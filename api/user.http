@@ -1,0 +1,19 @@
+
+@prod=https://talesofapirate.com/dnd
+@local=http://localhost:8010
+@host={{local}}
+@token=REPLACE_ME
+
+GET {{host}}/api/user
+authorization: Bearer {{token}}
+
+###
+PUT {{host}}/api/user  HTTP/1.1
+content-type: application/json
+authorization: Bearer {{token}}
+
+ {
+  "id": "myid",
+    "name": "username",
+    "nickname": "nick"
+},

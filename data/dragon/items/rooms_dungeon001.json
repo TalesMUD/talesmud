@@ -1,0 +1,80 @@
+[
+    {
+        "room": "start_room",
+        "name": "A new beginning",
+        "description": "As you rise up from the ground you find yourself in a narrow dark place with barely any light. You can see steps leading up to a cave wall with a rope dangling from the dark top.\nYou can hear some noise coming from afar.\n",
+        "exits": [
+            {
+                "exit": "north",
+                "description": "Follow along the steps...",
+                "target": "second_room"
+            }
+        ]
+    },
+    {
+        "room": "second_room",
+        "name": "The cave wall",
+        "description": "After following the steps you reach the cave wall. Directly in front of you there is a rope. The rope does not look like it would survive for long...\n",
+        "items": [
+            {
+                "fromTemplate": "rusty_sword_001",
+                "description": "There is an inscription on the hilt reading 'A Thousand Souls it takes'",
+                "multiplicity": [
+                    {
+                        "type": "player",
+                        "count": 1
+                    }
+                ]
+            }
+        ],
+        "exits": [
+            {
+                "exit": "climb",
+                "description": "Climb the rope",
+                "target": "Dungeon001_Entrance"
+            }
+        ]
+    },
+    {
+        "room": "Dungeon001_Entrance",
+        "name": "The Entrance",
+        "description": "You reach the entrance of an old catacomb. You still wonder how you got here in the first place. The heavy wooden door is wide open and you can still hear noises from inside.\n",
+        "exits": [
+            {
+                "exit": "south",
+                "description": "Follow the door to the right",
+                "target": "Dungeon001_Room1"
+            }
+        ]
+    },
+    {
+        "room": "Dungeon001_Room1",
+        "name": "Main Chamber",
+        "description": "You reach the Main Chamber of the Catacomb. The noise increases but you can't make out the origin of it.\n",
+        "detail": "You look closer to all sides of the room. After a thorough investigation you can see that parts of a wall are made up of loose rocks. You might be able to [move] these rocks.\n",
+        "exits": [
+            {
+                "exit": "north",  
+                "description": "Follow the door to the left",
+                "target": "Dungeon001_Entrance"
+            },
+            {
+                "exit": "hidden path",
+                "hidden": true,
+                "description": "You follow the hidden path on the east wall",
+                "target": "Dungeon001_End"
+            }
+        ],
+        "actions": [
+            {
+                "action": "move rocks",
+                "description": "You try to move one of the medium sized rocks. Parts of the wall start to crumble and a hidden path opens up."
+            }
+        ]
+    },
+    {
+        "room": "Dungeon001_End",
+        "name": "A surprise",
+        "description": "You reach a hidden place. Its dark and you cant see further than 2 meters in front of you. Suddenly you can clearly hear the screams. One hand reaches your back, then you are hit by a stone. Darkness falls upon you, your vision fades to black...\n"
+    }
+]

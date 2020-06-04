@@ -1,0 +1,10 @@
+version: '3'
+services:
+  owndnd:
+    build: .
+    ports:
+     - "8010:8010"
+  owndb:
+    image: "mongo:latest"
+    volumes:
+        - ~/volumes/owndnd/db:/data/db
