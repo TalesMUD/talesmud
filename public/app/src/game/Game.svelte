@@ -45,7 +45,19 @@
 
   $: {
     if ($isAuthenticated && $authToken && client && !ws) {
-      const backend = wsbackend + "?access_token=";
+      // connect to websocket server
+
+      var loc = window.location,
+        new_uri;
+      if (loc.protocol === "https:") {
+        new_uri = "wss:";
+      } else {
+        new_uri = "ws:";
+      }
+      new_uri += "//" + loc.host;
+      new_uri += loc.pathname + "/ws";
+
+      const backend = new_uri + "?access_token=";
       ws = new WebSocket(backend + $authToken);
       client.setWSClient(ws);
     }
@@ -95,7 +107,7 @@
 
   onMount(async () => {
     // change global background
-    document.body.style.backgroundImage = "url('app/bg.jpg')";
+    document.body.style.backgroundImage = "url('bg.jpg')";
     document.body.style.backdropFilter =
       "blur(10px) saturate(30%) brightness(50%)";
 
