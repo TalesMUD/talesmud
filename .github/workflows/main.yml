@@ -1,4 +1,4 @@
-name: Publish Docker
+name: Publish TalesMUD Docker image
 on: [push]
 jobs:
   build:
