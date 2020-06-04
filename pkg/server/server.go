@@ -216,6 +216,8 @@ func (app *app) setupRoutes() {
 		c.String(http.StatusOK, "API is up and running")
 	})
 
+	r.Use(static.Serve("/app", static.LocalFile("public/app/public/", false)))
+
 	// admin endpoints
 	authorized := r.Group("/admin/", gin.BasicAuth(gin.Accounts{
 		os.Getenv("ADMIN_USER"): os.Getenv("ADMIN_PASSWORD"),
@@ -252,7 +254,7 @@ func (app *app) setupRoutes() {
 	// Start MUD Server
 	app.mud.Run()
 	r.Use(app.authMiddleware()).GET("/ws", app.mud.HandleConnections)
-	r.Use(static.Serve("/", static.LocalFile("public/app/public/", false)))
+
 }
 
 // Run ... starts the server
