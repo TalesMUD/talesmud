@@ -1,0 +1,185 @@
+{
+  "characters": [
+    {
+      "id": "5ebc6568de1e1b77600c9d68",
+      "name": "damn",
+      "description": "i am sure of it",
+      "race": 0,
+      "class": 0,
+      "currentHitPoints": 15,
+      "maxHitPoints": 2,
+      "armorClass": 3,
+      "created": "0001-01-01T00:00:00Z",
+      "personalityTraits": "lalala"
+    },
+    {
+      "id": "5ebc6d496e979aad9f0ed807",
+      "name": "asdasd",
+      "description": "i am sure of it",
+      "race": 0,
+      "class": 0,
+      "currentHitPoints": 15,
+      "maxHitPoints": 2,
+      "armorClass": 3,
+      "created": "0001-01-01T00:00:00Z",
+      "personalityTraits": "lalala"
+    },
+    {
+      "id": "5ebc747d9d1bd200727d54a9",
+      "name": "Mr. X",
+      "description": "i am sure of it",
+      "race": 0,
+      "class": 0,
+      "currentHitPoints": 15,
+      "maxHitPoints": 2,
+      "armorClass": 3,
+      "created": "0001-01-01T00:00:00Z",
+      "personalityTraits": "lalala"
+    }
+  ],
+  "rooms": [
+    {
+      "id": "5ecefce71e5554d53c7941a2",
+      "name": "The Entrance \"",
+      "description": "You reach the entrance of an old catacomb. You still wonder how you got here in the first place. The heavy wooden door is wide open and you can still hear noises from inside.\n\nthisa das\n",
+      "detail": "",
+      "actions": null,
+      "exits": [
+        {
+          "name": "south",
+          "description": "Follow the door to the right",
+          "target": "5ed04cffac165280055c018a",
+          "params": null
+        }
+      ]
+    },
+    {
+      "id": "5ed04cffac165280055c018a",
+      "name": "This is totally something else",
+      "description": "Lets fill out this quite new room description",
+      "detail": "You look closer to all sides of the room. After a thorough investigation you can see that parts of a wall are made up of loose rocks. You might be able to [move] these rocks.\n",
+      "actions": [
+        {
+          "name": "move rocks",
+          "description": "You try to move one of the medium sized rocks. Parts of the wall start to crumble and a hidden path opens up.",
+          "params": null
+        }
+      ],
+      "exits": [
+        {
+          "name": "north",
+          "description": "Follow the door to the left",
+          "target": "Dungeon001_Entrance",
+          "params": null
+        },
+        {
+          "name": "hidden path",
+          "description": "You follow the hidden path on the east wall",
+          "hidden": true,
+          "target": "Dungeon001_End",
+          "params": null
+        }
+      ]
+    },
+    {
+      "id": "5ed04fb7ac165280055c018b",
+      "name": "Chamber of Horrors",
+      "description": "In the dark we all get a little mad",
+      "detail": "You look closer to all sides of the room. After a thorough investigation you can see that parts of a wall are made up of loose rocks. You might be able to [move] these rocks.\n",
+      "actions": [
+        {
+          "name": "move rocks",
+          "description": "You try to move one of the medium sized rocks. Parts of the wall start to crumble and a hidden path opens up.",
+          "params": null
+        }
+      ],
+      "exits": [
+        {
+          "name": "north",
+          "description": "Follow the door to the left",
+          "target": "5ed04ff0ac165280055c018c",
+          "params": null
+        },
+        {
+          "name": "hidden path",
+          "description": "You follow the hidden path on the east wall",
+          "hidden": true,
+          "target": "5ed04cffac165280055c018a",
+          "params": null
+        }
+      ]
+    },
+    {
+      "id": "5ed04ff0ac165280055c018c",
+      "name": "Another great room",
+      "description": "Lets examine this great room",
+      "detail": "You look closer to all sides of the room. After a thorough investigation you can see that parts of a wall are made up of loose rocks. You might be able to [move] these rocks.\n",
+      "actions": [
+        {
+          "name": "move rocks",
+          "description": "You try to move one of the medium sized rocks. Parts of the wall start to crumble and a hidden path opens up.",
+          "params": null
+        }
+      ],
+      "exits": [
+        {
+          "name": "north",
+          "description": "Follow the door to the left",
+          "target": "5ed3a34e7061ab189f64d22d",
+          "params": null
+        },
+        {
+          "name": "hidden path",
+          "description": "You follow the hidden path on the east wall",
+          "hidden": true,
+          "target": "5ed500bb14bb747980481de5",
+          "params": null
+        }
+      ]
+    },
+    {
+      "id": "5ed3a34e7061ab189f64d22d",
+      "name": "The Entrance",
+      "description": "You reach the entrance of an old catacomb. You still wonder how you got here in the first place. The heavy wooden door is wide open and you can still hear noises from inside.\n",
+      "detail": "",
+      "actions": null,
+      "exits": [
+        {
+          "name": "south",
+          "description": "Follow the door to the right",
+          "target": "5ed500bb14bb747980481de5",
+          "params": null
+        }
+      ]
+    },
+    {
+      "id": "5ed48e8514bb747980481de4",
+      "name": "This is a completely new room i guess",
+      "description": "asd\nas\nd\nasd\nasd",
+      "detail": "",
+      "actions": null,
+      "exits": null
+    },
+    {
+      "id": "5ed500bb14bb747980481de5",
+      "name": "Yet another room to create",
+      "description": "Great story in here",
+      "detail": "",
+      "actions": null,
+      "exits": null
+    }
+  ],
+  "users": [
+    {
+      "id": "5ecaedf0126a4e7317b494c3",
+      "refid": "auth0|asdasd",
+      "name": "Sucram",
+      "nickname": "insane",
+      "email": "somerandom@mail",
+      "created": "2020-05-24T21:58:08.756Z",
+      "lastSeen": "2020-05-24T21:58:08.756Z",
+      "picture": "",
+      "isNewUser": true
+    }
+  ]
+}
