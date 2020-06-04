@@ -212,8 +212,6 @@ func (app *app) setupRoutes() {
 		RoomsService: app.facade.RoomsService(),
 	}
 
-	r.Use(static.Serve("/app", static.LocalFile("public/app/public/", false)))
-
 	r.GET("/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "API is up and running")
 	})
@@ -254,7 +252,7 @@ func (app *app) setupRoutes() {
 	// Start MUD Server
 	app.mud.Run()
 	r.Use(app.authMiddleware()).GET("/ws", app.mud.HandleConnections)
-
+	r.Use(static.Serve("/", static.LocalFile("public/app/public/", false)))
 }
 
 // Run ... starts the server
