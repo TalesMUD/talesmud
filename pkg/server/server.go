@@ -251,7 +251,10 @@ func (app *app) setupRoutes() {
 	// Start MUD Server
 	app.mud.Run()
 
-	r.Use(app.authMiddleware()).GET("/ws", app.mud.HandleConnections)
+	ws := r.Group("/ws")
+	ws.Use(app.authMiddleware())
+	ws.GET("", app.mud.HandleConnections)
+
 	r.Use(static.Serve("/", static.LocalFile("public/app/public/", false)))
 }
 
