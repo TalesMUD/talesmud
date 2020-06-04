@@ -3,8 +3,8 @@ package commands
 import (
 	"strings"
 
-	"github.com/atla/owndnd/pkg/mudserver/game/def"
-	"github.com/atla/owndnd/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 )
 
 // ShrugCommand ... foo

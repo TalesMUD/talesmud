@@ -1,10 +1,10 @@
 package messages
 
 import (
-	e "github.com/atla/owndnd/pkg/entities"
-	"github.com/atla/owndnd/pkg/entities/characters"
-	"github.com/atla/owndnd/pkg/entities/rooms"
-	"github.com/atla/owndnd/pkg/mudserver/game/util"
+	e "github.com/talesmud/talesmud/pkg/entities"
+	"github.com/talesmud/talesmud/pkg/entities/characters"
+	"github.com/talesmud/talesmud/pkg/entities/rooms"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
 )
 
 // CharacterJoinedRoom ... asdd

@@ -3,8 +3,8 @@ package characters
 import (
 	"time"
 
-	"github.com/atla/owndnd/pkg/entities"
-	"github.com/atla/owndnd/pkg/entities/traits"
+	"github.com/talesmud/talesmud/pkg/entities"
+	"github.com/talesmud/talesmud/pkg/entities/traits"
 )
 
 //Race type

@@ -14,10 +14,10 @@ import (
 
 	"github.com/buger/jsonparser"
 
-	"github.com/atla/owndnd/pkg/db"
-	mud "github.com/atla/owndnd/pkg/mudserver"
-	"github.com/atla/owndnd/pkg/server/handler"
-	"github.com/atla/owndnd/pkg/service"
+	"github.com/talesmud/talesmud/pkg/db"
+	mud "github.com/talesmud/talesmud/pkg/mudserver"
+	"github.com/talesmud/talesmud/pkg/server/handler"
+	"github.com/talesmud/talesmud/pkg/service"
 
 	"errors"
 
@@ -212,7 +212,7 @@ func (app *app) setupRoutes() {
 		RoomsService: app.facade.RoomsService(),
 	}
 
-	r.Use(static.Serve("/", static.LocalFile("public/app/public/", false)))
+	r.Use(static.Serve("/app", static.LocalFile("public/app/public/", false)))
 
 	r.GET("/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "API is up and running")

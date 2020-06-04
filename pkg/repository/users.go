@@ -1,8 +1,8 @@
 package repository
 
 import (
-	"github.com/atla/owndnd/pkg/db"
-	e "github.com/atla/owndnd/pkg/entities"
+	"github.com/talesmud/talesmud/pkg/db"
+	e "github.com/talesmud/talesmud/pkg/entities"
 )
 
 //UsersRepository ...

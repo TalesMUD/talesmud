@@ -1,7 +1,7 @@
 package characters
 
 import (
-	"github.com/atla/owndnd/pkg/entities/items"
+	"github.com/talesmud/talesmud/pkg/entities/items"
 )
 
 //Inventory data

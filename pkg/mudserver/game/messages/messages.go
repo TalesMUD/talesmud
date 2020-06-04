@@ -1,8 +1,8 @@
 package messages
 
 import (
-	e "github.com/atla/owndnd/pkg/entities"
-	"github.com/atla/owndnd/pkg/entities/characters"
+	e "github.com/talesmud/talesmud/pkg/entities"
+	"github.com/talesmud/talesmud/pkg/entities/characters"
 )
 
 //UserJoined ... player joined event

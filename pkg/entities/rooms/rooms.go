@@ -1,6 +1,6 @@
 package rooms
 
-import "github.com/atla/owndnd/pkg/entities"
+import "github.com/talesmud/talesmud/pkg/entities"
 
 // RoomActionType type
 type RoomActionType int8

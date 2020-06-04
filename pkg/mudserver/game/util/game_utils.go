@@ -1,7 +1,7 @@
 package util
 
 import (
-	"github.com/atla/owndnd/pkg/entities/rooms"
+	"github.com/talesmud/talesmud/pkg/entities/rooms"
 )
 
 // CreateRoomDescription ...

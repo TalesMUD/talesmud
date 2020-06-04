@@ -3,7 +3,7 @@ package items
 import (
 	"time"
 
-	"github.com/atla/owndnd/pkg/entities"
+	"github.com/talesmud/talesmud/pkg/entities"
 )
 
 //ItemType type

@@ -4,9 +4,9 @@ import (
 	"errors"
 	"net/http"
 
-	e "github.com/atla/owndnd/pkg/entities"
-	"github.com/atla/owndnd/pkg/service"
 	"github.com/gin-gonic/gin"
+	e "github.com/talesmud/talesmud/pkg/entities"
+	"github.com/talesmud/talesmud/pkg/service"
 )
 
 //UsersHandler ...

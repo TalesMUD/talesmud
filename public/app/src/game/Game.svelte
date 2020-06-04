@@ -8,8 +8,6 @@
     border-radius: 0.5em;
     margin-top: 10em;
   }
-
-  
 </style>
 
 <script>
@@ -21,6 +19,7 @@
   import LocalEchoController from "./echo/LocalEchoController";
   import fit from "xterm-addon-fit";
   import { createClient, getClient } from "./Client";
+  import { wsbackend } from "../api/base.js";
 
   let client;
   let term;
@@ -46,7 +45,8 @@
 
   $: {
     if ($isAuthenticated && $authToken && client && !ws) {
-      ws = new WebSocket("ws://localhost:8010/ws?access_token=" + $authToken);
+      const backend = wsbackend + "?access_token=";
+      ws = new WebSocket(backend + $authToken);
       client.setWSClient(ws);
     }
   }
@@ -95,7 +95,7 @@
 
   onMount(async () => {
     // change global background
-    document.body.style.backgroundImage = "url('bg.jpg')";
+    document.body.style.backgroundImage = "url('app/bg.jpg')";
     document.body.style.backdropFilter =
       "blur(10px) saturate(30%) brightness(50%)";
 

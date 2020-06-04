@@ -1,8 +1,8 @@
 package service
 
 import (
-	"github.com/atla/owndnd/pkg/db"
-	"github.com/atla/owndnd/pkg/repository"
+	"github.com/talesmud/talesmud/pkg/db"
+	"github.com/talesmud/talesmud/pkg/repository"
 )
 
 //Facade ...
