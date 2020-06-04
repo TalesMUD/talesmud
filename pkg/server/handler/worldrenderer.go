@@ -8,9 +8,9 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/atla/owndnd/pkg/entities/rooms"
-	"github.com/atla/owndnd/pkg/service"
 	"github.com/gin-gonic/gin"
+	"github.com/talesmud/talesmud/pkg/entities/rooms"
+	"github.com/talesmud/talesmud/pkg/service"
 
 	graphviz "github.com/goccy/go-graphviz"
 	"github.com/goccy/go-graphviz/cgraph"

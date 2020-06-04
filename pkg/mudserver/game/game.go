@@ -1,12 +1,12 @@
 package game
 
 import (
-	"github.com/atla/owndnd/pkg/entities"
 	log "github.com/sirupsen/logrus"
+	"github.com/talesmud/talesmud/pkg/entities"
 
-	c "github.com/atla/owndnd/pkg/mudserver/game/commands"
-	m "github.com/atla/owndnd/pkg/mudserver/game/messages"
-	"github.com/atla/owndnd/pkg/service"
+	c "github.com/talesmud/talesmud/pkg/mudserver/game/commands"
+	m "github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/service"
 )
 
 //Game ... contains live game state

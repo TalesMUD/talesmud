@@ -1,7 +1,7 @@
 package def
 
 import (
-	"github.com/atla/owndnd/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 )
 
 // GameCtrl def

@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/atla/owndnd/pkg/entities"
-	"github.com/atla/owndnd/pkg/entities/rooms"
-	"github.com/atla/owndnd/pkg/mudserver/game/messages"
-	m "github.com/atla/owndnd/pkg/mudserver/game/messages"
-	"github.com/atla/owndnd/pkg/mudserver/game/util"
 	log "github.com/sirupsen/logrus"
+	"github.com/talesmud/talesmud/pkg/entities"
+	"github.com/talesmud/talesmud/pkg/entities/rooms"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	m "github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
 )
 
 func (game *Game) handleDefaultMessage(message *messages.Message) {

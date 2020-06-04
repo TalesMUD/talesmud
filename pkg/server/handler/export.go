@@ -3,11 +3,11 @@ package handler
 import (
 	"net/http"
 
-	e "github.com/atla/owndnd/pkg/entities"
-	"github.com/atla/owndnd/pkg/entities/characters"
-	"github.com/atla/owndnd/pkg/entities/rooms"
-	"github.com/atla/owndnd/pkg/service"
 	"github.com/gin-gonic/gin"
+	e "github.com/talesmud/talesmud/pkg/entities"
+	"github.com/talesmud/talesmud/pkg/entities/characters"
+	"github.com/talesmud/talesmud/pkg/entities/rooms"
+	"github.com/talesmud/talesmud/pkg/service"
 )
 
 //ExportHandler ...

@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/atla/owndnd/pkg/db"
-	e "github.com/atla/owndnd/pkg/entities"
 	log "github.com/sirupsen/logrus"
+	"github.com/talesmud/talesmud/pkg/db"
+	e "github.com/talesmud/talesmud/pkg/entities"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 

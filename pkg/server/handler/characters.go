@@ -3,10 +3,10 @@ package handler
 import (
 	"net/http"
 
-	"github.com/atla/owndnd/pkg/entities/characters"
-	"github.com/atla/owndnd/pkg/service"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	"github.com/talesmud/talesmud/pkg/entities/characters"
+	"github.com/talesmud/talesmud/pkg/service"
 )
 
 //CharactersHandler ...

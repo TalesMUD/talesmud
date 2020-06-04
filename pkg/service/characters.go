@@ -1,7 +1,7 @@
 package service
 
 import (
-	r "github.com/atla/owndnd/pkg/repository"
+	r "github.com/talesmud/talesmud/pkg/repository"
 )
 
 //--- Interface Definitions

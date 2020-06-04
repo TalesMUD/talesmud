@@ -1,6 +1,6 @@
 package templates
 
-import "github.com/atla/owndnd/pkg/entities/items"
+import "github.com/talesmud/talesmud/pkg/entities/items"
 
 //ItemTemplatePropertyType type
 type ItemTemplatePropertyType int

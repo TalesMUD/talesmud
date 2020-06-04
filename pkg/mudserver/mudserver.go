@@ -4,14 +4,14 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/atla/owndnd/pkg/entities"
-	"github.com/atla/owndnd/pkg/entities/rooms"
-	"github.com/atla/owndnd/pkg/mudserver/game"
-	"github.com/atla/owndnd/pkg/mudserver/game/messages"
-	"github.com/atla/owndnd/pkg/service"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	log "github.com/sirupsen/logrus"
+	"github.com/talesmud/talesmud/pkg/entities"
+	"github.com/talesmud/talesmud/pkg/entities/rooms"
+	"github.com/talesmud/talesmud/pkg/mudserver/game"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/service"
 )
 
 // MUDServer ... server application connecting the websocket clients with the game instance, providing utility functions etc.

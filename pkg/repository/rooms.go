@@ -1,9 +1,9 @@
 package repository
 
 import (
-	"github.com/atla/owndnd/pkg/db"
-	e "github.com/atla/owndnd/pkg/entities"
-	r "github.com/atla/owndnd/pkg/entities/rooms"
+	"github.com/talesmud/talesmud/pkg/db"
+	e "github.com/talesmud/talesmud/pkg/entities"
+	r "github.com/talesmud/talesmud/pkg/entities/rooms"
 )
 
 //--- Interface Definitions
