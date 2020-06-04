@@ -7,8 +7,8 @@ import (
 
 	"os"
 
-	"github.com/atla/owndnd/pkg/server"
 	"github.com/joho/godotenv"
+	"github.com/talesmud/talesmud/pkg/server"
 )
 
 func main() {

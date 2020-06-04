@@ -45,20 +45,9 @@
 
   $: {
     if ($isAuthenticated && $authToken && client && !ws) {
-      // connect to websocket server
-
-      var loc = window.location,
-        new_uri;
-      if (loc.protocol === "https:") {
-        new_uri = "wss:";
-      } else {
-        new_uri = "ws:";
-      }
-      new_uri += "//" + loc.host;
-      new_uri += loc.pathname + "/ws";
-
-      const backend = new_uri + "?access_token=";
-      ws = new WebSocket(backend + $authToken);
+      // connect to websocket server      
+      const url = wsbackend + "?access_token=";
+      ws = new WebSocket(url + $authToken);
       client.setWSClient(ws);
     }
   }
