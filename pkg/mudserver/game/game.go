@@ -111,6 +111,7 @@ func (g *Game) Run() {
 				// only broadcast if commandprocessor didnt process it
 				if !g.CommandProcessor.Process(g, message) {
 
+					//if !g.checkForRoomBased
 					// generic messages will be converted to plain OutgoingMessages (type message)
 					// and send to the room audience including the origin nickname or charactername
 					g.handleDefaultMessage(message)
