@@ -18,7 +18,6 @@
 
 <script>
   import { writable } from "svelte/store";
-  import CharacterCard from "./CharacterCard.svelte";
   import { onMount } from "svelte";
 
   import { createAuth, getAuth } from "./auth.js";

@@ -39,11 +39,6 @@
       text: input
     };
 
-    postData("https://leaveamessage.ey.r.appspot.com/api/messages", data)
-      //postData('/api/messages', data)
-      .then(data => {        
-        input = "";
-      });
   }
 </script>
 

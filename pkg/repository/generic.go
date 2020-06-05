@@ -77,7 +77,8 @@ func (repo *GenericRepo) FindAllWithParam(params *db.QueryParams, collector elem
 	cursor, err := repo.db.FindAllWithParams(repo.collection, params)
 
 	if err != nil {
-		log.WithField("collection", repo.collection).WithField("cursor", cursor).Fatal(err)
+		log.WithField("collection", repo.collection).WithField("cursor", cursor).Error(err)
+		return err
 	}
 
 	for cursor.Next(context.TODO()) {

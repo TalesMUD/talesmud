@@ -1,0 +1,10 @@
+# Character Templates
+# Item Types currency = 0, consumable=1, armor=2, weapon=3, collectible=4
+- id: wizard
+  name: Leather Helmet
+  description: very small protection
+  itemType: 2
+  properties:
+    magic: true
+  attributes:
+    damage: 3

@@ -11,6 +11,7 @@
 </style>
 
 <script>
+  import CharacterCreator from "./../characters/CharacterCreator.svelte";
   import "../../node_modules/xterm/css/xterm.css";
   import { onMount, onDestroy } from "svelte";
   import { createAuth, getAuth } from "../auth.js";
@@ -45,7 +46,7 @@
 
   $: {
     if ($isAuthenticated && $authToken && client && !ws) {
-      // connect to websocket server      
+      // connect to websocket server
       const url = wsbackend + "?access_token=";
       ws = new WebSocket(url + $authToken);
       client.setWSClient(ws);
@@ -73,6 +74,14 @@
     };
   };
 
+  const characterCreator = () => {
+    console.log("CREATE CHARACTER");
+
+    var Modalelem = document.querySelector(".modal");
+    var instance = M.Modal.init(Modalelem);
+    instance.open();
+  };
+
   async function setupTerminal() {
     term = new xterm.Terminal();
 
@@ -89,7 +98,7 @@
 
     const localEcho = new LocalEchoController(term);
     localEcho.addAutocompleteHandler(autocompleteCommonCommands);
-    client = createClient(createRenderer(term, localEcho));
+    client = createClient(createRenderer(term, localEcho), characterCreator);
 
     readLine(localEcho, term);
   }
@@ -120,6 +129,8 @@
     return [];
   }
 </script>
+
+<CharacterCreator />
 
 <div id="terminalWindow" class="z-depth-5">
   <div id="terminal"></div>
