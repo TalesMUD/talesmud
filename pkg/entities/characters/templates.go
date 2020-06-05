@@ -29,8 +29,8 @@ var CharacterTemplates = []Character{
 	Character{
 		Name:             "Gumdalf the Bay",
 		Description:      "Select to create the allmighty wizard",
-		Race:             RaceElve,
-		Class:            ClassRanger,
+		Race:             RaceDwarf,
+		Class:            ClassWizard,
 		CurrentHitPoints: 17,
 		MaxHitPoints:     17,
 		XP:               0,
