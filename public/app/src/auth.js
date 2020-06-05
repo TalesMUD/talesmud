@@ -73,7 +73,7 @@ function createAuth(config) {
   // It must be whitelisted in Auth0. I think.
   const login = async (redirectPage) => {
     await auth0.loginWithRedirect({
-      redirect_uri: "http://localhost:5000",
+      redirect_uri: redirectPage || window.location.origin,
       prompt: "login", // Force login prompt. No silence auth for you!
     });
   };
