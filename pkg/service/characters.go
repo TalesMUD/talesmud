@@ -1,6 +1,9 @@
 package service
 
 import (
+	"errors"
+
+	"github.com/talesmud/talesmud/pkg/entities/characters"
 	r "github.com/talesmud/talesmud/pkg/repository"
 )
 
@@ -9,6 +12,8 @@ import (
 //CharactersService delives logical functions on top of the charactersheets Repo
 type CharactersService interface {
 	r.CharactersRepository
+
+	IsCharacterNameTaken(name string) bool
 }
 
 //--- Implementations
@@ -22,4 +27,25 @@ func NewCharactersService(charactersRepo r.CharactersRepository) CharactersServi
 	return &charactersService{
 		charactersRepo,
 	}
+}
+
+//IsCharacterNameTaken ...
+func (srv *charactersService) IsCharacterNameTaken(name string) bool {
+	// check if charactername already exists
+	if chars, err := srv.FindByName(name); err == nil {
+		if len(chars) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+//Store ...
+func (srv *charactersService) Store(character *characters.Character) (*characters.Character, error) {
+
+	// check if charactername already exists
+	if srv.IsCharacterNameTaken(character.Name) {
+		return nil, errors.New("character name already taken")
+	}
+	return srv.Store(character)
 }

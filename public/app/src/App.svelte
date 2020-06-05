@@ -68,10 +68,11 @@
   import Game from "./game/Game.svelte";
 
   import UserMenu from "./UserMenu.svelte";
-  import Input from "./Input.svelte";
-  import Home from "./Home.svelte";
+
   import Welcome from "./Welcome.svelte";
   import Creator from "./creator/Creator.svelte";
+  import Characters from "./characters/Characters.svelte";
+
   import UserForm from "./UserForm.svelte";
   import { createAuth } from "./auth.js";
 
@@ -153,6 +154,16 @@
         </li>
         {#if $isAuthenticated}
           <li>
+            <NavLink to="/list">
+              <span class="valign-wrapper">
+                <span class="iconspacing valign-wrapper">
+                  <EditIcon size="18" />
+                </span>
+                Top Characters
+              </span>
+            </NavLink>
+          </li>
+          <li>
             <NavLink to="/creator/rooms">
               <span class="valign-wrapper">
                 <span class="iconspacing valign-wrapper">
@@ -188,14 +199,13 @@
 
     <Route path="account" component="{UserForm}" />
     <Route path="creator/*" component="{Creator}" />
+    <Route path="list" component="{Characters}" />
     <Route path="play" component="{Game}" />
 
     <Route path="/">
-      {#if $isAuthenticated}
-        <Game />
-      {:else}
-        <Welcome />
-      {/if}
+
+      <Welcome />
+
     </Route>
   </main>
 </Router>

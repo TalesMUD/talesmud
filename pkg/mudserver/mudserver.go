@@ -147,7 +147,16 @@ func (server *server) sendMessage(id string, msg interface{}) {
 		}
 	}
 }
+
 func (server *server) sendToRoom(room *rooms.Room, msg interface{}) {
+	server.sendToRoomWithout("", room, msg)
+}
+
+func (server *server) sendToRoomWithout(id string, room *rooms.Room, msg interface{}) {
+
+	if id != "" {
+		log.WithField("origin", id).Info("Sending to room without origin")
+	}
 
 	usersInRoom := []string{}
 
@@ -155,7 +164,7 @@ func (server *server) sendToRoom(room *rooms.Room, msg interface{}) {
 	allUsers, _ := server.Facade.UsersService().FindAll()
 
 	for _, usr := range allUsers {
-		if contains(room.Characters, usr.LastCharacter) {
+		if usr.LastCharacter != id && contains(room.Characters, usr.LastCharacter) {
 			usersInRoom = append(usersInRoom, usr.ID.Hex())
 		}
 	}
@@ -164,6 +173,7 @@ func (server *server) sendToRoom(room *rooms.Room, msg interface{}) {
 		server.sendMessage(usr, msg)
 	}
 }
+
 func (server *server) handleBroadcastMessages() {
 	for {
 		// Grab the next message from the broadcast channel
@@ -199,12 +209,15 @@ func (server *server) OnMessage(message interface{}) {
 			server.sendMessage(msg.GetAudienceID(), msg)
 			break
 		case messages.MessageAudienceRoom:
-
-			//log.WithField("room", msg.AudienceID).WithField("message", msg.Message).WithField("type", msg.Type).Info("Sending message to Audience Room")
-
 			room, _ := server.Facade.RoomsService().FindByID(msg.GetAudienceID())
 			server.sendToRoom(room, msg)
 			break
+
+		case messages.MessageAudienceRoomWithoutOrigin:
+			room, _ := server.Facade.RoomsService().FindByID(msg.GetAudienceID())
+			server.sendToRoomWithout(msg.GetOriginID(), room, msg)
+			break
+
 		case messages.MessageAudienceGlobal:
 			server.Broadcast <- msg
 			break

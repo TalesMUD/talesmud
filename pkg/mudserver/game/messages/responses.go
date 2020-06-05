@@ -44,6 +44,7 @@ const (
 	MessageAudienceOrigin = iota + 1
 	MessageAudienceUser
 	MessageAudienceRoom
+	MessageAudienceRoomWithoutOrigin
 	MessageAudienceGlobal
 	MessageAudienceSystem
 )
@@ -52,10 +53,11 @@ const (
 type MessageResponse struct {
 	Audience   AudienceType `json:"-"`
 	AudienceID string       `json:"-"`
+	OriginID   string       `json:"-"`
 
-	Type     string `json:"type"`
-	Username string `json:"username"`
-	Message  string `json:"message"`
+	Type     MessageType `json:"type"`
+	Username string      `json:"username"`
+	Message  string      `json:"message"`
 }
 
 //GetAudience ,,,
@@ -68,6 +70,11 @@ func (m MessageResponse) GetAudienceID() string {
 	return m.AudienceID
 }
 
+//GetOriginID ,,,
+func (m MessageResponse) GetOriginID() string {
+	return m.OriginID
+}
+
 //GetMessage ,,,
 func (m MessageResponse) GetMessage() string {
 	return m.Message
@@ -77,6 +84,7 @@ func (m MessageResponse) GetMessage() string {
 type MessageResponder interface {
 	GetAudience() AudienceType
 	GetAudienceID() string
+	GetOriginID() string
 	GetMessage() string
 }
 
@@ -107,7 +115,7 @@ func NewEnterRoomMessage(room *rooms.Room) *EnterRoomMessage {
 	return &EnterRoomMessage{
 		MessageResponse: MessageResponse{
 			Audience: MessageAudienceOrigin,
-			Type:     "enterRoom",
+			Type:     MessageTypeEnterRoom,
 			Message:  util.CreateRoomDescription(room),
 		},
 		Room: *room,
@@ -119,9 +127,19 @@ func NewOutgoingMessage(user string, message string) MessageResponse {
 	return MessageResponse{
 		// default
 		Audience: MessageAudienceRoom,
-		Type:     "message",
+		Type:     MessageTypeDefault,
 		Message:  message,
 		Username: user,
 	}
 
+}
+
+// NewCreateCharacterMessage ...
+func NewCreateCharacterMessage(user string) MessageResponse {
+	return MessageResponse{
+		Type:       MessageTypeCreateCharacter,
+		Message:    "User has no characters created.",
+		Audience:   MessageAudienceOrigin,
+		AudienceID: user,
+	}
 }

@@ -7,32 +7,6 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/traits"
 )
 
-//Race type
-type Race int
-
-const (
-	rHuman Race = iota + 1
-	rDwarf
-	rElve
-)
-
-func (cr Race) String() string {
-	return [...]string{"human", "dwarf", "elve"}[cr]
-}
-
-//Class type
-type Class int
-
-const (
-	cWarrior Class = iota + 1
-	cWizard
-	cRanger
-)
-
-func (cr Class) String() string {
-	return [...]string{"warrior", "wzard", "ranger"}[cr]
-}
-
 // Attribute data
 type Attribute struct {
 	Name  string `json:"name"`
@@ -40,11 +14,23 @@ type Attribute struct {
 	Value int32  `json:"value"`
 }
 
+//Attributes ...
+type Attributes []Attribute
+
+//NewAttribute ...
+func NewAttribute(name, short string, value int32) Attribute {
+	return Attribute{
+		Name:  name,
+		Short: short,
+		Value: value,
+	}
+}
+
 //Character data
 type Character struct {
-	*entities.Entity   `bson:",inline"`
-	traits.BelongsUser `bson:",inline"`
-	traits.CurrentRoom `bson:",inline"`
+	*entities.Entity `bson:",inline"`
+	traits.BelongsUser
+	traits.CurrentRoom
 
 	Name        string `json:"name"`
 	Description string `json:"description"`
@@ -53,10 +39,12 @@ type Character struct {
 
 	CurrentHitPoints int32 `json:"currentHitPoints"`
 	MaxHitPoints     int32 `json:"maxHitPoints"`
-	ArmorClass       int32 `json:"armorClass"`
 
-	Created    time.Time    `bson:"created" json:"created,omitempty"`
-	Attributes []*Attribute `bson:"attributes" json:"attributes,omitempty"`
+	XP    int32 `json:"xp"`
+	Level int32 `json:"level"`
+
+	Created    time.Time  `bson:"created" json:"created,omitempty"`
+	Attributes Attributes `bson:"attributes" json:"attributes,omitempty"`
 
 	PersonalityTraits string `json:"personalityTraits,omitempty"`
 

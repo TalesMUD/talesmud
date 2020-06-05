@@ -31,6 +31,7 @@ type Game struct {
 	Receivers []Receiver
 
 	CommandProcessor *c.CommandProcessor
+	RoomProcessor    *c.RoomProcessor
 
 	Avatars map[string]*Avatar
 
@@ -44,6 +45,7 @@ func New(facade service.Facade) *Game {
 		title: "Lair of the Dragon",
 
 		CommandProcessor: c.NewCommandProcessor(),
+		RoomProcessor:    c.NewRoomProcessor(),
 
 		// event channels
 		onMessageReceived: make(chan *m.Message, 20),
@@ -88,6 +90,11 @@ func (g *Game) OnMessageReceived() chan *m.Message {
 	return g.onMessageReceived
 }
 
+//GetFacade ...
+func (g *Game) GetFacade() service.Facade {
+	return g.Facade
+}
+
 //Run main game loop
 func (g *Game) Run() {
 
@@ -104,17 +111,20 @@ func (g *Game) Run() {
 				g.handleUserQuit(userQuit.User)
 
 				break
+				
 			case message := <-g.onMessageReceived:
 				// attach current character if a user is set
 				g.attachCharacterToMessage(message)
 
-				// only broadcast if commandprocessor didnt process it
+				// only broadcast if global commandprocessor didnt process it
 				if !g.CommandProcessor.Process(g, message) {
 
-					//if !g.checkForRoomBased
-					// generic messages will be converted to plain OutgoingMessages (type message)
-					// and send to the room audience including the origin nickname or charactername
-					g.handleDefaultMessage(message)
+					// check room commands
+					if !g.RoomProcessor.Process(g, message) {
+						// generic messages will be converted to plain OutgoingMessages (type message)
+						// and send to the room audience including the origin nickname or charactername
+						g.handleDefaultMessage(message)
+					}
 				}
 			}
 		}

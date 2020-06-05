@@ -3,7 +3,6 @@
 
 //TODO: make this configurable
 const backend = "/api"
-//const wsbackend = "wss://talesofapirate.com/mud/ws"
 const wsbackend = "wss://talesofapirate.com/ws"
 
-export { backend, wsbackend };
+export { backend, wsbackend};

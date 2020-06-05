@@ -1,6 +1,10 @@
 package rooms
 
-import "github.com/talesmud/talesmud/pkg/entities"
+import (
+	"errors"
+
+	"github.com/talesmud/talesmud/pkg/entities"
+)
 
 // RoomActionType type
 type RoomActionType int8
@@ -61,4 +65,58 @@ type Room struct {
 	Actions     Actions    `bson:"actions,omitempty" json:"actions"`
 	Exits       Exits      `bson:"exits,omitempty" json:"exits"`
 	Characters  Characters `bson:"characters,omitempty" json:"characters"`
+}
+
+//GetExit ,,,
+func (room *Room) GetExit(exit string) (Exit, bool) {
+
+	for _, e := range room.Exits {
+		if e.Name == exit {
+			return e, true
+		}
+	}
+	return Exit{}, false
+}
+
+//IsCharacterInRoom ,,,
+func (room *Room) IsCharacterInRoom(character string) bool {
+
+	for _, c := range room.Characters {
+		if c == character {
+			return true
+		}
+	}
+	return false
+}
+
+//AddCharacter ,,,
+func (room *Room) AddCharacter(character string) error {
+
+	if room.IsCharacterInRoom(character) {
+		return errors.New("Character already in room")
+	}
+
+	room.Characters = append(room.Characters, character)
+
+	return nil
+}
+
+//RemoveCharacter ,,,
+func (room *Room) RemoveCharacter(character string) error {
+
+	if !room.IsCharacterInRoom(character) {
+		return errors.New("Character is not room")
+	}
+
+	var charactersNew Characters
+
+	// make sure to remove duplilcates if for some reason the slice was altered
+	// by hand or via the databases
+	for _, c := range room.Characters {
+		if c != character {
+			charactersNew = append(charactersNew, c)
+		}
+	}
+	room.Characters = charactersNew
+	return nil
 }

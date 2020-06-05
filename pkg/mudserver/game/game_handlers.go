@@ -9,7 +9,6 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	m "github.com/talesmud/talesmud/pkg/mudserver/game/messages"
-	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
 )
 
 func (game *Game) handleDefaultMessage(message *messages.Message) {
@@ -31,16 +30,19 @@ func (game *Game) handleDefaultMessage(message *messages.Message) {
 
 func (game *Game) handleUserQuit(user *entities.User) {
 
+	log.Info("Handle User Quit " + user.Nickname)
+
 	character, _ := game.Facade.CharactersService().FindByID(user.LastCharacter)
 	room, _ := game.Facade.RoomsService().FindByID(character.CurrentRoomID)
 
-	room.Characters = util.RemoveStringFromSlice(room.Characters, character.ID.Hex())
 	//TOOD: move update to queue
+	room.RemoveCharacter(character.ID.Hex())
 	game.Facade.RoomsService().Update(room.ID.Hex(), room)
 
 	game.SendMessage(messages.CharacterLeftRoom{
 		MessageResponse: messages.MessageResponse{
-			Audience:   messages.MessageAudienceGlobal,
+			Audience:   messages.MessageAudienceRoomWithoutOrigin,
+			OriginID:   character.ID.Hex(),
 			AudienceID: character.CurrentRoomID,
 			Message:    character.Name + " left.",
 		},
@@ -81,7 +83,12 @@ func (game *Game) handleUserJoined(user *entities.User) {
 				//TODO: send updates via message queue?
 				game.Facade.UsersService().Update(user.RefID, user)
 			}
+		} else {
+			// player has no character yet, respnd with createCharacter Message
+			game.SendMessage(messages.NewCreateCharacterMessage(user.ID.Hex()))
+			return
 		}
+
 	}
 
 	character, _ := game.Facade.CharactersService().FindByID(user.LastCharacter)
@@ -90,7 +97,7 @@ func (game *Game) handleUserJoined(user *entities.User) {
 		MessageResponse: messages.MessageResponse{
 			Audience:   messages.MessageAudienceOrigin,
 			AudienceID: user.ID.Hex(),
-			Type:       "characterSelected",
+			Type:       m.MessageTypeCharacterSelected,
 			Message:    fmt.Sprintf("You are now playing as [%v]", character.Name),
 		},
 		Character: character,
@@ -118,7 +125,7 @@ func (game *Game) handleUserJoined(user *entities.User) {
 		}
 
 		// update room // send these state change messages via channel
-		currentRoom.Characters = append(currentRoom.Characters, character.ID.Hex())
+		currentRoom.AddCharacter(character.ID.Hex())
 		game.Facade.RoomsService().Update(currentRoom.ID.Hex(), currentRoom)
 
 		enterRoom := m.NewEnterRoomMessage(currentRoom)
@@ -127,8 +134,9 @@ func (game *Game) handleUserJoined(user *entities.User) {
 
 		game.SendMessage(messages.CharacterJoinedRoom{
 			MessageResponse: messages.MessageResponse{
-				Audience:   m.MessageAudienceRoom,
+				Audience:   m.MessageAudienceRoomWithoutOrigin,
 				AudienceID: currentRoom.ID.Hex(),
+				OriginID:   character.ID.Hex(),
 				Message:    character.Name + " entered.",
 			},
 		})
