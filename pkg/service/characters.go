@@ -14,6 +14,7 @@ type CharactersService interface {
 	r.CharactersRepository
 
 	IsCharacterNameTaken(name string) bool
+	GetCharacterTemplates() []*characters.Character
 }
 
 //--- Implementations
@@ -48,4 +49,8 @@ func (srv *charactersService) Store(character *characters.Character) (*character
 		return nil, errors.New("character name already taken")
 	}
 	return srv.Store(character)
+}
+
+func (srv *charactersService) GetCharacterTemplates() []characters.Character {
+	return characters.CharacterTemplates
 }

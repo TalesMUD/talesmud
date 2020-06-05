@@ -1,6 +1,9 @@
 package repository
 
 import (
+	"errors"
+
+	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/db"
 	e "github.com/talesmud/talesmud/pkg/entities"
 	r "github.com/talesmud/talesmud/pkg/entities/rooms"
@@ -39,6 +42,12 @@ func NewMongoDBRoomsRepository(db *db.Client) RoomsRepository {
 }
 
 func (repo *roomsRepository) FindByID(id string) (*r.Room, error) {
+
+	if id == "" {
+		log.Error("Rooms::FindByID - id is empty")
+		return nil, errors.New("Empty id")
+	}
+
 	result, err := repo.GenericRepo.FindByID(id)
 	if err == nil {
 		return result.(*r.Room), nil
