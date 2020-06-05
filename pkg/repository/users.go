@@ -1,6 +1,10 @@
 package repository
 
 import (
+	"errors"
+
+	log "github.com/sirupsen/logrus"
+
 	"github.com/talesmud/talesmud/pkg/db"
 	e "github.com/talesmud/talesmud/pkg/entities"
 )
@@ -59,6 +63,12 @@ func (pr *usersRepo) Update(refID string, user *e.User) error {
 }
 
 func (pr *usersRepo) FindByRefID(refID string) (*e.User, error) {
+
+	if refID == "" {
+		log.Error("Users::FindByRefID - refID is empty")
+		return nil, errors.New("Empty refID")
+	}
+
 	result, err := pr.GenericRepo.FindByField("refid", refID)
 
 	if user, ok := result.(*e.User); ok {

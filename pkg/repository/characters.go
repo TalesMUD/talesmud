@@ -1,6 +1,10 @@
 package repository
 
 import (
+	"errors"
+
+	log "github.com/sirupsen/logrus"
+
 	"github.com/talesmud/talesmud/pkg/db"
 	"github.com/talesmud/talesmud/pkg/entities"
 	e "github.com/talesmud/talesmud/pkg/entities/characters"
@@ -40,6 +44,12 @@ func NewMongoDBcharactersRepository(db *db.Client) CharactersRepository {
 }
 
 func (repo *charactersRepository) FindByID(id string) (*e.Character, error) {
+
+	if id == "" {
+		log.Error("Characters::FindByID - id is empty")
+		return nil, errors.New("Empty id")
+	}
+
 	result, err := repo.GenericRepo.FindByID(id)
 	if err == nil {
 		return result.(*e.Character), nil
@@ -47,6 +57,11 @@ func (repo *charactersRepository) FindByID(id string) (*e.Character, error) {
 	return nil, err
 }
 func (repo *charactersRepository) FindAllForUser(userID string) ([]*e.Character, error) {
+
+	if userID == "" {
+		log.Error("Characters::FindAllForUser - userID is empty")
+		return nil, errors.New("Empty userID")
+	}
 
 	results := make([]*e.Character, 0)
 
