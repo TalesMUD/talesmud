@@ -24,6 +24,13 @@ func (csh *CharactersHandler) GetCharacters(c *gin.Context) {
 	}
 }
 
+//GetCharacterTemplates returns the list of item templates
+func (csh *CharactersHandler) GetCharacterTemplates(c *gin.Context) {
+	c.JSON(http.StatusOK, csh.Service.GetCharacterTemplates())
+}
+
+
+
 //GetCharacterByID returns a single charactersheet
 func (csh *CharactersHandler) GetCharacterByID(c *gin.Context) {
 

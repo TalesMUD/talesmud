@@ -1,9 +1,6 @@
 package repository
 
 import (
-	"errors"
-
-	log "github.com/sirupsen/logrus"
 
 	"github.com/talesmud/talesmud/pkg/db"
 	e "github.com/talesmud/talesmud/pkg/entities"
