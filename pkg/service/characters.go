@@ -14,7 +14,7 @@ type CharactersService interface {
 	r.CharactersRepository
 
 	IsCharacterNameTaken(name string) bool
-	GetCharacterTemplates() []*characters.Character
+	GetCharacterTemplates() []characters.Character
 }
 
 //--- Implementations
