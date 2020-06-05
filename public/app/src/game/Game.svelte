@@ -96,7 +96,7 @@
 
   onMount(async () => {
     // change global background
-    document.body.style.backgroundImage = "url('bg.jpg')";
+    document.body.style.backgroundImage = "url('/bg.jpg')";
     document.body.style.backdropFilter =
       "blur(10px) saturate(30%) brightness(50%)";
 

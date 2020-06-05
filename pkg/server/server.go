@@ -255,7 +255,10 @@ func (app *app) setupRoutes() {
 	ws.Use(app.authMiddleware())
 	ws.GET("", app.mud.HandleConnections)
 
-	r.Use(static.Serve("/", static.LocalFile("public/app/public/", false)))
+	staticHandler := static.Serve("/", static.LocalFile("public/app/public/", false))
+	r.Use(staticHandler)
+	r.NoRoute(staticHandler)
+
 }
 
 // Run ... starts the server

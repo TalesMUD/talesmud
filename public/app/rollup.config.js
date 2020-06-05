@@ -15,10 +15,10 @@ export default {
 		sourcemap: true,
 		format: 'iife',
 		name: 'app',
-		file: 'public/build/bundle.js'
+		file: 'public/bundle.js'
 	},
 	plugins: [
-		css({ output: "public/build/extra.css" }),
+		css({ output: "public/extra.css" }),
 
 		svelte({
 			// enable run-time checks when not in production
@@ -26,7 +26,7 @@ export default {
 			// we'll extract any component CSS out into
 			// a separate file - better for performance
 			css: css => {
-				css.write('public/build/bundle.css');
+				css.write('public/bundle.css');
 			}
 		}),
 
