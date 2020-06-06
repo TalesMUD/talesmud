@@ -86,7 +86,8 @@ func (repo *GenericRepo) FindAllWithParam(params *db.QueryParams, collector elem
 		err := cursor.Decode(elem)
 		if err != nil {
 			log.WithError(err).Error("Could not decode element")
-			return errors.New("Could not decode element")
+			//	return errors.New("Could not decode element")
+			continue
 		}
 		collector(elem)
 	}
@@ -122,7 +123,7 @@ func (repo *GenericRepo) Store(entity interface{}) (interface{}, error) {
 		return nil, error
 	} else {
 		if oid, ok := result.InsertedID.(primitive.ObjectID); ok {
-			if n, ok := entity.(e.Entity); ok {
+			if n, ok := entity.(*e.Entity); ok {
 				n.ID = oid
 			}
 		}

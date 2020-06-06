@@ -78,13 +78,12 @@ func (repo *charactersRepository) FindAllForUser(userID string) ([]*e.Character,
 func (repo *charactersRepository) FindByName(name string) ([]*e.Character, error) {
 	results := make([]*e.Character, 0)
 
-	if err := repo.GenericRepo.FindAllWithParam(
+	repo.GenericRepo.FindAllWithParam(
 		db.NewQueryParams(db.QueryParam{Key: "name", Value: name}),
 		func(elem interface{}) {
 			results = append(results, elem.(*e.Character))
-		}); err != nil {
-		return nil, err
-	}
+		})
+
 	return results, nil
 }
 
@@ -112,5 +111,9 @@ func (repo *charactersRepository) Store(character *e.Character) (*e.Character, e
 }
 func (repo *charactersRepository) Import(character *e.Character) (*e.Character, error) {
 	result, err := repo.GenericRepo.Store(character)
-	return result.(*e.Character), err
+
+	if result == nil {
+		return nil, err
+	}
+	return result.(*e.Character), nil
 }

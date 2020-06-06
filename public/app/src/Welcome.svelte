@@ -9,6 +9,7 @@
 </style>
 
 <script>
+  import CharacterCreator from "./characters/CharacterCreator.svelte";
   import { onMount } from "svelte";
 
   import { createAuth, getAuth } from "./auth.js";
@@ -41,7 +42,7 @@
 
   $: {
     if (!loaded && !$isLoading && $isAuthenticated) {
-      loaded = true
+      loaded = true;
       getUser(
         $authToken,
         (user) => {
@@ -100,19 +101,6 @@
     <li>Update #2</li>
   </ul>
 
-  <!-- Modal Structure -->
-  <div id="modal1" class="modal">
-    <div class="modal-content">
-      <h4>Create new Character</h4>
-      <p>A bunch of text</p>
-    </div>
-    <div class="modal-footer">
-      <a href="#!" class="modal-close waves-effect waves-red btn-flat">
-        Cancel
-      </a>
-      <a href="#!" class="modal-close waves-effect waves-green btn-flat">
-        Create
-      </a>
-    </div>
-  </div>
+  <CharacterCreator />
+
 </div>

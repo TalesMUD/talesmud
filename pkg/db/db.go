@@ -50,11 +50,11 @@ func (qp *QueryParams) With(param QueryParam) *QueryParams {
 // AsBSON ...
 func (qp QueryParams) AsBSON() bson.M {
 
-	var result bson.M
+	result := bson.M{}
 	for _, p := range qp.params {
-		if _, ok := result[p.Key]; ok {
-			result[p.Key] = p.Value
-		}
+
+		result[p.Key] = p.Value
+
 	}
 	return result
 }

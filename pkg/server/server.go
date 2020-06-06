@@ -227,25 +227,32 @@ func (app *app) setupRoutes() {
 	}
 
 	// user,
-	apiv1 := r.Group("/api/")
-	apiv1.Use(app.authMiddleware())
+	protected := r.Group("/api/")
+	protected.Use(app.authMiddleware())
 	{
-		apiv1.GET("characters", csh.GetCharacters)
-		apiv1.POST("characters", csh.PostCharacter)
-		apiv1.GET("characters/:id", csh.GetCharacterByID)
-		apiv1.DELETE("characters/:id", csh.DeleteCharacterByID)
-		apiv1.PUT("characters/:id", csh.UpdateCharacterByID)
+		// CRUD
+		protected.GET("characters", csh.GetCharacters)
+		protected.POST("characters", csh.PostCharacter)
+		protected.GET("characters/:id", csh.GetCharacterByID)
+		protected.DELETE("characters/:id", csh.DeleteCharacterByID)
+		protected.PUT("characters/:id", csh.UpdateCharacterByID)
+		// special
+		protected.POST("newcharacter", csh.CreateNewCharacter)
 
-		apiv1.GET("rooms", rooms.GetRooms)
-		apiv1.POST("rooms", rooms.PostRoom)
-		apiv1.PUT("rooms/:id", rooms.PutRoom)
-		apiv1.DELETE("rooms/:id", rooms.DeleteRoom)
+		protected.GET("rooms", rooms.GetRooms)
+		protected.POST("rooms", rooms.PostRoom)
+		protected.PUT("rooms/:id", rooms.PutRoom)
+		protected.DELETE("rooms/:id", rooms.DeleteRoom)
 
-		apiv1.GET("world/map", worldRenderer.Render)
+		protected.GET("world/map", worldRenderer.Render)
 
-		apiv1.GET("user", usr.GetUser)
-		apiv1.PUT("user", usr.UpdateUser)
+		protected.GET("user", usr.GetUser)
+		protected.PUT("user", usr.UpdateUser)
+	}
 
+	public := r.Group("/api/")
+	{
+		public.GET("templates/characters", csh.GetCharacterTemplates)
 	}
 
 	// Start MUD Server
