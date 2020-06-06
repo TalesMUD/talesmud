@@ -6,7 +6,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
-	"github.com/talesmud/talesmud/pkg/entities/traits"
 	r "github.com/talesmud/talesmud/pkg/repository"
 	"github.com/talesmud/talesmud/pkg/server/dto"
 )
@@ -51,10 +50,7 @@ func (srv *charactersService) CreateNewCharacter(dto *dto.CreateCharacterDTO) (*
 		//character.Entity = entities.NewEntity()
 		character.Name = dto.Name
 		character.Description = dto.Description
-		character.BelongsUser = &traits.BelongsUser{}
-		character.BelongsUser = &traits.BelongsUser{
-			BelongsUserID: dto.UserID,
-		}
+		character.BelongsUserID = dto.UserID
 
 		if createdCharacter, err := srv.Store(character); err == nil {
 
