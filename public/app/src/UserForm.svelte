@@ -24,6 +24,8 @@
   import axios from "axios";
   import { onInterval } from "./utils.js";
 
+  import { getUser, updateUser } from "./api/user.js";
+
   let user = writable({});
 
   const {
@@ -46,27 +48,19 @@
   };
 
   $: {
-    axios(`http://localhost:8010/api/user`, {
-      method: "GET",
-      mode: "no-cors",
-      credentials: "same-origin",
-      headers: {
-        Authorization: `Bearer ${$authToken}`,
+    getUser(
+      $authToken,
+      (u) => {
+        user.set(u);
       },
-    }).then((r) => {
-      user.update((u) => r.data);
-      
-    });
+      (err) => console.log(err)
+    );
   }
 
   async function handleSubmit(event) {
     if ($isAuthenticated) {
-      axios.put(`http://localhost:8010/api/user`, $user, {
-        mode: "no-cors",
-        credentials: "same-origin",
-        headers: {
-          Authorization: `Bearer ${$authToken}`,
-        },
+      updateUser($authToken, $user, () => {
+        console.log("user updated ");
       });
     }
   }
@@ -78,12 +72,7 @@
 
     <div class="row">
       <div class="input-field col s12">
-        <input
-          bind:value="{$user.refid}"
-          id="refid"
-          type="text"
-          disabled
-        />
+        <input bind:value="{$user.refid}" id="refid" type="text" disabled />
         <label id="refidlabel" for="refid" class="active">Reference ID</label>
       </div>
     </div>

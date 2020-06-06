@@ -94,54 +94,61 @@ func (game *Game) handleUserJoined(user *entities.User) {
 
 	}
 
-	character, _ := game.Facade.CharactersService().FindByID(user.LastCharacter)
+	if character, err := game.Facade.CharactersService().FindByID(user.LastCharacter); err != nil {
 
-	characterSelected := &messages.CharacterSelected{
-		MessageResponse: messages.MessageResponse{
-			Audience:   messages.MessageAudienceOrigin,
-			AudienceID: user.ID.Hex(),
-			Type:       m.MessageTypeCharacterSelected,
-			Message:    fmt.Sprintf("You are now playing as [%v]", character.Name),
-		},
-		Character: character,
-	}
+		log.WithField("user", user.Name).Error("Could not select character for user")
+		// player character may be broken, let the user create a new one
+		game.SendMessage(messages.NewCreateCharacterMessage(user.ID.Hex()))
 
-	game.SendMessage(characterSelected)
+	} else {
 
-	if character, err := game.Facade.CharactersService().FindByID(user.LastCharacter); err == nil {
-
-		var currentRoom *rooms.Room
-
-		// new character or not part of a room?
-		if character.CurrentRoomID == "" {
-			// find a random room to start in or get starting room
-			rooms, _ := game.Facade.RoomsService().FindAll()
-
-			if len(rooms) > 0 {
-				// TOOD make this random or select a starting room
-				currentRoom = rooms[0]
-			}
-		} else {
-			if currentRoom, err = game.Facade.RoomsService().FindByID(character.CurrentRoomID); err != nil {
-				log.WithField("room", character.CurrentRoomID).Warn("CurrentRoomID for player not found")
-			}
+		characterSelected := &messages.CharacterSelected{
+			MessageResponse: messages.MessageResponse{
+				Audience:   messages.MessageAudienceOrigin,
+				AudienceID: user.ID.Hex(),
+				Type:       m.MessageTypeCharacterSelected,
+				Message:    fmt.Sprintf("You are now playing as [%v]", character.Name),
+			},
+			Character: character,
 		}
 
-		// update room // send these state change messages via channel
-		currentRoom.AddCharacter(character.ID.Hex())
-		game.Facade.RoomsService().Update(currentRoom.ID.Hex(), currentRoom)
+		game.SendMessage(characterSelected)
 
-		enterRoom := m.NewEnterRoomMessage(currentRoom)
-		enterRoom.AudienceID = user.ID.Hex()
-		game.SendMessage(enterRoom)
+		if character, err := game.Facade.CharactersService().FindByID(user.LastCharacter); err == nil {
 
-		game.SendMessage(messages.CharacterJoinedRoom{
-			MessageResponse: messages.MessageResponse{
-				Audience:   m.MessageAudienceRoomWithoutOrigin,
-				AudienceID: currentRoom.ID.Hex(),
-				OriginID:   character.ID.Hex(),
-				Message:    character.Name + " entered.",
-			},
-		})
+			var currentRoom *rooms.Room
+
+			// new character or not part of a room?
+			if character.CurrentRoomID == "" {
+				// find a random room to start in or get starting room
+				rooms, _ := game.Facade.RoomsService().FindAll()
+
+				if len(rooms) > 0 {
+					// TOOD make this random or select a starting room
+					currentRoom = rooms[0]
+				}
+			} else {
+				if currentRoom, err = game.Facade.RoomsService().FindByID(character.CurrentRoomID); err != nil {
+					log.WithField("room", character.CurrentRoomID).Warn("CurrentRoomID for player not found")
+				}
+			}
+
+			// update room // send these state change messages via channel
+			currentRoom.AddCharacter(character.ID.Hex())
+			game.Facade.RoomsService().Update(currentRoom.ID.Hex(), currentRoom)
+
+			enterRoom := m.NewEnterRoomMessage(currentRoom)
+			enterRoom.AudienceID = user.ID.Hex()
+			game.SendMessage(enterRoom)
+
+			game.SendMessage(messages.CharacterJoinedRoom{
+				MessageResponse: messages.MessageResponse{
+					Audience:   m.MessageAudienceRoomWithoutOrigin,
+					AudienceID: currentRoom.ID.Hex(),
+					OriginID:   character.ID.Hex(),
+					Message:    character.Name + " entered.",
+				},
+			})
+		}
 	}
 }
