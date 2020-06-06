@@ -21491,10 +21491,10 @@ var app = (function () {
   	let span0;
   	let t1;
   	let t2;
+  	let span1;
   	let t3;
   	let t4;
   	let t5;
-  	let span1;
   	let t6;
   	let t7;
   	let div1;
@@ -21510,13 +21510,13 @@ var app = (function () {
   			img = element("img");
   			t0 = space();
   			span0 = element("span");
-  			t1 = text("#");
-  			t2 = text(/*level*/ ctx[2]);
-  			t3 = text(" +");
-  			t4 = text(/*xp*/ ctx[3]);
-  			t5 = space();
+  			t1 = text(/*name*/ ctx[0]);
+  			t2 = space();
   			span1 = element("span");
-  			t6 = text(/*name*/ ctx[0]);
+  			t3 = text("LVL ");
+  			t4 = text(/*level*/ ctx[2]);
+  			t5 = text(" - XP ");
+  			t6 = text(/*xp*/ ctx[3]);
   			t7 = space();
   			div1 = element("div");
   			p0 = element("p");
@@ -21529,15 +21529,15 @@ var app = (function () {
   			attr_dev(img, "class", "circle img svelte-kodkpu");
   			add_location(img, file$8, 34, 6, 660);
   			attr_dev(span0, "class", "card-title");
-  			add_location(span0, file$8, 35, 6, 717);
-  			attr_dev(span1, "class", "card-title");
-  			add_location(span1, file$8, 37, 6, 771);
+  			add_location(span0, file$8, 35, 12, 723);
+  			attr_dev(span1, "class", "card-content");
+  			add_location(span1, file$8, 36, 6, 768);
   			attr_dev(div0, "class", "card-content white-text");
   			add_location(div0, file$8, 33, 4, 616);
-  			add_location(p0, file$8, 40, 6, 858);
-  			add_location(p1, file$8, 41, 6, 885);
+  			add_location(p0, file$8, 41, 6, 874);
+  			add_location(p1, file$8, 42, 6, 901);
   			attr_dev(div1, "class", "card-content");
-  			add_location(div1, file$8, 39, 4, 825);
+  			add_location(div1, file$8, 40, 4, 841);
   			attr_dev(div2, "class", "card cyan darken-3 hoverable characterCard center-align svelte-kodkpu");
   			add_location(div2, file$8, 32, 2, 542);
   		},
@@ -21551,11 +21551,11 @@ var app = (function () {
   			append_dev(div0, t0);
   			append_dev(div0, span0);
   			append_dev(span0, t1);
-  			append_dev(span0, t2);
-  			append_dev(span0, t3);
-  			append_dev(span0, t4);
-  			append_dev(div0, t5);
+  			append_dev(div0, t2);
   			append_dev(div0, span1);
+  			append_dev(span1, t3);
+  			append_dev(span1, t4);
+  			append_dev(span1, t5);
   			append_dev(span1, t6);
   			append_dev(div2, t7);
   			append_dev(div2, div1);
@@ -21565,9 +21565,9 @@ var app = (function () {
   			append_dev(div1, p1);
   		},
   		p: function update(ctx, [dirty]) {
-  			if (dirty & /*level*/ 4) set_data_dev(t2, /*level*/ ctx[2]);
-  			if (dirty & /*xp*/ 8) set_data_dev(t4, /*xp*/ ctx[3]);
-  			if (dirty & /*name*/ 1) set_data_dev(t6, /*name*/ ctx[0]);
+  			if (dirty & /*name*/ 1) set_data_dev(t1, /*name*/ ctx[0]);
+  			if (dirty & /*level*/ 4) set_data_dev(t4, /*level*/ ctx[2]);
+  			if (dirty & /*xp*/ 8) set_data_dev(t6, /*xp*/ ctx[3]);
   			if (dirty & /*description*/ 2) set_data_dev(t8, /*description*/ ctx[1]);
   		},
   		i: noop,
@@ -23285,12 +23285,8 @@ var app = (function () {
   	});
   }
 
-  //const backend = "http://localhost:8010/api"
-  //const wsbackend = "ws://localhost:8010/ws"
-
-  //TODO: make this configurable
-  const backend = "/api";
-  const wsbackend = "wss://talesofapirate.com/ws";
+  const backend = "http://localhost:8010/api";
+  const wsbackend = "ws://localhost:8010/ws";
 
   function getCharacters(token, cb, errorCb) {
       console.log ("using backend " + backend);
@@ -23337,21 +23333,21 @@ var app = (function () {
   			t5 = space();
   			a1 = element("a");
   			a1.textContent = "Create";
-  			add_location(h4, file$9, 48, 4, 978);
-  			add_location(p, file$9, 49, 4, 1012);
+  			add_location(h4, file$9, 50, 4, 1028);
+  			add_location(p, file$9, 51, 4, 1062);
   			attr_dev(div0, "class", "modal-content");
-  			add_location(div0, file$9, 47, 2, 946);
+  			add_location(div0, file$9, 49, 2, 996);
   			attr_dev(a0, "href", "#!");
   			attr_dev(a0, "class", "modal-close waves-effect waves-red btn-flat");
-  			add_location(a0, file$9, 52, 4, 1077);
+  			add_location(a0, file$9, 54, 4, 1127);
   			attr_dev(a1, "href", "#!");
   			attr_dev(a1, "class", "modal-close waves-effect waves-green btn-flat");
-  			add_location(a1, file$9, 53, 4, 1157);
+  			add_location(a1, file$9, 55, 4, 1207);
   			attr_dev(div1, "class", "modal-footer");
-  			add_location(div1, file$9, 51, 2, 1046);
+  			add_location(div1, file$9, 53, 2, 1096);
   			attr_dev(div2, "id", "modal1");
-  			attr_dev(div2, "class", "modal");
-  			add_location(div2, file$9, 46, 0, 912);
+  			attr_dev(div2, "class", "modal svelte-kmiq8r");
+  			add_location(div2, file$9, 48, 0, 962);
   		},
   		l: function claim(nodes) {
   			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");

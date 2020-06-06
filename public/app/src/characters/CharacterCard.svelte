@@ -33,9 +33,10 @@
   <div class="card cyan darken-3 hoverable characterCard center-align">
     <div class="card-content white-text">
       <img src="{avatar()}" alt="" class="circle img" />
-      <span class="card-title">#{level} +{xp}</span>
+            <span class="card-title">{name}</span>
+      <span class="card-content">LVL {level} - XP {xp}</span>
 
-      <span class="card-title">{name}</span>
+
     </div>
     <div class="card-content">
       <p>{description}</p>

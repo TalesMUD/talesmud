@@ -85,6 +85,7 @@ func (repo *GenericRepo) FindAllWithParam(params *db.QueryParams, collector elem
 		elem := repo.generator()
 		err := cursor.Decode(elem)
 		if err != nil {
+			log.WithError(err).Error("Could not decode element")
 			return errors.New("Could not decode element")
 		}
 		collector(elem)

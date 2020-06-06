@@ -23,7 +23,10 @@ func (game *Game) handleDefaultMessage(message *messages.Message) {
 	}
 
 	out := messages.NewOutgoingMessage(user, message.Data)
-	out.AudienceID = message.Character.CurrentRoomID
+
+	if message.Character != nil {
+		out.AudienceID = message.Character.CurrentRoomID
+	}
 
 	game.SendMessage(out)
 }
