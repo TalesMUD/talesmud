@@ -1,5 +1,7 @@
 <style>
-
+ .modal {
+    background-color: darkslategrey;
+  }
 </style>
 
 <script>

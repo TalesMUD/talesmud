@@ -28,9 +28,9 @@ func NewAttribute(name, short string, value int32) Attribute {
 
 //Character data
 type Character struct {
-	*entities.Entity `bson:",inline"`
-	traits.BelongsUser
-	traits.CurrentRoom
+	*entities.Entity    `bson:",inline"`
+	*traits.BelongsUser `bson:",inline"`
+	*traits.CurrentRoom `bson:",inline"`
 
 	Name        string `json:"name"`
 	Description string `json:"description"`

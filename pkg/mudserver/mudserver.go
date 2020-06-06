@@ -158,6 +158,11 @@ func (server *server) sendToRoomWithout(id string, room *rooms.Room, msg interfa
 		log.WithField("origin", id).Info("Sending to room without origin")
 	}
 
+	if room == nil {
+		log.WithField("origin", id).Info("MUDServer::sendToRoomWithout - room is nil (user has no character?)")
+		return
+	}
+
 	usersInRoom := []string{}
 
 	//TODO build service that reads all users from
