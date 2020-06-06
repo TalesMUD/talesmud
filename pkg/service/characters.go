@@ -51,6 +51,7 @@ func (srv *charactersService) CreateNewCharacter(dto *dto.CreateCharacterDTO) (*
 		//character.Entity = entities.NewEntity()
 		character.Name = dto.Name
 		character.Description = dto.Description
+		character.BelongsUser = &traits.BelongsUser{}
 		character.BelongsUser = &traits.BelongsUser{
 			BelongsUserID: dto.UserID,
 		}

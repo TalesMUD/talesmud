@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
+	"github.com/talesmud/talesmud/pkg/entities/traits"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	m "github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 )
@@ -117,6 +118,10 @@ func (game *Game) handleUserJoined(user *entities.User) {
 		if character, err := game.Facade.CharactersService().FindByID(user.LastCharacter); err == nil {
 
 			var currentRoom *rooms.Room
+
+			if character.CurrentRoom == nil {
+				character.CurrentRoom = &traits.CurrentRoom{}
+			}
 
 			// new character or not part of a room?
 			if character.CurrentRoomID == "" {
