@@ -7,7 +7,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
-	"github.com/talesmud/talesmud/pkg/entities/traits"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	m "github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 )
@@ -119,10 +118,6 @@ func (game *Game) handleUserJoined(user *entities.User) {
 
 			var currentRoom *rooms.Room
 
-			if character.CurrentRoom == nil {
-				character.CurrentRoom = &traits.CurrentRoom{}
-			}
-
 			// new character or not part of a room?
 			if character.CurrentRoomID == "" {
 				// find a random room to start in or get starting room
@@ -131,6 +126,11 @@ func (game *Game) handleUserJoined(user *entities.User) {
 				if len(rooms) > 0 {
 					// TOOD make this random or select a starting room
 					currentRoom = rooms[0]
+
+					//TODO: send this as message
+					character.CurrentRoomID = currentRoom.ID.Hex()
+					game.Facade.CharactersService().Update(character.ID.Hex(), character)
+
 				}
 			} else {
 				if currentRoom, err = game.Facade.RoomsService().FindByID(character.CurrentRoomID); err != nil {
