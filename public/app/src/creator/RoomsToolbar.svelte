@@ -36,20 +36,22 @@
   export let addAction;
 </script>
 
-<ul>
-  <li class="header">Manage Rooms</li>
-  <li>
-    <button class="btn-flat green" on:click="{createRoom()}">
-      Create New Room
-    </button>
-  </li>
-  <li>
-    <button class="btn-flat blue" on:click="{addExit()}">Create Exit</button>
-  </li>
-  <li>
-    <button class="btn-flat blue" on:click="{addAction()}">
-      Create Action
-    </button>
-  </li>
+<div class="row">
+  <ul>
+    <li class="header">Manage Rooms</li>
+    <li>
+      <button class="btn-flat green" on:click="{createRoom()}">
+        Create New Room
+      </button>
+    </li>
+    <li>
+      <button class="btn-flat blue" on:click="{addExit()}">Create Exit</button>
+    </li>
+    <li>
+      <button class="btn-flat blue" on:click="{addAction()}">
+        Create Action
+      </button>
+    </li>
 
-</ul>
+  </ul>
+</div>

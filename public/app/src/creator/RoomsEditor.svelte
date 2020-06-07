@@ -218,68 +218,67 @@
   </div>
 
   {#if $store.selectedRoom}
-    <div>
+    <div class="col s9">
 
-      <div class="col s12 m8">
-        <div class="card-panel cyan darken-4">
+      <div class="card-panel cyan darken-4">
 
-          <input
-            placeholder="Room Name"
-            id="room_name"
-            type="text"
-            bind:value="{$store.selectedRoom.name}"
-            class="col s8"
-          />
+        <input
+          placeholder="Room Name"
+          id="room_name"
+          type="text"
+          bind:value="{$store.selectedRoom.name}"
+          class="col s8"
+        />
 
-          {#if $store.selectedRoom.isNew}
-            <button
-              on:click="{() => create()}"
-              class="waves-effect waves-light btn-small green"
-            >
-              Create
-            </button>
-          {:else}
-            <button
-              on:click="{() => update()}"
-              class="waves-effect waves-light btn-small green right"
-            >
-              Update
-            </button>
-            <button
-              on:click="{() => delRoom()}"
-              class="waves-effect waves-light btn-small red right"
-            >
-              Delete
-            </button>
-          {/if}
-
-          <input
-            placeholder="Room ID"
-            id="room_id"
-            type="text"
-            value="{$store.selectedRoom.id}"
-            disabled
-          />
-
-          <textarea
-            placeholder="Room Description"
-            id="room_description"
-            type="text"
-            class="materialize-textarea"
-            bind:value="{$store.selectedRoom.description}"
-          ></textarea>
-
-        </div>
-
-        {#if $store.selectedRoom.exits}
-          <h6>Exits</h6>
-          <ul class="collapsible popout">
-            {#each $store.selectedRoom.exits as exit}
-              <ActionEditor exit="{exit}" deleteExit="{deleteExit}" />
-            {/each}
-          </ul>
+        {#if $store.selectedRoom.isNew}
+          <button
+            on:click="{() => create()}"
+            class="waves-effect waves-light btn-small green"
+          >
+            Create
+          </button>
+        {:else}
+          <button
+            on:click="{() => update()}"
+            class="waves-effect waves-light btn-small green right"
+          >
+            Update
+          </button>
+          <button
+            on:click="{() => delRoom()}"
+            class="waves-effect waves-light btn-small red right"
+          >
+            Delete
+          </button>
         {/if}
+
+        <input
+          placeholder="Room ID"
+          id="room_id"
+          type="text"
+          value="{$store.selectedRoom.id}"
+          disabled
+        />
+
+        <textarea
+          placeholder="Room Description"
+          id="room_description"
+          type="text"
+          class="materialize-textarea"
+          bind:value="{$store.selectedRoom.description}"
+        ></textarea>
+
       </div>
+
+      {#if $store.selectedRoom.exits}
+        <h6>Exits</h6>
+        <ul class="collapsible popout">
+          {#each $store.selectedRoom.exits as exit}
+            <ActionEditor exit="{exit}" deleteExit="{deleteExit}" />
+          {/each}
+        </ul>
+      {/if}
+
     </div>
   {/if}
 </div>
