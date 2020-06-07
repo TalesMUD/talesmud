@@ -59,6 +59,15 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 
 	var currentRoom *rooms.Room
 	var err error
+
+	if character.CurrentRoomID != "" {
+		if currentRoom, err = game.GetFacade().RoomsService().FindByID(character.CurrentRoomID); err != nil {
+			log.WithField("room", character.CurrentRoomID).Warn("CurrentRoomID for player not found (room might have been deleted or temporary)")
+			// set to ""
+			character.CurrentRoomID = ""
+		}
+	}
+
 	// new character or not part of a room?
 	if character.CurrentRoomID == "" {
 		// find a random room to start in or get starting room
@@ -72,10 +81,6 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 			character.CurrentRoomID = currentRoom.ID.Hex()
 			game.GetFacade().CharactersService().Update(character.ID.Hex(), character)
 
-		}
-	} else {
-		if currentRoom, err = game.GetFacade().RoomsService().FindByID(character.CurrentRoomID); err != nil {
-			log.WithField("room", character.CurrentRoomID).Warn("CurrentRoomID for player not found")
 		}
 	}
 
