@@ -2,10 +2,12 @@ body{background-color:#232333;color:#d8dee9;transition:background-color 0.3s;mar
 input.svelte-10o4r89{color:#eee}#refid.svelte-10o4r89{color:#999}#refidlabel.svelte-10o4r89{color:#999}
 .userbutton.svelte-1ujdy1x{margin-right:1em}.btn-small.svelte-1ujdy1x{color:#eee}.img.svelte-1ujdy1x{width:42px}
 .loginText.svelte-8qrmfc{color:greenyellow}
-.img.svelte-kodkpu{width:64px}.characterCard.svelte-kodkpu{width:250px;height:300px;margin:2em}
 .modal.svelte-zc7mv9{background-color:darkslategrey}input.svelte-zc7mv9{color:#eee}
+.img.svelte-turzkp{width:64px}.characterCard.svelte-turzkp{width:250px;height:220px;margin:2em}.card-title.svelte-turzkp{font-size:10px}
 .img.svelte-5kfd56{width:64px}.characterCard.svelte-5kfd56{width:250px}td.svelte-5kfd56{padding:2px}
-textarea.svelte-gfhy5w{color:white;margin-top:1em}input.svelte-gfhy5w{color:white}input.svelte-gfhy5w:disabled{color:white}.title.svelte-gfhy5w{font-size:2em}.btn-small.svelte-gfhy5w{margin-right:0.5em;margin-left:0.5em}.collection-item.svelte-gfhy5w{color:#333}.collection.svelte-gfhy5w{color:#333}.materialize-textarea.svelte-gfhy5w{border-bottom:none}
+.collapsible-header.svelte-1bo8y5f{color:#333}.collapsible-body.svelte-1bo8y5f{padding:1em;margin:1em}label.svelte-1bo8y5f{color:#eee}input.svelte-1bo8y5f{color:white}input.svelte-1bo8y5f:disabled{color:white}
+textarea.svelte-h9lw1s{color:white;margin-top:1em}input.svelte-h9lw1s{color:white}input.svelte-h9lw1s:disabled{color:white}.btn-small.svelte-h9lw1s{margin-right:0.5em;margin-left:0.5em}.collection-item.svelte-h9lw1s{color:#333}.collection.svelte-h9lw1s{color:#333}.materialize-textarea.svelte-h9lw1s{border-bottom:none}
+ul.svelte-13xq72.svelte-13xq72{display:flex;justify-content:flex-end;flex-direction:row;align-items:center;padding:15px}ul.svelte-13xq72 li.svelte-13xq72{display:inline-block;list-style:none;color:#eee}.btn-flat.svelte-13xq72.svelte-13xq72{color:#eee;margin:5px}.header.svelte-13xq72.svelte-13xq72{font-weight:500;font-size:200%}ul.svelte-13xq72 li.svelte-13xq72:first-child{margin-right:auto}
 #terminalWindow.svelte-19cdi4u{padding:1em;background:#000;border-width:2px;border-style:solid;border-color:#33ff2266;border-radius:0.5em;margin-top:10em}
 
 /*# sourceMappingURL=bundle.css.map */

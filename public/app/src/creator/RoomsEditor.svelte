@@ -31,13 +31,15 @@
   .materialize-textarea {
     border-bottom: none;
   }
-
   label {
     color: #eee;
   }
 </style>
 
 <script>
+  import ActionEditor from "./ActionEditor.svelte";
+  import RoomsToolbar from "./RoomsToolbar.svelte";
+
   import { store } from "./RoomsEditorStore.js";
   import { PlusIcon } from "svelte-feather-icons";
   import { writable } from "svelte/store";
@@ -92,8 +94,10 @@
     });
 
     loadData(() => {
-      store.setSelectedRoom($store.rooms[0]);
-      M.updateTextFields();
+      store.setSelectedRoom($store.rooms[0], () => {
+        var elems = document.querySelectorAll(".collapsible");
+        var instances = M.Collapsible.init(elems);
+      });
     });
   });
 
@@ -111,7 +115,10 @@
       newRoom,
       (room) => {
         loadData();
-        store.setSelectedRoom(room);
+        store.setSelectedRoom(room, () => {
+          var elems = document.querySelectorAll(".collapsible");
+          var instances = M.Collapsible.init(elems);
+        });
       },
       (err) => console.log(err)
     );
@@ -147,6 +154,39 @@
       }
     );
   };
+  const deleteExit = (exit) => {
+    store.deleteExit(exit);
+  };
+  const createExit = () => {
+    store.createExit();
+    M.updateTextFields();
+    var elems = document.querySelectorAll(".collapsible");
+    if (elems != undefined) {
+      var instances = M.Collapsible.init(elems, {});
+    }
+  };
+  const selectRoom = (room) => {
+    store.setSelectedRoom(room, () => {
+      M.updateTextFields();
+      var elems = document.querySelectorAll(".collapsible");
+      if (elems != undefined) {
+        var instances = M.Collapsible.init(elems, {});
+      }
+    });
+
+    var targets = document.querySelectorAll(".autocomplete");
+    const options = {
+      data: {},
+      onAutocomplete: function (roomName) {
+        console.log(roomName);
+      },
+    };
+
+    $store.rooms.forEach((value) => {
+      options.data[value.name] = null;
+    });
+    var targetInstances = M.Autocomplete.init(targets, options);
+  };
   const update = () => {
     updateRoom(
       $authToken,
@@ -163,22 +203,14 @@
   };
 </script>
 
+<RoomsToolbar createRoom="{newRoom}" addExit="{createExit}" />
+
 <div class="row">
-  <div class="row">
-    <span class="title col s6 valign-wrapper">Manage Rooms</span>
-    <button on:click="{() => newRoom()}" class="waves-effect waves-light btn-small green col s2">
-      <PlusIcon size="14" />
-      NEW
-    </button>
-  </div>
+
   <div class="col s3">
     <div class="collection">
       {#each $store.rooms as room}
-        <a
-          href="#!"
-          class="collection-item"
-          on:click="{store.setSelectedRoom(room)}"
-        >
+        <a href="#!" class="collection-item" on:click="{selectRoom(room)}">
           {room.name}
         </a>
       {/each}
@@ -200,14 +232,23 @@
           />
 
           {#if $store.selectedRoom.isNew}
-            <button on:click="{() => create()}" class="waves-effect waves-light btn-small green">
+            <button
+              on:click="{() => create()}"
+              class="waves-effect waves-light btn-small green"
+            >
               Create
             </button>
           {:else}
-            <button on:click="{() => update()}" class="waves-effect waves-light btn-small green right">
+            <button
+              on:click="{() => update()}"
+              class="waves-effect waves-light btn-small green right"
+            >
               Update
             </button>
-            <button on:click="{() => delRoom()}" class="waves-effect waves-light btn-small red right">
+            <button
+              on:click="{() => delRoom()}"
+              class="waves-effect waves-light btn-small red right"
+            >
               Delete
             </button>
           {/if}
@@ -232,20 +273,13 @@
 
         {#if $store.selectedRoom.exits}
           <h6>Exits</h6>
-
-          <ul class="collection">
-
+          <ul class="collapsible popout">
             {#each $store.selectedRoom.exits as exit}
-              <li class="collection-item">
-                <div>{exit.name}</div>
-                <div>{exit.description}</div>
-              </li>
+              <ActionEditor exit="{exit}" deleteExit="{deleteExit}" />
             {/each}
           </ul>
         {/if}
-
       </div>
-
     </div>
   {/if}
 </div>
