@@ -1,14 +1,11 @@
 package game
 
 import (
-	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/entities"
-	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
-	m "github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 )
 
 func (game *Game) handleDefaultMessage(message *messages.Message) {
@@ -22,7 +19,7 @@ func (game *Game) handleDefaultMessage(message *messages.Message) {
 		}
 	}
 
-	out := messages.NewOutgoingMessage(user, message.Data)
+	out := messages.NewRoomBasedMessage(user, message.Data)
 
 	if message.Character != nil {
 		out.AudienceID = message.Character.CurrentRoomID
@@ -73,7 +70,6 @@ func (game *Game) attachCharacterToMessage(msg *messages.Message) {
 func (game *Game) handleUserJoined(user *entities.User) {
 
 	// get active character for user
-
 	if user.LastCharacter == "" {
 
 		if chars, err := game.Facade.CharactersService().FindAllForUser(user.ID.Hex()); err == nil {
@@ -102,58 +98,9 @@ func (game *Game) handleUserJoined(user *entities.User) {
 
 	} else {
 
-		characterSelected := &messages.CharacterSelected{
-			MessageResponse: messages.MessageResponse{
-				Audience:   messages.MessageAudienceOrigin,
-				AudienceID: user.ID.Hex(),
-				Type:       m.MessageTypeCharacterSelected,
-				Message:    fmt.Sprintf("You are now playing as [%v]", character.Name),
-			},
-			Character: character,
-		}
+		// send message as userwould do it
+		selectCharacterMsg := messages.NewMessage(user, "selectcharacter "+character.Name)
 
-		game.SendMessage(characterSelected)
-
-		if character, err := game.Facade.CharactersService().FindByID(user.LastCharacter); err == nil {
-
-			var currentRoom *rooms.Room
-
-			// new character or not part of a room?
-			if character.CurrentRoomID == "" {
-				// find a random room to start in or get starting room
-				rooms, _ := game.Facade.RoomsService().FindAll()
-
-				if len(rooms) > 0 {
-					// TOOD make this random or select a starting room
-					currentRoom = rooms[0]
-
-					//TODO: send this as message
-					character.CurrentRoomID = currentRoom.ID.Hex()
-					game.Facade.CharactersService().Update(character.ID.Hex(), character)
-
-				}
-			} else {
-				if currentRoom, err = game.Facade.RoomsService().FindByID(character.CurrentRoomID); err != nil {
-					log.WithField("room", character.CurrentRoomID).Warn("CurrentRoomID for player not found")
-				}
-			}
-
-			// update room // send these state change messages via channel
-			currentRoom.AddCharacter(character.ID.Hex())
-			game.Facade.RoomsService().Update(currentRoom.ID.Hex(), currentRoom)
-
-			enterRoom := m.NewEnterRoomMessage(currentRoom)
-			enterRoom.AudienceID = user.ID.Hex()
-			game.SendMessage(enterRoom)
-
-			game.SendMessage(messages.CharacterJoinedRoom{
-				MessageResponse: messages.MessageResponse{
-					Audience:   m.MessageAudienceRoomWithoutOrigin,
-					AudienceID: currentRoom.ID.Hex(),
-					OriginID:   character.ID.Hex(),
-					Message:    character.Name + " entered.",
-				},
-			})
-		}
+		game.OnMessageReceived() <- selectCharacterMsg
 	}
 }

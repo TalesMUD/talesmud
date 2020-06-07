@@ -18,7 +18,7 @@ func (screamCommand *ScreamCommand) Execute(game def.GameCtrl, message *messages
 	newMsg := strings.Join(parts[1:], " ")
 
 	newMessage := "-- " + message.Character.Name + " screams " + strings.ToUpper(newMsg) + "!!!!!"
-	out := messages.NewOutgoingMessage("", newMessage)
+	out := messages.NewRoomBasedMessage("", newMessage)
 	out.AudienceID = message.Character.CurrentRoomID
 
 	game.SendMessage(out)
