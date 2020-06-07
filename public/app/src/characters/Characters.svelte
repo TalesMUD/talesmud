@@ -3,7 +3,7 @@
 </style>
 
 <script>
-  import CharacterCard from "./CharacterCard.svelte";
+  import CharacterScore from "./CharacterScore.svelte";
   import { onMount } from "svelte";
 
   import { createAuth, getAuth } from "../auth.js";
@@ -37,8 +37,8 @@
     getCharacters(
       $authToken,
       (characters) => {
-        data = characters;
-        topTen = characters.slice(0, 9);
+        data = characters.slice(0, 100);
+        topTen = characters.slice(0, 8);
       },
       (err) => console.log(err)
     );
@@ -56,12 +56,11 @@
 
     {#each topTen as character}
       <div class="col s3">
-        <CharacterCard
+        <CharacterScore
           name="{character.name}"
           level="{character.level}"
           xp="{character.xp}"
-          description="{character.description}"
-          created="{character.created}"
+          cclass="{character.class}"
         />
       </div>
     {/each}
@@ -72,18 +71,22 @@
     <table>
       <thead>
         <tr>
+          <th>Level</th>
           <th>Name</th>
+          <th>Class</th>
           <th>Description</th>
-          <th>Created</th>
+          <th>XP</th>
         </tr>
       </thead>
 
       <tbody>
         {#each data as character}
           <tr>
+            <td>{character.level}</td>
             <td>{character.name}</td>
+            <td>{character.class.name}</td>
             <td>{character.description}</td>
-            <td>{character.created}</td>
+            <td>{character.xp}</td>
           </tr>
         {/each}
       </tbody>

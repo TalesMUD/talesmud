@@ -86,7 +86,6 @@ func (repo *GenericRepo) FindAllWithParam(params *db.QueryParams, collector elem
 		err := cursor.Decode(elem)
 		if err != nil {
 			log.WithError(err).Error("Could not decode element")
-			//	return errors.New("Could not decode element")
 			continue
 		}
 		collector(elem)
@@ -108,7 +107,8 @@ func (repo *GenericRepo) FindAll(collector elementCollector) error {
 		elem := repo.generator()
 		err := cursor.Decode(elem)
 		if err != nil {
-			return errors.New("Could not decode element")
+			log.WithError(err).Error("Could not decode element")
+			continue
 		}
 		collector(elem)
 	}
