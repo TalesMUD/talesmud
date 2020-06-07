@@ -122,8 +122,8 @@ func NewEnterRoomMessage(room *rooms.Room) *EnterRoomMessage {
 	}
 }
 
-// NewOutgoingMessage ... creates a new Websocket message
-func NewOutgoingMessage(user string, message string) MessageResponse {
+// NewRoomBasedMessage ... creates a new Websocket message
+func NewRoomBasedMessage(user string, message string) MessageResponse {
 	return MessageResponse{
 		// default
 		Audience: MessageAudienceRoom,
@@ -131,7 +131,17 @@ func NewOutgoingMessage(user string, message string) MessageResponse {
 		Message:  message,
 		Username: user,
 	}
+}
 
+// Reply ... creates a reply message
+func Reply(userID string, message string) MessageResponse {
+	return MessageResponse{
+		// default
+		Audience:   MessageAudienceOrigin,
+		AudienceID: userID,
+		Type:       MessageTypeDefault,
+		Message:    message,
+	}
 }
 
 // NewCreateCharacterMessage ...

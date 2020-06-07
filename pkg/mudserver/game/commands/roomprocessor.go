@@ -28,8 +28,11 @@ func NewRoomProcessor() *RoomProcessor {
 }
 
 // RegisterCommand ... register
-func (roomProcessor *RoomProcessor) RegisterCommand(key string, command RoomCommand) {
-	roomProcessor.commands[key] = command
+func (roomProcessor *RoomProcessor) RegisterCommand(command RoomCommand, keys ...string) {
+
+	for _, key := range keys {
+		roomProcessor.commands[key] = command
+	}
 }
 
 // Process ...asd
@@ -61,15 +64,9 @@ func (roomProcessor *RoomProcessor) Process(game def.GameCtrl, message *messages
 
 func (roomProcessor *RoomProcessor) registerCommands() {
 
-	roomProcessor.RegisterCommand("north", TakeExit("north"))
-	roomProcessor.RegisterCommand("n", TakeExit("north"))
+	roomProcessor.RegisterCommand(TakeExit("north"), "n", "north")
+	roomProcessor.RegisterCommand(TakeExit("south"), "s", "south")
+	roomProcessor.RegisterCommand(TakeExit("east"), "e", "east")
+	roomProcessor.RegisterCommand(TakeExit("west"), "w", "west")
 
-	roomProcessor.RegisterCommand("south", TakeExit("south"))
-	roomProcessor.RegisterCommand("s", TakeExit("south"))
-
-	roomProcessor.RegisterCommand("east", TakeExit("east"))
-	roomProcessor.RegisterCommand("e", TakeExit("east"))
-
-	roomProcessor.RegisterCommand("west", TakeExit("west"))
-	roomProcessor.RegisterCommand("w", TakeExit("west"))
 }

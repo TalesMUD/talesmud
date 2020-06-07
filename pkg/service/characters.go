@@ -15,7 +15,7 @@ import (
 //CharactersService delives logical functions on top of the charactersheets Repo
 type CharactersService interface {
 	r.CharactersRepository
-
+	
 	IsCharacterNameTaken(name string) bool
 	GetCharacterTemplates() []characters.CharacterTemplate
 

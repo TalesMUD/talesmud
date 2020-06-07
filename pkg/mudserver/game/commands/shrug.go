@@ -23,7 +23,7 @@ func (shrugCommand *ShrugCommand) Execute(game def.GameCtrl, message *messages.M
 	}
 
 	newMessage := "-- " + message.Character.Name + " shrugs " + msg + " ¯\\_(ツ)_/¯"
-	out := messages.NewOutgoingMessage("", newMessage)
+	out := messages.NewRoomBasedMessage("", newMessage)
 	out.AudienceID = message.Character.CurrentRoomID
 	game.SendMessage(out)
 	return true

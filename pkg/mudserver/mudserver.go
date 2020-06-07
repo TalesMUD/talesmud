@@ -101,7 +101,7 @@ func (server *server) HandleConnections(c *gin.Context) {
 	}
 
 	// Send Welcome message
-	server.sendMessage(user.ID.Hex(), messages.NewOutgoingMessage("", "Connected to [Tales of the Red Dragon's Lair] ..."))
+	server.sendMessage(user.ID.Hex(), messages.NewRoomBasedMessage("", "Connected to [Tales of the Red Dragon's Lair] ..."))
 
 	server.Game.OnUserJoined <- &messages.UserJoined{
 		User: user,

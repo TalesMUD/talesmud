@@ -24,8 +24,10 @@ func NewCommandProcessor() *CommandProcessor {
 }
 
 // RegisterCommand ... register
-func (commandProcessor *CommandProcessor) RegisterCommand(key string, command Command) {
-	commandProcessor.commands[key] = command
+func (commandProcessor *CommandProcessor) RegisterCommand(command Command, keys ...string) {
+	for _, key := range keys {
+		commandProcessor.commands[key] = command
+	}
 }
 
 // Process ...asd
@@ -48,7 +50,9 @@ func (commandProcessor *CommandProcessor) Process(game def.GameCtrl, message *me
 
 func (commandProcessor *CommandProcessor) registerCommands() {
 
-	commandProcessor.RegisterCommand("scream", &ScreamCommand{})
-	commandProcessor.RegisterCommand("shrug", &ShrugCommand{})
+	commandProcessor.RegisterCommand(&ScreamCommand{}, "scream")
+	commandProcessor.RegisterCommand(&ShrugCommand{}, "shrug")
+	commandProcessor.RegisterCommand(&SelectCharacterCommand{}, "sc", "selectcharacter")
+	commandProcessor.RegisterCommand(&ListCharactersCommand{}, "lc", "listcharacters")
 
 }
