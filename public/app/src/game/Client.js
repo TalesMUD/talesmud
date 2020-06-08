@@ -9,6 +9,7 @@ const GAME_CLIENT = {};
 function createClient(renderer, characterCreator) {
   let ws;
   let messageHandlers = new Map();
+  let wsurl = "";
 
   let activeRoom = {};
   let currentCharacter = {};
@@ -33,7 +34,13 @@ function createClient(renderer, characterCreator) {
 
   const setWSClient = async (wscl) => {
     ws = wscl;
+    wsurl = ws.url;
 
+    updateClient(ws)
+    
+  };
+
+  const updateClient = (ws) => {
     ws.addEventListener("message", function (e) {
       var msg = JSON.parse(e.data);
 
@@ -47,8 +54,12 @@ function createClient(renderer, characterCreator) {
         }
         renderer(message);
       }
-    });
-  };
+    })
+
+    ws.addEventListener("close", function (e){
+      renderer ("Connection Closed.")
+    })
+  }
 
   const onInput = async (data) => {
     const msg = await handleInput(data);
@@ -58,6 +69,16 @@ function createClient(renderer, characterCreator) {
 
   const sendMessage = (msg) => {
     if (!ws) return;
+
+    if (
+      ws.readyState == WebSocket.CLOSING ||
+      ws.readyState == WebSocket.CLOSED
+    ) {
+      ws = new WebSocket(wsurl);
+      updateClient(ws)
+      renderer("reconnecting ...\n");
+    }
+
     ws.send(
       JSON.stringify({
         message: msg,

@@ -11,12 +11,14 @@ import (
 // CommandProcessor ... global user struct to control logins
 type CommandProcessor struct {
 	commands map[string]Command
+	Help     map[string]string
 }
 
 // NewCommandProcessor .. creates a new command processor
 func NewCommandProcessor() *CommandProcessor {
 	var commandProcessor = &CommandProcessor{
 		commands: make(map[string]Command),
+		Help:     make(map[string]string),
 	}
 	// only once?
 	commandProcessor.registerCommands()
@@ -24,10 +26,20 @@ func NewCommandProcessor() *CommandProcessor {
 }
 
 // RegisterCommand ... register
-func (commandProcessor *CommandProcessor) RegisterCommand(command Command, keys ...string) {
-	for _, key := range keys {
+func (commandProcessor *CommandProcessor) RegisterCommand(command Command, desc string, keys ...string) {
+
+	cmds := "["
+	for i, key := range keys {
+		if i > 0 {
+			cmds += ", "
+		}
+		cmds += key
 		commandProcessor.commands[key] = command
 	}
+
+	cmds += "]"
+
+	commandProcessor.Help[cmds] = desc
 }
 
 // Process ...asd
@@ -50,9 +62,11 @@ func (commandProcessor *CommandProcessor) Process(game def.GameCtrl, message *me
 
 func (commandProcessor *CommandProcessor) registerCommands() {
 
-	commandProcessor.RegisterCommand(&ScreamCommand{}, "scream")
-	commandProcessor.RegisterCommand(&ShrugCommand{}, "shrug")
-	commandProcessor.RegisterCommand(&SelectCharacterCommand{}, "sc", "selectcharacter")
-	commandProcessor.RegisterCommand(&ListCharactersCommand{}, "lc", "listcharacters")
+	commandProcessor.RegisterCommand(&ScreamCommand{}, "scream through the room", "scream")
+	commandProcessor.RegisterCommand(&ShrugCommand{}, "shrug emote", "shrug")
+	commandProcessor.RegisterCommand(&SelectCharacterCommand{}, "select a character, use: sc [charactername]", "sc", "selectcharacter")
+	commandProcessor.RegisterCommand(&ListCharactersCommand{}, "list all your characters", "lc", "listcharacters")
+	commandProcessor.RegisterCommand(&HelpCommand{processor: commandProcessor}, "are you really asking?", "h", "help")
+	commandProcessor.RegisterCommand(&WhoCommand{}, "list all online players", "who")
 
 }

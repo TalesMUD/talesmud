@@ -23,10 +23,12 @@ type User struct {
 
 	// every time the user logs in the last character is automatically loaded. When switched we track the last character in the user object while the
 	// game server will switch completely to the new character
-	LastCharacter string `json:"lastCharacter"`
+	LastCharacter string `bson:"lastCharacter" json:"lastCharacter"`
 
 	// is set to false after the first PUT request
-	IsNewUser bool `json:"isNewUser"`
+	IsNewUser bool `bson:"isNewUser" json:"isNewUser"`
+
+	IsOnline bool `bson:"isOnline" json:"isOnline"`
 }
 
 // NewUser creates a new user
