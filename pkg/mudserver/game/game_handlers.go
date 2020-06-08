@@ -32,6 +32,10 @@ func (game *Game) handleUserQuit(user *entities.User) {
 
 	log.Info("Handle User Quit " + user.Nickname)
 
+	// set user offline
+	user.IsOnline = false
+	game.Facade.UsersService().Update(user.RefID, user)
+
 	character, _ := game.Facade.CharactersService().FindByID(user.LastCharacter)
 	room, _ := game.Facade.RoomsService().FindByID(character.CurrentRoomID)
 
@@ -79,6 +83,7 @@ func (game *Game) handleUserJoined(user *entities.User) {
 			if len(chars) > 0 {
 				user.LastCharacter = chars[0].ID.Hex()
 				user.LastSeen = time.Now()
+				user.IsOnline = true
 				//TODO: send updates via message queue?
 				game.Facade.UsersService().Update(user.RefID, user)
 			}
@@ -87,7 +92,6 @@ func (game *Game) handleUserJoined(user *entities.User) {
 			game.SendMessage(messages.NewCreateCharacterMessage(user.ID.Hex()))
 			return
 		}
-
 	}
 
 	if character, err := game.Facade.CharactersService().FindByID(user.LastCharacter); err != nil {

@@ -115,10 +115,9 @@ func (g *Game) Run() {
 			case message := <-g.onMessageReceived:
 				// attach current character if a user is set
 				g.attachCharacterToMessage(message)
-
+				
 				// only broadcast if global commandprocessor didnt process it
 				if !g.CommandProcessor.Process(g, message) {
-
 					// check room commands
 					if !g.RoomProcessor.Process(g, message) {
 						// generic messages will be converted to plain OutgoingMessages (type message)

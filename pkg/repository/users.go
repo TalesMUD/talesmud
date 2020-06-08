@@ -13,6 +13,7 @@ import (
 type UsersRepository interface {
 	FindByRefID(id string) (*e.User, error)
 	FindAll() ([]*e.User, error)
+	FindAllOnline() ([]*e.User, error)
 	Create(user *e.User) (*e.User, error)
 	Import(user *e.User) (*e.User, error)
 	Update(id string, user *e.User) error
@@ -53,6 +54,18 @@ func (pr *usersRepo) FindAll() ([]*e.User, error) {
 	if err := pr.GenericRepo.FindAll(func(elem interface{}) {
 		results = append(results, elem.(*e.User))
 	}); err != nil {
+		return nil, err
+	}
+	return results, nil
+}
+
+func (pr *usersRepo) FindAllOnline() ([]*e.User, error) {
+	results := make([]*e.User, 0)
+	if err := pr.GenericRepo.FindAllWithParam(
+		db.NewQueryParams(db.QueryParam{Key: "isOnline", Value: true}),
+		func(elem interface{}) {
+			results = append(results, elem.(*e.User))
+		}); err != nil {
 		return nil, err
 	}
 	return results, nil

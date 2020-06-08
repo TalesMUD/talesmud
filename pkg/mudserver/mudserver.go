@@ -78,7 +78,6 @@ func (server *server) HandleConnections(c *gin.Context) {
 	var user *entities.User
 
 	if usr, exists := c.Get("user"); exists {
-
 		log.WithField("User", usr.(*entities.User).Nickname).Info("User logged in")
 		user = usr.(*entities.User)
 	}
@@ -117,6 +116,11 @@ func (server *server) HandleConnections(c *gin.Context) {
 			break
 		}
 
+		// update user online status
+		user.LastSeen = time.Now()
+		user.IsOnline = true
+		server.Facade.UsersService().Update(user.RefID, user)
+
 		if msg.Message != "" {
 			server.Game.OnMessageReceived() <- messages.NewMessage(user, msg.Message)
 		}
@@ -140,6 +144,12 @@ func (server *server) sendMessage(id string, msg interface{}) {
 			server.Game.OnUserQuit <- &messages.UserQuit{
 				User: client.User,
 			}
+
+			// update user online status
+			user := client.User
+			user.LastSeen = time.Now()
+			user.IsOnline = true
+			server.Facade.UsersService().Update(user.RefID, user)
 
 			log.Printf("error: %v", err)
 			client.ws.Close()
@@ -167,11 +177,25 @@ func (server *server) sendToRoomWithout(id string, room *rooms.Room, msg interfa
 
 	//TODO build service that reads all users from
 	allUsers, _ := server.Facade.UsersService().FindAll()
-
+	updateRoom := false
 	for _, usr := range allUsers {
 		if usr.LastCharacter != id && contains(room.Characters, usr.LastCharacter) {
-			usersInRoom = append(usersInRoom, usr.ID.Hex())
+
+			// check if character is really in this room or remove
+			if chr, err := server.Facade.CharactersService().FindByID(usr.LastCharacter); err == nil {
+				if chr.CurrentRoomID == room.ID.Hex() {
+					usersInRoom = append(usersInRoom, usr.ID.Hex())
+				} else {
+					// remove character from current room
+					room.RemoveCharacter(chr.ID.Hex())
+					updateRoom = true
+				}
+			}
 		}
+	}
+
+	if updateRoom {
+		server.Facade.RoomsService().Update(room.ID.Hex(), room)
 	}
 
 	for _, usr := range usersInRoom {
