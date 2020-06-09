@@ -1,16 +1,46 @@
 <style>
   #terminalWindow {
+    width: 100%;
+    height: 100%;
     padding: 1em;
-    background: #000;
-    border-width: 2px;
+    background: #00000088;
+    border-width: 1px;
     border-style: solid;
-    border-color: #33ff2266;
+    border-color: #ffffff33;
+    border-radius: 0.5em;
+
+    float: left;
+  }
+  #terminal {
+    background: #000;
+  }
+  #terminal2 {
+    background: #000;
+  }
+  #inventory {
+    float: right;
+    width: 300px;
+    background: #00000088;
+    padding: 1em;
+    border-width: 0px;
+    border-style: solid;
+    border-color: #5ece54;
     border-radius: 0.5em;
     margin-top: 10em;
+  }
+  #inv_content {
+    border-width: 0px;
+  }
+  #inv_content li {
+    background: #000000cc;
+    margin-bottom: 0.5em;
+    padding: 1em;
   }
 </style>
 
 <script>
+  import MediaQuery from "../MediaQuery.svelte";
+
   import CharacterCreator from "./../characters/CharacterCreator.svelte";
   import "../../node_modules/xterm/css/xterm.css";
   import { onMount, onDestroy } from "svelte";
@@ -21,6 +51,7 @@
   import fit from "xterm-addon-fit";
   import { createClient, getClient } from "./Client";
   import { wsbackend } from "../api/base.js";
+  import UserMenu from "../UserMenu.svelte";
 
   let client;
   let term;
@@ -84,12 +115,8 @@
 
   async function setupTerminal() {
     term = new xterm.Terminal();
-
     var fitAddon = new fit.FitAddon();
-
     term.loadAddon(fitAddon);
-
-    // setup terminal
     term.setOption("cursorBlink", true);
     term.setOption("convertEol", true);
 
@@ -110,8 +137,10 @@
       "blur(10px) saturate(30%) brightness(50%)";
 
     var nav = document.querySelector("nav");
-    nav.style.backgroundColor = "#00000000";
-    setupTerminal();
+    if (nav) {
+      nav.style.backgroundColor = "#00000000";
+      setupTerminal();
+    }
   });
 
   onDestroy(async () => {
@@ -120,8 +149,10 @@
     document.body.style.backdropFilter = "";
 
     var nav = document.querySelector("nav");
-    nav.style.backgroundColor = "#00000055";
-    setupTerminal();
+    if (nav) {
+      nav.style.backgroundColor = "#00000055";
+      setupTerminal();
+    }
   });
 
   function autocompleteCommonCommands(index, tokens) {
@@ -132,6 +163,6 @@
 
 <CharacterCreator />
 
-<div id="terminalWindow" class="z-depth-5">
+<div id="terminalWindow">
   <div id="terminal"></div>
 </div>

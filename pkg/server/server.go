@@ -49,6 +49,7 @@ type app struct {
 func NewApp() App {
 
 	db := db.New(os.Getenv("MONGODB_DATABASE"))
+	db.Connect(os.Getenv("MONGODB_CONNECTION_STRING"))
 
 	r := gin.New()
 	r.Use(gin.Logger())
@@ -271,7 +272,6 @@ func (app *app) setupRoutes() {
 // Run ... starts the server
 func (app *app) Run() {
 
-	app.db.Connect(os.Getenv("MONGODB_CONNECTION_STRING"))
 	app.setupRoutes()
 
 	port := 8010
@@ -282,6 +282,6 @@ func (app *app) Run() {
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "HEAD", "DELETE", "OPTIONS"}),
 		handlers.AllowedOrigins([]string{"*"}))(app.Router)
 
-	log.WithField("PORT", port).Info(fmt.Sprintf("ownDnD Server is running, listening on port %v", port))
+	log.WithField("PORT", port).Info(fmt.Sprintf("TalesMUD Server is running, listening on port %v", port))
 	log.Fatal(http.ListenAndServe(server, corsHandler))
 }

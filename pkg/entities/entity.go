@@ -1,15 +1,20 @@
 package entities
 
-import "go.mongodb.org/mongo-driver/bson/primitive"
+import (
+	"github.com/google/uuid"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
 
 //Entity ...
 type Entity struct {
-	ID primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	_ID primitive.ObjectID `bson:"_id,omitempty"`
+	ID  string             `bson:"id,omitempty" json:"id"`
 }
 
 // NewEntity ...
 func NewEntity() *Entity {
 	return &Entity{
-		ID: primitive.NewObjectID(),
+		_ID: primitive.NewObjectID(),
+		ID:  uuid.New().String(),
 	}
 }

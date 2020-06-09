@@ -68,8 +68,31 @@ func (server *server) Run() {
 
 	go server.Game.Run()
 	go server.handleBroadcastMessages()
+	go server.handleGameUpdates()
 
 	log.WithTime(time.Now()).Info("MUD Server running")
+}
+
+func (server *server) handleGameUpdates() {
+
+	pingTicker := time.NewTicker(60 * time.Second)
+
+	for {
+		select {
+		case <-pingTicker.C:
+			server.handleUserPings()
+		}
+	}
+}
+
+func (server *server) handleUserPings() {
+
+	for _, con := range server.Clients {
+		server.sendMessage(con.User.ID, messages.MessageResponse{
+			Type: messages.MessageTypePing,
+		})
+	}
+
 }
 
 //HandleConnections asd
@@ -93,14 +116,14 @@ func (server *server) HandleConnections(c *gin.Context) {
 	log.Info("Upgraded client connection")
 
 	// Register our new client
-	server.Clients[user.ID.Hex()] = conn{
+	server.Clients[user.ID] = conn{
 		User:   user,
 		ws:     ws,
 		active: true,
 	}
 
 	// Send Welcome message
-	server.sendMessage(user.ID.Hex(), messages.NewRoomBasedMessage("", "Connected to [Tales of the Red Dragon's Lair] ..."))
+	server.sendMessage(user.ID, messages.NewRoomBasedMessage("", "Connected to [Tales of the Red Dragon's Lair] ..."))
 
 	server.Game.OnUserJoined <- &messages.UserJoined{
 		User: user,
@@ -111,8 +134,12 @@ func (server *server) HandleConnections(c *gin.Context) {
 		var msg messages.IncomingMessage
 		err := ws.ReadJSON(&msg)
 		if err != nil {
+
+			user.IsOnline = false
+			server.Facade.UsersService().Update(user.RefID, user)
+
 			log.Printf("error: %v", err)
-			delete(server.Clients, user.ID.Hex())
+			delete(server.Clients, user.ID)
 			break
 		}
 
@@ -147,8 +174,7 @@ func (server *server) sendMessage(id string, msg interface{}) {
 
 			// update user online status
 			user := client.User
-			user.LastSeen = time.Now()
-			user.IsOnline = true
+			user.IsOnline = false
 			server.Facade.UsersService().Update(user.RefID, user)
 
 			log.Printf("error: %v", err)
@@ -183,11 +209,11 @@ func (server *server) sendToRoomWithout(id string, room *rooms.Room, msg interfa
 
 			// check if character is really in this room or remove
 			if chr, err := server.Facade.CharactersService().FindByID(usr.LastCharacter); err == nil {
-				if chr.CurrentRoomID == room.ID.Hex() {
-					usersInRoom = append(usersInRoom, usr.ID.Hex())
+				if chr.CurrentRoomID == room.ID {
+					usersInRoom = append(usersInRoom, usr.ID)
 				} else {
 					// remove character from current room
-					room.RemoveCharacter(chr.ID.Hex())
+					room.RemoveCharacter(chr.ID)
 					updateRoom = true
 				}
 			}
@@ -195,7 +221,7 @@ func (server *server) sendToRoomWithout(id string, room *rooms.Room, msg interfa
 	}
 
 	if updateRoom {
-		server.Facade.RoomsService().Update(room.ID.Hex(), room)
+		server.Facade.RoomsService().Update(room.ID, room)
 	}
 
 	for _, usr := range usersInRoom {
@@ -219,7 +245,7 @@ func (server *server) handleBroadcastMessages() {
 				}
 
 				client.ws.Close()
-				delete(server.Clients, client.User.ID.Hex())
+				delete(server.Clients, client.User.ID)
 
 			}
 		}

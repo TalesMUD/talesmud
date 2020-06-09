@@ -32,7 +32,11 @@ type charactersRepository struct {
 
 //NewMongoDBcharactersRepository creates a new mongodb charactersRepository
 func NewMongoDBcharactersRepository(db *db.Client) CharactersRepository {
-	return &charactersRepository{
+
+	// create index on id
+	//db.members.createIndex( { "user_id": 1 }, { unique: true } )
+
+	cr := &charactersRepository{
 		GenericRepo: &GenericRepo{
 			db:         db,
 			collection: "characters",
@@ -41,6 +45,10 @@ func NewMongoDBcharactersRepository(db *db.Client) CharactersRepository {
 			},
 		},
 	}
+
+	cr.CreateIndex()
+
+	return cr
 }
 
 func (repo *charactersRepository) FindByID(id string) (*e.Character, error) {

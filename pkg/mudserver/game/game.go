@@ -1,6 +1,8 @@
 package game
 
 import (
+	"time"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/entities"
 
@@ -95,8 +97,25 @@ func (g *Game) GetFacade() service.Facade {
 	return g.Facade
 }
 
+func (g *Game) handleGameUpdates() {
+
+	roomTicker := time.NewTicker(60 * time.Second)
+	npcTicker := time.NewTicker(15 * time.Second)
+
+	for {
+		select {
+		case <-roomTicker.C:
+			g.handleRoomUpdates()
+		case <-npcTicker.C:
+			//server.handleUserPings()
+		}
+	}
+}
+
 //Run main game loop
 func (g *Game) Run() {
+
+	go g.handleGameUpdates()
 
 	go func() {
 		for {
@@ -104,18 +123,15 @@ func (g *Game) Run() {
 			case userJoined := <-g.OnUserJoined:
 				log.Info("Received UserJoinged message")
 				g.handleUserJoined(userJoined.User)
-				break
 
 			case userQuit := <-g.OnUserQuit:
 				log.WithField("user", userQuit.User).Info("Received UserQuit message")
 				g.handleUserQuit(userQuit.User)
 
-				break
-				
 			case message := <-g.onMessageReceived:
 				// attach current character if a user is set
 				g.attachCharacterToMessage(message)
-				
+
 				// only broadcast if global commandprocessor didnt process it
 				if !g.CommandProcessor.Process(g, message) {
 					// check room commands

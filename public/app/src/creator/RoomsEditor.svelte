@@ -45,6 +45,7 @@
   import { writable } from "svelte/store";
   import { onMount } from "svelte";
   import { createAuth, getAuth } from "../auth.js";
+  import { v4 as uuidv4 } from "uuid";
 
   import axios from "axios";
   import {
@@ -105,23 +106,16 @@
     let newRoom = {
       name: "New Room",
       description: "",
+      detail: "",
+      areaType: "",
+      area: "",
+      id: uuidv4(),
       isNew: true,
       exits: [],
       actions: [],
     };
 
-    createRoom(
-      $authToken,
-      newRoom,
-      (room) => {
-        loadData();
-        store.setSelectedRoom(room, () => {
-          var elems = document.querySelectorAll(".collapsible");
-          var instances = M.Collapsible.init(elems);
-        });
-      },
-      (err) => console.log(err)
-    );
+    selectRoom(newRoom);
   };
 
   const delRoom = async (room) => {
@@ -172,6 +166,11 @@
       if (elems != undefined) {
         var instances = M.Collapsible.init(elems, {});
       }
+      M.updateTextFields();
+
+      var el = document.querySelectorAll(".tabs");
+
+      var instance = M.Tabs.init(el, {});
     });
 
     var targets = document.querySelectorAll(".autocomplete");
@@ -211,6 +210,9 @@
     <div class="collection">
       {#each $store.rooms as room}
         <a href="#!" class="collection-item" on:click="{selectRoom(room)}">
+          {#if room.area}
+            <span class="new badge" data-badge-caption="">{room.area}</span>
+          {/if}
           {room.name}
         </a>
       {/each}
@@ -222,63 +224,138 @@
 
       <div class="card-panel cyan darken-4">
 
-        <input
-          placeholder="Room Name"
-          id="room_name"
-          type="text"
-          bind:value="{$store.selectedRoom.name}"
-          class="col s8"
-        />
+        <div class="row">
 
-        {#if $store.selectedRoom.isNew}
-          <button
-            on:click="{() => create()}"
-            class="waves-effect waves-light btn-small green"
-          >
-            Create
-          </button>
-        {:else}
-          <button
-            on:click="{() => update()}"
-            class="waves-effect waves-light btn-small green right"
-          >
-            Update
-          </button>
-          <button
-            on:click="{() => delRoom()}"
-            class="waves-effect waves-light btn-small red right"
-          >
-            Delete
-          </button>
-        {/if}
+          <span>{$store.selectedRoom.name}</span>
 
-        <input
-          placeholder="Room ID"
-          id="room_id"
-          type="text"
-          value="{$store.selectedRoom.id}"
-          disabled
-        />
+          {#if $store.selectedRoom.isNew}
+            <button
+              on:click="{() => create()}"
+              class="waves-effect waves-light btn-small green"
+            >
+              Create
+            </button>
+          {:else}
+            <button
+              on:click="{() => update()}"
+              class="waves-effect waves-light btn-small green right"
+            >
+              Update
+            </button>
+            <button
+              on:click="{() => delRoom()}"
+              class="waves-effect waves-light btn-small red right"
+            >
+              Delete
+            </button>
+          {/if}
+        </div>
 
-        <textarea
-          placeholder="Room Description"
-          id="room_description"
-          type="text"
-          class="materialize-textarea"
-          bind:value="{$store.selectedRoom.description}"
-        ></textarea>
+        <div id="general"></div>
+
+        <div class="row">
+          <div class="input-field col s6">
+            <input
+              placeholder="Name"
+              id="room_name"
+              type="text"
+              bind:value="{$store.selectedRoom.name}"
+            />
+            <label class="active" for="room_name">Name</label>
+          </div>
+
+          {#if $store.selectedRoom.isNew}
+            <div class="input-field col s6">
+              <input
+                placeholder="ID"
+                id="room_id"
+                type="text"
+                bind:value="{$store.selectedRoom.id}"
+              />
+              <label class="active" for="room_id">ID</label>
+            </div>
+          {:else}
+            <div class="input-field col s6">
+              <input
+                placeholder="ID"
+                id="room_id"
+                type="text"
+                bind:value="{$store.selectedRoom.id}"
+                disabled
+              />
+              <label class="active" for="room_id">ID</label>
+            </div>
+          {/if}
+        </div>
+
+        <div class="row">
+          <div class="input-field">
+            <textarea
+              placeholder="Room Description"
+              id="room_description"
+              rows="8"
+              class="materialize-textarea"
+              bind:value="{$store.selectedRoom.description}"
+            ></textarea>
+            <label class="active" for="room_description">Description</label>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="input-field">
+            <textarea
+              placeholder="Room Details"
+              id="room_detail"
+              rows="4"
+              class="materialize-textarea"
+              bind:value="{$store.selectedRoom.detail}"
+            ></textarea>
+            <label class="active" for="room_detail">Detail (look)</label>
+          </div>
+        </div>
+
+        <div class="row">
+
+          <div class="input-field col s4">
+            <input
+              placeholder="Area"
+              id="area"
+              type="text"
+              bind:value="{$store.selectedRoom.area}"
+            />
+            <label class="active" for="area">Area</label>
+          </div>
+
+          <div class="input-field col s4">
+            <input
+              placeholder="Area Type"
+              id="area_type"
+              type="text"
+              bind:value="{$store.selectedRoom.areaType}"
+            />
+            <label class="active" for="area_type">Area Type</label>
+          </div>
+
+          <div class="input-field col s4">
+            <input
+              placeholder="Room Type"
+              id="room_type"
+              type="text"
+              bind:value="{$store.selectedRoom.roomType}"
+            />
+            <label class="active" for="room_type">Room Type</label>
+          </div>
+        </div>
 
       </div>
-
       {#if $store.selectedRoom.exits}
         <h6>Exits</h6>
-        <ul class="collapsible popout">
+        <ul class="collapsible">
           {#each $store.selectedRoom.exits as exit}
             <ActionEditor exit="{exit}" deleteExit="{deleteExit}" />
           {/each}
         </ul>
       {/if}
-
     </div>
   {/if}
 </div>

@@ -19,6 +19,6 @@ func (command *HelpCommand) Execute(game def.GameCtrl, message *messages.Message
 		result += key + " " + element + "\n"
 	}
 
-	game.SendMessage(messages.Reply(message.FromUser.ID.Hex(), result))
+	game.SendMessage(messages.Reply(message.FromUser.ID, result))
 	return true
 }

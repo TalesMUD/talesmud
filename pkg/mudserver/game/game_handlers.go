@@ -40,13 +40,13 @@ func (game *Game) handleUserQuit(user *entities.User) {
 	room, _ := game.Facade.RoomsService().FindByID(character.CurrentRoomID)
 
 	//TOOD: move update to queue
-	room.RemoveCharacter(character.ID.Hex())
-	game.Facade.RoomsService().Update(room.ID.Hex(), room)
+	room.RemoveCharacter(character.ID)
+	game.Facade.RoomsService().Update(room.ID, room)
 
 	game.SendMessage(messages.CharacterLeftRoom{
 		MessageResponse: messages.MessageResponse{
 			Audience:   messages.MessageAudienceRoomWithoutOrigin,
-			OriginID:   character.ID.Hex(),
+			OriginID:   character.ID,
 			AudienceID: character.CurrentRoomID,
 			Message:    character.Name + " left.",
 		},
@@ -76,12 +76,12 @@ func (game *Game) handleUserJoined(user *entities.User) {
 	// get active character for user
 	if user.LastCharacter == "" {
 
-		if chars, err := game.Facade.CharactersService().FindAllForUser(user.ID.Hex()); err == nil {
+		if chars, err := game.Facade.CharactersService().FindAllForUser(user.ID); err == nil {
 
 			// take first character for now
 			// TODO: let the player choose?
 			if len(chars) > 0 {
-				user.LastCharacter = chars[0].ID.Hex()
+				user.LastCharacter = chars[0].ID
 				user.LastSeen = time.Now()
 				user.IsOnline = true
 				//TODO: send updates via message queue?
@@ -89,7 +89,7 @@ func (game *Game) handleUserJoined(user *entities.User) {
 			}
 		} else {
 			// player has no character yet, respnd with createCharacter Message
-			game.SendMessage(messages.NewCreateCharacterMessage(user.ID.Hex()))
+			game.SendMessage(messages.NewCreateCharacterMessage(user.ID))
 			return
 		}
 	}
@@ -98,13 +98,13 @@ func (game *Game) handleUserJoined(user *entities.User) {
 
 		log.WithField("user", user.Name).Error("Could not select character for user")
 		// player character may be broken, let the user create a new one
-		game.SendMessage(messages.NewCreateCharacterMessage(user.ID.Hex()))
-
+		//game.SendMessage(messages.NewCreateCharacterMessage(user.ID))
+		// send list characters command
+		game.onMessageReceived <- messages.NewMessage(user, "lc")
 	} else {
 
 		// send message as userwould do it
 		selectCharacterMsg := messages.NewMessage(user, "selectcharacter "+character.Name)
-
 		game.OnMessageReceived() <- selectCharacterMsg
 	}
 }

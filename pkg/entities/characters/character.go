@@ -50,4 +50,11 @@ type Character struct {
 
 	// complex character fields
 	Inventory Inventory `json:"inventory"`
+
+	// track alltime stats in character object but dont expose as json by default
+	AllTimeStats struct {
+		PlayersKilled   int32 `bson:"playersKilled" json:"playersKilled"`
+		GoldCollected   int32 `bson:"goldCollected" json:"goldCollected"`
+		QuestsCompleted int32 `bson:"questsCompleted" json:"questsCompleted"`
+	} `bson:"allTimeStats" json:"_"`
 }

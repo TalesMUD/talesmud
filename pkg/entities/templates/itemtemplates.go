@@ -1,6 +1,9 @@
 package templates
 
-import "github.com/talesmud/talesmud/pkg/entities/items"
+import (
+	"github.com/talesmud/talesmud/pkg/entities"
+	"github.com/talesmud/talesmud/pkg/entities/items"
+)
 
 //ItemTemplatePropertyType type
 type ItemTemplatePropertyType int
@@ -51,12 +54,11 @@ type T struct {
 
 //ItemTemplate data
 type ItemTemplate struct {
-	//ID          primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
-	TemplateID  string         `yaml:"templateID" json:"templateID"`
-	Name        string         `json:"name"`
-	Description string         `json:"description"`
-	ItemType    items.ItemType `yaml:"itemType" json:"itemType"`
-	ItemSlot    items.ItemSlot `yaml:"itemSlot" json:"itemSlot"`
+	*entities.Entity `bson:",inline"`
+	Name             string         `json:"name"`
+	Description      string         `json:"description"`
+	ItemType         items.ItemType `yaml:"itemType" json:"itemType"`
+	ItemSlot         items.ItemSlot `yaml:"itemSlot" json:"itemSlot"`
 
 	Properties map[string]string `yaml:",flow" json:"properties"`
 	Attributes map[string]string `yaml:",flow" json:"attributes"`

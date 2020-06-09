@@ -9,6 +9,7 @@
 </style>
 
 <script>
+	import NavLink from './components/NavLink.svelte';
   import CharacterCreator from "./characters/CharacterCreator.svelte";
   import { onMount } from "svelte";
 
@@ -71,7 +72,8 @@
     <h4>Welcome back {$nickname}</h4>
     <div>
       Start playing
-      <button class="btn green">Play</button>
+      
+      <button class="btn green"><NavLink to="/play">Play</NavLink></button>
     </div>
 
     <div>

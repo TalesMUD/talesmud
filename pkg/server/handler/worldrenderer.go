@@ -38,12 +38,12 @@ func (handler *WorldRendererHandler) renderGraph(rooms []*rooms.Room) (image.Ima
 
 	// create all rooms as nodes
 	for _, room := range rooms {
-		allNodes[room.ID.Hex()], _ = graph.CreateNode(room.Name)
+		allNodes[room.ID], _ = graph.CreateNode(room.Name)
 	}
 
 	// second loop to create the edges
 	for _, room := range rooms {
-		roomNode := allNodes[room.ID.Hex()]
+		roomNode := allNodes[room.ID]
 
 		for _, exit := range room.Exits {
 			targetRoomNode := allNodes[exit.Target]

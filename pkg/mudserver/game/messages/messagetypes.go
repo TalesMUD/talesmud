@@ -9,4 +9,6 @@ const (
 	MessageTypeCreateCharacter   = "createCharacter"
 	MessageTypeSelectCharacter   = "selectCharacter"
 	MessageTypeCharacterSelected = "characterSelected"
+
+	MessageTypePing = "ping"
 )
