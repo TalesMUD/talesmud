@@ -68,5 +68,6 @@ func (roomProcessor *RoomProcessor) registerCommands() {
 	roomProcessor.RegisterCommand(TakeExit("south"), "s", "south")
 	roomProcessor.RegisterCommand(TakeExit("east"), "e", "east")
 	roomProcessor.RegisterCommand(TakeExit("west"), "w", "west")
+	roomProcessor.RegisterCommand(Look, "l", "look")
 
 }

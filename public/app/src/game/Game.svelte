@@ -1,7 +1,7 @@
 <style>
   #terminalWindow {
     width: 100%;
-    height: 100%;
+    
     padding: 1em;
     background: #00000088;
     border-width: 1px;
