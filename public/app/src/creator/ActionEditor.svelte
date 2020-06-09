@@ -24,22 +24,17 @@
 
 <li>
   <div class="collapsible-header">
-
     <i class="material-icons">exit_to_app</i>
     {exit.name}
   </div>
 
   <div class="collapsible-body">
+    <button on:click="{() => deleteExit(exit)}" class="btn-small red right">
+      <i class="material-icons">delete_forever</i>
+      Delete Exit
+    </button>
     <div class="row">
-      <button
-        on:click="{() => deleteExit(exit)}"
-        class="waves-effect waves-light btn-small red right"
-      >
-        <i class="material-icons">delete_forever</i>
-        Delete Exit
-      </button>
-    </div>
-    <div class="row">
+
       <div class="input-field">
         <input
           placeholder="Placeholder"
@@ -69,7 +64,11 @@
             <label for="target-{exit.target}">Target Room</label>
           </div>
           <div class="input-field">
-            <input type="text" id="autocomplete-input-{exit.name}" class="autocomplete" />
+            <input
+              type="text"
+              id="autocomplete-input-{exit.name}"
+              class="autocomplete"
+            />
             <label for="autocomplete-input">Target Room</label>
           </div>
 
