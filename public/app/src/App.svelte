@@ -28,7 +28,10 @@
   :global(a:hover) {
     text-decoration: none;
   }
-
+  .brand-logo {
+    margin-left: 1em;
+    margin-right: 1em;
+  }
   .iconspacing {
     margin-right: 0.5em;
   }
@@ -44,19 +47,25 @@
   nav {
     margin-bottom: 2em;
   }
-
+  .mobile {
+    font-size: 10px;
+  }
   img {
     height: 40px;
   }
 </style>
 
 <script>
+  import AppContent from "./AppContent.svelte";
+  import MediaQuery from "./MediaQuery.svelte";
+
   import {
     HashIcon,
     ShieldIcon,
     BookOpenIcon,
     EditIcon,
     PlayIcon,
+    UsersIcon,
   } from "svelte-feather-icons";
   import { Router, Link, Route, navigate } from "svelte-routing";
   import { afterUpdate, onMount } from "svelte";
@@ -65,15 +74,7 @@
   import { user, subMenu } from "./stores.js";
   import { fade } from "svelte/transition";
 
-  import Game from "./game/Game.svelte";
-
   import UserMenu from "./UserMenu.svelte";
-
-  import Welcome from "./Welcome.svelte";
-  import Creator from "./creator/Creator.svelte";
-  import Characters from "./characters/Characters.svelte";
-
-  import UserForm from "./UserForm.svelte";
   import { createAuth } from "./auth.js";
 
   // Auth0 config
@@ -127,85 +128,101 @@
 
 </svelte:head>
 
-<Router url="{url}">
-  <nav class="nav-extended">
-    <div class="nav-wrapper container">
-      <a href="#" class="brand-logo">
-        <span class="valign-wrapper italic">
-          <span class="iconspacing">
-            <BookOpenIcon size="24" />
-          </span>
-          <NavLink to="/">Tales</NavLink>
-        </span>
-      </a>
+<div class="root default">
 
-      <ul class="right hide-on-med-and-down">
-
-        <li>
-          <NavLink to="/play">
-            <span class="valign-wrapper">
-              <span class="iconspacing valign-wrapper">
-                <PlayIcon size="18" />
-              </span>
-              Play
+  <Router url="{url}">
+    <nav class="nav-extended">
+      <div class="nav-wrapper">
+        <a href="#" class="brand-logo">
+          <span class="valign-wrapper italic">
+            <span class="iconspacing">
+              <BookOpenIcon size="24" />
             </span>
-          </NavLink>
+            <NavLink to="/">Tales</NavLink>
+          </span>
+        </a>
 
-        </li>
-        {#if $isAuthenticated}
+        <ul class="right hide-on-small-only">
+
           <li>
-            <NavLink to="/list">
+            <NavLink to="/play">
               <span class="valign-wrapper">
                 <span class="iconspacing valign-wrapper">
-                  <EditIcon size="18" />
+                  <PlayIcon size="18" />
                 </span>
-                Top Characters
+                Play
               </span>
             </NavLink>
-          </li>
-          <li>
-            <NavLink to="/creator/rooms">
-              <span class="valign-wrapper">
-                <span class="iconspacing valign-wrapper">
-                  <EditIcon size="18" />
-                </span>
-                Creator
-              </span>
-            </NavLink>
-          </li>
-        {/if}
-        <li>
-          <NavLink to="signup">News</NavLink>
-        </li>
-        <UserMenu />
-      </ul>
-    </div>
 
-    {#if $subMenu.active}
-      <div class="nav-content container">
-        <ul class="tabs tabs-transparent">
-          {#each $subMenu.entries as entry}
-            <li class="tab">
-              <NavLink to="{entry.nav}">{entry.name}</NavLink>
+          </li>
+          {#if $isAuthenticated}
+            <li>
+              <NavLink to="/list">
+                <span class="valign-wrapper">
+                  <span class="iconspacing valign-wrapper">
+                    <UsersIcon size="18" />
+                  </span>
+                  Top Characters
+                </span>
+              </NavLink>
             </li>
-          {/each}
+            <li>
+              <NavLink to="/creator/rooms">
+                <span class="valign-wrapper">
+                  <span class="iconspacing valign-wrapper">
+                    <EditIcon size="18" />
+                  </span>
+                  Creator
+                </span>
+              </NavLink>
+            </li>
+          {/if}
+          <li>
+            <NavLink to="signup">News</NavLink>
+          </li>
+          <UserMenu />
         </ul>
       </div>
-    {/if}
 
-  </nav>
+      {#if $subMenu.active}
+        <MediaQuery query="(max-width: 1280px)" let:matches>
+          {#if matches}
+            <div class="nav-content">
+              <ul class="tabs tabs-transparent">
+                {#each $subMenu.entries as entry}
+                  <li class="tab">
+                    <NavLink to="{entry.nav}">{entry.name}</NavLink>
+                  </li>
+                {/each}
+              </ul>
+            </div>
+          {:else}
+            <div class="nav-content container">
+              <ul class="tabs tabs-transparent">
+                {#each $subMenu.entries as entry}
+                  <li class="tab">
+                    <NavLink to="{entry.nav}">{entry.name}</NavLink>
+                  </li>
+                {/each}
+              </ul>
+            </div>
+          {/if}
+        </MediaQuery>
+      {/if}
 
-  <main class="container">
+    </nav>
 
-    <Route path="account" component="{UserForm}" />
-    <Route path="creator/*" component="{Creator}" />
-    <Route path="list" component="{Characters}" />
-    <Route path="play" component="{Game}" />
+    <MediaQuery query="(min-width: 1281px)" let:matches>
+      {#if matches}
+        <main class="container">
+          <AppContent />
+        </main>
+      {:else}
+        <main>
+          <AppContent />
+        </main>
+      {/if}
+    </MediaQuery>
 
-    <Route path="/">
-
-      <Welcome />
-
-    </Route>
-  </main>
-</Router>
+  </Router>
+</div>

@@ -69,7 +69,7 @@
             <label for="target-{exit.target}">Target Room</label>
           </div>
           <div class="input-field">
-            <input type="text" id="autocomplete-input" class="autocomplete" />
+            <input type="text" id="autocomplete-input-{exit.name}" class="autocomplete" />
             <label for="autocomplete-input">Target Room</label>
           </div>
 

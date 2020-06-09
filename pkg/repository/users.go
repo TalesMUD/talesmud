@@ -28,7 +28,7 @@ type usersRepo struct {
 
 //NewMongoDBUsersRepository creates a new mongodb partiesrep
 func NewMongoDBUsersRepository(db *db.Client) UsersRepository {
-	return &usersRepo{
+	ur := &usersRepo{
 		GenericRepo: &GenericRepo{
 			db:         db,
 			collection: "users",
@@ -37,6 +37,9 @@ func NewMongoDBUsersRepository(db *db.Client) UsersRepository {
 			},
 		},
 	}
+
+	ur.CreateIndex()
+	return ur
 }
 
 func (pr *usersRepo) Import(user *e.User) (*e.User, error) {

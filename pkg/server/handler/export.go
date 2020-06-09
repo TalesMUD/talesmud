@@ -32,7 +32,8 @@ func (handler *ExportHandler) Export(c *gin.Context) {
 	d.Characters, _ = handler.CharactersService.FindAll()
 	d.Users, _ = handler.UserService.FindAll()
 
-	c.JSON(http.StatusOK, d)
+	//c.JSON(http.StatusOK, d)
+	c.YAML(http.StatusOK, d)
 }
 
 //Import Imports all data structures

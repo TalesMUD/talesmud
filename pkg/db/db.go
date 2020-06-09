@@ -6,7 +6,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -68,13 +67,6 @@ func New(database string) *Client {
 	}
 }
 
-// IDFromObjectID ...
-func (dba *Client) IDFromObjectID(bid interface{}) string {
-
-	return bid.(primitive.ObjectID).Hex()
-
-}
-
 // Close connection
 func (dba *Client) Close() error {
 	return dba.client.Disconnect(context.TODO())
@@ -124,14 +116,14 @@ func (dba *Client) FindOne(coll string, key string, value string) *mongo.SingleR
 }
 
 //FindByID returns all entities of a given collection
-func (dba *Client) FindByID(coll string, id primitive.ObjectID) *mongo.SingleResult {
-	return dba.C(coll).FindOne(context.TODO(), bson.M{"_id": id})
+func (dba *Client) FindByID(coll string, id string) *mongo.SingleResult {
+	return dba.C(coll).FindOne(context.TODO(), bson.M{"id": id})
 }
 
 //DeleteByID returns all entities of a given collection
-func (dba *Client) DeleteByID(coll string, id primitive.ObjectID) (*mongo.DeleteResult, error) {
+func (dba *Client) DeleteByID(coll string, id string) (*mongo.DeleteResult, error) {
 
-	return dba.C(coll).DeleteOne(context.TODO(), bson.M{"_id": id})
+	return dba.C(coll).DeleteOne(context.TODO(), bson.M{"id": id})
 }
 
 //InsertOne inserts one document
@@ -148,8 +140,8 @@ func (dba *Client) UpdateOne(coll string, key string, value string, data interfa
 }
 
 //UpdateOneByID inserts one document
-func (dba *Client) UpdateOneByID(coll string, id primitive.ObjectID, data interface{}) (*mongo.UpdateResult, error) {
-	filter := bson.M{"_id": id}
+func (dba *Client) UpdateOneByID(coll string, id string, data interface{}) (*mongo.UpdateResult, error) {
+	filter := bson.M{"id": id}
 	update := bson.M{"$set": data}
 
 	return dba.client.Database(dba.Database).Collection(coll).UpdateOne(context.TODO(), filter, update)

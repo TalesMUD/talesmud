@@ -27,14 +27,14 @@ func (selectCharacter *SelectCharacterCommand) Execute(game def.GameCtrl, messag
 	if characters, err := game.GetFacade().CharactersService().FindByName(characterName); err == nil {
 
 		for _, character := range characters {
-			if character.Name == characterName && character.BelongsUserID == message.FromUser.ID.Hex() {
+			if character.Name == characterName && character.BelongsUserID == message.FromUser.ID {
 				// found character to select
 				handleCharacterSelected(game, message.FromUser, character)
 				return true
 			}
 		}
 	}
-	game.SendMessage(messages.Reply(message.FromUser.ID.Hex(), "Could not select character: "+characterName))
+	game.SendMessage(messages.Reply(message.FromUser.ID, "Could not select character: "+characterName))
 
 	return false
 }
@@ -42,13 +42,13 @@ func (selectCharacter *SelectCharacterCommand) Execute(game def.GameCtrl, messag
 func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *characters.Character) {
 
 	// update player
-	user.LastCharacter = character.ID.Hex()
+	user.LastCharacter = character.ID
 	game.GetFacade().UsersService().Update(user.RefID, user)
 
 	characterSelected := &messages.CharacterSelected{
 		MessageResponse: messages.MessageResponse{
 			Audience:   messages.MessageAudienceOrigin,
-			AudienceID: user.ID.Hex(),
+			AudienceID: user.ID,
 			Type:       messages.MessageTypeCharacterSelected,
 			Message:    fmt.Sprintf("You are now playing as [%v]", character.Name),
 		},
@@ -78,25 +78,25 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 			currentRoom = rooms[0]
 
 			//TODO: send this as message
-			character.CurrentRoomID = currentRoom.ID.Hex()
-			game.GetFacade().CharactersService().Update(character.ID.Hex(), character)
+			character.CurrentRoomID = currentRoom.ID
+			game.GetFacade().CharactersService().Update(character.ID, character)
 
 		}
 	}
 
 	// update room // send these state change messages via channel
-	currentRoom.AddCharacter(character.ID.Hex())
-	game.GetFacade().RoomsService().Update(currentRoom.ID.Hex(), currentRoom)
+	currentRoom.AddCharacter(character.ID)
+	game.GetFacade().RoomsService().Update(currentRoom.ID, currentRoom)
 
 	enterRoom := m.NewEnterRoomMessage(currentRoom)
-	enterRoom.AudienceID = user.ID.Hex()
+	enterRoom.AudienceID = user.ID
 	game.SendMessage(enterRoom)
 
 	game.SendMessage(messages.CharacterJoinedRoom{
 		MessageResponse: messages.MessageResponse{
 			Audience:   m.MessageAudienceRoomWithoutOrigin,
-			AudienceID: currentRoom.ID.Hex(),
-			OriginID:   character.ID.Hex(),
+			AudienceID: currentRoom.ID,
+			OriginID:   character.ID,
 			Message:    character.Name + " entered.",
 		},
 	})

@@ -5,7 +5,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/db"
-	e "github.com/talesmud/talesmud/pkg/entities"
 	r "github.com/talesmud/talesmud/pkg/entities/rooms"
 )
 
@@ -16,6 +15,7 @@ type RoomsRepository interface {
 	FindAll() ([]*r.Room, error)
 	FindByID(id string) (*r.Room, error)
 	FindByName(name string) ([]*r.Room, error)
+
 	Store(room *r.Room) (*r.Room, error)
 	Import(room *r.Room) (*r.Room, error)
 	Update(id string, room *r.Room) error
@@ -30,7 +30,8 @@ type roomsRepository struct {
 
 //NewMongoDBRoomsRepository creates a new mongodb repoRepository
 func NewMongoDBRoomsRepository(db *db.Client) RoomsRepository {
-	return &roomsRepository{
+
+	r := &roomsRepository{
 		GenericRepo: &GenericRepo{
 			db:         db,
 			collection: "rooms",
@@ -39,6 +40,9 @@ func NewMongoDBRoomsRepository(db *db.Client) RoomsRepository {
 			},
 		},
 	}
+
+	r.CreateIndex()
+	return r
 }
 
 func (repo *roomsRepository) FindByID(id string) (*r.Room, error) {
@@ -87,7 +91,7 @@ func (repo *roomsRepository) Delete(id string) error {
 }
 
 func (repo *roomsRepository) Store(rep *r.Room) (*r.Room, error) {
-	rep.Entity = e.NewEntity()
+	//rep.Entity = e.NewEntity()
 	return repo.Import(rep)
 }
 

@@ -6,8 +6,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/db"
-	e "github.com/talesmud/talesmud/pkg/entities"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"gopkg.in/mgo.v2/bson"
 )
 
 // GenericRepo ...
@@ -20,13 +21,31 @@ type GenericRepo struct {
 type entityGenerator func() interface{}
 type elementCollector func(element interface{})
 
+//CreateIndex ..
+func (repo *GenericRepo) CreateIndex() {
+	mod := mongo.IndexModel{
+		Keys: bson.M{
+			"id": 1,
+		},
+		Options: options.Index().SetUnique(true),
+	}
+
+	name, err := repo.db.C(repo.collection).Indexes().CreateOne(context.Background(), mod)
+
+	if err != nil {
+		log.WithError(err).Info("Failed creating Index")
+	} else {
+		log.WithField("Index", name).Info("Created Index")
+	}
+
+}
+
 // FindByID ...
 func (repo *GenericRepo) FindByID(id string) (interface{}, error) {
 
 	log.WithField("id", id).Info("FindByID called")
 
-	oid, _ := primitive.ObjectIDFromHex(id)
-	result := repo.db.FindByID(repo.collection, oid)
+	result := repo.db.FindByID(repo.collection, id)
 
 	if result != nil {
 
@@ -118,15 +137,9 @@ func (repo *GenericRepo) FindAll(collector elementCollector) error {
 // Store stores a new entity
 func (repo *GenericRepo) Store(entity interface{}) (interface{}, error) {
 
-	if result, error := repo.db.InsertOne(repo.collection, entity); error != nil {
+	if _, error := repo.db.InsertOne(repo.collection, entity); error != nil {
 		log.WithField("Error", error).Error("error during insertion")
 		return nil, error
-	} else {
-		if oid, ok := result.InsertedID.(primitive.ObjectID); ok {
-			if n, ok := entity.(*e.Entity); ok {
-				n.ID = oid
-			}
-		}
 	}
 
 	return entity, nil
@@ -135,9 +148,7 @@ func (repo *GenericRepo) Store(entity interface{}) (interface{}, error) {
 // Delete an existing entity
 func (repo *GenericRepo) Delete(id string) error {
 
-	oid, _ := primitive.ObjectIDFromHex(id)
-
-	if result, err := repo.db.DeleteByID(repo.collection, oid); err != nil {
+	if result, err := repo.db.DeleteByID(repo.collection, id); err != nil {
 		log.WithError(err).Error("Error during update")
 		return err
 	} else {
@@ -150,9 +161,7 @@ func (repo *GenericRepo) Delete(id string) error {
 // Update an existing entity
 func (repo *GenericRepo) Update(item interface{}, id string) error {
 
-	oid, _ := primitive.ObjectIDFromHex(id)
-
-	if result, err := repo.db.UpdateOneByID(repo.collection, oid, item); err != nil {
+	if result, err := repo.db.UpdateOneByID(repo.collection, id, item); err != nil {
 		log.WithError(err).Error("Error during update")
 		return err
 	} else {

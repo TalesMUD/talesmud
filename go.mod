@@ -13,6 +13,7 @@ require (
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-kit/kit v0.10.0
 	github.com/goccy/go-graphviz v0.0.5
+	github.com/google/uuid v1.1.1
 	github.com/gorilla/context v1.1.1
 	github.com/gorilla/handlers v1.4.2
 	github.com/gorilla/mux v1.7.4
@@ -21,5 +22,6 @@ require (
 	github.com/rs/cors v1.7.0
 	github.com/sirupsen/logrus v1.6.0
 	go.mongodb.org/mongo-driver v1.3.4
+	gopkg.in/mgo.v2 v2.0.0-20160818020120-3f83fa500528
 	gopkg.in/square/go-jose.v2 v2.5.1
 )

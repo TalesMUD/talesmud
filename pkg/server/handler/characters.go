@@ -104,7 +104,7 @@ func (csh *CharactersHandler) CreateNewCharacter(c *gin.Context) {
 
 	if user, ok := c.Get("user"); ok {
 		if userObj, ok := user.(*entities.User); ok {
-			dto.UserID = userObj.ID.Hex()
+			dto.UserID = userObj.ID
 		}
 	}
 
