@@ -42,21 +42,28 @@
 
   </div>
   <div class="card-content">
-    <table>
-      <tbody>
-        {#each attributes as attribute}
-          <tr>
-            <td>{attribute.name}</td>
-            <td class="right">{attribute.value}</td>
-          </tr>
-        {/each}
-      </tbody>
-    </table>
+
+    {#if attributes}
+      <table>
+        <tbody>
+          {#each attributes as attribute}
+            <tr>
+              <td>{attribute.name}</td>
+              <td class="right">{attribute.value}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+      
+    {/if}
   </div>
   <div class="card-content">
-    <button class="btn green" on:click="{() => {
-      callback(templateId)
-    }}">
+    <button
+      class="btn green"
+      on:click="{() => {
+        callback(templateId);
+      }}"
+    >
       Choose
     </button>
   </div>

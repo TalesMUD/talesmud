@@ -29,7 +29,7 @@
     text-decoration: none;
   }
   .brand-logo {
-    margin-left: 1em;
+    margin-left: 0em;
     margin-right: 1em;
   }
   .iconspacing {
@@ -68,6 +68,12 @@
     UsersIcon,
   } from "svelte-feather-icons";
   import { Router, Link, Route, navigate } from "svelte-routing";
+
+  import Game from "./game/Game.svelte";
+  import Welcome from "./Welcome.svelte";
+  import Creator from "./creator/Creator.svelte";
+  import Characters from "./characters/Characters.svelte";
+  import UserForm from "./UserForm.svelte";
   import { afterUpdate, onMount } from "svelte";
   import NavLink from "./components/NavLink.svelte";
 
@@ -132,7 +138,7 @@
 
   <Router url="{url}">
     <nav class="nav-extended">
-      <div class="nav-wrapper">
+      <div class="nav-wrapper container">
         <a href="#" class="brand-logo">
           <span class="valign-wrapper italic">
             <span class="iconspacing">
@@ -216,10 +222,12 @@
       {#if matches}
         <main class="container">
           <AppContent />
+
         </main>
       {:else}
         <main>
           <AppContent />
+
         </main>
       {/if}
     </MediaQuery>

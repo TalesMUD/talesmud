@@ -9,7 +9,7 @@ import (
 type WhoCommand struct {
 }
 
-// Execute ... executes scream command
+// Execute ... executes who command
 func (command *WhoCommand) Execute(game def.GameCtrl, message *messages.Message) bool {
 
 	result := "List of all online players:\n"
