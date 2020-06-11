@@ -20,6 +20,9 @@
   :global(a:href) {
     text-decoration: none;
   }
+  :global(label) {
+    color: #00796b;
+  }
   :global(a) {
     color: #dedede;
 

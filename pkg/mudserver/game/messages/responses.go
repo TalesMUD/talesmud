@@ -1,9 +1,11 @@
 package messages
 
 import (
+	"github.com/talesmud/talesmud/pkg/entities"
 	e "github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
 )
 
@@ -111,12 +113,12 @@ type EnterRoomMessage struct {
 }
 
 //NewEnterRoomMessage ...
-func NewEnterRoomMessage(room *rooms.Room) *EnterRoomMessage {
+func NewEnterRoomMessage(room *rooms.Room, user *entities.User, game def.GameCtrl) *EnterRoomMessage {
 	return &EnterRoomMessage{
 		MessageResponse: MessageResponse{
 			Audience: MessageAudienceOrigin,
 			Type:     MessageTypeEnterRoom,
-			Message:  util.CreateRoomDescription(room),
+			Message:  util.CreateRoomDescription(room, user, game),
 		},
 		Room: *room,
 	}

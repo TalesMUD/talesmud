@@ -9,37 +9,34 @@ import (
 )
 
 // RoomActionType type
-type RoomActionType int8
+type RoomActionType string
 
 const (
-	RoomActionTypeDirection RoomActionType = iota + 1
+	RoomActionTypeResponse     RoomActionType = "response"
+	RoomActionTypeRoomResponse RoomActionType = "room_response"
+	RoomActionTypeScript       RoomActionType = "Script"
 )
-
-func (it RoomActionType) String() string {
-	return [...]string{"direction"}[it]
-}
-
-// RoomExitType type
-type RoomExitType int8
-
-const (
-	RoomExitTypeNormal RoomExitType = iota + 1
-)
-
-func (it RoomExitType) String() string {
-	return [...]string{"normal"}[it]
-}
 
 // Action ... action that can be invoked by a player in thi room
 type Action struct {
 	Name        string                 `bson:"name,omitempty" json:"name,omitempty"`
 	Description string                 `bson:"description,omitempty" json:"description,omitempty"`
+	Response    string                 `bson:"response,omitempty" json:"response,omitempty"`
 	Type        RoomActionType         `bson:"type,omitempty" json:"type,omitempty"`
-	Params      map[string]interface{} `bson:"params,omitempty" json:"params"`
+	Params      map[string]interface{} `bson:"params,omitempty" json:"params,omitempty"`
 }
 
 //Actions type
 type Actions []Action
+
+// RoomExitType type
+type RoomExitType string
+
+const (
+	RoomExitTypeNormal    RoomExitType = "normal"
+	RoomExitTypeDirection              = "direction"
+	RoomExitTypeTeleport               = "teleport"
+)
 
 // Exit ... action that can be invoked by a player in thi room
 type Exit struct {

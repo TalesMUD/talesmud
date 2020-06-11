@@ -23,11 +23,10 @@ func (command *ListCharactersCommand) Execute(game def.GameCtrl, message *messag
 		}
 		result += "To select character use: sc [charactername]"
 
-		game.SendMessage(messages.Reply(message.FromUser.ID, result))
+		game.SendMessage() <- messages.Reply(message.FromUser.ID, result)
 
 	} else {
-		game.SendMessage(messages.Reply(message.FromUser.ID, "You have no characters."))
-
+		game.SendMessage() <- messages.Reply(message.FromUser.ID, "You have no characters.")
 	}
 
 	return true

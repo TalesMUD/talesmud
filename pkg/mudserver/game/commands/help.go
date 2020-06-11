@@ -2,7 +2,7 @@ package commands
 
 import (
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
-	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	m "github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 )
 
 // HelpCommand ... foo
@@ -11,7 +11,7 @@ type HelpCommand struct {
 }
 
 // Execute ... executes scream command
-func (command *HelpCommand) Execute(game def.GameCtrl, message *messages.Message) bool {
+func (command *HelpCommand) Execute(game def.GameCtrl, message *m.Message) bool {
 
 	result := "List of all global commands:\n"
 
@@ -19,6 +19,6 @@ func (command *HelpCommand) Execute(game def.GameCtrl, message *messages.Message
 		result += key + " " + element + "\n"
 	}
 
-	game.SendMessage(messages.Reply(message.FromUser.ID, result))
+	game.SendMessage() <- m.Reply(message.FromUser.ID, result)
 	return true
 }

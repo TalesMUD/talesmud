@@ -20,12 +20,18 @@ type RoomsRepository interface {
 	Import(room *r.Room) (*r.Room, error)
 	Update(id string, room *r.Room) error
 	Delete(id string) error
+	Drop() error
 }
 
 //--- Implementations
 
 type roomsRepository struct {
 	*GenericRepo
+}
+
+// Drop ...
+func (repo *roomsRepository) Drop() error {
+	return repo.GenericRepo.DropCollection()
 }
 
 //NewMongoDBRoomsRepository creates a new mongodb repoRepository

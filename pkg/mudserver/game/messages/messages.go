@@ -19,6 +19,11 @@ type Message struct {
 	Data string
 }
 
+// Reply o a message
+func (msg *Message) Reply(message string) MessageResponse {
+	return Reply(msg.FromUser.ID, message)
+}
+
 // NewMessage ... creates a new message
 func NewMessage(fromUser *e.User, data string) *Message {
 	return &Message{

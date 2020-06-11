@@ -18,6 +18,7 @@ type UsersRepository interface {
 	Import(user *e.User) (*e.User, error)
 	Update(id string, user *e.User) error
 	Delete(id string) error
+	Drop() error
 }
 
 //--- Implementations
@@ -42,6 +43,12 @@ func NewMongoDBUsersRepository(db *db.Client) UsersRepository {
 	return ur
 }
 
+// Drop ...
+func (pr *usersRepo) Drop() error {
+	return pr.GenericRepo.DropCollection()
+}
+
+// Import ...
 func (pr *usersRepo) Import(user *e.User) (*e.User, error) {
 	result, err := pr.GenericRepo.Store(user)
 	return result.(*e.User), err

@@ -25,7 +25,7 @@ func Look(room *rooms.Room, game def.GameCtrl, message *messages.Message) bool {
 			result = "You look around... nothing else to see here."
 		}
 
-		game.SendMessage(messages.Reply(message.FromUser.ID, result))
+		game.SendMessage() <- message.Reply(result)
 		return true
 
 	} else {

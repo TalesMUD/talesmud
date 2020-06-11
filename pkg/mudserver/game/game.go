@@ -22,7 +22,8 @@ type Game struct {
 	SystemUser *entities.User
 
 	// messages
-	onMessageReceived chan *m.Message
+	onMessageReceived chan interface{}
+	sendMessage       chan interface{}
 
 	OnUserJoined chan *m.UserJoined
 	OnUserQuit   chan *m.UserQuit
@@ -50,12 +51,13 @@ func New(facade service.Facade) *Game {
 		RoomProcessor:    c.NewRoomProcessor(),
 
 		// event channels
-		onMessageReceived: make(chan *m.Message, 20),
+		onMessageReceived: make(chan interface{}, 20),
+		sendMessage:       make(chan interface{}, 20),
 		OnUserJoined:      make(chan *m.UserJoined, 20),
 		OnUserQuit:        make(chan *m.UserQuit, 20),
 
 		// game update listeners
-		Receivers: make([]Receiver, 0, 10),
+		//	Receivers: make([]Receiver, 0, 10),
 
 		Avatars: make(map[string]*Avatar),
 
@@ -64,9 +66,9 @@ func New(facade service.Facade) *Game {
 }
 
 // Subscribe ... sub
-func (g *Game) Subscribe(receiver Receiver) {
-	g.Receivers = append(g.Receivers, receiver)
-}
+//func (g *Game) Subscribe(receiver Receiver) {
+//	g.Receivers = append(g.Receivers, receiver)
+//}
 
 // Receiver ... rec
 type Receiver interface {
@@ -79,16 +81,22 @@ func (g *Game) Unsubscribe(receiver *Receiver) {
 	//game.Receivers = delete(game.Receivers, receiver)
 }
 
+/*
 // SendMessage ...
 func (g *Game) SendMessage(msg interface{}) {
 	// broeadcast message to all game listeners (currently only websocket server)
 	for _, receiver := range g.Receivers {
 		receiver.OnMessage(msg)
 	}
+}*/
+
+// SendMessage ...
+func (g *Game) SendMessage() chan interface{} {
+	return g.sendMessage
 }
 
 //OnMessageReceived returns onMessageReceived channel
-func (g *Game) OnMessageReceived() chan *m.Message {
+func (g *Game) OnMessageReceived() chan interface{} {
 	return g.onMessageReceived
 }
 
@@ -128,17 +136,20 @@ func (g *Game) Run() {
 				log.WithField("user", userQuit.User).Info("Received UserQuit message")
 				g.handleUserQuit(userQuit.User)
 
-			case message := <-g.onMessageReceived:
-				// attach current character if a user is set
-				g.attachCharacterToMessage(message)
+			case msg := <-g.onMessageReceived:
+				switch message := msg.(type) {
+				case *m.Message:
+					// attach current character if a user is set
+					g.attachCharacterToMessage(message)
 
-				// only broadcast if global commandprocessor didnt process it
-				if !g.CommandProcessor.Process(g, message) {
-					// check room commands
-					if !g.RoomProcessor.Process(g, message) {
-						// generic messages will be converted to plain OutgoingMessages (type message)
-						// and send to the room audience including the origin nickname or charactername
-						g.handleDefaultMessage(message)
+					// only broadcast if global commandprocessor didnt process it
+					if !g.CommandProcessor.Process(g, message) {
+						// check room commands
+						if !g.RoomProcessor.Process(g, message) {
+							// generic messages will be converted to plain OutgoingMessages (type message)
+							// and send to the room audience including the origin nickname or charactername
+							g.handleDefaultMessage(message)
+						}
 					}
 				}
 			}

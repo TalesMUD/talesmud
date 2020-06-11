@@ -21,7 +21,7 @@ func (screamCommand *ScreamCommand) Execute(game def.GameCtrl, message *messages
 	out := messages.NewRoomBasedMessage("", newMessage)
 	out.AudienceID = message.Character.CurrentRoomID
 
-	game.SendMessage(out)
+	game.SendMessage() <- out
 
 	return true
 }

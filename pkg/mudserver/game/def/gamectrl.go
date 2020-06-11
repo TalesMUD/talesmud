@@ -1,7 +1,6 @@
 package def
 
 import (
-	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
@@ -10,8 +9,8 @@ import (
 type GameCtrl interface {
 
 	// Used to pass messages as events inside the mud server, e.g. translate a command into other user messages etc.
-	OnMessageReceived() chan *messages.Message
+	OnMessageReceived() chan interface{}
 	// used to send replies/messages to users, origin or rooms, or global
-	SendMessage(msg interface{})
+	SendMessage() chan interface{}
 	GetFacade() service.Facade
 }

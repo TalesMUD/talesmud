@@ -40,6 +40,11 @@ func (repo *GenericRepo) CreateIndex() {
 
 }
 
+// DropCollection ... drops the whole collection
+func (repo *GenericRepo) DropCollection() error {
+	return repo.db.Drop(repo.collection)
+}
+
 // FindByID ...
 func (repo *GenericRepo) FindByID(id string) (interface{}, error) {
 

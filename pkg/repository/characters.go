@@ -22,6 +22,7 @@ type CharactersRepository interface {
 	Import(Character *e.Character) (*e.Character, error)
 	Update(id string, Character *e.Character) error
 	Delete(id string) error
+	Drop() error
 }
 
 //--- Implementations
@@ -49,6 +50,11 @@ func NewMongoDBcharactersRepository(db *db.Client) CharactersRepository {
 	cr.CreateIndex()
 
 	return cr
+}
+
+// Drop ...
+func (repo *charactersRepository) Drop() error {
+	return repo.GenericRepo.DropCollection()
 }
 
 func (repo *charactersRepository) FindByID(id string) (*e.Character, error) {

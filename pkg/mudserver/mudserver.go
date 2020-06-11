@@ -36,8 +36,6 @@ type server struct {
 	Clients   map[string]conn
 	Broadcast chan interface{}
 	Upgrader  websocket.Upgrader
-
-	//	MessageHandler *MessageHandler
 }
 
 //New creates a new mud server
@@ -57,8 +55,6 @@ func New(facade service.Facade) MUDServer {
 		Game:      game,
 	}
 
-	game.Subscribe(srv)
-
 	return srv
 }
 
@@ -66,26 +62,27 @@ func (server *server) Run() {
 
 	log.WithTime(time.Now()).Info("MUD Server starting ...")
 
+	go server.receiveMessages()
 	go server.Game.Run()
 	go server.handleBroadcastMessages()
-	go server.handleGameUpdates()
+	go server.handleClientTimeouts()
 
 	log.WithTime(time.Now()).Info("MUD Server running")
 }
 
-func (server *server) handleGameUpdates() {
+func (server *server) handleClientTimeouts() {
 
 	pingTicker := time.NewTicker(60 * time.Second)
 
 	for {
 		select {
 		case <-pingTicker.C:
-			server.handleUserPings()
+			server.sendUserPings()
 		}
 	}
 }
 
-func (server *server) handleUserPings() {
+func (server *server) sendUserPings() {
 
 	for _, con := range server.Clients {
 		server.sendMessage(con.User.ID, messages.MessageResponse{
@@ -253,36 +250,42 @@ func (server *server) handleBroadcastMessages() {
 }
 
 // OnMessage .. broadcast receiver
-func (server *server) OnMessage(message interface{}) {
+//func (server *server) OnMessage(message interface{}) {
 
-	if msg, ok := message.(messages.MessageResponder); ok {
-		switch msg.GetAudience() {
-		case messages.MessageAudienceOrigin:
-			server.sendMessage(msg.GetAudienceID(), msg)
-			break
-		case messages.MessageAudienceUser:
-			server.sendMessage(msg.GetAudienceID(), msg)
-			break
-		case messages.MessageAudienceRoom:
-			room, _ := server.Facade.RoomsService().FindByID(msg.GetAudienceID())
-			server.sendToRoom(room, msg)
-			break
+func (server *server) receiveMessages() {
 
-		case messages.MessageAudienceRoomWithoutOrigin:
-			room, _ := server.Facade.RoomsService().FindByID(msg.GetAudienceID())
-			server.sendToRoomWithout(msg.GetOriginID(), room, msg)
-			break
+	for {
+		message := <-server.Game.SendMessage()
 
-		case messages.MessageAudienceGlobal:
-			server.Broadcast <- msg
-			break
-		case messages.MessageAudienceSystem:
+		if msg, ok := message.(messages.MessageResponder); ok {
+			switch msg.GetAudience() {
+			case messages.MessageAudienceOrigin:
+				server.sendMessage(msg.GetAudienceID(), msg)
+				break
+			case messages.MessageAudienceUser:
+				server.sendMessage(msg.GetAudienceID(), msg)
+				break
+			case messages.MessageAudienceRoom:
+				room, _ := server.Facade.RoomsService().FindByID(msg.GetAudienceID())
+				server.sendToRoom(room, msg)
+				break
 
-			server.Broadcast <- messages.MessageResponse{
-				Username: "#SYSTEM",
-				Message:  msg.GetMessage(),
+			case messages.MessageAudienceRoomWithoutOrigin:
+				room, _ := server.Facade.RoomsService().FindByID(msg.GetAudienceID())
+				server.sendToRoomWithout(msg.GetOriginID(), room, msg)
+				break
+
+			case messages.MessageAudienceGlobal:
+				server.Broadcast <- msg
+				break
+			case messages.MessageAudienceSystem:
+
+				server.Broadcast <- messages.MessageResponse{
+					Username: "#SYSTEM",
+					Message:  msg.GetMessage(),
+				}
+				break
 			}
-			break
 		}
 	}
 }

@@ -1,24 +1,51 @@
 package util
 
 import (
+	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 )
 
 // CreateRoomDescription ...
-func CreateRoomDescription(room *rooms.Room) string {
+func CreateRoomDescription(room *rooms.Room, user *entities.User, game def.GameCtrl) string {
 	description := "[" + room.Name + "]\n"
 	description += room.Description + "\n"
+
+	// Characters
+	if len(room.Characters) > 0 {
+		description += "\n"
+		charResult := "-- In the room: "
+
+		for i, char := range room.Characters {
+			if i > 0 {
+				charResult += ", "
+			}
+
+			if character, err := game.GetFacade().CharactersService().FindByID(char); err == nil {
+				charResult += character.Name
+
+				if character.ID == user.LastCharacter {
+					charResult += "(you)"
+				}
+			}
+		}
+
+		description += charResult
+	}
+	// Exits
 	description += "\n"
-	description += "The visible exits are:\n"
+	description += "-- The visible exits are:\n"
 
 	for _, exit := range room.Exits {
-		description += "[" + exit.Name + "] " + exit.Description + "\n"
+		if !exit.Hidden {
+			description += " + [" + exit.Name + "] " + exit.Description + "\n"
+		}
 	}
 
 	return description
 }
 
-//RemoveCharacter ...
+//RemoveStringFromSlice ...
 func RemoveStringFromSlice(slice []string, inst string) []string {
 
 	for i, elem := range slice {
