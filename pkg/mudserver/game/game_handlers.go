@@ -25,7 +25,7 @@ func (game *Game) handleDefaultMessage(message *messages.Message) {
 		out.AudienceID = message.Character.CurrentRoomID
 	}
 
-	game.SendMessage(out)
+	game.SendMessage() <- out
 }
 
 func (game *Game) handleUserQuit(user *entities.User) {
@@ -43,14 +43,14 @@ func (game *Game) handleUserQuit(user *entities.User) {
 	room.RemoveCharacter(character.ID)
 	game.Facade.RoomsService().Update(room.ID, room)
 
-	game.SendMessage(messages.CharacterLeftRoom{
+	game.SendMessage() <- messages.CharacterLeftRoom{
 		MessageResponse: messages.MessageResponse{
 			Audience:   messages.MessageAudienceRoomWithoutOrigin,
 			OriginID:   character.ID,
 			AudienceID: character.CurrentRoomID,
 			Message:    character.Name + " left.",
 		},
-	})
+	}
 }
 
 func (game *Game) attachCharacterToMessage(msg *messages.Message) {
@@ -89,7 +89,7 @@ func (game *Game) handleUserJoined(user *entities.User) {
 			}
 		} else {
 			// player has no character yet, respnd with createCharacter Message
-			game.SendMessage(messages.NewCreateCharacterMessage(user.ID))
+			game.SendMessage() <- messages.NewCreateCharacterMessage(user.ID)
 			return
 		}
 	}

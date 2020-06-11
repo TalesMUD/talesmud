@@ -35,29 +35,29 @@ func TakeExit(exit string) RoomCommand {
 				game.GetFacade().CharactersService().Update(character.ID, character)
 
 				// send all players a left room message
-				game.SendMessage(messages.CharacterLeftRoom{
+				game.SendMessage() <- messages.CharacterLeftRoom{
 					MessageResponse: messages.MessageResponse{
 						Audience:   m.MessageAudienceRoomWithoutOrigin,
 						AudienceID: room.ID,
 						OriginID:   characterID,
 						Message:    message.Character.Name + " left.",
 					},
-				})
+				}
 
 				// send player a message to change room
-				enterRoom := messages.NewEnterRoomMessage(next)
+				enterRoom := messages.NewEnterRoomMessage(next, message.FromUser, game)
 				enterRoom.AudienceID = message.FromUser.ID
-				game.SendMessage(enterRoom)
+				game.SendMessage() <- enterRoom
 
 				// send all players in new room a joined message
-				game.SendMessage(messages.CharacterJoinedRoom{
+				game.SendMessage() <- messages.CharacterJoinedRoom{
 					MessageResponse: messages.MessageResponse{
 						Audience:   m.MessageAudienceRoomWithoutOrigin,
 						AudienceID: next.ID,
 						OriginID:   characterID,
 						Message:    message.Character.Name + " entered.",
 					},
-				})
+				}
 
 				return true
 			}

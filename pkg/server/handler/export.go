@@ -39,8 +39,13 @@ func (handler *ExportHandler) Export(c *gin.Context) {
 //Import Imports all data structures
 func (handler *ExportHandler) Import(c *gin.Context) {
 
+	// drop all collections before importing
+	handler.RoomsService.Drop()
+	handler.CharactersService.Drop()
+	handler.UserService.Drop()
+
 	var data exportStructure
-	if err := c.ShouldBindJSON(&data); err != nil {
+	if err := c.ShouldBindYAML(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

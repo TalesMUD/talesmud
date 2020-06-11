@@ -25,6 +25,6 @@ func (command *WhoCommand) Execute(game def.GameCtrl, message *messages.Message)
 		}
 	}
 
-	game.SendMessage(messages.Reply(message.FromUser.ID, result))
+	game.SendMessage() <- messages.Reply(message.FromUser.ID, result)
 	return true
 }

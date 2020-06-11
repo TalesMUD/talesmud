@@ -12,8 +12,15 @@
   input:disabled {
     color: white;
   }
+  .no-padding {
+    padding: 0;
+  }
   .title {
     font-size: 2em;
+  }
+
+  .first_label {
+        transform: translateX(-10px) translateY(-14px) scale(0.8);
   }
 
   .btn-small {
@@ -31,8 +38,15 @@
   .materialize-textarea {
     border-bottom: none;
   }
+  .header {
+    font-size: 150%;
+    font-weight: 600;
+  }
+  .active {
+    color: #ccc;
+  }
   label {
-    color: #eee;
+    color: #00796b;
   }
 </style>
 
@@ -226,7 +240,7 @@
 
         <div class="row">
 
-          <span>{$store.selectedRoom.name}</span>
+          <span class="header">{$store.selectedRoom.name}</span>
 
           {#if $store.selectedRoom.isNew}
             <button
@@ -254,14 +268,14 @@
         <div id="general"></div>
 
         <div class="row">
-          <div class="input-field col s6">
+          <div class="no-padding input-field col s6">
             <input
               placeholder="Name"
               id="room_name"
               type="text"
               bind:value="{$store.selectedRoom.name}"
             />
-            <label class="active" for="room_name">Name</label>
+            <label class="first_label" for="room_name">Name</label>
           </div>
 
           {#if $store.selectedRoom.isNew}
@@ -316,14 +330,14 @@
 
         <div class="row">
 
-          <div class="input-field col s4">
+          <div class="no-padding input-field col s4">
             <input
               placeholder="Area"
               id="area"
               type="text"
               bind:value="{$store.selectedRoom.area}"
             />
-            <label class="active" for="area">Area</label>
+            <label class="active first_label" for="area">Area</label>
           </div>
 
           <div class="input-field col s4">
@@ -346,6 +360,41 @@
             <label class="active" for="room_type">Room Type</label>
           </div>
         </div>
+
+        {#if $store.selectedRoom.coords}
+          <div class="row">
+
+            <div class="no-padding input-field col s2">
+              <input
+                placeholder="X"
+                id="x"
+                type="text"
+                bind:value="{$store.selectedRoom.coords.x}"
+              />
+              <label class="first_label" for="x">X</label>
+            </div>
+
+            <div class="input-field col s2">
+              <input
+                placeholder="Y"
+                id="y"
+                type="text"
+                bind:value="{$store.selectedRoom.coords.y}"
+              />
+              <label class="active" for="y">Y</label>
+            </div>
+
+            <div class="input-field col s2">
+              <input
+                placeholder="Z"
+                id="z"
+                type="text"
+                bind:value="{$store.selectedRoom.coords.z}"
+              />
+              <label class="active" for="z">Z</label>
+            </div>
+          </div>
+        {/if}
 
       </div>
       {#if $store.selectedRoom.exits}

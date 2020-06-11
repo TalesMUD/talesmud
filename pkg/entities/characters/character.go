@@ -46,8 +46,6 @@ type Character struct {
 	Created    time.Time  `bson:"created" json:"created,omitempty"`
 	Attributes Attributes `bson:"attributes" json:"attributes,omitempty"`
 
-	PersonalityTraits string `json:"personalityTraits,omitempty"`
-
 	// complex character fields
 	Inventory Inventory `json:"inventory"`
 

@@ -34,9 +34,8 @@ func (selectCharacter *SelectCharacterCommand) Execute(game def.GameCtrl, messag
 			}
 		}
 	}
-	game.SendMessage(messages.Reply(message.FromUser.ID, "Could not select character: "+characterName))
-
-	return false
+	game.SendMessage() <- message.Reply("Could not select character: " + characterName)
+	return true
 }
 
 func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *characters.Character) {
@@ -55,7 +54,7 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 		Character: character,
 	}
 
-	game.SendMessage(characterSelected)
+	game.SendMessage() <- characterSelected
 
 	var currentRoom *rooms.Room
 	var err error
@@ -88,17 +87,17 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 	currentRoom.AddCharacter(character.ID)
 	game.GetFacade().RoomsService().Update(currentRoom.ID, currentRoom)
 
-	enterRoom := m.NewEnterRoomMessage(currentRoom)
+	enterRoom := m.NewEnterRoomMessage(currentRoom, user, game)
 	enterRoom.AudienceID = user.ID
-	game.SendMessage(enterRoom)
+	game.SendMessage() <- enterRoom
 
-	game.SendMessage(messages.CharacterJoinedRoom{
+	game.SendMessage() <- messages.CharacterJoinedRoom{
 		MessageResponse: messages.MessageResponse{
 			Audience:   m.MessageAudienceRoomWithoutOrigin,
 			AudienceID: currentRoom.ID,
 			OriginID:   character.ID,
 			Message:    character.Name + " entered.",
 		},
-	})
+	}
 
 }

@@ -103,6 +103,11 @@ func (dba *Client) DeleteAll(coll string) (*mongo.DeleteResult, error) {
 	return dba.C(coll).DeleteMany(context.TODO(), findFilter)
 }
 
+//Drop drops the collection
+func (dba *Client) Drop(coll string) error {
+	return dba.C(coll).Drop(context.TODO())
+}
+
 //Delete returns all entities of a given collection
 func (dba *Client) Delete(coll string, key string, value string) (*mongo.DeleteResult, error) {
 	findFilter := bson.D{{key, value}}

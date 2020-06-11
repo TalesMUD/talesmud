@@ -68,5 +68,7 @@ func (commandProcessor *CommandProcessor) registerCommands() {
 	commandProcessor.RegisterCommand(&ListCharactersCommand{}, "list all your characters", "lc", "listcharacters")
 	commandProcessor.RegisterCommand(&HelpCommand{processor: commandProcessor}, "are you really asking?", "h", "help")
 	commandProcessor.RegisterCommand(&WhoCommand{}, "list all online players", "who")
+	commandProcessor.RegisterCommand(&InventoryCommand{}, "Display your inventory", "inventory", "i")
+	commandProcessor.RegisterCommand(&NewCharacterCommand{}, "Createa new character", "newcharacter", "nc")
 
 }

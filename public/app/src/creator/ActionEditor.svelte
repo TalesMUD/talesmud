@@ -29,10 +29,17 @@
   </div>
 
   <div class="collapsible-body">
-    <button on:click="{() => deleteExit(exit)}" class="btn-small red right">
-      <i class="material-icons">delete_forever</i>
-      Delete Exit
-    </button>
+    <div class="row">
+
+      <label>
+        <input type="checkbox" bind:checked="{exit.hidden}" />
+        <span>Hidden</span>
+      </label>
+      <button on:click="{() => deleteExit(exit)}" class="btn-small red right">
+        Delete Exit
+      </button>
+    </div>
+
     <div class="row">
 
       <div class="input-field">
