@@ -1,5 +1,5 @@
 
-@prod=https://talesofapirate.com/dnd
+@prod=https://talesofapirate.com/
 @local=http://0.0.0.0:8010
 @host={{local}}
 

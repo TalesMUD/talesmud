@@ -62,13 +62,13 @@ func (commandProcessor *CommandProcessor) Process(game def.GameCtrl, message *me
 
 func (commandProcessor *CommandProcessor) registerCommands() {
 
-	commandProcessor.RegisterCommand(&ScreamCommand{}, "scream through the room", "scream")
-	commandProcessor.RegisterCommand(&ShrugCommand{}, "shrug emote", "shrug")
-	commandProcessor.RegisterCommand(&SelectCharacterCommand{}, "select a character, use: sc [charactername]", "sc", "selectcharacter")
-	commandProcessor.RegisterCommand(&ListCharactersCommand{}, "list all your characters", "lc", "listcharacters")
-	commandProcessor.RegisterCommand(&HelpCommand{processor: commandProcessor}, "are you really asking?", "h", "help")
-	commandProcessor.RegisterCommand(&WhoCommand{}, "list all online players", "who")
+	commandProcessor.RegisterCommand(&ScreamCommand{}, "Scream through the room", "scream")
+	commandProcessor.RegisterCommand(&ShrugCommand{}, "Shrug emote", "shrug")
+	commandProcessor.RegisterCommand(&SelectCharacterCommand{}, "Select a character, use: sc [charactername]", "sc", "selectcharacter")
+	commandProcessor.RegisterCommand(&ListCharactersCommand{}, "List all your characters", "lc", "listcharacters")
+	commandProcessor.RegisterCommand(&HelpCommand{processor: commandProcessor}, "Are you really asking?", "h", "help")
+	commandProcessor.RegisterCommand(&WhoCommand{}, "List all online players", "who")
 	commandProcessor.RegisterCommand(&InventoryCommand{}, "Display your inventory", "inventory", "i")
-	commandProcessor.RegisterCommand(&NewCharacterCommand{}, "Createa new character", "newcharacter", "nc")
+	commandProcessor.RegisterCommand(&NewCharacterCommand{}, "Create a new character", "newcharacter", "nc")
 
 }

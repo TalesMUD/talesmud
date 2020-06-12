@@ -8,6 +8,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/db"
 	"github.com/talesmud/talesmud/pkg/entities"
 	e "github.com/talesmud/talesmud/pkg/entities/characters"
+	"github.com/talesmud/talesmud/pkg/entities/items"
 )
 
 //--- Interface Definitions
@@ -42,7 +43,9 @@ func NewMongoDBcharactersRepository(db *db.Client) CharactersRepository {
 			db:         db,
 			collection: "characters",
 			generator: func() interface{} {
-				return &e.Character{}
+				return &e.Character{
+					EquippedItems: make(map[items.ItemSlot]*items.Item),
+				}
 			},
 		},
 	}
