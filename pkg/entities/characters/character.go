@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/talesmud/talesmud/pkg/entities"
+	"github.com/talesmud/talesmud/pkg/entities/items"
 	"github.com/talesmud/talesmud/pkg/entities/traits"
 )
 
@@ -47,7 +48,8 @@ type Character struct {
 	Attributes Attributes `bson:"attributes" json:"attributes,omitempty"`
 
 	// complex character fields
-	Inventory Inventory `json:"inventory"`
+	Inventory     Inventory                      `bson:"inventory" json:"inventory"`
+	EquippedItems map[items.ItemSlot]*items.Item `bson:"equippedItems" json:"equippedItems"`
 
 	// track alltime stats in character object but dont expose as json by default
 	AllTimeStats struct {

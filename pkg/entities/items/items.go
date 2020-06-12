@@ -4,59 +4,71 @@ import (
 	"time"
 
 	"github.com/talesmud/talesmud/pkg/entities"
+	"github.com/talesmud/talesmud/pkg/entities/traits"
 )
 
 //ItemType type
-type ItemType int
+type ItemType string
 
 const (
-	itemTypeCurrency ItemType = iota + 1
-	itemTypeConsumable
-	itemTypeArmor
-	itemTypeWeapon
-	itemTypeCollectible
-	itemTypeCraftingMaterial
+	ItemTypeCurrency         ItemType = "currency"
+	ItemTypeConsumable                = "consumable"
+	ItemTypeArmor                     = "armor"
+	ItemTypeWeapon                    = "weapon"
+	ItemTypeCollectible               = "collectible"
+	ItemTypeCraftingMaterial          = "crafting_material"
 )
-
-func (it ItemType) String() string {
-	return [...]string{"currency", "consumable", "armor", "weapon", "collectible", "crafting_material"}[it]
-}
 
 //ItemSlot type
-type ItemSlot int
+type ItemSlot string
 
 const (
-	itemSlotInventory ItemSlot = iota + 1
-	itemSlotPurse
-	itemSlotHead
-	itemSlotChest
-	itemSlotLegs
-	itemSlotBoots
-	itemSlotNeck
-	itemSlotRing1
-	itemSlotRing2
-	itemSlotHands
-	itemSlotMainHand
-	itemSlotOffHand
+	ItemSlotInventory ItemSlot = "inventory"
+	ItemSlotContainer          = "container"
+	ItemSlotPurse              = "purse"
+	ItemSlotHead               = "head"
+	ItemSlotChest              = "chest"
+	ItemSlotLegs               = "legs"
+	ItemSlotBoots              = "boots"
+	ItemSlotNeck               = "neck"
+	ItemSlotRing1              = "ring1"
+	ItemSlotRing2              = "ring2"
+	ItemSlotHands              = "hands"
+	ItemSlotMainHand           = "main_hand"
+	ItemSlotOffHand            = "off_hand"
 )
-
-func (is ItemSlot) String() string {
-	return [...]string{"inventory", "purse", "head", "chest", "legs", "boots", "neck", "ring1", "ring2", "hands", "main_hand", "off_hand"}[is]
-}
 
 //Item data
 type Item struct {
 	*entities.Entity `bson:",inline"`
+	traits.LookAt    `bson:",inline"` // "detail"
 
 	Name        string `bson:"name,omitempty" json:"name"`
 	Description string `bson:"description,omitempty" json:"description"`
 
-	ItemType ItemType `bson:"itemType,omitempty" json:"itemType"`
-	ItemSlot ItemSlot `bson:"itemSlot,omitempty" json:"itemSlot"`
+	Type ItemType `bson:"type,omitempty" json:"type"`
+	Slot ItemSlot `bson:"slot,omitempty" json:"slot"`
 
-	Created    time.Time         `bson:"created,omitempty" json:"created,omitempty"`
-	Attributes map[string]string `bson:"attributes,omitempty" json:"attributes,omitempty"`
+	// custom item properties
 	Properties map[string]string `bson:"properties,omitempty" json:"properties,omitempty"`
+	// "stats"
+	Attributes map[string]string `bson:"attributes,omitempty" json:"attributes,omitempty"`
+
+	// container specifics
+	Closed   bool   `bson:"closed,omitempty" json:"closed,omitempty"`
+	Locked   bool   `bson:"locked,omitempty" json:"locked,omitempty"`
+	LockedBy string `bson:"lockedBy,omitempty" json:"lockedBy,omitempty"`
+	Items    Items  `bson:"items,omitempty" json:"items,omitempty"`
+	MaxItems int32  `bson:"maxItems,omitempty" json:"maxItems,omitempty"`
+
+	// misc
+	NoPickup bool `bson:"noPickup,omitempty" json:"noPickup,omitempty"`
+
+	// scripts
+
+	// metainfo
+	Tags    []string  `bson:"tags,omitempty" json:"tags"`
+	Created time.Time `bson:"created,omitempty" json:"created,omitempty"`
 }
 
 //Items type

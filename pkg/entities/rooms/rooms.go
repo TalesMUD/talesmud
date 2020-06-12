@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/talesmud/talesmud/pkg/entities"
-	"github.com/talesmud/talesmud/pkg/entities/items"
 	"github.com/talesmud/talesmud/pkg/entities/traits"
 )
 
@@ -54,6 +53,9 @@ type Exits []Exit
 //Characters type
 type Characters []string
 
+//Items type
+type Items []string
+
 //Room data
 type Room struct {
 	*entities.Entity `bson:",inline"`
@@ -68,10 +70,10 @@ type Room struct {
 	AreaType string   `bson:"areaType,omitempty" json:"areaType"`
 	Tags     []string `bson:"tags,omitempty" json:"tags"`
 
-	Actions    Actions     `bson:"actions,omitempty" json:"actions"`
-	Exits      Exits       `bson:"exits,omitempty" json:"exits"`
-	Characters Characters  `bson:"characters,omitempty" json:"characters"`
-	Items      items.Items `bson:"items,omitempty" json:"items"`
+	Actions    Actions    `bson:"actions,omitempty" json:"actions"`
+	Exits      Exits      `bson:"exits,omitempty" json:"exits"`
+	Characters Characters `bson:"characters,omitempty" json:"characters"`
+	Items      Items      `bson:"items,omitempty" json:"items"`
 
 	// can be optionally used for MUDs that want to be grid based or need stricter maps
 	Coords *struct {

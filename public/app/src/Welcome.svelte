@@ -9,7 +9,7 @@
 </style>
 
 <script>
-	import NavLink from './components/NavLink.svelte';
+  import NavLink from "./components/NavLink.svelte";
   import CharacterCreator from "./characters/CharacterCreator.svelte";
   import { onMount } from "svelte";
 
@@ -66,43 +66,90 @@
   });
 </script>
 
-<div class="center-align">
+<div class="left">
 
   {#if $isAuthenticated}
-    <h4>Welcome back {$nickname}</h4>
     <div>
-      Start playing
-      
-      <button class="btn green"><NavLink to="/play">Play</NavLink></button>
-    </div>
+      <h5>Welcome back {$nickname}</h5>
 
-    <div>
-      <p>
-        Or create a new Character
-        <a class="waves-effect waves-light btn modal-trigger" href="#modal1">
-          Modal
-        </a>
-      </p>
+      <div>
+        <NavLink to="/play">Start playing</NavLink>
+        or try to create some
+        <NavLink to="/creator">own content.</NavLink>
+      </div>
 
+      <div>
+        <p>
+          <a class="modal-trigger" href="#modal1">Create a new Character</a>
+        </p>
+
+      </div>
     </div>
   {:else if !$isAuthenticated}
-    <h4>Welcome Stranger</h4>
-    <p>
-      Please
-      <a href="/login" class="loginText">log</a>
-      in or
-      <a href="/signup" class="loginText">signup</a>
-    </p>
+    <div>
+      <h4>Welcome Stranger</h4>
+      <p>
+        Please
+        <a href="/login" class="loginText">log</a>
+        in or
+        <a href="/signup" class="loginText">signup</a>
+      </p>
+    </div>
   {/if}
 
-  <h4>TalesMUD</h4>
-  <p>What is TalesMUD about</p>
+  <div>
+    <h5>TalesMUD</h5>
+    <p>
+      TalesMUD is a MUD/MUX game engine/game development platform. Using
+      TalesMud you can create your own MUD server, define your game content and
+      either use the existing web client or build a new one from scratch.
+    </p>
+    <p>
+      This is still a very early version with many more features planned. As
+      development progresses you can expect several updates to the developer
+      sandbox version running on this site.
+    </p>
+    Implemented
+    <ul>
+      <li>- Character creation</li>
+      <li>- Room creation, movement between rooms</li>
+    </ul>
+    Planned
+    <ul>
+      <li>- Items, Inventory Management</li>
+      <li>- NPCs, Enemies and Dialogs</li>
+      <li>- Combat System</li>
+      <li>- Quest System</li>
+    </ul>
+    <p>
+      Head over to
+      <NavLink to="/play">play</NavLink>
+      create a character and try out the current set of commands by typing
+      [help]. List of all global commands:
+    </p>
+    <ul>
 
-  <h4>News</h4>
-  <ul>
-    <li>Update #2</li>
-  </ul>
+      <li>[shrug] shrug emote</li>
+      <li>[sc, selectcharacter] select a character, use: sc [charactername]</li>
+      <li>[lc, listcharacters] list all your characters</li>
+      <li>[h, help] are you really asking?</li>
+      <li>[who] list all online players</li>
+      <li>[inventory, i] Display your inventory</li>
+      <li>[newcharacter, nc] Createa new character</li>
+      <li>[scream] scream through the room</li>
+    </ul>
 
+  </div>
+
+  <div>
+    <h5>News</h5>
+    <ul>
+      <li>
+        12.06.2020 - First minimalistic version live supporting room creation,
+        character creation (template picks)
+      </li>
+    </ul>
+  </div>
   <CharacterCreator />
 
 </div>
