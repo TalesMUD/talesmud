@@ -11,6 +11,8 @@ type Facade interface {
 	PartiesService() PartiesService
 	UsersService() UsersService
 	RoomsService() RoomsService
+
+	ItemsService() ItemsService
 }
 
 type facade struct {
@@ -18,6 +20,7 @@ type facade struct {
 	ps  PartiesService
 	us  UsersService
 	rs  RoomsService
+	is  ItemsService
 	db  *db.Client
 }
 
@@ -28,11 +31,15 @@ func NewFacade(db *db.Client) Facade {
 	usersRepo := repository.NewMongoDBUsersRepository(db)
 	roomsRepo := repository.NewMongoDBRoomsRepository(db)
 
+	itemsRepo := repository.NewMongoDBItemsRepository(db)
+	itemTemplatesRepo := repository.NewMongoDBItemTemplatesRepository(db)
+
 	return &facade{
 		css: NewCharactersService(charactersRepo),
 		ps:  NewPartiesService(partiesRepo),
 		us:  NewUsersService(usersRepo),
 		rs:  NewRoomsService(roomsRepo),
+		is:  NewItemsService(itemsRepo, itemTemplatesRepo),
 	}
 }
 func (f *facade) RoomsService() RoomsService {
@@ -40,6 +47,10 @@ func (f *facade) RoomsService() RoomsService {
 }
 func (f *facade) CharactersService() CharactersService {
 	return f.css
+}
+
+func (f *facade) ItemsService() ItemsService {
+	return f.is
 }
 
 func (f *facade) PartiesService() PartiesService {

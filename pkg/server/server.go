@@ -202,10 +202,15 @@ func (app *app) setupRoutes() {
 		app.facade.RoomsService(),
 	}
 
+	items := &handler.ItemsHandler{
+		app.facade.ItemsService(),
+	}
+
 	exp := &handler.ExportHandler{
 		RoomsService:      app.facade.RoomsService(),
 		CharactersService: app.facade.CharactersService(),
 		UserService:       app.facade.UsersService(),
+		ItemsService:      app.facade.ItemsService(),
 	}
 
 	worldRenderer := &handler.WorldRendererHandler{
@@ -229,7 +234,7 @@ func (app *app) setupRoutes() {
 
 	// user,
 	protected := r.Group("/api/")
-	protected.Use(app.authMiddleware())
+	//	protected.Use(app.authMiddleware())
 	{
 		// CRUD
 		protected.GET("characters", csh.GetCharacters)
@@ -244,6 +249,19 @@ func (app *app) setupRoutes() {
 		protected.POST("rooms", rooms.PostRoom)
 		protected.PUT("rooms/:id", rooms.PutRoom)
 		protected.DELETE("rooms/:id", rooms.DeleteRoom)
+
+		// items API should probably not be directly public
+		protected.GET("items", items.GetItems)
+		protected.POST("items", items.PostItem)
+		protected.PUT("items/:id", items.UpdateItemByID)
+		protected.DELETE("items/:id", items.DeleteItemByID)
+
+		protected.GET("item-templates", items.GetItemTemplates)
+		protected.POST("item-templates", items.PostItemTemplate)
+		protected.PUT("item-templates/:id", items.UpdateItemTemplateByID)
+		protected.DELETE("item-templates/:id", items.DeleteItemTemplateByID)
+
+		protected.DELETE("item-create/:templateId", items.CreateItemFromTemplateID)
 
 		protected.GET("world/map", worldRenderer.Render)
 

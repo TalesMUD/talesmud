@@ -11,12 +11,14 @@ import (
 type ItemType string
 
 const (
-	ItemTypeCurrency         ItemType = "currency"
-	ItemTypeConsumable                = "consumable"
-	ItemTypeArmor                     = "armor"
-	ItemTypeWeapon                    = "weapon"
-	ItemTypeCollectible               = "collectible"
-	ItemTypeCraftingMaterial          = "crafting_material"
+	ItemTypeCurrency    ItemType = "currency"
+	ItemTypeConsumable           = "consumable"
+	ItemTypeArmor                = "armor"
+	ItemTypeWeapon               = "weapon"
+	ItemTypeCollectible          = "collectible"
+	ItemTypeQuest                = "quest"
+
+	ItemTypeCraftingMaterial = "crafting_material"
 )
 
 //ItemSlot type
@@ -38,6 +40,17 @@ const (
 	ItemSlotOffHand            = "off_hand"
 )
 
+//ItemQuality ...
+type ItemQuality string
+
+const (
+	ItemQualityNormal    ItemQuality = "normal"
+	ItemQualityMagic                 = "magic"
+	ItemQualityRare                  = "rare"
+	ItemQualityLegendary             = "legendary"
+	ItemQualityMythic                = "mythic"
+)
+
 //Item data
 type Item struct {
 	*entities.Entity `bson:",inline"`
@@ -46,13 +59,15 @@ type Item struct {
 	Name        string `bson:"name,omitempty" json:"name"`
 	Description string `bson:"description,omitempty" json:"description"`
 
-	Type ItemType `bson:"type,omitempty" json:"type"`
-	Slot ItemSlot `bson:"slot,omitempty" json:"slot"`
+	Type    ItemType    `bson:"type,omitempty" json:"type"`
+	Slot    ItemSlot    `bson:"slot,omitempty" json:"slot"`
+	Quality ItemQuality `bson:"quality,omitempty" json:"quality"`
+	Level   int32       `bson:"level,omitempty" json:"level,omitempty"`
 
 	// custom item properties
-	Properties map[string]string `bson:"properties,omitempty" json:"properties,omitempty"`
+	Properties map[string]interface{} `bson:"properties,omitempty" json:"properties,omitempty"`
 	// "stats"
-	Attributes map[string]string `bson:"attributes,omitempty" json:"attributes,omitempty"`
+	Attributes map[string]interface{} `bson:"attributes,omitempty" json:"attributes,omitempty"`
 
 	// container specifics
 	Closed   bool   `bson:"closed,omitempty" json:"closed,omitempty"`

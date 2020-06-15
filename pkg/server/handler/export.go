@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	e "github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
+	"github.com/talesmud/talesmud/pkg/entities/items"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/service"
 )
@@ -15,12 +16,15 @@ type ExportHandler struct {
 	RoomsService      service.RoomsService
 	CharactersService service.CharactersService
 	UserService       service.UsersService
+	ItemsService      service.ItemsService
 }
 
 type exportStructure struct {
-	Characters []*characters.Character `json:"characters"`
-	Rooms      []*rooms.Room           `json:"rooms"`
-	Users      []*e.User               `json:"users"`
+	Rooms         []*rooms.Room           `json:"rooms"`
+	Items         []*items.Item           `json:"items"`
+	ItemTemplates []*items.ItemTemplate   `json:"itemTemplates"`
+	Characters    []*characters.Character `json:"characters"`
+	Users         []*e.User               `json:"users"`
 }
 
 //Export Exports all data structures as JSON
@@ -31,9 +35,11 @@ func (handler *ExportHandler) Export(c *gin.Context) {
 	d.Rooms, _ = handler.RoomsService.FindAll()
 	d.Characters, _ = handler.CharactersService.FindAll()
 	d.Users, _ = handler.UserService.FindAll()
+	d.ItemTemplates, _ = handler.ItemsService.ItemTemplates().FindAll()
+	d.Items, _ = handler.ItemsService.Items().FindAll()
 
 	//c.JSON(http.StatusOK, d)
-	c.YAML(http.StatusOK, d)
+	c.IndentedJSON(http.StatusOK, d)
 }
 
 //Import Imports all data structures
@@ -45,7 +51,8 @@ func (handler *ExportHandler) Import(c *gin.Context) {
 	handler.UserService.Drop()
 
 	var data exportStructure
-	if err := c.ShouldBindYAML(&data); err != nil {
+	//if err := c.ShouldBindYAML(&data); err != nil {
+	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -60,6 +67,13 @@ func (handler *ExportHandler) Import(c *gin.Context) {
 
 	for _, user := range data.Users {
 		handler.UserService.Import(user)
+	}
+
+	for _, item := range data.Items {
+		handler.ItemsService.Items().Import(item)
+	}
+	for _, itemTemplate := range data.ItemTemplates {
+		handler.ItemsService.ItemTemplates().Import(itemTemplate)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"status": "Import successful"})
