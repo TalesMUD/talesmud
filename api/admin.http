@@ -9,7 +9,7 @@ Authorization: Basic admin:admin
 
 ###
 POST {{host}}/admin/import  HTTP/1.1
-content-type: application/yaml
+content-type: application/json
 Authorization: Basic admin:admin
 
-< import.yml
+< export.json

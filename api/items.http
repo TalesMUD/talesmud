@@ -3,7 +3,7 @@
 @host={{local}}
 @token=REPLACE_ME
 
-GET http://localhost:8000/api/items
+GET http://localhost:8010/api/items
 
 ###
 
@@ -11,7 +11,7 @@ PUT http://localhost:8000/api/createItem/sword_001
 
 ###
 
-GET http://localhost:8000/api/itemTemplates
+GET http://localhost:8010/api/item-templates?name=foo&slot=ring2&type=armor
 
 ###
 
