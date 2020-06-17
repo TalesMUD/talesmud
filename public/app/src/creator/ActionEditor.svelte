@@ -47,7 +47,6 @@
           placeholder="Placeholder"
           id="name-{exit.name}"
           type="text"
-          class="validate"
           bind:value="{exit.name}"
         />
         <label for="name-{exit.name}">Name</label>
@@ -57,7 +56,6 @@
             placeholder="Placeholder"
             id="desc-{exit.description}"
             type="text"
-            class="validate"
             bind:value="{exit.description}"
           />
           <label for="desc-{exit.description}">Description</label>
@@ -65,7 +63,6 @@
             <input
               id="target-{exit.target}"
               type="text"
-              class="validate"
               bind:value="{exit.target}"
             />
             <label for="target-{exit.target}">Target Room</label>

@@ -14,7 +14,12 @@ type ItemsService interface {
 	Items() r.ItemsRepository
 	ItemTemplates() r.ItemTemplatesRepository
 
-	CreateItemFromTemplate(templateId string) (*items.Item, error)
+	CreateItemFromTemplate(templateID string) (*items.Item, error)
+
+	ItemSlots() items.ItemSlots
+	ItemQualities() items.ItemQualities
+	ItemTypes() items.ItemTypes
+	ItemSubTypes() items.ItemSubTypes
 }
 
 //--- Implementations
@@ -31,6 +36,56 @@ func NewItemsService(itemsRepo r.ItemsRepository, itemsTemplateRepo r.ItemTempla
 		itemsRepo,
 		itemsTemplateRepo,
 		scripts.ScriptRunner{},
+	}
+}
+
+func (itemsService *itemsService) ItemSlots() items.ItemSlots {
+	return items.ItemSlots{
+		items.ItemSlotInventory,
+		items.ItemSlotContainer,
+		items.ItemSlotPurse,
+		items.ItemSlotHead,
+		items.ItemSlotChest,
+		items.ItemSlotLegs,
+		items.ItemSlotBoots,
+		items.ItemSlotNeck,
+		items.ItemSlotRing1,
+		items.ItemSlotRing2,
+		items.ItemSlotHands,
+		items.ItemSlotMainHand,
+		items.ItemSlotOffHand,
+	}
+}
+
+func (itemsService *itemsService) ItemQualities() items.ItemQualities {
+	return items.ItemQualities{
+		items.ItemQualityNormal,
+		items.ItemQualityMagic,
+		items.ItemQualityRare,
+		items.ItemQualityLegendary,
+		items.ItemQualityMythic,
+	}
+}
+
+func (itemsService *itemsService) ItemTypes() items.ItemTypes {
+	return items.ItemTypes{
+		items.ItemTypeCurrency,
+		items.ItemTypeConsumable,
+		items.ItemTypeArmor,
+		items.ItemTypeWeapon,
+		items.ItemTypeCollectible,
+		items.ItemTypeQuest,
+		items.ItemTypeCraftingMaterial,
+	}
+}
+
+func (itemsService *itemsService) ItemSubTypes() items.ItemSubTypes {
+	return items.ItemSubTypes{
+		items.ItemSubTypeSword,
+		items.ItemSubTypeTwoHandSword,
+		items.ItemSubTypeAxe,
+		items.ItemSubTypeSpear,
+		items.ItemSubTypeShield,
 	}
 }
 

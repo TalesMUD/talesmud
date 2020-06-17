@@ -41,6 +41,26 @@ func (csh *ItemsHandler) GetItems(c *gin.Context) {
 	}
 }
 
+//GetItemSlots ...
+func (csh *ItemsHandler) GetItemSlots(c *gin.Context) {
+	c.JSON(http.StatusOK, csh.Service.ItemSlots())
+}
+
+//GetItemQualities ...
+func (csh *ItemsHandler) GetItemQualities(c *gin.Context) {
+	c.JSON(http.StatusOK, csh.Service.ItemQualities())
+}
+
+//GetItemTypes ...
+func (csh *ItemsHandler) GetItemTypes(c *gin.Context) {
+	c.JSON(http.StatusOK, csh.Service.ItemTypes())
+}
+
+//GetItemSubTypes ...
+func (csh *ItemsHandler) GetItemSubTypes(c *gin.Context) {
+	c.JSON(http.StatusOK, csh.Service.ItemSubTypes())
+}
+
 //GetItemTemplates returns the list of item templates
 func (csh *ItemsHandler) GetItemTemplates(c *gin.Context) {
 

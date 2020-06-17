@@ -20,7 +20,7 @@
   }
 
   .first_label {
-        transform: translateX(-10px) translateY(-14px) scale(0.8);
+    transform: translateX(-10px) translateY(-14px) scale(0.8);
   }
 
   .btn-small {
@@ -109,10 +109,7 @@
     });
 
     loadData(() => {
-      store.setSelectedRoom($store.rooms[0], () => {
-        var elems = document.querySelectorAll(".collapsible");
-        var instances = M.Collapsible.init(elems);
-      });
+      selectRoom($store.rooms[0]);
     });
   });
 
@@ -162,9 +159,11 @@
       }
     );
   };
+
   const deleteExit = (exit) => {
     store.deleteExit(exit);
   };
+
   const createExit = () => {
     store.createExit();
     M.updateTextFields();
@@ -182,8 +181,21 @@
       }
       M.updateTextFields();
 
-      var el = document.querySelectorAll(".tabs");
+      // second time to fix the selects
+      setTimeout(function () {
+        var elems = document.querySelectorAll(".collapsible");
+        if (elems != undefined) {
+          var instances = M.Collapsible.init(elems, {});
+        }
+        M.updateTextFields();
 
+        var textareas = document.querySelectorAll(".materialize-textarea");
+        textareas.forEach((e) => {
+          M.textareaAutoResize(e);
+        });
+      }, 50);
+
+      var el = document.querySelectorAll(".tabs");
       var instance = M.Tabs.init(el, {});
     });
 
@@ -245,7 +257,7 @@
           {#if $store.selectedRoom.isNew}
             <button
               on:click="{() => create()}"
-              class="waves-effect waves-light btn-small green"
+              class="waves-effect waves-light btn-small green right"
             >
               Create
             </button>

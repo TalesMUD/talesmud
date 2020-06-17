@@ -10,6 +10,9 @@ import (
 //ItemType type
 type ItemType string
 
+//ItemTypes ...
+type ItemTypes []ItemType
+
 const (
 	ItemTypeCurrency    ItemType = "currency"
 	ItemTypeConsumable           = "consumable"
@@ -21,8 +24,28 @@ const (
 	ItemTypeCraftingMaterial = "crafting_material"
 )
 
+//ItemSubType type
+type ItemSubType string
+
+//ItemSubTypes ...
+type ItemSubTypes []ItemSubType
+
+const (
+	// weapons
+	ItemSubTypeSword        ItemSubType = "sword"
+	ItemSubTypeTwoHandSword ItemSubType = "twohandsword"
+	ItemSubTypeAxe                      = "axe"
+	ItemSubTypeSpear                    = "spear"
+
+	// shields
+	ItemSubTypeShield = "shield"
+)
+
 //ItemSlot type
 type ItemSlot string
+
+//ItemSlots type
+type ItemSlots []ItemSlot
 
 const (
 	ItemSlotInventory ItemSlot = "inventory"
@@ -43,6 +66,9 @@ const (
 //ItemQuality ...
 type ItemQuality string
 
+//ItemQualities type
+type ItemQualities []ItemQuality
+
 const (
 	ItemQualityNormal    ItemQuality = "normal"
 	ItemQualityMagic                 = "magic"
@@ -60,6 +86,7 @@ type Item struct {
 	Description string `bson:"description,omitempty" json:"description"`
 
 	Type    ItemType    `bson:"type,omitempty" json:"type"`
+	SubType ItemSubType `bson:"subType,omitempty" json:"subType"`
 	Slot    ItemSlot    `bson:"slot,omitempty" json:"slot"`
 	Quality ItemQuality `bson:"quality,omitempty" json:"quality"`
 	Level   int32       `bson:"level,omitempty" json:"level,omitempty"`

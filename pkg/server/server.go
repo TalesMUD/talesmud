@@ -272,6 +272,10 @@ func (app *app) setupRoutes() {
 	public := r.Group("/api/")
 	{
 		public.GET("templates/characters", csh.GetCharacterTemplates)
+		public.GET("item-slots", items.GetItemSlots)
+		public.GET("item-qualities", items.GetItemQualities)
+		public.GET("item-types", items.GetItemTypes)
+		public.GET("item-subtypes", items.GetItemSubTypes)
 	}
 
 	// Start MUD Server
@@ -281,10 +285,33 @@ func (app *app) setupRoutes() {
 	ws.Use(app.authMiddleware())
 	ws.GET("", app.mud.HandleConnections)
 
-	staticHandler := static.Serve("/", static.LocalFile("public/app/public/", false))
-	r.Use(staticHandler)
-	r.NoRoute(staticHandler)
+	//staticHandler := static.ServeRoot("/app/*filepath", "public/app/public/")
 
+	//staticHandler := gin.WrapH(http.Handler(http.FileServer(http.Dir("public/app/public"))))
+	//r.GET("/app/*any", staticHandler)
+	//r.NoRoute(staticHandler)
+	r.Use(middleware("/", "./public/app/public"))
+
+	//r.Use(staticHandler)
+
+}
+
+func middleware(urlPrefix, spaDirectory string) gin.HandlerFunc {
+	directory := static.LocalFile(spaDirectory, true)
+	fileserver := http.FileServer(directory)
+	if urlPrefix != "" {
+		fileserver = http.StripPrefix(urlPrefix, fileserver)
+	}
+	return func(c *gin.Context) {
+		if directory.Exists(urlPrefix, c.Request.URL.Path) {
+			fileserver.ServeHTTP(c.Writer, c.Request)
+			c.Abort()
+		} else {
+			c.Request.URL.Path = "/"
+			fileserver.ServeHTTP(c.Writer, c.Request)
+			c.Abort()
+		}
+	}
 }
 
 // Run ... starts the server
