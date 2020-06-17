@@ -55,6 +55,9 @@ function createAuth(config) {
 
       authToken.set(token);
 
+      setContext("token",token.slice(0,20));
+
+
       // refresh token after specific period or things will stop
       // working. Useful for long-lived apps like dashboards.
       intervalId = setInterval(async () => {

@@ -5,9 +5,10 @@
 </style>
 
 <script>
+	import ItemTemplatesEditor from './ItemTemplatesEditor.svelte';
   import WorldEditor from "./WorldEditor.svelte";
   import RoomsEditor from "./RoomsEditor.svelte";
-  import ItemsEditor from "./ItemsEditor.svelte";
+
 
   import { Router, Route } from "svelte-routing";
   import { writable } from "svelte/store";
@@ -62,14 +63,14 @@
     subMenu.hide();
   });
 
-  export let url = "";
+  
 </script>
 
-<Router url="{url}">
+<Router>
 
   <row>
     <Route path="rooms" component="{RoomsEditor}" />
-    <Route path="items" component="{ItemsEditor}" />
+    <Route path="items" component="{ItemTemplatesEditor}" />
     <Route path="world" component="{WorldEditor}" />
   </row>
 
