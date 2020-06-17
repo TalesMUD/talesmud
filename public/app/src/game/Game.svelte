@@ -1,7 +1,7 @@
 <style>
   #terminalWindow {
     width: 100%;
-    
+
     padding: 1em;
     background: #00000088;
     border-width: 1px;
@@ -57,26 +57,14 @@
   let term;
   let ws;
 
-  const {
-    isLoading,
-    isAuthenticated,
-    login,
-    logout,
-    authToken,
-    authError,
-    userInfo,
-  } = getAuth();
-
+  const { isAuthenticated, authToken } = getAuth();
   $: state = {
-    isLoading: $isLoading,
     isAuthenticated: $isAuthenticated,
-    authError: $authError,
-    userInfo: $userInfo ? $userInfo.name : null,
     authToken: $authToken.slice(0, 20),
   };
 
   $: {
-    if ($isAuthenticated && $authToken && client && !ws) {
+    if (client && !ws) {
       // connect to websocket server
       const url = wsbackend + "?access_token=";
       ws = new WebSocket(url + $authToken);
