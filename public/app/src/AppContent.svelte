@@ -15,7 +15,9 @@
 <Route path="account" component="{UserForm}" />
 <Route path="creator/*" component="{Creator}" />
 <Route path="list" component="{Characters}" />
-<Route path="play" component="{Game}" />
+<Route path="play" component="{Game}">
+  <Game />
+</Route>
 <Route path="/">
   <Welcome />
 </Route>

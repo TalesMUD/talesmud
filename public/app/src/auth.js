@@ -53,10 +53,9 @@ function createAuth(config) {
       // in Auth0 config, otherwise you will soon start throwing stuff!
       const token = await auth0.getTokenSilently(config.audience);
 
+      console.log("GET TOKEN SILENTLY " + token)
+
       authToken.set(token);
-
-      setContext("token",token.slice(0,20));
-
 
       // refresh token after specific period or things will stop
       // working. Useful for long-lived apps like dashboards.

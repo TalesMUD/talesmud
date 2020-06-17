@@ -58,7 +58,7 @@
   import { PlusIcon } from "svelte-feather-icons";
   import { writable } from "svelte/store";
   import { onMount } from "svelte";
-  import { createAuth, getAuth } from "../auth.js";
+  import { getAuth } from "../auth.js";
   import { v4 as uuidv4 } from "uuid";
 
   import axios from "axios";
@@ -72,26 +72,15 @@
 
   export let location;
 
-  const {
-    isLoading,
-    isAuthenticated,
-    login,
-    logout,
-    authToken,
-    authError,
-    userInfo,
-  } = getAuth();
+  const { isAuthenticated, authToken } = getAuth();
 
   $: state = {
-    isLoading: $isLoading,
     isAuthenticated: $isAuthenticated,
-    authError: $authError,
-    userInfo: $userInfo ? $userInfo.name : null,
     authToken: $authToken.slice(0, 20),
   };
 
   const loadData = async (cb) => {
-    if ($isLoading && !$isAuthenticated) return;
+    if (!$isAuthenticated) return;
     getRooms(
       $authToken,
       (rooms) => {

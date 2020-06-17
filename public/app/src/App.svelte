@@ -93,22 +93,14 @@
     audience: "http://talesofapirate.com/dnd/api",
   };
 
-  const {
-    isLoading,
-    isAuthenticated,
-    login,
-    logout,
-    authToken,
-    authError,
-    userInfo,
-  } = createAuth(config);
-
+  const { isAuthenticated, authToken } = createAuth(config);
   $: state = {
-    isLoading: $isLoading,
     isAuthenticated: $isAuthenticated,
-    authError: $authError,
-    userInfo: $userInfo ? $userInfo.name : null,
     authToken: $authToken.slice(0, 20),
+  };
+
+  String.prototype.capitalize = function () {
+    return this.charAt(0).toUpperCase() + this.slice(1);
   };
 
   onMount(async () => {
@@ -230,7 +222,6 @@
       {:else}
         <main>
           <AppContent />
-
         </main>
       {/if}
     </MediaQuery>

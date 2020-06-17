@@ -17,6 +17,7 @@
   import { UserIcon } from "svelte-feather-icons";
 
   import { getAuth } from "./auth.js";
+  import { getUser, updateUser } from "./api/user.js";
 
   const {
     isLoading,
@@ -29,16 +30,13 @@
   } = getAuth();
 
   async function loadUserData() {
-    axios(`http://localhost:8010/api/user`, {
-      method: "GET",
-      mode: "no-cors",
-      credentials: "same-origin",
-      headers: {
-        Authorization: `Bearer ${$authToken}`,
+    getUser(
+      $authToken,
+      (u) => {
+        user.set(u);
       },
-    })
-      .then((result) => console.log(result))
-      .catch((err) => console.log(err));
+      (err) => console.log(err)
+    );
   }
 
   async function signup() {
