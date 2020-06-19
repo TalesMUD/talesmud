@@ -6,6 +6,11 @@
     color: white;
     margin-top: 1em;
   }
+  .search {
+    color: white !important;
+    padding: 0;
+    margin: 0;
+  }
   input {
     color: white;
   }
@@ -21,9 +26,6 @@
   }
   .no-padding {
     padding: 0;
-  }
-  .title {
-    font-size: 2em;
   }
 
   .first_label {
@@ -58,6 +60,7 @@
 </style>
 
 <script>
+  import ActionEditor from "./ActionEditor.svelte";
   import Toolbar from "./Toolbar.svelte";
   import { createStore } from "./CRUDEditorStore.js";
   import { PlusIcon } from "svelte-feather-icons";
@@ -79,6 +82,7 @@
     if (!$isAuthenticated) return;
     config.get(
       $authToken,
+      $store.filters,
       (all) => {
         store.setElements(all);
         if (cb) cb();
@@ -130,22 +134,57 @@
     });
   };
 
-  const refreshUI = () => {
-    var elems = document.querySelectorAll("select");
-    var instances = M.FormSelect.init(elems, {});
-    // second time to fix the selects
-    setTimeout(function () {
-      var elems = document.querySelectorAll("select");
-      var instances = M.FormSelect.init(elems, {});
-    }, 50);
+  const addFilter = (filter) => {
+    if (filter.includes(":")) {
+      let keyval = filter.split(":");
+      store.addFilter(keyval[0], keyval[1]);
 
-    if (config.refreshUI) {
-      config.refreshUI();
+      loadData(() => {
+        selectElement($store.elements[0]);
+      });
     }
   };
 
+  const removeFilter = (filter) => {
+    if (filter.includes(":")) {
+      let keyval = filter.split(":");
+      store.removeFilter(keyval[0]);
+
+      loadData(() => {
+        selectElement($store.elements[0]);
+      });
+    }
+  };
+
+  const refreshUI = () => {
+    setTimeout(function () {
+      let chips = document.querySelectorAll(".chips");
+      let filters = [];
+
+      // restore current filters
+      $store.filters.forEach((f) => {
+        filters.push({
+          tag: f.key + ":" + f.val,
+        });
+      });
+
+      M.Chips.init(chips, {
+        data: filters,
+        onChipAdd: (ev, chip) => addFilter(chip.firstChild.nodeValue),
+        onChipDelete: (ev, chip) => removeFilter(chip.firstChild.nodeValue),
+      });
+
+      var elems = document.querySelectorAll("select");
+      M.FormSelect.init(elems, {});
+
+      if (config.refreshUI) {
+        config.refreshUI();
+      }
+    }, 50);
+  };
+
   const update = () => {
-    config.udate(
+    config.update(
       $authToken,
       $store.selectedElement.id,
       $store.selectedElement,
@@ -163,14 +202,25 @@
     title: config.title,
     actions: [
       {
-        name: "Create Item Template",
-        color: "green",
+        name: null,
+        color: "",
+        icon: "filter_alt",
+        fnc: () => {
+          store.toggleFilter();
+          refreshUI();
+        },
+      },
+      {
+        name: null,
+        icon: "add",
+        color: "",
         fnc: () => config.new(selectElement),
       },
       ...config.actions, // add extra ctions
     ],
   };
 </script>
+
 
 <Toolbar toolbar="{toolbarConfig}" />
 
@@ -185,6 +235,7 @@
           class="collection-item"
           on:click="{selectElement(element)}"
         >
+
           {#if element.slot}
             <span class="new badge" data-badge-caption="">
               {config.badge(element)}
@@ -197,12 +248,20 @@
   </div>
   <!-- END: ELEMENT LIST -->
 
-  <!-- START: OBJECT PAGE (Detail)-->
-  {#if $store.selectedElement}
-    <div class="col s9">
-      <div class="card-panel cyan darken-4">
-        <div class="row">
+  <div class="col s9">
 
+    {#if $store.filterActive}
+      <div class="card-panel white">
+        <div class="chips chips-placeholder search"></div>
+      </div>
+    {/if}
+
+    <!-- START: OBJECT PAGE (Detail)-->
+    {#if $store.selectedElement}
+      <div class="card-panel cyan darken-4">
+
+        <div class="row">
+          <slot name="hero" />
           <span class="header">{$store.selectedElement.name}</span>
 
           {#if $store.selectedElement.isNew}
@@ -294,10 +353,9 @@
           </div>
         </div>
 
-        <slot element="{$store.selectedElement}" />
-
+        <slot name="content" />
       </div>
-    </div>
-  {/if}
+    {/if}
+  </div>
 
 </div>

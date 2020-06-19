@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/entities/items"
+	"github.com/talesmud/talesmud/pkg/repository"
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
@@ -15,17 +16,12 @@ type ItemsHandler struct {
 }
 
 //ItemsQuery ...
-type ItemsQuery struct {
-	Name string         `form:"name"`
-	Type items.ItemType `form:"type"`
-	Slot items.ItemSlot `form:"slot"`
-}
 
 //GetItems returns the list of items
 // TODO: add filters
 func (csh *ItemsHandler) GetItems(c *gin.Context) {
 
-	var query ItemsQuery
+	var query repository.ItemsQuery
 
 	if c.ShouldBindQuery(&query) == nil {
 		log.Println("====== Only Bind By Query String ======")
@@ -34,7 +30,7 @@ func (csh *ItemsHandler) GetItems(c *gin.Context) {
 		log.Println(query.Slot)
 	}
 
-	if items, err := csh.Service.Items().FindAll(); err == nil {
+	if items, err := csh.Service.Items().FindAll(query); err == nil {
 		c.JSON(http.StatusOK, items)
 	} else {
 		c.Error(err)
@@ -64,16 +60,13 @@ func (csh *ItemsHandler) GetItemSubTypes(c *gin.Context) {
 //GetItemTemplates returns the list of item templates
 func (csh *ItemsHandler) GetItemTemplates(c *gin.Context) {
 
-	var query ItemsQuery
+	var query repository.ItemsQuery
 
 	if c.ShouldBindQuery(&query) == nil {
-		log.Println("====== Only Bind By Query String ======")
-		log.Println(query.Name)
-		log.Println(query.Type)
-		log.Println(query.Slot)
+		// WITH QUERY
 	}
 
-	if items, err := csh.Service.ItemTemplates().FindAll(); err == nil {
+	if items, err := csh.Service.ItemTemplates().FindAll(query); err == nil {
 		c.JSON(http.StatusOK, items)
 	} else {
 		c.Error(err)

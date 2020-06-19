@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 
@@ -14,7 +15,7 @@ import (
 
 //ItemsRepository repository interface
 type ItemsRepository interface {
-	FindAll() ([]*i.Item, error)
+	FindAll(query ItemsQuery) ([]*i.Item, error)
 	FindByID(id string) (*i.Item, error)
 	FindByName(name string) ([]*i.Item, error)
 	Store(item *i.Item) (*i.Item, error)
@@ -22,6 +23,49 @@ type ItemsRepository interface {
 	Update(id string, item *i.Item) error
 	Delete(id string) error
 	Drop() error
+}
+
+//ItemsQuery ...
+type ItemsQuery struct {
+	Name        *string        `form:"name"`
+	Description *string        `form:"description"`
+	Detail      *string        `form:"detail"`
+	Type        *i.ItemType    `form:"type"`
+	SubType     *i.ItemSubType `form:"subType"`
+	Quality     *i.ItemQuality `form:"quality"`
+	Slot        *i.ItemSlot    `form:"slot"`
+	Level       *int32         `form:"level"`
+}
+
+func (query ItemsQuery) matches(item *i.Item) bool {
+
+	match := true
+
+	if query.Name != nil && !strings.Contains(strings.ToLower(item.Name), strings.ToLower(*query.Name)) {
+		match = false
+	}
+	if match && query.Description != nil && !strings.Contains(strings.ToLower(item.Description), strings.ToLower(*query.Description)) {
+		match = false
+	}
+	if match && query.Detail != nil && !strings.Contains(strings.ToLower(item.Detail), strings.ToLower(*query.Detail)) {
+		match = false
+	}
+	if match && query.Type != nil && !strings.Contains(strings.ToLower(string(item.Type)), strings.ToLower(string(*query.Type))) {
+		match = false
+	}
+	if match && query.Slot != nil && !strings.Contains(strings.ToLower(string(item.Slot)), strings.ToLower(string(*query.Slot))) {
+		match = false
+	}
+	if match && query.SubType != nil && !strings.Contains(strings.ToLower(string(item.SubType)), strings.ToLower(string(*query.SubType))) {
+		match = false
+	}
+	if match && query.Quality != nil && !strings.Contains(strings.ToLower(string(item.Quality)), strings.ToLower(string(*query.Quality))) {
+		match = false
+	}
+	if match && query.Level != nil && item.Level != *query.Level {
+		match = false
+	}
+	return match
 }
 
 //--- Implementations
@@ -81,7 +125,7 @@ func (repo *itemsRepository) FindByName(name string) ([]*i.Item, error) {
 	return results, nil
 }
 
-func (repo *itemsRepository) FindAll() ([]*i.Item, error) {
+func (repo *itemsRepository) FindAll(query ItemsQuery) ([]*i.Item, error) {
 	results := make([]*i.Item, 0)
 	if err := repo.GenericRepo.FindAll(func(elem interface{}) {
 		results = append(results, elem.(*i.Item))

@@ -5,6 +5,7 @@
 </style>
 
 <script>
+	import ItemsEditor from './ItemsEditor.svelte';
 	import SampleEditor from './SampleEditor.svelte';
   import ItemTemplatesEditor from "./ItemTemplatesEditor.svelte";
   import WorldEditor from "./WorldEditor.svelte";
@@ -33,8 +34,8 @@
         nav: "creator/items",
       },
       {
-        name: "SAMPLE",
-        nav: "creator/sample",
+        name: "ITEM TEMPLATES",
+        nav: "creator/item-templates",
       },
       {
         name: "WORLD",
@@ -52,8 +53,8 @@
 <Router>
   <row>
     <Route path="rooms" component="{RoomsEditor}" />
-    <Route path="items" component="{ItemTemplatesEditor}" />
+    <Route path="items" component="{ItemsEditor}" />
     <Route path="world" component="{WorldEditor}" />
-    <Route path="sample" component="{SampleEditor}" />
+    <Route path="item-templates" component="{SampleEditor}" />
   </row>
 </Router>

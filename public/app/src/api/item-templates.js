@@ -55,9 +55,22 @@ function deleteItemTemplate(token, id, cb, errorCb) {
     .catch((err) => errorCb(err));
 }
 
-function getItemTemplates(token, cb, errorCb) {
+function getItemTemplates(token, filters, cb, errorCb) {
+  const path = `${backend}/item-templates`;
+  let filtered = path;
+  if (filters) {
+    filtered += "?";
+    let i = 0;
+    filters.forEach((f) => {
+      if (i > 0) {
+        filtered += "&";
+      }
+      filtered += f.key + "=" + f.val;
+      i++;
+    });
+  }
   axios
-    .get(`${backend}/item-templates`, {
+    .get(filtered, {
       mode: "no-cors",
       credentials: "same-origin",
       headers: {
@@ -104,5 +117,5 @@ export {
   getItemQualities,
   getItemTypes,
   getItemSubTypes,
-  getItemSlots
+  getItemSlots,
 };

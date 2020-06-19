@@ -16,6 +16,7 @@
   }
 
   .btn-flat {
+    border: 1px #aaaaaa88 solid;
     color: #eee;
     margin: 5px;
   }
@@ -49,7 +50,14 @@
     {#each toolbar.actions as action}
       <li>
         <button class="btn-flat {action.color}" on:click="{action.fnc()}">
-          {action.name}
+
+          {#if action.icon && action.name}
+            <i class="material-icons left">{action.icon}</i>
+          {:else if action.icon}
+            <i class="material-icons center">{action.icon}</i>
+          {/if}
+          {#if action.name}{action.name}{/if}
+
         </button>
       </li>
     {/each}

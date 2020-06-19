@@ -14,7 +14,7 @@ import (
 
 //ItemTemplatesRepository repository interface
 type ItemTemplatesRepository interface {
-	FindAll() ([]*i.ItemTemplate, error)
+	FindAll(query ItemsQuery) ([]*i.ItemTemplate, error)
 	FindByID(id string) (*i.ItemTemplate, error)
 	FindByName(name string) ([]*i.ItemTemplate, error)
 	Store(item *i.ItemTemplate) (*i.ItemTemplate, error)
@@ -81,10 +81,14 @@ func (repo *itemTemplatesRepository) FindByName(name string) ([]*i.ItemTemplate,
 	return results, nil
 }
 
-func (repo *itemTemplatesRepository) FindAll() ([]*i.ItemTemplate, error) {
+func (repo *itemTemplatesRepository) FindAll(query ItemsQuery) ([]*i.ItemTemplate, error) {
 	results := make([]*i.ItemTemplate, 0)
 	if err := repo.GenericRepo.FindAll(func(elem interface{}) {
-		results = append(results, elem.(*i.ItemTemplate))
+
+		item := elem.(*i.ItemTemplate)
+		if query.matches(&item.Item) {
+			results = append(results, item)
+		}
 	}); err != nil {
 		return nil, err
 	}
