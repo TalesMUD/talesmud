@@ -27,9 +27,22 @@ function deleteItem(token, id, cb, errorCb) {
     .catch((err) => errorCb(err));
 }
 
-function getItems(token, cb, errorCb) {
+function getItems(token, filters, cb, errorCb) {
+  const path = `${backend}/items`;
+  let filtered = path;
+  if (filters) {
+    filtered += "?";
+    let i = 0;
+    filters.forEach((f) => {
+      if (i > 0) {
+        filtered += "&";
+      }
+      filtered += f.key + "=" + f.val;
+    });
+  }
+
   axios
-    .get(`${backend}/items`, {
+    .get(filtered, {
       mode: "no-cors",
       credentials: "same-origin",
       headers: {
@@ -82,4 +95,11 @@ function createItemFromTemplate(token, templateId, cb, errorCb) {
     .catch((err) => errorCb(err));
 }
 
-export { getItem, deleteItem, getItems, updateItem, createItem, createItemFromTemplate };
+export {
+  getItem,
+  deleteItem,
+  getItems,
+  updateItem,
+  createItem,
+  createItemFromTemplate,
+};

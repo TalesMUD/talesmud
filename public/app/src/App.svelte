@@ -59,6 +59,7 @@
 </style>
 
 <script>
+	import Sprites from './game/Sprites.svelte';
   import AppContent from "./AppContent.svelte";
   import MediaQuery from "./MediaQuery.svelte";
 
@@ -137,8 +138,9 @@
         <a href="#" class="brand-logo">
           <span class="valign-wrapper italic">
             <span class="iconspacing">
-              <BookOpenIcon size="24" />
-            </span>
+            
+               <BookOpenIcon size="24" />
+           </span>
             <NavLink to="/">Tales</NavLink>
           </span>
         </a>

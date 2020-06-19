@@ -6,6 +6,7 @@
     color: white;
     margin-top: 1em;
   }
+
   input {
     color: white;
   }

@@ -1,10 +1,13 @@
 <style>
   .img {
-    width: 64px;
+    width: 96px;
+    height: 96px;
+    margin: 1em;
+    image-rendering: pixelated;
   }
   .characterCard {
     width: 250px;
-    height: 220px;
+    height: 300px;
     margin: 2em;
   }
   .card-title {
@@ -27,14 +30,15 @@
   }
 
   function avatar() {
-    return "https://robohash.org/" + name;
+    let num = 1 + Math.abs(name.hashCode() % 12);
+    return "img/avatars/" + num + "p.png";
   }
 </script>
 
 <div class="card cyan darken-3 hoverable characterCard center-align">
   <div class="card-content white-text">
 
-    <img src="{avatar()}" alt="" class="circle img" />
+    <img src="{avatar()}" alt="" class="circle img z-depth-2" />
 
     <span class="card-title">{xp} XP</span>
     <span class="card-title">LVL {level} - {cclass.name}</span>

@@ -3,6 +3,7 @@
 </style>
 
 <script>
+	import Credits from './Credits.svelte';
   import { Router, Link, Route, navigate } from "svelte-routing";
 
   import Game from "./game/Game.svelte";
@@ -10,11 +11,13 @@
   import Creator from "./creator/Creator.svelte";
   import Characters from "./characters/Characters.svelte";
   import UserForm from "./UserForm.svelte";
+  
 </script>
 
 <Route path="account" component="{UserForm}" />
 <Route path="creator/*" component="{Creator}" />
 <Route path="list" component="{Characters}" />
+<Route path="credits" component="{Credits}" />
 <Route path="play" component="{Game}">
   <Game />
 </Route>

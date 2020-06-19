@@ -9,6 +9,7 @@
 </style>
 
 <script>
+  import Sprites from "./game/Sprites.svelte";
   import NavLink from "./components/NavLink.svelte";
   import CharacterCreator from "./characters/CharacterCreator.svelte";
   import { onMount } from "svelte";
@@ -67,12 +68,13 @@
 </script>
 
 <div class="left">
-
   {#if $isAuthenticated}
     <div>
+
       <h5>Welcome back {$nickname}</h5>
 
       <div>
+
         <NavLink to="/play">Start playing</NavLink>
         or try to create some
         <NavLink to="/creator">own content.</NavLink>
@@ -150,6 +152,14 @@
       </li>
     </ul>
   </div>
+  <div>
+    <h5>Credits</h5>
+    The application uses several assets througout the app and the backend, here
+    is a list of free and licensed art:
+    <NavLink to="/credits">See Credits</NavLink>
+
+  </div>
+
   <CharacterCreator />
 
 </div>

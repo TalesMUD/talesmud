@@ -8,6 +8,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/items"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
+	"github.com/talesmud/talesmud/pkg/repository"
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
@@ -35,8 +36,8 @@ func (handler *ExportHandler) Export(c *gin.Context) {
 	d.Rooms, _ = handler.RoomsService.FindAll()
 	d.Characters, _ = handler.CharactersService.FindAll()
 	d.Users, _ = handler.UserService.FindAll()
-	d.ItemTemplates, _ = handler.ItemsService.ItemTemplates().FindAll()
-	d.Items, _ = handler.ItemsService.Items().FindAll()
+	d.ItemTemplates, _ = handler.ItemsService.ItemTemplates().FindAll(repository.ItemsQuery{})
+	d.Items, _ = handler.ItemsService.Items().FindAll(repository.ItemsQuery{})
 
 	//c.JSON(http.StatusOK, d)
 	c.IndentedJSON(http.StatusOK, d)

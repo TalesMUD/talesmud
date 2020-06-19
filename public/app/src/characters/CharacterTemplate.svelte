@@ -1,6 +1,9 @@
 <style>
   .img {
-    width: 64px;
+    width: 96px;
+    height: 96px;
+    margin: 1em;
+    image-rendering: pixelated;
   }
   .characterCard {
     width: 250px;
@@ -30,7 +33,8 @@
   }
 
   function avatar() {
-    return "https://robohash.org/" + name;
+    let num = 1 + Math.abs(name.hashCode()%12)
+    return "img/avatars/" + num + "p.png";
   }
 </script>
 
