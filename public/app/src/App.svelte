@@ -1,6 +1,6 @@
 <style>
   :global(body) {
-    background-color: #232333;
+    background-color: #263238;
     color: #d8dee9;
     transition: background-color 0.3s;
     margin: 0 auto;

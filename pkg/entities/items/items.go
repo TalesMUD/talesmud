@@ -111,6 +111,11 @@ type Item struct {
 	// metainfo
 	Tags    []string  `bson:"tags,omitempty" json:"tags"`
 	Created time.Time `bson:"created,omitempty" json:"created,omitempty"`
+
+	// additional non game critical meta information to enhance player experience on client
+	Meta *struct {
+		Img string `bson:"img,omitempty" json:"img,omitempty"`
+	} `bson:"meta,omitempty" meta:"coords,omitempty"`
 }
 
 //Items type

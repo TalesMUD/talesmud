@@ -35,7 +35,7 @@
   }
 </script>
 
-<div class="card cyan darken-3 hoverable characterCard center-align">
+<div class="card blue-grey darken-2 hoverable characterCard center-align">
   <div class="card-content white-text">
 
     <img src="{avatar()}" alt="" class="circle img z-depth-2" />

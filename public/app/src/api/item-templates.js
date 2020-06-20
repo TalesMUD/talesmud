@@ -57,6 +57,20 @@ function deleteItemTemplate(token, id, cb, errorCb) {
 
 function getItemTemplates(token, filters, cb, errorCb) {
   const path = `${backend}/item-templates`;
+  let filtered = createFilterRequest(path, filters);
+  
+  axios
+    .get(filtered, {
+      mode: "no-cors",
+      credentials: "same-origin",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    .then((result) => cb(result.data))
+    .catch((err) => errorCb(err));
+}
+function createFilterRequest(path, filters) {
   let filtered = path;
   if (filters) {
     filtered += "?";
@@ -69,17 +83,9 @@ function getItemTemplates(token, filters, cb, errorCb) {
       i++;
     });
   }
-  axios
-    .get(filtered, {
-      mode: "no-cors",
-      credentials: "same-origin",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-    .then((result) => cb(result.data))
-    .catch((err) => errorCb(err));
+  return filtered;
 }
+
 function updateItemTemplate(token, id, ItemTemplate, cb, errorCb) {
   axios
     .put(`${backend}/item-templates/${id}`, ItemTemplate, {
