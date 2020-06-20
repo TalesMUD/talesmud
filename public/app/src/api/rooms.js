@@ -26,10 +26,27 @@ function deleteRoom(token, id, cb, errorCb) {
     .then((result) => cb(result.data))
     .catch((err) => errorCb(err));
 }
+function createFilterRequest(path, filters) {
+  let filtered = path;
+  if (filters) {
+    filtered += "?";
+    let i = 0;
+    filters.forEach((f) => {
+      if (i > 0) {
+        filtered += "&";
+      }
+      filtered += f.key + "=" + f.val;
+      i++;
+    });
+  }
+  return filtered;
+}
+function getRooms(token, filters, cb, errorCb) {
+  const path = `${backend}/rooms`;
+  let filtered = createFilterRequest(path, filters);
 
-function getRooms(token, cb, errorCb) {
   axios
-    .get(`${backend}/rooms`, {
+    .get(filtered, {
       mode: "no-cors",
       credentials: "same-origin",
       headers: {

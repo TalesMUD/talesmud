@@ -49,7 +49,7 @@
     <li class="header">{toolbar.title}</li>
     {#each toolbar.actions as action}
       <li>
-        <button class="btn-flat {action.color}" on:click="{action.fnc()}">
+        <button class="btn-flat" on:click="{action.fnc()}">
 
           {#if action.icon && action.name}
             <i class="material-icons left">{action.icon}</i>

@@ -88,7 +88,7 @@ type Room struct {
 		Mood string `bson:"mood,omitempty" json:"mood,omitempty"`
 		// supply a background image id to the client (optional)
 		Background string `bson:"background,omitempty" json:"background,omitempty"`
-	} `bson:"meta,omitempty" meta:"coords,omitempty"`
+	} `bson:"meta,omitempty" meta:"meta,omitempty"`
 }
 
 //GetExit ...

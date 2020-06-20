@@ -9,6 +9,7 @@ function createStore() {
   });
   return {
     subscribe,
+    update,
     set,
     addFilter: (key, val) => {
       update((state) => {

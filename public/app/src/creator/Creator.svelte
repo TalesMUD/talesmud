@@ -5,11 +5,11 @@
 </style>
 
 <script>
+	import RoomsEditorNew from './RoomsEditorNew.svelte';
 	import ItemsEditor from './ItemsEditor.svelte';
-	import SampleEditor from './SampleEditor.svelte';
   import ItemTemplatesEditor from "./ItemTemplatesEditor.svelte";
   import WorldEditor from "./WorldEditor.svelte";
-  import RoomsEditor from "./RoomsEditor.svelte";
+
 
   import { Router, Route } from "svelte-routing";
   import { writable } from "svelte/store";
@@ -52,9 +52,9 @@
 
 <Router>
   <row>
-    <Route path="rooms" component="{RoomsEditor}" />
+    <Route path="rooms" component="{RoomsEditorNew}" />
     <Route path="items" component="{ItemsEditor}" />
     <Route path="world" component="{WorldEditor}" />
-    <Route path="item-templates" component="{SampleEditor}" />
+    <Route path="item-templates" component="{ItemTemplatesEditor}" />
   </row>
 </Router>

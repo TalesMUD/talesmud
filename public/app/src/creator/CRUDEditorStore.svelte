@@ -177,6 +177,17 @@
       var elems = document.querySelectorAll("select");
       M.FormSelect.init(elems, {});
 
+      M.updateTextFields();
+      var elems2 = document.querySelectorAll(".collapsible");
+      if (elems2 != undefined) {
+        var instances = M.Collapsible.init(elems2, {});
+      }
+
+      var textareas = document.querySelectorAll(".materialize-textarea");
+      textareas.forEach((e) => {
+        M.textareaAutoResize(e);
+      });
+
       if (config.refreshUI) {
         config.refreshUI();
       }
@@ -221,7 +232,6 @@
   };
 </script>
 
-
 <Toolbar toolbar="{toolbarConfig}" />
 
 <div class="row">
@@ -232,11 +242,11 @@
       {#each $store.elements as element}
         <a
           href="#!"
-          class="collection-item"
+          class="collection-item blue-grey lighten-5"
           on:click="{selectElement(element)}"
         >
 
-          {#if element.slot}
+          {#if element}
             <span class="new badge" data-badge-caption="">
               {config.badge(element)}
             </span>
@@ -251,15 +261,14 @@
   <div class="col s9">
 
     {#if $store.filterActive}
-      <div class="card-panel white">
+      <div class="card-panel blue-grey lighten-5">
         <div class="chips chips-placeholder search"></div>
       </div>
     {/if}
 
     <!-- START: OBJECT PAGE (Detail)-->
     {#if $store.selectedElement}
-      <div class="card-panel cyan darken-4">
-
+      <div class="card-panel blue-grey darken-3">
         <div class="row">
           <slot name="hero" />
           <span class="header">{$store.selectedElement.name}</span>
@@ -325,13 +334,13 @@
 
         <div class="row">
           <div class="input-field">
-            <input
-              placeholder="Item Description"
+            <textarea
+              placeholder="Description"
               id="itemTemplate_description"
               type="text"
               class="materialize-textarea"
               bind:value="{$store.selectedElement.description}"
-            />
+            ></textarea>
             <label class="active" for="itemTemplate_description">
               Description
             </label>
@@ -340,13 +349,13 @@
 
         <div class="row">
           <div class="input-field">
-            <input
-              placeholder="Item Details"
+            <textarea
+              placeholder="Details"
               id="itemTemplate_detail"
               type="text"
               class="materialize-textarea"
               bind:value="{$store.selectedElement.detail}"
-            />
+            ></textarea>
             <label class="active" for="itemTemplate_detail">
               Detail (look)
             </label>
@@ -355,6 +364,8 @@
 
         <slot name="content" />
       </div>
+
+      <slot name="extensions" />
     {/if}
   </div>
 
