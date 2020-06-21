@@ -22679,8 +22679,12 @@ var app = (function () {
   	});
   }
 
-  const backend = "http://localhost:8010/api";
-  const wsbackend = "ws://localhost:8010/ws";
+  //const backend = "http://localhost:8010/api"
+  //const wsbackend = "ws://localhost:8010/ws"
+
+  //TODO: make this configurable
+  const backend = "/api";
+  const wsbackend = "wss://talesofapirate.com/ws";
 
   function createNewCharacter (token, createDTO, cb, errorCb) {
     axios$1
