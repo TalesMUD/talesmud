@@ -3,9 +3,10 @@
 </style>
 
 <script>
+	import Toolbar from './Toolbar.svelte';
   import Sprites from "./../game/Sprites.svelte";
   import { onMount } from "svelte";
-  import CRUDEditorStore from "./CRUDEditorStore.svelte";
+  import CRUDEditor from "./CRUDEditor.svelte";
   import { createStore } from "./CRUDEditorStore.js";
   import { v4 as uuidv4 } from "uuid";
 
@@ -95,9 +96,54 @@
     getItemSlots((s) => (itemSlots = s));
   });
   /////////
+
+  const addAttribute = () => {
+store.update((state) => {
+      if (state.selectedElement.attributes == null) {
+        state.selectedElement.attributes = {};
+      }
+
+      state.selectedElement.exits.push({
+        name: "new_attribg",
+        descrvalueiption: "todo",
+        target: "select target",
+      });
+      return state;
+    });
+    config.refreshUI();
+
+};
+  const addProperty = () => {
+    console.log("New attribute");
+  };
+  const attributesToolbar = {
+    title: "Attributes",
+    small: true,
+    actions: [
+      {
+        icon: "add",
+        fnc: () => {
+          addAttribute();
+        },
+      },
+    ],
+  };
+  const propertiesToolbar = {
+    title: "Properties",
+    small: true,
+    actions: [
+      {
+        icon: "add",
+        fnc: () => {
+          addProperty();
+        },
+      },
+    ],
+  };
+
 </script>
 
-<CRUDEditorStore store="{store}" config="{config}">
+<CRUDEditor store="{store}" config="{config}">
 
   <span slot="hero" class="col s1 valign-wrapper">
     <Sprites item="weapon" />
@@ -165,4 +211,50 @@
 
     </div>
   </div>
-</CRUDEditorStore>
+
+  <div slot="extensions">
+
+    <Toolbar toolbar="{attributesToolbar}" />
+
+    <div class="card-panel blue-grey darken-3">
+      <table>
+        <thead>
+          <tr>
+            <th>Attribute</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each Object.entries($store.selectedElement.attributes) as [key, value]}
+            <tr>
+              <td>{key}</td>
+              <td>{value}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+
+    <Toolbar toolbar="{propertiesToolbar}" />
+
+    <div class="card-panel blue-grey darken-3">
+      <table>
+        <thead>
+          <tr>
+            <th>Property</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each Object.entries($store.selectedElement.properties) as [key, value]}
+            <tr>
+              <td>{key}</td>
+              <td>{value}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</CRUDEditor>

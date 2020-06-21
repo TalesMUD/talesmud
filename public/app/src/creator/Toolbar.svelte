@@ -26,6 +26,11 @@
     font-size: 200%;
   }
 
+  .header-small {
+    font-weight: 300;
+    font-size: 120%;
+  }
+
   ul li:first-child {
     margin-right: auto;
   }
@@ -34,6 +39,7 @@
 <script>
   export let toolbar = {
     title: "TODO",
+    small: false,
     actions: [
       {
         name: "Change Me",
@@ -42,11 +48,26 @@
       },
     ],
   };
+
+  const headerClass = () => {
+    if (toolbar.small) {
+      return "header-small";
+    }
+    return "header";
+  };
+
+  const headerDiv = () => {
+    if (toolbar.small) {
+      return "";
+    }
+    return "row";
+  };
 </script>
 
-<div class="row">
+
+<div class="{headerDiv()}">
   <ul>
-    <li class="header">{toolbar.title}</li>
+    <li class="{headerClass()}">{toolbar.title}</li>
     {#each toolbar.actions as action}
       <li>
         <button class="btn-flat" on:click="{action.fnc()}">

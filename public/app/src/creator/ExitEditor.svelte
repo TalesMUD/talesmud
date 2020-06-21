@@ -18,22 +18,22 @@
 </style>
 
 <script>
-  export let action;
-  export let deleteAction;
+  export let exit;
+  export let deleteExit;
 </script>
 
 <li>
   <div class="collapsible-header">
     <div class="col s9 left valign-wrapper">
-      <i class="material-icons left-align">flare</i>
-      {action.name}
+      <i class="material-icons left-align">exit_to_app</i>
+      {exit.name}
     </div>
     <div class="col s3 right-align">
       <button
-        on:click="{() => deleteAction(action)}"
+        on:click="{() => deleteExit(exit)}"
         class="btn-small red align-right"
       >
-        Delete Action
+        Delete Exit
       </button>
     </div>
 
@@ -42,43 +42,47 @@
   <div class="collapsible-body">
     <div class="row">
 
+      <label>
+        <input type="checkbox" bind:checked="{exit.hidden}" />
+        <span>Hidden</span>
+      </label>
+
+    </div>
+
+    <div class="row">
+
       <div class="input-field">
         <input
           placeholder="Placeholder"
-          id="name-{action.name}"
+          id="name-{exit.name}"
           type="text"
-          bind:value="{action.name}"
+          bind:value="{exit.name}"
         />
-        <label for="name-{action.name}">Name</label>
+        <label for="name-{exit.name}">Name</label>
 
         <div class="input-field">
           <input
             placeholder="Placeholder"
-            id="desc-{action.description}"
+            id="desc-{exit.description}"
             type="text"
-            bind:value="{action.description}"
+            bind:value="{exit.description}"
           />
-          <label for="desc-{action.description}">Description</label>
+          <label for="desc-{exit.description}">Description</label>
           <div class="input-field">
             <input
-              id="target-{action.response}"
+              id="target-{exit.target}"
               type="text"
-              bind:value="{action.response}"
+              bind:value="{exit.target}"
             />
-            <label for="target-{action.response}">Response</label>
+            <label for="target-{exit.target}">Target Room</label>
           </div>
-
           <div class="input-field">
-            <select
-              id="autocomplete-input-{action.type}"
-              bind:value="{action.type}"
-            >
-
-              <option value="response">Respond to Player</option>
-              <option value="response_room">Respond to Room</option>
-              <option value="script">Run Script</option>
-            </select>
-            <label>Type</label>
+            <input
+              type="text"
+              id="autocomplete-input-{exit.name}"
+              class="autocomplete"
+            />
+            <label for="autocomplete-input">Target Room</label>
           </div>
 
         </div>

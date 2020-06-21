@@ -5,7 +5,7 @@
 </style>
 
 <script>
-	import RoomsEditorNew from './RoomsEditorNew.svelte';
+	import RoomsEditor from './RoomsEditor.svelte';
 	import ItemsEditor from './ItemsEditor.svelte';
   import ItemTemplatesEditor from "./ItemTemplatesEditor.svelte";
   import WorldEditor from "./WorldEditor.svelte";
@@ -52,7 +52,7 @@
 
 <Router>
   <row>
-    <Route path="rooms" component="{RoomsEditorNew}" />
+    <Route path="rooms" component="{RoomsEditor}" />
     <Route path="items" component="{ItemsEditor}" />
     <Route path="world" component="{WorldEditor}" />
     <Route path="item-templates" component="{ItemTemplatesEditor}" />

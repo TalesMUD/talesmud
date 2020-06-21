@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/db"
@@ -13,6 +14,7 @@ import (
 //RoomsRepository repository interface
 type RoomsRepository interface {
 	FindAll() ([]*r.Room, error)
+	FindAllWithQuery(query RoomsQuery) ([]*r.Room, error)
 	FindByID(id string) (*r.Room, error)
 	FindByName(name string) ([]*r.Room, error)
 
@@ -21,6 +23,42 @@ type RoomsRepository interface {
 	Update(id string, room *r.Room) error
 	Delete(id string) error
 	Drop() error
+}
+
+//RoomsQuery ...
+type RoomsQuery struct {
+	Name        *string `form:"name"`
+	Description *string `form:"description"`
+	Detail      *string `form:"detail"`
+	RoomType    *string `form:"roomType"`
+	Area        *string `form:"area"`
+	AreaType    *string `form:"areaType"`
+}
+
+func (query RoomsQuery) matches(room *r.Room) bool {
+
+	match := true
+
+	if query.Name != nil && !strings.Contains(strings.ToLower(room.Name), strings.ToLower(*query.Name)) {
+		match = false
+	}
+	if match && query.Description != nil && !strings.Contains(strings.ToLower(room.Description), strings.ToLower(*query.Description)) {
+		match = false
+	}
+	if match && query.Detail != nil && !strings.Contains(strings.ToLower(room.Detail), strings.ToLower(*query.Detail)) {
+		match = false
+	}
+	if match && query.RoomType != nil && !strings.Contains(strings.ToLower(string(room.RoomType)), strings.ToLower(string(*query.RoomType))) {
+		match = false
+	}
+	if match && query.Area != nil && !strings.Contains(strings.ToLower(string(room.Area)), strings.ToLower(string(*query.Area))) {
+		match = false
+	}
+	if match && query.AreaType != nil && !strings.Contains(strings.ToLower(string(room.AreaType)), strings.ToLower(string(*query.AreaType))) {
+		match = false
+	}
+
+	return match
 }
 
 //--- Implementations
@@ -82,6 +120,20 @@ func (repo *roomsRepository) FindAll() ([]*r.Room, error) {
 	results := make([]*r.Room, 0)
 	if err := repo.GenericRepo.FindAll(func(elem interface{}) {
 		results = append(results, elem.(*r.Room))
+	}); err != nil {
+		return nil, err
+	}
+	return results, nil
+}
+
+func (repo *roomsRepository) FindAllWithQuery(query RoomsQuery) ([]*r.Room, error) {
+	results := make([]*r.Room, 0)
+	if err := repo.GenericRepo.FindAll(func(elem interface{}) {
+
+		room := elem.(*r.Room)
+		if query.matches(room) {
+			results = append(results, room)
+		}
 	}); err != nil {
 		return nil, err
 	}

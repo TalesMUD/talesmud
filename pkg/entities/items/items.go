@@ -109,8 +109,9 @@ type Item struct {
 	// scripts
 
 	// metainfo
-	Tags    []string  `bson:"tags,omitempty" json:"tags"`
-	Created time.Time `bson:"created,omitempty" json:"created,omitempty"`
+	Tags      []string  `bson:"tags,omitempty" json:"tags"`
+	Created   time.Time `bson:"created,omitempty" json:"created,omitempty"`
+	CreatedBy string    `bson:"createdBy,omitempty" json:"createdBy,omitempty"`
 
 	// additional non game critical meta information to enhance player experience on client
 	Meta *struct {
