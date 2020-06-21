@@ -13,7 +13,7 @@ type RoomActionType string
 const (
 	RoomActionTypeResponse     RoomActionType = "response"
 	RoomActionTypeRoomResponse RoomActionType = "room_response"
-	RoomActionTypeScript       RoomActionType = "Script"
+	RoomActionTypeScript       RoomActionType = "script"
 )
 
 // Action ... action that can be invoked by a player in thi room

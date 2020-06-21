@@ -5,7 +5,7 @@
 <script>
   import Sprites from "./../game/Sprites.svelte";
   import { onMount } from "svelte";
-  import CRUDEditorStore from "./CRUDEditorStore.svelte";
+  import CRUDEditor from "./CRUDEditor.svelte";
   import { createStore } from "./CRUDEditorStore.js";
   import { v4 as uuidv4 } from "uuid";
 
@@ -89,7 +89,7 @@
   /////////
 </script>
 
-<CRUDEditorStore store="{store}" config="{config}">
+<CRUDEditor store="{store}" config="{config}">
 
   <span slot="hero" class="col s1 valign-wrapper">
     <Sprites item="weapon" />
@@ -157,4 +157,4 @@
 
     </div>
   </div>
-</CRUDEditorStore>
+</CRUDEditor>

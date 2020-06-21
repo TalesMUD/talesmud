@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
+	"github.com/talesmud/talesmud/pkg/repository"
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
@@ -17,7 +18,13 @@ type RoomsHandler struct {
 //GetRooms returns the list of item templates
 func (handler *RoomsHandler) GetRooms(c *gin.Context) {
 
-	if rooms, err := handler.Service.FindAll(); err == nil {
+	var query repository.RoomsQuery
+
+	if c.ShouldBindQuery(&query) == nil {
+		// WITH QUERY
+	}
+
+	if rooms, err := handler.Service.FindAllWithQuery(query); err == nil {
 		c.JSON(http.StatusOK, rooms)
 	} else {
 		c.Error(err)
