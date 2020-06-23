@@ -18,6 +18,7 @@
   .btn-flat {
     border: 1px #aaaaaa88 solid;
     color: #eee;
+    border-radius: 4px;
     margin: 5px;
   }
 

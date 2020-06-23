@@ -206,11 +206,16 @@ func (app *app) setupRoutes() {
 		app.facade.ItemsService(),
 	}
 
+	scripts := &handler.ScriptsHandler{
+		app.facade.ScriptsService(),
+	}
+
 	exp := &handler.ExportHandler{
 		RoomsService:      app.facade.RoomsService(),
 		CharactersService: app.facade.CharactersService(),
 		UserService:       app.facade.UsersService(),
 		ItemsService:      app.facade.ItemsService(),
+		ScriptService:     app.facade.ScriptsService(),
 	}
 
 	worldRenderer := &handler.WorldRendererHandler{
@@ -262,6 +267,12 @@ func (app *app) setupRoutes() {
 		protected.DELETE("item-templates/:id", items.DeleteItemTemplateByID)
 
 		protected.DELETE("item-create/:templateId", items.CreateItemFromTemplateID)
+
+		// -- scripts
+		protected.GET("scripts", scripts.GetScripts)
+		protected.POST("scripts", scripts.PostScript)
+		protected.PUT("scripts/:id", scripts.PutScript)
+		protected.DELETE("scripts/:id", scripts.DeleteScript)
 
 		protected.GET("world/map", worldRenderer.Render)
 

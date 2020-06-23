@@ -9,6 +9,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/items"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/repository"
+	"github.com/talesmud/talesmud/pkg/scripts"
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
@@ -18,6 +19,7 @@ type ExportHandler struct {
 	CharactersService service.CharactersService
 	UserService       service.UsersService
 	ItemsService      service.ItemsService
+	ScriptService     service.ScriptsService
 }
 
 type exportStructure struct {
@@ -25,6 +27,7 @@ type exportStructure struct {
 	Items         []*items.Item           `json:"items"`
 	ItemTemplates []*items.ItemTemplate   `json:"itemTemplates"`
 	Characters    []*characters.Character `json:"characters"`
+	Scripts       []*scripts.Script       `json:"scripts"`
 	Users         []*e.User               `json:"users"`
 }
 

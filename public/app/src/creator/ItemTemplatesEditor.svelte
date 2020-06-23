@@ -3,7 +3,7 @@
 </style>
 
 <script>
-	import Toolbar from './Toolbar.svelte';
+  import Toolbar from "./Toolbar.svelte";
   import Sprites from "./../game/Sprites.svelte";
   import { onMount } from "svelte";
   import CRUDEditor from "./CRUDEditor.svelte";
@@ -21,6 +21,9 @@
     getItemSlots,
     getItemQualities,
   } from "../api/item-templates.js";
+
+  let newPropertyName = "";
+  let newAttributeName = "";
 
   const config = {
     title: "Manage Item Templates",
@@ -47,6 +50,8 @@
 
       // second time to fix the selects
       setTimeout(function () {
+        M.AutoInit();
+
         var elems = document.querySelectorAll("select");
         var instances = M.FormSelect.init(elems, {});
       }, 50);
@@ -97,24 +102,37 @@
   });
   /////////
 
+  const openNewAttributeModal = () => {
+    var elems = document.getElementById("attributeModal");
+    var instances = M.Modal.init(elems, {});
+    instances.open();
+  };
+  const openNewPropertyModal = () => {
+    var elems = document.getElementById("propertyModal");
+    var instances = M.Modal.init(elems, {});
+    instances.open();
+  };
   const addAttribute = () => {
-store.update((state) => {
+    store.update((state) => {
       if (state.selectedElement.attributes == null) {
         state.selectedElement.attributes = {};
       }
 
-      state.selectedElement.exits.push({
-        name: "new_attribg",
-        descrvalueiption: "todo",
-        target: "select target",
-      });
+      state.selectedElement.attributes[newAttributeName] = "value";
       return state;
     });
     config.refreshUI();
-
-};
+  };
   const addProperty = () => {
-    console.log("New attribute");
+    store.update((state) => {
+      if (state.selectedElement.properties == null) {
+        state.selectedElement.properties = {};
+      }
+
+      state.selectedElement.properties[newPropertyName] = "value";
+      return state;
+    });
+    config.refreshUI();
   };
   const attributesToolbar = {
     title: "Attributes",
@@ -123,7 +141,7 @@ store.update((state) => {
       {
         icon: "add",
         fnc: () => {
-          addAttribute();
+          openNewAttributeModal();
         },
       },
     ],
@@ -135,13 +153,53 @@ store.update((state) => {
       {
         icon: "add",
         fnc: () => {
-          addProperty();
+          openNewPropertyModal();
         },
       },
     ],
   };
-
 </script>
+
+<!-- Modal Structure -->
+<div id="attributeModal" class="modal">
+  <div class="modal-content">
+    <h5 style="color: #333;">New Attribute</h5>
+    <input style="color: #333;"
+      placeholder="Attribute Name"
+      type="text"
+      bind:value="{newAttributeName}"
+    />
+  </div>
+  <div class="modal-footer">
+    <a
+      href="#!"
+      class="modal-close waves-effect waves-green btn-flat"
+      on:click="{addAttribute}"
+    >
+      Create Attribute
+    </a>
+  </div>
+</div>
+
+<div id="propertyModal" class="modal">
+  <div class="modal-content">
+    <h5 style="color: #333;">New Property</h5>
+    <input style="color: #333;"
+      placeholder="Property Name"
+      type="text"
+      bind:value="{newPropertyName}"
+    />
+  </div>
+  <div class="modal-footer">
+    <a
+      href="#!"
+      class="modal-close waves-effect waves-green btn-flat"
+      on:click="{addProperty}"
+    >
+      Create Property
+    </a>
+  </div>
+</div>
 
 <CRUDEditor store="{store}" config="{config}">
 
@@ -216,45 +274,67 @@ store.update((state) => {
 
     <Toolbar toolbar="{attributesToolbar}" />
 
-    <div class="card-panel blue-grey darken-3">
-      <table>
-        <thead>
-          <tr>
-            <th>Attribute</th>
-            <th>Value</th>
-          </tr>
-        </thead>
-        <tbody>
-          {#each Object.entries($store.selectedElement.attributes) as [key, value]}
+    {#if $store.selectedElement.attributes}
+      <div class="card-panel blue-grey darken-3">
+        <table>
+          <thead>
             <tr>
-              <td>{key}</td>
-              <td>{value}</td>
+              <th>Attribute</th>
+              <th>Value</th>
             </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {#each Object.entries($store.selectedElement.attributes) as [key, value]}
+              <tr>
+
+                {#if key === 'new'}
+                  <input
+                    placeholder="{key}"
+                    id="{key}-input-"
+                    type="text"
+                    bind:value="{$store.selectedElement.attributes[key]}"
+                  />
+                {:else}
+                  <td>{key}</td>
+                {/if}
+
+                <td>
+                  <input
+                    placeholder="{key}"
+                    id="{key}-input"
+                    type="text"
+                    bind:value="{$store.selectedElement.attributes[key]}"
+                  />
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    {/if}
 
     <Toolbar toolbar="{propertiesToolbar}" />
-
-    <div class="card-panel blue-grey darken-3">
-      <table>
-        <thead>
-          <tr>
-            <th>Property</th>
-            <th>Value</th>
-          </tr>
-        </thead>
-        <tbody>
-          {#each Object.entries($store.selectedElement.properties) as [key, value]}
+    {#if $store.selectedElement.properties}
+      <div class="card-panel blue-grey darken-3">
+        <table>
+          <thead>
             <tr>
-              <td>{key}</td>
-              <td>{value}</td>
+              <th>Property</th>
+              <th>Value</th>
             </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {#each Object.entries($store.selectedElement.properties) as [key, value]}
+              <tr>
+                <td>{key}</td>
+                <td>{value}</td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    {/if}
 
   </div>
+
 </CRUDEditor>

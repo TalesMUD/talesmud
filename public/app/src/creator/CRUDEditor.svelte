@@ -11,6 +11,10 @@
     padding: 0;
     margin: 0;
   }
+  .not_stored {
+    border: 1px dashed orange;
+  }
+
   input {
     color: white;
   }
@@ -96,6 +100,12 @@
       selectElement($store.elements[0]);
     });
   });
+
+  const isDraft = (isnew) => {
+    console.log("re.selectedElement.isNew" + isnew);
+    if (isnew === true) return "not_stored";
+    return "";
+  };
 
   const deleteElement = async () => {
     config.delete(
@@ -246,7 +256,7 @@
           on:click="{selectElement(element)}"
         >
 
-          {#if element}
+          {#if element && config.badge}
             <span class="new badge" data-badge-caption="">
               {config.badge(element)}
             </span>
@@ -268,7 +278,21 @@
 
     <!-- START: OBJECT PAGE (Detail)-->
     {#if $store.selectedElement}
-      <div class="card-panel blue-grey darken-3">
+      <div
+        class="card-panel blue-grey darken-3 {isDraft($store.selectedElement.isNew)}"
+      >
+        {#if $store.selectedElement.isNew}
+          <div class="row center-align" style="padding:0; margin-top: -2.6em;">
+            <div
+              class="chip"
+              style="color: #121212; margin: 0; background-color: orange;
+              text-align:center;"
+            >
+              Not Stored
+            </div>
+          </div>
+        {/if}
+
         <div class="row">
           <slot name="hero" />
           <span class="header">{$store.selectedElement.name}</span>
@@ -347,20 +371,22 @@
           </div>
         </div>
 
-        <div class="row">
-          <div class="input-field">
-            <textarea
-              placeholder="Details"
-              id="itemTemplate_detail"
-              type="text"
-              class="materialize-textarea"
-              bind:value="{$store.selectedElement.detail}"
-            ></textarea>
-            <label class="active" for="itemTemplate_detail">
-              Detail (look)
-            </label>
+        {#if config.hideDetails == undefined || !config.hideDetails}
+          <div class="row">
+            <div class="input-field">
+              <textarea
+                placeholder="Details"
+                id="itemTemplate_detail"
+                type="text"
+                class="materialize-textarea"
+                bind:value="{$store.selectedElement.detail}"
+              ></textarea>
+              <label class="active" for="itemTemplate_detail">
+                Detail (look)
+              </label>
+            </div>
           </div>
-        </div>
+        {/if}
 
         <slot name="content" />
       </div>
