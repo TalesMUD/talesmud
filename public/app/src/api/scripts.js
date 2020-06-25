@@ -66,6 +66,19 @@ function updateScript(token, id, script, cb, errorCb) {
     .then((r) => cb(r.data))
     .catch((err) => errorCb(err));
 }
+function runScript(token, id, payload, cb, errorCb) {
+  axios
+    .post(`${backend}/run-script/${id}`, payload, {
+      mode: "no-cors",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    .then((r) => cb(r.data))
+    .catch((err) => errorCb(err));
+}
 function createScript(token, script, cb, errorCb) {
   axios
     .post(`${backend}/scripts`, script, {
@@ -80,4 +93,4 @@ function createScript(token, script, cb, errorCb) {
     .catch((err) => errorCb(err));
 }
 
-export { getScript, deleteScript, getScripts, updateScript, createScript };
+export { getScript, deleteScript, getScripts, runScript, updateScript, createScript };

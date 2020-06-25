@@ -14,6 +14,10 @@
   .not_stored {
     border: 1px dashed orange;
   }
+  .card-panel {
+    padding-bottom: 0;
+    margin-bottom: 0;
+  }
 
   input {
     color: white;
@@ -76,7 +80,6 @@
   export let store;
 
   const { isAuthenticated, authToken } = getAuth();
-
   $: state = {
     isAuthenticated: $isAuthenticated,
     authToken: $authToken.slice(0, 20),

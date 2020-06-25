@@ -273,6 +273,7 @@ func (app *app) setupRoutes() {
 		protected.POST("scripts", scripts.PostScript)
 		protected.PUT("scripts/:id", scripts.PutScript)
 		protected.DELETE("scripts/:id", scripts.DeleteScript)
+		protected.POST("run-script/:id", scripts.ExecuteScript)
 
 		protected.GET("world/map", worldRenderer.Render)
 
