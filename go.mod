@@ -21,9 +21,11 @@ require (
 	github.com/gorilla/websocket v1.4.2
 	github.com/hoisie/mustache v0.0.0-20160804235033-6375acf62c69
 	github.com/joho/godotenv v1.3.0
+	github.com/robertkrimen/otto v0.0.0-20191219234010-c382bd3c16ff
 	github.com/rs/cors v1.7.0
 	github.com/sirupsen/logrus v1.6.0
 	go.mongodb.org/mongo-driver v1.3.4
 	gopkg.in/mgo.v2 v2.0.0-20160818020120-3f83fa500528
+	gopkg.in/sourcemap.v1 v1.0.5 // indirect
 	gopkg.in/square/go-jose.v2 v2.5.1
 )

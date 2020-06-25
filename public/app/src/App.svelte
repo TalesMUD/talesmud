@@ -1,10 +1,10 @@
 <style>
   :global(body) {
     background-color: #263238;
-    color: #d8dee9;
     transition: background-color 0.3s;
     margin: 0 auto;
     padding: 0px;
+    color: #d8dee9;
 
     /* The image used */
     /*background-image: url("bg.jpg");*/
@@ -59,10 +59,9 @@
 </style>
 
 <script>
-	import Sprites from './game/Sprites.svelte';
+  import Sprites from "./game/Sprites.svelte";
   import AppContent from "./AppContent.svelte";
   import MediaQuery from "./MediaQuery.svelte";
-
   import {
     HashIcon,
     ShieldIcon,
@@ -109,6 +108,10 @@
     //let instance = M.Tabs.init(elems);
   });
   export let url = "";
+
+  const onHLJSLoaded = () => {
+    hljs.initHighlightingOnLoad();
+  };
 </script>
 
 <svelte:head>
@@ -127,7 +130,18 @@
     rel="stylesheet"
     href="https://fonts.googleapis.com/icon?family=Material+Icons"
   />
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@10.1.1/build/styles/atom-one-dark.min.css"
+  />
+  <script
+    src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@10.1.1/build/highlight.min.js"
+    on:load="{onHLJSLoaded}">
 
+  </script>
+  <script
+    src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@10.1.1/build/languages/javascript.min.js">
+  </script>
 </svelte:head>
 
 <div class="root default">
@@ -138,9 +152,9 @@
         <a href="#" class="brand-logo">
           <span class="valign-wrapper italic">
             <span class="iconspacing">
-            
-               <BookOpenIcon size="24" />
-           </span>
+
+              <BookOpenIcon size="24" />
+            </span>
             <NavLink to="/">Tales</NavLink>
           </span>
         </a>

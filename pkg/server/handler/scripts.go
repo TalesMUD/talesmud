@@ -41,6 +41,37 @@ func (handler *ScriptsHandler) PostScript(c *gin.Context) {
 	}
 }
 
+//ExecuteScript ... Updates a script
+func (handler *ScriptsHandler) ExecuteScript(c *gin.Context) {
+
+	id := c.Param("id")
+
+	// content ...
+	/*var script scripts.Script
+	if err := c.ShouldBindJSON(&script); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}*/
+
+	var data string
+	c.Bind(&data)
+	var js
+	if c.BindJSON(&json) == nil {
+	if script, err := handler.Service.FindByID(id); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	} else {
+
+		runner := scripts.ScriptRunner{}
+		result := runner.Run(*script, data)
+
+		c.JSON(http.StatusOK, gin.H{
+			"status": "Executed script",	
+			"result": result})
+
+	}
+
+}
+
 //PutScript ... Updates a script
 func (handler *ScriptsHandler) PutScript(c *gin.Context) {
 
