@@ -31,11 +31,11 @@ type itemsService struct {
 }
 
 //NewItemsService creates a nwe item service
-func NewItemsService(itemsRepo r.ItemsRepository, itemsTemplateRepo r.ItemTemplatesRepository) ItemsService {
+func NewItemsService(itemsRepo r.ItemsRepository, itemsTemplateRepo r.ItemTemplatesRepository, runner scripts.ScriptRunner) ItemsService {
 	return &itemsService{
 		itemsRepo,
 		itemsTemplateRepo,
-		scripts.ScriptRunner{},
+		runner,
 	}
 }
 

@@ -17,6 +17,7 @@ import (
 
 	"github.com/talesmud/talesmud/pkg/db"
 	mud "github.com/talesmud/talesmud/pkg/mudserver"
+	"github.com/talesmud/talesmud/pkg/scripts/runner"
 	"github.com/talesmud/talesmud/pkg/server/handler"
 	"github.com/talesmud/talesmud/pkg/service"
 
@@ -55,7 +56,10 @@ func NewApp() App {
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
 
-	facade := service.NewFacade(db)
+	runner := runner.NewDefaultScriptRunner()
+	facade := service.NewFacade(db, runner)
+	runner.SetServices(facade)
+
 	return &app{
 		db:     db,
 		Router: r,
@@ -208,6 +212,7 @@ func (app *app) setupRoutes() {
 
 	scripts := &handler.ScriptsHandler{
 		app.facade.ScriptsService(),
+		app.facade.Runner(),
 	}
 
 	exp := &handler.ExportHandler{
@@ -270,6 +275,7 @@ func (app *app) setupRoutes() {
 
 		// -- scripts
 		protected.GET("scripts", scripts.GetScripts)
+		protected.GET("script-types", scripts.GetScriptTypes)
 		protected.POST("scripts", scripts.PostScript)
 		protected.PUT("scripts/:id", scripts.PutScript)
 		protected.DELETE("scripts/:id", scripts.DeleteScript)
