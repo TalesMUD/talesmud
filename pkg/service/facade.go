@@ -3,6 +3,7 @@ package service
 import (
 	"github.com/talesmud/talesmud/pkg/db"
 	"github.com/talesmud/talesmud/pkg/repository"
+	"github.com/talesmud/talesmud/pkg/scripts"
 )
 
 //Facade ...
@@ -13,6 +14,8 @@ type Facade interface {
 	RoomsService() RoomsService
 	ScriptsService() ScriptsService
 	ItemsService() ItemsService
+
+	Runner() scripts.ScriptRunner
 }
 
 type facade struct {
@@ -22,11 +25,12 @@ type facade struct {
 	rs  RoomsService
 	is  ItemsService
 	ss  ScriptsService
+	sr  scripts.ScriptRunner
 	db  *db.Client
 }
 
 //NewFacade creates a new service facade
-func NewFacade(db *db.Client) Facade {
+func NewFacade(db *db.Client, runner scripts.ScriptRunner) Facade {
 	charactersRepo := repository.NewMongoDBcharactersRepository(db)
 	partiesRepo := repository.NewMongoDBPartiesRepository(db)
 	usersRepo := repository.NewMongoDBUsersRepository(db)
@@ -36,13 +40,16 @@ func NewFacade(db *db.Client) Facade {
 	itemsRepo := repository.NewMongoDBItemsRepository(db)
 	itemTemplatesRepo := repository.NewMongoDBItemTemplatesRepository(db)
 
+	is := NewItemsService(itemsRepo, itemTemplatesRepo, runner)
+
 	return &facade{
 		css: NewCharactersService(charactersRepo),
 		ps:  NewPartiesService(partiesRepo),
 		us:  NewUsersService(usersRepo),
 		rs:  NewRoomsService(roomsRepo),
 		ss:  NewScriptsService(scriptsRepo),
-		is:  NewItemsService(itemsRepo, itemTemplatesRepo),
+		is:  is,
+		sr:  runner,
 	}
 }
 func (f *facade) RoomsService() RoomsService {
@@ -63,4 +70,7 @@ func (f *facade) PartiesService() PartiesService {
 }
 func (f *facade) UsersService() UsersService {
 	return f.us
+}
+func (f *facade) Runner() scripts.ScriptRunner {
+	return f.sr
 }

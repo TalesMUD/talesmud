@@ -7,7 +7,6 @@ import (
 
 	"github.com/talesmud/talesmud/pkg/db"
 	"github.com/talesmud/talesmud/pkg/entities"
-	"github.com/talesmud/talesmud/pkg/scripts"
 	s "github.com/talesmud/talesmud/pkg/scripts"
 )
 
@@ -41,7 +40,7 @@ func NewMongoDBScriptRepository(db *db.Client) ScriptsRepository {
 			db:         db,
 			collection: "scripts",
 			generator: func() interface{} {
-				return &scripts.Script{}
+				return &s.Script{}
 			},
 		},
 	}

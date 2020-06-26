@@ -1,6 +1,13 @@
 import axios from "axios";
 import { backend } from "./base.js";
 
+function getScriptTypes(cb, errorCb) {
+  axios
+    .get(`${backend}/script-types`)
+    .then((result) => cb(result.data))
+    .catch((err) => errorCb(err));
+}
+
 function getScript(token, id, cb, errorCb) {
   axios
     .get(`${backend}/scripts/${id}`, {
@@ -72,7 +79,7 @@ function runScript(token, id, payload, cb, errorCb) {
       mode: "no-cors",
       credentials: "same-origin",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "text/plain",
         Authorization: `Bearer ${token}`,
       },
     })
@@ -93,4 +100,12 @@ function createScript(token, script, cb, errorCb) {
     .catch((err) => errorCb(err));
 }
 
-export { getScript, deleteScript, getScripts, runScript, updateScript, createScript };
+export {
+  getScript,
+  deleteScript,
+  getScriptTypes,
+  getScripts,
+  runScript,
+  updateScript,
+  createScript,
+};

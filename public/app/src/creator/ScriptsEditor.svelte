@@ -61,13 +61,24 @@
     getScripts,
     updateScript,
     createScript,
+    getScriptTypes,
   } from "../api/scripts.js";
 
   let jar;
   let test;
+  let result;
 
-  const testBody = writable('{}')
-  const result = writable("result");
+  const testBody = writable("{}");
+
+  ///////// ADDITIONAL DATA
+  // additional data
+
+  let scriptTypes = [];
+
+  onMount(async () => {
+    getScriptTypes((t) => (scriptTypes = t));
+  });
+  /////////
 
   const highlight = (editor) => {
     editor.textContent = editor.textContent;
@@ -96,8 +107,13 @@
             withLineNumbers(highlight)
           );
           test.onUpdate((code) => {
-            testBody.set(code)
+            testBody.set(code);
           });
+
+          result = CodeJar(
+            document.querySelector(".result"),
+            withLineNumbers(highlight)
+          );
         }
 
         jar.updateCode($store.selectedElement.code);
@@ -122,7 +138,8 @@
       $store.selectedElement.id,
       $testBody,
       (r) => {
-        result.set(JSON.stringify(r.result, undefined, 2));
+        let obj = r.result;
+        result.updateCode(JSON.stringify(obj, null, 2));
       },
       () => {
         console.log("update error.");
@@ -143,20 +160,35 @@
 </script>
 
 <CRUDEditor store="{store}" config="{config}">
+
+  <div slot="content">
+    <div class="row">
+
+      <div class="margininput input-field col s5">
+        <select bind:value="{$store.selectedElement.type}" on:change>
+          <option value="" disabled selected>Script Type</option>
+          {#each scriptTypes as type}
+            <option value="{type}">{type.capitalize()}</option>
+          {/each}
+        </select>
+        <label>Select Script Type</label>
+      </div>
+    </div>
+  </div>
+
   <div slot="extensions">
     <div class="card-panel editor language-javascript"></div>
 
     <Toolbar
-      toolbar="{{ title: 'Testrunner', small: true, actions: [{ name: 'Run', fnc: () => runCode() }] }}"
+      toolbar="{{ title: 'Testrunner', small: true, actions: [{ icon: 'play_arrow', fnc: () => runCode() }] }}"
     />
 
     <div class="card z-depth-3" style="background-color: #121212;">
       <div class="card-content language-javascript body col s6">
         {$testBody}
       </div>
-      <div class="card-content language-javascript result col s6">
-        {$result}
-      </div>
+      <div class="card-content language-javascript result col s6"></div>
     </div>
   </div>
+
 </CRUDEditor>

@@ -29885,6 +29885,13 @@ var app = (function () {
       return lineNumbers;
   }
 
+  function getScriptTypes(cb, errorCb) {
+    axios$1
+      .get(`${backend}/script-types`)
+      .then((result) => cb(result.data))
+      .catch((err) => errorCb(err));
+  }
+
   function getScript(token, id, cb, errorCb) {
     axios$1
       .get(`${backend}/scripts/${id}`, {
@@ -29952,7 +29959,7 @@ var app = (function () {
         mode: "no-cors",
         credentials: "same-origin",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "text/plain",
           Authorization: `Bearer ${token}`,
         },
       })
@@ -29979,7 +29986,174 @@ var app = (function () {
 
   const file$j = "src/creator/ScriptsEditor.svelte";
 
-  // (146:2) <div slot="extensions">
+  function get_each_context$4(ctx, list, i) {
+  	const child_ctx = ctx.slice();
+  	child_ctx[20] = list[i];
+  	return child_ctx;
+  }
+
+  // (170:10) {#each scriptTypes as type}
+  function create_each_block$4(ctx) {
+  	let option;
+  	let t_value = /*type*/ ctx[20].capitalize() + "";
+  	let t;
+  	let option_value_value;
+
+  	const block = {
+  		c: function create() {
+  			option = element("option");
+  			t = text(t_value);
+  			option.__value = option_value_value = /*type*/ ctx[20];
+  			option.value = option.__value;
+  			add_location(option, file$j, 170, 12, 3990);
+  		},
+  		m: function mount(target, anchor) {
+  			insert_dev(target, option, anchor);
+  			append_dev(option, t);
+  		},
+  		p: function update(ctx, dirty) {
+  			if (dirty & /*scriptTypes*/ 1 && t_value !== (t_value = /*type*/ ctx[20].capitalize() + "")) set_data_dev(t, t_value);
+
+  			if (dirty & /*scriptTypes*/ 1 && option_value_value !== (option_value_value = /*type*/ ctx[20])) {
+  				prop_dev(option, "__value", option_value_value);
+  			}
+
+  			option.value = option.__value;
+  		},
+  		d: function destroy(detaching) {
+  			if (detaching) detach_dev(option);
+  		}
+  	};
+
+  	dispatch_dev("SvelteRegisterBlock", {
+  		block,
+  		id: create_each_block$4.name,
+  		type: "each",
+  		source: "(170:10) {#each scriptTypes as type}",
+  		ctx
+  	});
+
+  	return block;
+  }
+
+  // (164:2) <div slot="content">
+  function create_content_slot(ctx) {
+  	let div0;
+  	let div2;
+  	let div1;
+  	let select;
+  	let option;
+  	let t1;
+  	let label;
+  	let dispose;
+  	let each_value = /*scriptTypes*/ ctx[0];
+  	validate_each_argument(each_value);
+  	let each_blocks = [];
+
+  	for (let i = 0; i < each_value.length; i += 1) {
+  		each_blocks[i] = create_each_block$4(get_each_context$4(ctx, each_value, i));
+  	}
+
+  	const block = {
+  		c: function create() {
+  			div0 = element("div");
+  			div2 = element("div");
+  			div1 = element("div");
+  			select = element("select");
+  			option = element("option");
+  			option.textContent = "Script Type";
+
+  			for (let i = 0; i < each_blocks.length; i += 1) {
+  				each_blocks[i].c();
+  			}
+
+  			t1 = space();
+  			label = element("label");
+  			label.textContent = "Select Script Type";
+  			option.__value = "";
+  			option.value = option.__value;
+  			option.disabled = true;
+  			option.selected = true;
+  			add_location(option, file$j, 168, 10, 3884);
+  			if (/*$store*/ ctx[1].selectedElement.type === void 0) add_render_callback(() => /*select_change_handler*/ ctx[18].call(select));
+  			add_location(select, file$j, 167, 8, 3812);
+  			add_location(label, file$j, 173, 8, 4086);
+  			attr_dev(div1, "class", "margininput input-field col s5");
+  			add_location(div1, file$j, 166, 6, 3759);
+  			attr_dev(div2, "class", "row");
+  			add_location(div2, file$j, 164, 4, 3734);
+  			attr_dev(div0, "slot", "content");
+  			add_location(div0, file$j, 163, 2, 3709);
+  		},
+  		m: function mount(target, anchor, remount) {
+  			insert_dev(target, div0, anchor);
+  			append_dev(div0, div2);
+  			append_dev(div2, div1);
+  			append_dev(div1, select);
+  			append_dev(select, option);
+
+  			for (let i = 0; i < each_blocks.length; i += 1) {
+  				each_blocks[i].m(select, null);
+  			}
+
+  			select_option(select, /*$store*/ ctx[1].selectedElement.type);
+  			append_dev(div1, t1);
+  			append_dev(div1, label);
+  			if (remount) run_all(dispose);
+
+  			dispose = [
+  				listen_dev(select, "change", /*select_change_handler*/ ctx[18]),
+  				listen_dev(select, "change", /*change_handler*/ ctx[17], false, false, false)
+  			];
+  		},
+  		p: function update(ctx, dirty) {
+  			if (dirty & /*scriptTypes*/ 1) {
+  				each_value = /*scriptTypes*/ ctx[0];
+  				validate_each_argument(each_value);
+  				let i;
+
+  				for (i = 0; i < each_value.length; i += 1) {
+  					const child_ctx = get_each_context$4(ctx, each_value, i);
+
+  					if (each_blocks[i]) {
+  						each_blocks[i].p(child_ctx, dirty);
+  					} else {
+  						each_blocks[i] = create_each_block$4(child_ctx);
+  						each_blocks[i].c();
+  						each_blocks[i].m(select, null);
+  					}
+  				}
+
+  				for (; i < each_blocks.length; i += 1) {
+  					each_blocks[i].d(1);
+  				}
+
+  				each_blocks.length = each_value.length;
+  			}
+
+  			if (dirty & /*$store*/ 2) {
+  				select_option(select, /*$store*/ ctx[1].selectedElement.type);
+  			}
+  		},
+  		d: function destroy(detaching) {
+  			if (detaching) detach_dev(div0);
+  			destroy_each(each_blocks, detaching);
+  			run_all(dispose);
+  		}
+  	};
+
+  	dispatch_dev("SvelteRegisterBlock", {
+  		block,
+  		id: create_content_slot.name,
+  		type: "slot",
+  		source: "(164:2) <div slot=\\\"content\\\">",
+  		ctx
+  	});
+
+  	return block;
+  }
+
+  // (179:2) <div slot="extensions">
   function create_extensions_slot(ctx) {
   	let div0;
   	let div1;
@@ -29990,7 +30164,6 @@ var app = (function () {
   	let t2;
   	let t3;
   	let div3;
-  	let t4;
   	let current;
 
   	const toolbar = new Toolbar({
@@ -29998,7 +30171,12 @@ var app = (function () {
   				toolbar: {
   					title: "Testrunner",
   					small: true,
-  					actions: [{ name: "Run", fnc: /*func*/ ctx[17] }]
+  					actions: [
+  						{
+  							icon: "play_arrow",
+  							fnc: /*func*/ ctx[19]
+  						}
+  					]
   				}
   			},
   			$$inline: true
@@ -30013,21 +30191,20 @@ var app = (function () {
   			t1 = space();
   			div4 = element("div");
   			div2 = element("div");
-  			t2 = text(/*$testBody*/ ctx[0]);
+  			t2 = text(/*$testBody*/ ctx[2]);
   			t3 = space();
   			div3 = element("div");
-  			t4 = text(/*$result*/ ctx[1]);
   			attr_dev(div1, "class", "card-panel editor language-javascript svelte-1f4ux7q");
-  			add_location(div1, file$j, 146, 4, 3420);
+  			add_location(div1, file$j, 179, 4, 4184);
   			attr_dev(div2, "class", "card-content language-javascript body col s6 svelte-1f4ux7q");
-  			add_location(div2, file$j, 153, 6, 3679);
+  			add_location(div2, file$j, 186, 6, 4450);
   			attr_dev(div3, "class", "card-content language-javascript result col s6 svelte-1f4ux7q");
-  			add_location(div3, file$j, 156, 6, 3777);
+  			add_location(div3, file$j, 189, 6, 4548);
   			attr_dev(div4, "class", "card z-depth-3");
   			set_style(div4, "background-color", "#121212");
-  			add_location(div4, file$j, 152, 4, 3609);
+  			add_location(div4, file$j, 185, 4, 4380);
   			attr_dev(div0, "slot", "extensions");
-  			add_location(div0, file$j, 145, 2, 3392);
+  			add_location(div0, file$j, 178, 2, 4156);
   		},
   		m: function mount(target, anchor) {
   			insert_dev(target, div0, anchor);
@@ -30040,12 +30217,10 @@ var app = (function () {
   			append_dev(div2, t2);
   			append_dev(div4, t3);
   			append_dev(div4, div3);
-  			append_dev(div3, t4);
   			current = true;
   		},
   		p: function update(ctx, dirty) {
-  			if (!current || dirty & /*$testBody*/ 1) set_data_dev(t2, /*$testBody*/ ctx[0]);
-  			if (!current || dirty & /*$result*/ 2) set_data_dev(t4, /*$result*/ ctx[1]);
+  			if (!current || dirty & /*$testBody*/ 4) set_data_dev(t2, /*$testBody*/ ctx[2]);
   		},
   		i: function intro(local) {
   			if (current) return;
@@ -30066,7 +30241,37 @@ var app = (function () {
   		block,
   		id: create_extensions_slot.name,
   		type: "slot",
-  		source: "(146:2) <div slot=\\\"extensions\\\">",
+  		source: "(179:2) <div slot=\\\"extensions\\\">",
+  		ctx
+  	});
+
+  	return block;
+  }
+
+  // (162:0) <CRUDEditor store="{store}" config="{config}">
+  function create_default_slot$2(ctx) {
+  	let t;
+
+  	const block = {
+  		c: function create() {
+  			t = space();
+  		},
+  		m: function mount(target, anchor) {
+  			insert_dev(target, t, anchor);
+  		},
+  		p: noop,
+  		i: noop,
+  		o: noop,
+  		d: function destroy(detaching) {
+  			if (detaching) detach_dev(t);
+  		}
+  	};
+
+  	dispatch_dev("SvelteRegisterBlock", {
+  		block,
+  		id: create_default_slot$2.name,
+  		type: "slot",
+  		source: "(162:0) <CRUDEditor store=\\\"{store}\\\" config=\\\"{config}\\\">",
   		ctx
   	});
 
@@ -30080,7 +30285,11 @@ var app = (function () {
   			props: {
   				store: /*store*/ ctx[7],
   				config: /*config*/ ctx[6],
-  				$$slots: { extensions: [create_extensions_slot] },
+  				$$slots: {
+  					default: [create_default_slot$2],
+  					extensions: [create_extensions_slot],
+  					content: [create_content_slot]
+  				},
   				$$scope: { ctx }
   			},
   			$$inline: true
@@ -30100,7 +30309,7 @@ var app = (function () {
   		p: function update(ctx, [dirty]) {
   			const crudeditor_changes = {};
 
-  			if (dirty & /*$$scope, $result, $testBody*/ 262147) {
+  			if (dirty & /*$$scope, $testBody, $store, scriptTypes*/ 8388615) {
   				crudeditor_changes.$$scope = { dirty, ctx };
   			}
 
@@ -30136,21 +30345,27 @@ var app = (function () {
   	let $authToken;
   	let $store;
   	let $testBody;
-  	let $result;
   	const { isAuthenticated, authToken } = getAuth();
   	validate_store(isAuthenticated, "isAuthenticated");
-  	component_subscribe($$self, isAuthenticated, value => $$invalidate(12, $isAuthenticated = value));
+  	component_subscribe($$self, isAuthenticated, value => $$invalidate(13, $isAuthenticated = value));
   	validate_store(authToken, "authToken");
-  	component_subscribe($$self, authToken, value => $$invalidate(13, $authToken = value));
+  	component_subscribe($$self, authToken, value => $$invalidate(14, $authToken = value));
   	let jar;
   	let test;
+  	let result;
   	const testBody = writable("{}");
   	validate_store(testBody, "testBody");
-  	component_subscribe($$self, testBody, value => $$invalidate(0, $testBody = value));
-  	const result = writable("result");
-  	validate_store(result, "result");
-  	component_subscribe($$self, result, value => $$invalidate(1, $result = value));
+  	component_subscribe($$self, testBody, value => $$invalidate(2, $testBody = value));
 
+  	///////// ADDITIONAL DATA
+  	// additional data
+  	let scriptTypes = [];
+
+  	onMount(async () => {
+  		getScriptTypes(t => $$invalidate(0, scriptTypes = t));
+  	});
+
+  	/////////
   	const highlight = editor => {
   		editor.textContent = editor.textContent;
   		hljs.highlightBlock(editor);
@@ -30178,6 +30393,8 @@ var app = (function () {
   					test.onUpdate(code => {
   						testBody.set(code);
   					});
+
+  					result = CodeJar(document.querySelector(".result"), withLineNumbers(highlight));
   				}
 
   				jar.updateCode($store.selectedElement.code);
@@ -30199,7 +30416,7 @@ var app = (function () {
   	const store = createStore();
 
   	validate_store(store, "store");
-  	component_subscribe($$self, store, value => $$invalidate(14, $store = value));
+  	component_subscribe($$self, store, value => $$invalidate(1, $store = value));
 
   	const runCode = () => {
   		runScript(
@@ -30207,7 +30424,8 @@ var app = (function () {
   			$store.selectedElement.id,
   			$testBody,
   			r => {
-  				result.set(JSON.stringify(r.result, undefined, 2));
+  				let obj = r.result;
+  				result.updateCode(JSON.stringify(obj, null, 2));
   			},
   			() => {
   				console.log("update error.");
@@ -30234,6 +30452,17 @@ var app = (function () {
 
   	let { $$slots = {}, $$scope } = $$props;
   	validate_slots("ScriptsEditor", $$slots, []);
+
+  	function change_handler(event) {
+  		bubble($$self, event);
+  	}
+
+  	function select_change_handler() {
+  		$store.selectedElement.type = select_value(this);
+  		store.set($store);
+  		$$invalidate(0, scriptTypes);
+  	}
+
   	const func = () => runCode();
 
   	$$self.$capture_state = () => ({
@@ -30257,10 +30486,12 @@ var app = (function () {
   		getScripts,
   		updateScript,
   		createScript,
+  		getScriptTypes,
   		jar,
   		test,
-  		testBody,
   		result,
+  		testBody,
+  		scriptTypes,
   		highlight,
   		config,
   		store,
@@ -30270,13 +30501,14 @@ var app = (function () {
   		$isAuthenticated,
   		$authToken,
   		$store,
-  		$testBody,
-  		$result
+  		$testBody
   	});
 
   	$$self.$inject_state = $$props => {
   		if ("jar" in $$props) jar = $$props.jar;
   		if ("test" in $$props) test = $$props.test;
+  		if ("result" in $$props) result = $$props.result;
+  		if ("scriptTypes" in $$props) $$invalidate(0, scriptTypes = $$props.scriptTypes);
   		if ("state" in $$props) state = $$props.state;
   	};
 
@@ -30287,7 +30519,7 @@ var app = (function () {
   	}
 
   	$$self.$$.update = () => {
-  		if ($$self.$$.dirty & /*$isAuthenticated, $authToken*/ 12288) {
+  		if ($$self.$$.dirty & /*$isAuthenticated, $authToken*/ 24576) {
   			 state = {
   				isAuthenticated: $isAuthenticated,
   				authToken: $authToken.slice(0, 20)
@@ -30296,23 +30528,25 @@ var app = (function () {
   	};
 
   	return [
+  		scriptTypes,
+  		$store,
   		$testBody,
-  		$result,
   		isAuthenticated,
   		authToken,
   		testBody,
-  		result,
   		config,
   		store,
   		runCode,
   		jar,
   		test,
+  		result,
   		state,
   		$isAuthenticated,
   		$authToken,
-  		$store,
   		highlight,
   		updateCode,
+  		change_handler,
+  		select_change_handler,
   		func
   	];
   }
@@ -30806,7 +31040,7 @@ var app = (function () {
 
   const file$l = "src/creator/RoomsEditor.svelte";
 
-  function get_each_context$4(ctx, list, i) {
+  function get_each_context$5(ctx, list, i) {
   	const child_ctx = ctx.slice();
   	child_ctx[15] = list[i];
   	return child_ctx;
@@ -30945,7 +31179,7 @@ var app = (function () {
   }
 
   // (161:2) <div slot="content">
-  function create_content_slot(ctx) {
+  function create_content_slot$1(ctx) {
   	let div0;
   	let div4;
   	let div1;
@@ -31086,7 +31320,7 @@ var app = (function () {
 
   	dispatch_dev("SvelteRegisterBlock", {
   		block,
-  		id: create_content_slot.name,
+  		id: create_content_slot$1.name,
   		type: "slot",
   		source: "(161:2) <div slot=\\\"content\\\">",
   		ctx
@@ -31256,7 +31490,7 @@ var app = (function () {
   	let each_blocks = [];
 
   	for (let i = 0; i < each_value.length; i += 1) {
-  		each_blocks[i] = create_each_block$4(get_each_context$4(ctx, each_value, i));
+  		each_blocks[i] = create_each_block$5(get_each_context$5(ctx, each_value, i));
   	}
 
   	const out = i => transition_out(each_blocks[i], 1, 1, () => {
@@ -31292,13 +31526,13 @@ var app = (function () {
   				let i;
 
   				for (i = 0; i < each_value.length; i += 1) {
-  					const child_ctx = get_each_context$4(ctx, each_value, i);
+  					const child_ctx = get_each_context$5(ctx, each_value, i);
 
   					if (each_blocks[i]) {
   						each_blocks[i].p(child_ctx, dirty);
   						transition_in(each_blocks[i], 1);
   					} else {
-  						each_blocks[i] = create_each_block$4(child_ctx);
+  						each_blocks[i] = create_each_block$5(child_ctx);
   						each_blocks[i].c();
   						transition_in(each_blocks[i], 1);
   						each_blocks[i].m(ul, null);
@@ -31350,7 +31584,7 @@ var app = (function () {
   }
 
   // (254:8) {#each $store.selectedElement.actions as action}
-  function create_each_block$4(ctx) {
+  function create_each_block$5(ctx) {
   	let current;
 
   	const actioneditor = new ActionEditor({
@@ -31390,7 +31624,7 @@ var app = (function () {
 
   	dispatch_dev("SvelteRegisterBlock", {
   		block,
-  		id: create_each_block$4.name,
+  		id: create_each_block$5.name,
   		type: "each",
   		source: "(254:8) {#each $store.selectedElement.actions as action}",
   		ctx
@@ -31528,7 +31762,7 @@ var app = (function () {
   }
 
   // (159:0) <CRUDEditor store="{store}" config="{config}">
-  function create_default_slot$2(ctx) {
+  function create_default_slot$3(ctx) {
   	let t;
 
   	const block = {
@@ -31548,7 +31782,7 @@ var app = (function () {
 
   	dispatch_dev("SvelteRegisterBlock", {
   		block,
-  		id: create_default_slot$2.name,
+  		id: create_default_slot$3.name,
   		type: "slot",
   		source: "(159:0) <CRUDEditor store=\\\"{store}\\\" config=\\\"{config}\\\">",
   		ctx
@@ -31565,9 +31799,9 @@ var app = (function () {
   				store: /*store*/ ctx[2],
   				config: /*config*/ ctx[1],
   				$$slots: {
-  					default: [create_default_slot$2],
+  					default: [create_default_slot$3],
   					extensions: [create_extensions_slot$1],
-  					content: [create_content_slot]
+  					content: [create_content_slot$1]
   				},
   				$$scope: { ctx }
   			},
@@ -32056,7 +32290,7 @@ var app = (function () {
 
   const file$m = "src/creator/ItemsEditor.svelte";
 
-  function get_each_context$5(ctx, list, i) {
+  function get_each_context$6(ctx, list, i) {
   	const child_ctx = ctx.slice();
   	child_ctx[19] = list[i];
   	return child_ctx;
@@ -32305,7 +32539,7 @@ var app = (function () {
   }
 
   // (151:10) {#each itemSlots as slot}
-  function create_each_block$5(ctx) {
+  function create_each_block$6(ctx) {
   	let option;
   	let t_value = /*slot*/ ctx[19].capitalize() + "";
   	let t;
@@ -32340,7 +32574,7 @@ var app = (function () {
 
   	dispatch_dev("SvelteRegisterBlock", {
   		block,
-  		id: create_each_block$5.name,
+  		id: create_each_block$6.name,
   		type: "each",
   		source: "(151:10) {#each itemSlots as slot}",
   		ctx
@@ -32350,7 +32584,7 @@ var app = (function () {
   }
 
   // (98:2) <div slot="content">
-  function create_content_slot$1(ctx) {
+  function create_content_slot$2(ctx) {
   	let div0;
   	let div4;
   	let div1;
@@ -32420,7 +32654,7 @@ var app = (function () {
   	let each_blocks = [];
 
   	for (let i = 0; i < each_value.length; i += 1) {
-  		each_blocks[i] = create_each_block$5(get_each_context$5(ctx, each_value, i));
+  		each_blocks[i] = create_each_block$6(get_each_context$6(ctx, each_value, i));
   	}
 
   	const block = {
@@ -32737,12 +32971,12 @@ var app = (function () {
   				let i;
 
   				for (i = 0; i < each_value.length; i += 1) {
-  					const child_ctx = get_each_context$5(ctx, each_value, i);
+  					const child_ctx = get_each_context$6(ctx, each_value, i);
 
   					if (each_blocks[i]) {
   						each_blocks[i].p(child_ctx, dirty);
   					} else {
-  						each_blocks[i] = create_each_block$5(child_ctx);
+  						each_blocks[i] = create_each_block$6(child_ctx);
   						each_blocks[i].c();
   						each_blocks[i].m(select4, null);
   					}
@@ -32772,7 +33006,7 @@ var app = (function () {
 
   	dispatch_dev("SvelteRegisterBlock", {
   		block,
-  		id: create_content_slot$1.name,
+  		id: create_content_slot$2.name,
   		type: "slot",
   		source: "(98:2) <div slot=\\\"content\\\">",
   		ctx
@@ -32782,7 +33016,7 @@ var app = (function () {
   }
 
   // (92:0) <CRUDEditor store="{store}" config="{config}">
-  function create_default_slot$3(ctx) {
+  function create_default_slot$4(ctx) {
   	let t;
 
   	const block = {
@@ -32802,7 +33036,7 @@ var app = (function () {
 
   	dispatch_dev("SvelteRegisterBlock", {
   		block,
-  		id: create_default_slot$3.name,
+  		id: create_default_slot$4.name,
   		type: "slot",
   		source: "(92:0) <CRUDEditor store=\\\"{store}\\\" config=\\\"{config}\\\">",
   		ctx
@@ -32819,8 +33053,8 @@ var app = (function () {
   				store: /*store*/ ctx[6],
   				config: /*config*/ ctx[5],
   				$$slots: {
-  					default: [create_default_slot$3],
-  					content: [create_content_slot$1],
+  					default: [create_default_slot$4],
+  					content: [create_content_slot$2],
   					hero: [create_hero_slot]
   				},
   				$$scope: { ctx }
@@ -33088,7 +33322,7 @@ var app = (function () {
 
   const file$n = "src/creator/ItemTemplatesEditor.svelte";
 
-  function get_each_context$6(ctx, list, i) {
+  function get_each_context$7(ctx, list, i) {
   	const child_ctx = ctx.slice();
   	child_ctx[31] = list[i][0];
   	child_ctx[32] = list[i][1];
@@ -33396,7 +33630,7 @@ var app = (function () {
   }
 
   // (210:2) <div slot="content">
-  function create_content_slot$2(ctx) {
+  function create_content_slot$3(ctx) {
   	let div0;
   	let div4;
   	let div1;
@@ -33818,7 +34052,7 @@ var app = (function () {
 
   	dispatch_dev("SvelteRegisterBlock", {
   		block,
-  		id: create_content_slot$2.name,
+  		id: create_content_slot$3.name,
   		type: "slot",
   		source: "(210:2) <div slot=\\\"content\\\">",
   		ctx
@@ -34132,7 +34366,7 @@ var app = (function () {
   	let each_blocks = [];
 
   	for (let i = 0; i < each_value.length; i += 1) {
-  		each_blocks[i] = create_each_block$6(get_each_context$6(ctx, each_value, i));
+  		each_blocks[i] = create_each_block$7(get_each_context$7(ctx, each_value, i));
   	}
 
   	const block = {
@@ -34184,12 +34418,12 @@ var app = (function () {
   				let i;
 
   				for (i = 0; i < each_value.length; i += 1) {
-  					const child_ctx = get_each_context$6(ctx, each_value, i);
+  					const child_ctx = get_each_context$7(ctx, each_value, i);
 
   					if (each_blocks[i]) {
   						each_blocks[i].p(child_ctx, dirty);
   					} else {
-  						each_blocks[i] = create_each_block$6(child_ctx);
+  						each_blocks[i] = create_each_block$7(child_ctx);
   						each_blocks[i].c();
   						each_blocks[i].m(tbody, null);
   					}
@@ -34220,7 +34454,7 @@ var app = (function () {
   }
 
   // (327:12) {#each Object.entries($store.selectedElement.properties) as [key, value]}
-  function create_each_block$6(ctx) {
+  function create_each_block$7(ctx) {
   	let tr;
   	let td0;
   	let t0_value = /*key*/ ctx[31] + "";
@@ -34264,7 +34498,7 @@ var app = (function () {
 
   	dispatch_dev("SvelteRegisterBlock", {
   		block,
-  		id: create_each_block$6.name,
+  		id: create_each_block$7.name,
   		type: "each",
   		source: "(327:12) {#each Object.entries($store.selectedElement.properties) as [key, value]}",
   		ctx
@@ -34378,7 +34612,7 @@ var app = (function () {
   }
 
   // (204:0) <CRUDEditor store="{store}" config="{config}">
-  function create_default_slot$4(ctx) {
+  function create_default_slot$5(ctx) {
   	let t0;
   	let t1;
 
@@ -34402,7 +34636,7 @@ var app = (function () {
 
   	dispatch_dev("SvelteRegisterBlock", {
   		block,
-  		id: create_default_slot$4.name,
+  		id: create_default_slot$5.name,
   		type: "slot",
   		source: "(204:0) <CRUDEditor store=\\\"{store}\\\" config=\\\"{config}\\\">",
   		ctx
@@ -34438,9 +34672,9 @@ var app = (function () {
   				store: /*store*/ ctx[8],
   				config: /*config*/ ctx[7],
   				$$slots: {
-  					default: [create_default_slot$4],
+  					default: [create_default_slot$5],
   					extensions: [create_extensions_slot$2],
-  					content: [create_content_slot$2],
+  					content: [create_content_slot$3],
   					hero: [create_hero_slot$1]
   				},
   				$$scope: { ctx }
@@ -35229,7 +35463,7 @@ var app = (function () {
   const file$p = "src/creator/Creator.svelte";
 
   // (57:0) <Router>
-  function create_default_slot$5(ctx) {
+  function create_default_slot$6(ctx) {
   	let row;
   	let t0;
   	let t1;
@@ -35325,7 +35559,7 @@ var app = (function () {
 
   	dispatch_dev("SvelteRegisterBlock", {
   		block,
-  		id: create_default_slot$5.name,
+  		id: create_default_slot$6.name,
   		type: "slot",
   		source: "(57:0) <Router>",
   		ctx
@@ -35339,7 +35573,7 @@ var app = (function () {
 
   	const router = new Router({
   			props: {
-  				$$slots: { default: [create_default_slot$5] },
+  				$$slots: { default: [create_default_slot$6] },
   				$$scope: { ctx }
   			},
   			$$inline: true
@@ -35683,7 +35917,7 @@ var app = (function () {
   const { console: console_1$9 } = globals;
   const file$r = "src/characters/Characters.svelte";
 
-  function get_each_context$7(ctx, list, i) {
+  function get_each_context$8(ctx, list, i) {
   	const child_ctx = ctx.slice();
   	child_ctx[16] = list[i];
   	return child_ctx;
@@ -35760,7 +35994,7 @@ var app = (function () {
   }
 
   // (83:8) {#each data as character}
-  function create_each_block$7(ctx) {
+  function create_each_block$8(ctx) {
   	let tr;
   	let td0;
   	let t0_value = /*character*/ ctx[16].level + "";
@@ -35840,7 +36074,7 @@ var app = (function () {
 
   	dispatch_dev("SvelteRegisterBlock", {
   		block,
-  		id: create_each_block$7.name,
+  		id: create_each_block$8.name,
   		type: "each",
   		source: "(83:8) {#each data as character}",
   		ctx
@@ -35886,7 +36120,7 @@ var app = (function () {
   	let each_blocks = [];
 
   	for (let i = 0; i < each_value.length; i += 1) {
-  		each_blocks[i] = create_each_block$7(get_each_context$7(ctx, each_value, i));
+  		each_blocks[i] = create_each_block$8(get_each_context$8(ctx, each_value, i));
   	}
 
   	const block = {
@@ -36007,12 +36241,12 @@ var app = (function () {
   				let i;
 
   				for (i = 0; i < each_value.length; i += 1) {
-  					const child_ctx = get_each_context$7(ctx, each_value, i);
+  					const child_ctx = get_each_context$8(ctx, each_value, i);
 
   					if (each_blocks[i]) {
   						each_blocks[i].p(child_ctx, dirty);
   					} else {
-  						each_blocks[i] = create_each_block$7(child_ctx);
+  						each_blocks[i] = create_each_block$8(child_ctx);
   						each_blocks[i].c();
   						each_blocks[i].m(tbody, null);
   					}
@@ -36608,7 +36842,7 @@ var app = (function () {
   }
 
   // (24:0) <Route path="/">
-  function create_default_slot$6(ctx) {
+  function create_default_slot$7(ctx) {
   	let current;
   	const welcome = new Welcome({ $$inline: true });
 
@@ -36636,7 +36870,7 @@ var app = (function () {
 
   	dispatch_dev("SvelteRegisterBlock", {
   		block,
-  		id: create_default_slot$6.name,
+  		id: create_default_slot$7.name,
   		type: "slot",
   		source: "(24:0) <Route path=\\\"/\\\">",
   		ctx
@@ -36686,7 +36920,7 @@ var app = (function () {
   	const route5 = new Route({
   			props: {
   				path: "/",
-  				$$slots: { default: [create_default_slot$6] },
+  				$$slots: { default: [create_default_slot$7] },
   				$$scope: { ctx }
   			},
   			$$inline: true
@@ -36833,7 +37067,7 @@ var app = (function () {
   	return child_ctx;
   }
 
-  function get_each_context$8(ctx, list, i) {
+  function get_each_context$9(ctx, list, i) {
   	const child_ctx = ctx.slice();
   	child_ctx[10] = list[i];
   	return child_ctx;
@@ -37302,7 +37536,7 @@ var app = (function () {
   	let each_blocks = [];
 
   	for (let i = 0; i < each_value.length; i += 1) {
-  		each_blocks[i] = create_each_block$8(get_each_context$8(ctx, each_value, i));
+  		each_blocks[i] = create_each_block$9(get_each_context$9(ctx, each_value, i));
   	}
 
   	const out = i => transition_out(each_blocks[i], 1, 1, () => {
@@ -37340,13 +37574,13 @@ var app = (function () {
   				let i;
 
   				for (i = 0; i < each_value.length; i += 1) {
-  					const child_ctx = get_each_context$8(ctx, each_value, i);
+  					const child_ctx = get_each_context$9(ctx, each_value, i);
 
   					if (each_blocks[i]) {
   						each_blocks[i].p(child_ctx, dirty);
   						transition_in(each_blocks[i], 1);
   					} else {
-  						each_blocks[i] = create_each_block$8(child_ctx);
+  						each_blocks[i] = create_each_block$9(child_ctx);
   						each_blocks[i].c();
   						transition_in(each_blocks[i], 1);
   						each_blocks[i].m(ul, null);
@@ -37525,7 +37759,7 @@ var app = (function () {
   }
 
   // (209:16) {#each $subMenu.entries as entry}
-  function create_each_block$8(ctx) {
+  function create_each_block$9(ctx) {
   	let li;
   	let t;
   	let current;
@@ -37580,7 +37814,7 @@ var app = (function () {
 
   	dispatch_dev("SvelteRegisterBlock", {
   		block,
-  		id: create_each_block$8.name,
+  		id: create_each_block$9.name,
   		type: "each",
   		source: "(209:16) {#each $subMenu.entries as entry}",
   		ctx
@@ -37831,7 +38065,7 @@ var app = (function () {
   }
 
   // (149:2) <Router url="{url}">
-  function create_default_slot$7(ctx) {
+  function create_default_slot$8(ctx) {
   	let nav;
   	let div;
   	let a;
@@ -38079,7 +38313,7 @@ var app = (function () {
 
   	dispatch_dev("SvelteRegisterBlock", {
   		block,
-  		id: create_default_slot$7.name,
+  		id: create_default_slot$8.name,
   		type: "slot",
   		source: "(149:2) <Router url=\\\"{url}\\\">",
   		ctx
@@ -38108,7 +38342,7 @@ var app = (function () {
   	const router = new Router({
   			props: {
   				url: /*url*/ ctx[0],
-  				$$slots: { default: [create_default_slot$7] },
+  				$$slots: { default: [create_default_slot$8] },
   				$$scope: { ctx }
   			},
   			$$inline: true
