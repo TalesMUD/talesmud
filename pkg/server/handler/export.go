@@ -41,6 +41,7 @@ func (handler *ExportHandler) Export(c *gin.Context) {
 	d.Users, _ = handler.UserService.FindAll()
 	d.ItemTemplates, _ = handler.ItemsService.ItemTemplates().FindAll(repository.ItemsQuery{})
 	d.Items, _ = handler.ItemsService.Items().FindAll(repository.ItemsQuery{})
+	d.Scripts, _ = handler.ScriptService.FindAll()
 
 	//c.JSON(http.StatusOK, d)
 	c.IndentedJSON(http.StatusOK, d)
@@ -53,6 +54,9 @@ func (handler *ExportHandler) Import(c *gin.Context) {
 	handler.RoomsService.Drop()
 	handler.CharactersService.Drop()
 	handler.UserService.Drop()
+	handler.ItemsService.Items().Drop()
+	handler.ItemsService.ItemTemplates().Drop()
+	handler.ScriptService.Drop()
 
 	var data exportStructure
 	//if err := c.ShouldBindYAML(&data); err != nil {
@@ -78,6 +82,10 @@ func (handler *ExportHandler) Import(c *gin.Context) {
 	}
 	for _, itemTemplate := range data.ItemTemplates {
 		handler.ItemsService.ItemTemplates().Import(itemTemplate)
+	}
+
+	for _, script := range data.Scripts {
+		handler.ScriptService.Import(script)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"status": "Import successful"})
