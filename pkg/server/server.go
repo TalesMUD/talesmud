@@ -58,13 +58,14 @@ func NewApp() App {
 
 	runner := runner.NewDefaultScriptRunner()
 	facade := service.NewFacade(db, runner)
-	runner.SetServices(facade)
+	mud := mud.New(facade)
+	runner.SetServices(facade, mud.GameCtrl())
 
 	return &app{
 		db:     db,
 		Router: r,
 		facade: facade,
-		mud:    mud.New(facade),
+		mud:    mud,
 	}
 }
 
@@ -259,6 +260,7 @@ func (app *app) setupRoutes() {
 		protected.POST("rooms", rooms.PostRoom)
 		protected.PUT("rooms/:id", rooms.PutRoom)
 		protected.DELETE("rooms/:id", rooms.DeleteRoom)
+		protected.DELETE("rooms-vh", rooms.GetRoomValueHelp)
 
 		// items API should probably not be directly public
 		protected.GET("items", items.GetItems)

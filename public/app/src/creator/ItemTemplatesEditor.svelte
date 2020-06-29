@@ -164,7 +164,8 @@
 <div id="attributeModal" class="modal">
   <div class="modal-content">
     <h5 style="color: #333;">New Attribute</h5>
-    <input style="color: #333;"
+    <input
+      style="color: #333;"
       placeholder="Attribute Name"
       type="text"
       bind:value="{newAttributeName}"
@@ -184,7 +185,8 @@
 <div id="propertyModal" class="modal">
   <div class="modal-content">
     <h5 style="color: #333;">New Property</h5>
-    <input style="color: #333;"
+    <input
+      style="color: #333;"
       placeholder="Property Name"
       type="text"
       bind:value="{newPropertyName}"
@@ -241,7 +243,6 @@
 
     </div>
     <div class="row">
-
       <div class="margininput input-field col s5">
         <select bind:value="{$store.selectedElement.quality}" on:change>
           <option value="" disabled selected>Item Quality</option>
@@ -268,6 +269,19 @@
       </div>
 
     </div>
+    <div class="row">
+      <div class="input-field">
+        <textarea
+          placeholder="Script ID"
+          id="itemTemplate_script"
+          type="text"
+          class="materialize-textarea"
+          bind:value="{$store.selectedElement.script}"
+        ></textarea>
+        <label class="active" for="itemTemplate_script">Script</label>
+      </div>
+    </div>
+
   </div>
 
   <div slot="extensions">

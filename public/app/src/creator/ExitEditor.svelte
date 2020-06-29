@@ -18,8 +18,34 @@
 </style>
 
 <script>
+  import { onMount } from "svelte";
   export let exit;
+  export let store;
+  export let valueHelp;
   export let deleteExit;
+
+  const initial = () => {
+    exit.target;
+  };
+  onMount(async () => {
+    setTimeout(function () {
+      // set exit target autocomplete values
+      let options = {
+        data: {},
+        onAutocomplete: (e) => {
+          console.log("ON AUTO " + e);
+        },
+      };
+      valueHelp.forEach((element) => {
+        const key = element.name + " (" + element.id + ")";
+        options.data[key] = element.id;
+      });
+
+      const selector = "#autocomplete-input-" + exit.name;
+      var elems = document.querySelectorAll(selector);
+      var instances = M.Autocomplete.init(elems, options);
+    }, 50);
+  });
 </script>
 
 <li>
@@ -68,19 +94,21 @@
             bind:value="{exit.description}"
           />
           <label for="desc-{exit.description}">Description</label>
-          <div class="input-field">
+
+          <!-- <div class="input-field">
             <input
               id="target-{exit.target}"
               type="text"
               bind:value="{exit.target}"
             />
             <label for="target-{exit.target}">Target Room</label>
-          </div>
+          </div> -->
           <div class="input-field">
             <input
               type="text"
               id="autocomplete-input-{exit.name}"
-              class="autocomplete"
+              class="autocomplete targets"
+              value="{initial()}"
             />
             <label for="autocomplete-input">Target Room</label>
           </div>

@@ -56,6 +56,20 @@ function getRooms(token, filters, cb, errorCb) {
     .then((result) => cb(result.data))
     .catch((err) => errorCb(err));
 }
+function getRoomsValueHelp(token, cb, errorCb) {
+  const path = `${backend}/rooms-vh`;
+
+  axios
+    .get(path, {
+      mode: "no-cors",
+      credentials: "same-origin",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    .then((result) => cb(result.data))
+    .catch((err) => errorCb(err));
+}
 function updateRoom(token, id, room, cb, errorCb) {
   axios
     .put(`${backend}/rooms/${id}`, room, {
@@ -84,4 +98,4 @@ function createRoom(token, room, cb, errorCb) {
     .catch((err) => errorCb(err));
 }
 
-export { getRoom, deleteRoom, getRooms, updateRoom, createRoom };
+export { getRoom, deleteRoom, getRoomsValueHelp, getRooms, updateRoom, createRoom };

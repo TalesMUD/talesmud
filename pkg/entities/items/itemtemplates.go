@@ -1,9 +1,10 @@
 package items
 
-import "github.com/talesmud/talesmud/pkg/scripts"
-
 // ItemTemplate ...
 type ItemTemplate struct {
-	Item          `bson:",inline"`
-	OnAfterCreate *scripts.Script `bson:"script,omitempty" json:"script"`
+	Item   `bson:",inline"`
+	Script *string `bson:"script,omitempty" json:"script"`
 }
+
+//ItemTemplates type
+type ItemTemplates []*ItemTemplate

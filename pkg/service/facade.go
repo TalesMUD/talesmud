@@ -36,18 +36,18 @@ func NewFacade(db *db.Client, runner scripts.ScriptRunner) Facade {
 	usersRepo := repository.NewMongoDBUsersRepository(db)
 	roomsRepo := repository.NewMongoDBRoomsRepository(db)
 	scriptsRepo := repository.NewMongoDBScriptRepository(db)
-
+	ss := NewScriptsService(scriptsRepo)
 	itemsRepo := repository.NewMongoDBItemsRepository(db)
 	itemTemplatesRepo := repository.NewMongoDBItemTemplatesRepository(db)
 
-	is := NewItemsService(itemsRepo, itemTemplatesRepo, runner)
+	is := NewItemsService(itemsRepo, itemTemplatesRepo, ss, runner)
 
 	return &facade{
 		css: NewCharactersService(charactersRepo),
 		ps:  NewPartiesService(partiesRepo),
 		us:  NewUsersService(usersRepo),
 		rs:  NewRoomsService(roomsRepo),
-		ss:  NewScriptsService(scriptsRepo),
+		ss:  ss,
 		is:  is,
 		sr:  runner,
 	}
