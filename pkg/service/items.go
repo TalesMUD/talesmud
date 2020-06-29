@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/items"
 	r "github.com/talesmud/talesmud/pkg/repository"
@@ -27,14 +28,16 @@ type ItemsService interface {
 type itemsService struct {
 	r.ItemsRepository
 	r.ItemTemplatesRepository
+	ScriptsService
 	scripts.ScriptRunner
 }
 
 //NewItemsService creates a nwe item service
-func NewItemsService(itemsRepo r.ItemsRepository, itemsTemplateRepo r.ItemTemplatesRepository, runner scripts.ScriptRunner) ItemsService {
+func NewItemsService(itemsRepo r.ItemsRepository, itemsTemplateRepo r.ItemTemplatesRepository, scriptService ScriptsService, runner scripts.ScriptRunner) ItemsService {
 	return &itemsService{
 		itemsRepo,
 		itemsTemplateRepo,
+		scriptService,
 		runner,
 	}
 }
@@ -118,10 +121,13 @@ func (itemsService *itemsService) CreateItemFromTemplate(templateID string) (*it
 		item := createItemFromTemplate(template)
 
 		// run script after item creation
-		if template.OnAfterCreate != nil {
-			itemsService.ScriptRunner.Run(*template.OnAfterCreate, item)
-		}
+		if template.Script != nil {
+			if script, err := itemsService.ScriptsService.FindByID(*template.Script); err == nil {
 
+				logrus.WithField("item", item.Name).WithField("script", script.Name).Info("Executing script on created item")
+				itemsService.ScriptRunner.Run(*script, item)
+			}
+		}
 		return item, nil
 	}
 

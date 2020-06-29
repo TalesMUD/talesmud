@@ -31,6 +31,15 @@ func (handler *RoomsHandler) GetRooms(c *gin.Context) {
 	}
 }
 
+//GetRoomValueHelp returns the list of item templates
+func (handler *RoomsHandler) GetRoomValueHelp(c *gin.Context) {
+
+	vh, _ := handler.Service.ValueHelp()
+
+	c.JSON(http.StatusOK, vh)
+
+}
+
 //PostRoom ... creates a new charactersheet
 func (handler *RoomsHandler) PostRoom(c *gin.Context) {
 

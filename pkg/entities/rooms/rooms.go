@@ -91,6 +91,9 @@ type Room struct {
 	} `bson:"meta,omitempty" meta:"meta,omitempty"`
 }
 
+//Rooms type
+type Rooms []*Room
+
 //GetExit ...
 func (room *Room) GetExit(exit string) (Exit, bool) {
 

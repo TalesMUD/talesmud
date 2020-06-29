@@ -11,13 +11,23 @@
   import { v4 as uuidv4 } from "uuid";
   import ActionEditor from "./ActionEditor.svelte";
 
+  import { getAuth } from "../auth.js";
+  const { isAuthenticated, authToken } = getAuth();
+  $: state = {
+    isAuthenticated: $isAuthenticated,
+    authToken: $authToken.slice(0, 20),
+  };
+  
   import {
     getRoom,
     deleteRoom,
+    getRoomsValueHelp,
     getRooms,
     updateRoom,
     createRoom,
   } from "../api/rooms.js";
+
+  let roomsValueHelp = [];
 
   const config = {
     title: "Manage Rooms",
@@ -38,22 +48,16 @@
       var elems = document.querySelectorAll("select");
       var instances = M.FormSelect.init(elems, {});
 
-      // second time to fix the selects
-      setTimeout(function () {
-        var elems = document.querySelectorAll("select");
-        var instances = M.FormSelect.init(elems, {});
+      M.updateTextFields();
+      var elems2 = document.querySelectorAll(".collapsible");
+      if (elems2 != undefined) {
+        var instances = M.Collapsible.init(elems2, {});
+      }
 
-        M.updateTextFields();
-        var elems2 = document.querySelectorAll(".collapsible");
-        if (elems2 != undefined) {
-          var instances = M.Collapsible.init(elems2, {});
-        }
-
-        var textareas = document.querySelectorAll(".materialize-textarea");
-        textareas.forEach((e) => {
-          M.textareaAutoResize(e);
-        });
-      }, 50);
+      var textareas = document.querySelectorAll(".materialize-textarea");
+      textareas.forEach((e) => {
+        M.textareaAutoResize(e);
+      });
     },
 
     new: (select) => {
@@ -127,7 +131,15 @@
     });
     config.refreshUI();
   };
-  onMount(async () => {});
+  onMount(async () => {
+    await getRoomsValueHelp(
+      $authToken,
+      (roomsvh) => {
+        roomsValueHelp = roomsvh;
+      },
+      () => {}
+    );
+  });
   /////////
 
   const exitsToolbar = {
@@ -239,7 +251,12 @@
         style="padding: 0; border: none;"
       >
         {#each $store.selectedElement.exits as exit}
-          <ExitEditor exit="{exit}" deleteExit="{deleteExit}" />
+          <ExitEditor
+            exit="{exit}"
+            valueHelp="{roomsValueHelp}"
+            store="{store}"
+            deleteExit="{deleteExit}"
+          />
         {/each}
       </ul>
     {/if}
