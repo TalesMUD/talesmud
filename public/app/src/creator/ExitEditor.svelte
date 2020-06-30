@@ -5,6 +5,13 @@
   .collapsible-body {
     padding: 1em;
     margin: 1em;
+    border: none;
+    padding-bottom: 0;
+    margin-bottom: 0;
+  }
+
+  td {
+    padding: 5px;
   }
   label {
     color: #eee;
@@ -24,98 +31,93 @@
   export let valueHelp;
   export let deleteExit;
 
+  $: {
+    if ($valueHelp) {
+      updateUI();
+    }
+  }
+
+  const updateUI = () => {
+    // set exit target autocomplete values
+    let options = {
+      data: {},
+      onAutocomplete: (e) => {
+        const roomid = options.data[e];
+
+        console.log("ON AUTO " + roomid);
+
+        exit.target = roomid;
+      },
+    };
+
+    let selected = "";
+
+    $valueHelp.forEach((element) => {
+      const key = element.name + " (" + element.id + ")";
+
+      if (element.id === exit.target) {
+        selected = key;
+      }
+
+      options.data[key] = element.id;
+    });
+
+    const selector = "#autocomplete-input-" + exit.name.replace(" ", "_");
+    var elems = document.querySelectorAll(selector);
+    if (elems.length > 0) {
+      elems[0].value = selected;
+    }
+
+    var instances = M.Autocomplete.init(elems, options);
+  };
+
   const initial = () => {
     exit.target;
   };
-  onMount(async () => {
-    setTimeout(function () {
-      // set exit target autocomplete values
-      let options = {
-        data: {},
-        onAutocomplete: (e) => {
-          console.log("ON AUTO " + e);
-        },
-      };
-      valueHelp.forEach((element) => {
-        const key = element.name + " (" + element.id + ")";
-        options.data[key] = element.id;
-      });
-
-      const selector = "#autocomplete-input-" + exit.name;
-      var elems = document.querySelectorAll(selector);
-      var instances = M.Autocomplete.init(elems, options);
-    }, 50);
-  });
+  onMount(async () => {});
 </script>
 
-<li>
-  <div class="collapsible-header">
-    <div class="col s9 left valign-wrapper">
-      <i class="material-icons left-align">exit_to_app</i>
-      {exit.name}
+<tr>
+
+  <td style="width:2em;">
+    <input
+      placeholder="Name"
+      id="name-{exit.name}"
+      type="text"
+      bind:value="{exit.name}"
+      style="margin:0; height: 2em;font-size: 14px;border-color:#ffffff33;"
+    />
+  </td>
+  <td>
+    <input
+      placeholder="Name"
+      id="name-{exit.description}"
+      type="text"
+      bind:value="{exit.description}"
+      style="margin:0; height: 2em;font-size: 14px;border-color:#ffffff33;"
+    />
+  </td>
+  <td>
+
+    <div class="input-field">
+
+      <input
+        type="text"
+        id="autocomplete-input-{exit.name.replace(' ', '_')}"
+        class="autocomplete targets"
+        style="margin:0; height: 2em;font-size: 14px;border-color:#ffffff33;"
+      />
+
     </div>
-    <div class="col s3 right-align">
-      <button
-        on:click="{() => deleteExit(exit)}"
-        class="btn-small red align-right"
-      >
-        Delete Exit
-      </button>
-    </div>
 
-  </div>
+  </td>
+  <td>
 
-  <div class="collapsible-body">
-    <div class="row">
-
-      <label>
-        <input type="checkbox" bind:checked="{exit.hidden}" />
-        <span>Hidden</span>
-      </label>
-
-    </div>
-
-    <div class="row">
-
-      <div class="input-field">
-        <input
-          placeholder="Placeholder"
-          id="name-{exit.name}"
-          type="text"
-          bind:value="{exit.name}"
-        />
-        <label for="name-{exit.name}">Name</label>
-
-        <div class="input-field">
-          <input
-            placeholder="Placeholder"
-            id="desc-{exit.description}"
-            type="text"
-            bind:value="{exit.description}"
-          />
-          <label for="desc-{exit.description}">Description</label>
-
-          <!-- <div class="input-field">
-            <input
-              id="target-{exit.target}"
-              type="text"
-              bind:value="{exit.target}"
-            />
-            <label for="target-{exit.target}">Target Room</label>
-          </div> -->
-          <div class="input-field">
-            <input
-              type="text"
-              id="autocomplete-input-{exit.name}"
-              class="autocomplete targets"
-              value="{initial()}"
-            />
-            <label for="autocomplete-input">Target Room</label>
-          </div>
-
-        </div>
-
-      </div>
-    </div>
-  </div>
-</li>
+    <button
+      class="btn-flat waves-effect waves-light right"
+      on:click="{() => deleteExit(exit)}"
+    >
+      <i class="material-icons" style="color:red;">remove</i>
+    </button>
+  </td>
+</tr>

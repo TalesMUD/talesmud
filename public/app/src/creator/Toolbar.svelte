@@ -5,8 +5,6 @@
     flex-direction: row;
     align-items: center;
     /* width: 100%; */
-
-    padding: 15px;
   }
 
   ul li {
@@ -27,9 +25,20 @@
     font-size: 200%;
   }
 
+  .padding {
+    padding-right: 0.5em;
+    padding-left: 0.5em;
+    margin: 0;
+  }
+  .padding-small {
+    padding-left: 5px;
+  }
+
   .header-small {
     font-weight: 300;
     font-size: 120%;
+
+    padding-right: 5px;
   }
 
   ul li:first-child {
@@ -56,7 +65,12 @@
     }
     return "header";
   };
-
+  const headerPadding = () => {
+    if (toolbar.small) {
+      return "padding-small";
+    }
+    return "padding";
+  };
   const headerDiv = () => {
     if (toolbar.small) {
       return "";
@@ -65,9 +79,8 @@
   };
 </script>
 
-
 <div class="{headerDiv()}">
-  <ul>
+  <ul class="{headerPadding()}">
     <li class="{headerClass()}">{toolbar.title}</li>
     {#each toolbar.actions as action}
       <li>

@@ -18,6 +18,14 @@
     padding-bottom: 0;
     margin-bottom: 0;
   }
+  .newbadge {
+    background-color: #26a69a;
+    border-radius: 5px;
+    color: #d8dee9;
+    padding: 3px;
+    width: auto;
+    text-overflow: ellipsis;
+  }
 
   input {
     color: white;
@@ -193,8 +201,10 @@
       M.updateTextFields();
       var elems2 = document.querySelectorAll(".collapsible");
       if (elems2 != undefined) {
-        var instances = M.Collapsible.init(elems2, {});
+        var instances = M.Collapsible.init(elems2, {      
+        });
       }
+
 
       var textareas = document.querySelectorAll(".materialize-textarea");
       textareas.forEach((e) => {
@@ -258,7 +268,6 @@
           class="collection-item blue-grey lighten-5"
           on:click="{selectElement(element)}"
         >
-
           {#if element && config.badge}
             <span class="new badge" data-badge-caption="">
               {config.badge(element)}
@@ -274,7 +283,7 @@
   <div class="col s9">
 
     {#if $store.filterActive}
-      <div class="card-panel blue-grey lighten-5">
+      <div class="card-panel blue-grey lighten-5" style="padding:15px;">
         <div class="chips chips-placeholder search"></div>
       </div>
     {/if}
