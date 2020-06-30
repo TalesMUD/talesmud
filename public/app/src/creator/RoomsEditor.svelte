@@ -3,6 +3,7 @@
 </style>
 
 <script>
+  import { writable } from "svelte/store";
   import ExitEditor from "./ExitEditor.svelte";
   import Toolbar from "./Toolbar.svelte";
   import { onMount } from "svelte";
@@ -17,7 +18,7 @@
     isAuthenticated: $isAuthenticated,
     authToken: $authToken.slice(0, 20),
   };
-  
+
   import {
     getRoom,
     deleteRoom,
@@ -27,18 +28,11 @@
     createRoom,
   } from "../api/rooms.js";
 
-  let roomsValueHelp = [];
+  const roomsValueHelp = writable([]);
 
   const config = {
     title: "Manage Rooms",
-    actions: [
-      {
-        icon: "add",
-        name: "Create Exit",
-        color: "blue",
-        fnc: () => createExit(),
-      },
-    ],
+    actions: [],
     get: getRooms,
     getElement: getRoom,
     create: createRoom,
@@ -58,6 +52,9 @@
       textareas.forEach((e) => {
         M.textareaAutoResize(e);
       });
+
+      // trigger valuehelp updates
+      roomsValueHelp.set($roomsValueHelp);
     },
 
     new: (select) => {
@@ -132,10 +129,10 @@
     config.refreshUI();
   };
   onMount(async () => {
-    await getRoomsValueHelp(
+    getRoomsValueHelp(
       $authToken,
       (roomsvh) => {
-        roomsValueHelp = roomsvh;
+        roomsValueHelp.set(roomsvh);
       },
       () => {}
     );
@@ -244,21 +241,29 @@
   <div slot="extensions">
 
     <Toolbar toolbar="{exitsToolbar}" />
-
     {#if $store.selectedElement.exits}
-      <ul
-        class="card-panel blue-grey darken-3 collapsible"
-        style="padding: 0; border: none;"
-      >
-        {#each $store.selectedElement.exits as exit}
-          <ExitEditor
-            exit="{exit}"
-            valueHelp="{roomsValueHelp}"
-            store="{store}"
-            deleteExit="{deleteExit}"
-          />
-        {/each}
-      </ul>
+      <div class="card-panel blue-grey darken-3">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Description</th>
+              <th>Target</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {#each $store.selectedElement.exits as exit}
+              <ExitEditor
+                exit="{exit}"
+                valueHelp="{roomsValueHelp}"
+                store="{store}"
+                deleteExit="{deleteExit}"
+              />
+            {/each}
+          </tbody>
+        </table>
+      </div>
     {/if}
 
     <Toolbar toolbar="{actionsToolbar}" />

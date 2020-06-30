@@ -245,7 +245,7 @@ func (app *app) setupRoutes() {
 
 	// user,
 	protected := r.Group("/api/")
-	//	protected.Use(app.authMiddleware())
+	protected.Use(app.authMiddleware())
 	{
 		// CRUD
 		protected.GET("characters", csh.GetCharacters)
@@ -257,10 +257,11 @@ func (app *app) setupRoutes() {
 		protected.POST("newcharacter", csh.CreateNewCharacter)
 
 		protected.GET("rooms", rooms.GetRooms)
+		protected.GET("rooms-vh", rooms.GetRoomValueHelp)
+
 		protected.POST("rooms", rooms.PostRoom)
 		protected.PUT("rooms/:id", rooms.PutRoom)
 		protected.DELETE("rooms/:id", rooms.DeleteRoom)
-		protected.DELETE("rooms-vh", rooms.GetRoomValueHelp)
 
 		// items API should probably not be directly public
 		protected.GET("items", items.GetItems)

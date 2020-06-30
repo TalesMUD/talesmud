@@ -6,8 +6,8 @@ import (
 
 // RoomValueHelpEntry ...
 type RoomValueHelpEntry struct {
-	ID   string
-	Name string
+	ID   string `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
 }
 
 //RoomsService delives logical functions on top of the rooms Repo
