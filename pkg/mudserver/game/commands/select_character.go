@@ -40,6 +40,28 @@ func (selectCharacter *SelectCharacterCommand) Execute(game def.GameCtrl, messag
 
 func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *characters.Character) {
 
+	// handle Character deselection
+	if user.LastCharacter != "" && user.LastCharacter != character.ID {
+		if character, err := game.GetFacade().CharactersService().FindByID(user.LastCharacter); err == nil {
+			if room, err := game.GetFacade().RoomsService().FindByID(character.CurrentRoomID); err == nil {
+
+				// remove character from current room
+				// send all players a left room message
+				game.SendMessage() <- messages.CharacterLeftRoom{
+					MessageResponse: messages.MessageResponse{
+						Audience:   m.MessageAudienceRoomWithoutOrigin,
+						AudienceID: room.ID,
+						OriginID:   character.ID,
+						Message:    character.Name + " left.",
+					},
+				}
+
+				room.RemoveCharacter(character.ID)
+				game.GetFacade().RoomsService().Update(room.ID, room)
+			}
+		}
+	}
+
 	// update player
 	user.LastCharacter = character.ID
 	game.GetFacade().UsersService().Update(user.RefID, user)

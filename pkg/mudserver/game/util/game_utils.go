@@ -8,13 +8,13 @@ import (
 
 // CreateRoomDescription ...
 func CreateRoomDescription(room *rooms.Room, user *entities.User, game def.GameCtrl) string {
-	description := "[" + room.Name + "]\n"
-	description += room.Description + "\n"
+	description := "\n[" + room.Name + "]\n"
+	description += room.Description
 
 	// Characters
 	if len(room.Characters) > 0 {
 		description += "\n"
-		charResult := "-- In the room: "
+		charResult := "- In the room: "
 
 		for i, char := range room.Characters {
 			if i > 0 {
@@ -34,7 +34,7 @@ func CreateRoomDescription(room *rooms.Room, user *entities.User, game def.GameC
 	}
 	// Exits
 	description += "\n"
-	description += "-- The visible exits are:\n"
+	description += "- The visible exits are:\n"
 
 	for _, exit := range room.Exits {
 		if !exit.Hidden {

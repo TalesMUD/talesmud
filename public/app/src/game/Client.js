@@ -6,10 +6,12 @@ import { writable } from "svelte/store";
 //const isLoading = writable(true);
 const GAME_CLIENT = {};
 
-function createClient(renderer, characterCreator) {
+function createClient(renderer, characterCreator, muxStore) {
   let ws;
   let messageHandlers = new Map();
   let wsurl = "";
+
+  let mux = muxStore;
 
   let activeRoom = {};
   let currentCharacter = {};
@@ -17,6 +19,16 @@ function createClient(renderer, characterCreator) {
   messageHandlers["enterRoom"] = (msg) => {
     activeRoom = msg.room;
     renderer(msg.message);
+
+    if (mux) {
+      mux.setExits(activeRoom.exits);
+
+      if (activeRoom.actions != undefined) {
+        mux.setActions(activeRoom.actions);
+      } else {
+        mux.setActions([]);
+      }
+    }
   };
 
   messageHandlers["createCharacter"] = (msg) => {
@@ -36,8 +48,7 @@ function createClient(renderer, characterCreator) {
     ws = wscl;
     wsurl = ws.url;
 
-    updateClient(ws)
-    
+    updateClient(ws);
   };
 
   const updateClient = (ws) => {
@@ -54,12 +65,12 @@ function createClient(renderer, characterCreator) {
         }
         renderer(message);
       }
-    })
+    });
 
-    ws.addEventListener("close", function (e){
-      renderer ("Connection Closed.")
-    })
-  }
+    ws.addEventListener("close", function (e) {
+      renderer("Connection Closed.");
+    });
+  };
 
   const onInput = async (data) => {
     const msg = await handleInput(data);
@@ -75,7 +86,7 @@ function createClient(renderer, characterCreator) {
       ws.readyState == WebSocket.CLOSED
     ) {
       ws = new WebSocket(wsurl);
-      updateClient(ws)
+      updateClient(ws);
       renderer("reconnecting ...\n");
     }
 
@@ -98,6 +109,7 @@ function createClient(renderer, characterCreator) {
   const client = {
     onInput,
     setWSClient,
+    sendMessage,
   };
 
   // setInterval(function () {

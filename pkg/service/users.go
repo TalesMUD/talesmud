@@ -13,6 +13,7 @@ type UsersService interface {
 	r.UsersRepository
 
 	FindOrCreateNewUser(id string) (*e.User, error)
+	IsOnline(id string) bool
 }
 
 type usersService struct {
@@ -24,6 +25,16 @@ func NewUsersService(usersRepository r.UsersRepository) UsersService {
 	return &usersService{
 		usersRepository,
 	}
+}
+
+// IsOnline returns the online status as bool
+func (us *usersService) IsOnline(id string) bool {
+
+	if user, err := us.UsersRepository.FindByID(id); err == nil {
+		return user.IsOnline
+	}
+
+	return false
 }
 
 // FindOrCreateNewUser ...
