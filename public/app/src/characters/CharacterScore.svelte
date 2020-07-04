@@ -7,7 +7,7 @@
   }
   .characterCard {
     width: 250px;
-    height: 300px;
+    height: 200px;
     margin: 2em;
   }
   .card-title {
@@ -35,13 +35,13 @@
   }
 </script>
 
-<div class="card blue-grey darken-2 hoverable characterCard center-align">
+<div class="card blue-grey darken-2 hoverable characterCard center-align" style="margin-top:50px;">
   <div class="card-content white-text">
 
-    <img src="{avatar()}" alt="" class="circle img z-depth-2" />
+    <img src="{avatar()}" alt="" style="margin-top:-70px;" class="circle img z-depth-2" />
 
-    <span class="card-title">{xp} XP</span>
-    <span class="card-title">LVL {level} - {cclass.name}</span>
-    <span class="card-content">{name}</span>
+    <span class="card-title">{name}</span>
+    <span class="card-content">LVL {level} - {cclass.name}</span><br>
+    <span class="card-content">{xp} XP</span>
   </div>
 </div>

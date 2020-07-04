@@ -12,6 +12,7 @@ import (
 //UsersRepository ...
 type UsersRepository interface {
 	FindByRefID(id string) (*e.User, error)
+	FindByID(id string) (*e.User, error)
 	FindAll() ([]*e.User, error)
 	FindAllOnline() ([]*e.User, error)
 	Create(user *e.User) (*e.User, error)
@@ -84,7 +85,20 @@ func (pr *usersRepo) FindAllOnline() ([]*e.User, error) {
 func (pr *usersRepo) Update(refID string, user *e.User) error {
 	return pr.GenericRepo.UpdateByField(user, "refid", refID)
 }
+func (pr *usersRepo) FindByID(id string) (*e.User, error) {
 
+	if id == "" {
+		log.Error("Users::FindByID - ID is empty")
+		return nil, errors.New("Empty ID")
+	}
+
+	result, err := pr.GenericRepo.FindByID(id)
+
+	if user, ok := result.(*e.User); ok {
+		return user, nil
+	}
+	return nil, err //ors.New("result is not a User")
+}
 func (pr *usersRepo) FindByRefID(refID string) (*e.User, error) {
 
 	if refID == "" {

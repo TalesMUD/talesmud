@@ -123,6 +123,7 @@
         description: "A Description",
         response: "Response",
         type: "room_response",
+        params: new Map(),
       });
       return state;
     });

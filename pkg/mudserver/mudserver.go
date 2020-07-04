@@ -2,6 +2,7 @@ package mudserver
 
 import (
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -21,10 +22,20 @@ type MUDServer interface {
 	GameCtrl() def.GameCtrl
 	HandleConnections(*gin.Context)
 }
-type conn struct {
-	User   *entities.User
-	ws     *websocket.Conn
+
+// Connection ...
+type Connection struct {
+	User *entities.User
+	ws   *websocket.Conn
+	mu   sync.Mutex
+
 	active bool
+}
+
+func (p *Connection) send(v interface{}) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.ws.WriteJSON(v)
 }
 
 /*CheckOrigin:
@@ -35,7 +46,7 @@ type server struct {
 
 	Game *game.Game
 
-	Clients   map[string]conn
+	Clients   map[string]*Connection
 	Broadcast chan interface{}
 	Upgrader  websocket.Upgrader
 }
@@ -56,7 +67,7 @@ func New(facade service.Facade) MUDServer {
 				return true
 			},
 		},
-		Clients:   make(map[string]conn),
+		Clients:   make(map[string]*Connection),
 		Broadcast: make(chan interface{}),
 		Game:      game,
 	}
@@ -119,7 +130,7 @@ func (server *server) HandleConnections(c *gin.Context) {
 	log.Info("Upgraded client connection")
 
 	// Register our new client
-	server.Clients[user.ID] = conn{
+	server.Clients[user.ID] = &Connection{
 		User:   user,
 		ws:     ws,
 		active: true,
@@ -167,7 +178,8 @@ func contains(s []string, e string) bool {
 func (server *server) sendMessage(id string, msg interface{}) {
 
 	if client, ok := server.Clients[id]; ok {
-		err := client.ws.WriteJSON(msg)
+		//dont directly write to websocket, use this mutex protected method
+		err := client.send(msg)
 		if err != nil {
 
 			// tell the game that the user quit as the websocket closes/closed...
@@ -239,7 +251,7 @@ func (server *server) handleBroadcastMessages() {
 
 		// Send it out to every client that is currently connected
 		for _, client := range server.Clients {
-			err := client.ws.WriteJSON(msg)
+			err := client.send(msg)
 			if err != nil {
 				log.Printf("error: %v", err)
 

@@ -22,7 +22,7 @@ type Action struct {
 	Description string                 `bson:"description,omitempty" json:"description,omitempty"`
 	Response    string                 `bson:"response,omitempty" json:"response,omitempty"`
 	Type        RoomActionType         `bson:"type,omitempty" json:"type,omitempty"`
-	Params      map[string]interface{} `bson:"params,omitempty" json:"params,omitempty"`
+	Params      map[string]interface{} `bson:"params,omitempty" json:"params"`
 }
 
 //Actions type
@@ -137,7 +137,7 @@ func (room *Room) RemoveCharacter(character string) error {
 
 	var charactersNew Characters
 
-	// make sure to remove duplilcates if for some reason the slice was altered
+	// make sure to remove duplicates if for some reason the slice was altered
 	// by hand or via the databases
 	for _, c := range room.Characters {
 		if c != character {

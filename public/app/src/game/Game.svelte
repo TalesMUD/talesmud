@@ -39,6 +39,10 @@
 </style>
 
 <script>
+  import { writable } from "svelte/store";
+  import MUDXPlus from "./MUDXPlus.svelte";
+  import { createStore } from "./MUDXPlusStore";
+
   import MediaQuery from "../MediaQuery.svelte";
 
   import CharacterCreator from "./../characters/CharacterCreator.svelte";
@@ -56,6 +60,10 @@
   let client;
   let term;
   let ws;
+
+  const muxStore = createStore();
+  const muxClient = writable({});
+  let muxplus = true;
 
   const { isAuthenticated, authToken } = getAuth();
   $: state = {
@@ -113,7 +121,13 @@
 
     const localEcho = new LocalEchoController(term);
     localEcho.addAutocompleteHandler(autocompleteCommonCommands);
-    client = createClient(createRenderer(term, localEcho), characterCreator);
+    client = createClient(
+      createRenderer(term, localEcho),
+      characterCreator,
+      muxStore
+    );
+
+    muxClient.set(client);
 
     readLine(localEcho, term);
   }
@@ -154,3 +168,10 @@
 <div id="terminalWindow">
   <div id="terminal"></div>
 </div>
+<MUDXPlus
+  store="{muxStore}"
+  term="{term}"
+  sendMessage="{(msg) => {
+    client.sendMessage(msg);
+  }}"
+/>

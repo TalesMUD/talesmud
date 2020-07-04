@@ -42,7 +42,9 @@
     let options = {
       data: {},
       onAutocomplete: (e) => {
-        const roomid = options.data[e];
+        const roomid = e.substring(e.lastIndexOf("(") + 1, e.lastIndexOf(")"));
+
+        //const roomid = options.data[e];
 
         console.log("ON AUTO " + roomid);
 
@@ -59,7 +61,7 @@
         selected = key;
       }
 
-      options.data[key] = element.id;
+      options.data[key] = null;
     });
 
     const selector = "#autocomplete-input-" + exit.name.replace(" ", "_");
@@ -78,7 +80,6 @@
 </script>
 
 <tr>
-
   <td style="width:2em;">
     <input
       placeholder="Name"
@@ -98,21 +99,16 @@
     />
   </td>
   <td>
-
     <div class="input-field">
-
       <input
         type="text"
         id="autocomplete-input-{exit.name.replace(' ', '_')}"
         class="autocomplete targets"
         style="margin:0; height: 2em;font-size: 14px;border-color:#ffffff33;"
       />
-
     </div>
-
   </td>
   <td>
-
     <button
       class="btn-flat waves-effect waves-light right"
       on:click="{() => deleteExit(exit)}"

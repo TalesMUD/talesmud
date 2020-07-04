@@ -18,8 +18,16 @@
 </style>
 
 <script>
+  import { onMount } from "svelte";
+
   export let action;
   export let deleteAction;
+
+  onMount(async () => {
+    if (action.params === null) {
+      action.params = new Map();
+    }
+  });
 </script>
 
 <li>
@@ -80,7 +88,15 @@
             </select>
             <label>Type</label>
           </div>
-
+          <div class="input-field">
+            <input
+              id="scriptid-{action.response}-1"
+              type="text"
+            />
+            <label for="target-{action.response}-1">
+              Script ID(if script is selected)
+            </label>
+          </div>
         </div>
 
       </div>
