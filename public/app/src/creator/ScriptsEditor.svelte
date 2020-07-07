@@ -36,7 +36,7 @@
 </style>
 
 <script>
-  import { Route } from "svelte-routing";
+  import { Router, Route, Link } from 'yrv';
   import { writable } from "svelte/store";
   import Toolbar from "./Toolbar.svelte";
   import Sprites from "./../game/Sprites.svelte";

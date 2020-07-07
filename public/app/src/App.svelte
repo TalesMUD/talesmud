@@ -70,7 +70,8 @@
     PlayIcon,
     UsersIcon,
   } from "svelte-feather-icons";
-  import { Router, Link, Route, navigate } from "svelte-routing";
+  //import { Router, Link, Route, navigate } from "svelte-routing";
+  import { Router, Route, Link } from 'yrv';
 
   import Game from "./game/Game.svelte";
   import Welcome from "./Welcome.svelte";
@@ -78,7 +79,6 @@
   import Characters from "./characters/Characters.svelte";
   import UserForm from "./UserForm.svelte";
   import { afterUpdate, onMount } from "svelte";
-  import NavLink from "./components/NavLink.svelte";
 
   import { user, subMenu } from "./stores.js";
   import { fade } from "svelte/transition";
@@ -146,7 +146,7 @@
 
 <div class="root default">
 
-  <Router url="{url}">
+  <Router>
     <nav class="nav-extended">
       <div class="nav-wrapper container">
         <a href="#" class="brand-logo">
@@ -155,47 +155,47 @@
 
               <BookOpenIcon size="24" />
             </span>
-            <NavLink to="/">Tales</NavLink>
+            <Link href="/">Tales</Link>
           </span>
         </a>
 
         <ul class="right hide-on-small-only">
 
           <li>
-            <NavLink to="/play">
+            <Link href="/play">
               <span class="valign-wrapper">
                 <span class="iconspacing valign-wrapper">
                   <PlayIcon size="18" />
                 </span>
                 Play
               </span>
-            </NavLink>
+            </Link>
 
           </li>
           {#if $isAuthenticated}
             <li>
-              <NavLink to="/list">
+              <Link href="/list">
                 <span class="valign-wrapper">
                   <span class="iconspacing valign-wrapper">
                     <UsersIcon size="18" />
                   </span>
                   Top Characters
                 </span>
-              </NavLink>
+              </Link>
             </li>
             <li>
-              <NavLink to="/creator/rooms">
+              <Link href="/creator/rooms">
                 <span class="valign-wrapper">
                   <span class="iconspacing valign-wrapper">
                     <EditIcon size="18" />
                   </span>
                   Creator
                 </span>
-              </NavLink>
+              </Link>
             </li>
           {/if}
           <li>
-            <NavLink to="signup">News</NavLink>
+            <Link href="/signup">News</Link>
           </li>
           <UserMenu />
         </ul>
@@ -208,7 +208,7 @@
               <ul class="tabs tabs-transparent">
                 {#each $subMenu.entries as entry}
                   <li class="tab">
-                    <NavLink to="{entry.nav}">{entry.name}</NavLink>
+                    <Link href="{entry.nav}">{entry.name}</Link>
                   </li>
                 {/each}
               </ul>
@@ -218,7 +218,7 @@
               <ul class="tabs tabs-transparent">
                 {#each $subMenu.entries as entry}
                   <li class="tab">
-                    <NavLink to="{entry.nav}">{entry.name}</NavLink>
+                    <Link href="{entry.nav}">{entry.name}</Link>
                   </li>
                 {/each}
               </ul>

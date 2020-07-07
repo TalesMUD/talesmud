@@ -11,7 +11,9 @@
   import ItemTemplatesEditor from "./ItemTemplatesEditor.svelte";
   import WorldEditor from "./WorldEditor.svelte";
 
-  import { Router, Route } from "svelte-routing";
+  //  import { Router, Route } from "svelte-routing";
+  import { Router, Route, Link } from "yrv";
+
   import { writable } from "svelte/store";
   import { onMount, onDestroy } from "svelte";
   import { subMenu } from "../stores.js";
@@ -27,23 +29,23 @@
     subMenu.setItems([
       {
         name: "ROOMS",
-        nav: "creator/rooms",
+        nav: "/creator/rooms",
       },
       {
         name: "ITEMS",
-        nav: "creator/items",
+        nav: "/creator/items",
       },
       {
         name: "ITEM TEMPLATES",
-        nav: "creator/item-templates",
+        nav: "/creator/item-templates",
       },
       {
         name: "SCRIPTS",
-        nav: "creator/scripts",
+        nav: "/creator/scripts",
       },
       {
         name: "WORLD",
-        nav: "creator/world",
+        nav: "/creator/world",
       },
     ]);
     subMenu.show();
@@ -56,10 +58,10 @@
 
 <Router>
   <row>
-    <Route path="rooms" component="{RoomsEditor}" />
-    <Route path="items" component="{ItemsEditor}" />
-    <Route path="world" component="{WorldEditor}" />
-    <Route path="item-templates" component="{ItemTemplatesEditor}" />
-        <Route path="scripts" component="{ScriptsEditor}" />
+    <Route path="/rooms" component="{RoomsEditor}" />
+    <Route path="/items" component="{ItemsEditor}" />
+    <Route path="/world" component="{WorldEditor}" />
+    <Route path="/item-templates" component="{ItemTemplatesEditor}" />
+    <Route path="/scripts" component="{ScriptsEditor}" />
   </row>
 </Router>
