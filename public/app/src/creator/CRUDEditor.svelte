@@ -264,7 +264,8 @@
     <div class="collection">
       {#each $store.elements as element}
         <a
-          href="#!"
+          href="javascript:void(0)"
+
           class="collection-item blue-grey lighten-5"
           on:click="{selectElement(element)}"
         >

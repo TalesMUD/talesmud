@@ -10,9 +10,10 @@
 
 <script>
   import Sprites from "./game/Sprites.svelte";
-  import NavLink from "./components/NavLink.svelte";
   import CharacterCreator from "./characters/CharacterCreator.svelte";
   import { onMount } from "svelte";
+    import { Router, Route, Link } from 'yrv';
+
 
   import { createAuth, getAuth } from "./auth.js";
   import axios from "axios";
@@ -81,9 +82,9 @@
 
       <div>
 
-        <NavLink to="/play">Start playing</NavLink>
+        <Link href="/play">Start playing</Link>
         or try to create some
-        <NavLink to="/creator">own content.</NavLink>
+        <Link href="/creator">own content.</Link>
       </div>
 
       <div>
@@ -131,7 +132,7 @@
     </ul>
     <p>
       Head over to
-      <NavLink to="/play">play</NavLink>
+      <Link href="/play">play</Link>
       create a character and try out the current set of commands by typing
       [help]. List of all global commands:
     </p>
@@ -162,7 +163,7 @@
     <h5>Credits</h5>
     The application uses several assets througout the app and the backend, here
     is a list of free and licensed art:
-    <NavLink to="/credits">See Credits</NavLink>
+    <Link href="/credits">See Credits</Link>
 
   </div>
 
