@@ -71,8 +71,8 @@
     UsersIcon,
   } from "svelte-feather-icons";
   //import { Router, Link, Route, navigate } from "svelte-routing";
-  import { Router, Route, Link } from 'yrv';
-
+  import { Router, Route, Link, router } from "yrv";
+  import { fade, fly } from "svelte/transition";
   import Game from "./game/Game.svelte";
   import Welcome from "./Welcome.svelte";
   import Creator from "./creator/Creator.svelte";
@@ -81,10 +81,11 @@
   import { afterUpdate, onMount } from "svelte";
 
   import { user, subMenu } from "./stores.js";
-  import { fade } from "svelte/transition";
 
   import UserMenu from "./UserMenu.svelte";
   import { createAuth } from "./auth.js";
+
+  let navbarVisible = true;
 
   // Auth0 config
   const config = {
@@ -112,6 +113,17 @@
   const onHLJSLoaded = () => {
     hljs.initHighlightingOnLoad();
   };
+
+  router.subscribe((e) => {
+    if (!e.initial) {
+      //console.log(e);
+      if (e.path.includes("/play")) {
+        navbarVisible = false;
+      } else {
+        navbarVisible = true;
+      }
+    }
+  });
 </script>
 
 <svelte:head>
@@ -141,94 +153,110 @@
   </script>
   <script
     src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@10.1.1/build/languages/javascript.min.js">
+
   </script>
 </svelte:head>
 
 <div class="root default">
 
   <Router>
-    <nav class="nav-extended">
-      <div class="nav-wrapper container">
-        <a href="#" class="brand-logo">
-          <span class="valign-wrapper italic">
-            <span class="iconspacing">
 
+    {#if navbarVisible}
+      <nav class="nav-extended" in:fly="{{ y: -200, duration: 2000 }}" out:fade>
+        <div class="nav-wrapper container">
+          <a href="#" class="brand-logo">
+            <span class="valign-wrapper italic">
+              <span class="iconspacing">
+
+                <BookOpenIcon size="24" />
+              </span>
+              <Link href="/">Tales</Link>
+            </span>
+          </a>
+
+          <ul class="right hide-on-small-only">
+
+            <li>
+              <Link href="/play">
+                <span class="valign-wrapper">
+                  <span class="iconspacing valign-wrapper">
+                    <PlayIcon size="18" />
+                  </span>
+                  Play
+                </span>
+              </Link>
+
+            </li>
+            {#if $isAuthenticated}
+              <li>
+                <Link href="/list">
+                  <span class="valign-wrapper">
+                    <span class="iconspacing valign-wrapper">
+                      <UsersIcon size="18" />
+                    </span>
+                    Top Characters
+                  </span>
+                </Link>
+              </li>
+              <li>
+                <Link href="/creator/rooms">
+                  <span class="valign-wrapper">
+                    <span class="iconspacing valign-wrapper">
+                      <EditIcon size="18" />
+                    </span>
+                    Creator
+                  </span>
+                </Link>
+              </li>
+            {/if}
+            <li>
+              <Link href="/signup">News</Link>
+            </li>
+            <UserMenu />
+          </ul>
+        </div>
+
+        {#if $subMenu.active}
+          <MediaQuery query="(max-width: 1280px)" let:matches>
+            {#if matches}
+              <div class="nav-content">
+                <ul class="tabs tabs-transparent">
+                  {#each $subMenu.entries as entry}
+                    <li class="tab">
+                      <Link href="{entry.nav}">{entry.name}</Link>
+                    </li>
+                  {/each}
+                </ul>
+              </div>
+            {:else}
+              <div class="nav-content container">
+                <ul class="tabs tabs-transparent">
+                  {#each $subMenu.entries as entry}
+                    <li class="tab">
+                      <Link href="{entry.nav}">{entry.name}</Link>
+                    </li>
+                  {/each}
+                </ul>
+              </div>
+            {/if}
+          </MediaQuery>
+        {/if}
+
+      </nav>
+    {/if}
+
+    {#if !navbarVisible}
+      <a href="/" class="brand-logo">
+        <span class="valign-wrapper italic" style="padding:1em; float: left;">
+
+          <Link href="/">
+            <span class="iconspacing">
               <BookOpenIcon size="24" />
             </span>
-            <Link href="/">Tales</Link>
-          </span>
-        </a>
-
-        <ul class="right hide-on-small-only">
-
-          <li>
-            <Link href="/play">
-              <span class="valign-wrapper">
-                <span class="iconspacing valign-wrapper">
-                  <PlayIcon size="18" />
-                </span>
-                Play
-              </span>
-            </Link>
-
-          </li>
-          {#if $isAuthenticated}
-            <li>
-              <Link href="/list">
-                <span class="valign-wrapper">
-                  <span class="iconspacing valign-wrapper">
-                    <UsersIcon size="18" />
-                  </span>
-                  Top Characters
-                </span>
-              </Link>
-            </li>
-            <li>
-              <Link href="/creator/rooms">
-                <span class="valign-wrapper">
-                  <span class="iconspacing valign-wrapper">
-                    <EditIcon size="18" />
-                  </span>
-                  Creator
-                </span>
-              </Link>
-            </li>
-          {/if}
-          <li>
-            <Link href="/signup">News</Link>
-          </li>
-          <UserMenu />
-        </ul>
-      </div>
-
-      {#if $subMenu.active}
-        <MediaQuery query="(max-width: 1280px)" let:matches>
-          {#if matches}
-            <div class="nav-content">
-              <ul class="tabs tabs-transparent">
-                {#each $subMenu.entries as entry}
-                  <li class="tab">
-                    <Link href="{entry.nav}">{entry.name}</Link>
-                  </li>
-                {/each}
-              </ul>
-            </div>
-          {:else}
-            <div class="nav-content container">
-              <ul class="tabs tabs-transparent">
-                {#each $subMenu.entries as entry}
-                  <li class="tab">
-                    <Link href="{entry.nav}">{entry.name}</Link>
-                  </li>
-                {/each}
-              </ul>
-            </div>
-          {/if}
-        </MediaQuery>
-      {/if}
-
-    </nav>
-
+          </Link>
+        </span>
+      </a>
+    {/if}
     <MediaQuery query="(min-width: 1281px)" let:matches>
       {#if matches}
         <main class="container">

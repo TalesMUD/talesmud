@@ -12,8 +12,7 @@
   import Sprites from "./game/Sprites.svelte";
   import CharacterCreator from "./characters/CharacterCreator.svelte";
   import { onMount } from "svelte";
-    import { Router, Route, Link } from 'yrv';
-
+  import { Router, Route, Link, navigateTo } from "yrv";
 
   import { createAuth, getAuth } from "./auth.js";
   import axios from "axios";
@@ -86,7 +85,12 @@
         or try to create some
         <Link href="/creator">own content.</Link>
       </div>
-
+      <button
+        on:click="{navigateTo('/play')}"
+        class="btn-small userbutton green"
+      >
+        Play
+      </button>
       <div>
         <p>
           <a class="modal-trigger" href="#modal1">Create a new Character</a>
@@ -103,6 +107,9 @@
         in or
         <a href="/signup" class="loginText">signup</a>
       </p>
+      <button on:click="{() => login()}" class="btn-small userbutton green">
+        Log in
+      </button>
     </div>
   {/if}
 
