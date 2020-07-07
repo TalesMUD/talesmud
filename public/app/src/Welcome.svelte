@@ -67,7 +67,13 @@
   });
 </script>
 
+{#if $isLoading}
+  <div class="progress">
+    <div class="indeterminate"></div>
+  </div>
+{/if}
 <div class="left">
+
   {#if $isAuthenticated}
     <div>
 
