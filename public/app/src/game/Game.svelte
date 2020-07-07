@@ -1,69 +1,57 @@
 <style>
+  .gameContainer {
+    padding: 1em;
+    margin: auto auto;
+    max-width: 900px;
+  }
   .roomImage {
-    width: 800px;
-
-    padding: 20px;
-    background: #00000088;
+    background: #000;
     border-width: 1px;
     border-style: solid;
     border-color: #ffffff33;
-    border-radius: 1.5em;
+    border-radius: 0.5em;
+    height: 100%;
 
-    margin: auto;
   }
 
   .roomImageInner {
-    background-image: 
-       linear-gradient(
+    background-image: linear-gradient(
         to bottom,
         rgba(0, 0, 0, 0),
         rgba(0, 0, 0, 0),
+        rgba(0, 0, 0, 0.1),
+        rgba(0, 0, 0, 0.4),
         rgba(0, 0, 0, 1)
-      ),url("/img/bg/oldtown-griphon.png");
+      ),
+      url("/img/bg/oldtown-griphon.png");
     width: 100%;
-    height: 500px;
+    height: 350px;
     background-repeat: no-repeat;
     background-size: 100% auto;
-    border-radius: 1.5em;
-    border-width: 0px;
+    border-radius: 0.5em;
+
     image-rendering: pixelated;
-    
   }
 
   #terminalWindow {
-    width: 760px;
-    height: 340px;
-    margin-top: -100px;
-    padding: 1em;
+    max-width: 640px;
+    height: 400px;
+    margin: -130px auto;
 
-    background: #00000088;
-
+    background: #000;
+    border-width: 1px;
+    border-style: solid;
+    border-color: #ffffff33;
     border-radius: 0.5em;
   }
   #terminal {
     background: #000;
+    margin: 1em;
+    padding-bottom: 1em;
+    height: 380px;
   }
   #terminal2 {
     background: #000;
-  }
-  #inventory {
-    float: right;
-    width: 300px;
-    background: #00000088;
-    padding: 1em;
-    border-width: 0px;
-    border-style: solid;
-    border-color: #5ece54;
-    border-radius: 0.5em;
-    margin-top: 10em;
-  }
-  #inv_content {
-    border-width: 0px;
-  }
-  #inv_content li {
-    background: #000000cc;
-    margin-bottom: 0.5em;
-    padding: 1em;
   }
 </style>
 
@@ -195,18 +183,21 @@
 
 <CharacterCreator />
 
-<div class="roomImage center-align">
-  <img class="roomImageInner center-align" />
+<div class="gameContainer">
+  <div class="roomImage center-align">
+    <div class="roomImageInner center-align"></div>
 
-  <div id="terminalWindow">
-    <div id="terminal"></div>
+    <div id="terminalWindow" class="z-depth-5">
+      <div id="terminal"></div>
+    </div>
+
+    <MUDXPlus
+      store="{muxStore}"
+      term="{term}"
+      sendMessage="{(msg) => {
+        client.sendMessage(msg);
+      }}"
+    />
   </div>
-</div>
 
-<MUDXPlus
-  store="{muxStore}"
-  term="{term}"
-  sendMessage="{(msg) => {
-    client.sendMessage(msg);
-  }}"
-/>
+</div>

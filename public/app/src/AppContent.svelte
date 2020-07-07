@@ -23,6 +23,6 @@
 <Route exact path="/play" component="{Game}">
   <Game />
 </Route>
-<Route>
+<Route exact path="/">
   <Welcome />
 </Route>

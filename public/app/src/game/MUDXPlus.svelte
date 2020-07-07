@@ -1,6 +1,7 @@
 <style>
   .mudx {
     padding: 1em;
+    margin-top: 150px;
   }
 
   .inventory {
@@ -72,7 +73,8 @@
     color: #eee;
   }
   .btncolor {
-    background: #00000055;
+    background: #00000000;
+    border: 1px solid #ffffff33;
   }
 
   .btn {
@@ -106,63 +108,66 @@
 
 <div style="clear:both;"></div>
 
-<div class="inventory right-align">
-  <button
-    class="btn waves-effect waves-light btncolor darken-1"
-    on:click="{() => toggleInventory()}"
-  >
-    inventory
-  </button>
-
-  {#if $showInventory === true}
-    <ul class="collection">
-      <li class="collection-item item left-align">
-        <img src="img/sword.png" alt="" />
-
-        <span class="item-header">
-          Sword of Long John Silver that never was
-        </span>
-        <br />
-        <span style="font-size:10px; color:orange;">legendary sword</span>
-        <span style="font-size:10px; color:grey; float:right;">main hand</span>
-
-        <p style="font-size:10px; margin: 0;" class="center-align">
-          +10 Dex / +5 Str / +7 Stam
-        </p>
-        <p
-          style="margin: 0; font-size:10px; color:grey; font-style:italic;"
-          class="center-align"
-        >
-          He never needed it anyway so i took it
-        </p>
-      </li>
-
-      <li class="collection-item item left-align">
-        <img src="img/sword.png" alt="" />
-
-        <span class="item-header">Sturdy Iron Helmet</span>
-        <br />
-        <span style="font-size:10px; color:purple;">epic helmet</span>
-        <span style="font-size:10px; color:grey; float:right;">head</span>
-
-        <p style="font-size:10px; margin: 0;" class="center-align">
-          +5 Dex / +20 Str / +3 Stam
-        </p>
-        <p
-          style="margin: 0; font-size:10px; color:grey; font-style:italic;
-          max-width: 250px; line-height:95%;"
-          class="center-align"
-        >
-          The person this belonged to had probably a very tiny head, not sure
-          how he ever fitted into it
-        </p>
-      </li>
-    </ul>
-  {/if}
-
-</div>
-
 <div class="mudx">
+
+  <div class="inventory right-align">
+    <button
+      class="btn waves-effect waves-light btncolor darken-1"
+      on:click="{() => toggleInventory()}"
+    >
+      inventory
+    </button>
+
+    {#if $showInventory === true}
+      <ul class="collection">
+        <li class="collection-item item left-align">
+          <img src="img/sword.png" alt="" />
+
+          <span class="item-header">
+            Sword of Long John Silver that never was
+          </span>
+          <br />
+          <span style="font-size:10px; color:orange;">legendary sword</span>
+          <span style="font-size:10px; color:grey; float:right;">
+            main hand
+          </span>
+
+          <p style="font-size:10px; margin: 0;" class="center-align">
+            +10 Dex / +5 Str / +7 Stam
+          </p>
+          <p
+            style="margin: 0; font-size:10px; color:grey; font-style:italic;"
+            class="center-align"
+          >
+            He never needed it anyway so i took it
+          </p>
+        </li>
+
+        <li class="collection-item item left-align">
+          <img src="img/sword.png" alt="" />
+
+          <span class="item-header">Sturdy Iron Helmet</span>
+          <br />
+          <span style="font-size:10px; color:purple;">epic helmet</span>
+          <span style="font-size:10px; color:grey; float:right;">head</span>
+
+          <p style="font-size:10px; margin: 0;" class="center-align">
+            +5 Dex / +20 Str / +3 Stam
+          </p>
+          <p
+            style="margin: 0; font-size:10px; color:grey; font-style:italic;
+            max-width: 250px; line-height:95%;"
+            class="center-align"
+          >
+            The person this belonged to had probably a very tiny head, not sure
+            how he ever fitted into it
+          </p>
+        </li>
+      </ul>
+    {/if}
+
+  </div>
+
   <ul class="ul2">
     {#each $store.exits as exit}
       {#if !exit.hidden}
