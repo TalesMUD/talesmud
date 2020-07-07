@@ -1,15 +1,44 @@
 <style>
-  #terminalWindow {
-    width: 100%;
+  .roomImage {
+    width: 800px;
 
-    padding: 1em;
+    padding: 20px;
     background: #00000088;
     border-width: 1px;
     border-style: solid;
     border-color: #ffffff33;
-    border-radius: 0.5em;
+    border-radius: 1.5em;
 
-    float: left;
+    margin: auto;
+  }
+
+  .roomImageInner {
+    background-image: 
+       linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0),
+        rgba(0, 0, 0, 0),
+        rgba(0, 0, 0, 1)
+      ),url("/img/bg/oldtown-griphon.png");
+    width: 100%;
+    height: 500px;
+    background-repeat: no-repeat;
+    background-size: 100% auto;
+    border-radius: 1.5em;
+    border-width: 0px;
+    image-rendering: pixelated;
+    
+  }
+
+  #terminalWindow {
+    width: 760px;
+    height: 340px;
+    margin-top: -100px;
+    padding: 1em;
+
+    background: #00000088;
+
+    border-radius: 0.5em;
   }
   #terminal {
     background: #000;
@@ -133,8 +162,9 @@
   }
 
   onMount(async () => {
-    // change global background
-    document.body.style.backgroundImage = "url('/bg.jpg')";
+    // change global background<img src="/img/bg/oldtown-griphon.png"/>
+
+    document.body.style.backgroundImage = "url('/img/bg/oldtown-griphon.png')";
     document.body.style.backdropFilter =
       "blur(10px) saturate(30%) brightness(50%)";
 
@@ -165,9 +195,14 @@
 
 <CharacterCreator />
 
-<div id="terminalWindow">
-  <div id="terminal"></div>
+<div class="roomImage center-align">
+  <img class="roomImageInner center-align" />
+
+  <div id="terminalWindow">
+    <div id="terminal"></div>
+  </div>
 </div>
+
 <MUDXPlus
   store="{muxStore}"
   term="{term}"

@@ -93,7 +93,7 @@
     audience: "http://talesofapirate.com/dnd/api",
   };
 
-  const { isAuthenticated, authToken } = createAuth(config);
+  const { isLoading, isAuthenticated, authToken } = createAuth(config);
   $: state = {
     isAuthenticated: $isAuthenticated,
     authToken: $authToken.slice(0, 20),
