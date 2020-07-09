@@ -85,12 +85,7 @@
         or try to create some
         <Link href="/creator">own content.</Link>
       </div>
-      <button
-        on:click="{navigateTo('/play')}"
-        class="btn-small userbutton green"
-      >
-        Play
-      </button>
+ 
       <div>
         <p>
           <a class="modal-trigger" href="#modal1">Create a new Character</a>

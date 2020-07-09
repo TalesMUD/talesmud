@@ -38,6 +38,13 @@
     create: createRoom,
     update: updateRoom,
     delete: deleteRoom,
+    beforeSelect: (element) => {
+      if (element.meta === undefined) {
+        element.meta = {
+          background: "",
+        };
+      }
+    },
     refreshUI: () => {
       var elems = document.querySelectorAll("select");
       var instances = M.FormSelect.init(elems, {});
@@ -68,6 +75,9 @@
         isNew: true,
         exits: [],
         actions: [],
+        meta: {
+          background: "",
+        },
       });
     },
 
@@ -200,6 +210,17 @@
           bind:value="{$store.selectedElement.roomType}"
         />
         <label class="active" for="room_type">Room Type</label>
+      </div>
+    </div>
+    <div class="row">
+      <div class="no-padding input-field col s6">
+        <input
+          placeholder="Background Image ID"
+          id="room_background"
+          type="text"
+          bind:value="{$store.selectedElement.meta.background}"
+        />
+        <label class="first_label" for="room_background">Backgruond</label>
       </div>
     </div>
 

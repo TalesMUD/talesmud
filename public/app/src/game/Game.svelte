@@ -1,54 +1,99 @@
 <style>
-  .gameContainer {
-    padding: 1em;
-    margin: auto auto;
-    max-width: 900px;
+  @media screen and (max-width: 480px) {
+    .gameContainer {
+      padding: 0em;
+      margin: auto auto;
+      max-width: 100%;
+      height: 95%;
+    }
+
+      #terminalWindow {
+    max-width: 640px;
+    height: 60%;
+    margin-top: 200px;
+    margin-left: auto;
+    margin-right: auto;
+
+    background: #000;
+    border-width: 1px;
+    border-style: solid;
+    border-color: #ffffff33;
+    border-radius: 0.5em;
+    position: relative;
   }
+  }
+  @media screen and (min-width: 480px) {
+    .gameContainer {
+      padding: 1em;
+      margin: auto auto;
+      max-width: 900px;
+      height: 80%;
+    }
+
+    #terminalWindow {
+      max-width: 640px;
+      height: 60%;
+      margin-top: 280px;
+      margin-left: auto;
+      margin-right: auto;
+
+      background: #000;
+      border-width: 1px;
+      border-style: solid;
+      border-color: #ffffff33;
+      border-radius: 0.5em;
+      position: relative;
+    }
+  }
+
   .roomImage {
     background: #000;
     border-width: 1px;
     border-style: solid;
     border-color: #ffffff33;
     border-radius: 0.5em;
-    height: 100%;
 
+    position: relative;
   }
 
   .roomImageInner {
-    background-image: linear-gradient(
-        to bottom,
-        rgba(0, 0, 0, 0),
-        rgba(0, 0, 0, 0),
-        rgba(0, 0, 0, 0.1),
-        rgba(0, 0, 0, 0.4),
-        rgba(0, 0, 0, 1)
-      ),
-      url("/img/bg/oldtown-griphon.png");
     width: 100%;
-    height: 350px;
+    height: 420px;
     background-repeat: no-repeat;
     background-size: 100% auto;
     border-radius: 0.5em;
-
+    position: absolute;
+    left: 0;
+    top: 0;
     image-rendering: pixelated;
+    opacity: 1;
+    transition: opacity 0.6s;
+    z-index: 0;
+  }
+  .hidden {
+    opacity: 0;
+    transition: opacity 0.6s;
   }
 
-  #terminalWindow {
-    max-width: 640px;
-    height: 400px;
-    margin: -130px auto;
-
-    background: #000;
-    border-width: 1px;
-    border-style: solid;
-    border-color: #ffffff33;
-    border-radius: 0.5em;
+  .roomImageGradient {
+    width: 100%;
+    height: 100%;
+    background-image: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0),
+      rgba(0, 0, 0, 0),
+      rgba(0, 0, 0, 0),
+      rgba(0, 0, 0, 0.2),
+      rgba(0, 0, 0, 0.8),
+      rgba(0, 0, 0, 1)
+    );
   }
+
   #terminal {
     background: #000;
     margin: 1em;
     padding-bottom: 1em;
-    height: 380px;
+    height: 95%;
   }
   #terminal2 {
     background: #000;
@@ -74,6 +119,8 @@
   import { wsbackend } from "../api/base.js";
   import UserMenu from "../UserMenu.svelte";
 
+  let toggleImage = true;
+
   let client;
   let term;
   let ws;
@@ -86,6 +133,7 @@
   $: state = {
     isAuthenticated: $isAuthenticated,
     authToken: $authToken.slice(0, 20),
+    background: $muxStore.background,
   };
 
   $: {
@@ -95,6 +143,35 @@
       ws = new WebSocket(url + $authToken);
       client.setWSClient(ws);
     }
+
+    // set document background
+    document.body.style.backgroundImage =
+      "url('/img/bg/" + $muxStore.background + ".png')";
+
+    let oldImg = document.querySelector(
+      toggleImage ? "#roomImg1" : "#roomImg2"
+    );
+    let newImg = document.querySelector(
+      !toggleImage ? "#roomImg1" : "#roomImg2"
+    );
+
+    toggleImage = !toggleImage;
+
+    if (newImg && oldImg) {
+      newImg.style.backgroundImage =
+        "url('/img/bg/" + $muxStore.background + ".png')";
+
+      newImg.classList.remove("hidden");
+      oldImg.classList.add("hidden");
+
+      let terminal = document.querySelector("#terminalWindow");
+      terminal.classList.add("hidden");
+      terminal.classList.remove("hidden");
+    }
+  }
+
+  $: background: {
+    console.log("BACKGROUND CHANGE");
   }
 
   function sleep(ms) {
@@ -184,9 +261,14 @@
 <CharacterCreator />
 
 <div class="gameContainer">
-  <div class="roomImage center-align">
-    <div class="roomImageInner center-align"></div>
+  <div class="roomImage center-align z-depth-5">
 
+    <div id="roomImg1" class="roomImageInner center-align">
+      <div class="roomImageGradient"></div>
+    </div>
+    <div id="roomImg2" class="roomImageInner center-align hidden">
+      <div class="roomImageGradient"></div>
+    </div>
     <div id="terminalWindow" class="z-depth-5">
       <div id="terminal"></div>
     </div>

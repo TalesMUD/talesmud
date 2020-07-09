@@ -23,6 +23,11 @@ function createClient(renderer, characterCreator, muxStore) {
     if (mux) {
       mux.setExits(activeRoom.exits);
 
+      //TODO: set default?
+      if (activeRoom.Meta != undefined && activeRoom.Meta.background != undefined){
+        mux.setBackground(activeRoom.Meta.background)
+      }
+
       if (activeRoom.actions != undefined) {
         mux.setActions(activeRoom.actions);
       } else {
@@ -59,6 +64,11 @@ function createClient(renderer, characterCreator, muxStore) {
         messageHandlers[msg.type](msg);
       } else {
         let message = msg.message;
+
+        if (message === "" || message === "\n") {
+          console.log("RECEIVED EMPTY MESSAGE")
+          return;
+        }
 
         if (msg.username) {
           message = msg.username + ":  " + msg.message;

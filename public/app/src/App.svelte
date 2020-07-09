@@ -246,7 +246,7 @@
     {/if}
 
     {#if !navbarVisible}
-      <a href="/" class="brand-logo">
+      <a href="/" class="brand-logo" style="position:absolute; left: 15; top: 15px; z-index:1000;">
         <span class="valign-wrapper italic" style="padding:1em; float: left;">
 
           <Link href="/">

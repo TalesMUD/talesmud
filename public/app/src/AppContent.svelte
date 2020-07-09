@@ -20,9 +20,8 @@
 <Route path="/creator" component="{Creator}" />
 <Route exact path="/list" component="{Characters}" />
 <Route exact path="/credits" component="{Credits}" />
-<Route exact path="/play" component="{Game}">
-  <Game />
-</Route>
+<Route exact path="/play" component="{Game}"/>
+  
 <Route exact path="/">
   <Welcome />
 </Route>
