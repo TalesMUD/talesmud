@@ -1,18 +1,30 @@
 <style>
   .mudx {
-    padding: 1em;
-    margin-top: 150px;
+    margin-top: 1em;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 640px;
   }
 
   .inventory {
-    padding: 1em;
-    float: right;
-    justify-content: flex-end;
+
+    max-width: 600px;
+    max-height: 250px;
+
+    position: absolute;
+    top: 20px;
+    left: 100px;
+
+    z-index: 1003;
+    display: block;
+    opacity: 1;
+    overflow-y: auto;
+    transform: scaleX(1) scaleY(1);
   }
 
   .inventory ul {
     border: none;
-    margin: 1em;
+    margin: 0.2em;
   }
 
   .inventory ul li:last-child {
@@ -20,7 +32,7 @@
   }
 
   .item {
-    background: #00000055;
+    background: #000000cc;
     color: #fff;
     border: 1px #ffffff55 solid;
     margin: 0.2em;
@@ -78,21 +90,43 @@
   }
 
   .btn {
-    border-radius: 15px;
+    border-radius: 0.5em;
+    padding-left: 1em;
+    padding-right: 1em;
+    margin-left: 0.5em;
   }
 </style>
 
 <script>
+  import Inventory from "./ui/Inventory.svelte";
   import Sprites from "./Sprites.svelte";
   import { writable } from "svelte/store";
   import { getClient } from "./Client";
 
   const showInventory = writable(false);
+  const showExits = writable(false);
+  const showActions = writable(false);
+  const showSkills = writable(false);
+  
 
+  const hideAll = () => {
+    showInventory.set(false);
+    showExits.set(false);
+  };
   const toggleInventory = () => {
-    showInventory.set(!$showInventory);
-
-    console.log("Showinventory is " + $showInventory);
+    let show = !$showInventory;
+    hideAll();
+    showInventory.set(show);
+    /*
+    var Modalelem = document.getElementById("inventoryModal");
+    var instance = M.Modal.init(Modalelem);
+     instance.open();
+     */
+  };
+  const toggleExits = () => {
+    let show = !$showExits;
+    hideAll();
+    showExits.set(show);
   };
 
   export let store;
@@ -106,19 +140,47 @@
   };
 </script>
 
+<Inventory />
+
 <div style="clear:both;"></div>
 
 <div class="mudx">
 
-  <div class="inventory right-align">
-    <button
-      class="btn waves-effect waves-light btncolor darken-1"
-      on:click="{() => toggleInventory()}"
-    >
-      inventory
-    </button>
+  <button
+    class="btn waves-effect waves-light btncolor darken-1 right"
+    on:click="{() => toggleInventory()}"
+  >
+    <i class="material-icons">inbox</i>
+  </button>
 
-    {#if $showInventory === true}
+  <button
+    class="btn waves-effect waves-light btncolor darken-1 left"
+    style="margin-left:0;"
+    on:click="{() => toggleExits()}"
+  >
+    <i class="material-icons">exit_to_app</i>
+  </button>
+
+  {#if $showExits === true}
+    <ul class="ul2 left">
+      {#each $store.exits as exit}
+        {#if !exit.hidden}
+          <li style="margin-right: 5px;">
+            <button
+              class="btn waves-effect waves-light btncolor darken-1"
+              on:click="{() => takeExit(exit.name)}"
+            >
+              {exit.name}
+            </button>
+          </li>
+        {/if}
+      {/each}
+    </ul>
+  {/if}
+
+  <div style="clear:both;"></div>
+  {#if $showInventory === true}
+    <div class="inventory right-align">
       <ul class="collection">
         <li class="collection-item item left-align">
           <img src="img/sword.png" alt="" />
@@ -143,46 +205,32 @@
           </p>
         </li>
 
-        <li class="collection-item item left-align">
-          <img src="img/sword.png" alt="" />
+        {#each Array(10) as _, i}
+          <li class="collection-item item left-align">
+            <img src="img/sword.png" alt="" />
 
-          <span class="item-header">Sturdy Iron Helmet</span>
-          <br />
-          <span style="font-size:10px; color:purple;">epic helmet</span>
-          <span style="font-size:10px; color:grey; float:right;">head</span>
+            <span class="item-header">Sturdy Iron Helmet</span>
+            <br />
+            <span style="font-size:10px; color:purple;">epic helmet</span>
+            <span style="font-size:10px; color:grey; float:right;">head</span>
 
-          <p style="font-size:10px; margin: 0;" class="center-align">
-            +5 Dex / +20 Str / +3 Stam
-          </p>
-          <p
-            style="margin: 0; font-size:10px; color:grey; font-style:italic;
-            max-width: 250px; line-height:95%;"
-            class="center-align"
-          >
-            The person this belonged to had probably a very tiny head, not sure
-            how he ever fitted into it
-          </p>
-        </li>
+            <p style="font-size:10px; margin: 0;" class="center-align">
+              +5 Dex / +20 Str / +3 Stam
+            </p>
+            <p
+              style="margin: 0; font-size:10px; color:grey; font-style:italic;
+              max-width: 250px; line-height:95%;"
+              class="center-align"
+            >
+              The person this belonged to had probably a very tiny head, not
+              sure how he ever fitted into it
+            </p>
+          </li>
+        {/each}
+        }
       </ul>
-    {/if}
-
-  </div>
-
-  <ul class="ul2">
-    {#each $store.exits as exit}
-      {#if !exit.hidden}
-        <li style="margin-right: 5px;">
-          <button
-            class="btn waves-effect waves-light btncolor darken-1"
-            on:click="{() => takeExit(exit.name)}"
-          >
-            {exit.name}
-          </button>
-        </li>
-      {/if}
-    {/each}
-  </ul>
-
+    </div>
+  {/if}
   <ul class="ul2">
     {#each $store.actions as action}
       <li style="margin-right: 5px;">

@@ -150,6 +150,10 @@
   };
 
   const selectElement = (element) => {
+    if (config.beforeSelect) {
+      config.beforeSelect(element);
+    }
+
     store.setSelectedElement(element, () => {
       refreshUI();
     });
@@ -201,10 +205,8 @@
       M.updateTextFields();
       var elems2 = document.querySelectorAll(".collapsible");
       if (elems2 != undefined) {
-        var instances = M.Collapsible.init(elems2, {      
-        });
+        var instances = M.Collapsible.init(elems2, {});
       }
-
 
       var textareas = document.querySelectorAll(".materialize-textarea");
       textareas.forEach((e) => {
@@ -265,7 +267,6 @@
       {#each $store.elements as element}
         <a
           href="javascript:void(0)"
-
           class="collection-item blue-grey lighten-5"
           on:click="{selectElement(element)}"
         >
