@@ -24,8 +24,8 @@ function createClient(renderer, characterCreator, muxStore) {
       mux.setExits(activeRoom.exits);
 
       //TODO: set default?
-      if (activeRoom.Meta != undefined && activeRoom.Meta.background != undefined){
-        mux.setBackground(activeRoom.Meta.background)
+      if (activeRoom.meta != undefined && activeRoom.meta.background != undefined){
+        mux.setBackground(activeRoom.meta.background)
       }
 
       if (activeRoom.actions != undefined) {
