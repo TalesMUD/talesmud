@@ -3,11 +3,11 @@
     margin-top: 1em;
     margin-left: auto;
     margin-right: auto;
+    margin-bottom: 1em;
     max-width: 640px;
   }
 
   .inventory {
-
     max-width: 600px;
     max-height: 250px;
 
@@ -105,13 +105,15 @@
 
   const showInventory = writable(false);
   const showExits = writable(false);
+
   const showActions = writable(false);
   const showSkills = writable(false);
-  
 
   const hideAll = () => {
     showInventory.set(false);
     showExits.set(false);
+    showActions.set(false);
+    showSkills.set(false);
   };
   const toggleInventory = () => {
     let show = !$showInventory;
@@ -128,7 +130,16 @@
     hideAll();
     showExits.set(show);
   };
-
+  const toggleSkills = () => {
+    let show = !$showSkills;
+    hideAll();
+    showSkills.set(show);
+  };
+  const toggleActions = () => {
+    let show = !$showActions;
+    hideAll();
+    showActions.set(show);
+  };
   export let store;
   export let term;
   export let sendMessage;
@@ -154,7 +165,7 @@
   </button>
 
   <button
-    class="btn waves-effect waves-light btncolor darken-1 left"
+    class="btn waves-effect waves-light btncolor darken-1 left {$showExits === true ? "orange" : ""}"
     style="margin-left:0;"
     on:click="{() => toggleExits()}"
   >
@@ -167,7 +178,7 @@
         {#if !exit.hidden}
           <li style="margin-right: 5px;">
             <button
-              class="btn waves-effect waves-light btncolor darken-1"
+              class="btn waves-effect waves-light btncolor darken-1 orange"
               on:click="{() => takeExit(exit.name)}"
             >
               {exit.name}
@@ -175,6 +186,48 @@
           </li>
         {/if}
       {/each}
+    </ul>
+  {/if}
+
+  <button
+    class="btn waves-effect waves-light btncolor darken-1 left {$showActions === true ? "blue" : ""}"
+    on:click="{() => toggleActions()}"
+  >
+    <i class="material-icons">flare</i>
+  </button>
+
+  {#if $showActions === true}
+    <ul class="ul2">
+      {#each $store.actions as action}
+        <li style="margin-right: 5px;">
+          <button
+            class="btn waves-effect waves-light btncolor darken-1 blue"
+            on:click="{() => takeExit(action.name)}"
+          >
+            {action.name}
+          </button>
+        </li>
+      {/each}
+
+    </ul>
+  {/if}
+ <button
+    class="btn waves-effect waves-light btncolor darken-1 left {$showSkills === true ? "green" : ""}"
+    on:click="{() => toggleSkills()}"
+  >
+    <i class="material-icons">brightness_7</i>
+  </button>
+  {#if $showSkills}
+    <ul class="ul2">
+      <li style="margin-right: 5px;">
+        <button
+          class="btn waves-effect waves-light btncolor darken-1 green"
+          on:click="{() => takeExit('look')}"
+        >
+          look
+        </button>
+      </li>
+
     </ul>
   {/if}
 
@@ -231,29 +284,5 @@
       </ul>
     </div>
   {/if}
-  <ul class="ul2">
-    {#each $store.actions as action}
-      <li style="margin-right: 5px;">
-        <button
-          class="btn waves-effect waves-light btncolor darken-1"
-          on:click="{() => takeExit(action.name)}"
-        >
-          {action.name}
-        </button>
-      </li>
-    {/each}
 
-  </ul>
-
-  <ul class="ul2">
-    <li style="margin-right: 5px;">
-      <button
-        class="btn waves-effect waves-light btncolor darken-1"
-        on:click="{() => takeExit('look')}"
-      >
-        look
-      </button>
-    </li>
-
-  </ul>
 </div>
