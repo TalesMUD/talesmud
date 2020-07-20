@@ -2,9 +2,27 @@
   .loginText {
     color: greenyellow;
   }
-
+  .welcome {
+    padding: 1em;
+  }
   .modal {
     background-color: darkslategrey;
+  }
+
+  .room {
+    border-radius: 0.5em;
+    image-rendering: pixelated;
+  }
+
+  .highlightContainer {
+    float: right;
+    margin: 1em;
+  }
+  .roomHighlight {
+    background-color: #00000066;
+    border: 1px solid #ffffff33;
+    border-radius: 1em;
+    padding: 0.5em;
   }
 </style>
 
@@ -14,6 +32,8 @@
   import { onMount } from "svelte";
   import { Router, Route, Link, navigateTo } from "yrv";
 
+  import { getRoomOfTheDay } from "./api/rooms";
+
   import { createAuth, getAuth } from "./auth.js";
   import axios from "axios";
   import { onInterval } from "./utils.js";
@@ -21,6 +41,12 @@
   import { writable } from "svelte/store";
 
   const nickname = writable("stranger");
+  const roomOfTheDay = writable({
+    name: "RoomOfTheDay",
+    meta: {
+      background: "oldtown-griphon",
+    },
+  });
   let loaded = false;
 
   const {
@@ -58,6 +84,13 @@
   const loadUser = async () => {};
 
   onMount(async () => {
+    getRoomOfTheDay(
+      (room) => {
+        roomOfTheDay.set(room);
+      },
+      (error) => console.log(error)
+    );
+
     document.addEventListener("DOMContentLoaded", function () {
       var elems = document.querySelectorAll(".modal");
       var instances = M.Modal.init(elems, {});
@@ -72,10 +105,33 @@
     <div class="indeterminate"></div>
   </div>
 {/if}
+
 <div class="left">
 
+  <div class="highlightContainer" style="margin-left: 2em;">
+    <p style="text-align:center;">Room of the Day</p>
+    <div class="roomHighlight z-depth-2">
+
+      <img
+        class="room"
+        src="img/bg/{$roomOfTheDay.meta.background}.png"
+        alt="Room of the Day"
+      />
+      <p
+        style="width: 100%; padding-left: 1em; padding-right: 1em; "       
+      >
+        {$roomOfTheDay.name}
+      </p>
+      <p
+        style="width: 300px; padding-left: 1em; padding-right: 1em;
+        text-align:justify;"
+      >
+        {$roomOfTheDay.description}
+      </p>
+    </div>
+  </div>
   {#if $isAuthenticated}
-    <div>
+    <div class="welcome" style="float:left;">
 
       <h5>Welcome back {$nickname}</h5>
 
@@ -85,7 +141,7 @@
         or try to create some
         <Link href="/creator">own content.</Link>
       </div>
- 
+
       <div>
         <p>
           <a class="modal-trigger" href="#modal1">Create a new Character</a>
@@ -108,7 +164,7 @@
     </div>
   {/if}
 
-  <div>
+  <div class="welcome" style="clear:left; text-align: justify;">
     <h5>TalesMUD</h5>
     <p>
       TalesMUD is a MUD/MUX game engine/game development platform. Using
@@ -152,7 +208,7 @@
 
   </div>
 
-  <div>
+  <div class="welcome">
     <h5>News</h5>
     <ul>
       <li>
@@ -161,7 +217,7 @@
       </li>
     </ul>
   </div>
-  <div>
+  <div class="welcome">
     <h5>Credits</h5>
     The application uses several assets througout the app and the backend, here
     is a list of free and licensed art:

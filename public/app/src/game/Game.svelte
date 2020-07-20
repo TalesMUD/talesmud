@@ -7,20 +7,20 @@
       height: 95%;
     }
 
-      #terminalWindow {
-    max-width: 640px;
-    height: 60%;
-    margin-top: 200px;
-    margin-left: auto;
-    margin-right: auto;
+    #terminalWindow {
+      max-width: 640px;
+      height: 60%;
+      margin-top: 200px;
+      margin-left: auto;
+      margin-right: auto;
 
-    background: #000;
-    border-width: 1px;
-    border-style: solid;
-    border-color: #ffffff33;
-    border-radius: 0.5em;
-    position: relative;
-  }
+      background: #000;
+      border-width: 1px;
+      border-style: solid;
+      border-color: #ffffff33;
+      border-radius: 0.5em;
+      position: relative;
+    }
   }
   @media screen and (min-width: 480px) {
     .gameContainer {
@@ -113,6 +113,8 @@
   import { createAuth, getAuth } from "../auth.js";
   import axios from "axios";
   import xterm from "xterm";
+  import wrap from "word-wrap";
+
   import LocalEchoController from "./echo/LocalEchoController";
   import fit from "xterm-addon-fit";
   import { createClient, getClient } from "./Client";
@@ -124,6 +126,7 @@
   let client;
   let term;
   let ws;
+  const cols = writable(60);
 
   const muxStore = createStore();
   const muxClient = writable({});
@@ -191,6 +194,8 @@
   const createRenderer = (term, localEcho) => {
     return (data) => {
       localEcho.clearInput();
+
+      //term.writeln(wrap(data, { width: 62 }));
       term.writeln(data);
     };
   };
@@ -205,6 +210,10 @@
 
   async function setupTerminal() {
     term = new xterm.Terminal();
+    term.onResize((c, rows) => {
+      cols.set(c);
+    });
+
     var fitAddon = new fit.FitAddon();
     term.loadAddon(fitAddon);
     term.setOption("cursorBlink", true);

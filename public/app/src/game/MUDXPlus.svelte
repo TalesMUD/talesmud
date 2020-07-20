@@ -165,7 +165,7 @@
   </button>
 
   <button
-    class="btn waves-effect waves-light btncolor darken-1 left {$showExits === true ? "orange" : ""}"
+    class="btn waves-effect waves-light btncolor darken-1 left {$showExits === true ? 'orange' : ''}"
     style="margin-left:0;"
     on:click="{() => toggleExits()}"
   >
@@ -189,30 +189,33 @@
     </ul>
   {/if}
 
-  <button
-    class="btn waves-effect waves-light btncolor darken-1 left {$showActions === true ? "blue" : ""}"
-    on:click="{() => toggleActions()}"
-  >
-    <i class="material-icons">flare</i>
-  </button>
+  {#if $store.actions.length > 0}
+    <button
+      class="btn waves-effect waves-light btncolor darken-1 left {$showActions === true ? 'blue' : ''}"
+      on:click="{() => toggleActions()}"
+    >
+      <i class="material-icons">flare</i>
+    </button>
 
-  {#if $showActions === true}
-    <ul class="ul2">
-      {#each $store.actions as action}
-        <li style="margin-right: 5px;">
-          <button
-            class="btn waves-effect waves-light btncolor darken-1 blue"
-            on:click="{() => takeExit(action.name)}"
-          >
-            {action.name}
-          </button>
-        </li>
-      {/each}
+    {#if $showActions === true}
+      <ul class="ul2">
+        {#each $store.actions as action}
+          <li style="margin-right: 5px;">
+            <button
+              class="btn waves-effect waves-light btncolor darken-1 blue"
+              on:click="{() => takeExit(action.name)}"
+            >
+              {action.name}
+            </button>
+          </li>
+        {/each}
 
-    </ul>
+      </ul>
+    {/if}
   {/if}
- <button
-    class="btn waves-effect waves-light btncolor darken-1 left {$showSkills === true ? "green" : ""}"
+
+  <button
+    class="btn waves-effect waves-light btncolor darken-1 left {$showSkills === true ? 'green' : ''}"
     on:click="{() => toggleSkills()}"
   >
     <i class="material-icons">brightness_7</i>
