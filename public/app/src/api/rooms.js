@@ -14,6 +14,16 @@ function getRoom(token, id, cb, errorCb) {
     .catch((err) => errorCb(err));
 }
 
+function getRoomOfTheDay(cb, errorCb) {
+  axios
+    .get(`${backend}/room-of-the-day`, {
+      mode: "no-cors",
+      credentials: "same-origin",
+    })
+    .then((result) => cb(result.data))
+    .catch((err) => errorCb(err));
+}
+
 function deleteRoom(token, id, cb, errorCb) {
   axios
     .delete(`${backend}/rooms/${id}`, {
@@ -98,4 +108,4 @@ function createRoom(token, room, cb, errorCb) {
     .catch((err) => errorCb(err));
 }
 
-export { getRoom, deleteRoom, getRoomsValueHelp, getRooms, updateRoom, createRoom };
+export { getRoom, getRoomOfTheDay, deleteRoom, getRoomsValueHelp, getRooms, updateRoom, createRoom };

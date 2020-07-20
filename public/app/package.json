@@ -33,6 +33,7 @@
     "sirv-cli": "^0.4.4",
     "svelte-media-query": "0.0.4",
     "uuid": "^8.1.0",
+    "word-wrap": "^1.2.3",
     "xterm": "^4.6.0",
     "xterm-addon-fit": "^0.4.0",
     "yrv": "0.0.30"

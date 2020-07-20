@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"math/rand"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -26,6 +28,21 @@ func (handler *RoomsHandler) GetRooms(c *gin.Context) {
 
 	if rooms, err := handler.Service.FindAllWithQuery(query); err == nil {
 		c.JSON(http.StatusOK, rooms)
+	} else {
+		c.Error(err)
+	}
+}
+
+//GetRoomOfTheDay returns the list of item templates
+func (handler *RoomsHandler) GetRoomOfTheDay(c *gin.Context) {
+
+	if rooms, err := handler.Service.FindAll(); err == nil {
+		dayOfYear := time.Now().YearDay()
+		rand.Seed(int64(dayOfYear))
+		randomPick := rand.Int() % len(rooms)
+		room := rooms[randomPick]
+
+		c.JSON(http.StatusOK, room)
 	} else {
 		c.Error(err)
 	}

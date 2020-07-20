@@ -297,6 +297,9 @@ func (app *app) setupRoutes() {
 		public.GET("item-qualities", items.GetItemQualities)
 		public.GET("item-types", items.GetItemTypes)
 		public.GET("item-subtypes", items.GetItemSubTypes)
+
+		public.GET("room-of-the-day", rooms.GetRoomOfTheDay)
+		
 	}
 
 	// Start MUD Server

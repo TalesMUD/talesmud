@@ -16,6 +16,7 @@ function createClient(renderer, characterCreator, muxStore) {
   let activeRoom = {};
   let currentCharacter = {};
 
+
   messageHandlers["enterRoom"] = (msg) => {
     activeRoom = msg.room;
     renderer(msg.message);
