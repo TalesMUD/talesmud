@@ -51,6 +51,11 @@ func (commandProcessor *CommandProcessor) Process(game def.GameCtrl, message *me
 		var key = parts[0]
 		if val, ok := commandProcessor.commands[key]; ok {
 
+			// support for commands without parameters to enable input like "i did find something" but still support the command "i" for inventory
+			if val.Key() != nil && val.Key().Matches(key, message.Data) == false {
+				return false
+			}
+
 			log.Println("Found command " + key + " executing...")
 			return val.Execute(game, message)
 		}

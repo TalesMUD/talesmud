@@ -11,8 +11,11 @@ import (
 type ScreamCommand struct {
 }
 
+// Key ...
+func (command *ScreamCommand) Key() CommandKey { return &StartsWithCommandKey{} }
+
 // Execute ... executes scream command
-func (screamCommand *ScreamCommand) Execute(game def.GameCtrl, message *messages.Message) bool {
+func (command *ScreamCommand) Execute(game def.GameCtrl, message *messages.Message) bool {
 
 	parts := strings.Fields(message.Data)
 	newMsg := strings.Join(parts[1:], " ")

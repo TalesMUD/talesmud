@@ -10,6 +10,9 @@ type InventoryCommand struct {
 	processor *CommandProcessor
 }
 
+// Key ...
+func (command *InventoryCommand) Key() CommandKey { return &ExactCommandKey{} }
+
 // Execute ... executes scream command
 func (command *InventoryCommand) Execute(game def.GameCtrl, message *m.Message) bool {
 

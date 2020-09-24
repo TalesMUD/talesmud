@@ -18,8 +18,11 @@ import (
 type SelectCharacterCommand struct {
 }
 
+// Key ...
+func (command *SelectCharacterCommand) Key() CommandKey { return &StartsWithCommandKey{} }
+
 // Execute ... executes scream command
-func (selectCharacter *SelectCharacterCommand) Execute(game def.GameCtrl, message *messages.Message) bool {
+func (command *SelectCharacterCommand) Execute(game def.GameCtrl, message *messages.Message) bool {
 
 	parts := strings.Fields(message.Data)
 	characterName := strings.Join(parts[1:], " ")
