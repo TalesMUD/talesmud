@@ -10,6 +10,9 @@ type HelpCommand struct {
 	processor *CommandProcessor
 }
 
+// Key ...
+func (command *HelpCommand) Key() CommandKey { return &ExactCommandKey{} }
+
 // Execute ... executes scream command
 func (command *HelpCommand) Execute(game def.GameCtrl, message *m.Message) bool {
 

@@ -9,6 +9,9 @@ import (
 type NewCharacterCommand struct {
 }
 
+// Key ...
+func (command *NewCharacterCommand) Key() CommandKey { return &ExactCommandKey{} }
+
 // Execute ... executes the command
 func (command *NewCharacterCommand) Execute(game def.GameCtrl, message *messages.Message) bool {
 

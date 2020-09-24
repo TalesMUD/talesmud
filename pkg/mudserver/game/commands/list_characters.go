@@ -11,6 +11,9 @@ import (
 type ListCharactersCommand struct {
 }
 
+// Key ...
+func (command *ListCharactersCommand) Key() CommandKey { return &ExactCommandKey{} }
+
 // Execute ... executes scream command
 func (command *ListCharactersCommand) Execute(game def.GameCtrl, message *messages.Message) bool {
 

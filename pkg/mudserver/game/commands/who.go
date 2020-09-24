@@ -9,6 +9,9 @@ import (
 type WhoCommand struct {
 }
 
+// Key ...
+func (command *WhoCommand) Key() CommandKey { return &ExactCommandKey{} }
+
 // Execute ... executes who command
 func (command *WhoCommand) Execute(game def.GameCtrl, message *messages.Message) bool {
 
