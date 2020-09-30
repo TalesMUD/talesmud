@@ -135,7 +135,7 @@ func (room *Room) RemoveCharacter(character string) error {
 		return errors.New("Character is not room")
 	}
 
-	var charactersNew Characters
+	charactersNew := Characters{}
 
 	// make sure to remove duplicates if for some reason the slice was altered
 	// by hand or via the databases
