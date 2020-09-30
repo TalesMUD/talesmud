@@ -27,7 +27,11 @@ func (g *Game) removeOfflineCharacters(room *rooms.Room) {
 
 	needsUpdate := false
 
-	for _, char := range room.Characters {
+	// iterate on copy so we can modify src during iteration
+	chars := rooms.Characters{}
+	copy(room.Characters, chars)
+
+	for _, char := range chars {
 		remove := false
 
 		if character, err := g.Facade.CharactersService().FindByID(char); err == nil {
