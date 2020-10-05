@@ -19,17 +19,18 @@ func needsUpdate(room *rooms.Room) bool {
 func (g *Game) updateRoom(room *rooms.Room) {
 
 	g.removeOfflineCharacters(room)
-
 	// execute scripts in the room
+
 }
 
+// Checks for characters that are "stuck" in the wrong room as well as offline players to remove the characters from the room
 func (g *Game) removeOfflineCharacters(room *rooms.Room) {
 
 	needsUpdate := false
 
 	// iterate on copy so we can modify src during iteration
-	chars := rooms.Characters{}
-	copy(room.Characters, chars)
+	chars := make(rooms.Characters, len(room.Characters))
+	copy(chars, room.Characters)
 
 	for _, char := range chars {
 		remove := false
@@ -79,7 +80,7 @@ func (g *Game) handleRoomUpdates() {
 			}
 		}
 	} else {
-		log.WithError(err).Error("Could nto update rooms")
+		log.WithError(err).Error("Could not update rooms")
 	}
 
 }

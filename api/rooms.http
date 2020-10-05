@@ -1,17 +1,21 @@
 @prod=https://talesofapirate.com/dnd
 @local=http://localhost:8010
-@host={{prod}}
+@host={{local}}
 @token=REPLACE_ME
 
 ###
 GET {{host}}/api/rooms  HTTP/1.1
 ###
-PUT {{host}}/api/rooms/5eceea65840932cc320899b9  HTTP/1.1
+PUT {{host}}/api/rooms/oldtown-entrance  HTTP/1.1
 content-type: application/json
 authorization: Bearer {{token}}
 
 {
-    "name": "Main Chamberrr" 
+    "id": "oldtown-entrance",
+    "name": "Entrance to Oldtown ..",
+"roomType": "gate",
+    "characters": []
+
 },
 
 

@@ -89,7 +89,11 @@ func (repo *GenericRepo) UpdateByField(item interface{}, key string, value strin
 		log.WithError(err).Error("Error during update")
 		return err
 	} else {
-		log.WithField("Generic Update", result).Info("updated entity")
+		if result.MatchedCount == 0 {
+			log.WithField("Generic Update Failed", result).WithField("Key", key).Info("updated entity with key")
+		} else {
+			log.WithField("Generic Update Success", result).WithField("Key", key).Info("updated entity with key")
+		}
 	}
 
 	return nil
@@ -170,7 +174,11 @@ func (repo *GenericRepo) Update(item interface{}, id string) error {
 		log.WithError(err).Error("Error during update")
 		return err
 	} else {
-		log.WithField("Generic Update", result).Info("updated entity")
+		if result.MatchedCount == 0 {
+			log.WithField("Generic Update Failed", result).WithField("ID", id).Info("updated entity by id")
+		} else {
+			log.WithField("Generic Update Success", result).WithField("ID", id).Info("updated entity by id")
+		}
 	}
 
 	return nil

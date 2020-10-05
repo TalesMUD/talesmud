@@ -105,10 +105,13 @@ func (g *Game) GetFacade() service.Facade {
 	return g.Facade
 }
 
+const roomUpdateInterval = 10
+const npcUpdateInterval = 10
+
 func (g *Game) handleGameUpdates() {
 
-	roomTicker := time.NewTicker(60 * time.Second)
-	npcTicker := time.NewTicker(15 * time.Second)
+	roomTicker := time.NewTicker(roomUpdateInterval * time.Second)
+	npcTicker := time.NewTicker(npcUpdateInterval * time.Second)
 
 	for {
 		select {
