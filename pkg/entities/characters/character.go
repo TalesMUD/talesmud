@@ -48,7 +48,7 @@ type Character struct {
 	Attributes Attributes `bson:"attributes" json:"attributes,omitempty"`
 
 	// complex character fields
-	Inventory     Inventory                      `bson:"inventory" json:"inventory"`
+	Inventory     items.Inventory                `bson:"inventory" json:"inventory"`
 	EquippedItems map[items.ItemSlot]*items.Item `bson:"equippedItems" json:"equippedItems"`
 
 	// track alltime stats in character object but dont expose as json by default
