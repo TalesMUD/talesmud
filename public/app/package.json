@@ -24,7 +24,7 @@
     "codejar": "^3.0.0",
     "feather-icons": "^4.28.0",
     "highlight-javascript": "0.0.3",
-    "highlight.js": "^10.1.1",
+    "highlight.js": "^10.1.2",
     "materialize-css": "^1.0.0-rc.2",
     "materializecss": "^1.0.11",
     "moment": "^2.25.1",
