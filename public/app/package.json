@@ -28,7 +28,7 @@
     "materialize-css": "^1.0.0-rc.2",
     "materializecss": "^1.0.11",
     "moment": "^2.25.1",
-    "prismjs": "^1.21.0",
+    "prismjs": "^1.23.0",
     "shell-quote": "^1.7.2",
     "sirv-cli": "^0.4.4",
     "svelte-media-query": "0.0.4",
