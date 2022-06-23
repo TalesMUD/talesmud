@@ -29,7 +29,7 @@
     "materializecss": "^1.0.11",
     "moment": "^2.25.1",
     "prismjs": "^1.21.0",
-    "shell-quote": "^1.7.2",
+    "shell-quote": "^1.7.3",
     "sirv-cli": "^0.4.4",
     "svelte-media-query": "0.0.4",
     "uuid": "^8.1.0",
