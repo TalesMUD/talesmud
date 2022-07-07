@@ -27,7 +27,7 @@
     "highlight.js": "^10.1.1",
     "materialize-css": "^1.0.0-rc.2",
     "materializecss": "^1.0.11",
-    "moment": "^2.25.1",
+    "moment": "^2.29.4",
     "prismjs": "^1.21.0",
     "shell-quote": "^1.7.2",
     "sirv-cli": "^0.4.4",
