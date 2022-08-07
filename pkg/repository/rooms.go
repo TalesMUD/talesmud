@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"reflect"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -27,14 +28,15 @@ type RoomsRepository interface {
 
 //RoomsQuery ...
 type RoomsQuery struct {
-	Name        *string `form:"name"`
-	Description *string `form:"description"`
-	Detail      *string `form:"detail"`
-	RoomType    *string `form:"roomType"`
-	Area        *string `form:"area"`
-	AreaType    *string `form:"areaType"`
+	Name        string `form:"name"`
+	Description string `form:"description"`
+	Detail      string `form:"detail"`
+	RoomType    string `form:"roomType"`
+	Area        string `form:"area"`
+	AreaType    string `form:"areaType"`
 }
 
+/*
 func (query RoomsQuery) matches(room *r.Room) bool {
 
 	match := true
@@ -59,7 +61,7 @@ func (query RoomsQuery) matches(room *r.Room) bool {
 	}
 
 	return match
-}
+}*/
 
 //--- Implementations
 
@@ -128,14 +130,22 @@ func (repo *roomsRepository) FindAll() ([]*r.Room, error) {
 
 func (repo *roomsRepository) FindAllWithQuery(query RoomsQuery) ([]*r.Room, error) {
 	results := make([]*r.Room, 0)
-	if err := repo.GenericRepo.FindAll(func(elem interface{}) {
+	params := []db.QueryParam{}
 
-		room := elem.(*r.Room)
-		if query.matches(room) {
-			results = append(results, room)
+	v := reflect.ValueOf(query)
+	for i := 0; i < v.NumField(); i++ {
+		if v.Field(i).Interface() != nil {
+			p := db.QueryParam{Key: strings.ToLower(v.Type().Field(i).Name), Value: v.Field(i).Interface()}
+			if p.Value != "" {
+				params = append(params, p)
+			}
 		}
-	}); err != nil {
-		return nil, err
+	}
+
+	if e := repo.GenericRepo.FindAllWithParam(db.NewQueryParams(params...), func(elem interface{}) {
+		results = append(results, elem.(*r.Room))
+	}); e != nil {
+		return results, nil
 	}
 	return results, nil
 }

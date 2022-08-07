@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@auth0/auth0-spa-js": "^1.8.1",
-    "axios": "^0.19.2",
+    "axios": "^0.27.2",
     "codejar": "^3.0.0",
     "feather-icons": "^4.28.0",
     "highlight-javascript": "0.0.3",

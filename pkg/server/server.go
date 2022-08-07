@@ -299,7 +299,7 @@ func (app *app) setupRoutes() {
 		public.GET("item-subtypes", items.GetItemSubTypes)
 
 		public.GET("room-of-the-day", rooms.GetRoomOfTheDay)
-		
+
 	}
 
 	// Start MUD Server
@@ -343,9 +343,12 @@ func (app *app) Run() {
 
 	app.setupRoutes()
 
-	port := 8010
+	// read port from env file
+	port := os.Getenv("PORT")
+	
 	server := fmt.Sprintf("0.0.0.0:%v", port)
 
+	// setup CORS handler
 	corsHandler := handlers.CORS(
 		handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}),
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "HEAD", "DELETE", "OPTIONS"}),

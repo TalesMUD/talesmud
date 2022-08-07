@@ -203,6 +203,7 @@ func (server *server) sendToRoom(room *rooms.Room, msg interface{}) {
 	server.sendToRoomWithout("", room, msg)
 }
 
+// sendToRoomWithout sends a message to all clients except the one with the given id
 func (server *server) sendToRoomWithout(id string, room *rooms.Room, msg interface{}) {
 
 	if id != "" {
