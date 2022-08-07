@@ -1,10 +1,25 @@
 version: '3'
 services:
-  owndnd:
+  talesmud:
     build: .
     ports:
      - "8010:8010"
-  owndb:
-    image: "mongo:latest"
+    depends_on:
+     - "talesdb"
+    environment:
+     - GIN_MODE=debug
+     - MONGODB_CONNECTION_STRING=mongodb://talesdb:27017
+     - MONGODB_DATABASE=talesmud
+     - MONGODB_USER=talesmud
+     - MONGODB_PASSWORD=talesmud
+     - AUTH0_AUDIENCE=http://talesofapirate.com/dnd/api
+     - AUTH0_DOMAIN=https://owndnd.eu.auth0.com/
+     - AUTH0_WK_JWKS=https://owndnd.eu.auth0.com/.well-known/jwks.json
+     - ADMIN_USER=admin
+     - ADMIN_PASSWORD=admin
+  talesdb:
+    image: "mongo:4.2.6"
+    ports:
+     - "27017:27017"
     volumes:
-        - ~/volumes/owndnd/db:/data/db
+        - ~/volumes/talesmud/db:/data/db

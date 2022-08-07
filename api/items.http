@@ -4,6 +4,7 @@
 @token=REPLACE_ME
 
 GET http://localhost:8010/api/items
+authorization: Bearer {{token}}
 
 ###
 

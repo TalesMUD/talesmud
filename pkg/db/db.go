@@ -83,7 +83,7 @@ func (dba *Client) FindAll(coll string) (*mongo.Cursor, error) {
 	return dba.C(coll).Find(context.Background(), findFilter)
 }
 
-//Find returns all entities of a given collection
+//Find returns all entities of a given collection with find options
 func (dba *Client) Find(coll string, key string, value string) (*mongo.Cursor, error) {
 	findFilter := bson.D{{
 		Key:   key,
