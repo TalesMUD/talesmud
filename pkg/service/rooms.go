@@ -28,16 +28,16 @@ func NewRoomsService(roomsRepository r.RoomsRepository) RoomsService {
 	}
 }
 
+// Implementation of the Value Help interface for rooms using the RoomValueHelpEntry object
 func (service *roomsService) ValueHelp() ([]RoomValueHelpEntry, error) {
 
 	results := make([]RoomValueHelpEntry, 0)
 
 	if rooms, err := service.FindAll(); err == nil {
-
-		for _, room := range rooms {
+		for i := range rooms {
 			results = append(results, RoomValueHelpEntry{
-				ID:   room.ID,
-				Name: room.Name,
+				ID:   rooms[i].ID,
+				Name: rooms[i].Name,
 			})
 		}
 	}

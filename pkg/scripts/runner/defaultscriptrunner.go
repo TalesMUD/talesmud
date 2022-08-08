@@ -131,7 +131,7 @@ func (runner DefaultScriptRunner) addRoomFunctions(vm *otto.Otto) {
 
 	vm.Set("T_findRoom", func(call otto.FunctionCall) otto.Value {
 		room, _ := call.Argument(0).ToString()
-		r, _ := runner.RoomsService.FindAllWithQuery(repository.RoomsQuery{Name: &room})
+		r, _ := runner.RoomsService.FindAllWithQuery(repository.RoomsQuery{Name: room})
 
 		result, _ := vm.ToValue(rooms.RoomsToJSONString(r))
 		return result
