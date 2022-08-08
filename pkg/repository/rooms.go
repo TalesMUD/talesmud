@@ -36,33 +36,6 @@ type RoomsQuery struct {
 	AreaType    string `form:"areaType"`
 }
 
-/*
-func (query RoomsQuery) matches(room *r.Room) bool {
-
-	match := true
-
-	if query.Name != nil && !strings.Contains(strings.ToLower(room.Name), strings.ToLower(*query.Name)) {
-		match = false
-	}
-	if match && query.Description != nil && !strings.Contains(strings.ToLower(room.Description), strings.ToLower(*query.Description)) {
-		match = false
-	}
-	if match && query.Detail != nil && !strings.Contains(strings.ToLower(room.Detail), strings.ToLower(*query.Detail)) {
-		match = false
-	}
-	if match && query.RoomType != nil && !strings.Contains(strings.ToLower(string(room.RoomType)), strings.ToLower(string(*query.RoomType))) {
-		match = false
-	}
-	if match && query.Area != nil && !strings.Contains(strings.ToLower(string(room.Area)), strings.ToLower(string(*query.Area))) {
-		match = false
-	}
-	if match && query.AreaType != nil && !strings.Contains(strings.ToLower(string(room.AreaType)), strings.ToLower(string(*query.AreaType))) {
-		match = false
-	}
-
-	return match
-}*/
-
 //--- Implementations
 
 type roomsRepository struct {
@@ -132,6 +105,7 @@ func (repo *roomsRepository) FindAllWithQuery(query RoomsQuery) ([]*r.Room, erro
 	results := make([]*r.Room, 0)
 	params := []db.QueryParam{}
 
+	// get all field names and string values and add to prams slice
 	v := reflect.ValueOf(query)
 	for i := 0; i < v.NumField(); i++ {
 		if v.Field(i).Interface() != nil {
