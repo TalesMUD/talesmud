@@ -18,3 +18,6 @@
 .vscode/*
 cmd/owndnd/owndnd
 main
+bin/tales
+out.json
+dialog1.json

@@ -8,7 +8,8 @@ import (
 
 func needsUpdate(room *rooms.Room) bool {
 
-	if len(*room.Characters) > 0 {
+	// check on nil first then on empty slice
+	if room.Characters != nil && len(*room.Characters) > 0 {
 		return true
 	}
 
