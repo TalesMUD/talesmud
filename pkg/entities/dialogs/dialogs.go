@@ -14,32 +14,50 @@ type DialogState struct {
 	DialogVisited map[string]bool
 }
 
+// create DialogOptionType enum with options SINGLE and ALWAYS
+type DialogOptionType int
+
+const DOT_SINGLE = 0
+const DOT_ALWAYS = 1
+
+func NewDialogState() *DialogState {
+	return &DialogState{
+		CurrentDialog: "main",
+		DialogVisited: make(map[string]bool),
+	}
+}
+
 // Dialog ...
 type Dialog struct {
-	ID                     string        `bson:"id,omitempty" json:"id,omitempty"`
-	Text                   string        `bson:"text,omitempty" json:"text,omitempty"`
-	Options                DialogOptions `bson:"options,omitempty" json:"options,omitempty"`
-	RequiresVisitedDialogs []string      `bson:"requiresVisitedDialogs,omitempty" json:"requiresVisitedDialogs,omitempty"`
+	ID                     string           `bson:"id,omitempty" json:"id,omitempty"`
+	Text                   string           `bson:"text,omitempty" json:"text,omitempty"`
+	OptionType             DialogOptionType `bson:"dialog_option_type,omitempty" json:"dialog_option_type,omitempty"`
+	Options                DialogOptions    `bson:"options,omitempty" json:"options,omitempty"`
+	RequiresVisitedDialogs []string         `bson:"requiresVisitedDialogs,omitempty" json:"requiresVisitedDialogs,omitempty"`
 }
 
 // create a new Dialog
-func NewDialog(id string, text string, options map[string]*Dialog) *Dialog {
+func NewDialog(id string, text string, options map[string]*Dialog, optionType DialogOptionType) *Dialog {
 	return &Dialog{
-		ID:      id,
-		Text:    text,
-		Options: options,
+		ID:         id,
+		Text:       text,
+		Options:    options,
+		OptionType: optionType,
 	}
 }
-func NewDialogWithRequirements(id string, text string, options map[string]*Dialog, visited ...string) *Dialog {
+func NewDialogWithRequirements(id string, text string, options map[string]*Dialog, optionType DialogOptionType, visited ...string) *Dialog {
 	return &Dialog{
 		ID:                     id,
 		Text:                   text,
 		Options:                options,
 		RequiresVisitedDialogs: visited,
+		OptionType:             optionType,
 	}
 }
+
+// creates a dialog that is used as a response (defaults to DOT_ALWAYS) 
 func NewResponse(id string, text string) DialogOptions {
-	return Options(NewDialog(id, text, nil))
+	return Options(NewDialog(id, text, nil, DOT_ALWAYS))
 }
 
 func SingleOption(dialog *Dialog) DialogOptions {
