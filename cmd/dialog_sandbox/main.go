@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"reflect"
 
 	log "github.com/sirupsen/logrus"
 
@@ -26,52 +27,82 @@ func main() {
 		DialogVisited: make(map[string]bool),
 	}
 
-	run(dialog, state)
+	run(dialog, &state)
 
 }
 
-func run(dialog *d.Dialog, state d.DialogState) {
+func run(dialog *d.Dialog, state *d.DialogState) {
+
+	currentDialog := dialog
+
 	for {
-		runDialog(dialog, func(key string) {
-			fmt.Printf("You selected: %s\n", dialog.Options[key])
-
+		runDialog(currentDialog, state, func(key string) {
+			state.DialogVisited[key] = true
 			state.CurrentDialog = dialog.Options[key].ID
+			currentDialog = dialog.FindDialog(state.CurrentDialog)
 		})
-
 	}
 }
 
-func runDialog(dialog *d.Dialog, choiceFunc func(string)) {
+func getAvailableOptions(dialog *d.Dialog, state *d.DialogState) []string {
+	options := make([]string, 0)
+	for _, v := range dialog.Options {
+		// check if v.RequiresVisitedDialogs is not empty and add to options if all required visited dialogs are matching the ones in state
+		if len(v.RequiresVisitedDialogs) > 0 {
+
+			requirementsMatched := true
+			for _, r := range v.RequiresVisitedDialogs {
+				// if requirement is not in visited dialogs, don't add to options
+				if !state.DialogVisited[r] {
+					requirementsMatched = false
+					break
+				}
+			}
+			if requirementsMatched {
+				options = append(options, v.ID)
+			}
+
+		} else {
+			options = append(options, v.Text)
+		}
+
+	}
+	return options
+}
+
+func runDialog(dialog *d.Dialog, state *d.DialogState, choiceFunc func(string)) {
 
 	if dialog.Options == nil {
 		fmt.Println(dialog.Text)
+		choiceFunc("main")
 		return
 	}
 
-	// get string array slice of options texts from dialog
-	options := make([]string, 0)
-	for _, v := range dialog.Options {
-		options = append(options, v.Text)
-	}
+	if len(dialog.Options) == 1 {
+		keys := reflect.ValueOf(dialog.Options).MapKeys()
+		runDialog(dialog.Options[keys[0].String()], state, choiceFunc)
+	} else {
+		options := getAvailableOptions(dialog, state)
 
-	prompt := promptui.Select{
-		Label: dialog.Text,
-		Items: options,
-	}
-
-	_, result, err := prompt.Run()
-	if err != nil {
-		log.Error(err)
-	}
-
-	// get ID of option of user selected item and passinto choiceFunc
-	selectedID := ""
-	for _, k := range dialog.Options {
-		if k.Text == result {
-			selectedID = k.ID
+		prompt := promptui.Select{
+			Label: dialog.Text,
+			Items: options,
 		}
+
+		_, result, err := prompt.Run()
+		if err != nil {
+			log.Error(err)
+		}
+
+		// get ID of option of user selected item and passinto choiceFunc
+		selectedID := ""
+		for _, k := range dialog.Options {
+			if k.Text == result {
+				selectedID = k.ID
+			}
+		}
+		choiceFunc(selectedID)
 	}
-	choiceFunc(selectedID)
 
 }
 
@@ -83,11 +114,13 @@ func createSampleDialog() *d.Dialog {
 				d.DOT_SINGLE,
 			),
 			d.NewDialog("2", "I'm doing fine, thanks", nil, d.DOT_SINGLE),
-			d.NewDialog("3", "I'm doing fine, thanks", nil, d.DOT_SINGLE),
+			d.NewDialog("3", "Almost great!", nil, d.DOT_SINGLE),
 			d.NewDialogWithRequirements("4", "Until next time",
 				d.NewResponse("4_1", "Bye!"),
+				d.DOT_SINGLE,
 				"1"), // requires visited dialog 1
 		),
+		d.DOT_ALWAYS,
 	)
 	return dialog
 }
