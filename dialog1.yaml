@@ -1,0 +1,56 @@
+id: intro
+text: Hello stranger, are you visiting Oldtown for the first time?
+options:
+    intro_yes:
+        id: intro_yes
+        text: Yes, i go by the name {{PLAYER}}.
+        options:
+            main:
+                id: main
+                text: Welcome to Oldtown {{PLAYER}}, let me show you around. How can
+                    i help you today?
+                options:
+                    hidden:
+                        id: hidden
+                        text: You can only see this if you asked me where to find
+                            the mayor
+                        options:
+                            hidden_question:
+                                id: hidden_question
+                                text: Secretly, i am the Mayor. Dont tell anyone!
+                        requires_visited_dialogs:
+                          - mayor
+                        has_answer: true
+                    inn:
+                        id: inn
+                        text: Where can i grab a drink?
+                    leave:
+                        id: leave
+                        text: I'm done, goodbye.
+                        options:
+                            end:
+                                id: end
+                                text: '''Til next time {{PLAYER}}.'
+                                is_dialog_exit: true
+                        has_answer: true
+                    mayor:
+                        id: mayor
+                        text: Where do i find the mayor of Oldtown?
+                        options:
+                            mayor_question:
+                                id: mayor_question
+                                text: Not sure, why do you ask?
+                        has_answer: true
+                    quests:
+                        id: quests
+                        text: Where could i offer my services for some coins?
+                    smith:
+                        id: smith
+                        text: Where can i find the next smith?
+                        options:
+                            smith_question:
+                                id: smith_question
+                                text: You can find the next smith in the town center
+                                    on the left side of the road.
+                        has_answer: true
+        has_answer: true
