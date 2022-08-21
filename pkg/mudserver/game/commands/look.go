@@ -31,6 +31,7 @@ func Look(room *rooms.Room, game def.GameCtrl, message *messages.Message) bool {
 	} else {
 		// look at object
 		// find object
+		// look at NPC
 	}
 
 	return false
