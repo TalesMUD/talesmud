@@ -1,0 +1,12 @@
+id: main
+text: Have you checked out the well in the towns center yet?
+answer:
+    id: rambling2
+    text: I heard a sip from it could work wonders on your health.
+    answer:
+        id: rambling3
+        text: I'm sure it will at least be refreshing.
+        answer:
+            id: end
+            text: Just make sure to not fall into the well.
+            is_dialog_exit: true
