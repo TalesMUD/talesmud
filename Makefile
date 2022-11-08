@@ -1,7 +1,7 @@
 
 build-frontend:
 	echo "Building frontend"
-	cd public/app/ && npm run build
+	cd public/app/ && npm i && npm run build
 
 build-backend:
 	echo "Building backend"
