@@ -33,13 +33,13 @@
     update: updateItem,
     delete: deleteItem,
     refreshUI: () => {
-      var elems = document.querySelectorAll("select");
-      var instances = M.FormSelect.init(elems, {});
+      let elems = document.querySelectorAll("select");
+      let instances = M.FormSelect.init(elems, {});
 
       // second time to fix the selects
       setTimeout(function () {
-        var elems = document.querySelectorAll("select");
-        var instances = M.FormSelect.init(elems, {});
+        let elems = document.querySelectorAll("select");
+        let instances = M.FormSelect.init(elems, {});
       }, 50);
     },
 
@@ -75,8 +75,8 @@
   let itemSubTypes = [];
   let itemSlots = [];
   // create level array
-  var levels = [];
-  for (var i = 1; i <= 50; i++) {
+  let levels = [];
+  for (let i = 1; i <= 50; i++) {
     levels.push(i);
   }
 
