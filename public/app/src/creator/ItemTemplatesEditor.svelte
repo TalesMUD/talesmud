@@ -45,15 +45,15 @@
     update: updateItemTemplate,
     delete: deleteItemTemplate,
     refreshUI: () => {
-      var elems = document.querySelectorAll("select");
-      var instances = M.FormSelect.init(elems, {});
+      let elems = document.querySelectorAll("select");
+      let instances = M.FormSelect.init(elems, {});
 
       // second time to fix the selects
       setTimeout(function () {
         M.AutoInit();
 
-        var elems = document.querySelectorAll("select");
-        var instances = M.FormSelect.init(elems, {});
+        let elems = document.querySelectorAll("select");
+        let instances = M.FormSelect.init(elems, {});
       }, 50);
     },
 
@@ -89,8 +89,8 @@
   let itemSubTypes = [];
   let itemSlots = [];
   // create level array
-  var levels = [];
-  for (var i = 1; i <= 50; i++) {
+  let levels = [];
+  for (let i = 1; i <= 50; i++) {
     levels.push(i);
   }
 
@@ -103,13 +103,13 @@
   /////////
 
   const openNewAttributeModal = () => {
-    var elems = document.getElementById("attributeModal");
-    var instances = M.Modal.init(elems, {});
+    let elems = document.getElementById("attributeModal");
+    let instances = M.Modal.init(elems, {});
     instances.open();
   };
   const openNewPropertyModal = () => {
-    var elems = document.getElementById("propertyModal");
-    var instances = M.Modal.init(elems, {});
+    let elems = document.getElementById("propertyModal");
+    let instances = M.Modal.init(elems, {});
     instances.open();
   };
   const addAttribute = () => {
