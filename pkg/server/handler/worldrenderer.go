@@ -45,7 +45,7 @@ func (handler *WorldRendererHandler) renderGraph(rooms []*rooms.Room) (image.Ima
 	for _, room := range rooms {
 		roomNode := allNodes[room.ID]
 
-		for _, exit := range room.Exits {
+		for _, exit := range *room.Exits {
 			targetRoomNode := allNodes[exit.Target]
 
 			if roomNode != nil && targetRoomNode != nil {

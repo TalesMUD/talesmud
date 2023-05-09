@@ -12,11 +12,11 @@ func CreateRoomDescription(room *rooms.Room, user *entities.User, game def.GameC
 	description += room.Description
 
 	// Characters
-	if len(room.Characters) > 0 {
+	if len(*room.Characters) > 0 {
 		description += "\n"
 		charResult := "- In the room: "
 
-		for i, char := range room.Characters {
+		for i, char := range *room.Characters {
 			if i > 0 {
 				charResult += ", "
 			}
@@ -36,7 +36,7 @@ func CreateRoomDescription(room *rooms.Room, user *entities.User, game def.GameC
 	description += "\n"
 	description += "- The visible exits are:\n"
 
-	for _, exit := range room.Exits {
+	for _, exit := range *room.Exits {
 		if !exit.Hidden {
 			description += " + [" + exit.Name + "] " + exit.Description + "\n"
 		}

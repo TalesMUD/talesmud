@@ -8,7 +8,8 @@ import (
 
 func needsUpdate(room *rooms.Room) bool {
 
-	if len(room.Characters) > 0 {
+	// check on nil first then on empty slice
+	if room.Characters != nil && len(*room.Characters) > 0 {
 		return true
 	}
 
@@ -29,8 +30,8 @@ func (g *Game) removeOfflineCharacters(room *rooms.Room) {
 	needsUpdate := false
 
 	// iterate on copy so we can modify src during iteration
-	chars := make(rooms.Characters, len(room.Characters))
-	copy(chars, room.Characters)
+	chars := make(rooms.Characters, len(*room.Characters))
+	copy(chars, *room.Characters)
 
 	for _, char := range chars {
 		remove := false

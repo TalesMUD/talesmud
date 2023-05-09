@@ -221,7 +221,7 @@ func (server *server) sendToRoomWithout(id string, room *rooms.Room, msg interfa
 	allUsers, _ := server.Facade.UsersService().FindAll()
 	updateRoom := false
 	for _, usr := range allUsers {
-		if usr.LastCharacter != id && contains(room.Characters, usr.LastCharacter) {
+		if usr.LastCharacter != id && contains(*room.Characters, usr.LastCharacter) {
 
 			// check if character is really in this room or remove
 			if chr, err := server.Facade.CharactersService().FindByID(usr.LastCharacter); err == nil {

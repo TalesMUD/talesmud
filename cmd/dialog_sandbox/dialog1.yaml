@@ -1,0 +1,25 @@
+id: intro
+text: Hello stranger, are you visiting Oldtown for the first time?
+options:
+    intro_yes:
+        id: intro_yes
+        text: Yes, i go by the name {{PLAYER}}.
+        options:
+            main:
+                id: main
+                text: Welcome to Oldtown {{PLAYER}}, let me show you around. How can
+                    i help you?
+                options:
+                    inn:
+                        id: inn
+                        text: Where can i grab a drink?
+                    mayor:
+                        id: mayor
+                        text: Where do i find the mayor of Oldtown?
+                    quests:
+                        id: quests
+                        text: Where could i offer my services for some coins?
+                    smith:
+                        id: smith
+                        text: Where can i find the next smith?
+        has_answer: true

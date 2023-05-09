@@ -7,6 +7,13 @@ build-backend:
 	echo "Building backend"
 	go build -o bin/tales cmd/tales/main.go
 
+build-dialogs-sandbox:
+	echo "Building Dialogs sandbox"
+	go build -o bin/dialog_sandbox cmd/dialog_sandbox/main.go
+
+run-dialogs-sandbox:
+	echo "Starting dialogs sandbox..."
+	go run cmd/dialog_sandbox/main.go
 
 run-server:
 	echo "Starting tales server ..."
