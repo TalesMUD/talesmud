@@ -56,6 +56,9 @@ type Characters []string
 //Items type
 type Items []string
 
+//NPCs type
+type NPCs []string
+
 //Room data
 type Room struct {
 	*entities.Entity `bson:",inline"`
@@ -70,10 +73,13 @@ type Room struct {
 	AreaType string   `bson:"areaType,omitempty" json:"areaType"`
 	Tags     []string `bson:"tags" json:"tags"`
 
-	Actions    Actions    `bson:"actions" json:"actions"`
-	Exits      Exits      `bson:"exits" json:"exits"`
-	Characters Characters `bson:"characters" json:"characters"`
-	Items      Items      `bson:"items" json:"items"`
+	Actions *Actions `bson:"actions,omitempty" json:"actions"`
+	Exits   *Exits   `bson:"exits,omitempty" json:"exits"`
+
+	// live data
+	Items      *Items      `bson:"items,omitempty" json:"items"`
+	Characters *Characters `bson:"characters,omitempty" json:"characters"`
+	NPCs       *NPCs       `bson:"npcs,omitempty" json:"npcs"`
 
 	// can be optionally used for MUDs that want to be grid based or need stricter maps
 	Coords *struct {
@@ -97,7 +103,7 @@ type Rooms []*Room
 //GetExit ...
 func (room *Room) GetExit(exit string) (Exit, bool) {
 
-	for _, e := range room.Exits {
+	for _, e := range *room.Exits {
 		if e.Name == exit {
 			return e, true
 		}
@@ -108,7 +114,7 @@ func (room *Room) GetExit(exit string) (Exit, bool) {
 //IsCharacterInRoom ,,,
 func (room *Room) IsCharacterInRoom(character string) bool {
 
-	for _, c := range room.Characters {
+	for _, c := range *room.Characters {
 		if c == character {
 			return true
 		}
@@ -123,7 +129,8 @@ func (room *Room) AddCharacter(character string) error {
 		return errors.New("Character already in room")
 	}
 
-	room.Characters = append(room.Characters, character)
+	modified := append(*room.Characters, character)
+	room.Characters = &modified
 
 	return nil
 }
@@ -135,15 +142,16 @@ func (room *Room) RemoveCharacter(character string) error {
 		return errors.New("Character is not room")
 	}
 
-	charactersNew := Characters{}
+	charactersNew := make(Characters, 0)
 
 	// make sure to remove duplicates if for some reason the slice was altered
 	// by hand or via the databases
-	for _, c := range room.Characters {
+	for _, c := range *room.Characters {
 		if c != character {
 			charactersNew = append(charactersNew, c)
 		}
 	}
-	room.Characters = charactersNew
+
+	room.Characters = &charactersNew
 	return nil
 }

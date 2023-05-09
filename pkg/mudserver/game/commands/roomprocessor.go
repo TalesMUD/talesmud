@@ -79,7 +79,7 @@ func (roomProcessor *RoomProcessor) registerCommands() {
 
 func (roomProcessor *RoomProcessor) matchesDynamicCommand(key string, room *rooms.Room, message *messages.Message) (RoomCommand, bool) {
 
-	for _, exit := range room.Exits {
+	for _, exit := range *room.Exits {
 		if strings.HasPrefix(message.Data, exit.Name) {
 			// custom exit
 			return TakeExit(exit.Name), true
@@ -93,7 +93,7 @@ func (roomProcessor *RoomProcessor) matchesDynamicCommand(key string, room *room
 		"roomArea":      room.Area,
 	}
 
-	for _, action := range room.Actions {
+	for _, action := range *room.Actions {
 		// support "longer" command inputs as custom action triggers: e.g. "move rocks"
 		if strings.HasPrefix(message.Data, action.Name) {
 

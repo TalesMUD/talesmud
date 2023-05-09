@@ -12,14 +12,17 @@ type Class struct {
 //ArmorType type
 type ArmorType string
 
+// armor types
 const (
 	ArmorTypeCloth   ArmorType = "Cloth"
 	ArmorTypeLeather           = "Leather"
 	ArmorTypePlate             = "Plate"
 )
 
+// CombatType ...
 type CombatType string
 
+// combat types
 const (
 	CombatTypeMelee CombatType = "Melee"
 	CombaTypeRanged            = "Ranged"

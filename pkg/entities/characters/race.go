@@ -14,7 +14,7 @@ var (
 		ID:          "dwarf",
 		Name:        "Dwarf",
 		Description: "Small, but dont underestimate them",
-		Heritage:    "Deep below a Mountain",
+		Heritage:    "Deep below the mountains",
 	}
 	RaceHuman Race = Race{
 		ID:          "human",

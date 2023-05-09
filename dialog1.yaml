@@ -1,0 +1,52 @@
+id: intro
+text: Hello stranger, are you visiting Oldtown for the first time?
+alternateTexts:
+  - Hi there, new to Oldtown?
+  - Welcome to Oldtown!
+options:
+  - id: intro_yes
+    text: Yes, i go by the name {{PLAYER}}.
+    answer:
+        id: main
+        text: Welcome to Oldtown {{PLAYER}}, let me show you around. How can i help
+            you today?
+        alternateTexts:
+          - Greetings {{PLAYER}}, let me show you around. How can serve you?
+          - Let me welcome you to Oldtown {{PLAYER}}, how can i help you today?
+        options:
+          - id: smith
+            text: Where can i find the next smith?
+            answer:
+                id: smith_question
+                text: You can find the next smith in the town center on the left side
+                    of the road.
+                alternateTexts:
+                  - Head to the town center and then go to the left side of the road
+                    you will reach the smith from there.
+          - id: hidden
+            text: You can only see this if you asked me where to find the mayor
+            answer:
+                id: hidden_question
+                text: Secretly, i am the Mayor. Dont tell anyone!
+            requires_visited_dialogs:
+              - mayor
+          - id: inn
+            text: Where can i grab a drink?
+          - id: time
+            text: How late is it?
+            answer:
+                id: time_answer
+                text: It is currently {{TIME}}.
+          - id: mayor
+            text: Where do i find the mayor of Oldtown?
+            answer:
+                id: mayor_question
+                text: Not sure, why do you ask?
+          - id: quests
+            text: Where could i offer my services for some coins?
+          - id: leave
+            text: I'm done, goodbye.
+            answer:
+                id: end
+                text: '''Til next time {{PLAYER}}.'
+                is_dialog_exit: true
