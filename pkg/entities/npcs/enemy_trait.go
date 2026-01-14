@@ -6,4 +6,3 @@ type EnemyTrait struct {
 }
 
 // Companion??
-

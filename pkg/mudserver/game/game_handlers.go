@@ -52,6 +52,7 @@ func (game *Game) handleUserQuit(user *entities.User) {
 		},
 	}
 }
+
 // Find the matching character for the user where the message originated
 func (game *Game) attachCharacterToMessage(msg *messages.Message) {
 

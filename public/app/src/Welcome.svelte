@@ -112,11 +112,14 @@
     <p style="text-align:center;">Room of the Day</p>
     <div class="roomHighlight z-depth-2">
 
+      <!-- only show img if $roomOfTheDay.meta is not null -->
+      {#if $roomOfTheDay.meta}
       <img
         class="room"
         src="img/bg/{$roomOfTheDay.meta.background}.png"
         alt="Room of the Day"
       />
+      {/if}  
       <p
         style="width: 100%; padding-left: 1em; padding-right: 1em; "       
       >
@@ -224,7 +227,7 @@
     <Link href="/credits">See Credits</Link>
 
   </div>
-
-  <CharacterCreator />
+    <CharacterCreator />
+  
 
 </div>

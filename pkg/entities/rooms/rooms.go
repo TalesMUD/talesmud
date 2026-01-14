@@ -114,6 +114,11 @@ func (room *Room) GetExit(exit string) (Exit, bool) {
 //IsCharacterInRoom ,,,
 func (room *Room) IsCharacterInRoom(character string) bool {
 
+	// only check if there are characters in the room
+	if room.Characters == nil || len(*room.Characters) == 0 {
+		return false
+	}
+
 	for _, c := range *room.Characters {
 		if c == character {
 			return true
@@ -127,6 +132,11 @@ func (room *Room) AddCharacter(character string) error {
 
 	if room.IsCharacterInRoom(character) {
 		return errors.New("Character already in room")
+	}
+
+	// make sure room.Characters is not nil
+	if room.Characters == nil {
+		room.Characters = &Characters{}
 	}
 
 	modified := append(*room.Characters, character)

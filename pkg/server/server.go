@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 
@@ -9,22 +8,12 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"net/http"
-	"strings"
-
-	"encoding/base64"
-
-	"github.com/buger/jsonparser"
 
 	"github.com/talesmud/talesmud/pkg/db"
 	mud "github.com/talesmud/talesmud/pkg/mudserver"
 	"github.com/talesmud/talesmud/pkg/scripts/runner"
 	"github.com/talesmud/talesmud/pkg/server/handler"
 	"github.com/talesmud/talesmud/pkg/service"
-
-	"errors"
-
-	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/dgrijalva/jwt-go/request"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/handlers"
@@ -41,7 +30,7 @@ type app struct {
 	Router *gin.Engine
 	db     *db.Client
 	// owndnd specific
-	facade service.Facade
+	Facade service.Facade
 	mud    mud.MUDServer
 }
 
@@ -64,129 +53,8 @@ func NewApp() App {
 	return &app{
 		db:     db,
 		Router: r,
-		facade: facade,
+		Facade: facade,
 		mud:    mud,
-	}
-}
-
-/// AUTH0 handling
-type jwks struct {
-	Keys []webKeys `json:"keys"`
-}
-type webKeys struct {
-	Kty string   `json:"kty"`
-	Kid string   `json:"kid"`
-	Use string   `json:"use"`
-	N   string   `json:"n"`
-	E   string   `json:"e"`
-	X5c []string `json:"x5c"`
-}
-
-func getPemCert(token *jwt.Token) (string, error) {
-	cert := ""
-	resp, err := http.Get(os.Getenv("AUTH0_WK_JWKS"))
-
-	if err != nil {
-		return cert, err
-	}
-	defer resp.Body.Close()
-
-	var jwks = jwks{}
-	err = json.NewDecoder(resp.Body).Decode(&jwks)
-
-	if err != nil {
-		return cert, err
-	}
-
-	for k := range jwks.Keys {
-		if token.Header["kid"] == jwks.Keys[k].Kid {
-			cert = "-----BEGIN CERTIFICATE-----\n" + jwks.Keys[k].X5c[0] + "\n-----END CERTIFICATE-----"
-		}
-	}
-
-	if cert == "" {
-		err := errors.New("Unable to find appropriate key")
-		return cert, err
-	}
-
-	return cert, nil
-}
-
-func (app *app) authMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		log.Info("GIN JWT MIDDLEWARE")
-		r := c.Request
-
-		keyFunc := func(token *jwt.Token) (interface{}, error) {
-			// Verify 'aud' claim
-			aud := os.Getenv("AUTH0_AUDIENCE")
-			checkAud := token.Claims.(jwt.MapClaims).VerifyAudience(aud, false)
-			if !checkAud {
-				return token, errors.New("Invalid audience")
-			}
-			// Verify 'iss' claim
-			iss := os.Getenv("AUTH0_DOMAIN")
-			checkIss := token.Claims.(jwt.MapClaims).VerifyIssuer(iss, false)
-			if !checkIss {
-				return token, errors.New("Invalid issuer")
-			}
-
-			cert, err := getPemCert(token)
-			if err != nil {
-				panic(err.Error())
-			}
-
-			result, _ := jwt.ParseRSAPublicKeyFromPEM([]byte(cert))
-			return result, nil
-		}
-
-		var token *jwt.Token
-		var err error
-
-		if fromQuery, ok := c.GetQuery("access_token"); ok {
-			log.Info("Found access token in query param")
-			token, err = jwt.Parse(fromQuery, keyFunc)
-
-		} else {
-			log.Info("Found access token in http header")
-			token, err = request.ParseFromRequest(r, request.AuthorizationHeaderExtractor, keyFunc)
-		}
-
-		if err != nil {
-			fmt.Println(err)
-			fmt.Println("Token is not valid:", token)
-
-			c.AbortWithStatus(401)
-
-		} else {
-
-			// set userid if not already in context
-			if _, ok := c.Get("userid"); !ok {
-				splitted := strings.Split(token.Raw, ".")
-				if decoded, err := base64.RawStdEncoding.DecodeString(splitted[1]); err == nil {
-					if sub, err := jsonparser.GetString(decoded, "sub"); err == nil {
-						c.Set("userid", sub)
-					} else {
-						log.WithError(err).Error("Could not get sub part from JSON")
-					}
-				} else {
-					//TODO: remove token logging
-					log.WithError(err).WithField("RawToken", token.Raw).Error("Could not decode token part")
-				}
-			}
-
-			if _, ok := c.Get("user"); !ok {
-				if id, exists := c.Get("userid"); exists {
-					if user, err := app.facade.UsersService().FindOrCreateNewUser(id.(string)); err == nil {
-						log.WithField("UserID", user.ID).Debug("Set user in Context")
-						c.Set("user", user)
-					}
-				}
-			}
-
-			c.Set("token", token)
-			c.Next()
-		}
 	}
 }
 
@@ -196,36 +64,44 @@ func (app *app) setupRoutes() {
 	r := app.Router
 
 	csh := &handler.CharactersHandler{
-		app.facade.CharactersService(),
+		app.Facade.CharactersService(),
 	}
 
 	usr := &handler.UsersHandler{
-		app.facade.UsersService(),
+		app.Facade.UsersService(),
 	}
 
 	rooms := &handler.RoomsHandler{
-		app.facade.RoomsService(),
+		app.Facade.RoomsService(),
 	}
 
 	items := &handler.ItemsHandler{
-		app.facade.ItemsService(),
+		app.Facade.ItemsService(),
 	}
 
 	scripts := &handler.ScriptsHandler{
-		app.facade.ScriptsService(),
-		app.facade.Runner(),
+		app.Facade.ScriptsService(),
+		app.Facade.Runner(),
+	}
+
+	npcs := &handler.NPCsHandler{
+		Service: app.Facade.NPCsService(),
+	}
+
+	dialogs := &handler.DialogsHandler{
+		Service: app.Facade.DialogsService(),
 	}
 
 	exp := &handler.ExportHandler{
-		RoomsService:      app.facade.RoomsService(),
-		CharactersService: app.facade.CharactersService(),
-		UserService:       app.facade.UsersService(),
-		ItemsService:      app.facade.ItemsService(),
-		ScriptService:     app.facade.ScriptsService(),
+		RoomsService:      app.Facade.RoomsService(),
+		CharactersService: app.Facade.CharactersService(),
+		UserService:       app.Facade.UsersService(),
+		ItemsService:      app.Facade.ItemsService(),
+		ScriptService:     app.Facade.ScriptsService(),
 	}
 
 	worldRenderer := &handler.WorldRendererHandler{
-		RoomsService: app.facade.RoomsService(),
+		RoomsService: app.Facade.RoomsService(),
 	}
 
 	r.GET("/health", func(c *gin.Context) {
@@ -245,7 +121,7 @@ func (app *app) setupRoutes() {
 
 	// user,
 	protected := r.Group("/api/")
-	protected.Use(app.authMiddleware())
+	protected.Use(AuthMiddleware(app.Facade))
 	{
 		// CRUD
 		protected.GET("characters", csh.GetCharacters)
@@ -288,6 +164,20 @@ func (app *app) setupRoutes() {
 
 		protected.GET("user", usr.GetUser)
 		protected.PUT("user", usr.UpdateUser)
+
+		// NPCs
+		protected.GET("npcs", npcs.GetNPCs)
+		protected.POST("npcs", npcs.PostNPC)
+		protected.GET("npcs/:id", npcs.GetNPCByID)
+		protected.PUT("npcs/:id", npcs.UpdateNPCByID)
+		protected.DELETE("npcs/:id", npcs.DeleteNPCByID)
+
+		// Dialogs
+		protected.GET("dialogs", dialogs.GetDialogs)
+		protected.POST("dialogs", dialogs.PostDialog)
+		protected.GET("dialogs/:id", dialogs.GetDialogByID)
+		protected.PUT("dialogs/:id", dialogs.UpdateDialogByID)
+		protected.DELETE("dialogs/:id", dialogs.DeleteDialogByID)
 	}
 
 	public := r.Group("/api/")
@@ -306,7 +196,7 @@ func (app *app) setupRoutes() {
 	app.mud.Run()
 
 	ws := r.Group("/ws")
-	ws.Use(app.authMiddleware())
+	ws.Use(AuthMiddleware(app.Facade))
 	ws.GET("", app.mud.HandleConnections)
 
 	//staticHandler := static.ServeRoot("/app/*filepath", "public/app/public/")
@@ -345,7 +235,7 @@ func (app *app) Run() {
 
 	// read port from env file
 	port := os.Getenv("PORT")
-	
+
 	server := fmt.Sprintf("0.0.0.0:%v", port)
 
 	// setup CORS handler
