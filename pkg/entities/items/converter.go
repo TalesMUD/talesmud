@@ -40,7 +40,6 @@ func ItemsToJSONString(items Items) string {
 	return string(bytes)
 }
 
-
 // ItemTemplateFromJSONString ...
 func ItemTemplateFromJSONString(input string) (*ItemTemplate, error) {
 	bytes := []byte(input)

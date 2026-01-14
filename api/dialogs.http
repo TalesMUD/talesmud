@@ -1,0 +1,113 @@
+@host = http://localhost:8010
+@token = YOUR_AUTH_TOKEN_HERE
+
+### Get all dialogs
+GET {{host}}/api/dialogs
+Authorization: Bearer {{token}}
+
+### Get dialog by ID
+GET {{host}}/api/dialogs/DIALOG_ID_HERE
+Authorization: Bearer {{token}}
+
+### Create a simple dialog
+POST {{host}}/api/dialogs
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Guard Greeting",
+  "nodeId": "main",
+  "text": "Halt! State your business.",
+  "options": [
+    {
+      "nodeId": "pass",
+      "text": "I'm just passing through.",
+      "answer": {
+        "nodeId": "pass_response",
+        "text": "Very well, move along citizen.",
+        "isDialogExit": true
+      }
+    },
+    {
+      "nodeId": "mayor",
+      "text": "I need to see the mayor.",
+      "answer": {
+        "nodeId": "mayor_response",
+        "text": "The mayor is in the town hall, north of the square."
+      }
+    },
+    {
+      "nodeId": "leave",
+      "text": "[Leave]",
+      "isDialogExit": true
+    }
+  ]
+}
+
+### Create a more complex dialog with conditions
+POST {{host}}/api/dialogs
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Mysterious Merchant",
+  "nodeId": "main",
+  "text": "Welcome, traveler. Looking for something... special?",
+  "alternateTexts": [
+    "Ah, a customer! What brings you to my humble shop?",
+    "Greetings, friend. I have wares if you have coin."
+  ],
+  "options": [
+    {
+      "nodeId": "wares",
+      "text": "What do you have for sale?",
+      "answer": {
+        "nodeId": "wares_response",
+        "text": "Many things... potions, scrolls, artifacts of power.",
+        "options": [
+          {
+            "nodeId": "potions",
+            "text": "Tell me about the potions."
+          },
+          {
+            "nodeId": "artifacts",
+            "text": "Artifacts of power, you say?"
+          },
+          {
+            "nodeId": "back",
+            "text": "[Back]"
+          }
+        ]
+      }
+    },
+    {
+      "nodeId": "secret",
+      "text": "I heard you have something special...",
+      "requires_visited_dialogs": ["wares"],
+      "answer": {
+        "nodeId": "secret_response",
+        "text": "Ah, you've heard rumors? Perhaps we can do business..."
+      }
+    },
+    {
+      "nodeId": "leave",
+      "text": "Not today.",
+      "isDialogExit": true
+    }
+  ]
+}
+
+### Update a dialog
+PUT {{host}}/api/dialogs/DIALOG_ID_HERE
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Updated Guard Greeting",
+  "nodeId": "main",
+  "text": "Stop right there! Who goes there?"
+}
+
+### Delete a dialog
+DELETE {{host}}/api/dialogs/DIALOG_ID_HERE
+Authorization: Bearer {{token}}

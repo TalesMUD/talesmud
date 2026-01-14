@@ -155,3 +155,45 @@ func NewCreateCharacterMessage(user string) MessageResponse {
 		AudienceID: user,
 	}
 }
+
+// DialogOption represents a player choice in a dialog
+type DialogOption struct {
+	Index int    `json:"index"` // 1-based index for player input
+	Text  string `json:"text"`  // The option text to display
+}
+
+// DialogMessage represents a dialog message with NPC text and player options
+type DialogMessage struct {
+	MessageResponse
+	NPCName        string         `json:"npcName"`
+	NPCText        string         `json:"npcText"`
+	Options        []DialogOption `json:"options"`
+	ConversationID string         `json:"conversationID"`
+}
+
+// NewDialogMessage creates a new dialog message for the player
+func NewDialogMessage(userID, npcName, npcText string, options []DialogOption, conversationID string) *DialogMessage {
+	return &DialogMessage{
+		MessageResponse: MessageResponse{
+			Audience:   MessageAudienceOrigin,
+			AudienceID: userID,
+			Type:       MessageTypeDialog,
+			Message:    npcText,
+		},
+		NPCName:        npcName,
+		NPCText:        npcText,
+		Options:        options,
+		ConversationID: conversationID,
+	}
+}
+
+// NewDialogEndMessage creates a message indicating the conversation has ended
+func NewDialogEndMessage(userID, npcName, message string) MessageResponse {
+	return MessageResponse{
+		Audience:   MessageAudienceOrigin,
+		AudienceID: userID,
+		Type:       MessageTypeDialogEnd,
+		Message:    message,
+		Username:   npcName,
+	}
+}

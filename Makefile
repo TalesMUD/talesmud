@@ -26,5 +26,8 @@ run-frontend:
 run: ; ${MAKE} -j4 run-server run-frontend
 
 build:
-	build-frontend
-	build-backend
+	echo "1. Building frontend"
+	cd public/app/ && npm run build
+
+	echo "2. Building backend"
+	go build -o bin/tales cmd/tales/main.go

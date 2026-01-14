@@ -245,7 +245,7 @@
     var nav = document.querySelector("nav");
     if (nav) {
       nav.style.backgroundColor = "#00000000";
-      setupTerminal();
+      await setupTerminal();
     }
   });
 

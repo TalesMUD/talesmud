@@ -37,7 +37,7 @@ func (roomProcessor *RoomProcessor) RegisterCommand(command RoomCommand, keys ..
 	}
 }
 
-// Process ...asd
+// Process handles room-based commands
 func (roomProcessor *RoomProcessor) Process(game def.GameCtrl, message *messages.Message) bool {
 
 	if message.Character == nil || message.Character.CurrentRoomID == "" {
@@ -45,6 +45,12 @@ func (roomProcessor *RoomProcessor) Process(game def.GameCtrl, message *messages
 	}
 
 	if room, err := game.GetFacade().RoomsService().FindByID(message.Character.CurrentRoomID); err == nil {
+		// First, check if this is a dialog selection (number input during conversation)
+		// This takes priority over other room commands
+		if DialogSelectCommand(room, game, message) {
+			return true
+		}
+
 		parts := strings.Fields(message.Data)
 
 		if len(parts) > 0 {
