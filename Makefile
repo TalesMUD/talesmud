@@ -2,6 +2,10 @@
 build-frontend:
 	echo "Building frontend"
 	cd public/app/ && npm run build
+	echo "Copying frontend build into Go-embeddable dist folder"
+	rm -rf pkg/webui/dist
+	mkdir -p pkg/webui/dist
+	cp -r public/app/public/* pkg/webui/dist/
 
 build-backend:
 	echo "Building backend"
@@ -28,6 +32,10 @@ run: ; ${MAKE} -j4 run-server run-frontend
 build:
 	echo "1. Building frontend"
 	cd public/app/ && npm run build
+	echo "1b. Copying frontend build into Go-embeddable dist folder"
+	rm -rf pkg/webui/dist
+	mkdir -p pkg/webui/dist
+	cp -r public/app/public/* pkg/webui/dist/
 
 	echo "2. Building backend"
 	go build -o bin/tales cmd/tales/main.go

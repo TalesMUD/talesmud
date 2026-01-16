@@ -1,7 +1,6 @@
 package service
 
 import (
-	"github.com/talesmud/talesmud/pkg/db"
 	"github.com/talesmud/talesmud/pkg/repository"
 	"github.com/talesmud/talesmud/pkg/scripts"
 )
@@ -32,22 +31,22 @@ type facade struct {
 	ds    DialogsService
 	convs ConversationsService
 	sr    scripts.ScriptRunner
-	db    *db.Client
+	repos repository.Factory
 }
 
 // NewFacade creates a new service facade
-func NewFacade(db *db.Client, runner scripts.ScriptRunner) Facade {
+func NewFacade(repos repository.Factory, runner scripts.ScriptRunner) Facade {
 	// Create repositories
-	charactersRepo := repository.NewMongoDBcharactersRepository(db)
-	partiesRepo := repository.NewMongoDBPartiesRepository(db)
-	usersRepo := repository.NewMongoDBUsersRepository(db)
-	roomsRepo := repository.NewMongoDBRoomsRepository(db)
-	scriptsRepo := repository.NewMongoDBScriptRepository(db)
-	itemsRepo := repository.NewMongoDBItemsRepository(db)
-	itemTemplatesRepo := repository.NewMongoDBItemTemplatesRepository(db)
-	npcsRepo := repository.NewMongoDBNPCsRepository(db)
-	dialogsRepo := repository.NewMongoDBDialogsRepository(db)
-	conversationsRepo := repository.NewMongoDBConversationsRepository(db)
+	charactersRepo := repos.Characters()
+	partiesRepo := repos.Parties()
+	usersRepo := repos.Users()
+	roomsRepo := repos.Rooms()
+	scriptsRepo := repos.Scripts()
+	itemsRepo := repos.Items()
+	itemTemplatesRepo := repos.ItemTemplates()
+	npcsRepo := repos.NPCs()
+	dialogsRepo := repos.Dialogs()
+	conversationsRepo := repos.Conversations()
 
 	// Create services
 	ss := NewScriptsService(scriptsRepo)
@@ -64,6 +63,7 @@ func NewFacade(db *db.Client, runner scripts.ScriptRunner) Facade {
 		ds:    NewDialogsService(dialogsRepo),
 		convs: NewConversationsService(conversationsRepo),
 		sr:    runner,
+		repos: repos,
 	}
 }
 func (f *facade) RoomsService() RoomsService {

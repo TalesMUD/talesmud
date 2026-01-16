@@ -6,6 +6,21 @@ TalesMUD is a browser-based Multi-User Dungeon (MUD) framework built with Go and
 
 **Repository:** [github.com/TalesMUD/talesmud](https://github.com/TalesMUD/talesmud)
 
+## Documentation Index
+
+- **Architecture:** `ARCHITECTURE.md`
+- **Game design + MVP backlog:** `GAME_DESIGN.md`
+
+## MVP Roadmap (next up)
+
+Planned epics (see `GAME_DESIGN.md`):
+
+- Enemy NPCs + combat
+- Combat instances (ad-hoc rooms)
+- Items/loot/containers
+- Inventory + equip/unequip
+- Merchants/trading
+
 ## Features
 
 ### Core Game Features
@@ -203,6 +218,12 @@ The NPCs branch represents the latest development work, focusing on NPC systems 
 GIN_MODE=debug
 PORT=8010
 
+# Database Driver (mongo | sqlite)
+DB_DRIVER=sqlite
+
+# SQLite (used when DB_DRIVER=sqlite)
+SQLITE_PATH=./talesmud.db
+
 # MongoDB
 MONGODB_CONNECTION_STRING=mongodb://localhost:27017
 MONGODB_DATABASE=talesmud
@@ -225,7 +246,7 @@ ADMIN_PASSWORD=admin
 ### Prerequisites
 - Go 1.18+
 - Node.js (for frontend build)
-- MongoDB 4.2+
+- MongoDB 4.2+ (only if DB_DRIVER=mongo)
 
 ### Build Commands
 
@@ -242,6 +263,9 @@ make build-backend
 # Run the server
 make run-server
 
+# Run the server with SQLite (single binary + embedded frontend)
+DB_DRIVER=sqlite SQLITE_PATH=./talesmud.db ./bin/tales
+
 # Run frontend dev server
 make run-frontend
 
@@ -254,6 +278,20 @@ make run-dialogs-sandbox
 ```bash
 # Start with Docker Compose (includes MongoDB)
 docker-compose up -d
+```
+
+### Data Migration (MongoDB → SQLite)
+
+1. Export data from a running Mongo-backed server:
+
+```bash
+curl -u "$ADMIN_USER:$ADMIN_PASSWORD" http://localhost:8010/admin/export -o export.json
+```
+
+2. Import into SQLite:
+
+```bash
+go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
 ```
 
 ## API Endpoints

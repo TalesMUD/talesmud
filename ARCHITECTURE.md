@@ -13,8 +13,8 @@ TalesMUD follows a layered architecture with clear separation between HTTP API, 
          ┌────────────────────┼────────────────────┐
          ▼                    ▼                    ▼
 ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│   HTTP Server   │  │   MUD Server    │  │  Static Files   │
-│   (Gin Router)  │  │  (WebSocket)    │  │   (Frontend)    │
+│   HTTP Server   │  │   MUD Server    │  │  Embedded SPA   │
+│   (Gin Router)  │  │  (WebSocket)    │  │  (go:embed FS)  │
 └────────┬────────┘  └────────┬────────┘  └─────────────────┘
          │                    │
          │                    ▼
@@ -32,14 +32,15 @@ TalesMUD follows a layered architecture with clear separation between HTTP API, 
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                     Repository Layer                             │
-│              (Generic MongoDB Operations)                        │
+│              (MongoDB or SQLite backends)                        │
 └─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                        MongoDB                                   │
-│  (users, characters, rooms, items, npcs, scripts, parties)      │
-└─────────────────────────────────────────────────────────────────┘
+                             │
+              ┌──────────────┴──────────────┐
+              ▼                             ▼
+┌───────────────────────────┐  ┌───────────────────────────────┐
+│          MongoDB           │  │            SQLite             │
+│  (collections by entity)   │  │ (tables with JSON payloads)   │
+└───────────────────────────┘  └───────────────────────────────┘
 ```
 
 ## Backend Architecture
@@ -64,11 +65,19 @@ The HTTP server handles REST API requests and serves as the entry point for WebS
 ```go
 type app struct {
     Router    *gin.Engine      // HTTP router
-    db        *db.Client       // MongoDB connection
     Facade    service.Facade   // Service layer access
     mud       mud.MUDServer    // Game server instance
 }
 ```
+
+#### Database Driver Selection
+
+`server.NewApp()` selects the storage backend at startup:
+
+- `DB_DRIVER=mongo` → MongoDB repositories
+- `DB_DRIVER=sqlite` → SQLite repositories (single-file DB)
+
+When `DB_DRIVER=sqlite`, use `SQLITE_PATH` to point to the DB file.
 
 #### Route Organization
 
@@ -319,7 +328,7 @@ type Facade interface {
 
 ### Repository Layer (`pkg/repository/`)
 
-Data access layer with generic MongoDB operations.
+Data access layer with backend-specific implementations (MongoDB or SQLite) selected at startup.
 
 #### Generic Repository
 
@@ -341,9 +350,10 @@ type GenericRepo struct {
 - `Update(entity)` - Update existing
 - `Delete(id)` - Remove entity
 
-### Database Layer (`pkg/db/`)
+### Database Layer (`pkg/db/` + `pkg/db/sqlite/`)
 
-MongoDB client wrapper with query building.
+- **MongoDB**: wrapper client and BSON query builder.
+- **SQLite**: JSON document storage (one row per entity) with JSON1 queries, WAL mode, and busy timeout.
 
 #### Query Parameter Builder
 
