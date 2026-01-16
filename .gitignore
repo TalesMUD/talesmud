@@ -16,6 +16,7 @@
 .env
 .idea/*
 .vscode/*
+bin/tales
 cmd/owndnd/owndnd
 main
 bin/tales

@@ -808,5 +808,87 @@ pkg/
 ├── repository/        # Data access
 ├── db/                # Database client
 ├── scripts/           # Script execution
+│   ├── scripts.go     # Script entity and types
+│   ├── scriptrunner.go # Runner interface
+│   ├── events/        # Event system
+│   │   ├── events.go  # Event types
+│   │   ├── context.go # Event context
+│   │   └── registry.go # Event handlers
+│   └── runner/
+│       ├── factory.go # Multi-runner factory
+│       ├── defaultscriptrunner.go # JavaScript (deprecated)
+│       └── lua/       # Lua runner
+│           ├── luarunner.go
+│           ├── sandbox.go
+│           ├── pool.go
+│           └── modules/ # tales.* API
 └── util/              # Utilities
 ```
+
+## Scripting System Architecture
+
+The scripting system uses Lua (via gopher-lua) for dynamic game content. JavaScript support is deprecated but maintained for backward compatibility.
+
+### Script Runner Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      MultiRunner                                 │
+│           (Routes to appropriate runner by language)            │
+└─────────────────────────────────────────────────────────────────┘
+                    │                    │
+         ┌──────────┴──────────┐ ┌──────┴─────────┐
+         ▼                     ▼ ▼                ▼
+┌─────────────────────┐  ┌─────────────────────────────┐
+│  DefaultScriptRunner │  │       LuaRunner             │
+│     (JavaScript)     │  │  (Primary, recommended)     │
+│     [DEPRECATED]     │  └──────────────┬──────────────┘
+└─────────────────────┘                   │
+                                         ▼
+                           ┌──────────────────────────┐
+                           │        VM Pool           │
+                           │  (Reusable Lua states)   │
+                           └──────────────┬───────────┘
+                                         │
+                           ┌─────────────┼─────────────┐
+                           ▼             ▼             ▼
+                    ┌──────────┐  ┌──────────┐  ┌──────────┐
+                    │ Sandbox  │  │ Modules  │  │ Context  │
+                    │ Security │  │tales.*API│  │  Data    │
+                    └──────────┘  └──────────┘  └──────────┘
+```
+
+### Lua API Modules
+
+| Module | Purpose |
+|--------|---------|
+| `tales.items` | Item and template operations |
+| `tales.rooms` | Room queries and management |
+| `tales.characters` | Character operations (damage, heal, teleport) |
+| `tales.npcs` | NPC operations and queries |
+| `tales.dialogs` | Dialog and conversation management |
+| `tales.game` | Messaging (room, character, broadcast) |
+| `tales.utils` | Utilities (random, UUID, dice rolling) |
+
+### Event System
+
+Events allow scripts to respond to game actions:
+
+```
+Game Events                 Event Registry              Script Handlers
+┌─────────┐                ┌─────────────┐            ┌─────────────────┐
+│ player  │ ──dispatch──▶  │  handlers   │ ──execute──▶│ Script 1 (Lua) │
+│ entered │                │  by event   │            │ Script 2 (Lua) │
+│  room   │                │   type      │            │ ...            │
+└─────────┘                └─────────────┘            └─────────────────┘
+```
+
+Event types include:
+- Player events: `player.enter_room`, `player.leave_room`, `player.join`, `player.quit`
+- NPC events: `npc.death`, `npc.spawn`, `npc.idle`
+- Item events: `item.pickup`, `item.drop`, `item.use`, `item.create`
+- Dialog events: `dialog.start`, `dialog.end`, `dialog.option`
+- Room events: `room.action`, `room.update`
+- Quest events: `quest.start`, `quest.complete`, `quest.progress`
+
+See [SCRIPTING.md](SCRIPTING.md) for full documentation.

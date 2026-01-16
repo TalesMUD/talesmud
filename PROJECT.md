@@ -9,11 +9,13 @@ TalesMUD is a browser-based Multi-User Dungeon (MUD) framework built with Go and
 ## Documentation Index
 
 - **Architecture:** `ARCHITECTURE.md`
-- **Game design + MVP backlog:** `GAME_DESIGN.md`
+- **Game design + MVP backlog:** `game-design/GAME_DESIGN.md`
+- **Scripting system:** `game-design/SCRIPTING.md`
+- **World map implementation:** `game-design/WORLD_MAP_IMPLEMENTATION.md`
 
 ## MVP Roadmap (next up)
 
-Planned epics (see `GAME_DESIGN.md`):
+Planned epics (see `game-design/GAME_DESIGN.md`):
 
 - Enemy NPCs + combat
 - Combat instances (ad-hoc rooms)

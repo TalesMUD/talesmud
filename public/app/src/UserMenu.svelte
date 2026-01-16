@@ -18,6 +18,7 @@
 
   import { getAuth } from "./auth.js";
   import { getUser, updateUser } from "./api/user.js";
+  import { user } from "./stores.js";
 
   const {
     isLoading,
@@ -30,28 +31,32 @@
   } = getAuth();
 
   async function loadUserData() {
+    if (!$authToken) return;
+
     getUser(
       $authToken,
       (u) => {
         user.set(u);
       },
-      (err) => console.log(err)
+      (err) => console.error("Failed to load user data:", err)
     );
   }
 
   async function signup() {
     await login();
+  }
 
-    if ($isAuthenticated) {
-      await loadUserData();
-    }
+  // Load user data whenever authToken changes and user is authenticated
+  $: if ($isAuthenticated && $authToken) {
+    loadUserData();
   }
 
   onMount(() => {
-    document.addEventListener("DOMContentLoaded", function () {
-      var elems = document.querySelectorAll(".dropdown-trigger");
-      var instances = M.Dropdown.init(elems);
-    });
+    // Initialize Materialize dropdown
+    const elems = document.querySelectorAll(".dropdown-trigger");
+    if (elems.length > 0 && typeof M !== "undefined") {
+      M.Dropdown.init(elems);
+    }
   });
 </script>
 
