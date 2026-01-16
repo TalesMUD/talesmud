@@ -2,21 +2,22 @@ package server
 
 import (
 	"fmt"
-	"os"
-
-	"github.com/gin-contrib/static"
-	log "github.com/sirupsen/logrus"
-
 	"net/http"
-
-	"github.com/talesmud/talesmud/pkg/db"
-	mud "github.com/talesmud/talesmud/pkg/mudserver"
-	"github.com/talesmud/talesmud/pkg/scripts/runner"
-	"github.com/talesmud/talesmud/pkg/server/handler"
-	"github.com/talesmud/talesmud/pkg/service"
+	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/handlers"
+	log "github.com/sirupsen/logrus"
+
+	"github.com/talesmud/talesmud/pkg/db"
+	dbsqlite "github.com/talesmud/talesmud/pkg/db/sqlite"
+	mud "github.com/talesmud/talesmud/pkg/mudserver"
+	"github.com/talesmud/talesmud/pkg/repository"
+	"github.com/talesmud/talesmud/pkg/scripts/runner"
+	"github.com/talesmud/talesmud/pkg/server/handler"
+	"github.com/talesmud/talesmud/pkg/service"
+	"github.com/talesmud/talesmud/pkg/webui"
 )
 
 // App ... main application structure
@@ -37,21 +38,46 @@ type app struct {
 // NewApp returns an application instance
 // this is the primary stateless server providing an API interface
 func NewApp() App {
+	driver := strings.ToLower(strings.TrimSpace(os.Getenv("DB_DRIVER")))
+	if driver == "" {
+		if strings.TrimSpace(os.Getenv("SQLITE_PATH")) != "" {
+			driver = "sqlite"
+		} else {
+			driver = "mongo"
+		}
+	}
 
-	db := db.New(os.Getenv("MONGODB_DATABASE"))
-	db.Connect(os.Getenv("MONGODB_CONNECTION_STRING"))
+	var repos repository.Factory
+	switch driver {
+	case "mongo":
+		client := db.New(os.Getenv("MONGODB_DATABASE"))
+		client.Connect(os.Getenv("MONGODB_CONNECTION_STRING"))
+		repos = repository.NewMongoFactory(client)
+	case "sqlite":
+		path := strings.TrimSpace(os.Getenv("SQLITE_PATH"))
+		if path == "" {
+			path = "talesmud.db"
+		}
+		client, err := dbsqlite.Open(path)
+		if err != nil {
+			log.WithError(err).Fatal("Failed to open SQLite database")
+		}
+		repos = repository.NewSQLiteFactory(client)
+	default:
+		log.WithField("driver", driver).Fatal("Unsupported DB driver")
+	}
 
 	r := gin.New()
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
 
 	runner := runner.NewDefaultScriptRunner()
-	facade := service.NewFacade(db, runner)
+	facade := service.NewFacade(repos, runner)
 	mud := mud.New(facade)
 	runner.SetServices(facade, mud.GameCtrl())
 
 	return &app{
-		db:     db,
+		db:     nil,
 		Router: r,
 		Facade: facade,
 		mud:    mud,
@@ -98,6 +124,9 @@ func (app *app) setupRoutes() {
 		UserService:       app.Facade.UsersService(),
 		ItemsService:      app.Facade.ItemsService(),
 		ScriptService:     app.Facade.ScriptsService(),
+		NPCsService:       app.Facade.NPCsService(),
+		DialogsService:    app.Facade.DialogsService(),
+		PartiesService:    app.Facade.PartiesService(),
 	}
 
 	worldRenderer := &handler.WorldRendererHandler{
@@ -204,28 +233,10 @@ func (app *app) setupRoutes() {
 	//staticHandler := gin.WrapH(http.Handler(http.FileServer(http.Dir("public/app/public"))))
 	//r.GET("/app/*any", staticHandler)
 	//r.NoRoute(staticHandler)
-	r.Use(middleware("/", "./public/app/public"))
+	r.Use(SPAMiddleware("/", webui.FS(), webui.IndexFile))
 
 	//r.Use(staticHandler)
 
-}
-
-func middleware(urlPrefix, spaDirectory string) gin.HandlerFunc {
-	directory := static.LocalFile(spaDirectory, true)
-	fileserver := http.FileServer(directory)
-	if urlPrefix != "" {
-		fileserver = http.StripPrefix(urlPrefix, fileserver)
-	}
-	return func(c *gin.Context) {
-		if directory.Exists(urlPrefix, c.Request.URL.Path) {
-			fileserver.ServeHTTP(c.Writer, c.Request)
-			c.Abort()
-		} else {
-			c.Request.URL.Path = "/"
-			fileserver.ServeHTTP(c.Writer, c.Request)
-			c.Abort()
-		}
-	}
 }
 
 // Run ... starts the server

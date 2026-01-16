@@ -10,6 +10,8 @@
   import ItemsEditor from "./ItemsEditor.svelte";
   import ItemTemplatesEditor from "./ItemTemplatesEditor.svelte";
   import WorldEditor from "./WorldEditor.svelte";
+  import NPCsEditor from "./NPCsEditor.svelte";
+  import DialogsEditor from "./DialogsEditor.svelte";
 
   //  import { Router, Route } from "svelte-routing";
   import { Router, Route, Link } from "yrv";
@@ -40,6 +42,14 @@
         nav: "/creator/item-templates",
       },
       {
+        name: "NPCS",
+        nav: "/creator/npcs",
+      },
+      {
+        name: "DIALOGS",
+        nav: "/creator/dialogs",
+      },
+      {
         name: "SCRIPTS",
         nav: "/creator/scripts",
       },
@@ -62,6 +72,8 @@
     <Route path="/items" component="{ItemsEditor}" />
     <Route path="/world" component="{WorldEditor}" />
     <Route path="/item-templates" component="{ItemTemplatesEditor}" />
+    <Route path="/npcs" component="{NPCsEditor}" />
+    <Route path="/dialogs" component="{DialogsEditor}" />
     <Route path="/scripts" component="{ScriptsEditor}" />
   </row>
 </Router>
