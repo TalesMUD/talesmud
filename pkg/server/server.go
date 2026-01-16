@@ -71,10 +71,10 @@ func NewApp() App {
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
 
-	runner := runner.NewDefaultScriptRunner()
-	facade := service.NewFacade(repos, runner)
+	scriptRunner := runner.NewMultiRunner()
+	facade := service.NewFacade(repos, scriptRunner)
 	mud := mud.New(facade)
-	runner.SetServices(facade, mud.GameCtrl())
+	scriptRunner.SetServices(facade, mud.GameCtrl())
 
 	return &app{
 		db:     nil,
@@ -190,6 +190,7 @@ func (app *app) setupRoutes() {
 		protected.POST("run-script/:id", scripts.ExecuteScript)
 
 		protected.GET("world/map", worldRenderer.Render)
+		protected.GET("world/graph", worldRenderer.RenderGraphData)
 
 		protected.GET("user", usr.GetUser)
 		protected.PUT("user", usr.UpdateUser)

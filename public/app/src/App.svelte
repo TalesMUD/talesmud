@@ -127,9 +127,7 @@
 </script>
 
 <svelte:head>
-  <script src="https://cdn.auth0.com/js/auth0/9.0/auth0.min.js">
-
-  </script>
+  <!-- Removed unused Auth0 CDN script - using @auth0/auth0-spa-js from npm instead -->
   <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"

@@ -2,6 +2,8 @@
 build-frontend:
 	echo "Building frontend"
 	cd public/app/ && npm run build
+	echo "Copying Svelte Flow CSS"
+	cp public/app/node_modules/@xyflow/svelte/dist/style.css public/app/public/svelte-flow.css
 	echo "Copying frontend build into Go-embeddable dist folder"
 	rm -rf pkg/webui/dist
 	mkdir -p pkg/webui/dist
@@ -32,6 +34,8 @@ run: ; ${MAKE} -j4 run-server run-frontend
 build:
 	echo "1. Building frontend"
 	cd public/app/ && npm run build
+	echo "1a. Copying Svelte Flow CSS"
+	cp public/app/node_modules/@xyflow/svelte/dist/style.css public/app/public/svelte-flow.css
 	echo "1b. Copying frontend build into Go-embeddable dist folder"
 	rm -rf pkg/webui/dist
 	mkdir -p pkg/webui/dist

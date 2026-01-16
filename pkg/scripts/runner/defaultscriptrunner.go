@@ -2,7 +2,7 @@ package runner
 
 import (
 	"encoding/json"
-	"fmt"
+	"time"
 
 	"github.com/robertkrimen/otto"
 	_ "github.com/robertkrimen/otto/underscore"
@@ -17,22 +17,21 @@ import (
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
-// DefaultScriptRunner ...
+// DefaultScriptRunner implements ScriptRunner for JavaScript using Otto
+// Deprecated: Use LuaRunner for new scripts
 type DefaultScriptRunner struct {
 	RoomsService      service.RoomsService
 	CharactersService service.CharactersService
 	ItemsService      service.ItemsService
 	Game              def.GameCtrl
-
-	//	ScriptService     service.ScriptsService
 }
 
-// NewDefaultScriptRunner ...
+// NewDefaultScriptRunner creates a new JavaScript script runner
 func NewDefaultScriptRunner() *DefaultScriptRunner {
 	return &DefaultScriptRunner{}
 }
 
-// SetServices ...
+// SetServices injects the required services into the runner
 func (runner *DefaultScriptRunner) SetServices(facade service.Facade, game def.GameCtrl) {
 	runner.ItemsService = facade.ItemsService()
 	runner.RoomsService = facade.RoomsService()
@@ -40,42 +39,76 @@ func (runner *DefaultScriptRunner) SetServices(facade service.Facade, game def.G
 	runner.Game = game
 }
 
-//Run ...
+// SupportsLanguage returns true if the runner supports the given language
+func (runner *DefaultScriptRunner) SupportsLanguage(lang scripts.ScriptLanguage) bool {
+	return lang == scripts.ScriptLanguageJavaScript
+}
+
+// Shutdown gracefully shuts down the script runner
+func (runner *DefaultScriptRunner) Shutdown() {
+	// Otto doesn't require cleanup
+}
+
+// Run executes a JavaScript script with the given context
 func (runner *DefaultScriptRunner) Run(script scripts.Script, ctx interface{}) interface{} {
+	result := runner.RunWithResult(script, &scripts.ScriptContext{Data: map[string]interface{}{"ctx": ctx}})
+	if !result.Success {
+		return result.Error
+	}
+	return result.Result
+}
 
-	logrus.WithField("Script", script.Name).Info("Executing script ...")
+// RunWithResult executes a script and returns detailed result information
+func (runner *DefaultScriptRunner) RunWithResult(script scripts.Script, ctx *scripts.ScriptContext) *scripts.ScriptResult {
+	start := time.Now()
 
-	//TODO: do some checks with Code
-	//TODO: run code in goroutine that will be killed after 5 seconds
+	logrus.WithField("Script", script.Name).WithField("Language", "javascript").Info("Executing script...")
+
 	vm := runner.newScriptRuntime()
-	vm.Set("ctx", ctx)
+
+	// Set context variables
+	if ctx != nil {
+		for key, value := range ctx.Data {
+			vm.Set(key, value)
+		}
+	}
 
 	_, err := vm.Run(script.Code)
 	if err != nil {
-		return err.Error()
-	}
-
-	if value, err := vm.Get("ctx"); err == nil {
-		if str, err := value.ToString(); err == nil {
-
-			//st, _ := strconv.Unquote(str)
-
-			// depending on type unmarshal to different entities
-			//TYPE ITEM:
-			fmt.Println(str)
-
-			bytes := []byte(str)
-			var item items.Item
-			if err := json.Unmarshal(bytes, &item); err != nil {
-				logrus.WithField("string", str).WithError(err).Info("Could not unmarshal")
-			}
-
-			fmt.Println(item)
-
-			return item
+		return &scripts.ScriptResult{
+			Success:  false,
+			Error:    err.Error(),
+			Duration: time.Since(start),
 		}
 	}
-	return ctx
+
+	// Try to get the modified context
+	if value, err := vm.Get("ctx"); err == nil {
+		if str, err := value.ToString(); err == nil {
+			// Try to unmarshal as item (for backward compatibility)
+			bytes := []byte(str)
+			var item items.Item
+			if err := json.Unmarshal(bytes, &item); err == nil {
+				return &scripts.ScriptResult{
+					Success:  true,
+					Result:   item,
+					Duration: time.Since(start),
+				}
+			}
+			// Return raw string if not an item
+			return &scripts.ScriptResult{
+				Success:  true,
+				Result:   str,
+				Duration: time.Since(start),
+			}
+		}
+	}
+
+	return &scripts.ScriptResult{
+		Success:  true,
+		Result:   nil,
+		Duration: time.Since(start),
+	}
 }
 
 func (runner DefaultScriptRunner) newScriptRuntime() *otto.Otto {
