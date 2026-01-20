@@ -2,7 +2,7 @@
 
 ## Overview
 
-TalesMUD is a browser-based Multi-User Dungeon (MUD) framework built with Go and Svelte. It provides a complete platform for creating and playing text-based multiplayer adventure games, featuring real-time WebSocket communication, a web-based content editor, and persistent game state via MongoDB.
+TalesMUD is a browser-based Multi-User Dungeon (MUD) framework built with Go and Svelte. It provides a complete platform for creating and playing text-based multiplayer adventure games, featuring real-time WebSocket communication, a web-based content editor, and persistent game state via SQLite.
 
 **Repository:** [github.com/TalesMUD/talesmud](https://github.com/TalesMUD/talesmud)
 
@@ -80,7 +80,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Session management
 
 - **Data Persistence**
-  - MongoDB for all game data
+  - SQLite for all game data
   - World export/import functionality
   - YAML/JSON data file support
 
@@ -91,7 +91,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
 |-----------|------------|
 | Language | Go 1.18 |
 | HTTP Framework | Gin |
-| Database | MongoDB |
+| Database | SQLite |
 | WebSocket | Gorilla WebSocket |
 | Authentication | Auth0 JWT |
 | Scripting | Otto (JavaScript VM) |
@@ -113,7 +113,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
 | Container | Docker |
 | Orchestration | Docker Compose |
 | CI/CD | GitHub Actions |
-| Database | MongoDB 4.2.6 |
+| Database | SQLite |
 
 ## Project Structure
 
@@ -128,7 +128,7 @@ talesmud/
 │   ├── server/             # HTTP API server
 │   ├── service/            # Business logic layer
 │   ├── repository/         # Data access layer
-│   ├── db/                 # MongoDB client
+│   ├── db/                 # Database utilities (SQLite)
 │   └── scripts/            # Script execution engine
 ├── public/                 # Frontend
 │   └── app/
@@ -220,17 +220,8 @@ The NPCs branch represents the latest development work, focusing on NPC systems 
 GIN_MODE=debug
 PORT=8010
 
-# Database Driver (mongo | sqlite)
-DB_DRIVER=sqlite
-
-# SQLite (used when DB_DRIVER=sqlite)
+# SQLite database path
 SQLITE_PATH=./talesmud.db
-
-# MongoDB
-MONGODB_CONNECTION_STRING=mongodb://localhost:27017
-MONGODB_DATABASE=talesmud
-MONGODB_USER=talesmud
-MONGODB_PASSWORD=talesmud
 
 # Auth0
 AUTH0_AUDIENCE=http://talesofapirate.com/dnd/api
@@ -248,7 +239,6 @@ ADMIN_PASSWORD=admin
 ### Prerequisites
 - Go 1.18+
 - Node.js (for frontend build)
-- MongoDB 4.2+ (only if DB_DRIVER=mongo)
 
 ### Build Commands
 
@@ -278,19 +268,13 @@ make run-dialogs-sandbox
 ### Docker Deployment
 
 ```bash
-# Start with Docker Compose (includes MongoDB)
+# Start with Docker Compose
 docker-compose up -d
 ```
 
-### Data Migration (MongoDB → SQLite)
+### Data Import
 
-1. Export data from a running Mongo-backed server:
-
-```bash
-curl -u "$ADMIN_USER:$ADMIN_PASSWORD" http://localhost:8010/admin/export -o export.json
-```
-
-2. Import into SQLite:
+Import world data into SQLite:
 
 ```bash
 go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
@@ -349,4 +333,4 @@ This project is actively developed. The NPCs branch contains the latest work on 
 - [MUD Wikipedia](https://en.wikipedia.org/wiki/MUD) - Background on Multi-User Dungeons
 - [Go Documentation](https://golang.org/doc/) - Go language reference
 - [Svelte Tutorial](https://svelte.dev/tutorial) - Svelte framework guide
-- [MongoDB Manual](https://docs.mongodb.com/manual/) - Database documentation
+- [SQLite Documentation](https://www.sqlite.org/docs.html) - Database documentation

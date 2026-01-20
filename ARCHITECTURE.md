@@ -32,15 +32,14 @@ TalesMUD follows a layered architecture with clear separation between HTTP API, 
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                     Repository Layer                             │
-│              (MongoDB or SQLite backends)                        │
+│                     (SQLite backend)                             │
 └─────────────────────────────────────────────────────────────────┘
-                             │
-              ┌──────────────┴──────────────┐
-              ▼                             ▼
-┌───────────────────────────┐  ┌───────────────────────────────┐
-│          MongoDB           │  │            SQLite             │
-│  (collections by entity)   │  │ (tables with JSON payloads)   │
-└───────────────────────────┘  └───────────────────────────────┘
+                              │
+                              ▼
+              ┌───────────────────────────────┐
+              │            SQLite             │
+              │ (tables with JSON payloads)   │
+              └───────────────────────────────┘
 ```
 
 ## Backend Architecture
@@ -70,14 +69,11 @@ type app struct {
 }
 ```
 
-#### Database Driver Selection
+#### Database Configuration
 
-`server.NewApp()` selects the storage backend at startup:
+`server.NewApp()` initializes the SQLite storage backend at startup.
 
-- `DB_DRIVER=mongo` → MongoDB repositories
-- `DB_DRIVER=sqlite` → SQLite repositories (single-file DB)
-
-When `DB_DRIVER=sqlite`, use `SQLITE_PATH` to point to the DB file.
+Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
 
 #### Route Organization
 
@@ -328,15 +324,15 @@ type Facade interface {
 
 ### Repository Layer (`pkg/repository/`)
 
-Data access layer with backend-specific implementations (MongoDB or SQLite) selected at startup.
+Data access layer with SQLite backend using JSON document storage.
 
 #### Generic Repository
 
 ```go
-type GenericRepo struct {
-    db         *db.Client
-    collection string
-    generator  func() interface{}  // Entity factory
+type sqliteGenericRepo struct {
+    db        *sql.DB
+    table     string
+    generator func() interface{}  // Entity factory
 }
 ```
 
@@ -352,16 +348,14 @@ type GenericRepo struct {
 
 ### Database Layer (`pkg/db/` + `pkg/db/sqlite/`)
 
-- **MongoDB**: wrapper client and BSON query builder.
-- **SQLite**: JSON document storage (one row per entity) with JSON1 queries, WAL mode, and busy timeout.
+SQLite JSON document storage with one row per entity, using JSON1 extension for queries, WAL mode, and busy timeout.
 
 #### Query Parameter Builder
 
 ```go
 NewQueryParams().
     With(QueryParam{Key: "area", Value: "oldtown"}).
-    With(QueryParam{Key: "roomType", Value: "tavern"}).
-    AsBSON()
+    With(QueryParam{Key: "roomType", Value: "tavern"})
 ```
 
 #### Collections
@@ -383,8 +377,7 @@ NewQueryParams().
 
 ```go
 type Entity struct {
-    _ID primitive.ObjectID `bson:"_id,omitempty"`  // MongoDB ID
-    ID  string             `bson:"id"`             // UUID
+    ID string `json:"id"`  // UUID
 }
 ```
 
@@ -703,7 +696,7 @@ main()
 ### Thread Safety
 
 - `Connection.mu sync.Mutex` - Protects WebSocket writes
-- MongoDB driver handles internal synchronization
+- SQLite uses WAL mode and busy timeout for concurrent access
 - Channels prevent race conditions on shared state
 
 ## Design Patterns
