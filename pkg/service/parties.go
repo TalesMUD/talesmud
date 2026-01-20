@@ -5,7 +5,6 @@ import (
 	e "github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	r "github.com/talesmud/talesmud/pkg/repository"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // PartiesService delives logical functions on top of the charactersheets Repo
@@ -47,12 +46,7 @@ func (s *partiesService) CreateParty(createParty *CreatePartyDTO) (*e.Party, err
 
 	var party entities.Party
 	party.Name = createParty.Name
-
-	for _, c := range createParty.Characters {
-
-		oid, _ := primitive.ObjectIDFromHex(c)
-		party.Characters = append(party.Characters, oid)
-	}
+	party.Characters = createParty.Characters
 
 	return s.repo.Store(&party)
 }

@@ -2,19 +2,16 @@ package entities
 
 import (
 	"github.com/google/uuid"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-//Entity ...
+// Entity is the base type for all entities with a unique ID.
 type Entity struct {
-	_ID primitive.ObjectID `bson:"_id,omitempty"`
-	ID  string             `bson:"id,omitempty" json:"id"`
+	ID string `json:"id"`
 }
 
-// NewEntity ...
+// NewEntity creates a new entity with a generated UUID.
 func NewEntity() *Entity {
 	return &Entity{
-		_ID: primitive.NewObjectID(),
-		ID:  uuid.New().String(),
+		ID: uuid.New().String(),
 	}
 }

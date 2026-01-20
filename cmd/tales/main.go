@@ -30,20 +30,11 @@ func main() {
 	log.SetLevel(level)
 
 	fmt.Println("Starting tales server...")
-	driver := strings.ToLower(strings.TrimSpace(os.Getenv("DB_DRIVER")))
-	if driver == "" && strings.TrimSpace(os.Getenv("SQLITE_PATH")) != "" {
-		driver = "sqlite"
+	sqlitePath := os.Getenv("SQLITE_PATH")
+	if sqlitePath == "" {
+		sqlitePath = "talesmud.db"
 	}
-	if driver == "" {
-		driver = "mongo"
-	}
-	fmt.Printf("db driver %v\n", driver)
-	if driver == "sqlite" {
-		fmt.Printf("sqlite path %v\n", os.Getenv("SQLITE_PATH"))
-	} else {
-		fmt.Printf("mongo connection string %v\n", os.Getenv("MONGODB_CONNECTION_STRING"))
-		fmt.Printf("mongo database %v\n", os.Getenv("MONGODB_DATABASE"))
-	}
+	fmt.Printf("SQLite database: %v\n", sqlitePath)
 
 	server := server.NewApp()
 	server.Run()

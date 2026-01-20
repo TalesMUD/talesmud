@@ -10,7 +10,6 @@ import (
 	"github.com/gorilla/handlers"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/talesmud/talesmud/pkg/db"
 	dbsqlite "github.com/talesmud/talesmud/pkg/db/sqlite"
 	mud "github.com/talesmud/talesmud/pkg/mudserver"
 	"github.com/talesmud/talesmud/pkg/repository"
@@ -27,11 +26,7 @@ type App interface {
 }
 
 type app struct {
-
-	// generic app base
 	Router *gin.Engine
-	db     *db.Client
-	// owndnd specific
 	Facade service.Facade
 	mud    mud.MUDServer
 }
@@ -39,34 +34,15 @@ type app struct {
 // NewApp returns an application instance
 // this is the primary stateless server providing an API interface
 func NewApp() App {
-	driver := strings.ToLower(strings.TrimSpace(os.Getenv("DB_DRIVER")))
-	if driver == "" {
-		if strings.TrimSpace(os.Getenv("SQLITE_PATH")) != "" {
-			driver = "sqlite"
-		} else {
-			driver = "mongo"
-		}
+	path := strings.TrimSpace(os.Getenv("SQLITE_PATH"))
+	if path == "" {
+		path = "talesmud.db"
 	}
-
-	var repos repository.Factory
-	switch driver {
-	case "mongo":
-		client := db.New(os.Getenv("MONGODB_DATABASE"))
-		client.Connect(os.Getenv("MONGODB_CONNECTION_STRING"))
-		repos = repository.NewMongoFactory(client)
-	case "sqlite":
-		path := strings.TrimSpace(os.Getenv("SQLITE_PATH"))
-		if path == "" {
-			path = "talesmud.db"
-		}
-		client, err := dbsqlite.Open(path)
-		if err != nil {
-			log.WithError(err).Fatal("Failed to open SQLite database")
-		}
-		repos = repository.NewSQLiteFactory(client)
-	default:
-		log.WithField("driver", driver).Fatal("Unsupported DB driver")
+	client, err := dbsqlite.Open(path)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to open SQLite database")
 	}
+	repos := repository.NewSQLiteFactory(client)
 
 	r := gin.New()
 	r.Use(gin.Logger())
@@ -78,7 +54,6 @@ func NewApp() App {
 	scriptRunner.SetServices(facade, mud.GameCtrl())
 
 	return &app{
-		db:     nil,
 		Router: r,
 		Facade: facade,
 		mud:    mud,
