@@ -1,13 +1,19 @@
 
 build-frontend:
-	echo "Building frontend"
+	echo "Building main frontend"
 	cd public/app/ && npm run build
-	echo "Copying Svelte Flow CSS"
-	cp public/app/node_modules/@xyflow/svelte/dist/style.css public/app/public/svelte-flow.css
 	echo "Copying frontend build into Go-embeddable dist folder"
 	rm -rf pkg/webui/dist
 	mkdir -p pkg/webui/dist
-	cp -r public/app/public/* pkg/webui/dist/
+	cp -r public/app/dist/* pkg/webui/dist/
+
+build-mud-client:
+	echo "Building mud-client (game client)"
+	cd public/mud-client/ && npm install && npm run build
+	echo "Copying mud-client build into Go-embeddable dist folder"
+	rm -rf pkg/webuiplay/dist
+	mkdir -p pkg/webuiplay/dist
+	cp -r public/mud-client/public/* pkg/webuiplay/dist/
 
 build-backend:
 	echo "Building backend"
@@ -26,20 +32,29 @@ run-server:
 	go run cmd/tales/main.go
 
 run-frontend:
-	echo "Starting tales frtontend ..."
+	echo "Starting main frontend ..."
 	cd public/app/ && npm run dev
 
-run: ; ${MAKE} -j4 run-server run-frontend
+run-mud-client:
+	echo "Starting mud-client (game client) ..."
+	cd public/mud-client/ && npm install && npm run dev
+
+run: ; ${MAKE} -j4 run-server run-frontend run-mud-client
 
 build:
-	echo "1. Building frontend"
+	echo "1. Building main frontend"
 	cd public/app/ && npm run build
-	echo "1a. Copying Svelte Flow CSS"
-	cp public/app/node_modules/@xyflow/svelte/dist/style.css public/app/public/svelte-flow.css
-	echo "1b. Copying frontend build into Go-embeddable dist folder"
+	echo "1a. Copying frontend build into Go-embeddable dist folder"
 	rm -rf pkg/webui/dist
 	mkdir -p pkg/webui/dist
-	cp -r public/app/public/* pkg/webui/dist/
+	cp -r public/app/dist/* pkg/webui/dist/
 
-	echo "2. Building backend"
+	echo "2. Building mud-client (game client)"
+	cd public/mud-client/ && npm install && npm run build
+	echo "2a. Copying mud-client build into Go-embeddable dist folder"
+	rm -rf pkg/webuiplay/dist
+	mkdir -p pkg/webuiplay/dist
+	cp -r public/mud-client/public/* pkg/webuiplay/dist/
+
+	echo "3. Building backend"
 	go build -o bin/tales cmd/tales/main.go

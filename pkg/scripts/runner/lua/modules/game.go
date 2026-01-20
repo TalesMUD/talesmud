@@ -17,7 +17,15 @@ func RegisterGameModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 		roomID := L.CheckString(1)
 		message := L.CheckString(2)
 		game := runner.GetGame()
-		if game == nil {
+		facade := runner.GetFacade()
+		if game == nil || facade == nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+
+		// Validate room exists to avoid "success but nothing happened" confusion.
+		if _, err := facade.RoomsService().FindByID(roomID); err != nil {
+			logrus.WithField("roomID", roomID).WithError(err).Warn("[Script] msgToRoom: room not found")
 			L.Push(lua.LBool(false))
 			return 1
 		}
@@ -102,6 +110,13 @@ func RegisterGameModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 		game := runner.GetGame()
 		facade := runner.GetFacade()
 		if game == nil || facade == nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+
+		// Validate room exists
+		if _, err := facade.RoomsService().FindByID(roomID); err != nil {
+			logrus.WithField("roomID", roomID).WithError(err).Warn("[Script] msgToRoomExcept: room not found")
 			L.Push(lua.LBool(false))
 			return 1
 		}

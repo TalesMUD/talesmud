@@ -1,88 +1,6 @@
-<style>
-  .sidelist {
-    width: 20em;
-  }
-  textarea {
-    color: white;
-    margin-top: 1em;
-  }
-  .search {
-    color: white !important;
-    padding: 0;
-    margin: 0;
-  }
-  .not_stored {
-    border: 1px dashed orange;
-  }
-  .card-panel {
-    padding-bottom: 0;
-    margin-bottom: 0;
-  }
-  .newbadge {
-    background-color: #26a69a;
-    border-radius: 5px;
-    color: #d8dee9;
-    padding: 3px;
-    width: auto;
-    text-overflow: ellipsis;
-  }
-
-  input {
-    color: white;
-  }
-  :global(input) {
-    color: #fff;
-  }
-  .margininput {
-    margin-left: 0.5em;
-    margin-right: 0.5em;
-  }
-  input:disabled {
-    color: white;
-  }
-  .no-padding {
-    padding: 0;
-  }
-
-  .first_label {
-    transform: translateX(-10px) translateY(-14px) scale(0.8);
-  }
-
-  .btn-small {
-    margin-right: 0.5em;
-    margin-left: 0.5em;
-  }
-
-  .collection-item {
-    color: #333;
-  }
-  .collection {
-    color: #333;
-  }
-
-  .materialize-textarea {
-    border-bottom: none;
-  }
-  .header {
-    font-size: 150%;
-    font-weight: 600;
-  }
-  .active {
-    color: #ccc;
-  }
-  label {
-    color: #00796b;
-  }
-</style>
-
 <script>
-  import ActionEditor from "./ActionEditor.svelte";
-  import Toolbar from "./Toolbar.svelte";
-  import { createStore } from "./CRUDEditorStore.js";
-  import { PlusIcon } from "svelte-feather-icons";
-  import { writable } from "svelte/store";
   import { onMount } from "svelte";
-  import { createAuth, getAuth } from "../auth.js";
+  import { getAuth } from "../auth.js";
 
   export let config;
   export let store;
@@ -93,28 +11,39 @@
     authToken: $authToken.slice(0, 20),
   };
 
+  let filterInput = "";
+  let hasLoadedData = false;
+
   const loadData = async (cb) => {
-    if (!$isAuthenticated) return;
+    if (!$isAuthenticated || !$authToken) return;
     config.get(
       $authToken,
       $store.filters,
       (all) => {
         store.setElements(all);
+        hasLoadedData = true;
         if (cb) cb();
       },
       (err) => console.log(err)
     );
   };
 
+  // Reactively load data when auth becomes available
+  $: if ($isAuthenticated && $authToken && !hasLoadedData) {
+    loadData(() => {
+      selectElement($store.elements[0]);
+    });
+  }
+
   onMount(async () => {
+    // Initial load attempt (may be skipped if auth not ready)
     loadData(() => {
       selectElement($store.elements[0]);
     });
   });
 
   const isDraft = (isnew) => {
-    console.log("re.selectedElement.isNew" + isnew);
-    if (isnew === true) return "not_stored";
+    if (isnew === true) return "border border-dashed border-amber-400/60";
     return "";
   };
 
@@ -130,7 +59,7 @@
         });
       },
       () => {
-        console.log("create error.");
+        console.log("delete error.");
       }
     );
   };
@@ -150,6 +79,7 @@
   };
 
   const selectElement = (element) => {
+    if (!element) return;
     if (config.beforeSelect) {
       config.beforeSelect(element);
     }
@@ -163,6 +93,7 @@
     if (filter.includes(":")) {
       let keyval = filter.split(":");
       store.addFilter(keyval[0], keyval[1]);
+      filterInput = "";
 
       loadData(() => {
         selectElement($store.elements[0]);
@@ -182,41 +113,9 @@
   };
 
   const refreshUI = () => {
-    setTimeout(function () {
-      let chips = document.querySelectorAll(".chips");
-      let filters = [];
-
-      // restore current filters
-      $store.filters.forEach((f) => {
-        filters.push({
-          tag: f.key + ":" + f.val,
-        });
-      });
-
-      M.Chips.init(chips, {
-        data: filters,
-        onChipAdd: (ev, chip) => addFilter(chip.firstChild.nodeValue),
-        onChipDelete: (ev, chip) => removeFilter(chip.firstChild.nodeValue),
-      });
-
-      var elems = document.querySelectorAll("select");
-      M.FormSelect.init(elems, {});
-
-      M.updateTextFields();
-      var elems2 = document.querySelectorAll(".collapsible");
-      if (elems2 != undefined) {
-        var instances = M.Collapsible.init(elems2, {});
-      }
-
-      var textareas = document.querySelectorAll(".materialize-textarea");
-      textareas.forEach((e) => {
-        M.textareaAutoResize(e);
-      });
-
-      if (config.refreshUI) {
-        config.refreshUI();
-      }
-    }, 50);
+    if (config.refreshUI) {
+      config.refreshUI();
+    }
   };
 
   const update = () => {
@@ -225,7 +124,6 @@
       $store.selectedElement.id,
       $store.selectedElement,
       () => {
-        console.log("update successful.");
         loadData();
       },
       () => {
@@ -234,179 +132,206 @@
     );
   };
 
-  const toolbarConfig = {
-    title: config.title,
-    actions: [
-      {
-        name: null,
-        color: "",
-        icon: "filter_alt",
-        fnc: () => {
-          store.toggleFilter();
-          refreshUI();
-        },
-      },
-      {
-        name: null,
-        icon: "add",
-        color: "",
-        fnc: () => config.new(selectElement),
-      },
-      ...config.actions, // add extra ctions
-    ],
+  const labels = {
+    create: config?.labels?.create || "Create",
+    update: config?.labels?.update || "Update",
+    delete: config?.labels?.delete || "Delete",
   };
 </script>
 
-<Toolbar toolbar="{toolbarConfig}" />
-
-<div class="row">
-
-  <!-- START: ELEMENT LIST (Master)-->
-  <div class="col s3">
-    <div class="collection">
-      {#each $store.elements as element}
-        <a
-          href="javascript:void(0)"
-          class="collection-item blue-grey lighten-5"
-          on:click="{selectElement(element)}"
-        >
-          {#if element && config.badge}
-            <span class="new badge" data-badge-caption="">
-              {config.badge(element)}
-            </span>
-          {/if}
-          {element.name}
-        </a>
-      {/each}
-    </div>
+{#if !$isAuthenticated}
+  <div class="px-6 py-12 text-center text-sm text-slate-500 dark:text-slate-400">
+    Please log in to access Creator tools.
   </div>
-  <!-- END: ELEMENT LIST -->
-
-  <div class="col s9">
-
-    {#if $store.filterActive}
-      <div class="card-panel blue-grey lighten-5" style="padding:15px;">
-        <div class="chips chips-placeholder search"></div>
-      </div>
-    {/if}
-
-    <!-- START: OBJECT PAGE (Detail)-->
-    {#if $store.selectedElement}
-      <div
-        class="card-panel blue-grey darken-3 {isDraft($store.selectedElement.isNew)}"
-      >
-        {#if $store.selectedElement.isNew}
-          <div class="row center-align" style="padding:0; margin-top: -2.6em;">
-            <div
-              class="chip"
-              style="color: #121212; margin: 0; background-color: orange;
-              text-align:center;"
-            >
-              Not Stored
-            </div>
-          </div>
-        {/if}
-
-        <div class="row">
-          <slot name="hero" />
-          <span class="header">{$store.selectedElement.name}</span>
-
-          {#if $store.selectedElement.isNew}
-            <button
-              on:click="{() => create()}"
-              class="waves-effect waves-light btn-small green right"
-            >
-              Create
-            </button>
-          {:else}
-            <button
-              on:click="{() => update()}"
-              class="waves-effect waves-light btn-small green right"
-            >
-              Update
-            </button>
-            <button
-              on:click="{() => deleteElement()}"
-              class="waves-effect waves-light btn-small red right"
-            >
-              Delete
-            </button>
-          {/if}
+{:else}
+  <div class="flex h-[calc(100vh-128px)]">
+    <aside class="w-72 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col">
+      <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+        <h2 class="text-sm font-semibold">{config.listTitle || config.title}</h2>
+        <div class="flex items-center gap-1">
+          <button
+            class="btn btn-ghost p-1.5"
+            type="button"
+            on:click={() => store.toggleFilter()}
+          >
+            <span class="material-symbols-outlined text-lg">filter_alt</span>
+          </button>
+          <button
+            class="btn btn-ghost p-1.5"
+            type="button"
+            on:click={() => config.new(selectElement)}
+          >
+            <span class="material-symbols-outlined text-lg">add</span>
+          </button>
         </div>
-
-        <div class="row">
-          <div class="no-padding input-field col s6">
+      </div>
+      {#if $store.filterActive}
+        <div class="p-3 border-b border-slate-200 dark:border-slate-800">
+          <div class="flex items-center gap-2">
             <input
-              placeholder="Name"
-              id="itemTemplate_name"
-              type="text"
-              bind:value="{$store.selectedElement.name}"
+              class="input-base text-xs"
+              placeholder="key:value"
+              bind:value={filterInput}
             />
-            <label class="first_label" for="itemTemplate_name">Name</label>
+            <button
+              class="btn btn-outline px-3 py-2 text-xs"
+              type="button"
+              on:click={() => addFilter(filterInput)}
+            >
+              Add
+            </button>
           </div>
-
-          {#if $store.selectedElement.isNew}
-            <div class="input-field col s4">
-              <input
-                placeholder="ID"
-                id="itemTemplate_id"
-                type="text"
-                bind:value="{$store.selectedElement.id}"
-              />
-              <label class="active" for="itemTemplate_id">ID</label>
-            </div>
-          {:else}
-            <div class="input-field col s4">
-              <input
-                placeholder="ID"
-                id="itemTemplate_id"
-                type="text"
-                bind:value="{$store.selectedElement.id}"
-                disabled
-              />
-              <label class="active" for="itemTemplate_id">ID</label>
+          {#if $store.filters.length}
+            <div class="mt-2 flex flex-wrap gap-2">
+              {#each $store.filters as filter}
+                <button
+                  class="text-xs rounded-full border border-slate-200 px-2 py-1 text-slate-500 hover:text-primary dark:border-slate-700"
+                  type="button"
+                  on:click={() => removeFilter(`${filter.key}:${filter.val}`)}
+                >
+                  {filter.key}:{filter.val}
+                </button>
+              {/each}
             </div>
           {/if}
-
         </div>
+      {/if}
+      <div class="flex-1 overflow-y-auto p-2 space-y-1">
+        {#each $store.elements as element}
+          <button
+            type="button"
+            class={`w-full text-left px-3 py-2.5 rounded-md transition-colors ${
+              element === $store.selectedElement
+                ? "bg-primary/10 text-primary border-l-2 border-primary"
+                : "hover:bg-slate-100 dark:hover:bg-slate-800"
+            }`}
+            on:click={() => selectElement(element)}
+          >
+            <div class="text-sm font-medium flex items-center gap-2">
+              <span>{element.name}</span>
+              {#if element.isNew}
+                <span class="text-[10px] uppercase tracking-wider bg-primary/20 text-primary px-2 py-0.5 rounded">
+                  Draft
+                </span>
+              {/if}
+            </div>
+            <div class="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
+              {config.badge ? config.badge(element) : `ID: ${element.id}`}
+            </div>
+          </button>
+        {/each}
+      </div>
+    </aside>
 
-        <div class="row">
-          <div class="input-field">
-            <textarea
-              placeholder="Description"
-              id="itemTemplate_description"
-              type="text"
-              class="materialize-textarea"
-              bind:value="{$store.selectedElement.description}"
-            ></textarea>
-            <label class="active" for="itemTemplate_description">
-              Description
-            </label>
-          </div>
-        </div>
-
-        {#if config.hideDetails == undefined || !config.hideDetails}
-          <div class="row">
-            <div class="input-field">
-              <textarea
-                placeholder="Details"
-                id="itemTemplate_detail"
-                type="text"
-                class="materialize-textarea"
-                bind:value="{$store.selectedElement.detail}"
-              ></textarea>
-              <label class="active" for="itemTemplate_detail">
-                Detail (look)
-              </label>
+    <section class="flex-1 overflow-y-auto">
+      <div class="p-8 pb-4">
+        <div class="max-w-5xl mx-auto">
+          <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+            <div class="space-y-1">
+              <h1 class="text-3xl font-bold tracking-tight">{config.title}</h1>
+              {#if config.subtitle}
+                <p class="text-slate-500 dark:text-slate-400 text-sm">
+                  {config.subtitle}
+                </p>
+              {/if}
+            </div>
+            <div class="flex items-center gap-3">
+              {#if config.extraActions}
+                {#each config.extraActions as action}
+                  <button
+                    class={`btn ${action.variant || "btn-outline"}`}
+                    type="button"
+                    on:click={() => action.onClick()}
+                  >
+                    {#if action.icon}
+                      <span class="material-symbols-outlined text-sm">{action.icon}</span>
+                    {/if}
+                    {action.label}
+                  </button>
+                {/each}
+              {/if}
+              {#if $store.selectedElement}
+                {#if $store.selectedElement.isNew}
+                  <button class="btn btn-primary" type="button" on:click={() => create()}>
+                    <span class="material-symbols-outlined text-sm">add_box</span>
+                    {labels.create}
+                  </button>
+                {:else}
+                  <button class="btn btn-danger" type="button" on:click={() => deleteElement()}>
+                    <span class="material-symbols-outlined text-sm">delete</span>
+                    {labels.delete}
+                  </button>
+                  <button class="btn btn-primary" type="button" on:click={() => update()}>
+                    <span class="material-symbols-outlined text-sm">save</span>
+                    {labels.update}
+                  </button>
+                {/if}
+              {/if}
             </div>
           </div>
-        {/if}
 
-        <slot name="content" />
+          {#if $store.selectedElement}
+            <div class={`card p-6 space-y-6 ${isDraft($store.selectedElement.isNew)}`}>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="md:col-span-2 space-y-4">
+                  <div class="space-y-1.5">
+                    <label class="label-caps" for="element_name">Name</label>
+                    <input
+                      id="element_name"
+                      type="text"
+                      class="input-base text-lg font-semibold"
+                      bind:value={$store.selectedElement.name}
+                    />
+                  </div>
+                  {#if !config.hideDetails}
+                    <div class="space-y-1.5">
+                      <label class="label-caps" for="element_description">Description</label>
+                      <textarea
+                        id="element_description"
+                        rows="3"
+                        class="input-base"
+                        bind:value={$store.selectedElement.description}
+                      />
+                    </div>
+                    <div class="space-y-1.5">
+                      <label class="label-caps" for="element_detail">Details</label>
+                      <textarea
+                        id="element_detail"
+                        rows="3"
+                        class="input-base"
+                        bind:value={$store.selectedElement.detail}
+                      />
+                    </div>
+                  {/if}
+                </div>
+                <div class="space-y-4">
+                  <div class="space-y-1.5">
+                    <label class="label-caps" for="element_id">ID</label>
+                    <input
+                      id="element_id"
+                      type="text"
+                      class="input-base font-mono text-xs"
+                      bind:value={$store.selectedElement.id}
+                      disabled={!$store.selectedElement.isNew}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <slot name="hero" />
+              <slot name="content" />
+            </div>
+
+            <div class="mt-6">
+              <slot name="extensions" />
+            </div>
+          {:else}
+            <div class="text-sm text-slate-500 dark:text-slate-400">
+              Select an entry to begin editing.
+            </div>
+          {/if}
+        </div>
       </div>
-
-      <slot name="extensions" />
-    {/if}
+    </section>
   </div>
-
-</div>
+{/if}

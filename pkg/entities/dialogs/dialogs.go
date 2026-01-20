@@ -171,7 +171,7 @@ func WriteToFile(dialog *Dialog, fileName string) {
 	if err == nil {
 		err = ioutil.WriteFile(fileName, result, 0644)
 		if err != nil {
-			log.Error("Error writing %s", fileName)
+			log.Errorf("Error writing %s", fileName)
 		}
 	}
 }

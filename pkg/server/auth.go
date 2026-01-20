@@ -135,7 +135,8 @@ func handleTokenSuccess(c *gin.Context, token *jwt.Token, facade service.Facade)
 // It decodes the JWT token and extracts the 'sub' claim.
 func setUserId(c *gin.Context, token *jwt.Token) {
 	splitted := strings.Split(token.Raw, ".")
-	if decoded, err := base64.RawStdEncoding.DecodeString(splitted[1]); err == nil {
+	// JWTs use URL-safe base64 encoding (RawURLEncoding), not standard base64
+	if decoded, err := base64.RawURLEncoding.DecodeString(splitted[1]); err == nil {
 		if sub, err := jsonparser.GetString(decoded, "sub"); err == nil {
 			c.Set("userid", sub)
 		} else {

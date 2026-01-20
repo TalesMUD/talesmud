@@ -18,6 +18,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/server/handler"
 	"github.com/talesmud/talesmud/pkg/service"
 	"github.com/talesmud/talesmud/pkg/webui"
+	"github.com/talesmud/talesmud/pkg/webuiplay"
 )
 
 // App ... main application structure
@@ -118,6 +119,11 @@ func (app *app) setupRoutes() {
 		Service: app.Facade.DialogsService(),
 	}
 
+	charTemplates := &handler.CharacterTemplatesHandler{
+		Repo:              app.Facade.CharacterTemplatesRepo(),
+		ItemTemplatesRepo: app.Facade.ItemsService().ItemTemplates(),
+	}
+
 	exp := &handler.ExportHandler{
 		RoomsService:      app.Facade.RoomsService(),
 		CharactersService: app.Facade.CharactersService(),
@@ -154,6 +160,7 @@ func (app *app) setupRoutes() {
 	{
 		// CRUD
 		protected.GET("characters", csh.GetCharacters)
+		protected.GET("my-characters", csh.GetMyCharacters)
 		protected.POST("characters", csh.PostCharacter)
 		protected.GET("characters/:id", csh.GetCharacterByID)
 		protected.DELETE("characters/:id", csh.DeleteCharacterByID)
@@ -163,6 +170,7 @@ func (app *app) setupRoutes() {
 
 		protected.GET("rooms", rooms.GetRooms)
 		protected.GET("rooms-vh", rooms.GetRoomValueHelp)
+		protected.GET("rooms/:id", rooms.GetRoomByID)
 
 		protected.POST("rooms", rooms.PostRoom)
 		protected.PUT("rooms/:id", rooms.PutRoom)
@@ -191,6 +199,7 @@ func (app *app) setupRoutes() {
 
 		protected.GET("world/map", worldRenderer.Render)
 		protected.GET("world/graph", worldRenderer.RenderGraphData)
+		protected.GET("world/rooms-minimal", worldRenderer.GetMinimalRooms)
 
 		protected.GET("user", usr.GetUser)
 		protected.PUT("user", usr.UpdateUser)
@@ -208,10 +217,20 @@ func (app *app) setupRoutes() {
 		protected.GET("dialogs/:id", dialogs.GetDialogByID)
 		protected.PUT("dialogs/:id", dialogs.UpdateDialogByID)
 		protected.DELETE("dialogs/:id", dialogs.DeleteDialogByID)
+
+		// Character Templates (DB-backed)
+		protected.GET("character-templates", charTemplates.GetCharacterTemplates)
+		protected.POST("character-templates", charTemplates.PostCharacterTemplate)
+		protected.GET("character-templates/:id", charTemplates.GetCharacterTemplateByID)
+		protected.PUT("character-templates/:id", charTemplates.UpdateCharacterTemplateByID)
+		protected.DELETE("character-templates/:id", charTemplates.DeleteCharacterTemplateByID)
+		protected.POST("character-templates/seed", charTemplates.SeedCharacterTemplates)
+		protected.GET("character-templates/presets", charTemplates.GetCharacterTemplatePresets)
 	}
 
 	public := r.Group("/api/")
 	{
+		// Legacy endpoint for old character creation flow (returns hardcoded templates)
 		public.GET("templates/characters", csh.GetCharacterTemplates)
 		public.GET("item-slots", items.GetItemSlots)
 		public.GET("item-qualities", items.GetItemQualities)
@@ -229,14 +248,11 @@ func (app *app) setupRoutes() {
 	ws.Use(AuthMiddleware(app.Facade))
 	ws.GET("", app.mud.HandleConnections)
 
-	//staticHandler := static.ServeRoot("/app/*filepath", "public/app/public/")
+	// Serve mud-client (game client) at /play
+	r.Use(SPAMiddleware("/play", webuiplay.FS(), webuiplay.IndexFile))
 
-	//staticHandler := gin.WrapH(http.Handler(http.FileServer(http.Dir("public/app/public"))))
-	//r.GET("/app/*any", staticHandler)
-	//r.NoRoute(staticHandler)
+	// Serve main app at /
 	r.Use(SPAMiddleware("/", webui.FS(), webui.IndexFile))
-
-	//r.Use(staticHandler)
 
 }
 

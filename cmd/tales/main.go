@@ -18,6 +18,17 @@ func main() {
 		log.Error("Error loading .env file")
 	}
 
+	logLevel := strings.ToLower(strings.TrimSpace(os.Getenv("LOG_LEVEL")))
+	if logLevel == "" {
+		logLevel = "info"
+	}
+	level, err := log.ParseLevel(logLevel)
+	if err != nil {
+		log.WithField("LOG_LEVEL", logLevel).Warn("Invalid LOG_LEVEL, defaulting to info")
+		level = log.InfoLevel
+	}
+	log.SetLevel(level)
+
 	fmt.Println("Starting tales server...")
 	driver := strings.ToLower(strings.TrimSpace(os.Getenv("DB_DRIVER")))
 	if driver == "" && strings.TrimSpace(os.Getenv("SQLITE_PATH")) != "" {

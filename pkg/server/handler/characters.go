@@ -27,6 +27,27 @@ func (csh *CharactersHandler) GetCharacters(c *gin.Context) {
 	}
 }
 
+//GetMyCharacters returns only the authenticated user's characters
+func (csh *CharactersHandler) GetMyCharacters(c *gin.Context) {
+	user, ok := c.Get("user")
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
+		return
+	}
+
+	userObj, ok := user.(*entities.User)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user object"})
+		return
+	}
+
+	if characters, err := csh.Service.FindAllForUser(userObj.ID); err == nil {
+		c.JSON(http.StatusOK, characters)
+	} else {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
+}
+
 //GetCharacterTemplates returns the list of item templates
 func (csh *CharactersHandler) GetCharacterTemplates(c *gin.Context) {
 	c.JSON(http.StatusOK, csh.Service.GetCharacterTemplates())

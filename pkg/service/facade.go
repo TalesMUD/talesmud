@@ -16,6 +16,7 @@ type Facade interface {
 	NPCsService() NPCsService
 	DialogsService() DialogsService
 	ConversationsService() ConversationsService
+	CharacterTemplatesRepo() repository.CharacterTemplatesRepository
 
 	Runner() scripts.ScriptRunner
 }
@@ -47,13 +48,14 @@ func NewFacade(repos repository.Factory, runner scripts.ScriptRunner) Facade {
 	npcsRepo := repos.NPCs()
 	dialogsRepo := repos.Dialogs()
 	conversationsRepo := repos.Conversations()
+	characterTemplatesRepo := repos.CharacterTemplates()
 
 	// Create services
 	ss := NewScriptsService(scriptsRepo)
 	is := NewItemsService(itemsRepo, itemTemplatesRepo, ss, runner)
 
 	return &facade{
-		css:   NewCharactersService(charactersRepo),
+		css:   NewCharactersService(charactersRepo, characterTemplatesRepo),
 		ps:    NewPartiesService(partiesRepo),
 		us:    NewUsersService(usersRepo),
 		rs:    NewRoomsService(roomsRepo),
@@ -99,4 +101,8 @@ func (f *facade) DialogsService() DialogsService {
 
 func (f *facade) ConversationsService() ConversationsService {
 	return f.convs
+}
+
+func (f *facade) CharacterTemplatesRepo() repository.CharacterTemplatesRepository {
+	return f.repos.CharacterTemplates()
 }

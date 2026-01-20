@@ -41,17 +41,21 @@ This document describes (1) what TalesMUD already supports and (2) the missing *
 
 ## 2. Current features (implemented)
 
-This section is a concise “what exists today” snapshot.
+This section is a concise "what exists today" snapshot.
 
 ### 2.1 World & movement
 
 - Rooms exist as persisted entities with:
   - Named exits (directional + custom exit names), room actions, and metadata (mood/background).
   - Room coordinates for map view (X/Y/Z).
-  - Lists of characters and NPCs present.
+  - Lists of characters, items, and NPCs present (by ID).
+  - Exit types: Normal (named), Direction (cardinal), Teleport (hidden/visible).
+  - Room actions with types: Response, RoomResponse, Script.
+  - Optional `OnEnterScriptID` for scripted room entry events.
 
 - Commands already cover:
   - Move (`north/south/east/west` + aliases), `look`, dynamic exits, and room actions.
+  - Interactive world map editor with Svelte Flow.
 
 ### 2.2 Multiplayer
 
@@ -60,31 +64,109 @@ This section is a concise “what exists today” snapshot.
   - See each other in rooms.
   - Use room/global chat and emotes (e.g., `scream`, `shrug`).
   - Use `who` to list online players.
+- 4-goroutine game loop: message receiver, game loop, broadcast handler, timeout handler.
 
 ### 2.3 Characters
 
-- Character creation + selection flow exists (templates, races/classes).
-- Core attributes (STR/DEX/CON/INT/WIS/CHA), HP, XP/Level, and “all-time stats” exist.
+- Character creation + selection flow exists via character templates.
+- Core attributes (STR/DEX/CON/INT/WIS/CHA), HP, XP/Level, and "all-time stats" exist.
+- **Character Templates** system fully implemented:
+  - Templates define race, class, attributes, backstory, origin area.
+  - Starting items with slot assignments for immediate equipping.
+  - Archetype categorization (warrior, mage, etc.).
+  - REST API at `/api/character-templates`.
+- 3 Races: Dwarf, Human, Elve.
+- 6 Classes: Warrior, Ranger, Hunter, Rogue, Mage, Cleric.
+- 12 Equipment slots: Head, Chest, Legs, Boots, Neck, Rings (x2), Hands, MainHand, OffHand, plus special slots.
+- Stats tracking: PlayersKilled, GoldCollected, QuestsCompleted.
 
-### 2.4 Items (foundational)
+### 2.4 Items (fully implemented)
 
-- **Item Templates** exist and are the canonical way to define an item “base”. A template should describe:
-  - The **base identity**: name, type (weapon/armor/consumable/currency/etc.), level requirement, base price, description, slot compatibility, etc.
-  - **Quality / variation rules**: when a template becomes a real item in the world, it can roll into different “qualities” (e.g., poor/common/rare) that affect stats via ranges or multipliers.
-  - **Stat ranges**: templates define what stats can vary and how (e.g., `damageMin`/`damageMax` ranges, `armor` range, etc.).
-  - **Random properties (“affixes”)**: templates define what extra properties can roll on drop (eligible affix pool, roll counts, weights, constraints like “no duplicate affixes”, etc.).
-- **Item Instances** are the actual items that exist in the world:
-  - They are created by instantiating an item template (e.g., loot drops, merchant stock creation, admin/world placement).
-  - On creation they **roll** their quality + variable stats + random properties as defined by the template.
-  - They then live somewhere concrete: in a **room** (on the ground), in a **player inventory/equipment**, or held by an **NPC** (merchant stock, carried loot, handed out, etc.).
-- Item entity also supports:
-  - Properties/attributes map for extensible stats (for both template defaults and instance-rolled values).
-  - Containers with nested items (`Items`, `MaxItems`, `Closed`, `Locked`).
+- **Item Templates** exist and are the canonical way to define an item "base":
+  - Base identity: name, type, level requirement, base price, description, slot compatibility.
+  - Optional script execution on item creation.
+  - REST API at `/api/item-templates`.
 
-### 2.5 NPCs & dialogs (branch work)
+- **Item Types:** Currency, Consumable, Armor, Weapon, Collectible, Quest, CraftingMaterial.
+- **Item Subtypes:** Sword, TwoHandSword, Axe, Spear, Shield.
+- **Quality Tiers:** Normal, Magic, Rare, Legendary, Mythic.
 
-- NPC entity exists and is trait-composed (DialogTrait / MerchantTrait / EnemyTrait placeholders).
-- Dialog system supports branching trees, templating, once-only options, idle dialogs, etc.
+- **Item Instances** are created via `ItemsService.CreateItemFromTemplate()`:
+  - Properties/attributes map for extensible stats.
+  - Container support: Closed, Locked, LockedBy, nested Items, MaxItems.
+  - NoPickup flag for fixed items.
+
+### 2.5 NPCs & dialogs (fully implemented)
+
+- **NPC Entity** with trait-based composition:
+  - Core fields: Name, Description, Race, Class, HP, Level.
+  - `DialogID` for interactive conversation trees.
+  - `IdleDialogID` with `IdleDialogTimeout` for ambient dialog.
+  - `EnemyTrait` (placeholder for combat - type field only).
+  - `MerchantTrait` (placeholder for trading - type field only).
+  - Helper methods: `IsEnemy()`, `HasDialog()`, `HasIdleDialog()`, `IsMerchant()`.
+  - REST API at `/api/npcs` with `?roomID` filter support.
+
+- **Dialog System** fully implemented:
+  - TreeNode format with NodeID, Text, AlternateTexts[], Options[], Answer.
+  - Random text selection from AlternateTexts array.
+  - `OrderedTexts` flag for sequential text on repeat visits.
+  - `RequiresVisitedDialogs` array for conditional options.
+  - `ShowOnlyOnce` flag for one-time options.
+  - `IsDialogExit` marker to end conversations.
+  - Mustache template rendering with variables (PLAYER, NPC, custom context).
+  - REST API at `/api/dialogs`.
+
+- **Conversation State Management:**
+  - Tracks CharacterID, TargetID, TargetType (npc|item), DialogID, CurrentNodeID.
+  - VisitedNodes map with visit counts.
+  - Context variables map for dynamic content.
+  - LastInteracted timestamp.
+  - 5-minute conversation timeout.
+  - Service methods: `GetOrCreateConversation()`, `GetCurrentNode()`, `GetFilteredOptions()`, `AdvanceConversation()`, `ResetConversation()`.
+
+- **Talk Command:** `talk <npc>` starts conversation with named NPC in current room.
+- **Dialog Selection:** Numeric input selects dialog options during conversations.
+
+### 2.6 Scripting system (Lua)
+
+- **Language:** Lua via gopher-lua (replaced legacy JavaScript/Otto).
+- **VM Pool:** 10 reusable Lua states for performance.
+- **Sandbox:** Disabled modules (os, io, debug, loadfile, dofile).
+- **Timeout:** 5-second execution limit per script.
+- **Script Types:** item, room, npc, quest, event, custom.
+
+- **7 API Modules** accessible via `tales.*`:
+  - `tales.items` - Item/template operations.
+  - `tales.rooms` - Room queries and management.
+  - `tales.characters` - Character operations.
+  - `tales.npcs` - NPC operations.
+  - `tales.dialogs` - Dialog/conversation management.
+  - `tales.game` - Messaging (room, character, broadcast).
+  - `tales.utils` - Dice rolls, random, UUID, time, etc.
+
+- **Event System** defined (28 event types) but only `player.enter_room` currently wired.
+
+### 2.7 Database support
+
+- **Dual-backend support** via `DB_DRIVER` environment variable:
+  - `mongo` - MongoDB with BSON collections.
+  - `sqlite` - SQLite with JSON document storage, WAL mode.
+- Factory pattern abstracts repository selection at startup.
+- All entities support both backends transparently.
+
+### 2.8 REST API
+
+Full CRUD endpoints for all entities:
+- `/api/characters`, `/api/character-templates`
+- `/api/rooms`, `/api/npcs`, `/api/dialogs`
+- `/api/items`, `/api/item-templates`
+- `/api/scripts` (with POST `/api/run-script/:id`)
+- `/api/user`
+- `/admin/world` (map visualization)
+- `/admin/export` (world data export)
+
+Authentication via Auth0 JWT (query param or Authorization header).
 
 ---
 
@@ -105,7 +187,9 @@ Damage, hit chance, and armor effects must be simple and visible (“You hit for
 
 ### 3.4 Small surface area for scripting
 
-Expose clear “hooks” (onAttack, onDeath, onLootOpen, onBuy, onSell) rather than letting scripts mutate anything.
+Expose clear "hooks" (onAttack, onDeath, onLootOpen, onBuy, onSell) rather than letting scripts mutate anything.
+
+**Current state:** Lua scripting with 7 API modules. 28 event types defined but only `player.enter_room` is wired. Scripts execute in sandboxed VM pool with 5-second timeout.
 
 ---
 

@@ -1,7 +1,7 @@
 // src/auth.js
 
-import { onMount, setContext, getContext } from "svelte";
-import { writable } from "svelte/store";
+import { setContext, getContext } from "svelte";
+import { writable, get } from "svelte/store";
 import createAuth0Client from "@auth0/auth0-spa-js";
 
 const isLoading = writable(true);
@@ -12,21 +12,24 @@ const authError = writable(null);
 const AUTH_KEY = {};
 
 // Refresh token 30 minutes before typical expiration
-// Auth0 access tokens typically expire in 24 hours, but we refresh more frequently
 const refreshRate = 30 * 60 * 1000; // 30 minutes
 
-function createAuth(config) {
-  let auth0 = null;
-  let intervalId = undefined;
+// Module-level auth0 client
+let auth0 = null;
+let initPromise = null;
 
-  onMount(async () => {
+async function initAuth0(config) {
+  if (auth0) return auth0;
+  if (initPromise) return initPromise;
+
+  initPromise = (async () => {
     try {
       auth0 = await createAuth0Client({
         domain: config.domain,
         client_id: config.client_id,
         audience: config.audience,
-        cacheLocation: "localstorage",  // Persist tokens across page reloads
-        useRefreshTokens: true,          // Enable refresh token rotation for long sessions
+        cacheLocation: "localstorage",
+        useRefreshTokens: true,
       });
 
       const params = new URLSearchParams(window.location.search);
@@ -40,7 +43,6 @@ function createAuth(config) {
       if (params.has("code")) {
         try {
           await auth0.handleRedirectCallback();
-          // Clear URL parameters after successful callback
           window.history.replaceState({}, document.title, window.location.pathname);
           authError.set(null);
         } catch (callbackError) {
@@ -53,40 +55,29 @@ function createAuth(config) {
       isAuthenticated.set(_isAuthenticated);
 
       if (_isAuthenticated) {
-        // Fetch user profile from Auth0
         userInfo.set(await auth0.getUser());
 
         try {
-          // Get the access token with proper parameter format
           const token = await auth0.getTokenSilently({ audience: config.audience });
           authToken.set(token);
 
           // Set up automatic token refresh
-          intervalId = setInterval(async () => {
+          setInterval(async () => {
             try {
               const newToken = await auth0.getTokenSilently({ audience: config.audience });
               authToken.set(newToken);
-              console.log("Token refreshed successfully");
             } catch (refreshError) {
               console.error("Token refresh failed:", refreshError);
-
-              // Check if it's a login_required error (session truly expired)
-              if (refreshError.error === "login_required" ||
-                  refreshError.error === "consent_required") {
+              if (refreshError.error === "login_required" || refreshError.error === "consent_required") {
                 isAuthenticated.set(false);
                 authToken.set("");
                 userInfo.set({});
                 authError.set(refreshError);
-                clearInterval(intervalId);
               }
-              // For other errors, we might just have a temporary network issue
-              // Don't immediately log out, let the next refresh attempt try again
             }
           }, refreshRate);
         } catch (tokenError) {
           console.error("Failed to get initial token:", tokenError);
-
-          // If we can't get a token but were authenticated, session may be stale
           if (tokenError.error === "login_required") {
             isAuthenticated.set(false);
             authError.set(tokenError);
@@ -99,16 +90,19 @@ function createAuth(config) {
     }
 
     isLoading.set(false);
+    return auth0;
+  })();
 
-    // Cleanup on component unmount
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-  });
+  return initPromise;
+}
+
+function createAuth(config) {
+  // Start initialization immediately
+  initAuth0(config);
 
   const login = async (redirectPage) => {
+    // Wait for auth0 to be ready
+    await initAuth0(config);
     if (!auth0) {
       console.error("Auth0 client not initialized");
       return;
@@ -116,22 +110,16 @@ function createAuth(config) {
 
     await auth0.loginWithRedirect({
       redirect_uri: redirectPage || window.location.origin,
-      // Removed prompt: "login" to allow silent authentication
     });
   };
 
   const logout = async () => {
+    await initAuth0(config);
     if (!auth0) {
       console.error("Auth0 client not initialized");
       return;
     }
 
-    // Clear interval before logout
-    if (intervalId) {
-      clearInterval(intervalId);
-    }
-
-    // Clear all auth stores
     authToken.set("");
     isAuthenticated.set(false);
     userInfo.set({});
@@ -142,8 +130,8 @@ function createAuth(config) {
     });
   };
 
-  // Check if session is still valid (useful for components to call)
   const checkSession = async () => {
+    await initAuth0(config);
     if (!auth0) return false;
 
     try {
@@ -170,14 +158,10 @@ function createAuth(config) {
     checkSession,
   };
 
-  // Put everything in context so that child
-  // components can access the state
   setContext(AUTH_KEY, auth);
-
   return auth;
 }
 
-// Helper function for child components to access the auth context
 function getAuth() {
   return getContext(AUTH_KEY);
 }

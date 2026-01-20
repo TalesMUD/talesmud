@@ -73,6 +73,9 @@ type Room struct {
 	AreaType string   `bson:"areaType,omitempty" json:"areaType"`
 	Tags     []string `bson:"tags" json:"tags"`
 
+	// Scripting hooks
+	OnEnterScriptID string `bson:"onEnterScriptID,omitempty" json:"onEnterScriptID,omitempty"`
+
 	Actions *Actions `bson:"actions,omitempty" json:"actions"`
 	Exits   *Exits   `bson:"exits,omitempty" json:"exits"`
 

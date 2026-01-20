@@ -107,7 +107,7 @@
 
   import MediaQuery from "../MediaQuery.svelte";
 
-  import CharacterCreator from "./../characters/CharacterCreator.svelte";
+  import CharacterCreatorModal from "./../characters/CharacterCreatorModal.svelte";
   import "../../node_modules/xterm/css/xterm.css";
   import { onMount, onDestroy } from "svelte";
   import { createAuth, getAuth } from "../auth.js";
@@ -120,6 +120,13 @@
   import { createClient, getClient } from "./Client";
   import { wsbackend } from "../api/base.js";
   import UserMenu from "../UserMenu.svelte";
+  import { getMyCharacters } from "../api/characters.js";
+
+  // Character list for autocomplete
+  let userCharacters = [];
+
+  // Character creator modal state
+  let showCharacterCreator = false;
 
   let toggleImage = true;
 
@@ -140,11 +147,21 @@
   };
 
   $: {
-    if (client && !ws) {
-      // connect to websocket server
+    if (client && !ws && $authToken) {
+      // connect to websocket server only when auth token is available
       const url = wsbackend + "?access_token=";
       ws = new WebSocket(url + $authToken);
       client.setWSClient(ws);
+
+      // Load user's characters for autocomplete
+      getMyCharacters(
+        $authToken,
+        (characters) => {
+          userCharacters = characters || [];
+          console.log("Loaded characters for autocomplete:", userCharacters.map(c => c.name));
+        },
+        (err) => console.log("Failed to load characters for autocomplete:", err)
+      );
     }
 
     // set document background
@@ -202,10 +219,21 @@
 
   const characterCreator = () => {
     console.log("CREATE CHARACTER");
+    showCharacterCreator = true;
+  };
 
-    var Modalelem = document.querySelector(".modal");
-    var instance = M.Modal.init(Modalelem);
-    instance.open();
+  const onCharacterCreatorClose = () => {
+    showCharacterCreator = false;
+    // Refresh character list for autocomplete
+    if ($authToken) {
+      getMyCharacters(
+        $authToken,
+        (characters) => {
+          userCharacters = characters || [];
+        },
+        (err) => console.log("Failed to refresh characters:", err)
+      );
+    }
   };
 
   async function setupTerminal() {
@@ -262,12 +290,27 @@
   });
 
   function autocompleteCommonCommands(index, tokens) {
-    if (index == 0) return ["north", "east", "south", "west", "say"];
+    // First token: suggest common commands
+    if (index == 0) {
+      return [
+        "north", "east", "south", "west",
+        "say", "sc", "lc", "nc",
+        "help", "who", "inventory", "look"
+      ];
+    }
+
+    // Second token for "sc" or "selectcharacter": suggest character names
+    if (index == 1 && (tokens[0] === "sc" || tokens[0] === "selectcharacter")) {
+      const names = userCharacters.map((c) => c.name);
+      console.log("Autocomplete sc - characters:", names, "tokens:", tokens);
+      return names;
+    }
+
     return [];
   }
 </script>
 
-<CharacterCreator />
+<CharacterCreatorModal isOpen={showCharacterCreator} onClose={onCharacterCreatorClose} />
 
 <div class="gameContainer">
   <div class="roomImage center-align z-depth-5">
