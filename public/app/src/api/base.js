@@ -1,8 +1,12 @@
-const backend = "http://localhost:8010/api"
-const wsbackend = "ws://localhost:8010/ws"
+const defaultOrigin =
+  typeof window !== "undefined" ? window.location.origin : "http://localhost:8010";
 
-//TODO: make this configurable
-//const backend = "https://talesofapirate.com/api"
-//const wsbackend = "wss://talesofapirate.com/ws"
+const defaultWsOrigin =
+  typeof window !== "undefined"
+    ? `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}`
+    : "ws://localhost:8010";
 
-export { backend, wsbackend};
+const backend = import.meta.env.VITE_API_BASE_URL || `${defaultOrigin}/api`;
+const wsbackend = import.meta.env.VITE_WS_BASE_URL || `${defaultWsOrigin}/ws`;
+
+export { backend, wsbackend };

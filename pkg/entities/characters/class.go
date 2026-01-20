@@ -45,6 +45,20 @@ var (
 		ArmorType:   ArmorTypeLeather,
 		CombatType:  CombaTypeRanged,
 	}
+	ClassHunter Class = Class{
+		ID:          "hunter",
+		Name:        "Hunter",
+		Description: "Woodsman and tracker, deadly at range and in the wilds",
+		ArmorType:   ArmorTypeLeather,
+		CombatType:  CombaTypeRanged,
+	}
+	ClassRogue Class = Class{
+		ID:          "rogue",
+		Name:        "Rogue",
+		Description: "Agile skirmisher who relies on speed, precision and tricks",
+		ArmorType:   ArmorTypeLeather,
+		CombatType:  CombatTypeMelee,
+	}
 	ClassWizard Class = Class{
 		ID:          "wizard",
 		Name:        "Wizard",

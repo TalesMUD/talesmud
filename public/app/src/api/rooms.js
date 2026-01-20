@@ -108,4 +108,56 @@ function createRoom(token, room, cb, errorCb) {
     .catch((err) => errorCb(err));
 }
 
-export { getRoom, getRoomOfTheDay, deleteRoom, getRoomsValueHelp, getRooms, updateRoom, createRoom };
+// Promise-based wrappers for async/await usage
+function getRoomAsync(token, id) {
+  return new Promise((resolve, reject) => {
+    getRoom(token, id, resolve, reject);
+  });
+}
+
+function getRoomsAsync(token, filters = []) {
+  return new Promise((resolve, reject) => {
+    getRooms(token, filters, resolve, reject);
+  });
+}
+
+function getRoomsValueHelpAsync(token) {
+  return new Promise((resolve, reject) => {
+    getRoomsValueHelp(token, resolve, reject);
+  });
+}
+
+function createRoomAsync(token, room) {
+  return new Promise((resolve, reject) => {
+    createRoom(token, room, resolve, reject);
+  });
+}
+
+function updateRoomAsync(token, id, room) {
+  return new Promise((resolve, reject) => {
+    updateRoom(token, id, room, resolve, reject);
+  });
+}
+
+function deleteRoomAsync(token, id) {
+  return new Promise((resolve, reject) => {
+    deleteRoom(token, id, resolve, reject);
+  });
+}
+
+export {
+  getRoom,
+  getRoomOfTheDay,
+  deleteRoom,
+  getRoomsValueHelp,
+  getRooms,
+  updateRoom,
+  createRoom,
+  // Async versions
+  getRoomAsync,
+  getRoomsAsync,
+  getRoomsValueHelpAsync,
+  createRoomAsync,
+  updateRoomAsync,
+  deleteRoomAsync,
+};

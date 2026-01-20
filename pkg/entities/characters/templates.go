@@ -1,18 +1,19 @@
 package characters
 
-//CharacterTemplate ...
-type CharacterTemplate struct {
+// CharacterCreationTemplate is the legacy hardcoded template type used by the old
+// character creation endpoint. This will be replaced by DB-backed templates.
+type CharacterCreationTemplate struct {
 	Character
 	TemplateID int32 `json:"templateId"`
 }
 
-//CharacterTemplates TODO: move to DB or yml?
-var CharacterTemplates = []CharacterTemplate{
+// CharacterCreationTemplates TODO: move to DB or yml?
+var CharacterCreationTemplates = []CharacterCreationTemplate{
 	{
 		TemplateID: 1,
 		Character: Character{
-			Name:             "Mr. Warrior",
-			Description:      "Create a new Warrior",
+			Name:             "Warrior",
+			Description:      "Frontline melee fighter with high durability",
 			Race:             RaceHuman,
 			Class:            ClassWarrior,
 			CurrentHitPoints: 25,
@@ -20,30 +21,30 @@ var CharacterTemplates = []CharacterTemplate{
 			XP:               0,
 			Level:            1,
 			// basepoints for level 1 should sum to 50
-			Attributes: createBaseAttributes(11, 8, 5, 6, 20),
+			Attributes: createBaseAttributes(14, 7, 4, 5, 20),
 		},
 	},
 	{
 
 		TemplateID: 2,
 		Character: Character{
-			Name:             "Mrs. Longstride",
-			Description:      "Create a new Ranger",
+			Name:             "Hunter",
+			Description:      "Ranged specialist with great mobility and stamina",
 			Race:             RaceElve,
-			Class:            ClassRanger,
+			Class:            ClassHunter,
 			CurrentHitPoints: 20,
 			MaxHitPoints:     20,
 			XP:               0,
 			Level:            1,
 			// basepoints for level 1 should sum to 50
-			Attributes: createBaseAttributes(7, 15, 5, 6, 17),
+			Attributes: createBaseAttributes(8, 18, 6, 6, 12),
 		},
 	},
 	{
 		TemplateID: 3,
 		Character: Character{
-			Name:             "Gumdalf the Bay",
-			Description:      "Create a new Wizard",
+			Name:             "Wizard",
+			Description:      "Spellcaster with high intelligence and wisdom",
 			Race:             RaceDwarf,
 			Class:            ClassWizard,
 			CurrentHitPoints: 17,
@@ -51,7 +52,22 @@ var CharacterTemplates = []CharacterTemplate{
 			XP:               0,
 			Level:            1,
 			// basepoints for level 1 should sum to 50
-			Attributes: createBaseAttributes(5, 5, 15, 12, 13),
+			Attributes: createBaseAttributes(4, 6, 18, 14, 8),
+		},
+	},
+	{
+		TemplateID: 4,
+		Character: Character{
+			Name:             "Rogue",
+			Description:      "Swift melee skirmisher focused on dexterity and precision",
+			Race:             RaceHuman,
+			Class:            ClassRogue,
+			CurrentHitPoints: 19,
+			MaxHitPoints:     19,
+			XP:               0,
+			Level:            1,
+			// basepoints for level 1 should sum to 50
+			Attributes: createBaseAttributes(10, 18, 6, 5, 11),
 		},
 	},
 }

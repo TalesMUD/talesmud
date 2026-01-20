@@ -1,15 +1,11 @@
-<style>
-
-</style>
-
 <script>
   import { writable } from "svelte/store";
-  import ExitEditor from "./ExitEditor.svelte";
-  import Toolbar from "./Toolbar.svelte";
   import { onMount } from "svelte";
+  import { v4 as uuidv4 } from "uuid";
+
   import CRUDEditor from "./CRUDEditor.svelte";
   import { createStore } from "./CRUDEditorStore.js";
-  import { v4 as uuidv4 } from "uuid";
+  import ExitEditor from "./ExitEditor.svelte";
   import ActionEditor from "./ActionEditor.svelte";
 
   import { getAuth } from "../auth.js";
@@ -27,12 +23,23 @@
     updateRoom,
     createRoom,
   } from "../api/rooms.js";
+  import { getScripts } from "../api/scripts.js";
 
   const roomsValueHelp = writable([]);
+  const scriptsValueHelp = writable([]);
+  const store = createStore();
+  let hasLoadedScripts = false;
+  let hasLoadedRooms = false;
 
   const config = {
     title: "Manage Rooms",
-    actions: [],
+    subtitle: "Configure environment, exits, and NPC populations.",
+    listTitle: "Rooms",
+    labels: {
+      create: "Create Room",
+      update: "Update Room",
+      delete: "Delete",
+    },
     get: getRooms,
     getElement: getRoom,
     create: createRoom,
@@ -44,54 +51,58 @@
           background: "",
         };
       }
-    },
-    refreshUI: () => {
-      var elems = document.querySelectorAll("select");
-      var instances = M.FormSelect.init(elems, {});
-
-      M.updateTextFields();
-      var elems2 = document.querySelectorAll(".collapsible");
-      if (elems2 != undefined) {
-        var instances = M.Collapsible.init(elems2, {});
+      if (element.onEnterScriptID === undefined) {
+        element.onEnterScriptID = "";
       }
-
-      var textareas = document.querySelectorAll(".materialize-textarea");
-      textareas.forEach((e) => {
-        M.textareaAutoResize(e);
-      });
-
-      // trigger valuehelp updates
-      roomsValueHelp.set($roomsValueHelp);
+      // Ensure coords object exists for editing
+      if (element.coords === undefined || element.coords === null) {
+        element.coords = { x: 0, y: 0, z: 0 };
+      }
     },
-
-    new: (select) => {
-      select({
-        name: "New Room",
-        description: "",
-        detail: "",
-        areaType: "",
-        area: "",
-        id: uuidv4(),
-        isNew: true,
-        exits: [],
-        actions: [],
-        meta: {
-          background: "",
-        },
-      });
-    },
-
-    badge: (element) => {
-      return element.area;
-    },
+    badge: (element) => element.area,
   };
-  // create store outside of the component to use it in the slot..
-  const store = createStore();
+
+  const createNewRoom = () => {
+    config.new((element) => {
+      if (config.beforeSelect) {
+        config.beforeSelect(element);
+      }
+      store.setSelectedElement(element);
+    });
+  };
+
+  config.extraActions = [
+    {
+      label: "Create Room",
+      icon: "add_box",
+      variant: "btn-outline",
+      onClick: createNewRoom,
+    },
+  ];
+
+  config.new = (select) => {
+    select({
+      name: "New Room",
+      description: "",
+      detail: "",
+      areaType: "",
+      area: "",
+      roomType: "",
+      id: uuidv4(),
+      isNew: true,
+      exits: [],
+      actions: [],
+      coords: { x: 0, y: 0, z: 0 },
+      meta: {
+        background: "",
+      },
+    });
+  };
 
   const deleteExit = (exit) => {
     store.update((state) => {
       state.selectedElement.exits = state.selectedElement.exits.filter(
-        (x) => x.name != exit.name
+        (x) => x.name !== exit.name
       );
       return state;
     });
@@ -110,13 +121,12 @@
       });
       return state;
     });
-    config.refreshUI();
   };
 
-  const deleteAction = (exit) => {
+  const deleteAction = (action) => {
     store.update((state) => {
       state.selectedElement.actions = state.selectedElement.actions.filter(
-        (x) => x.name != exit.name
+        (x) => x.name !== action.name
       );
       return state;
     });
@@ -137,168 +147,283 @@
       });
       return state;
     });
-    config.refreshUI();
   };
-  onMount(async () => {
+
+  const loadRoomsValueHelp = () => {
+    if (hasLoadedRooms) return;
+    if (!$isAuthenticated || !$authToken) return;
+
     getRoomsValueHelp(
       $authToken,
       (roomsvh) => {
-        roomsValueHelp.set(roomsvh);
+        console.log("Loaded rooms value help:", roomsvh?.length || 0, "rooms");
+        roomsValueHelp.set(roomsvh || []);
+        hasLoadedRooms = true;
       },
-      () => {}
+      (err) => {
+        console.log("Failed to load rooms value help:", err);
+      }
     );
-  });
-  /////////
+  };
 
-  const exitsToolbar = {
-    title: "Exits",
-    small: true,
-    actions: [
-      {
-        icon: "add",
-        fnc: () => {
-          createExit();
-        },
+  onMount(() => {
+    loadRoomsValueHelp();
+  });
+
+  const loadScripts = () => {
+    if (hasLoadedScripts) return;
+    if (!$isAuthenticated || !$authToken) return;
+
+    getScripts(
+      $authToken,
+      [],
+      (scripts) => {
+        scriptsValueHelp.set(scripts || []);
+        hasLoadedScripts = true;
       },
-    ],
+      (err) => {
+        console.log("Failed to load scripts for Rooms editor:", err);
+      }
+    );
   };
-  const actionsToolbar = {
-    title: "Actions",
-    small: true,
-    actions: [
-      {
-        icon: "add",
-        fnc: () => {
-          createAction();
-        },
-      },
-    ],
-  };
+
+  // Load data once auth token becomes available (auth init may complete after onMount).
+  $: if ($isAuthenticated && $authToken && !hasLoadedScripts) {
+    loadScripts();
+  }
+
+  $: if ($isAuthenticated && $authToken && !hasLoadedRooms) {
+    loadRoomsValueHelp();
+  }
 </script>
 
-<CRUDEditor store="{store}" config="{config}">
-
-  <div slot="content">
-
-    <div class="row">
-
-      <div class="no-padding input-field col s4">
+<CRUDEditor store={store} config={config}>
+  <div slot="content" class="space-y-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="space-y-1.5">
+        <label class="label-caps" for="area">Area</label>
         <input
-          placeholder="Area"
           id="area"
           type="text"
-          bind:value="{$store.selectedElement.area}"
+          class="input-base"
+          bind:value={$store.selectedElement.area}
         />
-        <label class="active first_label" for="area">Area</label>
       </div>
 
-      <div class="input-field col s4">
+      <div class="space-y-1.5">
+        <label class="label-caps" for="area_type">Area Type</label>
         <input
-          placeholder="Area Type"
           id="area_type"
           type="text"
-          bind:value="{$store.selectedElement.areaType}"
+          class="input-base"
+          bind:value={$store.selectedElement.areaType}
         />
-        <label class="active" for="area_type">Area Type</label>
       </div>
 
-      <div class="input-field col s4">
+      <div class="space-y-1.5">
+        <label class="label-caps" for="room_type">Room Type</label>
         <input
-          placeholder="Room Type"
           id="room_type"
           type="text"
-          bind:value="{$store.selectedElement.roomType}"
+          class="input-base"
+          bind:value={$store.selectedElement.roomType}
         />
-        <label class="active" for="room_type">Room Type</label>
       </div>
     </div>
-    <div class="row">
-      <div class="no-padding input-field col s6">
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="space-y-1.5">
+        <label class="label-caps" for="room_background">Background Image ID</label>
         <input
-          placeholder="Background Image ID"
           id="room_background"
           type="text"
-          bind:value="{$store.selectedElement.meta.background}"
+          class="input-base"
+          bind:value={$store.selectedElement.meta.background}
         />
-        <label class="first_label" for="room_background">Backgruond</label>
+      </div>
+
+      <div class="space-y-1.5">
+        <label class="label-caps" for="room_on_enter_script">On Enter Script</label>
+        <select
+          id="room_on_enter_script"
+          class="input-base"
+          bind:value={$store.selectedElement.onEnterScriptID}
+        >
+          <option value="">None</option>
+          {#if $scriptsValueHelp}
+            {#each $scriptsValueHelp as script}
+              <option value={script.id}>{script.name} ({script.id})</option>
+            {/each}
+          {/if}
+        </select>
+        <p class="text-[10px] text-slate-400">
+          Runs when a player enters this room (e.g., walking in or selecting a character).
+        </p>
       </div>
     </div>
 
-    {#if $store.selectedElement.coords}
-      <div class="row">
-
-        <div class="no-padding input-field col s2">
-          <input
-            placeholder="X"
-            id="x"
-            type="text"
-            bind:value="{$store.selectedElement.coords.x}"
-          />
-          <label class="first_label" for="x">X</label>
+    <!-- Map Coordinates & Preview Section -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Mini Map Preview -->
+      <div class="p-4 rounded-lg bg-slate-800/50 border border-slate-700">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-[10px] font-bold uppercase text-primary">Map Preview</span>
+          <span class="text-[10px] text-slate-400 font-mono">
+            ({$store.selectedElement.coords?.x ?? 0}, {$store.selectedElement.coords?.y ?? 0}, {$store.selectedElement.coords?.z ?? 0})
+          </span>
         </div>
-
-        <div class="input-field col s2">
-          <input
-            placeholder="Y"
-            id="y"
-            type="text"
-            bind:value="{$store.selectedElement.coords.y}"
-          />
-          <label class="active" for="y">Y</label>
+        <div class="mini-map-grid">
+          <!-- 3x3 grid showing current room and adjacent positions -->
+          {#each [-1, 0, 1] as dy}
+            {#each [-1, 0, 1] as dx}
+              {@const isCenter = dx === 0 && dy === 0}
+              {@const exitDir = dx === -1 ? 'west' : dx === 1 ? 'east' : dy === -1 ? 'north' : dy === 1 ? 'south' : null}
+              {@const hasExit = exitDir && $store.selectedElement.exits?.some(e => e.name?.toLowerCase() === exitDir)}
+              {@const isDiagonal = dx !== 0 && dy !== 0}
+              <div
+                class="mini-map-cell"
+                class:current={isCenter}
+                class:has-exit={hasExit && !isDiagonal}
+                class:diagonal={isDiagonal}
+              >
+                {#if isCenter}
+                  <span class="text-[10px] font-bold text-primary">●</span>
+                {:else if hasExit && !isDiagonal}
+                  <span class="text-[8px] text-cyan-400">◆</span>
+                {:else if !isDiagonal}
+                  <span class="text-[8px] text-slate-600">·</span>
+                {/if}
+              </div>
+            {/each}
+          {/each}
         </div>
-
-        <div class="input-field col s2">
-          <input
-            placeholder="Z"
-            id="z"
-            type="text"
-            bind:value="{$store.selectedElement.coords.z}"
-          />
-          <label class="active" for="z">Z</label>
+        <div class="mt-2 text-[9px] text-slate-500 text-center">
+          ● = This Room | ◆ = Has Exit
         </div>
       </div>
-    {/if}
+
+      <!-- Coordinates Input -->
+      <div class="p-4 rounded-lg bg-slate-800/50 border border-slate-700">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-[10px] font-bold uppercase text-primary">Grid Coordinates</span>
+          <span class="text-[9px] text-slate-500">Z: -1=underground, 0=ground, 1+=above</span>
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <div class="space-y-1.5">
+            <label class="label-caps" for="coord_x">X (East/West)</label>
+            <input
+              id="coord_x"
+              type="number"
+              class="input-base text-center font-mono"
+              bind:value={$store.selectedElement.coords.x}
+            />
+          </div>
+          <div class="space-y-1.5">
+            <label class="label-caps" for="coord_y">Y (North/South)</label>
+            <input
+              id="coord_y"
+              type="number"
+              class="input-base text-center font-mono"
+              bind:value={$store.selectedElement.coords.y}
+            />
+          </div>
+          <div class="space-y-1.5">
+            <label class="label-caps" for="coord_z">Z (Level)</label>
+            <input
+              id="coord_z"
+              type="number"
+              class="input-base text-center font-mono"
+              bind:value={$store.selectedElement.coords.z}
+            />
+          </div>
+        </div>
+        <p class="mt-2 text-[9px] text-slate-500">
+          Set coordinates to place this room on the world map grid.
+          Rooms without coordinates won't appear on the visual map.
+        </p>
+      </div>
+    </div>
   </div>
 
-  <div slot="extensions">
-
-    <Toolbar toolbar="{exitsToolbar}" />
-    {#if $store.selectedElement.exits}
-      <div class="card-panel blue-grey darken-3">
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Description</th>
-              <th>Target</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each $store.selectedElement.exits as exit}
-              <ExitEditor
-                exit="{exit}"
-                valueHelp="{roomsValueHelp}"
-                store="{store}"
-                deleteExit="{deleteExit}"
-              />
-            {/each}
-          </tbody>
-        </table>
+  <div slot="extensions" class="space-y-6">
+    <div class="card p-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-2">
+          <span class="material-symbols-outlined text-lg">explore</span>
+          Exits
+        </h3>
+        <button class="text-xs text-primary hover:underline" type="button" on:click={createExit}>
+          + Link Manual
+        </button>
       </div>
-    {/if}
+      <div class="space-y-3">
+        {#if $store.selectedElement.exits}
+          {#each $store.selectedElement.exits as exit}
+            <ExitEditor
+              exit={exit}
+              valueHelp={roomsValueHelp}
+              store={store}
+              deleteExit={deleteExit}
+            />
+          {/each}
+        {/if}
+      </div>
+    </div>
 
-    <Toolbar toolbar="{actionsToolbar}" />
-
-    {#if $store.selectedElement.actions}
-      <ul
-        class="card-panel blue-grey darken-3 collapsible"
-        style="padding: 0; border: none;"
-      >
-        {#each $store.selectedElement.actions as action}
-          <ActionEditor action="{action}" deleteAction="{deleteAction}" />
-        {/each}
-      </ul>
-    {/if}
+    <div class="card p-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-2">
+          <span class="material-symbols-outlined text-lg">bolt</span>
+          Actions
+        </h3>
+        <button class="text-xs text-primary hover:underline" type="button" on:click={createAction}>
+          + Add Action
+        </button>
+      </div>
+      <div class="space-y-3">
+        {#if $store.selectedElement.actions}
+          {#each $store.selectedElement.actions as action}
+            <ActionEditor action={action} deleteAction={deleteAction} />
+          {/each}
+        {/if}
+      </div>
+    </div>
   </div>
 </CRUDEditor>
+
+<style>
+  .mini-map-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    width: 100%;
+    max-width: 120px;
+    margin: 0 auto;
+    aspect-ratio: 1;
+  }
+
+  .mini-map-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(30, 41, 59, 0.5);
+    border: 1px solid rgba(51, 65, 85, 0.5);
+    border-radius: 2px;
+    aspect-ratio: 1;
+  }
+
+  .mini-map-cell.current {
+    background: rgba(0, 188, 212, 0.2);
+    border-color: rgba(0, 188, 212, 0.5);
+  }
+
+  .mini-map-cell.has-exit {
+    background: rgba(0, 188, 212, 0.1);
+    border-color: rgba(0, 188, 212, 0.3);
+  }
+
+  .mini-map-cell.diagonal {
+    background: transparent;
+    border-color: transparent;
+  }
+</style>

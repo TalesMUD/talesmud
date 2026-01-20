@@ -193,6 +193,8 @@ local count = tales.dialogs.getVisitCount(conversationID, nodeID)
 
 ```lua
 -- Send message to all players in room
+-- NOTE: roomID must be the room's stored ID (the same value as `room.id` in the database / API),
+-- not the background image name or a display name.
 tales.game.msgToRoom(roomID, "A rumbling sound echoes...")
 
 -- Send message to specific character
@@ -273,6 +275,13 @@ ctx.item       -- Item involved
 
 The event system allows scripts to respond to game events.
 
+### Current Status (What Works Today)
+
+- **Room enter trigger (implemented)**: you can attach a Lua script to a room via `room.onEnterScriptID`. The server runs it whenever a player enters the room (walking in or selecting a character).
+  - **Creator UI**: Creator → Rooms → **On Enter Script**
+  - **Context available**: `ctx.eventType` (`"player.enter_room"`), `ctx.room`, `ctx.toRoom`, plus `ctx.character` / `ctx.user` when available.
+- **General event registry**: the registry and event types exist in code, but most event types are not wired into gameplay yet.
+
 ### Event Types
 
 | Event | Description |
@@ -308,8 +317,8 @@ Event scripts receive context data specific to the event type:
 -- Player movement events
 ctx.character  -- The moving character
 ctx.room       -- Current room (after move for enter, before for leave)
-ctx.fromRoom   -- Previous room (for enter_room)
-ctx.toRoom     -- Destination room (for leave_room)
+ctx.fromRoom   -- Previous room (when available)
+ctx.toRoom     -- Destination room (when available)
 
 -- NPC events
 ctx.npc        -- The NPC

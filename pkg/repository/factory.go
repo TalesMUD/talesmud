@@ -11,6 +11,7 @@ type Factory interface {
 	Scripts() ScriptsRepository
 	Items() ItemsRepository
 	ItemTemplates() ItemTemplatesRepository
+	CharacterTemplates() CharacterTemplatesRepository
 	NPCs() NPCsRepository
 	Dialogs() DialogsRepository
 	Conversations() ConversationsRepository
@@ -53,6 +54,10 @@ func (f *MongoFactory) Items() ItemsRepository {
 
 func (f *MongoFactory) ItemTemplates() ItemTemplatesRepository {
 	return NewMongoDBItemTemplatesRepository(f.db)
+}
+
+func (f *MongoFactory) CharacterTemplates() CharacterTemplatesRepository {
+	return NewMongoDBCharacterTemplatesRepository(f.db)
 }
 
 func (f *MongoFactory) NPCs() NPCsRepository {

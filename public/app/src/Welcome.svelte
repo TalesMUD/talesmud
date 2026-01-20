@@ -1,44 +1,13 @@
-<style>
-  .loginText {
-    color: greenyellow;
-  }
-  .welcome {
-    padding: 1em;
-  }
-  .modal {
-    background-color: darkslategrey;
-  }
-
-  .room {
-    border-radius: 0.5em;
-    image-rendering: pixelated;
-  }
-
-  .highlightContainer {
-    float: right;
-    margin: 1em;
-  }
-  .roomHighlight {
-    background-color: #00000066;
-    border: 1px solid #ffffff33;
-    border-radius: 1em;
-    padding: 0.5em;
-  }
-</style>
-
 <script>
-  import Sprites from "./game/Sprites.svelte";
   import CharacterCreator from "./characters/CharacterCreator.svelte";
   import { onMount } from "svelte";
-  import { Router, Route, Link, navigateTo } from "yrv";
 
   import { getRoomOfTheDay } from "./api/rooms";
 
-  import { createAuth, getAuth } from "./auth.js";
-  import axios from "axios";
-  import { onInterval } from "./utils.js";
+  import { getAuth } from "./auth.js";
   import { getUser } from "./api/user.js";
   import { writable } from "svelte/store";
+  import { onDestroy } from "svelte";
 
   const nickname = writable("stranger");
   const roomOfTheDay = writable({
@@ -83,151 +52,202 @@
 
   const loadUser = async () => {};
 
+  let playMenuOpen = false;
+  let playMenuEl;
+
+  function togglePlayMenu(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    playMenuOpen = !playMenuOpen;
+  }
+
+  function onDocumentClick(e) {
+    if (!playMenuEl) return;
+    if (!playMenuEl.contains(e.target)) playMenuOpen = false;
+  }
+
   onMount(async () => {
+    document.addEventListener("click", onDocumentClick);
     getRoomOfTheDay(
       (room) => {
         roomOfTheDay.set(room);
       },
       (error) => console.log(error)
     );
-
-    document.addEventListener("DOMContentLoaded", function () {
-      var elems = document.querySelectorAll(".modal");
-      var instances = M.Modal.init(elems, {});
-    });
-
     await loadUser();
+  });
+
+  onDestroy(() => {
+    document.removeEventListener("click", onDocumentClick);
   });
 </script>
 
 {#if $isLoading}
-  <div class="progress">
-    <div class="indeterminate"></div>
+  <div class="h-1 w-full bg-slate-200 dark:bg-slate-800">
+    <div class="h-1 w-1/2 animate-pulse bg-primary"></div>
   </div>
 {/if}
 
-<div class="left">
-
-  <div class="highlightContainer" style="margin-left: 2em;">
-    <p style="text-align:center;">Room of the Day</p>
-    <div class="roomHighlight z-depth-2">
-
-      <!-- only show img if $roomOfTheDay.meta is not null -->
-      {#if $roomOfTheDay.meta}
-      <img
-        class="room"
-        src="img/bg/{$roomOfTheDay.meta.background}.png"
-        alt="Room of the Day"
-      />
-      {/if}  
-      <p
-        style="width: 100%; padding-left: 1em; padding-right: 1em; "       
-      >
-        {$roomOfTheDay.name}
-      </p>
-      <p
-        style="width: 300px; padding-left: 1em; padding-right: 1em;
-        text-align:justify;"
-      >
-        {$roomOfTheDay.description}
-      </p>
-    </div>
-  </div>
-  {#if $isAuthenticated}
-    <div class="welcome" style="float:left;">
-
-      <h5>Welcome back {$nickname}</h5>
-
-      <div>
-
-        <Link href="/play">Start playing</Link>
-        or try to create some
-        <Link href="/creator">own content.</Link>
+<div class="px-6 py-8">
+  <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[2fr,1fr] gap-8">
+    <section class="space-y-6">
+      <div class="card p-6">
+        {#if $isAuthenticated}
+          <div class="flex flex-col gap-3">
+            <h1 class="text-2xl font-bold">Welcome back {$nickname}</h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400">
+              Jump into the world or craft something new for your players.
+            </p>
+            <div class="flex flex-wrap gap-3">
+              <div class="relative inline-flex" bind:this={playMenuEl}>
+                <a class="btn btn-primary rounded-r-none" href="/play">
+                  <span class="material-symbols-outlined text-sm">play_arrow</span>
+                  Start playing
+                </a>
+                <button
+                  class="btn btn-primary rounded-l-none px-2"
+                  type="button"
+                  aria-haspopup="menu"
+                  aria-expanded={playMenuOpen}
+                  on:click={togglePlayMenu}
+                >
+                  <span class="material-symbols-outlined text-sm">arrow_drop_down</span>
+                </button>
+                {#if playMenuOpen}
+                  <div
+                    class="absolute left-0 top-full mt-2 w-56 rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-800 dark:bg-slate-900 overflow-hidden z-20"
+                    role="menu"
+                  >
+                    <a
+                      class="block px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                      href="/characters/new"
+                      role="menuitem"
+                    >
+                      New Character
+                    </a>
+                  </div>
+                {/if}
+              </div>
+              <a class="btn btn-outline" href="/creator/rooms">
+                <span class="material-symbols-outlined text-sm">edit</span>
+                Open Creator
+              </a>
+            </div>
+          </div>
+        {:else}
+          <div class="flex flex-col gap-3">
+            <h1 class="text-2xl font-bold">Welcome, Stranger</h1>
+            <p class="text-sm text-slate-500 dark:text-slate-400">
+              Sign in to save progress and access the Creator tools.
+            </p>
+            <div class="flex flex-wrap gap-3">
+              <button class="btn btn-primary" type="button" on:click={() => login()}>
+                Log in
+              </button>
+              <button class="btn btn-outline" type="button" on:click={() => login()}>
+                Create account
+              </button>
+            </div>
+          </div>
+        {/if}
       </div>
 
-      <div>
-        <p>
-          <a class="modal-trigger" href="#modal1">Create a new Character</a>
+      <div class="card p-6 space-y-4">
+        <div>
+          <h2 class="text-lg font-semibold">About TalesMUD</h2>
+          <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            TalesMUD is a MUD/MUX engine and creator platform. Build your own world,
+            define content, and run a live multiplayer text adventure.
+          </p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-500 dark:text-slate-400">
+          <div>
+            <div class="label-caps text-primary">Implemented</div>
+            <ul class="mt-2 space-y-1">
+              <li>- Character creation</li>
+              <li>- Room creation and movement</li>
+            </ul>
+          </div>
+          <div>
+            <div class="label-caps text-primary">Planned</div>
+            <ul class="mt-2 space-y-1">
+              <li>- Items and inventory management</li>
+              <li>- NPCs, enemies, dialogs</li>
+              <li>- Combat and quest systems</li>
+            </ul>
+          </div>
+        </div>
+        <div>
+          <p class="text-sm text-slate-500 dark:text-slate-400">
+            Head over to <a href="/play" class="text-primary">play</a> and
+            try commands like <span class="font-mono">help</span>.
+          </p>
+        </div>
+      </div>
+
+      <div class="card p-6 space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-semibold">Latest News</h2>
+          <a class="text-sm text-primary hover:underline" href="/news">View all</a>
+        </div>
+        <ul class="text-sm text-slate-500 dark:text-slate-400 space-y-2">
+          <li>
+            <span class="font-mono text-xs text-slate-400">12.06.2020</span> · First
+            minimalistic version live supporting room creation and character
+            templates.
+          </li>
+        </ul>
+      </div>
+
+      <div class="card p-6 space-y-2">
+        <h2 class="text-lg font-semibold">Credits</h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400">
+          The application uses several assets throughout the app and backend.
         </p>
-
+        <a class="text-sm text-primary hover:underline" href="/credits">
+          See Credits
+        </a>
       </div>
-    </div>
-  {:else if !$isAuthenticated}
-    <div>
-      <h4>Welcome Stranger</h4>
-      <p>
-        Please
-        <a href="/login" class="loginText">log</a>
-        in or
-        <a href="/signup" class="loginText">signup</a>
-      </p>
-      <button on:click="{() => login()}" class="btn-small userbutton green">
-        Log in
-      </button>
-    </div>
-  {/if}
 
-  <div class="welcome" style="clear:left; text-align: justify;">
-    <h5>TalesMUD</h5>
-    <p>
-      TalesMUD is a MUD/MUX game engine/game development platform. Using
-      TalesMud you can create your own MUD server, define your game content and
-      either use the existing web client or build a new one from scratch.
-    </p>
-    <p>
-      This is still a very early version with many more features planned. As
-      development progresses you can expect several updates to the developer
-      sandbox version running on this site.
-    </p>
-    Implemented
-    <ul>
-      <li>- Character creation</li>
-      <li>- Room creation, movement between rooms</li>
-    </ul>
-    Planned
-    <ul>
-      <li>- Items, Inventory Management</li>
-      <li>- NPCs, Enemies and Dialogs</li>
-      <li>- Combat System</li>
-      <li>- Quest System</li>
-    </ul>
-    <p>
-      Head over to
-      <Link href="/play">play</Link>
-      create a character and try out the current set of commands by typing
-      [help]. List of all global commands:
-    </p>
-    <ul>
+      <div class="card p-6 space-y-3">
+        <h2 class="text-lg font-semibold">Create a Character</h2>
+        <CharacterCreator />
+        <div class="pt-2">
+          <a class="text-sm text-primary hover:underline" href="/characters/new">
+            Open full creator
+          </a>
+        </div>
+      </div>
+    </section>
 
-      <li>[shrug] shrug emote</li>
-      <li>[sc, selectcharacter] select a character, use: sc [charactername]</li>
-      <li>[lc, listcharacters] list all your characters</li>
-      <li>[h, help] are you really asking?</li>
-      <li>[who] list all online players</li>
-      <li>[inventory, i] Display your inventory</li>
-      <li>[newcharacter, nc] Createa new character</li>
-      <li>[scream] scream through the room</li>
-    </ul>
+    <aside class="space-y-6">
+      <div class="card p-4">
+        <div class="label-caps text-center">Room of the Day</div>
+        <div class="mt-3 rounded-lg border border-slate-800 bg-slate-900/60 p-3 text-center">
+          {#if $roomOfTheDay.meta}
+            <img
+              class="w-full rounded-md border border-slate-800"
+              src={`/img/bg/${$roomOfTheDay.meta.background}.png`}
+              alt="Room of the Day"
+            />
+          {/if}
+          <div class="mt-3 text-sm font-medium">{$roomOfTheDay.name}</div>
+          <p class="mt-2 text-xs text-slate-400">
+            {$roomOfTheDay.description}
+          </p>
+        </div>
+      </div>
 
+      <div class="card p-4 space-y-2">
+        <div class="label-caps">Quick Commands</div>
+        <ul class="text-xs font-mono text-slate-400 space-y-1">
+          <li>[help] list commands</li>
+          <li>[sc] select character</li>
+          <li>[lc] list characters</li>
+          <li>[who] list online players</li>
+          <li>[inventory] show inventory</li>
+        </ul>
+      </div>
+    </aside>
   </div>
-
-  <div class="welcome">
-    <h5>News</h5>
-    <ul>
-      <li>
-        12.06.2020 - First minimalistic version live supporting room creation,
-        character creation (template picks)
-      </li>
-    </ul>
-  </div>
-  <div class="welcome">
-    <h5>Credits</h5>
-    The application uses several assets througout the app and the backend, here
-    is a list of free and licensed art:
-    <Link href="/credits">See Credits</Link>
-
-  </div>
-    <CharacterCreator />
-  
-
 </div>

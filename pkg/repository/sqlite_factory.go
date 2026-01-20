@@ -40,6 +40,10 @@ func (f *SQLiteFactory) ItemTemplates() ItemTemplatesRepository {
 	return NewSQLiteItemTemplatesRepository(f.client)
 }
 
+func (f *SQLiteFactory) CharacterTemplates() CharacterTemplatesRepository {
+	return NewSQLiteCharacterTemplatesRepository(f.client)
+}
+
 func (f *SQLiteFactory) NPCs() NPCsRepository {
 	return NewSQLiteNPCsRepository(f.client)
 }

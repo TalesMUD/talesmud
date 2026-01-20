@@ -1,30 +1,33 @@
 # TalesMUD Scripting System
 
-This document describes the scripting system in TalesMUD, its current capabilities, and recommendations for future development.
+This document describes the Lua scripting system in TalesMUD, its API, and examples for content creators.
 
 ## Overview
 
-TalesMUD uses an embedded JavaScript engine ([Otto](https://github.com/robertkrimen/otto)) to provide scripting capabilities for dynamic game content. Scripts are stored as entities in the database and can be attached to various game objects.
+TalesMUD uses an embedded Lua scripting engine ([gopher-lua](https://github.com/yuin/gopher-lua)) to provide dynamic game content. Scripts are stored as entities in the database and can be attached to rooms, items, NPCs, and triggered by events.
 
-## Current Implementation
-
-### Architecture
+## Architecture
 
 ```
 Script Entity (stored in DB)
-       ↓
+       |
    ScriptsService (CRUD operations)
-       ↓
-   ScriptRunner Interface
-       ↓
-   DefaultScriptRunner (Otto JavaScript VM)
-       ↓
-   T_* Built-in Functions (API)
-       ↓
-   Game Services (Items, Rooms, Characters)
+       |
+   LuaRunner (gopher-lua VM pool)
+       |
+   tales.* API Modules
+       |
+   Game Services (Items, Rooms, Characters, NPCs, Dialogs)
 ```
 
-### Script Entity Structure
+### Key Features
+
+- **VM Pool**: 10 reusable Lua states for performance
+- **Sandbox**: Dangerous modules disabled (os, io, debug, loadfile, dofile)
+- **Timeout**: 5-second execution limit per script
+- **Go-Lua Bridge**: Automatic conversion between Go structs and Lua tables via luar
+
+## Script Entity Structure
 
 Scripts are defined in `pkg/scripts/scripts.go`:
 
@@ -33,8 +36,9 @@ type Script struct {
     *entities.Entity          // ID, timestamps, ownership
     Name        string        // Human-readable name
     Description string        // What the script does
-    Code        string        // JavaScript code
+    Code        string        // Lua code
     Type        ScriptType    // Categorization
+    Language    ScriptLanguage // "lua" (default)
 }
 ```
 
@@ -45,399 +49,581 @@ type Script struct {
 | None | `none` | Uncategorized |
 | Custom | `custom` | General purpose |
 | Item | `item` | Item creation/behavior |
-| Room | `room` | Room actions and triggers |
+| Room | `room` | Room actions and entry triggers |
 | Quest | `quest` | Quest logic |
 | NPC | `npc` | NPC behavior |
+| Event | `event` | Event handlers |
 
-### Files
+## Files
 
 | File | Purpose |
 |------|---------|
 | `pkg/scripts/scripts.go` | Script entity definition |
 | `pkg/scripts/scriptrunner.go` | ScriptRunner interface |
-| `pkg/scripts/runner/defaultscriptrunner.go` | JavaScript implementation |
+| `pkg/scripts/runner/lua/luarunner.go` | Lua VM implementation |
+| `pkg/scripts/runner/lua/modules/*.go` | API module implementations |
+| `pkg/scripts/events/events.go` | Event type definitions |
 | `pkg/service/scripts.go` | Service layer |
 | `pkg/repository/scripts.go` | MongoDB repository |
 | `pkg/repository/scripts_sqlite.go` | SQLite repository |
 | `pkg/server/handler/scripts.go` | REST API endpoints |
 
-## Current Capabilities
+---
 
-### What Works Today
+## Lua API Reference
 
-1. **Item Template Scripts** - Scripts execute when items are created from templates
-   - Location: `pkg/service/items.go:124-129`
-   - The script receives the newly created item as `ctx`
+All API functions are accessible via the `tales` global table.
 
-2. **Script CRUD via REST API**
-   - `GET /api/scripts` - List all scripts
-   - `GET /api/scripts/:id` - Get script by ID
-   - `POST /api/scripts` - Create script
-   - `PUT /api/scripts/:id` - Update script
-   - `DELETE /api/scripts/:id` - Delete script
-   - `POST /api/run-script/:id` - Execute script with context
+### tales.items - Item Operations
 
-3. **Export/Import** - Scripts are included in world data exports
-
-### Available Script API Functions
-
-Scripts have access to these built-in functions (prefixed with `T_`):
-
-#### Item Functions
-```javascript
-// Find item templates by name (returns JSON array)
-T_findItemTemplate(name)
-
-// Get a specific item template by ID (returns JSON)
-T_getItemTemplate(templateID)
-
-// Create a new item instance from a template (returns JSON)
-T_createItemFromTemplate(templateID)
-```
-
-#### Room Functions
-```javascript
-// Find rooms by name (returns JSON array)
-T_findRoom(roomName)
-
-// Get a specific room by ID (returns JSON)
-T_getRoom(roomID)
-
-// Update a room (pass JSON string)
-T_updateRoom(roomJsonString)
-```
-
-#### Game Functions
-```javascript
-// Send a system message to all players in a room
-T_msgToRoom(roomID, message)
-```
-
-#### Context Variable
-```javascript
-// The context passed to the script (e.g., an item being created)
-ctx
-```
-
-### Example Scripts
-
-#### Random Item Stats on Creation
-```javascript
-// Randomize damage for a weapon when created
-var item = ctx;
-item.minDamage = Math.floor(Math.random() * 5) + 1;
-item.maxDamage = item.minDamage + Math.floor(Math.random() * 10) + 5;
-ctx = JSON.stringify(item);
-```
-
-#### Room Announcement
-```javascript
-// Announce something to a room
-T_msgToRoom("room-id-here", "The ground trembles beneath your feet...");
-```
-
-### What's Partially Implemented
-
-1. **Room Action Scripts** - The `RoomActionTypeScript` is defined but not executed
-   - Location: `pkg/mudserver/game/commands/roomprocessor.go:128-131`
-   - Currently falls through to error logging
-
-2. **NPC Scripts** - Script type exists but no integration with NPC entities
-
-3. **Quest Scripts** - Script type defined but no quest system infrastructure
-
-## Known Limitations
-
-1. **No Timeout Protection** - Scripts can theoretically run indefinitely (TODO in code)
-2. **Limited API** - Only basic item, room, and messaging functions
-3. **No Event System** - Scripts can't respond to game events
-4. **No Character Functions** - Can't interact with players/NPCs from scripts
-5. **Synchronous Execution** - All scripts run synchronously
-
-## Recommendations for Improvement
-
-### High Priority
-
-#### 1. Complete Room Action Script Execution
-
-Add script execution in `roomprocessor.go`:
-
-```go
-case rooms.RoomActionTypeScript:
-    if scriptID, ok := action.Params["scriptId"].(string); ok {
-        if script, err := scriptsService.FindByID(scriptID); err == nil {
-            ctx := map[string]interface{}{
-                "room": room,
-                "character": character,
-                "action": action,
-            }
-            scriptRunner.Run(*script, ctx)
-        }
-    }
-```
-
-#### 2. Add Script Timeout Protection
-
-```go
-func (runner *DefaultScriptRunner) Run(script scripts.Script, ctx interface{}) interface{} {
-    vm := runner.newScriptRuntime()
-    vm.Set("ctx", ctx)
-
-    // Interrupt after 5 seconds
-    vm.Interrupt = make(chan func(), 1)
-    go func() {
-        time.Sleep(5 * time.Second)
-        vm.Interrupt <- func() {
-            panic("script execution timeout")
-        }
-    }()
-
-    defer func() {
-        if r := recover(); r != nil {
-            logrus.Error("Script timed out or panicked")
-        }
-    }()
-
-    _, err := vm.Run(script.Code)
-    // ...
-}
-```
-
-#### 3. Expand Script API
-
-Add character/NPC functions:
-```javascript
-T_getCharacter(characterID)
-T_getNPC(npcID)
-T_moveCharacterToRoom(characterID, roomID)
-T_giveItemToCharacter(characterID, itemID)
-T_msgToCharacter(characterID, message)
-T_damageCharacter(characterID, amount)
-T_healCharacter(characterID, amount)
-```
-
-Add inventory functions:
-```javascript
-T_addItemToInventory(characterID, itemID)
-T_removeItemFromInventory(characterID, itemID)
-T_hasItem(characterID, itemName)
-```
-
-#### 4. Add NPC Script Integration
-
-Add script reference to NPC entity:
-```go
-type NPC struct {
-    // ... existing fields
-    BehaviorScriptID string `bson:"behaviorScriptID,omitempty" json:"behaviorScriptID,omitempty"`
-    OnTalkScriptID   string `bson:"onTalkScriptID,omitempty" json:"onTalkScriptID,omitempty"`
-    OnDeathScriptID  string `bson:"onDeathScriptID,omitempty" json:"onDeathScriptID,omitempty"`
-}
-```
-
-### Medium Priority
-
-#### 5. Event-Driven Script System
-
-Create an event system where scripts can register for events:
-
-| Event | Trigger | Context |
-|-------|---------|---------|
-| `onPlayerEnterRoom` | Player enters a room | player, room, fromRoom |
-| `onPlayerLeaveRoom` | Player leaves a room | player, room, toRoom |
-| `onItemPickup` | Player picks up item | player, item, room |
-| `onItemDrop` | Player drops item | player, item, room |
-| `onNPCDeath` | NPC is killed | npc, killer, room |
-| `onDialogOption` | Dialog option selected | player, npc, dialog, option |
-| `onTimerTick` | Periodic timer | world state |
-
-#### 6. Quest System Foundation
-
-Create quest entities with script hooks:
-```go
-type Quest struct {
-    *entities.Entity
-    Name              string
-    Description       string
-    StartScriptID     string   // Runs when quest starts
-    CompleteScriptID  string   // Runs when quest completes
-    FailScriptID      string   // Runs when quest fails
-    Objectives        []QuestObjective
-}
-
-type QuestObjective struct {
-    ID               string
-    Description      string
-    Type             string   // "kill", "collect", "visit", "talk"
-    Target           string   // NPC ID, Item ID, Room ID, etc.
-    Required         int
-    OnProgressScript string   // Runs when progress is made
-}
-```
-
-#### 7. Dialog Script Integration
-
-Add script hooks to dialogs:
-```go
-type Dialog struct {
-    // ... existing fields
-    OnEnterScriptID string `bson:"onEnterScriptID,omitempty"`
-    OnExitScriptID  string `bson:"onExitScriptID,omitempty"`
-    Condition       string `bson:"condition,omitempty"` // JS expression
-}
-```
-
-### Low Priority
-
-#### 8. Script Editor Improvements
-- Syntax highlighting in web UI
-- Script testing/debugging tools
-- Script versioning
-
-#### 9. Script Variables/State
-- Persistent script variables (saved between executions)
-- Global game state accessible to scripts
-
-## Language Comparison: Should We Switch?
-
-### Current: JavaScript (Otto)
-
-**Pros:**
-- Already implemented and working
-- Familiar syntax for most developers
-- Includes underscore.js library
-- Pure Go implementation (no CGO)
-- Good for simple scripts
-
-**Cons:**
-- Otto is ES5 only (no modern JavaScript features)
-- Not as performant as native solutions
-- Project has limited maintenance
-- No async/await support
-
-### Alternative: Lua (via gopher-lua or golua)
-
-**Pros:**
-- Industry standard for game scripting (Unity, Roblox, WoW, etc.)
-- Extremely fast execution
-- Very small memory footprint
-- Simple, clean syntax
-- Excellent sandboxing
-- Well-documented for game development
-- [gopher-lua](https://github.com/yuin/gopher-lua) is pure Go, actively maintained
-
-**Cons:**
-- Different syntax (may require learning)
-- Fewer web developers familiar with it
-- Would require rewriting existing scripts
-
-**Example Lua script:**
 ```lua
--- Random item stats
-local item = ctx
-item.minDamage = math.random(1, 5)
-item.maxDamage = item.minDamage + math.random(5, 15)
-return item
+-- Get item by ID
+local item = tales.items.get(itemID)
+
+-- Find items by name (partial match)
+local items = tales.items.findByName("sword")
+
+-- Get item template by ID
+local template = tales.items.getTemplate(templateID)
+
+-- Find templates by name
+local templates = tales.items.findTemplates("iron")
+
+-- Create item instance from template
+local newItem = tales.items.createFromTemplate(templateID)
+
+-- Delete an item
+local success = tales.items.delete(itemID)
 ```
 
-### Alternative: Python (embedded)
+### tales.rooms - Room Operations
 
-**Pros:**
-- Very familiar to most developers
-- Rich standard library
-- Great for complex logic
+```lua
+-- Get room by ID
+local room = tales.rooms.get(roomID)
 
-**Cons:**
-- Heavy runtime overhead
-- Complex embedding (requires CGO with CPython)
-- Security sandboxing is difficult
-- Not designed for embedding
+-- Find rooms by name
+local rooms = tales.rooms.findByName("tavern")
 
-### Alternative: Starlark (Google's Python dialect)
+-- Find rooms by area
+local rooms = tales.rooms.findByArea("Darkwood Forest")
 
-**Pros:**
-- Python-like syntax
-- Pure Go implementation
-- Designed for configuration/scripting
-- Good sandboxing
-- Used by Bazel, Buck, and other tools
+-- Get all rooms
+local allRooms = tales.rooms.getAll()
 
-**Cons:**
-- Limited standard library
-- Less feature-rich than full Python
-- Smaller community
+-- Get character IDs in a room
+local charIDs = tales.rooms.getCharacters(roomID)
 
-### Alternative: JavaScript (goja)
+-- Get NPC IDs in a room
+local npcIDs = tales.rooms.getNPCs(roomID)
 
-**Pros:**
-- ES6+ support (modern JavaScript)
-- Better performance than Otto
-- Pure Go implementation
-- Drop-in replacement potential
+-- Get item IDs in a room
+local itemIDs = tales.rooms.getItems(roomID)
+```
 
-**Cons:**
-- Still not as fast as Lua
-- More memory usage than Lua
+### tales.characters - Character Operations
 
-## Recommendation
+```lua
+-- Get character by ID
+local char = tales.characters.get(characterID)
 
-### For Immediate Use: Stay with JavaScript (Otto)
+-- Find characters by name
+local chars = tales.characters.findByName("Gandalf")
 
-The current implementation works and switching languages now would delay more important features. Focus on:
-1. Completing room action script execution
-2. Adding timeout protection
-3. Expanding the API
+-- Get all characters
+local allChars = tales.characters.getAll()
 
-### For Future Consideration: Evaluate goja or Lua
+-- Get the room a character is in
+local room = tales.characters.getRoom(characterID)
 
-**If staying with JavaScript:** Consider migrating from Otto to [goja](https://github.com/dop251/goja) for ES6+ support and better performance.
+-- Damage a character (reduces HP, clamped to 0)
+local success = tales.characters.damage(characterID, 10)
 
-**If switching languages:** Lua with [gopher-lua](https://github.com/yuin/gopher-lua) is the best choice for game scripting:
-- Battle-tested in game industry
-- Best performance
-- Smallest memory footprint
-- Easy to learn for content creators
-- Excellent documentation for game use cases
+-- Heal a character (increases HP, clamped to max)
+local success = tales.characters.heal(characterID, 10)
 
-The switch to Lua would be a larger undertaking but would provide a more robust, industry-standard scripting foundation.
+-- Teleport character to a room (handles room membership)
+local success = tales.characters.teleport(characterID, roomID)
 
-## Quick Start for Content Creators
+-- Give XP to a character
+local success = tales.characters.giveXP(characterID, 100)
+```
 
-### Creating a Script
+### tales.npcs - NPC Operations
 
-1. Go to Admin UI > Scripts
-2. Click "New Script"
-3. Fill in:
-   - **Name**: Descriptive name (e.g., "Random Sword Stats")
-   - **Type**: Select appropriate type (item, room, npc, etc.)
-   - **Description**: What the script does
-   - **Code**: JavaScript code
+```lua
+-- Get NPC by ID
+local npc = tales.npcs.get(npcID)
 
-### Attaching to Item Templates
+-- Find NPCs by name
+local npcs = tales.npcs.findByName("Guard")
 
-1. Create or edit an Item Template
-2. Select your script from the "Script" dropdown
-3. Save the template
-4. When items are created from this template, the script runs
+-- Find NPCs in a specific room
+local npcs = tales.npcs.findInRoom(roomID)
 
-### Testing Scripts
+-- Get all NPCs
+local allNPCs = tales.npcs.getAll()
 
-Use the REST API endpoint:
+-- Damage an NPC
+local success = tales.npcs.damage(npcID, 15)
+
+-- Heal an NPC
+local success = tales.npcs.heal(npcID, 10)
+
+-- Move NPC to a different room
+local success = tales.npcs.moveTo(npcID, roomID)
+
+-- Check if NPC is dead (HP <= 0)
+local isDead = tales.npcs.isDead(npcID)
+
+-- Check if NPC has EnemyTrait
+local isEnemy = tales.npcs.isEnemy(npcID)
+
+-- Check if NPC has MerchantTrait
+local isMerchant = tales.npcs.isMerchant(npcID)
+
+-- Delete an NPC
+local success = tales.npcs.delete(npcID)
+```
+
+### tales.dialogs - Dialog & Conversation Operations
+
+```lua
+-- Get dialog by ID
+local dialog = tales.dialogs.get(dialogID)
+
+-- Find dialogs by name
+local dialogs = tales.dialogs.findByName("merchant_greeting")
+
+-- Get all dialogs
+local allDialogs = tales.dialogs.getAll()
+
+-- Get conversation between character and target (NPC/item)
+local conv = tales.dialogs.getConversation(characterID, targetID)
+
+-- Set conversation context variable
+local success = tales.dialogs.setContext(conversationID, "questStatus", "accepted")
+
+-- Get conversation context variable
+local value = tales.dialogs.getContext(conversationID, "questStatus")
+
+-- Check if dialog node was visited
+local visited = tales.dialogs.hasVisited(conversationID, "intro_node")
+
+-- Get visit count for a dialog node
+local count = tales.dialogs.getVisitCount(conversationID, "intro_node")
+```
+
+### tales.game - Messaging
+
+```lua
+-- Send message to all players in a room
+local success = tales.game.msgToRoom(roomID, "The ground shakes...")
+
+-- Send message to a specific character
+local success = tales.game.msgToCharacter(characterID, "You feel a chill...")
+
+-- Send message to a specific user (by user ID)
+local success = tales.game.msgToUser(userID, "System notification")
+
+-- Broadcast message to all connected players
+local success = tales.game.broadcast("Server will restart in 5 minutes")
+
+-- Send to room except one character
+local success = tales.game.msgToRoomExcept(roomID, "Player vanishes!", excludeCharID)
+
+-- Log a message (levels: "debug", "info", "warn", "error")
+tales.game.log("info", "Script executed successfully")
+```
+
+### tales.utils - Utility Functions
+
+```lua
+-- Random integer between min and max (inclusive)
+local num = tales.utils.random(1, 100)
+
+-- Random float between 0 and 1
+local flt = tales.utils.randomFloat()
+
+-- Generate UUID
+local id = tales.utils.uuid()
+
+-- Current Unix timestamp (seconds)
+local ts = tales.utils.now()
+
+-- Current Unix timestamp (milliseconds)
+local tsMs = tales.utils.nowMs()
+
+-- Format timestamp to readable string
+local str = tales.utils.formatTime(timestamp) -- "2024-01-15 14:30:00"
+
+-- Roll dice using standard notation
+local result = tales.utils.roll("2d6")      -- 2-12
+local result = tales.utils.roll("1d20+5")   -- 6-25
+local result = tales.utils.roll("3d6-2")    -- 1-16
+
+-- Percentage chance (returns true/false)
+local success = tales.utils.chance(25)  -- 25% chance of true
+
+-- Pick random element from array
+local item = tales.utils.pick({"sword", "axe", "bow"})
+
+-- Shuffle array in place
+local shuffled = tales.utils.shuffle(myArray)
+
+-- Clamp value between min and max
+local clamped = tales.utils.clamp(value, 0, 100)
+
+-- Linear interpolation
+local lerped = tales.utils.lerp(0, 100, 0.5)  -- returns 50
+```
+
+---
+
+## Script Context
+
+Scripts receive context through the global `ctx` table. The context varies by trigger type.
+
+### Item Creation Context
+When a script runs during item creation:
+```lua
+ctx.item      -- The newly created item
+ctx.template  -- The source item template
+```
+
+### Room Entry Context (OnEnterScriptID)
+When a player enters a room:
+```lua
+ctx.eventType  -- "player.enter_room"
+ctx.timestamp  -- Unix timestamp
+ctx.room       -- The room being entered
+ctx.toRoom     -- Same as ctx.room
+ctx.character  -- The entering character
+ctx.user       -- The user object
+```
+
+### General Event Context
+```lua
+ctx.eventType  -- Event type string
+ctx.timestamp  -- Unix timestamp
+ctx.room       -- Related room (if applicable)
+ctx.character  -- Related character (if applicable)
+ctx.npc        -- Related NPC (if applicable)
+ctx.item       -- Related item (if applicable)
+```
+
+---
+
+## Event System
+
+TalesMUD defines 28 event types for script triggers. Currently only `player.enter_room` is wired into the game loop.
+
+### Player Events
+| Event | Description |
+|-------|-------------|
+| `player.enter_room` | Player enters a room (IMPLEMENTED) |
+| `player.leave_room` | Player leaves a room |
+| `player.join` | Player joins the game |
+| `player.quit` | Player disconnects |
+| `player.death` | Player character dies |
+| `player.level_up` | Player gains a level |
+
+### Item Events
+| Event | Description |
+|-------|-------------|
+| `item.pickup` | Player picks up item |
+| `item.drop` | Player drops item |
+| `item.use` | Player uses item |
+| `item.equip` | Player equips item |
+| `item.unequip` | Player unequips item |
+| `item.create` | Item is created |
+
+### NPC Events
+| Event | Description |
+|-------|-------------|
+| `npc.death` | NPC is killed |
+| `npc.spawn` | NPC spawns |
+| `npc.update` | NPC state changes |
+| `npc.idle` | NPC idle tick |
+
+### Dialog Events
+| Event | Description |
+|-------|-------------|
+| `dialog.start` | Conversation begins |
+| `dialog.end` | Conversation ends |
+| `dialog.option` | Dialog option selected |
+
+### Room Events
+| Event | Description |
+|-------|-------------|
+| `room.update` | Room state changes |
+| `room.action` | Room action triggered |
+
+### Quest Events
+| Event | Description |
+|-------|-------------|
+| `quest.start` | Quest begins |
+| `quest.complete` | Quest completed |
+| `quest.fail` | Quest failed |
+| `quest.progress` | Quest progress updated |
+
+### Combat Events
+| Event | Description |
+|-------|-------------|
+| `combat.start` | Combat begins |
+| `combat.end` | Combat ends |
+| `combat.damage` | Damage dealt |
+
+### Timer Events
+| Event | Description |
+|-------|-------------|
+| `timer.tick` | Periodic timer |
+
+---
+
+## Example Scripts
+
+### Random Item Stats on Creation
+```lua
+-- Script attached to item template
+-- Randomizes weapon damage when item is created
+
+local item = ctx.item
+if item then
+    local baseDamage = tales.utils.roll("2d6")
+    item.Properties = item.Properties or {}
+    item.Properties["damageMin"] = baseDamage
+    item.Properties["damageMax"] = baseDamage + tales.utils.random(5, 10)
+
+    -- 10% chance for magic quality
+    if tales.utils.chance(10) then
+        item.Quality = "magic"
+        item.Properties["damageMax"] = item.Properties["damageMax"] + 3
+    end
+end
+
+return ctx
+```
+
+### Room Entry Announcement
+```lua
+-- Script attached to room via OnEnterScriptID
+-- Announces when players enter a special area
+
+local char = ctx.character
+local room = ctx.room
+
+if char and room then
+    -- Message to the entering player
+    tales.game.msgToCharacter(char.ID,
+        "You feel an ancient presence watching you...")
+
+    -- Message to others in the room
+    tales.game.msgToRoomExcept(room.ID,
+        char.Name .. " enters cautiously, disturbing the dust.",
+        char.ID)
+
+    -- Log for debugging
+    tales.game.log("info", char.Name .. " entered " .. room.Name)
+end
+```
+
+### Trapped Room
+```lua
+-- Room entry script that damages careless players
+
+local char = ctx.character
+if not char then return end
+
+-- 30% chance to trigger trap
+if tales.utils.chance(30) then
+    local damage = tales.utils.roll("1d6")
+    tales.characters.damage(char.ID, damage)
+
+    tales.game.msgToCharacter(char.ID,
+        "A dart shoots from the wall! You take " .. damage .. " damage.")
+
+    tales.game.msgToRoomExcept(ctx.room.ID,
+        char.Name .. " triggers a trap and cries out in pain!",
+        char.ID)
+else
+    tales.game.msgToCharacter(char.ID,
+        "You carefully navigate the trapped hallway.")
+end
+```
+
+### Dynamic NPC Greeting
+```lua
+-- Could be used in dialog system or NPC idle behavior
+
+local hour = os.date("*t").hour  -- Note: os is sandboxed, use server time
+local greeting
+
+if hour < 12 then
+    greeting = "Good morning, traveler!"
+elseif hour < 18 then
+    greeting = "Good afternoon, traveler!"
+else
+    greeting = "Good evening, traveler!"
+end
+
+-- Using game messaging
+tales.game.msgToRoom(ctx.room.ID, "The innkeeper says: \"" .. greeting .. "\"")
+```
+
+### Quest Item Check
+```lua
+-- Check if player has required item (concept for future quests)
+
+local function hasItem(charID, itemName)
+    local char = tales.characters.get(charID)
+    if not char or not char.Inventory or not char.Inventory.Items then
+        return false
+    end
+
+    for _, item in ipairs(char.Inventory.Items) do
+        if item.Name and item.Name:lower():find(itemName:lower()) then
+            return true
+        end
+    end
+    return false
+end
+
+local char = ctx.character
+if char and hasItem(char.ID, "ancient key") then
+    tales.game.msgToCharacter(char.ID,
+        "The door recognizes your key and swings open!")
+    -- In future: unlock exit, teleport player, etc.
+else
+    tales.game.msgToCharacter(char.ID,
+        "The door is sealed with ancient magic.")
+end
+```
+
+---
+
+## REST API Endpoints
+
+Scripts can be managed via the REST API:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/scripts` | List all scripts |
+| GET | `/api/scripts/:id` | Get script by ID |
+| POST | `/api/scripts` | Create script |
+| PUT | `/api/scripts/:id` | Update script |
+| DELETE | `/api/scripts/:id` | Delete script |
+| POST | `/api/run-script/:id` | Execute script with context |
+
+### Testing Scripts via API
+
 ```bash
 curl -X POST http://localhost:8080/api/run-script/SCRIPT_ID \
   -H "Content-Type: application/json" \
-  -d '{"testData": "value"}'
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{"testData": "value", "characterID": "char-123"}'
 ```
 
-## Future Vision
+---
 
-The goal is to enable content creators to build rich, dynamic game experiences:
+## Current Integration Points
 
-- **Dynamic Quests**: NPCs that give quests based on player actions
-- **Living World**: Weather systems, day/night cycles, random events
-- **Smart NPCs**: Enemies with patrol routes, merchants with dynamic prices
-- **Interactive Environments**: Traps, puzzles, secret doors
-- **Player-triggered Events**: Completing quests unlocks new areas
-- **Scheduled Events**: World bosses, invasions, festivals
+### Implemented
+- **Room Entry Scripts**: Set `OnEnterScriptID` on a room entity. Fires when player enters the room or selects a character in that room.
+- **Item Template Scripts**: Reference a script ID on an item template. Fires when items are created from that template.
 
-All of this should be achievable through scripts without modifying the core game code.
+### Planned (Not Yet Wired)
+- Room Action Scripts (`RoomActionTypeScript`)
+- NPC Behavior Scripts
+- Dialog Script Hooks
+- Combat Event Scripts
+- Quest Scripts
+
+---
+
+## Best Practices
+
+### 1. Keep Scripts Focused
+Each script should do one thing well. Complex behaviors should be split across multiple scripts.
+
+### 2. Use Logging for Debugging
+```lua
+tales.game.log("debug", "Script checkpoint: processing " .. ctx.character.Name)
+```
+
+### 3. Validate Context
+Always check that expected context values exist:
+```lua
+if not ctx.character then
+    tales.game.log("warn", "No character in context!")
+    return
+end
+```
+
+### 4. Handle Errors Gracefully
+API functions return `nil` on failure. Check return values:
+```lua
+local room = tales.rooms.get(roomID)
+if not room then
+    tales.game.log("error", "Room not found: " .. roomID)
+    return
+end
+```
+
+### 5. Avoid Infinite Loops
+The 5-second timeout will kill runaway scripts, but design defensively:
+```lua
+local MAX_ITERATIONS = 100
+local count = 0
+while condition and count < MAX_ITERATIONS do
+    -- work
+    count = count + 1
+end
+```
+
+### 6. Use Dice Notation for Randomness
+`tales.utils.roll()` is more readable than math.random for game mechanics:
+```lua
+-- Good
+local damage = tales.utils.roll("2d6+3")
+
+-- Less clear
+local damage = math.random(1,6) + math.random(1,6) + 3
+```
+
+---
+
+## Sandbox Restrictions
+
+The following Lua features are disabled for security:
+
+- `os` module (system commands, file access)
+- `io` module (file operations)
+- `debug` module (introspection)
+- `loadfile` / `dofile` (loading external code)
+- Direct file system access
+
+Available standard libraries:
+- `base` (print, pairs, ipairs, type, etc.)
+- `string` (manipulation functions)
+- `table` (table operations)
+- `math` (mathematical functions)
+
+---
+
+## Future Enhancements
+
+### High Priority
+1. Wire remaining event types to script execution
+2. Add room action script support
+3. Implement NPC behavior script hooks
+
+### Medium Priority
+4. Script versioning and rollback
+5. Script debugging tools in admin UI
+6. Persistent script variables (saved between executions)
+
+### Low Priority
+7. Visual script editor
+8. Script performance profiling
+9. Script dependency system

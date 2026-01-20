@@ -29,6 +29,30 @@ type GraphNode struct {
 	Z           int32   `json:"z"`
 }
 
+// MinimalRoom is a lightweight room structure for the world map
+type MinimalRoom struct {
+	ID       string        `json:"id"`
+	Name     string        `json:"name"`
+	Area     string        `json:"area"`
+	AreaType string        `json:"areaType"`
+	Coords   *MinimalCoord `json:"coords,omitempty"`
+	Exits    []MinimalExit `json:"exits"`
+}
+
+// MinimalCoord represents room coordinates
+type MinimalCoord struct {
+	X int32 `json:"x"`
+	Y int32 `json:"y"`
+	Z int32 `json:"z"`
+}
+
+// MinimalExit represents an exit for the world map
+type MinimalExit struct {
+	Name       string `json:"name"`
+	Target     string `json:"target"`
+	IsCardinal bool   `json:"isCardinal"`
+}
+
 // GraphEdge represents a connection between rooms
 type GraphEdge struct {
 	ID         string `json:"id"`
@@ -316,4 +340,55 @@ func (handler *WorldRendererHandler) RenderGraphData(c *gin.Context) {
 	}
 	
 	c.JSON(http.StatusOK, graphData)
+}
+
+// GetMinimalRooms returns a lightweight list of rooms for the world map editor
+func (handler *WorldRendererHandler) GetMinimalRooms(c *gin.Context) {
+	rooms, err := handler.RoomsService.FindAll()
+	if err != nil {
+		log.Printf("Error fetching rooms: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	log.Printf("Found %d rooms for minimal map", len(rooms))
+
+	minimalRooms := make([]MinimalRoom, 0, len(rooms))
+
+	for _, room := range rooms {
+		mr := MinimalRoom{
+			ID:       room.ID,
+			Name:     room.Name,
+			Area:     room.Area,
+			AreaType: room.AreaType,
+			Exits:    make([]MinimalExit, 0),
+		}
+
+		// Add coordinates if present
+		if room.Coords != nil {
+			mr.Coords = &MinimalCoord{
+				X: room.Coords.X,
+				Y: room.Coords.Y,
+				Z: room.Coords.Z,
+			}
+		}
+
+		// Add exits
+		if room.Exits != nil {
+			for _, exit := range *room.Exits {
+				mr.Exits = append(mr.Exits, MinimalExit{
+					Name:       exit.Name,
+					Target:     exit.Target,
+					IsCardinal: isCardinalDirection(exit.Name),
+				})
+			}
+		}
+
+		minimalRooms = append(minimalRooms, mr)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"count": len(minimalRooms),
+		"rooms": minimalRooms,
+	})
 }

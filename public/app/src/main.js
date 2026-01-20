@@ -1,28 +1,19 @@
-import '../node_modules/materialize-css/dist/css/materialize.css'
-import '../public/global.css'
-import '../node_modules/materialize-css/dist/js/materialize'
-
-import App from './App.svelte';
+import "./app.css";
+import App from "./App.svelte";
 
 Object.defineProperty(String.prototype, "hashCode", {
-    value: function () {
-      var hash = 0,
-        i,
-        chr;
-      for (i = 0; i < this.length; i++) {
-        chr = this.charCodeAt(i);
-        hash = (hash << 5) - hash + chr;
-        hash |= 0; // Convert to 32bit integer
-      }
-      return hash;
-    },
-  });
-
-const app = new App({
-	target: document.body,
-	props: {}
+  value: function () {
+    let hash = 0;
+    for (let i = 0; i < this.length; i += 1) {
+      hash = (hash << 5) - hash + this.charCodeAt(i);
+      hash |= 0;
+    }
+    return hash;
+  },
 });
 
-M.AutoInit();
+const app = new App({
+  target: document.getElementById("app"),
+});
 
 export default app;

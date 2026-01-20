@@ -128,8 +128,14 @@ func (r *LuaRunner) RunWithResult(script scripts.Script, ctx *scripts.ScriptCont
 	defer cancel()
 	r.sandbox.SetupInterrupt(L, execCtx)
 
+	// Re-register the tales module each run to avoid persistent mutations
+	r.registerTalesModule(L)
+
 	// Set context variables
 	r.setContext(L, ctx)
+
+	// Debug: log module availability to help diagnose broken tables/functions
+	r.logModuleDiagnostics(L, script.Name)
 
 	// Execute the script
 	result := r.executeWithTimeout(L, script.Code, execCtx)
@@ -138,6 +144,39 @@ func (r *LuaRunner) RunWithResult(script scripts.Script, ctx *scripts.ScriptCont
 	return result
 }
 
+// logModuleDiagnostics logs the current state of key Lua modules/functions.
+func (r *LuaRunner) logModuleDiagnostics(L *lua.LState, scriptName string) {
+	tales := L.GetGlobal("tales")
+	talesType := tales.Type().String()
+
+	utilsType := "nil"
+	rollType := "nil"
+	gameType := "nil"
+	gameLogType := "nil"
+
+	if tbl, ok := tales.(*lua.LTable); ok {
+		utils := tbl.RawGetString("utils")
+		game := tbl.RawGetString("game")
+		utilsType = utils.Type().String()
+		gameType = game.Type().String()
+
+		if utilsTbl, ok := utils.(*lua.LTable); ok {
+			rollType = utilsTbl.RawGetString("roll").Type().String()
+		}
+		if gameTbl, ok := game.(*lua.LTable); ok {
+			gameLogType = gameTbl.RawGetString("log").Type().String()
+		}
+	}
+
+	logrus.WithFields(logrus.Fields{
+		"script":        scriptName,
+		"talesType":     talesType,
+		"talesUtils":    utilsType,
+		"talesUtilsRoll": rollType,
+		"talesGame":     gameType,
+		"talesGameLog":  gameLogType,
+	}).Debug("Lua module diagnostics")
+}
 // createState creates a new Lua state with modules and sandbox applied
 func (r *LuaRunner) createState() *lua.LState {
 	L := lua.NewState(lua.Options{
