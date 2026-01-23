@@ -100,16 +100,53 @@
     const nodes = [];
     const edges = [];
     const positions = new Map();
+    const backReferences = []; // Store back-references to draw after main layout
+
+    // First pass: collect all node IDs to detect back-references
+    const allNodeIds = new Set();
+    function collectNodeIds(node, visited = new Set()) {
+      if (!node) return;
+      const nodeId = node.nodeId || node.id;
+      if (nodeId) {
+        if (visited.has(nodeId)) return; // Prevent infinite recursion
+        visited.add(nodeId);
+        allNodeIds.add(nodeId);
+      }
+      if (node.answer) collectNodeIds(node.answer, visited);
+      if (node.options) {
+        node.options.forEach(opt => {
+          // Only recurse if the option has inline content
+          if (opt.text || opt.options?.length > 0 || opt.answer) {
+            collectNodeIds(opt, visited);
+          }
+        });
+      }
+    }
+    collectNodeIds(dialog);
 
     // Calculate positions using tree layout
-    function layoutNode(node, level, indexInLevel, parentX = 0, isAnswer = false) {
+    function layoutNode(node, level, indexInLevel, parentX = 0, isAnswer = false, parentNodeId = null, visited = new Set()) {
       if (!node) return;
 
       const nodeId = node.nodeId || node.id || `node_${nodes.length}`;
 
-      // Calculate children count for this level
-      const childCount = (node.options?.length || 0) + (node.answer ? 1 : 0);
-      const totalWidth = childCount > 0 ? (childCount - 1) * NODE_SPACING_X : 0;
+      // Prevent infinite recursion
+      if (visited.has(nodeId)) return;
+      visited.add(nodeId);
+
+      // Count real children (excluding pure back-references)
+      let realChildCount = 0;
+      if (node.answer) realChildCount++;
+      if (node.options?.length > 0) {
+        node.options.forEach(opt => {
+          const optId = opt.nodeId;
+          // It's a back-reference if: has an ID, matches existing node, and has no inline content
+          const isBackRef = optId && allNodeIds.has(optId) && !opt.text && !opt.options?.length && !opt.answer;
+          if (!isBackRef) realChildCount++;
+        });
+      }
+
+      const totalWidth = realChildCount > 0 ? (realChildCount - 1) * NODE_SPACING_X : 0;
       const startX = parentX - totalWidth / 2;
 
       // Position this node
@@ -117,6 +154,21 @@
       const y = level * LEVEL_SPACING_Y;
 
       positions.set(nodeId, { x, y });
+
+      // Check if this node has any back-reference options
+      let hasBackRef = false;
+      let backRefTargets = [];
+      if (node.options?.length > 0) {
+        node.options.forEach(opt => {
+          const optId = opt.nodeId;
+          // It's a back-reference if it references an existing node and has no inline content
+          const isBackRef = optId && allNodeIds.has(optId) && !opt.text && !opt.options?.length && !opt.answer;
+          if (isBackRef) {
+            hasBackRef = true;
+            backRefTargets.push(optId);
+          }
+        });
+      }
 
       nodes.push({
         id: nodeId,
@@ -127,12 +179,14 @@
         isExit: node.is_dialog_exit,
         isAnswer: isAnswer,
         hasOptions: (node.options?.length || 0) > 0,
+        hasBackRef: hasBackRef,
+        backRefTargets: backRefTargets,
       });
 
       // Process answer node first (centered below)
       if (node.answer) {
         const answerId = node.answer.nodeId || `answer_${nodeId}`;
-        const answerX = childCount > 1 ? startX + (childCount - 1) * NODE_SPACING_X / 2 : x;
+        const answerX = realChildCount > 1 ? startX + (realChildCount - 1) * NODE_SPACING_X / 2 : x;
 
         edges.push({
           id: `edge_${nodeId}_${answerId}`,
@@ -145,34 +199,66 @@
           isAnswer: true,
         });
 
-        layoutNode(node.answer, level + 1, 0, answerX, true);
+        layoutNode(node.answer, level + 1, 0, answerX, true, nodeId, visited);
       }
 
       // Process options
       if (node.options?.length > 0) {
-        const optionStartIndex = node.answer ? 1 : 0;
+        let realChildIndex = node.answer ? 1 : 0;
         node.options.forEach((option, i) => {
           const optionId = option.nodeId || `option_${nodeId}_${i}`;
-          const optionX = startX + (i + optionStartIndex) * NODE_SPACING_X;
 
-          edges.push({
-            id: `edge_${nodeId}_${optionId}`,
-            source: nodeId,
-            target: optionId,
-            sourceX: x,
-            sourceY: y + NODE_HEIGHT / 2,
-            targetX: optionX,
-            targetY: y + LEVEL_SPACING_Y - NODE_HEIGHT / 2,
-            isAnswer: false,
-            optionIndex: i + 1,
-          });
+          // Check if this is a back-reference (references existing node with no inline content)
+          const isBackRef = optionId && allNodeIds.has(optionId) && !option.text && !option.options?.length && !option.answer;
 
-          layoutNode(option, level + 1, i, optionX, false);
+          if (isBackRef) {
+            // This is a back-reference - store it to create edge after layout is complete
+            backReferences.push({
+              id: `backref_${nodeId}_${optionId}_${i}`,
+              source: nodeId,
+              sourceX: x,
+              sourceY: y + NODE_HEIGHT / 2,
+              target: optionId,
+              isBackRef: true,
+              optionIndex: i + 1,
+              targetName: optionId,
+            });
+          } else {
+            // Normal child node
+            const optionX = startX + realChildIndex * NODE_SPACING_X;
+
+            edges.push({
+              id: `edge_${nodeId}_${optionId}`,
+              source: nodeId,
+              target: optionId,
+              sourceX: x,
+              sourceY: y + NODE_HEIGHT / 2,
+              targetX: optionX,
+              targetY: y + LEVEL_SPACING_Y - NODE_HEIGHT / 2,
+              isAnswer: false,
+              optionIndex: i + 1,
+            });
+
+            layoutNode(option, level + 1, i, optionX, false, nodeId, visited);
+            realChildIndex++;
+          }
         });
       }
     }
 
     layoutNode(dialog, 0, 0, 0);
+
+    // Now add back-reference edges with proper target positions
+    backReferences.forEach(ref => {
+      const targetPos = positions.get(ref.target);
+      if (targetPos) {
+        edges.push({
+          ...ref,
+          targetX: targetPos.x,
+          targetY: targetPos.y - NODE_HEIGHT / 2, // Connect to top of target node
+        });
+      }
+    });
 
     graphNodes = nodes;
     graphEdges = edges;
@@ -443,47 +529,79 @@
               <!-- Edges -->
               <g class="edges">
                 {#each graphEdges as edge}
-                  <!-- Curved path from source to target -->
-                  {@const midY = (edge.sourceY + edge.targetY) / 2}
-                  <path
-                    d="M {edge.sourceX} {edge.sourceY}
-                       C {edge.sourceX} {midY},
-                         {edge.targetX} {midY},
-                         {edge.targetX} {edge.targetY}"
-                    fill="none"
-                    stroke={edge.isAnswer ? '#2196f3' : '#ff9800'}
-                    stroke-width="2"
-                    class="edge-path"
-                  />
-                  <!-- Option number label -->
-                  {#if edge.optionIndex}
-                    <circle
-                      cx={(edge.sourceX + edge.targetX) / 2}
-                      cy={midY}
-                      r="12"
-                      fill="#1a1a1a"
-                      stroke="#ff9800"
+                  {#if edge.isBackRef}
+                    <!-- Back-reference: curved dashed line going back up -->
+                    {@const offsetX = edge.sourceX < edge.targetX ? -40 : 40}
+                    {@const midY = Math.min(edge.sourceY, edge.targetY) - 60}
+                    <path
+                      d="M {edge.sourceX} {edge.sourceY}
+                         C {edge.sourceX + offsetX} {edge.sourceY + 40},
+                           {edge.sourceX + offsetX * 2} {midY},
+                           {(edge.sourceX + edge.targetX) / 2} {midY}
+                         C {edge.targetX - offsetX * 2} {midY},
+                           {edge.targetX - offsetX} {edge.targetY - 40},
+                           {edge.targetX} {edge.targetY}"
+                      fill="none"
+                      stroke="#9c27b0"
                       stroke-width="2"
+                      stroke-dasharray="6 4"
+                      class="edge-path backref-path"
                     />
-                    <text
-                      x={(edge.sourceX + edge.targetX) / 2}
-                      y={midY}
-                      text-anchor="middle"
-                      dominant-baseline="middle"
-                      class="edge-label"
-                    >
-                      {edge.optionIndex}
-                    </text>
-                  {/if}
-                  {#if edge.isAnswer}
-                    <text
-                      x={(edge.sourceX + edge.targetX) / 2}
-                      y={midY - 16}
-                      text-anchor="middle"
-                      class="answer-label"
-                    >
-                      AUTO
-                    </text>
+                    <!-- Arrow head at target -->
+                    <polygon
+                      points="{edge.targetX},{edge.targetY} {edge.targetX - 6},{edge.targetY - 12} {edge.targetX + 6},{edge.targetY - 12}"
+                      fill="#9c27b0"
+                    />
+                    <!-- Back-reference label -->
+                    <g transform="translate({(edge.sourceX + edge.targetX) / 2}, {midY - 12})">
+                      <rect x="-24" y="-10" width="48" height="20" rx="4" fill="#1a1a1a" stroke="#9c27b0" stroke-width="1.5" />
+                      <text x="0" y="4" text-anchor="middle" class="backref-label">
+                        {edge.targetName}
+                      </text>
+                    </g>
+                  {:else}
+                    <!-- Normal edge: curved path from source to target -->
+                    {@const midY = (edge.sourceY + edge.targetY) / 2}
+                    <path
+                      d="M {edge.sourceX} {edge.sourceY}
+                         C {edge.sourceX} {midY},
+                           {edge.targetX} {midY},
+                           {edge.targetX} {edge.targetY}"
+                      fill="none"
+                      stroke={edge.isAnswer ? '#2196f3' : '#ff9800'}
+                      stroke-width="2"
+                      class="edge-path"
+                    />
+                    <!-- Option number label -->
+                    {#if edge.optionIndex}
+                      <circle
+                        cx={(edge.sourceX + edge.targetX) / 2}
+                        cy={midY}
+                        r="12"
+                        fill="#1a1a1a"
+                        stroke="#ff9800"
+                        stroke-width="2"
+                      />
+                      <text
+                        x={(edge.sourceX + edge.targetX) / 2}
+                        y={midY}
+                        text-anchor="middle"
+                        dominant-baseline="middle"
+                        class="edge-label"
+                      >
+                        {edge.optionIndex}
+                      </text>
+                    {/if}
+                    {#if edge.isAnswer}
+                      <text
+                        x={(edge.sourceX + edge.targetX) / 2}
+                        y={midY - 16}
+                        text-anchor="middle"
+                        class="answer-label"
+                      >
+                        AUTO
+                      </text>
+                    {/if}
                   {/if}
                 {/each}
               </g>
@@ -502,6 +620,8 @@
                     isExit={node.isExit}
                     isAnswer={node.isAnswer}
                     hasOptions={node.hasOptions}
+                    hasBackRef={node.hasBackRef || false}
+                    backRefTargets={node.backRefTargets || []}
                     on:select={handleNodeSelect}
                   />
                 {/each}
@@ -538,6 +658,10 @@
               <div class="legend-item">
                 <span class="legend-color" style="background: #f44336;"></span>
                 <span>Exit</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-color legend-dashed" style="background: #9c27b0;"></span>
+                <span>Go To (Loop)</span>
               </div>
             </div>
           {:else}
@@ -692,6 +816,17 @@
     pointer-events: none;
   }
 
+  .backref-label {
+    fill: #9c27b0;
+    font-size: 10px;
+    font-weight: 600;
+    pointer-events: none;
+  }
+
+  .backref-path {
+    opacity: 0.9;
+  }
+
   .controls {
     position: absolute;
     left: 16px;
@@ -749,6 +884,16 @@
     width: 12px;
     height: 12px;
     border-radius: 3px;
+  }
+
+  .legend-dashed {
+    background: repeating-linear-gradient(
+      90deg,
+      #9c27b0 0px,
+      #9c27b0 4px,
+      transparent 4px,
+      transparent 7px
+    ) !important;
   }
 
   .empty-state {

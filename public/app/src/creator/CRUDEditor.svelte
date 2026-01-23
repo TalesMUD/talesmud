@@ -271,7 +271,7 @@
           </div>
 
           {#if $store.selectedElement}
-            <div class={`card p-6 space-y-6 ${isDraft($store.selectedElement.isNew)}`}>
+            <div class={`card p-6 space-y-6 ${isDraft($store.selectedElement.isNew)} relative`}>
               <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="md:col-span-2 space-y-4">
                   <div class="space-y-1.5">
@@ -315,10 +315,10 @@
                       disabled={!$store.selectedElement.isNew}
                     />
                   </div>
+                  <slot name="hero" />
                 </div>
               </div>
 
-              <slot name="hero" />
               <slot name="content" />
             </div>
 

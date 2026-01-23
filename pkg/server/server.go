@@ -90,13 +90,21 @@ func (app *app) setupRoutes() {
 		Service: app.Facade.NPCsService(),
 	}
 
+	npcSpawners := &handler.NPCSpawnersHandler{
+		Service: app.Facade.NPCSpawnersService(),
+	}
+
 	dialogs := &handler.DialogsHandler{
 		Service: app.Facade.DialogsService(),
 	}
 
 	charTemplates := &handler.CharacterTemplatesHandler{
-		Repo:              app.Facade.CharacterTemplatesRepo(),
-		ItemTemplatesRepo: app.Facade.ItemsService().ItemTemplates(),
+		Repo:      app.Facade.CharacterTemplatesRepo(),
+		ItemsRepo: app.Facade.ItemsService(),
+	}
+
+	lootTables := &handler.LootTablesHandler{
+		Service: app.Facade.LootTablesService(),
 	}
 
 	exp := &handler.ExportHandler{
@@ -151,18 +159,13 @@ func (app *app) setupRoutes() {
 		protected.PUT("rooms/:id", rooms.PutRoom)
 		protected.DELETE("rooms/:id", rooms.DeleteRoom)
 
-		// items API should probably not be directly public
+		// Items API - use ?isTemplate=true for templates, ?isTemplate=false for instances
 		protected.GET("items", items.GetItems)
 		protected.POST("items", items.PostItem)
+		protected.GET("items/:id", items.GetItemByID)
 		protected.PUT("items/:id", items.UpdateItemByID)
 		protected.DELETE("items/:id", items.DeleteItemByID)
-
-		protected.GET("item-templates", items.GetItemTemplates)
-		protected.POST("item-templates", items.PostItemTemplate)
-		protected.PUT("item-templates/:id", items.UpdateItemTemplateByID)
-		protected.DELETE("item-templates/:id", items.DeleteItemTemplateByID)
-
-		protected.DELETE("item-create/:templateId", items.CreateItemFromTemplateID)
+		protected.POST("items/from-template/:templateId", items.CreateInstanceFromTemplate)
 
 		// -- scripts
 		protected.GET("scripts", scripts.GetScripts)
@@ -182,9 +185,18 @@ func (app *app) setupRoutes() {
 		// NPCs
 		protected.GET("npcs", npcs.GetNPCs)
 		protected.POST("npcs", npcs.PostNPC)
+		protected.GET("npcs/templates", npcs.GetNPCTemplates)
 		protected.GET("npcs/:id", npcs.GetNPCByID)
 		protected.PUT("npcs/:id", npcs.UpdateNPCByID)
 		protected.DELETE("npcs/:id", npcs.DeleteNPCByID)
+		protected.POST("npcs/:id/spawn", npcs.SpawnNPC)
+
+		// NPC Spawners
+		protected.GET("spawners", npcSpawners.GetSpawners)
+		protected.POST("spawners", npcSpawners.PostSpawner)
+		protected.GET("spawners/:id", npcSpawners.GetSpawnerByID)
+		protected.PUT("spawners/:id", npcSpawners.UpdateSpawnerByID)
+		protected.DELETE("spawners/:id", npcSpawners.DeleteSpawnerByID)
 
 		// Dialogs
 		protected.GET("dialogs", dialogs.GetDialogs)
@@ -201,6 +213,14 @@ func (app *app) setupRoutes() {
 		protected.DELETE("character-templates/:id", charTemplates.DeleteCharacterTemplateByID)
 		protected.POST("character-templates/seed", charTemplates.SeedCharacterTemplates)
 		protected.GET("character-templates/presets", charTemplates.GetCharacterTemplatePresets)
+
+		// Loot Tables
+		protected.GET("loottables", lootTables.GetLootTables)
+		protected.POST("loottables", lootTables.PostLootTable)
+		protected.GET("loottables/:id", lootTables.GetLootTableByID)
+		protected.PUT("loottables/:id", lootTables.UpdateLootTableByID)
+		protected.DELETE("loottables/:id", lootTables.DeleteLootTableByID)
+		protected.POST("loottables/:id/roll", lootTables.RollLootTable)
 	}
 
 	public := r.Group("/api/")

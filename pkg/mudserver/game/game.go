@@ -7,6 +7,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities"
 
 	c "github.com/talesmud/talesmud/pkg/mudserver/game/commands"
+	def "github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	m "github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	"github.com/talesmud/talesmud/pkg/service"
 )
@@ -20,6 +21,9 @@ type Game struct {
 	Facade service.Facade
 
 	SystemUser *entities.User
+
+	// NPC instance manager for runtime NPC instances
+	NPCManager *NPCInstanceManager
 
 	// messages
 	onMessageReceived chan interface{}
@@ -43,7 +47,7 @@ type Game struct {
 
 // New creates a new game instance
 func New(facade service.Facade) *Game {
-	return &Game{
+	g := &Game{
 
 		title: "Lair of the Dragon",
 
@@ -63,6 +67,11 @@ func New(facade service.Facade) *Game {
 
 		Facade: facade,
 	}
+
+	// Initialize NPC instance manager
+	g.NPCManager = NewNPCInstanceManager(facade)
+
+	return g
 }
 
 // Subscribe ... sub
@@ -105,26 +114,40 @@ func (g *Game) GetFacade() service.Facade {
 	return g.Facade
 }
 
+// GetNPCInstanceManager returns the NPC instance manager
+func (g *Game) GetNPCInstanceManager() def.NPCInstanceCtrl {
+	return g.NPCManager
+}
+
 const roomUpdateInterval = 10
 const npcUpdateInterval = 10
+const spawnerUpdateInterval = 5
 
 func (g *Game) handleGameUpdates() {
 
 	roomTicker := time.NewTicker(roomUpdateInterval * time.Second)
 	npcTicker := time.NewTicker(npcUpdateInterval * time.Second)
+	spawnerTicker := time.NewTicker(spawnerUpdateInterval * time.Second)
 
 	for {
 		select {
 		case <-roomTicker.C:
 			g.handleRoomUpdates()
 		case <-npcTicker.C:
-			//server.handleUserPings()
+			g.handleNPCUpdates()
+		case <-spawnerTicker.C:
+			g.handleSpawnerUpdates()
 		}
 	}
 }
 
 //Run main game loop
 func (g *Game) Run() {
+
+	// Initialize NPC instance manager (spawns initial NPCs from spawners)
+	if err := g.NPCManager.Initialize(); err != nil {
+		log.WithError(err).Error("Failed to initialize NPC instance manager")
+	}
 
 	go g.handleGameUpdates()
 

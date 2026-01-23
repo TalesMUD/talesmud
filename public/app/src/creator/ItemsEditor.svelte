@@ -10,14 +10,11 @@
     createItem,
     updateItem,
     deleteItem,
-  } from "../api/items.js";
-
-  import {
     getItemQualities,
     getItemTypes,
     getItemSubTypes,
     getItemSlots,
-  } from "../api/item-templates.js";
+  } from "../api/items.js";
 
   const config = {
     title: "Manage Items",

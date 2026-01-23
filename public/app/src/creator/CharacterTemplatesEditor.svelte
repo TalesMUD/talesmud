@@ -14,7 +14,7 @@
     seedCharacterTemplates,
   } from "../api/character-templates.js";
 
-  import { getItemTemplates } from "../api/item-templates.js";
+  import { getItemTemplates } from "../api/items.js";
 
   const store = createStore();
   const { isAuthenticated, authToken } = getAuth();

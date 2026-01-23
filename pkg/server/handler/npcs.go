@@ -14,10 +14,11 @@ type NPCsHandler struct {
 	Service service.NPCsService
 }
 
-// GetNPCs returns all NPCs
+// GetNPCs returns all NPCs with optional filtering
 func (h *NPCsHandler) GetNPCs(c *gin.Context) {
-	// Check for optional roomID filter
+	// Check for optional filters
 	roomID := c.Query("roomID")
+	isTemplateFilter := c.Query("isTemplate")
 
 	var npcs []*npc.NPC
 	var err error
@@ -28,11 +29,24 @@ func (h *NPCsHandler) GetNPCs(c *gin.Context) {
 		npcs, err = h.Service.FindAll()
 	}
 
-	if err == nil {
-		c.JSON(http.StatusOK, npcs)
-	} else {
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
+
+	// Filter by isTemplate if specified
+	if isTemplateFilter != "" {
+		wantTemplate := isTemplateFilter == "true"
+		filtered := make([]*npc.NPC, 0)
+		for _, n := range npcs {
+			if n.IsTemplate == wantTemplate {
+				filtered = append(filtered, n)
+			}
+		}
+		npcs = filtered
+	}
+
+	c.JSON(http.StatusOK, npcs)
 }
 
 // GetNPCByID returns a single NPC by ID
@@ -90,4 +104,41 @@ func (h *NPCsHandler) DeleteNPCByID(c *gin.Context) {
 	} else {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 	}
+}
+
+// GetNPCTemplates returns all NPC templates
+func (h *NPCsHandler) GetNPCTemplates(c *gin.Context) {
+	templates, err := h.Service.FindAllTemplates()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, templates)
+}
+
+// SpawnNPC creates an instance from a template
+// Note: This only creates the NPC data, the caller must register it with the game's NPCManager
+func (h *NPCsHandler) SpawnNPC(c *gin.Context) {
+	templateID := c.Param("id")
+
+	var req struct {
+		RoomID string `json:"roomId" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	log.WithFields(log.Fields{
+		"template": templateID,
+		"room":     req.RoomID,
+	}).Info("Spawning NPC from template")
+
+	instance, err := h.Service.SpawnFromTemplate(templateID, req.RoomID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, instance)
 }

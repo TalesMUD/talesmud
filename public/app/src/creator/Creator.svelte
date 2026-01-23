@@ -1,7 +1,8 @@
 <script>
   const tabs = [
     { name: "Rooms", nav: "/creator/rooms" },
-    { name: "Items", nav: "/creator/items" },
+    // Items editor hidden - items are now managed via Rooms editor
+    // { name: "Items", nav: "/creator/items" },
     { name: "Item Templates", nav: "/creator/item-templates" },
     { name: "Character Templates", nav: "/creator/character-templates" },
     { name: "NPCs", nav: "/creator/npcs" },

@@ -125,21 +125,27 @@ func (runner DefaultScriptRunner) addItemFunctions(vm *otto.Otto) {
 
 	vm.Set("T_findItemTemplate", func(call otto.FunctionCall) otto.Value {
 		itemTemplate, _ := call.Argument(0).ToString()
-		templates, _ := runner.ItemsService.ItemTemplates().FindByName(itemTemplate)
-		result, _ := vm.ToValue(items.ItemTemplatesToJSONString(templates))
+		templates, _ := runner.ItemsService.FindTemplateByName(itemTemplate)
+		result, _ := vm.ToValue(items.ItemsToJSONString(templates))
 		return result
 	})
 	vm.Set("T_getItemTemplate", func(call otto.FunctionCall) otto.Value {
 		itemTemplateID, _ := call.Argument(0).ToString()
-		template, _ := runner.ItemsService.ItemTemplates().FindByID(itemTemplateID)
-		result, _ := vm.ToValue(items.ItemTemplateToJSONString(*template))
-		return result
+		template, _ := runner.ItemsService.FindByID(itemTemplateID)
+		if template != nil && template.IsTemplate {
+			result, _ := vm.ToValue(items.ItemToJSONString(*template))
+			return result
+		}
+		return otto.NullValue()
 	})
 	vm.Set("T_createItemFromTemplate", func(call otto.FunctionCall) otto.Value {
 		templateID, _ := call.Argument(0).ToString()
-		item, _ := runner.ItemsService.CreateItemFromTemplate(templateID)
-		result, _ := vm.ToValue(items.ItemToJSONString(*item))
-		return result
+		item, _ := runner.ItemsService.CreateInstanceFromTemplate(templateID)
+		if item != nil {
+			result, _ := vm.ToValue(items.ItemToJSONString(*item))
+			return result
+		}
+		return otto.NullValue()
 	})
 }
 

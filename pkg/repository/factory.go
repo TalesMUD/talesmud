@@ -8,10 +8,11 @@ type Factory interface {
 	Rooms() RoomsRepository
 	Scripts() ScriptsRepository
 	Items() ItemsRepository
-	ItemTemplates() ItemTemplatesRepository
 	CharacterTemplates() CharacterTemplatesRepository
 	NPCs() NPCsRepository
+	NPCSpawners() NPCSpawnersRepository
 	Dialogs() DialogsRepository
 	Conversations() ConversationsRepository
+	LootTables() LootTablesRepository
 	Close() error
 }

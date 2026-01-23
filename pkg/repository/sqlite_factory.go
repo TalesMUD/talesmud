@@ -36,10 +36,6 @@ func (f *SQLiteFactory) Items() ItemsRepository {
 	return NewSQLiteItemsRepository(f.client)
 }
 
-func (f *SQLiteFactory) ItemTemplates() ItemTemplatesRepository {
-	return NewSQLiteItemTemplatesRepository(f.client)
-}
-
 func (f *SQLiteFactory) CharacterTemplates() CharacterTemplatesRepository {
 	return NewSQLiteCharacterTemplatesRepository(f.client)
 }
@@ -48,12 +44,20 @@ func (f *SQLiteFactory) NPCs() NPCsRepository {
 	return NewSQLiteNPCsRepository(f.client)
 }
 
+func (f *SQLiteFactory) NPCSpawners() NPCSpawnersRepository {
+	return NewSQLiteNPCSpawnersRepository(f.client)
+}
+
 func (f *SQLiteFactory) Dialogs() DialogsRepository {
 	return NewSQLiteDialogsRepository(f.client)
 }
 
 func (f *SQLiteFactory) Conversations() ConversationsRepository {
 	return NewSQLiteConversationsRepository(f.client)
+}
+
+func (f *SQLiteFactory) LootTables() LootTablesRepository {
+	return NewSQLiteLootTablesRepository(f.client)
 }
 
 func (f *SQLiteFactory) Close() error {

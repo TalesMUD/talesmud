@@ -4,6 +4,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 	luar "layeh.com/gopher-luar"
 
+	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	luarunner "github.com/talesmud/talesmud/pkg/scripts/runner/lua"
 )
 
@@ -229,6 +230,261 @@ func RegisterNPCsModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 
 		err := facade.NPCsService().Delete(id)
 		L.Push(lua.LBool(err == nil))
+		return 1
+	}))
+
+	// === Template and Instance Functions ===
+
+	// tales.npcs.getTemplates() - Get all NPC templates
+	mod.RawSetString("getTemplates", L.NewFunction(func(L *lua.LState) int {
+		facade := runner.GetFacade()
+		if facade == nil {
+			L.Push(lua.LNil)
+			return 1
+		}
+
+		templates, err := facade.NPCsService().FindAllTemplates()
+		if err != nil {
+			L.Push(lua.LNil)
+			return 1
+		}
+
+		L.Push(luar.New(L, templates))
+		return 1
+	}))
+
+	// tales.npcs.isTemplate(id) - Check if NPC is a template
+	mod.RawSetString("isTemplate", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+		facade := runner.GetFacade()
+		if facade == nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+
+		npc, err := facade.NPCsService().FindByID(id)
+		if err != nil || npc == nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+
+		L.Push(lua.LBool(npc.IsTemplate))
+		return 1
+	}))
+
+	// tales.npcs.spawnFromTemplate(templateId, roomId) - Spawn instance from template
+	mod.RawSetString("spawnFromTemplate", L.NewFunction(func(L *lua.LState) int {
+		templateID := L.CheckString(1)
+		roomID := L.CheckString(2)
+
+		game := runner.GetGame()
+		if game == nil {
+			L.Push(lua.LNil)
+			return 1
+		}
+
+		npcMgr := game.GetNPCInstanceManager()
+		if npcMgr == nil {
+			L.Push(lua.LNil)
+			return 1
+		}
+
+		instance, err := npcMgr.SpawnInstanceDirect(templateID, roomID)
+		if err != nil || instance == nil {
+			L.Push(lua.LNil)
+			return 1
+		}
+
+		L.Push(luar.New(L, instance))
+		return 1
+	}))
+
+	// tales.npcs.getInstance(id) - Get instance from memory (not DB)
+	mod.RawSetString("getInstance", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+
+		game := runner.GetGame()
+		if game == nil {
+			L.Push(lua.LNil)
+			return 1
+		}
+
+		npcMgr := game.GetNPCInstanceManager()
+		if npcMgr == nil {
+			L.Push(lua.LNil)
+			return 1
+		}
+
+		instance := npcMgr.GetInstance(id)
+		if instance == nil {
+			L.Push(lua.LNil)
+			return 1
+		}
+
+		L.Push(luar.New(L, instance))
+		return 1
+	}))
+
+	// tales.npcs.getInstancesInRoom(roomId) - Get all instances in room
+	mod.RawSetString("getInstancesInRoom", L.NewFunction(func(L *lua.LState) int {
+		roomID := L.CheckString(1)
+
+		game := runner.GetGame()
+		if game == nil {
+			L.Push(lua.LNil)
+			return 1
+		}
+
+		npcMgr := game.GetNPCInstanceManager()
+		if npcMgr == nil {
+			L.Push(lua.LNil)
+			return 1
+		}
+
+		instances := npcMgr.GetInstancesInRoom(roomID)
+		L.Push(luar.New(L, instances))
+		return 1
+	}))
+
+	// tales.npcs.kill(id) - Kill an NPC instance
+	mod.RawSetString("kill", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+
+		game := runner.GetGame()
+		if game == nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+
+		npcMgr := game.GetNPCInstanceManager()
+		if npcMgr == nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+
+		success := npcMgr.KillInstance(id)
+		L.Push(lua.LBool(success))
+		return 1
+	}))
+
+	// tales.npcs.setState(id, state) - Set NPC instance state
+	mod.RawSetString("setState", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+		state := L.CheckString(2)
+
+		game := runner.GetGame()
+		if game == nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+
+		npcMgr := game.GetNPCInstanceManager()
+		if npcMgr == nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+
+		success := npcMgr.UpdateInstance(id, func(n *npc.NPC) {
+			n.State = state
+		})
+		L.Push(lua.LBool(success))
+		return 1
+	}))
+
+	// tales.npcs.getState(id) - Get NPC state
+	mod.RawSetString("getState", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+
+		// First try instance manager
+		game := runner.GetGame()
+		if game != nil {
+			npcMgr := game.GetNPCInstanceManager()
+			if npcMgr != nil {
+				instance := npcMgr.GetInstance(id)
+				if instance != nil {
+					L.Push(lua.LString(instance.State))
+					return 1
+				}
+			}
+		}
+
+		// Fall back to persisted NPC
+		facade := runner.GetFacade()
+		if facade != nil {
+			npc, err := facade.NPCsService().FindByID(id)
+			if err == nil && npc != nil {
+				L.Push(lua.LString(npc.State))
+				return 1
+			}
+		}
+
+		L.Push(lua.LString(""))
+		return 1
+	}))
+
+	// tales.npcs.damageInstance(id, amount) - Damage an instance
+	mod.RawSetString("damageInstance", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+		amount := L.CheckInt(2)
+
+		game := runner.GetGame()
+		if game == nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+
+		npcMgr := game.GetNPCInstanceManager()
+		if npcMgr == nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+
+		died := npcMgr.DamageInstance(id, int32(amount))
+		L.Push(lua.LBool(died))
+		return 1
+	}))
+
+	// tales.npcs.healInstance(id, amount) - Heal an instance
+	mod.RawSetString("healInstance", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+		amount := L.CheckInt(2)
+
+		game := runner.GetGame()
+		if game == nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+
+		npcMgr := game.GetNPCInstanceManager()
+		if npcMgr == nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+
+		success := npcMgr.HealInstance(id, int32(amount))
+		L.Push(lua.LBool(success))
+		return 1
+	}))
+
+	// tales.npcs.moveInstance(id, roomId) - Move an instance to a room
+	mod.RawSetString("moveInstance", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+		roomID := L.CheckString(2)
+
+		game := runner.GetGame()
+		if game == nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+
+		npcMgr := game.GetNPCInstanceManager()
+		if npcMgr == nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+
+		success := npcMgr.MoveInstance(id, roomID)
+		L.Push(lua.LBool(success))
 		return 1
 	}))
 

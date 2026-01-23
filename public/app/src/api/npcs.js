@@ -87,4 +87,14 @@ function deleteNPC(token, id, cb, errorCb) {
     .catch((err) => errorCb(err));
 }
 
-export { getNPC, getNPCs, createNPC, updateNPC, deleteNPC };
+// Get only NPC templates (isTemplate=true)
+function getNPCTemplates(token, cb, errorCb) {
+  return getNPCs(token, [{ key: "isTemplate", val: "true" }], cb, errorCb);
+}
+
+// Get only unique NPCs (isTemplate=false)
+function getUniqueNPCs(token, cb, errorCb) {
+  return getNPCs(token, [{ key: "isTemplate", val: "false" }], cb, errorCb);
+}
+
+export { getNPC, getNPCs, createNPC, updateNPC, deleteNPC, getNPCTemplates, getUniqueNPCs };

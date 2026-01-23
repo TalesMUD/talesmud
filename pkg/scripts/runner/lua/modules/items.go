@@ -11,7 +11,7 @@ import (
 func RegisterItemsModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 	mod := L.NewTable()
 
-	// tales.items.get(id) - Get item by ID
+	// tales.items.get(id) - Get item by ID (template or instance)
 	mod.RawSetString("get", L.NewFunction(func(L *lua.LState) int {
 		id := L.CheckString(1)
 		facade := runner.GetFacade()
@@ -20,7 +20,7 @@ func RegisterItemsModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 			return 1
 		}
 
-		item, err := facade.ItemsService().Items().FindByID(id)
+		item, err := facade.ItemsService().FindByID(id)
 		if err != nil || item == nil {
 			L.Push(lua.LNil)
 			return 1
@@ -30,7 +30,7 @@ func RegisterItemsModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 		return 1
 	}))
 
-	// tales.items.findByName(name) - Find items by name
+	// tales.items.findByName(name) - Find items by name (templates and instances)
 	mod.RawSetString("findByName", L.NewFunction(func(L *lua.LState) int {
 		name := L.CheckString(1)
 		facade := runner.GetFacade()
@@ -39,7 +39,7 @@ func RegisterItemsModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 			return 1
 		}
 
-		items, err := facade.ItemsService().Items().FindByName(name)
+		items, err := facade.ItemsService().FindByName(name)
 		if err != nil {
 			L.Push(lua.LNil)
 			return 1
@@ -58,13 +58,13 @@ func RegisterItemsModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 			return 1
 		}
 
-		template, err := facade.ItemsService().ItemTemplates().FindByID(id)
-		if err != nil || template == nil {
+		item, err := facade.ItemsService().FindByID(id)
+		if err != nil || item == nil || !item.IsTemplate {
 			L.Push(lua.LNil)
 			return 1
 		}
 
-		L.Push(luar.New(L, template))
+		L.Push(luar.New(L, item))
 		return 1
 	}))
 
@@ -77,7 +77,7 @@ func RegisterItemsModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 			return 1
 		}
 
-		templates, err := facade.ItemsService().ItemTemplates().FindByName(name)
+		templates, err := facade.ItemsService().FindTemplateByName(name)
 		if err != nil {
 			L.Push(lua.LNil)
 			return 1
@@ -87,7 +87,7 @@ func RegisterItemsModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 		return 1
 	}))
 
-	// tales.items.createFromTemplate(templateID) - Create item from template
+	// tales.items.createFromTemplate(templateID) - Create item instance from template
 	mod.RawSetString("createFromTemplate", L.NewFunction(func(L *lua.LState) int {
 		templateID := L.CheckString(1)
 		facade := runner.GetFacade()
@@ -96,7 +96,7 @@ func RegisterItemsModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 			return 1
 		}
 
-		item, err := facade.ItemsService().CreateItemFromTemplate(templateID)
+		item, err := facade.ItemsService().CreateInstanceFromTemplate(templateID)
 		if err != nil || item == nil {
 			L.Push(lua.LNil)
 			return 1
@@ -123,7 +123,7 @@ func RegisterItemsModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 			return 1
 		}
 
-		err := facade.ItemsService().Items().Delete(id)
+		err := facade.ItemsService().Delete(id)
 		L.Push(lua.LBool(err == nil))
 		return 1
 	}))

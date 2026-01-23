@@ -14,8 +14,10 @@ type Facade interface {
 	ScriptsService() ScriptsService
 	ItemsService() ItemsService
 	NPCsService() NPCsService
+	NPCSpawnersService() NPCSpawnersService
 	DialogsService() DialogsService
 	ConversationsService() ConversationsService
+	LootTablesService() LootTablesService
 	CharacterTemplatesRepo() repository.CharacterTemplatesRepository
 
 	Runner() scripts.ScriptRunner
@@ -29,8 +31,10 @@ type facade struct {
 	is    ItemsService
 	ss    ScriptsService
 	ns    NPCsService
+	nss   NPCSpawnersService
 	ds    DialogsService
 	convs ConversationsService
+	lts   LootTablesService
 	sr    scripts.ScriptRunner
 	repos repository.Factory
 }
@@ -44,15 +48,17 @@ func NewFacade(repos repository.Factory, runner scripts.ScriptRunner) Facade {
 	roomsRepo := repos.Rooms()
 	scriptsRepo := repos.Scripts()
 	itemsRepo := repos.Items()
-	itemTemplatesRepo := repos.ItemTemplates()
 	npcsRepo := repos.NPCs()
+	npcSpawnersRepo := repos.NPCSpawners()
 	dialogsRepo := repos.Dialogs()
 	conversationsRepo := repos.Conversations()
 	characterTemplatesRepo := repos.CharacterTemplates()
+	lootTablesRepo := repos.LootTables()
 
 	// Create services
 	ss := NewScriptsService(scriptsRepo)
-	is := NewItemsService(itemsRepo, itemTemplatesRepo, ss, runner)
+	is := NewItemsService(itemsRepo)
+	lts := NewLootTablesService(lootTablesRepo, is)
 
 	return &facade{
 		css:   NewCharactersService(charactersRepo, characterTemplatesRepo),
@@ -62,8 +68,10 @@ func NewFacade(repos repository.Factory, runner scripts.ScriptRunner) Facade {
 		ss:    ss,
 		is:    is,
 		ns:    NewNPCsService(npcsRepo),
+		nss:   NewNPCSpawnersService(npcSpawnersRepo),
 		ds:    NewDialogsService(dialogsRepo),
 		convs: NewConversationsService(conversationsRepo),
+		lts:   lts,
 		sr:    runner,
 		repos: repos,
 	}
@@ -95,12 +103,20 @@ func (f *facade) NPCsService() NPCsService {
 	return f.ns
 }
 
+func (f *facade) NPCSpawnersService() NPCSpawnersService {
+	return f.nss
+}
+
 func (f *facade) DialogsService() DialogsService {
 	return f.ds
 }
 
 func (f *facade) ConversationsService() ConversationsService {
 	return f.convs
+}
+
+func (f *facade) LootTablesService() LootTablesService {
+	return f.lts
 }
 
 func (f *facade) CharacterTemplatesRepo() repository.CharacterTemplatesRepository {

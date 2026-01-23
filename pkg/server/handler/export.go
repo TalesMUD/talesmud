@@ -29,14 +29,12 @@ func (handler *ExportHandler) Export(c *gin.Context) {
 	d.Rooms, _ = handler.RoomsService.FindAll()
 	d.Characters, _ = handler.CharactersService.FindAll()
 	d.Users, _ = handler.UserService.FindAll()
-	d.ItemTemplates, _ = handler.ItemsService.ItemTemplates().FindAll(repository.ItemsQuery{})
-	d.Items, _ = handler.ItemsService.Items().FindAll(repository.ItemsQuery{})
+	d.Items, _ = handler.ItemsService.FindAll(repository.ItemsQuery{}) // Gets all items (templates + instances)
 	d.Scripts, _ = handler.ScriptService.FindAll()
 	d.NPCs, _ = handler.NPCsService.FindAll()
 	d.Dialogs, _ = handler.DialogsService.FindAll()
 	d.Parties, _ = handler.PartiesService.FindAll()
 
-	//c.JSON(http.StatusOK, d)
 	c.IndentedJSON(http.StatusOK, d)
 }
 
@@ -47,14 +45,12 @@ func (handler *ExportHandler) Import(c *gin.Context) {
 	handler.RoomsService.Drop()
 	handler.CharactersService.Drop()
 	handler.UserService.Drop()
-	handler.ItemsService.Items().Drop()
-	handler.ItemsService.ItemTemplates().Drop()
+	handler.ItemsService.Drop()
 	handler.ScriptService.Drop()
 	handler.NPCsService.Drop()
 	handler.DialogsService.Drop()
 
 	var data exporter.Data
-	//if err := c.ShouldBindYAML(&data); err != nil {
 	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -73,10 +69,7 @@ func (handler *ExportHandler) Import(c *gin.Context) {
 	}
 
 	for _, item := range data.Items {
-		handler.ItemsService.Items().Import(item)
-	}
-	for _, itemTemplate := range data.ItemTemplates {
-		handler.ItemsService.ItemTemplates().Import(itemTemplate)
+		handler.ItemsService.Import(item)
 	}
 
 	for _, script := range data.Scripts {

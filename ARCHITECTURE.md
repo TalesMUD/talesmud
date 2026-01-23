@@ -84,8 +84,7 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
 /api/
     ├── characters/        # Character CRUD
     ├── rooms/             # Room CRUD
-    ├── items/             # Item CRUD
-    ├── item-templates/    # Item template CRUD
+    ├── items/             # Item CRUD (templates: ?isTemplate=true)
     ├── scripts/           # Script CRUD
     ├── user               # User profile
     └── templates/         # Public templates
@@ -219,17 +218,44 @@ func (g *Game) Run() {
 }
 ```
 
-#### Update Cycle (Every 10 seconds)
+#### Update Cycle
 
-1. **Room Updates**
+The game runs multiple update tickers:
+
+1. **Room Updates** (10 seconds)
    - Remove offline characters from rooms
    - Sync room state to database
    - Clean up stale connections
 
-2. **NPC Updates** (Planned)
-   - Process NPC behaviors
-   - Execute idle dialogs
-   - Handle NPC movement
+2. **NPC Updates** (10 seconds)
+   - Process NPC state machine (idle, patrol, combat, fleeing)
+   - Handle respawning for dead NPCs
+   - Execute behavior updates (wander, patrol paths)
+
+3. **Spawner Updates** (5 seconds)
+   - Check each spawner's instance count
+   - Spawn new instances when below max capacity
+   - Clean up dead instances from spawner tracking
+
+#### NPCInstanceManager
+
+Manages in-memory NPC instances that are spawned from templates:
+
+```go
+type NPCInstanceManager struct {
+    instances    map[string]*npc.NPC      // Active NPC instances
+    spawnerState map[string]*SpawnerState // Runtime spawner state
+    facade       service.Facade
+}
+```
+
+Key methods:
+- `Initialize()` - Load spawners and create initial instances
+- `SpawnInstance(spawner)` - Create instance from spawner template
+- `SpawnInstanceDirect(templateID, roomID)` - Spawn without spawner
+- `GetInstancesInRoom(roomID)` - Query instances by room
+- `KillInstance(id)` - Mark instance as dead
+- `RespawnInstance(id)` - Restore instance to alive state
 
 ### Command System (`pkg/mudserver/game/commands/`)
 
@@ -293,6 +319,27 @@ Try room actions (custom interactions)
 Execute matched command
 ```
 
+### Item Commands
+
+| Command | Aliases | Description |
+|---------|---------|-------------|
+| `pickup <item>` | `get`, `take` | Pick up item from room |
+| `drop <item> [qty]` | - | Drop item to room |
+| `examine <item>` | `inspect` | Detailed item inspection |
+| `inventory` | `i` | Show inventory (categorized) |
+| `equipment` | `eq`, `gear` | Show equipped items |
+| `equip <item>` | `wear` | Equip item from inventory |
+| `unequip <slot\|item>` | `remove` | Unequip to inventory |
+
+### Trade Commands
+
+| Command | Aliases | Description |
+|---------|---------|-------------|
+| `list` | `shop` | Show merchant inventory |
+| `buy <item> [qty]` | - | Purchase from merchant |
+| `sell <item> [qty]` | - | Sell to merchant |
+| `value <item>` | `price` | Check sell price |
+
 ### Service Layer (`pkg/service/`)
 
 Business logic layer using the Facade pattern.
@@ -307,6 +354,11 @@ type Facade interface {
     RoomsService() RoomsService
     ScriptsService() ScriptsService
     ItemsService() ItemsService
+    NPCsService() NPCsService
+    NPCSpawnersService() NPCSpawnersService
+    DialogsService() DialogsService
+    ConversationsService() ConversationsService
+    LootTablesService() LootTablesService
     Runner() scripts.ScriptRunner
 }
 ```
@@ -321,6 +373,7 @@ type Facade interface {
 | ItemsService | Item CRUD, create from template |
 | ScriptsService | Script CRUD, execution |
 | PartiesService | Party/group management |
+| LootTablesService | Loot table CRUD, loot rolling |
 
 ### Repository Layer (`pkg/repository/`)
 
@@ -364,12 +417,16 @@ NewQueryParams().
 |------------|--------|
 | users | User accounts |
 | characters | Player characters |
+| charactertemplates | Character blueprints |
 | rooms | Game locations |
-| items | Item instances |
-| itemtemplates | Item blueprints |
-| npc | Non-player characters |
+| items | Items (templates and instances, distinguished by `isTemplate` field) |
+| npcs | NPC templates and singletons |
+| npc_spawners | NPC spawn point definitions |
+| dialogs | Dialog trees |
+| conversations | Active dialog sessions |
 | scripts | Game scripts |
 | parties | Player groups |
+| loot_tables | Loot drop configurations |
 
 ## Entity Model
 
@@ -459,16 +516,148 @@ type NPC struct {
     CurrentHitPoints, MaxHitPoints int32
     Level int32
 
-    EnemyTrait *EnemyTrait  // Combat behavior
+    // Template System
+    IsTemplate     bool    // True if this is a blueprint
+    TemplateID     string  // For instances: source template
+    InstanceSuffix string  // Unique suffix (e.g., "abc123")
+
+    // Behavior Configuration
+    SpawnRoomID  string         // Respawn location
+    RespawnTime  time.Duration  // Time to respawn (0 = no respawn)
+    WanderRadius int            // Rooms to wander from spawn
+    PatrolPath   []string       // Room IDs for patrol route
+
+    // State Tracking
+    IsDead    bool       // Currently dead
+    DeathTime time.Time  // When died
+    State     string     // FSM: idle, combat, patrol, dead, fleeing
+
+    // Behavior Traits
+    EnemyTrait    *EnemyTrait    // Combat behavior
+    MerchantTrait *MerchantTrait // Trading behavior (see below)
+
+    // Dialog references
+    DialogID          string
+    IdleDialogID      string
+    IdleDialogTimeout time.Duration
+}
+```
+
+#### EnemyTrait
+
+```go
+type EnemyTrait struct {
+    // Classification
+    CreatureType string  // beast, humanoid, undead, elemental, construct, demon, dragon, aberration
+    CombatStyle  string  // melee, ranged, magic, swarm, brute, agile
+    Difficulty   string  // trivial, easy, normal, hard, boss
+
+    // Combat Stats
+    AttackPower  int32
+    Defense      int32
+    AttackSpeed  float64
+
+    // Behavior
+    AggroRadius   int     // Detection range (0 = passive)
+    AggroOnSight  bool    // Auto-attack on detection
+    CallForHelp   bool    // Alert nearby enemies
+    FleeThreshold float64 // HP % to flee
+
+    // Rewards
+    XPReward       int64
+    GoldDrop       Range     // {Min, Max}
+    LootTableID    string    // Reference to loot table
+    GuaranteedLoot []string  // Item template IDs that always drop
+    MaxDrops       int32     // Max items from loot table (0 = unlimited)
+
+    // Event Scripts
+    OnAggroScript string
+    OnDeathScript string
+    OnFleeScript  string
+}
+```
+
+#### MerchantTrait
+
+```go
+type MerchantTrait struct {
+    MerchantType   string         // general, blacksmith, alchemist, etc.
+    Inventory      []MerchantItem // Items for sale
+    RestockMinutes int32          // Restock interval (0 = never)
+    LastRestock    time.Time      // Last restock timestamp
+    BuyMultiplier  float64        // Price multiplier when buying (1.0 = normal)
+    SellMultiplier float64        // Price multiplier when selling (0.5 = half price)
+    AcceptedTypes  []string       // Item types merchant will buy (empty = all)
+    RejectedTags   []string       // Tags that prevent buying (soulbound, quest)
+}
+
+type MerchantItem struct {
+    ItemTemplateID string  // Item template to sell
+    BasePrice      int64   // Override price (0 = use item's BasePrice)
+    PriceOverride  int64   // Force specific price (ignores multipliers)
+    Quantity       int32   // Current stock (-1 = unlimited)
+    MaxQuantity    int32   // Max after restock
+    RequiredLevel  int32   // Player level requirement
+}
+```
+
+### NPCSpawner Entity
+
+Defines automatic NPC spawning points:
+
+```go
+type NPCSpawner struct {
+    *entities.Entity
+
+    TemplateID    string         // NPC template to spawn
+    RoomID        string         // Where to spawn
+    MaxInstances  int            // Max alive at once
+    SpawnInterval time.Duration  // Time between spawns
+    InitialCount  int            // Spawn on world load
+
+    RespawnTimeOverride *time.Duration  // Override template respawn
+}
+```
+
+### LootTable Entity
+
+Defines item drop tables for NPCs:
+
+```go
+type LootTable struct {
+    *entities.Entity
+
+    Name           string       // Display name
+    Description    string       // Editor description
+    Entries        []LootEntry  // Potential drops
+    GoldMultiplier float64      // Multiplier for gold drops (1.0 = normal)
+    DropBonus      float64      // Flat bonus to all drop chances
+}
+
+type LootEntry struct {
+    ItemTemplateID string   // Item to drop
+    DropChance     float64  // 0.0-1.0 probability
+    MinQuantity    int32    // Min items (stackable)
+    MaxQuantity    int32    // Max items (stackable)
+    Guaranteed     bool     // Always drops
+    MinPlayerLevel int32    // Level requirement
+    RequiredTags   []string // Player must have tags
 }
 ```
 
 ### Item Entity
 
+Items use a unified template/instance pattern similar to NPCs:
+
 ```go
 type Item struct {
     *entities.Entity
     traits.LookAt
+
+    // Template System (matching NPC pattern)
+    IsTemplate     bool    // True if this is a blueprint
+    TemplateID     string  // For instances: source template ID
+    InstanceSuffix string  // Unique suffix for instance identification
 
     Name, Description string
     Type    ItemType     // weapon, armor, etc.
@@ -484,8 +673,23 @@ type Item struct {
     Closed, Locked bool
     Items          Items
     MaxItems       int32
+
+    // Interaction flags
+    NoPickup   bool   // Cannot be picked up
+
+    // Stacking and economy
+    Stackable bool   // Can stack in inventory
+    Quantity  int32  // Current stack count
+    MaxStack  int32  // Max stack size (0 = unlimited)
+    BasePrice int64  // Default price in gold
 }
 ```
+
+**Template/Instance Lifecycle:**
+- Templates (`IsTemplate=true`) are blueprints stored in the database
+- Instances (`IsTemplate=false`, `TemplateID` set) are created from templates
+- Use `CreateInstanceFromTemplate(templateID)` to spawn new instances
+- Instances track their source template via `TemplateID`
 
 ## Dialog System
 
@@ -623,7 +827,7 @@ App.svelte
 │   └── Creator.svelte (editor)
 │       ├── RoomsEditor.svelte
 │       ├── ItemsEditor.svelte
-│       ├── ItemTemplatesEditor.svelte
+│       ├── ItemTemplatesEditor.svelte (uses unified items API with isTemplate filter)
 │       ├── ScriptsEditor.svelte
 │       └── WorldEditor.svelte
 ├── UserForm.svelte
@@ -858,10 +1062,27 @@ The scripting system uses Lua (via gopher-lua) for dynamic game content. JavaScr
 | `tales.items` | Item and template operations |
 | `tales.rooms` | Room queries and management |
 | `tales.characters` | Character operations (damage, heal, teleport) |
-| `tales.npcs` | NPC operations and queries |
+| `tales.npcs` | NPC operations (templates, instances, spawning) |
 | `tales.dialogs` | Dialog and conversation management |
 | `tales.game` | Messaging (room, character, broadcast) |
 | `tales.utils` | Utilities (random, UUID, dice rolling) |
+
+#### tales.npcs Functions
+
+| Function | Description |
+|----------|-------------|
+| `get(id)` | Get NPC by ID (template or persisted) |
+| `getTemplates()` | Get all NPC templates |
+| `isTemplate(id)` | Check if NPC is a template |
+| `spawnFromTemplate(templateId, roomId)` | Create instance in memory |
+| `getInstance(id)` | Get instance from NPCInstanceManager |
+| `getInstancesInRoom(roomId)` | Get all instances in a room |
+| `kill(id)` | Mark instance as dead |
+| `setState(id, state)` | Set instance FSM state |
+| `getState(id)` | Get instance state |
+| `damageInstance(id, amount)` | Apply damage, returns true if died |
+| `healInstance(id, amount)` | Restore health |
+| `moveInstance(id, roomId)` | Move instance to room |
 
 ### Event System
 

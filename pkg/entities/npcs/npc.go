@@ -23,6 +23,33 @@ type NPC struct {
 	MaxHitPoints     int32 `bson:"maxHitPoints" json:"maxHitPoints"`
 	Level            int32 `bson:"level" json:"level"`
 
+	// Template System
+	// IsTemplate indicates this NPC is a blueprint for spawning multiple instances
+	// When false, this NPC is a unique singleton that cannot be spawned via spawners
+	IsTemplate bool `bson:"isTemplate" json:"isTemplate"`
+	// TemplateID references the source template for spawned instances
+	TemplateID string `bson:"templateId,omitempty" json:"templateId,omitempty"`
+	// InstanceSuffix is a unique suffix for spawned instances (e.g., "abc123")
+	InstanceSuffix string `bson:"instanceSuffix,omitempty" json:"instanceSuffix,omitempty"`
+
+	// Behavior Configuration
+	// SpawnRoomID is the room where this NPC spawns/respawns
+	SpawnRoomID string `bson:"spawnRoomId,omitempty" json:"spawnRoomId,omitempty"`
+	// RespawnTime is how long after death before respawning (0 = no respawn)
+	RespawnTime time.Duration `bson:"respawnTime,omitempty" json:"respawnTime,omitempty"`
+	// WanderRadius is how many rooms away from spawn the NPC can wander (0 = stationary)
+	WanderRadius int `bson:"wanderRadius,omitempty" json:"wanderRadius,omitempty"`
+	// PatrolPath is an ordered list of room IDs for patrol behavior
+	PatrolPath []string `bson:"patrolPath,omitempty" json:"patrolPath,omitempty"`
+
+	// State Tracking
+	// IsDead indicates the NPC is currently dead and awaiting respawn
+	IsDead bool `bson:"isDead" json:"isDead"`
+	// DeathTime is when the NPC died (for respawn timing)
+	DeathTime time.Time `bson:"deathTime,omitempty" json:"deathTime,omitempty"`
+	// State is the FSM state: "idle", "combat", "patrol", "dead", "fleeing"
+	State string `bson:"state" json:"state"`
+
 	// DialogID references the main interactive dialog for this NPC (stored in dialogs collection)
 	DialogID string `bson:"dialogID,omitempty" json:"dialogID,omitempty"`
 
@@ -35,6 +62,7 @@ type NPC struct {
 	MerchantTrait *MerchantTrait `bson:"merchantTrait,omitempty" json:"merchantTrait,omitempty"`
 
 	Created time.Time `bson:"created" json:"created,omitempty"`
+	Updated time.Time `bson:"updated,omitempty" json:"updated,omitempty"`
 }
 
 // IsEnemy returns true if this NPC has enemy behavior
@@ -55,4 +83,31 @@ func (npc *NPC) HasIdleDialog() bool {
 // IsMerchant returns true if this NPC can trade with players
 func (npc *NPC) IsMerchant() bool {
 	return npc.MerchantTrait != nil
+}
+
+// IsInstance returns true if this NPC is a spawned instance from a template
+func (npc *NPC) IsInstance() bool {
+	return npc.TemplateID != "" && npc.InstanceSuffix != ""
+}
+
+// GetDisplayName returns the name shown to players
+func (npc *NPC) GetDisplayName() string {
+	return npc.Name
+}
+
+// GetTargetName returns the unique name for targeting commands
+// For instances, this includes the suffix to distinguish between multiple spawns
+func (npc *NPC) GetTargetName() string {
+	if npc.InstanceSuffix != "" {
+		return npc.Name + "-" + npc.InstanceSuffix
+	}
+	return npc.Name
+}
+
+// ShouldRespawn returns true if this NPC is dead and ready to respawn
+func (npc *NPC) ShouldRespawn() bool {
+	if !npc.IsDead || npc.RespawnTime <= 0 {
+		return false
+	}
+	return time.Since(npc.DeathTime) >= npc.RespawnTime
 }

@@ -52,7 +52,10 @@ func (repo *sqliteItemsRepository) FindByName(name string) ([]*i.Item, error) {
 func (repo *sqliteItemsRepository) FindAll(query ItemsQuery) ([]*i.Item, error) {
 	results := make([]*i.Item, 0)
 	if err := repo.sqliteGenericRepo.FindAll(func(elem interface{}) {
-		results = append(results, elem.(*i.Item))
+		item := elem.(*i.Item)
+		if query.matches(item) {
+			results = append(results, item)
+		}
 	}); err != nil {
 		return nil, err
 	}
@@ -78,4 +81,56 @@ func (repo *sqliteItemsRepository) Import(item *i.Item) (*i.Item, error) {
 		return nil, err
 	}
 	return result.(*i.Item), nil
+}
+
+func (repo *sqliteItemsRepository) FindAllTemplates(query ItemsQuery) ([]*i.Item, error) {
+	results := make([]*i.Item, 0)
+	if err := repo.sqliteGenericRepo.FindAll(func(elem interface{}) {
+		item := elem.(*i.Item)
+		if item.IsTemplate && query.matches(item) {
+			results = append(results, item)
+		}
+	}); err != nil {
+		return nil, err
+	}
+	return results, nil
+}
+
+func (repo *sqliteItemsRepository) FindAllInstances(query ItemsQuery) ([]*i.Item, error) {
+	results := make([]*i.Item, 0)
+	if err := repo.sqliteGenericRepo.FindAll(func(elem interface{}) {
+		item := elem.(*i.Item)
+		if !item.IsTemplate && query.matches(item) {
+			results = append(results, item)
+		}
+	}); err != nil {
+		return nil, err
+	}
+	return results, nil
+}
+
+func (repo *sqliteItemsRepository) FindTemplateByName(name string) ([]*i.Item, error) {
+	results := make([]*i.Item, 0)
+	_ = repo.sqliteGenericRepo.FindAllWithParam(
+		db.NewQueryParams(db.QueryParam{Key: "name", Value: name}),
+		func(elem interface{}) {
+			item := elem.(*i.Item)
+			if item.IsTemplate {
+				results = append(results, item)
+			}
+		})
+	return results, nil
+}
+
+func (repo *sqliteItemsRepository) FindByTemplateID(templateID string) ([]*i.Item, error) {
+	results := make([]*i.Item, 0)
+	if err := repo.sqliteGenericRepo.FindAll(func(elem interface{}) {
+		item := elem.(*i.Item)
+		if item.TemplateID == templateID {
+			results = append(results, item)
+		}
+	}); err != nil {
+		return nil, err
+	}
+	return results, nil
 }

@@ -203,6 +203,31 @@
         />
       </div>
 
+      {#if specialExitsCount > 0}
+        <div class="special-exits-list">
+          {#each editingRoom.exits.filter(e => !isCardinalDirection(e.name || "")) as exit}
+            {@const targetRoom = roomsValueHelp.find(r => r.id === exit.target)}
+            <div class="special-exit-item" on:click={() => showSpecialExitsModal = true}>
+              <div class="special-exit-info">
+                <span class="special-exit-name">{exit.name || "Unnamed"}</span>
+                <span class="special-exit-target">
+                  <span class="material-symbols-outlined">arrow_forward</span>
+                  {targetRoom ? targetRoom.name : "No target"}
+                </span>
+              </div>
+              <div class="special-exit-meta">
+                {#if exit.exitType && exit.exitType !== "normal"}
+                  <span class="exit-type-badge">{exit.exitType}</span>
+                {/if}
+                {#if exit.hidden}
+                  <span class="material-symbols-outlined hidden-icon" title="Hidden">visibility_off</span>
+                {/if}
+              </div>
+            </div>
+          {/each}
+        </div>
+      {/if}
+
       <button
         class="special-exits-btn"
         type="button"
@@ -387,6 +412,78 @@
     text-transform: uppercase;
     color: #888;
     margin: 0 0 12px 0;
+  }
+
+  .special-exits-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .special-exit-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid #3a3a3a;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .special-exit-item:hover {
+    border-color: #00bcd4;
+    background: rgba(0, 188, 212, 0.05);
+  }
+
+  .special-exit-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .special-exit-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #fff;
+    text-transform: capitalize;
+  }
+
+  .special-exit-target {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #888;
+  }
+
+  .special-exit-target .material-symbols-outlined {
+    font-size: 12px;
+  }
+
+  .special-exit-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .exit-type-badge {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    color: #aaa;
+  }
+
+  .hidden-icon {
+    font-size: 16px;
+    color: #888;
   }
 
   .special-exits-btn {
