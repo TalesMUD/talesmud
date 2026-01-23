@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"encoding/json"
+	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -35,6 +37,14 @@ func (handler *ScriptsHandler) PostScript(c *gin.Context) {
 		return
 	}
 
+	if script.Language == "" {
+		script.Language = scripts.ScriptLanguageLua
+	}
+	if script.Language != scripts.ScriptLanguageLua {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "only Lua scripts are supported"})
+		return
+	}
+
 	log.WithField("script", script.Name).Info("Creating new script")
 
 	if script, err := handler.Service.Store(&script); err == nil {
@@ -49,22 +59,37 @@ func (handler *ScriptsHandler) ExecuteScript(c *gin.Context) {
 
 	id := c.Param("id")
 
-	// read body as string
-	buf := make([]byte, 1024)
-	num, _ := c.Request.Body.Read(buf)
-	reqBody := string(buf[0:num])
-
-	//TODO: check if the body is a JSON object?
-
 	if script, err := handler.Service.FindByID(id); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	} else {
 
-		result := handler.Runner.Run(*script, reqBody)
+		body, err := io.ReadAll(c.Request.Body)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "failed to read request body"})
+			return
+		}
+
+		scriptCtx := scripts.NewScriptContext()
+		if len(body) > 0 {
+			var payload interface{}
+			if err := json.Unmarshal(body, &payload); err == nil {
+				scriptCtx.Set("ctx", payload)
+			} else {
+				scriptCtx.Set("ctx", string(body))
+			}
+		} else {
+			scriptCtx.Set("ctx", nil)
+		}
+
+		result := handler.Runner.RunWithResult(*script, scriptCtx)
 
 		c.JSON(http.StatusOK, gin.H{
-			"status": "Execution successful",
-			"result": result})
+			"success":    result.Success,
+			"result":     result.Result,
+			"error":      result.Error,
+			"duration":   result.Duration.String(),
+			"durationMs": result.Duration.Milliseconds(),
+		})
 
 	}
 
@@ -84,6 +109,18 @@ func (handler *ScriptsHandler) PutScript(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	existing, err := handler.Service.FindByID(id)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if existing.GetLanguage() != scripts.ScriptLanguageLua {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "cannot update non-Lua scripts; delete and recreate as Lua"})
+		return
+	}
+
+	script.Language = scripts.ScriptLanguageLua
 
 	log.WithField("script", script.Name).Info("Updating script")
 

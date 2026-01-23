@@ -1,0 +1,862 @@
+{
+    "rooms": [
+        {
+            "id": "5ecefce71e5554d53c7941a2",
+            "detail": "",
+            "name": "Entrance to the Catacomb",
+            "description": "You reach the entrance of an old catacomb. You still wonder how you got here in the first place. The heavy wooden door is wide open and you can still hear noises from inside.\n\nA rusty old shield lies on the ground.",
+            "roomType": "entrance",
+            "area": "catacombs",
+            "areaType": "dungeon",
+            "tags": null,
+            "actions": null,
+            "exits": [
+                {
+                    "name": "south",
+                    "description": "Follow the door to the right",
+                    "target": "5ed04cffac165280055c018a",
+                    "params": null
+                }
+            ],
+            "characters": [
+                "82fd1e20-b095-4ae2-9191-4422b4b47996"
+            ],
+            "items": null,
+            "Meta": null
+        },
+        {
+            "id": "5ed04cffac165280055c018a",
+            "detail": "You look closer to all sides of the room. After a thorough investigation you can see that parts of a wall are made up of loose rocks. You might be able to [move] these rocks.\n",
+            "name": "Pathway into Darkness",
+            "description": "As you step through the catacomb entrance you stand in a narrow passage that only leads north. The air smells moldy and the walls are wet and grown over. You see plenty of rocks on both sides of the wall.",
+            "roomType": "path",
+            "area": "catacombs",
+            "areaType": "dungeon",
+            "tags": null,
+            "actions": [
+                {
+                    "name": "move rocks",
+                    "description": "{{characterName}} trys to move one of the medium sized rocks. Parts of the wall start to crumble and a [hidden path] opens up.",
+                    "type": "response"
+                }
+            ],
+            "exits": [
+                {
+                    "name": "north",
+                    "description": "Follow the door to the left",
+                    "target": "5ed04fb7ac165280055c018b",
+                    "params": null
+                },
+                {
+                    "name": "hidden path",
+                    "description": "You follow the hidden path on the east wall",
+                    "hidden": true,
+                    "target": "catacombs-secret-chamber",
+                    "params": null
+                }
+            ],
+            "characters": [
+                "a623d128-41c8-48e2-a612-9307be3c1c56"
+            ],
+            "items": null,
+            "Meta": null
+        },
+        {
+            "id": "5ed04fb7ac165280055c018b",
+            "detail": "You look closer to all sides of the room.\n",
+            "name": "Chamber of Sorrows",
+            "description": "You are entering a dark muddy room...\nOn the walls you can see clear signs of past bloodshed. Something bad happend in here, something really bad. You ask yourself, where do you go from here?\n",
+            "roomType": "chamber",
+            "area": "catacombs",
+            "areaType": "dungeon",
+            "tags": null,
+            "actions": [
+                {
+                    "name": "move rocks",
+                    "description": "You try to move one of the medium sized rocks. Parts of the wall start to crumble and a hidden path opens up."
+                }
+            ],
+            "exits": [
+                {
+                    "name": "north",
+                    "description": "Follow the door to the left",
+                    "target": "oldtown-entrance",
+                    "params": null
+                },
+                {
+                    "name": "south",
+                    "description": "follow the path south",
+                    "target": "5ed04cffac165280055c018a",
+                    "params": null
+                }
+            ],
+            "characters": [
+                "a623d128-41c8-48e2-a612-9307be3c1c56"
+            ],
+            "items": null,
+            "Meta": null
+        },
+        {
+            "id": "oldtown-entrance",
+            "detail": "",
+            "name": "Entrance to Oldtown",
+            "description": "You reach the gates of Oldtown. A long forgotten village of fishersman and sword craftsmen.",
+            "roomType": "gate",
+            "area": "oldtown",
+            "areaType": "city",
+            "tags": null,
+            "actions": null,
+            "exits": [
+                {
+                    "name": "west",
+                    "description": "Enter Oldtown",
+                    "target": "oldtown-mainstreet",
+                    "params": null
+                }
+            ],
+            "characters": [
+                "a623d128-41c8-48e2-a612-9307be3c1c56"
+            ],
+            "items": null,
+            "Meta": null
+        },
+        {
+            "id": "oldtown-mainstreet",
+            "detail": "You can see shops on all sides and even wandering merchants. Watch out for the thieve kids as you might lose a coin or two when you encounter them.\n\nThere is a well in the center where you can [drink] from.   ",
+            "name": "The main street of old town",
+            "description": "As you pass through the gates you find yourself on a very busy street. The main street of old town leading up in the distance to the castle.\n",
+            "roomType": "street",
+            "area": "oldtown",
+            "areaType": "city",
+            "tags": null,
+            "actions": [
+                {
+                    "name": "drink",
+                    "description": "You lean forward to grab the bucket and take a deep sip out of the fresh water. It tastes just like water.",
+                    "response": "-",
+                    "type": "response"
+                }
+            ],
+            "exits": [
+                {
+                    "name": "east",
+                    "description": "Back to the entrance",
+                    "target": "oldtown-entrance",
+                    "params": null
+                },
+                {
+                    "name": "griphon",
+                    "description": "Enter the Old Feisty Griphon Inn",
+                    "target": "oldtown-feisty-griphon",
+                    "params": null
+                },
+                {
+                    "name": "smith",
+                    "description": "Enter the Weaponsmith",
+                    "target": "oldtown-weaponsmith",
+                    "params": null
+                }
+            ],
+            "characters": [
+                "a623d128-41c8-48e2-a612-9307be3c1c56",
+                "67a02931-92da-4350-be2f-be5b63779886",
+                "fa4f401e-730b-43ec-8d3e-2bd8f542082b",
+                "d010b5b0-890a-4da5-a8f9-bb7c8b5a1190",
+                "82fd1e20-b095-4ae2-9191-4422b4b47996",
+                "a4fabb29-9bd7-4131-9b2c-23dea0de1141"
+            ],
+            "items": null,
+            "Meta": null
+        },
+        {
+            "id": "oldtown-feisty-griphon",
+            "detail": "You can see three rows of tables with chairs on both sides each\n\nTry to [smell]",
+            "name": "Old Feisty Griphon",
+            "description": "As you enter the pub. ...\n\nyou can feel the alcohol in the air - as you breath your lungs fill with stink of rum and beer.",
+            "roomType": "inn",
+            "area": "oldtown",
+            "areaType": "city",
+            "tags": null,
+            "actions": [
+                {
+                    "name": "smell",
+                    "description": "You smell something strange but you cant really make out what it is",
+                    "type": "response"
+                }
+            ],
+            "exits": [
+                {
+                    "name": "leave",
+                    "description": "Leave the Inn",
+                    "target": "oldtown-mainstreet",
+                    "params": null
+                },
+                {
+                    "name": "down",
+                    "description": "To the Basement",
+                    "target": "oldtown-griphon-cellar",
+                    "params": null
+                }
+            ],
+            "characters": [
+                "82fd1e20-b095-4ae2-9191-4422b4b47996"
+            ],
+            "items": null,
+            "Meta": null
+        },
+        {
+            "id": "oldtown-weaponsmith",
+            "detail": "",
+            "name": "The Weasponsmith",
+            "description": "As you enter the smith you can see many gloriful swords and shields hanging on the wall.",
+            "roomType": "merchant",
+            "area": "oldtown",
+            "areaType": "city",
+            "tags": null,
+            "actions": null,
+            "exits": [
+                {
+                    "name": "leave",
+                    "description": "Leave the Weaponsmith",
+                    "target": "oldtown-mainstreet",
+                    "params": null
+                },
+                {
+                    "name": "up",
+                    "description": "Go upstairs",
+                    "target": "weaponsmith-upstairs",
+                    "params": null
+                }
+            ],
+            "characters": [
+                "82fd1e20-b095-4ae2-9191-4422b4b47996"
+            ],
+            "items": null,
+            "Meta": null
+        },
+        {
+            "id": "catacombs-secret-chamber",
+            "detail": "",
+            "name": "Secret chamber",
+            "description": "As you step through the newly created pathway you find yourself in a secret chamber",
+            "roomType": "chamber",
+            "area": "catacombs",
+            "areaType": "dungeon",
+            "tags": null,
+            "actions": null,
+            "exits": [
+                {
+                    "name": "leave",
+                    "description": "You get back to the pathway",
+                    "target": "5ed04cffac165280055c018a",
+                    "params": null
+                }
+            ],
+            "characters": [
+                "fa4f401e-730b-43ec-8d3e-2bd8f542082b"
+            ],
+            "items": null,
+            "Meta": null
+        },
+        {
+            "id": "weaponsmith-upstairs",
+            "detail": "",
+            "name": "Weaponsmith Upstairs",
+            "description": "As you climb the stairs you reach the sleeping quarters of the weaponsmith",
+            "roomType": "sleeping-room",
+            "area": "oldtown",
+            "areaType": "city",
+            "tags": null,
+            "actions": null,
+            "exits": [
+                {
+                    "name": "down",
+                    "description": "Go Downstairs",
+                    "target": "oldtown-weaponsmith",
+                    "params": null
+                }
+            ],
+            "characters": [
+                "a4fabb29-9bd7-4131-9b2c-23dea0de1141"
+            ],
+            "items": null,
+            "Meta": null
+        },
+        {
+            "id": "oldtown-griphon-cellar",
+            "detail": "",
+            "name": "Griphon Cellar",
+            "description": "As you take the steps downstairs you can smell all  the beer and wine flavors from centuries ...",
+            "roomType": "basement",
+            "area": "oldtown",
+            "areaType": "city",
+            "tags": null,
+            "actions": null,
+            "exits": [
+                {
+                    "name": "up",
+                    "description": "Back upstairs",
+                    "target": "oldtown-feisty-griphon",
+                    "params": null
+                }
+            ],
+            "characters": [
+                "a4fabb29-9bd7-4131-9b2c-23dea0de1141"
+            ],
+            "items": null,
+            "Meta": null
+        }
+    ],
+    "items": [
+        {
+            "id": "650e9871-a63f-49cc-9606-4c77c2295f50",
+            "detail": "",
+            "name": "Some new item",
+            "description": "",
+            "type": "",
+            "subType": "",
+            "slot": "inventory",
+            "quality": "normal",
+            "level": 1,
+            "tags": null,
+            "created": "0001-01-01T00:00:00Z",
+            "Meta": null
+        },
+        {
+            "id": "4deb79c1-a13c-4f97-857a-7d1d142645bb",
+            "detail": "",
+            "name": "Another random item",
+            "description": "asdasd",
+            "type": "",
+            "subType": "",
+            "slot": "inventory",
+            "quality": "normal",
+            "level": 1,
+            "tags": null,
+            "created": "0001-01-01T00:00:00Z",
+            "Meta": null
+        },
+        {
+            "id": "4471c54f-0497-466d-b948-3f8003fca1d2",
+            "detail": "shiny",
+            "name": "Gold",
+            "description": "10 ounces of gold",
+            "type": "currency",
+            "subType": "",
+            "slot": "purse",
+            "quality": "normal",
+            "level": 1,
+            "tags": null,
+            "created": "0001-01-01T00:00:00Z",
+            "Meta": null
+        }
+    ],
+    "itemTemplates": [
+        {
+            "id": "sword-001",
+            "detail": "nothing special about it",
+            "name": "Rusty Edge",
+            "description": "a very rusty edge",
+            "type": "weapon",
+            "subType": "sword",
+            "slot": "main_hand",
+            "quality": "rare",
+            "level": 3,
+            "properties": {
+                "damageType": "physical",
+                "maxDamage": 5,
+                "merchantPrice": 1,
+                "minDamage": 3,
+                "range": 1.2,
+                "resellPrice": 2
+            },
+            "attributes": {
+                "dexterity": "3",
+                "intelligence": "3",
+                "stamina": "7",
+                "strength": "2"
+            },
+            "tags": null,
+            "created": "0001-01-01T00:00:00Z",
+            "Meta": null,
+            "script": null
+        },
+        {
+            "id": "962aa25d-6d93-4456-89ac-7aa83e6f1fc9",
+            "detail": "It glows",
+            "name": "Two-Handed Blade of the Fallen",
+            "description": "Once wielded by a magic tribe of fallen umbras",
+            "type": "weapon",
+            "subType": "sword",
+            "slot": "main_hand",
+            "quality": "legendary",
+            "level": 15,
+            "attributes": {
+                "strength": "12"
+            },
+            "tags": null,
+            "created": "0001-01-01T00:00:00Z",
+            "Meta": null,
+            "script": null
+        },
+        {
+            "id": "378f4e5b-b803-451a-9a7d-de5d3be79645",
+            "detail": "It stinks",
+            "name": "Stinky Cheese",
+            "description": "A stinky piece of cheese",
+            "type": "consumable",
+            "subType": "",
+            "slot": "inventory",
+            "quality": "normal",
+            "level": 1,
+            "tags": null,
+            "created": "0001-01-01T00:00:00Z",
+            "Meta": null,
+            "script": null
+        },
+        {
+            "id": "00014f49-1d09-4bde-8e53-6e316f7e5702",
+            "detail": "Its shiny and looks massive and strong",
+            "name": "Shield of Relentless",
+            "description": "The Shield of Relentless, defender of a thousand battles",
+            "type": "armor",
+            "subType": "shield",
+            "slot": "off_hand",
+            "quality": "legendary",
+            "level": 30,
+            "tags": null,
+            "created": "0001-01-01T00:00:00Z",
+            "Meta": null,
+            "script": null
+        },
+        {
+            "id": "9fa8fac3-11fe-405b-8b1d-c194ccc2e5b1",
+            "detail": "Look all metal and numb",
+            "name": "Simple Chain Mail",
+            "description": "A simple chain mail",
+            "type": "armor",
+            "subType": "",
+            "slot": "chest",
+            "quality": "magic",
+            "level": 10,
+            "tags": null,
+            "created": "0001-01-01T00:00:00Z",
+            "Meta": null,
+            "script": null
+        },
+        {
+            "id": "8e58397e-66f0-4c64-90a5-f0a224791845",
+            "detail": "",
+            "name": "Another item",
+            "description": "test test",
+            "type": "collectible",
+            "subType": "spear",
+            "slot": "inventory",
+            "quality": "magic",
+            "level": 1,
+            "tags": null,
+            "created": "0001-01-01T00:00:00Z",
+            "Meta": null,
+            "script": null
+        }
+    ],
+    "characters": [
+        {
+            "id": "a623d128-41c8-48e2-a612-9307be3c1c56",
+            "belongsUser": "5edc23487af5618b192f457e",
+            "currentRoom": "oldtown-mainstreet",
+            "name": "atla",
+            "description": "Best wizard of all time",
+            "race": {
+                "id": "dwarf",
+                "name": "Dwarf",
+                "description": "Small, but dont underestimate them",
+                "heritage": "Deep below a Mountain"
+            },
+            "class": {
+                "id": "wizard",
+                "name": "Wizard",
+                "description": "Master of the elements wielder of magic spells",
+                "armorType": "Cloth",
+                "combatType": "Magic"
+            },
+            "currentHitPoints": 17,
+            "maxHitPoints": 17,
+            "xp": 0,
+            "level": 1,
+            "created": "0001-01-01T00:00:00Z",
+            "attributes": [
+                {
+                    "name": "Strength",
+                    "short": "str",
+                    "value": 5
+                },
+                {
+                    "name": "Dexterity",
+                    "short": "dex",
+                    "value": 5
+                },
+                {
+                    "name": "Intelligence",
+                    "short": "int",
+                    "value": 15
+                },
+                {
+                    "name": "Wisdom",
+                    "short": "wis",
+                    "value": 12
+                },
+                {
+                    "name": "Stamina",
+                    "short": "sta",
+                    "value": 13
+                }
+            ],
+            "inventory": {
+                "size": 0,
+                "items": []
+            },
+            "equippedItems": {},
+            "_": {
+                "playersKilled": 0,
+                "goldCollected": 0,
+                "questsCompleted": 0
+            }
+        },
+        {
+            "id": "82fd1e20-b095-4ae2-9191-4422b4b47996",
+            "belongsUser": "5edc23487af5618b192f457e",
+            "currentRoom": "oldtown-mainstreet",
+            "name": "Conan",
+            "description": "the Barbarian",
+            "race": {
+                "id": "human",
+                "name": "Human",
+                "description": "The common race",
+                "heritage": "Big cities"
+            },
+            "class": {
+                "id": "warrior",
+                "name": "Warrior",
+                "description": "Strong plate wearing melee warrior",
+                "armorType": "Plate",
+                "combatType": "Melee"
+            },
+            "currentHitPoints": 25,
+            "maxHitPoints": 25,
+            "xp": 0,
+            "level": 1,
+            "created": "0001-01-01T00:00:00Z",
+            "attributes": [
+                {
+                    "name": "Strength",
+                    "short": "str",
+                    "value": 11
+                },
+                {
+                    "name": "Dexterity",
+                    "short": "dex",
+                    "value": 8
+                },
+                {
+                    "name": "Intelligence",
+                    "short": "int",
+                    "value": 5
+                },
+                {
+                    "name": "Wisdom",
+                    "short": "wis",
+                    "value": 6
+                },
+                {
+                    "name": "Stamina",
+                    "short": "sta",
+                    "value": 20
+                }
+            ],
+            "inventory": {
+                "size": 0,
+                "items": []
+            },
+            "equippedItems": {},
+            "_": {
+                "playersKilled": 0,
+                "goldCollected": 0,
+                "questsCompleted": 0
+            }
+        },
+        {
+            "id": "67a02931-92da-4350-be2f-be5b63779886",
+            "belongsUser": "5edc23487af5618b192f457e",
+            "currentRoom": "oldtown-mainstreet",
+            "name": "Gumdalf the Bay",
+            "description": "Create a new Wizard",
+            "race": {
+                "id": "dwarf",
+                "name": "Dwarf",
+                "description": "Small, but dont underestimate them",
+                "heritage": "Deep below a Mountain"
+            },
+            "class": {
+                "id": "wizard",
+                "name": "Wizard",
+                "description": "Master of the elements wielder of magic spells",
+                "armorType": "Cloth",
+                "combatType": "Magic"
+            },
+            "currentHitPoints": 17,
+            "maxHitPoints": 17,
+            "xp": 0,
+            "level": 1,
+            "created": "0001-01-01T00:00:00Z",
+            "attributes": [
+                {
+                    "name": "Strength",
+                    "short": "str",
+                    "value": 5
+                },
+                {
+                    "name": "Dexterity",
+                    "short": "dex",
+                    "value": 5
+                },
+                {
+                    "name": "Intelligence",
+                    "short": "int",
+                    "value": 15
+                },
+                {
+                    "name": "Wisdom",
+                    "short": "wis",
+                    "value": 12
+                },
+                {
+                    "name": "Stamina",
+                    "short": "sta",
+                    "value": 13
+                }
+            ],
+            "inventory": {
+                "size": 0,
+                "items": []
+            },
+            "equippedItems": {},
+            "_": {
+                "playersKilled": 0,
+                "goldCollected": 0,
+                "questsCompleted": 0
+            }
+        },
+        {
+            "id": "fa4f401e-730b-43ec-8d3e-2bd8f542082b",
+            "belongsUser": "5edc23487af5618b192f457e",
+            "currentRoom": "oldtown-mainstreet",
+            "name": "Insany",
+            "description": "Master of All",
+            "race": {
+                "id": "human",
+                "name": "Human",
+                "description": "The common race",
+                "heritage": "Big cities"
+            },
+            "class": {
+                "id": "warrior",
+                "name": "Warrior",
+                "description": "Strong plate wearing melee warrior",
+                "armorType": "Plate",
+                "combatType": "Melee"
+            },
+            "currentHitPoints": 25,
+            "maxHitPoints": 25,
+            "xp": 0,
+            "level": 1,
+            "created": "0001-01-01T00:00:00Z",
+            "attributes": [
+                {
+                    "name": "Strength",
+                    "short": "str",
+                    "value": 11
+                },
+                {
+                    "name": "Dexterity",
+                    "short": "dex",
+                    "value": 8
+                },
+                {
+                    "name": "Intelligence",
+                    "short": "int",
+                    "value": 5
+                },
+                {
+                    "name": "Wisdom",
+                    "short": "wis",
+                    "value": 6
+                },
+                {
+                    "name": "Stamina",
+                    "short": "sta",
+                    "value": 20
+                }
+            ],
+            "inventory": {
+                "size": 0,
+                "items": []
+            },
+            "equippedItems": {},
+            "_": {
+                "playersKilled": 0,
+                "goldCollected": 0,
+                "questsCompleted": 0
+            }
+        },
+        {
+            "id": "d010b5b0-890a-4da5-a8f9-bb7c8b5a1190",
+            "belongsUser": "5edcde12c75e76dde2960e4b",
+            "currentRoom": "oldtown-mainstreet",
+            "name": "Legolas",
+            "description": "Legolas Longpants",
+            "race": {
+                "id": "elve",
+                "name": "Elve",
+                "description": "Splendid forestwalkers, great sight during nights",
+                "heritage": "Near the forest"
+            },
+            "class": {
+                "id": "ranger",
+                "name": "Ranger",
+                "description": "Quick Bow wielding ranged combatant",
+                "armorType": "Leather",
+                "combatType": "Ranged"
+            },
+            "currentHitPoints": 20,
+            "maxHitPoints": 20,
+            "xp": 0,
+            "level": 1,
+            "created": "0001-01-01T00:00:00Z",
+            "attributes": [
+                {
+                    "name": "Strength",
+                    "short": "str",
+                    "value": 7
+                },
+                {
+                    "name": "Dexterity",
+                    "short": "dex",
+                    "value": 15
+                },
+                {
+                    "name": "Intelligence",
+                    "short": "int",
+                    "value": 5
+                },
+                {
+                    "name": "Wisdom",
+                    "short": "wis",
+                    "value": 6
+                },
+                {
+                    "name": "Stamina",
+                    "short": "sta",
+                    "value": 17
+                }
+            ],
+            "inventory": {
+                "size": 0,
+                "items": []
+            },
+            "equippedItems": {},
+            "_": {
+                "playersKilled": 0,
+                "goldCollected": 0,
+                "questsCompleted": 0
+            }
+        },
+        {
+            "id": "a4fabb29-9bd7-4131-9b2c-23dea0de1141",
+            "belongsUser": "5edc23487af5618b192f457e",
+            "currentRoom": "oldtown-mainstreet",
+            "name": "HexHex",
+            "description": "from the witcher series i guess",
+            "race": {
+                "id": "dwarf",
+                "name": "Dwarf",
+                "description": "Small, but dont underestimate them",
+                "heritage": "Deep below a Mountain"
+            },
+            "class": {
+                "id": "wizard",
+                "name": "Wizard",
+                "description": "Master of the elements wielder of magic spells",
+                "armorType": "Cloth",
+                "combatType": "Magic"
+            },
+            "currentHitPoints": 17,
+            "maxHitPoints": 17,
+            "xp": 0,
+            "level": 1,
+            "created": "0001-01-01T00:00:00Z",
+            "attributes": [
+                {
+                    "name": "Strength",
+                    "short": "str",
+                    "value": 5
+                },
+                {
+                    "name": "Dexterity",
+                    "short": "dex",
+                    "value": 5
+                },
+                {
+                    "name": "Intelligence",
+                    "short": "int",
+                    "value": 15
+                },
+                {
+                    "name": "Wisdom",
+                    "short": "wis",
+                    "value": 12
+                },
+                {
+                    "name": "Stamina",
+                    "short": "sta",
+                    "value": 13
+                }
+            ],
+            "inventory": {
+                "size": 0,
+                "items": null
+            },
+            "equippedItems": null,
+            "_": {
+                "playersKilled": 0,
+                "goldCollected": 0,
+                "questsCompleted": 0
+            }
+        }
+    ],
+    "scripts": [
+        {
+            "id": "12901c0b-f290-4a37-9110-e6d88a9e9738",
+            "name": "HelloWorld",
+            "description": "Just a hello world",
+            "code": "console.log('Hello World from Script');\n\n//get context\nvar obj = JSON.parse(ctx);\n\nconsole.log(obj.foo)\n\nobj.foo = \"Hello ... again?\"\n\n// change our context\nctx = JSON.stringify(obj)",
+            "type": "none"
+        },
+        {
+            "id": "6a3bdd01-d233-40a0-84d1-7e54c2991a2f",
+            "name": "SpawnRandomItem",
+            "description": "Spawns a random item from all item templates",
+            "code": "// SpawnRandomItem\n// input:\n// {\"name\": \"itemname\"}\n\nfunction jp(o) { return JSON.parse(o)}\nfunction s(o){return JSON.stringify(o)}\n\n//get context\nvar context = jp(ctx);\n\nvar templates = jp(T_findItemTemplate (context.name))\nvar item = jp(T_createItemFromTemplate (templates[0].id))\n\nitem.name += \" on a stick\"\nitem.description += \"\\nThis sword has seen better times\"\n\n// set our context\nctx = s(item)",
+            "type": "item"
+        },
+        {
+            "id": "2bfbdc7f-26e4-4afc-bfff-cc1b0d3a7ed1",
+            "name": "RandomizeDesription",
+            "description": "Randomizes item description",
+            "code": "console.log('Hello World from Script');\n\n\n",
+            "type": "item"
+        }
+    ],
+    "users": [
+    ]
+}

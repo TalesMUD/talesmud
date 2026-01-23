@@ -43,6 +43,7 @@ type Character struct {
 
 	XP    int32 `json:"xp"`
 	Level int32 `json:"level"`
+	Gold  int64 `json:"gold"`
 
 	Created    time.Time  `bson:"created" json:"created,omitempty"`
 	Attributes Attributes `bson:"attributes" json:"attributes,omitempty"`

@@ -33,6 +33,17 @@ func (handler *RoomsHandler) GetRooms(c *gin.Context) {
 	}
 }
 
+//GetRoomByID returns a single room by ID
+func (handler *RoomsHandler) GetRoomByID(c *gin.Context) {
+	id := c.Param("id")
+
+	if room, err := handler.Service.FindByID(id); err == nil {
+		c.JSON(http.StatusOK, room)
+	} else {
+		c.JSON(http.StatusNotFound, gin.H{"error": "room not found"})
+	}
+}
+
 //GetRoomOfTheDay returns the list of item templates
 func (handler *RoomsHandler) GetRoomOfTheDay(c *gin.Context) {
 

@@ -75,5 +75,22 @@ func (commandProcessor *CommandProcessor) registerCommands() {
 	commandProcessor.RegisterCommand(&WhoCommand{}, "List all online players", "who")
 	commandProcessor.RegisterCommand(&InventoryCommand{}, "Display your inventory", "inventory", "i")
 	commandProcessor.RegisterCommand(&NewCharacterCommand{}, "Create a new character", "newcharacter", "nc")
+	commandProcessor.RegisterCommand(&TalkCommand{}, "Talk to an NPC: talk [npc-name]", "talk")
+
+	// Item commands
+	commandProcessor.RegisterCommand(&PickupCommand{}, "Pick up an item: pickup [item]", "pickup", "get", "take")
+	commandProcessor.RegisterCommand(&DropCommand{}, "Drop an item: drop [item] [quantity]", "drop")
+	commandProcessor.RegisterCommand(&ExamineCommand{}, "Examine an item: examine [item]", "examine", "inspect")
+
+	// Trade commands
+	commandProcessor.RegisterCommand(&ListCommand{}, "List merchant inventory: list", "list", "shop")
+	commandProcessor.RegisterCommand(&BuyCommand{}, "Buy from merchant: buy [item] [quantity]", "buy")
+	commandProcessor.RegisterCommand(&SellCommand{}, "Sell to merchant: sell [item] [quantity]", "sell")
+	commandProcessor.RegisterCommand(&ValueCommand{}, "Check item sell price: value [item]", "value", "price")
+
+	// Equipment commands
+	commandProcessor.RegisterCommand(&EquipCommand{}, "Equip an item: equip [item]", "equip", "wear")
+	commandProcessor.RegisterCommand(&UnequipCommand{}, "Unequip an item: unequip [slot or item]", "unequip", "remove")
+	commandProcessor.RegisterCommand(&EquipmentCommand{}, "Show equipped items", "equipment", "eq", "gear")
 
 }

@@ -1,92 +1,75 @@
-<style>
-  .userbutton {
-    margin-right: 1em;
-  }
-
-  .btn-small {
-    color: #eee;
-  }
-
-  .img {
-    width: 42px;
-  }
-</style>
-
 <script>
-  import { onMount } from "svelte";
-  import { UserIcon } from "svelte-feather-icons";
-
+  import { onMount, onDestroy } from "svelte";
   import { getAuth } from "./auth.js";
-  import { getUser, updateUser } from "./api/user.js";
 
-  const {
-    isLoading,
-    isAuthenticated,
-    login,
-    logout,
-    authToken,
-    authError,
-    userInfo,
-  } = getAuth();
+  const { isLoading, isAuthenticated, login, logout, userInfo } = getAuth();
+  let open = false;
+  let menuRef;
 
-  async function loadUserData() {
-    getUser(
-      $authToken,
-      (u) => {
-        user.set(u);
-      },
-      (err) => console.log(err)
-    );
-  }
+  const toggle = () => {
+    open = !open;
+  };
 
-  async function signup() {
-    await login();
-
-    if ($isAuthenticated) {
-      await loadUserData();
+  const handleClickOutside = (event) => {
+    if (menuRef && !menuRef.contains(event.target)) {
+      open = false;
     }
-  }
+  };
 
   onMount(() => {
-    document.addEventListener("DOMContentLoaded", function () {
-      var elems = document.querySelectorAll(".dropdown-trigger");
-      var instances = M.Dropdown.init(elems);
-    });
+    document.addEventListener("click", handleClickOutside);
+  });
+
+  onDestroy(() => {
+    document.removeEventListener("click", handleClickOutside);
   });
 </script>
 
-<!-- Dropdown Structure -->
-<ul id="dropdown1" class="dropdown-content">
-  <li>
-    <a href="#!" on:click="{() => logout()}">logout</a>
-  </li>
-  <li>
-    <a href="account">profile</a>
-  </li>
-</ul>
-
 {#if $isLoading}
-  <li class="right-align">...</li>
+  <span class="text-xs text-slate-400">Loading...</span>
 {:else if !$isAuthenticated}
-  <li class="right-align">
-    <p on:click="{() => signup()}" class="btn-small userbutton green">Signup</p>
-  </li>
-  <li class="right-align">
-    <button on:click="{() => login()}" class="btn-small userbutton green">
+  <div class="flex items-center gap-2">
+    <button class="btn btn-outline" type="button" on:click={() => login()}>
       Log in
     </button>
-  </li>
+    <button class="btn btn-primary" type="button" on:click={() => login()}>
+      Signup
+    </button>
+  </div>
+{:else}
+  <div class="relative" bind:this={menuRef}>
+    <button
+      class="flex items-center gap-3 pl-4 border-l border-slate-200 dark:border-slate-800"
+      type="button"
+      on:click={toggle}
+    >
+      <img
+        alt="User Avatar"
+        class="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-700"
+        src={$userInfo?.picture || "https://avatars.githubusercontent.com/u/0?v=4"}
+      />
+      <span class="text-sm font-medium hidden sm:inline">
+        {$userInfo?.name || "User"}
+      </span>
+      <span class="material-symbols-outlined text-slate-400">expand_more</span>
+    </button>
+    {#if open}
+      <div
+        class="absolute right-0 mt-2 w-40 rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-800 dark:bg-slate-900"
+      >
+        <a
+          href="/account"
+          class="block px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+          >Profile</a
+        >
+        <button
+          class="w-full text-left px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+          type="button"
+          on:click={() => logout()}
+        >
+          Logout
+        </button>
+      </div>
+    {/if}
+  </div>
 {/if}
-<li>
-
-  <a class="dropdown-trigger" href="#" data-target="dropdown1">
-    <span class="valign-wrapper">
-
-      {#if $isAuthenticated}
-        <img src="{$userInfo.picture}" alt="" class="circle img " />
-        <i class="material-icons left">arrow_drop_down</i>
-      {/if}
-    </span>
-
-  </a>
-</li>

@@ -3,10 +3,12 @@ package dialogs
 import (
 	"io/ioutil"
 	"math/rand"
+	"time"
 
 	"github.com/hoisie/mustache"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/talesmud/talesmud/pkg/entities"
 	"gopkg.in/yaml.v3"
 )
 
@@ -36,9 +38,18 @@ func NewDialogState() *DialogState {
 	}
 }
 
-// Dialog ...
+// Dialog represents a dialog tree that can be attached to NPCs or items.
+// The Entity ID is for database persistence, while the node ID is for tree navigation.
 type Dialog struct {
-	ID   string `bson:"id,omitempty" json:"id,omitempty" yaml:"id,omitempty"`
+	*entities.Entity `bson:",inline"`
+
+	// Name is a human-readable identifier for the dialog (e.g., "Guard Greeting")
+	Name string `bson:"name,omitempty" json:"name,omitempty" yaml:"name,omitempty"`
+
+	// NodeID is the identifier for this node within the dialog tree (e.g., "main", "greeting")
+	// This is different from Entity.ID which is the database document ID
+	NodeID string `bson:"nodeId,omitempty" json:"nodeId,omitempty" yaml:"id,omitempty"`
+
 	Text string `bson:"text,omitempty" json:"text,omitempty" yaml:"text"`
 	// if AlternateTexts is not empty then the text should be randomly selected
 	AlternateTexts []string `bson:"alternateTexts,omitempty" json:"alternateTexts,omitempty" yaml:"alternateTexts,omitempty"`
@@ -52,23 +63,31 @@ type Dialog struct {
 	ShowOnlyOnce           *bool     `bson:"show_only_once,omitempty" json:"show_only_once,omitempty" yaml:"show_only_once,omitempty"`
 	//	HasAnswer              *bool         `bson:"has_answer,omitempty" json:"has_answer,omitempty" yaml:"has_answer,omitempty"`
 	IsDialogExit *bool `bson:"is_dialog_exit,omitempty" json:"is_dialog_exit,omitempty" yaml:"is_dialog_exit,omitempty"`
+
+	// Metadata
+	Created   time.Time `bson:"created,omitempty" json:"created,omitempty"`
+	CreatedBy string    `bson:"createdBy,omitempty" json:"createdBy,omitempty"`
 }
 
-// create a new Dialog
-func NewDialog(id string, text string, options []*Dialog, showOnlyOnce *bool) *Dialog {
+// NewDialog creates a new dialog node (not persisted, use for building trees)
+func NewDialog(nodeID string, text string, options []*Dialog, showOnlyOnce *bool) *Dialog {
 	return &Dialog{
-		ID:           id,
+		NodeID:       nodeID,
 		Text:         text,
 		Options:      options,
-		ShowOnlyOnce: showOnlyOnce}
+		ShowOnlyOnce: showOnlyOnce,
+	}
 }
-func NewDialogWithRequirements(id string, text string, options []*Dialog, showOnlyOnce *bool, visited ...string) *Dialog {
+
+// NewDialogWithRequirements creates a dialog node with visit requirements
+func NewDialogWithRequirements(nodeID string, text string, options []*Dialog, showOnlyOnce *bool, visited ...string) *Dialog {
 	return &Dialog{
-		ID:                     id,
+		NodeID:                 nodeID,
 		Text:                   text,
 		Options:                options,
 		RequiresVisitedDialogs: visited,
-		ShowOnlyOnce:           showOnlyOnce}
+		ShowOnlyOnce:           showOnlyOnce,
+	}
 }
 
 // creates a dialog that is used as a response (defaults to DOT_ALWAYS)
@@ -117,20 +136,19 @@ func (d *Dialog) RenderPlain(state *DialogState) string {
 	return mustache.Render(d.Text, state.Context)
 }
 
-// FindDialogue ...
-func (d *Dialog) FindDialog(id string) *Dialog {
-
-	if d.ID == id {
+// FindDialog finds a dialog node by its NodeID within the tree
+func (d *Dialog) FindDialog(nodeID string) *Dialog {
+	if d.NodeID == nodeID {
 		return d
 	}
 
 	for _, v := range d.Options {
-		if r := v.FindDialog(id); r != nil {
+		if r := v.FindDialog(nodeID); r != nil {
 			return r
 		}
 	}
 	if d.Answer != nil {
-		return d.Answer.FindDialog(id)
+		return d.Answer.FindDialog(nodeID)
 	}
 
 	return nil
@@ -153,7 +171,7 @@ func WriteToFile(dialog *Dialog, fileName string) {
 	if err == nil {
 		err = ioutil.WriteFile(fileName, result, 0644)
 		if err != nil {
-			log.Error("Error writing %s", fileName)
+			log.Errorf("Error writing %s", fileName)
 		}
 	}
 }

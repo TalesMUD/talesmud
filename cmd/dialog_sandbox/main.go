@@ -182,7 +182,7 @@ func runDialog(dialog *d.Dialog, state *d.DialogState, playerInteracted bool, ch
 	selectedID := ""
 	for _, k := range dialog.Options {
 		if k.RenderPlain(state) == result {
-			selectedID = k.ID
+			selectedID = k.NodeID
 		}
 	}
 
@@ -192,16 +192,16 @@ func runDialog(dialog *d.Dialog, state *d.DialogState, playerInteracted bool, ch
 
 func createIdleDialog() *d.Dialog {
 	return &d.Dialog{
-		ID:   "main",
+		NodeID: "main",
 		Text: "Have you checked out the well in the towns center yet?",
 		Answer: &d.Dialog{
-			ID:   "rambling2",
+			NodeID: "rambling2",
 			Text: "I heard a sip from it could work wonders on your health.",
 			Answer: &d.Dialog{
-				ID:   "rambling3",
+				NodeID: "rambling3",
 				Text: "I'm sure it will at least be refreshing.",
 				Answer: &d.Dialog{
-					ID:           "end",
+					NodeID:       "end",
 					Text:         "Just make sure to not fall into the well.",
 					IsDialogExit: d.RefTrue(),
 				},
@@ -213,7 +213,7 @@ func createIdleDialog() *d.Dialog {
 func createSampleDialog() *d.Dialog {
 
 	return &d.Dialog{
-		ID:   "intro",
+		NodeID: "intro",
 		Text: "Hello stranger, are you visiting Oldtown for the first time?",
 		AlternateTexts: []string{
 			"Hi there, new to Oldtown?",
@@ -221,10 +221,10 @@ func createSampleDialog() *d.Dialog {
 		},
 		Options: d.Options(
 			&d.Dialog{
-				ID:   "intro_yes",
+				NodeID: "intro_yes",
 				Text: "Yes, i go by the name {{PLAYER}}.",
 				Answer: &d.Dialog{
-					ID:   "main",
+					NodeID: "main",
 					Text: "Welcome to Oldtown {{PLAYER}}, let me show you around. How can i help you today?",
 					AlternateTexts: []string{
 						"Greetings {{PLAYER}}, let me show you around. How can serve you?",
@@ -232,10 +232,10 @@ func createSampleDialog() *d.Dialog {
 					},
 					Options: d.Options(
 						&d.Dialog{
-							ID:   "smith",
+							NodeID: "smith",
 							Text: "Where can i find the next smith?",
 							Answer: &d.Dialog{
-								ID:   "smith_question",
+								NodeID: "smith_question",
 								Text: "You can find the next smith in the town center on the left side of the road.",
 								AlternateTexts: []string{
 									"Head to the town center and then go to the left side of the road you will reach the smith from there.",
@@ -243,43 +243,43 @@ func createSampleDialog() *d.Dialog {
 							},
 						},
 						&d.Dialog{
-							ID:                     "hidden",
+							NodeID:                 "hidden",
 							Text:                   "You can only see this if you asked me where to find the mayor",
 							RequiresVisitedDialogs: []string{"mayor"},
 							Answer: &d.Dialog{
-								ID:   "hidden_question",
+								NodeID: "hidden_question",
 								Text: "Secretly, i am the Mayor. Dont tell anyone!",
 							},
 						},
 						&d.Dialog{
-							ID:   "inn",
+							NodeID: "inn",
 							Text: "Where can i grab a drink?",
 						},
 						&d.Dialog{
-							ID:   "time",
+							NodeID: "time",
 							Text: "How late is it?",
 							Answer: &d.Dialog{
-								ID:   "time_answer",
+								NodeID: "time_answer",
 								Text: "It is currently {{TIME}}.",
 							},
 						},
 						&d.Dialog{
-							ID:   "mayor",
+							NodeID: "mayor",
 							Text: "Where do i find the mayor of Oldtown?",
 							Answer: &d.Dialog{
-								ID:   "mayor_question",
+								NodeID: "mayor_question",
 								Text: "Not sure, why do you ask?",
 							},
 						},
 						&d.Dialog{
-							ID:   "quests",
+							NodeID: "quests",
 							Text: "Where could i offer my services for some coins?",
 						},
 						&d.Dialog{
-							ID:   "leave",
+							NodeID: "leave",
 							Text: "I'm done, goodbye.",
 							Answer: &d.Dialog{
-								ID:           "end",
+								NodeID:       "end",
 								Text:         "'Til next time {{PLAYER}}.",
 								IsDialogExit: d.RefTrue(),
 							},

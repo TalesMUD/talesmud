@@ -1,98 +1,110 @@
-<style>
-
-</style>
-
 <script>
-  import Toolbar from "./Toolbar.svelte";
-  import Sprites from "./../game/Sprites.svelte";
   import { onMount } from "svelte";
+  import { v4 as uuidv4 } from "uuid";
   import CRUDEditor from "./CRUDEditor.svelte";
   import { createStore } from "./CRUDEditorStore.js";
-  import { v4 as uuidv4 } from "uuid";
 
   import {
-    getItemTemplate,
+    getItem,
     getItemTemplates,
-    createItemTemplate,
-    updateItemTemplate,
-    deleteItemTemplate,
+    createItem,
+    updateItem,
+    deleteItem,
     getItemTypes,
     getItemSubTypes,
     getItemSlots,
     getItemQualities,
-  } from "../api/item-templates.js";
+  } from "../api/items.js";
 
+  const store = createStore();
   let newPropertyName = "";
   let newAttributeName = "";
 
-  const config = {
-    title: "Manage Item Templates",
-    actions: [
-      {
-        icon: "add",
-        name: "Item from Template",
-        color: "",
-        fnc: () => {
-          console.log(
-            "Create new template for id " + $store.selectedElement.id
-          );
-        },
-      },
-    ],
-    get: getItemTemplates,
-    getElement: getItemTemplate,
-    create: createItemTemplate,
-    update: updateItemTemplate,
-    delete: deleteItemTemplate,
-    refreshUI: () => {
-      let elems = document.querySelectorAll("select");
-      let instances = M.FormSelect.init(elems, {});
-
-      // second time to fix the selects
-      setTimeout(function () {
-        M.AutoInit();
-
-        let elems = document.querySelectorAll("select");
-        let instances = M.FormSelect.init(elems, {});
-      }, 50);
-    },
-
-    new: (select) => {
-      select({
-        id: uuidv4(),
-        name: "Unnamed Item",
-        description: "",
-        detail: "",
-        type: "",
-        slot: "inventory",
-        quality: "normal",
-        level: 1,
-        properties: new Map(),
-        attributes: new Map(),
-        noPickup: false,
-        tags: [],
-        isNew: true,
-      });
-    },
-
-    badge: (element) => {
-      return element.quality + " " + element.subType;
-    },
-  };
-  // create store outside of the component to use it in the slot..
-  const store = createStore();
-
-  ///////// ADDITIONAL DATA
-  // additional data
   let itemQualities = [];
   let itemTypes = [];
   let itemSubTypes = [];
   let itemSlots = [];
-  // create level array
   let levels = [];
-  for (let i = 1; i <= 50; i++) {
+  for (let i = 1; i <= 50; i += 1) {
     levels.push(i);
   }
+
+  const config = {
+    title: "Item Template Editor",
+    subtitle: "Design base attributes and script behaviors for world items.",
+    listTitle: "Templates",
+    labels: {
+      create: "Save Template",
+      update: "Save Template",
+      delete: "Delete",
+    },
+    get: getItemTemplates,
+    getElement: getItem,
+    create: createItem,
+    update: updateItem,
+    delete: deleteItem,
+  };
+
+  const createNewTemplate = () => {
+    config.new((element) => {
+      store.setSelectedElement(element);
+    });
+  };
+
+  config.extraActions = [
+    {
+      label: "New Item",
+      icon: "add_box",
+      variant: "btn-outline",
+      onClick: createNewTemplate,
+    },
+  ];
+
+  config.new = (select) => {
+    select({
+      id: uuidv4(),
+      name: "Unnamed Item",
+      description: "",
+      detail: "",
+      type: "",
+      subType: "",
+      slot: "inventory",
+      quality: "normal",
+      level: 1,
+      properties: {},
+      attributes: {},
+      noPickup: false,
+      tags: [],
+      isTemplate: true,
+      isNew: true,
+    });
+  };
+
+  const addAttribute = () => {
+    store.update((state) => {
+      if (!state.selectedElement.attributes) {
+        state.selectedElement.attributes = {};
+      }
+      if (newAttributeName) {
+        state.selectedElement.attributes[newAttributeName] = "value";
+        newAttributeName = "";
+      }
+      return state;
+    });
+  };
+
+  const addProperty = () => {
+    store.update((state) => {
+      if (!state.selectedElement.properties) {
+        state.selectedElement.properties = {};
+      }
+      if (newPropertyName) {
+        state.selectedElement.properties[newPropertyName] = "value";
+        newPropertyName = "";
+      }
+      return state;
+    });
+  };
 
   onMount(async () => {
     getItemQualities((q) => (itemQualities = q));
@@ -100,255 +112,99 @@
     getItemSubTypes((st) => (itemSubTypes = st));
     getItemSlots((s) => (itemSlots = s));
   });
-  /////////
-
-  const openNewAttributeModal = () => {
-    let elems = document.getElementById("attributeModal");
-    let instances = M.Modal.init(elems, {});
-    instances.open();
-  };
-  const openNewPropertyModal = () => {
-    let elems = document.getElementById("propertyModal");
-    let instances = M.Modal.init(elems, {});
-    instances.open();
-  };
-  const addAttribute = () => {
-    store.update((state) => {
-      if (state.selectedElement.attributes == null) {
-        state.selectedElement.attributes = {};
-      }
-
-      state.selectedElement.attributes[newAttributeName] = "value";
-      return state;
-    });
-    config.refreshUI();
-  };
-  const addProperty = () => {
-    store.update((state) => {
-      if (state.selectedElement.properties == null) {
-        state.selectedElement.properties = {};
-      }
-
-      state.selectedElement.properties[newPropertyName] = "value";
-      return state;
-    });
-    config.refreshUI();
-  };
-  const attributesToolbar = {
-    title: "Attributes",
-    small: true,
-    actions: [
-      {
-        icon: "add",
-        fnc: () => {
-          openNewAttributeModal();
-        },
-      },
-    ],
-  };
-  const propertiesToolbar = {
-    title: "Properties",
-    small: true,
-    actions: [
-      {
-        icon: "add",
-        fnc: () => {
-          openNewPropertyModal();
-        },
-      },
-    ],
-  };
 </script>
 
-<!-- Modal Structure -->
-<div id="attributeModal" class="modal">
-  <div class="modal-content">
-    <h5 style="color: #333;">New Attribute</h5>
-    <input
-      style="color: #333;"
-      placeholder="Attribute Name"
-      type="text"
-      bind:value="{newAttributeName}"
-    />
-  </div>
-  <div class="modal-footer">
-    <a
-      href="#!"
-      class="modal-close waves-effect waves-green btn-flat"
-      on:click="{addAttribute}"
-    >
-      Create Attribute
-    </a>
-  </div>
-</div>
-
-<div id="propertyModal" class="modal">
-  <div class="modal-content">
-    <h5 style="color: #333;">New Property</h5>
-    <input
-      style="color: #333;"
-      placeholder="Property Name"
-      type="text"
-      bind:value="{newPropertyName}"
-    />
-  </div>
-  <div class="modal-footer">
-    <a
-      href="#!"
-      class="modal-close waves-effect waves-green btn-flat"
-      on:click="{addProperty}"
-    >
-      Create Property
-    </a>
-  </div>
-</div>
-
-<CRUDEditor store="{store}" config="{config}">
-
-  <span slot="hero" class="col s1 valign-wrapper">
-    <Sprites item="weapon" />
-  </span>
-
-  <div slot="content">
-    <div class="row">
-
-      <div class="margininput input-field col s1">
-        <select bind:value="{$store.selectedElement.level}" on:change>
+<CRUDEditor store={store} config={config}>
+  <div slot="content" class="space-y-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="space-y-1.5">
+        <label class="label-caps">Level</label>
+        <select class="input-base" bind:value={$store.selectedElement.level}>
           {#each levels as lvl}
-            <option value="{lvl}">{lvl}</option>
+            <option value={lvl}>{lvl}</option>
           {/each}
         </select>
-        <label>Level</label>
       </div>
-
-      <div class="margininput input-field col s5">
-        <select bind:value="{$store.selectedElement.type}" on:change>
+      <div class="space-y-1.5">
+        <label class="label-caps">Item Type</label>
+        <select class="input-base" bind:value={$store.selectedElement.type}>
           <option value="" disabled selected>Item Type</option>
           {#each itemTypes as type}
-            <option value="{type}">{type.capitalize()}</option>
+            <option value={type}>{type}</option>
           {/each}
         </select>
-        <label>Select Item Type</label>
       </div>
-
-      <div class="margininput input-field col s5">
-        <select bind:value="{$store.selectedElement.subType}" on:change>
+      <div class="space-y-1.5">
+        <label class="label-caps">Item Subtype</label>
+        <select class="input-base" bind:value={$store.selectedElement.subType}>
           <option value="" selected>Item Subtype</option>
           {#each itemSubTypes as subType}
-            <option value="{subType}">{subType.capitalize()}</option>
+            <option value={subType}>{subType}</option>
           {/each}
         </select>
-        <label>Select Item Sub Type</label>
       </div>
-
     </div>
-    <div class="row">
-      <div class="margininput input-field col s5">
-        <select bind:value="{$store.selectedElement.quality}" on:change>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="space-y-1.5">
+        <label class="label-caps">Item Quality</label>
+        <select class="input-base" bind:value={$store.selectedElement.quality}>
           <option value="" disabled selected>Item Quality</option>
           {#each itemQualities as quality}
-            <option value="{quality}">{quality.capitalize()}</option>
+            <option value={quality}>{quality}</option>
           {/each}
-
         </select>
-        <label>Select Item Quality</label>
       </div>
-
-      <div class="margininput input-field col s5">
-        <select
-          class="margininput"
-          bind:value="{$store.selectedElement.slot}"
-          on:change
-        >
-          <option value="" selected>Item Slot</option>
+      <div class="space-y-1.5">
+        <label class="label-caps">Slot</label>
+        <select class="input-base" bind:value={$store.selectedElement.slot}>
           {#each itemSlots as slot}
-            <option class="select" value="{slot}">{slot.capitalize()}</option>
+            <option value={slot}>{slot}</option>
           {/each}
         </select>
-        <label>Select Item Slot</label>
-      </div>
-
-    </div>
-    <div class="row">
-      <div class="input-field">
-        <textarea
-          placeholder="Script ID"
-          id="itemTemplate_script"
-          type="text"
-          class="materialize-textarea"
-          bind:value="{$store.selectedElement.script}"
-        ></textarea>
-        <label class="active" for="itemTemplate_script">Script</label>
       </div>
     </div>
 
-  </div>
-
-  <div slot="extensions">
-
-    <Toolbar toolbar="{attributesToolbar}" />
-
-    {#if $store.selectedElement.attributes}
-      <div class="card-panel blue-grey darken-3">
-        <table>
-          <thead>
-            <tr>
-              <th>Attribute</th>
-              <th>Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each Object.entries($store.selectedElement.attributes) as [key, value]}
-              <tr>
-
-                {#if key === 'new'}
-                  <input
-                    placeholder="{key}"
-                    id="{key}-input-"
-                    type="text"
-                    bind:value="{$store.selectedElement.attributes[key]}"
-                  />
-                {:else}
-                  <td>{key}</td>
-                {/if}
-
-                <td>
-                  <input
-                    placeholder="{key}"
-                    id="{key}-input"
-                    type="text"
-                    bind:value="{$store.selectedElement.attributes[key]}"
-                  />
-                </td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="card p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="label-caps text-primary">Attributes</div>
+          <button class="text-xs text-primary hover:underline" type="button" on:click={addAttribute}>
+            + Add
+          </button>
+        </div>
+        <div class="flex gap-2">
+          <input class="input-base text-xs" placeholder="Attribute name" bind:value={newAttributeName} />
+        </div>
+        <div class="space-y-2">
+          {#each Object.entries($store.selectedElement.attributes || {}) as [key, value]}
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-mono text-slate-400">{key}</span>
+              <input class="input-base text-xs flex-1" bind:value={$store.selectedElement.attributes[key]} />
+            </div>
+          {/each}
+        </div>
       </div>
-    {/if}
 
-    <Toolbar toolbar="{propertiesToolbar}" />
-    {#if $store.selectedElement.properties}
-      <div class="card-panel blue-grey darken-3">
-        <table>
-          <thead>
-            <tr>
-              <th>Property</th>
-              <th>Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each Object.entries($store.selectedElement.properties) as [key, value]}
-              <tr>
-                <td>{key}</td>
-                <td>{value}</td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
+      <div class="card p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="label-caps text-primary">Properties</div>
+          <button class="text-xs text-primary hover:underline" type="button" on:click={addProperty}>
+            + Add
+          </button>
+        </div>
+        <div class="flex gap-2">
+          <input class="input-base text-xs" placeholder="Property name" bind:value={newPropertyName} />
+        </div>
+        <div class="space-y-2">
+          {#each Object.entries($store.selectedElement.properties || {}) as [key, value]}
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-mono text-slate-400">{key}</span>
+              <input class="input-base text-xs flex-1" bind:value={$store.selectedElement.properties[key]} />
+            </div>
+          {/each}
+        </div>
       </div>
-    {/if}
-
+    </div>
   </div>
-
 </CRUDEditor>

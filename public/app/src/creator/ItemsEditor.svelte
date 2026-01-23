@@ -1,5 +1,4 @@
 <script>
-  import Sprites from "./../game/Sprites.svelte";
   import { onMount } from "svelte";
   import CRUDEditor from "./CRUDEditor.svelte";
   import { createStore } from "./CRUDEditorStore.js";
@@ -11,34 +10,26 @@
     createItem,
     updateItem,
     deleteItem,
-  } from "../api/items.js";
-
-  import {
     getItemQualities,
     getItemTypes,
     getItemSubTypes,
     getItemSlots,
-  } from "../api/item-templates.js";
+  } from "../api/items.js";
 
   const config = {
     title: "Manage Items",
-    actions: [],
+    subtitle: "Create and update live items in the world.",
+    listTitle: "Items",
+    labels: {
+      create: "Create Item",
+      update: "Update Item",
+      delete: "Delete",
+    },
     get: getItems,
     getElement: getItem,
     create: createItem,
     update: updateItem,
     delete: deleteItem,
-    refreshUI: () => {
-      let elems = document.querySelectorAll("select");
-      let instances = M.FormSelect.init(elems, {});
-
-      // second time to fix the selects
-      setTimeout(function () {
-        let elems = document.querySelectorAll("select");
-        let instances = M.FormSelect.init(elems, {});
-      }, 50);
-    },
-
     new: (select) => {
       select({
         id: uuidv4(),
@@ -56,7 +47,6 @@
         isNew: true,
       });
     },
-
     badge: (element) => {
       return element.quality + " " + element.subType;
     },
@@ -85,72 +75,59 @@
   /////////
 </script>
 
-<CRUDEditor store="{store}" config="{config}">
-
-  <span slot="hero" class="col s1 valign-wrapper">
-    <Sprites item="weapon" />
-  </span>
-
-  <div slot="content">
-    <div class="row">
-
-      <div class="margininput input-field col s1">
-        <select bind:value="{$store.selectedElement.level}" on:change>
+<CRUDEditor store={store} config={config}>
+  <div slot="content" class="space-y-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="space-y-1.5">
+        <label class="label-caps">Level</label>
+        <select class="input-base" bind:value={$store.selectedElement.level}>
           {#each levels as lvl}
-            <option value="{lvl}">{lvl}</option>
+            <option value={lvl}>{lvl}</option>
           {/each}
         </select>
-        <label>Level</label>
       </div>
 
-      <div class="margininput input-field col s5">
-        <select bind:value="{$store.selectedElement.type}" on:change>
+      <div class="space-y-1.5">
+        <label class="label-caps">Item Type</label>
+        <select class="input-base" bind:value={$store.selectedElement.type}>
           <option value="" disabled selected>Item Type</option>
           {#each itemTypes as type}
-            <option value="{type}">{type.capitalize()}</option>
+            <option value={type}>{type}</option>
           {/each}
         </select>
-        <label>Select Item Type</label>
       </div>
 
-      <div class="margininput input-field col s5">
-        <select bind:value="{$store.selectedElement.subType}" on:change>
+      <div class="space-y-1.5">
+        <label class="label-caps">Item Subtype</label>
+        <select class="input-base" bind:value={$store.selectedElement.subType}>
           <option value="" selected>Item Subtype</option>
           {#each itemSubTypes as subType}
-            <option value="{subType}">{subType.capitalize()}</option>
+            <option value={subType}>{subType}</option>
           {/each}
         </select>
-        <label>Select Item Sub Type</label>
       </div>
-
     </div>
-    <div class="row">
 
-      <div class="margininput input-field col s5">
-        <select bind:value="{$store.selectedElement.quality}" on:change>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="space-y-1.5">
+        <label class="label-caps">Item Quality</label>
+        <select class="input-base" bind:value={$store.selectedElement.quality}>
           <option value="" disabled selected>Item Quality</option>
           {#each itemQualities as quality}
-            <option value="{quality}">{quality.capitalize()}</option>
+            <option value={quality}>{quality}</option>
           {/each}
-
         </select>
-        <label>Select Item Quality</label>
       </div>
 
-      <div class="margininput input-field col s5">
-        <select
-          class="margininput"
-          bind:value="{$store.selectedElement.slot}"
-          on:change
-        >
+      <div class="space-y-1.5">
+        <label class="label-caps">Item Slot</label>
+        <select class="input-base" bind:value={$store.selectedElement.slot}>
           <option value="" selected>Item Slot</option>
           {#each itemSlots as slot}
-            <option class="select" value="{slot}">{slot.capitalize()}</option>
+            <option value={slot}>{slot}</option>
           {/each}
         </select>
-        <label>Select Item Slot</label>
       </div>
-
     </div>
   </div>
 </CRUDEditor>

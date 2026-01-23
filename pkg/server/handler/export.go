@@ -4,62 +4,53 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	e "github.com/talesmud/talesmud/pkg/entities"
-	"github.com/talesmud/talesmud/pkg/entities/characters"
-	"github.com/talesmud/talesmud/pkg/entities/items"
-	"github.com/talesmud/talesmud/pkg/entities/rooms"
+	"github.com/talesmud/talesmud/pkg/exporter"
 	"github.com/talesmud/talesmud/pkg/repository"
-	"github.com/talesmud/talesmud/pkg/scripts"
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
-//ExportHandler ...
+// ExportHandler ...
 type ExportHandler struct {
 	RoomsService      service.RoomsService
 	CharactersService service.CharactersService
 	UserService       service.UsersService
 	ItemsService      service.ItemsService
 	ScriptService     service.ScriptsService
+	NPCsService       service.NPCsService
+	DialogsService    service.DialogsService
+	PartiesService    service.PartiesService
 }
 
-type exportStructure struct {
-	Rooms         []*rooms.Room           `json:"rooms"`
-	Items         []*items.Item           `json:"items"`
-	ItemTemplates []*items.ItemTemplate   `json:"itemTemplates"`
-	Characters    []*characters.Character `json:"characters"`
-	Scripts       []*scripts.Script       `json:"scripts"`
-	Users         []*e.User               `json:"users"`
-}
-
-//Export Exports all data structures as JSON
+// Export Exports all data structures as JSON
 func (handler *ExportHandler) Export(c *gin.Context) {
 
-	d := exportStructure{}
+	d := exporter.Data{}
 
 	d.Rooms, _ = handler.RoomsService.FindAll()
 	d.Characters, _ = handler.CharactersService.FindAll()
 	d.Users, _ = handler.UserService.FindAll()
-	d.ItemTemplates, _ = handler.ItemsService.ItemTemplates().FindAll(repository.ItemsQuery{})
-	d.Items, _ = handler.ItemsService.Items().FindAll(repository.ItemsQuery{})
+	d.Items, _ = handler.ItemsService.FindAll(repository.ItemsQuery{}) // Gets all items (templates + instances)
 	d.Scripts, _ = handler.ScriptService.FindAll()
+	d.NPCs, _ = handler.NPCsService.FindAll()
+	d.Dialogs, _ = handler.DialogsService.FindAll()
+	d.Parties, _ = handler.PartiesService.FindAll()
 
-	//c.JSON(http.StatusOK, d)
 	c.IndentedJSON(http.StatusOK, d)
 }
 
-//Import Imports all data structures
+// Import Imports all data structures
 func (handler *ExportHandler) Import(c *gin.Context) {
 
 	// drop all collections before importing
 	handler.RoomsService.Drop()
 	handler.CharactersService.Drop()
 	handler.UserService.Drop()
-	handler.ItemsService.Items().Drop()
-	handler.ItemsService.ItemTemplates().Drop()
+	handler.ItemsService.Drop()
 	handler.ScriptService.Drop()
+	handler.NPCsService.Drop()
+	handler.DialogsService.Drop()
 
-	var data exportStructure
-	//if err := c.ShouldBindYAML(&data); err != nil {
+	var data exporter.Data
 	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -78,14 +69,20 @@ func (handler *ExportHandler) Import(c *gin.Context) {
 	}
 
 	for _, item := range data.Items {
-		handler.ItemsService.Items().Import(item)
-	}
-	for _, itemTemplate := range data.ItemTemplates {
-		handler.ItemsService.ItemTemplates().Import(itemTemplate)
+		handler.ItemsService.Import(item)
 	}
 
 	for _, script := range data.Scripts {
 		handler.ScriptService.Import(script)
+	}
+	for _, npc := range data.NPCs {
+		handler.NPCsService.Import(npc)
+	}
+	for _, dialog := range data.Dialogs {
+		handler.DialogsService.Import(dialog)
+	}
+	for _, party := range data.Parties {
+		handler.PartiesService.Store(party)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"status": "Import successful"})

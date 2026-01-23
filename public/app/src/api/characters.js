@@ -41,6 +41,19 @@ function getCharacters(token, cb, errorCb) {
       .catch((err) => errorCb(err));
   };
 
+function getMyCharacters(token, cb, errorCb) {
+    axios
+      .get(`${backend}/my-characters`, {
+        mode: "no-cors",
+        credentials: "same-origin",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      .then((result) => cb(result.data))
+      .catch((err) => errorCb(err));
+  };
+
   // public API
   function getCharacterTemplates(cb, errorCb) {
     axios
@@ -65,4 +78,4 @@ function updateCharacter(token, id, character, cb, errorCb) {
       .catch((err) => errorCb(err));
   };
 
-export {getCharacter, createNewCharacter, getCharacterTemplates, getCharacters, updateCharacter};
+export {getCharacter, createNewCharacter, getCharacterTemplates, getCharacters, getMyCharacters, updateCharacter};

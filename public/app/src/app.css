@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: theme("fontFamily.display");
+  }
+
+  body {
+    @apply bg-background-light text-slate-900 dark:bg-background-dark dark:text-slate-100;
+    @apply min-h-screen;
+  }
+
+  a {
+    @apply text-inherit no-underline;
+  }
+
+  .material-symbols-outlined {
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+    vertical-align: middle;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors;
+  }
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-emerald-600 shadow-sm;
+  }
+  .btn-outline {
+    @apply border border-slate-300 text-slate-600 hover:bg-slate-200 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800;
+  }
+  .btn-danger {
+    @apply bg-accent-red text-white hover:bg-red-600 shadow-sm;
+  }
+  .btn-ghost {
+    @apply text-slate-500 hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-800;
+  }
+  .card {
+    @apply rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-card-dark;
+  }
+  .input-base {
+    @apply w-full rounded-md border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-100;
+  }
+  .label-caps {
+    @apply text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500;
+  }
+}

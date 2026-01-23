@@ -1,168 +1,247 @@
-<style>
-  .modal {
-    background-color: darkslategrey;
-  }
-
-  input {
-    color: #eee;
-  }
-</style>
-
 <script>
   import CharacterTemplate from "./CharacterTemplate.svelte";
   import { onMount } from "svelte";
-  import { writable } from "svelte/store";
-
-  import { createAuth, getAuth } from "../auth.js";
-  import axios from "axios";
-  import { onInterval } from "../utils.js";
+  import { getAuth } from "../auth.js";
   import { getCharacterTemplates, createNewCharacter } from "../api/characters";
 
-  let data = [];
-  let topTen = [];
+  const { isLoading, isAuthenticated, login, authToken } = getAuth();
 
-  const store = writable({
-    templateSelected: false,
-    selectedTemplate: 0,
-    character: {},
-    name: "unnamed",
-    description: "Describe your new character",
-  });
+  let templates = [];
+  let selectedTemplateId = null;
+  let selectedTemplate = null;
 
-  const {
-    isLoading,
-    isAuthenticated,
-    login,
-    logout,
-    authToken,
-    authError,
-    userInfo,
-  } = getAuth();
+  let name = "";
+  let description = "";
 
-  $: state = {
-    isLoading: $isLoading,
-    isAuthenticated: $isAuthenticated,
-    authError: $authError,
-    userInfo: $userInfo ? $userInfo.name : null,
-    authToken: $authToken.slice(0, 20),
+  let isLoadingTemplates = false;
+  let isSubmitting = false;
+  let errorMessage = "";
+  let successCharacter = null;
+
+  const selectTemplate = (id) => {
+    selectedTemplateId = id;
+    selectedTemplate = templates.find((t) => t.id === id) || null;
+    errorMessage = "";
   };
 
-  const create = () => {
+  const create = async () => {
+    errorMessage = "";
+    successCharacter = null;
+
+    if (!selectedTemplateId) {
+      errorMessage = "Please select a class template first.";
+      return;
+    }
+    if (!name || name.trim().length < 3) {
+      errorMessage = "Name must be at least 3 characters.";
+      return;
+    }
+
+    isSubmitting = true;
     const createDTO = {
-      name: $store.name,
-      description: $store.description,
-      templateId: $store.selectedTemplate,
+      name: name.trim(),
+      description: (description || "").trim(),
+      templateId: selectedTemplateId,
     };
 
     createNewCharacter(
       $authToken,
       createDTO,
-      (character) => console.log("Created character " + character.id),
-      (err) => console.log(err)
+      (character) => {
+        successCharacter = character;
+        isSubmitting = false;
+      },
+      (err) => {
+        isSubmitting = false;
+        errorMessage =
+          err?.response?.data?.error ||
+          err?.response?.data?.message ||
+          err?.message ||
+          "Failed to create character.";
+      }
     );
   };
 
-  onMount(async () => {
-    document.addEventListener("DOMContentLoaded", function () {
-      var elems = document.querySelectorAll(".modal");
-      var instances = M.Modal.init(elems, {});
-    });
-
+  // Fetch templates on component init
+  function loadTemplates() {
+    isLoadingTemplates = true;
     getCharacterTemplates(
       (result) => {
-        templates.set(result);
+        templates = result || [];
+        isLoadingTemplates = false;
       },
       (err) => {
-        console.log(err);
+        isLoadingTemplates = false;
+        errorMessage =
+          err?.response?.data?.error ||
+          err?.response?.data?.message ||
+          err?.message ||
+          "Failed to load character templates.";
       }
     );
-  });
+  }
 
-  const templates = writable([]);
+  // Call immediately - onMount may not fire with yrv router
+  loadTemplates();
 </script>
 
-<!-- Modal Structure -->
-<div id="modal1" class="modal">
-  <div class="modal-content">
-    <h4>Create new Character</h4>
+{#if !$isAuthenticated}
+  <div class="flex items-center justify-between">
+    <p class="text-sm text-slate-500 dark:text-slate-400">
+      Log in to create and manage characters.
+    </p>
+    <button class="btn btn-primary" type="button" on:click={() => login()}>
+      Log in
+    </button>
+  </div>
+{:else}
+  <div class="space-y-5">
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <p class="text-sm text-slate-500 dark:text-slate-400">
+          Choose a class template (stats/race/class), then personalize your name and description.
+        </p>
+      </div>
+      <a class="text-xs text-primary hover:underline" href="/characters/new">
+        Open full creator
+      </a>
+    </div>
 
-    {#if !$store.templateSelected}
-      <p>
-        Select a template which fits you most, you can change starting
-        attributes as well
-      </p>
-      <div class="row">
-        {#each $templates as character}
-          <div class="col s4">
-            <CharacterTemplate
-              name="{character.name}"
-              description="{character.description}"
-              created="{character.created}"
-              attributes="{character.attributes}"
-              templateId="{character.templateId}"
-              callback="{(id) => {
-                store.update((state) => {
-                  state.templateSelected = true;
-                  state.selectedTemplate = id;
-                  state.character = character;
-                  state.name = character.name;
-                  state.description = character.description;
-                  return state;
-                });
-              }}"
-            />
-          </div>
-        {/each}
+    {#if errorMessage}
+      <div class="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+        {errorMessage}
       </div>
     {/if}
 
-    <div class="row">
-      {#if $store.templateSelected}
-        <div class="col s4">
-          <CharacterTemplate
-            name="{$store.name}"
-            description="{$store.description}"
-            created="{$store.character.created}"
-            attributes="{$store.character.attributes}"
-          />
+    {#if successCharacter}
+      <div class="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+        <div class="font-medium">Character created: {successCharacter.name}</div>
+        <div class="mt-1 text-xs text-emerald-200/80">
+          You can now <a class="underline" href="/play">start playing</a>.
         </div>
-      {/if}
-      <div class="col s8">
+      </div>
+    {/if}
 
-        <div class="input-field">
-          <input
-            bind:value="{$store.name}"
-            id="name"
-            type="text"
-            class="validate"
-          />
-          <label for="name" class="active">Name</label>
+    <div class="grid grid-cols-1 lg:grid-cols-[1.6fr,1fr] gap-6">
+      <div class="space-y-3">
+        <div class="label-caps">Pick a class</div>
+        {#if isLoadingTemplates}
+          <div class="text-sm text-slate-500 dark:text-slate-400">
+            Loading templates…
+          </div>
+        {:else if templates.length === 0}
+          <div class="rounded-lg border border-slate-800 bg-slate-900/40 p-4 text-sm text-slate-400">
+            No templates available.
+            <div class="mt-2 text-xs text-slate-500">
+              This usually means the API base URL is wrong. Check `VITE_API_BASE_URL` (or reload after updating).
+            </div>
+          </div>
+        {:else}
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {#each templates as t}
+              <CharacterTemplate
+                name={t.name}
+                description={t.description}
+                attributes={t.attributes}
+                templateId={t.id}
+                race={t.race}
+                cclass={t.class}
+                selected={t.id === selectedTemplateId}
+                callback={selectTemplate}
+              />
+            {/each}
+          </div>
+        {/if}
+      </div>
+
+      <div class="space-y-4">
+        <div class="label-caps">Details</div>
+
+        <div class="space-y-1.5">
+          <label class="label-caps">Name</label>
+          <input class="input-base" bind:value={name} placeholder="e.g. Gandalf the White" />
+        </div>
+        <div class="space-y-1.5">
+          <label class="label-caps">Description</label>
+          <input class="input-base" bind:value={description} placeholder="Short backstory or vibe…" />
         </div>
 
-        <div class="input-field">
-          <input
-            bind:value="{$store.description}"
-            id="description"
-            type="text"
-          />
-          <label for="description" class="active">Description</label>
+        <!-- Selected template preview card -->
+        <div class="rounded-xl border border-slate-800 bg-slate-900/40 p-4 space-y-4">
+          {#if selectedTemplate}
+            <!-- Template header with avatar -->
+            <div class="flex items-center gap-4">
+              <img
+                src={`/img/avatars/${1 + Math.abs(selectedTemplate.name.hashCode() % 12)}p.png`}
+                alt={selectedTemplate.name}
+                class="w-14 h-14 rounded-full border-2 border-primary"
+              />
+              <div class="flex-1 min-w-0">
+                <div class="font-semibold text-slate-100">{selectedTemplate.name}</div>
+                <div class="flex items-center gap-2 mt-1">
+                  {#if selectedTemplate.class}
+                    <span class="px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-[10px] font-medium text-slate-300">
+                      {selectedTemplate.class.name}
+                    </span>
+                  {/if}
+                  {#if selectedTemplate.race}
+                    <span class="px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-[10px] font-medium text-slate-300">
+                      {selectedTemplate.race.name}
+                    </span>
+                  {/if}
+                </div>
+              </div>
+            </div>
+
+            <!-- Stats grid -->
+            <div class="space-y-3">
+              <div class="label-caps">Base Stats</div>
+              <div class="grid grid-cols-2 gap-2">
+                {#if selectedTemplate.attributes}
+                  {#each selectedTemplate.attributes as attr}
+                    <div class="flex items-center justify-between bg-slate-800/50 rounded-lg px-3 py-2">
+                      <span class="text-xs text-slate-400">{attr.name}</span>
+                      <span class="text-sm font-mono font-semibold text-slate-200">{attr.value}</span>
+                    </div>
+                  {/each}
+                {/if}
+              </div>
+            </div>
+
+            <!-- Combat info -->
+            <div class="grid grid-cols-2 gap-3 pt-2 border-t border-slate-800">
+              <div>
+                <div class="label-caps">HP</div>
+                <div class="text-sm font-medium text-slate-200 mt-1">
+                  {selectedTemplate.currentHitPoints}/{selectedTemplate.maxHitPoints}
+                </div>
+              </div>
+              <div>
+                <div class="label-caps">Combat Type</div>
+                <div class="text-sm font-medium text-slate-200 mt-1">
+                  {selectedTemplate.class?.combatType || "—"}
+                </div>
+              </div>
+            </div>
+          {:else}
+            <div class="text-center py-6">
+              <span class="material-symbols-outlined text-4xl text-slate-600 mb-2">person_add</span>
+              <p class="text-sm text-slate-500">Select a class template to see stats</p>
+            </div>
+          {/if}
+        </div>
+
+        <div class="flex justify-end">
+          <button
+            class="btn btn-primary"
+            type="button"
+            disabled={isSubmitting || !selectedTemplate}
+            on:click={create}
+          >
+            {#if isSubmitting}Creating…{:else}Create Character{/if}
+          </button>
         </div>
       </div>
     </div>
   </div>
-  <div class="modal-footer">
-    <button
-      href="#!"
-      class="modal-close waves-effect waves-red btn"      
-    >
-      Cancel
-    </button>
-    <button
-      href="#!"
-      class="modal-close waves-effect waves-green btn"
-      on:click="{create}"
-    >
-      Create
-    </button>
-  </div>
-</div>
+{/if}

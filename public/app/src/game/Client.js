@@ -1,10 +1,9 @@
 // src/auth.js
 
-import { onMount, setContext, getContext } from "svelte";
-import { writable } from "svelte/store";
+import { onMount } from "svelte";
+import { writable, get } from "svelte/store";
 
-//const isLoading = writable(true);
-const GAME_CLIENT = {};
+const GAME_CLIENT = writable(null);
 
 function createClient(renderer, characterCreator, muxStore) {
   let ws;
@@ -30,14 +29,14 @@ function createClient(renderer, characterCreator, muxStore) {
       }
 
       if (activeRoom.actions != undefined) {
-        mux.setActions(activeRoom.actions);
+        mux.setActaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaions(activeRoom.actions);
       } else {
         mux.setActions([]);
       }
     }
   };
 
-  messageHandlers["createCharacter"] = (msg) => {
+  messageHandlers["createCharacter"] = (msg) => {a
     renderer(msg.message);
 
     if (characterCreator) {
@@ -123,16 +122,15 @@ function createClient(renderer, characterCreator, muxStore) {
     sendMessage,
   };
 
-  // setInterval(function () {
-  //   renderer("\n<The lights in front of you are flickering>")
-  // }, 5000);
+  // Set the client object in the store
+  GAME_CLIENT.set(client);
 
-  setContext(GAME_CLIENT, client);
   return client;
 }
 
 function getClient() {
-  return getContext(GAME_CLIENT);
+  // Return the client object from the store
+  return get(GAME_CLIENT);
 }
 
 export { createClient, getClient };

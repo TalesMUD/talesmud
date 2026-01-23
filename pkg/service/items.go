@@ -1,22 +1,26 @@
 package service
 
 import (
-	"github.com/sirupsen/logrus"
+	"fmt"
+	"time"
+
+	"github.com/google/uuid"
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/items"
 	r "github.com/talesmud/talesmud/pkg/repository"
-	"github.com/talesmud/talesmud/pkg/scripts"
 )
 
 //--- Interface Definitions
 
-//ItemsService delives logical functions on top of the charactersheets Repo
+// ItemsService delivers logical functions on top of the items repository
 type ItemsService interface {
-	Items() r.ItemsRepository
-	ItemTemplates() r.ItemTemplatesRepository
+	r.ItemsRepository
 
-	CreateItemFromTemplate(templateID string) (*items.Item, error)
+	// Template-specific methods
+	FindAllTemplates(query r.ItemsQuery) ([]*items.Item, error)
+	CreateInstanceFromTemplate(templateID string) (*items.Item, error)
 
+	// Metadata helpers
 	ItemSlots() items.ItemSlots
 	ItemQualities() items.ItemQualities
 	ItemTypes() items.ItemTypes
@@ -27,22 +31,16 @@ type ItemsService interface {
 
 type itemsService struct {
 	r.ItemsRepository
-	r.ItemTemplatesRepository
-	ScriptsService
-	scripts.ScriptRunner
 }
 
-//NewItemsService creates a nwe item service
-func NewItemsService(itemsRepo r.ItemsRepository, itemsTemplateRepo r.ItemTemplatesRepository, scriptService ScriptsService, runner scripts.ScriptRunner) ItemsService {
+// NewItemsService creates a new item service
+func NewItemsService(itemsRepo r.ItemsRepository) ItemsService {
 	return &itemsService{
-		itemsRepo,
-		itemsTemplateRepo,
-		scriptService,
-		runner,
+		ItemsRepository: itemsRepo,
 	}
 }
 
-func (itemsService *itemsService) ItemSlots() items.ItemSlots {
+func (srv *itemsService) ItemSlots() items.ItemSlots {
 	return items.ItemSlots{
 		items.ItemSlotInventory,
 		items.ItemSlotContainer,
@@ -60,7 +58,7 @@ func (itemsService *itemsService) ItemSlots() items.ItemSlots {
 	}
 }
 
-func (itemsService *itemsService) ItemQualities() items.ItemQualities {
+func (srv *itemsService) ItemQualities() items.ItemQualities {
 	return items.ItemQualities{
 		items.ItemQualityNormal,
 		items.ItemQualityMagic,
@@ -70,7 +68,7 @@ func (itemsService *itemsService) ItemQualities() items.ItemQualities {
 	}
 }
 
-func (itemsService *itemsService) ItemTypes() items.ItemTypes {
+func (srv *itemsService) ItemTypes() items.ItemTypes {
 	return items.ItemTypes{
 		items.ItemTypeCurrency,
 		items.ItemTypeConsumable,
@@ -82,7 +80,7 @@ func (itemsService *itemsService) ItemTypes() items.ItemTypes {
 	}
 }
 
-func (itemsService *itemsService) ItemSubTypes() items.ItemSubTypes {
+func (srv *itemsService) ItemSubTypes() items.ItemSubTypes {
 	return items.ItemSubTypes{
 		items.ItemSubTypeSword,
 		items.ItemSubTypeTwoHandSword,
@@ -92,44 +90,78 @@ func (itemsService *itemsService) ItemSubTypes() items.ItemSubTypes {
 	}
 }
 
-//Items...
-func (itemsService *itemsService) Items() r.ItemsRepository {
-	return itemsService.ItemsRepository
-}
-
-//itemTemplates...
-func (itemsService *itemsService) ItemTemplates() r.ItemTemplatesRepository {
-	return itemsService.ItemTemplatesRepository
-}
-
-func createItemFromTemplate(itemTemplate *items.ItemTemplate) *items.Item {
-
-	item := itemTemplate.Item
-	item.Entity = entities.NewEntity()
-
-	return &item
-}
-
-//CreateItemFromTemplate ...
-func (itemsService *itemsService) CreateItemFromTemplate(templateID string) (*items.Item, error) {
-
-	// get item template
-	if template, err := itemsService.ItemTemplates().FindByID(templateID); err != nil {
-		return nil, err
-	} else {
-
-		item := createItemFromTemplate(template)
-
-		// run script after item creation
-		if template.Script != nil {
-			if script, err := itemsService.ScriptsService.FindByID(*template.Script); err == nil {
-
-				logrus.WithField("item", item.Name).WithField("script", script.Name).Info("Executing script on created item")
-				itemsService.ScriptRunner.Run(*script, item)
-			}
-		}
-		return item, nil
+// CreateInstanceFromTemplate creates a new item instance from a template
+func (srv *itemsService) CreateInstanceFromTemplate(templateID string) (*items.Item, error) {
+	template, err := srv.FindByID(templateID)
+	if err != nil {
+		return nil, fmt.Errorf("template not found: %w", err)
+	}
+	if template == nil {
+		return nil, fmt.Errorf("template %s not found", templateID)
+	}
+	if !template.IsTemplate {
+		return nil, fmt.Errorf("item %s is not a template", templateID)
 	}
 
-	//	return nil, fmt.Errorf("Could not create item from templateID %v", templateID)
+	// Generate unique suffix
+	suffix := uuid.New().String()[:8]
+
+	// Create instance (deep copy template fields)
+	instance := &items.Item{
+		Entity:      entities.NewEntity(),
+		Name:        template.Name,
+		Description: template.Description,
+		Type:        template.Type,
+		SubType:     template.SubType,
+		Slot:        template.Slot,
+		Quality:     template.Quality,
+		Level:       template.Level,
+		Properties:  copyMap(template.Properties),
+		Attributes:  copyMap(template.Attributes),
+		Tags:        append([]string{}, template.Tags...),
+		NoPickup:    template.NoPickup,
+
+		// Template reference
+		IsTemplate:     false,
+		TemplateID:     templateID,
+		InstanceSuffix: suffix,
+
+		Created: time.Now(),
+	}
+
+	// Copy container fields if applicable
+	instance.Closed = template.Closed
+	instance.Locked = template.Locked
+	instance.LockedBy = template.LockedBy
+	instance.MaxItems = template.MaxItems
+
+	// Copy LookAt trait
+	instance.LookAt = template.LookAt
+
+	// Copy meta if present
+	if template.Meta != nil {
+		instance.Meta = &struct {
+			Img string `bson:"img,omitempty" json:"img,omitempty"`
+		}{Img: template.Meta.Img}
+	}
+
+	// Save the instance to the database
+	savedInstance, err := srv.Store(instance)
+	if err != nil {
+		return nil, fmt.Errorf("failed to save item instance: %w", err)
+	}
+
+	return savedInstance, nil
+}
+
+// copyMap creates a shallow copy of a map
+func copyMap(m map[string]interface{}) map[string]interface{} {
+	if m == nil {
+		return nil
+	}
+	result := make(map[string]interface{}, len(m))
+	for k, v := range m {
+		result[k] = v
+	}
+	return result
 }

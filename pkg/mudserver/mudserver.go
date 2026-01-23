@@ -13,6 +13,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/mudserver/game"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/scripts"
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
@@ -276,6 +277,12 @@ func (server *server) receiveMessages() {
 	for {
 		message := <-server.Game.SendMessage()
 
+		// Room-enter trigger: run a room-attached script whenever a player enters a room.
+		// This is observed via the outgoing EnterRoomMessage (sent to the entering player).
+		if enter, ok := message.(*messages.EnterRoomMessage); ok {
+			server.runRoomEnterScript(enter)
+		}
+
 		if msg, ok := message.(messages.MessageResponder); ok {
 			switch msg.GetAudience() {
 			case messages.MessageAudienceOrigin:
@@ -307,6 +314,66 @@ func (server *server) receiveMessages() {
 			}
 		}
 	}
+}
+
+func (server *server) runRoomEnterScript(enter *messages.EnterRoomMessage) {
+	if enter == nil {
+		return
+	}
+
+	scriptID := enter.Room.OnEnterScriptID
+	if scriptID == "" {
+		return
+	}
+
+	// AudienceID is set by the caller before sending the EnterRoomMessage.
+	userID := enter.GetAudienceID()
+	if userID == "" {
+		return
+	}
+
+	// Run asynchronously so we don't delay room rendering.
+	go func() {
+		script, err := server.Facade.ScriptsService().FindByID(scriptID)
+		if err != nil || script == nil {
+			log.WithField("scriptID", scriptID).WithError(err).Warn("Room on-enter script not found")
+			return
+		}
+
+		// Load user + character (best effort)
+		user, _ := server.Facade.UsersService().FindByID(userID)
+		var character interface{}
+		if user != nil && user.LastCharacter != "" {
+			if chr, err := server.Facade.CharactersService().FindByID(user.LastCharacter); err == nil {
+				character = chr
+			}
+		}
+
+		// Load the canonical room (best effort) so scripts see the latest saved version.
+		roomObj := interface{}(&enter.Room)
+		if enter.Room.ID != "" {
+			if room, err := server.Facade.RoomsService().FindByID(enter.Room.ID); err == nil && room != nil {
+				roomObj = room
+			}
+		}
+
+		ctx := scripts.NewScriptContext()
+		ctx.Set("eventType", "player.enter_room")
+		ctx.Set("room", roomObj)
+		ctx.Set("toRoom", roomObj)
+		if user != nil {
+			ctx.Set("user", user)
+		}
+		if character != nil {
+			ctx.Set("character", character)
+		}
+
+		result := server.Facade.Runner().RunWithResult(*script, ctx)
+		if result != nil && !result.Success {
+			log.WithField("script", script.Name).WithField("scriptID", scriptID).WithField("error", result.Error).
+				Warn("Room on-enter script failed")
+		}
+	}()
 }
 
 // OnSystemMessage .. broadcast receiver

@@ -1,22 +1,3 @@
-<style>
-  .collapsible-header {
-    background-color: transparent;
-  }
-  .collapsible-body {
-    padding: 1em;
-    margin: 1em;
-  }
-  label {
-    color: #eee;
-  }
-  input {
-    color: white;
-  }
-  input:disabled {
-    color: white;
-  }
-</style>
-
 <script>
   import { onMount } from "svelte";
 
@@ -30,76 +11,69 @@
   });
 </script>
 
-<li>
-  <div class="collapsible-header">
-    <div class="col s9 left valign-wrapper">
-      <i class="material-icons left-align">flare</i>
-      {action.name}
+<div class="p-4 rounded-lg border border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-900/50 space-y-3">
+  <div class="flex items-center justify-between">
+    <div class="text-xs font-bold uppercase tracking-wider text-slate-400">
+      {action.name || "Room Action"}
     </div>
-    <div class="col s3 right-align">
-      <button
-        on:click="{() => deleteAction(action)}"
-        class="btn-small red align-right"
-      >
-        Delete Action
-      </button>
-    </div>
-
+    <button
+      class="text-xs text-accent-red hover:underline"
+      type="button"
+      on:click={() => deleteAction(action)}
+    >
+      Remove
+    </button>
   </div>
 
-  <div class="collapsible-body">
-    <div class="row">
-
-      <div class="input-field">
-        <input
-          placeholder="Placeholder"
-          id="name-{action.name}"
-          type="text"
-          bind:value="{action.name}"
-        />
-        <label for="name-{action.name}">Name</label>
-
-        <div class="input-field">
-          <input
-            placeholder="Placeholder"
-            id="desc-{action.description}"
-            type="text"
-            bind:value="{action.description}"
-          />
-          <label for="desc-{action.description}">Description</label>
-          <div class="input-field">
-            <input
-              id="target-{action.response}"
-              type="text"
-              bind:value="{action.response}"
-            />
-            <label for="target-{action.response}">Response</label>
-          </div>
-
-          <div class="input-field">
-            <select
-              id="autocomplete-input-{action.type}"
-              bind:value="{action.type}"
-            >
-
-              <option value="response">Respond to Player</option>
-              <option value="response_room">Respond to Room</option>
-              <option value="script">Run Script</option>
-            </select>
-            <label>Type</label>
-          </div>
-          <div class="input-field">
-            <input
-              id="scriptid-{action.response}-1"
-              type="text"
-            />
-            <label for="target-{action.response}-1">
-              Script ID(if script is selected)
-            </label>
-          </div>
-        </div>
-
-      </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="space-y-1.5">
+      <label class="label-caps" for={`action-name-${action.name}`}>Name</label>
+      <input
+        class="input-base text-xs"
+        id={`action-name-${action.name}`}
+        type="text"
+        bind:value={action.name}
+      />
+    </div>
+    <div class="space-y-1.5">
+      <label class="label-caps" for={`action-type-${action.name}`}>Type</label>
+      <select class="input-base text-xs" id={`action-type-${action.name}`} bind:value={action.type}>
+        <option value="response">Respond to Player</option>
+        <option value="response_room">Respond to Room</option>
+        <option value="script">Run Script</option>
+      </select>
     </div>
   </div>
-</li>
+
+  <div class="space-y-1.5">
+    <label class="label-caps" for={`action-desc-${action.name}`}>Description</label>
+    <input
+      class="input-base text-xs"
+      id={`action-desc-${action.name}`}
+      type="text"
+      bind:value={action.description}
+    />
+  </div>
+
+  <div class="space-y-1.5">
+    <label class="label-caps" for={`action-response-${action.name}`}>Response</label>
+    <input
+      class="input-base text-xs"
+      id={`action-response-${action.name}`}
+      type="text"
+      bind:value={action.response}
+    />
+  </div>
+
+  {#if action.type === "script"}
+    <div class="space-y-1.5">
+      <label class="label-caps" for={`action-script-${action.name}`}>Script ID</label>
+      <input
+        class="input-base text-xs"
+        id={`action-script-${action.name}`}
+        type="text"
+        bind:value={action.scriptId}
+      />
+    </div>
+  {/if}
+</div>
