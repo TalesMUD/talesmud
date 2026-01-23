@@ -1,0 +1,380 @@
+[
+    {
+        "id": "starting-room",
+        "detail": "Looking around, you notice a strange marking on one of the trees. It appears to be an arrow pointing north.",
+        "name": "Forest Clearing",
+        "description": "You find yourself in a quiet forest clearing. Tall trees surround you and there's an eerie silence in the air. How did you get here? You can't remember. There's a path leading north and another to the east.",
+        "roomType": "clearing",
+        "area": "starting-area",
+        "areaType": "forest",
+        "tags": null,
+        "actions": null,
+        "exits": [
+            {
+                "name": "north",
+                "description": "Follow the path north",
+                "target": "tall-oak",
+                "params": null
+            },
+            {
+                "name": "east",
+                "description": "Take the path to the east",
+                "target": "forest-stream",
+                "params": null
+            }
+        ]
+    },
+    {
+        "id": "tall-oak",
+        "detail": "You look up and notice a small object stuck in the branches of the tree. A small locket. How did it get there?",
+        "name": "Tall Oak",
+        "description": "You stand before a towering oak tree. It's the tallest one you've seen in this forest. There's a strange sense of comfort being near it. A narrow path leads further north.",
+        "roomType": "tree",
+        "area": "starting-area",
+        "areaType": "forest",
+        "tags": null,
+        "actions": [
+            {
+                "name": "climb tree",
+                "description": "{{characterName}} decides to climb the tree and retrieve the locket. It's a small locket with an intricate design. Inside is a picture of a person you don't recognize.",
+                "type": "room_response",
+                "params": null
+            }
+        ],
+        "exits": [
+            {
+                "name": "south",
+                "description": "Back to the forest clearing",
+                "target": "starting-room",
+                "params": null
+            },
+            {
+                "name": "north",
+                "description": "Follow the path further north",
+                "target": "abandoned-camp",
+                "params": null
+            }
+        ]
+    },
+    {
+        "id": "forest-stream",
+        "detail": "Upon closer inspection, you notice a set of footprints leading west, towards the stream. They seem fresh.",
+        "name": "Forest Stream",
+        "description": "You reach a gentle stream running through the forest. The sound of flowing water is soothing. You can't help but wonder who else has been here. A path leads back west.",
+        "roomType": "stream",
+        "area": "starting-area",
+        "areaType": "forest",
+        "tags": null,
+        "actions": [
+            {
+                "name": "follow footprints",
+                "description": "{{characterName}} decides to follow the footprints. They lead to a small bundle hidden in the brush. It contains some clothes, a map, and a dagger.",
+                "type": "room_response",
+                "params": null
+            }
+        ],
+        "exits": [
+            {
+                "name": "west",
+                "description": "Back to the forest clearing",
+                "target": "starting-room",
+                "params": null
+            }
+        ]
+    },
+    {
+        "id": "abandoned-camp",
+        "detail": "As you approach the fire pit, you notice a piece of torn cloth. It matches the clothes you found near the stream.",
+        "name": "Abandoned Camp",
+        "description": "You come across what looks like an abandoned camp. A burnt-out fire pit lies in the center, and discarded utensils are scattered about. Whoever was here, they left in a hurry. To the east, a rocky path leads uphill.",
+        "roomType": "camp",
+        "area": "starting-area",
+        "areaType": "forest",
+        "tags": null,
+        "actions": [
+            {
+                "name": "investigate camp",
+                "description": "{{characterName}} decides to investigate the camp. Among the debris, you find a journal. The entries are rushed, hinting at a looming danger and a need to escape.",
+                "type": "room_response",
+                "params": null
+            }
+        ],
+        "exits": [
+            {
+                "name": "south",
+                "description": "Back to the tall oak",
+                "target": "tall-oak",
+                "params": null
+            },
+            {
+                "name": "east",
+                "description": "Follow the rocky path uphill",
+                "target": "hilltop",
+                "params": null
+            }
+        ]
+    },
+    {
+        "id": "hilltop",
+        "detail": "You take a deep breath and look around. From here, you can see a village in the distance.",
+        "name": "Hilltop",
+        "description": "You reach the top of the hill, leaving the forest behind. The journey ahead is unclear, but you know you can't go back. You must press forward and figure out what happened. A path to the north leads towards the distant village.",
+        "roomType": "hilltop",
+        "area": "starting-area",
+        "areaType": "hill",
+        "tags": null,
+        "actions": null,
+        "exits": [
+            {
+                "name": "north",
+                "description": "Follow the path to the village",
+                "target": "village-gate",
+                "params": null
+            }
+        ]
+    },
+    {
+        "id": "woodland-path",
+        "detail": "Around you, the trees whisper secrets carried by the wind, creating a tranquil, almost ethereal atmosphere.",
+        "name": "Woodland Path",
+        "description": "You continue down a dirt path lined with tall, ancient trees. Their branches intertwine overhead, creating a natural canopy that blocks out most of the sunlight.",
+        "roomType": "path",
+        "area": "woods",
+        "areaType": "forest",
+        "tags": null,
+        "actions": null,
+        "exits": [
+            {
+                "name": "north",
+                "description": "Continue north through the woods",
+                "target": "woodland-clearing",
+                "params": null
+            },
+            {
+                "name": "west",
+                "description": "Turn west into the thicker part of the woods",
+                "target": "woodland-shack",
+                "params": null
+            }
+        ]
+    },
+    {
+        "id": "woodland-clearing",
+        "detail": "You notice hoofprints and tracks of small animals crossing the clearing, indicating frequent activity.",
+        "name": "Woodland Clearing",
+        "description": "The path opens into a large clearing. Wildflowers and soft grass cover the ground. You see a river glistening in the distance.",
+        "roomType": "clearing",
+        "area": "woods",
+        "areaType": "forest",
+        "tags": null,
+        "actions": null,
+        "exits": [
+            {
+                "name": "south",
+                "description": "Back to the Woodland Path",
+                "target": "woodland-path",
+                "params": null
+            },
+            {
+                "name": "east",
+                "description": "Approach the river",
+                "target": "riverbank",
+                "params": null
+            }
+        ]
+    },
+    {
+        "id": "woodland-shack",
+        "detail": "You notice a strange symbol carved into the wooden door. It seems to hold a magical significance.",
+        "name": "Woodland Shack",
+        "description": "Hidden among the dense trees, you stumble upon a small shack. It's old and worn but looks like it has been inhabited recently.",
+        "roomType": "house",
+        "area": "woods",
+        "areaType": "forest",
+        "tags": null,
+        "actions": null,
+        "exits": [
+            {
+                "name": "leave",
+                "description": "Leave the shack",
+                "target": "woodland-path",
+                "params": null
+            }
+        ]
+    },
+    {
+        "id": "riverbank",
+        "detail": "Looking around, you notice a narrow bridge further down the river.",
+        "name": "Riverbank",
+        "description": "You arrive at the bank of a wide, slow-moving river. The gentle lapping of water creates a peaceful ambiance.",
+        "roomType": "river",
+        "area": "woods",
+        "areaType": "forest",
+        "tags": null,
+        "actions": null,
+        "exits": [
+            {
+                "name": "west",
+                "description": "Back to the clearing",
+                "target": "woodland-clearing",
+                "params": null
+            },
+            {
+                "name": "north",
+                "description": "Cross the bridge",
+                "target": "bridge-crossing",
+                "params": null
+            }
+        ]
+    },
+    {
+        "id": "bridge-crossing",
+        "detail": "Underneath the bridge, the water flows with a serene calmness. There's a faint rainbow visible in the mist of the river's spray.",
+        "name": "Bridge Crossing",
+        "description": "A sturdy wooden bridge spans the width of the river. As you cross, you enjoy a breathtaking view of the surrounding woods and distant hills.",
+        "roomType": "bridge",
+        "area": "woods",
+        "areaType": "forest",
+        "tags": null,
+        "actions": null,
+        "exits": [
+            {
+                "name": "south",
+                "description": "Go back to the riverbank",
+                "target": "riverbank",
+                "params": null
+            },
+            {
+                "name": "north",
+                "description": "Cross the bridge to the farmland",
+                "target": "farmland-edge",
+                "params": null
+            }
+        ]
+    },
+    {
+        "id": "farmland-edge",
+        "detail": "The farm appears active and well-tended, with various crops growing in neat rows.",
+        "name": "Edge of the Farmland",
+        "description": "After crossing the bridge, you find yourself on the outskirts of a sprawling farmland. A charming farmhouse can be seen in the distance.",
+        "roomType": "farm",
+        "area": "farmland",
+        "areaType": "rural",
+        "tags": null,
+        "actions": null,
+        "exits": [
+            {
+                "name": "south",
+                "description": "Go back to the bridge",
+                "target": "bridge-crossing",
+                "params": null
+            },
+            {
+                "name": "east",
+                "description": "Approach the farmhouse",
+                "target": "farmer-house",
+                "params": null
+            },
+            {
+                "name": "north",
+                "description": "Venture into the hills",
+                "target": "grassy-hills",
+                "params": null
+            }
+        ]
+    },
+    {
+        "id": "farmer-house",
+        "detail": "You can see a small garden at the side, well-tended with blooming flowers and vegetables.",
+        "name": "Farmer's House",
+        "description": "You stand before a cozy farmhouse. It's made of old stone and wood, with a warm light glowing from the windows.",
+        "roomType": "house",
+        "area": "farmland",
+        "areaType": "rural",
+        "tags": null,
+        "actions": null,
+        "exits": [
+            {
+                "name": "leave",
+                "description": "Leave the house",
+                "target": "farmland-edge",
+                "params": null
+            }
+        ]
+    },
+    {
+        "id": "grassy-hills",
+        "detail": "The hills offer a panoramic view of the surrounding areas. You can see a walled town in the distance.",
+        "name": "Grassy Hills",
+        "description": "You climb a series of rolling hills covered in green grass and dotted with wildflowers. A soft breeze rustles the grass, creating waves that shimmer in the sunlight.",
+        "roomType": "hills",
+        "area": "farmland",
+        "areaType": "rural",
+        "tags": null,
+        "actions": null,
+        "exits": [
+            {
+                "name": "south",
+                "description": "Go back to the farmland",
+                "target": "farmland-edge",
+                "params": null
+            },
+            {
+                "name": "north",
+                "description": "Head towards the walled town",
+                "target": "town-outskirts",
+                "params": null
+            }
+        ]
+    },
+    {
+        "id": "town-outskirts",
+        "detail": "From here, you can see the town's bustling market square, filled with vendors and townsfolk.",
+        "name": "Outskirts of Oldtown",
+        "description": "As you descend the hills, you find yourself on the outskirts of a medium-sized walled town. The stone walls are worn but well maintained, and a large wooden gate stands open in welcome.",
+        "roomType": "town",
+        "area": "Oldtown",
+        "areaType": "urban",
+        "tags": null,
+        "actions": null,
+        "exits": [
+            {
+                "name": "south",
+                "description": "Go back to the hills",
+                "target": "grassy-hills",
+                "params": null
+            },
+            {
+                "name": "north",
+                "description": "Enter through the town gates",
+                "target": "oldtown-gate",
+                "params": null
+            }
+        ]
+    },
+    {
+        "id": "oldtown-gate",
+        "detail": "Above the gate, you see the town's crest - a shield bearing the image of a golden tree.",
+        "name": "Oldtown Gate",
+        "description": "You stand before the grand gate of Oldtown. It's a sturdy construction of thick wood and iron reinforcements. Town guards nod at you as you pass.",
+        "roomType": "gate",
+        "area": "Oldtown",
+        "areaType": "urban",
+        "tags": null,
+        "actions": null,
+        "exits": [
+            {
+                "name": "leave",
+                "description": "Leave Oldtown",
+                "target": "town-outskirts",
+                "params": null
+            },
+            {
+                "name": "enter",
+                "description": "Enter Oldtown",
+                "target": "oldtown-market",
+                "params": null
+            }
+        ]
+    }
+]

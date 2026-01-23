@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Tales - Script Editor &amp; Manager</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#10b981", // Emerald 500
+                        "background-light": "#f8fafc",
+                        "background-dark": "#0f172a",
+                        "card-light": "#ffffff",
+                        "card-dark": "#1e293b",
+                        "editor-dark": "#020617",
+                        "accent-red": "#ef4444",
+                    },
+                    fontFamily: {
+                        display: ["Inter", "sans-serif"],
+                        mono: ["JetBrains Mono", "monospace"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.5rem",
+                    },
+                },
+            },
+        };
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .code-syntax-keyword { color: #c678dd; }
+        .code-syntax-function { color: #61afef; }
+        .code-syntax-string { color: #98c379; }
+        .code-syntax-comment { color: #5c6370; font-style: italic; }
+        .code-syntax-variable { color: #e06c75; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<nav class="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-2 font-bold text-xl tracking-tight">
+<span class="material-symbols-outlined text-primary">auto_stories</span>
+<span>Tales</span>
+</div>
+<div class="hidden md:flex items-center gap-6 text-sm font-medium text-slate-500 dark:text-slate-400">
+<a class="hover:text-primary transition-colors" href="#">Play</a>
+<a class="hover:text-primary transition-colors" href="#">Top Characters</a>
+<a class="text-primary border-b-2 border-primary pb-1" href="#">Creator</a>
+<a class="hover:text-primary transition-colors" href="#">News</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="flex items-center gap-3 pl-4 border-l border-slate-200 dark:border-slate-800">
+<img alt="Admin Avatar" class="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCXdocoVslkhqhXE7G2eC4C0tD74mJEyYBp3Rs9MLOiPbLPZHJtioZYYIULEwyxnw1-Xa4s9v980z0mLQclsy_qAtVOLc6ZhSQN2T2JoRqZNlreIWzfHP5UQYEd_B-927hnA-U-cm-YgxWZMtu-oSg9lVwmNqMJMNSsIZiFs9cO6sUzcezDTTdU8K6sA3zJgO_EDJd5PBg8AEqOBrkAO-V-Bt1SE9_0ULaPauU1lEuPvbYtzFxp_RI6vXBFxDiox6DE8hopPrBzKD4"/>
+<span class="text-sm font-medium hidden sm:inline">Admin</span>
+<span class="material-symbols-outlined text-slate-400">expand_more</span>
+</div>
+</div>
+</nav>
+<div class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 px-6 overflow-x-auto scrollbar-hide">
+<div class="flex items-center gap-8 py-3 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-500 min-w-max">
+<a class="hover:text-primary transition-colors" href="#">Rooms</a>
+<a class="hover:text-primary transition-colors" href="#">Items</a>
+<a class="hover:text-primary transition-colors" href="#">Item Templates</a>
+<a class="hover:text-primary transition-colors" href="#">NPCs</a>
+<a class="hover:text-primary transition-colors" href="#">Dialogs</a>
+<a class="text-primary" href="#">Scripts</a>
+<a class="hover:text-primary transition-colors" href="#">World</a>
+</div>
+</div>
+<main class="flex-1 flex overflow-hidden">
+<aside class="w-72 border-r border-slate-200 dark:border-slate-800 flex flex-col bg-white dark:bg-slate-900 transition-all duration-300">
+<div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+<h2 class="font-semibold text-sm">Scripts</h2>
+<div class="flex gap-1">
+<button class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors text-slate-500">
+<span class="material-symbols-outlined text-lg">filter_alt</span>
+</button>
+<button class="p-1.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-md transition-colors">
+<span class="material-symbols-outlined text-lg">add</span>
+</button>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto p-2 space-y-1">
+<button class="w-full text-left px-3 py-2.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group">
+<div class="text-sm font-medium">HelloWorld</div>
+<div class="text-[10px] text-slate-400 dark:text-slate-500 font-mono">ID: a7b1c...</div>
+</button>
+<button class="w-full text-left px-3 py-2.5 rounded-md bg-primary/10 text-primary border-l-2 border-primary transition-colors">
+<div class="text-sm font-bold">SpawnRandomItem</div>
+<div class="text-[10px] opacity-70 font-mono">ID: 6a3bd...</div>
+</button>
+<button class="w-full text-left px-3 py-2.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group">
+<div class="text-sm font-medium">RandomizeDescription</div>
+<div class="text-[10px] text-slate-400 dark:text-slate-500 font-mono">ID: d4e5f...</div>
+</button>
+<button class="w-full text-left px-3 py-2.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group">
+<div class="text-sm font-medium">OnCombatStart</div>
+<div class="text-[10px] text-slate-400 dark:text-slate-500 font-mono">ID: f9g2h...</div>
+</button>
+<button class="w-full text-left px-3 py-2.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group">
+<div class="text-sm font-medium">ApplyBurnEffect</div>
+<div class="text-[10px] text-slate-400 dark:text-slate-500 font-mono">ID: x2z1w...</div>
+</button>
+</div>
+</aside>
+<section class="flex-1 flex flex-col bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+<div class="p-8 pb-4">
+<div class="max-w-5xl mx-auto">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+<div class="space-y-1">
+<h1 class="text-3xl font-bold tracking-tight">Manage Scripts</h1>
+<p class="text-slate-500 dark:text-slate-400 text-sm">Configure logic for game events and objects.</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-md transition-colors flex items-center gap-2 border border-slate-300 dark:border-slate-700">
+<span class="material-symbols-outlined text-sm">play_arrow</span> Run Test
+                            </button>
+<button class="px-4 py-2 text-sm font-medium text-white bg-accent-red hover:bg-red-600 rounded-md transition-colors flex items-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-sm">delete</span> Delete
+                            </button>
+<button class="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-emerald-600 rounded-md transition-colors flex items-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-sm">save</span> Update Script
+                            </button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 bg-white dark:bg-card-dark p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="md:col-span-2 space-y-4">
+<div class="space-y-1.5">
+<label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Script Name</label>
+<input class="w-full bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 rounded-md focus:ring-primary focus:border-primary px-4 py-2.5 text-lg font-semibold" type="text" value="SpawnRandomItem"/>
+</div>
+<div class="space-y-1.5">
+<label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Description</label>
+<textarea class="w-full bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 rounded-md focus:ring-primary focus:border-primary px-4 py-2.5 text-sm" placeholder="Describe what this script does..." rows="2">Spawns a random item from all item templates when triggered by a room action or container interaction.</textarea>
+</div>
+</div>
+<div class="space-y-4">
+<div class="space-y-1.5">
+<label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Script ID</label>
+<div class="bg-slate-100 dark:bg-slate-900 px-4 py-2.5 rounded-md font-mono text-xs text-slate-500 border border-slate-200 dark:border-slate-800">
+                                    6a3bdd01-d233-40a0-84d1-7e54c2991a
+                                </div>
+</div>
+<div class="space-y-1.5">
+<label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Trigger Type</label>
+<select class="w-full bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 rounded-md focus:ring-primary focus:border-primary px-4 py-2.5 text-sm">
+<option>Global Trigger</option>
+<option selected="">Manual Interaction</option>
+<option>Timed Event</option>
+<option>NPC Behavior</option>
+</select>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="px-8 pb-12 flex-1">
+<div class="max-w-5xl mx-auto h-full flex flex-col gap-4">
+<div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-1">
+<div class="flex items-center gap-4">
+<span>Script Code (JavaScript)</span>
+<span class="flex items-center gap-1 text-primary"><span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span> Auto-saved</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-xs">code</span> 152 lines</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-xs">history</span> 2m ago</span>
+</div>
+</div>
+<div class="flex-1 bg-editor-dark rounded-xl border border-slate-800 shadow-2xl overflow-hidden flex flex-col min-h-[500px]">
+<div class="flex items-center gap-1.5 px-4 py-2 bg-slate-900 border-b border-slate-800">
+<div class="w-3 h-3 rounded-full bg-red-500/50"></div>
+<div class="w-3 h-3 rounded-full bg-yellow-500/50"></div>
+<div class="w-3 h-3 rounded-full bg-green-500/50"></div>
+<span class="ml-4 text-[11px] font-mono text-slate-500">spawn_random.js</span>
+</div>
+<div class="flex-1 flex font-mono text-sm leading-relaxed overflow-hidden">
+<div class="py-4 px-4 bg-slate-900/50 text-slate-600 text-right select-none border-r border-slate-800">
+                                01<br/>02<br/>03<br/>04<br/>05<br/>06<br/>07<br/>08<br/>09<br/>10<br/>11<br/>12<br/>13<br/>14<br/>15<br/>16<br/>17<br/>18<br/>19
+                            </div>
+<div class="flex-1 p-4 overflow-y-auto text-slate-300 whitespace-pre scrollbar-hide">
+<span class="code-syntax-comment">// SpawnRandomItem Utility</span>
+<span class="code-syntax-comment">// @input: {"name": "itemname"}</span>
+<span class="code-syntax-keyword">function</span> <span class="code-syntax-function">jp</span>(o) { <span class="code-syntax-keyword">return</span> JSON.parse(o); }
+<span class="code-syntax-keyword">function</span> <span class="code-syntax-function">s</span>(o) { <span class="code-syntax-keyword">return</span> JSON.stringify(o); }
+<span class="code-syntax-comment">// Get Execution Context</span>
+<span class="code-syntax-keyword">var</span> <span class="code-syntax-variable">context</span> = <span class="code-syntax-function">jp</span>(ctx);
+<span class="code-syntax-keyword">var</span> <span class="code-syntax-variable">templates</span> = <span class="code-syntax-function">jp</span>(T_findItemTemplate(context.name));
+<span class="code-syntax-keyword">var</span> <span class="code-syntax-variable">item</span> = <span class="code-syntax-function">jp</span>(T_createItemFromTemplate(templates[0].id));
+<span class="code-syntax-variable">item</span>.name += <span class="code-syntax-string">" on a stick"</span>;
+<span class="code-syntax-variable">item</span>.description += <span class="code-syntax-string">"\n\nThis sword has seen better times"</span>;
+<span class="code-syntax-comment">// Push back to world state</span>
+World.spawn(item, context.location);
+<span class="code-syntax-function">log</span>(<span class="code-syntax-string">"Spawned "</span> + <span class="code-syntax-variable">item</span>.name);</div>
+</div>
+<div class="border-t border-slate-800 bg-slate-900/80 p-4">
+<div class="flex items-center justify-between mb-3">
+<span class="text-[10px] font-bold uppercase text-slate-500">Test Runner Output</span>
+<button class="text-xs text-primary hover:underline flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">refresh</span> Re-run
+                                </button>
+</div>
+<div class="bg-black/40 rounded p-3 font-mono text-xs text-green-400 border border-emerald-900/30">
+<span class="text-slate-500 mr-2">[14:20:01]</span> &gt; Initializing script engine...<br/>
+<span class="text-slate-500 mr-2">[14:20:01]</span> &gt; Script compiled successfully.<br/>
+<span class="text-slate-500 mr-2">[14:20:02]</span> &gt; Spawned Iron Sword on a stick
+                            </div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<footer class="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-6 py-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-500 font-medium">
+<div class="flex items-center gap-4">
+<span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-primary"></span> Server Online</span>
+<span>Region: US-EAST-1</span>
+<span>Version: 2.4.0-alpha</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="font-mono">Ln 14, Col 42</span>
+<span class="font-mono">UTF-8</span>
+<button class="hover:text-primary transition-colors">Documentation</button>
+</div>
+</footer>
+
+</body></html>

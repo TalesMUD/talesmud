@@ -15,9 +15,9 @@ import (
 //CharactersService delives logical functions on top of the charactersheets Repo
 type CharactersService interface {
 	r.CharactersRepository
-	
+
 	IsCharacterNameTaken(name string) bool
-	GetCharacterTemplates() []characters.CharacterTemplate
+	GetCharacterTemplates() []*characters.CharacterTemplate
 
 	CreateNewCharacter(dto *dto.CreateCharacterDTO) (*characters.Character, error)
 }
@@ -26,12 +26,14 @@ type CharactersService interface {
 
 type charactersService struct {
 	r.CharactersRepository
+	templatesRepo r.CharacterTemplatesRepository
 }
 
-//NewCharactersService creates a nwe item service
-func NewCharactersService(charactersRepo r.CharactersRepository) CharactersService {
+//NewCharactersService creates a new item service
+func NewCharactersService(charactersRepo r.CharactersRepository, templatesRepo r.CharacterTemplatesRepository) CharactersService {
 	return &charactersService{
-		charactersRepo,
+		CharactersRepository: charactersRepo,
+		templatesRepo:        templatesRepo,
 	}
 }
 func (srv *charactersService) CreateNewCharacter(dto *dto.CreateCharacterDTO) (*characters.Character, error) {
@@ -41,52 +43,35 @@ func (srv *charactersService) CreateNewCharacter(dto *dto.CreateCharacterDTO) (*
 		return nil, errors.New("character name already taken")
 	}
 
-	// get template
-	if template, err := srv.GetCharacterTemplate(dto.TemplateID); err != nil {
-		return nil, fmt.Errorf("Could not create new character %v", dto)
-	} else {
-
-		character := characterFromTemplate(template)
-		//character.Entity = entities.NewEntity()
-		character.Name = dto.Name
-		character.Description = dto.Description
-		character.BelongsUserID = dto.UserID
-
-		if createdCharacter, err := srv.Store(character); err == nil {
-
-			log.Info("Created new character based on template")
-
-			return createdCharacter, nil
-		}
+	// get template from DB
+	template, err := srv.templatesRepo.FindByID(dto.TemplateID)
+	if err != nil {
+		return nil, fmt.Errorf("could not find template: %v", err)
 	}
 
-	return nil, errors.New("Could not create new character")
-}
+	character := characterFromTemplate(template)
+	character.Name = dto.Name
+	character.Description = dto.Description
+	character.BelongsUserID = dto.UserID
 
-func (srv *charactersService) GetCharacterTemplate(templateID int32) (characters.CharacterTemplate, error) {
-	templates := srv.GetCharacterTemplates()
-
-	for _, template := range templates {
-		if template.TemplateID == templateID {
-			return template, nil
-		}
+	if createdCharacter, err := srv.Store(character); err == nil {
+		log.Info("Created new character based on template")
+		return createdCharacter, nil
 	}
 
-	return characters.CharacterTemplate{}, fmt.Errorf("Could not find templateID %v", templateID)
+	return nil, errors.New("could not create new character")
 }
 
-func characterFromTemplate(template characters.CharacterTemplate) *characters.Character {
-
+func characterFromTemplate(template *characters.CharacterTemplate) *characters.Character {
 	return &characters.Character{
 		Race:             template.Race,
 		Class:            template.Class,
 		CurrentHitPoints: template.CurrentHitPoints,
 		MaxHitPoints:     template.MaxHitPoints,
 		XP:               0,
-		Level:            1,
+		Level:            template.Level,
 		Attributes:       template.Attributes,
 	}
-
 }
 
 //IsCharacterNameTaken ...
@@ -110,6 +95,11 @@ func (srv *charactersService) Store(character *characters.Character) (*character
 	return srv.CharactersRepository.Store(character)
 }
 
-func (srv *charactersService) GetCharacterTemplates() []characters.CharacterTemplate {
-	return characters.CharacterTemplates
+func (srv *charactersService) GetCharacterTemplates() []*characters.CharacterTemplate {
+	templates, err := srv.templatesRepo.FindAll()
+	if err != nil {
+		log.WithError(err).Error("Failed to fetch character templates from DB")
+		return []*characters.CharacterTemplate{}
+	}
+	return templates
 }

@@ -73,6 +73,9 @@ type Room struct {
 	AreaType string   `bson:"areaType,omitempty" json:"areaType"`
 	Tags     []string `bson:"tags" json:"tags"`
 
+	// Scripting hooks
+	OnEnterScriptID string `bson:"onEnterScriptID,omitempty" json:"onEnterScriptID,omitempty"`
+
 	Actions *Actions `bson:"actions,omitempty" json:"actions"`
 	Exits   *Exits   `bson:"exits,omitempty" json:"exits"`
 
@@ -114,6 +117,11 @@ func (room *Room) GetExit(exit string) (Exit, bool) {
 //IsCharacterInRoom ,,,
 func (room *Room) IsCharacterInRoom(character string) bool {
 
+	// only check if there are characters in the room
+	if room.Characters == nil || len(*room.Characters) == 0 {
+		return false
+	}
+
 	for _, c := range *room.Characters {
 		if c == character {
 			return true
@@ -127,6 +135,11 @@ func (room *Room) AddCharacter(character string) error {
 
 	if room.IsCharacterInRoom(character) {
 		return errors.New("Character already in room")
+	}
+
+	// make sure room.Characters is not nil
+	if room.Characters == nil {
+		room.Characters = &Characters{}
 	}
 
 	modified := append(*room.Characters, character)
@@ -154,4 +167,74 @@ func (room *Room) RemoveCharacter(character string) error {
 
 	room.Characters = &charactersNew
 	return nil
+}
+
+//IsItemInRoom checks if an item is in the room
+func (room *Room) IsItemInRoom(itemID string) bool {
+	if room.Items == nil || len(*room.Items) == 0 {
+		return false
+	}
+
+	for _, id := range *room.Items {
+		if id == itemID {
+			return true
+		}
+	}
+	return false
+}
+
+//AddItem adds an item ID to the room
+func (room *Room) AddItem(itemID string) error {
+	if room.IsItemInRoom(itemID) {
+		return errors.New("Item already in room")
+	}
+
+	if room.Items == nil {
+		room.Items = &Items{}
+	}
+
+	modified := append(*room.Items, itemID)
+	room.Items = &modified
+
+	return nil
+}
+
+//RemoveItem removes an item ID from the room
+func (room *Room) RemoveItem(itemID string) error {
+	if !room.IsItemInRoom(itemID) {
+		return errors.New("Item is not in room")
+	}
+
+	itemsNew := make(Items, 0)
+
+	for _, id := range *room.Items {
+		if id != itemID {
+			itemsNew = append(itemsNew, id)
+		}
+	}
+
+	room.Items = &itemsNew
+	return nil
+}
+
+//GetItemIDs returns a copy of the item IDs in the room
+func (room *Room) GetItemIDs() []string {
+	if room.Items == nil || len(*room.Items) == 0 {
+		return []string{}
+	}
+
+	result := make([]string, len(*room.Items))
+	copy(result, *room.Items)
+	return result
+}
+
+//GetNPCIDs returns a copy of the NPC IDs in the room (residents)
+func (room *Room) GetNPCIDs() []string {
+	if room.NPCs == nil || len(*room.NPCs) == 0 {
+		return []string{}
+	}
+
+	result := make([]string, len(*room.NPCs))
+	copy(result, *room.NPCs)
+	return result
 }

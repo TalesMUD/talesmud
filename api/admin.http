@@ -1,7 +1,7 @@
 
 @prod=https://talesofapirate.com/
 @local=http://0.0.0.0:8010
-@host={{prod}}
+@host={{local}}
 
 ### this credentials are only for local testing
 GET {{host}}/admin/export
@@ -12,4 +12,4 @@ POST {{host}}/admin/import  HTTP/1.1
 content-type: application/json
 Authorization: Basic admin:admin
 
-< export.json
+< export-new.json

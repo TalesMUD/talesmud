@@ -82,6 +82,14 @@ type Item struct {
 	*entities.Entity `bson:",inline"`
 	traits.LookAt    `bson:",inline"` // "detail"
 
+	// Template System (following NPC pattern)
+	// IsTemplate indicates this Item is a blueprint for creating instances
+	IsTemplate bool `bson:"isTemplate" json:"isTemplate"`
+	// TemplateID references the source template for created instances
+	TemplateID string `bson:"templateId,omitempty" json:"templateId,omitempty"`
+	// InstanceSuffix is a unique suffix for created instances (e.g., "abc123")
+	InstanceSuffix string `bson:"instanceSuffix,omitempty" json:"instanceSuffix,omitempty"`
+
 	Name        string `bson:"name,omitempty" json:"name"`
 	Description string `bson:"description,omitempty" json:"description"`
 
@@ -106,6 +114,12 @@ type Item struct {
 	// misc
 	NoPickup bool `bson:"noPickup,omitempty" json:"noPickup,omitempty"`
 
+	// stacking and economy
+	Stackable bool  `bson:"stackable,omitempty" json:"stackable,omitempty"`
+	Quantity  int32 `bson:"quantity,omitempty" json:"quantity,omitempty"`
+	MaxStack  int32 `bson:"maxStack,omitempty" json:"maxStack,omitempty"`
+	BasePrice int64 `bson:"basePrice,omitempty" json:"basePrice,omitempty"`
+
 	// scripts
 
 	// metainfo
@@ -121,3 +135,47 @@ type Item struct {
 
 //Items type
 type Items []*Item
+
+// IsInstance returns true if this Item was created from a template
+func (item *Item) IsInstance() bool {
+	return item.TemplateID != "" && item.InstanceSuffix != ""
+}
+
+// GetDisplayName returns the name shown to players
+func (item *Item) GetDisplayName() string {
+	return item.Name
+}
+
+// GetTargetName returns the unique name for targeting commands
+func (item *Item) GetTargetName() string {
+	if item.InstanceSuffix != "" {
+		return item.Name + "-" + item.InstanceSuffix
+	}
+	return item.Name
+}
+
+// CanEquipToSlot checks if this item can be equipped to the given slot
+func (item *Item) CanEquipToSlot(slot ItemSlot) bool {
+	// Item must have an equipment slot defined
+	if item.Slot == "" || item.Slot == ItemSlotInventory || item.Slot == ItemSlotContainer || item.Slot == ItemSlotPurse {
+		return false
+	}
+
+	// Two-handed weapons can go in main hand or off hand (they occupy both)
+	if item.SubType == ItemSubTypeTwoHandSword {
+		return slot == ItemSlotMainHand || slot == ItemSlotOffHand
+	}
+
+	// Direct slot match
+	return item.Slot == slot
+}
+
+// IsTwoHanded returns true if this item requires both hand slots
+func (item *Item) IsTwoHanded() bool {
+	return item.SubType == ItemSubTypeTwoHandSword
+}
+
+// IsEquippable returns true if this item can be equipped
+func (item *Item) IsEquippable() bool {
+	return item.Slot != "" && item.Slot != ItemSlotInventory && item.Slot != ItemSlotContainer && item.Slot != ItemSlotPurse
+}

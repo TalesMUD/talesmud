@@ -1,12 +1,11 @@
 package service
 
 import (
-	"github.com/talesmud/talesmud/pkg/db"
 	"github.com/talesmud/talesmud/pkg/repository"
 	"github.com/talesmud/talesmud/pkg/scripts"
 )
 
-//Facade ...
+// Facade provides access to all services
 type Facade interface {
 	CharactersService() CharactersService
 	PartiesService() PartiesService
@@ -14,42 +13,67 @@ type Facade interface {
 	RoomsService() RoomsService
 	ScriptsService() ScriptsService
 	ItemsService() ItemsService
+	NPCsService() NPCsService
+	NPCSpawnersService() NPCSpawnersService
+	DialogsService() DialogsService
+	ConversationsService() ConversationsService
+	LootTablesService() LootTablesService
+	CharacterTemplatesRepo() repository.CharacterTemplatesRepository
 
 	Runner() scripts.ScriptRunner
 }
 
 type facade struct {
-	css CharactersService
-	ps  PartiesService
-	us  UsersService
-	rs  RoomsService
-	is  ItemsService
-	ss  ScriptsService
-	sr  scripts.ScriptRunner
-	db  *db.Client
+	css   CharactersService
+	ps    PartiesService
+	us    UsersService
+	rs    RoomsService
+	is    ItemsService
+	ss    ScriptsService
+	ns    NPCsService
+	nss   NPCSpawnersService
+	ds    DialogsService
+	convs ConversationsService
+	lts   LootTablesService
+	sr    scripts.ScriptRunner
+	repos repository.Factory
 }
 
-//NewFacade creates a new service facade
-func NewFacade(db *db.Client, runner scripts.ScriptRunner) Facade {
-	charactersRepo := repository.NewMongoDBcharactersRepository(db)
-	partiesRepo := repository.NewMongoDBPartiesRepository(db)
-	usersRepo := repository.NewMongoDBUsersRepository(db)
-	roomsRepo := repository.NewMongoDBRoomsRepository(db)
-	scriptsRepo := repository.NewMongoDBScriptRepository(db)
-	ss := NewScriptsService(scriptsRepo)
-	itemsRepo := repository.NewMongoDBItemsRepository(db)
-	itemTemplatesRepo := repository.NewMongoDBItemTemplatesRepository(db)
+// NewFacade creates a new service facade
+func NewFacade(repos repository.Factory, runner scripts.ScriptRunner) Facade {
+	// Create repositories
+	charactersRepo := repos.Characters()
+	partiesRepo := repos.Parties()
+	usersRepo := repos.Users()
+	roomsRepo := repos.Rooms()
+	scriptsRepo := repos.Scripts()
+	itemsRepo := repos.Items()
+	npcsRepo := repos.NPCs()
+	npcSpawnersRepo := repos.NPCSpawners()
+	dialogsRepo := repos.Dialogs()
+	conversationsRepo := repos.Conversations()
+	characterTemplatesRepo := repos.CharacterTemplates()
+	lootTablesRepo := repos.LootTables()
 
-	is := NewItemsService(itemsRepo, itemTemplatesRepo, ss, runner)
+	// Create services
+	ss := NewScriptsService(scriptsRepo)
+	is := NewItemsService(itemsRepo)
+	lts := NewLootTablesService(lootTablesRepo, is)
 
 	return &facade{
-		css: NewCharactersService(charactersRepo),
-		ps:  NewPartiesService(partiesRepo),
-		us:  NewUsersService(usersRepo),
-		rs:  NewRoomsService(roomsRepo),
-		ss:  ss,
-		is:  is,
-		sr:  runner,
+		css:   NewCharactersService(charactersRepo, characterTemplatesRepo),
+		ps:    NewPartiesService(partiesRepo),
+		us:    NewUsersService(usersRepo),
+		rs:    NewRoomsService(roomsRepo),
+		ss:    ss,
+		is:    is,
+		ns:    NewNPCsService(npcsRepo),
+		nss:   NewNPCSpawnersService(npcSpawnersRepo),
+		ds:    NewDialogsService(dialogsRepo),
+		convs: NewConversationsService(conversationsRepo),
+		lts:   lts,
+		sr:    runner,
+		repos: repos,
 	}
 }
 func (f *facade) RoomsService() RoomsService {
@@ -73,4 +97,28 @@ func (f *facade) UsersService() UsersService {
 }
 func (f *facade) Runner() scripts.ScriptRunner {
 	return f.sr
+}
+
+func (f *facade) NPCsService() NPCsService {
+	return f.ns
+}
+
+func (f *facade) NPCSpawnersService() NPCSpawnersService {
+	return f.nss
+}
+
+func (f *facade) DialogsService() DialogsService {
+	return f.ds
+}
+
+func (f *facade) ConversationsService() ConversationsService {
+	return f.convs
+}
+
+func (f *facade) LootTablesService() LootTablesService {
+	return f.lts
+}
+
+func (f *facade) CharacterTemplatesRepo() repository.CharacterTemplatesRepository {
+	return f.repos.CharacterTemplates()
 }

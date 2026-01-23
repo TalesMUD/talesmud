@@ -5,6 +5,9 @@
 
 ###
 GET {{host}}/api/rooms  HTTP/1.1
+
+###
+GET {{host}}/api/room-of-the-day  HTTP/1.1
 ###
 PUT {{host}}/api/rooms/oldtown-entrance  HTTP/1.1
 content-type: application/json

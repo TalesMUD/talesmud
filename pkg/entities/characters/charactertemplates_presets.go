@@ -1,0 +1,137 @@
+package characters
+
+import "github.com/talesmud/talesmud/pkg/entities/items"
+
+// SystemCharacterTemplatePresets returns a hardcoded list of templates that can be seeded into the database.
+// These are intended as "starter defaults" and can be modified after import.
+func SystemCharacterTemplatePresets() []*CharacterTemplate {
+	return []*CharacterTemplate{
+		{
+			Entity:            nil, // assigned when stored
+			Name:              "Warrior",
+			Description:       "Frontline fighter with high durability",
+			Backstory:         "Trained for battle and hardened by countless skirmishes.",
+			OriginArea:        "Oldtown",
+			Archetype:         "warrior",
+			Race:              RaceHuman,
+			Class:             ClassWarrior,
+			Level:             1,
+			CurrentHitPoints:  25,
+			MaxHitPoints:      25,
+			Attributes:        createBaseAttributes(14, 7, 4, 5, 20),
+			StartingItems: []StartingItem{
+				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Rusty Sword"},
+				{Slot: items.ItemSlotChest, ItemTemplateName: "Leather Armor"},
+			},
+			Source: "system",
+		},
+		{
+			Entity:            nil,
+			Name:              "Rogue",
+			Description:       "Agile skirmisher focused on dexterity and precision",
+			Backstory:         "Quick hands, quicker feet—surviving by wit and stealth.",
+			OriginArea:        "Dockside",
+			Archetype:         "rogue",
+			Race:              RaceHuman,
+			Class:             ClassRogue,
+			Level:             1,
+			CurrentHitPoints:  19,
+			MaxHitPoints:      19,
+			Attributes:        createBaseAttributes(10, 18, 6, 5, 11),
+			StartingItems: []StartingItem{
+				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Worn Dagger"},
+				{Slot: items.ItemSlotChest, ItemTemplateName: "Leather Armor"},
+			},
+			Source: "system",
+		},
+		{
+			Entity:            nil,
+			Name:              "Mage",
+			Description:       "Arcane spellcaster with high intelligence and wisdom",
+			Backstory:         "A student of forgotten tomes, seeking mastery of the arcane.",
+			OriginArea:        "Arcane Tower",
+			Archetype:         "mage",
+			Race:              RaceDwarf,
+			Class:             ClassWizard,
+			Level:             1,
+			CurrentHitPoints:  17,
+			MaxHitPoints:      17,
+			Attributes:        createBaseAttributes(4, 6, 18, 14, 8),
+			StartingItems: []StartingItem{
+				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Apprentice Staff"},
+				{Slot: items.ItemSlotChest, ItemTemplateName: "Cloth Robe"},
+			},
+			Source: "system",
+		},
+		{
+			Entity:            nil,
+			Name:              "Cleric",
+			Description:       "Supportive holy caster with strong wisdom and stamina",
+			Backstory:         "Bound by oath to heal the wounded and smite the wicked.",
+			OriginArea:        "Temple District",
+			Archetype:         "cleric",
+			Race:              RaceHuman,
+			Class: Class{
+				ID:          "cleric",
+				Name:        "Cleric",
+				Description: "Holy spellcaster and protector",
+				ArmorType:   ArmorTypeLeather,
+				CombatType:  CombatTypeMagic,
+			},
+			Level:            1,
+			CurrentHitPoints: 22,
+			MaxHitPoints:     22,
+			Attributes:       createBaseAttributes(6, 7, 10, 18, 9),
+			StartingItems: []StartingItem{
+				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Simple Mace"},
+				{Slot: items.ItemSlotChest, ItemTemplateName: "Cloth Robe"},
+			},
+			Source: "system",
+		},
+		{
+			Entity:            nil,
+			Name:              "Ranger",
+			Description:       "Ranged specialist with great mobility",
+			Backstory:         "A hunter of the wilds, reading tracks like an open book.",
+			OriginArea:        "Forest Edge",
+			Archetype:         "ranger",
+			Race:              RaceElve,
+			Class:             ClassRanger,
+			Level:             1,
+			CurrentHitPoints:  20,
+			MaxHitPoints:      20,
+			Attributes:        createBaseAttributes(8, 18, 6, 6, 12),
+			StartingItems: []StartingItem{
+				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Short Bow"},
+				{Slot: items.ItemSlotChest, ItemTemplateName: "Leather Armor"},
+			},
+			Source: "system",
+		},
+		{
+			Entity:            nil,
+			Name:              "Druid",
+			Description:       "Nature caster balanced between wisdom and intellect",
+			Backstory:         "A guardian of the natural order, attuned to the spirits of the grove.",
+			OriginArea:        "Sacred Grove",
+			Archetype:         "druid",
+			Race:              RaceElve,
+			Class: Class{
+				ID:          "druid",
+				Name:        "Druid",
+				Description: "Nature spellcaster and shapeshifter",
+				ArmorType:   ArmorTypeLeather,
+				CombatType:  CombatTypeMagic,
+			},
+			Level:            1,
+			CurrentHitPoints: 20,
+			MaxHitPoints:     20,
+			Attributes:       createBaseAttributes(5, 8, 14, 18, 5),
+			StartingItems: []StartingItem{
+				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Wooden Staff"},
+				{Slot: items.ItemSlotChest, ItemTemplateName: "Cloth Robe"},
+			},
+			Source: "system",
+		},
+	}
+}
+

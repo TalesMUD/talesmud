@@ -37,7 +37,7 @@ func (roomProcessor *RoomProcessor) RegisterCommand(command RoomCommand, keys ..
 	}
 }
 
-// Process ...asd
+// Process handles room-based commands
 func (roomProcessor *RoomProcessor) Process(game def.GameCtrl, message *messages.Message) bool {
 
 	if message.Character == nil || message.Character.CurrentRoomID == "" {
@@ -45,6 +45,12 @@ func (roomProcessor *RoomProcessor) Process(game def.GameCtrl, message *messages
 	}
 
 	if room, err := game.GetFacade().RoomsService().FindByID(message.Character.CurrentRoomID); err == nil {
+		// First, check if this is a dialog selection (number input during conversation)
+		// This takes priority over other room commands
+		if DialogSelectCommand(room, game, message) {
+			return true
+		}
+
 		parts := strings.Fields(message.Data)
 
 		if len(parts) > 0 {
@@ -79,10 +85,12 @@ func (roomProcessor *RoomProcessor) registerCommands() {
 
 func (roomProcessor *RoomProcessor) matchesDynamicCommand(key string, room *rooms.Room, message *messages.Message) (RoomCommand, bool) {
 
-	for _, exit := range *room.Exits {
-		if strings.HasPrefix(message.Data, exit.Name) {
-			// custom exit
-			return TakeExit(exit.Name), true
+	if room.Exits != nil {
+		for _, exit := range *room.Exits {
+			if strings.HasPrefix(message.Data, exit.Name) {
+				// custom exit
+				return TakeExit(exit.Name), true
+			}
 		}
 	}
 
@@ -93,38 +101,40 @@ func (roomProcessor *RoomProcessor) matchesDynamicCommand(key string, room *room
 		"roomArea":      room.Area,
 	}
 
-	for _, action := range *room.Actions {
-		// support "longer" command inputs as custom action triggers: e.g. "move rocks"
-		if strings.HasPrefix(message.Data, action.Name) {
+	if room.Actions != nil {
+		for _, action := range *room.Actions {
+			// support "longer" command inputs as custom action triggers: e.g. "move rocks"
+			if strings.HasPrefix(message.Data, action.Name) {
 
-			desc := mustache.Render(action.Description, context)
+				desc := mustache.Render(action.Description, context)
 
-			switch action.Type {
+				switch action.Type {
 
-			case rooms.RoomActionTypeResponse:
-				return func(room *rooms.Room, game def.GameCtrl, message *messages.Message) bool {
+				case rooms.RoomActionTypeResponse:
+					return func(room *rooms.Room, game def.GameCtrl, message *messages.Message) bool {
 
-					game.SendMessage() <- message.Reply(desc)
-					return true
-				}, true
+						game.SendMessage() <- message.Reply(desc)
+						return true
+					}, true
 
-			case rooms.RoomActionTypeRoomResponse:
-				return func(room *rooms.Room, game def.GameCtrl, message *messages.Message) bool {
+				case rooms.RoomActionTypeRoomResponse:
+					return func(room *rooms.Room, game def.GameCtrl, message *messages.Message) bool {
 
-					actionResponseToRoom := message.Reply(desc)
-					actionResponseToRoom.AudienceID = room.ID
-					actionResponseToRoom.Audience = messages.MessageAudienceRoom
+						actionResponseToRoom := message.Reply(desc)
+						actionResponseToRoom.AudienceID = room.ID
+						actionResponseToRoom.Audience = messages.MessageAudienceRoom
 
-					game.SendMessage() <- actionResponseToRoom
-					return true
-				}, true
+						game.SendMessage() <- actionResponseToRoom
+						return true
+					}, true
 
-			case rooms.RoomActionTypeScript:
-				fallthrough
-			default:
-				log.WithField("type", action.Type).WithField("name", action.Name).Error("matched action name but unsupported or empty action type ")
+				case rooms.RoomActionTypeScript:
+					fallthrough
+				default:
+					log.WithField("type", action.Type).WithField("name", action.Name).Error("matched action name but unsupported or empty action type ")
+				}
+
 			}
-
 		}
 	}
 	return nil, false

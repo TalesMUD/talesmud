@@ -1,0 +1,101 @@
+@host = http://localhost:8010
+@token = YOUR_AUTH_TOKEN_HERE
+
+### Get all NPCs
+GET {{host}}/api/npcs
+Authorization: Bearer {{token}}
+
+### Get NPCs in a specific room
+GET {{host}}/api/npcs?roomID=ROOM_ID_HERE
+Authorization: Bearer {{token}}
+
+### Get NPC by ID
+GET {{host}}/api/npcs/NPC_ID_HERE
+Authorization: Bearer {{token}}
+
+### Create a simple NPC without dialog
+POST {{host}}/api/npcs
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Town Guard",
+  "description": "A stern-looking guard in chainmail armor.",
+  "currentRoomID": "ROOM_ID_HERE",
+  "level": 5,
+  "maxHitPoints": 50,
+  "currentHitPoints": 50
+}
+
+### Create an NPC with dialog attached
+POST {{host}}/api/npcs
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Oldtown Guard",
+  "description": "A weathered guard keeping watch over the town gates.",
+  "currentRoomID": "ROOM_ID_HERE",
+  "dialogID": "DIALOG_ID_HERE",
+  "level": 3,
+  "maxHitPoints": 40,
+  "currentHitPoints": 40,
+  "race": {
+    "name": "Human"
+  },
+  "class": {
+    "name": "Fighter"
+  }
+}
+
+### Create a merchant NPC
+POST {{host}}/api/npcs
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Mysterious Merchant",
+  "description": "A hooded figure with glowing eyes peers at you from behind the counter.",
+  "currentRoomID": "ROOM_ID_HERE",
+  "dialogID": "DIALOG_ID_HERE",
+  "level": 10,
+  "maxHitPoints": 30,
+  "currentHitPoints": 30,
+  "merchantTrait": {
+    "merchantType": "general"
+  }
+}
+
+### Create an enemy NPC
+POST {{host}}/api/npcs
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Goblin Scout",
+  "description": "A small, green-skinned creature snarling menacingly.",
+  "currentRoomID": "ROOM_ID_HERE",
+  "level": 2,
+  "maxHitPoints": 15,
+  "currentHitPoints": 15,
+  "enemyTrait": {
+    "enemyType": "goblin"
+  }
+}
+
+### Update an NPC
+PUT {{host}}/api/npcs/NPC_ID_HERE
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Veteran Guard",
+  "description": "A battle-scarred guard with many years of service.",
+  "level": 8,
+  "maxHitPoints": 80,
+  "currentHitPoints": 80
+}
+
+### Delete an NPC
+DELETE {{host}}/api/npcs/NPC_ID_HERE
+Authorization: Bearer {{token}}

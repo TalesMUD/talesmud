@@ -19,17 +19,29 @@ POST {{host}}/api/characters  HTTP/1.1
 content-type: application/json
 authorization: Bearer {{token}}
 
+
  {
-    "name": "Herrkuu",
+    "name": "Herrkuu2",
     "description": "i was once a great conquerror",
-    "race": 1,
-    "class": 0,
+     "race": {
+              "id": "human",
+              "name": "Human",
+              "description": "The common race",
+              "heritage": "Big cities"
+          },
+          "class": {
+              "id": "warrior",
+              "name": "Warrior",
+              "description": "Strong plate wearing melee warrior",
+              "armorType": "Plate",
+              "combatType": "Melee"
+          },
     "currentHitPoints": 15,
     "maxHitPoints": 2,
     "armorClass": 3,
     "personalityTraits": "Nothing noteworthy",
-    "belongsUser": "5ecac2facd07026c8f0a5189",
-    "currentRoom": "5ed04fb7ac165280055c018b",
+    "belongsUser": "4b177f6f-96a1-4494-afe0-e1528229b2f6",
+    "currentRoom": "starting-room",
     "attributes": [
       {
         "name": "Strength",

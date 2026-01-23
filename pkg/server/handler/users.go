@@ -20,8 +20,10 @@ func (handler *UsersHandler) GetUser(c *gin.Context) {
 	if userid, ok := c.Get("userid"); ok {
 		if user, err := handler.Service.FindByRefID(userid.(string)); err == nil {
 			c.JSON(http.StatusOK, user)
+			return
 		} else {
 			c.Error(err)
+			return
 		}
 	}
 	c.Error(errors.New("No userid found"))
@@ -45,6 +47,7 @@ func (handler *UsersHandler) UpdateUser(c *gin.Context) {
 
 		if err := handler.Service.Update(userid.(string), &user); err == nil {
 			c.JSON(http.StatusOK, "User updated")
+			return
 		} else {
 			c.Error(err)
 			return

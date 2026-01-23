@@ -11,4 +11,8 @@ const (
 	MessageTypeCharacterSelected = "characterSelected"
 
 	MessageTypePing = "ping"
+
+	// Dialog messages
+	MessageTypeDialog    = "dialog"    // NPC dialog with options
+	MessageTypeDialogEnd = "dialogEnd" // Conversation ended
 )

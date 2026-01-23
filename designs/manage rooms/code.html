@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Tales - Room Configuration Dashboard</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography,container-queries"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#10b981", // Emerald 500
+                        "background-light": "#f8fafc",
+                        "background-dark": "#0f172a",
+                        "card-light": "#ffffff",
+                        "card-dark": "#1e293b",
+                        "editor-dark": "#020617",
+                        "accent-red": "#ef4444",
+                    },
+                    fontFamily: {
+                        display: ["Inter", "sans-serif"],
+                        mono: ["JetBrains Mono", "monospace"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.5rem",
+                    },
+                },
+            },
+        };
+    </script>
+<style type="text/tailwindcss">
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<nav class="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-2 font-bold text-xl tracking-tight">
+<span class="material-symbols-outlined text-primary">auto_stories</span>
+<span>Tales</span>
+</div>
+<div class="hidden md:flex items-center gap-6 text-sm font-medium text-slate-500 dark:text-slate-400">
+<a class="hover:text-primary transition-colors" href="#">Play</a>
+<a class="hover:text-primary transition-colors" href="#">Top Characters</a>
+<a class="text-primary border-b-2 border-primary pb-1" href="#">Creator</a>
+<a class="hover:text-primary transition-colors" href="#">News</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="flex items-center gap-3 pl-4 border-l border-slate-200 dark:border-slate-800">
+<img alt="Admin Avatar" class="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmXTkY8KGRWiaHr0aDtIuia5XUURkUKJwjvMUAXX5nYfT_8LrbsAw1XmyvHcHmkGn2M4byxOYMMOjI0xB6GkQuB6ti-dNgwO5L0tRPBxmGhj5TEylgYT7dIee9kXrC1Y3d7LzMXd-jTVxdTrr31KxJnoLu6hOIZnfhh9Pn3yqFaOvh-aMZjNfCmyXZps66qLGPq5B69bpCP51FMd7839PVmsEILCNg-0DN9Jj86vzZ_D-wiXfFqoGHMsLY9__RYwQbOxaUKRO6tFk"/>
+<span class="text-sm font-medium hidden sm:inline">Admin</span>
+<span class="material-symbols-outlined text-slate-400">expand_more</span>
+</div>
+</div>
+</nav>
+<div class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 px-6 overflow-x-auto scrollbar-hide">
+<div class="flex items-center gap-8 py-3 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-500 min-w-max">
+<a class="text-primary" href="#">Rooms</a>
+<a class="hover:text-primary transition-colors" href="#">Items</a>
+<a class="hover:text-primary transition-colors" href="#">Item Templates</a>
+<a class="hover:text-primary transition-colors" href="#">NPCs</a>
+<a class="hover:text-primary transition-colors" href="#">Dialogs</a>
+<a class="hover:text-primary transition-colors" href="#">Scripts</a>
+<a class="hover:text-primary transition-colors" href="#">World</a>
+</div>
+</div>
+<main class="flex-1 flex overflow-hidden">
+<aside class="w-72 border-r border-slate-200 dark:border-slate-800 flex flex-col bg-white dark:bg-slate-900 transition-all duration-300">
+<div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+<h2 class="font-semibold text-sm">Rooms</h2>
+<div class="flex gap-1">
+<button class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors text-slate-500">
+<span class="material-symbols-outlined text-lg">search</span>
+</button>
+<button class="p-1.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-md transition-colors">
+<span class="material-symbols-outlined text-lg">add</span>
+</button>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto p-2 space-y-1">
+<button class="w-full text-left px-3 py-2.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group">
+<div class="text-sm font-medium">The Dark Cave</div>
+<div class="text-[10px] text-slate-400 dark:text-slate-500 font-mono">ID: room_001</div>
+</button>
+<button class="w-full text-left px-3 py-2.5 rounded-md bg-primary/10 text-primary border-l-2 border-primary transition-colors">
+<div class="text-sm font-bold">Hidden Grove</div>
+<div class="text-[10px] opacity-70 font-mono">ID: room_002</div>
+</button>
+<button class="w-full text-left px-3 py-2.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group">
+<div class="text-sm font-medium">Town Square</div>
+<div class="text-[10px] text-slate-400 dark:text-slate-500 font-mono">ID: room_003</div>
+</button>
+<button class="w-full text-left px-3 py-2.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group">
+<div class="text-sm font-medium">Dusty Tavern</div>
+<div class="text-[10px] text-slate-400 dark:text-slate-500 font-mono">ID: room_004</div>
+</button>
+<button class="w-full text-left px-3 py-2.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group">
+<div class="text-sm font-medium">Ancient Crypt</div>
+<div class="text-[10px] text-slate-400 dark:text-slate-500 font-mono">ID: room_005</div>
+</button>
+</div>
+</aside>
+<section class="flex-1 flex flex-col bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+<div class="p-8">
+<div class="max-w-5xl mx-auto">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+<div class="space-y-1">
+<h1 class="text-3xl font-bold tracking-tight">Manage Rooms</h1>
+<p class="text-slate-500 dark:text-slate-400 text-sm">Configure environment, exits, and NPC populations.</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-md transition-colors flex items-center gap-2 border border-slate-300 dark:border-slate-700">
+<span class="material-symbols-outlined text-sm">add_box</span> Create Room
+                            </button>
+<button class="px-4 py-2 text-sm font-medium text-white bg-accent-red hover:bg-red-600 rounded-md transition-colors flex items-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-sm">delete</span> Delete
+                            </button>
+<button class="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-emerald-600 rounded-md transition-colors flex items-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-sm">save</span> Update Room
+                            </button>
+</div>
+</div>
+<div class="space-y-6">
+<div class="bg-white dark:bg-card-dark p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="md:col-span-2 space-y-4">
+<div class="space-y-1.5">
+<label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Room Name</label>
+<input class="w-full bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 rounded-md focus:ring-primary focus:border-primary px-4 py-2.5 text-lg font-semibold" type="text" value="Hidden Grove"/>
+</div>
+<div class="space-y-1.5">
+<label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Description</label>
+<textarea class="w-full bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 rounded-md focus:ring-primary focus:border-primary px-4 py-2.5 text-sm font-mono leading-relaxed" placeholder="Describe the room..." rows="6">A peaceful clearing hidden deep within the Whispering Woods. The air is thick with the scent of pine and wild lilies. To the north, a small stream trickles through the rocks. Strange emerald moss glows softly on the ancient tree trunks.</textarea>
+</div>
+</div>
+<div class="space-y-4">
+<div class="space-y-1.5">
+<label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Room ID</label>
+<div class="bg-slate-100 dark:bg-slate-900 px-4 py-2.5 rounded-md font-mono text-xs text-slate-500 border border-slate-200 dark:border-slate-800">
+                                            room_hidden_grove_002
+                                        </div>
+</div>
+<div class="space-y-1.5">
+<label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Terrain Type</label>
+<select class="w-full bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 rounded-md focus:ring-primary focus:border-primary px-4 py-2.5 text-sm">
+<option>Forest</option>
+<option selected="">Grove</option>
+<option>Cave</option>
+<option>Interior</option>
+<option>Urban</option>
+</select>
+</div>
+<div class="p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/10">
+<div class="flex items-center justify-between mb-2">
+<span class="text-[10px] font-bold uppercase text-primary">Map Preview</span>
+<span class="text-[10px] text-slate-400">Sector 4-B</span>
+</div>
+<div class="aspect-square bg-slate-900 rounded border border-slate-800 flex items-center justify-center font-mono text-primary text-2xl">
+                                            [ G ]
+                                        </div>
+</div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="bg-white dark:bg-card-dark p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-2">
+<span class="material-symbols-outlined text-lg">explore</span> Exits
+                                    </h3>
+<button class="text-xs text-primary hover:underline">+ Link Manual</button>
+</div>
+<div class="space-y-4">
+<div class="grid grid-cols-12 gap-3 items-center">
+<div class="col-span-3 text-xs font-medium text-slate-400">North</div>
+<div class="col-span-8">
+<select class="w-full bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 rounded-md text-xs py-1.5">
+<option>Stream Edge (room_045)</option>
+<option selected="">Whispering Woods (room_001)</option>
+<option>(None)</option>
+</select>
+</div>
+<button class="col-span-1 text-slate-400 hover:text-accent-red">
+<span class="material-symbols-outlined text-sm">close</span>
+</button>
+</div>
+<div class="grid grid-cols-12 gap-3 items-center">
+<div class="col-span-3 text-xs font-medium text-slate-400">South</div>
+<div class="col-span-8">
+<select class="w-full bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 rounded-md text-xs py-1.5">
+<option selected="">Deep Forest (room_082)</option>
+<option>(None)</option>
+</select>
+</div>
+<button class="col-span-1 text-slate-400 hover:text-accent-red">
+<span class="material-symbols-outlined text-sm">close</span>
+</button>
+</div>
+<div class="grid grid-cols-12 gap-3 items-center">
+<div class="col-span-3 text-xs font-medium text-slate-400">East</div>
+<div class="col-span-8">
+<div class="text-xs text-slate-500 italic px-2 py-1.5 border border-dashed border-slate-700 rounded-md">No link established</div>
+</div>
+<button class="col-span-1 text-primary hover:text-emerald-400">
+<span class="material-symbols-outlined text-sm">add</span>
+</button>
+</div>
+<div class="grid grid-cols-12 gap-3 items-center">
+<div class="col-span-3 text-xs font-medium text-slate-400">West</div>
+<div class="col-span-8">
+<select class="w-full bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 rounded-md text-xs py-1.5">
+<option selected="">Rocky Outcrop (room_012)</option>
+<option>(None)</option>
+</select>
+</div>
+<button class="col-span-1 text-slate-400 hover:text-accent-red">
+<span class="material-symbols-outlined text-sm">close</span>
+</button>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-card-dark p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-2">
+<span class="material-symbols-outlined text-lg">groups</span> NPC Spawns
+                                    </h3>
+<button class="text-xs text-primary hover:underline">+ Add NPC</button>
+</div>
+<div class="space-y-3">
+<div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700/50">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">pets</span>
+</div>
+<div>
+<div class="text-xs font-bold">Forest Spirit</div>
+<div class="text-[10px] text-slate-500 font-mono">ID: npc_forest_spirit</div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="text-right">
+<div class="text-[10px] font-bold text-slate-400 uppercase">Spawn Chance</div>
+<div class="text-xs text-primary">15%</div>
+</div>
+<button class="text-slate-500 hover:text-accent-red transition-colors">
+<span class="material-symbols-outlined text-sm">settings</span>
+</button>
+</div>
+</div>
+<div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700/50">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">pest_control</span>
+</div>
+<div>
+<div class="text-xs font-bold">Small Woodland Critter</div>
+<div class="text-[10px] text-slate-500 font-mono">ID: npc_critter_01</div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="text-right">
+<div class="text-[10px] font-bold text-slate-400 uppercase">Spawn Chance</div>
+<div class="text-xs text-primary">60%</div>
+</div>
+<button class="text-slate-500 hover:text-accent-red transition-colors">
+<span class="material-symbols-outlined text-sm">settings</span>
+</button>
+</div>
+</div>
+<div class="py-4 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-lg flex flex-col items-center justify-center gap-2 opacity-50">
+<span class="material-symbols-outlined text-slate-500">person_add</span>
+<span class="text-[10px] font-bold uppercase tracking-tighter">Empty Spawn Slot</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<footer class="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-6 py-2 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-500 font-medium">
+<div class="flex items-center gap-4">
+<span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-primary"></span> Server Online</span>
+<span>Region: US-EAST-1</span>
+<span>World State: Validated</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="font-mono">Zone: Whispering Woods</span>
+<span class="font-mono">Index: 002</span>
+<button class="hover:text-primary transition-colors">Documentation</button>
+</div>
+</footer>
+
+</body></html>
