@@ -11,6 +11,8 @@
   export let isExit = false;
   export let isAnswer = false;
   export let hasOptions = false;
+  export let hasBackRef = false;
+  export let backRefTargets = [];
 
   const dispatch = createEventDispatcher();
 
@@ -175,6 +177,14 @@
     <g transform="translate({width/2 - 16}, {height/2 - 16})">
       <circle cx="0" cy="0" r="10" fill="#2196f3" />
       <text x="0" y="1" class="answer-indicator" text-anchor="middle" dominant-baseline="middle">A</text>
+    </g>
+  {/if}
+
+  <!-- Back-reference indicator (bottom left) -->
+  {#if hasBackRef && backRefTargets.length > 0}
+    <g transform="translate({-width/2 + 8}, {height/2 - 20})">
+      <rect x="0" y="0" width="42" height="14" rx="3" fill="#9c27b0" />
+      <text x="21" y="10" class="badge-text" text-anchor="middle">GOTO</text>
     </g>
   {/if}
 

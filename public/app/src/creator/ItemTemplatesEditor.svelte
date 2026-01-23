@@ -5,16 +5,16 @@
   import { createStore } from "./CRUDEditorStore.js";
 
   import {
-    getItemTemplate,
+    getItem,
     getItemTemplates,
-    createItemTemplate,
-    updateItemTemplate,
-    deleteItemTemplate,
+    createItem,
+    updateItem,
+    deleteItem,
     getItemTypes,
     getItemSubTypes,
     getItemSlots,
     getItemQualities,
-  } from "../api/item-templates.js";
+  } from "../api/items.js";
 
   const store = createStore();
   let newPropertyName = "";
@@ -39,10 +39,10 @@
       delete: "Delete",
     },
     get: getItemTemplates,
-    getElement: getItemTemplate,
-    create: createItemTemplate,
-    update: updateItemTemplate,
-    delete: deleteItemTemplate,
+    getElement: getItem,
+    create: createItem,
+    update: updateItem,
+    delete: deleteItem,
   };
 
   const createNewTemplate = () => {
@@ -75,7 +75,7 @@
       attributes: {},
       noPickup: false,
       tags: [],
-      script: "",
+      isTemplate: true,
       isNew: true,
     });
   };
@@ -163,11 +163,6 @@
           {/each}
         </select>
       </div>
-    </div>
-
-    <div class="space-y-1.5">
-      <label class="label-caps">Linked Script</label>
-      <input class="input-base" bind:value={$store.selectedElement.script} />
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">

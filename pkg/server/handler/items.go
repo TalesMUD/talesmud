@@ -10,17 +10,14 @@ import (
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
-//ItemsHandler ...
+// ItemsHandler ...
 type ItemsHandler struct {
 	Service service.ItemsService
 }
 
-//ItemsQuery ...
-
-//GetItems returns the list of items
-// TODO: add filters
-func (csh *ItemsHandler) GetItems(c *gin.Context) {
-
+// GetItems returns the list of items
+// Use ?isTemplate=true to get only templates, ?isTemplate=false for instances only
+func (h *ItemsHandler) GetItems(c *gin.Context) {
 	var query repository.ItemsQuery
 
 	if c.ShouldBindQuery(&query) == nil {
@@ -30,112 +27,85 @@ func (csh *ItemsHandler) GetItems(c *gin.Context) {
 		log.Println(query.Slot)
 	}
 
-	if items, err := csh.Service.Items().FindAll(query); err == nil {
-		c.JSON(http.StatusOK, items)
+	// Check for isTemplate filter
+	isTemplateStr := c.Query("isTemplate")
+
+	var result []*items.Item
+	var err error
+
+	switch isTemplateStr {
+	case "true":
+		result, err = h.Service.FindAllTemplates(query)
+	case "false":
+		result, err = h.Service.FindAllInstances(query)
+	default:
+		result, err = h.Service.FindAll(query)
+	}
+
+	if err == nil {
+		c.JSON(http.StatusOK, result)
 	} else {
 		c.Error(err)
 	}
 }
 
-//GetItemSlots ...
-func (csh *ItemsHandler) GetItemSlots(c *gin.Context) {
-	c.JSON(http.StatusOK, csh.Service.ItemSlots())
+// GetItemSlots ...
+func (h *ItemsHandler) GetItemSlots(c *gin.Context) {
+	c.JSON(http.StatusOK, h.Service.ItemSlots())
 }
 
-//GetItemQualities ...
-func (csh *ItemsHandler) GetItemQualities(c *gin.Context) {
-	c.JSON(http.StatusOK, csh.Service.ItemQualities())
+// GetItemQualities ...
+func (h *ItemsHandler) GetItemQualities(c *gin.Context) {
+	c.JSON(http.StatusOK, h.Service.ItemQualities())
 }
 
-//GetItemTypes ...
-func (csh *ItemsHandler) GetItemTypes(c *gin.Context) {
-	c.JSON(http.StatusOK, csh.Service.ItemTypes())
+// GetItemTypes ...
+func (h *ItemsHandler) GetItemTypes(c *gin.Context) {
+	c.JSON(http.StatusOK, h.Service.ItemTypes())
 }
 
-//GetItemSubTypes ...
-func (csh *ItemsHandler) GetItemSubTypes(c *gin.Context) {
-	c.JSON(http.StatusOK, csh.Service.ItemSubTypes())
+// GetItemSubTypes ...
+func (h *ItemsHandler) GetItemSubTypes(c *gin.Context) {
+	c.JSON(http.StatusOK, h.Service.ItemSubTypes())
 }
 
-//GetItemTemplates returns the list of item templates
-func (csh *ItemsHandler) GetItemTemplates(c *gin.Context) {
-
-	var query repository.ItemsQuery
-
-	if c.ShouldBindQuery(&query) == nil {
-		// WITH QUERY
-	}
-
-	if items, err := csh.Service.ItemTemplates().FindAll(query); err == nil {
-		c.JSON(http.StatusOK, items)
-	} else {
-		c.Error(err)
-	}
-}
-
-//GetItemByID returns a item
-func (csh *ItemsHandler) GetItemByID(c *gin.Context) {
-
+// GetItemByID returns a item (template or instance)
+func (h *ItemsHandler) GetItemByID(c *gin.Context) {
 	id := c.Param("id")
 
-	if item, err := csh.Service.Items().FindByID(id); err == nil {
+	if item, err := h.Service.FindByID(id); err == nil {
 		c.JSON(http.StatusOK, item)
 	} else {
 		c.Error(err)
 	}
 }
 
-//GetItemTemplateByID returns a item
-func (csh *ItemsHandler) GetItemTemplateByID(c *gin.Context) {
-
+// DeleteItemByID deletes an item (template or instance)
+func (h *ItemsHandler) DeleteItemByID(c *gin.Context) {
 	id := c.Param("id")
 
-	if item, err := csh.Service.ItemTemplates().FindByID(id); err == nil {
-		c.JSON(http.StatusOK, item)
-	} else {
-		c.Error(err)
-	}
-}
-
-//DeleteItemByID deletes an item
-func (csh *ItemsHandler) DeleteItemByID(c *gin.Context) {
-
-	id := c.Param("id")
-
-	if err := csh.Service.Items().Delete(id); err == nil {
+	if err := h.Service.Delete(id); err == nil {
 		c.JSON(http.StatusOK, "deleted")
 	} else {
 		c.Error(err)
 	}
 }
 
-//DeleteItemTemplateByID deletes an item
-func (csh *ItemsHandler) DeleteItemTemplateByID(c *gin.Context) {
+// CreateInstanceFromTemplate creates an item instance from a template
+func (h *ItemsHandler) CreateInstanceFromTemplate(c *gin.Context) {
+	templateID := c.Param("templateId")
 
-	id := c.Param("id")
-
-	if err := csh.Service.ItemTemplates().Delete(id); err == nil {
-		c.JSON(http.StatusOK, "deleted")
-	} else {
-		c.Error(err)
-	}
-}
-
-//CreateItemFromTemplateID creates a item
-func (csh *ItemsHandler) CreateItemFromTemplateID(c *gin.Context) {
-
-	id := c.Param("templateId")
-
-	if item, err := csh.Service.CreateItemFromTemplate(id); err == nil {
-		c.JSON(http.StatusOK, item)
-	} else {
+	instance, err := h.Service.CreateInstanceFromTemplate(templateID)
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
+
+	c.JSON(http.StatusOK, instance)
 }
 
-//UpdateItemByID creates a item
-func (csh *ItemsHandler) UpdateItemByID(c *gin.Context) {
-
+// UpdateItemByID updates an item (template or instance)
+func (h *ItemsHandler) UpdateItemByID(c *gin.Context) {
 	id := c.Param("id")
 	var item items.Item
 	if err := c.ShouldBindJSON(&item); err != nil {
@@ -145,62 +115,24 @@ func (csh *ItemsHandler) UpdateItemByID(c *gin.Context) {
 
 	log.WithField("item", item.Name).Info("Updating item")
 
-	if err := csh.Service.Items().Update(id, &item); err == nil {
+	if err := h.Service.Update(id, &item); err == nil {
 		c.JSON(http.StatusOK, gin.H{"status": "updated item"})
 	} else {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	}
 }
 
-//UpdateItemTemplateByID creates a item
-func (csh *ItemsHandler) UpdateItemTemplateByID(c *gin.Context) {
-
-	id := c.Param("id")
-	var itemTemplate items.ItemTemplate
-	if err := c.ShouldBindJSON(&itemTemplate); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	log.WithField("itemtemplate", itemTemplate.Name).Info("Updating itemtemplate")
-
-	if err := csh.Service.ItemTemplates().Update(id, &itemTemplate); err == nil {
-		c.JSON(http.StatusOK, gin.H{"status": "updated item template"})
-	} else {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-	}
-}
-
-//PostItem ... creates a new item
-func (csh *ItemsHandler) PostItem(c *gin.Context) {
-
+// PostItem creates a new item (template or instance based on isTemplate field)
+func (h *ItemsHandler) PostItem(c *gin.Context) {
 	var item items.Item
 	if err := c.ShouldBindJSON(&item); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	log.WithField("item", item.Name).Info("Creating new item")
+	log.WithField("item", item.Name).WithField("isTemplate", item.IsTemplate).Info("Creating new item")
 
-	if newItem, err := csh.Service.Items().Store(&item); err == nil {
-		c.JSON(http.StatusOK, newItem)
-	} else {
-		c.Error(err)
-	}
-}
-
-//PostItemTemplate ... creates a new item template
-func (csh *ItemsHandler) PostItemTemplate(c *gin.Context) {
-
-	var itemTemplate items.ItemTemplate
-	if err := c.ShouldBindJSON(&itemTemplate); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	log.WithField("item", itemTemplate.Name).Info("Creating new item template")
-
-	if newItem, err := csh.Service.ItemTemplates().Store(&itemTemplate); err == nil {
+	if newItem, err := h.Service.Store(&item); err == nil {
 		c.JSON(http.StatusOK, newItem)
 	} else {
 		c.Error(err)

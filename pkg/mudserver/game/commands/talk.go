@@ -44,14 +44,14 @@ func (command *TalkCommand) Execute(game def.GameCtrl, message *messages.Message
 		npcName = strings.TrimPrefix(npcName, "To ")
 	}
 
-	// Find NPC in current room
-	npc, err := game.GetFacade().NPCsService().FindNPCInRoomByName(message.Character.CurrentRoomID, npcName)
-	if err != nil {
-		log.WithError(err).Error("Error finding NPC")
-		game.SendMessage() <- message.Reply("Error finding NPC.")
+	// Find NPC in current room via the NPC instance manager
+	npcManager := game.GetNPCInstanceManager()
+	if npcManager == nil {
+		game.SendMessage() <- message.Reply("Error: NPC system not available.")
 		return true
 	}
 
+	npc := npcManager.FindInstanceByNameInRoom(message.Character.CurrentRoomID, npcName)
 	if npc == nil {
 		game.SendMessage() <- message.Reply("There is no one named '" + npcName + "' here.")
 		return true

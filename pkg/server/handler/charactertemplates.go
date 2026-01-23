@@ -12,8 +12,8 @@ import (
 
 // CharacterTemplatesHandler handles character template CRUD operations
 type CharacterTemplatesHandler struct {
-	Repo              repository.CharacterTemplatesRepository
-	ItemTemplatesRepo repository.ItemTemplatesRepository
+	Repo      repository.CharacterTemplatesRepository
+	ItemsRepo repository.ItemsRepository
 }
 
 // GetCharacterTemplates returns all character templates
@@ -101,13 +101,14 @@ func (h *CharacterTemplatesHandler) SeedCharacterTemplates(c *gin.Context) {
 	starterItems := items.StarterItemTemplatePresets()
 	for _, itemTemplate := range starterItems {
 		// Check if item template with this name already exists
-		existing, _ := h.ItemTemplatesRepo.FindByName(itemTemplate.Name)
+		existing, _ := h.ItemsRepo.FindTemplateByName(itemTemplate.Name)
 		if len(existing) > 0 {
 			itemNameToID[itemTemplate.Name] = existing[0].ID
 			log.WithField("name", itemTemplate.Name).Info("Item template already exists, using existing ID")
 		} else {
 			// Create the item template
-			created, err := h.ItemTemplatesRepo.Store(itemTemplate)
+			itemTemplate.IsTemplate = true // Ensure flag is set
+			created, err := h.ItemsRepo.Store(itemTemplate)
 			if err != nil {
 				log.WithError(err).WithField("name", itemTemplate.Name).Error("Failed to seed item template")
 				continue

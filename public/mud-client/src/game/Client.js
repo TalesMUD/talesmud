@@ -49,6 +49,36 @@ function createClient(renderer, characterCreator, muxStore) {
     renderer(msg.message);
   };
 
+  // Dialog message handler - renders NPC dialog with numbered options
+  messageHandlers["dialog"] = (msg) => {
+    let output = "";
+
+    // Show NPC name and text
+    output += `[${msg.npcName}] ${msg.npcText}\n`;
+
+    // Show options if any
+    if (msg.options && msg.options.length > 0) {
+      output += "\n";
+      for (const opt of msg.options) {
+        output += `${opt.index}. ${opt.text}\n`;
+      }
+      output += "\nEnter a number to respond:";
+    }
+
+    renderer(output);
+  };
+
+  // Dialog end message handler
+  messageHandlers["dialogEnd"] = (msg) => {
+    let output = "";
+    if (msg.username) {
+      output += `[${msg.username}] `;
+    }
+    output += msg.message;
+    output += "\n[The conversation has ended]";
+    renderer(output);
+  };
+
   const setWSClient = async (wscl) => {
     ws = wscl;
     wsurl = ws.url;

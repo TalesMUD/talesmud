@@ -13,9 +13,10 @@ import (
 
 // ItemsQuery holds query parameters for filtering items.
 type ItemsQuery struct {
-	Name string `form:"name"`
-	Type string `form:"type"`
-	Slot string `form:"slot"`
+	Name       string `form:"name"`
+	Type       string `form:"type"`
+	Slot       string `form:"slot"`
+	IsTemplate *bool  `form:"isTemplate"` // nil = all, true = templates only, false = instances only
 }
 
 // matches returns true if the item matches the query filters.
@@ -27,6 +28,9 @@ func (q ItemsQuery) matches(item *items.Item) bool {
 		return false
 	}
 	if q.Slot != "" && string(item.Slot) != q.Slot {
+		return false
+	}
+	if q.IsTemplate != nil && item.IsTemplate != *q.IsTemplate {
 		return false
 	}
 	return true
@@ -108,18 +112,12 @@ type ItemsRepository interface {
 	Delete(id string) error
 	Store(item *items.Item) (*items.Item, error)
 	Import(item *items.Item) (*items.Item, error)
-}
 
-// ItemTemplatesRepository provides access to item template data.
-type ItemTemplatesRepository interface {
-	Drop() error
-	FindByID(id string) (*items.ItemTemplate, error)
-	FindByName(name string) ([]*items.ItemTemplate, error)
-	FindAll(query ItemsQuery) ([]*items.ItemTemplate, error)
-	Update(id string, item *items.ItemTemplate) error
-	Delete(id string) error
-	Store(item *items.ItemTemplate) (*items.ItemTemplate, error)
-	Import(item *items.ItemTemplate) (*items.ItemTemplate, error)
+	// Template-specific methods
+	FindAllTemplates(query ItemsQuery) ([]*items.Item, error)
+	FindAllInstances(query ItemsQuery) ([]*items.Item, error)
+	FindTemplateByName(name string) ([]*items.Item, error)
+	FindByTemplateID(templateID string) ([]*items.Item, error)
 }
 
 // CharacterTemplatesRepository provides access to character template data.
@@ -168,4 +166,29 @@ type ConversationsRepository interface {
 	Store(conv *conversations.Conversation) (*conversations.Conversation, error)
 	Update(id string, conv *conversations.Conversation) error
 	Delete(id string) error
+}
+
+// NPCSpawnersRepository provides access to NPC spawner data.
+type NPCSpawnersRepository interface {
+	FindAll() ([]*npc.NPCSpawner, error)
+	FindByID(id string) (*npc.NPCSpawner, error)
+	FindByRoom(roomID string) ([]*npc.NPCSpawner, error)
+	FindByTemplate(templateID string) ([]*npc.NPCSpawner, error)
+	Store(spawner *npc.NPCSpawner) (*npc.NPCSpawner, error)
+	Import(spawner *npc.NPCSpawner) (*npc.NPCSpawner, error)
+	Update(id string, spawner *npc.NPCSpawner) error
+	Delete(id string) error
+	Drop() error
+}
+
+// LootTablesRepository provides access to loot table data.
+type LootTablesRepository interface {
+	FindAll() ([]*items.LootTable, error)
+	FindByID(id string) (*items.LootTable, error)
+	FindByName(name string) ([]*items.LootTable, error)
+	Store(lootTable *items.LootTable) (*items.LootTable, error)
+	Import(lootTable *items.LootTable) (*items.LootTable, error)
+	Update(id string, lootTable *items.LootTable) error
+	Delete(id string) error
+	Drop() error
 }

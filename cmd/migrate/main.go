@@ -51,11 +51,11 @@ func main() {
 		_ = facade.RoomsService().Drop()
 		_ = facade.CharactersService().Drop()
 		_ = facade.UsersService().Drop()
-		_ = facade.ItemsService().Items().Drop()
-		_ = facade.ItemsService().ItemTemplates().Drop()
+		_ = facade.ItemsService().Drop()
 		_ = facade.ScriptsService().Drop()
 		_ = facade.NPCsService().Drop()
 		_ = facade.DialogsService().Drop()
+		_ = facade.LootTablesService().Drop()
 	}
 
 	for _, room := range data.Rooms {
@@ -68,10 +68,7 @@ func main() {
 		_, _ = facade.UsersService().Import(user)
 	}
 	for _, item := range data.Items {
-		_, _ = facade.ItemsService().Items().Import(item)
-	}
-	for _, itemTemplate := range data.ItemTemplates {
-		_, _ = facade.ItemsService().ItemTemplates().Import(itemTemplate)
+		_, _ = facade.ItemsService().Import(item)
 	}
 	for _, script := range data.Scripts {
 		_, _ = facade.ScriptsService().Import(script)
@@ -84,6 +81,9 @@ func main() {
 	}
 	for _, party := range data.Parties {
 		_, _ = facade.PartiesService().Store(party)
+	}
+	for _, lootTable := range data.LootTables {
+		_, _ = facade.LootTablesService().Import(lootTable)
 	}
 
 	fmt.Println("Migration completed successfully.")
