@@ -50,6 +50,10 @@ type NPC struct {
 	// State is the FSM state: "idle", "combat", "patrol", "dead", "fleeing"
 	State string `bson:"state" json:"state"`
 
+	// Combat state
+	InCombat         bool   `bson:"inCombat" json:"inCombat"`
+	CombatInstanceID string `bson:"combatInstanceId,omitempty" json:"combatInstanceId,omitempty"`
+
 	// DialogID references the main interactive dialog for this NPC (stored in dialogs collection)
 	DialogID string `bson:"dialogID,omitempty" json:"dialogID,omitempty"`
 

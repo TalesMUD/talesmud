@@ -1,6 +1,8 @@
 package def
 
 import (
+	"github.com/talesmud/talesmud/pkg/entities/characters"
+	"github.com/talesmud/talesmud/pkg/entities/combat"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/service"
 )
@@ -29,6 +31,28 @@ type NPCInstanceCtrl interface {
 	FindInstanceByNameInRoom(roomID, name string) *npc.NPC
 }
 
+// CombatEngineCtrl provides access to the combat system for commands
+type CombatEngineCtrl interface {
+	// IsPlayerInCombat checks if a player is currently in combat
+	IsPlayerInCombat(characterID string) bool
+	// IsNPCInCombat checks if an NPC is currently in combat
+	IsNPCInCombat(npcID string) bool
+	// GetCombatInstance returns the combat instance a player is in
+	GetCombatInstance(characterID string) *combat.CombatInstance
+	// InitiateCombat starts combat between players and enemies
+	InitiateCombat(roomID string, players []*characters.Character, enemies []*npc.NPC) *combat.CombatInstance
+	// ProcessPlayerAttack handles a player attacking a target in combat
+	ProcessPlayerAttack(characterID, targetID string) (message string, combatEnded bool, endState combat.CombatState)
+	// ProcessPlayerDefend handles a player defending
+	ProcessPlayerDefend(characterID string) (message string, combatEnded bool, endState combat.CombatState)
+	// ProcessPlayerFlee handles a player attempting to flee
+	ProcessPlayerFlee(characterID string) (success bool, message string, combatEnded bool, endState combat.CombatState)
+	// GetCombatStatus returns a formatted status string for the combat
+	GetCombatStatus(characterID string) string
+	// EndCombatForPlayer removes a player from combat (cleanup on disconnect, etc.)
+	EndCombatForPlayer(characterID string)
+}
+
 // GameCtrl def
 // interface for commands package to communicate back to game instance
 type GameCtrl interface {
@@ -40,4 +64,6 @@ type GameCtrl interface {
 	GetFacade() service.Facade
 	// GetNPCInstanceManager returns the NPC instance controller
 	GetNPCInstanceManager() NPCInstanceCtrl
+	// GetCombatEngine returns the combat engine controller
+	GetCombatEngine() CombatEngineCtrl
 }

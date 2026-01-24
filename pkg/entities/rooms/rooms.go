@@ -98,6 +98,10 @@ type Room struct {
 		// supply a background image id to the client (optional)
 		Background string `bson:"background,omitempty" json:"background,omitempty"`
 	} `bson:"meta,omitempty" json:"meta,omitempty"`
+
+	// CanBind indicates if players can use /bind in this room to set their respawn point
+	// Typically true for inns, temples, safe houses
+	CanBind bool `bson:"canBind" json:"canBind"`
 }
 
 //Rooms type

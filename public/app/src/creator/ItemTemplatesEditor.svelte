@@ -1,8 +1,12 @@
 <script>
+  import { writable } from "svelte/store";
   import { onMount } from "svelte";
   import { v4 as uuidv4 } from "uuid";
   import CRUDEditor from "./CRUDEditor.svelte";
   import { createStore } from "./CRUDEditorStore.js";
+
+  import { getAuth } from "../auth.js";
+  const { isAuthenticated, authToken } = getAuth();
 
   import {
     getItem,
@@ -15,19 +19,68 @@
     getItemSlots,
     getItemQualities,
   } from "../api/items.js";
+  import { getScripts } from "../api/scripts.js";
 
   const store = createStore();
+  const scriptsValueHelp = writable([]);
+  const itemQualitiesStore = writable([]);
+  const itemTypesStore = writable([]);
+  const itemSubTypesStore = writable([]);
+  const itemSlotsStore = writable([]);
   let newPropertyName = "";
   let newAttributeName = "";
 
-  let itemQualities = [];
-  let itemTypes = [];
-  let itemSubTypes = [];
-  let itemSlots = [];
   let levels = [];
   for (let i = 1; i <= 50; i += 1) {
     levels.push(i);
   }
+
+  // Load scripts for OnUse dropdown
+  const loadScripts = () => {
+    if (!$isAuthenticated || !$authToken) return;
+    getScripts(
+      $authToken,
+      [],
+      (scripts) => scriptsValueHelp.set(scripts || []),
+      (err) => console.error("Failed to load scripts:", err)
+    );
+  };
+
+  // Load item metadata immediately (these are public endpoints, no auth needed)
+  const loadItemMetadata = () => {
+    console.log("Loading item metadata...");
+    getItemQualities(
+      (q) => {
+        console.log("Received qualities:", q);
+        itemQualitiesStore.set(q || []);
+      },
+      (err) => console.error("Failed to load item qualities:", err)
+    );
+    getItemTypes(
+      (t) => {
+        console.log("Received types:", t);
+        itemTypesStore.set(t || []);
+      },
+      (err) => console.error("Failed to load item types:", err)
+    );
+    getItemSubTypes(
+      (st) => {
+        console.log("Received subtypes:", st);
+        itemSubTypesStore.set(st || []);
+      },
+      (err) => console.error("Failed to load item subtypes:", err)
+    );
+    getItemSlots(
+      (s) => {
+        console.log("Received slots:", s);
+        itemSlotsStore.set(s || []);
+      },
+      (err) => console.error("Failed to load item slots:", err)
+    );
+  };
+
+  // Call immediately at module level
+  loadItemMetadata();
 
   const config = {
     title: "Item Template Editor",
@@ -77,6 +130,12 @@
       tags: [],
       isTemplate: true,
       isNew: true,
+      // Consumable/stacking fields
+      consumable: false,
+      stackable: false,
+      quantity: 1,
+      maxStack: 1,
+      onUseScriptId: "",
     });
   };
 
@@ -107,10 +166,8 @@
   };
 
   onMount(async () => {
-    getItemQualities((q) => (itemQualities = q));
-    getItemTypes((t) => (itemTypes = t));
-    getItemSubTypes((st) => (itemSubTypes = st));
-    getItemSlots((s) => (itemSlots = s));
+    console.log("ItemTemplatesEditor: onMount called");
+    loadScripts();
   });
 </script>
 
@@ -129,7 +186,7 @@
         <label class="label-caps">Item Type</label>
         <select class="input-base" bind:value={$store.selectedElement.type}>
           <option value="" disabled selected>Item Type</option>
-          {#each itemTypes as type}
+          {#each $itemTypesStore as type}
             <option value={type}>{type}</option>
           {/each}
         </select>
@@ -138,7 +195,7 @@
         <label class="label-caps">Item Subtype</label>
         <select class="input-base" bind:value={$store.selectedElement.subType}>
           <option value="" selected>Item Subtype</option>
-          {#each itemSubTypes as subType}
+          {#each $itemSubTypesStore as subType}
             <option value={subType}>{subType}</option>
           {/each}
         </select>
@@ -150,7 +207,7 @@
         <label class="label-caps">Item Quality</label>
         <select class="input-base" bind:value={$store.selectedElement.quality}>
           <option value="" disabled selected>Item Quality</option>
-          {#each itemQualities as quality}
+          {#each $itemQualitiesStore as quality}
             <option value={quality}>{quality}</option>
           {/each}
         </select>
@@ -158,11 +215,71 @@
       <div class="space-y-1.5">
         <label class="label-caps">Slot</label>
         <select class="input-base" bind:value={$store.selectedElement.slot}>
-          {#each itemSlots as slot}
+          {#each $itemSlotsStore as slot}
             <option value={slot}>{slot}</option>
           {/each}
         </select>
       </div>
+    </div>
+
+    <!-- Consumable & Stacking Settings -->
+    <div class="card p-4 space-y-4">
+      <div class="label-caps text-primary">Consumable & Stacking</div>
+      <div class="flex flex-wrap items-center gap-6">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            class="w-4 h-4 rounded border-slate-600 bg-slate-800 text-primary focus:ring-primary focus:ring-offset-0"
+            bind:checked={$store.selectedElement.consumable}
+          />
+          <span class="text-sm text-slate-300">Consumable</span>
+          <span class="text-[10px] text-slate-500">(Removed/decremented on use)</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            class="w-4 h-4 rounded border-slate-600 bg-slate-800 text-primary focus:ring-primary focus:ring-offset-0"
+            bind:checked={$store.selectedElement.stackable}
+          />
+          <span class="text-sm text-slate-300">Stackable</span>
+        </label>
+      </div>
+      {#if $store.selectedElement.stackable}
+        <div class="grid grid-cols-2 gap-4">
+          <div class="space-y-1.5">
+            <label class="label-caps">Default Quantity</label>
+            <input
+              type="number"
+              class="input-base"
+              min="1"
+              bind:value={$store.selectedElement.quantity}
+            />
+          </div>
+          <div class="space-y-1.5">
+            <label class="label-caps">Max Stack</label>
+            <input
+              type="number"
+              class="input-base"
+              min="1"
+              bind:value={$store.selectedElement.maxStack}
+            />
+          </div>
+        </div>
+      {/if}
+    </div>
+
+    <!-- On Use Script -->
+    <div class="space-y-1.5">
+      <label class="label-caps">On Use Script</label>
+      <select class="input-base" bind:value={$store.selectedElement.onUseScriptId}>
+        <option value="">None</option>
+        {#each $scriptsValueHelp as script}
+          <option value={script.id}>{script.name}</option>
+        {/each}
+      </select>
+      <p class="text-[10px] text-slate-400">
+        Lua script executed when item is used. Context: ctx.item, ctx.character, ctx.room
+      </p>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">

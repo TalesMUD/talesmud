@@ -121,6 +121,12 @@ type Item struct {
 	BasePrice int64 `bson:"basePrice,omitempty" json:"basePrice,omitempty"`
 
 	// scripts
+	// OnUseScriptID is a Lua script executed when item is used
+	// Script context: ctx.item, ctx.character, ctx.room
+	OnUseScriptID string `bson:"onUseScriptId,omitempty" json:"onUseScriptId,omitempty"`
+
+	// Consumable indicates item is consumed on use (removed or quantity decremented)
+	Consumable bool `bson:"consumable,omitempty" json:"consumable,omitempty"`
 
 	// metainfo
 	Tags      []string  `bson:"tags,omitempty" json:"tags"`

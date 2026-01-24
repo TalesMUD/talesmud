@@ -9,14 +9,14 @@
 
 ## Executive Summary
 
-This document outlines the turn-based combat system for TalesMUD. Combat occurs in isolated **Combat Instances** - temporary rooms where players and enemies fight in a Pokemon-style turn-based format. The system supports multi-enemy encounters, party combat, and persistence across disconnections.
+This document outlines the turn-based combat system for TalesMUD. Combat occurs in isolated **Combat Instances** - temporary rooms where players and enemies fight in a Pokemon-style turn-based format. The system supports multi-enemy encounters, multi-player combat, and persistence across disconnections.
 
 ### Key Features
 
 - **Turn-based combat** with initiative-based turn order
 - **Combat instances** - isolated temporary rooms for fights
 - **Multi-enemy encounters** - fight multiple NPCs simultaneously
-- **Party combat** - multiple players can fight together
+- **Multi-player combat** - multiple players can fight together (formal party system later)
 - **Flee mechanics** - chance-based escape system
 - **Persistence** - players return to combat on reconnect
 - **Loot & XP distribution** - rewards on victory
@@ -318,13 +318,45 @@ When combat is triggered:
 1. Mark combat state as `defeat`
 2. For each dead player:
    - Calculate gold loss (configurable %, default 10%)
-   - Set respawn location (last bind point or starting room)
+   - Set respawn location (player's bound room or world starting room)
    - Restore HP to 50%
    - Teleport to respawn location
 3. Clear combat status from NPCs
 4. Reset NPC HP (they won)
 5. Destroy combat instance
 6. Notify players of defeat
+
+#### Bind Points & Respawn
+
+Players can bind to specific rooms (inns, temples, safe houses) using the `/bind` command. Only rooms with `CanBind: true` support this.
+
+**Room Property:**
+```go
+// Added to Room entity
+CanBind bool `json:"canBind"` // If true, players can /bind here
+```
+
+**Character Property:**
+```go
+// Added to Character entity
+BoundRoomID string `json:"boundRoomId,omitempty"` // Respawn location
+```
+
+**Respawn Priority:**
+1. `Character.BoundRoomID` if set and room still exists
+2. World starting room (configured in game settings)
+
+**Bind Command:**
+```
+> bind
+
+You bind your soul to the Sleeping Dragon Inn.
+You will respawn here upon death.
+```
+
+Error cases:
+- "You cannot bind here." (room doesn't support binding)
+- "You are already bound to this location."
 
 #### Fled (All Players Escaped)
 
@@ -459,15 +491,17 @@ Turn order is fixed for the duration of combat (re-roll only if new combatants j
 
 ### Attack Resolution
 
+**Phase 1: Melee Only**
+
 ```
 To Hit Roll:
   Roll = 1d20
   If Roll == 20: Critical Hit (auto-hit, double damage)
   If Roll == 1: Critical Miss (auto-miss)
-  Hit = Roll + (STR or DEX modifier based on weapon) >= Target.Defense + 10
+  Hit = Roll + STR modifier >= Target.Defense + 10
 
 Damage Calculation:
-  Base Damage = Weapon.Damage + (STR modifier for melee, DEX for ranged)
+  Base Damage = Weapon.Damage + STR modifier
 
   For Players:
     Weapon.Damage = EquippedWeapon.Attributes["damage"] OR 1 (unarmed)
@@ -482,6 +516,10 @@ Damage Calculation:
 
   If Critical: Final Damage *= 2
 ```
+
+**Future Phases:**
+- **Ranged Weapons (Bows):** DEX-based to-hit and damage
+- **Spells:** INT/WIS-based, mana cost, spell effects
 
 ### Attribute Modifiers
 
@@ -569,7 +607,7 @@ When combat ends in victory:
 Total XP = Sum of all enemy XPReward values
 Per Player XP = Total XP / Number of living players at victory
 
-XP is NOT split if player died during combat but party won.
+XP is NOT split if player died during combat but others won.
 Dead players get 0 XP.
 ```
 
@@ -589,7 +627,7 @@ Same rules as XP - dead players get nothing.
 3. Players can pick up items after combat ends
 4. First-come-first-serve (free for all)
 
-Future enhancement: Need/Greed/Pass rolling system for party loot.
+Future enhancement: Need/Greed/Pass rolling system for group loot.
 
 ---
 
@@ -601,17 +639,24 @@ Future enhancement: Need/Greed/Pass rolling system for party loot.
 |---------|--------|-------------|
 | `attack` | `attack <target>` | Initiate combat with target NPC |
 
+### Respawn System
+
+| Command | Syntax | Description |
+|---------|--------|-------------|
+| `bind` | `bind` | Bind to current room (if room allows) |
+
 ### In-Combat Commands
 
-| Command | Aliases | Syntax | Description |
-|---------|---------|--------|-------------|
-| `attack` | `a`, `hit` | `attack <target>` | Attack target enemy |
-| `spell` | `cast` | `spell <spell> [target]` | Cast a spell (future) |
-| `item` | `use` | `item <item>` | Use an item (potion, etc.) |
-| `defend` | `d`, `guard` | `defend` | Defend for damage reduction |
-| `flee` | `run`, `escape` | `flee` | Attempt to escape combat |
-| `status` | `combat`, `cs` | `status` | View combat status |
-| `log` | `combatlog` | `log [lines]` | View combat log |
+| Command | Aliases | Syntax | Description | Phase |
+|---------|---------|--------|-------------|-------|
+| `attack` | `a`, `hit` | `attack <target>` | Melee attack target enemy | 1 |
+| `defend` | `d`, `guard` | `defend` | Defend for damage reduction | 3 |
+| `flee` | `run`, `escape` | `flee` | Attempt to escape combat | 3 |
+| `item` | `use` | `item <item>` | Use an item (potion, etc.) | 3 |
+| `status` | `combat`, `cs` | `status` | View combat status | 3 |
+| `log` | `combatlog` | `log [lines]` | View combat log | 7 |
+| `shoot` | `fire` | `shoot <target>` | Ranged attack (bow) | Future |
+| `spell` | `cast` | `spell <spell> [target]` | Cast a spell | Future |
 
 ### Command Details
 
@@ -721,6 +766,18 @@ ACTIONS: attack | defend | item | flee | status
 - **Combat in room**: Players and NPCs remain "in" the origin room
 - **Loot placement**: Items dropped to room's `Items` array
 - **Room visibility**: Other players see "X is in combat" status
+- **Bind points**: Rooms with `CanBind: true` allow `/bind` for respawn
+
+### Multi-Player Combat (Without Formal Party System)
+
+When combat is initiated, **all players currently in the room** may be pulled into combat:
+
+1. **Aggressive NPC attacks**: All players in room are targeted
+2. **Player attacks NPC**: Only the attacking player enters combat initially
+3. **Other players in room**: Can choose to `attack` the same NPC to join the fight
+4. **Join window**: Players can only join within Round 1 of combat
+
+This allows cooperative play without requiring a formal party invite system. Party system (invite, leave, party chat, shared XP settings) is a future enhancement.
 
 ### With Scripting System
 
@@ -755,6 +812,8 @@ tales.combat.endCombat(instanceId, result)  -- "victory", "defeat", "draw"
 
 **Scope:** ~15 files
 
+**Note:** Phase 1 supports **melee weapons only**. Ranged weapons (bows) and spells are added in later phases.
+
 1. **Combat Instance Model**
    - Create `pkg/entities/combat/instance.go`
    - Define all combat types and structs
@@ -771,10 +830,11 @@ tales.combat.endCombat(instanceId, result)  -- "victory", "defeat", "draw"
    - Sort turn order
    - Track current turn
 
-4. **Basic Attack Command**
+4. **Basic Melee Attack Command**
    - Implement `attack` command for combat initiation
    - Implement `attack` for in-combat targeting
-   - Basic damage calculation
+   - Melee damage calculation (STR-based)
+   - Unarmed combat fallback (1 base damage)
 
 ### Phase 2: Combat Resolution (Critical)
 
@@ -830,18 +890,19 @@ tales.combat.endCombat(instanceId, result)  -- "victory", "defeat", "draw"
 
 1. **Multi-Enemy Encounters**
    - Multiple NPCs in combat
-   - Target selection
+   - Target selection (`attack goblin 2` or `attack [2]`)
    - Aggro grouping (CallForHelp)
 
-2. **Party Combat**
-   - Multiple players in instance
-   - Party-wide combat initiation
+2. **Multi-Player Combat**
+   - Multiple players in same combat instance
+   - Players in room when combat starts are included
    - Turn order with multiple players
+   - Note: Formal party system (invite, party chat) is a separate feature
 
 3. **Loot/XP Distribution**
-   - Split rewards among party
-   - Dead player exclusion
-   - Room loot drops
+   - Split rewards among living players at victory
+   - Dead player exclusion (0 XP/gold if dead at end)
+   - Room loot drops (free-for-all pickup)
 
 ### Phase 5: NPC AI (Medium Priority)
 
@@ -1019,35 +1080,47 @@ You awaken at the Town Square with 25/50 HP.
 
 ## Success Criteria
 
+### MVP (Melee Combat)
 - [ ] Players can initiate combat with `attack <npc>` command
 - [ ] Aggressive NPCs auto-initiate combat on player room entry
 - [ ] Combat follows turn-based order based on initiative
-- [ ] Players can attack, defend, use items, and flee
+- [ ] Players can attack (melee), defend, use items, and flee
 - [ ] NPCs execute basic AI combat actions
 - [ ] Combat ends when all enemies or all players are defeated
 - [ ] Victory grants XP, gold, and loot drops
-- [ ] Defeat causes gold loss and respawn
+- [ ] Defeat causes gold loss and respawn at bound location
+- [ ] Players can `/bind` at designated rooms (inns, temples)
 - [ ] Multiple enemies can be fought simultaneously
-- [ ] Multiple players can fight together
+- [ ] Multiple players can join the same combat
 - [ ] Players return to combat on reconnect
 - [ ] 60-second turn timer enforced
 - [ ] Combat status visible to participants
-- [ ] All combat accessible via Lua scripting
+
+### Post-MVP
+- [ ] Ranged weapons (bows) with DEX-based attacks
+- [ ] Spell system with mana
+- [ ] Formal party system
+- [ ] Lua scripting for combat events
 
 ---
 
 ## Future Enhancements (Out of Scope for MVP)
 
-1. **Spell System** - Magic attacks with mana costs
-2. **Status Effects** - Poison, stun, bleed, buffs
-3. **PvP Combat** - Player vs player duels
-4. **Boss Mechanics** - Special abilities, phases
-5. **Combat Formations** - Front/back row positioning
-6. **Aggro/Threat System** - Tank mechanics
-7. **Need/Greed Loot** - Loot rolling system
-8. **Combat Achievements** - Kill tracking, titles
-9. **Arena System** - Structured PvP/PvE challenges
-10. **Combo System** - Chained attacks for bonus damage
+### Near-Term (Post-MVP)
+1. **Ranged Weapons (Bows)** - DEX-based attacks, ammo system
+2. **Spell System** - Magic attacks with mana costs, spell slots
+3. **Party System** - Formal party invite/join, party chat, shared XP options
+
+### Long-Term
+4. **Status Effects** - Poison, stun, bleed, buffs
+5. **PvP Combat** - Player vs player duels
+6. **Boss Mechanics** - Special abilities, phases
+7. **Combat Formations** - Front/back row positioning
+8. **Aggro/Threat System** - Tank mechanics
+9. **Need/Greed Loot** - Loot rolling system
+10. **Combat Achievements** - Kill tracking, titles
+11. **Arena System** - Structured PvP/PvE challenges
+12. **Combo System** - Chained attacks for bonus damage
 
 ---
 
@@ -1122,10 +1195,12 @@ You awaken at the Town Square with 25/50 HP.
 
 | File | Changes |
 |------|---------|
-| `pkg/entities/characters/character.go` | Add `InCombat`, `CombatInstanceID` |
+| `pkg/entities/characters/character.go` | Add `InCombat`, `CombatInstanceID`, `BoundRoomID` |
 | `pkg/entities/npcs/npc.go` | Add `InCombat`, `CombatInstanceID` |
+| `pkg/entities/rooms/rooms.go` | Add `CanBind` property |
 | `pkg/mudserver/game/game.go` | Add combat manager, combat tick |
 | `pkg/mudserver/game/commands/commandprocessor.go` | Combat command routing |
+| `pkg/mudserver/game/commands/bind.go` | New bind command |
 | `pkg/scripts/runner/lua/modules/combat.go` | New Lua module |
 
 ---

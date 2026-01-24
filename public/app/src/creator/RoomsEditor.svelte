@@ -90,6 +90,10 @@
       if (element.coords === undefined || element.coords === null) {
         element.coords = { x: 0, y: 0, z: 0 };
       }
+      // Ensure canBind is initialized
+      if (element.canBind === undefined) {
+        element.canBind = false;
+      }
     },
     badge: (element) => element.area,
   };
@@ -125,6 +129,7 @@
       exits: [],
       actions: [],
       coords: { x: 0, y: 0, z: 0 },
+      canBind: false,
       meta: {
         background: "",
       },
@@ -710,6 +715,19 @@
           Runs when a player enters this room (e.g., walking in or selecting a character).
         </p>
       </div>
+    </div>
+
+    <!-- Room Properties -->
+    <div class="flex flex-wrap items-center gap-6 pt-2">
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          class="w-4 h-4 rounded border-slate-600 bg-slate-800 text-primary focus:ring-primary focus:ring-offset-0"
+          bind:checked={$store.selectedElement.canBind}
+        />
+        <span class="text-sm text-slate-300">Can Bind</span>
+        <span class="text-[10px] text-slate-500">(Players can set respawn point here)</span>
+      </label>
     </div>
   </div>
 

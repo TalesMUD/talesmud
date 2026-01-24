@@ -121,28 +121,28 @@ function getItemSlots(cb, errorCb) {
   axios
     .get(`${backend}/item-slots`)
     .then((result) => cb(result.data))
-    .catch((err) => errorCb(err));
+    .catch((err) => errorCb && errorCb(err));
 }
 
 function getItemQualities(cb, errorCb) {
   axios
     .get(`${backend}/item-qualities`)
     .then((result) => cb(result.data))
-    .catch((err) => errorCb(err));
+    .catch((err) => errorCb && errorCb(err));
 }
 
 function getItemTypes(cb, errorCb) {
   axios
     .get(`${backend}/item-types`)
     .then((result) => cb(result.data))
-    .catch((err) => errorCb(err));
+    .catch((err) => errorCb && errorCb(err));
 }
 
 function getItemSubTypes(cb, errorCb) {
   axios
     .get(`${backend}/item-subtypes`)
     .then((result) => cb(result.data))
-    .catch((err) => errorCb(err));
+    .catch((err) => errorCb && errorCb(err));
 }
 
 export {
