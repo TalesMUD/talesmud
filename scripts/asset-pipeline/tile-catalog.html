@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DarkIcons Tile Catalog</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 { text-align: center; margin-bottom: 10px; }
+        .info { text-align: center; color: #888; margin-bottom: 20px; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 4px;
+            max-width: 800px;
+            margin: 0 auto;
+            background: #0f0f1a;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .tile {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #252540;
+            border-radius: 4px;
+            padding: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tile:hover {
+            background: #3a3a60;
+            transform: scale(1.1);
+            z-index: 10;
+        }
+        .tile img {
+            width: 32px;
+            height: 32px;
+            image-rendering: pixelated;
+        }
+        .tile .pos {
+            font-size: 9px;
+            color: #666;
+            margin-top: 2px;
+        }
+        .tile.selected {
+            outline: 2px solid #4CAF50;
+            background: #2a4a2a;
+        }
+        .row-label {
+            grid-column: 1 / -1;
+            background: #1a1a30;
+            padding: 8px;
+            margin-top: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            color: #aaa;
+        }
+        .row-label:first-child { margin-top: 0; }
+
+        #selected-info {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #252540;
+            padding: 15px;
+            border-radius: 8px;
+            min-width: 200px;
+        }
+        #selected-info img {
+            width: 64px;
+            height: 64px;
+            image-rendering: pixelated;
+        }
+        #selected-info .filename {
+            font-family: monospace;
+            font-size: 12px;
+            color: #4CAF50;
+            word-break: break-all;
+        }
+
+        .category-input {
+            margin-top: 10px;
+        }
+        .category-input input {
+            width: 100%;
+            padding: 5px;
+            background: #1a1a2e;
+            border: 1px solid #444;
+            color: #eee;
+            border-radius: 4px;
+        }
+
+        #export-btn {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 30px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        #export-btn:hover { background: #45a049; }
+
+        #mapping-output {
+            max-width: 800px;
+            margin: 20px auto;
+            background: #0f0f1a;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+        #mapping-output pre {
+            white-space: pre-wrap;
+            font-size: 11px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>DarkIcons 0.4 Tile Catalog</h1>
+    <p class="info">Click tiles to select, then assign category/name. Export generates Python mapping.</p>
+
+    <div class="grid" id="grid"></div>
+
+    <button id="export-btn">Export Mapping</button>
+
+    <div id="mapping-output">
+        <h3>Python Mapping (copy to extract_tiles.py)</h3>
+        <pre id="mapping-code"></pre>
+    </div>
+
+    <div id="selected-info" style="display:none;">
+        <img id="sel-img" src="">
+        <div>Position: <span id="sel-pos"></span></div>
+        <div class="filename" id="sel-file"></div>
+        <div class="category-input">
+            <input type="text" id="sel-category" placeholder="category (e.g., items/weapons/swords)">
+        </div>
+        <div class="category-input">
+            <input type="text" id="sel-name" placeholder="name (e.g., iron-sword)">
+        </div>
+    </div>
+
+    <script>
+        const ROWS = 20;
+        const COLS = 10;
+        const BASE_PATH = '../../public/assets/img/tiles/uncategorized/';
+
+        // Store mappings
+        const mappings = {};
+        let selectedTile = null;
+
+        // Row descriptions based on visual inspection
+        const rowDescriptions = [
+            'Row 0: Shields (wooden, metal, ornate)',
+            'Row 1: Shields & Accessories',
+            'Row 2: Swords',
+            'Row 3: Swords & Daggers',
+            'Row 4: Polearms (spears, halberds)',
+            'Row 5: Staves & Rods',
+            'Row 6: Bows',
+            'Row 7: Bows & Religious Items',
+            'Row 8: Orbs & Spheres',
+            'Row 9: Books & Tomes',
+            'Row 10: Potions & Vessels',
+            'Row 11: Keys & Misc Items',
+            'Row 12: Flowers, Herbs, Fruits',
+            'Row 13: Food (cheese, meat, vegetables)',
+            'Row 14: Resources (seeds, materials, ingots)',
+            'Row 15: Gems, Ores, Materials',
+            'Row 16: Tools (shovels, pickaxes, axes)',
+            'Row 17: Tools (hammers, saws, etc)',
+            'Row 18: Magic Staves',
+            'Row 19: Wands'
+        ];
+
+        const grid = document.getElementById('grid');
+
+        for (let row = 0; row < ROWS; row++) {
+            // Add row label
+            const label = document.createElement('div');
+            label.className = 'row-label';
+            label.textContent = rowDescriptions[row] || `Row ${row}`;
+            grid.appendChild(label);
+
+            for (let col = 0; col < COLS; col++) {
+                const tile = document.createElement('div');
+                tile.className = 'tile';
+                tile.dataset.row = row;
+                tile.dataset.col = col;
+
+                const filename = `darkicons-tile-r${String(row).padStart(2,'0')}-c${String(col).padStart(2,'0')}.png`;
+
+                tile.innerHTML = `
+                    <img src="${BASE_PATH}${filename}" alt="r${row}c${col}">
+                    <span class="pos">${row},${col}</span>
+                `;
+
+                tile.addEventListener('click', () => selectTile(tile, row, col, filename));
+                grid.appendChild(tile);
+            }
+        }
+
+        function selectTile(tile, row, col, filename) {
+            // Deselect previous
+            if (selectedTile) {
+                selectedTile.classList.remove('selected');
+            }
+
+            selectedTile = tile;
+            tile.classList.add('selected');
+
+            const info = document.getElementById('selected-info');
+            info.style.display = 'block';
+
+            document.getElementById('sel-img').src = `${BASE_PATH}${filename}`;
+            document.getElementById('sel-pos').textContent = `Row ${row}, Col ${col}`;
+            document.getElementById('sel-file').textContent = filename;
+
+            // Load existing mapping if any
+            const key = `${row},${col}`;
+            if (mappings[key]) {
+                document.getElementById('sel-category').value = mappings[key].category;
+                document.getElementById('sel-name').value = mappings[key].name;
+            } else {
+                document.getElementById('sel-category').value = '';
+                document.getElementById('sel-name').value = '';
+            }
+        }
+
+        // Save mapping on input change
+        document.getElementById('sel-category').addEventListener('change', saveMapping);
+        document.getElementById('sel-name').addEventListener('change', saveMapping);
+        document.getElementById('sel-category').addEventListener('blur', saveMapping);
+        document.getElementById('sel-name').addEventListener('blur', saveMapping);
+
+        function saveMapping() {
+            if (!selectedTile) return;
+
+            const row = parseInt(selectedTile.dataset.row);
+            const col = parseInt(selectedTile.dataset.col);
+            const category = document.getElementById('sel-category').value.trim();
+            const name = document.getElementById('sel-name').value.trim();
+
+            if (category && name) {
+                mappings[`${row},${col}`] = { category, name };
+                selectedTile.style.borderColor = '#4CAF50';
+            }
+        }
+
+        // Export mapping
+        document.getElementById('export-btn').addEventListener('click', () => {
+            let code = 'DARKICONS_MAP = {\n';
+
+            const entries = Object.entries(mappings).sort((a, b) => {
+                const [ar, ac] = a[0].split(',').map(Number);
+                const [br, bc] = b[0].split(',').map(Number);
+                return ar - br || ac - bc;
+            });
+
+            for (const [key, value] of entries) {
+                const [row, col] = key.split(',');
+                code += `    (${row}, ${col}): ("${value.category}", "${value.name}"),\n`;
+            }
+
+            code += '}\n';
+
+            document.getElementById('mapping-code').textContent = code;
+            document.getElementById('mapping-output').style.display = 'block';
+        });
+    </script>
+</body>
+</html>

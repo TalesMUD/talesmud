@@ -11,6 +11,8 @@
 # Output of the go coverage tool
 *.out
 
+
+
 # Go binary
 bin/tales
 cmd/owndnd/owndnd
@@ -35,6 +37,8 @@ out/
 .cursor/
 .claude/
 
+img/
+
 # Database files
 talesmud.db
 talesmud.db-shm
@@ -48,3 +52,7 @@ talesmud.db-wal
 export.json
 out.json
 dialog1.json
+
+# Game assets (extracted sprites, purchased art - not for git)
+public/assets/img/
+img/*.png

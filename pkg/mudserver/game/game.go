@@ -25,6 +25,9 @@ type Game struct {
 	// NPC instance manager for runtime NPC instances
 	NPCManager *NPCInstanceManager
 
+	// Combat controller for combat system
+	CombatController *CombatController
+
 	// messages
 	onMessageReceived chan interface{}
 	sendMessage       chan interface{}
@@ -70,6 +73,9 @@ func New(facade service.Facade) *Game {
 
 	// Initialize NPC instance manager
 	g.NPCManager = NewNPCInstanceManager(facade)
+
+	// Initialize Combat controller
+	g.CombatController = NewCombatController(g)
 
 	return g
 }
@@ -119,15 +125,22 @@ func (g *Game) GetNPCInstanceManager() def.NPCInstanceCtrl {
 	return g.NPCManager
 }
 
+// GetCombatEngine returns the combat engine controller
+func (g *Game) GetCombatEngine() def.CombatEngineCtrl {
+	return g.CombatController
+}
+
 const roomUpdateInterval = 10
 const npcUpdateInterval = 10
 const spawnerUpdateInterval = 5
+const combatUpdateInterval = 2 // Combat checks every 2 seconds
 
 func (g *Game) handleGameUpdates() {
 
 	roomTicker := time.NewTicker(roomUpdateInterval * time.Second)
 	npcTicker := time.NewTicker(npcUpdateInterval * time.Second)
 	spawnerTicker := time.NewTicker(spawnerUpdateInterval * time.Second)
+	combatTicker := time.NewTicker(combatUpdateInterval * time.Second)
 
 	for {
 		select {
@@ -137,7 +150,16 @@ func (g *Game) handleGameUpdates() {
 			g.handleNPCUpdates()
 		case <-spawnerTicker.C:
 			g.handleSpawnerUpdates()
+		case <-combatTicker.C:
+			g.handleCombatUpdates()
 		}
+	}
+}
+
+// handleCombatUpdates processes combat tick (turn timeouts, NPC actions)
+func (g *Game) handleCombatUpdates() {
+	if g.CombatController != nil {
+		g.CombatController.Update()
 	}
 }
 

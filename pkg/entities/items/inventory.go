@@ -30,7 +30,10 @@ func (inv *Inventory) AddItem(item *Item) error {
 	// Check if the item is stackable and we can find an existing stack
 	if item.Stackable {
 		for _, existing := range inv.Items {
-			if existing.TemplateID == item.TemplateID && existing.Stackable {
+			// Stack by TemplateID if both have one, otherwise stack by Name
+			sameTemplate := existing.TemplateID != "" && existing.TemplateID == item.TemplateID
+			sameName := existing.TemplateID == "" && item.TemplateID == "" && existing.Name == item.Name
+			if (sameTemplate || sameName) && existing.Stackable {
 				// Check max stack limit
 				if existing.MaxStack > 0 && existing.Quantity+item.Quantity > existing.MaxStack {
 					// Can't fully stack, but add what we can

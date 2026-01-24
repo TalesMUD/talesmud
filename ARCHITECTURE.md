@@ -237,6 +237,12 @@ The game runs multiple update tickers:
    - Spawn new instances when below max capacity
    - Clean up dead instances from spawner tracking
 
+4. **Combat Updates** (2 seconds)
+   - Check turn timeouts (60 seconds per player turn)
+   - Process NPC turns when it's their turn
+   - Handle AFK auto-flee after 3 consecutive timeouts
+   - Check global combat timeout (30 minutes)
+
 #### NPCInstanceManager
 
 Manages in-memory NPC instances that are spawned from templates:
@@ -256,6 +262,118 @@ Key methods:
 - `GetInstancesInRoom(roomID)` - Query instances by room
 - `KillInstance(id)` - Mark instance as dead
 - `RespawnInstance(id)` - Restore instance to alive state
+
+#### CombatController
+
+Manages turn-based combat instances:
+
+```go
+type CombatController struct {
+    manager *combat.Manager    // In-memory combat instances
+    engine  *combat.Engine     // Combat logic and calculations
+    game    *Game              // Game reference for notifications
+}
+```
+
+Key methods:
+- `IsPlayerInCombat(characterID)` - Check if player is in combat
+- `IsNPCInCombat(npcID)` - Check if NPC is in combat
+- `InitiateCombat(roomID, players, enemies)` - Start new combat
+- `ProcessPlayerAttack(characterID, targetID)` - Handle attack action
+- `ProcessPlayerDefend(characterID)` - Handle defend action
+- `ProcessPlayerFlee(characterID)` - Handle flee attempt
+- `GetCombatStatus(characterID)` - Get formatted combat status
+- `Update()` - Process combat tick (turn timeouts, NPC turns)
+
+### Combat System (`pkg/mudserver/game/combat/`)
+
+Turn-based combat occurs in isolated **Combat Instances** that manage fights between players and NPCs.
+
+#### Combat Instance Model
+
+```go
+type CombatInstance struct {
+    ID              string
+    OriginRoomID    string          // Room where combat started
+
+    Players         []CombatantRef  // Player combatants
+    Enemies         []CombatantRef  // NPC combatants
+
+    TurnOrder       []CombatantRef  // Initiative-sorted order
+    CurrentTurnIdx  int             // Current turn
+    TurnStartTime   time.Time       // For timeout tracking
+    Round           int             // Current combat round
+
+    State           CombatState     // pending, active, victory, defeat, fled, timeout
+    Log             []CombatLogEntry
+}
+
+type CombatantRef struct {
+    ID, Name        string
+    Type            CombatantType   // player or npc
+    Initiative      int             // Turn order priority
+    IsAlive, HasFled bool
+
+    MaxHP, CurrentHP int32
+    AttackPower, Defense int32
+    STRMod, DEXMod, CONMod int      // Attribute modifiers
+    DefenseBonus    int32           // From defend action
+}
+```
+
+#### Combat Flow
+
+```
+1. INITIATION
+   └── Player attacks NPC OR aggressive NPC detects player
+   └── Create CombatInstance with participants
+   └── Roll initiative (1d20 + DEX mod), sort turn order
+
+2. COMBAT ROUND
+   └── For each combatant in turn order:
+       ├── Player turn: 60-second timer, choose action
+       │   ├── attack <target> - Roll to hit, deal damage
+       │   ├── defend - +50% defense until next turn
+       │   ├── flee - Chance-based escape (50% + DEX bonus)
+       │   └── timeout - Auto-defend after 60s
+       └── NPC turn: AI decides action
+           ├── If HP < flee threshold → attempt flee
+           └── Otherwise → attack weakest player
+
+3. RESOLUTION
+   ├── Victory (all enemies dead) → XP/gold rewards, loot drops
+   ├── Defeat (all players dead) → 10% gold loss, respawn at bind point
+   └── Fled (all players escaped) → NPCs reset to idle
+```
+
+#### Combat Commands
+
+| Command | Aliases | Description |
+|---------|---------|-------------|
+| `attack <target>` | `a`, `hit` | Attack enemy (or initiate combat) |
+| `defend` | `d`, `guard` | Take defensive stance (+50% defense) |
+| `flee` | `run`, `escape` | Attempt to escape (50% + DEX bonus) |
+| `status` | `cs`, `combat` | Show combat status |
+| `bind` | - | Bind respawn point at current room |
+
+#### Combat Update Cycle (2 seconds)
+
+```go
+func (c *CombatController) Update() {
+    for _, instance := range c.manager.GetActiveInstances() {
+        // Check turn timeout
+        if instance.IsTurnTimedOut() {
+            // Player: auto-defend, check AFK auto-flee
+            // Advance to next turn
+        }
+
+        // Check global timeout (30 minutes)
+        if time.Since(instance.CreatedAt) >= 30*time.Minute {
+            // End combat as timeout
+        }
+    }
+}
+```
 
 ### Command System (`pkg/mudserver/game/commands/`)
 
@@ -472,12 +590,26 @@ type Character struct {
 
     CurrentHitPoints, MaxHitPoints int32
     XP, Level int32
+    Gold int64
 
     Inventory     items.Inventory
     EquippedItems map[items.ItemSlot]*items.Item
+
+    // Combat state
+    InCombat         bool    // Currently in combat
+    CombatInstanceID string  // Active combat instance
+    BoundRoomID      string  // Respawn location (set via /bind)
+
     AllTimeStats
 }
 ```
+
+Helper methods for combat:
+- `GetAttribute(short)` - Get attribute value by short name (STR, DEX, etc.)
+- `GetAttributeModifier(short)` - Get modifier ((value - 10) / 2)
+- `GetSTRMod()`, `GetDEXMod()`, `GetCONMod()` - Specific modifiers
+- `GetWeaponDamage()` - Main hand weapon damage (1 if unarmed)
+- `GetArmorDefense()` - Total defense from equipped armor
 
 ### Room Entity
 
@@ -499,6 +631,8 @@ type Room struct {
 
     Coords *struct{X, Y, Z int32}  // Grid position
     Meta   *struct{Mood, Background string}
+
+    CanBind bool  // If true, players can /bind here for respawn
 }
 ```
 
@@ -531,6 +665,10 @@ type NPC struct {
     IsDead    bool       // Currently dead
     DeathTime time.Time  // When died
     State     string     // FSM: idle, combat, patrol, dead, fleeing
+
+    // Combat state
+    InCombat         bool    // Currently in combat instance
+    CombatInstanceID string  // Active combat instance
 
     // Behavior Traits
     EnemyTrait    *EnemyTrait    // Combat behavior

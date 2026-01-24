@@ -74,6 +74,7 @@ func (commandProcessor *CommandProcessor) registerCommands() {
 	commandProcessor.RegisterCommand(&HelpCommand{processor: commandProcessor}, "Are you really asking?", "h", "help")
 	commandProcessor.RegisterCommand(&WhoCommand{}, "List all online players", "who")
 	commandProcessor.RegisterCommand(&InventoryCommand{}, "Display your inventory", "inventory", "i")
+	commandProcessor.RegisterCommand(&CharacterCommand{}, "Display character stats", "character", "char", "stats")
 	commandProcessor.RegisterCommand(&NewCharacterCommand{}, "Create a new character", "newcharacter", "nc")
 	commandProcessor.RegisterCommand(&TalkCommand{}, "Talk to an NPC: talk [npc-name]", "talk")
 
@@ -81,6 +82,7 @@ func (commandProcessor *CommandProcessor) registerCommands() {
 	commandProcessor.RegisterCommand(&PickupCommand{}, "Pick up an item: pickup [item]", "pickup", "get", "take")
 	commandProcessor.RegisterCommand(&DropCommand{}, "Drop an item: drop [item] [quantity]", "drop")
 	commandProcessor.RegisterCommand(&ExamineCommand{}, "Examine an item: examine [item]", "examine", "inspect")
+	commandProcessor.RegisterCommand(&UseCommand{}, "Use a consumable item: use [item]", "use", "eat", "drink", "consume")
 
 	// Trade commands
 	commandProcessor.RegisterCommand(&ListCommand{}, "List merchant inventory: list", "list", "shop")
@@ -92,5 +94,14 @@ func (commandProcessor *CommandProcessor) registerCommands() {
 	commandProcessor.RegisterCommand(&EquipCommand{}, "Equip an item: equip [item]", "equip", "wear")
 	commandProcessor.RegisterCommand(&UnequipCommand{}, "Unequip an item: unequip [slot or item]", "unequip", "remove")
 	commandProcessor.RegisterCommand(&EquipmentCommand{}, "Show equipped items", "equipment", "eq", "gear")
+
+	// Combat commands
+	commandProcessor.RegisterCommand(&AttackCommand{}, "Attack a target: attack [target]", "attack", "a", "hit")
+	commandProcessor.RegisterCommand(&DefendCommand{}, "Take defensive stance in combat", "defend", "d", "guard")
+	commandProcessor.RegisterCommand(&FleeCommand{}, "Attempt to flee from combat", "flee", "run", "escape")
+	commandProcessor.RegisterCommand(&CombatStatusCommand{}, "Show combat status", "status", "cs", "combat")
+
+	// Respawn commands
+	commandProcessor.RegisterCommand(&BindCommand{}, "Bind respawn point: bind", "bind")
 
 }
