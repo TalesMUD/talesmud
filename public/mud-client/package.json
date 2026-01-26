@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@auth0/auth0-spa-js": "^1.22.6",
+    "svelte-grid": "^5.1.2",
     "axios": "^0.27.2",
     "materialize-css": "^1.0.0-rc.2",
     "moment": "^2.25.1",

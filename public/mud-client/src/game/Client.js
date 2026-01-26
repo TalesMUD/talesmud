@@ -20,8 +20,14 @@ function createClient(renderer, characterCreator, muxStore) {
     activeRoom = msg.room;
     renderer(msg.message);
 
+    // Debug: log raw room data from server
+    console.log("=== enterRoom message received ===");
+    console.log("Full room object:", JSON.stringify(activeRoom, null, 2));
+    console.log("Raw exits from server:", JSON.stringify(activeRoom.exits, null, 2));
+
     if (mux) {
       mux.setExits(activeRoom.exits);
+      mux.setRoomInfo(activeRoom.name, activeRoom.description);
 
       //TODO: set default?
       if (activeRoom.meta != undefined && activeRoom.meta.background != undefined){
@@ -33,6 +39,20 @@ function createClient(renderer, characterCreator, muxStore) {
       } else {
         mux.setActions([]);
       }
+
+      // Set NPCs in the room for UI rendering
+      if (msg.npcs != undefined) {
+        mux.setNPCs(msg.npcs);
+      } else {
+        mux.setNPCs([]);
+      }
+
+      // Set game context flags
+      const hasItems = activeRoom.items && activeRoom.items.length > 0;
+      mux.setGameContext({ hasItems });
+
+      // Clear any active dialog when entering a new room
+      mux.clearDialog();
     }
   };
 
@@ -66,6 +86,11 @@ function createClient(renderer, characterCreator, muxStore) {
     }
 
     renderer(output);
+
+    // Update store for UI overlay
+    if (mux) {
+      mux.setDialog(msg.npcName, msg.npcText, msg.options || [], msg.conversationID || "");
+    }
   };
 
   // Dialog end message handler
@@ -77,6 +102,45 @@ function createClient(renderer, characterCreator, muxStore) {
     output += msg.message;
     output += "\n[The conversation has ended]";
     renderer(output);
+
+    // Clear dialog state in store
+    if (mux) {
+      mux.clearDialog();
+    }
+  };
+
+  // Combat message handlers
+  messageHandlers["combatStart"] = (msg) => {
+    renderer(msg.message);
+    if (mux) {
+      mux.setGameContext({ inCombat: true });
+    }
+  };
+
+  messageHandlers["combatTurn"] = (msg) => {
+    renderer(msg.message);
+    // Keep combat mode active
+    if (mux) {
+      mux.setGameContext({ inCombat: true });
+    }
+  };
+
+  messageHandlers["combatAction"] = (msg) => {
+    renderer(msg.message);
+  };
+
+  messageHandlers["combatStatus"] = (msg) => {
+    renderer(msg.message);
+    if (mux) {
+      mux.setGameContext({ inCombat: true });
+    }
+  };
+
+  messageHandlers["combatEnd"] = (msg) => {
+    renderer(msg.message);
+    if (mux) {
+      mux.setGameContext({ inCombat: false });
+    }
   };
 
   const setWSClient = async (wscl) => {
