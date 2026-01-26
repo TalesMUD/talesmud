@@ -106,14 +106,45 @@ func NewMultiResponse(responses ...MessageResponse) MultiResponse {
 	return mr
 }
 
+// RoomNPC represents NPC data sent to the frontend for UI rendering
+type RoomNPC struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	DisplayName string `json:"displayName"` // includes #1, #2 suffix for duplicates
+	IsEnemy     bool   `json:"isEnemy"`
+	IsMerchant  bool   `json:"isMerchant"`
+	CurrentHP   int32  `json:"currentHp,omitempty"`
+	MaxHP       int32  `json:"maxHp,omitempty"`
+	Level       int32  `json:"level,omitempty"`
+	State       string `json:"state"` // idle, combat, dead
+}
+
 // EnterRoomMessage ... Define our message object
 type EnterRoomMessage struct {
 	MessageResponse
 	Room rooms.Room `json:"room"`
+	NPCs []RoomNPC  `json:"npcs"`
 }
 
 //NewEnterRoomMessage ...
 func NewEnterRoomMessage(room *rooms.Room, user *entities.User, game def.GameCtrl) *EnterRoomMessage {
+	// Get NPC data for frontend rendering
+	roomNPCs := util.GetRoomNPCs(room, game)
+	npcs := make([]RoomNPC, len(roomNPCs))
+	for i, n := range roomNPCs {
+		npcs[i] = RoomNPC{
+			ID:          n.ID,
+			Name:        n.Name,
+			DisplayName: n.DisplayName,
+			IsEnemy:     n.IsEnemy,
+			IsMerchant:  n.IsMerchant,
+			CurrentHP:   n.CurrentHP,
+			MaxHP:       n.MaxHP,
+			Level:       n.Level,
+			State:       n.State,
+		}
+	}
+
 	return &EnterRoomMessage{
 		MessageResponse: MessageResponse{
 			Audience: MessageAudienceOrigin,
@@ -121,6 +152,7 @@ func NewEnterRoomMessage(room *rooms.Room, user *entities.User, game def.GameCtr
 			Message:  util.CreateRoomDescription(room, user, game),
 		},
 		Room: *room,
+		NPCs: npcs,
 	}
 }
 

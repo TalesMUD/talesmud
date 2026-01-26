@@ -54,7 +54,7 @@ func CreateRoomDescription(room *rooms.Room, user *entities.User, game def.GameC
 		var friendlyNPCs []string
 
 		// Build display names with numbers for duplicates
-		displayNames := buildNPCDisplayNames(npcs)
+		displayNames := BuildNPCDisplayNames(npcs)
 
 		for _, n := range npcs {
 			displayName := displayNames[n.Entity.ID]
@@ -99,9 +99,50 @@ func CreateRoomDescription(room *rooms.Room, user *entities.User, game def.GameC
 	return description
 }
 
-// buildNPCDisplayNames creates display names for NPCs, adding numbers when duplicates exist
+// RoomNPC represents NPC data for frontend UI rendering
+type RoomNPC struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	DisplayName string `json:"displayName"`
+	IsEnemy     bool   `json:"isEnemy"`
+	IsMerchant  bool   `json:"isMerchant"`
+	CurrentHP   int32  `json:"currentHp,omitempty"`
+	MaxHP       int32  `json:"maxHp,omitempty"`
+	Level       int32  `json:"level,omitempty"`
+	State       string `json:"state"`
+}
+
+// GetRoomNPCs returns NPC data for frontend rendering
+func GetRoomNPCs(room *rooms.Room, game def.GameCtrl) []RoomNPC {
+	npcs := game.GetNPCInstanceManager().GetInstancesInRoom(room.ID)
+	if len(npcs) == 0 {
+		return []RoomNPC{}
+	}
+
+	displayNames := BuildNPCDisplayNames(npcs)
+	result := make([]RoomNPC, 0, len(npcs))
+
+	for _, n := range npcs {
+		roomNPC := RoomNPC{
+			ID:          n.Entity.ID,
+			Name:        n.Name,
+			DisplayName: displayNames[n.Entity.ID],
+			IsEnemy:     n.IsEnemy(),
+			IsMerchant:  n.IsMerchant(),
+			CurrentHP:   n.CurrentHitPoints,
+			MaxHP:       n.MaxHitPoints,
+			Level:       n.Level,
+			State:       n.State,
+		}
+		result = append(result, roomNPC)
+	}
+
+	return result
+}
+
+// BuildNPCDisplayNames creates display names for NPCs, adding numbers when duplicates exist
 // Returns a map of NPC ID -> display name (e.g., "Rat #1", "Rat #2" or just "Rat" if unique)
-func buildNPCDisplayNames(npcs []*npc.NPC) map[string]string {
+func BuildNPCDisplayNames(npcs []*npc.NPC) map[string]string {
 	result := make(map[string]string)
 
 	// Count NPCs by base name

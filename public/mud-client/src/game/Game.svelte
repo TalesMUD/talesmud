@@ -1,143 +1,78 @@
 <style>
-  @media screen and (max-width: 480px) {
-    .gameContainer {
-      padding: 0em;
-      margin: auto auto;
-      max-width: 100%;
-      height: 95%;
-    }
-
-    #terminalWindow {
-      max-width: 640px;
-      height: 60%;
-      margin-top: 200px;
-      margin-left: auto;
-      margin-right: auto;
-
-      background: #000;
-      border-width: 1px;
-      border-style: solid;
-      border-color: #ffffff33;
-      border-radius: 0.5em;
-      position: relative;
-    }
+  /* CSS Custom Properties for theming */
+  :root {
+    --terminal-bg: rgba(0, 0, 0, 0.85);
+    --terminal-blur: 12px;
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --panel-bg: rgba(0, 0, 0, 0.7);
+    --accent-color: #f59e0b;
+    --text-primary: #e5e7eb;
+    --border-radius: 12px;
+    --panel-gap: 1em;
+    --transition-fast: 150ms ease;
+    --transition-normal: 300ms ease;
   }
-  @media screen and (min-width: 480px) {
-    .gameContainer {
-      padding: 1em;
-      margin: auto auto;
-      max-width: 900px;
-      height: 80%;
+
+  /* Main game container */
+  .gameContainer {
+    display: flex;
+    flex-direction: column;
+    padding: 1em;
+    margin: 0 auto;
+    max-width: min(95vw, 2400px);
+    height: calc(100vh - 2em);
+    gap: var(--panel-gap);
+  }
+
+  .grid-container {
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* Animation for panel appearance */
+  @keyframes fadeSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
     }
-
-    #terminalWindow {
-      max-width: 640px;
-      height: 60%;
-      margin-top: 280px;
-      margin-left: auto;
-      margin-right: auto;
-
-      background: #000;
-      border-width: 1px;
-      border-style: solid;
-      border-color: #ffffff33;
-      border-radius: 0.5em;
-      position: relative;
+    to {
+      opacity: 1;
+      transform: translateY(0);
     }
   }
 
-  .roomImage {
-    background: #000;
-    border-width: 1px;
-    border-style: solid;
-    border-color: #ffffff33;
-    border-radius: 0.5em;
-
-    position: relative;
-  }
-
-  .roomImageInner {
-    width: 100%;
-    height: 420px;
-    background-repeat: no-repeat;
-    background-size: 100% auto;
-    border-radius: 0.5em;
-    position: absolute;
-    left: 0;
-    top: 0;
-    image-rendering: pixelated;
-    opacity: 1;
-    transition: opacity 0.6s;
-    z-index: 0;
-  }
-  .hidden {
-    opacity: 0;
-    transition: opacity 0.6s;
-  }
-
-  .roomImageGradient {
-    width: 100%;
-    height: 100%;
-    background-image: linear-gradient(
-      to bottom,
-      rgba(0, 0, 0, 0),
-      rgba(0, 0, 0, 0),
-      rgba(0, 0, 0, 0),
-      rgba(0, 0, 0, 0.2),
-      rgba(0, 0, 0, 0.8),
-      rgba(0, 0, 0, 1)
-    );
-  }
-
-  #terminal {
-    background: #000;
-    margin: 1em;
-    padding-bottom: 1em;
-    height: 95%;
-  }
-  #terminal2 {
-    background: #000;
+  .gameContainer {
+    animation: fadeSlideIn 0.5s ease-out;
   }
 </style>
 
 <script>
   import { writable } from "svelte/store";
-  import MUDXPlus from "./MUDXPlus.svelte";
   import { createStore } from "./MUDXPlusStore";
-
-  import MediaQuery from "../MediaQuery.svelte";
+  import { layoutStore } from "./layout/LayoutStore.js";
+  import WidgetGrid from "./layout/WidgetGrid.svelte";
+  import EditModeToolbar from "./layout/EditModeToolbar.svelte";
+  import AddWidgetPanel from "./layout/AddWidgetPanel.svelte";
 
   import CharacterCreator from "../characters/CharacterCreator.svelte";
-  import "../../node_modules/xterm/css/xterm.css";
   import { onMount, onDestroy } from "svelte";
-  import { createAuth, getAuth } from "../auth.js";
-  import axios from "axios";
-  import xterm from "xterm";
-  import wrap from "word-wrap";
-
-  import LocalEchoController from "./echo/LocalEchoController";
-  import fit from "xterm-addon-fit";
-  import { createClient, getClient } from "./Client";
+  import { getAuth } from "../auth.js";
+  import { createClient } from "./Client";
   import { wsbackend } from "../api/base.js";
-  import UserMenu from "../UserMenu.svelte";
-
-  let toggleImage = true;
 
   let client;
   let term;
+  let renderer;
   let ws;
-  const cols = writable(60);
 
   const muxStore = createStore();
   const muxClient = writable({});
-  let muxplus = true;
 
   const { isLoading, isAuthenticated, authToken } = getAuth();
-  $: state = {
-    isAuthenticated: $isAuthenticated,
-    authToken: $authToken ? $authToken.slice(0, 20) : "",
-    background: $muxStore.background,
-  };
+
+  let showAddPanel = false;
+
+  $: editMode = $layoutStore.editMode;
 
   $: {
     // Only connect when: client exists, no existing ws, auth is loaded, user is authenticated, and token exists
@@ -148,97 +83,52 @@
       client.setWSClient(ws);
     }
 
-    // set document background
-    document.body.style.backgroundImage =
-      "url('/play/img/bg/" + $muxStore.background + ".png')";
-
-    let oldImg = document.querySelector(
-      toggleImage ? "#roomImg1" : "#roomImg2"
-    );
-    let newImg = document.querySelector(
-      !toggleImage ? "#roomImg1" : "#roomImg2"
-    );
-
-    toggleImage = !toggleImage;
-
-    if (newImg && oldImg) {
-      newImg.style.backgroundImage =
+    // set document background (blurred)
+    if ($muxStore.background) {
+      document.body.style.backgroundImage =
         "url('/play/img/bg/" + $muxStore.background + ".png')";
-
-      newImg.classList.remove("hidden");
-      oldImg.classList.add("hidden");
-
-      let terminal = document.querySelector("#terminalWindow");
-      terminal.classList.add("hidden");
-      terminal.classList.remove("hidden");
     }
   }
 
-  $: background: {
-    console.log("BACKGROUND CHANGE");
-  }
-
-  function sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  function readLine(localEcho, term) {
-    localEcho
-      .read("~$ ")
-      .then((input) => {
-        client.onInput(input);
-        readLine(localEcho, term);
-      })
-      .catch((error) => console.log(`Error reading: ${error}`));
-  }
-
-  const createRenderer = (term, localEcho) => {
-    return (data) => {
-      localEcho.clearInput();
-
-      //term.writeln(wrap(data, { width: 62 }));
-      term.writeln(data);
-    };
-  };
-
   const characterCreator = () => {
     console.log("CREATE CHARACTER");
-
     var Modalelem = document.querySelector(".modal");
     var instance = M.Modal.init(Modalelem);
     instance.open();
   };
 
-  async function setupTerminal() {
-    term = new xterm.Terminal();
-    term.onResize((c, rows) => {
-      cols.set(c);
-    });
+  function handleTerminalReady(terminal, termRenderer) {
+    term = terminal;
+    renderer = termRenderer;
 
-    var fitAddon = new fit.FitAddon();
-    term.loadAddon(fitAddon);
-    term.setOption("cursorBlink", true);
-    term.setOption("convertEol", true);
-
-    term.open(document.getElementById("terminal"));
-    fitAddon.fit();
-
-    const localEcho = new LocalEchoController(term);
-    localEcho.addAutocompleteHandler(autocompleteCommonCommands);
+    // Now create the client with the renderer
     client = createClient(
-      createRenderer(term, localEcho),
+      renderer,
       characterCreator,
       muxStore
     );
 
     muxClient.set(client);
 
-    readLine(localEcho, term);
+    // Show message if not authenticated
+    if (!$isLoading && !$isAuthenticated) {
+      term.writeln("Please log in to connect to the game.");
+    }
+  }
+
+  function handleTerminalInput(input) {
+    if (client) {
+      client.onInput(input);
+    }
+  }
+
+  function sendMessage(msg) {
+    if (client) {
+      client.sendMessage(msg);
+    }
   }
 
   onMount(async () => {
-    // change global background<img src="/play/img/bg/oldtown-griphon.png"/>
-
     document.body.style.backgroundImage = "url('/play/img/bg/oldtown-griphon.png')";
     document.body.style.backdropFilter =
       "blur(10px) saturate(30%) brightness(50%)";
@@ -247,16 +137,12 @@
     if (nav) {
       nav.style.backgroundColor = "#00000000";
     }
-    await setupTerminal();
 
-    // Show message if not authenticated after terminal is ready
-    if (term && !$isLoading && !$isAuthenticated) {
-      term.writeln("Please log in to connect to the game.");
-    }
+    // Initialize layout from storage
+    layoutStore.loadFromStorage();
   });
 
   onDestroy(async () => {
-    // change global background
     document.body.style.backgroundImage = "";
     document.body.style.backdropFilter = "";
 
@@ -265,35 +151,25 @@
       nav.style.backgroundColor = "#00000055";
     }
   });
-
-  function autocompleteCommonCommands(index, tokens) {
-    if (index == 0) return ["north", "east", "south", "west", "say"];
-    return [];
-  }
 </script>
 
 <CharacterCreator />
 
 <div class="gameContainer">
-  <div class="roomImage center-align z-depth-5">
-
-    <div id="roomImg1" class="roomImageInner center-align">
-      <div class="roomImageGradient"></div>
-    </div>
-    <div id="roomImg2" class="roomImageInner center-align hidden">
-      <div class="roomImageGradient"></div>
-    </div>
-    <div id="terminalWindow" class="z-depth-5">
-      <div id="terminal"></div>
-    </div>
-
-    <MUDXPlus
-      store="{muxStore}"
-      term="{term}"
-      sendMessage="{(msg) => {
-        client.sendMessage(msg);
-      }}"
+  <div class="grid-container">
+    <WidgetGrid
+      store={muxStore}
+      {sendMessage}
+      onTerminalReady={handleTerminalReady}
+      onTerminalInput={handleTerminalInput}
     />
   </div>
 
+  {#if editMode}
+    <EditModeToolbar on:openAddPanel={() => showAddPanel = true} />
+  {/if}
+
+  {#if showAddPanel}
+    <AddWidgetPanel on:close={() => showAddPanel = false} />
+  {/if}
 </div>

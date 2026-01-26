@@ -19,6 +19,7 @@
   import { getAuth } from "./auth.js";
   import { getUser, updateUser } from "./api/user.js";
   import { user } from "./stores.js";
+  import { layoutStore } from "./game/layout/LayoutStore.js";
 
   const {
     isLoading,
@@ -63,7 +64,17 @@
 <!-- Dropdown Structure -->
 <ul id="dropdown1" class="dropdown-content">
   <li>
-    <a href="#!" on:click="{() => logout()}">logout</a>
+    <a href="#!" on:click="{() => layoutStore.enterEditMode()}">
+      <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">dashboard_customize</i>
+      Edit Layout
+    </a>
+  </li>
+  <li class="divider"></li>
+  <li>
+    <a href="#!" on:click="{() => logout()}">
+      <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">logout</i>
+      Logout
+    </a>
   </li>
 </ul>
 
