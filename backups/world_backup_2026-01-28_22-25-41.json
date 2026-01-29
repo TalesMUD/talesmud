@@ -1,0 +1,872 @@
+{
+  "dialogs": [
+    {
+      "id": "DLG0001",
+      "name": "Mira Thornwood Dialog",
+      "nodeId": "root",
+      "created": "0001-01-01T00:00:00Z"
+    }
+  ],
+  "items": [
+    {
+      "id": "ITM0001",
+      "detail": "A torch of simple construction—a wooden shaft wrapped with oil-soaked cloth. It's dusty from sitting in the catacombs for who knows how long, but still functional. Light this and darkness becomes merely shadow.",
+      "isTemplate": true,
+      "name": "Dusty Torch",
+      "description": "An old torch, still usable despite years of neglect.",
+      "type": "collectible",
+      "subType": "light_source",
+      "slot": "",
+      "quality": "normal",
+      "stackable": true,
+      "maxStack": 5,
+      "basePrice": 1,
+      "consumable": true,
+      "tags": [
+        "light",
+        "tutorial",
+        "catacomb"
+      ],
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": {
+        "img": "An old wooden torch with cloth wrapping, dusty but functional, fantasy item illustration."
+      }
+    },
+    {
+      "id": "ITM0002",
+      "detail": "A piece of sharp flint and a curved steel striker. Strike them together to create sparks. Essential for lighting torches, campfires, and generally not freezing to death in the wilderness.",
+      "isTemplate": true,
+      "name": "Flint and Steel",
+      "description": "A simple fire-starting kit.",
+      "type": "collectible",
+      "subType": "tool",
+      "slot": "",
+      "quality": "normal",
+      "basePrice": 5,
+      "tags": [
+        "tool",
+        "utility",
+        "tutorial"
+      ],
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": {
+        "img": "A piece of flint and a steel striker, simple fire-starting tools, fantasy item illustration."
+      }
+    },
+    {
+      "id": "ITM0003",
+      "detail": "A fragment torn from some larger document. The writing is faded but legible in places:",
+      "isTemplate": true,
+      "name": "Tattered Journal Page",
+      "description": "A fragment of an old journal with faded writing.",
+      "type": "collectible",
+      "subType": "readable",
+      "slot": "",
+      "quality": "normal",
+      "tags": [
+        "lore",
+        "tutorial",
+        "hint"
+      ],
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": {
+        "img": "A torn piece of old parchment with faded handwriting, fantasy item illustration."
+      }
+    },
+    {
+      "id": "ITM0004",
+      "detail": "A bundle of useful herbs gathered from the wildflower meadow: healing sage, thistlecap, and common yarrow. These form the base of many simple remedies.",
+      "isTemplate": true,
+      "name": "Meadow Herbs",
+      "description": "A bundle of common healing herbs from the meadow.",
+      "type": "crafting_material",
+      "subType": "herb",
+      "slot": "",
+      "quality": "normal",
+      "stackable": true,
+      "maxStack": 20,
+      "basePrice": 2,
+      "tags": [
+        "herb",
+        "gathering",
+        "crafting"
+      ],
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": {
+        "img": "A bundle of green meadow herbs tied with string, healing sage and wildflowers, fantasy item illustration."
+      }
+    },
+    {
+      "id": "ITM0005",
+      "detail": "A well-made leather belt, worn but serviceable. Probably belonged to a merchant before the bandits got their hands on it. The extra loops and pouches increase carrying capacity.",
+      "isTemplate": true,
+      "name": "Leather Belt",
+      "description": "A sturdy leather belt, slightly worn.",
+      "type": "armor",
+      "subType": "accessory",
+      "slot": "waist",
+      "quality": "normal",
+      "basePrice": 8,
+      "tags": [
+        "equipment",
+        "accessory",
+        "bandit_loot"
+      ],
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": {
+        "img": "A worn brown leather belt with a simple brass buckle, fantasy item illustration."
+      }
+    },
+    {
+      "id": "ITM0006",
+      "detail": "The lowest denomination of currency in Valdris. Ten bits make a silver mark, and ten marks make a gold crown. Not worth much individually, but they add up.",
+      "isTemplate": true,
+      "name": "Copper Bits",
+      "description": "A handful of copper coins.",
+      "type": "currency",
+      "subType": "coin",
+      "slot": "",
+      "quality": "normal",
+      "stackable": true,
+      "maxStack": 999,
+      "basePrice": 1,
+      "tags": [
+        "currency",
+        "common"
+      ],
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": {
+        "img": "A small pile of copper coins with various stamps, fantasy currency illustration."
+      }
+    },
+    {
+      "id": "ITM0007",
+      "detail": "The standard food of those who travel light. Dried meat, hardtack biscuits, and a few pieces of dried fruit wrapped in oiled cloth. Not delicious, but sustaining.",
+      "isTemplate": true,
+      "name": "Traveler's Ration",
+      "description": "A wrapped bundle of dried meat and hardtack.",
+      "type": "consumable",
+      "subType": "food",
+      "slot": "",
+      "quality": "normal",
+      "stackable": true,
+      "maxStack": 10,
+      "basePrice": 3,
+      "consumable": true,
+      "tags": [
+        "food",
+        "consumable",
+        "travel"
+      ],
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": {
+        "img": "A cloth-wrapped bundle containing dried meat, hardtack biscuits, and dried fruit, fantasy travel food illustration."
+      }
+    },
+    {
+      "id": "ITM0008",
+      "detail": "A small blade that's seen better days. The edge is dull and spotted with rust, but it's still better than bare hands. Many adventurers start with less.",
+      "isTemplate": true,
+      "name": "Rusty Dagger",
+      "description": "A small blade in poor condition.",
+      "type": "weapon",
+      "subType": "dagger",
+      "slot": "main_hand",
+      "quality": "normal",
+      "basePrice": 5,
+      "tags": [
+        "weapon",
+        "starter",
+        "dagger"
+      ],
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": {
+        "img": "A short rusty dagger with a worn leather grip, fantasy weapon illustration."
+      }
+    },
+    {
+      "id": "ITM0009",
+      "detail": "A solid branch shaped into a serviceable weapon. Primitive but effective. The weight behind a swing compensates for the lack of an edge.",
+      "isTemplate": true,
+      "name": "Wooden Club",
+      "description": "A heavy piece of wood, good for hitting things.",
+      "type": "weapon",
+      "subType": "club",
+      "slot": "main_hand",
+      "quality": "normal",
+      "basePrice": 3,
+      "tags": [
+        "weapon",
+        "starter",
+        "blunt"
+      ],
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": {
+        "img": "A crude wooden club made from a tree branch, fantasy weapon illustration."
+      }
+    },
+    {
+      "id": "ITM0010",
+      "detail": "A fitted leather cap that covers the top of the head. Won't stop a sword, but might save you from a glancing blow or a thrown rock.",
+      "isTemplate": true,
+      "name": "Leather Cap",
+      "description": "A simple leather cap offering minimal protection.",
+      "type": "armor",
+      "subType": "helmet",
+      "slot": "head",
+      "quality": "normal",
+      "basePrice": 10,
+      "tags": [
+        "armor",
+        "starter",
+        "leather"
+      ],
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": {
+        "img": "A simple brown leather cap or skullcap, fantasy armor illustration."
+      }
+    },
+    {
+      "id": "ITM0011",
+      "detail": "Layers of quilted cloth provide modest protection against cuts and impacts. Common among those who can't afford metal armor but want more than bare skin between themselves and danger.",
+      "isTemplate": true,
+      "name": "Padded Vest",
+      "description": "A quilted vest offering basic protection.",
+      "type": "armor",
+      "subType": "chest",
+      "slot": "chest",
+      "quality": "normal",
+      "basePrice": 15,
+      "tags": [
+        "armor",
+        "starter",
+        "cloth"
+      ],
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": {
+        "img": "A quilted padded vest in brown fabric, simple armor, fantasy illustration."
+      }
+    },
+    {
+      "id": "ITM0012",
+      "detail": "A small vial of alchemical mixture that accelerates the body's natural healing. Tastes like copper and herbs. Not pleasant, but effective.",
+      "isTemplate": true,
+      "name": "Weak Health Potion",
+      "description": "A small vial of red liquid that restores health.",
+      "type": "consumable",
+      "subType": "potion",
+      "slot": "",
+      "quality": "normal",
+      "stackable": true,
+      "maxStack": 10,
+      "basePrice": 15,
+      "consumable": true,
+      "tags": [
+        "potion",
+        "healing",
+        "consumable"
+      ],
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": {
+        "img": "A small glass vial filled with glowing red liquid, health potion, fantasy item illustration."
+      }
+    },
+    {
+      "id": "ITM0013",
+      "detail": "The hide of a meadow wolf, skinned and roughly preserved. A leatherworker could turn this into something useful—armor, a cloak, or trade goods.",
+      "isTemplate": true,
+      "name": "Wolf Pelt",
+      "description": "The fur of a meadow wolf, useful for crafting.",
+      "type": "crafting_material",
+      "subType": "hide",
+      "slot": "",
+      "quality": "normal",
+      "stackable": true,
+      "maxStack": 10,
+      "basePrice": 8,
+      "tags": [
+        "crafting",
+        "hide",
+        "wolf"
+      ],
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": {
+        "img": "A gray wolf pelt, tanned and ready for use, fantasy crafting material illustration."
+      }
+    },
+    {
+      "id": "ITM0014",
+      "detail": "A wicked curved tusk pulled from a wild boar. These are popular among crafters—they can be carved into decorations, used to reinforce armor, or simply sold as trophies.",
+      "isTemplate": true,
+      "name": "Boar Tusk",
+      "description": "A curved tusk from a wild boar.",
+      "type": "crafting_material",
+      "subType": "trophy",
+      "slot": "",
+      "quality": "normal",
+      "stackable": true,
+      "maxStack": 20,
+      "basePrice": 5,
+      "tags": [
+        "crafting",
+        "trophy",
+        "boar"
+      ],
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": {
+        "img": "A curved yellowed boar tusk, fantasy crafting material illustration."
+      }
+    },
+    {
+      "id": "ITM0015",
+      "detail": "The silver mark is the workhorse of Valdris commerce. Most everyday transactions use marks. The coin bears different stamps depending on where it was minted, but the silver content is standardized.",
+      "isTemplate": true,
+      "name": "Silver Mark",
+      "description": "A silver coin, the standard currency of Valdris.",
+      "type": "currency",
+      "subType": "coin",
+      "slot": "",
+      "quality": "normal",
+      "stackable": true,
+      "maxStack": 999,
+      "basePrice": 10,
+      "tags": [
+        "currency",
+        "common"
+      ],
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": {
+        "img": "A silver coin stamped with a crown symbol, fantasy currency illustration."
+      }
+    },
+    {
+      "id": "ITM0016",
+      "detail": "An old key of unusual design, its surface covered in tiny symbols that match the runes found in ancient catacombs. It feels warm—not from your hand, but from within.",
+      "isTemplate": true,
+      "name": "Mysterious Old Key",
+      "description": "An ancient key with strange markings.",
+      "type": "quest",
+      "subType": "key",
+      "slot": "",
+      "quality": "normal",
+      "tags": [
+        "quest",
+        "key",
+        "mystery"
+      ],
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": {
+        "img": "An ornate ancient brass key with strange runic symbols, glowing faintly, fantasy quest item illustration."
+      }
+    },
+    {
+      "id": "ITM0017",
+      "detail": "A brass gear approximately the size of your palm. Its teeth are precisely machined, clearly the work of skilled technomancers—yet the runes etched into its surface match no known Collective design. They're older. Much older.",
+      "isTemplate": true,
+      "name": "Strange Gear",
+      "description": "A brass gear covered in ancient runes, humming with energy.",
+      "type": "quest",
+      "subType": "artifact",
+      "slot": "",
+      "quality": "normal",
+      "tags": [
+        "quest",
+        "artifact",
+        "twist",
+        "construct"
+      ],
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": {
+        "img": "A brass clockwork gear with glowing blue runes etched into its surface, ancient technomancy artifact, fantasy quest item illustration."
+      }
+    },
+    {
+      "id": "ITM0018",
+      "detail": "The tail of a common rat. Unpleasant to carry but some merchants buy them for alchemical purposes, and certain quests require proof of rat-killing. Stack them up.",
+      "isTemplate": true,
+      "name": "Rat Tail",
+      "description": "The severed tail of a rat. Gross but tradeable.",
+      "type": "collectible",
+      "subType": "junk",
+      "slot": "",
+      "quality": "normal",
+      "stackable": true,
+      "maxStack": 50,
+      "basePrice": 1,
+      "tags": [
+        "junk",
+        "trophy",
+        "rat"
+      ],
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": {
+        "img": "A severed rat tail, unpleasant but recognizable, fantasy junk item illustration."
+      }
+    },
+    {
+      "id": "ITM0019",
+      "detail": "A massive claw from a thornback bear—a rare and dangerous creature. The claw itself is nearly a foot long, curved like a sickle, with thorn-like growths along its edge.",
+      "isTemplate": true,
+      "name": "Thornback Claw",
+      "description": "A massive claw from a thornback bear, prized by crafters.",
+      "type": "crafting_material",
+      "subType": "trophy",
+      "slot": "",
+      "quality": "normal",
+      "stackable": true,
+      "maxStack": 10,
+      "basePrice": 25,
+      "tags": [
+        "crafting",
+        "trophy",
+        "rare",
+        "boss_loot"
+      ],
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": {
+        "img": "A massive curved bear claw with thorn-like protrusions, rare trophy item, fantasy illustration."
+      }
+    },
+    {
+      "id": "ITM0020",
+      "detail": "A fragment of armor torn from the Hollow Knight during your battle. The metal is ancient, corroded, yet somehow still intact. Faint runes glow along its surface—the same runes found on the Strange Gear.",
+      "isTemplate": true,
+      "name": "Hollow Knight Shard",
+      "description": "A fragment of the Hollow Knight's armor, pulsing with residual energy.",
+      "type": "quest",
+      "subType": "artifact",
+      "slot": "",
+      "quality": "normal",
+      "tags": [
+        "quest",
+        "artifact",
+        "boss_loot",
+        "story"
+      ],
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": {
+        "img": "A jagged shard of ancient corroded metal armor with faint glowing runes, boss trophy, fantasy quest item illustration."
+      }
+    },
+    {
+      "id": "ITM0021",
+      "detail": "Pulled from the rubble of the collapsed corridor, this branch is weathered but strong. It feels right in your hands—balanced, ready. Someone left it here, or something did. Either way, it's yours now.",
+      "isTemplate": true,
+      "name": "Sturdy Branch",
+      "description": "A thick wooden branch, surprisingly solid.",
+      "type": "weapon",
+      "subType": "club",
+      "slot": "main_hand",
+      "quality": "normal",
+      "basePrice": 1,
+      "tags": [
+        "weapon",
+        "starter",
+        "blunt",
+        "catacomb"
+      ],
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": {
+        "img": "A thick weathered wooden branch used as an improvised weapon, rough bark texture, fantasy starter weapon illustration."
+      }
+    },
+    {
+      "id": "ITM0022",
+      "detail": "A triangular piece of dark stone, broken from something larger. Symbols cover its surface—not the same as the catacomb runes, but somehow related. When you hold it, you feel a faint warmth, as if something inside recognizes you. Or remembers you.",
+      "isTemplate": true,
+      "name": "Etched Stone Fragment",
+      "description": "A palm-sized stone fragment covered in unfamiliar symbols.",
+      "type": "quest",
+      "subType": "artifact_fragment",
+      "slot": "",
+      "quality": "normal",
+      "tags": [
+        "quest",
+        "artifact",
+        "fragment",
+        "mystery",
+        "catacomb",
+        "hollow_king"
+      ],
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": {
+        "img": "A triangular dark stone fragment with glowing etched symbols, mysterious ancient artifact piece, fantasy quest item illustration."
+      }
+    },
+    {
+      "id": "ITM0023",
+      "detail": "This bone is old beyond measure—yellowed, cracked, yet impossibly intact where the runes spiral across its surface. The carvings glow faintly in darkness, pulsing like a slow heartbeat. It belonged to something once. Something that may still be waiting.",
+      "isTemplate": true,
+      "name": "Rune-Carved Bone",
+      "description": "An ancient bone fragment inscribed with spiraling runes.",
+      "type": "quest",
+      "subType": "artifact_fragment",
+      "slot": "",
+      "quality": "normal",
+      "tags": [
+        "quest",
+        "artifact",
+        "fragment",
+        "mystery",
+        "catacomb",
+        "hollow_king"
+      ],
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": {
+        "img": "An ancient yellowed bone fragment with spiraling glowing runes, mysterious artifact piece, fantasy quest item illustration."
+      }
+    },
+    {
+      "id": "ITM0024",
+      "detail": "This medal was once precious—you can tell by its weight, the craftsmanship beneath the tarnish. The crest shows a symbol you don't recognize, yet it stirs something in your mind. A memory that isn't yours. When the three fragments are near each other, they seem to... hum.",
+      "isTemplate": true,
+      "name": "Tarnished Medal",
+      "description": "A corroded medal bearing an unfamiliar crest.",
+      "type": "quest",
+      "subType": "artifact_fragment",
+      "slot": "",
+      "quality": "normal",
+      "tags": [
+        "quest",
+        "artifact",
+        "fragment",
+        "mystery",
+        "catacomb",
+        "hollow_king"
+      ],
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": {
+        "img": "A tarnished bronze medal with an ornate crest partially obscured by corrosion, mysterious ancient artifact, fantasy quest item illustration."
+      }
+    }
+  ],
+  "lootTables": [
+    {
+      "id": "LT0001",
+      "name": "Catacomb Rat Loot",
+      "entries": [
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        },
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        }
+      ],
+      "goldMultiplier": 1,
+      "dropBonus": 0
+    },
+    {
+      "id": "LT0101",
+      "name": "Meadow Creature Loot",
+      "entries": [
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        },
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        },
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        },
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        }
+      ],
+      "goldMultiplier": 1,
+      "dropBonus": 0
+    },
+    {
+      "id": "LT0102",
+      "name": "Bandit Loot",
+      "entries": [
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        },
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        },
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        },
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        },
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        },
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        },
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        }
+      ],
+      "goldMultiplier": 1,
+      "dropBonus": 0
+    },
+    {
+      "id": "LT0103",
+      "name": "Thornback Bear Loot",
+      "entries": [
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        },
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        },
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        },
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        },
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        }
+      ],
+      "goldMultiplier": 1,
+      "dropBonus": 0
+    },
+    {
+      "id": "LT0201",
+      "name": "Ethereal Creature Loot",
+      "entries": [
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        },
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        }
+      ],
+      "goldMultiplier": 1,
+      "dropBonus": 0
+    },
+    {
+      "id": "LT0202",
+      "name": "Alley Thug Loot",
+      "entries": [
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        },
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        },
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        }
+      ],
+      "goldMultiplier": 1,
+      "dropBonus": 0
+    },
+    {
+      "id": "LT0203",
+      "name": "Cellar Rat Loot",
+      "description": "Drops from the cellar rats beneath the Weary Wanderer.",
+      "entries": [
+        {
+          "itemTemplateId": "ITM0018",
+          "dropChance": 1,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": true
+        },
+        {
+          "itemTemplateId": "ITM0006",
+          "dropChance": 0.4,
+          "minQuantity": 1,
+          "maxQuantity": 3,
+          "guaranteed": false
+        }
+      ],
+      "goldMultiplier": 1,
+      "dropBonus": 0
+    },
+    {
+      "id": "LT0204",
+      "name": "Hollow Knight Loot",
+      "entries": [
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        },
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        },
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        },
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        },
+        {
+          "itemTemplateId": "",
+          "dropChance": 0,
+          "minQuantity": 1,
+          "maxQuantity": 1,
+          "guaranteed": false
+        }
+      ],
+      "goldMultiplier": 1,
+      "dropBonus": 0
+    }
+  ],
+  "npcs": [],
+  "rooms": [],
+  "scripts": [
+    {
+      "id": "SCR0001",
+      "name": "Awakening Chamber Entry",
+      "description": "Atmospheric script when entering the starting chamber",
+      "code": "local character = ctx.character\nif character then\n  local messages = {\n    \"The symbols on the walls seem to pulse faintly as you enter.\",\n    \"A chill runs down your spine. You've been here before... haven't you?\",\n    \"The sourceless light flickers momentarily.\",\n    \"Dust motes drift lazily in the pale light.\",\n    \"You hear a faint whisper, but the words slip away before you can grasp them.\"\n  }\n  local msg = messages[math.random(#messages)]\n  tales.game.msgToCharacter(character.ID, msg)\nend\n",
+      "type": "room",
+      "language": "lua"
+    },
+    {
+      "id": "SCR0002",
+      "name": "Collapsed Corridor Entry",
+      "description": "Atmospheric script for the collapsed corridor",
+      "code": "local character = ctx.character\nif character then\n  local messages = {\n    \"Pebbles clatter down from the unstable ceiling above.\",\n    \"The air is thick with ancient dust.\",\n    \"A stone shifts somewhere in the rubble, settling with a hollow thud.\",\n    \"You hear a faint skittering sound from deeper in the catacombs.\",\n    \"Cracks in the ceiling groan ominously as you pass beneath them.\"\n  }\n  local msg = messages[math.random(#messages)]\n  tales.game.msgToCharacter(character.ID, msg)\nend\n",
+      "type": "room",
+      "language": "lua"
+    },
+    {
+      "id": "SCR0003",
+      "name": "Torch Alcove Entry",
+      "description": "Atmospheric script for the supply alcove",
+      "code": "local character = ctx.character\nif character then\n  local messages = {\n    \"Cobwebs sway gently as you disturb the still air.\",\n    \"The wooden rack creaks softly, as if acknowledging your presence.\",\n    \"Someone prepared this cache. Someone who knew others would follow.\",\n    \"The chest's hinges squeak faintly in the silence.\",\n    \"A sense of relief washes over you. Supplies. Someone was here before.\"\n  }\n  local msg = messages[math.random(#messages)]\n  tales.game.msgToCharacter(character.ID, msg)\nend\n",
+      "type": "room",
+      "language": "lua"
+    },
+    {
+      "id": "SCR0004",
+      "name": "Rune Chamber Entry",
+      "description": "Atmospheric script for the puzzle room with reactive runes",
+      "code": "local character = ctx.character\nif character then\n  local messages = {\n    \"The runes flare briefly as you enter, then settle into a soft glow.\",\n    \"You feel a tingling sensation, as if the room itself is aware of you.\",\n    \"The pedestals hum with dormant power.\",\n    \"Ancient magic permeates the air, making your skin prickle.\",\n    \"The symbols on the walls seem to shift when you're not looking directly at them.\"\n  }\n  local msg = messages[math.random(#messages)]\n  tales.game.msgToCharacter(character.ID, msg)\n\n  -- Check if player has the journal for a hint\n  local hasJournal = tales.game.hasItem(character.ID, \"ITM0003\")\n  if hasJournal then\n    tales.game.msgToCharacter(character.ID, \"The symbols in your journal seem to match some of those on the pedestals...\")\n  end\nend\n",
+      "type": "room",
+      "language": "lua"
+    },
+    {
+      "id": "SCR0005",
+      "name": "Rat Nest Entry",
+      "description": "Tense atmospheric script for the rat-infested chamber",
+      "code": "local character = ctx.character\nif character then\n  local messages = {\n    \"Dozens of tiny red eyes turn toward you from the darkness.\",\n    \"The stench of rot and animal musk assaults your senses.\",\n    \"Something hisses from the shadows. You are not welcome here.\",\n    \"Bones crunch underfoot as you step into the chamber.\",\n    \"The rats watch you with unsettling intelligence.\"\n  }\n  local msg = messages[math.random(#messages)]\n  tales.game.msgToCharacter(character.ID, msg)\n\n  -- Warning if unarmed\n  local hasWeapon = tales.game.hasEquipped(character.ID, \"main_hand\")\n  if not hasWeapon then\n    tales.game.msgToCharacter(character.ID, \"You feel exposed without a weapon. The rats seem to sense your vulnerability...\")\n  end\nend\n",
+      "type": "room",
+      "language": "lua"
+    },
+    {
+      "id": "SCR0006",
+      "name": "Exit Stairwell Entry",
+      "description": "Hopeful atmospheric script for the exit chamber",
+      "code": "local character = ctx.character\nif character then\n  local messages = {\n    \"Daylight! True daylight streams down from above.\",\n    \"Warm air drifts down the stairwell, carrying the scent of grass and earth.\",\n    \"Hope stirs in your chest. Freedom awaits above.\",\n    \"The worn steps speak of countless souls who climbed before you.\",\n    \"Vines creep down through cracks in the stone, reaching toward the darkness below.\"\n  }\n  local msg = messages[math.random(#messages)]\n  tales.game.msgToCharacter(character.ID, msg)\n\n  -- Check if player has all three fragments\n  local hasStone = tales.game.hasItem(character.ID, \"ITM0022\")\n  local hasBone = tales.game.hasItem(character.ID, \"ITM0023\")\n  local hasMedal = tales.game.hasItem(character.ID, \"ITM0024\")\n\n  if hasStone and hasBone and hasMedal then\n    tales.game.msgToCharacter(character.ID, \"The three fragments in your pack begin to hum in unison. They resonate with something here...\")\n  elseif hasStone or hasBone or hasMedal then\n    tales.game.msgToCharacter(character.ID, \"You notice an inscription carved into the wall. Something about 'the three'...\")\n  end\nend\n",
+      "type": "room",
+      "language": "lua"
+    }
+  ]
+}

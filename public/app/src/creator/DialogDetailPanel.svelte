@@ -143,19 +143,19 @@
 
         {#if !isViewingNode}
           <div class="field">
-            <label>Dialog Name</label>
-            <input type="text" bind:value={dialog.name} placeholder="e.g., Guard Greeting" />
+            <label for="dialog-name">Dialog Name</label>
+            <input id="dialog-name" type="text" bind:value={dialog.name} placeholder="e.g., Guard Greeting" />
           </div>
         {/if}
 
         <div class="field">
-          <label>Node ID</label>
-          <input type="text" bind:value={displayNode.nodeId} placeholder="e.g., main, greeting" />
+          <label for="dialog-node-id">Node ID</label>
+          <input id="dialog-node-id" type="text" bind:value={displayNode.nodeId} placeholder="e.g., main, greeting" />
         </div>
 
         <div class="field">
-          <label>Text</label>
-          <textarea bind:value={displayNode.text} rows="3" placeholder="What the NPC says..."></textarea>
+          <label for="dialog-text">Text</label>
+          <textarea id="dialog-text" bind:value={displayNode.text} rows="3" placeholder="What the NPC says..."></textarea>
         </div>
       </section>
 
@@ -242,6 +242,7 @@
         <p class="section-hint">Automatic NPC response after this option is selected</p>
 
         {#if displayNode.answer}
+          <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
           <div class="answer-card" on:click={() => handleNodeClick(displayNode.answer)}>
             <div class="answer-header">
               <span class="answer-badge">ANSWER</span>

@@ -85,8 +85,16 @@
 
     // set document background (blurred)
     if ($muxStore.background) {
-      document.body.style.backgroundImage =
-        "url('/play/img/bg/" + $muxStore.background + ".png')";
+      const bgUrl = "/api/backgrounds/" + $muxStore.background + ".png";
+      const placeholderUrl = "/play/img/placeholder.png";
+      const testImg = new Image();
+      testImg.onload = () => {
+        document.body.style.backgroundImage = "url('" + bgUrl + "')";
+      };
+      testImg.onerror = () => {
+        document.body.style.backgroundImage = "url('" + placeholderUrl + "')";
+      };
+      testImg.src = bgUrl;
     }
   }
 
@@ -129,7 +137,7 @@
   }
 
   onMount(async () => {
-    document.body.style.backgroundImage = "url('/play/img/bg/oldtown-griphon.png')";
+    document.body.style.backgroundImage = "url('/api/backgrounds/oldtown-griphon.png')";
     document.body.style.backdropFilter =
       "blur(10px) saturate(30%) brightness(50%)";
 

@@ -15,14 +15,16 @@
 </style>
 
 <script>
-  import MediaQuery from "svelte-media-query";
-  import { fade } from "svelte/transition";
   import moment from "moment";
 
   export let name;
   export let description;
+  // Props passed from parent but not displayed in template
+  // svelte-ignore unused-export-let
   export let created;
+  // svelte-ignore unused-export-let
   export let level;
+  // svelte-ignore unused-export-let
   export let xp;
   export let templateId;
   export let attributes;

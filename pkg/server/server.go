@@ -107,6 +107,14 @@ func (app *app) setupRoutes() {
 		Service: app.Facade.LootTablesService(),
 	}
 
+	backgroundsPath := strings.TrimSpace(os.Getenv("BACKGROUNDS_PATH"))
+	if backgroundsPath == "" {
+		backgroundsPath = "./uploads/backgrounds"
+	}
+	backgrounds := &handler.BackgroundsHandler{
+		BasePath: backgroundsPath,
+	}
+
 	exp := &handler.ExportHandler{
 		RoomsService:      app.Facade.RoomsService(),
 		CharactersService: app.Facade.CharactersService(),
@@ -221,10 +229,18 @@ func (app *app) setupRoutes() {
 		protected.PUT("loottables/:id", lootTables.UpdateLootTableByID)
 		protected.DELETE("loottables/:id", lootTables.DeleteLootTableByID)
 		protected.POST("loottables/:id/roll", lootTables.RollLootTable)
+
+		// Backgrounds (upload/list/delete require auth)
+		protected.GET("backgrounds", backgrounds.ListBackgrounds)
+		protected.POST("backgrounds/upload", backgrounds.UploadBackground)
+		protected.DELETE("backgrounds/:filename", backgrounds.DeleteBackground)
 	}
 
 	public := r.Group("/api/")
 	{
+		// Serve background images (public, no auth required)
+		public.GET("backgrounds/:filename", backgrounds.ServeBackground)
+
 		// Legacy endpoint for old character creation flow (returns hardcoded templates)
 		public.GET("templates/characters", csh.GetCharacterTemplates)
 		public.GET("item-slots", items.GetItemSlots)

@@ -1,0 +1,103 @@
+# Room DTO
+# Exportable room definition for world building
+
+name: RoomDTO
+endpoint: /api/rooms
+
+fields:
+  id:
+    type: string
+    description: Unique identifier
+
+  name:
+    type: string
+    required: true
+
+  description:
+    type: string
+    required: true
+
+  detail:
+    type: string
+    description: Text shown when looking/inspecting
+
+  roomType:
+    type: string
+    examples: [tavern, shop, forest, dungeon, cave, street]
+
+  area:
+    type: string
+    description: Area/zone grouping
+
+  areaType:
+    type: string
+
+  tags:
+    type: string[]
+
+  canBind:
+    type: boolean
+    default: false
+    description: Players can set respawn here
+
+  onEnterScriptID:
+    type: string
+    description: Script ID executed on entry
+
+  coords:
+    type: object
+    properties:
+      x: integer
+      y: integer
+      z: integer
+
+  meta:
+    type: object
+    properties:
+      mood: string
+      background: string
+
+  exits:
+    type: Exit[]
+
+  actions:
+    type: Action[]
+
+# Nested types
+Exit:
+  fields:
+    name:
+      type: string
+      required: true
+    description:
+      type: string
+    type:
+      type: string
+      enum: [normal, direction, teleport]
+      default: normal
+    hidden:
+      type: boolean
+      default: false
+    target:
+      type: string
+      required: true
+      description: Target room ID
+    params:
+      type: object
+
+Action:
+  fields:
+    name:
+      type: string
+      required: true
+    description:
+      type: string
+    type:
+      type: string
+      enum: [response, room_response, script]
+      required: true
+    response:
+      type: string
+      description: Text for response type
+    params:
+      type: object

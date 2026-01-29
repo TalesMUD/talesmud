@@ -79,8 +79,8 @@
   <div slot="content" class="space-y-6">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div class="space-y-1.5">
-        <label class="label-caps">Level</label>
-        <select class="input-base" bind:value={$store.selectedElement.level}>
+        <label class="label-caps" for="item-level">Level</label>
+        <select id="item-level" class="input-base" bind:value={$store.selectedElement.level}>
           {#each levels as lvl}
             <option value={lvl}>{lvl}</option>
           {/each}
@@ -88,8 +88,8 @@
       </div>
 
       <div class="space-y-1.5">
-        <label class="label-caps">Item Type</label>
-        <select class="input-base" bind:value={$store.selectedElement.type}>
+        <label class="label-caps" for="item-type">Item Type</label>
+        <select id="item-type" class="input-base" bind:value={$store.selectedElement.type}>
           <option value="" disabled selected>Item Type</option>
           {#each itemTypes as type}
             <option value={type}>{type}</option>
@@ -98,8 +98,8 @@
       </div>
 
       <div class="space-y-1.5">
-        <label class="label-caps">Item Subtype</label>
-        <select class="input-base" bind:value={$store.selectedElement.subType}>
+        <label class="label-caps" for="item-subtype">Item Subtype</label>
+        <select id="item-subtype" class="input-base" bind:value={$store.selectedElement.subType}>
           <option value="" selected>Item Subtype</option>
           {#each itemSubTypes as subType}
             <option value={subType}>{subType}</option>
@@ -110,8 +110,8 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="space-y-1.5">
-        <label class="label-caps">Item Quality</label>
-        <select class="input-base" bind:value={$store.selectedElement.quality}>
+        <label class="label-caps" for="item-quality">Item Quality</label>
+        <select id="item-quality" class="input-base" bind:value={$store.selectedElement.quality}>
           <option value="" disabled selected>Item Quality</option>
           {#each itemQualities as quality}
             <option value={quality}>{quality}</option>
@@ -120,8 +120,8 @@
       </div>
 
       <div class="space-y-1.5">
-        <label class="label-caps">Item Slot</label>
-        <select class="input-base" bind:value={$store.selectedElement.slot}>
+        <label class="label-caps" for="item-slot">Item Slot</label>
+        <select id="item-slot" class="input-base" bind:value={$store.selectedElement.slot}>
           <option value="" selected>Item Slot</option>
           {#each itemSlots as slot}
             <option value={slot}>{slot}</option>

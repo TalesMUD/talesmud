@@ -82,6 +82,10 @@ func (command *UseCommand) Execute(game def.GameCtrl, message *messages.Message)
 		log.WithError(err).Error("Failed to update character after item use")
 	}
 
+	if inv := messages.NewInventoryUpdateMessage(message); inv != nil {
+		game.SendMessage() <- inv
+	}
+
 	return true
 }
 

@@ -215,8 +215,8 @@ return input`,
 <CRUDEditor store={store} config={config}>
   <div slot="content" class="space-y-4">
     <div class="space-y-1.5">
-      <label class="label-caps">Script Type</label>
-      <select class="input-base" bind:value={$store.selectedElement.type}>
+      <label class="label-caps" for="script-type">Script Type</label>
+      <select id="script-type" class="input-base" bind:value={$store.selectedElement.type}>
         <option value="" disabled selected>Script Type</option>
         {#each scriptTypes as type}
           <option value={type}>{type}</option>

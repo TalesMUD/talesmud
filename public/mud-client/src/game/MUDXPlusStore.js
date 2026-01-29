@@ -25,6 +25,11 @@ function createStore() {
     inCombat: false,
     hasItems: false,
     hasMerchant: false,
+
+    // Inventory state
+    inventory: [],
+    equippedItems: {},
+    gold: 0,
   });
 
   const store = {
@@ -85,6 +90,16 @@ function createStore() {
         state.dialogNpcText = "";
         state.dialogOptions = [];
         state.dialogConversationID = "";
+        return state;
+      });
+    },
+
+    // Inventory methods
+    setInventory: (inventory, equippedItems, gold) => {
+      update((state) => {
+        state.inventory = (inventory && inventory.items) || [];
+        state.equippedItems = equippedItems || {};
+        state.gold = gold || 0;
         return state;
       });
     },

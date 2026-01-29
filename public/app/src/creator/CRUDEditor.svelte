@@ -208,6 +208,16 @@
             on:click={() => selectElement(element)}
           >
             <div class="text-sm font-medium flex items-center gap-2">
+              {#if config.icon}
+                {@const iconData = config.icon(element)}
+                {#if iconData}
+                  <span
+                    class="material-symbols-outlined text-sm"
+                    style="color: {iconData.color || '#9ca3af'}"
+                    title={iconData.title || ''}
+                  >{iconData.name}</span>
+                {/if}
+              {/if}
               <span>{element.name}</span>
               {#if element.isNew}
                 <span class="text-[10px] uppercase tracking-wider bg-primary/20 text-primary px-2 py-0.5 rounded">

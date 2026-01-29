@@ -28,10 +28,6 @@
   :global(a:hover) {
     text-decoration: none;
   }
-  .brand-logo {
-    margin-left: 0em;
-    margin-right: 1em;
-  }
   .iconspacing {
     margin-right: 0.5em;
   }
@@ -40,18 +36,6 @@
     text-decoration: none;
     text-decoration-line: none;
     color: #aaa;
-  }
-  nav {
-    background: #00000055;
-  }
-  nav {
-    margin-bottom: 2em;
-  }
-  .mobile {
-    font-size: 10px;
-  }
-  img {
-    height: 40px;
   }
 
   .back-link {
@@ -68,6 +52,7 @@
   import Game from "./game/Game.svelte";
   import { onMount } from "svelte";
   import UserMenu from "./UserMenu.svelte";
+  import SettingsModal from "./game/ui/SettingsModal.svelte";
   import { createAuth } from "./auth.js";
 
   // Auth0 config
@@ -126,4 +111,7 @@
 
   <!-- Game component -->
   <Game />
+
+  <!-- Settings Modal (global) -->
+  <SettingsModal />
 </div>

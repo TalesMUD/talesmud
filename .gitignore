@@ -56,3 +56,10 @@ dialog1.json
 # Game assets (extracted sprites, purchased art - not for git)
 public/assets/img/
 img/*.png
+*.Identifier
+*.Identifier
+import/*
+
+# Uploaded content (keep directory structure but not user uploads)
+uploads/backgrounds/*
+!uploads/backgrounds/.gitkeep

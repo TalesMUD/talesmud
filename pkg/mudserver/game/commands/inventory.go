@@ -106,6 +106,9 @@ func (command *InventoryCommand) Execute(game def.GameCtrl, message *m.Message) 
 	}
 
 	game.SendMessage() <- message.Reply(sb.String())
+	if inv := m.NewInventoryUpdateMessage(message); inv != nil {
+		game.SendMessage() <- inv
+	}
 	return true
 }
 

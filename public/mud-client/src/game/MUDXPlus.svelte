@@ -92,12 +92,6 @@
     font-size: 16px;
   }
 
-  /* Icon-only button */
-  .btn-icon {
-    padding: 0.5em;
-    min-width: 36px;
-  }
-
   /* Exit buttons - orange */
   .exit-btn {
     background: rgba(249, 115, 22, 0.2);
@@ -290,10 +284,6 @@
       font-size: 14px;
     }
 
-    .btn-icon {
-      min-width: 32px;
-    }
-
     .more-popup {
       grid-template-columns: repeat(2, 1fr);
       min-width: 200px;
@@ -317,6 +307,7 @@
   import { getCardinalExits, getSpecialExits, getVerticalExits } from "./MUDXPlusStore";
 
   export let store;
+  // svelte-ignore unused-export-let
   export let term;
   export let sendMessage;
 
@@ -477,6 +468,7 @@
       </button>
 
       {#if showMoreMenu}
+        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
         <div class="menu-backdrop" on:click={closeMoreMenu}></div>
         <div class="more-popup">
           {#each moreCommands as cmd}

@@ -1,0 +1,99 @@
+# Item Template DTO
+# Exportable item definition (templates only, not instances)
+
+name: ItemDTO
+endpoint: /api/items
+
+fields:
+  id:
+    type: string
+    description: Unique identifier
+
+  name:
+    type: string
+    required: true
+
+  description:
+    type: string
+
+  detail:
+    type: string
+    description: Text shown when inspecting
+
+  type:
+    type: string
+    required: true
+    enum: [currency, consumable, armor, weapon, collectible, quest, crafting_material]
+
+  subType:
+    type: string
+    examples: [sword, twohandsword, axe, spear, shield, bow, staff, dagger]
+
+  slot:
+    type: string
+    enum: [inventory, head, chest, legs, boots, neck, ring1, ring2, hands, main_hand, off_hand]
+    default: inventory
+
+  quality:
+    type: string
+    enum: [normal, magic, rare, legendary, mythic]
+    default: normal
+
+  level:
+    type: integer
+    default: 0
+    description: Required level to use
+
+  basePrice:
+    type: integer
+    default: 0
+    description: Gold value
+
+  stackable:
+    type: boolean
+    default: false
+
+  maxStack:
+    type: integer
+    default: 0
+    description: 0 = unlimited
+
+  consumable:
+    type: boolean
+    default: false
+    description: Consumed on use
+
+  noPickup:
+    type: boolean
+    default: false
+
+  onUseScriptID:
+    type: string
+    description: Script ID executed on use
+
+  attributes:
+    type: object
+    description: Combat stats
+    examples:
+      damage: 10
+      defense: 5
+      armor: 15
+      critChance: 0.05
+
+  properties:
+    type: object
+    description: Custom properties
+
+  tags:
+    type: string[]
+
+  # Container properties (for chests, bags, etc.)
+  maxItems:
+    type: integer
+    default: 0
+    description: Container capacity (0 = not a container)
+
+  meta:
+    type: object
+    properties:
+      img: string

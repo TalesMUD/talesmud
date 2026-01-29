@@ -165,14 +165,10 @@ func (command *AttackCommand) handleInitiateCombat(game def.GameCtrl, message *m
 
 	game.SendMessage() <- message.Reply(startMsg)
 
-	// Check if it's the player's turn
-	currentTurn := instance.GetCurrentTurnCombatant()
-	if currentTurn != nil && currentTurn.ID == message.Character.Entity.ID {
-		game.SendMessage() <- message.Reply("\nIt's your turn! Actions: attack <target> | defend | flee | status")
-	} else if currentTurn != nil {
-		// It's an NPC's turn - the game loop will handle NPC actions
-		game.SendMessage() <- message.Reply(fmt.Sprintf("\n%s prepares to act...", currentTurn.Name))
-	}
+	// Set auto-attack target to the initial target
+	combatEngine.SetAutoAttackTarget(message.Character.Entity.ID, target.Entity.ID)
+
+	game.SendMessage() <- message.Reply("\nCombat is automatic. Commands: attack <target> (switch target) | defend | flee | status")
 
 	// Notify other players in the room
 	roomMsg := messages.MessageResponse{
@@ -187,7 +183,7 @@ func (command *AttackCommand) handleInitiateCombat(game def.GameCtrl, message *m
 	return true
 }
 
-// handleInCombatAttack handles an attack action during combat
+// handleInCombatAttack handles an attack action during combat (queues target switch)
 func (command *AttackCommand) handleInCombatAttack(game def.GameCtrl, message *messages.Message, combatEngine def.CombatEngineCtrl, targetName string) bool {
 	instance := combatEngine.GetCombatInstance(message.Character.Entity.ID)
 	if instance == nil {
@@ -199,68 +195,53 @@ func (command *AttackCommand) handleInCombatAttack(game def.GameCtrl, message *m
 		return true
 	}
 
-	// Check if it's the player's turn
-	currentTurn := instance.GetCurrentTurnCombatant()
-	if currentTurn == nil || currentTurn.ID != message.Character.Entity.ID {
-		timeRemaining := instance.GetTurnTimeRemaining()
-		if currentTurn != nil {
-			game.SendMessage() <- message.Reply(fmt.Sprintf("It's not your turn! Waiting for %s. (%ds remaining)", currentTurn.Name, timeRemaining))
-		} else {
-			game.SendMessage() <- message.Reply("Combat is in an invalid state.")
-		}
-		return true
-	}
-
-	// Find the target enemy
-	var targetID string
-
 	// Get list of living enemies
 	var livingEnemies []struct {
-		id   string
-		name string
-		hp   int32
+		id    string
+		name  string
+		hp    int32
 		maxHP int32
 	}
 	for _, enemy := range instance.Enemies {
 		if enemy.IsAlive {
 			livingEnemies = append(livingEnemies, struct {
-				id   string
-				name string
-				hp   int32
+				id    string
+				name  string
+				hp    int32
 				maxHP int32
 			}{enemy.ID, enemy.Name, enemy.CurrentHP, enemy.MaxHP})
 		}
 	}
 
-	// Auto-target if only one enemy and no target specified
 	if targetName == "" {
 		if len(livingEnemies) == 1 {
-			targetID = livingEnemies[0].id
+			// Switch to the only enemy
+			combatEngine.SetAutoAttackTarget(message.Character.Entity.ID, livingEnemies[0].id)
+			game.SendMessage() <- message.Reply(fmt.Sprintf("You focus your attacks on %s.", livingEnemies[0].name))
+			return true
 		} else if len(livingEnemies) > 1 {
-			// Multiple enemies - need to specify target
 			var targets []string
 			for _, e := range livingEnemies {
 				targets = append(targets, fmt.Sprintf("%s (%d/%d HP)", e.name, e.hp, e.maxHP))
 			}
-			game.SendMessage() <- message.Reply(fmt.Sprintf("Multiple enemies! Specify target: attack <target>\nAvailable: %s", strings.Join(targets, ", ")))
-			return true
-		} else {
-			game.SendMessage() <- message.Reply("No enemies to attack!")
+			game.SendMessage() <- message.Reply(fmt.Sprintf("Switch target to whom? Usage: attack <target>\nAvailable: %s", strings.Join(targets, ", ")))
 			return true
 		}
-	} else {
-		// Search for target by name
-		targetNameLower := strings.ToLower(targetName)
-		for _, enemy := range livingEnemies {
-			if strings.Contains(strings.ToLower(enemy.name), targetNameLower) {
-				targetID = enemy.id
-				break
-			}
+		game.SendMessage() <- message.Reply("No enemies to attack!")
+		return true
+	}
+
+	// Search for target by name
+	var targetID string
+	targetNameLower := strings.ToLower(targetName)
+	for _, enemy := range livingEnemies {
+		if strings.Contains(strings.ToLower(enemy.name), targetNameLower) {
+			targetID = enemy.id
+			break
 		}
 	}
 
 	if targetID == "" {
-		// List available targets
 		var targets []string
 		for _, e := range livingEnemies {
 			targets = append(targets, fmt.Sprintf("%s (%d/%d HP)", e.name, e.hp, e.maxHP))
@@ -269,27 +250,19 @@ func (command *AttackCommand) handleInCombatAttack(game def.GameCtrl, message *m
 		return true
 	}
 
-	// Process the attack
-	resultMsg, combatEnded, endState := combatEngine.ProcessPlayerAttack(message.Character.Entity.ID, targetID)
+	// Queue the target switch - it will take effect on the player's next turn
+	combatEngine.SetAutoAttackTarget(message.Character.Entity.ID, targetID)
+	combatEngine.QueuePlayerAction(message.Character.Entity.ID, combat.CombatActionAttack, targetID)
 
-	game.SendMessage() <- message.Reply(resultMsg)
-
-	if combatEnded {
-		command.handleCombatEnd(game, message, combatEngine, endState)
-	} else {
-		// Show next turn info
-		newInstance := combatEngine.GetCombatInstance(message.Character.Entity.ID)
-		if newInstance != nil {
-			nextTurn := newInstance.GetCurrentTurnCombatant()
-			if nextTurn != nil {
-				if nextTurn.ID == message.Character.Entity.ID {
-					game.SendMessage() <- message.Reply("\nIt's still your turn! Actions: attack <target> | defend | flee | status")
-				} else {
-					game.SendMessage() <- message.Reply(fmt.Sprintf("\n%s's turn...", nextTurn.Name))
-				}
-			}
+	// Find the target name for the message
+	targetDisplayName := targetName
+	for _, e := range livingEnemies {
+		if e.id == targetID {
+			targetDisplayName = e.name
+			break
 		}
 	}
+	game.SendMessage() <- message.Reply(fmt.Sprintf("You switch your focus to %s.", targetDisplayName))
 
 	return true
 }
@@ -432,35 +405,9 @@ func (command *DefendCommand) Execute(game def.GameCtrl, message *messages.Messa
 		return true
 	}
 
-	instance := combatEngine.GetCombatInstance(message.Character.Entity.ID)
-	if instance == nil {
-		game.SendMessage() <- message.Reply("Combat instance not found.")
-		return true
-	}
-
-	// Check if it's the player's turn
-	currentTurn := instance.GetCurrentTurnCombatant()
-	if currentTurn == nil || currentTurn.ID != message.Character.Entity.ID {
-		game.SendMessage() <- message.Reply("It's not your turn!")
-		return true
-	}
-
-	resultMsg, combatEnded, endState := combatEngine.ProcessPlayerDefend(message.Character.Entity.ID)
-	game.SendMessage() <- message.Reply(resultMsg)
-
-	if combatEnded {
-		attackCmd := &AttackCommand{}
-		attackCmd.handleCombatEnd(game, message, combatEngine, endState)
-	} else {
-		// Show next turn info
-		newInstance := combatEngine.GetCombatInstance(message.Character.Entity.ID)
-		if newInstance != nil {
-			nextTurn := newInstance.GetCurrentTurnCombatant()
-			if nextTurn != nil && nextTurn.ID != message.Character.Entity.ID {
-				game.SendMessage() <- message.Reply(fmt.Sprintf("\n%s's turn...", nextTurn.Name))
-			}
-		}
-	}
+	// Queue defend for next turn
+	combatEngine.QueuePlayerAction(message.Character.Entity.ID, combat.CombatActionDefend, "")
+	game.SendMessage() <- message.Reply("You prepare to defend on your next turn.")
 
 	return true
 }
@@ -484,35 +431,9 @@ func (command *FleeCommand) Execute(game def.GameCtrl, message *messages.Message
 		return true
 	}
 
-	instance := combatEngine.GetCombatInstance(message.Character.Entity.ID)
-	if instance == nil {
-		game.SendMessage() <- message.Reply("Combat instance not found.")
-		return true
-	}
-
-	// Check if it's the player's turn
-	currentTurn := instance.GetCurrentTurnCombatant()
-	if currentTurn == nil || currentTurn.ID != message.Character.Entity.ID {
-		game.SendMessage() <- message.Reply("It's not your turn! You can only flee on your turn.")
-		return true
-	}
-
-	success, resultMsg, combatEnded, endState := combatEngine.ProcessPlayerFlee(message.Character.Entity.ID)
-	game.SendMessage() <- message.Reply(resultMsg)
-
-	if combatEnded {
-		attackCmd := &AttackCommand{}
-		attackCmd.handleCombatEnd(game, message, combatEngine, endState)
-	} else if !success {
-		// Flee failed, show next turn
-		newInstance := combatEngine.GetCombatInstance(message.Character.Entity.ID)
-		if newInstance != nil {
-			nextTurn := newInstance.GetCurrentTurnCombatant()
-			if nextTurn != nil && nextTurn.ID != message.Character.Entity.ID {
-				game.SendMessage() <- message.Reply(fmt.Sprintf("\n%s's turn...", nextTurn.Name))
-			}
-		}
-	}
+	// Queue flee for next turn
+	combatEngine.QueuePlayerAction(message.Character.Entity.ID, combat.CombatActionFlee, "")
+	game.SendMessage() <- message.Reply("You prepare to flee on your next turn.")
 
 	return true
 }

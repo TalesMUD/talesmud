@@ -58,8 +58,12 @@ type CombatantRef struct {
 	CONMod int `json:"conMod"`
 
 	// Status effects
-	DefenseBonus    int32 `json:"defenseBonus"`    // From defend action
-	ConsecutiveAFKs int   `json:"consecutiveAfks"` // For auto-flee after 3 timeouts
+	DefenseBonus int32 `json:"defenseBonus"` // From defend action
+
+	// Auto-attack system
+	AutoAttackTargetID string       `json:"autoAttackTargetId,omitempty"` // Persistent target for auto-attacks
+	QueuedAction       CombatAction `json:"queuedAction,omitempty"`      // Next action override (flee, defend, attack)
+	QueuedTargetID     string       `json:"queuedTargetId,omitempty"`    // Target for queued attack
 }
 
 // CombatLogEntry represents a single action in the combat log

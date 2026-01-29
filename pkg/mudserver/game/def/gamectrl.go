@@ -51,6 +51,10 @@ type CombatEngineCtrl interface {
 	GetCombatStatus(characterID string) string
 	// EndCombatForPlayer removes a player from combat (cleanup on disconnect, etc.)
 	EndCombatForPlayer(characterID string)
+	// QueuePlayerAction queues an action for a player's next auto-attack turn
+	QueuePlayerAction(characterID string, action combat.CombatAction, targetID string)
+	// SetAutoAttackTarget sets the persistent auto-attack target for a player
+	SetAutoAttackTarget(characterID string, targetID string)
 }
 
 // GameCtrl def

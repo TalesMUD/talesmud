@@ -1,0 +1,57 @@
+# Dialog DTO
+# Exportable dialog tree definition
+
+name: DialogDTO
+endpoint: /api/dialogs
+
+fields:
+  id:
+    type: string
+    description: Unique identifier
+
+  name:
+    type: string
+    description: Human-readable name
+
+  nodeID:
+    type: string
+    required: true
+    description: Tree node identifier (e.g., "main", "greeting")
+
+  text:
+    type: string
+    required: true
+    description: NPC speech (supports {{variable}} templates)
+
+  alternateTexts:
+    type: string[]
+    description: Random text variations
+
+  orderedTexts:
+    type: boolean
+    description: Use sequential text on repeat
+
+  options:
+    type: DialogDTO[]
+    description: Player choice options (recursive)
+
+  answer:
+    type: DialogDTO
+    description: Auto-response continuation
+
+  requiresVisitedDialogs:
+    type: string[]
+    description: Node IDs that must be visited first
+
+  showOnlyOnce:
+    type: boolean
+
+  isDialogExit:
+    type: boolean
+    description: Returns to main node
+
+# Template variables available in text
+templateVariables:
+  - "{{player.name}}"
+  - "{{npc.name}}"
+  - "{{context.*}}"

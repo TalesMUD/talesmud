@@ -219,6 +219,32 @@ func NewDialogMessage(userID, npcName, npcText string, options []DialogOption, c
 	}
 }
 
+// InventoryUpdateMessage sends the full inventory state to the client
+type InventoryUpdateMessage struct {
+	MessageResponse
+	Inventory     interface{} `json:"inventory"`
+	EquippedItems interface{} `json:"equippedItems"`
+	Gold          int64       `json:"gold"`
+}
+
+// NewInventoryUpdateMessage creates an inventory update from the current character state
+func NewInventoryUpdateMessage(msg *Message) *InventoryUpdateMessage {
+	if msg == nil || msg.Character == nil {
+		return nil
+	}
+	ch := msg.Character
+	return &InventoryUpdateMessage{
+		MessageResponse: MessageResponse{
+			Audience:   MessageAudienceOrigin,
+			AudienceID: msg.FromUser.ID,
+			Type:       MessageTypeInventoryUpdate,
+		},
+		Inventory:     ch.Inventory,
+		EquippedItems: ch.EquippedItems,
+		Gold:          ch.Gold,
+	}
+}
+
 // NewDialogEndMessage creates a message indicating the conversation has ended
 func NewDialogEndMessage(userID, npcName, message string) MessageResponse {
 	return MessageResponse{

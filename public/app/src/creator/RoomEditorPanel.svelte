@@ -207,6 +207,7 @@
         <div class="special-exits-list">
           {#each editingRoom.exits.filter(e => !isCardinalDirection(e.name || "")) as exit}
             {@const targetRoom = roomsValueHelp.find(r => r.id === exit.target)}
+            <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
             <div class="special-exit-item" on:click={() => showSpecialExitsModal = true}>
               <div class="special-exit-info">
                 <span class="special-exit-name">{exit.name || "Unnamed"}</span>

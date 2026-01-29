@@ -1,0 +1,53 @@
+# Script DTO
+# Exportable game script definition
+
+name: ScriptDTO
+endpoint: /api/scripts
+
+fields:
+  id:
+    type: string
+    description: Unique identifier
+
+  name:
+    type: string
+    required: true
+
+  description:
+    type: string
+
+  type:
+    type: string
+    enum: [none, custom, item, room, quest, npc, event]
+    default: custom
+
+  language:
+    type: string
+    enum: [lua, javascript]
+    default: javascript
+
+  code:
+    type: string
+    required: true
+    description: Script source code
+
+# Script API reference
+scriptAPI:
+  globals:
+    - player: Current character
+    - room: Current room
+    - target: Action target (NPC/Item)
+    - game: Game service API
+
+  functions:
+    - say(message): Send message to player
+    - broadcast(message): Message to all in room
+    - teleport(roomID): Move player
+    - giveItem(templateID): Give item
+    - takeItem(itemID): Remove item
+    - giveGold(amount): Give gold
+    - takeGold(amount): Remove gold
+    - heal(amount): Heal HP
+    - damage(amount): Damage HP
+    - setFlag(key, value): Set persistent flag
+    - getFlag(key): Get persistent flag

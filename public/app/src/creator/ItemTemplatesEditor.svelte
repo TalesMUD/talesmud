@@ -175,16 +175,16 @@
   <div slot="content" class="space-y-6">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div class="space-y-1.5">
-        <label class="label-caps">Level</label>
-        <select class="input-base" bind:value={$store.selectedElement.level}>
+        <label class="label-caps" for="template-level">Level</label>
+        <select id="template-level" class="input-base" bind:value={$store.selectedElement.level}>
           {#each levels as lvl}
             <option value={lvl}>{lvl}</option>
           {/each}
         </select>
       </div>
       <div class="space-y-1.5">
-        <label class="label-caps">Item Type</label>
-        <select class="input-base" bind:value={$store.selectedElement.type}>
+        <label class="label-caps" for="template-type">Item Type</label>
+        <select id="template-type" class="input-base" bind:value={$store.selectedElement.type}>
           <option value="" disabled selected>Item Type</option>
           {#each $itemTypesStore as type}
             <option value={type}>{type}</option>
@@ -192,8 +192,8 @@
         </select>
       </div>
       <div class="space-y-1.5">
-        <label class="label-caps">Item Subtype</label>
-        <select class="input-base" bind:value={$store.selectedElement.subType}>
+        <label class="label-caps" for="template-subtype">Item Subtype</label>
+        <select id="template-subtype" class="input-base" bind:value={$store.selectedElement.subType}>
           <option value="" selected>Item Subtype</option>
           {#each $itemSubTypesStore as subType}
             <option value={subType}>{subType}</option>
@@ -204,8 +204,8 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="space-y-1.5">
-        <label class="label-caps">Item Quality</label>
-        <select class="input-base" bind:value={$store.selectedElement.quality}>
+        <label class="label-caps" for="template-quality">Item Quality</label>
+        <select id="template-quality" class="input-base" bind:value={$store.selectedElement.quality}>
           <option value="" disabled selected>Item Quality</option>
           {#each $itemQualitiesStore as quality}
             <option value={quality}>{quality}</option>
@@ -213,8 +213,8 @@
         </select>
       </div>
       <div class="space-y-1.5">
-        <label class="label-caps">Slot</label>
-        <select class="input-base" bind:value={$store.selectedElement.slot}>
+        <label class="label-caps" for="template-slot">Slot</label>
+        <select id="template-slot" class="input-base" bind:value={$store.selectedElement.slot}>
           {#each $itemSlotsStore as slot}
             <option value={slot}>{slot}</option>
           {/each}
@@ -247,8 +247,9 @@
       {#if $store.selectedElement.stackable}
         <div class="grid grid-cols-2 gap-4">
           <div class="space-y-1.5">
-            <label class="label-caps">Default Quantity</label>
+            <label class="label-caps" for="template-quantity">Default Quantity</label>
             <input
+              id="template-quantity"
               type="number"
               class="input-base"
               min="1"
@@ -256,8 +257,9 @@
             />
           </div>
           <div class="space-y-1.5">
-            <label class="label-caps">Max Stack</label>
+            <label class="label-caps" for="template-maxstack">Max Stack</label>
             <input
+              id="template-maxstack"
               type="number"
               class="input-base"
               min="1"
@@ -270,8 +272,8 @@
 
     <!-- On Use Script -->
     <div class="space-y-1.5">
-      <label class="label-caps">On Use Script</label>
-      <select class="input-base" bind:value={$store.selectedElement.onUseScriptId}>
+      <label class="label-caps" for="template-onuse-script">On Use Script</label>
+      <select id="template-onuse-script" class="input-base" bind:value={$store.selectedElement.onUseScriptId}>
         <option value="">None</option>
         {#each $scriptsValueHelp as script}
           <option value={script.id}>{script.name}</option>

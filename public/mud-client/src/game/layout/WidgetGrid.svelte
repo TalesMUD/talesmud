@@ -116,6 +116,8 @@
         };
       case 'actionbar':
         return { store, sendMessage, term: null };
+      case 'inventory':
+        return { store, sendMessage };
       default:
         return baseProps;
     }

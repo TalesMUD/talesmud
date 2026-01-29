@@ -65,6 +65,7 @@
 <svelte:window on:keydown={handleKey} />
 
 {#if open}
+  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
   <div class="modal-backdrop" on:click|self={close}>
     <div class="modal-container">
       <div class="modal-header">
@@ -95,8 +96,9 @@
               <div class="exit-row">
                 <div class="exit-fields">
                   <div class="field-group">
-                    <label>Exit Name</label>
+                    <label for="exit-name-{index}">Exit Name</label>
                     <input
+                      id="exit-name-{index}"
                       type="text"
                       placeholder="e.g., portal, stairs, ladder"
                       value={exit.name}
@@ -105,8 +107,9 @@
                   </div>
 
                   <div class="field-group">
-                    <label>Type</label>
+                    <label for="exit-type-{index}">Type</label>
                     <select
+                      id="exit-type-{index}"
                       value={exit.exitType || "normal"}
                       on:change={(e) => updateExit(index, "exitType", e.target.value)}
                     >
@@ -117,8 +120,9 @@
                   </div>
 
                   <div class="field-group">
-                    <label>Target Room</label>
+                    <label for="exit-target-{index}">Target Room</label>
                     <select
+                      id="exit-target-{index}"
                       value={exit.target}
                       on:change={(e) => updateExit(index, "target", e.target.value)}
                     >
@@ -130,8 +134,9 @@
                   </div>
 
                   <div class="field-group wide">
-                    <label>Description</label>
+                    <label for="exit-desc-{index}">Description</label>
                     <input
+                      id="exit-desc-{index}"
                       type="text"
                       placeholder="What the player sees when using this exit"
                       value={exit.description || ""}
