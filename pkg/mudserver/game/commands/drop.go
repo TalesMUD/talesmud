@@ -111,6 +111,9 @@ func (command *DropCommand) Execute(game def.GameCtrl, message *messages.Message
 		}
 
 		game.SendMessage() <- message.Reply("You drop " + item.Name + " (x" + itoa(int(quantity)) + ").")
+		if inv := messages.NewInventoryUpdateMessage(message); inv != nil {
+			game.SendMessage() <- inv
+		}
 		return true
 	}
 
@@ -149,6 +152,9 @@ func (command *DropCommand) Execute(game def.GameCtrl, message *messages.Message
 		quantityStr = " (x" + itoa(int(removedItem.Quantity)) + ")"
 	}
 	game.SendMessage() <- message.Reply("You drop " + removedItem.Name + quantityStr + ".")
+	if inv := messages.NewInventoryUpdateMessage(message); inv != nil {
+		game.SendMessage() <- inv
+	}
 
 	return true
 }

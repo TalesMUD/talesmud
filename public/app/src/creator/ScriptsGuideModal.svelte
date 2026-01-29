@@ -17,6 +17,7 @@
 
 <svelte:window on:keydown={handleKey} />
 {#if open}
+  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
   <div
     class="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-sm p-6"
     on:click|self={close}

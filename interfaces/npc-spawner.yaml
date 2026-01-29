@@ -1,0 +1,42 @@
+# NPCSpawner DTO
+# Exportable spawner configuration
+
+name: NPCSpawnerDTO
+endpoint: /api/npc-spawners
+
+fields:
+  id:
+    type: string
+    description: Unique identifier
+
+  name:
+    type: string
+
+  templateID:
+    type: string
+    required: true
+    description: NPC template to spawn
+
+  roomID:
+    type: string
+    required: true
+    description: Spawn location
+
+  maxInstances:
+    type: integer
+    default: 1
+    description: Max alive at once
+
+  spawnInterval:
+    type: string
+    required: true
+    description: Duration string (e.g., "30s", "5m")
+
+  initialCount:
+    type: integer
+    default: 1
+    description: Spawn count on server start
+
+  respawnTimeOverride:
+    type: string
+    description: Override template respawn time

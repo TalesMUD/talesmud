@@ -22,4 +22,7 @@ const (
 	MessageTypeCombatAction = "combatAction" // Action result (attack, defend, etc.)
 	MessageTypeCombatEnd    = "combatEnd"    // Combat ended (victory, defeat, fled)
 	MessageTypeCombatStatus = "combatStatus" // Combat status update
+
+	// Inventory messages
+	MessageTypeInventoryUpdate = "inventoryUpdate" // Inventory/equipment changed
 )

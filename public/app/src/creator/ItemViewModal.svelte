@@ -32,6 +32,7 @@
 <svelte:window on:keydown={handleKey} />
 
 {#if open && item}
+  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
   <div class="modal-backdrop" on:click|self={close}>
     <div class="modal-container">
       <div class="modal-header">

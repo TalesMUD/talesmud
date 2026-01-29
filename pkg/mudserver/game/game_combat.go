@@ -203,17 +203,34 @@ func (c *CombatController) GetCombatStatus(characterID string) string {
 			continue
 		}
 		marker := "  "
-		turnIndicator := ""
 		if i == instance.CurrentTurnIdx {
 			marker = "► "
-			if combatant.Type == combat.CombatantTypePlayer {
-				turnIndicator = fmt.Sprintf(" [%ds remaining]", instance.GetTurnTimeRemaining())
-			}
 		}
-		sb.WriteString(fmt.Sprintf("%s%d. %s (%d)%s\n", marker, i+1, combatant.Name, combatant.Initiative, turnIndicator))
+		sb.WriteString(fmt.Sprintf("%s%d. %s (%d)\n", marker, i+1, combatant.Name, combatant.Initiative))
 	}
 
-	sb.WriteString("\nACTIONS: attack <target> | defend | flee | status")
+	// Show auto-attack target and queued action for the player
+	player := instance.GetPlayerByID(characterID)
+	if player != nil {
+		if player.AutoAttackTargetID != "" {
+			target := instance.GetCombatantByID(player.AutoAttackTargetID)
+			if target != nil && target.IsAlive {
+				sb.WriteString(fmt.Sprintf("\nAuto-attacking: %s (%d/%d HP)", target.Name, target.CurrentHP, target.MaxHP))
+			}
+		}
+		if player.QueuedAction != "" {
+			queuedInfo := string(player.QueuedAction)
+			if player.QueuedAction == combat.CombatActionAttack && player.QueuedTargetID != "" {
+				target := instance.GetCombatantByID(player.QueuedTargetID)
+				if target != nil {
+					queuedInfo = fmt.Sprintf("attack %s", target.Name)
+				}
+			}
+			sb.WriteString(fmt.Sprintf("\nQueued action: %s", queuedInfo))
+		}
+	}
+
+	sb.WriteString("\n\nCombat is automatic. Commands: attack <target> (switch target) | defend | flee | status")
 	sb.WriteString("\n═══════════════════════════════════════════════════════")
 
 	return sb.String()
@@ -352,72 +369,66 @@ func (c *CombatController) Update() {
 	instances := c.manager.GetActiveInstances()
 
 	for _, instance := range instances {
-		current := instance.GetCurrentTurnCombatant()
-		if current == nil {
-			continue
-		}
-
-		// If it's an NPC's turn, process their action automatically
-		if current.Type == combat.CombatantTypeNPC {
-			c.processNPCTurns(instance)
-
-			// Check if combat ended
-			endState := c.engine.CheckCombatEnd(instance)
-			if endState != combat.CombatStateActive {
-				c.engine.EndCombat(instance, endState)
-				c.cleanupCombatInstance(instance, endState)
-				continue
-			}
-
-			// Notify players it's their turn now
-			nextCurrent := instance.GetCurrentTurnCombatant()
-			if nextCurrent != nil && nextCurrent.Type == combat.CombatantTypePlayer {
-				c.notifyPlayersInCombat(instance, fmt.Sprintf("\nIt's %s's turn!", nextCurrent.Name))
-			}
-			continue
-		}
-
-		// Check for player turn timeout
-		if instance.IsTurnTimedOut() {
-			if current.Type == combat.CombatantTypePlayer {
-				// Player turn timed out
-				result := c.engine.HandleTurnTimeout(instance)
-				c.notifyPlayersInCombat(instance, result.Message)
-
-				// Check if player should be auto-fled
-				if c.engine.ShouldAutoFlee(current) {
-					fleeResult := c.engine.ProcessFlee(instance, current.ID)
-					c.notifyPlayersInCombat(instance, "AFK timeout - "+fleeResult.Message)
-				}
-
-				// Advance turn
-				c.engine.NextTurn(instance)
-
-				// Check if combat ended
-				endState := c.engine.CheckCombatEnd(instance)
-				if endState != combat.CombatStateActive {
-					c.engine.EndCombat(instance, endState)
-					c.cleanupCombatInstance(instance, endState)
-					continue
-				}
-
-				// Process NPC turns
-				c.processNPCTurns(instance)
-
-				// Check again
-				endState = c.engine.CheckCombatEnd(instance)
-				if endState != combat.CombatStateActive {
-					c.engine.EndCombat(instance, endState)
-					c.cleanupCombatInstance(instance, endState)
-				}
-			}
-		}
+		// Process all turns continuously (both NPC and player)
+		c.processAllTurns(instance)
 
 		// Check for global combat timeout
 		if time.Since(instance.CreatedAt).Minutes() >= float64(c.engine.Config.CombatTimeoutMinutes) {
 			c.engine.EndCombat(instance, combat.CombatStateTimeout)
 			c.notifyPlayersInCombat(instance, "Combat has timed out due to inactivity.")
 			c.cleanupCombatInstance(instance, combat.CombatStateTimeout)
+		}
+	}
+}
+
+// processAllTurns processes all combatant turns (NPC and player) in sequence
+func (c *CombatController) processAllTurns(instance *combat.CombatInstance) {
+	maxTurns := len(instance.TurnOrder) + 2 // Safety limit per tick
+
+	for i := 0; i < maxTurns; i++ {
+		current := instance.GetCurrentTurnCombatant()
+		if current == nil {
+			break
+		}
+
+		if current.Type == combat.CombatantTypeNPC {
+			// Process NPC turn
+			npcEntity := c.game.NPCManager.GetInstance(current.ID)
+			action, targetID := c.engine.GetNPCAIAction(instance, current, npcEntity)
+
+			switch action {
+			case combat.CombatActionAttack:
+				if targetID != "" {
+					result := c.engine.ProcessAttack(instance, current.ID, targetID)
+					c.notifyPlayersInCombat(instance, result.Message)
+					if result.TargetDied {
+						target := instance.GetCombatantByID(targetID)
+						if target != nil && target.Type == combat.CombatantTypePlayer {
+							c.syncPlayerHP(targetID, 0)
+						}
+					}
+				}
+			case combat.CombatActionDefend:
+				result := c.engine.ProcessDefend(instance, current.ID)
+				c.notifyPlayersInCombat(instance, result.Message)
+			case combat.CombatActionFlee:
+				result := c.engine.ProcessFlee(instance, current.ID)
+				c.notifyPlayersInCombat(instance, result.Message)
+			}
+		} else {
+			// Process player turn via auto-attack
+			c.processPlayerAutoAttack(instance, current)
+		}
+
+		// Advance turn
+		c.engine.NextTurn(instance)
+
+		// Check if combat ended
+		endState := c.engine.CheckCombatEnd(instance)
+		if endState != combat.CombatStateActive {
+			c.engine.EndCombat(instance, endState)
+			c.cleanupCombatInstance(instance, endState)
+			return
 		}
 	}
 }
@@ -458,6 +469,133 @@ func (c *CombatController) cleanupCombatInstance(instance *combat.CombatInstance
 		"instanceID": instance.ID,
 		"endState":   endState,
 	}).Info("Combat instance cleaned up")
+}
+
+// QueuePlayerAction queues an action for a player's next auto-attack turn
+func (c *CombatController) QueuePlayerAction(characterID string, action combat.CombatAction, targetID string) {
+	instance := c.manager.GetInstanceByPlayerID(characterID)
+	if instance == nil {
+		return
+	}
+
+	player := instance.GetPlayerByID(characterID)
+	if player == nil {
+		return
+	}
+
+	player.QueuedAction = action
+	player.QueuedTargetID = targetID
+	c.engine.UpdateCombatant(instance, player)
+}
+
+// SetAutoAttackTarget sets the persistent auto-attack target for a player
+func (c *CombatController) SetAutoAttackTarget(characterID string, targetID string) {
+	instance := c.manager.GetInstanceByPlayerID(characterID)
+	if instance == nil {
+		return
+	}
+
+	player := instance.GetPlayerByID(characterID)
+	if player == nil {
+		return
+	}
+
+	player.AutoAttackTargetID = targetID
+	c.engine.UpdateCombatant(instance, player)
+}
+
+// processPlayerAutoAttack processes a player's turn automatically
+func (c *CombatController) processPlayerAutoAttack(instance *combat.CombatInstance, player *combat.CombatantRef) {
+	if player == nil || !player.IsAlive || player.HasFled {
+		return
+	}
+
+	// Check for queued action
+	if player.QueuedAction != "" {
+		switch player.QueuedAction {
+		case combat.CombatActionFlee:
+			result := c.engine.ProcessFlee(instance, player.ID)
+			c.notifyPlayersInCombat(instance, result.Message)
+
+		case combat.CombatActionDefend:
+			result := c.engine.ProcessDefend(instance, player.ID)
+			c.notifyPlayersInCombat(instance, result.Message)
+
+		case combat.CombatActionAttack:
+			targetID := player.QueuedTargetID
+			if targetID != "" {
+				// Validate target is alive
+				target := instance.GetCombatantByID(targetID)
+				if target != nil && target.IsAlive {
+					result := c.engine.ProcessAttack(instance, player.ID, targetID)
+					c.notifyPlayersInCombat(instance, result.Message)
+					// Update persistent auto-attack target
+					player.AutoAttackTargetID = targetID
+					c.engine.UpdateCombatant(instance, player)
+					if result.TargetDied {
+						if target.Type == combat.CombatantTypePlayer {
+							c.syncPlayerHP(targetID, 0)
+						}
+					}
+				} else {
+					// Queued target is dead/invalid, fall through to auto-attack
+					c.doAutoAttack(instance, player)
+				}
+			} else {
+				c.doAutoAttack(instance, player)
+			}
+		}
+
+		// Clear the queued action
+		// Re-fetch player since it may have been updated
+		playerRef := instance.GetPlayerByID(player.ID)
+		if playerRef != nil {
+			playerRef.QueuedAction = ""
+			playerRef.QueuedTargetID = ""
+			c.engine.UpdateCombatant(instance, playerRef)
+		}
+		return
+	}
+
+	// No queued action - auto-attack
+	c.doAutoAttack(instance, player)
+}
+
+// doAutoAttack performs the default auto-attack for a player
+func (c *CombatController) doAutoAttack(instance *combat.CombatInstance, player *combat.CombatantRef) {
+	targetID := player.AutoAttackTargetID
+
+	// Validate auto-attack target
+	if targetID != "" {
+		target := instance.GetCombatantByID(targetID)
+		if target == nil || !target.IsAlive {
+			targetID = "" // Target is dead/invalid, pick a new one
+		}
+	}
+
+	// If no valid target, pick first living enemy
+	if targetID == "" {
+		livingEnemies := instance.GetLivingEnemies()
+		if len(livingEnemies) > 0 {
+			targetID = livingEnemies[0].ID
+			player.AutoAttackTargetID = targetID
+			c.engine.UpdateCombatant(instance, player)
+		}
+	}
+
+	if targetID == "" {
+		return // No enemies to attack
+	}
+
+	result := c.engine.ProcessAttack(instance, player.ID, targetID)
+	c.notifyPlayersInCombat(instance, result.Message)
+
+	if result.TargetDied {
+		target := instance.GetCombatantByID(targetID)
+		if target != nil && target.Type == combat.CombatantTypePlayer {
+			c.syncPlayerHP(targetID, 0)
+		}
+	}
 }
 
 // Ensure CombatController implements CombatEngineCtrl

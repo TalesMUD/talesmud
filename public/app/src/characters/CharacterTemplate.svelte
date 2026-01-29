@@ -1,12 +1,18 @@
 <script>
   export let name;
   export let description;
+  // These props are passed from parent but currently not displayed
+  // svelte-ignore unused-export-let
   export let created;
+  // svelte-ignore unused-export-let
   export let level;
+  // svelte-ignore unused-export-let
   export let xp;
   export let templateId;
+  // svelte-ignore unused-export-let
   export let attributes;
   export let race;
+  // svelte-ignore unused-export-let
   export let cclass;
   export let callback;
   export let selected = false;

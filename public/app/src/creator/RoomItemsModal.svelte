@@ -78,6 +78,7 @@
 <svelte:window on:keydown={handleKey} />
 
 {#if open}
+  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
   <div class="modal-backdrop" on:click|self={close}>
     <div class="modal-container">
       <div class="modal-header">
@@ -144,6 +145,7 @@
                 {@const item = getItemById(itemId)}
                 <div class="item-row">
                   {#if item}
+                    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
                     <div class="item-info" on:click={() => viewItem(item)}>
                       <span
                         class="item-name"

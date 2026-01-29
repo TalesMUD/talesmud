@@ -69,6 +69,12 @@ function createClient(renderer, characterCreator, muxStore) {
     renderer(msg.message);
   };
 
+  messageHandlers["inventoryUpdate"] = (msg) => {
+    if (mux) {
+      mux.setInventory(msg.inventory, msg.equippedItems, msg.gold);
+    }
+  };
+
   // Dialog message handler - renders NPC dialog with numbered options
   messageHandlers["dialog"] = (msg) => {
     let output = "";

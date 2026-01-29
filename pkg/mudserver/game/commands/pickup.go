@@ -164,6 +164,9 @@ func (command *PickupCommand) Execute(game def.GameCtrl, message *messages.Messa
 		quantityStr = " (x" + itoa(int(item.Quantity)) + ")"
 	}
 	game.SendMessage() <- message.Reply("You pick up " + item.Name + quantityStr + ".")
+	if inv := messages.NewInventoryUpdateMessage(message); inv != nil {
+		game.SendMessage() <- inv
+	}
 
 	return true
 }

@@ -1,0 +1,1200 @@
+{
+  "dialogs": [
+    {
+      "id": "ab0658ed-5591-4822-9e07-c182b2008afa",
+      "name": "Oldtown Guard 1",
+      "nodeId": "d-oldtownguard-main",
+      "text": "Hi stranger, how can i help you?",
+      "alternateTexts": [
+        "Good day to you, what do you want?"
+      ],
+      "options": [
+        {
+          "nodeId": "ask_inn",
+          "text": "Where is the next Inn? I need a beer!",
+          "answer": {
+            "nodeId": "answer_griphon",
+            "text": "You can reach the Old Feisty Griphon Inn directly from Oldtowns main street! You cant miss it ",
+            "created": "0001-01-01T00:00:00Z"
+          },
+          "created": "0001-01-01T00:00:00Z"
+        },
+        {
+          "nodeId": "merchant",
+          "text": "I need restock, where can i find the local merchant?",
+          "answer": {
+            "nodeId": "a_market_merchant",
+            "text": "You can find the next merchant right here on the market",
+            "options": [
+              {
+                "nodeId": "d-oldtownguard-main",
+                "text": "New option",
+                "created": "0001-01-01T00:00:00Z"
+              }
+            ],
+            "created": "0001-01-01T00:00:00Z"
+          },
+          "created": "0001-01-01T00:00:00Z"
+        },
+        {
+          "nodeId": "mayor",
+          "text": "What you can tell me about the Mayor?",
+          "answer": {
+            "nodeId": "answer_1768868361649",
+            "text": "What do you want to know?",
+            "options": [
+              {
+                "nodeId": "option_1768868373460",
+                "text": "How long has he been mayor in this town?",
+                "answer": {
+                  "nodeId": "A_1738324",
+                  "text": "Not for long to be honest he is rather new in town",
+                  "options": [
+                    {
+                      "nodeId": "d-oldtownguard-main",
+                      "text": "New option",
+                      "created": "0001-01-01T00:00:00Z"
+                    }
+                  ],
+                  "is_dialog_exit": false,
+                  "created": "0001-01-01T00:00:00Z"
+                },
+                "created": "0001-01-01T00:00:00Z"
+              }
+            ],
+            "created": "0001-01-01T00:00:00Z"
+          },
+          "created": "0001-01-01T00:00:00Z"
+        },
+        {
+          "nodeId": "exit",
+          "text": "Thanks that is all for now",
+          "is_dialog_exit": true,
+          "created": "0001-01-01T00:00:00Z"
+        }
+      ],
+      "created": "2026-01-20T01:05:52.614294479+01:00"
+    }
+  ],
+  "items": [
+    {
+      "id": "650e9871-a63f-49cc-9606-4c77c2295f50",
+      "detail": "",
+      "isTemplate": false,
+      "name": "Some new item",
+      "description": "",
+      "type": "",
+      "subType": "",
+      "slot": "inventory",
+      "quality": "normal",
+      "level": 1,
+      "tags": null,
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": null
+    },
+    {
+      "id": "4deb79c1-a13c-4f97-857a-7d1d142645bb",
+      "detail": "",
+      "isTemplate": false,
+      "name": "Another random item",
+      "description": "asdasd",
+      "type": "",
+      "subType": "",
+      "slot": "inventory",
+      "quality": "normal",
+      "level": 1,
+      "tags": null,
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": null
+    },
+    {
+      "id": "4471c54f-0497-466d-b948-3f8003fca1d2",
+      "detail": "shiny",
+      "isTemplate": false,
+      "name": "Gold",
+      "description": "10 ounces of gold",
+      "type": "currency",
+      "subType": "",
+      "slot": "purse",
+      "quality": "normal",
+      "level": 1,
+      "tags": null,
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": null
+    },
+    {
+      "id": "sword-001",
+      "detail": "nothing special about it",
+      "isTemplate": true,
+      "name": "Rusty Edge",
+      "description": "a very rusty edge",
+      "type": "weapon",
+      "subType": "sword",
+      "slot": "main_hand",
+      "quality": "rare",
+      "level": 3,
+      "properties": {
+        "damageType": "physical",
+        "maxDamage": 5,
+        "merchantPrice": 1,
+        "minDamage": 3,
+        "range": 1.2,
+        "resellPrice": 2
+      },
+      "attributes": {
+        "dexterity": "3",
+        "intelligence": "3",
+        "stamina": "7",
+        "strength": "2"
+      },
+      "tags": null,
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": null
+    },
+    {
+      "id": "962aa25d-6d93-4456-89ac-7aa83e6f1fc9",
+      "detail": "It glows",
+      "isTemplate": true,
+      "name": "Two-Handed Blade of the Fallen",
+      "description": "Once wielded by a magic tribe of fallen umbras",
+      "type": "weapon",
+      "subType": "sword",
+      "slot": "main_hand",
+      "quality": "legendary",
+      "level": 15,
+      "attributes": {
+        "strength": "12"
+      },
+      "tags": null,
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": null
+    },
+    {
+      "id": "378f4e5b-b803-451a-9a7d-de5d3be79645",
+      "detail": "It stinks",
+      "isTemplate": true,
+      "name": "Stinky Cheese",
+      "description": "A stinky piece of cheese",
+      "type": "consumable",
+      "subType": "",
+      "slot": "inventory",
+      "quality": "normal",
+      "level": 1,
+      "attributes": {
+        "healthRestore": "10"
+      },
+      "stackable": true,
+      "quantity": 1,
+      "maxStack": 20,
+      "consumable": true,
+      "tags": null,
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": null
+    },
+    {
+      "id": "00014f49-1d09-4bde-8e53-6e316f7e5702",
+      "detail": "Its shiny and looks massive and strong",
+      "isTemplate": true,
+      "name": "Shield of Relentless",
+      "description": "The Shield of Relentless, defender of a thousand battles",
+      "type": "armor",
+      "subType": "shield",
+      "slot": "off_hand",
+      "quality": "legendary",
+      "level": 30,
+      "tags": null,
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": null
+    },
+    {
+      "id": "9fa8fac3-11fe-405b-8b1d-c194ccc2e5b1",
+      "detail": "Look all metal and numb",
+      "isTemplate": true,
+      "name": "Simple Chain Mail",
+      "description": "A simple chain mail",
+      "type": "armor",
+      "subType": "",
+      "slot": "chest",
+      "quality": "magic",
+      "level": 10,
+      "tags": null,
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": null
+    },
+    {
+      "id": "8e58397e-66f0-4c64-90a5-f0a224791845",
+      "detail": "",
+      "isTemplate": true,
+      "name": "Another item",
+      "description": "test test",
+      "type": "collectible",
+      "subType": "spear",
+      "slot": "inventory",
+      "quality": "magic",
+      "level": 1,
+      "tags": null,
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": null
+    },
+    {
+      "id": "3a0ac24d-e625-4f6f-a15d-b4ce4229d9bf",
+      "detail": "",
+      "isTemplate": true,
+      "name": "Rusty Sword",
+      "description": "A worn iron sword, chipped but serviceable.",
+      "type": "weapon",
+      "subType": "sword",
+      "slot": "main_hand",
+      "quality": "normal",
+      "level": 1,
+      "attributes": {
+        "attackSpeed": 1.2,
+        "damage": 5
+      },
+      "tags": null,
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": null
+    },
+    {
+      "id": "9f82de27-a3b6-430d-a2ba-e3d66ca8cae3",
+      "detail": "",
+      "isTemplate": true,
+      "name": "Worn Dagger",
+      "description": "A slim blade favored by those who strike from shadows.",
+      "type": "weapon",
+      "subType": "dagger",
+      "slot": "main_hand",
+      "quality": "normal",
+      "level": 1,
+      "attributes": {
+        "attackSpeed": 1.8,
+        "critChance": 5,
+        "damage": 3
+      },
+      "tags": null,
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": null
+    },
+    {
+      "id": "e3e19880-1433-4704-961c-790afd60149a",
+      "detail": "",
+      "isTemplate": true,
+      "name": "Apprentice Staff",
+      "description": "A simple wooden staff imbued with faint magical energy.",
+      "type": "weapon",
+      "subType": "staff",
+      "slot": "main_hand",
+      "quality": "normal",
+      "level": 1,
+      "attributes": {
+        "attackSpeed": 1,
+        "damage": 2,
+        "spellPower": 5
+      },
+      "tags": null,
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": null
+    },
+    {
+      "id": "027308da-05be-4772-866a-5c8afa201e64",
+      "detail": "",
+      "isTemplate": true,
+      "name": "Simple Mace",
+      "description": "A sturdy mace blessed by a minor shrine.",
+      "type": "weapon",
+      "subType": "mace",
+      "slot": "main_hand",
+      "quality": "normal",
+      "level": 1,
+      "attributes": {
+        "attackSpeed": 1.1,
+        "damage": 4,
+        "holyDamage": 2
+      },
+      "tags": null,
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": null
+    },
+    {
+      "id": "508e7992-3e00-4038-ad18-453051b16de4",
+      "detail": "",
+      "isTemplate": true,
+      "name": "Short Bow",
+      "description": "A compact hunting bow, accurate at medium range.",
+      "type": "weapon",
+      "subType": "bow",
+      "slot": "main_hand",
+      "quality": "normal",
+      "level": 1,
+      "attributes": {
+        "attackSpeed": 1.4,
+        "damage": 4,
+        "range": 30
+      },
+      "tags": null,
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": null
+    },
+    {
+      "id": "37dbb5f6-143d-4b57-aed6-4dc20a8ca9f6",
+      "detail": "",
+      "isTemplate": true,
+      "name": "Wooden Staff",
+      "description": "A gnarled branch shaped by nature's hand, thrumming with primal energy.",
+      "type": "weapon",
+      "subType": "staff",
+      "slot": "main_hand",
+      "quality": "normal",
+      "level": 1,
+      "attributes": {
+        "attackSpeed": 1,
+        "damage": 2,
+        "naturePower": 5
+      },
+      "tags": null,
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": null
+    },
+    {
+      "id": "40a3026d-018e-4476-b09a-56da49817361",
+      "detail": "",
+      "isTemplate": true,
+      "name": "Leather Armor",
+      "description": "Simple tanned leather offering basic protection.",
+      "type": "armor",
+      "subType": "chest",
+      "slot": "chest",
+      "quality": "normal",
+      "level": 1,
+      "attributes": {
+        "agility": 1,
+        "armor": 8
+      },
+      "tags": null,
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": null
+    },
+    {
+      "id": "dee89251-5f92-4bc2-a348-6dc4ee4e1533",
+      "detail": "",
+      "isTemplate": true,
+      "name": "Cloth Robe",
+      "description": "A plain robe favored by scholars and spellcasters.",
+      "type": "armor",
+      "subType": "chest",
+      "slot": "chest",
+      "quality": "normal",
+      "level": 1,
+      "attributes": {
+        "armor": 3,
+        "mana": 10,
+        "spellPower": 2
+      },
+      "tags": null,
+      "created": "0001-01-01T00:00:00Z",
+      "Meta": null
+    },
+    {
+      "id": "b5156d8e-08c7-4979-b229-c856bba7b7c3",
+      "detail": "nothing special about it",
+      "isTemplate": false,
+      "templateId": "sword-001",
+      "instanceSuffix": "8307e9eb",
+      "name": "Rusty Edge",
+      "description": "a very rusty edge",
+      "type": "weapon",
+      "subType": "sword",
+      "slot": "main_hand",
+      "quality": "rare",
+      "level": 3,
+      "properties": {
+        "damageType": "physical",
+        "maxDamage": 5,
+        "merchantPrice": 1,
+        "minDamage": 3,
+        "range": 1.2,
+        "resellPrice": 2
+      },
+      "attributes": {
+        "dexterity": "3",
+        "intelligence": "3",
+        "stamina": "7",
+        "strength": "2"
+      },
+      "tags": [],
+      "created": "2026-01-22T23:39:49.087165115+01:00",
+      "Meta": null
+    },
+    {
+      "id": "c78a0532-741a-4f78-92b6-786486b8dc82",
+      "detail": "It stinks",
+      "isTemplate": false,
+      "templateId": "378f4e5b-b803-451a-9a7d-de5d3be79645",
+      "instanceSuffix": "ca88d7bc",
+      "name": "Stinky Cheese",
+      "description": "A stinky piece of cheese",
+      "type": "consumable",
+      "subType": "",
+      "slot": "inventory",
+      "quality": "normal",
+      "level": 1,
+      "tags": [],
+      "created": "2026-01-22T23:45:50.052208944+01:00",
+      "Meta": null
+    },
+    {
+      "id": "8f1ad7e4-2074-4afc-b859-59dd259d8743",
+      "detail": "nothing special about it",
+      "isTemplate": false,
+      "templateId": "sword-001",
+      "instanceSuffix": "93789920",
+      "name": "Rusty Edge",
+      "description": "a very rusty edge",
+      "type": "weapon",
+      "subType": "sword",
+      "slot": "main_hand",
+      "quality": "rare",
+      "level": 3,
+      "properties": {
+        "damageType": "physical",
+        "maxDamage": 5,
+        "merchantPrice": 1,
+        "minDamage": 3,
+        "range": 1.2,
+        "resellPrice": 2
+      },
+      "attributes": {
+        "dexterity": "3",
+        "intelligence": "3",
+        "stamina": "7",
+        "strength": "2"
+      },
+      "tags": [],
+      "created": "2026-01-23T19:55:41.060080696+01:00",
+      "Meta": null
+    },
+    {
+      "id": "e8b302c0-870f-46fa-8877-30455bde1ed2",
+      "detail": "It stinks",
+      "isTemplate": false,
+      "templateId": "378f4e5b-b803-451a-9a7d-de5d3be79645",
+      "instanceSuffix": "9ad34d24",
+      "name": "Stinky Cheese",
+      "description": "A stinky piece of cheese",
+      "type": "consumable",
+      "subType": "",
+      "slot": "inventory",
+      "quality": "normal",
+      "level": 1,
+      "tags": [],
+      "created": "2026-01-23T19:55:46.171505977+01:00",
+      "Meta": null
+    },
+    {
+      "id": "e0b911b9-089d-488b-aac1-c131e2902006",
+      "detail": "nothing special about it",
+      "isTemplate": false,
+      "templateId": "sword-001",
+      "instanceSuffix": "d6cd8e40",
+      "name": "Rusty Edge",
+      "description": "a very rusty edge",
+      "type": "weapon",
+      "subType": "sword",
+      "slot": "main_hand",
+      "quality": "rare",
+      "level": 3,
+      "properties": {
+        "damageType": "physical",
+        "maxDamage": 5,
+        "merchantPrice": 1,
+        "minDamage": 3,
+        "range": 1.2,
+        "resellPrice": 2
+      },
+      "attributes": {
+        "dexterity": "3",
+        "intelligence": "3",
+        "stamina": "7",
+        "strength": "2"
+      },
+      "tags": [],
+      "created": "2026-01-23T19:56:28.986249844+01:00",
+      "Meta": null
+    },
+    {
+      "id": "a2c7f31b-cdb5-41aa-a40f-0774c4c1ddd4",
+      "detail": "It stinks",
+      "isTemplate": false,
+      "templateId": "378f4e5b-b803-451a-9a7d-de5d3be79645",
+      "instanceSuffix": "29c4f1f0",
+      "name": "Stinky Cheese",
+      "description": "A stinky piece of cheese",
+      "type": "consumable",
+      "subType": "",
+      "slot": "inventory",
+      "quality": "normal",
+      "level": 1,
+      "tags": [],
+      "created": "2026-01-23T19:56:31.088896755+01:00",
+      "Meta": null
+    },
+    {
+      "id": "b6679b3c-ed4c-4ccf-887b-11eb0dfe62af",
+      "detail": "It stinks",
+      "isTemplate": false,
+      "templateId": "378f4e5b-b803-451a-9a7d-de5d3be79645",
+      "instanceSuffix": "0f5b1f17",
+      "name": "Stinky Cheese",
+      "description": "A stinky piece of cheese",
+      "type": "consumable",
+      "subType": "",
+      "slot": "inventory",
+      "quality": "normal",
+      "level": 1,
+      "attributes": {
+        "healthRestore": "10"
+      },
+      "tags": [],
+      "created": "2026-01-23T22:17:36.068344996+01:00",
+      "Meta": null
+    },
+    {
+      "id": "3447b14a-323f-4a05-810a-5e976fc2578f",
+      "detail": "It stinks",
+      "isTemplate": false,
+      "templateId": "378f4e5b-b803-451a-9a7d-de5d3be79645",
+      "instanceSuffix": "cca7a83e",
+      "name": "Stinky Cheese",
+      "description": "A stinky piece of cheese",
+      "type": "consumable",
+      "subType": "",
+      "slot": "inventory",
+      "quality": "normal",
+      "level": 1,
+      "attributes": {
+        "healthRestore": "10"
+      },
+      "tags": [],
+      "created": "2026-01-23T22:17:41.034719713+01:00",
+      "Meta": null
+    },
+    {
+      "id": "c3b9c98e-2360-49a8-ae92-6408f5831e1d",
+      "detail": "It stinks",
+      "isTemplate": false,
+      "templateId": "378f4e5b-b803-451a-9a7d-de5d3be79645",
+      "instanceSuffix": "7f992eae",
+      "name": "Stinky Cheese",
+      "description": "A stinky piece of cheese",
+      "type": "consumable",
+      "subType": "",
+      "slot": "inventory",
+      "quality": "normal",
+      "level": 1,
+      "attributes": {
+        "healthRestore": "10"
+      },
+      "stackable": true,
+      "quantity": 1,
+      "maxStack": 20,
+      "consumable": true,
+      "tags": [],
+      "created": "2026-01-23T22:37:02.979951576+01:00",
+      "Meta": null
+    },
+    {
+      "id": "7f6d7ab7-8ce9-4e76-b802-89fac904065f",
+      "detail": "It stinks",
+      "isTemplate": false,
+      "templateId": "378f4e5b-b803-451a-9a7d-de5d3be79645",
+      "instanceSuffix": "5210913e",
+      "name": "Stinky Cheese",
+      "description": "A stinky piece of cheese",
+      "type": "consumable",
+      "subType": "",
+      "slot": "inventory",
+      "quality": "normal",
+      "level": 1,
+      "attributes": {
+        "healthRestore": "10"
+      },
+      "stackable": true,
+      "quantity": 1,
+      "maxStack": 20,
+      "consumable": true,
+      "tags": [],
+      "created": "2026-01-23T22:37:06.63552914+01:00",
+      "Meta": null
+    },
+    {
+      "id": "9bc4d3f7-9824-40ed-bcc1-a22bee0c6999",
+      "detail": "It stinks",
+      "isTemplate": false,
+      "templateId": "378f4e5b-b803-451a-9a7d-de5d3be79645",
+      "instanceSuffix": "024d1aaa",
+      "name": "Stinky Cheese",
+      "description": "A stinky piece of cheese",
+      "type": "consumable",
+      "subType": "",
+      "slot": "inventory",
+      "quality": "normal",
+      "level": 1,
+      "attributes": {
+        "healthRestore": "10"
+      },
+      "stackable": true,
+      "quantity": 1,
+      "maxStack": 20,
+      "consumable": true,
+      "tags": [],
+      "created": "2026-01-23T22:37:43.410308093+01:00",
+      "Meta": null
+    }
+  ],
+  "lootTables": [],
+  "npcs": [
+    {
+      "id": "6cdea5a6-f859-411b-b937-281c0c196037",
+      "name": "Rat",
+      "description": "A simple grey brownish rat",
+      "race": {
+        "id": "beast",
+        "name": "Beast",
+        "description": "Wild creatures",
+        "heritage": ""
+      },
+      "class": {
+        "id": "commoner",
+        "name": "Commoner",
+        "description": "Simple folk",
+        "armorType": "",
+        "combatType": ""
+      },
+      "currentHitPoints": 10,
+      "maxHitPoints": 10,
+      "level": 1,
+      "isTemplate": true,
+      "isDead": false,
+      "deathTime": "0001-01-01T00:00:00Z",
+      "state": "",
+      "inCombat": false,
+      "enemyTrait": {
+        "creatureType": "beast",
+        "combatStyle": "melee",
+        "difficulty": "easy",
+        "attackPower": 2,
+        "defense": 1,
+        "attackSpeed": 0,
+        "aggroRadius": 0,
+        "aggroOnSight": false,
+        "callForHelp": false,
+        "fleeThreshold": 0,
+        "xpReward": 10,
+        "goldDrop": {
+          "min": 0,
+          "max": 0
+        }
+      },
+      "created": "2026-01-21T22:10:39.183118272+01:00",
+      "updated": "0001-01-01T00:00:00Z"
+    },
+    {
+      "id": "d73d5b08-0a58-40f3-9109-c0db71ae9189",
+      "name": "Oldtown Guard",
+      "description": "The guard of oldtown",
+      "race": {
+        "id": "human",
+        "name": "Human",
+        "description": "The common race",
+        "heritage": ""
+      },
+      "class": {
+        "id": "commoner",
+        "name": "Commoner",
+        "description": "Simple folk",
+        "armorType": "",
+        "combatType": ""
+      },
+      "currentHitPoints": 10,
+      "maxHitPoints": 10,
+      "level": 1,
+      "isTemplate": false,
+      "isDead": false,
+      "deathTime": "0001-01-01T00:00:00Z",
+      "state": "",
+      "inCombat": false,
+      "dialogID": "ab0658ed-5591-4822-9e07-c182b2008afa",
+      "created": "2026-01-23T00:16:58.589954458+01:00",
+      "updated": "0001-01-01T00:00:00Z"
+    }
+  ],
+  "rooms": [
+    {
+      "id": "5ecefce71e5554d53c7941a2",
+      "detail": "",
+      "name": "Entrance to the Catacomb",
+      "description": "You reach the entrance of an old catacomb. You still wonder how you got here in the first place. The heavy wooden door is wide open and you can still hear noises from inside.\n\nA rusty old shield lies on the ground.",
+      "roomType": "entrance",
+      "area": "catacombs",
+      "areaType": "dungeon",
+      "tags": null,
+      "actions": null,
+      "exits": [
+        {
+          "name": "south",
+          "description": "Follow the door to the right",
+          "target": "5ed04cffac165280055c018a",
+          "params": null
+        }
+      ],
+      "items": null,
+      "characters": [],
+      "npcs": null,
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "meta": {},
+      "canBind": true
+    },
+    {
+      "id": "5ed04cffac165280055c018a",
+      "detail": "You look closer to all sides of the room. After a thorough investigation you can see that parts of a wall are made up of loose rocks. You might be able to [move] these rocks.\n",
+      "name": "Pathway into Darkness",
+      "description": "As you step through the catacomb entrance you stand in a narrow passage that only leads north. The air smells moldy and the walls are wet and grown over. You see plenty of rocks on both sides of the wall.",
+      "roomType": "path",
+      "area": "catacombs",
+      "areaType": "dungeon",
+      "tags": null,
+      "actions": [
+        {
+          "name": "move rocks",
+          "description": "{{characterName}} trys to move one of the medium sized rocks. Parts of the wall start to crumble and a [hidden path] opens up.",
+          "type": "response",
+          "params": null
+        }
+      ],
+      "exits": [
+        {
+          "name": "west",
+          "description": "Follow the door to the left",
+          "target": "5ed04fb7ac165280055c018b",
+          "params": null
+        },
+        {
+          "name": "hidden path",
+          "description": "You follow the hidden path on the east wall",
+          "hidden": true,
+          "target": "catacombs-secret-chamber",
+          "params": null
+        }
+      ],
+      "items": null,
+      "characters": [],
+      "npcs": null,
+      "coords": {
+        "x": 0,
+        "y": -1,
+        "z": 0
+      },
+      "meta": {},
+      "canBind": true
+    },
+    {
+      "id": "5ed04fb7ac165280055c018b",
+      "detail": "You look closer to all sides of the room.\n",
+      "name": "Chamber of Sorrows",
+      "description": "You are entering a dark muddy room...\nOn the walls you can see clear signs of past bloodshed. Something bad happend in here, something really bad. You ask yourself, where do you go from here?\n",
+      "roomType": "chamber",
+      "area": "catacombs",
+      "areaType": "dungeon",
+      "tags": null,
+      "actions": [
+        {
+          "name": "move rocks",
+          "description": "You try to move one of the medium sized rocks. Parts of the wall start to crumble and a hidden path opens up.",
+          "params": null
+        }
+      ],
+      "exits": [
+        {
+          "name": "south",
+          "description": "leave the catacombs",
+          "target": "oldtown-entrance",
+          "params": null
+        },
+        {
+          "name": "east",
+          "description": "follow the path east",
+          "target": "5ed04cffac165280055c018a",
+          "params": null
+        }
+      ],
+      "items": null,
+      "characters": [],
+      "npcs": null,
+      "coords": {
+        "x": -1,
+        "y": -1,
+        "z": 0
+      },
+      "meta": {},
+      "canBind": false
+    },
+    {
+      "id": "oldtown-entrance",
+      "detail": "",
+      "name": "Entrance to Oldtown",
+      "description": "You reach the gates of Oldtown. A long forgotten village of fishersman and sword craftsmen.",
+      "roomType": "gate",
+      "area": "oldtown",
+      "areaType": "city",
+      "tags": null,
+      "actions": null,
+      "exits": [
+        {
+          "name": "west",
+          "description": "Enter Oldtown",
+          "target": "oldtown-mainstreet",
+          "params": null
+        },
+        {
+          "name": "north",
+          "description": "Head to the catacombs",
+          "target": "5ed04fb7ac165280055c018b",
+          "params": null
+        },
+        {
+          "name": "south",
+          "target": "8632af0c-0356-4e59-8624-9b874472ba20",
+          "params": null
+        }
+      ],
+      "items": null,
+      "characters": [],
+      "npcs": null,
+      "coords": {
+        "x": -1,
+        "y": 0,
+        "z": 0
+      },
+      "meta": {},
+      "canBind": false
+    },
+    {
+      "id": "oldtown-mainstreet",
+      "detail": "You can see shops on all sides and even wandering merchants. Watch out for the thieve kids as you might lose a coin or two when you encounter them.\n\nThere is a well in the center where you can [drink] from.   ",
+      "name": "The main street of old town",
+      "description": "As you pass through the gates you find yourself on a very busy street. The main street of old town leading up in the distance to the castle.\n",
+      "roomType": "street",
+      "area": "oldtown",
+      "areaType": "city",
+      "tags": null,
+      "actions": [
+        {
+          "name": "drink",
+          "description": "You lean forward to grab the bucket and take a deep sip out of the fresh water. It tastes just like water.",
+          "response": "-",
+          "type": "response",
+          "params": null
+        }
+      ],
+      "exits": [
+        {
+          "name": "east",
+          "description": "Back to the entrance",
+          "target": "oldtown-entrance",
+          "params": null
+        },
+        {
+          "name": "griphon",
+          "description": "Enter the Old Feisty Griphon Inn",
+          "target": "oldtown-feisty-griphon",
+          "params": null
+        },
+        {
+          "name": "smith",
+          "description": "Enter the Weaponsmith",
+          "target": "oldtown-weaponsmith",
+          "params": null
+        }
+      ],
+      "items": [],
+      "characters": [
+        "a623d128-41c8-48e2-a612-9307be3c1c56",
+        "67a02931-92da-4350-be2f-be5b63779886",
+        "fa4f401e-730b-43ec-8d3e-2bd8f542082b",
+        "d010b5b0-890a-4da5-a8f9-bb7c8b5a1190",
+        "82fd1e20-b095-4ae2-9191-4422b4b47996",
+        "a4fabb29-9bd7-4131-9b2c-23dea0de1141"
+      ],
+      "npcs": [
+        "d73d5b08-0a58-40f3-9109-c0db71ae9189"
+      ],
+      "coords": {
+        "x": -2,
+        "y": 0,
+        "z": 0
+      },
+      "meta": {},
+      "canBind": false
+    },
+    {
+      "id": "oldtown-feisty-griphon",
+      "detail": "You can see three rows of tables with chairs on both sides each\n\nTry to [smell]",
+      "name": "Old Feisty Griphon",
+      "description": "As you enter the pub. ...\n\nyou can feel the alcohol in the air - as you breath your lungs fill with stink of rum and beer.",
+      "roomType": "inn",
+      "area": "oldtown",
+      "areaType": "city",
+      "tags": null,
+      "onEnterScriptID": "2837921c-5907-49f6-9db6-42296b68ef2d",
+      "actions": [
+        {
+          "name": "smell",
+          "description": "You smell something strange but you cant really make out what it is",
+          "type": "response",
+          "params": null
+        }
+      ],
+      "exits": [
+        {
+          "name": "leave",
+          "description": "Leave the Inn",
+          "target": "oldtown-mainstreet",
+          "params": null
+        },
+        {
+          "name": "down",
+          "description": "To the Basement",
+          "target": "oldtown-griphon-cellar",
+          "params": null
+        }
+      ],
+      "items": null,
+      "characters": [],
+      "npcs": null,
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "meta": {},
+      "canBind": true
+    },
+    {
+      "id": "oldtown-weaponsmith",
+      "detail": "",
+      "name": "The Weasponsmith",
+      "description": "As you enter the smith you can see many gloriful swords and shields hanging on the wall.",
+      "roomType": "merchant",
+      "area": "oldtown",
+      "areaType": "city",
+      "tags": null,
+      "actions": null,
+      "exits": [
+        {
+          "name": "leave",
+          "description": "Leave the Weaponsmith",
+          "target": "oldtown-mainstreet",
+          "params": null
+        },
+        {
+          "name": "up",
+          "description": "Go upstairs",
+          "target": "weaponsmith-upstairs",
+          "params": null
+        }
+      ],
+      "items": null,
+      "characters": [],
+      "npcs": null,
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "meta": {
+        "background": "oldtown-smith"
+      },
+      "canBind": false
+    },
+    {
+      "id": "catacombs-secret-chamber",
+      "detail": "",
+      "name": "Secret chamber",
+      "description": "As you step through the newly created pathway you find yourself in a secret chamber",
+      "roomType": "chamber",
+      "area": "catacombs",
+      "areaType": "dungeon",
+      "tags": null,
+      "actions": null,
+      "exits": [
+        {
+          "name": "leave",
+          "description": "You get back to the pathway",
+          "target": "5ed04cffac165280055c018a",
+          "params": null
+        }
+      ],
+      "items": null,
+      "characters": [],
+      "npcs": null,
+      "coords": {
+        "x": 0,
+        "y": -2,
+        "z": 0
+      },
+      "meta": {},
+      "canBind": false
+    },
+    {
+      "id": "weaponsmith-upstairs",
+      "detail": "",
+      "name": "Weaponsmith Upstairs",
+      "description": "As you climb the stairs you reach the sleeping quarters of the weaponsmith",
+      "roomType": "sleeping-room",
+      "area": "oldtown",
+      "areaType": "city",
+      "tags": null,
+      "actions": null,
+      "exits": [
+        {
+          "name": "down",
+          "description": "Go Downstairs",
+          "target": "oldtown-weaponsmith",
+          "params": null
+        }
+      ],
+      "items": [],
+      "characters": [],
+      "npcs": null,
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "meta": {},
+      "canBind": false
+    },
+    {
+      "id": "oldtown-griphon-cellar",
+      "detail": "",
+      "name": "Griphon Cellar",
+      "description": "As you take the steps downstairs you can smell all  the beer and wine flavors from centuries ...",
+      "roomType": "basement",
+      "area": "oldtown",
+      "areaType": "city",
+      "tags": null,
+      "actions": null,
+      "exits": [
+        {
+          "name": "up",
+          "description": "Back upstairs",
+          "target": "oldtown-feisty-griphon",
+          "params": null
+        }
+      ],
+      "items": [],
+      "characters": [],
+      "npcs": null,
+      "coords": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "meta": {},
+      "canBind": false
+    },
+    {
+      "id": "8632af0c-0356-4e59-8624-9b874472ba20",
+      "detail": "",
+      "name": "Oldtown wall",
+      "description": "You walk south until you are closer at the large towns wall around Oldtown. There seems to be some kind of path leading along the wall",
+      "roomType": "outdoor",
+      "area": "oldtown",
+      "areaType": "city",
+      "tags": null,
+      "actions": [],
+      "exits": [
+        {
+          "name": "north",
+          "target": "oldtown-entrance",
+          "params": null
+        },
+        {
+          "name": "south",
+          "target": "c6374dc5-2918-43f0-ba21-1e347ff90fdb",
+          "params": null
+        }
+      ],
+      "items": null,
+      "characters": [],
+      "npcs": null,
+      "coords": {
+        "x": -1,
+        "y": 1,
+        "z": 0
+      },
+      "meta": {
+        "background": "oldtown-wall"
+      },
+      "canBind": false
+    },
+    {
+      "id": "c6374dc5-2918-43f0-ba21-1e347ff90fdb",
+      "detail": "",
+      "name": "Thieves nest entrance",
+      "description": "As you walk alongside the wall you can spot a very strange looking hideout close by the woods. Footsteps are going into the direction of the trees",
+      "roomType": "",
+      "area": "oldtown",
+      "areaType": "city",
+      "tags": null,
+      "actions": [],
+      "exits": [
+        {
+          "name": "north",
+          "target": "8632af0c-0356-4e59-8624-9b874472ba20",
+          "params": null
+        }
+      ],
+      "items": null,
+      "characters": [],
+      "npcs": null,
+      "coords": {
+        "x": -1,
+        "y": 2,
+        "z": 0
+      },
+      "meta": {},
+      "canBind": false
+    }
+  ],
+  "scripts": [
+    {
+      "id": "be85dff8-a5cd-403f-b327-0a432407bf64",
+      "name": "Roll 2D6",
+      "description": "something",
+      "code": "return tales.rooms.get(\"oldtown-entrance\").name",
+      "type": "",
+      "language": "lua"
+    },
+    {
+      "id": "3d1361fd-bbf3-42e5-8e27-8ec9f05db464",
+      "name": "Announce to room",
+      "description": "something",
+      "code": "tales.game.msgToRoom(\"oldtown-entrance\", \"The air crackles with energy.\")\n",
+      "type": "",
+      "language": "lua"
+    },
+    {
+      "id": "2837921c-5907-49f6-9db6-42296b68ef2d",
+      "name": "Innkepper Welcome",
+      "description": "something",
+      "code": "local character = ctx.character\nif character then\n  tales.game.msgToCharacter(character.ID, \"The Innkeeper waves towards you.\")\nend",
+      "type": "",
+      "language": "lua"
+    }
+  ]
+}

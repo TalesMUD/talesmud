@@ -500,6 +500,7 @@
         <!-- Graph Area -->
         <div class="graph-area">
           {#if selectedDialog}
+            <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
             <svg
               bind:this={svgElement}
               class="graph-svg"

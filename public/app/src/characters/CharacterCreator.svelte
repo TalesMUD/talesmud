@@ -158,12 +158,12 @@
         <div class="label-caps">Details</div>
 
         <div class="space-y-1.5">
-          <label class="label-caps">Name</label>
-          <input class="input-base" bind:value={name} placeholder="e.g. Gandalf the White" />
+          <label class="label-caps" for="char-name">Name</label>
+          <input id="char-name" class="input-base" bind:value={name} placeholder="e.g. Gandalf the White" />
         </div>
         <div class="space-y-1.5">
-          <label class="label-caps">Description</label>
-          <input class="input-base" bind:value={description} placeholder="Short backstory or vibe…" />
+          <label class="label-caps" for="char-desc">Description</label>
+          <input id="char-desc" class="input-base" bind:value={description} placeholder="Short backstory or vibe…" />
         </div>
 
         <!-- Selected template preview card -->

@@ -20,6 +20,7 @@
   import { getUser, updateUser } from "./api/user.js";
   import { user } from "./stores.js";
   import { layoutStore } from "./game/layout/LayoutStore.js";
+  import { settingsStore } from "./game/SettingsStore.js";
 
   const {
     isLoading,
@@ -64,13 +65,22 @@
 <!-- Dropdown Structure -->
 <ul id="dropdown1" class="dropdown-content">
   <li>
+    <!-- svelte-ignore a11y-invalid-attribute -->
     <a href="#!" on:click="{() => layoutStore.enterEditMode()}">
       <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">dashboard_customize</i>
       Edit Layout
     </a>
   </li>
+  <li>
+    <!-- svelte-ignore a11y-invalid-attribute -->
+    <a href="#!" on:click="{() => settingsStore.openModal()}">
+      <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">settings</i>
+      Settings
+    </a>
+  </li>
   <li class="divider"></li>
   <li>
+    <!-- svelte-ignore a11y-invalid-attribute -->
     <a href="#!" on:click="{() => logout()}">
       <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">logout</i>
       Logout
@@ -82,6 +92,7 @@
   <li class="right-align">...</li>
 {:else if !$isAuthenticated}
   <li class="right-align">
+    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions -->
     <p on:click="{() => signup()}" class="btn-small userbutton green">Signup</p>
   </li>
   <li class="right-align">
@@ -92,6 +103,7 @@
 {/if}
 <li>
 
+  <!-- svelte-ignore a11y-invalid-attribute -->
   <a class="dropdown-trigger" href="#" data-target="dropdown1">
     <span class="valign-wrapper">
 

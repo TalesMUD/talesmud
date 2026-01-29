@@ -1,0 +1,95 @@
+# TalesMUD Content DTOs
+# API interface definitions for import/export
+
+version: "1.0"
+description: |
+  YAML specifications for game content that can be exported and imported
+  to recreate a fresh server. These define REST API DTO structures.
+
+  All entities are templates/definitions - no runtime state included.
+
+usage:
+  export: GET /api/export -> returns all content as JSON
+  import: POST /api/import -> accepts content bundle
+
+models:
+  - name: RoomDTO
+    file: room.yaml
+    endpoint: /api/rooms
+    description: World locations with exits and actions
+
+  - name: ItemDTO
+    file: item.yaml
+    endpoint: /api/items
+    description: Item templates (weapons, armor, consumables)
+
+  - name: NPCDTO
+    file: npc.yaml
+    endpoint: /api/npcs
+    description: NPC templates with enemy/merchant traits
+
+  - name: DialogDTO
+    file: dialog.yaml
+    endpoint: /api/dialogs
+    description: Dialog trees for conversations
+
+  - name: ScriptDTO
+    file: script.yaml
+    endpoint: /api/scripts
+    description: Lua/JavaScript game scripts
+
+  - name: LootTableDTO
+    file: loot-table.yaml
+    endpoint: /api/loot-tables
+    description: Item drop configurations
+
+  - name: NPCSpawnerDTO
+    file: npc-spawner.yaml
+    endpoint: /api/npc-spawners
+    description: NPC spawn configurations
+
+  - name: CharacterTemplateDTO
+    file: character-template.yaml
+    endpoint: /api/character-templates
+    description: Starting character templates
+
+# Content bundle structure for full export/import
+ContentBundle:
+  fields:
+    version:
+      type: string
+      required: true
+    exportedAt:
+      type: datetime
+    rooms:
+      type: RoomDTO[]
+    items:
+      type: ItemDTO[]
+    npcs:
+      type: NPCDTO[]
+    dialogs:
+      type: DialogDTO[]
+    scripts:
+      type: ScriptDTO[]
+    lootTables:
+      type: LootTableDTO[]
+    npcSpawners:
+      type: NPCSpawnerDTO[]
+    characterTemplates:
+      type: CharacterTemplateDTO[]
+
+# Shared enums
+enums:
+  ItemType: [currency, consumable, armor, weapon, collectible, quest, crafting_material]
+  ItemSlot: [inventory, head, chest, legs, boots, neck, ring1, ring2, hands, main_hand, off_hand]
+  ItemQuality: [normal, magic, rare, legendary, mythic]
+  RoomActionType: [response, room_response, script]
+  RoomExitType: [normal, direction, teleport]
+  ScriptType: [none, custom, item, room, quest, npc, event]
+  ScriptLanguage: [lua, javascript]
+  ArmorType: [Cloth, Leather, Plate]
+  CombatType: [Melee, Ranged, Magic]
+  Attribute: [STR, DEX, CON, INT, WIS, CHA]
+  CreatureType: [beast, humanoid, undead, elemental, construct, demon, dragon, aberration]
+  CombatStyle: [melee, ranged, magic, swarm, brute, agile]
+  Difficulty: [trivial, easy, normal, hard, boss]

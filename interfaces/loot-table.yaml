@@ -1,0 +1,60 @@
+# LootTable DTO
+# Exportable loot drop definition
+
+name: LootTableDTO
+endpoint: /api/loot-tables
+
+fields:
+  id:
+    type: string
+    description: Unique identifier
+
+  name:
+    type: string
+    required: true
+
+  description:
+    type: string
+
+  goldMultiplier:
+    type: number
+    default: 1.0
+
+  dropBonus:
+    type: number
+    default: 0
+    description: Flat bonus to all drop chances
+
+  entries:
+    type: LootEntry[]
+
+# Nested types
+LootEntry:
+  fields:
+    itemTemplateID:
+      type: string
+      required: true
+
+    dropChance:
+      type: number
+      required: true
+      description: 0.0 to 1.0
+
+    minQuantity:
+      type: integer
+      default: 1
+
+    maxQuantity:
+      type: integer
+      default: 1
+
+    guaranteed:
+      type: boolean
+      default: false
+
+    minPlayerLevel:
+      type: integer
+      default: 0
+
+    requiredTags:
+      type: string[]

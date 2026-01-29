@@ -132,6 +132,12 @@
       });
     },
     badge: (element) => (element.race ? element.race.name : ""),
+    icon: (element) => {
+      if (!element.isTemplate) {
+        return { name: "star", color: "#f59e0b", title: "Unique NPC" };
+      }
+      return null;
+    },
   };
 
   const toggleEnemyTrait = () => {
@@ -241,24 +247,24 @@
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div class="space-y-1.5">
-        <label class="label-caps">Level</label>
-        <select class="input-base" bind:value={$store.selectedElement.level}>
+        <label class="label-caps" for="npc-level">Level</label>
+        <select id="npc-level" class="input-base" bind:value={$store.selectedElement.level}>
           {#each levels as lvl}
             <option value={lvl}>{lvl}</option>
           {/each}
         </select>
       </div>
       <div class="space-y-1.5">
-        <label class="label-caps">Race</label>
-        <select class="input-base" bind:value={selectedRaceId} on:change={onRaceChange}>
+        <label class="label-caps" for="npc-race">Race</label>
+        <select id="npc-race" class="input-base" bind:value={selectedRaceId} on:change={onRaceChange}>
           {#each races as race}
             <option value={race.id}>{race.name}</option>
           {/each}
         </select>
       </div>
       <div class="space-y-1.5">
-        <label class="label-caps">Class</label>
-        <select class="input-base" bind:value={selectedClassId} on:change={onClassChange}>
+        <label class="label-caps" for="npc-class">Class</label>
+        <select id="npc-class" class="input-base" bind:value={selectedClassId} on:change={onClassChange}>
           {#each classes as cls}
             <option value={cls.id}>{cls.name}</option>
           {/each}
@@ -268,8 +274,8 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="space-y-1.5">
-        <label class="label-caps">Dialog ID</label>
-        <select class="input-base" bind:value={$store.selectedElement.dialogID}>
+        <label class="label-caps" for="npc-dialog">Dialog ID</label>
+        <select id="npc-dialog" class="input-base" bind:value={$store.selectedElement.dialogID}>
           <option value="">None</option>
           {#if $dialogsValueHelp}
             {#each $dialogsValueHelp as dialog}
@@ -281,8 +287,8 @@
         </select>
       </div>
       <div class="space-y-1.5">
-        <label class="label-caps">Idle Dialog ID</label>
-        <select class="input-base" bind:value={$store.selectedElement.idleDialogID}>
+        <label class="label-caps" for="npc-idle-dialog">Idle Dialog ID</label>
+        <select id="npc-idle-dialog" class="input-base" bind:value={$store.selectedElement.idleDialogID}>
           <option value="">None</option>
           {#if $dialogsValueHelp}
             {#each $dialogsValueHelp as dialog}
@@ -297,14 +303,14 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="space-y-1.5">
-        <label class="label-caps">Current Room ID</label>
-        <input class="input-base" bind:value={$store.selectedElement.currentRoomID} />
+        <label class="label-caps" for="npc-room">Current Room ID</label>
+        <input id="npc-room" class="input-base" bind:value={$store.selectedElement.currentRoomID} />
       </div>
       <div class="space-y-1.5">
-        <label class="label-caps">Hit Points</label>
+        <label class="label-caps" for="npc-hp-current">Hit Points</label>
         <div class="grid grid-cols-2 gap-2">
-          <input class="input-base text-center" bind:value={$store.selectedElement.currentHitPoints} type="number" />
-          <input class="input-base text-center" bind:value={$store.selectedElement.maxHitPoints} type="number" />
+          <input id="npc-hp-current" class="input-base text-center" bind:value={$store.selectedElement.currentHitPoints} type="number" />
+          <input id="npc-hp-max" class="input-base text-center" bind:value={$store.selectedElement.maxHitPoints} type="number" />
         </div>
       </div>
     </div>
@@ -360,24 +366,24 @@
             </p>
             <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div class="space-y-1.5">
-                <label class="label-caps">Creature Type</label>
-                <select class="input-base text-xs" bind:value={$store.selectedElement.enemyTrait.creatureType}>
+                <label class="label-caps" for="enemy-creature-type">Creature Type</label>
+                <select id="enemy-creature-type" class="input-base text-xs" bind:value={$store.selectedElement.enemyTrait.creatureType}>
                   {#each creatureTypes as ct}
                     <option value={ct.id}>{ct.name}</option>
                   {/each}
                 </select>
               </div>
               <div class="space-y-1.5">
-                <label class="label-caps">Combat Style</label>
-                <select class="input-base text-xs" bind:value={$store.selectedElement.enemyTrait.combatStyle}>
+                <label class="label-caps" for="enemy-combat-style">Combat Style</label>
+                <select id="enemy-combat-style" class="input-base text-xs" bind:value={$store.selectedElement.enemyTrait.combatStyle}>
                   {#each combatStyles as cs}
                     <option value={cs.id}>{cs.name}</option>
                   {/each}
                 </select>
               </div>
               <div class="space-y-1.5">
-                <label class="label-caps">Difficulty</label>
-                <select class="input-base text-xs" bind:value={$store.selectedElement.enemyTrait.difficulty}>
+                <label class="label-caps" for="enemy-difficulty">Difficulty</label>
+                <select id="enemy-difficulty" class="input-base text-xs" bind:value={$store.selectedElement.enemyTrait.difficulty}>
                   {#each difficulties as d}
                     <option value={d.id}>{d.name}</option>
                   {/each}
@@ -387,16 +393,16 @@
 
             <div class="grid grid-cols-3 gap-4">
               <div class="space-y-1.5">
-                <label class="label-caps">Attack Power</label>
-                <input class="input-base text-xs text-center" type="number" bind:value={$store.selectedElement.enemyTrait.attackPower} />
+                <label class="label-caps" for="enemy-attack">Attack Power</label>
+                <input id="enemy-attack" class="input-base text-xs text-center" type="number" bind:value={$store.selectedElement.enemyTrait.attackPower} />
               </div>
               <div class="space-y-1.5">
-                <label class="label-caps">Defense</label>
-                <input class="input-base text-xs text-center" type="number" bind:value={$store.selectedElement.enemyTrait.defense} />
+                <label class="label-caps" for="enemy-defense">Defense</label>
+                <input id="enemy-defense" class="input-base text-xs text-center" type="number" bind:value={$store.selectedElement.enemyTrait.defense} />
               </div>
               <div class="space-y-1.5">
-                <label class="label-caps">XP Reward</label>
-                <input class="input-base text-xs text-center" type="number" bind:value={$store.selectedElement.enemyTrait.xpReward} />
+                <label class="label-caps" for="enemy-xp">XP Reward</label>
+                <input id="enemy-xp" class="input-base text-xs text-center" type="number" bind:value={$store.selectedElement.enemyTrait.xpReward} />
               </div>
             </div>
 
@@ -437,13 +443,13 @@
             </p>
             <div class="grid grid-cols-2 gap-4">
               <div class="space-y-1.5">
-                <label class="label-caps">Buy Price Modifier</label>
-                <input class="input-base text-xs text-center" type="number" step="0.1" min="0" bind:value={$store.selectedElement.merchantTrait.buyPriceModifier} />
+                <label class="label-caps" for="merchant-buy">Buy Price Modifier</label>
+                <input id="merchant-buy" class="input-base text-xs text-center" type="number" step="0.1" min="0" bind:value={$store.selectedElement.merchantTrait.buyPriceModifier} />
                 <p class="text-[9px] text-slate-500">Multiplier when NPC buys from player (0.5 = 50% of base price)</p>
               </div>
               <div class="space-y-1.5">
-                <label class="label-caps">Sell Price Modifier</label>
-                <input class="input-base text-xs text-center" type="number" step="0.1" min="0" bind:value={$store.selectedElement.merchantTrait.sellPriceModifier} />
+                <label class="label-caps" for="merchant-sell">Sell Price Modifier</label>
+                <input id="merchant-sell" class="input-base text-xs text-center" type="number" step="0.1" min="0" bind:value={$store.selectedElement.merchantTrait.sellPriceModifier} />
                 <p class="text-[9px] text-slate-500">Multiplier when NPC sells to player (1.0 = base price)</p>
               </div>
             </div>

@@ -247,6 +247,9 @@ func (command *BuyCommand) Execute(game def.GameCtrl, message *messages.Message)
 		msg = "You buy " + itemTemplate.Name + " for " + itoa64(totalPrice) + " gold."
 	}
 	game.SendMessage() <- message.Reply(msg)
+	if inv := messages.NewInventoryUpdateMessage(message); inv != nil {
+		game.SendMessage() <- inv
+	}
 
 	return true
 }
@@ -361,6 +364,9 @@ func (command *SellCommand) Execute(game def.GameCtrl, message *messages.Message
 		msg = "You sell " + item.Name + " for " + itoa64(totalPrice) + " gold."
 	}
 	game.SendMessage() <- message.Reply(msg)
+	if inv := messages.NewInventoryUpdateMessage(message); inv != nil {
+		game.SendMessage() <- inv
+	}
 
 	return true
 }

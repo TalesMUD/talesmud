@@ -103,6 +103,9 @@ func (command *UnequipCommand) Execute(game def.GameCtrl, message *messages.Mess
 	}
 
 	game.SendMessage() <- message.Reply("You unequip " + item.Name + ".")
+	if inv := messages.NewInventoryUpdateMessage(message); inv != nil {
+		game.SendMessage() <- inv
+	}
 	return true
 }
 

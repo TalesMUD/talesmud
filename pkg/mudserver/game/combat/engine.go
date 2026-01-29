@@ -562,30 +562,3 @@ func (e *Engine) GetNPCAIAction(instance *combat.CombatInstance, npcCombatant *c
 	return combat.CombatActionDefend, ""
 }
 
-// HandleTurnTimeout handles when a player's turn times out
-func (e *Engine) HandleTurnTimeout(instance *combat.CombatInstance) DefendResult {
-	current := instance.GetCurrentTurnCombatant()
-	if current == nil {
-		return DefendResult{Message: "No current combatant"}
-	}
-
-	current.ConsecutiveAFKs++
-	e.UpdateCombatant(instance, current)
-
-	// Log timeout
-	instance.AddLogEntry(combat.CombatLogEntry{
-		ActorID:   current.ID,
-		ActorName: current.Name,
-		Action:    combat.CombatActionTimeout,
-		Result:    "timeout",
-		Message:   fmt.Sprintf("%s's turn timed out. Auto-defending.", current.Name),
-	})
-
-	// Process as defend
-	return e.ProcessDefend(instance, current.ID)
-}
-
-// ShouldAutoFlee returns true if a player should be auto-fled due to AFK
-func (e *Engine) ShouldAutoFlee(combatant *combat.CombatantRef) bool {
-	return combatant.ConsecutiveAFKs >= e.Config.AFKAutoFleeAfterTurns
-}

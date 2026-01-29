@@ -1,0 +1,105 @@
+# CharacterTemplate DTO
+# Exportable character creation template
+
+name: CharacterTemplateDTO
+endpoint: /api/character-templates
+
+fields:
+  id:
+    type: string
+    description: Unique identifier
+
+  name:
+    type: string
+    required: true
+
+  description:
+    type: string
+
+  backstory:
+    type: string
+
+  originArea:
+    type: string
+    description: Starting area
+
+  archetype:
+    type: string
+    examples: [warrior, rogue, mage, ranger, hunter]
+
+  race:
+    type: Race
+    required: true
+
+  class:
+    type: Class
+    required: true
+
+  level:
+    type: integer
+    default: 1
+
+  maxHitPoints:
+    type: integer
+    required: true
+
+  attributes:
+    type: Attribute[]
+    required: true
+
+  startingItems:
+    type: StartingItem[]
+
+# Nested types
+Race:
+  fields:
+    id:
+      type: string
+      required: true
+    name:
+      type: string
+      required: true
+    description:
+      type: string
+    heritage:
+      type: string
+
+Class:
+  fields:
+    id:
+      type: string
+      required: true
+    name:
+      type: string
+      required: true
+    description:
+      type: string
+    armorType:
+      type: string
+      enum: [Cloth, Leather, Plate]
+    combatType:
+      type: string
+      enum: [Melee, Ranged, Magic]
+
+Attribute:
+  fields:
+    name:
+      type: string
+      required: true
+    short:
+      type: string
+      required: true
+      enum: [STR, DEX, CON, INT, WIS, CHA]
+    value:
+      type: integer
+      required: true
+
+StartingItem:
+  fields:
+    slot:
+      type: string
+      enum: [inventory, head, chest, legs, boots, neck, ring1, ring2, hands, main_hand, off_hand]
+      required: true
+    itemTemplateID:
+      type: string
+      required: true

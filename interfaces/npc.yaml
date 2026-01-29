@@ -1,0 +1,198 @@
+# NPC Template DTO
+# Exportable NPC definition (templates only, not instances)
+
+name: NPCDTO
+endpoint: /api/npcs
+
+fields:
+  id:
+    type: string
+    description: Unique identifier
+
+  name:
+    type: string
+    required: true
+
+  description:
+    type: string
+
+  level:
+    type: integer
+    default: 1
+
+  maxHitPoints:
+    type: integer
+    required: true
+
+  race:
+    type: Race
+
+  class:
+    type: Class
+
+  # Spawning
+  spawnRoomID:
+    type: string
+    description: Default spawn room
+
+  respawnTime:
+    type: string
+    description: Duration string (e.g., "30s", "5m")
+
+  wanderRadius:
+    type: integer
+    default: 0
+
+  patrolPath:
+    type: string[]
+    description: Room IDs for patrol route
+
+  # Dialog
+  dialogID:
+    type: string
+    description: Interactive dialog ID
+
+  idleDialogID:
+    type: string
+    description: Ambient dialog ID
+
+  idleDialogTimeout:
+    type: string
+    description: Duration before idle dialog
+
+  # Traits (embedded)
+  enemyTrait:
+    type: EnemyTrait
+
+  merchantTrait:
+    type: MerchantTrait
+
+# Nested types
+Race:
+  fields:
+    id:
+      type: string
+      required: true
+    name:
+      type: string
+      required: true
+    description:
+      type: string
+    heritage:
+      type: string
+
+Class:
+  fields:
+    id:
+      type: string
+      required: true
+    name:
+      type: string
+      required: true
+    description:
+      type: string
+    armorType:
+      type: string
+      enum: [Cloth, Leather, Plate]
+    combatType:
+      type: string
+      enum: [Melee, Ranged, Magic]
+
+EnemyTrait:
+  fields:
+    creatureType:
+      type: string
+      enum: [beast, humanoid, undead, elemental, construct, demon, dragon, aberration]
+    combatStyle:
+      type: string
+      enum: [melee, ranged, magic, swarm, brute, agile]
+    difficulty:
+      type: string
+      enum: [trivial, easy, normal, hard, boss]
+      default: normal
+    attackPower:
+      type: integer
+      default: 1
+    defense:
+      type: integer
+      default: 0
+    attackSpeed:
+      type: number
+      default: 1.0
+    aggroRadius:
+      type: integer
+      default: 0
+    aggroOnSight:
+      type: boolean
+      default: false
+    callForHelp:
+      type: boolean
+      default: false
+    fleeThreshold:
+      type: number
+      default: 0
+    xpReward:
+      type: integer
+      default: 0
+    goldDrop:
+      type: object
+      properties:
+        min: integer
+        max: integer
+    lootTableID:
+      type: string
+    guaranteedLoot:
+      type: string[]
+      description: Item template IDs
+    maxDrops:
+      type: integer
+      default: 0
+    onAggroScript:
+      type: string
+    onDeathScript:
+      type: string
+    onFleeScript:
+      type: string
+
+MerchantTrait:
+  fields:
+    merchantType:
+      type: string
+      examples: [general, blacksmith, alchemist, armorer]
+    buyMultiplier:
+      type: number
+      default: 1.0
+    sellMultiplier:
+      type: number
+      default: 1.0
+    restockMinutes:
+      type: integer
+      default: 0
+    acceptedTypes:
+      type: string[]
+    rejectedTags:
+      type: string[]
+    inventory:
+      type: MerchantItem[]
+
+MerchantItem:
+  fields:
+    itemTemplateID:
+      type: string
+      required: true
+    basePrice:
+      type: integer
+      default: 0
+    priceOverride:
+      type: integer
+      default: 0
+    quantity:
+      type: integer
+      default: -1
+      description: -1 = unlimited
+    maxQuantity:
+      type: integer
+      default: -1
+    requiredLevel:
+      type: integer
+      default: 0

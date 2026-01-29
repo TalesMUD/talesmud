@@ -115,5 +115,8 @@ func (command *EquipCommand) Execute(game def.GameCtrl, message *messages.Messag
 	}
 
 	game.SendMessage() <- message.Reply(msg.String())
+	if inv := messages.NewInventoryUpdateMessage(message); inv != nil {
+		game.SendMessage() <- inv
+	}
 	return true
 }

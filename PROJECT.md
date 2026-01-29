@@ -156,6 +156,10 @@ talesmud/
 | `scream` | - | Broadcast to room |
 | `shrug` | - | Emote action |
 | `help` | `h` | Show help |
+| `attack` | `a`, `hit` | Attack a target / switch combat target |
+| `defend` | `d`, `guard` | Queue defensive stance for next combat turn |
+| `flee` | `run`, `escape` | Queue flee attempt for next combat turn |
+| `status` | `cs`, `combat` | Show combat status |
 
 ## Current Development Status
 
@@ -194,10 +198,15 @@ The NPCs branch represents the latest development work, focusing on NPC systems 
 - Talk/speak command implementation
 - Frontend dialog UI
 
+4. **Auto-Attack Combat System**
+   - Automatic combat rounds (players and NPCs auto-attack each turn)
+   - Turn-order initiative system with auto-processing
+   - Players can queue special actions between auto-attacks: target switch, defend, flee
+   - Combat starts with `attack`/`kill` and proceeds automatically
+   - No turn timeouts or AFK mechanics needed
+
 #### Planned Features
 
-- Merchant trait trading system
-- Enemy trait combat system
 - NPC movement and patrol paths
 - Quest-giving NPCs
 

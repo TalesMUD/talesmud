@@ -220,6 +220,7 @@
   }
 </style>
 
+<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 <div class="panel-backdrop" on:click={handleBackdropClick}>
   <div class="panel">
     <div class="panel-header">
@@ -237,6 +238,7 @@
         <div class="category-header">{category.name}</div>
         <div class="widget-grid">
           {#each category.widgets as widget}
+            <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
             <div
               class="widget-card"
               class:disabled={!widget.canAdd}

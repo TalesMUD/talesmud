@@ -125,4 +125,16 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 		},
 	}
 
+	// Send initial inventory state to the client
+	game.SendMessage() <- &m.InventoryUpdateMessage{
+		MessageResponse: m.MessageResponse{
+			Audience:   m.MessageAudienceOrigin,
+			AudienceID: user.ID,
+			Type:       m.MessageTypeInventoryUpdate,
+		},
+		Inventory:     character.Inventory,
+		EquippedItems: character.EquippedItems,
+		Gold:          character.Gold,
+	}
+
 }

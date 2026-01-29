@@ -88,6 +88,7 @@
   $: displayId = formatId(node?.nodeId || node?.id);
 </script>
 
+<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
 <g
   class="dialog-node"
   class:selected
@@ -95,6 +96,7 @@
   class:is-exit={isExit}
   transform="translate({x}, {y})"
   on:click={handleClick}
+  on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleClick(e); }}
   role="button"
   tabindex="0"
 >
