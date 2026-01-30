@@ -8,6 +8,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/items"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
+	"github.com/talesmud/talesmud/pkg/entities/settings"
 	"github.com/talesmud/talesmud/pkg/scripts"
 )
 
@@ -191,4 +192,10 @@ type LootTablesRepository interface {
 	Update(id string, lootTable *items.LootTable) error
 	Delete(id string) error
 	Drop() error
+}
+
+// ServerSettingsRepository provides access to server settings (singleton).
+type ServerSettingsRepository interface {
+	Get() (*settings.ServerSettings, error)
+	Upsert(s *settings.ServerSettings) error
 }

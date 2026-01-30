@@ -62,8 +62,15 @@
 
   let client;
   let term;
-  let renderer;
   let ws;
+  let renderers = [];
+
+  // Multi-renderer dispatches output to all registered terminal widgets
+  function multiRenderer(data) {
+    for (const r of renderers) {
+      r(data);
+    }
+  }
 
   const muxStore = createStore();
   const muxClient = writable({});
@@ -106,21 +113,27 @@
   };
 
   function handleTerminalReady(terminal, termRenderer) {
-    term = terminal;
-    renderer = termRenderer;
+    // Track xterm instance if provided (classic Terminal passes it, Terminal X passes null)
+    if (terminal) {
+      term = terminal;
+    }
 
-    // Now create the client with the renderer
-    client = createClient(
-      renderer,
-      characterCreator,
-      muxStore
-    );
+    // Register this terminal's renderer for multi-output
+    renderers.push(termRenderer);
 
-    muxClient.set(client);
+    // Create client once using the multi-renderer so all terminals receive output
+    if (!client) {
+      client = createClient(
+        multiRenderer,
+        characterCreator,
+        muxStore
+      );
+      muxClient.set(client);
+    }
 
     // Show message if not authenticated
     if (!$isLoading && !$isAuthenticated) {
-      term.writeln("Please log in to connect to the game.");
+      termRenderer("Please log in to connect to the game.");
     }
   }
 

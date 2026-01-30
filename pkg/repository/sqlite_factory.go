@@ -60,6 +60,10 @@ func (f *SQLiteFactory) LootTables() LootTablesRepository {
 	return NewSQLiteLootTablesRepository(f.client)
 }
 
+func (f *SQLiteFactory) ServerSettings() ServerSettingsRepository {
+	return NewSQLiteServerSettingsRepository(f.client)
+}
+
 func (f *SQLiteFactory) Close() error {
 	return f.client.Close()
 }

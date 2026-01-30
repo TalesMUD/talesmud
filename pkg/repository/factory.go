@@ -14,5 +14,6 @@ type Factory interface {
 	Dialogs() DialogsRepository
 	Conversations() ConversationsRepository
 	LootTables() LootTablesRepository
+	ServerSettings() ServerSettingsRepository
 	Close() error
 }

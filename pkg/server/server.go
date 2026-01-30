@@ -130,6 +130,10 @@ func (app *app) setupRoutes() {
 		RoomsService: app.Facade.RoomsService(),
 	}
 
+	serverSettings := &handler.ServerSettingsHandler{
+		Service: app.Facade.ServerSettingsService(),
+	}
+
 	r.GET("/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "API is up and running")
 	})
@@ -234,6 +238,10 @@ func (app *app) setupRoutes() {
 		protected.GET("backgrounds", backgrounds.ListBackgrounds)
 		protected.POST("backgrounds/upload", backgrounds.UploadBackground)
 		protected.DELETE("backgrounds/:filename", backgrounds.DeleteBackground)
+
+		// Server Settings
+		protected.GET("settings", serverSettings.GetServerSettings)
+		protected.PUT("settings", serverSettings.UpdateServerSettings)
 	}
 
 	public := r.Group("/api/")
@@ -250,6 +258,8 @@ func (app *app) setupRoutes() {
 
 		public.GET("room-of-the-day", rooms.GetRoomOfTheDay)
 
+		// Public server info (no auth, used by MUD client)
+		public.GET("server-info", serverSettings.GetServerInfo)
 	}
 
 	// Start MUD Server
@@ -261,6 +271,10 @@ func (app *app) setupRoutes() {
 
 	// Serve mud-client (game client) at /play
 	r.Use(SPAMiddleware("/play", webuiplay.FS(), webuiplay.IndexFile))
+
+	// Optional landing page from OS filesystem
+	landingPath := strings.TrimSpace(os.Getenv("LANDING_PATH"))
+	r.Use(LandingMiddleware(landingPath))
 
 	// Serve main app at /
 	r.Use(SPAMiddleware("/", webui.FS(), webui.IndexFile))

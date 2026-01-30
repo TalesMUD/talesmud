@@ -10,6 +10,40 @@
   .img {
     width: 42px;
   }
+
+  /* ── Dark theme overrides for Materialize dropdown ── */
+  :global(#dropdown1.dropdown-content) {
+    background: #111820;
+    border: 1px solid rgba(61, 220, 132, 0.12);
+    border-radius: 6px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    min-width: 180px;
+  }
+
+  :global(#dropdown1.dropdown-content li > a) {
+    color: #ccc8c2;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    padding: 0.6rem 1rem;
+  }
+
+  :global(#dropdown1.dropdown-content li > a:hover) {
+    background: rgba(61, 220, 132, 0.08);
+    color: #e8e6e3;
+  }
+
+  :global(#dropdown1.dropdown-content li > a > i) {
+    color: rgba(61, 220, 132, 0.5);
+  }
+
+  :global(#dropdown1.dropdown-content li > a:hover > i) {
+    color: #7ae8a4;
+  }
+
+  :global(#dropdown1.dropdown-content li.divider) {
+    background-color: rgba(255, 255, 255, 0.06);
+  }
 </style>
 
 <script>

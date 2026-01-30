@@ -20,6 +20,15 @@ export const WIDGET_TYPES = {
     icon: 'terminal',
     category: 'core'
   },
+  terminalx: {
+    name: 'Terminal X',
+    description: 'Veilspan-style MUD terminal with CRT effects',
+    defaultSize: { w: 12, h: 14 },
+    minSize: { w: 6, h: 6 },
+    maxInstances: 1,
+    icon: 'computer',
+    category: 'core'
+  },
   actionbar: {
     name: 'Action Bar',
     description: 'Commands, compass, and quick actions',

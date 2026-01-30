@@ -79,6 +79,12 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Basic auth for admin endpoints
   - Session management
 
+- **Optional Landing Page**
+  - Serve a static landing page at `/` from the OS filesystem via `LANDING_PATH`
+  - When disabled (default), the main app SPA is served at `/` as usual
+  - Auth0 callbacks (`?code=` / `?error=`) pass through to the main SPA automatically
+  - Static assets (images, CSS) in the landing directory are served alongside `index.html`
+
 - **Data Persistence**
   - SQLite for all game data
   - World export/import functionality
@@ -241,6 +247,9 @@ AUTH_ENABLED=false
 # Admin
 ADMIN_USER=admin
 ADMIN_PASSWORD=admin
+
+# Optional landing page (path to directory with index.html + static assets)
+# LANDING_PATH=./public/landing
 ```
 
 ## Building & Running
