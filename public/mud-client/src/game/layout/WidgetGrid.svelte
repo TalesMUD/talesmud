@@ -10,6 +10,7 @@
   // Widget components
   import RoomWidget from '../widgets/RoomWidget.svelte';
   import TerminalWidget from '../widgets/TerminalWidget.svelte';
+  import TerminalXWidget from '../widgets/TerminalXWidget.svelte';
   import ActionBarWidget from '../widgets/ActionBarWidget.svelte';
   import CharacterWidget from '../widgets/CharacterWidget.svelte';
   import InventoryWidget from '../widgets/InventoryWidget.svelte';
@@ -24,6 +25,7 @@
   const widgetComponents = {
     room: RoomWidget,
     terminal: TerminalWidget,
+    terminalx: TerminalXWidget,
     actionbar: ActionBarWidget,
     character: CharacterWidget,
     inventory: InventoryWidget,
@@ -110,6 +112,11 @@
       case 'room':
         return { store, sendMessage };
       case 'terminal':
+        return {
+          onTerminalReady,
+          onInput: onTerminalInput
+        };
+      case 'terminalx':
         return {
           onTerminalReady,
           onInput: onTerminalInput

@@ -218,7 +218,7 @@
                     <!-- Template header with avatar -->
                     <div class="flex items-center gap-4">
                       <img
-                        src={`/img/avatars/${1 + Math.abs(selectedTemplate.name.hashCode() % 12)}p.png`}
+                        src={`/img/avatars/${1 + Math.abs((selectedTemplate.name || "").hashCode() % 12)}p.png`}
                         alt={selectedTemplate.name}
                         class="w-14 h-14 rounded-full border-2 border-primary"
                       />

@@ -94,6 +94,17 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
     └── world              # World map
 ```
 
+#### Landing Page Middleware
+
+**File:** `pkg/server/landing.go`
+
+Optional middleware that serves a static landing page from the OS filesystem when `LANDING_PATH` is set. Sits between the `/play` SPA and `/` SPA in the middleware chain.
+
+- Skips `/api/`, `/admin/`, `/ws`, `/play` prefixes
+- Skips Auth0 callbacks (`?code=` or `?error=` query params) so the main SPA handles them
+- Serves `index.html` for `/` and static assets for other matching files
+- Returns a no-op handler when `LANDING_PATH` is unset or `index.html` is missing
+
 #### Authentication Middleware
 
 **File:** `pkg/server/auth.go`

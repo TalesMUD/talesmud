@@ -137,8 +137,12 @@ func (server *server) HandleConnections(c *gin.Context) {
 		active: true,
 	}
 
-	// Send Welcome message
-	server.sendMessage(user.ID, messages.NewRoomBasedMessage("", "Connected to [Tales of the Red Dragon's Lair] ..."))
+	// Send Welcome message with dynamic server name
+	serverName := "TalesMUD"
+	if ss, err := server.Facade.ServerSettingsService().Get(); err == nil && ss.ServerName != "" {
+		serverName = ss.ServerName
+	}
+	server.sendMessage(user.ID, messages.NewRoomBasedMessage("", "Connected to ["+serverName+"] ..."))
 
 	server.Game.OnUserJoined <- &messages.UserJoined{
 		User: user,

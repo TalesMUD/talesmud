@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Veilspan — Chapter I: Gloomfen Depths</title>
+  <meta name="description" content="A text-based MUD RPG. Awaken in forgotten catacombs. Explore a fractured world. Descend into the depths beneath Gloomfen. Veilspan awaits.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;500;600;700&family=Fira+Code:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════════════
+       CSS VARIABLES & RESET
+       ═══════════════════════════════════════════════════ */
+    :root {
+      --bg-abyss: #06080c;
+      --bg-deep: #0a0e14;
+      --bg-surface: #111820;
+      --bg-card: #141c26;
+      --bg-card-hover: #1a2433;
+
+      --green-glow: #3ddc84;
+      --green-dim: #1a5c38;
+      --green-text: #7ae8a4;
+      --green-bright: #50fa7b;
+
+      --amber-glow: #e8a849;
+      --amber-dim: #5c4419;
+      --amber-text: #f0c674;
+
+      --purple-glow: #bd93f9;
+      --purple-dim: #3d2a6b;
+
+      --red-glow: #ff5555;
+      --red-dim: #5c1a1a;
+
+      --cyan-glow: #8be9fd;
+      --cyan-dim: #1a4c5c;
+
+      --text-bright: #e8e6e3;
+      --text-body: #b0aca6;
+      --text-dim: #6b6660;
+      --text-ghost: #3d3a36;
+
+      --iron-pact: #d4744e;
+      --silver-dawn: #a8c8e8;
+      --cogwright: #c8a84e;
+
+      --border-subtle: rgba(61, 220, 132, 0.08);
+      --border-glow: rgba(61, 220, 132, 0.25);
+
+      --font-display: 'Cinzel Decorative', serif;
+      --font-heading: 'Cinzel', serif;
+      --font-body: 'Cormorant Garamond', serif;
+      --font-mono: 'Fira Code', monospace;
+
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      scrollbar-width: thin;
+      scrollbar-color: var(--green-dim) var(--bg-abyss);
+    }
+
+    body {
+      background: var(--bg-abyss);
+      color: var(--text-body);
+      font-family: var(--font-body);
+      font-size: 18px;
+      line-height: 1.7;
+      overflow-x: hidden;
+      cursor: default;
+    }
+
+    /* ═══════════════════════════════════════════════════
+       SCANLINE & NOISE OVERLAY
+       ═══════════════════════════════════════════════════ */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.03) 2px,
+        rgba(0, 0, 0, 0.03) 4px
+      );
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 9998;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.4) 100%);
+    }
+
+    /* ═══════════════════════════════════════════════════
+       UTILITY
+       ═══════════════════════════════════════════════════ */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+
+    .sr-only {
+      position: absolute; width: 1px; height: 1px;
+      padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0,0,0,0); border: 0;
+    }
+
+    /* ═══════════════════════════════════════════════════
+       NAV BAR
+       ═══════════════════════════════════════════════════ */
+    .nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(to bottom, var(--bg-abyss), transparent);
+      transition: background 0.4s;
+    }
+
+    .nav.scrolled {
+      background: rgba(6, 8, 12, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .nav-brand {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--green-dim);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    .nav-brand span { color: var(--green-glow); }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      text-decoration: none;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      transition: color 0.3s;
+      position: relative;
+    }
+
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0; right: 0;
+      height: 1px;
+      background: var(--green-glow);
+      transform: scaleX(0);
+      transition: transform 0.3s var(--ease-out);
+    }
+
+    .nav-links a:hover { color: var(--green-text); }
+    .nav-links a:hover::after { transform: scaleX(1); }
+
+    /* ═══════════════════════════════════════════════════
+       HERO SECTION
+       ═══════════════════════════════════════════════════ */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      position: relative;
+      padding: 6rem 2rem;
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+    }
+
+    .hero-bg img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.15;
+      filter: blur(2px) saturate(0.6);
+      image-rendering: auto;
+    }
+
+    .hero-bg::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(to bottom, var(--bg-abyss) 0%, transparent 30%, transparent 60%, var(--bg-abyss) 100%),
+        radial-gradient(ellipse at 50% 40%, rgba(61,220,132,0.04) 0%, transparent 70%);
+    }
+
+    .hero-pre {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--green-dim);
+      margin-bottom: 1.5rem;
+      opacity: 0;
+      animation: fadeUp 1s var(--ease-out) 0.3s forwards;
+    }
+
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(2.5rem, 7vw, 5.5rem);
+      font-weight: 900;
+      color: var(--text-bright);
+      letter-spacing: 0.08em;
+      line-height: 1.1;
+      text-shadow:
+        0 0 40px rgba(61,220,132,0.15),
+        0 0 80px rgba(61,220,132,0.05);
+      opacity: 0;
+      animation: fadeUp 1.2s var(--ease-out) 0.6s forwards;
+    }
+
+    .hero-chapter {
+      font-family: var(--font-heading);
+      font-size: clamp(0.9rem, 2vw, 1.3rem);
+      font-weight: 400;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--amber-text);
+      margin-top: 1rem;
+      opacity: 0;
+      animation: fadeUp 1s var(--ease-out) 0.9s forwards;
+    }
+
+    .hero-tagline {
+      font-family: var(--font-body);
+      font-size: 1.2rem;
+      font-style: italic;
+      color: var(--text-dim);
+      margin-top: 2.5rem;
+      opacity: 0;
+      animation: fadeUp 1s var(--ease-out) 1.2s forwards;
+    }
+
+    .hero-terminal {
+      margin-top: 3rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--green-text);
+      opacity: 0;
+      animation: fadeUp 1s var(--ease-out) 1.5s forwards;
+    }
+
+    .hero-terminal .prompt { color: var(--green-dim); }
+    .hero-terminal .cmd { color: var(--green-glow); }
+
+    .cursor-blink {
+      display: inline-block;
+      width: 8px;
+      height: 1em;
+      background: var(--green-glow);
+      margin-left: 2px;
+      vertical-align: text-bottom;
+      animation: blink 1s step-end infinite;
+    }
+
+    .hero-cta {
+      margin-top: 3rem;
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      opacity: 0;
+      animation: fadeUp 1s var(--ease-out) 1.8s forwards;
+    }
+
+    .btn {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      text-decoration: none;
+      padding: 0.9rem 2.2rem;
+      border: 1px solid var(--border-glow);
+      color: var(--green-text);
+      background: rgba(61,220,132,0.05);
+      transition: all 0.3s var(--ease-out);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(61,220,132,0.15), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .btn:hover {
+      background: rgba(61,220,132,0.12);
+      border-color: var(--green-glow);
+      box-shadow: 0 0 30px rgba(61,220,132,0.1), inset 0 0 30px rgba(61,220,132,0.05);
+      transform: translateY(-2px);
+    }
+
+    .btn:hover::before { opacity: 1; }
+
+    .btn-primary {
+      background: rgba(61,220,132,0.12);
+      color: var(--green-bright);
+    }
+
+    .hero-scroll {
+      position: absolute;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      color: var(--text-ghost);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      opacity: 0;
+      animation: fadeUp 1s var(--ease-out) 2.2s forwards;
+    }
+
+    .hero-scroll::after {
+      content: '';
+      display: block;
+      width: 1px;
+      height: 30px;
+      background: linear-gradient(to bottom, var(--green-dim), transparent);
+      margin: 0.5rem auto 0;
+      animation: scrollPulse 2s ease-in-out infinite;
+    }
+
+    /* ═══════════════════════════════════════════════════
+       SECTION DIVIDERS
+       ═══════════════════════════════════════════════════ */
+    .divider {
+      text-align: center;
+      padding: 3rem 0;
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      color: var(--text-ghost);
+      letter-spacing: 0.5em;
+    }
+
+    .divider::before, .divider::after {
+      content: '═══════════';
+      margin: 0 1rem;
+    }
+
+    /* ═══════════════════════════════════════════════════
+       LORE SECTION
+       ═══════════════════════════════════════════════════ */
+    .lore {
+      padding: 4rem 0;
+    }
+
+    .lore-header {
+      text-align: center;
+      margin-bottom: 4rem;
+    }
+
+    .section-label {
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.4em;
+      text-transform: uppercase;
+      color: var(--green-dim);
+      display: block;
+      margin-bottom: 1rem;
+    }
+
+    .section-title {
+      font-family: var(--font-heading);
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 600;
+      color: var(--text-bright);
+      letter-spacing: 0.06em;
+    }
+
+    .lore-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      align-items: start;
+    }
+
+    .lore-text p {
+      margin-bottom: 1.5rem;
+      font-size: 1.1rem;
+      line-height: 1.8;
+    }
+
+    .lore-text p:first-child::first-letter {
+      font-family: var(--font-display);
+      font-size: 3.5em;
+      float: left;
+      line-height: 0.8;
+      margin-right: 0.1em;
+      color: var(--green-text);
+      text-shadow: 0 0 20px rgba(61,220,132,0.3);
+    }
+
+    .lore-image-stack {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .lore-img-wrap {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .lore-img-wrap img {
+      width: 100%;
+      display: block;
+      image-rendering: pixelated;
+      transition: transform 0.6s var(--ease-out);
+    }
+
+    .lore-img-wrap:hover img {
+      transform: scale(1.05);
+    }
+
+    .lore-img-wrap .img-label {
+      position: absolute;
+      bottom: 0;
+      left: 0; right: 0;
+      padding: 0.5rem 0.8rem;
+      background: linear-gradient(transparent, rgba(6,8,12,0.9));
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      color: var(--green-dim);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    /* ═══════════════════════════════════════════════════
+       JOURNEY SECTION (ASCII MAP STYLE)
+       ═══════════════════════════════════════════════════ */
+    .journey {
+      padding: 4rem 0;
+    }
+
+    .journey-header {
+      text-align: center;
+      margin-bottom: 4rem;
+    }
+
+    .journey-path {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      position: relative;
+    }
+
+    .journey-path::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 5%;
+      right: 5%;
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--green-dim), var(--green-dim), transparent);
+      z-index: 0;
+    }
+
+    .journey-node {
+      text-align: center;
+      position: relative;
+      z-index: 1;
+      padding: 1rem;
+    }
+
+    .journey-node-img {
+      width: 100%;
+      aspect-ratio: 16/10;
+      object-fit: cover;
+      image-rendering: pixelated;
+      border: 1px solid var(--border-subtle);
+      margin-bottom: 1rem;
+      transition: all 0.4s var(--ease-out);
+      filter: brightness(0.7) saturate(0.8);
+    }
+
+    .journey-node:hover .journey-node-img {
+      filter: brightness(1) saturate(1);
+      border-color: var(--border-glow);
+      box-shadow: 0 0 30px rgba(61,220,132,0.08);
+    }
+
+    .journey-node-num {
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      color: var(--green-dim);
+      letter-spacing: 0.3em;
+      display: block;
+      margin-bottom: 0.3rem;
+    }
+
+    .journey-node-name {
+      font-family: var(--font-heading);
+      font-size: 1rem;
+      color: var(--text-bright);
+      letter-spacing: 0.05em;
+      display: block;
+      margin-bottom: 0.3rem;
+    }
+
+    .journey-node-level {
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      color: var(--text-ghost);
+      letter-spacing: 0.1em;
+    }
+
+    .journey-node-desc {
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      margin-top: 0.5rem;
+      font-style: italic;
+    }
+
+    /* ═══════════════════════════════════════════════════
+       FACTIONS
+       ═══════════════════════════════════════════════════ */
+    .factions {
+      padding: 4rem 0;
+    }
+
+    .factions-header {
+      text-align: center;
+      margin-bottom: 4rem;
+    }
+
+    .faction-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+
+    .faction-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      padding: 2.5rem 2rem;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.4s var(--ease-out);
+    }
+
+    .faction-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      transition: opacity 0.4s;
+    }
+
+    .faction-card:hover {
+      background: var(--bg-card-hover);
+      transform: translateY(-4px);
+      border-color: transparent;
+    }
+
+    .faction-card.iron::before {
+      background: linear-gradient(90deg, transparent, var(--iron-pact), transparent);
+    }
+    .faction-card.iron:hover { border-color: rgba(212, 116, 78, 0.2); box-shadow: 0 8px 40px rgba(212,116,78,0.06); }
+    .faction-card.iron .faction-icon { color: var(--iron-pact); }
+    .faction-card.iron .faction-symbol { border-color: rgba(212,116,78,0.3); }
+
+    .faction-card.silver::before {
+      background: linear-gradient(90deg, transparent, var(--silver-dawn), transparent);
+    }
+    .faction-card.silver:hover { border-color: rgba(168,200,232,0.2); box-shadow: 0 8px 40px rgba(168,200,232,0.06); }
+    .faction-card.silver .faction-icon { color: var(--silver-dawn); }
+    .faction-card.silver .faction-symbol { border-color: rgba(168,200,232,0.3); }
+
+    .faction-card.cog::before {
+      background: linear-gradient(90deg, transparent, var(--cogwright), transparent);
+    }
+    .faction-card.cog:hover { border-color: rgba(200,168,78,0.2); box-shadow: 0 8px 40px rgba(200,168,78,0.06); }
+    .faction-card.cog .faction-icon { color: var(--cogwright); }
+    .faction-card.cog .faction-symbol { border-color: rgba(200,168,78,0.3); }
+
+    .faction-symbol {
+      width: 48px;
+      height: 48px;
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+      font-size: 1.3rem;
+    }
+
+    .faction-icon {
+      font-family: var(--font-mono);
+      font-weight: bold;
+    }
+
+    .faction-name {
+      font-family: var(--font-heading);
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text-bright);
+      letter-spacing: 0.06em;
+      margin-bottom: 0.3rem;
+    }
+
+    .faction-capital {
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      color: var(--text-ghost);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+
+    .faction-desc {
+      font-size: 0.95rem;
+      color: var(--text-dim);
+      line-height: 1.7;
+    }
+
+    .faction-races {
+      margin-top: 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--text-ghost);
+      letter-spacing: 0.1em;
+    }
+
+    /* ═══════════════════════════════════════════════════
+       CHAPTER PLOT
+       ═══════════════════════════════════════════════════ */
+    .chapter {
+      padding: 4rem 0;
+    }
+
+    .chapter-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .terminal-block {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      line-height: 1.9;
+      padding: 2rem 2.5rem;
+      position: relative;
+      max-width: 800px;
+      margin: 0 auto 2rem;
+    }
+
+    .terminal-block::before {
+      content: attr(data-title);
+      position: absolute;
+      top: -0.7em;
+      left: 1.5rem;
+      background: var(--bg-surface);
+      padding: 0 0.5rem;
+      font-size: 0.55rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--green-dim);
+    }
+
+    .terminal-block .line { display: block; margin-bottom: 0.3rem; }
+    .terminal-block .comment { color: var(--text-ghost); }
+    .terminal-block .green { color: var(--green-text); }
+    .terminal-block .amber { color: var(--amber-text); }
+    .terminal-block .red { color: var(--red-glow); }
+    .terminal-block .purple { color: var(--purple-glow); }
+    .terminal-block .cyan { color: var(--cyan-glow); }
+    .terminal-block .bright { color: var(--text-bright); }
+    .terminal-block .dim { color: var(--text-dim); }
+
+    /* ═══════════════════════════════════════════════════
+       GALLERY
+       ═══════════════════════════════════════════════════ */
+    .gallery {
+      padding: 4rem 0;
+    }
+
+    .gallery-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(2, 200px);
+      gap: 0.5rem;
+    }
+
+    .gallery-item {
+      overflow: hidden;
+      position: relative;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .gallery-item:nth-child(1) { grid-column: span 2; grid-row: span 2; }
+
+    .gallery-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      image-rendering: pixelated;
+      filter: brightness(0.65) saturate(0.7);
+      transition: all 0.5s var(--ease-out);
+    }
+
+    .gallery-item:hover img {
+      filter: brightness(1) saturate(1);
+      transform: scale(1.08);
+    }
+
+    .gallery-item .gallery-label {
+      position: absolute;
+      bottom: 0;
+      left: 0; right: 0;
+      padding: 2rem 0.8rem 0.6rem;
+      background: linear-gradient(transparent, rgba(6,8,12,0.95));
+      font-family: var(--font-mono);
+      font-size: 0.55rem;
+      color: var(--green-dim);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: all 0.3s var(--ease-out);
+    }
+
+    .gallery-item:hover .gallery-label {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ═══════════════════════════════════════════════════
+       MUD TERMINAL PREVIEW
+       ═══════════════════════════════════════════════════ */
+    .terminal {
+      padding: 4rem 0;
+    }
+
+    .terminal-header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    .terminal-window {
+      background: #0c0c0c;
+      border: 1px solid var(--border-subtle);
+      max-width: 750px;
+      margin: 0 auto;
+      overflow: hidden;
+    }
+
+    .terminal-titlebar {
+      background: var(--bg-surface);
+      padding: 0.6rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .terminal-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-ghost);
+    }
+
+    .terminal-dot:nth-child(1) { background: var(--red-dim); }
+    .terminal-dot:nth-child(2) { background: var(--amber-dim); }
+    .terminal-dot:nth-child(3) { background: var(--green-dim); }
+
+    .terminal-title {
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      color: var(--text-ghost);
+      letter-spacing: 0.1em;
+      margin-left: 0.5rem;
+    }
+
+    .terminal-body {
+      padding: 1.5rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      line-height: 1.8;
+      color: var(--text-dim);
+      min-height: 320px;
+    }
+
+    .terminal-body .t-green { color: var(--green-text); }
+    .terminal-body .t-amber { color: var(--amber-text); }
+    .terminal-body .t-bright { color: var(--text-bright); }
+    .terminal-body .t-dim { color: var(--text-ghost); }
+    .terminal-body .t-cyan { color: var(--cyan-glow); }
+    .terminal-body .t-red { color: var(--red-glow); }
+
+    .terminal-body .t-line {
+      display: block;
+      opacity: 0;
+      animation: termLine 0.3s var(--ease-out) forwards;
+    }
+
+    /* ═══════════════════════════════════════════════════
+       FOOTER
+       ═══════════════════════════════════════════════════ */
+    .footer {
+      padding: 4rem 2rem;
+      text-align: center;
+      border-top: 1px solid var(--border-subtle);
+      margin-top: 4rem;
+    }
+
+    .footer-brand {
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      color: var(--text-dim);
+      letter-spacing: 0.15em;
+      margin-bottom: 0.5rem;
+    }
+
+    .footer-sub {
+      font-family: var(--font-mono);
+      font-size: 0.6rem;
+      color: var(--text-ghost);
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 2rem;
+      justify-content: center;
+      list-style: none;
+      margin-bottom: 2rem;
+    }
+
+    .footer-links a {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      text-decoration: none;
+      letter-spacing: 0.1em;
+      transition: color 0.3s;
+    }
+
+    .footer-links a:hover { color: var(--green-text); }
+
+    .footer-about {
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .footer-about-label {
+      font-family: var(--font-mono);
+      font-size: 0.55rem;
+      color: var(--text-ghost);
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+    }
+
+    .footer-socials {
+      display: flex;
+      gap: 1.5rem;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .footer-socials a {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      text-decoration: none;
+      letter-spacing: 0.1em;
+      transition: color 0.3s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .footer-socials a:hover { color: var(--green-text); }
+
+    .footer-socials svg {
+      width: 14px;
+      height: 14px;
+      fill: currentColor;
+    }
+
+    .footer-copy {
+      font-family: var(--font-mono);
+      font-size: 0.55rem;
+      color: var(--text-ghost);
+      letter-spacing: 0.15em;
+    }
+
+    .footer-ascii {
+      font-family: var(--font-mono);
+      font-size: 0.5rem;
+      color: var(--text-ghost);
+      line-height: 1.3;
+      white-space: pre;
+      margin-bottom: 2rem;
+      opacity: 0.4;
+    }
+
+    /* ═══════════════════════════════════════════════════
+       ANIMATIONS
+       ═══════════════════════════════════════════════════ */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+
+    @keyframes scrollPulse {
+      0%, 100% { opacity: 0.3; transform: scaleY(1); }
+      50% { opacity: 0.8; transform: scaleY(1.2); }
+    }
+
+    @keyframes termLine {
+      from { opacity: 0; transform: translateX(-5px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .fade-in {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s var(--ease-out), transform 0.8s var(--ease-out);
+    }
+
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ═══════════════════════════════════════════════════
+       RESPONSIVE
+       ═══════════════════════════════════════════════════ */
+    @media (max-width: 900px) {
+      .lore-grid { grid-template-columns: 1fr; }
+      .faction-grid { grid-template-columns: 1fr; }
+      .journey-path {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .journey-path::before { display: none; }
+      .gallery-grid {
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: repeat(3, 160px);
+      }
+      .gallery-item:nth-child(1) { grid-column: span 2; }
+      .nav-links { display: none; }
+    }
+
+    @media (max-width: 600px) {
+      .journey-path { grid-template-columns: 1fr; }
+      .gallery-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: repeat(6, 160px);
+      }
+      .gallery-item:nth-child(1) { grid-column: span 1; grid-row: span 1; }
+      .hero-cta { flex-direction: column; align-items: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav" id="nav">
+    <div class="nav-brand"><span>&gt;</span> talesmud.veilspan</div>
+    <ul class="nav-links">
+      <li><a href="#lore">Lore</a></li>
+      <li><a href="#journey">Journey</a></li>
+      <li><a href="#factions">Factions</a></li>
+      <li><a href="#chapter">Chapter I</a></li>
+      <li><a href="#play">Play</a></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero" id="hero">
+    <div class="hero-bg">
+      <img src="R0004.png" alt="Rune Chamber">
+    </div>
+    <div class="hero-pre">A TalesMUD Server</div>
+    <h1 class="hero-title">Veilspan</h1>
+    <div class="hero-chapter">Chapter I &mdash; Gloomfen Depths</div>
+    <p class="hero-tagline">&ldquo;Awaken. Emerge. Descend.&rdquo;</p>
+    <div class="hero-terminal">
+      <span class="prompt">&gt;</span> <span class="cmd">connect veilspan.mud</span><span class="cursor-blink"></span>
+    </div>
+    <div class="hero-cta">
+      <a href="#play" class="btn btn-primary">Enter the World</a>
+      <a href="#lore" class="btn">Read the Lore</a>
+    </div>
+    <div class="hero-scroll">Scroll to descend</div>
+  </section>
+
+  <!-- DIVIDER -->
+  <div class="divider">I</div>
+
+  <!-- LORE -->
+  <section class="lore" id="lore">
+    <div class="container">
+      <div class="lore-header fade-in">
+        <span class="section-label">// The World</span>
+        <h2 class="section-title">The World of Aethermoor</h2>
+      </div>
+      <div class="lore-grid">
+        <div class="lore-text fade-in">
+          <p>Aethermoor is a world scarred by ancient technomancy and fractured by the ambitions of three great factions. Beneath its meadows and mountains lie the remnants of the Architects &mdash; beings who came from beyond the Veil, terraformed this world, and vanished into the space between realities millennia ago.</p>
+          <p>Players awaken on a cold stone slab in forgotten catacombs, with no memory of who they are or how they arrived. A faint hum of ancient machinery echoes through the dark. Runes pulse with dying light. Something stirs in the depths below.</p>
+          <p>The only way is up &mdash; through crumbling corridors, past things that skitter in the dark, and into the blinding light of a world you do not remember. But Aethermoor remembers you. Or rather, what you were made to be.</p>
+        </div>
+        <div class="lore-image-stack fade-in">
+          <div class="lore-img-wrap">
+            <img src="R0001.png" alt="Awakening Chamber" loading="lazy">
+            <div class="img-label">R0001 &mdash; Awakening Chamber</div>
+          </div>
+          <div class="lore-img-wrap">
+            <img src="R0006.png" alt="Exit Stairwell" loading="lazy">
+            <div class="img-label">R0006 &mdash; Exit Stairwell</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DIVIDER -->
+  <div class="divider">II</div>
+
+  <!-- JOURNEY -->
+  <section class="journey" id="journey">
+    <div class="container">
+      <div class="journey-header fade-in">
+        <span class="section-label">// The Path</span>
+        <h2 class="section-title">Your Journey Awaits</h2>
+      </div>
+      <div class="journey-path fade-in">
+        <div class="journey-node">
+          <img class="journey-node-img" src="R0001.png" alt="Catacombs" loading="lazy">
+          <span class="journey-node-num">Zone 00</span>
+          <span class="journey-node-name">The Catacombs</span>
+          <span class="journey-node-level">Level 1&ndash;5</span>
+          <p class="journey-node-desc">Awaken with no memory on a cold stone slab</p>
+        </div>
+        <div class="journey-node">
+          <img class="journey-node-img" src="R0101.png" alt="Meadows" loading="lazy">
+          <span class="journey-node-num">Zone 01</span>
+          <span class="journey-node-name">Meadow Emergence</span>
+          <span class="journey-node-level">Level 5&ndash;12</span>
+          <p class="journey-node-desc">Step into sunlight for the first time</p>
+        </div>
+        <div class="journey-node">
+          <img class="journey-node-img" src="R0202.png" alt="Oldtown" loading="lazy">
+          <span class="journey-node-num">Zone 02</span>
+          <span class="journey-node-name">Oldtown</span>
+          <span class="journey-node-level">Level 10&ndash;18</span>
+          <p class="journey-node-desc">The neutral city hub where factions converge</p>
+        </div>
+        <div class="journey-node">
+          <img class="journey-node-img" src="R0310.png" alt="Gloomfen" loading="lazy">
+          <span class="journey-node-num">Zone 03+</span>
+          <span class="journey-node-name">Gloomfen &amp; Beyond</span>
+          <span class="journey-node-level">Level 15&ndash;50</span>
+          <p class="journey-node-desc">Descend into the depths beneath the mire</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DIVIDER -->
+  <div class="divider">III</div>
+
+  <!-- FACTIONS -->
+  <section class="factions" id="factions">
+    <div class="container">
+      <div class="factions-header fade-in">
+        <span class="section-label">// Choose Your Allegiance</span>
+        <h2 class="section-title">The Three Factions</h2>
+      </div>
+      <div class="faction-grid fade-in">
+        <!-- Iron Pact -->
+        <div class="faction-card iron">
+          <div class="faction-symbol">
+            <span class="faction-icon">&LeftAngleBracket;&#9876;&RightAngleBracket;</span>
+          </div>
+          <h3 class="faction-name">The Iron Pact</h3>
+          <div class="faction-capital">Capital: Kazgrath</div>
+          <p class="faction-desc">
+            A mountain fortress of dark stone and iron, forged by an alliance of dwarves and orcs.
+            The Great Forge burns day and night. Honor is earned through strength, and the
+            ancient roads they carved still lead to the heart of the world.
+          </p>
+          <div class="faction-races">&gt; Dwarves &amp; Orcs</div>
+        </div>
+        <!-- Silver Dawn -->
+        <div class="faction-card silver">
+          <div class="faction-symbol">
+            <span class="faction-icon">&LeftAngleBracket;&#10038;&RightAngleBracket;</span>
+          </div>
+          <h3 class="faction-name">The Silver Dawn</h3>
+          <div class="faction-capital">Capital: Aelindor</div>
+          <p class="faction-desc">
+            A breathtaking circular elven city built around the Starspire Tower. Three
+            concentric rings of living wood and crystalline bridges. The oldest faction,
+            keepers of nature magic and the ley lines that hum beneath every forest.
+          </p>
+          <div class="faction-races">&gt; Elves &amp; Allies</div>
+        </div>
+        <!-- Cogwright -->
+        <div class="faction-card cog">
+          <div class="faction-symbol">
+            <span class="faction-icon">&LeftAngleBracket;&#9881;&RightAngleBracket;</span>
+          </div>
+          <h3 class="faction-name">Cogwright Collective</h3>
+          <div class="faction-capital">Capital: Veridane</div>
+          <p class="faction-desc">
+            A U-shaped industrial city of steam, brass, and invention. Constructs and
+            golems serve as citizens. The youngest faction, rising fast &mdash; they
+            study ancient technomancy without knowing its true origin.
+          </p>
+          <div class="faction-races">&gt; Constructs &amp; Technomancers</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DIVIDER -->
+  <div class="divider">IV</div>
+
+  <!-- CHAPTER PLOT -->
+  <section class="chapter" id="chapter">
+    <div class="container">
+      <div class="chapter-header fade-in">
+        <span class="section-label">// The Story So Far</span>
+        <h2 class="section-title">Chapter I: Gloomfen Depths</h2>
+      </div>
+
+      <div class="terminal-block fade-in" data-title="Plot Synopsis">
+        <span class="line comment">// You awaken with no memory. No name. No past.</span>
+        <span class="line comment">// Something ancient placed you here. Something that</span>
+        <span class="line comment">// needs you to remember.</span>
+        <span class="line">&nbsp;</span>
+        <span class="line bright">ACT I &mdash; EMERGENCE</span>
+        <span class="line dim">Escape the Catacombs. Emerge into sunlit meadows.</span>
+        <span class="line dim">Discover Oldtown &mdash; a hub where three factions</span>
+        <span class="line dim">compete for dominance over a world they don't</span>
+        <span class="line dim">fully understand.</span>
+        <span class="line">&nbsp;</span>
+        <span class="line bright">ACT II &mdash; DIVERGENCE</span>
+        <span class="line dim">Three paths lead from Oldtown. West to the dark</span>
+        <span class="line dim">Ashenveil Woods and the Iron Pact's mountain</span>
+        <span class="line dim">fortress. East through Silverbrook Vale to the</span>
+        <span class="line dim">elven city of Aelindor. South through the Gloomfen</span>
+        <span class="line dim">to the Cogwright Collective's industrial capital.</span>
+        <span class="line">&nbsp;</span>
+        <span class="line bright">ACT III &mdash; REVELATION</span>
+        <span class="line dim">The three endgame dungeons reveal the truth:</span>
+        <span class="line green">&gt; The Sundered Vault: The Architects built this world.</span>
+        <span class="line cyan">&gt; The Veilstorm Reaches: You came from beyond the Veil.</span>
+        <span class="line amber">&gt; The Iron Maw: The Architects are returning.</span>
+        <span class="line">&nbsp;</span>
+        <span class="line bright">ACT IV &mdash; DESCENT</span>
+        <span class="line red">&gt; Beneath Gloomfen lies the Gateway.</span>
+        <span class="line red">&gt; Something is pushing through.</span>
+        <span class="line red">&gt; The factions must unite &mdash; or fall.</span>
+        <span class="line">&nbsp;</span>
+        <span class="line purple">You were made for this. You are the lock on a door</span>
+        <span class="line purple">that was never meant to open again.</span>
+      </div>
+
+      <div class="terminal-block fade-in" data-title="World Statistics">
+        <span class="line green">&gt; 20 zones spanning Levels 1&ndash;50</span>
+        <span class="line green">&gt; 3 faction capitals with 60&ndash;75 rooms each</span>
+        <span class="line green">&gt; 3 endgame dungeons revealing the Architect mystery</span>
+        <span class="line green">&gt; 1 final raid beneath Gloomfen Depths</span>
+        <span class="line green">&gt; ~622 rooms across all zones</span>
+        <span class="line">&nbsp;</span>
+        <span class="line amber">&gt; 3 factions to align with (or betray)</span>
+        <span class="line amber">&gt; Contested PvP zones at Thornfield Highlands</span>
+        <span class="line amber">&gt; Player origin mystery woven through every zone</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- DIVIDER -->
+  <div class="divider">V</div>
+
+  <!-- GALLERY -->
+  <section class="gallery" id="gallery">
+    <div class="container">
+      <div class="gallery-header fade-in">
+        <span class="section-label">// Scenes from Aethermoor</span>
+        <h2 class="section-title">The World in Pixel</h2>
+      </div>
+      <div class="gallery-grid fade-in">
+        <div class="gallery-item">
+          <img src="R0315.png" alt="Hag's Sanctum" loading="lazy">
+          <div class="gallery-label">Hag's Sanctum &mdash; Gloomfen Marsh</div>
+        </div>
+        <div class="gallery-item">
+          <img src="R0209.png" alt="Ironhand's Forge" loading="lazy">
+          <div class="gallery-label">Ironhand's Forge &mdash; Oldtown</div>
+        </div>
+        <div class="gallery-item">
+          <img src="R0104.png" alt="Bandit Lookout" loading="lazy">
+          <div class="gallery-label">Bandit Lookout &mdash; Meadows</div>
+        </div>
+        <div class="gallery-item">
+          <img src="R0304.png" alt="Fenwatch Camp" loading="lazy">
+          <div class="gallery-label">Fenwatch Camp &mdash; Gloomfen</div>
+        </div>
+        <div class="gallery-item">
+          <img src="R0206.png" alt="Shrine of the Twelve" loading="lazy">
+          <div class="gallery-label">Shrine of the Twelve &mdash; Oldtown</div>
+        </div>
+        <div class="gallery-item">
+          <img src="R0312.png" alt="Flooded Hall" loading="lazy">
+          <div class="gallery-label">Flooded Hall &mdash; Sunken Ruins</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DIVIDER -->
+  <div class="divider">VI</div>
+
+  <!-- TERMINAL PREVIEW -->
+  <section class="terminal" id="play">
+    <div class="container">
+      <div class="terminal-header fade-in">
+        <span class="section-label">// Experience</span>
+        <h2 class="section-title">Enter the MUD</h2>
+      </div>
+      <div class="terminal-window fade-in">
+        <div class="terminal-titlebar">
+          <div class="terminal-dot"></div>
+          <div class="terminal-dot"></div>
+          <div class="terminal-dot"></div>
+          <span class="terminal-title">veilspan &mdash; telnet session</span>
+        </div>
+        <div class="terminal-body" id="terminal-body">
+          <!-- filled by JS -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-ascii">
+ ██╗   ██╗███████╗██╗██╗     ███████╗██████╗  █████╗ ███╗   ██╗
+ ██║   ██║██╔════╝██║██║     ██╔════╝██╔══██╗██╔══██╗████╗  ██║
+ ██║   ██║█████╗  ██║██║     ███████╗██████╔╝███████║██╔██╗ ██║
+ ╚██╗ ██╔╝██╔══╝  ██║██║     ╚════██║██╔═══╝ ██╔══██║██║╚██╗██║
+  ╚████╔╝ ███████╗██║███████╗███████║██║     ██║  ██║██║ ╚████║
+   ╚═══╝  ╚══════╝╚═╝╚══════╝╚══════╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═══╝
+    </div>
+    <div class="footer-brand">Veilspan</div>
+    <div class="footer-sub">A TalesMUD Server &mdash; Chapter I: Gloomfen Depths</div>
+    <ul class="footer-links">
+      <li><a href="#hero">Home</a></li>
+      <li><a href="#lore">Lore</a></li>
+      <li><a href="#factions">Factions</a></li>
+      <li><a href="#play">Play</a></li>
+      <li><a href="https://github.com/atla" target="_blank" rel="noopener">GitHub</a></li>
+    </ul>
+    <div class="footer-about">
+      <div class="footer-about-label">// Created by</div>
+      <div class="footer-socials">
+        <a href="https://x.com/atla_" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          @atla_
+        </a>
+        <a href="https://github.com/atla" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+          atla
+        </a>
+      </div>
+    </div>
+    <div class="footer-copy">&copy; 2026 Veilspan &mdash; Powered by TalesMUD (Open Source)</div>
+  </footer>
+
+  <!-- ═══════════════════════════════════════════════════
+       JAVASCRIPT
+       ═══════════════════════════════════════════════════ -->
+  <script>
+    // Scroll-triggered fade-in
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+    // Nav scroll effect
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => {
+      nav.classList.toggle('scrolled', window.scrollY > 80);
+    });
+
+    // Terminal typewriter
+    const termLines = [
+      { text: '═══════════════════════════════════════', cls: 't-dim' },
+      { text: '         V E I L S P A N', cls: 't-green' },
+      { text: '   Chapter I: Gloomfen Depths', cls: 't-amber' },
+      { text: '═══════════════════════════════════════', cls: 't-dim' },
+      { text: '', cls: '' },
+      { text: 'Connected to veilspan.mud port 4000', cls: 't-dim' },
+      { text: 'Welcome, traveler.', cls: 't-bright' },
+      { text: '', cls: '' },
+      { text: '> look', cls: 't-green' },
+      { text: '', cls: '' },
+      { text: 'Awakening Chamber', cls: 't-bright' },
+      { text: 'You lie on a cold stone slab. The air tastes of', cls: '' },
+      { text: 'dust and forgotten centuries. Faint runes pulse', cls: '' },
+      { text: 'on the walls — purple, green, amber — casting', cls: '' },
+      { text: 'shifting shadows across rough-hewn stone.', cls: '' },
+      { text: '', cls: '' },
+      { text: 'You have no memory. No name. Only a deep,', cls: '' },
+      { text: 'resonant hum that seems to come from everywhere', cls: '' },
+      { text: 'and nowhere at once.', cls: '' },
+      { text: '', cls: '' },
+      { text: 'Exits: [north] [east]', cls: 't-cyan' },
+      { text: '', cls: '' },
+      { text: '> _', cls: 't-green' },
+    ];
+
+    let termStarted = false;
+    const termBody = document.getElementById('terminal-body');
+
+    const termObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && !termStarted) {
+          termStarted = true;
+          typeTerminal();
+        }
+      });
+    }, { threshold: 0.3 });
+
+    termObserver.observe(termBody);
+
+    function typeTerminal() {
+      termBody.innerHTML = '';
+      termLines.forEach((line, i) => {
+        const span = document.createElement('span');
+        span.className = `t-line ${line.cls}`;
+        span.textContent = line.text || '\u00A0';
+        span.style.animationDelay = `${i * 120}ms`;
+        termBody.appendChild(span);
+      });
+    }
+  </script>
+</body>
+</html>

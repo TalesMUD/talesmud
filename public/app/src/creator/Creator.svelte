@@ -10,6 +10,7 @@
     { name: "Dialog Graph", nav: "/creator/dialog-graph" },
     { name: "Scripts", nav: "/creator/scripts" },
     { name: "World", nav: "/creator/world" },
+    { name: "Settings", nav: "/creator/settings" },
   ];
 
   // Note: Creator is mounted at `/creator` and `yrv` matches nested routes relative

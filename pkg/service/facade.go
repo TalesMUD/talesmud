@@ -18,6 +18,7 @@ type Facade interface {
 	DialogsService() DialogsService
 	ConversationsService() ConversationsService
 	LootTablesService() LootTablesService
+	ServerSettingsService() ServerSettingsService
 	CharacterTemplatesRepo() repository.CharacterTemplatesRepository
 
 	Runner() scripts.ScriptRunner
@@ -35,6 +36,7 @@ type facade struct {
 	ds    DialogsService
 	convs ConversationsService
 	lts   LootTablesService
+	sss   ServerSettingsService
 	sr    scripts.ScriptRunner
 	repos repository.Factory
 }
@@ -54,6 +56,7 @@ func NewFacade(repos repository.Factory, runner scripts.ScriptRunner) Facade {
 	conversationsRepo := repos.Conversations()
 	characterTemplatesRepo := repos.CharacterTemplates()
 	lootTablesRepo := repos.LootTables()
+	serverSettingsRepo := repos.ServerSettings()
 
 	// Create services
 	ss := NewScriptsService(scriptsRepo)
@@ -72,6 +75,7 @@ func NewFacade(repos repository.Factory, runner scripts.ScriptRunner) Facade {
 		ds:    NewDialogsService(dialogsRepo),
 		convs: NewConversationsService(conversationsRepo),
 		lts:   lts,
+		sss:   NewServerSettingsService(serverSettingsRepo),
 		sr:    runner,
 		repos: repos,
 	}
@@ -117,6 +121,10 @@ func (f *facade) ConversationsService() ConversationsService {
 
 func (f *facade) LootTablesService() LootTablesService {
 	return f.lts
+}
+
+func (f *facade) ServerSettingsService() ServerSettingsService {
+	return f.sss
 }
 
 func (f *facade) CharacterTemplatesRepo() repository.CharacterTemplatesRepository {

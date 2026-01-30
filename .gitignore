@@ -63,3 +63,10 @@ import/*
 # Uploaded content (keep directory structure but not user uploads)
 uploads/backgrounds/*
 !uploads/backgrounds/.gitkeep
+backups/*
+
+public/landing/*.png
+bin/tales
+tales
+talesmud.db-shm
+talesmud.db-wal

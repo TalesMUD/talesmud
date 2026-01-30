@@ -54,6 +54,7 @@
   import UserMenu from "./UserMenu.svelte";
   import SettingsModal from "./game/ui/SettingsModal.svelte";
   import { createAuth } from "./auth.js";
+  import { getServerInfo } from "./api/server-info.js";
 
   // Auth0 config
   const config = {
@@ -68,12 +69,21 @@
     authToken: $authToken.slice(0, 20),
   };
 
+  let serverName = "Tales";
+
   String.prototype.capitalize = function () {
     return this.charAt(0).toUpperCase() + this.slice(1);
   };
 
   onMount(async () => {
-    // Initialize any components
+    getServerInfo(
+      (data) => {
+        if (data.serverName) {
+          serverName = data.serverName;
+        }
+      },
+      (err) => console.warn("Could not load server info:", err)
+    );
   });
 </script>
 
@@ -98,7 +108,7 @@
       <span class="iconspacing">
         <BookOpenIcon size="24" />
       </span>
-      Tales
+      {serverName}
     </span>
   </a>
 

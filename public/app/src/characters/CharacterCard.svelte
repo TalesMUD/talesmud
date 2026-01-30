@@ -30,7 +30,7 @@
   }
 
   function avatar() {
-    let num = 1 + Math.abs(name.hashCode()%12)
+    let num = 1 + Math.abs((name || "").hashCode()%12)
     return "/img/avatars/" + num + "p.png";
   }
 </script>

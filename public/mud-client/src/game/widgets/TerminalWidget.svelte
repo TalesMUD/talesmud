@@ -17,7 +17,36 @@
   let localEcho;
   let resizeObserver;
 
-  function getTerminalFontSize() {
+  // ── Font size configuration (S / M / L) ──
+
+  const FONT_SCALES = [
+    { label: 'S', scale: 0.7, key: 'small' },
+    { label: 'M', scale: 0.85, key: 'medium' },
+    { label: 'L', scale: 1.0, key: 'large' },
+  ];
+  const STORAGE_KEY = 'talesmud_term_fontsize';
+
+  let fontScaleIndex = 0;
+
+  function loadFontScale() {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const idx = FONT_SCALES.findIndex(f => f.key === stored);
+        if (idx >= 0) fontScaleIndex = idx;
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  function cycleFontSize() {
+    fontScaleIndex = (fontScaleIndex + 1) % FONT_SCALES.length;
+    try {
+      localStorage.setItem(STORAGE_KEY, FONT_SCALES[fontScaleIndex].key);
+    } catch (e) { /* ignore */ }
+    applyFontSize();
+  }
+
+  function getBaseTerminalFontSize() {
     const width = window.innerWidth;
     if (width >= 3000) return 26;
     if (width >= 2600) return 24;
@@ -27,6 +56,19 @@
     if (width >= 1400) return 17;
     return 15;
   }
+
+  function getScaledFontSize() {
+    return Math.round(getBaseTerminalFontSize() * FONT_SCALES[fontScaleIndex].scale);
+  }
+
+  function applyFontSize() {
+    if (term) {
+      term.setOption('fontSize', getScaledFontSize());
+      if (fitAddon) fitAddon.fit();
+    }
+  }
+
+  $: currentFontLabel = FONT_SCALES[fontScaleIndex].label;
 
   function debounce(fn, ms) {
     let timeout;
@@ -52,7 +94,9 @@
   }
 
   onMount(() => {
-    const fontSize = getTerminalFontSize();
+    loadFontScale();
+
+    const fontSize = getScaledFontSize();
     term = new xterm.Terminal({
       fontSize: fontSize,
       fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace"
@@ -83,9 +127,7 @@
 
     // Handle resize with debounce
     const handleResize = debounce(() => {
-      const newFontSize = getTerminalFontSize();
-      term.setOption('fontSize', newFontSize);
-      fitAddon.fit();
+      applyFontSize();
     }, 100);
 
     window.addEventListener('resize', handleResize);
@@ -146,6 +188,35 @@
     height: 100%;
   }
 
+  .terminal-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0.35rem 0.75rem;
+    flex-shrink: 0;
+    background: rgba(0, 0, 0, 0.3);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .term-fontsize-btn {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.3);
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.12rem 0.4rem;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+    line-height: 1;
+    border-radius: 3px;
+  }
+
+  .term-fontsize-btn:hover {
+    color: rgba(255, 255, 255, 0.7);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+
   .terminal-container {
     flex: 1;
     display: flex;
@@ -174,6 +245,11 @@
 </style>
 
 <div class="terminal-widget">
+  <div class="terminal-toolbar">
+    <button class="term-fontsize-btn" on:click={cycleFontSize} title="Font size: {FONT_SCALES[fontScaleIndex].key}">
+      {currentFontLabel}
+    </button>
+  </div>
   <div class="terminal-container">
     <div class="terminal-inner" bind:this={terminalContainer}></div>
   </div>

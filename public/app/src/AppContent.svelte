@@ -12,6 +12,7 @@
   import DialogGraphEditor from "./creator/DialogGraphEditor.svelte";
   import ScriptsEditor from "./creator/ScriptsEditor.svelte";
   import WorldEditor from "./creator/GridWorldEditor.svelte";
+  import SettingsEditor from "./creator/SettingsEditor.svelte";
   import Characters from "./characters/Characters.svelte";
   import NewCharacter from "./characters/NewCharacter.svelte";
   import UserForm from "./UserForm.svelte";
@@ -70,6 +71,11 @@
   <Route exact path="/creator/world">
     <CreatorLayout>
       <WorldEditor />
+    </CreatorLayout>
+  </Route>
+  <Route exact path="/creator/settings">
+    <CreatorLayout>
+      <SettingsEditor />
     </CreatorLayout>
   </Route>
   <Route exact path="/list" component="{Characters}" />
