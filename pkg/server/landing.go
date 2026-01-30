@@ -17,16 +17,32 @@ import (
 // which case the request falls through to the main SPA.
 func LandingMiddleware(landingPath string) gin.HandlerFunc {
 	if landingPath == "" {
+		log.Warn("LANDING_PATH is empty, landing page disabled")
 		return func(c *gin.Context) {}
 	}
+
+	absPath, _ := filepath.Abs(landingPath)
+	log.WithFields(log.Fields{
+		"raw":      landingPath,
+		"resolved": absPath,
+	}).Info("Landing middleware: resolving path")
 
 	indexPath := filepath.Join(landingPath, "index.html")
 	if _, err := os.Stat(indexPath); err != nil {
-		log.WithField("path", landingPath).Info("Landing page not found, disabled")
+		absIndex, _ := filepath.Abs(indexPath)
+		log.WithFields(log.Fields{
+			"path":     landingPath,
+			"index":    absIndex,
+			"error":    err,
+		}).Warn("Landing page not found, disabled")
 		return func(c *gin.Context) {}
 	}
 
-	log.WithField("path", landingPath).Info("Landing page enabled")
+	absIndex, _ := filepath.Abs(indexPath)
+	log.WithFields(log.Fields{
+		"path":  landingPath,
+		"index": absIndex,
+	}).Info("Landing page enabled")
 
 	return func(c *gin.Context) {
 		pth := c.Request.URL.Path
@@ -47,6 +63,7 @@ func LandingMiddleware(landingPath string) gin.HandlerFunc {
 
 		// Serve landing index.html for the root path.
 		if pth == "/" {
+			log.WithField("index", indexPath).Debug("Serving landing page for /")
 			c.File(indexPath)
 			c.Abort()
 			return

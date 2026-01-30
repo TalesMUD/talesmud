@@ -274,6 +274,11 @@ func (app *app) setupRoutes() {
 
 	// Optional landing page from OS filesystem
 	landingPath := strings.TrimSpace(os.Getenv("LANDING_PATH"))
+	cwd, _ := os.Getwd()
+	log.WithFields(log.Fields{
+		"LANDING_PATH": landingPath,
+		"cwd":          cwd,
+	}).Info("Landing page configuration")
 	r.Use(LandingMiddleware(landingPath))
 
 	// Serve main app at /
