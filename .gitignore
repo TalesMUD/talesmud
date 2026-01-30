@@ -70,3 +70,4 @@ bin/tales
 tales
 talesmud.db-shm
 talesmud.db-wal
+bin/tales
