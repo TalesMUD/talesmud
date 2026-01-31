@@ -26,6 +26,9 @@ dist/
 build/
 out/
 *.tsbuildinfo
+pkg/webui/dist/index.html
+public/mud-client/public/bundle.js.map
+public/mud-client/public/extra.css
 
 # Vite/bundler cache
 .vite/
@@ -66,8 +69,4 @@ uploads/backgrounds/*
 backups/*
 
 public/landing/*.png
-bin/tales
 tales
-talesmud.db-shm
-talesmud.db-wal
-bin/tales
