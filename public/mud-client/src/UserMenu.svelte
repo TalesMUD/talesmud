@@ -1,12 +1,4 @@
 <style>
-  .userbutton {
-    margin-right: 1em;
-  }
-
-  .btn-small {
-    color: #eee;
-  }
-
   .img {
     width: 42px;
   }
@@ -48,10 +40,9 @@
 
 <script>
   import { onMount } from "svelte";
-  import { UserIcon } from "svelte-feather-icons";
 
   import { getAuth } from "./auth.js";
-  import { getUser, updateUser } from "./api/user.js";
+  import { getUser } from "./api/user.js";
   import { user } from "./stores.js";
   import { layoutStore } from "./game/layout/LayoutStore.js";
   import { settingsStore } from "./game/SettingsStore.js";
@@ -76,10 +67,6 @@
       },
       (err) => console.error("Failed to load user data:", err)
     );
-  }
-
-  async function signup() {
-    await login();
   }
 
   // Load user data whenever authToken changes and user is authenticated
@@ -112,6 +99,14 @@
       Settings
     </a>
   </li>
+  {#if $user && ($user.role === "creator" || $user.role === "admin")}
+    <li>
+      <a href="/creator" target="_blank">
+        <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">public</i>
+        World Builder
+      </a>
+    </li>
+  {/if}
   <li class="divider"></li>
   <li>
     <!-- svelte-ignore a11y-invalid-attribute -->
@@ -124,16 +119,6 @@
 
 {#if $isLoading}
   <li class="right-align">...</li>
-{:else if !$isAuthenticated}
-  <li class="right-align">
-    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions -->
-    <p on:click="{() => signup()}" class="btn-small userbutton green">Signup</p>
-  </li>
-  <li class="right-align">
-    <button on:click="{() => login()}" class="btn-small userbutton green">
-      Log in
-    </button>
-  </li>
 {/if}
 <li>
 

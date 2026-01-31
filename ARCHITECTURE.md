@@ -82,16 +82,22 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
 /health                    # Health check
 /ws                        # WebSocket (game connection)
 /api/
-    ├── characters/        # Character CRUD
-    ├── rooms/             # Room CRUD
-    ├── items/             # Item CRUD (templates: ?isTemplate=true)
-    ├── scripts/           # Script CRUD
-    ├── user               # User profile
+    ├── characters/        # Character CRUD (player level)
+    ├── rooms/ (GET)       # Room read (player level)
+    ├── rooms/ (POST/PUT/DELETE) # Room write (creator level)
+    ├── items/ (GET)       # Item read (player level)
+    ├── items/ (POST/PUT/DELETE) # Item write (creator level)
+    ├── scripts/           # Script CRUD (creator level)
+    ├── npcs/              # NPC CRUD (creator level for writes)
+    ├── dialogs/           # Dialog CRUD (creator level for writes)
+    ├── user               # User profile (player level)
+    ├── admin/
+    │   └── users/         # User management (admin only)
     └── templates/         # Public templates
 /admin/
-    ├── export             # World export
-    ├── import             # World import
-    └── world              # World map
+    ├── export             # World export (basic auth)
+    ├── import             # World import (basic auth)
+    └── world              # World map (basic auth)
 ```
 
 #### Landing Page Middleware
@@ -105,18 +111,33 @@ Optional middleware that serves a static landing page from the OS filesystem whe
 - Serves `index.html` for `/` and static assets for other matching files
 - Returns a no-op handler when `LANDING_PATH` is unset or `index.html` is missing
 
-#### Authentication Middleware
+#### Authentication & Authorization Middleware
 
 **File:** `pkg/server/auth.go`
 
 ```
-Request → Extract JWT → Validate with Auth0 JWKS → Find/Create User → Set Context
+Request → Extract JWT → Validate with Auth0 JWKS → Find/Create User → Check Ban → Set Context
 ```
 
 - Supports both query parameter (`?access_token=`) and Authorization header
 - Validates against Auth0 JWKS endpoint
 - Creates new user on first login
+- Syncs admin role from `MUD_ADMIN_OAUTHID` env var on every login
+- Rejects banned users with 403 at the auth layer
 - Sets `userid` and `user` in Gin context
+
+**Role-Based Middleware:**
+
+- `CreatorMiddleware()` — Requires creator or admin role for game content modification endpoints
+- `AdminMiddleware()` — Requires admin role for user management endpoints
+
+**Access Level Hierarchy:**
+
+| Role | Player Routes | Creator Routes | Admin Routes |
+|------|:---:|:---:|:---:|
+| Player | Yes | No | No |
+| MUD Creator | Yes | Yes | No |
+| MUD Admin | Yes | Yes | Yes |
 
 ### MUD Server (`pkg/mudserver/`)
 
@@ -496,7 +517,7 @@ type Facade interface {
 
 | Service | Responsibilities |
 |---------|------------------|
-| UsersService | User CRUD, online status, find/create on login |
+| UsersService | User CRUD, online status, find/create on login, role management (SetRole), ban/unban, admin sync from env var |
 | CharactersService | Character CRUD, templates, name validation |
 | RoomsService | Room CRUD, room queries |
 | ItemsService | Item CRUD, create from template |
@@ -960,10 +981,37 @@ type MessageResponse struct {
 
 ## Frontend Architecture
 
-### Component Hierarchy
+### MUD Client — Onboarding Flow
+
+The MUD client (`/play`) uses a phase-based routing system in `App.svelte` to guide new players through onboarding before showing the game UI:
 
 ```
-App.svelte
+App.svelte (phase-based routing)
+├── LoadingScreen           (phase: "loading" — Auth0 initializing)
+├── WelcomeScreen           (phase: "welcome" — unauthenticated)
+├── NicknameSetup           (phase: "nickname" — new user, needs display name)
+├── CharacterCreationWizard (phase: "character" — no characters yet)
+│   ├── Step 1: Choose Template (from GET /api/templates/characters)
+│   ├── Step 2: Name & Describe Character
+│   └── Step 3: Confirm & Create (POST /api/newcharacter)
+└── Game + UserMenu + SettingsModal (phase: "ready" — normal gameplay)
+```
+
+Phase detection:
+- After Auth0 login, fetches `GET /api/user` to check `isNewUser` / `nickname`
+- Then fetches `GET /api/characters` to check if user has characters
+- Transitions through phases automatically until reaching "ready"
+
+Onboarding components are in `src/onboarding/`:
+- `LoadingScreen.svelte` — Minimal dark loading screen
+- `WelcomeScreen.svelte` — Cinematic landing with Login/Signup CTAs
+- `NicknameSetup.svelte` — Glass-morphism card for nickname entry
+- `CharacterCreationWizard.svelte` — Three-step full-page wizard
+
+### Admin/Creator App — Component Hierarchy
+
+```
+App.svelte (role-aware navigation: Creator/Admin links gated by user role)
 ├── AppContent.svelte (router)
 │   ├── Welcome.svelte (landing)
 │   ├── Game.svelte (gameplay)
@@ -973,12 +1021,14 @@ App.svelte
 │   ├── Characters.svelte
 │   │   ├── CharacterCard.svelte
 │   │   └── CharacterCreator.svelte
-│   └── Creator.svelte (editor)
-│       ├── RoomsEditor.svelte
-│       ├── ItemsEditor.svelte
-│       ├── ItemTemplatesEditor.svelte (uses unified items API with isTemplate filter)
-│       ├── ScriptsEditor.svelte
-│       └── WorldEditor.svelte
+│   ├── Creator.svelte (editor, creator/admin role)
+│   │   ├── RoomsEditor.svelte
+│   │   ├── ItemsEditor.svelte
+│   │   ├── ItemTemplatesEditor.svelte (uses unified items API with isTemplate filter)
+│   │   ├── ScriptsEditor.svelte
+│   │   └── WorldEditor.svelte
+│   └── admin/
+│       └── UserManagement.svelte (admin only, user table + ban modal)
 ├── UserForm.svelte
 └── UserMenu.svelte
 ```
@@ -1109,9 +1159,14 @@ HTTP Request with JWT → AuthMiddleware
 ### Authorization
 
 - Protected endpoints require valid JWT
-- Admin endpoints require basic auth
-- User can only access own characters
-- Room/item CRUD available to authenticated users
+- Legacy admin endpoints (export/import) require basic auth
+- Three-tier role system enforced via middleware:
+  - **Player** (default): Can access own characters, read game data, play the game
+  - **MUD Creator**: Full access to Creator area (write rooms, items, scripts, NPCs, etc.)
+  - **MUD Admin**: All Creator access plus User Management (promote/demote/ban users)
+- Admin role is assigned exclusively via `MUD_ADMIN_OAUTHID` environment variable
+- Banned users are rejected at the auth middleware layer (403 on all authenticated endpoints)
+- Ban enforcement stores both Reference ID and email for cross-account prevention
 
 ## Scalability Considerations
 

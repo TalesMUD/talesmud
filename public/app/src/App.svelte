@@ -1,8 +1,10 @@
 <script>
   import { Router } from "yrv";
+  import { writable } from "svelte/store";
   import AppContent from "./AppContent.svelte";
   import UserMenu from "./UserMenu.svelte";
   import { createAuth } from "./auth.js";
+  import { getUser } from "./api/user.js";
   import { onDestroy, onMount } from "svelte";
 
   const config = {
@@ -15,7 +17,26 @@
       "http://talesofapirate.com/dnd/api",
   };
 
-  const { isAuthenticated, isLoading } = createAuth(config);
+  const { isAuthenticated, isLoading, authToken } = createAuth(config);
+
+  // User role tracking
+  let userRole = writable("player");
+  let userRoleLoaded = false;
+
+  $: isCreator = $userRole === "creator" || $userRole === "admin";
+  $: isAdmin = $userRole === "admin";
+
+  // Load user data (including role) after authentication
+  $: if ($isAuthenticated && $authToken && !userRoleLoaded) {
+    userRoleLoaded = true;
+    getUser(
+      $authToken,
+      (u) => {
+        userRole.set(u.role || "player");
+      },
+      (err) => console.error("Failed to load user role:", err)
+    );
+  }
 
   let playMenuOpen = false;
   let playMenuEl;
@@ -83,7 +104,12 @@
           </div>
           {#if $isAuthenticated}
             <a class="hover:text-primary transition-colors" href="/list">Top Characters</a>
-            <a class="hover:text-primary transition-colors" href="/creator/rooms">Creator</a>
+            {#if isCreator}
+              <a class="hover:text-primary transition-colors" href="/creator/rooms">Creator</a>
+            {/if}
+            {#if isAdmin}
+              <a class="hover:text-primary transition-colors" href="/manage/users">Admin</a>
+            {/if}
           {/if}
           <a class="hover:text-primary transition-colors" href="/news">News</a>
         </div>

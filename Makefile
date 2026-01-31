@@ -41,6 +41,12 @@ run-mud-client:
 
 run: ; ${MAKE} -j4 run-server run-frontend run-mud-client
 
+# Dev mode: Go backend (go run) + Vite/Rollup dev servers with hot reload.
+# Main app: http://localhost:5173 (Vite proxies /api and /ws to Go backend)
+# Game client: http://localhost:8080 (talks to Go backend via CORS)
+# Go backend: http://localhost:8010
+dev: ; ${MAKE} -j4 run-server run-frontend run-mud-client
+
 build:
 	echo "1. Building main frontend"
 	cd public/app/ && npm run build

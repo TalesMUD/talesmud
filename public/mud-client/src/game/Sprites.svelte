@@ -24,5 +24,5 @@
 </script>
 
 <h2 class="{item}">
-  <img src="/play/img/sword.png" alt="" />
+  <img src="img/sword.png" alt="" />
 </h2>

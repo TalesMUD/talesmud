@@ -36,7 +36,7 @@
 
   function avatar() {
     let num = 1 + Math.abs((name || "").hashCode()%12)
-    return "/play/img/avatars/" + num + "p.png";
+    return "img/avatars/" + num + "p.png";
   }
 </script>
 

@@ -44,6 +44,16 @@
   .gameContainer {
     animation: fadeSlideIn 0.5s ease-out;
   }
+
+  /* Fixed overlay for darkening/blurring the background image */
+  .bg-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px) saturate(30%) brightness(50%);
+    z-index: -1;
+    pointer-events: none;
+  }
 </style>
 
 <script>
@@ -58,7 +68,7 @@
   import { onMount, onDestroy } from "svelte";
   import { getAuth } from "../auth.js";
   import { createClient } from "./Client";
-  import { wsbackend } from "../api/base.js";
+  import { backend, wsbackend } from "../api/base.js";
 
   let client;
   let term;
@@ -92,8 +102,8 @@
 
     // set document background (blurred)
     if ($muxStore.background) {
-      const bgUrl = "/api/backgrounds/" + $muxStore.background + ".png";
-      const placeholderUrl = "/play/img/placeholder.png";
+      const bgUrl = backend + "/backgrounds/" + $muxStore.background + ".png";
+      const placeholderUrl = "img/placeholder.png";
       const testImg = new Image();
       testImg.onload = () => {
         document.body.style.backgroundImage = "url('" + bgUrl + "')";
@@ -131,10 +141,7 @@
       muxClient.set(client);
     }
 
-    // Show message if not authenticated
-    if (!$isLoading && !$isAuthenticated) {
-      termRenderer("Please log in to connect to the game.");
-    }
+    // Unauthenticated users are handled by the onboarding flow in App.svelte
   }
 
   function handleTerminalInput(input) {
@@ -150,9 +157,8 @@
   }
 
   onMount(async () => {
-    document.body.style.backgroundImage = "url('/api/backgrounds/oldtown-griphon.png')";
-    document.body.style.backdropFilter =
-      "blur(10px) saturate(30%) brightness(50%)";
+    document.body.style.backgroundImage = "url('" + backend + "/backgrounds/oldtown-griphon.png')";
+    document.body.style.backgroundAttachment = "fixed";
 
     var nav = document.querySelector("nav");
     if (nav) {
@@ -165,7 +171,7 @@
 
   onDestroy(async () => {
     document.body.style.backgroundImage = "";
-    document.body.style.backdropFilter = "";
+    document.body.style.backgroundAttachment = "";
 
     var nav = document.querySelector("nav");
     if (nav) {
@@ -175,6 +181,8 @@
 </script>
 
 <CharacterCreator />
+
+<div class="bg-overlay"></div>
 
 <div class="gameContainer">
   <div class="grid-container">

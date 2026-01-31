@@ -48,6 +48,14 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Item templates for reusable definitions
   - Container support with nested items
 
+- **New Player Onboarding**
+  - Phase-based flow: Welcome Screen, Nickname Setup, Character Creation Wizard, Game
+  - Unauthenticated users see a cinematic welcome landing screen (not the game UI)
+  - Signup and Login via Auth0 with dedicated CTA buttons
+  - First-time users prompted to choose a display name/nickname
+  - Three-step character creation wizard: Choose Template, Name Character, Confirm & Create
+  - Automatic phase detection from user profile and character data
+
 - **Multiplayer**
   - Real-time player interactions via WebSocket
   - Players see each other in rooms
@@ -73,11 +81,22 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
 
 ### Technical Features
 
-- **Authentication**
+- **Authentication & Authorization**
   - Auth0 OAuth2 integration
   - JWT-based API protection
-  - Basic auth for admin endpoints
+  - Basic auth for legacy admin endpoints (export/import)
   - Session management
+  - Three-tier role system: MUD Admin, MUD Creator, Player
+  - MUD Admin configured via `MUD_ADMIN_OAUTHID` env var (has full access)
+  - MUD Creators can modify game content (Creator area)
+  - Players can play the game, view rankings, and news
+  - User ban system (bans by Reference ID and email)
+
+- **User Management (Admin Only)**
+  - View all registered users with ID, Name, Nickname, Email, Access Level
+  - Promote players to Creator role or demote Creators to Player
+  - Ban/unban players with double-confirmation modal
+  - Banned users are blocked from all authenticated endpoints
 
 - **Optional Landing Page**
   - Serve a static landing page at `/` from the OS filesystem via `LANDING_PATH`
@@ -244,9 +263,13 @@ AUTH0_DOMAIN=https://owndnd.eu.auth0.com/
 AUTH0_WK_JWKS=https://owndnd.eu.auth0.com/.well-known/jwks.json
 AUTH_ENABLED=false
 
-# Admin
+# Admin (basic auth for export/import)
 ADMIN_USER=admin
 ADMIN_PASSWORD=admin
+
+# MUD Admin OAuth ID (Auth0 sub claim, e.g. "twitter|16651340")
+# The user with this OAuth ID gets full admin access
+MUD_ADMIN_OAUTHID=
 
 # Optional landing page (path to directory with index.html + static assets)
 # LANDING_PATH=./public/landing
@@ -305,15 +328,26 @@ go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
 - `GET /api/templates/characters` - Character creation templates
 - `GET /api/room-of-the-day` - Featured room
 
-### Protected Endpoints (Require Auth)
-- `GET/POST/PUT/DELETE /api/characters` - Character management
-- `GET/POST/PUT/DELETE /api/rooms` - Room management
-- `GET/POST/PUT/DELETE /api/items` - Item management
-- `GET/POST/PUT/DELETE /api/item-templates` - Item template management
-- `GET/POST/PUT/DELETE /api/scripts` - Script management
-- `GET /api/user` - User profile
+### Protected Endpoints (Require Auth - Player Level)
+- `GET /api/characters`, `POST /api/newcharacter` - Character management
+- `GET /api/rooms`, `GET /api/items` - Read game data
+- `GET /api/user`, `PUT /api/user` - User profile
 
-### Admin Endpoints (Basic Auth)
+### Creator Endpoints (Require Creator or Admin Role)
+- `POST/PUT/DELETE /api/rooms` - Room management
+- `POST/PUT/DELETE /api/items` - Item management
+- `POST/PUT/DELETE /api/scripts` - Script management
+- `POST/PUT/DELETE /api/npcs` - NPC management
+- `POST/PUT/DELETE /api/dialogs` - Dialog management
+- `PUT /api/settings` - Server settings
+
+### Admin API Endpoints (Require Admin Role)
+- `GET /api/admin/users` - List all users
+- `PUT /api/admin/users/:id/role` - Change user role
+- `POST /api/admin/users/:id/ban` - Ban user
+- `POST /api/admin/users/:id/unban` - Unban user
+
+### Legacy Admin Endpoints (Basic Auth)
 - `GET /admin/export` - Export world data
 - `POST /admin/import` - Import world data
 - `GET /admin/world` - World map rendering

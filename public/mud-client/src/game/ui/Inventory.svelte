@@ -88,7 +88,7 @@ padding: 0;
     <div class="inventory right-align">
       <ul class="collection">
         <li class="collection-item item left-align">
-          <img src="/play/img/sword.png" alt="" />
+          <img src="img/sword.png" alt="" />
 
           <span class="item-header">
             Sword of Long John Silver that never was
@@ -112,7 +112,7 @@ padding: 0;
 
         {#each Array(10) as _, i}
           <li class="collection-item item left-align">
-            <img src="/play/img/sword.png" alt="" />
+            <img src="img/sword.png" alt="" />
 
             <span class="item-header">Sturdy Iron Helmet</span>
             <br />
