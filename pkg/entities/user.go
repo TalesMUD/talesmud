@@ -2,7 +2,14 @@ package entities
 
 import "time"
 
-//User connects to login credentials to a user object
+// Role constants for access levels
+const (
+	RolePlayer  = "player"
+	RoleCreator = "creator"
+	RoleAdmin   = "admin"
+)
+
+// User connects to login credentials to a user object
 type User struct {
 	*Entity `bson:",inline"`
 
@@ -29,9 +36,37 @@ type User struct {
 	IsNewUser bool `bson:"isNewUser" json:"isNewUser"`
 
 	IsOnline bool `bson:"isOnline" json:"isOnline"`
+
+	// Role is the user's access level: "player" (default), "creator", or "admin"
+	Role string `json:"role"`
+
+	// IsBanned indicates whether the user is banned from the game
+	IsBanned bool `json:"isBanned"`
+
+	// BannedEmail stores the email at the time of banning (for email-based ban enforcement)
+	BannedEmail string `json:"bannedEmail,omitempty"`
 }
 
 // NewUser creates a new user
 func NewUser() *User {
 	return &User{}
+}
+
+// GetRole returns the effective role, defaulting to "player" if not set
+func (u *User) GetRole() string {
+	if u.Role == "" {
+		return RolePlayer
+	}
+	return u.Role
+}
+
+// IsAdmin returns true if the user has admin role
+func (u *User) IsAdmin() bool {
+	return u.GetRole() == RoleAdmin
+}
+
+// IsCreator returns true if the user has creator or admin role
+func (u *User) IsCreator() bool {
+	role := u.GetRole()
+	return role == RoleCreator || role == RoleAdmin
 }

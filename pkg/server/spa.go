@@ -34,6 +34,18 @@ func SPAMiddleware(urlPrefix string, spaFS fs.FS, indexFile string) gin.HandlerF
 			if !strings.HasPrefix(pth, urlPrefix) {
 				return // Let other middleware handle this request
 			}
+			// Redirect /prefix to /prefix/ so relative asset paths in
+			// index.html resolve correctly (e.g. "bundle.js" → /prefix/bundle.js).
+			if pth == urlPrefix {
+				target := urlPrefix + "/"
+				// Preserve query string (critical for OAuth callback parameters like ?code=...)
+				if c.Request.URL.RawQuery != "" {
+					target += "?" + c.Request.URL.RawQuery
+				}
+				c.Redirect(http.StatusMovedPermanently, target)
+				c.Abort()
+				return
+			}
 		} else {
 			// For root prefix, don't handle paths that start with other known prefixes
 			// This allows /play to be handled by its own middleware

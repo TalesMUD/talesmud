@@ -108,7 +108,7 @@ function createAuth(config) {
     };
   });
 
-  const login = async (redirectPage) => {
+  const login = async (redirectPage, options = {}) => {
     if (!auth0) {
       console.error("Auth0 client not initialized");
       return;
@@ -116,7 +116,7 @@ function createAuth(config) {
 
     await auth0.loginWithRedirect({
       redirect_uri: redirectPage || window.location.origin + "/play",
-      // Removed prompt: "login" to allow silent authentication
+      ...options,
     });
   };
 

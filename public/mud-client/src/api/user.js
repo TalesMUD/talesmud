@@ -14,7 +14,7 @@ function getUser(token, cb, errorCb) {
     .catch((err) => errorCb(err));
 };
 
-function updateUser(token, user, cb) {
+function updateUser(token, user, cb, errorCb) {
   axios
     .put(`${backend}/user`, user, {
       mode: "no-cors",
@@ -23,7 +23,8 @@ function updateUser(token, user, cb) {
         Authorization: `Bearer ${token}`,
       },
     })
-    .then((r) => cb(r.data));
+    .then((r) => cb(r.data))
+    .catch((err) => { if (errorCb) errorCb(err); });
 };
 
 export { getUser, updateUser };

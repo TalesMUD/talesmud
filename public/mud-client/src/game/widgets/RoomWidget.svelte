@@ -3,6 +3,7 @@
   import DialogOverlay from '../ui/DialogOverlay.svelte';
   import { findNpcByName } from '../MUDXPlusStore';
   import { settingsStore } from '../SettingsStore.js';
+  import { backend } from '../../api/base.js';
 
   export let store;
   export let sendMessage;
@@ -30,8 +31,8 @@
     toggleImage = !toggleImage;
 
     if (newImg && oldImg) {
-      const bgUrl = `/api/backgrounds/${background}.png`;
-      const placeholderUrl = '/play/img/placeholder.png';
+      const bgUrl = `${backend}/backgrounds/${background}.png`;
+      const placeholderUrl = 'img/placeholder.png';
 
       // Test if image exists before displaying
       const testImg = new Image();

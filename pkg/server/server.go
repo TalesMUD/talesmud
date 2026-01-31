@@ -134,11 +134,15 @@ func (app *app) setupRoutes() {
 		Service: app.Facade.ServerSettingsService(),
 	}
 
+	userMgmt := &handler.UserManagementHandler{
+		Service: app.Facade.UsersService(),
+	}
+
 	r.GET("/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "API is up and running")
 	})
 
-	// admin endpoints
+	// admin endpoints (basic auth for export/import)
 	authorized := r.Group("/admin/", gin.BasicAuth(gin.Accounts{
 		os.Getenv("ADMIN_USER"): os.Getenv("ADMIN_PASSWORD"),
 	}))
@@ -146,102 +150,120 @@ func (app *app) setupRoutes() {
 		authorized.GET("export", exp.Export)
 		authorized.POST("import", exp.Import)
 		authorized.GET("world", worldRenderer.Render)
-
 	}
 
-	// user,
+	// Protected API routes (JWT auth required)
 	protected := r.Group("/api/")
 	protected.Use(AuthMiddleware(app.Facade))
 	{
-		// CRUD
+		// Player-level routes (any authenticated user)
+
+		// Characters
 		protected.GET("characters", csh.GetCharacters)
 		protected.GET("my-characters", csh.GetMyCharacters)
 		protected.POST("characters", csh.PostCharacter)
 		protected.GET("characters/:id", csh.GetCharacterByID)
 		protected.DELETE("characters/:id", csh.DeleteCharacterByID)
 		protected.PUT("characters/:id", csh.UpdateCharacterByID)
-		// special
 		protected.POST("newcharacter", csh.CreateNewCharacter)
 
+		// Read-only game data (accessible to all authenticated users)
 		protected.GET("rooms", rooms.GetRooms)
 		protected.GET("rooms-vh", rooms.GetRoomValueHelp)
 		protected.GET("rooms/:id", rooms.GetRoomByID)
-
-		protected.POST("rooms", rooms.PostRoom)
-		protected.PUT("rooms/:id", rooms.PutRoom)
-		protected.DELETE("rooms/:id", rooms.DeleteRoom)
-
-		// Items API - use ?isTemplate=true for templates, ?isTemplate=false for instances
 		protected.GET("items", items.GetItems)
-		protected.POST("items", items.PostItem)
 		protected.GET("items/:id", items.GetItemByID)
-		protected.PUT("items/:id", items.UpdateItemByID)
-		protected.DELETE("items/:id", items.DeleteItemByID)
-		protected.POST("items/from-template/:templateId", items.CreateInstanceFromTemplate)
-
-		// -- scripts
 		protected.GET("scripts", scripts.GetScripts)
 		protected.GET("script-types", scripts.GetScriptTypes)
-		protected.POST("scripts", scripts.PostScript)
-		protected.PUT("scripts/:id", scripts.PutScript)
-		protected.DELETE("scripts/:id", scripts.DeleteScript)
-		protected.POST("run-script/:id", scripts.ExecuteScript)
-
 		protected.GET("world/map", worldRenderer.Render)
 		protected.GET("world/graph", worldRenderer.RenderGraphData)
 		protected.GET("world/rooms-minimal", worldRenderer.GetMinimalRooms)
+		protected.GET("npcs", npcs.GetNPCs)
+		protected.GET("npcs/templates", npcs.GetNPCTemplates)
+		protected.GET("npcs/:id", npcs.GetNPCByID)
+		protected.GET("spawners", npcSpawners.GetSpawners)
+		protected.GET("spawners/:id", npcSpawners.GetSpawnerByID)
+		protected.GET("dialogs", dialogs.GetDialogs)
+		protected.GET("dialogs/:id", dialogs.GetDialogByID)
+		protected.GET("character-templates", charTemplates.GetCharacterTemplates)
+		protected.GET("character-templates/:id", charTemplates.GetCharacterTemplateByID)
+		protected.GET("character-templates/presets", charTemplates.GetCharacterTemplatePresets)
+		protected.GET("loottables", lootTables.GetLootTables)
+		protected.GET("loottables/:id", lootTables.GetLootTableByID)
+		protected.GET("backgrounds", backgrounds.ListBackgrounds)
+		protected.GET("settings", serverSettings.GetServerSettings)
 
+		// User profile (any authenticated user can view/edit own profile)
 		protected.GET("user", usr.GetUser)
 		protected.PUT("user", usr.UpdateUser)
 
-		// NPCs
-		protected.GET("npcs", npcs.GetNPCs)
-		protected.POST("npcs", npcs.PostNPC)
-		protected.GET("npcs/templates", npcs.GetNPCTemplates)
-		protected.GET("npcs/:id", npcs.GetNPCByID)
-		protected.PUT("npcs/:id", npcs.UpdateNPCByID)
-		protected.DELETE("npcs/:id", npcs.DeleteNPCByID)
-		protected.POST("npcs/:id/spawn", npcs.SpawnNPC)
+		// Creator-level routes (creator or admin role required)
+		creator := protected.Group("")
+		creator.Use(CreatorMiddleware())
+		{
+			// Rooms
+			creator.POST("rooms", rooms.PostRoom)
+			creator.PUT("rooms/:id", rooms.PutRoom)
+			creator.DELETE("rooms/:id", rooms.DeleteRoom)
 
-		// NPC Spawners
-		protected.GET("spawners", npcSpawners.GetSpawners)
-		protected.POST("spawners", npcSpawners.PostSpawner)
-		protected.GET("spawners/:id", npcSpawners.GetSpawnerByID)
-		protected.PUT("spawners/:id", npcSpawners.UpdateSpawnerByID)
-		protected.DELETE("spawners/:id", npcSpawners.DeleteSpawnerByID)
+			// Items
+			creator.POST("items", items.PostItem)
+			creator.PUT("items/:id", items.UpdateItemByID)
+			creator.DELETE("items/:id", items.DeleteItemByID)
+			creator.POST("items/from-template/:templateId", items.CreateInstanceFromTemplate)
 
-		// Dialogs
-		protected.GET("dialogs", dialogs.GetDialogs)
-		protected.POST("dialogs", dialogs.PostDialog)
-		protected.GET("dialogs/:id", dialogs.GetDialogByID)
-		protected.PUT("dialogs/:id", dialogs.UpdateDialogByID)
-		protected.DELETE("dialogs/:id", dialogs.DeleteDialogByID)
+			// Scripts
+			creator.POST("scripts", scripts.PostScript)
+			creator.PUT("scripts/:id", scripts.PutScript)
+			creator.DELETE("scripts/:id", scripts.DeleteScript)
+			creator.POST("run-script/:id", scripts.ExecuteScript)
 
-		// Character Templates (DB-backed)
-		protected.GET("character-templates", charTemplates.GetCharacterTemplates)
-		protected.POST("character-templates", charTemplates.PostCharacterTemplate)
-		protected.GET("character-templates/:id", charTemplates.GetCharacterTemplateByID)
-		protected.PUT("character-templates/:id", charTemplates.UpdateCharacterTemplateByID)
-		protected.DELETE("character-templates/:id", charTemplates.DeleteCharacterTemplateByID)
-		protected.POST("character-templates/seed", charTemplates.SeedCharacterTemplates)
-		protected.GET("character-templates/presets", charTemplates.GetCharacterTemplatePresets)
+			// NPCs
+			creator.POST("npcs", npcs.PostNPC)
+			creator.PUT("npcs/:id", npcs.UpdateNPCByID)
+			creator.DELETE("npcs/:id", npcs.DeleteNPCByID)
+			creator.POST("npcs/:id/spawn", npcs.SpawnNPC)
 
-		// Loot Tables
-		protected.GET("loottables", lootTables.GetLootTables)
-		protected.POST("loottables", lootTables.PostLootTable)
-		protected.GET("loottables/:id", lootTables.GetLootTableByID)
-		protected.PUT("loottables/:id", lootTables.UpdateLootTableByID)
-		protected.DELETE("loottables/:id", lootTables.DeleteLootTableByID)
-		protected.POST("loottables/:id/roll", lootTables.RollLootTable)
+			// NPC Spawners
+			creator.POST("spawners", npcSpawners.PostSpawner)
+			creator.PUT("spawners/:id", npcSpawners.UpdateSpawnerByID)
+			creator.DELETE("spawners/:id", npcSpawners.DeleteSpawnerByID)
 
-		// Backgrounds (upload/list/delete require auth)
-		protected.GET("backgrounds", backgrounds.ListBackgrounds)
-		protected.POST("backgrounds/upload", backgrounds.UploadBackground)
-		protected.DELETE("backgrounds/:filename", backgrounds.DeleteBackground)
+			// Dialogs
+			creator.POST("dialogs", dialogs.PostDialog)
+			creator.PUT("dialogs/:id", dialogs.UpdateDialogByID)
+			creator.DELETE("dialogs/:id", dialogs.DeleteDialogByID)
 
-		// Server Settings
-		protected.GET("settings", serverSettings.GetServerSettings)
-		protected.PUT("settings", serverSettings.UpdateServerSettings)
+			// Character Templates
+			creator.POST("character-templates", charTemplates.PostCharacterTemplate)
+			creator.PUT("character-templates/:id", charTemplates.UpdateCharacterTemplateByID)
+			creator.DELETE("character-templates/:id", charTemplates.DeleteCharacterTemplateByID)
+			creator.POST("character-templates/seed", charTemplates.SeedCharacterTemplates)
+
+			// Loot Tables
+			creator.POST("loottables", lootTables.PostLootTable)
+			creator.PUT("loottables/:id", lootTables.UpdateLootTableByID)
+			creator.DELETE("loottables/:id", lootTables.DeleteLootTableByID)
+			creator.POST("loottables/:id/roll", lootTables.RollLootTable)
+
+			// Backgrounds
+			creator.POST("backgrounds/upload", backgrounds.UploadBackground)
+			creator.DELETE("backgrounds/:filename", backgrounds.DeleteBackground)
+
+			// Server Settings
+			creator.PUT("settings", serverSettings.UpdateServerSettings)
+		}
+
+		// Admin-level routes (admin role required)
+		adminAPI := protected.Group("admin/")
+		adminAPI.Use(AdminMiddleware())
+		{
+			adminAPI.GET("users", userMgmt.GetAllUsers)
+			adminAPI.PUT("users/:id/role", userMgmt.UpdateUserRole)
+			adminAPI.POST("users/:id/ban", userMgmt.BanUser)
+			adminAPI.POST("users/:id/unban", userMgmt.UnbanUser)
+			adminAPI.DELETE("users/:id", userMgmt.DeleteUser)
+		}
 	}
 
 	public := r.Group("/api/")

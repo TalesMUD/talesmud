@@ -1,8 +1,19 @@
-const defaultOrigin =
-  typeof window !== "undefined" ? window.location.origin : "http://localhost:8010";
+// In dev mode (served from a different port on localhost), point to the Go backend directly.
+// In production, the app is embedded in the Go binary and served from the same origin.
+const isLocalDev =
+  typeof window !== "undefined" &&
+  window.location.hostname === "localhost" &&
+  window.location.port !== "8010";
 
-const defaultWsOrigin =
-  typeof window !== "undefined"
+const defaultOrigin = isLocalDev
+  ? "http://localhost:8010"
+  : typeof window !== "undefined"
+    ? window.location.origin
+    : "http://localhost:8010";
+
+const defaultWsOrigin = isLocalDev
+  ? "ws://localhost:8010"
+  : typeof window !== "undefined"
     ? `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}`
     : "ws://localhost:8010";
 

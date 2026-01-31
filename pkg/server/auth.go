@@ -14,6 +14,7 @@ import (
 	"github.com/dgrijalva/jwt-go/request"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	e "github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
@@ -117,6 +118,7 @@ func handleTokenError(c *gin.Context, err error, token *jwt.Token) {
 
 // handleTokenSuccess handles the case where the JWT token is valid.
 // It sets the user ID and user in the gin context, if they don't already exist.
+// It also enforces ban status — banned users are rejected with 403.
 func handleTokenSuccess(c *gin.Context, token *jwt.Token, facade service.Facade) {
 	// set userid if not already in context
 	if _, ok := c.Get("userid"); !ok {
@@ -125,6 +127,16 @@ func handleTokenSuccess(c *gin.Context, token *jwt.Token, facade service.Facade)
 
 	if _, ok := c.Get("user"); !ok {
 		setUser(c, facade)
+	}
+
+	// Ban enforcement: reject banned users at the auth layer
+	if usr, exists := c.Get("user"); exists {
+		if user, ok := usr.(*e.User); ok && user.IsBanned {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+				"error": "Your account has been banned",
+			})
+			return
+		}
 	}
 
 	c.Set("token", token)
@@ -184,5 +196,35 @@ func AuthMiddleware(facade service.Facade) gin.HandlerFunc {
 		} else {
 			handleTokenSuccess(c, token, facade)
 		}
+	}
+}
+
+// CreatorMiddleware requires the authenticated user to have creator or admin role.
+func CreatorMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if usr, exists := c.Get("user"); exists {
+			if user, ok := usr.(*e.User); ok && user.IsCreator() {
+				c.Next()
+				return
+			}
+		}
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+			"error": "Creator access required",
+		})
+	}
+}
+
+// AdminMiddleware requires the authenticated user to have admin role.
+func AdminMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if usr, exists := c.Get("user"); exists {
+			if user, ok := usr.(*e.User); ok && user.IsAdmin() {
+				c.Next()
+				return
+			}
+		}
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+			"error": "Admin access required",
+		})
 	}
 }

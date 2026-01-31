@@ -17,6 +17,7 @@
   import NewCharacter from "./characters/NewCharacter.svelte";
   import UserForm from "./UserForm.svelte";
   import News from "./news/News.svelte";
+  import UserManagement from "./admin/UserManagement.svelte";
 </script>
 
 <main class="min-h-[calc(100vh-72px)]">
@@ -77,6 +78,9 @@
     <CreatorLayout>
       <SettingsEditor />
     </CreatorLayout>
+  </Route>
+  <Route exact path="/manage/users">
+    <UserManagement />
   </Route>
   <Route exact path="/list" component="{Characters}" />
   <Route exact path="/characters/new" component="{NewCharacter}" />
