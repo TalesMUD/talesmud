@@ -29,14 +29,14 @@ function createClient(renderer, characterCreator, muxStore) {
       }
 
       if (activeRoom.actions != undefined) {
-        mux.setActaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaions(activeRoom.actions);
+        mux.setActions(activeRoom.actions);
       } else {
         mux.setActions([]);
       }
     }
   };
 
-  messageHandlers["createCharacter"] = (msg) => {a
+  messageHandlers["createCharacter"] = (msg) => {
     renderer(msg.message);
 
     if (characterCreator) {

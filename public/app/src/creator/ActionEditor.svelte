@@ -3,6 +3,7 @@
 
   export let action;
   export let deleteAction;
+  export let scriptsValueHelp = null;
 
   onMount(async () => {
     if (action.params === null) {
@@ -67,13 +68,27 @@
 
   {#if action.type === "script"}
     <div class="space-y-1.5">
-      <label class="label-caps" for={`action-script-${action.name}`}>Script ID</label>
-      <input
-        class="input-base text-xs"
-        id={`action-script-${action.name}`}
-        type="text"
-        bind:value={action.scriptId}
-      />
+      <label class="label-caps" for={`action-script-${action.name}`}>Script</label>
+      {#if scriptsValueHelp}
+        <select
+          class="input-base text-xs"
+          id={`action-script-${action.name}`}
+          bind:value={action.scriptId}
+        >
+          <option value="">Select a script...</option>
+          {#each scriptsValueHelp as script}
+            <option value={script.id}>{script.name} ({script.id})</option>
+          {/each}
+        </select>
+      {:else}
+        <input
+          class="input-base text-xs"
+          id={`action-script-${action.name}`}
+          type="text"
+          placeholder="Script ID"
+          bind:value={action.scriptId}
+        />
+      {/if}
     </div>
   {/if}
 </div>

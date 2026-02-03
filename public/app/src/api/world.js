@@ -67,4 +67,16 @@ function getMinimalRoomsAsync(token) {
     .then((result) => result.data);
 }
 
-export { getWorldMap, getWorldGraph, getWorldGraphAsync, getMinimalRooms, getMinimalRoomsAsync };
+// Batch-update room coordinates
+function batchUpdateCoordsAsync(token, updates) {
+  return axios
+    .put(`${backend}/world/rooms-coords`, updates, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    .then((result) => result.data);
+}
+
+export { getWorldMap, getWorldGraph, getWorldGraphAsync, getMinimalRooms, getMinimalRoomsAsync, batchUpdateCoordsAsync };

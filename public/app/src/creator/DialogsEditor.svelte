@@ -10,6 +10,7 @@
     updateDialog,
     deleteDialog,
   } from "../api/dialogs.js";
+  import { dialogColumns } from "./tableColumns.js";
 
   const store = createStore();
 
@@ -17,6 +18,7 @@
     title: "Manage Dialogs",
     subtitle: "Author NPC dialog trees and alternate text responses.",
     listTitle: "Dialogs",
+    columns: dialogColumns,
     labels: {
       create: "Create Dialog",
       update: "Update Dialog",

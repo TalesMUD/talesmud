@@ -479,6 +479,65 @@
     color: #6b7280;
   }
 
+  /* Generate buttons */
+  .input-with-generate,
+  .textarea-with-generate {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    gap: 0.48rem;
+  }
+
+  .input-with-generate .form-input,
+  .textarea-with-generate .form-textarea {
+    flex: 1;
+  }
+
+  .btn-generate {
+    flex: 0 0 auto;
+    width: 42px;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    border-radius: 7px;
+    color: #f59e0b;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn-generate:hover:not(:disabled) {
+    background: rgba(245, 158, 11, 0.2);
+    border-color: rgba(245, 158, 11, 0.4);
+    transform: translateY(-1px);
+  }
+
+  .btn-generate:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-generate-desc {
+    align-self: flex-start;
+    height: 42px;
+  }
+
+  .generate-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(245, 158, 11, 0.3);
+    border-top-color: #f59e0b;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
   /* Responsive */
   @media (max-width: 600px) {
     .customize-layout {
@@ -497,7 +556,7 @@
 
 <script>
   import { onMount } from "svelte";
-  import { getCharacterTemplates, createNewCharacter } from "../api/characters.js";
+  import { getCharacterTemplates, createNewCharacter, generateCharacter } from "../api/characters.js";
 
   export let authToken;
   export let onComplete;
@@ -511,6 +570,8 @@
   let creating = false;
   let error = "";
   let showSuccess = false;
+  let generatingName = false;
+  let generatingDesc = false;
 
   const backgrounds = [
     'img/bg/castle-1.png',
@@ -591,6 +652,64 @@
     if (e.key === "Enter" && canProceedStep2) {
       nextStep();
     }
+  }
+
+  function buildGenerateDTO(generateType) {
+    return {
+      generate: generateType,
+      templateName: selectedTemplate?.name || "",
+      archetype: selectedTemplate?.archetype || "",
+      race: selectedTemplate?.race?.name || "",
+      class: selectedTemplate?.class?.name || "",
+      description: selectedTemplate?.description || "",
+      backstory: selectedTemplate?.backstory || "",
+      originArea: selectedTemplate?.originArea || "",
+      currentName: characterName || "",
+    };
+  }
+
+  function handleGenerateName() {
+    if (generatingName || !selectedTemplate) return;
+    generatingName = true;
+    error = "";
+
+    generateCharacter(
+      authToken,
+      buildGenerateDTO("name"),
+      (result) => {
+        generatingName = false;
+        if (result.name) {
+          characterName = result.name;
+        }
+      },
+      (err) => {
+        generatingName = false;
+        error = "Could not generate name. Try again or type one manually.";
+        console.error("Name generation failed:", err);
+      }
+    );
+  }
+
+  function handleGenerateDescription() {
+    if (generatingDesc || !selectedTemplate) return;
+    generatingDesc = true;
+    error = "";
+
+    generateCharacter(
+      authToken,
+      buildGenerateDTO("description"),
+      (result) => {
+        generatingDesc = false;
+        if (result.description) {
+          characterDescription = result.description;
+        }
+      },
+      (err) => {
+        generatingDesc = false;
+        error = "Could not generate description. Try again or type one manually.";
+        console.error("Description generation failed:", err);
+      }
+    );
   }
 </script>
 
@@ -697,28 +816,56 @@
         <div class="customize-form">
           <div class="form-group">
             <label class="form-label" for="char-name">Character Name</label>
-            <input
-              id="char-name"
-              class="form-input"
-              type="text"
-              bind:value={characterName}
-              placeholder="Enter a name..."
-              on:keydown={handleNameKeydown}
-              maxlength="40"
-              autofocus
-            />
+            <div class="input-with-generate">
+              <input
+                id="char-name"
+                class="form-input"
+                type="text"
+                bind:value={characterName}
+                placeholder="Enter a name..."
+                on:keydown={handleNameKeydown}
+                maxlength="40"
+                autofocus
+              />
+              <button
+                class="btn-generate"
+                on:click={handleGenerateName}
+                disabled={generatingName}
+                title="Generate a random name with AI"
+              >
+                {#if generatingName}
+                  <span class="generate-spinner"></span>
+                {:else}
+                  &#x2728;
+                {/if}
+              </button>
+            </div>
           </div>
 
           <div class="form-group">
             <label class="form-label" for="char-desc">Description</label>
-            <textarea
-              id="char-desc"
-              class="form-textarea"
-              bind:value={characterDescription}
-              placeholder="Describe your character..."
-              maxlength="200"
-              rows="3"
-            ></textarea>
+            <div class="textarea-with-generate">
+              <textarea
+                id="char-desc"
+                class="form-textarea"
+                bind:value={characterDescription}
+                placeholder="Describe your character..."
+                maxlength="200"
+                rows="3"
+              ></textarea>
+              <button
+                class="btn-generate btn-generate-desc"
+                on:click={handleGenerateDescription}
+                disabled={generatingDesc}
+                title="Generate a description with AI"
+              >
+                {#if generatingDesc}
+                  <span class="generate-spinner"></span>
+                {:else}
+                  &#x2728;
+                {/if}
+              </button>
+            </div>
           </div>
         </div>
       </div>

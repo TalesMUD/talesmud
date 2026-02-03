@@ -6,6 +6,11 @@ function createStore() {
     selectedElement: null,
     filters: [],
     filterActive: false,
+    // Data table state
+    detailOpen: false,
+    tableFilterValues: {},
+    sortKey: "",
+    sortDir: "asc",
   });
   return {
     subscribe,
@@ -59,6 +64,38 @@ function createStore() {
     setElements: (newelements) => {
       update((state) => {
         state.elements = newelements;
+        return state;
+      });
+    },
+    // Data table methods
+    openDetail: () => {
+      update((state) => {
+        state.detailOpen = true;
+        return state;
+      });
+    },
+    closeDetail: () => {
+      update((state) => {
+        state.detailOpen = false;
+        return state;
+      });
+    },
+    setTableFilter: (key, val) => {
+      update((state) => {
+        state.tableFilterValues = { ...state.tableFilterValues, [key]: val };
+        return state;
+      });
+    },
+    resetTableFilters: () => {
+      update((state) => {
+        state.tableFilterValues = {};
+        return state;
+      });
+    },
+    setSort: (key, dir) => {
+      update((state) => {
+        state.sortKey = key;
+        state.sortDir = dir;
         return state;
       });
     },

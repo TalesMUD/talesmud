@@ -392,3 +392,44 @@ func (handler *WorldRendererHandler) GetMinimalRooms(c *gin.Context) {
 		"rooms": minimalRooms,
 	})
 }
+
+// CoordsUpdate represents a single room coordinate update
+type CoordsUpdate struct {
+	ID string `json:"id"`
+	X  int32  `json:"x"`
+	Y  int32  `json:"y"`
+	Z  int32  `json:"z"`
+}
+
+// BatchUpdateCoords updates coordinates for multiple rooms at once
+func (handler *WorldRendererHandler) BatchUpdateCoords(c *gin.Context) {
+	var updates []CoordsUpdate
+	if err := c.ShouldBindJSON(&updates); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	updated := 0
+	for _, u := range updates {
+		room, err := handler.RoomsService.FindByID(u.ID)
+		if err != nil || room == nil {
+			log.Printf("Skipping coord update for room %s: not found", u.ID)
+			continue
+		}
+
+		room.Coords = &struct {
+			X int32 `bson:"x" json:"x"`
+			Y int32 `bson:"y" json:"y"`
+			Z int32 `bson:"z" json:"z"`
+		}{X: u.X, Y: u.Y, Z: u.Z}
+
+		if err := handler.RoomsService.Update(u.ID, room); err != nil {
+			log.Printf("Error updating coords for room %s: %v", u.ID, err)
+			continue
+		}
+		updated++
+	}
+
+	log.Printf("Batch updated coordinates for %d/%d rooms", updated, len(updates))
+	c.JSON(http.StatusOK, gin.H{"updated": updated})
+}

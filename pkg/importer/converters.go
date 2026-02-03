@@ -47,9 +47,19 @@ func (y *YAMLRoom) ToEntity() *rooms.Room {
 				Type:        rooms.RoomActionType(a.Type),
 				Description: a.Description,
 				Response:    a.Response,
+				Params:      a.Params,
 			}
 		}
 		room.Actions = &actions
+	}
+
+	// Convert room items (place item template IDs into the room)
+	if len(y.Items) > 0 {
+		itemIDs := make(rooms.Items, len(y.Items))
+		for i, item := range y.Items {
+			itemIDs[i] = item.ID
+		}
+		room.Items = &itemIDs
 	}
 
 	// Set meta if background is provided

@@ -78,4 +78,17 @@ function updateCharacter(token, id, character, cb, errorCb) {
       .catch((err) => errorCb(err));
   };
 
-export {getCharacter, createNewCharacter, getCharacterTemplates, getCharacters, getMyCharacters, updateCharacter};
+function generateCharacter(token, generateDTO, cb, errorCb) {
+  axios
+    .post(`${backend}/generate/character`, generateDTO, {
+      mode: "no-cors",
+      credentials: "same-origin",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    .then((r) => cb(r.data))
+    .catch((err) => errorCb(err));
+}
+
+export {getCharacter, createNewCharacter, getCharacterTemplates, getCharacters, getMyCharacters, updateCharacter, generateCharacter};

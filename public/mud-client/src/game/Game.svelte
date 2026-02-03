@@ -45,6 +45,13 @@
     animation: fadeSlideIn 0.5s ease-out;
   }
 
+  .gameContainer.mobile {
+    padding: 0;
+    max-width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+  }
+
   /* Fixed overlay for darkening/blurring the background image */
   .bg-overlay {
     position: fixed;
@@ -63,10 +70,12 @@
   import WidgetGrid from "./layout/WidgetGrid.svelte";
   import EditModeToolbar from "./layout/EditModeToolbar.svelte";
   import AddWidgetPanel from "./layout/AddWidgetPanel.svelte";
+  import { mobileStore } from "./mobile/mobileStore.js";
+  import MobileLayout from "./mobile/MobileLayout.svelte";
 
-  import CharacterCreator from "../characters/CharacterCreator.svelte";
   import { onMount, onDestroy } from "svelte";
   import { getAuth } from "../auth.js";
+  import { showCharacterWizard } from "../onboarding/onboardingStore.js";
   import { createClient } from "./Client";
   import { backend, wsbackend } from "../api/base.js";
 
@@ -88,6 +97,8 @@
   const { isLoading, isAuthenticated, authToken } = getAuth();
 
   let showAddPanel = false;
+
+  const { isMobile } = mobileStore;
 
   $: editMode = $layoutStore.editMode;
 
@@ -117,9 +128,7 @@
 
   const characterCreator = () => {
     console.log("CREATE CHARACTER");
-    var Modalelem = document.querySelector(".modal");
-    var instance = M.Modal.init(Modalelem);
-    instance.open();
+    showCharacterWizard.set(true);
   };
 
   function handleTerminalReady(terminal, termRenderer) {
@@ -180,25 +189,32 @@
   });
 </script>
 
-<CharacterCreator />
-
 <div class="bg-overlay"></div>
 
-<div class="gameContainer">
-  <div class="grid-container">
-    <WidgetGrid
+<div class="gameContainer" class:mobile={$isMobile}>
+  {#if $isMobile}
+    <MobileLayout
       store={muxStore}
       {sendMessage}
       onTerminalReady={handleTerminalReady}
       onTerminalInput={handleTerminalInput}
     />
-  </div>
+  {:else}
+    <div class="grid-container">
+      <WidgetGrid
+        store={muxStore}
+        {sendMessage}
+        onTerminalReady={handleTerminalReady}
+        onTerminalInput={handleTerminalInput}
+      />
+    </div>
 
-  {#if editMode}
-    <EditModeToolbar on:openAddPanel={() => showAddPanel = true} />
-  {/if}
+    {#if editMode}
+      <EditModeToolbar on:openAddPanel={() => showAddPanel = true} />
+    {/if}
 
-  {#if showAddPanel}
-    <AddWidgetPanel on:close={() => showAddPanel = false} />
+    {#if showAddPanel}
+      <AddWidgetPanel on:close={() => showAddPanel = false} />
+    {/if}
   {/if}
 </div>

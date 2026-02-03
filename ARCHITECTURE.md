@@ -464,6 +464,9 @@ Try dynamic exits (custom exit names)
        │
        ▼
 Try room actions (custom interactions)
+  ├── response → reply to player
+  ├── response_room → broadcast to room
+  └── script → execute Lua script via Runner
        │
        ▼
 Execute matched command
@@ -632,6 +635,9 @@ type Character struct {
     CombatInstanceID string  // Active combat instance
     BoundRoomID      string  // Respawn location (set via /bind)
 
+    // Scripting flags (puzzle state, quest progress, etc.)
+    Flags map[string]interface{}
+
     AllTimeStats
 }
 ```
@@ -654,8 +660,8 @@ type Room struct {
     RoomType, Area    string
     Tags              []string
 
-    Actions    *Actions     // Custom interactions
-    Exits      *Exits       // Room connections
+    Actions    *Actions     // Custom interactions (response, response_room, script)
+    Exits      *Exits       // Room connections (supports hidden exits)
 
     Items      *Items       // Items in room
     Characters *Characters  // Players in room
@@ -1022,16 +1028,33 @@ App.svelte (role-aware navigation: Creator/Admin links gated by user role)
 │   │   ├── CharacterCard.svelte
 │   │   └── CharacterCreator.svelte
 │   ├── Creator.svelte (editor, creator/admin role)
+│   │   ├── CRUDEditor.svelte (shared master-detail layout)
+│   │   │   ├── DataTable.svelte (filterable, sortable data table)
+│   │   │   └── DataTableFilterBar.svelte (per-column filter inputs)
 │   │   ├── RoomsEditor.svelte
 │   │   ├── ItemsEditor.svelte
-│   │   ├── ItemTemplatesEditor.svelte (uses unified items API with isTemplate filter)
+│   │   ├── ItemTemplatesEditor.svelte
+│   │   ├── NPCsEditor.svelte
+│   │   ├── DialogsEditor.svelte
 │   │   ├── ScriptsEditor.svelte
-│   │   └── WorldEditor.svelte
+│   │   ├── CharacterTemplatesEditor.svelte
+│   │   ├── GridWorldEditor.svelte
+│   │   └── tableColumns.js (column definitions per entity type)
 │   └── admin/
 │       └── UserManagement.svelte (admin only, user table + ban modal)
 ├── UserForm.svelte
 └── UserMenu.svelte
 ```
+
+#### Creator UI Data Table Pattern
+
+All entity editors (Rooms, Items, Item Templates, NPCs, Dialogs, Scripts, Character Templates) share the `CRUDEditor` component which provides a side-by-side master-detail layout:
+
+- **Table panel (left)**: Full-width filterable, sortable data table showing entity-specific columns. When no entity is selected/detail is closed, the table expands to full width.
+- **Detail panel (right)**: Edit form with all entity fields, shown when a table row is clicked. Includes close button to return to full-width table, and prev/next navigation.
+- **Column definitions**: Defined in `tableColumns.js` per entity type, supporting text, number, select, boolean, and computed column types.
+- **Client-side filtering**: Instant filtering on the full preloaded dataset with per-column filter inputs (text search, dropdowns for enums). No API calls per filter change.
+- **Client-side sorting**: Click column headers to sort (ascending → descending → none).
 
 ### State Management
 
@@ -1040,7 +1063,7 @@ App.svelte (role-aware navigation: Creator/Admin links gated by user role)
 | `stores.js` | Global user state, menu state |
 | `auth.js` | Auth0 authentication state |
 | `MUDXPlusStore.js` | Game UI state (exits, actions, background) |
-| `CRUDEditorStore.js` | Editor state (elements, selection, filters) |
+| `CRUDEditorStore.js` | Editor state (elements, selection, filters, table filter/sort state, detail panel open/close) |
 | `Client.js` | WebSocket client state (room, character) |
 
 ### WebSocket Client
@@ -1268,8 +1291,25 @@ The scripting system uses Lua (via gopher-lua) for dynamic game content. JavaScr
 | `tales.characters` | Character operations (damage, heal, teleport) |
 | `tales.npcs` | NPC operations (templates, instances, spawning) |
 | `tales.dialogs` | Dialog and conversation management |
-| `tales.game` | Messaging (room, character, broadcast) |
+| `tales.game` | Messaging, flags, items, room manipulation |
 | `tales.utils` | Utilities (random, UUID, dice rolling) |
+
+#### tales.game Functions
+
+| Function | Description |
+|----------|-------------|
+| `msgToRoom(roomID, message)` | Send message to all players in a room |
+| `msgToCharacter(characterID, message)` | Send message to a specific character |
+| `msgToUser(userID, message)` | Send message to a specific user |
+| `broadcast(message)` | Send message to all connected players |
+| `msgToRoomExcept(roomID, message, excludeCharID)` | Send to room excluding one player |
+| `log(level, message)` | Log a message (debug/info/warn/error) |
+| `hasItem(characterID, itemID)` | Check if character has item (by ID or TemplateID) |
+| `getFlag(characterID, flagName)` | Get a game flag from character's Flags map |
+| `setFlag(characterID, flagName, value)` | Set a game flag (persisted to DB) |
+| `revealExit(roomID, exitName)` | Unhide a hidden exit in a room (persisted) |
+| `giveItem(characterID, templateID)` | Create item from template and add to inventory |
+| `hasEquipped(characterID, slotName)` | Check if character has item in equipment slot |
 
 #### tales.npcs Functions
 
@@ -1306,7 +1346,7 @@ Event types include:
 - NPC events: `npc.death`, `npc.spawn`, `npc.idle`
 - Item events: `item.pickup`, `item.drop`, `item.use`, `item.create`
 - Dialog events: `dialog.start`, `dialog.end`, `dialog.option`
-- Room events: `room.action`, `room.update`
+- Room events: `room.action` (triggered by script-type room actions), `room.update`
 - Quest events: `quest.start`, `quest.complete`, `quest.progress`
 
 See [SCRIPTING.md](SCRIPTING.md) for full documentation.

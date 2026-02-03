@@ -25,4 +25,7 @@ const (
 
 	// Inventory messages
 	MessageTypeInventoryUpdate = "inventoryUpdate" // Inventory/equipment changed
+
+	// Character update messages
+	MessageTypeCharacterUpdate = "characterUpdate" // Character stats changed (HP, XP, etc.)
 )

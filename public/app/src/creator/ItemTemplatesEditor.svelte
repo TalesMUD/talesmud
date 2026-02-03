@@ -20,6 +20,8 @@
     getItemQualities,
   } from "../api/items.js";
   import { getScripts } from "../api/scripts.js";
+  import { itemTemplateColumns } from "./tableColumns.js";
+  import { knownItemAttributes } from "./fieldSuggestions.js";
 
   const store = createStore();
   const scriptsValueHelp = writable([]);
@@ -82,10 +84,26 @@
   // Call immediately at module level
   loadItemMetadata();
 
+  // Clone columns so we can populate dynamic dropdown options
+  const columns = itemTemplateColumns.map((c) => ({ ...c }));
+
+  // Populate dynamic column filter options as metadata loads
+  $: {
+    const typeCol = columns.find((c) => c.key === "type");
+    if (typeCol && $itemTypesStore.length) typeCol.options = $itemTypesStore;
+    const subTypeCol = columns.find((c) => c.key === "subType");
+    if (subTypeCol && $itemSubTypesStore.length) subTypeCol.options = $itemSubTypesStore;
+    const slotCol = columns.find((c) => c.key === "slot");
+    if (slotCol && $itemSlotsStore.length) slotCol.options = $itemSlotsStore;
+    const qualityCol = columns.find((c) => c.key === "quality");
+    if (qualityCol && $itemQualitiesStore.length) qualityCol.options = $itemQualitiesStore;
+  }
+
   const config = {
     title: "Item Template Editor",
     subtitle: "Design base attributes and script behaviors for world items.",
     listTitle: "Templates",
+    columns: columns,
     labels: {
       create: "Save Template",
       update: "Save Template",
@@ -293,7 +311,12 @@
           </button>
         </div>
         <div class="flex gap-2">
-          <input class="input-base text-xs" placeholder="Attribute name" bind:value={newAttributeName} />
+          <input class="input-base text-xs" placeholder="Attribute name" list="attr-key-suggestions" bind:value={newAttributeName} />
+          <datalist id="attr-key-suggestions">
+            {#each knownItemAttributes as key}
+              <option value={key} />
+            {/each}
+          </datalist>
         </div>
         <div class="space-y-2">
           {#each Object.entries($store.selectedElement.attributes || {}) as [key, value]}

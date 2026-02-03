@@ -28,16 +28,22 @@
   import { getScripts } from "../api/scripts.js";
   import { getNPCs, getNPC, getUniqueNPCs } from "../api/npcs.js";
   import {
+    getNPCSpawners,
     getNPCSpawnersByRoom,
     createNPCSpawner,
     updateNPCSpawner,
     deleteNPCSpawner,
   } from "../api/npcspawners.js";
+  import { roomColumns } from "./tableColumns.js";
+  import { uniqueValues } from "./fieldSuggestions.js";
   import {
     getItem,
     getItemTemplates,
     createItemFromTemplate,
   } from "../api/items.js";
+
+  // Clone columns so we can populate dynamic dropdown options
+  const columns = roomColumns.map((c) => ({ ...c }));
 
   const roomsValueHelp = writable([]);
   const scriptsValueHelp = writable([]);
@@ -54,6 +60,19 @@
   let hasLoadedItemTemplates = false;
   let hasLoadedUniqueNPCs = false;
 
+  // Populate area column filter options dynamically from loaded rooms
+  $: {
+    const areaCol = columns.find((c) => c.key === "area");
+    if (areaCol && $store.elements.length) {
+      areaCol.options = uniqueValues($store.elements, "area");
+    }
+  }
+
+  // Derive form field suggestions from loaded rooms
+  $: areaSuggestions = uniqueValues($store.elements, "area");
+  $: areaTypeSuggestions = uniqueValues($store.elements, "areaType");
+  $: roomTypeSuggestions = uniqueValues($store.elements, "roomType");
+
   // Tab state for extensions section
   let activeTab = "exits";
 
@@ -63,16 +82,47 @@
   // Residents (unique NPCs) state
   let selectedResidentId = "";
 
+  // Enrich rooms with spawner counts after loading
+  let hasLoadedSpawnerCounts = false;
+  const enrichRoomsWithSpawnerCounts = (rooms) => {
+    if (!$isAuthenticated || !$authToken || hasLoadedSpawnerCounts) return;
+    getNPCSpawners(
+      $authToken,
+      [],
+      (spawners) => {
+        const countMap = {};
+        (spawners || []).forEach((s) => {
+          countMap[s.roomId] = (countMap[s.roomId] || 0) + 1;
+        });
+        rooms.forEach((r) => {
+          r._spawnersCount = countMap[r.id] || 0;
+        });
+        store.setElements([...rooms]);
+        hasLoadedSpawnerCounts = true;
+      },
+      () => {}
+    );
+  };
+
+  // Wrap getRooms to enrich with spawner counts after load
+  const getRoomsEnriched = (token, filters, cb, errorCb) => {
+    getRooms(token, filters, (rooms) => {
+      cb(rooms);
+      enrichRoomsWithSpawnerCounts(rooms);
+    }, errorCb);
+  };
+
   const config = {
     title: "Manage Rooms",
     subtitle: "Configure environment, exits, and NPC populations.",
     listTitle: "Rooms",
+    columns: columns,
     labels: {
       create: "Create Room",
       update: "Update Room",
       delete: "Delete",
     },
-    get: getRooms,
+    get: getRoomsEnriched,
     getElement: getRoom,
     create: createRoom,
     update: updateRoom,
@@ -661,8 +711,14 @@
           id="area"
           type="text"
           class="input-base"
+          list="area-suggestions"
           bind:value={$store.selectedElement.area}
         />
+        <datalist id="area-suggestions">
+          {#each areaSuggestions as val}
+            <option value={val} />
+          {/each}
+        </datalist>
       </div>
 
       <div class="space-y-1.5">
@@ -671,8 +727,14 @@
           id="area_type"
           type="text"
           class="input-base"
+          list="areatype-suggestions"
           bind:value={$store.selectedElement.areaType}
         />
+        <datalist id="areatype-suggestions">
+          {#each areaTypeSuggestions as val}
+            <option value={val} />
+          {/each}
+        </datalist>
       </div>
 
       <div class="space-y-1.5">
@@ -681,8 +743,14 @@
           id="room_type"
           type="text"
           class="input-base"
+          list="roomtype-suggestions"
           bind:value={$store.selectedElement.roomType}
         />
+        <datalist id="roomtype-suggestions">
+          {#each roomTypeSuggestions as val}
+            <option value={val} />
+          {/each}
+        </datalist>
       </div>
     </div>
 
@@ -838,7 +906,7 @@
           <div class="space-y-3">
             {#if $store.selectedElement.actions?.length}
               {#each $store.selectedElement.actions as action}
-                <ActionEditor action={action} deleteAction={deleteAction} />
+                <ActionEditor action={action} deleteAction={deleteAction} scriptsValueHelp={$scriptsValueHelp} />
               {/each}
             {:else}
               <p class="text-xs text-slate-500 dark:text-slate-400 italic">No actions configured. Add actions for interactive room elements.</p>

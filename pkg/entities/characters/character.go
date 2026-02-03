@@ -59,6 +59,9 @@ type Character struct {
 	// Respawn binding - room where player respawns on death
 	BoundRoomID string `bson:"boundRoomId,omitempty" json:"boundRoomId,omitempty"`
 
+	// Game flags for scripting (puzzles, quests, state tracking)
+	Flags map[string]interface{} `bson:"flags,omitempty" json:"flags,omitempty"`
+
 	// track alltime stats in character object but dont expose as json by default
 	AllTimeStats struct {
 		PlayersKilled   int32 `bson:"playersKilled" json:"playersKilled"`

@@ -25,11 +25,24 @@ function createStore() {
     inCombat: false,
     hasItems: false,
     hasMerchant: false,
+    groundItems: [],
 
     // Inventory state
     inventory: [],
     equippedItems: {},
     gold: 0,
+
+    // Character state
+    character: null, // Full character object from characterSelected
+    characterStats: {
+      currentHitPoints: 0,
+      maxHitPoints: 0,
+      xp: 0,
+      level: 0,
+      gold: 0,
+      inCombat: false,
+      attributes: [],
+    },
   });
 
   const store = {
@@ -100,6 +113,61 @@ function createStore() {
         state.inventory = (inventory && inventory.items) || [];
         state.equippedItems = equippedItems || {};
         state.gold = gold || 0;
+        return state;
+      });
+    },
+
+    // Character methods
+    setCharacter: (character) => {
+      update((state) => {
+        state.character = character;
+        if (character) {
+          state.characterStats = {
+            currentHitPoints: character.currentHitPoints || 0,
+            maxHitPoints: character.maxHitPoints || 0,
+            xp: character.xp || 0,
+            level: character.level || 0,
+            gold: character.gold || 0,
+            inCombat: character.inCombat || false,
+            attributes: character.attributes || [],
+          };
+          state.gold = character.gold || 0;
+        }
+        return state;
+      });
+    },
+    updateCharacterStats: (stats) => {
+      update((state) => {
+        state.characterStats = {
+          ...state.characterStats,
+          currentHitPoints: stats.currentHitPoints ?? state.characterStats.currentHitPoints,
+          maxHitPoints: stats.maxHitPoints ?? state.characterStats.maxHitPoints,
+          xp: stats.xp ?? state.characterStats.xp,
+          level: stats.level ?? state.characterStats.level,
+          gold: stats.gold ?? state.characterStats.gold,
+          inCombat: stats.inCombat ?? state.characterStats.inCombat,
+          attributes: stats.attributes || state.characterStats.attributes,
+        };
+        // Keep gold in sync
+        if (stats.gold !== undefined) {
+          state.gold = stats.gold;
+        }
+        return state;
+      });
+    },
+
+    // Ground items methods
+    setGroundItems: (items) => {
+      update((state) => {
+        state.groundItems = items || [];
+        state.hasItems = (items || []).length > 0;
+        return state;
+      });
+    },
+    removeGroundItem: (itemId) => {
+      update((state) => {
+        state.groundItems = state.groundItems.filter(i => i.id !== itemId);
+        state.hasItems = state.groundItems.length > 0;
         return state;
       });
     },

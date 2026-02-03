@@ -59,6 +59,15 @@
     margin: 0;
     padding: 0;
   }
+
+  @media screen and (max-width: 768px) {
+    .back-link {
+      display: none;
+    }
+    .user-menu-wrapper {
+      display: none;
+    }
+  }
 </style>
 
 <script>
@@ -77,6 +86,7 @@
   import WelcomeScreen from "./onboarding/WelcomeScreen.svelte";
   import NicknameSetup from "./onboarding/NicknameSetup.svelte";
   import CharacterCreationWizard from "./onboarding/CharacterCreationWizard.svelte";
+  import { showCharacterWizard } from "./onboarding/onboardingStore.js";
 
   // Auth0 config
   const config = {
@@ -165,6 +175,7 @@
 
   function onCharacterCreated() {
     phase = "ready";
+    showCharacterWizard.set(false);
   }
 </script>
 
@@ -244,4 +255,12 @@
     <!-- Settings Modal (global) -->
     <SettingsModal />
   </div>
+
+  <!-- Character creation wizard triggered by "nc" command in-game -->
+  {#if $showCharacterWizard}
+    <CharacterCreationWizard
+      authToken={$authToken}
+      onComplete={onCharacterCreated}
+    />
+  {/if}
 {/if}
