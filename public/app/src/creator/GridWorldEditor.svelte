@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import { navigateTo } from "yrv";
   import { getAuth } from "../auth.js";
-  import { getMinimalRoomsAsync } from "../api/world.js";
+  import { getMinimalRoomsAsync, batchUpdateCoordsAsync } from "../api/world.js";
   import {
     getRoomsValueHelpAsync,
     createRoomAsync,
@@ -237,6 +237,173 @@
   }
 
   // Load data
+  // Auto-layout rooms without coordinates using BFS through exit connections
+  function autoLayoutRooms(roomsList) {
+    const unplaced = roomsList.filter(r => r.coords == null);
+    if (unplaced.length === 0) return [];
+
+    const roomMap = new Map(roomsList.map(r => [r.id, r]));
+    const occupied = new Set();
+    const updates = [];
+
+    // Track already-occupied positions from rooms that have coords
+    roomsList.forEach(r => {
+      if (r.coords) {
+        occupied.add(`${r.coords.x},${r.coords.y},${r.coords.z}`);
+      }
+    });
+
+    const offsets = {
+      north: { x: 0, y: 1 },
+      south: { x: 0, y: -1 },
+      east: { x: 1, y: 0 },
+      west: { x: -1, y: 0 },
+    };
+
+    function findFreePosition(baseX, baseY, z) {
+      // Spiral outward to find a free position near the base
+      for (let radius = 0; radius < 50; radius++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          for (let dy = -radius; dy <= radius; dy++) {
+            if (Math.abs(dx) !== radius && Math.abs(dy) !== radius) continue;
+            const key = `${baseX + dx},${baseY + dy},${z}`;
+            if (!occupied.has(key)) return { x: baseX + dx, y: baseY + dy, z };
+          }
+        }
+      }
+      return { x: baseX, y: baseY, z };
+    }
+
+    function placeRoom(room, x, y, z) {
+      const pos = findFreePosition(x, y, z);
+      room.coords = { x: pos.x, y: pos.y, z: pos.z };
+      occupied.add(`${pos.x},${pos.y},${pos.z}`);
+      updates.push({ id: room.id, x: pos.x, y: pos.y, z: pos.z });
+    }
+
+    // BFS from each unplaced room to place connected components
+    const placed = new Set(roomsList.filter(r => r.coords != null).map(r => r.id));
+
+    // First, try to place rooms connected to already-placed rooms
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const room of unplaced) {
+        if (placed.has(room.id)) continue;
+
+        // Check if any exit target or incoming connection is placed
+        for (const exit of (room.exits || [])) {
+          const target = roomMap.get(exit.target);
+          if (!target || !placed.has(target.id) || !target.coords) continue;
+          const dir = exit.name?.toLowerCase();
+          const offset = offsets[dir];
+          if (offset) {
+            placeRoom(room, target.coords.x - offset.x, target.coords.y - offset.y, target.coords.z);
+          } else {
+            // Non-cardinal exit: place adjacent
+            placeRoom(room, target.coords.x + 1, target.coords.y, target.coords.z);
+          }
+          placed.add(room.id);
+          changed = true;
+          break;
+        }
+
+        // Also check if other placed rooms have exits pointing to this room
+        if (!placed.has(room.id)) {
+          for (const [, other] of roomMap) {
+            if (!placed.has(other.id) || !other.coords) continue;
+            for (const exit of (other.exits || [])) {
+              if (exit.target !== room.id) continue;
+              const dir = exit.name?.toLowerCase();
+              const offset = offsets[dir];
+              if (offset) {
+                placeRoom(room, other.coords.x + offset.x, other.coords.y + offset.y, other.coords.z);
+              } else {
+                placeRoom(room, other.coords.x + 1, other.coords.y, other.coords.z);
+              }
+              placed.add(room.id);
+              changed = true;
+              break;
+            }
+            if (placed.has(room.id)) break;
+          }
+        }
+      }
+    }
+
+    // Place disconnected components: pick a seed room from each, BFS from it
+    const remaining = unplaced.filter(r => !placed.has(r.id));
+    if (remaining.length > 0) {
+      // Group remaining into connected components
+      const visited = new Set();
+      const components = [];
+
+      for (const room of remaining) {
+        if (visited.has(room.id)) continue;
+        const component = [];
+        const queue = [room];
+        visited.add(room.id);
+
+        while (queue.length > 0) {
+          const current = queue.shift();
+          component.push(current);
+          for (const exit of (current.exits || [])) {
+            const target = roomMap.get(exit.target);
+            if (target && !visited.has(target.id) && !placed.has(target.id)) {
+              visited.add(target.id);
+              queue.push(target);
+            }
+          }
+        }
+        components.push(component);
+      }
+
+      // Place each component with an offset
+      let componentOffsetX = 0;
+      for (const component of components) {
+        // Place seed room
+        const seed = component[0];
+        placeRoom(seed, componentOffsetX, 0, 0);
+        placed.add(seed.id);
+
+        // BFS from seed
+        const bfsQueue = [seed];
+        while (bfsQueue.length > 0) {
+          const current = bfsQueue.shift();
+          for (const exit of (current.exits || [])) {
+            const target = roomMap.get(exit.target);
+            if (!target || placed.has(target.id)) continue;
+            const dir = exit.name?.toLowerCase();
+            const offset = offsets[dir];
+            if (offset) {
+              placeRoom(target, current.coords.x + offset.x, current.coords.y + offset.y, current.coords.z);
+            } else {
+              placeRoom(target, current.coords.x + 1, current.coords.y, current.coords.z);
+            }
+            placed.add(target.id);
+            bfsQueue.push(target);
+          }
+        }
+
+        // Find bounding box for offset
+        const xs = component.filter(r => r.coords).map(r => r.coords.x);
+        componentOffsetX = Math.max(...xs) + 3;
+      }
+
+      // Any still unplaced rooms (no exits at all) go in a grid
+      const stillUnplaced = remaining.filter(r => !placed.has(r.id));
+      const gridCols = 5;
+      stillUnplaced.forEach((room, i) => {
+        const gx = componentOffsetX + (i % gridCols);
+        const gy = Math.floor(i / gridCols);
+        placeRoom(room, gx, gy, 0);
+        placed.add(room.id);
+      });
+    }
+
+    return updates;
+  }
+
   async function loadRooms() {
     if (!$authToken) return;
 
@@ -249,7 +416,25 @@
 
       if (minimalData?.rooms) {
         allRooms = minimalData.rooms;
-        // Filter to only rooms with coordinates for map rendering
+
+        // Auto-layout rooms that don't have coordinates
+        const unplacedCount = minimalData.rooms.filter(r => r.coords == null).length;
+        if (unplacedCount > 0) {
+          console.log(`Auto-laying out ${unplacedCount} rooms without coordinates...`);
+          const coordUpdates = autoLayoutRooms(minimalData.rooms);
+
+          // Persist auto-assigned coordinates to backend
+          if (coordUpdates.length > 0) {
+            try {
+              await batchUpdateCoordsAsync($authToken, coordUpdates);
+              console.log(`Persisted coordinates for ${coordUpdates.length} rooms`);
+            } catch (persistErr) {
+              console.warn("Could not persist auto-layout coordinates:", persistErr);
+            }
+          }
+        }
+
+        // All rooms now have coordinates after auto-layout
         rooms = minimalData.rooms.filter(r => r.coords != null);
         console.log(`Loaded ${rooms.length} rooms with coordinates (${allRooms.length} total)`);
       } else {

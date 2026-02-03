@@ -122,8 +122,9 @@ type RoomNPC struct {
 // EnterRoomMessage ... Define our message object
 type EnterRoomMessage struct {
 	MessageResponse
-	Room rooms.Room `json:"room"`
-	NPCs []RoomNPC  `json:"npcs"`
+	Room  rooms.Room     `json:"room"`
+	NPCs  []RoomNPC      `json:"npcs"`
+	Items []util.RoomItem `json:"items"`
 }
 
 //NewEnterRoomMessage ...
@@ -145,14 +146,18 @@ func NewEnterRoomMessage(room *rooms.Room, user *entities.User, game def.GameCtr
 		}
 	}
 
+	// Get item data for frontend rendering
+	roomItems := util.GetRoomItems(room, game)
+
 	return &EnterRoomMessage{
 		MessageResponse: MessageResponse{
 			Audience: MessageAudienceOrigin,
 			Type:     MessageTypeEnterRoom,
 			Message:  util.CreateRoomDescription(room, user, game),
 		},
-		Room: *room,
-		NPCs: npcs,
+		Room:  *room,
+		NPCs:  npcs,
+		Items: roomItems,
 	}
 }
 
@@ -242,6 +247,39 @@ func NewInventoryUpdateMessage(msg *Message) *InventoryUpdateMessage {
 		Inventory:     ch.Inventory,
 		EquippedItems: ch.EquippedItems,
 		Gold:          ch.Gold,
+	}
+}
+
+// CharacterUpdateMessage sends updated character stats to the client (e.g., after combat damage)
+type CharacterUpdateMessage struct {
+	MessageResponse
+	CurrentHitPoints int32                    `json:"currentHitPoints"`
+	MaxHitPoints     int32                    `json:"maxHitPoints"`
+	XP               int32                    `json:"xp"`
+	Level            int32                    `json:"level"`
+	Gold             int64                    `json:"gold"`
+	InCombat         bool                     `json:"inCombat"`
+	Attributes       characters.Attributes    `json:"attributes,omitempty"`
+}
+
+// NewCharacterUpdateMessage creates a character update from the current character state
+func NewCharacterUpdateMessage(userID string, ch *characters.Character) *CharacterUpdateMessage {
+	if ch == nil {
+		return nil
+	}
+	return &CharacterUpdateMessage{
+		MessageResponse: MessageResponse{
+			Audience:   MessageAudienceOrigin,
+			AudienceID: userID,
+			Type:       MessageTypeCharacterUpdate,
+		},
+		CurrentHitPoints: ch.CurrentHitPoints,
+		MaxHitPoints:     ch.MaxHitPoints,
+		XP:               ch.XP,
+		Level:            ch.Level,
+		Gold:             ch.Gold,
+		InCombat:         ch.InCombat,
+		Attributes:       ch.Attributes,
 	}
 }
 

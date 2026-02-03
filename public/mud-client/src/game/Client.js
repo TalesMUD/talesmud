@@ -47,9 +47,8 @@ function createClient(renderer, characterCreator, muxStore) {
         mux.setNPCs([]);
       }
 
-      // Set game context flags
-      const hasItems = activeRoom.items && activeRoom.items.length > 0;
-      mux.setGameContext({ hasItems });
+      // Set ground items from server-resolved item details
+      mux.setGroundItems(msg.items || []);
 
       // Clear any active dialog when entering a new room
       mux.clearDialog();
@@ -67,11 +66,30 @@ function createClient(renderer, characterCreator, muxStore) {
   messageHandlers["characterSelected"] = (msg) => {
     currentCharacter = msg.character;
     renderer(msg.message);
+    if (mux && msg.character) {
+      mux.setCharacter(msg.character);
+    }
   };
 
   messageHandlers["inventoryUpdate"] = (msg) => {
     if (mux) {
       mux.setInventory(msg.inventory, msg.equippedItems, msg.gold);
+      // Keep character stats gold in sync
+      mux.updateCharacterStats({ gold: msg.gold });
+    }
+  };
+
+  messageHandlers["characterUpdate"] = (msg) => {
+    if (mux) {
+      mux.updateCharacterStats({
+        currentHitPoints: msg.currentHitPoints,
+        maxHitPoints: msg.maxHitPoints,
+        xp: msg.xp,
+        level: msg.level,
+        gold: msg.gold,
+        inCombat: msg.inCombat,
+        attributes: msg.attributes,
+      });
     }
   };
 
@@ -120,6 +138,7 @@ function createClient(renderer, characterCreator, muxStore) {
     renderer(msg.message);
     if (mux) {
       mux.setGameContext({ inCombat: true });
+      mux.updateCharacterStats({ inCombat: true });
     }
   };
 
@@ -146,6 +165,7 @@ function createClient(renderer, characterCreator, muxStore) {
     renderer(msg.message);
     if (mux) {
       mux.setGameContext({ inCombat: false });
+      mux.updateCharacterStats({ inCombat: false });
     }
   };
 

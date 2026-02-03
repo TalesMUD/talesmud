@@ -86,6 +86,17 @@ func CreateRoomDescription(room *rooms.Room, user *entities.User, game def.GameC
 		}
 	}
 
+	// Actions
+	if room.Actions != nil && len(*room.Actions) > 0 {
+		description += "\n- You can:"
+		for _, action := range *room.Actions {
+			if action.Description != "" {
+				description += "\n  > " + action.Description + " [" + action.Name + "]"
+			}
+		}
+		description += "\n"
+	}
+
 	// Exits
 	description += "\n"
 	description += "- The visible exits are:\n"
@@ -97,6 +108,35 @@ func CreateRoomDescription(room *rooms.Room, user *entities.User, game def.GameC
 	}
 
 	return description
+}
+
+// RoomItem represents item data for frontend UI rendering
+type RoomItem struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	NoPickup bool   `json:"noPickup,omitempty"`
+}
+
+// GetRoomItems returns item data for frontend rendering
+func GetRoomItems(room *rooms.Room, game def.GameCtrl) []RoomItem {
+	if room.Items == nil || len(*room.Items) == 0 {
+		return []RoomItem{}
+	}
+
+	result := make([]RoomItem, 0, len(*room.Items))
+	for _, itemID := range *room.Items {
+		item, err := game.GetFacade().ItemsService().FindByID(itemID)
+		if err != nil {
+			continue
+		}
+		result = append(result, RoomItem{
+			ID:       item.ID,
+			Name:     item.Name,
+			NoPickup: item.NoPickup,
+		})
+	}
+
+	return result
 }
 
 // RoomNPC represents NPC data for frontend UI rendering

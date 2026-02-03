@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"math/rand"
 	"strings"
 	"time"
 
@@ -328,6 +329,40 @@ func (c *CombatController) notifyPlayersInCombat(instance *combat.CombatInstance
 	}
 }
 
+// notifyAllPlayersInInstance sends a message to all players regardless of alive/fled status
+func (c *CombatController) notifyAllPlayersInInstance(instance *combat.CombatInstance, message string) {
+	for _, player := range instance.Players {
+		char, err := c.game.Facade.CharactersService().FindByID(player.ID)
+		if err != nil {
+			continue
+		}
+		c.game.sendMessage <- messages.MessageResponse{
+			Audience:   messages.MessageAudienceUser,
+			AudienceID: char.BelongsUserID,
+			Type:       messages.MessageTypeCombatEnd,
+			Message:    message,
+		}
+	}
+}
+
+// sendPlayerCharacterUpdate sends updated character stats to all players in the combat instance
+func (c *CombatController) sendPlayerCharacterUpdate(instance *combat.CombatInstance) {
+	for _, player := range instance.Players {
+		char, err := c.game.Facade.CharactersService().FindByID(player.ID)
+		if err != nil {
+			continue
+		}
+		// Reflect combat HP in the update
+		char.CurrentHitPoints = player.CurrentHP
+		char.InCombat = true
+
+		update := messages.NewCharacterUpdateMessage(char.BelongsUserID, char)
+		if update != nil {
+			c.game.sendMessage <- update
+		}
+	}
+}
+
 // syncPlayerHP updates a player's HP in the database
 func (c *CombatController) syncPlayerHP(characterID string, hp int32) {
 	char, err := c.game.Facade.CharactersService().FindByID(characterID)
@@ -420,6 +455,9 @@ func (c *CombatController) processAllTurns(instance *combat.CombatInstance) {
 			c.processPlayerAutoAttack(instance, current)
 		}
 
+		// Send updated character stats to all players after each action
+		c.sendPlayerCharacterUpdate(instance)
+
 		// Advance turn
 		c.engine.NextTurn(instance)
 
@@ -433,8 +471,21 @@ func (c *CombatController) processAllTurns(instance *combat.CombatInstance) {
 	}
 }
 
-// cleanupCombatInstance cleans up after combat ends
+// cleanupCombatInstance cleans up after combat ends, processes rewards, and notifies players
 func (c *CombatController) cleanupCombatInstance(instance *combat.CombatInstance, endState combat.CombatState) {
+
+	// Process combat end based on state
+	switch endState {
+	case combat.CombatStateVictory:
+		c.processCombatVictory(instance)
+	case combat.CombatStateDefeat:
+		c.processCombatDefeat(instance)
+	case combat.CombatStateFled:
+		c.notifyAllPlayersInInstance(instance, "\n═══════════════════════════════════════════════════\n              ESCAPED\n═══════════════════════════════════════════════════\n\nYou have fled from combat!\n═══════════════════════════════════════════════════")
+	case combat.CombatStateTimeout:
+		// Timeout message already sent in Update()
+	}
+
 	// Clear combat state from players
 	for _, player := range instance.Players {
 		char, err := c.game.Facade.CharactersService().FindByID(player.ID)
@@ -448,6 +499,12 @@ func (c *CombatController) cleanupCombatInstance(instance *combat.CombatInstance
 		char.CurrentHitPoints = player.CurrentHP
 
 		c.game.Facade.CharactersService().Update(player.ID, char)
+
+		// Send updated stats to client (combat ended, final HP/XP/Gold)
+		update := messages.NewCharacterUpdateMessage(char.BelongsUserID, char)
+		if update != nil {
+			c.game.sendMessage <- update
+		}
 	}
 
 	// Clear combat state from NPCs
@@ -465,10 +522,203 @@ func (c *CombatController) cleanupCombatInstance(instance *combat.CombatInstance
 	// Remove the instance
 	c.manager.RemoveInstance(instance.ID)
 
+	// Send a room refresh to all players so dead NPCs disappear from the UI
+	if room, err := c.game.Facade.RoomsService().FindByID(instance.OriginRoomID); err == nil && room != nil {
+		for _, player := range instance.Players {
+			char, err := c.game.Facade.CharactersService().FindByID(player.ID)
+			if err != nil {
+				continue
+			}
+			user, err := c.game.Facade.UsersService().FindByID(char.BelongsUserID)
+			if err != nil {
+				continue
+			}
+			enterRoom := messages.NewEnterRoomMessage(room, user, c.game)
+			enterRoom.AudienceID = user.ID
+			c.game.sendMessage <- enterRoom
+		}
+	}
+
 	log.WithFields(log.Fields{
 		"instanceID": instance.ID,
 		"endState":   endState,
 	}).Info("Combat instance cleaned up")
+}
+
+// processCombatVictory handles XP, gold, loot rewards and sends the victory message
+func (c *CombatController) processCombatVictory(instance *combat.CombatInstance) {
+	var totalXP int64
+	var totalGold int64
+	var allLootItems []string
+	var enemyNames []string
+
+	// Get the room for loot drops
+	room, roomErr := c.game.Facade.RoomsService().FindByID(instance.OriginRoomID)
+
+	for _, enemy := range instance.Enemies {
+		if enemy.IsAlive {
+			continue
+		}
+		enemyNames = append(enemyNames, enemy.Name)
+
+		npcData := c.game.NPCManager.GetInstance(enemy.ID)
+		if npcData == nil || npcData.EnemyTrait == nil {
+			continue
+		}
+
+		totalXP += npcData.EnemyTrait.XPReward
+
+		// Roll gold
+		goldRange := npcData.EnemyTrait.GoldDrop
+		if goldRange.Max > goldRange.Min {
+			totalGold += int64(goldRange.Min) + int64(rand.Intn(int(goldRange.Max-goldRange.Min+1)))
+		} else if goldRange.Min > 0 {
+			totalGold += int64(goldRange.Min)
+		}
+
+		// Process loot drops (items placed in room)
+		if roomErr == nil && room != nil {
+			// Use first living player's level for level-gated drops
+			var killerLevel int32 = 1
+			livingPlayers := instance.GetLivingPlayers()
+			if len(livingPlayers) > 0 {
+				char, err := c.game.Facade.CharactersService().FindByID(livingPlayers[0].ID)
+				if err == nil && char != nil {
+					killerLevel = char.Level
+				}
+			}
+
+			lootResult, err := DropLootFromNPC(c.game.Facade, npcData, room, killerLevel)
+			if err == nil && lootResult != nil {
+				for _, item := range lootResult.Items {
+					if item.Stackable && item.Quantity > 1 {
+						allLootItems = append(allLootItems, fmt.Sprintf("%s (x%d)", item.Name, item.Quantity))
+					} else {
+						allLootItems = append(allLootItems, item.Name)
+					}
+				}
+			}
+		}
+	}
+
+	// Split rewards among living players
+	livingPlayers := instance.GetLivingPlayers()
+	numLiving := int64(len(livingPlayers))
+	if numLiving == 0 {
+		numLiving = 1
+	}
+	xpPerPlayer := totalXP / numLiving
+	goldPerPlayer := totalGold / numLiving
+
+	// Build victory message
+	var sb strings.Builder
+	sb.WriteString("\n═══════════════════════════════════════════════════\n")
+	sb.WriteString("              VICTORY!\n")
+	sb.WriteString("═══════════════════════════════════════════════════\n\n")
+
+	for _, name := range enemyNames {
+		sb.WriteString(fmt.Sprintf("Defeated: %s\n", name))
+	}
+
+	sb.WriteString(fmt.Sprintf("\nREWARDS:\n"))
+	if xpPerPlayer > 0 {
+		sb.WriteString(fmt.Sprintf("  + %d XP\n", xpPerPlayer))
+	}
+	if goldPerPlayer > 0 {
+		sb.WriteString(fmt.Sprintf("  + %d Gold\n", goldPerPlayer))
+	}
+	if len(allLootItems) > 0 {
+		sb.WriteString("\nLOOT DROPPED:\n")
+		for _, itemName := range allLootItems {
+			sb.WriteString(fmt.Sprintf("  - %s\n", itemName))
+		}
+	}
+	if xpPerPlayer == 0 && goldPerPlayer == 0 && len(allLootItems) == 0 {
+		sb.WriteString("  (none)\n")
+	}
+
+	sb.WriteString("\n═══════════════════════════════════════════════════")
+
+	// Award rewards and notify each living player
+	for _, player := range livingPlayers {
+		char, err := c.game.Facade.CharactersService().FindByID(player.ID)
+		if err != nil {
+			continue
+		}
+
+		char.XP += int32(xpPerPlayer)
+		char.Gold += goldPerPlayer
+		c.game.Facade.CharactersService().Update(player.ID, char)
+
+		// Send victory message
+		c.game.sendMessage <- messages.MessageResponse{
+			Audience:   messages.MessageAudienceUser,
+			AudienceID: char.BelongsUserID,
+			Type:       messages.MessageTypeCombatEnd,
+			Message:    sb.String(),
+		}
+
+		// Send inventory update so UI reflects new gold
+		c.game.sendMessage <- messages.InventoryUpdateMessage{
+			MessageResponse: messages.MessageResponse{
+				Audience:   messages.MessageAudienceUser,
+				AudienceID: char.BelongsUserID,
+				Type:       messages.MessageTypeInventoryUpdate,
+			},
+			Inventory:     char.Inventory,
+			EquippedItems: char.EquippedItems,
+			Gold:          char.Gold,
+		}
+	}
+}
+
+// processCombatDefeat handles death penalties and sends the defeat message
+func (c *CombatController) processCombatDefeat(instance *combat.CombatInstance) {
+	for _, player := range instance.Players {
+		char, err := c.game.Facade.CharactersService().FindByID(player.ID)
+		if err != nil {
+			continue
+		}
+
+		var sb strings.Builder
+		sb.WriteString("\n═══════════════════════════════════════════════════\n")
+		sb.WriteString("              DEFEAT\n")
+		sb.WriteString("═══════════════════════════════════════════════════\n\n")
+		sb.WriteString("You have been defeated!\n\n")
+
+		// Gold loss penalty (10%)
+		goldLoss := int64(float64(char.Gold) * 0.10)
+		if goldLoss > 0 {
+			char.Gold -= goldLoss
+			sb.WriteString(fmt.Sprintf("PENALTY: Lost %d gold\n", goldLoss))
+		}
+
+		// Respawn with 50% HP
+		char.CurrentHitPoints = char.MaxHitPoints / 2
+		if char.CurrentHitPoints < 1 {
+			char.CurrentHitPoints = 1
+		}
+
+		// Update the combatant HP so the later cleanup sync uses the right value
+		for i := range instance.Players {
+			if instance.Players[i].ID == player.ID {
+				instance.Players[i].CurrentHP = char.CurrentHitPoints
+				break
+			}
+		}
+
+		sb.WriteString(fmt.Sprintf("\nYou awaken with %d/%d HP.\n", char.CurrentHitPoints, char.MaxHitPoints))
+		sb.WriteString("═══════════════════════════════════════════════════")
+
+		c.game.Facade.CharactersService().Update(player.ID, char)
+
+		c.game.sendMessage <- messages.MessageResponse{
+			Audience:   messages.MessageAudienceUser,
+			AudienceID: char.BelongsUserID,
+			Type:       messages.MessageTypeCombatEnd,
+			Message:    sb.String(),
+		}
+	}
 }
 
 // QueuePlayerAction queues an action for a player's next auto-attack turn

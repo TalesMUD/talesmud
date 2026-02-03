@@ -1,38 +1,107 @@
 <script>
-  // Placeholder widget - will be connected to server data later
-  const mockEquipment = {
-    head: { name: 'Steel Helm', icon: 'person', rarity: 'uncommon' },
-    body: { name: 'Chainmail', icon: 'checkroom', rarity: 'uncommon' },
-    hands: null,
-    feet: { name: 'Leather Boots', icon: 'do_not_step', rarity: 'common' },
-    mainHand: { name: 'Iron Sword', icon: 'bolt', rarity: 'uncommon' },
-    offHand: { name: 'Wooden Shield', icon: 'shield', rarity: 'common' },
-    ring1: { name: 'Gold Ring', icon: 'circle', rarity: 'rare' },
-    ring2: null,
-    neck: null,
-  };
+  export let store = null;
+  export let sendMessage = null;
 
-  const slotLabels = {
-    head: 'Head',
-    body: 'Body',
-    hands: 'Hands',
-    feet: 'Feet',
-    mainHand: 'Main Hand',
-    offHand: 'Off Hand',
-    ring1: 'Ring 1',
-    ring2: 'Ring 2',
-    neck: 'Neck',
-  };
+  let equippedItems = {};
 
-  function getRarityColor(rarity) {
-    if (!rarity) return '#4b5563';
-    switch (rarity) {
-      case 'uncommon': return '#22c55e';
+  // Subscribe to store
+  $: if (store) {
+    equippedItems = $store.equippedItems || {};
+  }
+
+  // Backend slot keys mapped to display labels, grouped into rows
+  const slotRows = [
+    [
+      { key: 'head', label: 'Head' },
+      { key: 'neck', label: 'Neck' },
+    ],
+    [
+      { key: 'chest', label: 'Chest' },
+    ],
+    [
+      { key: 'main_hand', label: 'Main Hand' },
+      { key: 'hands', label: 'Hands' },
+      { key: 'off_hand', label: 'Off Hand' },
+    ],
+    [
+      { key: 'legs', label: 'Legs' },
+    ],
+    [
+      { key: 'boots', label: 'Boots' },
+      { key: 'ring1', label: 'Ring 1' },
+      { key: 'ring2', label: 'Ring 2' },
+    ],
+  ];
+
+  function getQualityColor(quality) {
+    switch (quality) {
+      case 'magic': return '#22c55e';
       case 'rare': return '#3b82f6';
-      case 'epic': return '#a855f7';
-      case 'legendary': return '#f59e0b';
+      case 'legendary': return '#a855f7';
+      case 'mythic': return '#f59e0b';
       default: return '#9ca3af';
     }
+  }
+
+  function getItemIcon(item) {
+    if (item.meta && item.meta.img) return null;
+    switch (item.type) {
+      case 'weapon': return 'bolt';
+      case 'armor': return 'security';
+      case 'consumable': return 'local_drink';
+      case 'quest': return 'auto_stories';
+      case 'currency': return 'paid';
+      case 'collectible': return 'star';
+      case 'crafting_material': return 'build';
+      default: return 'inventory_2';
+    }
+  }
+
+  function getSlotIcon(slotKey) {
+    switch (slotKey) {
+      case 'head': return 'face';
+      case 'neck': return 'more_horiz';
+      case 'chest': return 'checkroom';
+      case 'hands': return 'front_hand';
+      case 'legs': return 'straighten';
+      case 'boots': return 'do_not_step';
+      case 'main_hand': return 'bolt';
+      case 'off_hand': return 'shield';
+      case 'ring1': return 'circle';
+      case 'ring2': return 'circle';
+      default: return 'help_outline';
+    }
+  }
+
+  function getItemTooltip(item, slotLabel) {
+    if (!item) return slotLabel + ' - Empty';
+    let tip = item.name;
+    if (item.quality && item.quality !== 'normal') {
+      tip += ' [' + item.quality.toUpperCase() + ']';
+    }
+    if (item.type) {
+      tip += ' (' + item.type + ')';
+    }
+    // Show key attributes
+    if (item.attributes) {
+      const stats = [];
+      if (item.attributes.damage != null) stats.push('Dmg: ' + item.attributes.damage);
+      if (item.attributes.defense != null) stats.push('Def: ' + item.attributes.defense);
+      if (item.attributes.armor != null) stats.push('Armor: ' + item.attributes.armor);
+      if (item.attributes.strength != null) stats.push('Str: +' + item.attributes.strength);
+      if (item.attributes.agility != null) stats.push('Agi: +' + item.attributes.agility);
+      if (item.attributes.intelligence != null) stats.push('Int: +' + item.attributes.intelligence);
+      if (stats.length > 0) {
+        tip += '\n' + stats.join(', ');
+      }
+    }
+    return tip;
+  }
+
+  function handleUnequip(item) {
+    if (!sendMessage || !item) return;
+    const name = item.instanceSuffix ? item.name + '-' + item.instanceSuffix : item.name;
+    sendMessage('unequip ' + name);
   }
 </script>
 
@@ -101,6 +170,12 @@
 
   .equipment-slot.empty {
     opacity: 0.5;
+    cursor: default;
+  }
+
+  .equipment-slot.filled:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
   }
 
   .slot-label {
@@ -120,6 +195,12 @@
     font-size: 0.7em;
     text-align: center;
     color: #d1d5db;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
   }
 
   .slot-empty {
@@ -128,13 +209,16 @@
     font-style: italic;
   }
 
-  .placeholder-notice {
-    font-size: 0.7em;
-    color: #6b7280;
-    text-align: center;
-    margin-top: 1em;
-    padding-top: 0.75em;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  .unequip-hint {
+    font-size: 0.55em;
+    color: #ef4444;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    margin-top: 0.2em;
+  }
+
+  .equipment-slot.filled:hover .unequip-hint {
+    opacity: 1;
   }
 </style>
 
@@ -145,141 +229,33 @@
   </div>
 
   <div class="equipment-grid">
-    <!-- Head & Neck row -->
-    <div class="equipment-row">
-      <div
-        class="equipment-slot"
-        class:empty={!mockEquipment.head}
-        style="border-color: {getRarityColor(mockEquipment.head?.rarity)}"
-      >
-        <span class="slot-label">{slotLabels.head}</span>
-        {#if mockEquipment.head}
-          <i class="material-icons slot-icon" style="color: {getRarityColor(mockEquipment.head.rarity)}">{mockEquipment.head.icon}</i>
-          <span class="slot-name">{mockEquipment.head.name}</span>
-        {:else}
-          <span class="slot-empty">Empty</span>
-        {/if}
+    {#each slotRows as row}
+      <div class="equipment-row">
+        {#each row as slot}
+          {@const item = equippedItems[slot.key]}
+          <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+          <div
+            class="equipment-slot"
+            class:empty={!item}
+            class:filled={!!item}
+            style="border-color: {item ? getQualityColor(item.quality) : 'rgba(255, 255, 255, 0.1)'}"
+            title={getItemTooltip(item, slot.label)}
+            on:click={() => item && handleUnequip(item)}
+          >
+            <span class="slot-label">{slot.label}</span>
+            {#if item}
+              <i class="material-icons slot-icon" style="color: {getQualityColor(item.quality)}">
+                {getItemIcon(item) || getSlotIcon(slot.key)}
+              </i>
+              <span class="slot-name">{item.name}</span>
+              <span class="unequip-hint">click to unequip</span>
+            {:else}
+              <i class="material-icons slot-icon" style="color: #4b5563">{getSlotIcon(slot.key)}</i>
+              <span class="slot-empty">Empty</span>
+            {/if}
+          </div>
+        {/each}
       </div>
-      <div
-        class="equipment-slot"
-        class:empty={!mockEquipment.neck}
-        style="border-color: {getRarityColor(mockEquipment.neck?.rarity)}"
-      >
-        <span class="slot-label">{slotLabels.neck}</span>
-        {#if mockEquipment.neck}
-          <i class="material-icons slot-icon" style="color: {getRarityColor(mockEquipment.neck.rarity)}">{mockEquipment.neck.icon}</i>
-          <span class="slot-name">{mockEquipment.neck.name}</span>
-        {:else}
-          <span class="slot-empty">Empty</span>
-        {/if}
-      </div>
-    </div>
-
-    <!-- Body row -->
-    <div class="equipment-row">
-      <div
-        class="equipment-slot"
-        class:empty={!mockEquipment.body}
-        style="border-color: {getRarityColor(mockEquipment.body?.rarity)}"
-      >
-        <span class="slot-label">{slotLabels.body}</span>
-        {#if mockEquipment.body}
-          <i class="material-icons slot-icon" style="color: {getRarityColor(mockEquipment.body.rarity)}">{mockEquipment.body.icon}</i>
-          <span class="slot-name">{mockEquipment.body.name}</span>
-        {:else}
-          <span class="slot-empty">Empty</span>
-        {/if}
-      </div>
-    </div>
-
-    <!-- Hands row -->
-    <div class="equipment-row">
-      <div
-        class="equipment-slot"
-        class:empty={!mockEquipment.mainHand}
-        style="border-color: {getRarityColor(mockEquipment.mainHand?.rarity)}"
-      >
-        <span class="slot-label">{slotLabels.mainHand}</span>
-        {#if mockEquipment.mainHand}
-          <i class="material-icons slot-icon" style="color: {getRarityColor(mockEquipment.mainHand.rarity)}">{mockEquipment.mainHand.icon}</i>
-          <span class="slot-name">{mockEquipment.mainHand.name}</span>
-        {:else}
-          <span class="slot-empty">Empty</span>
-        {/if}
-      </div>
-      <div
-        class="equipment-slot"
-        class:empty={!mockEquipment.hands}
-        style="border-color: {getRarityColor(mockEquipment.hands?.rarity)}"
-      >
-        <span class="slot-label">{slotLabels.hands}</span>
-        {#if mockEquipment.hands}
-          <i class="material-icons slot-icon" style="color: {getRarityColor(mockEquipment.hands.rarity)}">{mockEquipment.hands.icon}</i>
-          <span class="slot-name">{mockEquipment.hands.name}</span>
-        {:else}
-          <span class="slot-empty">Empty</span>
-        {/if}
-      </div>
-      <div
-        class="equipment-slot"
-        class:empty={!mockEquipment.offHand}
-        style="border-color: {getRarityColor(mockEquipment.offHand?.rarity)}"
-      >
-        <span class="slot-label">{slotLabels.offHand}</span>
-        {#if mockEquipment.offHand}
-          <i class="material-icons slot-icon" style="color: {getRarityColor(mockEquipment.offHand.rarity)}">{mockEquipment.offHand.icon}</i>
-          <span class="slot-name">{mockEquipment.offHand.name}</span>
-        {:else}
-          <span class="slot-empty">Empty</span>
-        {/if}
-      </div>
-    </div>
-
-    <!-- Feet & Rings row -->
-    <div class="equipment-row">
-      <div
-        class="equipment-slot"
-        class:empty={!mockEquipment.feet}
-        style="border-color: {getRarityColor(mockEquipment.feet?.rarity)}"
-      >
-        <span class="slot-label">{slotLabels.feet}</span>
-        {#if mockEquipment.feet}
-          <i class="material-icons slot-icon" style="color: {getRarityColor(mockEquipment.feet.rarity)}">{mockEquipment.feet.icon}</i>
-          <span class="slot-name">{mockEquipment.feet.name}</span>
-        {:else}
-          <span class="slot-empty">Empty</span>
-        {/if}
-      </div>
-      <div
-        class="equipment-slot"
-        class:empty={!mockEquipment.ring1}
-        style="border-color: {getRarityColor(mockEquipment.ring1?.rarity)}"
-      >
-        <span class="slot-label">{slotLabels.ring1}</span>
-        {#if mockEquipment.ring1}
-          <i class="material-icons slot-icon" style="color: {getRarityColor(mockEquipment.ring1.rarity)}">{mockEquipment.ring1.icon}</i>
-          <span class="slot-name">{mockEquipment.ring1.name}</span>
-        {:else}
-          <span class="slot-empty">Empty</span>
-        {/if}
-      </div>
-      <div
-        class="equipment-slot"
-        class:empty={!mockEquipment.ring2}
-        style="border-color: {getRarityColor(mockEquipment.ring2?.rarity)}"
-      >
-        <span class="slot-label">{slotLabels.ring2}</span>
-        {#if mockEquipment.ring2}
-          <i class="material-icons slot-icon" style="color: {getRarityColor(mockEquipment.ring2.rarity)}">{mockEquipment.ring2.icon}</i>
-          <span class="slot-name">{mockEquipment.ring2.name}</span>
-        {:else}
-          <span class="slot-empty">Empty</span>
-        {/if}
-      </div>
-    </div>
-  </div>
-
-  <div class="placeholder-notice">
-    Placeholder data - server integration pending
+    {/each}
   </div>
 </div>

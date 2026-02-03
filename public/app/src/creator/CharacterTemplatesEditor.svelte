@@ -15,6 +15,8 @@
   } from "../api/character-templates.js";
 
   import { getItemTemplates } from "../api/items.js";
+  import { characterTemplateColumns } from "./tableColumns.js";
+  import { knownCharacterAttributes } from "./fieldSuggestions.js";
 
   const store = createStore();
   const { isAuthenticated, authToken } = getAuth();
@@ -42,6 +44,7 @@
     title: "Character Template Editor",
     subtitle: "Define character archetypes with stats, backstory, and starting gear.",
     listTitle: "Templates",
+    columns: characterTemplateColumns,
     labels: {
       create: "Save Template",
       update: "Save Template",
@@ -327,7 +330,12 @@
         </button>
       </div>
       <div class="flex gap-2 mb-2">
-        <input class="input-base text-xs" placeholder="Attribute name" bind:value={newAttributeName} />
+        <input class="input-base text-xs" placeholder="Attribute name" list="char-attr-suggestions" bind:value={newAttributeName} />
+        <datalist id="char-attr-suggestions">
+          {#each knownCharacterAttributes as key}
+            <option value={key} />
+          {/each}
+        </datalist>
       </div>
       <div class="space-y-2">
         {#if $store.selectedElement.attributes}

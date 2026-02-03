@@ -29,7 +29,9 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
 
 - **Room-Based World System**
   - Interconnected rooms with customizable exits (directional, named, teleport)
-  - Room actions for custom player interactions
+  - Hidden/secret exits (toggleable visibility in editor)
+  - Room actions for custom player interactions (respond, broadcast, run script)
+  - Action descriptions shown in room text ("You can:" section)
   - Visual backgrounds and mood settings
   - Coordinate-based world mapping (X, Y, Z grid)
   - Dynamic item and NPC spawning
@@ -66,18 +68,35 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
 ### Content Creation
 
 - **Web-Based Editor**
-  - Room editor with exit and action configuration
-  - Item and item template management
-  - Script editor for custom logic
-  - World map visualization
+  - Full-width filterable data tables for browsing all entity types (Rooms, Items, Item Templates, NPCs, Dialogs, Scripts, Character Templates)
+  - Per-column filtering (text search, enum dropdowns) with instant client-side filtering and sorting
+  - Side-by-side master-detail layout: data table + edit form shown together, closeable to full-width table view
+  - Room editor with exit, action, spawner, items, and NPC resident configuration
+  - Item and item template management with attributes and properties
+  - NPC editor with enemy and merchant trait configuration
+  - Lua script editor with syntax highlighting and integrated test runner
+  - Dialog tree editor with options and alternate texts
+  - Character template editor with archetype selection and starting gear
+  - World map visualization (GridWorldEditor)
   - CRUD operations with live preview
 
 - **Scripting System**
-  - JavaScript-based scripting via Otto VM
-  - Room action scripts
+  - Lua-based scripting via gopher-lua (primary)
+  - Room action scripts (type "script" triggers Lua execution with room.action context)
+  - Room on-enter scripts
   - Item behavior scripts
   - NPC behavior scripts
   - Quest scripting support
+  - Game API: messaging, inventory checks (`hasItem`, `hasEquipped`), character flags (`getFlag`/`setFlag`), item rewards (`giveItem`), exit manipulation (`revealExit`)
+
+### AI / LLM Integration
+
+- **Groq API Integration**
+  - Reusable Groq LLM client (`pkg/service/groq/`) for AI-powered text generation
+  - Character creation: AI-generated names and descriptions based on selected template (archetype, race, class, backstory)
+  - Protected API endpoint: `POST /api/generate/character`
+  - Graceful degradation when `GROQ_API_KEY` is not configured
+  - Designed for extension to other AI features (NPC dialogue, room descriptions, quest generation)
 
 ### Technical Features
 
@@ -120,6 +139,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
 | WebSocket | Gorilla WebSocket |
 | Authentication | Auth0 JWT |
 | Scripting | Otto (JavaScript VM) |
+| AI / LLM | Groq API (llama-3.3-70b) |
 | Logging | Logrus |
 
 ### Frontend
@@ -273,6 +293,10 @@ MUD_ADMIN_OAUTHID=
 
 # Optional landing page (path to directory with index.html + static assets)
 # LANDING_PATH=./public/landing
+
+# AI Generation (Groq API) — used for character name/description generation
+# Get a key at https://console.groq.com
+GROQ_API_KEY=
 ```
 
 ## Building & Running
@@ -330,6 +354,7 @@ go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
 
 ### Protected Endpoints (Require Auth - Player Level)
 - `GET /api/characters`, `POST /api/newcharacter` - Character management
+- `POST /api/generate/character` - AI-powered character name/description generation
 - `GET /api/rooms`, `GET /api/items` - Read game data
 - `GET /api/user`, `PUT /api/user` - User profile
 

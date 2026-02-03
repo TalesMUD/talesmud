@@ -125,6 +125,10 @@
         return { store, sendMessage, term: null };
       case 'inventory':
         return { store, sendMessage };
+      case 'equipment':
+        return { store, sendMessage };
+      case 'character':
+        return { store, sendMessage };
       default:
         return baseProps;
     }

@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import { writable, get } from "svelte/store";
   import { v4 as uuidv4 } from "uuid";
   import { CodeJar } from "codejar";
@@ -22,6 +22,7 @@
     createScript,
     getScriptTypes,
   } from "../api/scripts.js";
+  import { scriptColumns } from "./tableColumns.js";
 
   hljs.registerLanguage("lua", lua);
 
@@ -62,10 +63,14 @@
     );
   };
 
+  // Clone columns so we can populate dynamic script type options
+  const columns = scriptColumns.map((c) => ({ ...c }));
+
   const config = {
     title: "Manage Scripts",
     subtitle: "Configure logic for game events and objects.",
     listTitle: "Scripts",
+    columns: columns,
     labels: {
       create: "Create Script",
       update: "Update Script",
@@ -203,12 +208,22 @@ return input`,
   };
 
   onMount(async () => {
-    getScriptTypes((t) => (scriptTypes = t));
+    getScriptTypes((t) => {
+      scriptTypes = t;
+      // Populate script type column filter options
+      const typeCol = columns.find((c) => c.key === "type");
+      if (typeCol) typeCol.options = t;
+    });
     setupEditors();
   });
 
-  $: if ($store.selectedElement) {
-    setupEditors();
+  // Re-setup editors when detail opens or selected element changes
+  $: if ($store.selectedElement && $store.detailOpen) {
+    // Reset CodeJar instances when detail re-opens so they bind to new DOM refs
+    jar = null;
+    test = null;
+    result = null;
+    tick().then(() => setupEditors());
   }
 </script>
 
@@ -258,7 +273,7 @@ return input`,
       </div>
       <div class="flex-1 flex font-mono text-sm leading-relaxed overflow-hidden">
         <div
-          class="flex-1 p-4 overflow-y-auto text-slate-300 whitespace-pre scrollbar-hide"
+          class="flex-1 p-4 overflow-auto text-slate-300 whitespace-pre"
           bind:this={editorRef}
         ></div>
       </div>

@@ -13,6 +13,15 @@
     deleteNPC,
   } from "../api/npcs.js";
   import { getDialogs } from "../api/dialogs.js";
+  import { npcColumns } from "./tableColumns.js";
+  import { knownRaces, knownClasses } from "./fieldSuggestions.js";
+
+  // Clone columns so we can populate dynamic dropdown options
+  const columns = npcColumns.map((c) => ({ ...c }));
+  const raceCol = columns.find((c) => c.key === "race.name");
+  if (raceCol) raceCol.options = knownRaces;
+  const classCol = columns.find((c) => c.key === "class.name");
+  if (classCol) classCol.options = knownClasses;
 
   const { isAuthenticated, authToken } = getAuth();
   $: state = {
@@ -94,6 +103,7 @@
     title: "Manage NPCs",
     subtitle: "Configure NPC profiles, traits, and dialog bindings.",
     listTitle: "NPCs",
+    columns: columns,
     labels: {
       create: "Create NPC",
       update: "Update NPC",
@@ -137,6 +147,14 @@
         return { name: "star", color: "#f59e0b", title: "Unique NPC" };
       }
       return null;
+    },
+    rowIndicator: (element) => {
+      const hasEnemy = !!element.enemyTrait;
+      const hasMerchant = !!element.merchantTrait;
+      if (hasEnemy && hasMerchant) return { color: "#f59e0b", title: "Enemy + Merchant" };
+      if (hasEnemy) return { color: "#ef4444", title: "Enemy" };
+      if (hasMerchant) return { color: "#22c55e", title: "Merchant" };
+      return { color: "#64748b", title: "Neutral" };
     },
   };
 

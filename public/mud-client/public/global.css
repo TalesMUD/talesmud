@@ -215,3 +215,25 @@ button:focus {
     transform: translateX(2px);
   }
 }
+
+/* Mobile-specific global styles */
+@media screen and (max-width: 768px) {
+  body {
+    padding: 0;
+    overscroll-behavior: none;
+  }
+
+  html, body {
+    overflow: hidden;
+  }
+}
+
+/* Safe area inset support */
+@supports (padding: env(safe-area-inset-top)) {
+  :root {
+    --safe-area-top: env(safe-area-inset-top);
+    --safe-area-bottom: env(safe-area-inset-bottom);
+    --safe-area-left: env(safe-area-inset-left);
+    --safe-area-right: env(safe-area-inset-right);
+  }
+}

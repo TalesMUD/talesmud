@@ -16,6 +16,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/scripts/runner"
 	"github.com/talesmud/talesmud/pkg/server/handler"
 	"github.com/talesmud/talesmud/pkg/service"
+	"github.com/talesmud/talesmud/pkg/service/groq"
 	"github.com/talesmud/talesmud/pkg/webui"
 	"github.com/talesmud/talesmud/pkg/webuiplay"
 )
@@ -107,6 +108,10 @@ func (app *app) setupRoutes() {
 		Service: app.Facade.LootTablesService(),
 	}
 
+	generate := &handler.GenerateHandler{
+		GroqClient: groq.NewClient(),
+	}
+
 	backgroundsPath := strings.TrimSpace(os.Getenv("BACKGROUNDS_PATH"))
 	if backgroundsPath == "" {
 		backgroundsPath = "./uploads/backgrounds"
@@ -167,6 +172,9 @@ func (app *app) setupRoutes() {
 		protected.PUT("characters/:id", csh.UpdateCharacterByID)
 		protected.POST("newcharacter", csh.CreateNewCharacter)
 
+		// AI-powered generation
+		protected.POST("generate/character", generate.GenerateCharacter)
+
 		// Read-only game data (accessible to all authenticated users)
 		protected.GET("rooms", rooms.GetRooms)
 		protected.GET("rooms-vh", rooms.GetRoomValueHelp)
@@ -205,6 +213,7 @@ func (app *app) setupRoutes() {
 			creator.POST("rooms", rooms.PostRoom)
 			creator.PUT("rooms/:id", rooms.PutRoom)
 			creator.DELETE("rooms/:id", rooms.DeleteRoom)
+			creator.PUT("world/rooms-coords", worldRenderer.BatchUpdateCoords)
 
 			// Items
 			creator.POST("items", items.PostItem)

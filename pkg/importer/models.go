@@ -5,18 +5,48 @@ package importer
 
 // YAMLRoom represents a room in YAML format
 type YAMLRoom struct {
-	ID          string       `yaml:"id"`
-	Name        string       `yaml:"name"`
-	Description string       `yaml:"description"`
-	Detail      string       `yaml:"detail"`
-	Area        string       `yaml:"area"`
-	Tags        []string     `yaml:"tags"`
-	CanBind     bool         `yaml:"canBind"`
-	Coords      *YAMLCoords  `yaml:"coords"`
-	Exits       []YAMLExit   `yaml:"exits"`
-	Actions     []YAMLAction `yaml:"actions"`
-	Meta        YAMLRoomMeta `yaml:"meta"`
-	OnEnter     string       `yaml:"onEnterScript"`
+	ID          string         `yaml:"id"`
+	Name        string         `yaml:"name"`
+	Description string         `yaml:"description"`
+	Detail      string         `yaml:"detail"`
+	Area        string         `yaml:"area"`
+	Tags        []string       `yaml:"tags"`
+	CanBind     bool           `yaml:"canBind"`
+	Coords      *YAMLCoords    `yaml:"coords"`
+	Exits       []YAMLExit     `yaml:"exits"`
+	Actions     []YAMLAction   `yaml:"actions"`
+	Items       []YAMLRoomItem `yaml:"items"`
+	Meta        YAMLRoomMeta   `yaml:"meta"`
+	OnEnter     string         `yaml:"onEnterScript"`
+}
+
+// YAMLRoomItem represents an item placed in a room.
+// Supports both string format ("ITM0004") and object format ({id: "ITM0004", location: "on table"}).
+type YAMLRoomItem struct {
+	ID       string `yaml:"id"`
+	Location string `yaml:"location"`
+}
+
+// UnmarshalYAML handles both string and object formats for room items
+func (ri *YAMLRoomItem) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	// Try plain string first: "ITM0004"
+	var s string
+	if err := unmarshal(&s); err == nil {
+		ri.ID = s
+		return nil
+	}
+
+	// Try object format: {id: "ITM0004", location: "on table"}
+	var obj struct {
+		ID       string `yaml:"id"`
+		Location string `yaml:"location"`
+	}
+	if err := unmarshal(&obj); err != nil {
+		return err
+	}
+	ri.ID = obj.ID
+	ri.Location = obj.Location
+	return nil
 }
 
 // YAMLExit represents a room exit
@@ -30,10 +60,11 @@ type YAMLExit struct {
 
 // YAMLAction represents a room action
 type YAMLAction struct {
-	Name        string `yaml:"name"`
-	Type        string `yaml:"type"`
-	Description string `yaml:"description"`
-	Response    string `yaml:"response"`
+	Name        string                 `yaml:"name"`
+	Type        string                 `yaml:"type"`
+	Description string                 `yaml:"description"`
+	Response    string                 `yaml:"response"`
+	Params      map[string]interface{} `yaml:"params"`
 }
 
 // YAMLRoomMeta contains room metadata

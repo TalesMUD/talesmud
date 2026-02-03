@@ -10,4 +10,7 @@ const onboardingPhase = writable("loading");
 const userData = writable(null);
 const userCharacters = writable([]);
 
-export { onboardingPhase, userData, userCharacters };
+// Set to true when the "nc" command is used in-game to show the character creation wizard
+const showCharacterWizard = writable(false);
+
+export { onboardingPhase, userData, userCharacters, showCharacterWizard };

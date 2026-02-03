@@ -12,7 +12,7 @@ type RoomActionType string
 
 const (
 	RoomActionTypeResponse     RoomActionType = "response"
-	RoomActionTypeRoomResponse RoomActionType = "room_response"
+	RoomActionTypeRoomResponse RoomActionType = "response_room"
 	RoomActionTypeScript       RoomActionType = "script"
 )
 
@@ -22,6 +22,7 @@ type Action struct {
 	Description string                 `bson:"description,omitempty" json:"description,omitempty"`
 	Response    string                 `bson:"response,omitempty" json:"response,omitempty"`
 	Type        RoomActionType         `bson:"type,omitempty" json:"type,omitempty"`
+	ScriptId    string                 `bson:"scriptId,omitempty" json:"scriptId,omitempty"`
 	Params      map[string]interface{} `bson:"params,omitempty" json:"params"`
 }
 

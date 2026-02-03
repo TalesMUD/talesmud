@@ -440,6 +440,10 @@
       placeholder="_"
       spellcheck="false"
       autocomplete="off"
+      inputmode="text"
+      enterkeyhint="send"
+      autocapitalize="off"
+      autocorrect="off"
     />
   </div>
 </div>
