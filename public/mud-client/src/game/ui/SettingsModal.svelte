@@ -357,6 +357,21 @@
                   <span class="toggle-slider"></span>
                 </label>
               </div>
+
+              <div class="setting-item">
+                <div class="setting-info">
+                  <div class="setting-label">Room Text Overlay</div>
+                  <div class="setting-desc">Show game text as an overlay on the room image (always on for mobile)</div>
+                </div>
+                <label class="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={$settingsStore.interface?.roomTextOverlay}
+                    on:change={() => toggleSetting('interface', 'roomTextOverlay')}
+                  />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
             </div>
           {/if}
         </div>

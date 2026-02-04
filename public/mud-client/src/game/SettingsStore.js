@@ -12,7 +12,8 @@ const DEFAULT_SETTINGS = {
   // Interface settings
   interface: {
     parchmentBackground: false,  // Room description parchment style (default off)
-    compactMode: false
+    compactMode: false,
+    roomTextOverlay: false       // Show game text overlay on room image (always on for mobile)
   }
 };
 

@@ -210,11 +210,14 @@
     letter-spacing: 0.5px;
   }
 
-  .header-right {
-    margin-left: auto;
+  .widget-toolbar {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 0.75em;
+    margin-bottom: 0.75em;
+    padding-bottom: 0.5em;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
 
   .gold-display {
@@ -733,23 +736,24 @@
   <div class="widget-header">
     <i class="material-icons">inventory_2</i>
     <span class="widget-title">Inventory</span>
-    <div class="header-right">
-      {#if gold > 0}
-        <span class="gold-display">
-          <i class="material-icons">paid</i>
-          {gold}
-        </span>
-      {/if}
-      <span class="item-count">{inventory.length} items</span>
-      <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-      <span
-        class="view-toggle"
-        on:click={toggleViewMode}
-        title={viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
-      >
-        <i class="material-icons">{viewMode === 'grid' ? 'view_list' : 'grid_view'}</i>
+  </div>
+
+  <div class="widget-toolbar">
+    {#if gold > 0}
+      <span class="gold-display">
+        <i class="material-icons">paid</i>
+        {gold}
       </span>
-    </div>
+    {/if}
+    <span class="item-count">{inventory.length} items</span>
+    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+    <span
+      class="view-toggle"
+      on:click={toggleViewMode}
+      title={viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
+    >
+      <i class="material-icons">{viewMode === 'grid' ? 'view_list' : 'grid_view'}</i>
+    </span>
   </div>
 
   {#if inventory.length === 0}

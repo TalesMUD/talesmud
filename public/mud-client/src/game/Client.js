@@ -2,6 +2,7 @@
 
 import { onMount } from "svelte";
 import { writable, get } from "svelte/store";
+import { overlayStore } from "./ui/overlayStore.js";
 
 const GAME_CLIENT = writable(null);
 
@@ -19,6 +20,7 @@ function createClient(renderer, characterCreator, muxStore) {
   messageHandlers["enterRoom"] = (msg) => {
     activeRoom = msg.room;
     renderer(msg.message);
+    overlayStore.clearAll();
 
     // Debug: log raw room data from server
     console.log("=== enterRoom message received ===");
@@ -126,6 +128,7 @@ function createClient(renderer, characterCreator, muxStore) {
     output += msg.message;
     output += "\n[The conversation has ended]";
     renderer(output);
+    overlayStore.pushMessage(output);
 
     // Clear dialog state in store
     if (mux) {
@@ -136,6 +139,7 @@ function createClient(renderer, characterCreator, muxStore) {
   // Combat message handlers
   messageHandlers["combatStart"] = (msg) => {
     renderer(msg.message);
+    overlayStore.pushMessage(msg.message);
     if (mux) {
       mux.setGameContext({ inCombat: true });
       mux.updateCharacterStats({ inCombat: true });
@@ -144,6 +148,7 @@ function createClient(renderer, characterCreator, muxStore) {
 
   messageHandlers["combatTurn"] = (msg) => {
     renderer(msg.message);
+    overlayStore.pushMessage(msg.message);
     // Keep combat mode active
     if (mux) {
       mux.setGameContext({ inCombat: true });
@@ -152,10 +157,12 @@ function createClient(renderer, characterCreator, muxStore) {
 
   messageHandlers["combatAction"] = (msg) => {
     renderer(msg.message);
+    overlayStore.pushMessage(msg.message);
   };
 
   messageHandlers["combatStatus"] = (msg) => {
     renderer(msg.message);
+    overlayStore.pushMessage(msg.message);
     if (mux) {
       mux.setGameContext({ inCombat: true });
     }
@@ -163,6 +170,7 @@ function createClient(renderer, characterCreator, muxStore) {
 
   messageHandlers["combatEnd"] = (msg) => {
     renderer(msg.message);
+    overlayStore.pushMessage(msg.message);
     if (mux) {
       mux.setGameContext({ inCombat: false });
       mux.updateCharacterStats({ inCombat: false });
@@ -194,6 +202,7 @@ function createClient(renderer, characterCreator, muxStore) {
           message = msg.username + ":  " + msg.message;
         }
         renderer(message);
+        overlayStore.pushMessage(message);
       }
     });
 
