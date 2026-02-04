@@ -111,7 +111,7 @@
 
   /* Hide the widget's own header since the sheet already has one */
   .sheet-content :global(.widget-header) {
-    display: none;
+    display: none !important;
   }
 </style>
 

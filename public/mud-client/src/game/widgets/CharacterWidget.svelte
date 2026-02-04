@@ -21,8 +21,8 @@
 
   // Derived values
   $: name = character?.name || '—';
-  $: race = character?.race || '';
-  $: charClass = character?.class || '';
+  $: race = typeof character?.race === 'object' ? (character.race.name || '') : (character?.race || '');
+  $: charClass = typeof character?.class === 'object' ? (character.class.name || '') : (character?.class || '');
   $: level = stats.level || character?.level || 0;
   $: currentHp = stats.currentHitPoints || 0;
   $: maxHp = stats.maxHitPoints || 1;

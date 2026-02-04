@@ -1,6 +1,7 @@
 <script>
   import EntityPanel from '../ui/EntityPanel.svelte';
   import DialogOverlay from '../ui/DialogOverlay.svelte';
+  import RoomTextOverlay from '../ui/RoomTextOverlay.svelte';
   import { findNpcByName } from '../MUDXPlusStore';
   import { settingsStore } from '../SettingsStore.js';
   import { backend } from '../../api/base.js';
@@ -212,6 +213,8 @@
     <div id="roomImg1" class="roomImageInner"></div>
     <div id="roomImg2" class="roomImageInner hidden"></div>
     <div class="roomImageGradient"></div>
+
+    <RoomTextOverlay />
 
     {#if $store.roomName}
       <div class="roomName">

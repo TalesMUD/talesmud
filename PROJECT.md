@@ -58,6 +58,13 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Three-step character creation wizard: Choose Template, Name Character, Confirm & Create
   - Automatic phase detection from user profile and character data
 
+- **Room Text Overlay**
+  - Game text (combat, actions, player messages) displayed as translucent overlay on room image
+  - Auto-dismiss with duration scaled by text length (2-4 seconds)
+  - Smooth fade-in/fade-out animations
+  - Stacks up to 5 messages during rapid sequences (e.g. combat)
+  - Always enabled on mobile; optional toggle for desktop in Settings > Interface
+
 - **Multiplayer**
   - Real-time player interactions via WebSocket
   - Players see each other in rooms

@@ -1065,6 +1065,7 @@ All entity editors (Rooms, Items, Item Templates, NPCs, Dialogs, Scripts, Charac
 | `MUDXPlusStore.js` | Game UI state (exits, actions, background) |
 | `CRUDEditorStore.js` | Editor state (elements, selection, filters, table filter/sort state, detail panel open/close) |
 | `Client.js` | WebSocket client state (room, character) |
+| `overlayStore.js` | Transient text overlay messages (auto-dismiss with timers) |
 
 ### WebSocket Client
 

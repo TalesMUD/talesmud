@@ -1,6 +1,7 @@
 <script>
   import EntityPanel from '../ui/EntityPanel.svelte';
   import DialogOverlay from '../ui/DialogOverlay.svelte';
+  import RoomTextOverlay from '../ui/RoomTextOverlay.svelte';
   import MobileActionBar from './MobileActionBar.svelte';
   import { findNpcByName } from '../MUDXPlusStore';
   import { settingsStore } from '../SettingsStore.js';
@@ -120,53 +121,6 @@
     z-index: 5;
   }
 
-  .room-name {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    padding: 0.8em 1em;
-    text-align: center;
-    z-index: 10;
-    font-family: 'Cinzel', serif;
-    font-size: 1.2em;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    color: #f0e6d3;
-    text-shadow:
-      0 0 10px rgba(255, 215, 140, 0.3),
-      0 2px 4px rgba(0, 0, 0, 0.8),
-      0 4px 12px rgba(0, 0, 0, 0.6);
-    background: radial-gradient(
-      ellipse 70% 100% at 50% 0%,
-      rgba(0, 0, 0, 0.75) 0%,
-      rgba(0, 0, 0, 0.4) 50%,
-      rgba(0, 0, 0, 0) 100%
-    );
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5em;
-  }
-
-  .room-name::before,
-  .room-name::after {
-    content: '\25C8';
-    font-size: 0.6em;
-    color: rgba(168, 130, 90, 0.7);
-    text-shadow: 0 0 8px rgba(168, 130, 90, 0.4);
-  }
-
-  .flourish {
-    display: inline-block;
-    color: rgba(168, 130, 90, 0.6);
-    font-size: 0.85em;
-  }
-
-  .flourish-left {
-    transform: scaleX(-1);
-  }
-
   .entity-section {
     position: absolute;
     bottom: 0;
@@ -220,6 +174,9 @@
     background: #000;
     flex: 1;
     min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
   }
 
   .room-description {
@@ -275,13 +232,9 @@
     <div class="room-image-inner hidden" bind:this={img2El}></div>
     <div class="room-image-gradient"></div>
 
-    {#if $store.roomName}
-      <div class="room-name">
-        <span class="flourish flourish-left">--</span>
-        <span>{$store.roomName}</span>
-        <span class="flourish">--</span>
-      </div>
-    {/if}
+    <!-- Room name is already shown in MobileHeader -->
+
+    <RoomTextOverlay />
 
     {#if $store.dialogActive}
       <DialogOverlay
