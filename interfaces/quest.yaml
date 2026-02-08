@@ -1,0 +1,305 @@
+# =============================================================================
+# Quest Interface
+# =============================================================================
+#
+# Quests are structured tasks that guide players through the game world.
+# Each quest has objectives, rewards, and optional prerequisites.
+#
+# QUEST LIFECYCLE:
+# ────────────────
+# 1. AVAILABLE  — player meets prerequisites, can accept the quest
+# 2. ACTIVE     — player has accepted, working on objectives
+# 3. COMPLETED  — all objectives done, rewards given
+# 4. FAILED     — quest failed (optional, script-driven)
+# 5. ABANDONED  — player dropped the quest voluntarily
+#
+# HOW PLAYERS GET QUESTS:
+# ───────────────────────
+# Quests are acquired via the "source" field:
+#   npc    — player talks to an NPC (most common)
+#   item   — player interacts with/picks up an item
+#   auto   — automatically given when conditions are met
+#   script — given by a Lua script (e.g., entering a zone)
+#
+# OBJECTIVE TYPES:
+# ────────────────
+# Each quest has one or more objectives that must be completed:
+#   kill    — kill N enemies of a specific NPC template
+#   collect — pick up N items of a specific item template
+#   deliver — bring a specific item to a specific NPC
+#   visit   — enter a specific room
+#   talk    — talk to an NPC (optionally reach a specific dialog node)
+#   custom  — progress managed entirely by a Lua script
+#
+# ID CONVENTIONS:
+# ───────────────
+# Quest IDs follow a zone-based numbering scheme:
+#   QST0001–QST0099  — Tutorial / Zone 0 (Catacombs)
+#   QST0100–QST0199  — Zone 1 (Meadows / Forest Path)
+#   QST0200–QST0299  — Zone 2 (Oldtown)
+#   QST0300–QST0399  — Zone 3 (Gloomfen Marsh)
+#   QST0900–QST0999  — Daily / repeatable quests
+#
+# =============================================================================
+
+name: QuestDTO
+endpoint: /api/quests
+
+fields:
+  # ─── Identity ───────────────────────────────────────────────────────────────
+
+  id:
+    type: string
+    # Auto-generated UUID. Convention: use "QST" + 4-digit zone-based number.
+    # Example: "QST0201" = Zone 2, Quest 01.
+
+  name:
+    type: string
+    required: true
+    # Quest title shown in the quest log and dialog. Keep concise (2-6 words).
+    # Examples: "Sewer Sweep", "The Lost Heirloom", "Wolf Menace"
+
+  description:
+    type: string
+    required: true
+    # Full quest description shown in the quest log. Explains the quest's
+    # story context and what the player needs to do. 2-4 sentences.
+    # Write in third person or neutral tone.
+
+  # ─── Classification ─────────────────────────────────────────────────────────
+
+  category:
+    type: string
+    enum: [main, side, daily]
+    # Quest category. Affects quest log grouping and UI presentation:
+    #   main  — main storyline quests, critical path
+    #   side  — optional side quests, exploration content
+    #   daily — repeatable daily quests (requires repeatable: true)
+
+  level:
+    type: integer
+    default: 0
+    # Recommended player level. Used for sorting in the quest log and
+    # difficulty indication. 0 = no level recommendation.
+
+  repeatable:
+    type: boolean
+    default: false
+    # If true, the quest can be completed multiple times. After completion,
+    # it returns to "available" status. Typical for daily quests.
+
+  # ─── Source ─────────────────────────────────────────────────────────────────
+
+  source:
+    type: QuestSource
+    required: true
+    # How the player acquires this quest. See QuestSource below.
+
+  # ─── Objectives ─────────────────────────────────────────────────────────────
+
+  objectives:
+    type: Objective[]
+    required: true
+    # List of objectives the player must complete. All objectives must be
+    # completed for the quest to finish (AND logic). Objectives with an
+    # "order" field are completed sequentially; unordered ones can be
+    # completed in any order.
+
+  # ─── Rewards ────────────────────────────────────────────────────────────────
+
+  rewards:
+    type: Reward
+    # Rewards given on quest completion. All fields are optional.
+
+  # ─── Completion ─────────────────────────────────────────────────────────────
+
+  onCompleteScriptId:
+    type: string
+    # Script ID executed when the quest is completed (all objectives done).
+    # Use for cutscenes, unlocking new areas, spawning events, or custom
+    # reward logic beyond the standard rewards.
+
+  # ─── Prerequisites ──────────────────────────────────────────────────────────
+
+  requiredQuestIds:
+    type: string[]
+    # Quest IDs that must be completed before this quest becomes available.
+    # Creates quest chains where one quest unlocks the next.
+    # Example: ["QST0101"] means the player must complete QST0101 first.
+
+  requiredLevel:
+    type: integer
+    default: 0
+    # Minimum player level required to accept this quest.
+    # 0 = no level requirement.
+
+  # ─── Dialog Integration ─────────────────────────────────────────────────────
+  # These text fields are injected into the quest-giver NPC's dialog
+  # when the quest is at different stages. They override or supplement
+  # the NPC's normal dialog with quest-specific text.
+
+  acceptDialogText:
+    type: string
+    # Text the NPC says when offering the quest (before acceptance).
+    # Shown alongside an "Accept" button in the dialog UI.
+
+  progressDialogText:
+    type: string
+    # Text the NPC says when the player talks to them while the quest
+    # is in progress (not all objectives complete). Use for reminders
+    # or hints about what to do next.
+
+  completeDialogText:
+    type: string
+    # Text the NPC says when the player returns with all objectives done.
+    # Shown alongside the reward display and "Complete" button.
+
+  # ─── Metadata ───────────────────────────────────────────────────────────────
+
+  created:
+    type: datetime
+    # Auto-set on creation.
+
+  updated:
+    type: datetime
+    # Auto-set on modification.
+
+
+# =============================================================================
+# Nested Types
+# =============================================================================
+
+QuestSource:
+  # Defines how a player can acquire this quest.
+  fields:
+    type:
+      type: string
+      required: true
+      enum: [npc, item, auto, script]
+      # Acquisition method:
+      #   npc    — talk to a specific NPC to receive the quest (most common)
+      #   item   — interact with or pick up a specific item
+      #   auto   — automatically given when prerequisites are met
+      #   script — given by a Lua script (e.g., on room entry)
+
+    npcId:
+      type: string
+      # NPC template ID that offers this quest. Required when type: "npc".
+      # The NPC's dialog will show quest-related options.
+
+    itemId:
+      type: string
+      # Item template ID that triggers this quest. Required when type: "item".
+
+
+Objective:
+  # A single quest objective the player must complete.
+  fields:
+    id:
+      type: string
+      required: true
+      # Unique identifier within this quest. Used for progress tracking.
+      # Convention: use descriptive snake_case names.
+      # Examples: "kill_sewer_rats", "collect_herbs", "visit_temple"
+
+    type:
+      type: string
+      required: true
+      enum: [kill, collect, deliver, visit, talk, custom]
+      # Objective type. Determines which fields are relevant:
+      #   kill    — uses targetId (NPC template), amount
+      #   collect — uses targetId (item template), amount
+      #   deliver — uses targetId (item template), deliverToNpcId, amount
+      #   visit   — uses targetId (room ID), amount (usually 1)
+      #   talk    — uses targetId (NPC template), dialogNodeId
+      #   custom  — uses checkScriptId
+
+    description:
+      type: string
+      required: true
+      # Human-readable objective text shown in the quest log.
+      # Include the target and quantity. Write as a directive.
+      # Examples: "Kill 8 Sewer Rats", "Collect 5 Moonbloom Herbs",
+      #           "Deliver the package to Captain Aldric"
+
+    # ─── Target Fields ──────────────────────────────────────────────────────
+    # Which fields are used depends on the objective type.
+
+    targetId:
+      type: string
+      # The entity ID this objective tracks:
+      #   kill    — NPC template ID (e.g., "ENM0001")
+      #   collect — item template ID (e.g., "ITM0005")
+      #   deliver — item template ID to be delivered
+      #   visit   — room ID (e.g., "R0230")
+      #   talk    — NPC template ID to talk to
+
+    targetName:
+      type: string
+      # Display name of the target. Used in UI when the target entity
+      # might not be loaded. Should match the entity's actual name.
+
+    amount:
+      type: integer
+      default: 1
+      # How many times the action must be performed:
+      #   kill: number of kills needed
+      #   collect: number of items to gather
+      #   deliver: number of items to deliver (usually 1)
+      #   visit: number of visits (usually 1)
+      #   talk: always 1
+
+    # ─── Deliver-specific ────────────────────────────────────────────────────
+
+    deliverToNpcId:
+      type: string
+      # NPC template ID to deliver the item to. Only used when type: "deliver".
+
+    deliverToNpcName:
+      type: string
+      # Display name of the delivery target NPC.
+
+    # ─── Talk-specific ───────────────────────────────────────────────────────
+
+    dialogNodeId:
+      type: string
+      # Specific dialog node ID the player must reach in conversation.
+      # Only used when type: "talk". If omitted, any conversation with
+      # the target NPC counts.
+
+    # ─── Custom Script ───────────────────────────────────────────────────────
+
+    checkScriptId:
+      type: string
+      # Script ID that manages progress for "custom" type objectives.
+      # The script is called periodically to check if the objective
+      # is complete. Can also be used as an override for other types
+      # (e.g., a kill objective with extra conditions).
+
+    # ─── Ordering ────────────────────────────────────────────────────────────
+
+    order:
+      type: integer
+      default: 0
+      # Determines objective ordering. Objectives with order > 0 must be
+      # completed in sequence (lower order first). Objectives with order: 0
+      # can be completed in any order. Useful for multi-stage quests.
+
+
+Reward:
+  # Rewards given to the player on quest completion.
+  fields:
+    xp:
+      type: integer
+      default: 0
+      # Experience points awarded.
+
+    gold:
+      type: integer
+      default: 0
+      # Gold awarded.
+
+    itemTemplateIds:
+      type: string[]
+      # Item template IDs awarded as rewards. Each template ID creates
+      # one item instance added to the player's inventory.

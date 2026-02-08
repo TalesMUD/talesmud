@@ -28,6 +28,9 @@ type Game struct {
 	// Combat controller for combat system
 	CombatController *CombatController
 
+	// Quest tracker for quest progress
+	QuestTracker *QuestTracker
+
 	// messages
 	onMessageReceived chan interface{}
 	sendMessage       chan interface{}
@@ -76,6 +79,9 @@ func New(facade service.Facade) *Game {
 
 	// Initialize Combat controller
 	g.CombatController = NewCombatController(g)
+
+	// Initialize Quest tracker
+	g.QuestTracker = NewQuestTracker(facade, g)
 
 	return g
 }
@@ -130,10 +136,16 @@ func (g *Game) GetCombatEngine() def.CombatEngineCtrl {
 	return g.CombatController
 }
 
+// GetQuestTracker returns the quest tracker controller
+func (g *Game) GetQuestTracker() def.QuestTrackerCtrl {
+	return g.QuestTracker
+}
+
 const roomUpdateInterval = 10
 const npcUpdateInterval = 10
 const spawnerUpdateInterval = 5
-const combatUpdateInterval = 2 // Combat checks every 2 seconds
+const combatUpdateInterval = 2   // Combat checks every 2 seconds
+const regenUpdateInterval = 10    // HP regeneration every 10 seconds
 
 func (g *Game) handleGameUpdates() {
 
@@ -141,6 +153,7 @@ func (g *Game) handleGameUpdates() {
 	npcTicker := time.NewTicker(npcUpdateInterval * time.Second)
 	spawnerTicker := time.NewTicker(spawnerUpdateInterval * time.Second)
 	combatTicker := time.NewTicker(combatUpdateInterval * time.Second)
+	regenTicker := time.NewTicker(regenUpdateInterval * time.Second)
 
 	for {
 		select {
@@ -152,6 +165,8 @@ func (g *Game) handleGameUpdates() {
 			g.handleSpawnerUpdates()
 		case <-combatTicker.C:
 			g.handleCombatUpdates()
+		case <-regenTicker.C:
+			g.handleRegenerationUpdates()
 		}
 	}
 }

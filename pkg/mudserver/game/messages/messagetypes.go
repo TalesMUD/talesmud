@@ -28,4 +28,11 @@ const (
 
 	// Character update messages
 	MessageTypeCharacterUpdate = "characterUpdate" // Character stats changed (HP, XP, etc.)
+	MessageTypeLevelUp         = "levelUp"         // Player leveled up
+
+	// Quest messages
+	MessageTypeQuestAccepted  = "questAccepted"  // Quest accepted
+	MessageTypeQuestProgress  = "questProgress"  // Quest objective progress updated
+	MessageTypeQuestCompleted = "questCompleted" // Quest completed
+	MessageTypeQuestLog       = "questLog"       // Full quest log
 )

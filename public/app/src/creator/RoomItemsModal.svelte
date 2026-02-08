@@ -1,6 +1,8 @@
 <script>
   import { createEventDispatcher } from "svelte";
   import ItemViewModal from "./ItemViewModal.svelte";
+  import EntitySelectButton from "./EntitySelectButton.svelte";
+  import { itemTemplateColumns } from "./tableColumns.js";
 
   export let open = false;
   export let itemIds = [];  // Current item IDs in the room (array of strings)
@@ -98,18 +100,17 @@
         <div class="add-item-section">
           <h3 class="section-title">Add Item from Template</h3>
           <div class="add-item-row">
-            <select
-              class="template-select"
-              bind:value={selectedTemplateId}
-            >
-              <option value="">Select a template...</option>
-              {#each itemTemplates as template}
-                <option value={template.id}>
-                  {template.name}
-                  {#if template.type}({template.type}){/if}
-                </option>
-              {/each}
-            </select>
+            <div style="flex: 1">
+              <EntitySelectButton
+                value={selectedTemplateId}
+                elements={itemTemplates}
+                columns={itemTemplateColumns}
+                title="Select Item Template"
+                placeholder="Select a template..."
+                allowNone={false}
+                on:change={(e) => selectedTemplateId = e.detail}
+              />
+            </div>
             <button
               class="add-btn"
               type="button"

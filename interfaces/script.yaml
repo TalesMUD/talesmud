@@ -1,53 +1,131 @@
-# Script DTO
-# Exportable game script definition
+# =============================================================================
+# Script Interface
+# =============================================================================
+#
+# Scripts are Lua or JavaScript code snippets that add custom game logic.
+# They are triggered by events in the game world: entering rooms, using items,
+# killing NPCs, completing quests, or via room actions.
+#
+# SCRIPT TYPES:
+# ─────────────
+# The "type" field categorizes what the script is designed for. This is
+# primarily organizational — any script can technically access the full API.
+# Types help the creator tool filter and suggest appropriate scripts:
+#
+#   none   — uncategorized / utility script
+#   custom — general-purpose, user-defined logic
+#   item   — triggered by item use (onUseScriptId on items)
+#   room   — triggered by room entry (onEnterScriptID) or room actions
+#   quest  — quest objective checks and completion logic
+#   npc    — triggered by NPC events (aggro, death, flee)
+#   event  — triggered by game-wide events (server events, timers)
+#
+# LANGUAGES:
+# ──────────
+# Scripts can be written in Lua or JavaScript. Lua is the preferred language
+# for new scripts. JavaScript is supported for backward compatibility.
+# If the language field is omitted, it defaults to JavaScript.
+#
+# EXECUTION CONTEXT:
+# ──────────────────
+# Scripts run in a sandboxed environment with access to game APIs.
+# The available context variables depend on the trigger:
+#   - Item scripts: player, item, room
+#   - Room scripts: player, room
+#   - NPC scripts:  player, npc, room
+#   - Quest scripts: player, quest, objective
+#
+# ID CONVENTIONS:
+# ───────────────
+# Script IDs follow: "SCR" + 4-digit number (e.g., SCR0007, SCR0015).
+#
+# =============================================================================
 
 name: ScriptDTO
 endpoint: /api/scripts
 
 fields:
+  # ─── Identity ───────────────────────────────────────────────────────────────
+
   id:
     type: string
-    description: Unique identifier
+    # Auto-generated UUID. Do not set manually on creation.
+    # Convention for authored content: use prefixed IDs like "SCR0001".
 
   name:
     type: string
     required: true
+    # Human-readable name for the script. Used in the creator tool
+    # and referenced in logs/debugging.
+    # Examples: "Health Potion Effect", "Dungeon Trap", "Wolf Aggro Bark"
 
   description:
     type: string
+    # Optional description of what the script does. Helpful for content
+    # creators browsing available scripts in the creator tool.
+
+  # ─── Configuration ──────────────────────────────────────────────────────────
 
   type:
     type: string
     enum: [none, custom, item, room, quest, npc, event]
     default: custom
+    # Categorization of the script's purpose. See header for full descriptions.
+    # This is organizational — it doesn't restrict what the script can do.
+    # Used by the creator tool to filter scripts when assigning to entities.
 
   language:
     type: string
     enum: [lua, javascript]
     default: javascript
+    # Scripting language used in the "code" field.
+    # "lua" — preferred for new scripts, better sandboxing and performance
+    # "javascript" — legacy support, defaults if field is omitted
+    # Note: Lua scripts have access to additional game modules (quests, etc.)
+
+  # ─── Code ───────────────────────────────────────────────────────────────────
 
   code:
     type: string
     required: true
-    description: Script source code
+    # The actual script source code. Written in the language specified above.
+    # Executed in a sandboxed environment with access to the Script API.
+    # See the Script API reference below for available functions.
 
-# Script API reference
+
+# =============================================================================
+# Script API Reference
+# =============================================================================
+# Available globals and functions in the script execution context.
+
 scriptAPI:
+  # ─── Global Variables ────────────────────────────────────────────────────
+  # These are automatically injected based on the trigger context.
   globals:
-    - player: Current character
-    - room: Current room
-    - target: Action target (NPC/Item)
-    - game: Game service API
+    - player:  "Current character (the player who triggered the script)"
+    - room:    "Current room where the action is happening"
+    - target:  "Action target — the NPC or Item involved (depends on trigger)"
+    - game:    "Game service API — access to game-wide functions"
 
+  # ─── Core Functions ──────────────────────────────────────────────────────
+  # Available in all script contexts.
   functions:
-    - say(message): Send message to player
-    - broadcast(message): Message to all in room
-    - teleport(roomID): Move player
-    - giveItem(templateID): Give item
-    - takeItem(itemID): Remove item
-    - giveGold(amount): Give gold
-    - takeGold(amount): Remove gold
-    - heal(amount): Heal HP
-    - damage(amount): Damage HP
-    - setFlag(key, value): Set persistent flag
-    - getFlag(key): Get persistent flag
+    - say(message):       "Send a message to the triggering player only"
+    - broadcast(message): "Send a message to everyone in the current room"
+    - teleport(roomID):   "Move the triggering player to a different room"
+    - giveItem(templateID): "Create an item from template and add to player inventory"
+    - takeItem(itemID):   "Remove an item from the player's inventory"
+    - giveGold(amount):   "Add gold to the player"
+    - takeGold(amount):   "Remove gold from the player (fails if insufficient)"
+    - heal(amount):       "Restore HP to the player (capped at maxHitPoints)"
+    - damage(amount):     "Deal damage to the player (can kill)"
+    - setFlag(key, value): "Set a persistent flag on the player (survives logout)"
+    - getFlag(key):       "Get a persistent flag value from the player"
+
+  # ─── Lua-specific Modules ────────────────────────────────────────────────
+  # Additional modules available in Lua scripts via require().
+  luaModules:
+    - quests: "Quest progress tracking — advance objectives, complete quests"
+    - npc:    "NPC manipulation — spawn, despawn, move NPCs"
+    - items:  "Item manipulation — create, modify, destroy items"
+    - rooms:  "Room queries — find rooms, check occupants"

@@ -1,95 +1,211 @@
-# TalesMUD Content DTOs
-# API interface definitions for import/export
+# =============================================================================
+# TalesMUD Content Interface Definitions
+# =============================================================================
+#
+# This directory contains YAML interface specifications for all game content
+# entities. These define the REST API DTO (Data Transfer Object) structures
+# used for creating, reading, updating, and exporting game content.
+#
+# PURPOSE:
+# ────────
+# These files serve as the source of truth for:
+#   - What fields exist on each entity and what they mean
+#   - API endpoint paths for CRUD operations
+#   - Data types, enums, defaults, and validation rules
+#   - Nested type definitions (traits, sub-objects)
+#   - Documentation for AI agents and content creators
+#
+# All entities are templates/definitions — no runtime state is included
+# in export/import operations unless explicitly noted.
+#
+# =============================================================================
 
-version: "1.0"
-description: |
-  YAML specifications for game content that can be exported and imported
-  to recreate a fresh server. These define REST API DTO structures.
+version: "1.1"
 
-  All entities are templates/definitions - no runtime state included.
-
-usage:
-  export: GET /api/export -> returns all content as JSON
-  import: POST /api/import -> accepts content bundle
+# =============================================================================
+# Entity Index
+# =============================================================================
 
 models:
   - name: RoomDTO
     file: room.yaml
     endpoint: /api/rooms
-    description: World locations with exits and actions
+    description: >
+      World locations with exits, actions, and coordinates. Rooms are the
+      fundamental building blocks — every location a player visits is a Room.
 
   - name: ItemDTO
     file: item.yaml
     endpoint: /api/items
-    description: Item templates (weapons, armor, consumables)
+    description: >
+      Item templates for weapons, armor, consumables, quest items, and
+      crafting materials. Uses template/instance pattern — author templates,
+      the engine creates instances at runtime.
 
   - name: NPCDTO
     file: npc.yaml
     endpoint: /api/npcs
-    description: NPC templates with enemy/merchant traits
+    description: >
+      NPC definitions with enemy and merchant traits. Supports three states:
+      template (blueprint for spawning), unique (one-off named NPC), and
+      instance (runtime copy from template). See npc.yaml header for details.
 
   - name: DialogDTO
     file: dialog.yaml
     endpoint: /api/dialogs
-    description: Dialog trees for conversations
+    description: >
+      Recursive dialog trees for NPC conversations. Supports template
+      variables ({{player.name}}), text variations, conditional options,
+      and progressive dialog unlocking.
 
   - name: ScriptDTO
     file: script.yaml
     endpoint: /api/scripts
-    description: Lua/JavaScript game scripts
+    description: >
+      Lua/JavaScript game scripts triggered by events (room entry, item use,
+      NPC death, quest completion). Provides a sandboxed API for game logic.
 
   - name: LootTableDTO
     file: loot-table.yaml
     endpoint: /api/loot-tables
-    description: Item drop configurations
+    description: >
+      Item drop configurations for enemy NPCs. Each entry has a drop chance,
+      quantity range, and optional level/tag requirements. Supports guaranteed
+      drops and global drop modifiers.
 
   - name: NPCSpawnerDTO
     file: npc-spawner.yaml
     endpoint: /api/npc-spawners
-    description: NPC spawn configurations
+    description: >
+      NPC spawn configurations that create and maintain instances from
+      templates. Manages instance count, spawn intervals, and respawn timing.
 
   - name: CharacterTemplateDTO
     file: character-template.yaml
     endpoint: /api/character-templates
-    description: Starting character templates
+    description: >
+      Starting character templates for player creation. Defines race, class,
+      attributes, starting gear, and backstory. Players choose a template
+      during onboarding.
 
-# Content bundle structure for full export/import
+  - name: QuestDTO
+    file: quest.yaml
+    endpoint: /api/quests
+    description: >
+      Quest definitions with objectives, rewards, and prerequisites.
+      Supports kill, collect, deliver, visit, talk, and custom objective
+      types. Integrates with NPC dialogs for quest-giver conversations.
+
+
+# =============================================================================
+# Content Bundle (Full Export/Import)
+# =============================================================================
+# The export/import system can bundle all content into a single payload.
+
+usage:
+  export: "GET /api/export → returns all content as JSON"
+  import: "POST /api/import → accepts content bundle"
+
 ContentBundle:
+  # Structure of a full content export/import payload.
   fields:
     version:
       type: string
       required: true
+      # Bundle format version. Currently "1.1".
+
     exportedAt:
       type: datetime
+      # Timestamp when the bundle was exported.
+
     rooms:
       type: RoomDTO[]
+      # All room definitions.
+
     items:
       type: ItemDTO[]
+      # All item templates.
+
     npcs:
       type: NPCDTO[]
+      # All NPC templates and unique NPCs.
+
     dialogs:
       type: DialogDTO[]
+      # All dialog trees.
+
     scripts:
       type: ScriptDTO[]
+      # All game scripts.
+
     lootTables:
       type: LootTableDTO[]
+      # All loot table definitions.
+
     npcSpawners:
       type: NPCSpawnerDTO[]
+      # All NPC spawner configurations.
+
     characterTemplates:
       type: CharacterTemplateDTO[]
+      # All character creation templates.
 
-# Shared enums
+    quests:
+      type: QuestDTO[]
+      # All quest definitions.
+
+
+# =============================================================================
+# Shared Enums Reference
+# =============================================================================
+# Quick reference for all enum values used across entities.
+
 enums:
+  # Item enums
   ItemType: [currency, consumable, armor, weapon, collectible, quest, crafting_material]
-  ItemSlot: [inventory, head, chest, legs, boots, neck, ring1, ring2, hands, main_hand, off_hand]
+  ItemSlot: [inventory, container, purse, head, chest, legs, boots, neck, ring1, ring2, hands, main_hand, off_hand]
   ItemQuality: [normal, magic, rare, legendary, mythic]
+
+  # Room enums
   RoomActionType: [response, room_response, script]
   RoomExitType: [normal, direction, teleport]
+
+  # Script enums
   ScriptType: [none, custom, item, room, quest, npc, event]
   ScriptLanguage: [lua, javascript]
+
+  # Character enums
   ArmorType: [Cloth, Leather, Plate]
   CombatType: [Melee, Ranged, Magic]
   Attribute: [STR, DEX, CON, INT, WIS, CHA]
+
+  # NPC enums
   CreatureType: [beast, humanoid, undead, elemental, construct, demon, dragon, aberration]
   CombatStyle: [melee, ranged, magic, swarm, brute, agile]
   Difficulty: [trivial, easy, normal, hard, boss]
+
+  # Quest enums
+  QuestCategory: [main, side, daily]
+  QuestSourceType: [npc, item, auto, script]
+  ObjectiveType: [kill, collect, deliver, visit, talk, custom]
+  QuestStatus: [available, active, completed, failed, abandoned]
+
+
+# =============================================================================
+# ID Conventions
+# =============================================================================
+# Content IDs follow zone-based numbering for easier cross-referencing:
+#
+#   Rooms:   R0001, R0203, R0301  (R + 4 digits, first 2 = zone)
+#   NPCs:    NPC0001, NPC0004     (NPC + 4 digits)
+#   Enemies: ENM0001, ENM0002     (ENM + 4 digits, enemy NPC templates)
+#   Items:   ITM0001, ITM0012     (ITM + 4 digits)
+#   Scripts: SCR0001, SCR0007     (SCR + 4 digits)
+#   Quests:  QST0001, QST0201    (QST + 4 digits, first 2 = zone)
+#
+# Zone numbering:
+#   00 = Tutorial / Catacombs
+#   01 = Meadows / Forest Path
+#   02 = Oldtown
+#   03 = Gloomfen Marsh
+#   09 = Daily / repeatable content

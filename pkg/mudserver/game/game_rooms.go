@@ -77,7 +77,9 @@ func (g *Game) handleRoomUpdates() {
 
 		for _, room := range allRooms {
 			if needsUpdate(room) {
-				go g.updateRoom(room)
+				// Run synchronously to avoid DB connection contention
+				// (SQLite has limited concurrent connections)
+				g.updateRoom(room)
 			}
 		}
 	} else {

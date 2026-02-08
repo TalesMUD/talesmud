@@ -1,4 +1,7 @@
 <script>
+  import EntitySelectButton from "./EntitySelectButton.svelte";
+  import { npcColumns } from "./tableColumns.js";
+
   export let spawner;
   export let npcTemplates = [];
   export let onDelete;
@@ -116,19 +119,16 @@
       />
     </div>
     <div class="space-y-1.5">
-      <label class="label-caps" for={`spawner-template-${spawner.id}`}>NPC Template</label>
-      <select
-        class="input-base text-xs"
-        id={`spawner-template-${spawner.id}`}
-        bind:value={spawner.templateId}
-      >
-        <option value="" disabled>Select NPC template</option>
-        {#each npcTemplates as template}
-          <option value={template.id}>
-            {template.name} (Lvl {template.level || 1})
-          </option>
-        {/each}
-      </select>
+      <label class="label-caps">NPC Template</label>
+      <EntitySelectButton
+        value={spawner.templateId}
+        elements={npcTemplates}
+        columns={npcColumns}
+        title="Select NPC Template"
+        placeholder="Select NPC template..."
+        allowNone={false}
+        on:change={(e) => spawner.templateId = e.detail}
+      />
     </div>
   </div>
 

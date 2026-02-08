@@ -15,6 +15,7 @@
   import CharacterWidget from '../widgets/CharacterWidget.svelte';
   import InventoryWidget from '../widgets/InventoryWidget.svelte';
   import EquipmentWidget from '../widgets/EquipmentWidget.svelte';
+  import QuestLogWidget from '../widgets/QuestLogWidget.svelte';
 
   export let store;
   export let sendMessage;
@@ -29,7 +30,8 @@
     actionbar: ActionBarWidget,
     character: CharacterWidget,
     inventory: InventoryWidget,
-    equipment: EquipmentWidget
+    equipment: EquipmentWidget,
+    questlog: QuestLogWidget
   };
 
   // Grid configuration

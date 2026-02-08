@@ -71,6 +71,17 @@ export const npcColumns = [
   },
   { key: "name", label: "Name", width: 180, priority: 1 },
   {
+    key: "_npcType", label: "NPC Type", width: 90, type: "select", priority: 1,
+    options: ["Neutral", "Merchant", "Enemy"],
+    accessor: (el) => {
+      const hasEnemy = !!el.enemyTrait;
+      const hasMerchant = !!el.merchantTrait;
+      if (hasEnemy) return "Enemy";
+      if (hasMerchant) return "Merchant";
+      return "Neutral";
+    },
+  },
+  {
     key: "race.name", label: "Race", width: 90, type: "select", options: [], priority: 2,
     accessor: (el) => el.race?.name || "-",
   },
@@ -80,17 +91,9 @@ export const npcColumns = [
   },
   { key: "level", label: "Lvl", width: 50, type: "number", priority: 2 },
   {
-    key: "isTemplate", label: "Type", width: 80, type: "select", priority: 3,
+    key: "isTemplate", label: "Template", width: 80, type: "select", priority: 3,
     options: ["Template", "Unique"],
     accessor: (el) => el.isTemplate ? "Template" : "Unique",
-  },
-  {
-    key: "_hasEnemy", label: "Enemy", width: 65, type: "boolean", priority: 3,
-    accessor: (el) => el.enemyTrait ? "Yes" : "No",
-  },
-  {
-    key: "_hasMerchant", label: "Merchant", width: 75, type: "boolean", priority: 3,
-    accessor: (el) => el.merchantTrait ? "Yes" : "No",
   },
 ];
 
@@ -131,6 +134,34 @@ export const itemColumns = [
   },
   { key: "slot", label: "Slot", width: 100, type: "select", options: [], priority: 3 },
   { key: "level", label: "Lvl", width: 50, type: "number", priority: 2 },
+];
+
+export const questColumns = [
+  {
+    key: "id", label: "ID", width: 90, mono: true, priority: 1,
+    accessor: (el) => el.id?.length > 10 ? el.id.slice(0, 8) + "\u2026" : el.id,
+  },
+  { key: "name", label: "Name", width: 200, priority: 1 },
+  {
+    key: "category", label: "Category", width: 90, type: "select", priority: 2,
+    options: ["main", "side", "daily"],
+  },
+  { key: "level", label: "Lvl", width: 50, type: "number", priority: 2 },
+  {
+    key: "source.type", label: "Source", width: 90, type: "select", priority: 2,
+    options: ["npc", "item", "auto", "script"],
+    accessor: (el) => el.source?.type || "-",
+  },
+  {
+    key: "_objectiveCount", label: "Objectives", width: 80, type: "number", priority: 3,
+    accessor: (el) => el.objectives?.length || 0,
+    sortAccessor: (el) => el.objectives?.length || 0,
+    filterable: false,
+  },
+  {
+    key: "repeatable", label: "Repeat", width: 65, type: "boolean", priority: 3,
+    accessor: (el) => el.repeatable ? "Yes" : "No",
+  },
 ];
 
 export const characterTemplateColumns = [

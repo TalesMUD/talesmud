@@ -26,7 +26,7 @@ TalesMUD follows a layered architecture with clear separation between HTTP API, 
          ▼                    ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                      Service Layer                               │
-│    (Characters, Rooms, Users, Items, Scripts, Parties)          │
+│  (Characters, Rooms, Users, Items, Scripts, Parties, Quests)   │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -90,6 +90,8 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
     ├── scripts/           # Script CRUD (creator level)
     ├── npcs/              # NPC CRUD (creator level for writes)
     ├── dialogs/           # Dialog CRUD (creator level for writes)
+    ├── quests/            # Quest CRUD (creator for writes), quest progress (player level)
+    ├── quest-progress/    # Quest log per character (player level)
     ├── user               # User profile (player level)
     ├── admin/
     │   └── users/         # User management (admin only)
@@ -223,6 +225,7 @@ type Game struct {
     RoomProcessor     *RoomProcessor       // Room commands
 
     Avatars          map[string]*Avatar    // Active players
+    QuestTracker     *QuestTracker         // Quest progress tracking
 }
 ```
 
@@ -287,8 +290,12 @@ type NPCInstanceManager struct {
 }
 ```
 
+Resident NPC initialization (two-pass):
+1. Load NPCs referenced in `Room.NPCs` lists
+2. Load any remaining non-template NPCs that have `CurrentRoomID` set (auto-spawn unique NPCs into their assigned room)
+
 Key methods:
-- `Initialize()` - Load spawners and create initial instances
+- `Initialize()` - Load spawners, create initial instances, and register all resident NPCs
 - `SpawnInstance(spawner)` - Create instance from spawner template
 - `SpawnInstanceDirect(templateID, roomID)` - Spawn without spawner
 - `GetInstancesInRoom(roomID)` - Query instances by room
@@ -493,6 +500,28 @@ Execute matched command
 | `sell <item> [qty]` | - | Sell to merchant |
 | `value <item>` | `price` | Check sell price |
 
+### Quest Commands
+
+| Command | Aliases | Description |
+|---------|---------|-------------|
+| `quests` | `ql`, `questlog` | Show quest log (active quests with progress) |
+| `quest <name>` | - | Show details of a specific quest |
+| `abandon <name>` | - | Abandon an active quest |
+
+#### QuestTracker
+
+Listens to game events and automatically updates quest objective progress:
+
+| Event | Source | Objectives Updated |
+|-------|--------|-------------------|
+| NPC killed | `game_combat.go` (processCombatVictory) | Kill objectives matching NPC template |
+| Item pickup | `pickup.go` command | Collect objectives matching item template |
+| Room enter | `room_takeexit.go` command | Visit objectives matching room ID |
+| Dialog node | `talk.go` command | Talk objectives matching NPC + dialog node |
+| Talk to NPC | `talk.go` command | Deliver objectives (if player has required item) |
+
+When talking to a quest-source NPC, quest dialog options (offer, progress check, turn-in) are automatically injected into the NPC's conversation.
+
 ### Service Layer (`pkg/service/`)
 
 Business logic layer using the Facade pattern.
@@ -512,6 +541,7 @@ type Facade interface {
     DialogsService() DialogsService
     ConversationsService() ConversationsService
     LootTablesService() LootTablesService
+    QuestsService() QuestsService
     Runner() scripts.ScriptRunner
 }
 ```
@@ -527,6 +557,7 @@ type Facade interface {
 | ScriptsService | Script CRUD, execution |
 | PartiesService | Party/group management |
 | LootTablesService | Loot table CRUD, loot rolling |
+| QuestsService | Quest definition CRUD, quest progress tracking, accept/abandon/complete quests, objective progress, prerequisite checks |
 
 ### Repository Layer (`pkg/repository/`)
 
@@ -580,6 +611,8 @@ NewQueryParams().
 | scripts | Game scripts |
 | parties | Player groups |
 | loot_tables | Loot drop configurations |
+| quests | Quest definitions (objectives, rewards, prerequisites) |
+| quest_progress | Per-character quest state and objective progress |
 
 ## Entity Model
 
@@ -821,6 +854,46 @@ type LootEntry struct {
 }
 ```
 
+### Quest Entity
+
+```go
+type Quest struct {
+    *entities.Entity
+
+    Name        string       // Quest display name
+    Description string       // Quest journal text
+    Category    string       // "main", "side", "daily"
+    Level       int32        // Recommended level
+    Repeatable  bool         // Can be completed again
+
+    Source      QuestSource  // How player gets quest (NPC, item, auto, script)
+    Objectives  []Objective  // Kill, Collect, Deliver, Visit, Talk, Custom objectives
+    Rewards     Reward       // XP, Gold, Item grants on completion
+
+    RequiredQuestIDs []string // Prerequisite quests
+    RequiredLevel    int32    // Minimum level to accept
+
+    // NPC dialog integration text
+    AcceptDialogText, ProgressDialogText, CompleteDialogText string
+    OnCompleteScriptID string // Optional Lua script on completion
+}
+```
+
+#### QuestProgress (Per-Character State)
+
+```go
+type QuestProgress struct {
+    *entities.Entity
+
+    CharacterID string           // Owner character
+    QuestID     string           // Quest definition
+    Status      QuestStatus      // available, active, completed, failed, abandoned
+    Objectives  []ObjectiveProgress // Per-objective current/required counts
+    AcceptedAt  time.Time
+    CompletedAt time.Time
+}
+```
+
 ### Item Entity
 
 Items use a unified template/instance pattern similar to NPCs:
@@ -943,6 +1016,10 @@ const (
     MessageTypeSelectCharacter  // Character selection
     MessageTypeCharacterSelected // Selection confirmed
     MessageTypePing             // Keep-alive
+    MessageTypeQuestAccepted    // Quest accepted
+    MessageTypeQuestProgress    // Quest objective updated
+    MessageTypeQuestCompleted   // Quest completed
+    MessageTypeQuestLog         // Full quest log
 )
 ```
 
@@ -1036,6 +1113,7 @@ App.svelte (role-aware navigation: Creator/Admin links gated by user role)
 │   │   ├── ItemTemplatesEditor.svelte
 │   │   ├── NPCsEditor.svelte
 │   │   ├── DialogsEditor.svelte
+│   │   ├── QuestsEditor.svelte
 │   │   ├── ScriptsEditor.svelte
 │   │   ├── CharacterTemplatesEditor.svelte
 │   │   ├── GridWorldEditor.svelte
@@ -1048,7 +1126,7 @@ App.svelte (role-aware navigation: Creator/Admin links gated by user role)
 
 #### Creator UI Data Table Pattern
 
-All entity editors (Rooms, Items, Item Templates, NPCs, Dialogs, Scripts, Character Templates) share the `CRUDEditor` component which provides a side-by-side master-detail layout:
+All entity editors (Rooms, Items, Item Templates, NPCs, Dialogs, Quests, Scripts, Character Templates) share the `CRUDEditor` component which provides a side-by-side master-detail layout:
 
 - **Table panel (left)**: Full-width filterable, sortable data table showing entity-specific columns. When no entity is selected/detail is closed, the table expands to full width.
 - **Detail panel (right)**: Edit form with all entity fields, shown when a table row is clicked. Includes close button to return to full-width table, and prev/next navigation.
@@ -1217,6 +1295,7 @@ pkg/
 │   ├── items/         # Items and templates
 │   ├── npcs/          # Non-player characters
 │   ├── dialogs/       # Conversation system
+│   ├── quests/        # Quest definitions and progress
 │   ├── skills/        # Character abilities
 │   └── traits/        # Shared behaviors
 ├── mudserver/         # Game server
@@ -1293,6 +1372,7 @@ The scripting system uses Lua (via gopher-lua) for dynamic game content. JavaScr
 | `tales.npcs` | NPC operations (templates, instances, spawning) |
 | `tales.dialogs` | Dialog and conversation management |
 | `tales.game` | Messaging, flags, items, room manipulation |
+| `tales.quests` | Quest operations (accept, complete, progress, grant, abandon) |
 | `tales.utils` | Utilities (random, UUID, dice rolling) |
 
 #### tales.game Functions

@@ -72,6 +72,7 @@
   import AddWidgetPanel from "./layout/AddWidgetPanel.svelte";
   import { mobileStore } from "./mobile/mobileStore.js";
   import MobileLayout from "./mobile/MobileLayout.svelte";
+  import QuestNotifications from "./ui/QuestNotifications.svelte";
 
   import { onMount, onDestroy } from "svelte";
   import { getAuth } from "../auth.js";
@@ -217,4 +218,7 @@
       <AddWidgetPanel on:close={() => showAddPanel = false} />
     {/if}
   {/if}
+
+  <!-- Quest notifications - shown on all layouts -->
+  <QuestNotifications store={muxStore} />
 </div>

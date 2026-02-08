@@ -64,6 +64,10 @@ type Dialog struct {
 	//	HasAnswer              *bool         `bson:"has_answer,omitempty" json:"has_answer,omitempty" yaml:"has_answer,omitempty"`
 	IsDialogExit *bool `bson:"is_dialog_exit,omitempty" json:"is_dialog_exit,omitempty" yaml:"is_dialog_exit,omitempty"`
 
+	// Quest integration
+	QuestID string `bson:"questId,omitempty" json:"questId,omitempty" yaml:"questId,omitempty"`
+	Action  string `bson:"action,omitempty" json:"action,omitempty" yaml:"action,omitempty"` // "accept", "complete", "progress"
+
 	// Metadata
 	Created   time.Time `bson:"created,omitempty" json:"created,omitempty"`
 	CreatedBy string    `bson:"createdBy,omitempty" json:"createdBy,omitempty"`

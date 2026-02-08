@@ -1,105 +1,184 @@
-# CharacterTemplate DTO
-# Exportable character creation template
+# =============================================================================
+# Character Template Interface
+# =============================================================================
+#
+# Character templates define pre-built character configurations that players
+# choose from during character creation. Each template provides a complete
+# starting setup: race, class, stats, equipment, and backstory.
+#
+# These are NOT the same as NPC templates. Character templates are for PLAYER
+# characters only — they define the starting point for new characters during
+# the onboarding/creation wizard.
+#
+# The player picks a template, optionally customizes their name, and the
+# server creates a full Character entity from this template.
+#
+# =============================================================================
 
 name: CharacterTemplateDTO
 endpoint: /api/character-templates
 
 fields:
+  # ─── Identity ───────────────────────────────────────────────────────────────
+
   id:
     type: string
-    description: Unique identifier
+    # Auto-generated UUID. Do not set manually.
 
   name:
     type: string
     required: true
+    # Display name of the template shown during character creation.
+    # Should be evocative and descriptive.
+    # Examples: "Forest Ranger", "Battle-Hardened Warrior", "Shadow Rogue"
 
   description:
     type: string
+    # Short description of the template shown in the creation UI.
+    # 1-3 sentences summarizing the playstyle and fantasy.
+    # Example: "A skilled archer who protects the wild places."
 
   backstory:
     type: string
+    # Optional lore/narrative text for the character's background.
+    # Shown in the character creation details panel. Can be multiple
+    # paragraphs. Sets the narrative tone for the character.
+    # Example: "Trained by the elven wardens of Silverwood..."
 
   originArea:
     type: string
-    description: Starting area
+    # Starting area name. Flavor text indicating where the character
+    # comes from. May influence starting room placement.
+    # Examples: "Silverwood Forest", "Oldtown Slums", "Mountain Keep"
 
   archetype:
     type: string
-    examples: [warrior, rogue, mage, ranger, hunter]
+    # High-level character archetype. Used for grouping templates in
+    # the creation UI and for matching playstyle preferences.
+    examples: [warrior, rogue, mage, ranger, hunter, cleric]
+
+  # ─── Core Stats ─────────────────────────────────────────────────────────────
 
   race:
     type: Race
     required: true
+    # The character's race. Determines heritage and lore flavor.
+    # Must be a valid Race. See Race type in npc.yaml.
+    # Built-in races: dwarf, human, elve
 
   class:
     type: Class
     required: true
+    # The character's class. Determines combat style and equipment proficiency.
+    # Must be a valid Class. See Class type in npc.yaml.
+    # Built-in classes: warrior, ranger, hunter, rogue, wizard
 
   level:
     type: integer
     default: 1
+    # Starting level. Almost always 1 for new characters.
+    # Could be higher for special event templates or testing.
 
   maxHitPoints:
     type: integer
     required: true
+    # Starting maximum HP. Varies by class/archetype:
+    # Warriors/tanks: higher (20-30), Mages/rogues: lower (12-18)
+
+  currentHitPoints:
+    type: integer
+    # Starting current HP. If omitted, defaults to maxHitPoints.
+
+  # ─── Attributes ─────────────────────────────────────────────────────────────
 
   attributes:
     type: Attribute[]
     required: true
+    # Starting attribute scores. All six attributes should be defined.
+    # Total attribute points should be balanced across templates.
+    # Typical range: 8-18 per attribute for level 1 characters.
+
+  # ─── Starting Gear ──────────────────────────────────────────────────────────
 
   startingItems:
     type: StartingItem[]
+    # Items given to the character on creation. Each entry specifies
+    # an item template and which slot it goes into.
+    # Equipped items go into their slot (main_hand, chest, etc.).
+    # Inventory items use slot: "inventory".
 
-# Nested types
-Race:
-  fields:
-    id:
-      type: string
-      required: true
-    name:
-      type: string
-      required: true
-    description:
-      type: string
-    heritage:
-      type: string
+  # ─── Metadata ───────────────────────────────────────────────────────────────
 
-Class:
-  fields:
-    id:
-      type: string
-      required: true
-    name:
-      type: string
-      required: true
-    description:
-      type: string
-    armorType:
-      type: string
-      enum: [Cloth, Leather, Plate]
-    combatType:
-      type: string
-      enum: [Melee, Ranged, Magic]
+  source:
+    type: string
+    # Origin of this template. "system" = built-in default,
+    # "db" = created via the creator tool / API.
+    enum: [system, db]
+
+  created:
+    type: datetime
+    # Auto-set on creation.
+
+  updated:
+    type: datetime
+    # Auto-set on modification.
+
+
+# =============================================================================
+# Nested Types
+# =============================================================================
 
 Attribute:
+  # A single character attribute (stat) with its starting value.
   fields:
     name:
       type: string
       required: true
+      # Full attribute name. Must match the attribute system.
+      # Values: "Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma"
+
     short:
       type: string
       required: true
       enum: [STR, DEX, CON, INT, WIS, CHA]
+      # Three-letter abbreviation. Used in UI displays and formulas.
+      #   STR — Strength: melee damage, carrying capacity
+      #   DEX — Dexterity: ranged damage, dodge chance, initiative
+      #   CON — Constitution: hit points, stamina, resistance
+      #   INT — Intelligence: magic damage, mana pool
+      #   WIS — Wisdom: healing power, perception, trap detection
+      #   CHA — Charisma: merchant prices, dialog options, NPC reactions
+
     value:
       type: integer
       required: true
+      # Starting value for this attribute. Typical range: 8-18 for level 1.
+      # 10 is average. Higher values cost more in point-buy systems.
 
 StartingItem:
+  # An item given to the character when created from this template.
   fields:
     slot:
       type: string
       enum: [inventory, head, chest, legs, boots, neck, ring1, ring2, hands, main_hand, off_hand]
       required: true
-    itemTemplateID:
+      # Where the item is placed. Equipment slots auto-equip the item.
+      # "inventory" places it unequipped in the character's bag.
+
+    itemTemplateId:
       type: string
       required: true
+      # ID of the item template to instantiate. Must reference a valid
+      # item template. The engine creates an instance from this template.
+
+    itemTemplateName:
+      type: string
+      # Display name of the item template. Optional — used as a human-readable
+      # reference in the creator tool. The actual name comes from the template.
+
+
+# =============================================================================
+# Shared Types (Race, Class)
+# =============================================================================
+# Race and Class are defined in npc.yaml and shared across NPC and
+# CharacterTemplate entities. Refer to npc.yaml for their full definitions.

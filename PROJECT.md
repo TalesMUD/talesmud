@@ -12,6 +12,7 @@ TalesMUD is a browser-based Multi-User Dungeon (MUD) framework built with Go and
 - **Game design + MVP backlog:** `game-design/GAME_DESIGN.md`
 - **Scripting system:** `game-design/SCRIPTING.md`
 - **World map implementation:** `game-design/WORLD_MAP_IMPLEMENTATION.md`
+- **Quest authoring guide:** `game-design/QUEST_AUTHORING.md`
 
 ## MVP Roadmap (next up)
 
@@ -35,6 +36,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Visual backgrounds and mood settings
   - Coordinate-based world mapping (X, Y, Z grid)
   - Dynamic item and NPC spawning
+  - Unique NPCs auto-spawn into their assigned room on server start via `CurrentRoomID`
 
 - **Character System**
   - Full RPG character creation with races and classes
@@ -49,6 +51,19 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Quality tiers: Normal, Magic, Rare, Legendary, Mythic
   - Item templates for reusable definitions
   - Container support with nested items
+
+- **Quest System**
+  - Data-driven quest definitions with multiple objective types: Kill, Collect, Deliver, Visit, Talk, Custom (Lua)
+  - Quest progress tracking per character with persistent state
+  - NPC dialog integration: automatic quest offer/turn-in options injected into NPC conversations
+  - Quest rewards: XP, Gold, and item grants on completion
+  - Quest prerequisites: required quest completions and level requirements
+  - Repeatable quests support
+  - Quest categories: Main, Side, Daily
+  - QuestTracker: automatic progress updates from game events (NPC kills, item pickups, room entries, dialog nodes)
+  - Lua scripting API (`tales.quests`) for custom quest logic
+  - Creator UI: full quest editor with objectives, rewards, prerequisites, and dialog text configuration
+  - Player commands: `quests`/`ql` (quest log), `quest <name>` (details), `abandon <name>` (abandon quest)
 
 - **New Player Onboarding**
   - Phase-based flow: Welcome Screen, Nickname Setup, Character Creation Wizard, Game
@@ -75,9 +90,10 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
 ### Content Creation
 
 - **Web-Based Editor**
-  - Full-width filterable data tables for browsing all entity types (Rooms, Items, Item Templates, NPCs, Dialogs, Scripts, Character Templates)
+  - Full-width filterable data tables for browsing all entity types (Rooms, Items, Item Templates, NPCs, Dialogs, Quests, Scripts, Character Templates)
   - Per-column filtering (text search, enum dropdowns) with instant client-side filtering and sorting
   - Side-by-side master-detail layout: data table + edit form shown together, closeable to full-width table view
+  - **Entity Selection Modal**: All entity ID selectors (rooms, NPCs, items, scripts, dialogs, quests) use a centered modal dialog with a full filterable DataTable instead of simple dropdowns. This scales to hundreds of entries with per-column search, sort, and filter support. Components: `EntitySelectButton` (inline trigger) + `EntitySelectModal` (table dialog). **UI Guideline: Never use `<select>` dropdowns for entity ID references. Always use `EntitySelectButton` with the appropriate column definitions from `tableColumns.js`.**
   - Room editor with exit, action, spawner, items, and NPC resident configuration
   - Item and item template management with attributes and properties
   - NPC editor with enemy and merchant trait configuration
@@ -212,6 +228,9 @@ talesmud/
 | `defend` | `d`, `guard` | Queue defensive stance for next combat turn |
 | `flee` | `run`, `escape` | Queue flee attempt for next combat turn |
 | `status` | `cs`, `combat` | Show combat status |
+| `quests` | `ql`, `questlog` | Show quest log |
+| `quest` | - | Show quest details: quest [name] |
+| `abandon` | - | Abandon a quest: abandon [name] |
 
 ## Current Development Status
 
@@ -365,12 +384,20 @@ go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
 - `GET /api/rooms`, `GET /api/items` - Read game data
 - `GET /api/user`, `PUT /api/user` - User profile
 
+### Protected Endpoints (Player Level - Quests)
+- `GET /api/quests` - List all quest definitions
+- `GET /api/quests/:id` - Get quest by ID
+- `GET /api/quest-progress/:characterId` - Get character quest log
+- `POST /api/quest-progress/:characterId/accept/:questId` - Accept quest
+- `POST /api/quest-progress/:characterId/abandon/:questId` - Abandon quest
+
 ### Creator Endpoints (Require Creator or Admin Role)
 - `POST/PUT/DELETE /api/rooms` - Room management
 - `POST/PUT/DELETE /api/items` - Item management
 - `POST/PUT/DELETE /api/scripts` - Script management
 - `POST/PUT/DELETE /api/npcs` - NPC management
 - `POST/PUT/DELETE /api/dialogs` - Dialog management
+- `POST/PUT/DELETE /api/quests` - Quest management
 - `PUT /api/settings` - Server settings
 
 ### Admin API Endpoints (Require Admin Role)

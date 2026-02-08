@@ -12,6 +12,7 @@ import (
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	combatpkg "github.com/talesmud/talesmud/pkg/mudserver/game/combat"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 )
 
@@ -566,7 +567,12 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 			continue
 		}
 
-		totalXP += npcData.EnemyTrait.XPReward
+		// Use configured XP or calculate from NPC level
+		xpReward := npcData.EnemyTrait.XPReward
+		if xpReward == 0 {
+			xpReward = leveling.CalculateEnemyXPReward(npcData.Level)
+		}
+		totalXP += xpReward
 
 		// Roll gold
 		goldRange := npcData.EnemyTrait.GoldDrop
@@ -601,8 +607,28 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 		}
 	}
 
-	// Split rewards among living players
+	// Track quest progress for NPC kills
 	livingPlayers := instance.GetLivingPlayers()
+	for _, enemy := range instance.Enemies {
+		if enemy.IsAlive {
+			continue
+		}
+		npcData := c.game.NPCManager.GetInstance(enemy.ID)
+		if npcData == nil {
+			continue
+		}
+		for _, player := range livingPlayers {
+			char, err := c.game.Facade.CharactersService().FindByID(player.ID)
+			if err != nil || char == nil {
+				continue
+			}
+			if c.game.QuestTracker != nil {
+				c.game.QuestTracker.OnNPCKilled(char.ID, char.BelongsUserID, npcData)
+			}
+		}
+	}
+
+	// Split rewards among living players
 	numLiving := int64(len(livingPlayers))
 	if numLiving == 0 {
 		numLiving = 1
@@ -648,14 +674,45 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 
 		char.XP += int32(xpPerPlayer)
 		char.Gold += goldPerPlayer
-		c.game.Facade.CharactersService().Update(player.ID, char)
 
-		// Send victory message
-		c.game.sendMessage <- messages.MessageResponse{
-			Audience:   messages.MessageAudienceUser,
-			AudienceID: char.BelongsUserID,
-			Type:       messages.MessageTypeCombatEnd,
-			Message:    sb.String(),
+		// Check for level-up
+		if levelsGained, _ := leveling.CheckLevelUp(char); levelsGained > 0 {
+			// Apply level-up stat changes
+			result := leveling.ApplyLevelUp(char, levelsGained)
+
+			// Save updated character
+			c.game.Facade.CharactersService().Update(player.ID, char)
+
+			// Send victory message first
+			c.game.sendMessage <- messages.MessageResponse{
+				Audience:   messages.MessageAudienceUser,
+				AudienceID: char.BelongsUserID,
+				Type:       messages.MessageTypeCombatEnd,
+				Message:    sb.String(),
+			}
+
+			// Send level-up notification
+			c.game.sendMessage <- messages.MessageResponse{
+				Audience:   messages.MessageAudienceUser,
+				AudienceID: char.BelongsUserID,
+				Type:       messages.MessageTypeLevelUp,
+				Message:    result.Message,
+			}
+
+			// Send updated character stats to client
+			update := messages.NewCharacterUpdateMessage(char.BelongsUserID, char)
+			c.game.sendMessage <- update
+		} else {
+			// No level-up, just save character with updated XP and gold
+			c.game.Facade.CharactersService().Update(player.ID, char)
+
+			// Send victory message
+			c.game.sendMessage <- messages.MessageResponse{
+				Audience:   messages.MessageAudienceUser,
+				AudienceID: char.BelongsUserID,
+				Type:       messages.MessageTypeCombatEnd,
+				Message:    sb.String(),
+			}
 		}
 
 		// Send inventory update so UI reflects new gold

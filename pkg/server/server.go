@@ -108,6 +108,10 @@ func (app *app) setupRoutes() {
 		Service: app.Facade.LootTablesService(),
 	}
 
+	questsHandler := &handler.QuestsHandler{
+		Service: app.Facade.QuestsService(),
+	}
+
 	generate := &handler.GenerateHandler{
 		GroqClient: groq.NewClient(),
 	}
@@ -200,6 +204,12 @@ func (app *app) setupRoutes() {
 		protected.GET("loottables/:id", lootTables.GetLootTableByID)
 		protected.GET("backgrounds", backgrounds.ListBackgrounds)
 		protected.GET("settings", serverSettings.GetServerSettings)
+		protected.GET("quests", questsHandler.GetQuests)
+		protected.GET("quests/:id", questsHandler.GetQuestByID)
+		protected.GET("quest-progress/:characterId", questsHandler.GetQuestLog)
+		protected.POST("quest-progress/:characterId/accept/:questId", questsHandler.AcceptQuest)
+		protected.POST("quest-progress/:characterId/abandon/:questId", questsHandler.AbandonQuest)
+		protected.POST("quest-progress/:characterId/complete/:questId", questsHandler.CompleteQuest)
 
 		// User profile (any authenticated user can view/edit own profile)
 		protected.GET("user", usr.GetUser)
@@ -254,6 +264,11 @@ func (app *app) setupRoutes() {
 			creator.PUT("loottables/:id", lootTables.UpdateLootTableByID)
 			creator.DELETE("loottables/:id", lootTables.DeleteLootTableByID)
 			creator.POST("loottables/:id/roll", lootTables.RollLootTable)
+
+			// Quests
+			creator.POST("quests", questsHandler.PostQuest)
+			creator.PUT("quests/:id", questsHandler.UpdateQuestByID)
+			creator.DELETE("quests/:id", questsHandler.DeleteQuestByID)
 
 			// Backgrounds
 			creator.POST("backgrounds/upload", backgrounds.UploadBackground)

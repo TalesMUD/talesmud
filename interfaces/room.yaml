@@ -1,103 +1,242 @@
-# Room DTO
-# Exportable room definition for world building
+# =============================================================================
+# Room Interface
+# =============================================================================
+#
+# Rooms are the fundamental building blocks of the game world. Every location
+# a player can visit is a Room. Rooms are connected by Exits and can contain
+# NPCs, Items, and interactive Actions.
+#
+# Rooms are static definitions — they describe the world layout. Runtime data
+# (which players/NPCs are currently in the room) is managed by the game engine.
+#
+# =============================================================================
 
 name: RoomDTO
 endpoint: /api/rooms
 
 fields:
+  # ─── Identity ───────────────────────────────────────────────────────────────
+
   id:
     type: string
-    description: Unique identifier
+    # Auto-generated UUID. Do not set manually on creation; the server assigns it.
+    # Convention for authored content: use zone-prefixed IDs like "R0301" for
+    # easier cross-referencing (e.g., R0301 = Zone 3, Room 01).
 
   name:
     type: string
     required: true
+    # Short display name shown in the UI header (e.g., "The Weary Wanderer",
+    # "Market Square", "Dark Cavern"). Keep concise — 2-5 words.
 
   description:
     type: string
     required: true
+    # Main room description shown when a player enters or types "look".
+    # This is the primary narrative text. Write in second person present tense
+    # ("You see...", "The room is..."). 2-5 sentences recommended.
 
   detail:
     type: string
-    description: Text shown when looking/inspecting
+    # Extended description shown when a player inspects/examines the room
+    # more closely (e.g., "look around", "examine room"). Use for hidden
+    # clues, environmental storytelling, or additional atmosphere.
+    # If empty, the main description is shown instead.
+
+  # ─── Classification ─────────────────────────────────────────────────────────
 
   roomType:
     type: string
-    examples: [tavern, shop, forest, dungeon, cave, street]
+    # Freeform room category. Used for ambient effects, music selection,
+    # and NPC behavior rules. Convention: use lowercase identifiers.
+    examples: [tavern, shop, forest, dungeon, cave, street, temple, market, dock, castle]
 
   area:
     type: string
-    description: Area/zone grouping
+    # Zone/area grouping. All rooms in the same zone share this value.
+    # Used for map display, area-based NPC spawning, and quest scoping.
+    # Example: "Oldtown", "Gloomfen Marsh", "Catacombs"
 
   areaType:
     type: string
+    # Sub-classification within an area. Useful for distinguishing indoor
+    # vs outdoor rooms within the same zone.
+    # Example: "indoor", "outdoor", "underground", "rooftop"
 
   tags:
     type: string[]
+    # Freeform tags for filtering, scripting, and quest objectives.
+    # Examples: ["safe_zone", "no_combat", "underwater", "dark", "quest_hub"]
+    # Tags can be checked by scripts and used in spawner room filters.
+
+  # ─── Game Mechanics ─────────────────────────────────────────────────────────
 
   canBind:
     type: boolean
     default: false
-    description: Players can set respawn here
+    # If true, players can set this room as their respawn point (bind point).
+    # On death, players respawn at their bound room. Typically only inns,
+    # temples, or safe areas should have canBind: true.
 
   onEnterScriptID:
     type: string
-    description: Script ID executed on entry
+    # Script ID executed every time ANY player enters this room.
+    # Use for traps, ambushes, quest triggers, environmental effects,
+    # or cutscenes. The script receives the entering player as context.
+    # See script.yaml for script definitions.
+
+  # ─── Coordinates ────────────────────────────────────────────────────────────
 
   coords:
     type: object
+    # Optional grid coordinates for world map display. Used by the client
+    # to position rooms on a visual map. Rooms without coords don't appear
+    # on the grid map but are still reachable via exits.
     properties:
-      x: integer
-      y: integer
-      z: integer
+      x:
+        type: integer
+        # Horizontal position on the map grid. Increases going east.
+      y:
+        type: integer
+        # Vertical position on the map grid. Increases going south.
+      z:
+        type: integer
+        # Depth/floor level. 0 = ground level, negative = underground,
+        # positive = upper floors.
+
+  # ─── Client Metadata ────────────────────────────────────────────────────────
 
   meta:
     type: object
+    # Optional metadata for client-side presentation (UI, audio, visuals).
+    # Not used by game logic — purely for the frontend client.
     properties:
-      mood: string
-      background: string
+      mood:
+        type: string
+        # Atmospheric mood hint for the client. Affects ambient audio,
+        # color palette, or visual filters.
+        # Examples: "dark", "peaceful", "tense", "mysterious", "cheerful"
+      background:
+        type: string
+        # Background image ID or path for the room view in the client.
+        # References an asset in the client's image library.
+
+  # ─── Exits ──────────────────────────────────────────────────────────────────
 
   exits:
     type: Exit[]
+    # List of exits connecting this room to other rooms. Each exit is a
+    # one-way connection — to create a two-way passage, both rooms need
+    # exits pointing to each other.
+
+  # ─── Actions ────────────────────────────────────────────────────────────────
 
   actions:
     type: Action[]
+    # List of interactive actions available in this room. Actions are
+    # custom verbs players can type (e.g., "pull lever", "search crates").
+    # They produce text responses, broadcast messages, or trigger scripts.
 
-# Nested types
+  # ─── Runtime Data (read-only) ───────────────────────────────────────────────
+  # These lists are managed by the game engine. They reflect which entities
+  # are currently in the room. Do not set in content definitions.
+
+  items:
+    type: string[]
+    # IDs of items currently on the ground in this room.
+
+  characters:
+    type: string[]
+    # IDs of player characters currently in this room.
+
+  npcs:
+    type: string[]
+    # IDs of NPCs currently in this room.
+
+
+# =============================================================================
+# Nested Types
+# =============================================================================
+
 Exit:
+  # An exit connects this room to a target room. Players type the exit name
+  # to move (e.g., "north", "climb rope", "enter tavern").
   fields:
     name:
       type: string
       required: true
+      # The command players type to use this exit. Can be a compass direction
+      # ("north", "south") or a descriptive action ("climb rope", "enter door").
+      # This is what appears in the room's exit list.
+
     description:
       type: string
+      # Text shown to the player when they use this exit (transition text).
+      # Example: "You push through the heavy oak door..."
+
     type:
       type: string
       enum: [normal, direction, teleport]
       default: normal
+      # Exit behavior type:
+      #   normal    — standard passage, shown in exit list
+      #   direction — compass direction (north/south/east/west), shown with arrows
+      #   teleport  — instant transport, may skip movement animations
+
     hidden:
       type: boolean
       default: false
+      # If true, this exit is NOT shown in the room's exit list. Players must
+      # discover it through exploration, clues in the description, or actions.
+      # Hidden exits still work if the player types the exact name.
+      # Use for secret passages, puzzle solutions, etc.
+
     target:
       type: string
       required: true
-      description: Target room ID
+      # ID of the destination room. Must reference a valid room.
+
     params:
       type: object
+      # Optional key-value parameters passed to the exit handler.
+      # Used for special exit behavior (e.g., requiring a key item,
+      # level requirements, time-of-day restrictions).
 
 Action:
+  # A room action is an interactive verb players can type. Actions can
+  # produce simple text responses, broadcast to the room, or execute scripts.
   fields:
     name:
       type: string
       required: true
+      # The command players type to trigger this action.
+      # Examples: "pull lever", "search crates", "read sign", "pray"
+
     description:
       type: string
+      # Help text or hint shown in action listings. Not the action result —
+      # that's the "response" field or script output.
+
     type:
       type: string
       enum: [response, room_response, script]
       required: true
+      # Action behavior type:
+      #   response      — sends the "response" text to the acting player only
+      #   room_response — broadcasts the "response" text to everyone in the room
+      #   script        — executes a Lua/JS script (set scriptId in params)
+
     response:
       type: string
-      description: Text for response type
+      # Text output for "response" and "room_response" types.
+      # Ignored for "script" type. Supports basic markdown.
+
+    scriptId:
+      type: string
+      # Script ID to execute for "script" type actions.
+      # The script receives the acting player and room as context.
+
     params:
       type: object
+      # Optional key-value parameters. For "script" type, typically includes
+      # "scriptId" and any custom data the script needs.

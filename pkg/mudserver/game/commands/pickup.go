@@ -158,6 +158,9 @@ func (command *PickupCommand) Execute(game def.GameCtrl, message *messages.Messa
 		log.WithError(err).Error("Error updating character")
 	}
 
+	// Track quest progress for item pickup
+	NotifyQuestItemPickup(game, message.Character.ID, message.FromUser.ID, item)
+
 	// Send pickup message
 	quantityStr := ""
 	if item.Stackable && item.Quantity > 1 {

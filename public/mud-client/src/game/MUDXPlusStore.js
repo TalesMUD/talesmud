@@ -43,6 +43,10 @@ function createStore() {
       inCombat: false,
       attributes: [],
     },
+
+    // Quest state
+    quests: [], // Array of quest log entries
+    questNotifications: [], // Recent quest events for toast notifications
   });
 
   const store = {
@@ -180,6 +184,28 @@ function createStore() {
         if (hasMerchant !== undefined) state.hasMerchant = hasMerchant;
         return state;
       });
+    },
+
+    // Quest methods
+    updateQuests: (questLog) => {
+      update((state) => {
+        state.quests = questLog || [];
+        return state;
+      });
+    },
+    addQuestNotification: (notification) => {
+      update((state) => {
+        state.questNotifications = [...state.questNotifications, notification];
+        return state;
+      });
+
+      // Auto-remove after 5 seconds
+      setTimeout(() => {
+        update((state) => {
+          state.questNotifications = state.questNotifications.filter(n => n !== notification);
+          return state;
+        });
+      }, 5000);
     },
   };
 

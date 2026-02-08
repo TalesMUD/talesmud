@@ -64,6 +64,15 @@ export const WIDGET_TYPES = {
     maxInstances: 1,
     icon: 'shield',
     category: 'player'
+  },
+  questlog: {
+    name: 'Quest Log',
+    description: 'Active and completed quests',
+    defaultSize: { w: 6, h: 10 },
+    minSize: { w: 4, h: 6 },
+    maxInstances: 1,
+    icon: 'assignment',
+    category: 'player'
   }
 };
 

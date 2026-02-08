@@ -1,12 +1,14 @@
 package commands
 
 import (
+	"fmt"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/talesmud/talesmud/pkg/entities/conversations"
 	"github.com/talesmud/talesmud/pkg/entities/dialogs"
+	"github.com/talesmud/talesmud/pkg/entities/quests"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 )
@@ -57,8 +59,23 @@ func (command *TalkCommand) Execute(game def.GameCtrl, message *messages.Message
 		return true
 	}
 
+	// Track quest progress for talking to NPC (deliver objectives)
+	NotifyQuestTalkToNPC(game, message.Character.ID, message.FromUser.ID, npc)
+
+	// Check for quest offers from this NPC
+	npcTemplateID := npc.TemplateID
+	if npcTemplateID == "" {
+		npcTemplateID = npc.ID
+	}
+	questOptions := getQuestDialogOptions(game, message.Character.ID, npcTemplateID, npc.ID)
+
 	// Check if NPC has a dialog
 	if !npc.HasDialog() {
+		// If NPC has quest options but no dialog, show quest dialog
+		if len(questOptions) > 0 {
+			sendQuestOnlyDialog(game, message, npc.Name, questOptions)
+			return true
+		}
 		game.SendMessage() <- message.Reply(npc.Name + " doesn't seem to want to talk.")
 		return true
 	}
@@ -89,14 +106,113 @@ func (command *TalkCommand) Execute(game def.GameCtrl, message *messages.Message
 	conv.SetContext("NPC", npc.Name)
 	game.GetFacade().ConversationsService().Update(conv.ID, conv)
 
-	// Send dialog message
-	sendDialogMessage(game, message, npc.Name, dialog, conv)
+	// Track dialog node visit for quest progress
+	NotifyQuestDialogNode(game, message.Character.ID, message.FromUser.ID, npc.ID, npc.DialogID, conv.CurrentNodeID)
+
+	// Send dialog message (with quest options injected)
+	sendDialogMessage(game, message, npc.Name, dialog, conv, questOptions)
 
 	return true
 }
 
+// questDialogOption represents a quest-related dialog option
+type questDialogOption struct {
+	text    string
+	questID string
+	action  string // "accept", "complete", "progress"
+}
+
+// getQuestDialogOptions checks for quest-related dialog options for an NPC
+func getQuestDialogOptions(game def.GameCtrl, characterID, npcTemplateID, npcInstanceID string) []questDialogOption {
+	var options []questDialogOption
+
+	// Find quests offered by this NPC (check both template and instance ID)
+	npcQuests, err := game.GetFacade().QuestsService().FindBySourceNPC(npcTemplateID)
+	if err != nil {
+		return options
+	}
+
+	// Also check instance ID if different
+	if npcInstanceID != npcTemplateID {
+		instanceQuests, err := game.GetFacade().QuestsService().FindBySourceNPC(npcInstanceID)
+		if err == nil {
+			npcQuests = append(npcQuests, instanceQuests...)
+		}
+	}
+
+	for _, quest := range npcQuests {
+		progress, _ := game.GetFacade().QuestsService().GetProgress(characterID, quest.ID)
+
+		if progress == nil || progress.Status == quests.QuestStatusAbandoned {
+			// Quest available to accept
+			text := quest.AcceptDialogText
+			if text == "" {
+				text = fmt.Sprintf("[Quest] %s", quest.Name)
+			}
+			options = append(options, questDialogOption{
+				text:    text,
+				questID: quest.ID,
+				action:  "accept",
+			})
+		} else if progress.Status == quests.QuestStatusActive {
+			// Check if all objectives are complete
+			allComplete := true
+			for _, obj := range progress.Objectives {
+				if !obj.Completed {
+					allComplete = false
+					break
+				}
+			}
+			if allComplete {
+				text := quest.CompleteDialogText
+				if text == "" {
+					text = fmt.Sprintf("[Turn In] %s", quest.Name)
+				}
+				options = append(options, questDialogOption{
+					text:    text,
+					questID: quest.ID,
+					action:  "complete",
+				})
+			} else {
+				text := quest.ProgressDialogText
+				if text == "" {
+					text = fmt.Sprintf("[In Progress] %s", quest.Name)
+				}
+				options = append(options, questDialogOption{
+					text:    text,
+					questID: quest.ID,
+					action:  "progress",
+				})
+			}
+		}
+	}
+
+	return options
+}
+
+// sendQuestOnlyDialog sends a dialog with only quest options (for NPCs without dialogs)
+func sendQuestOnlyDialog(game def.GameCtrl, message *messages.Message, npcName string, questOptions []questDialogOption) {
+	options := make([]messages.DialogOption, len(questOptions))
+	for i, qo := range questOptions {
+		options[i] = messages.DialogOption{
+			Index: i + 1,
+			Text:  qo.text,
+		}
+	}
+
+	dialogMsg := messages.NewDialogMessage(
+		message.FromUser.ID,
+		npcName,
+		npcName+" looks at you expectantly.",
+		options,
+		"",
+	)
+
+	game.SendMessage() <- dialogMsg
+}
+
 // sendDialogMessage sends the current dialog state to the player
-func sendDialogMessage(game def.GameCtrl, message *messages.Message, npcName string, dialog *dialogs.Dialog, conv *conversations.Conversation) {
+func sendDialogMessage(game def.GameCtrl, message *messages.Message, npcName string, dialog *dialogs.Dialog, conv *conversations.Conversation, questOptions []questDialogOption) {
 	// Get current node
 	currentNode := game.GetFacade().ConversationsService().GetCurrentNode(conv, dialog)
 	if currentNode == nil {
@@ -127,6 +243,14 @@ func sendDialogMessage(game def.GameCtrl, message *messages.Message, npcName str
 		options = append(options, messages.DialogOption{
 			Index: i + 1, // 1-based index
 			Text:  optText,
+		})
+	}
+
+	// Inject quest options at the end
+	for _, qo := range questOptions {
+		options = append(options, messages.DialogOption{
+			Index: len(options) + 1,
+			Text:  qo.text,
 		})
 	}
 

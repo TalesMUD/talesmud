@@ -1,7 +1,10 @@
 <script>
+  import { writable } from "svelte/store";
   import { v4 as uuidv4 } from "uuid";
   import CRUDEditor from "./CRUDEditor.svelte";
   import { createStore } from "./CRUDEditorStore.js";
+  import EntitySelectButton from "./EntitySelectButton.svelte";
+  import { getAuth } from "../auth.js";
 
   import {
     getDialog,
@@ -12,7 +15,31 @@
   } from "../api/dialogs.js";
   import { dialogColumns } from "./tableColumns.js";
 
+  const { isAuthenticated, authToken } = getAuth();
+  const allDialogs = writable([]);
   const store = createStore();
+  let hasLoadedAllDialogs = false;
+
+  const loadAllDialogs = () => {
+    if (hasLoadedAllDialogs) return;
+    if (!$isAuthenticated || !$authToken) return;
+
+    getDialogs(
+      $authToken,
+      [],
+      (dialogs) => {
+        allDialogs.set(dialogs || []);
+        hasLoadedAllDialogs = true;
+      },
+      (err) => {
+        console.log("Failed to load dialogs for value help:", err);
+      }
+    );
+  };
+
+  $: if ($isAuthenticated && $authToken && !hasLoadedAllDialogs) {
+    loadAllDialogs();
+  }
 
   const config = {
     title: "Manage Dialogs",
@@ -91,7 +118,14 @@
         {#each $store.selectedElement.options as option, index}
           <div class="grid grid-cols-1 md:grid-cols-[2fr,1fr,auto] gap-3 items-center">
             <input class="input-base text-xs" bind:value={option.text} placeholder="Option text" />
-            <input class="input-base text-xs" bind:value={option.nextDialogId} placeholder="Next dialog ID" />
+            <EntitySelectButton
+              value={option.nextDialogId}
+              elements={$allDialogs || []}
+              columns={dialogColumns}
+              title="Select Next Dialog"
+              placeholder="Next dialog..."
+              on:change={(e) => option.nextDialogId = e.detail}
+            />
             <button class="text-xs text-accent-red hover:underline" type="button" on:click={() => removeOption(index)}>
               Remove
             </button>

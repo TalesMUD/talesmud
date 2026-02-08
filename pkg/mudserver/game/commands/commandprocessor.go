@@ -67,6 +67,9 @@ func (commandProcessor *CommandProcessor) Process(game def.GameCtrl, message *me
 
 func (commandProcessor *CommandProcessor) registerCommands() {
 
+	// Chat commands
+	commandProcessor.RegisterCommand(&SayCommand{}, "Speak to the current room: say <message>", "say")
+	commandProcessor.RegisterCommand(&TellCommand{}, "Send private message: tell <player> <message>", "tell", "whisper", "pm")
 	commandProcessor.RegisterCommand(&ScreamCommand{}, "Scream through the room", "scream")
 	commandProcessor.RegisterCommand(&ShrugCommand{}, "Shrug emote", "shrug")
 	commandProcessor.RegisterCommand(&SelectCharacterCommand{}, "Select a character, use: sc [charactername]", "sc", "selectcharacter")
@@ -101,7 +104,15 @@ func (commandProcessor *CommandProcessor) registerCommands() {
 	commandProcessor.RegisterCommand(&FleeCommand{}, "Attempt to flee from combat", "flee", "run", "escape")
 	commandProcessor.RegisterCommand(&CombatStatusCommand{}, "Show combat status", "status", "cs", "combat")
 
+	// Quest commands
+	commandProcessor.RegisterCommand(&QuestLogCommand{}, "Show your quest log", "quests", "ql", "questlog")
+	commandProcessor.RegisterCommand(&QuestDetailCommand{}, "Show quest details: quest [name]", "quest")
+	commandProcessor.RegisterCommand(&AbandonQuestCommand{}, "Abandon a quest: abandon [name]", "abandon")
+
 	// Respawn commands
 	commandProcessor.RegisterCommand(&BindCommand{}, "Bind respawn point: bind", "bind")
+
+	// HP Recovery commands
+	commandProcessor.RegisterCommand(&RestCommand{}, "Rest to recover HP faster: rest", "rest")
 
 }

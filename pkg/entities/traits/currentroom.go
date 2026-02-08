@@ -2,7 +2,7 @@ package traits
 
 //CurrentRoom ...
 type CurrentRoom struct {
-	CurrentRoomID string `bson:"currentRoom,omitempty" json:"currentRoom,omitempty"`
+	CurrentRoomID string `bson:"currentRoomID,omitempty" json:"currentRoomID,omitempty"`
 }
 
 // IsInCurrentRoom ...

@@ -4,6 +4,7 @@
   import { v4 as uuidv4 } from "uuid";
   import CRUDEditor from "./CRUDEditor.svelte";
   import { createStore } from "./CRUDEditorStore.js";
+  import EntitySelectButton from "./EntitySelectButton.svelte";
 
   import { getAuth } from "../auth.js";
   const { isAuthenticated, authToken } = getAuth();
@@ -20,7 +21,7 @@
     getItemQualities,
   } from "../api/items.js";
   import { getScripts } from "../api/scripts.js";
-  import { itemTemplateColumns } from "./tableColumns.js";
+  import { itemTemplateColumns, scriptColumns } from "./tableColumns.js";
   import { knownItemAttributes } from "./fieldSuggestions.js";
 
   const store = createStore();
@@ -290,13 +291,15 @@
 
     <!-- On Use Script -->
     <div class="space-y-1.5">
-      <label class="label-caps" for="template-onuse-script">On Use Script</label>
-      <select id="template-onuse-script" class="input-base" bind:value={$store.selectedElement.onUseScriptId}>
-        <option value="">None</option>
-        {#each $scriptsValueHelp as script}
-          <option value={script.id}>{script.name}</option>
-        {/each}
-      </select>
+      <label class="label-caps">On Use Script</label>
+      <EntitySelectButton
+        value={$store.selectedElement.onUseScriptId}
+        elements={$scriptsValueHelp || []}
+        columns={scriptColumns}
+        title="Select On-Use Script"
+        placeholder="None"
+        on:change={(e) => $store.selectedElement.onUseScriptId = e.detail}
+      />
       <p class="text-[10px] text-slate-400">
         Lua script executed when item is used. Context: ctx.item, ctx.character, ctx.room
       </p>
