@@ -1,4 +1,7 @@
 <script>
+  import EntitySelectButton from "./EntitySelectButton.svelte";
+  import { roomColumns } from "./tableColumns.js";
+
   export let exit;
   export let valueHelp;
   export let deleteExit;
@@ -20,16 +23,15 @@
     />
   </div>
   <div class="col-span-4">
-    <select class="input-base text-xs" bind:value={exit.target}>
-      <option value="" disabled>Select target</option>
-      {#if $valueHelp}
-        {#each $valueHelp as room}
-          <option value={room.id}>
-            {room.name} ({room.id})
-          </option>
-        {/each}
-      {/if}
-    </select>
+    <EntitySelectButton
+      value={exit.target}
+      elements={$valueHelp || []}
+      columns={roomColumns}
+      title="Select Target Room"
+      placeholder="Select target..."
+      allowNone={false}
+      on:change={(e) => exit.target = e.detail}
+    />
   </div>
   <button
     class="col-span-1 flex items-center justify-center"

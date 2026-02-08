@@ -36,8 +36,11 @@
 
   // Z-level filter
   let selectedZLevel = "all"; // "all" or a number
+  // Area filter
+  let selectedArea = "all"; // "all" or an area name string
   $: zLevels = getUniqueZLevels(rooms);
-  $: filteredRooms = filterRoomsByZ(rooms, selectedZLevel);
+  $: uniqueAreas = getUniqueAreas(rooms);
+  $: filteredRooms = filterRooms(rooms, selectedZLevel, selectedArea);
 
   function getUniqueZLevels(roomsList) {
     const levels = new Set();
@@ -49,16 +52,43 @@
     return [...levels].sort((a, b) => b - a); // Sort descending (highest floor first)
   }
 
-  function filterRoomsByZ(roomsList, zLevel) {
-    if (zLevel === "all") return roomsList;
-    const z = parseInt(zLevel);
-    return roomsList.filter(r => r.coords?.z === z);
+  function getUniqueAreas(roomsList) {
+    const areas = new Map(); // area name -> count
+    roomsList.forEach(r => {
+      const area = r.area || "(no area)";
+      areas.set(area, (areas.get(area) || 0) + 1);
+    });
+    // Sort by name
+    return [...areas.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([name, count]) => ({ name, count }));
   }
 
-  // Fit view when z-level changes
+  function filterRooms(roomsList, zLevel, area) {
+    let result = roomsList;
+    if (zLevel !== "all") {
+      const z = parseInt(zLevel);
+      result = result.filter(r => r.coords?.z === z);
+    }
+    if (area !== "all") {
+      if (area === "(no area)") {
+        result = result.filter(r => !r.area);
+      } else {
+        result = result.filter(r => r.area === area);
+      }
+    }
+    return result;
+  }
+
+  // Fit view when z-level or area filter changes
   let prevZLevel = selectedZLevel;
+  let prevArea = selectedArea;
   $: if (selectedZLevel !== prevZLevel) {
     prevZLevel = selectedZLevel;
+    setTimeout(fitView, 50);
+  }
+  $: if (selectedArea !== prevArea) {
+    prevArea = selectedArea;
     setTimeout(fitView, 50);
   }
 
@@ -1003,6 +1033,21 @@
   <div class="header">
     <h4>World Map</h4>
     <div class="header-actions">
+      <!-- Area Filter -->
+      {#if uniqueAreas.length > 1}
+        <div class="z-filter">
+          <label for="area-select">Area:</label>
+          <select id="area-select" bind:value={selectedArea}>
+            <option value="all">All ({rooms.length})</option>
+            {#each uniqueAreas as area}
+              <option value={area.name}>
+                {area.name} ({area.count})
+              </option>
+            {/each}
+          </select>
+        </div>
+      {/if}
+
       <!-- Z-Level Filter -->
       {#if zLevels.length > 1}
         <div class="z-filter">
@@ -1215,12 +1260,23 @@
               <div class="legend-section">
                 <div class="legend-title">Zones</div>
                 {#each areaGroups as area}
-                  <div class="legend-item">
+                  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+                  <div
+                    class="legend-item clickable"
+                    class:active={selectedArea === area.name}
+                    on:click={() => selectedArea = selectedArea === area.name ? "all" : area.name}
+                  >
                     <span class="legend-swatch" style="background: {area.color};"></span>
                     <span class="legend-name">{area.name}</span>
                     <span class="legend-count">{area.count}</span>
                   </div>
                 {/each}
+                {#if selectedArea !== "all"}
+                  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+                  <div class="legend-clear" on:click={() => selectedArea = "all"}>
+                    Show all zones
+                  </div>
+                {/if}
               </div>
               <hr class="legend-divider" />
             {/if}
@@ -1275,10 +1331,10 @@
                   Create Your First Room
                 </button>
               {:else}
-                <p>No rooms on this floor.</p>
-                <button class="create-room-btn" on:click={() => selectedZLevel = "all"}>
+                <p>No rooms match the current filters.</p>
+                <button class="create-room-btn" on:click={() => { selectedZLevel = "all"; selectedArea = "all"; }}>
                   <span class="material-symbols-outlined" style="font-size: 18px;">layers</span>
-                  Show All Floors
+                  Clear Filters
                 </button>
               {/if}
             </div>
@@ -1675,6 +1731,35 @@
     font-size: 10px;
     color: #666;
     font-family: monospace;
+  }
+
+  .legend-item.clickable {
+    cursor: pointer;
+    padding: 3px 4px;
+    border-radius: 4px;
+    transition: background 0.15s ease;
+  }
+
+  .legend-item.clickable:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .legend-item.clickable.active {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+  }
+
+  .legend-clear {
+    font-size: 11px;
+    color: #5c8d55;
+    cursor: pointer;
+    padding: 4px 4px 0;
+    margin-top: 4px;
+    border-top: 1px solid #2a2a4a;
+  }
+
+  .legend-clear:hover {
+    color: #7cb875;
   }
 
   /* Portal notification */

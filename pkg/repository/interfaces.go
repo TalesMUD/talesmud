@@ -7,6 +7,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/dialogs"
 	"github.com/talesmud/talesmud/pkg/entities/items"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
+	"github.com/talesmud/talesmud/pkg/entities/quests"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/entities/settings"
 	"github.com/talesmud/talesmud/pkg/scripts"
@@ -198,4 +199,29 @@ type LootTablesRepository interface {
 type ServerSettingsRepository interface {
 	Get() (*settings.ServerSettings, error)
 	Upsert(s *settings.ServerSettings) error
+}
+
+// QuestsRepository provides access to quest definition data.
+type QuestsRepository interface {
+	FindAll() ([]*quests.Quest, error)
+	FindByID(id string) (*quests.Quest, error)
+	FindByName(name string) ([]*quests.Quest, error)
+	FindBySourceNPC(npcID string) ([]*quests.Quest, error)
+	Store(quest *quests.Quest) (*quests.Quest, error)
+	Import(quest *quests.Quest) (*quests.Quest, error)
+	Update(id string, quest *quests.Quest) error
+	Delete(id string) error
+	Drop() error
+}
+
+// QuestProgressRepository provides access to per-player quest progress data.
+type QuestProgressRepository interface {
+	FindAll() ([]*quests.QuestProgress, error)
+	FindByID(id string) (*quests.QuestProgress, error)
+	FindByCharacterID(characterID string) ([]*quests.QuestProgress, error)
+	FindByCharacterAndQuest(characterID, questID string) (*quests.QuestProgress, error)
+	Store(progress *quests.QuestProgress) (*quests.QuestProgress, error)
+	Import(progress *quests.QuestProgress) (*quests.QuestProgress, error)
+	Update(id string, progress *quests.QuestProgress) error
+	Delete(id string) error
 }

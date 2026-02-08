@@ -20,6 +20,9 @@ func Open(path string) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	// SQLite works best with a single connection to avoid lock contention.
+	// Pragmas (busy_timeout, synchronous) are per-connection and only applied once,
+	// so multiple connections would miss them.
 	db.SetMaxOpenConns(1)
 	db.SetMaxIdleConns(1)
 
@@ -79,10 +82,50 @@ func (c *Client) InitSchema() error {
 		`CREATE TABLE IF NOT EXISTS parties (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
 		`CREATE TABLE IF NOT EXISTS loot_tables (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
 		`CREATE TABLE IF NOT EXISTS server_settings (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
+		`CREATE TABLE IF NOT EXISTS quests (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
+		`CREATE TABLE IF NOT EXISTS quest_progress (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
 	}
 	for _, stmt := range stmts {
 		if _, err := c.db.Exec(stmt); err != nil {
 			return fmt.Errorf("sqlite schema init failed: %w", err)
+		}
+	}
+
+	// Create indexes on frequently queried JSON fields for better performance
+	if err := c.createIndexes(); err != nil {
+		return fmt.Errorf("sqlite index creation failed: %w", err)
+	}
+
+	return nil
+}
+
+// createIndexes creates indexes on commonly queried JSON fields
+func (c *Client) createIndexes() error {
+	indexes := []string{
+		// NPCs: queried by name, room, and template status
+		`CREATE INDEX IF NOT EXISTS idx_npcs_name ON npcs(json_extract(data, '$.name'));`,
+		`CREATE INDEX IF NOT EXISTS idx_npcs_room ON npcs(json_extract(data, '$.currentRoomID'));`,
+		`CREATE INDEX IF NOT EXISTS idx_npcs_template ON npcs(json_extract(data, '$.isTemplate'));`,
+
+		// Characters: queried by user and room
+		`CREATE INDEX IF NOT EXISTS idx_characters_user ON characters(json_extract(data, '$.belongsUserID'));`,
+		`CREATE INDEX IF NOT EXISTS idx_characters_room ON characters(json_extract(data, '$.currentRoomID'));`,
+
+		// Items: queried by name, room, and template status
+		`CREATE INDEX IF NOT EXISTS idx_items_name ON items(json_extract(data, '$.name'));`,
+		`CREATE INDEX IF NOT EXISTS idx_items_template ON items(json_extract(data, '$.isTemplate'));`,
+
+		// Users: queried by email and online status
+		`CREATE INDEX IF NOT EXISTS idx_users_email ON users(json_extract(data, '$.email'));`,
+
+		// Quest progress: queried by character
+		`CREATE INDEX IF NOT EXISTS idx_quest_progress_char ON quest_progress(json_extract(data, '$.characterID'));`,
+	}
+
+	for _, idx := range indexes {
+		if _, err := c.db.Exec(idx); err != nil {
+			log.WithError(err).Warn("Failed to create index (may already exist)")
+			// Don't fail on index creation errors - they're optimizations
 		}
 	}
 	return nil

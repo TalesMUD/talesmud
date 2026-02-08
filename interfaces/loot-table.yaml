@@ -1,60 +1,120 @@
-# LootTable DTO
-# Exportable loot drop definition
+# =============================================================================
+# Loot Table Interface
+# =============================================================================
+#
+# Loot tables define what items drop when an enemy NPC is killed. Each table
+# contains a list of entries, where each entry specifies an item template,
+# a drop chance, and quantity range.
+#
+# HOW LOOT DROPS WORK:
+# ────────────────────
+# When an NPC with an enemyTrait.lootTableId dies:
+#   1. The loot table is loaded
+#   2. Each entry is rolled independently (dropChance + dropBonus)
+#   3. Successful rolls produce items (quantity between min/max)
+#   4. Guaranteed entries (guaranteed: true) always drop
+#   5. Gold is calculated from the NPC's goldDrop range * goldMultiplier
+#   6. Total drops are capped by the NPC's enemyTrait.maxDrops
+#
+# A single loot table can be shared across multiple NPCs. For example,
+# all wolves in a zone might share the same "wolf_loot" table.
+#
+# =============================================================================
 
 name: LootTableDTO
 endpoint: /api/loot-tables
 
 fields:
+  # ─── Identity ───────────────────────────────────────────────────────────────
+
   id:
     type: string
-    description: Unique identifier
+    # Auto-generated UUID. Do not set manually on creation.
 
   name:
     type: string
     required: true
+    # Human-readable name for the loot table. Used in the creator tool.
+    # Examples: "Wolf Pelts", "Bandit Loot", "Dragon Hoard"
 
   description:
     type: string
+    # Optional description explaining what this loot table is for.
+
+  # ─── Global Modifiers ───────────────────────────────────────────────────────
 
   goldMultiplier:
     type: number
     default: 1.0
+    # Multiplier applied to the NPC's goldDrop range. Stacks with the
+    # NPC's own gold settings. 1.0 = normal, 2.0 = double gold.
+    # Use for event bonuses or elite variants.
 
   dropBonus:
     type: number
     default: 0
-    description: Flat bonus to all drop chances
+    # Flat bonus added to ALL entry drop chances in this table.
+    # Example: dropBonus: 0.1 adds +10% to every entry's dropChance.
+    # Useful for increasing overall loot generosity.
+
+  # ─── Entries ────────────────────────────────────────────────────────────────
 
   entries:
     type: LootEntry[]
+    # List of possible item drops. Each entry is rolled independently.
+    # An NPC kill can produce zero, one, or many items depending on
+    # the rolls and the NPC's maxDrops setting.
 
-# Nested types
+
+# =============================================================================
+# Nested Types
+# =============================================================================
+
 LootEntry:
+  # A single possible item drop from this loot table.
   fields:
-    itemTemplateID:
+    itemTemplateId:
       type: string
       required: true
+      # ID of the item template to drop. Must reference a valid item template.
+      # The engine creates an instance from this template when the drop succeeds.
 
     dropChance:
       type: number
       required: true
-      description: 0.0 to 1.0
+      # Probability of this item dropping, from 0.0 (never) to 1.0 (always).
+      # The table's dropBonus is added to this value before rolling.
+      # Examples: 0.5 = 50% chance, 0.01 = 1% chance, 1.0 = guaranteed
+      # Note: for guaranteed drops, prefer using guaranteed: true instead.
 
     minQuantity:
       type: integer
       default: 1
+      # Minimum number of this item that drops (if the roll succeeds).
+      # Actual quantity is random between minQuantity and maxQuantity.
 
     maxQuantity:
       type: integer
       default: 1
+      # Maximum number of this item that drops. For non-stackable items,
+      # each unit is a separate item instance.
 
     guaranteed:
       type: boolean
       default: false
+      # If true, this item ALWAYS drops regardless of dropChance.
+      # Use for signature drops (e.g., wolf always drops a pelt).
+      # Guaranteed drops do NOT count against the NPC's maxDrops limit.
 
     minPlayerLevel:
       type: integer
       default: 0
+      # Minimum player level required for this entry to be eligible.
+      # 0 = no level requirement. Use to gate powerful drops behind
+      # player progression (e.g., rare sword only drops for level 10+).
 
     requiredTags:
       type: string[]
+      # Tags that must be present on the player or context for this entry
+      # to be eligible. Used for conditional drops (e.g., quest-specific
+      # items that only drop during a particular quest).

@@ -9,6 +9,8 @@
   import ActionEditor from "./ActionEditor.svelte";
   import SpawnerEditor from "./SpawnerEditor.svelte";
   import RoomItemsModal from "./RoomItemsModal.svelte";
+  import EntitySelectButton from "./EntitySelectButton.svelte";
+  import { scriptColumns, npcColumns } from "./tableColumns.js";
 
   import { getAuth } from "../auth.js";
   const { isAuthenticated, authToken } = getAuth();
@@ -766,19 +768,15 @@
       </div>
 
       <div class="space-y-1.5">
-        <label class="label-caps" for="room_on_enter_script">On Enter Script</label>
-        <select
-          id="room_on_enter_script"
-          class="input-base"
-          bind:value={$store.selectedElement.onEnterScriptID}
-        >
-          <option value="">None</option>
-          {#if $scriptsValueHelp}
-            {#each $scriptsValueHelp as script}
-              <option value={script.id}>{script.name} ({script.id})</option>
-            {/each}
-          {/if}
-        </select>
+        <label class="label-caps">On Enter Script</label>
+        <EntitySelectButton
+          value={$store.selectedElement.onEnterScriptID}
+          elements={$scriptsValueHelp || []}
+          columns={scriptColumns}
+          title="Select On-Enter Script"
+          placeholder="None"
+          on:change={(e) => $store.selectedElement.onEnterScriptID = e.detail}
+        />
         <p class="text-[10px] text-slate-400">
           Runs when a player enters this room (e.g., walking in or selecting a character).
         </p>
@@ -1016,26 +1014,17 @@
 
           <!-- Add Resident -->
           <div class="flex gap-2">
-            <select
-              class="input-base flex-1 text-sm"
-              bind:value={selectedResidentId}
-            >
-              <option value="">Select a unique NPC...</option>
-              {#each availableResidents as npc}
-                <option value={npc.id}>
-                  {npc.name} (Lvl {npc.level || 1})
-                  {#if npc.class?.name} - {npc.class.name}{/if}
-                </option>
-              {/each}
-            </select>
-            <button
-              class="px-4 py-2 text-xs font-medium bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-              type="button"
-              on:click={addResident}
-              disabled={!selectedResidentId}
-            >
-              Add
-            </button>
+            <div class="flex-1">
+              <EntitySelectButton
+                value={selectedResidentId}
+                elements={availableResidents}
+                columns={npcColumns}
+                title="Select Unique NPC"
+                placeholder="Select a unique NPC..."
+                allowNone={false}
+                on:change={(e) => { selectedResidentId = e.detail; addResident(); }}
+              />
+            </div>
           </div>
 
           <!-- Current Residents List -->

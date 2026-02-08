@@ -1,198 +1,494 @@
-# NPC Template DTO
-# Exportable NPC definition (templates only, not instances)
+# =============================================================================
+# NPC (Non-Player Character) Interface
+# =============================================================================
+#
+# NPCs are characters controlled by the game engine. They can be enemies,
+# merchants, quest givers, ambient townsfolk, or any non-player entity.
+#
+# IMPORTANT — Template vs Unique vs Instance:
+# ───────────────────────────────────────────
+# NPCs use a three-state classification based on two fields (isTemplate, templateId):
+#
+#   1. TEMPLATE (isTemplate: true)
+#      A blueprint used by NPCSpawners to create multiple copies (instances).
+#      Templates are never placed in the world directly — they live in the
+#      database as definitions only. Use templates for any NPC that should
+#      exist in multiple copies (e.g., "Wolf", "Town Guard", "Skeleton").
+#      Spawners reference the template ID and create instances from it.
+#
+#   2. UNIQUE (isTemplate: false, templateId: "")
+#      A one-of-a-kind NPC placed directly in the world. There is only ever
+#      one of this NPC. Use unique NPCs for named characters with special
+#      roles (e.g., "Elara the Innkeeper", "King Aldric", "Old Wizard Theron").
+#      Unique NPCs are NOT spawned from templates — they exist as-is.
+#
+#   3. INSTANCE (isTemplate: false, templateId: "<uuid>", instanceSuffix: "<hash>")
+#      A runtime copy spawned from a template by an NPCSpawner. You do NOT
+#      create instances manually — the spawner system generates them. Each
+#      instance gets a unique suffix appended to its name (e.g., "Wolf-a3f8c1").
+#      When killed, instances respawn according to their spawner configuration.
+#
+# Decision guide:
+#   - Need multiple copies? → Create a TEMPLATE + NPCSpawner
+#   - Named one-off NPC?   → Create a UNIQUE NPC
+#   - Never create instances manually — let spawners handle it
+#
+# =============================================================================
 
 name: NPCDTO
 endpoint: /api/npcs
 
 fields:
+  # ─── Identity ───────────────────────────────────────────────────────────────
+
   id:
     type: string
-    description: Unique identifier
+    # Auto-generated UUID. Do not set manually on creation; the server assigns it.
 
   name:
     type: string
     required: true
+    # Display name shown to players. For templates, this is the base name
+    # (e.g., "Wolf"). Instances append a suffix (e.g., "Wolf-a3f8c1").
 
   description:
     type: string
+    # Short description shown when a player looks at the NPC.
+    # Should set the scene in 1-2 sentences.
+
+  # ─── Template System ────────────────────────────────────────────────────────
+  # See the header comment for full explanation of template vs unique vs instance.
+
+  isTemplate:
+    type: boolean
+    default: false
+    # If true, this NPC is a blueprint for spawning. It will NOT appear in the
+    # world directly. An NPCSpawner must reference this template's ID to create
+    # instances of it.
+    # If false and templateId is empty, this is a unique/singleton NPC.
+
+  templateId:
+    type: string
+    # Only set on INSTANCES (runtime copies spawned from a template).
+    # Points back to the source template's ID. Empty string for templates
+    # and unique NPCs. Do not set manually — the spawner fills this in.
+
+  instanceSuffix:
+    type: string
+    # Only set on INSTANCES. A short random hash (first 8 chars of a UUID)
+    # appended to the NPC name to distinguish copies. Do not set manually.
+
+  # ─── Stats ──────────────────────────────────────────────────────────────────
 
   level:
     type: integer
     default: 1
+    # NPC level, used for combat scaling and loot eligibility.
 
   maxHitPoints:
     type: integer
     required: true
+    # Maximum HP. Determines how much damage the NPC can absorb before dying.
+    # For enemy NPCs, set this based on difficulty and level.
+
+  currentHitPoints:
+    type: integer
+    # Current HP. Defaults to maxHitPoints on spawn. Only relevant at runtime;
+    # you typically don't set this in definitions.
+
+  # ─── Classification ─────────────────────────────────────────────────────────
 
   race:
     type: Race
+    # The NPC's race. See Race nested type below.
+    # Optional — mainly used for humanoid NPCs.
 
   class:
     type: Class
+    # The NPC's class. See Class nested type below.
+    # Optional — mainly used for humanoid NPCs with combat roles.
 
-  # Spawning
-  spawnRoomID:
+  # ─── Spawning & Movement ────────────────────────────────────────────────────
+
+  spawnRoomId:
     type: string
-    description: Default spawn room
+    # Room ID where this NPC spawns. For unique NPCs, this is their home room.
+    # For templates, this can be overridden by the NPCSpawner's roomId.
 
   respawnTime:
-    type: string
-    description: Duration string (e.g., "30s", "5m")
+    type: duration
+    # Go duration string (e.g., "30s", "5m", "1h"). Time after death before
+    # the NPC respawns. Set to "0" or omit for no respawn (one-time NPCs).
+    # For templates, this can be overridden by the NPCSpawner.
+    examples: ["30s", "5m", "1h"]
 
   wanderRadius:
     type: integer
     default: 0
+    # Number of rooms the NPC can randomly wander from its spawn room.
+    # 0 = stationary (NPC stays in its spawn room).
+    # Wandering happens on a timer and picks random adjacent rooms.
 
   patrolPath:
     type: string[]
-    description: Room IDs for patrol route
+    # Ordered list of room IDs the NPC patrols through in sequence.
+    # When set, overrides random wandering. The NPC cycles through these
+    # rooms continuously. Each entry is a room ID.
+    examples: [["room_market", "room_gate", "room_square", "room_market"]]
 
-  # Dialog
+  # ─── State (runtime only) ───────────────────────────────────────────────────
+  # These fields are managed by the game engine at runtime. Do not set in
+  # content definitions — they are included here for API completeness.
+
+  state:
+    type: string
+    enum: [idle, combat, patrol, dead, fleeing]
+    default: idle
+    # Current behavior state. Managed by the NPC AI system.
+
+  isDead:
+    type: boolean
+    default: false
+    # Whether the NPC is currently dead. Managed by the combat system.
+
+  inCombat:
+    type: boolean
+    default: false
+    # Whether the NPC is currently in a combat encounter.
+
+  combatInstanceId:
+    type: string
+    # ID of the active combat encounter, if any.
+
+  # ─── Dialog ─────────────────────────────────────────────────────────────────
+
   dialogID:
     type: string
-    description: Interactive dialog ID
+    # ID of the Dialog entity used for interactive conversation.
+    # When a player talks to this NPC, this dialog tree is opened.
+    # Leave empty for NPCs that cannot be spoken to.
 
   idleDialogID:
     type: string
-    description: Ambient dialog ID
+    # ID of a Dialog entity used for ambient/idle chatter.
+    # The NPC periodically says lines from this dialog to the room,
+    # creating atmosphere. Separate from interactive dialog.
 
   idleDialogTimeout:
-    type: string
-    description: Duration before idle dialog
+    type: duration
+    # How often the NPC speaks its idle dialog. Go duration string.
+    # e.g., "60s" means the NPC says something every ~60 seconds.
+    examples: ["30s", "60s", "5m"]
 
-  # Traits (embedded)
+  # ─── Traits ─────────────────────────────────────────────────────────────────
+  # Traits are optional behavior modules. An NPC can have zero or more traits.
+  # An NPC with enemyTrait is hostile/fightable. An NPC with merchantTrait
+  # can buy/sell items. An NPC can have both (e.g., a hostile merchant).
+
   enemyTrait:
     type: EnemyTrait
+    # If present, this NPC is an enemy that can be fought. Defines combat
+    # stats, aggro behavior, rewards, and loot. See EnemyTrait below.
 
   merchantTrait:
     type: MerchantTrait
+    # If present, this NPC is a merchant that can buy/sell items.
+    # Defines inventory, pricing, and restock behavior. See MerchantTrait below.
 
-# Nested types
+  # ─── Metadata ───────────────────────────────────────────────────────────────
+
+  created:
+    type: datetime
+    # Timestamp when the NPC was created. Auto-set by the server.
+
+  updated:
+    type: datetime
+    # Timestamp of the last update. Auto-set by the server.
+
+
+# =============================================================================
+# Nested Types
+# =============================================================================
+
 Race:
+  # Defines the NPC's species/heritage. Primarily cosmetic/lore but can
+  # influence dialog and quest availability.
   fields:
     id:
       type: string
       required: true
+      # Machine-readable identifier. Must match a known race ID.
+      # Built-in races: "dwarf", "human", "elve"
+
     name:
       type: string
       required: true
+      # Display name (e.g., "Dwarf", "Human", "Elve")
+
     description:
       type: string
+      # Lore description of the race.
+
     heritage:
       type: string
+      # Cultural/ancestral background. Flavor text for character lore.
 
 Class:
+  # Defines the NPC's combat role and equipment proficiency.
   fields:
     id:
       type: string
       required: true
+      # Machine-readable identifier. Must match a known class ID.
+      # Built-in classes: "warrior", "ranger", "hunter", "rogue", "wizard"
+
     name:
       type: string
       required: true
+      # Display name (e.g., "Warrior", "Ranger", "Wizard")
+
     description:
       type: string
+      # Lore description of the class.
+
     armorType:
       type: string
       enum: [Cloth, Leather, Plate]
+      # Determines what armor tier the NPC can wear.
+      # Cloth = mages/casters, Leather = rogues/rangers, Plate = warriors/tanks.
+
     combatType:
       type: string
       enum: [Melee, Ranged, Magic]
+      # Primary combat style. Affects attack animations and range.
+      # Melee = close quarters, Ranged = bows/thrown, Magic = spells.
+
+
+# =============================================================================
+# EnemyTrait
+# =============================================================================
+# Attach this trait to make an NPC hostile/fightable. Without this trait,
+# an NPC cannot be attacked or engage in combat.
 
 EnemyTrait:
   fields:
+    # ─── Classification ─────────────────────────────────────────────────────
+
     creatureType:
       type: string
       enum: [beast, humanoid, undead, elemental, construct, demon, dragon, aberration]
+      # Creature category. Affects which abilities/spells are effective
+      # and may be referenced by quest objectives (e.g., "kill 5 beasts").
+
     combatStyle:
       type: string
       enum: [melee, ranged, magic, swarm, brute, agile]
+      # How the NPC fights. Affects AI behavior patterns:
+      #   melee  — standard close-range attacker
+      #   ranged — keeps distance, uses projectiles
+      #   magic  — uses spells, may have special abilities
+      #   swarm  — weak individually but attacks in groups
+      #   brute  — slow but hits very hard
+      #   agile  — fast, may dodge attacks
+
     difficulty:
       type: string
       enum: [trivial, easy, normal, hard, boss]
       default: normal
+      # Overall difficulty rating. Affects combat scaling:
+      #   trivial — no threat, can be one-shot (rats, critters)
+      #   easy    — minor challenge for on-level players
+      #   normal  — standard encounter, fair fight
+      #   hard    — requires preparation or grouping
+      #   boss    — major encounter, usually end-of-zone/dungeon
+
+    # ─── Combat Stats ───────────────────────────────────────────────────────
+
     attackPower:
-      type: integer
+      type: number
       default: 1
+      # Base damage dealt per attack. Multiplied by combat formulas.
+
     defense:
       type: integer
       default: 0
+      # Damage reduction value. Subtracted from incoming damage.
+
     attackSpeed:
       type: number
       default: 1.0
+      # Attacks per combat round. 1.0 = one attack per round.
+      # 0.5 = attacks every other round. 2.0 = two attacks per round.
+
+    # ─── Aggro Behavior ─────────────────────────────────────────────────────
+
     aggroRadius:
       type: integer
       default: 0
+      # Number of rooms away the NPC can detect players. 0 = only in same room.
+      # When a player enters within this radius, the NPC may initiate combat.
+
     aggroOnSight:
       type: boolean
       default: false
+      # If true, the NPC attacks any player that enters its room automatically.
+      # If false, the NPC only fights when attacked first (passive enemy).
+
     callForHelp:
       type: boolean
       default: false
+      # If true, when this NPC enters combat it alerts nearby friendly NPCs
+      # to join the fight. Creates pack behavior for wolves, guard patrols, etc.
+
     fleeThreshold:
       type: number
       default: 0
+      # HP percentage (0.0 to 1.0) at which the NPC tries to flee combat.
+      # 0 = never flees. 0.2 = flees at 20% HP. Useful for cowardly enemies.
+
+    # ─── Rewards ────────────────────────────────────────────────────────────
+
     xpReward:
       type: integer
       default: 0
+      # Experience points awarded to the player on kill.
+
     goldDrop:
       type: object
+      # Random gold drop range. The actual amount is randomly chosen
+      # between min and max (inclusive) on each kill.
       properties:
-        min: integer
-        max: integer
-    lootTableID:
+        min:
+          type: integer
+          # Minimum gold dropped.
+        max:
+          type: integer
+          # Maximum gold dropped.
+
+    lootTableId:
       type: string
+      # ID of a LootTable entity defining random item drops.
+      # The loot table is rolled on kill to determine item rewards.
+      # See loot-table.yaml for the LootTable definition.
+
     guaranteedLoot:
       type: string[]
-      description: Item template IDs
+      # List of item template IDs that ALWAYS drop on kill, in addition
+      # to the loot table roll. Use for quest items or signature drops.
+
     maxDrops:
       type: integer
       default: 0
+      # Maximum number of items that can drop from the loot table per kill.
+      # 0 = no limit (all successful rolls produce items).
+
+    # ─── Scripts ────────────────────────────────────────────────────────────
+
     onAggroScript:
       type: string
+      # Script ID executed when this NPC enters combat (aggros a player).
+      # Use for boss introductions, triggering events, calling reinforcements.
+
     onDeathScript:
       type: string
+      # Script ID executed when this NPC is killed. Use for quest progression,
+      # spawning follow-up enemies, dropping special items, or cutscenes.
+
     onFleeScript:
       type: string
+      # Script ID executed when this NPC flees combat (hits fleeThreshold).
+      # Use for cowardly NPCs that run and alert others.
+
+
+# =============================================================================
+# MerchantTrait
+# =============================================================================
+# Attach this trait to make an NPC a merchant. Players can buy from and
+# sell to merchants. Without this trait, trade interactions are unavailable.
 
 MerchantTrait:
   fields:
     merchantType:
       type: string
-      examples: [general, blacksmith, alchemist, armorer]
+      # Freeform merchant category. Used for flavor and filtering.
+      # Convention: use lowercase identifiers.
+      examples: [general, blacksmith, alchemist, armorer, jeweler, herbalist]
+
     buyMultiplier:
       type: number
       default: 1.0
+      # Price multiplier when the PLAYER BUYS from this merchant.
+      # 1.0 = base price, 1.5 = 50% markup, 0.8 = 20% discount.
+
     sellMultiplier:
       type: number
       default: 1.0
+      # Price multiplier when the PLAYER SELLS to this merchant.
+      # 1.0 = full base price, 0.5 = merchant pays half price.
+      # Typically set lower than buyMultiplier for profit margin.
+
     restockMinutes:
       type: integer
       default: 0
+      # Minutes between inventory restocks. 0 = never restocks (static inventory).
+      # When the timer elapses, sold-out items are restored to their maxQuantity.
+
     acceptedTypes:
       type: string[]
+      # Item types the merchant will buy FROM players. If empty, buys all types.
+      # Use item type strings: "weapon", "armor", "consumable", etc.
+      # Example: a blacksmith might only accept ["weapon", "armor"].
+
     rejectedTags:
       type: string[]
+      # Item tags the merchant refuses to buy. Overrides acceptedTypes.
+      # Example: ["cursed", "stolen"] means the merchant won't buy those items.
+
     inventory:
       type: MerchantItem[]
+      # List of items this merchant stocks for sale. Each entry defines
+      # an item template, pricing, and quantity limits.
+
+
+# =============================================================================
+# MerchantItem
+# =============================================================================
+# A single item listing in a merchant's inventory.
 
 MerchantItem:
   fields:
-    itemTemplateID:
+    itemTemplateId:
       type: string
       required: true
+      # ID of the item template this merchant sells. Must reference a valid
+      # item template (isTemplate: true) in the items collection.
+
     basePrice:
       type: integer
       default: 0
+      # Base price in gold before multipliers. If 0, uses the item template's
+      # basePrice field instead.
+
     priceOverride:
       type: integer
       default: 0
+      # If set (> 0), completely overrides both basePrice and multiplier
+      # calculations. The item sells for exactly this amount.
+
     quantity:
       type: integer
       default: -1
-      description: -1 = unlimited
+      # Current stock count. -1 = unlimited supply. 0 = sold out.
+      # Decreases when players buy. Restored on restock if restockMinutes > 0.
+
     maxQuantity:
       type: integer
       default: -1
+      # Maximum stock after restock. -1 = unlimited. Used by the restock
+      # timer to refill quantity back up to this value.
+
     requiredLevel:
       type: integer
       default: 0
+      # Minimum player level required to purchase this item.
+      # 0 = no level requirement.

@@ -64,6 +64,14 @@ func (f *SQLiteFactory) ServerSettings() ServerSettingsRepository {
 	return NewSQLiteServerSettingsRepository(f.client)
 }
 
+func (f *SQLiteFactory) Quests() QuestsRepository {
+	return NewSQLiteQuestsRepository(f.client)
+}
+
+func (f *SQLiteFactory) QuestProgress() QuestProgressRepository {
+	return NewSQLiteQuestProgressRepository(f.client)
+}
+
 func (f *SQLiteFactory) Close() error {
 	return f.client.Close()
 }

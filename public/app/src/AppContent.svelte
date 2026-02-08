@@ -10,6 +10,7 @@
   import NPCsEditor from "./creator/NPCsEditor.svelte";
   import DialogsEditor from "./creator/DialogsEditor.svelte";
   import DialogGraphEditor from "./creator/DialogGraphEditor.svelte";
+  import QuestsEditor from "./creator/QuestsEditor.svelte";
   import ScriptsEditor from "./creator/ScriptsEditor.svelte";
   import WorldEditor from "./creator/GridWorldEditor.svelte";
   import SettingsEditor from "./creator/SettingsEditor.svelte";
@@ -62,6 +63,11 @@
   <Route exact path="/creator/dialog-graph">
     <CreatorLayout>
       <DialogGraphEditor />
+    </CreatorLayout>
+  </Route>
+  <Route exact path="/creator/quests">
+    <CreatorLayout>
+      <QuestsEditor />
     </CreatorLayout>
   </Route>
   <Route exact path="/creator/scripts">

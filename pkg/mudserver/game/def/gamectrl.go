@@ -3,7 +3,9 @@ package def
 import (
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/combat"
+	"github.com/talesmud/talesmud/pkg/entities/items"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
+	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
@@ -57,6 +59,15 @@ type CombatEngineCtrl interface {
 	SetAutoAttackTarget(characterID string, targetID string)
 }
 
+// QuestTrackerCtrl provides access to the quest tracker for event notifications
+type QuestTrackerCtrl interface {
+	OnNPCKilled(characterID, userID string, npc *npc.NPC)
+	OnItemPickup(characterID, userID string, item *items.Item)
+	OnRoomEnter(characterID, userID string, room *rooms.Room)
+	OnDialogNode(characterID, userID, npcID, dialogID, nodeID string)
+	OnTalkToNPC(characterID, userID string, npc *npc.NPC)
+}
+
 // GameCtrl def
 // interface for commands package to communicate back to game instance
 type GameCtrl interface {
@@ -70,4 +81,8 @@ type GameCtrl interface {
 	GetNPCInstanceManager() NPCInstanceCtrl
 	// GetCombatEngine returns the combat engine controller
 	GetCombatEngine() CombatEngineCtrl
+	// GetQuestTracker returns the quest tracker controller
+	GetQuestTracker() QuestTrackerCtrl
+	// InterruptRest stops a character from resting
+	InterruptRest(char *characters.Character)
 }

@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/buger/jsonparser"
 	"github.com/dgrijalva/jwt-go"
@@ -17,6 +19,15 @@ import (
 	e "github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/service"
 )
+
+// jwksCache holds cached JWKS keys to avoid fetching from Auth0 on every request.
+var jwksCache struct {
+	sync.RWMutex
+	keys      []webKeys
+	fetchedAt time.Time
+}
+
+const jwksCacheTTL = 1 * time.Hour
 
 type jwks struct {
 	Keys []webKeys `json:"keys"`
@@ -31,53 +42,65 @@ type webKeys struct {
 	X5c []string `json:"x5c"`
 }
 
-// getPemCert is a function used to get the PEM certificate from a JWT token. It retrieves the certificate
-// by calling the Auth0 JWKS endpoint and parsing the JSON response to find the certificate that matches the key ID
-// specified in the JWT token header.
-func getPemCert(token *jwt.Token) (string, error) {
+// fetchJWKS retrieves JWKS keys from Auth0, using an in-memory cache with TTL.
+func fetchJWKS() ([]webKeys, error) {
+	jwksCache.RLock()
+	if len(jwksCache.keys) > 0 && time.Since(jwksCache.fetchedAt) < jwksCacheTTL {
+		keys := jwksCache.keys
+		jwksCache.RUnlock()
+		return keys, nil
+	}
+	jwksCache.RUnlock()
 
-	// Initialize an empty string to hold the certificate
-	cert := ""
+	jwksCache.Lock()
+	defer jwksCache.Unlock()
 
-	// Make a GET request to the JWKS endpoint specified in the environment variables
-	resp, err := http.Get(os.Getenv("AUTH0_WK_JWKS"))
-
-	// If the request results in an error, return the empty certificate string and the error
-	if err != nil {
-		return cert, err
+	// Double-check after acquiring write lock
+	if len(jwksCache.keys) > 0 && time.Since(jwksCache.fetchedAt) < jwksCacheTTL {
+		return jwksCache.keys, nil
 	}
 
-	// Make sure to close the response body when the function returns
+	log.Info("Fetching JWKS keys from Auth0")
+	resp, err := http.Get(os.Getenv("AUTH0_WK_JWKS"))
+	if err != nil {
+		// Return stale cache if available
+		if len(jwksCache.keys) > 0 {
+			log.WithError(err).Warn("Failed to refresh JWKS, using stale cache")
+			return jwksCache.keys, nil
+		}
+		return nil, err
+	}
 	defer resp.Body.Close()
 
-	// Initialize a jwks structure to hold the JSON response
-	var jwks = jwks{}
-
-	// Decode the JSON response into the jwks structure
-	err = json.NewDecoder(resp.Body).Decode(&jwks)
-
-	// If decoding the JSON results in an error, return the empty certificate string and the error
-	if err != nil {
-		return cert, err
+	var parsed jwks
+	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
+		if len(jwksCache.keys) > 0 {
+			log.WithError(err).Warn("Failed to decode JWKS, using stale cache")
+			return jwksCache.keys, nil
+		}
+		return nil, err
 	}
 
-	// Iterate over the keys in the JWKS response
-	for k := range jwks.Keys {
-		// If the key ID of the current key matches the key ID specified in the JWT token header,
-		// construct the certificate string using the certificate value (x5c) from the JWKS key
-		if token.Header["kid"] == jwks.Keys[k].Kid {
-			cert = "-----BEGIN CERTIFICATE-----\n" + jwks.Keys[k].X5c[0] + "\n-----END CERTIFICATE-----"
+	jwksCache.keys = parsed.Keys
+	jwksCache.fetchedAt = time.Now()
+	log.WithField("keyCount", len(parsed.Keys)).Info("JWKS keys cached")
+	return parsed.Keys, nil
+}
+
+// getPemCert retrieves the PEM certificate matching the JWT token's key ID from cached JWKS keys.
+func getPemCert(token *jwt.Token) (string, error) {
+	keys, err := fetchJWKS()
+	if err != nil {
+		return "", err
+	}
+
+	for _, key := range keys {
+		if token.Header["kid"] == key.Kid {
+			return "-----BEGIN CERTIFICATE-----\n" + key.X5c[0] + "\n-----END CERTIFICATE-----", nil
 		}
 	}
 
-	// If no matching key was found in the JWKS, return an error
-	if cert == "" {
-		err := errors.New("Unable to find appropriate key")
-		return cert, err
-	}
-
-	// If a matching key was found, return the certificate string and nil error
-	return cert, nil
+	return "", errors.New("Unable to find appropriate key")
 }
 
 // getKeyFunc returns a function to be used as the jwt.Keyfunc for JWT token validation.

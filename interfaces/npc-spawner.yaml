@@ -1,42 +1,104 @@
-# NPCSpawner DTO
-# Exportable spawner configuration
+# =============================================================================
+# NPC Spawner Interface
+# =============================================================================
+#
+# NPC Spawners are the mechanism for populating the world with NPC instances
+# created from templates. A spawner watches a specific room and maintains
+# a configured number of NPC instances alive at any time.
+#
+# HOW SPAWNING WORKS:
+# ───────────────────
+# 1. On server start, the spawner creates initialCount instances immediately
+# 2. The spawner checks every spawnInterval whether instances need replacing
+# 3. If alive count < maxInstances, a new instance is spawned from the template
+# 4. Instances are placed in the spawner's roomId
+# 5. When an instance dies, it respawns after the template's respawnTime
+#    (or respawnTimeOverride if set on the spawner)
+#
+# RELATIONSHIP TO NPC TEMPLATES:
+# ──────────────────────────────
+# Spawners ONLY work with NPC templates (isTemplate: true). They create
+# instances (isTemplate: false, templateId: set, instanceSuffix: set).
+# You cannot use a spawner with a unique NPC — unique NPCs are placed
+# directly in the world without spawners.
+#
+# One template can have multiple spawners (e.g., wolves in different zones).
+# Each spawner independently manages its own set of instances.
+#
+# =============================================================================
 
 name: NPCSpawnerDTO
 endpoint: /api/npc-spawners
 
 fields:
+  # ─── Identity ───────────────────────────────────────────────────────────────
+
   id:
     type: string
-    description: Unique identifier
+    # Auto-generated UUID. Do not set manually on creation.
 
   name:
     type: string
+    # Optional human-readable label for the spawner. Used in the creator
+    # tool for identification. Not shown to players.
+    # Example: "Gloomfen Wolf Pack", "Market Square Guards"
 
-  templateID:
+  # ─── Configuration ──────────────────────────────────────────────────────────
+
+  templateId:
     type: string
     required: true
-    description: NPC template to spawn
+    # ID of the NPC template to spawn instances from. Must reference an
+    # NPC with isTemplate: true. The spawner copies all template properties
+    # (name, stats, traits, dialog) into each instance.
 
-  roomID:
+  roomId:
     type: string
     required: true
-    description: Spawn location
+    # Room ID where instances are placed when spawned. All instances from
+    # this spawner appear in this room initially. They may wander if the
+    # template has wanderRadius > 0 or a patrolPath defined.
 
   maxInstances:
     type: integer
     default: 1
-    description: Max alive at once
+    # Maximum number of alive instances this spawner maintains simultaneously.
+    # The spawner will not create new instances if this many are already alive.
+    # Example: maxInstances: 3 means up to 3 wolves at once.
 
   spawnInterval:
-    type: string
+    type: duration
     required: true
-    description: Duration string (e.g., "30s", "5m")
+    # How often the spawner checks if new instances are needed.
+    # Go duration string. The spawner runs on this timer, and if the
+    # alive count is below maxInstances, it spawns one new instance.
+    # Example: "30s" = checks every 30 seconds.
+    examples: ["10s", "30s", "1m", "5m"]
 
   initialCount:
     type: integer
     default: 1
-    description: Spawn count on server start
+    # Number of instances spawned immediately on server start / world load.
+    # Capped by maxInstances. Use to pre-populate areas with NPCs so
+    # the world doesn't feel empty when the server starts.
+
+  # ─── Overrides ──────────────────────────────────────────────────────────────
 
   respawnTimeOverride:
-    type: string
-    description: Override template respawn time
+    type: duration
+    # If set, overrides the template's respawnTime for instances created
+    # by this spawner. Allows the same template to have different respawn
+    # speeds in different locations.
+    # Example: "2m" makes this spawner's wolves respawn in 2 minutes
+    # even if the wolf template says "5m".
+    examples: ["30s", "2m", "10m"]
+
+  # ─── Metadata ───────────────────────────────────────────────────────────────
+
+  created:
+    type: datetime
+    # Auto-set on creation.
+
+  updated:
+    type: datetime
+    # Auto-set on modification.

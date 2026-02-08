@@ -3,6 +3,7 @@
   import { v4 as uuidv4 } from "uuid";
   import CRUDEditor from "./CRUDEditor.svelte";
   import { createStore } from "./CRUDEditorStore.js";
+  import EntitySelectButton from "./EntitySelectButton.svelte";
   import { getAuth } from "../auth.js";
 
   import {
@@ -13,7 +14,8 @@
     deleteNPC,
   } from "../api/npcs.js";
   import { getDialogs } from "../api/dialogs.js";
-  import { npcColumns } from "./tableColumns.js";
+  import { getRoomsValueHelp } from "../api/rooms.js";
+  import { npcColumns, dialogColumns, roomColumns } from "./tableColumns.js";
   import { knownRaces, knownClasses } from "./fieldSuggestions.js";
 
   // Clone columns so we can populate dynamic dropdown options
@@ -30,8 +32,10 @@
   };
 
   const dialogsValueHelp = writable([]);
+  const roomsValueHelp = writable([]);
   const store = createStore();
   let hasLoadedDialogs = false;
+  let hasLoadedRooms = false;
 
   let levels = [];
   for (let i = 1; i <= 50; i += 1) levels.push(i);
@@ -219,9 +223,28 @@
     );
   };
 
-  // Load dialogs once auth token becomes available
+  const loadRooms = () => {
+    if (hasLoadedRooms) return;
+    if (!$isAuthenticated || !$authToken) return;
+
+    getRoomsValueHelp(
+      $authToken,
+      (rooms) => {
+        roomsValueHelp.set(rooms || []);
+        hasLoadedRooms = true;
+      },
+      (err) => {
+        console.log("Failed to load rooms for NPCs editor:", err);
+      }
+    );
+  };
+
+  // Load dialogs and rooms once auth token becomes available
   $: if ($isAuthenticated && $authToken && !hasLoadedDialogs) {
     loadDialogs();
+  }
+  $: if ($isAuthenticated && $authToken && !hasLoadedRooms) {
+    loadRooms();
   }
 </script>
 
@@ -292,37 +315,40 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="space-y-1.5">
-        <label class="label-caps" for="npc-dialog">Dialog ID</label>
-        <select id="npc-dialog" class="input-base" bind:value={$store.selectedElement.dialogID}>
-          <option value="">None</option>
-          {#if $dialogsValueHelp}
-            {#each $dialogsValueHelp as dialog}
-              <option value={dialog.id}>
-                {dialog.name} ({dialog.id})
-              </option>
-            {/each}
-          {/if}
-        </select>
+        <label class="label-caps">Dialog</label>
+        <EntitySelectButton
+          value={$store.selectedElement.dialogID}
+          elements={$dialogsValueHelp || []}
+          columns={dialogColumns}
+          title="Select Dialog"
+          placeholder="None"
+          on:change={(e) => $store.selectedElement.dialogID = e.detail}
+        />
       </div>
       <div class="space-y-1.5">
-        <label class="label-caps" for="npc-idle-dialog">Idle Dialog ID</label>
-        <select id="npc-idle-dialog" class="input-base" bind:value={$store.selectedElement.idleDialogID}>
-          <option value="">None</option>
-          {#if $dialogsValueHelp}
-            {#each $dialogsValueHelp as dialog}
-              <option value={dialog.id}>
-                {dialog.name} ({dialog.id})
-              </option>
-            {/each}
-          {/if}
-        </select>
+        <label class="label-caps">Idle Dialog</label>
+        <EntitySelectButton
+          value={$store.selectedElement.idleDialogID}
+          elements={$dialogsValueHelp || []}
+          columns={dialogColumns}
+          title="Select Idle Dialog"
+          placeholder="None"
+          on:change={(e) => $store.selectedElement.idleDialogID = e.detail}
+        />
       </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="space-y-1.5">
-        <label class="label-caps" for="npc-room">Current Room ID</label>
-        <input id="npc-room" class="input-base" bind:value={$store.selectedElement.currentRoomID} />
+        <label class="label-caps">Current Room</label>
+        <EntitySelectButton
+          value={$store.selectedElement.currentRoomID}
+          elements={$roomsValueHelp || []}
+          columns={roomColumns}
+          title="Select Current Room"
+          placeholder="None"
+          on:change={(e) => $store.selectedElement.currentRoomID = e.detail}
+        />
       </div>
       <div class="space-y-1.5">
         <label class="label-caps" for="npc-hp-current">Hit Points</label>

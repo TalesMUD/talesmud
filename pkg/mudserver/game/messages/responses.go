@@ -283,6 +283,69 @@ func NewCharacterUpdateMessage(userID string, ch *characters.Character) *Charact
 	}
 }
 
+// QuestObjectiveProgress represents objective progress sent to the client
+type QuestObjectiveProgress struct {
+	ObjectiveID string `json:"objectiveId"`
+	Description string `json:"description"`
+	Current     int32  `json:"current"`
+	Required    int32  `json:"required"`
+	Completed   bool   `json:"completed"`
+}
+
+// QuestUpdateMessage notifies the client of a quest status change
+type QuestUpdateMessage struct {
+	MessageResponse
+	QuestName  string                    `json:"questName"`
+	QuestID    string                    `json:"questId"`
+	Status     string                    `json:"status"`
+	Objectives []QuestObjectiveProgress  `json:"objectives,omitempty"`
+}
+
+// QuestLogEntry represents a quest in the quest log
+type QuestLogEntry struct {
+	QuestID     string                    `json:"questId"`
+	QuestName   string                    `json:"questName"`
+	Description string                    `json:"description"`
+	Category    string                    `json:"category"`
+	Status      string                    `json:"status"`
+	Objectives  []QuestObjectiveProgress  `json:"objectives"`
+}
+
+// QuestLogMessage sends the full quest log to the client
+type QuestLogMessage struct {
+	MessageResponse
+	Quests []QuestLogEntry `json:"quests"`
+}
+
+// NewQuestUpdateMessage creates a quest update message for the player
+func NewQuestUpdateMessage(userID, questID, questName, status string, objectives []QuestObjectiveProgress) *QuestUpdateMessage {
+	return &QuestUpdateMessage{
+		MessageResponse: MessageResponse{
+			Audience:   MessageAudienceOrigin,
+			AudienceID: userID,
+			Type:       MessageType(status),
+			Message:    questName,
+		},
+		QuestName:  questName,
+		QuestID:    questID,
+		Status:     status,
+		Objectives: objectives,
+	}
+}
+
+// NewQuestLogMessage creates a quest log message for the player
+func NewQuestLogMessage(userID string, entries []QuestLogEntry) *QuestLogMessage {
+	return &QuestLogMessage{
+		MessageResponse: MessageResponse{
+			Audience:   MessageAudienceOrigin,
+			AudienceID: userID,
+			Type:       MessageTypeQuestLog,
+			Message:    "Quest Log",
+		},
+		Quests: entries,
+	}
+}
+
 // NewDialogEndMessage creates a message indicating the conversation has ended
 func NewDialogEndMessage(userID, npcName, message string) MessageResponse {
 	return MessageResponse{

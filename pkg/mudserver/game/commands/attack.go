@@ -36,6 +36,9 @@ func (command *AttackCommand) Execute(game def.GameCtrl, message *messages.Messa
 		return true
 	}
 
+	// Interrupt rest when attacking
+	game.InterruptRest(message.Character)
+
 	// Parse target from command: "attack goblin" or "a goblin"
 	parts := strings.Fields(message.Data)
 	targetName := ""

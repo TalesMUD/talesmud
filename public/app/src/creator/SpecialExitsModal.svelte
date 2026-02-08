@@ -1,6 +1,8 @@
 <script>
   import { createEventDispatcher } from "svelte";
   import { isCardinalDirection } from "./WorldEditorStore.js";
+  import EntitySelectButton from "./EntitySelectButton.svelte";
+  import { roomColumns } from "./tableColumns.js";
 
   export let open = false;
   export let exits = [];
@@ -121,16 +123,15 @@
 
                   <div class="field-group">
                     <label for="exit-target-{index}">Target Room</label>
-                    <select
-                      id="exit-target-{index}"
+                    <EntitySelectButton
                       value={exit.target}
-                      on:change={(e) => updateExit(index, "target", e.target.value)}
-                    >
-                      <option value="">Select target...</option>
-                      {#each roomsValueHelp as room}
-                        <option value={room.id}>{room.name}</option>
-                      {/each}
-                    </select>
+                      elements={roomsValueHelp}
+                      columns={roomColumns}
+                      title="Select Target Room"
+                      placeholder="Select target..."
+                      allowNone={false}
+                      on:change={(e) => updateExit(index, "target", e.detail)}
+                    />
                   </div>
 
                   <div class="field-group wide">

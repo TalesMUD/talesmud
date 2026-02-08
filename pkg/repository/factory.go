@@ -15,5 +15,7 @@ type Factory interface {
 	Conversations() ConversationsRepository
 	LootTables() LootTablesRepository
 	ServerSettings() ServerSettingsRepository
+	Quests() QuestsRepository
+	QuestProgress() QuestProgressRepository
 	Close() error
 }

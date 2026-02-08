@@ -73,18 +73,24 @@ func (m *NPCInstanceManager) Initialize() error {
 	return nil
 }
 
-// initializeResidents loads unique NPCs that are directly assigned to rooms
+// initializeResidents loads unique NPCs (non-templates) into the instance manager.
+// NPCs are discovered two ways:
+//  1. Listed in a Room's NPC list (Room.NPCs field)
+//  2. Have a CurrentRoomID set directly on the NPC record
+//
+// This ensures unique NPCs always spawn into their assigned room on server start.
 func (m *NPCInstanceManager) initializeResidents() error {
+	registered := make(map[string]bool)
+
+	// Pass 1: Load NPCs referenced from Room.NPCs lists
 	rooms, err := m.facade.RoomsService().FindAll()
 	if err != nil {
 		return err
 	}
 
-	residentCount := 0
 	for _, room := range rooms {
 		npcIDs := room.GetNPCIDs()
 		for _, npcID := range npcIDs {
-			// Load the NPC from the database
 			npcData, err := m.facade.NPCsService().FindByID(npcID)
 			if err != nil {
 				log.WithError(err).WithFields(log.Fields{
@@ -94,7 +100,6 @@ func (m *NPCInstanceManager) initializeResidents() error {
 				continue
 			}
 
-			// Skip if it's a template (shouldn't happen, but safety check)
 			if npcData.IsTemplate {
 				log.WithFields(log.Fields{
 					"npcID":  npcID,
@@ -103,14 +108,30 @@ func (m *NPCInstanceManager) initializeResidents() error {
 				continue
 			}
 
-			// Register the NPC
 			m.RegisterExistingNPC(npcData, room.ID)
-			residentCount++
+			registered[npcData.Entity.ID] = true
 		}
 	}
 
-	if residentCount > 0 {
-		log.WithField("count", residentCount).Info("Loaded resident NPCs from rooms")
+	// Pass 2: Load unique NPCs that have CurrentRoomID set but aren't in any Room.NPCs list
+	uniqueNPCs, err := m.facade.NPCsService().FindAllNonTemplates()
+	if err != nil {
+		log.WithError(err).Warn("Failed to load non-template NPCs")
+	} else {
+		for _, n := range uniqueNPCs {
+			if registered[n.Entity.ID] {
+				continue // already loaded from room list
+			}
+			if n.CurrentRoomID == "" {
+				continue // no room assigned
+			}
+			m.RegisterExistingNPC(n, n.CurrentRoomID)
+			registered[n.Entity.ID] = true
+		}
+	}
+
+	if len(registered) > 0 {
+		log.WithField("count", len(registered)).Info("Loaded resident NPCs")
 	}
 
 	return nil

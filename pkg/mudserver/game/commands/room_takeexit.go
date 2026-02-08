@@ -16,6 +16,9 @@ func TakeExit(exit string) RoomCommand {
 
 			characterID := message.Character.ID
 
+			// Interrupt rest when moving
+			game.InterruptRest(message.Character)
+
 			// find next room
 			if next, err := game.GetFacade().RoomsService().FindByID(exit.Target); err == nil {
 
@@ -48,6 +51,9 @@ func TakeExit(exit string) RoomCommand {
 				enterRoom := messages.NewEnterRoomMessage(next, message.FromUser, game)
 				enterRoom.AudienceID = message.FromUser.ID
 				game.SendMessage() <- enterRoom
+
+				// Track quest progress for room entry
+				NotifyQuestRoomEnter(game, characterID, message.FromUser.ID, next)
 
 				// send all players in new room a joined message
 				game.SendMessage() <- messages.CharacterJoinedRoom{

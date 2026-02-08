@@ -1,57 +1,161 @@
-# Dialog DTO
-# Exportable dialog tree definition
+# =============================================================================
+# Dialog Interface
+# =============================================================================
+#
+# Dialogs define conversation trees for NPC interactions. When a player talks
+# to an NPC with a dialogID, the dialog tree is opened and the player
+# navigates through options (branches) and answers (continuations).
+#
+# TREE STRUCTURE:
+# ───────────────
+# A dialog is a recursive tree. Each node has:
+#   - text: what the NPC says
+#   - options: player choices (branches) — each option is itself a Dialog node
+#   - answer: automatic NPC continuation — no player choice, just flows forward
+#
+# The conversation starts at the root node. The player picks options,
+# which lead to deeper nodes. Nodes with isDialogExit: true return
+# the player to the root/main node.
+#
+# TEMPLATE VARIABLES:
+# ───────────────────
+# Dialog text supports {{variable}} template syntax for dynamic content:
+#   {{player.name}}  — the talking player's name
+#   {{npc.name}}     — the NPC's name
+#   {{context.*}}    — custom context variables set by scripts
+#
+# TEXT VARIATIONS:
+# ────────────────
+# For more natural conversations, NPCs can have multiple text variations:
+#   - alternateTexts: list of alternative texts picked randomly
+#   - orderedTexts: if true, texts cycle sequentially instead of randomly
+# This makes repeat conversations feel less repetitive.
+#
+# CONDITIONAL OPTIONS:
+# ────────────────────
+# Options can be gated by prior dialog progress:
+#   - requiresVisitedDialogs: option only appears after visiting specific nodes
+#   - showOnlyOnce: option disappears after being selected once
+# This creates branching narratives and progressive dialog unlocks.
+#
+# =============================================================================
 
 name: DialogDTO
 endpoint: /api/dialogs
 
 fields:
+  # ─── Identity ───────────────────────────────────────────────────────────────
+
   id:
     type: string
-    description: Unique identifier
+    # Auto-generated UUID for the database record. The root dialog node
+    # is the entity stored in the database.
 
   name:
     type: string
-    description: Human-readable name
+    # Human-readable label for the dialog tree. Used in the creator tool
+    # for identification. Not shown to players.
+    # Example: "Elara Greeting", "Blacksmith Quest Dialog"
+
+  # ─── Node Identity ──────────────────────────────────────────────────────────
 
   nodeID:
     type: string
     required: true
-    description: Tree node identifier (e.g., "main", "greeting")
+    # Unique identifier for this node within the dialog tree.
+    # Used for referencing in requiresVisitedDialogs and quest objectives.
+    # Convention: use descriptive names like "main", "greeting", "quest_accept",
+    # "inn_directions". Must be unique within the tree.
+
+  # ─── Content ────────────────────────────────────────────────────────────────
 
   text:
     type: string
     required: true
-    description: NPC speech (supports {{variable}} templates)
+    # The NPC's spoken text at this dialog node. This is what the player reads.
+    # Supports {{variable}} template syntax (see header).
+    # Write in character — this is the NPC speaking directly.
+    # Example: "Welcome to Oldtown, {{player.name}}! First time here?"
 
   alternateTexts:
     type: string[]
-    description: Random text variations
+    # Alternative versions of "text" for variety. On each visit to this node,
+    # one text is chosen randomly (or sequentially if orderedTexts is true).
+    # If empty, "text" is always used. All entries support {{variable}} syntax.
 
   orderedTexts:
     type: boolean
-    description: Use sequential text on repeat
+    # If true, alternateTexts are used in sequential order on repeat visits
+    # instead of randomly. Useful for NPCs that reveal information gradually.
+    # First visit uses "text", subsequent visits cycle through alternateTexts.
+
+  # ─── Tree Structure ─────────────────────────────────────────────────────────
 
   options:
     type: DialogDTO[]
-    description: Player choice options (recursive)
+    # Player choice options — the branches of the conversation tree.
+    # Each option is itself a full Dialog node (recursive). The option's
+    # "text" field is what the PLAYER says (shown as a clickable choice),
+    # and the option's "answer" or nested "options" continue the conversation.
+    # Example: options might be "Where's the inn?" and "Got any quests?"
 
   answer:
     type: DialogDTO
-    description: Auto-response continuation
+    # Automatic NPC continuation. After the NPC speaks this node's text,
+    # the conversation flows directly into the answer node without player
+    # choice. Use for multi-part NPC speeches or dramatic pauses.
+    # If both "answer" and "options" are set, "answer" plays first, then
+    # options are shown.
+
+  # ─── Conditional Display ────────────────────────────────────────────────────
 
   requiresVisitedDialogs:
     type: string[]
-    description: Node IDs that must be visited first
+    # List of nodeIDs that must have been visited (in any previous conversation)
+    # before this option appears. Creates progressive dialog unlocking.
+    # Example: The "tell me about the dungeon" option only appears after
+    # the player has visited the "ask_about_rumors" node.
 
   showOnlyOnce:
     type: boolean
+    # If true, this option disappears after the player selects it once.
+    # Useful for one-time information reveals, quest acceptance dialogs,
+    # or introductory conversations that shouldn't repeat.
 
   isDialogExit:
     type: boolean
-    description: Returns to main node
+    # If true, selecting this option returns the player to the root/main
+    # dialog node. Use as a "go back" or "ask about something else" option.
+    # Typically the last option in a branch.
 
-# Template variables available in text
+  # ─── Metadata ───────────────────────────────────────────────────────────────
+
+  created:
+    type: datetime
+    # Auto-set on creation.
+
+  createdBy:
+    type: string
+    # User ID of the creator.
+
+
+# =============================================================================
+# Template Variables Reference
+# =============================================================================
+# Available variables for use in text and alternateTexts:
+
 templateVariables:
-  - "{{player.name}}"
-  - "{{npc.name}}"
-  - "{{context.*}}"
+  - "{{player.name}}"    # The talking player's character name
+  - "{{npc.name}}"       # The NPC's display name
+  - "{{context.*}}"      # Custom variables set by scripts (e.g., {{context.quest_status}})
+
+
+# =============================================================================
+# Dialog State (runtime, read-only)
+# =============================================================================
+# The game engine tracks dialog state per player-NPC pair:
+#
+#   currentDialogID  — which node the player is currently on
+#   dialogVisited    — map of nodeID -> visit count (for requiresVisitedDialogs)
+#   context          — map of custom variables (for {{context.*}} templates)
+#   dynamicContext   — map of callback functions for computed context values

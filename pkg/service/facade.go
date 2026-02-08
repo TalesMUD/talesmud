@@ -19,6 +19,7 @@ type Facade interface {
 	ConversationsService() ConversationsService
 	LootTablesService() LootTablesService
 	ServerSettingsService() ServerSettingsService
+	QuestsService() QuestsService
 	CharacterTemplatesRepo() repository.CharacterTemplatesRepository
 
 	Runner() scripts.ScriptRunner
@@ -37,6 +38,7 @@ type facade struct {
 	convs ConversationsService
 	lts   LootTablesService
 	sss   ServerSettingsService
+	qs    QuestsService
 	sr    scripts.ScriptRunner
 	repos repository.Factory
 }
@@ -57,13 +59,16 @@ func NewFacade(repos repository.Factory, runner scripts.ScriptRunner) Facade {
 	characterTemplatesRepo := repos.CharacterTemplates()
 	lootTablesRepo := repos.LootTables()
 	serverSettingsRepo := repos.ServerSettings()
+	questsRepo := repos.Quests()
+	questProgressRepo := repos.QuestProgress()
 
 	// Create services
 	ss := NewScriptsService(scriptsRepo)
 	is := NewItemsService(itemsRepo)
 	lts := NewLootTablesService(lootTablesRepo, is)
+	qs := NewQuestsService(questsRepo, questProgressRepo)
 
-	return &facade{
+	f := &facade{
 		css:   NewCharactersService(charactersRepo, characterTemplatesRepo),
 		ps:    NewPartiesService(partiesRepo),
 		us:    NewUsersService(usersRepo),
@@ -76,9 +81,15 @@ func NewFacade(repos repository.Factory, runner scripts.ScriptRunner) Facade {
 		convs: NewConversationsService(conversationsRepo),
 		lts:   lts,
 		sss:   NewServerSettingsService(serverSettingsRepo),
+		qs:    qs,
 		sr:    runner,
 		repos: repos,
 	}
+
+	// Set facade reference in quests service for reward granting
+	qs.SetFacade(f)
+
+	return f
 }
 func (f *facade) RoomsService() RoomsService {
 	return f.rs
@@ -125,6 +136,10 @@ func (f *facade) LootTablesService() LootTablesService {
 
 func (f *facade) ServerSettingsService() ServerSettingsService {
 	return f.sss
+}
+
+func (f *facade) QuestsService() QuestsService {
+	return f.qs
 }
 
 func (f *facade) CharacterTemplatesRepo() repository.CharacterTemplatesRepository {

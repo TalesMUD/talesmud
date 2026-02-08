@@ -177,6 +177,94 @@ function createClient(renderer, characterCreator, muxStore) {
     }
   };
 
+  // Quest message handlers
+  messageHandlers["questAccepted"] = (msg) => {
+    renderer(msg.message);
+    overlayStore.pushMessage(msg.message);
+
+    // Update quest log
+    requestQuestLog();
+
+    // Show notification
+    if (mux) {
+      mux.addQuestNotification({
+        type: 'accepted',
+        questName: msg.questName || 'Quest',
+        message: msg.message || 'Quest accepted',
+      });
+    }
+  };
+
+  messageHandlers["questProgress"] = (msg) => {
+    renderer(msg.message);
+
+    // Update quest log
+    requestQuestLog();
+
+    // Show objective progress notification
+    if (mux && msg.objectives) {
+      const completedObjective = msg.objectives.find(o => o.completed);
+      if (completedObjective) {
+        mux.addQuestNotification({
+          type: 'progress',
+          questName: msg.questName || 'Quest',
+          message: `Objective complete: ${completedObjective.description || 'Objective completed'}`,
+        });
+      }
+    }
+  };
+
+  messageHandlers["questCompleted"] = (msg) => {
+    renderer(msg.message);
+    overlayStore.pushMessage(msg.message);
+
+    // Refresh quest log
+    requestQuestLog();
+
+    // Show completion notification with rewards
+    if (mux) {
+      mux.addQuestNotification({
+        type: 'completed',
+        questName: msg.questName || 'Quest',
+        message: msg.message || 'Quest completed!',
+      });
+    }
+  };
+
+  messageHandlers["questLog"] = (msg) => {
+    // Update full quest log
+    if (mux && msg.quests) {
+      mux.updateQuests(msg.quests);
+    }
+  };
+
+  // Helper function to fetch quest log from API
+  const requestQuestLog = () => {
+    if (!currentCharacter || !currentCharacter.id) return;
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    fetch(`/api/quest-progress/${currentCharacter.id}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    })
+    .then(data => {
+      if (mux && Array.isArray(data)) {
+        mux.updateQuests(data);
+      }
+    })
+    .catch(err => {
+      console.error('Failed to fetch quest log:', err);
+    });
+  };
+
   const setWSClient = async (wscl) => {
     ws = wscl;
     wsurl = ws.url;

@@ -8,6 +8,9 @@ import (
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 )
 
+// handleDefaultMessage implements implicit "say" behavior.
+// When player input doesn't match any command, treat it as room speech.
+// This allows players to type "hello everyone" instead of "say hello everyone".
 func (game *Game) handleDefaultMessage(message *messages.Message) {
 
 	user := ""

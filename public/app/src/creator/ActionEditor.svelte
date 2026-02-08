@@ -1,5 +1,7 @@
 <script>
   import { onMount } from "svelte";
+  import EntitySelectButton from "./EntitySelectButton.svelte";
+  import { scriptColumns } from "./tableColumns.js";
 
   export let action;
   export let deleteAction;
@@ -68,27 +70,15 @@
 
   {#if action.type === "script"}
     <div class="space-y-1.5">
-      <label class="label-caps" for={`action-script-${action.name}`}>Script</label>
-      {#if scriptsValueHelp}
-        <select
-          class="input-base text-xs"
-          id={`action-script-${action.name}`}
-          bind:value={action.scriptId}
-        >
-          <option value="">Select a script...</option>
-          {#each scriptsValueHelp as script}
-            <option value={script.id}>{script.name} ({script.id})</option>
-          {/each}
-        </select>
-      {:else}
-        <input
-          class="input-base text-xs"
-          id={`action-script-${action.name}`}
-          type="text"
-          placeholder="Script ID"
-          bind:value={action.scriptId}
-        />
-      {/if}
+      <label class="label-caps">Script</label>
+      <EntitySelectButton
+        value={action.scriptId}
+        elements={scriptsValueHelp || []}
+        columns={scriptColumns}
+        title="Select Script"
+        placeholder="Select a script..."
+        on:change={(e) => action.scriptId = e.detail}
+      />
     </div>
   {/if}
 </div>
