@@ -73,6 +73,15 @@ export const WIDGET_TYPES = {
     maxInstances: 1,
     icon: 'assignment',
     category: 'player'
+  },
+  minimap: {
+    name: 'Minimap',
+    description: 'Explored room map for current floor',
+    defaultSize: { w: 6, h: 8 },
+    minSize: { w: 3, h: 3 },
+    maxInstances: 1,
+    icon: 'map',
+    category: 'core'
   }
 };
 

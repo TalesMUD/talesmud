@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quick Reference - TalesMUD Documentation</title>
+  <meta name="description" content="Quick Reference guide for TalesMUD players.">
+  <link rel="stylesheet" href="docs-style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="../index.html" class="nav-brand"><span>&gt;</span> talesmud.veilspan</a>
+    <ul class="nav-links">
+      <li><a href="../index.html">Home</a></li>
+      <li><a href="../index.html#lore">Lore</a></li>
+      <li><a href="index.html">Docs</a></li>
+      <li><a href="../play">Play</a></li>
+    </ul>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="docs-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h2 class="sidebar-title">Documentation</h2>
+      <nav class="sidebar-nav">
+  <li><a href="01-getting-started.html">01. Getting Started</a></li>
+  <li><a href="02-user-interface.html">02. User Interface</a></li>
+  <li><a href="03-commands.html">03. Commands Reference</a></li>
+  <li><a href="04-character.html">04. Character System</a></li>
+  <li><a href="05-inventory-equipment.html">05. Inventory & Equipment</a></li>
+  <li><a href="06-combat.html">06. Combat System</a></li>
+  <li><a href="07-quests.html">07. Quest System</a></li>
+  <li><a href="08-exploration.html">08. Exploration & Minimap</a></li>
+  <li><a href="09-npcs.html">09. NPC Interactions</a></li>
+  <li><a href="10-settings.html">10. Settings & Customization</a></li>
+  <li><a href="11-mobile.html">11. Mobile Play</a></li>
+  <li><a href="12-quick-reference.html" class="active">12. Quick Reference</a></li>
+  <li><a href="13-glossary.html">13. Glossary</a></li>
+</nav>
+    </aside>
+
+    <!-- Content -->
+    <main class="content">
+      <div class="doc-header">
+        <span class="doc-category">// Reference</span>
+      </div>
+      
+      <h1>Quick Reference Guide</h1>
+
+<p>Fast lookup for commands, shortcuts, and essential information.</p>
+
+<h2>Essential Commands</h2>
+
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>n</code>, <code>s</code>, <code>e</code>, <code>w</code></td>
+<td>Move north, south, east, west</td>
+</tr>
+<tr>
+<td><code>up</code>, <code>down</code></td>
+<td>Move vertically</td>
+</tr>
+<tr>
+<td><code>look</code></td>
+<td>Examine current room</td>
+</tr>
+<tr>
+<td><code>i</code></td>
+<td>View inventory</td>
+</tr>
+<tr>
+<td><code>eq</code></td>
+<td>View equipment</td>
+</tr>
+<tr>
+<td><code>c</code></td>
+<td>View character stats</td>
+</tr>
+<tr>
+<td><code>pickup [item]</code></td>
+<td>Pick up item</td>
+</tr>
+<tr>
+<td><code>drop [item]</code></td>
+<td>Drop item</td>
+</tr>
+<tr>
+<td><code>use [item]</code></td>
+<td>Use/consume item</td>
+</tr>
+<tr>
+<td><code>equip [item]</code></td>
+<td>Equip item</td>
+</tr>
+<tr>
+<td><code>unequip [item]</code></td>
+<td>Remove equipped item</td>
+</tr>
+<tr>
+<td><code>talk [npc]</code></td>
+<td>Talk to NPC</td>
+</tr>
+<tr>
+<td><code>attack [enemy]</code></td>
+<td>Start combat</td>
+</tr>
+<tr>
+<td><code>flee</code></td>
+<td>Escape combat</td>
+</tr>
+<tr>
+<td><code>list</code></td>
+<td>View merchant inventory</td>
+</tr>
+<tr>
+<td><code>who</code></td>
+<td>List online players</td>
+</tr>
+<tr>
+<td><code>help</code></td>
+<td>Get help</td>
+</tr>
+</tbody>
+</table>
+
+<h2>Combat Commands</h2>
+
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Use When</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>attack</code></td>
+<td>Deal damage (primary action)</td>
+</tr>
+<tr>
+<td><code>defend</code></td>
+<td>Reduce incoming damage (low HP)</td>
+</tr>
+<tr>
+<td><code>flee</code></td>
+<td>Escape combat (losing badly)</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>Check combat state</td>
+</tr>
+<tr>
+<td><code>use [potion]</code></td>
+<td>Heal or buff</td>
+</tr>
+</tbody>
+</table>
+
+<h2>Widget Shortcuts</h2>
+
+<table>
+<thead>
+<tr>
+<th>Widget</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Room</strong></td>
+<td>See location, NPCs, description</td>
+</tr>
+<tr>
+<td><strong>Terminal</strong></td>
+<td>Type commands, see messages</td>
+</tr>
+<tr>
+<td><strong>Action Bar</strong></td>
+<td>Quick commands and navigation</td>
+</tr>
+<tr>
+<td><strong>Character</strong></td>
+<td>HP, XP, Level, Gold, Stats</td>
+</tr>
+<tr>
+<td><strong>Inventory</strong></td>
+<td>Items you're carrying</td>
+</tr>
+<tr>
+<td><strong>Equipment</strong></td>
+<td>Gear you have equipped</td>
+</tr>
+<tr>
+<td><strong>Quest Log</strong></td>
+<td>Active and completed quests</td>
+</tr>
+<tr>
+<td><strong>Minimap</strong></td>
+<td>Explored areas map</td>
+</tr>
+</tbody>
+</table>
+
+<h2>Item Quality Colors</h2>
+
+<table>
+<thead>
+<tr>
+<th>Color</th>
+<th>Quality</th>
+<th>Rarity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gray</td>
+<td>Normal</td>
+<td>Common</td>
+</tr>
+<tr>
+<td>Blue</td>
+<td>Magic</td>
+<td>Uncommon</td>
+</tr>
+<tr>
+<td>Purple</td>
+<td>Rare</td>
+<td>Rare</td>
+</tr>
+<tr>
+<td>Orange</td>
+<td>Legendary</td>
+<td>Very Rare</td>
+</tr>
+<tr>
+<td>Red</td>
+<td>Mythic</td>
+<td>Extremely Rare</td>
+</tr>
+</tbody>
+</table>
+
+<h2>Equipment Slots</h2>
+
+<ul>
+<li>Head, Neck, Chest</li>
+<li>Main Hand, Off Hand, Hands</li>
+<li>Legs, Boots</li>
+<li>Ring 1, Ring 2</li>
+</ul>
+
+<h2>HP Bar Colors</h2>
+
+<table>
+<thead>
+<tr>
+<th>Color</th>
+<th>HP Range</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Green</td>
+<td>75-100%</td>
+<td>Healthy</td>
+</tr>
+<tr>
+<td>Yellow/Orange</td>
+<td>25-75%</td>
+<td>Wounded</td>
+</tr>
+<tr>
+<td>Red</td>
+<td>0-25%</td>
+<td>Critical</td>
+</tr>
+</tbody>
+</table>
+
+<h2>Quest Objective Symbols</h2>
+
+<ul>
+<li>✓ Completed objective</li>
+<li>☐ Incomplete objective</li>
+<li>Numbers show progress (e.g., "3/5")</li>
+</ul>
+
+<h2>Terminal Controls</h2>
+
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Up Arrow</td>
+<td>Previous command</td>
+</tr>
+<tr>
+<td>Down Arrow</td>
+<td>Next command</td>
+</tr>
+<tr>
+<td>Tab</td>
+<td>Auto-complete (partial support)</td>
+</tr>
+<tr>
+<td>Enter</td>
+<td>Execute command</td>
+</tr>
+</tbody>
+</table>
+
+<h2>NPC Button Colors</h2>
+
+<table>
+<thead>
+<tr>
+<th>Color</th>
+<th>NPC Type</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Blue</td>
+<td>Friendly</td>
+<td>Talk</td>
+</tr>
+<tr>
+<td>Green</td>
+<td>Merchant</td>
+<td>Trade</td>
+</tr>
+<tr>
+<td>Red</td>
+<td>Enemy</td>
+<td>Attack</td>
+</tr>
+</tbody>
+</table>
+
+<h2>Settings Quick Access</h2>
+
+<strong>General:</strong>
+<ul>
+<li>Sound Enabled: Toggle audio</li>
+<li>Music Volume: 0-100</li>
+<li>SFX Volume: 0-100</li>
+</ul>
+
+<strong>Interface:</strong>
+<ul>
+<li>Parchment Background: Texture on/off</li>
+<li>Compact Mode: Dense layout</li>
+<li>Room Text Overlay: Messages on room</li>
+</ul>
+
+<h2>Recommended Settings</h2>
+
+<strong>New Players:</strong>
+<ul>
+<li>Parchment: On</li>
+<li>Compact: Off</li>
+<li>Room Overlay: On</li>
+</ul>
+
+<strong>Experienced Players:</strong>
+<ul>
+<li>Parchment: Off</li>
+<li>Compact: On</li>
+<li>Room Overlay: Off (optional)</li>
+</ul>
+
+<strong>Mobile:</strong>
+<ul>
+<li>Compact: On</li>
+<li>Room Overlay: On (automatic)</li>
+</ul>
+
+<h2>Survival Tips</h2>
+
+<h3>Always:</h3>
+<ul>
+<li>Carry 10+ healing potions</li>
+<li>Keep HP above 50% between fights</li>
+<li>Save gold for equipment upgrades</li>
+<li>Complete quests at your level</li>
+<li>Set bind point in safe location</li>
+</ul>
+
+<h3>Never:</h3>
+<ul>
+<li>Fight enemies 3+ levels above you without preparation</li>
+<li>Explore dangerous areas without potions</li>
+<li>Ignore HP warnings</li>
+<li>Waste gold on low-quality items</li>
+<li>Forget to equip better gear</li>
+</ul>
+
+<h2>Item Management</h2>
+
+<h3>Keep:</h3>
+<ul>
+<li>Equipment upgrades</li>
+<li>Healing potions (stock)</li>
+<li>Quest items</li>
+<li>High-quality gear</li>
+</ul>
+
+<h3>Sell/Drop:</h3>
+<ul>
+<li>Outgrown equipment</li>
+<li>Low-quality duplicates</li>
+<li>Excess consumables</li>
+<li>Vendor trash</li>
+</ul>
+
+<h2>Quest Efficiency</h2>
+
+<ol>
+<li>Accept all quests in an area</li>
+<li>Group by location</li>
+<li>Complete objectives together</li>
+<li>Return to turn in batch</li>
+<li>Move to next area</li>
+</ol>
+
+<h2>Combat Strategy</h2>
+
+<table>
+<thead>
+<tr>
+<th>Enemy Level</th>
+<th>Strategy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3+ below</td>
+<td>Quick attack spam</td>
+</tr>
+<tr>
+<td>1-2 below</td>
+<td>Attack, minimal potions</td>
+</tr>
+<tr>
+<td>Same level</td>
+<td>Attack + defend, use potions</td>
+</tr>
+<tr>
+<td>1-2 above</td>
+<td>Careful, defend often, stock potions</td>
+</tr>
+<tr>
+<td>3+ above</td>
+<td>Flee or avoid</td>
+</tr>
+</tbody>
+</table>
+
+<h2>Level Progression Priority</h2>
+
+<ol>
+<li>Complete quests (best XP)</li>
+<li>Fight at-level enemies</li>
+<li>Upgrade equipment</li>
+<li>Explore new areas</li>
+<li>Grind only if necessary</li>
+</ol>
+
+<h2>Gold Priority Spending</h2>
+
+<ol>
+<li>Equipment upgrades (biggest impact)</li>
+<li>Healing potions (survival)</li>
+<li>Quest requirements (progress blockers)</li>
+<li>Consumable buffs (optional)</li>
+<li>Cosmetics (luxury)</li>
+</ol>
+
+<h2>Minimap Tips</h2>
+
+<ul>
+<li>Resets on page reload (session storage)</li>
+<li>Shows current floor only</li>
+<li>Nearby rooms fade by distance</li>
+<li>Hover for room names</li>
+<li>Use for navigation reference</li>
+</ul>
+
+<h2>Mobile Quick Tips</h2>
+
+<ul>
+<li>Use buttons > typing</li>
+<li>Tap between Room/Console tabs</li>
+<li>44px touch targets</li>
+<li>Portrait or landscape (preference)</li>
+<li>Add to home screen for app feel</li>
+</ul>
+
+<h2>Troubleshooting Quick Fixes</h2>
+
+<table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>Quick Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lost</td>
+<td>Check minimap, type <code>look</code></td>
+</tr>
+<tr>
+<td>Low HP</td>
+<td>Use healing potion immediately</td>
+</tr>
+<tr>
+<td>Can't move</td>
+<td>In combat? Type <code>flee</code></td>
+</tr>
+<tr>
+<td>Inventory full</td>
+<td>Sell items to merchant</td>
+</tr>
+<tr>
+<td>Dialog stuck</td>
+<td>Complete selection (type number)</td>
+</tr>
+<tr>
+<td>NPC won't talk</td>
+<td>Check it's not enemy type</td>
+</tr>
+<tr>
+<td>Layout broken</td>
+<td>Clear localStorage, reload</td>
+</tr>
+<tr>
+<td>Settings won't save</td>
+<td>Check browser privacy settings</td>
+</tr>
+</tbody>
+</table>
+
+<h2>Common Mistakes</h2>
+
+<ul>
+<li>❌ Fighting without potions</li>
+<li>❌ Not reading quest objectives</li>
+<li>❌ Ignoring equipment upgrades</li>
+<li>❌ Attacking higher-level enemies</li>
+<li>❌ Not setting bind points</li>
+<li>❌ Hoarding low-quality items</li>
+<li>❌ Forgetting to equip new gear</li>
+</ul>
+
+<h2>Pro Tips</h2>
+
+<ul>
+<li>✓ Type direction shortcuts (n, s, e, w)</li>
+<li>✓ Use command history (Up arrow)</li>
+<li>✓ Check Quest Log frequently</li>
+<li>✓ Sell old gear before inventory fills</li>
+<li>✓ Talk to all NPCs (hidden quests)</li>
+<li>✓ Explore thoroughly (secrets!)</li>
+<li>✓ Group quests by area for efficiency</li>
+<li>✓ Upgrade weapon before armor</li>
+<li>✓ Keep 20-30% gold as emergency fund</li>
+</ul>
+
+<h2>Interface Layout Tips</h2>
+
+<h3>Desktop:</h3>
+<ul>
+<li>Room + Terminal side-by-side</li>
+<li>Action Bar at bottom</li>
+<li>Info widgets in panels</li>
+</ul>
+
+<h3>Mobile:</h3>
+<ul>
+<li>Vertical stack</li>
+<li>Tab switching</li>
+<li>Touch-optimized buttons</li>
+</ul>
+
+<h2>Keyboard Shortcuts</h2>
+
+<strong>Terminal:</strong>
+<ul>
+<li><code>↑</code> Previous command</li>
+<li><code>↓</code> Next command</li>
+<li><code>Tab</code> Auto-complete</li>
+<li><code>Enter</code> Execute</li>
+</ul>
+
+<strong>Layout Edit:</strong>
+<ul>
+<li>Drag to move</li>
+<li>Drag corners to resize</li>
+<li>Click X to remove</li>
+</ul>
+
+<h2>Essential Checks</h2>
+
+<strong>Before Combat:</strong>
+<ul>
+<li>[ ] HP above 50%</li>
+<li>[ ] Potions in inventory</li>
+<li>[ ] Best equipment equipped</li>
+<li>[ ] Enemy level reasonable</li>
+</ul>
+
+<strong>Before Exploration:</strong>
+<ul>
+<li>[ ] Bind point set</li>
+<li>[ ] 10+ healing potions</li>
+<li>[ ] Inventory space available</li>
+<li>[ ] Good equipment</li>
+</ul>
+
+<strong>Before Boss Fight:</strong>
+<ul>
+<li>[ ] Max HP</li>
+<li>[ ] 20+ healing potions</li>
+<li>[ ] Best gear equipped</li>
+<li>[ ] Understand boss mechanics</li>
+</ul>
+
+<h2>Resource Management</h2>
+
+<strong>HP Management:</strong>
+<ul>
+<li>Use potions at 30-40% HP</li>
+<li>Rest between fights</li>
+<li>Keep emergency potions</li>
+</ul>
+
+<strong>Gold Management:</strong>
+<ul>
+<li>Save for equipment</li>
+<li>Don't splurge on consumables</li>
+<li>Sell unnecessary items</li>
+</ul>
+
+<strong>Inventory Management:</strong>
+<ul>
+<li>Keep 5-10 free slots</li>
+<li>Sell old equipment</li>
+<li>Stack consumables</li>
+</ul>
+
+<h2>Time Efficiency</h2>
+
+<strong>Fast Leveling:</strong>
+<ul>
+<li>Quest-focused (best XP/time)</li>
+<li>Fight at-level enemies</li>
+<li>Avoid grinding low-level mobs</li>
+</ul>
+
+<strong>Fast Gold:</strong>
+<ul>
+<li>Sell equipment drops</li>
+<li>Complete quests (rewards)</li>
+<li>Merchant rare items</li>
+</ul>
+
+<strong>Fast Travel:</strong>
+<ul>
+<li>Type directions (faster)</li>
+<li>Learn major routes</li>
+<li>Use minimap</li>
+</ul>
+
+<h2>Documentation Structure</h2>
+
+<ol>
+<li><a href="01-getting-started.html">Getting Started</a> - New player guide</li>
+<li><a href="02-user-interface.html">User Interface</a> - Widget guide</li>
+<li><a href="03-commands.html">Commands Reference</a> - All commands</li>
+<li><a href="04-character.html">Character System</a> - Stats and progression</li>
+<li><a href="05-inventory-equipment.html">Inventory & Equipment</a> - Item management</li>
+<li><a href="06-combat.html">Combat System</a> - Fighting guide</li>
+<li><a href="07-quests.html">Quest System</a> - Quest guide</li>
+<li><a href="08-exploration.html">Exploration & Minimap</a> - Navigation</li>
+<li><a href="09-npcs.html">NPC Interactions</a> - Talking to NPCs</li>
+<li><a href="10-settings.html">Settings & Customization</a> - Configuration</li>
+<li><a href="11-mobile.html">Mobile Play</a> - Mobile guide</li>
+<li><a href="12-quick-reference.html">Quick Reference</a> - This page</li>
+<li><a href="13-glossary.html">Glossary</a> - Terms and definitions</li>
+</ol>
+
+<h2>Getting Help</h2>
+
+<ul>
+<li>Type <code>help</code> in-game</li>
+<li>Read documentation sections</li>
+<li>Check this quick reference</li>
+<li>Ask in chat (if multiplayer)</li>
+</ul>
+
+<strong>Need more detail? Check the full documentation sections!</strong>
+
+
+      <div class="doc-nav">
+  <a href="11-mobile.html" class="doc-nav-link">
+    <span class="doc-nav-label">Previous</span>
+    <span class="doc-nav-title">Mobile Play</span>
+  </a>
+  <a href="13-glossary.html" class="doc-nav-link">
+    <span class="doc-nav-label">Next</span>
+    <span class="doc-nav-title">Glossary</span>
+  </a>
+</div>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-copy">&copy; 2026 Veilspan - TalesMUD Documentation</div>
+  </footer>
+
+</body>
+</html>

@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mobile Play - TalesMUD Documentation</title>
+  <meta name="description" content="Mobile Play guide for TalesMUD players.">
+  <link rel="stylesheet" href="docs-style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="../index.html" class="nav-brand"><span>&gt;</span> talesmud.veilspan</a>
+    <ul class="nav-links">
+      <li><a href="../index.html">Home</a></li>
+      <li><a href="../index.html#lore">Lore</a></li>
+      <li><a href="index.html">Docs</a></li>
+      <li><a href="../play">Play</a></li>
+    </ul>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="docs-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h2 class="sidebar-title">Documentation</h2>
+      <nav class="sidebar-nav">
+  <li><a href="01-getting-started.html">01. Getting Started</a></li>
+  <li><a href="02-user-interface.html">02. User Interface</a></li>
+  <li><a href="03-commands.html">03. Commands Reference</a></li>
+  <li><a href="04-character.html">04. Character System</a></li>
+  <li><a href="05-inventory-equipment.html">05. Inventory & Equipment</a></li>
+  <li><a href="06-combat.html">06. Combat System</a></li>
+  <li><a href="07-quests.html">07. Quest System</a></li>
+  <li><a href="08-exploration.html">08. Exploration & Minimap</a></li>
+  <li><a href="09-npcs.html">09. NPC Interactions</a></li>
+  <li><a href="10-settings.html">10. Settings & Customization</a></li>
+  <li><a href="11-mobile.html" class="active">11. Mobile Play</a></li>
+  <li><a href="12-quick-reference.html">12. Quick Reference</a></li>
+  <li><a href="13-glossary.html">13. Glossary</a></li>
+</nav>
+    </aside>
+
+    <!-- Content -->
+    <main class="content">
+      <div class="doc-header">
+        <span class="doc-category">// Mobile Guide</span>
+      </div>
+      
+      <h1>Mobile Play Guide</h1>
+
+<p>Play TalesMUD on your phone or tablet with the mobile-optimized interface.</p>
+
+<h2>Mobile Interface Overview</h2>
+
+<p>TalesMUD automatically adapts to mobile devices with a responsive, touch-friendly interface.</p>
+
+<h3>Automatic Detection</h3>
+
+<strong>The client detects:</strong>
+<ul>
+<li>Screen size (small width triggers mobile layout)</li>
+<li>Touch capabilities</li>
+<li>Device orientation</li>
+<li>Safe areas (notches, home bars)</li>
+</ul>
+
+<strong>What Changes:</strong>
+<ul>
+<li>Layout switches to mobile mode</li>
+<li>Widgets stack vertically</li>
+<li>Tab-based navigation appears</li>
+<li>Touch targets enlarged</li>
+</ul>
+
+<h2>Mobile Layout</h2>
+
+<h3>Tab System</h3>
+
+<p>The main interface uses tabs to switch between views:</p>
+
+<strong>Room Tab:</strong>
+<ul>
+<li>Shows Room Widget</li>
+<li>Current location display</li>
+<li>NPC/enemy cards</li>
+<li>Room actions</li>
+</ul>
+
+<strong>Console Tab:</strong>
+<ul>
+<li>Shows Terminal</li>
+<li>Command input</li>
+<li>Game messages</li>
+<li>Classic MUD interface</li>
+</ul>
+
+<strong>Switching:</strong>
+<ul>
+<li>Tap "Room" or "Console" tab</li>
+<li>Swipe between tabs (if supported)</li>
+<li>Active tab highlighted</li>
+</ul>
+
+<h3>Header</h3>
+
+<strong>Mobile Header Shows:</strong>
+<ul>
+<li>Current room name</li>
+<li>Game status</li>
+<li>Settings button</li>
+<li>Menu button (if applicable)</li>
+</ul>
+
+<strong>Always Visible:</strong>
+<ul>
+<li>Fixed at top of screen</li>
+<li>Quick reference to location</li>
+<li>Access to key functions</li>
+</ul>
+
+<h3>Bottom Sheets</h3>
+
+<strong>Character/Inventory/Equipment:</strong>
+<ul>
+<li>Accessible via drawer system</li>
+<li>Swipe up from bottom to open</li>
+<li>Tap outside to close</li>
+<li>Smooth animations</li>
+</ul>
+
+<strong>Quest Log:</strong>
+<ul>
+<li>May be in drawer</li>
+<li>Or accessible via menu</li>
+<li>Tap to expand quests</li>
+<li>Compact display</li>
+</ul>
+
+<h3>Action Bar</h3>
+
+<strong>Mobile-Optimized:</strong>
+<ul>
+<li>Larger touch targets (44px minimum)</li>
+<li>Wraps to multiple rows if needed</li>
+<li>Clear button spacing</li>
+<li>Tap-friendly design</li>
+</ul>
+
+<strong>Same Functions:</strong>
+<ul>
+<li>Direction buttons</li>
+<li>Standard commands</li>
+<li>Combat commands</li>
+<li>Room actions</li>
+</ul>
+
+<h2>Touch Controls</h2>
+
+<h3>Touch Targets</h3>
+
+<strong>Minimum Size:</strong>
+<ul>
+<li>44x44 pixels for all buttons</li>
+<li>Comfortable tap area</li>
+<li>Prevents mis-taps</li>
+<li>Accessibility compliant</li>
+</ul>
+
+<strong>Spacing:</strong>
+<ul>
+<li>Adequate gaps between buttons</li>
+<li>Prevents accidental taps</li>
+<li>Finger-friendly</li>
+</ul>
+
+<h3>Gestures</h3>
+
+<strong>Supported Gestures:</strong>
+<ul>
+<li><strong>Tap</strong> - Select, activate</li>
+<li><strong>Swipe</strong> - Switch tabs, scroll</li>
+<li><strong>Pull</strong> - Refresh (if implemented)</li>
+<li><strong>Pinch</strong> - Zoom (may not be supported)</li>
+</ul>
+
+<strong>Standard Scrolling:</strong>
+<ul>
+<li>Swipe to scroll in terminal</li>
+<li>Scroll room descriptions</li>
+<li>Scroll inventory lists</li>
+</ul>
+
+<h3>Keyboard</h3>
+
+<strong>On-Screen Keyboard:</strong>
+<ul>
+<li>Appears when tapping terminal input</li>
+<li>Auto-capitalizes commands (may vary)</li>
+<li>Auto-correct may interfere (can disable)</li>
+<li>Takes significant screen space</li>
+</ul>
+
+<strong>Tips:</strong>
+<ul>
+<li>Use buttons when possible</li>
+<li>Type only when necessary</li>
+<li>Dismiss keyboard to see more</li>
+</ul>
+
+<h2>Mobile-Specific Features</h2>
+
+<h3>Room Text Overlay</h3>
+
+<strong>Always Enabled on Mobile:</strong>
+<ul>
+<li>Displays messages over room image</li>
+<li>Easier to read than terminal</li>
+<li>Auto-fade after duration</li>
+<li>Bold text support</li>
+</ul>
+
+<strong>Why:</strong>
+<ul>
+<li>Limited screen space</li>
+<li>Better visibility</li>
+<li>Quick glance information</li>
+<li>No need to switch to console tab</li>
+</ul>
+
+<h3>Compact Layout</h3>
+
+<strong>Vertical Stacking:</strong>
+<ul>
+<li>All widgets stack vertically</li>
+<li>Full-width display</li>
+<li>Scroll to see all</li>
+<li>No side-by-side panels</li>
+</ul>
+
+<strong>Priority:</strong>
+<ul>
+<li>Most important info first</li>
+<li>Action Bar always accessible</li>
+<li>Easy navigation</li>
+</ul>
+
+<h3>Safe Area Handling</h3>
+
+<strong>Device Notches:</strong>
+<ul>
+<li>UI respects safe areas</li>
+<li>No content behind notches</li>
+<li>No content behind home indicator</li>
+<li>Proper padding applied</li>
+</ul>
+
+<strong>Automatic:</strong>
+<ul>
+<li>Detects device features</li>
+<li>Adjusts layout</li>
+<li>No configuration needed</li>
+</ul>
+
+<h2>Playing on Mobile</h2>
+
+<h3>Navigation</h3>
+
+<strong>Movement:</strong>
+<ul>
+<li>Tap direction buttons (N, E, S, W, Up, Down)</li>
+<li>Larger, easier to tap</li>
+<li>Clear visual feedback</li>
+</ul>
+
+<strong>Alternative:</strong>
+<ul>
+<li>Switch to Console tab</li>
+<li>Type direction commands (<code>n</code>, <code>s</code>, <code>e</code>, <code>w</code>)</li>
+<li>Faster for experienced players</li>
+</ul>
+
+<h3>Combat</h3>
+
+<strong>Touch-Friendly Combat:</strong>
+<ul>
+<li>Tap "Attack" on enemy card to start</li>
+<li>Tap "Attack", "Defend", or "Flee" buttons</li>
+<li>Large combat buttons</li>
+<li>Easy to react quickly</li>
+</ul>
+
+<strong>Visual Feedback:</strong>
+<ul>
+<li>Character widget glows red</li>
+<li>HP bar updates</li>
+<li>Clear combat messages</li>
+</ul>
+
+<h3>Inventory Management</h3>
+
+<strong>Grid View Recommended:</strong>
+<ul>
+<li>Easier to tap icons</li>
+<li>Visual recognition</li>
+<li>Thumb-friendly</li>
+</ul>
+
+<strong>Actions:</strong>
+<ul>
+<li>Tap item to see details</li>
+<li>Popup with large action buttons</li>
+<li>Equip, Use, Drop clearly labeled</li>
+</ul>
+
+<h3>Quest Tracking</h3>
+
+<strong>Mobile Quest Log:</strong>
+<ul>
+<li>Compact display</li>
+<li>Tap to expand quest</li>
+<li>Objectives clearly shown</li>
+<li>Progress visible</li>
+</ul>
+
+<strong>Notifications:</strong>
+<ul>
+<li>Toast style</li>
+<li>Appear at top or bottom</li>
+<li>Auto-dismiss</li>
+<li>Important updates highlighted</li>
+</ul>
+
+<h3>NPC Interaction</h3>
+
+<strong>Dialog on Mobile:</strong>
+<ul>
+<li>Full-screen dialog overlay</li>
+<li>Large text</li>
+<li>Clear option buttons</li>
+<li>Easy to read and tap</li>
+</ul>
+
+<strong>Trading:</strong>
+<ul>
+<li>Drawer or full-screen view</li>
+<li>Easy item selection</li>
+<li>Clear buy/sell buttons</li>
+<li>Price visibility</li>
+</ul>
+
+<h2>Mobile Layout Optimization</h2>
+
+<h3>Portrait Mode (Vertical)</h3>
+
+<strong>Default Orientation:</strong>
+<ul>
+<li>Vertical stacking</li>
+<li>Tabs at top</li>
+<li>Action Bar accessible</li>
+<li>Scrollable content</li>
+</ul>
+
+<strong>Best For:</strong>
+<ul>
+<li>One-handed play</li>
+<li>Comfortable holding</li>
+<li>Reading text</li>
+</ul>
+
+<h3>Landscape Mode (Horizontal)</h3>
+
+<strong>Wider Layout:</strong>
+<ul>
+<li>May show side-by-side panels</li>
+<li>More desktop-like</li>
+<li>Better for typing</li>
+<li>More visible at once</li>
+</ul>
+
+<strong>Best For:</strong>
+<ul>
+<li>Two-handed play</li>
+<li>Keyboard use</li>
+<li>Desktop-style experience</li>
+</ul>
+
+<h3>Rotation</h3>
+
+<strong>Auto-Adjust:</strong>
+<ul>
+<li>Layout adapts to orientation</li>
+<li>Widgets reflow</li>
+<li>Maintains usability</li>
+</ul>
+
+<strong>Lock Orientation:</strong>
+<ul>
+<li>Use device settings</li>
+<li>Prevent rotation</li>
+<li>Consistent experience</li>
+</ul>
+
+<h2>Mobile Settings</h2>
+
+<h3>Recommended Mobile Settings</h3>
+
+<strong>Interface:</strong>
+<ul>
+<li><strong>Parchment Background:</strong> Off (cleaner on small screen)</li>
+<li><strong>Compact Mode:</strong> On (more info visible)</li>
+<li><strong>Room Text Overlay:</strong> On (automatic, helpful)</li>
+</ul>
+
+<strong>Terminal:</strong>
+<ul>
+<li><strong>Font Size:</strong> Medium or Large (readability)</li>
+</ul>
+
+<strong>Layout:</strong>
+<ul>
+<li>Use default mobile layout</li>
+<li>Don't over-customize on small screen</li>
+<li>Keep essential widgets only</li>
+</ul>
+
+<h3>Performance on Mobile</h3>
+
+<strong>Optimize:</strong>
+<ul>
+<li>Close background apps</li>
+<li>Ensure good internet connection</li>
+<li>Use Wi-Fi when possible</li>
+<li>Clear browser cache periodically</li>
+</ul>
+
+<strong>Battery Life:</strong>
+<ul>
+<li>Lower screen brightness</li>
+<li>Disable unused features</li>
+<li>Close when not playing</li>
+<li>Consider power-saving mode</li>
+</ul>
+
+<h2>Mobile Tips and Tricks</h2>
+
+<h3>Efficiency Tips</h3>
+
+<strong>Use Buttons Over Typing:</strong>
+<ul>
+<li>Faster than keyboard</li>
+<li>No typos</li>
+<li>Larger targets</li>
+<li>Better flow</li>
+</ul>
+
+<strong>Command History:</strong>
+<ul>
+<li>If typing, use history</li>
+<li>Repeat commands easily</li>
+<li>Save time</li>
+</ul>
+
+<strong>Widget Priority:</strong>
+<ul>
+<li>Keep Action Bar visible</li>
+<li>Room or Console tab primary</li>
+<li>Access others via drawers</li>
+</ul>
+
+<h3>Common Mobile Challenges</h3>
+
+<strong>Small Screen:</strong>
+<ul>
+<li><strong>Solution:</strong> Use compact mode</li>
+<li><strong>Solution:</strong> Hide unused widgets</li>
+<li><strong>Solution:</strong> Use tabs effectively</li>
+</ul>
+
+<strong>Fat Fingers:</strong>
+<ul>
+<li><strong>Solution:</strong> 44px buttons help</li>
+<li><strong>Solution:</strong> Use landscape for more space</li>
+<li><strong>Solution:</strong> Use stylus if needed</li>
+</ul>
+
+<strong>Keyboard Coverage:</strong>
+<ul>
+<li><strong>Solution:</strong> Minimize typing</li>
+<li><strong>Solution:</strong> Use buttons primarily</li>
+<li><strong>Solution:</strong> Dismiss keyboard when done</li>
+</ul>
+
+<strong>Battery Drain:</strong>
+<ul>
+<li><strong>Solution:</strong> Lower brightness</li>
+<li><strong>Solution:</strong> Close when inactive</li>
+<li><strong>Solution:</strong> Use power-saving mode</li>
+</ul>
+
+<h3>Advanced Mobile Play</h3>
+
+<strong>External Keyboard:</strong>
+<ul>
+<li>Connect Bluetooth keyboard</li>
+<li>Type commands faster</li>
+<li>Desktop-like experience</li>
+<li>Still use touch for selections</li>
+</ul>
+
+<strong>Tablet Play:</strong>
+<ul>
+<li>Larger screen = more space</li>
+<li>May use desktop layout</li>
+<li>Better for long sessions</li>
+<li>Keyboard or touch</li>
+</ul>
+
+<h2>Mobile Browser Recommendations</h2>
+
+<h3>Recommended Browsers</h3>
+
+<strong>iOS:</strong>
+<ul>
+<li>Safari (best compatibility)</li>
+<li>Chrome (alternative)</li>
+<li>Firefox (alternative)</li>
+</ul>
+
+<strong>Android:</strong>
+<ul>
+<li>Chrome (best compatibility)</li>
+<li>Firefox (alternative)</li>
+<li>Samsung Internet (alternative)</li>
+</ul>
+
+<strong>Tips:</strong>
+<ul>
+<li>Keep browser updated</li>
+<li>Clear cache if issues</li>
+<li>Enable JavaScript</li>
+<li>Allow localStorage</li>
+</ul>
+
+<h3>Browser Settings</h3>
+
+<strong>Enable:</strong>
+<ul>
+<li>JavaScript</li>
+<li>LocalStorage</li>
+<li>Cookies (for session)</li>
+</ul>
+
+<strong>Disable:</strong>
+<ul>
+<li>Aggressive ad blockers (may break features)</li>
+<li>Script blockers</li>
+<li>Privacy modes that clear data</li>
+</ul>
+
+<h3>Home Screen App</h3>
+
+<strong>Add to Home Screen:</strong>
+
+<strong>iOS Safari:</strong>
+<ol>
+<li>Tap Share button</li>
+<li>Select "Add to Home Screen"</li>
+<li>Name it "TalesMUD"</li>
+<li>Tap Add</li>
+</ol>
+
+<strong>Android Chrome:</strong>
+<ol>
+<li>Tap menu (⋮)</li>
+<li>Select "Add to Home Screen"</li>
+<li>Name it "TalesMUD"</li>
+<li>Tap Add</li>
+</ol>
+
+<strong>Benefits:</strong>
+<ul>
+<li>Quick access</li>
+<li>Full-screen mode</li>
+<li>App-like experience</li>
+<li>No browser UI</li>
+</ul>
+
+<h2>Mobile-Specific Commands</h2>
+
+<strong>Same commands work on mobile:</strong>
+<ul>
+<li>All movement commands</li>
+<li>All information commands</li>
+<li>All combat commands</li>
+<li>All interaction commands</li>
+</ul>
+
+<strong>Just use buttons for easier access!</strong>
+
+<h2>Troubleshooting Mobile</h2>
+
+<h3>"Layout looks wrong"</h3>
+
+<strong>Solutions:</strong>
+<ul>
+<li>Reload page</li>
+<li>Clear browser cache</li>
+<li>Rotate and rotate back</li>
+<li>Reset to default layout</li>
+</ul>
+
+<h3>"Buttons too small"</h3>
+
+<strong>Check:</strong>
+<ul>
+<li>Compact mode off</li>
+<li>Browser zoom level</li>
+<li>Device accessibility settings</li>
+<li>Screen size adequate</li>
+</ul>
+
+<h3>"Keyboard won't appear"</h3>
+
+<strong>Solutions:</strong>
+<ul>
+<li>Tap input area in Console</li>
+<li>Check browser permissions</li>
+<li>Restart browser</li>
+<li>Update browser</li>
+</ul>
+
+<h3>"Game runs slow"</h3>
+
+<strong>Optimize:</strong>
+<ul>
+<li>Close other apps</li>
+<li>Clear browser cache</li>
+<li>Free device memory</li>
+<li>Check internet connection</li>
+<li>Disable unused features</li>
+</ul>
+
+<h3>"Touch not responding"</h3>
+
+<strong>Check:</strong>
+<ul>
+<li>Screen protector not interfering</li>
+<li>Clean screen</li>
+<li>Browser up to date</li>
+<li>Device not overheating</li>
+<li>Restart browser</li>
+</ul>
+
+<h2>Data Usage</h2>
+
+<strong>TalesMUD is text-based:</strong>
+<ul>
+<li>Very low data usage</li>
+<li>~1-5 MB per hour (estimate)</li>
+<li>Safe on mobile data</li>
+<li>Minimal downloads</li>
+</ul>
+
+<strong>Save Data:</strong>
+<ul>
+<li>Images load once (cached)</li>
+<li>Text is lightweight</li>
+<li>WebSocket efficient</li>
+</ul>
+
+<h2>Mobile vs Desktop</h2>
+
+<h3>Mobile Advantages</h3>
+
+<strong>Pros:</strong>
+<ul>
+<li>Play anywhere</li>
+<li>Touch-friendly</li>
+<li>Casual gaming</li>
+<li>Quick sessions</li>
+</ul>
+
+<h3>Mobile Limitations</h3>
+
+<strong>Cons:</strong>
+<ul>
+<li>Smaller screen</li>
+<li>Keyboard slower</li>
+<li>Battery concerns</li>
+<li>Less info visible at once</li>
+</ul>
+
+<h3>Best of Both</h3>
+
+<strong>Use Mobile For:</strong>
+<ul>
+<li>Quick check-ins</li>
+<li>Light questing</li>
+<li>Simple tasks</li>
+<li>On-the-go play</li>
+</ul>
+
+<strong>Use Desktop For:</strong>
+<ul>
+<li>Long sessions</li>
+<li>Complex tasks</li>
+<li>Fast typing</li>
+<li>Multiple widgets</li>
+</ul>
+
+<h2>Mobile Play Checklist</h2>
+
+<h3>Before Playing on Mobile</h3>
+
+<ul>
+<li>[ ] Good internet connection (Wi-Fi preferred)</li>
+<li>[ ] Device charged or charging available</li>
+<li>[ ] Browser updated</li>
+<li>[ ] Site added to home screen (optional)</li>
+<li>[ ] Settings optimized for mobile</li>
+<li>[ ] Comfortable grip position</li>
+</ul>
+
+<h3>During Mobile Play</h3>
+
+<ul>
+<li>[ ] Use buttons instead of typing</li>
+<li>[ ] Switch between tabs as needed</li>
+<li>[ ] Monitor battery level</li>
+<li>[ ] Take breaks (small screen = eye strain)</li>
+<li>[ ] Save progress frequently (auto-save helps)</li>
+</ul>
+
+<h2>Mobile FAQs</h2>
+
+<strong>Q: Can I play offline?</strong>
+<p>A: No, TalesMUD requires internet connection.</p>
+
+<strong>Q: Does it work on tablets?</strong>
+<p>A: Yes! Better experience due to larger screen.</p>
+
+<strong>Q: Can I play on a Chromebook?</strong>
+<p>A: Yes, works like desktop in browser.</p>
+
+<strong>Q: Touch or stylus?</strong>
+<p>A: Both work, personal preference.</p>
+
+<strong>Q: Can I use external keyboard?</strong>
+<p>A: Yes, Bluetooth keyboards work great.</p>
+
+<strong>Q: Landscape or portrait better?</strong>
+<p>A: Personal preference. Try both!</p>
+
+<strong>Q: Does it drain battery fast?</strong>
+<p>A: No, text-based game is very efficient.</p>
+
+<strong>Q: Can I switch between mobile and desktop?</strong>
+<p>A: Yes, settings sync via localStorage per-browser.</p>
+
+<h2>Next Steps</h2>
+
+<ul>
+<li>Optimize your settings: <a href="10-settings.html">Settings & Customization</a></li>
+<li>Learn all commands: <a href="03-commands.html">Commands Reference</a></li>
+<li>Master the interface: <a href="02-user-interface.html">User Interface Guide</a></li>
+<li>Start playing: <a href="01-getting-started.html">Getting Started</a></li>
+</ul>
+
+<strong>Adventure awaits, even on mobile!</strong>
+
+
+      <div class="doc-nav">
+  <a href="10-settings.html" class="doc-nav-link">
+    <span class="doc-nav-label">Previous</span>
+    <span class="doc-nav-title">Settings & Customization</span>
+  </a>
+  <a href="12-quick-reference.html" class="doc-nav-link">
+    <span class="doc-nav-label">Next</span>
+    <span class="doc-nav-title">Quick Reference</span>
+  </a>
+</div>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-copy">&copy; 2026 Veilspan - TalesMUD Documentation</div>
+  </footer>
+
+</body>
+</html>

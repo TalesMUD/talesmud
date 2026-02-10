@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exploration & Minimap - TalesMUD Documentation</title>
+  <meta name="description" content="Exploration & Minimap guide for TalesMUD players.">
+  <link rel="stylesheet" href="docs-style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="../index.html" class="nav-brand"><span>&gt;</span> talesmud.veilspan</a>
+    <ul class="nav-links">
+      <li><a href="../index.html">Home</a></li>
+      <li><a href="../index.html#lore">Lore</a></li>
+      <li><a href="index.html">Docs</a></li>
+      <li><a href="../play">Play</a></li>
+    </ul>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="docs-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h2 class="sidebar-title">Documentation</h2>
+      <nav class="sidebar-nav">
+  <li><a href="01-getting-started.html">01. Getting Started</a></li>
+  <li><a href="02-user-interface.html">02. User Interface</a></li>
+  <li><a href="03-commands.html">03. Commands Reference</a></li>
+  <li><a href="04-character.html">04. Character System</a></li>
+  <li><a href="05-inventory-equipment.html">05. Inventory & Equipment</a></li>
+  <li><a href="06-combat.html">06. Combat System</a></li>
+  <li><a href="07-quests.html">07. Quest System</a></li>
+  <li><a href="08-exploration.html" class="active">08. Exploration & Minimap</a></li>
+  <li><a href="09-npcs.html">09. NPC Interactions</a></li>
+  <li><a href="10-settings.html">10. Settings & Customization</a></li>
+  <li><a href="11-mobile.html">11. Mobile Play</a></li>
+  <li><a href="12-quick-reference.html">12. Quick Reference</a></li>
+  <li><a href="13-glossary.html">13. Glossary</a></li>
+</nav>
+    </aside>
+
+    <!-- Content -->
+    <main class="content">
+      <div class="doc-header">
+        <span class="doc-category">// Gameplay Features</span>
+      </div>
+      
+      <h1>Exploration & Minimap</h1>
+
+<p>Navigate the vast game world effectively using the minimap and exploration tools.</p>
+
+<h2>Exploration Basics</h2>
+
+<h3>Moving Through the World</h3>
+
+<strong>Cardinal Directions:</strong>
+<ul>
+<li><strong>North</strong> - Primary direction</li>
+<li><strong>South</strong> - Opposite of north</li>
+<li><strong>East</strong> - Right on compass</li>
+<li><strong>West</strong> - Left on compass</li>
+</ul>
+
+<strong>Vertical Movement:</strong>
+<ul>
+<li><strong>Up</strong> - Stairs, ladders, slopes ascending</li>
+<li><strong>Down</strong> - Descending paths</li>
+</ul>
+
+<strong>Special Exits:</strong>
+<ul>
+<li>Custom named exits (e.g., "enter portal", "climb tree")</li>
+<li>Appear as buttons when available</li>
+</ul>
+
+<h3>Room Structure</h3>
+
+<p>Each location (room) contains:</p>
+
+<strong>Room Name:</strong>
+<ul>
+<li>Centered at top of Room Widget</li>
+<li>Distinctive title for the location</li>
+<li>Helps identify where you are</li>
+</ul>
+
+<strong>Room Description:</strong>
+<ul>
+<li>Detailed text about surroundings</li>
+<li>Often contains clues</li>
+<li>Mentions notable features</li>
+<li>Describes atmosphere</li>
+</ul>
+
+<strong>Room Image:</strong>
+<ul>
+<li>Visual representation (pixelated background)</li>
+<li>Sets the mood</li>
+<li>Unique to each area</li>
+</ul>
+
+<strong>Entities:</strong>
+<ul>
+<li>NPCs present in room</li>
+<li>Enemies that may attack</li>
+<li>Merchants for trading</li>
+</ul>
+
+<strong>Items:</strong>
+<ul>
+<li>Objects on the ground</li>
+<li>Can be picked up</li>
+<li>Quest items or loot</li>
+</ul>
+
+<strong>Exits:</strong>
+<ul>
+<li>Available directions to travel</li>
+<li>Shown as buttons in Action Bar</li>
+<li>Only functional exits displayed</li>
+</ul>
+
+<h2>Using the Minimap</h2>
+
+<p>The Minimap Widget is your navigation tool for tracking explored areas.</p>
+
+<h3>Minimap Features</h3>
+
+<strong>What It Shows:</strong>
+<ul>
+<li>Rooms you've visited</li>
+<li>Your current location (highlighted)</li>
+<li>Room connections (exit lines)</li>
+<li>Room layout on current floor</li>
+</ul>
+
+<strong>What It Doesn't Show:</strong>
+<ul>
+<li>Unexplored rooms</li>
+<li>Rooms on different floors/levels</li>
+<li>Enemy positions</li>
+<li>NPCs or items</li>
+</ul>
+
+<h3>Understanding the Minimap</h3>
+
+<strong>Room Display:</strong>
+<ul>
+<li><strong>Current Room</strong> - Bright/distinct color highlight</li>
+<li><strong>Visited Rooms</strong> - Shown with normal colors</li>
+<li><strong>Nearby Rooms</strong> - Full opacity</li>
+<li><strong>Distant Rooms</strong> - Faded (up to 5 rooms away shown)</li>
+</ul>
+
+<strong>Connections:</strong>
+<ul>
+<li>Lines between rooms show exits</li>
+<li>Cardinal directions create grid pattern</li>
+<li>Special exits may not appear on minimap</li>
+</ul>
+
+<strong>Floor-Based View:</strong>
+<ul>
+<li>Only shows current Z-level (floor)</li>
+<li>Going up/down clears the view</li>
+<li>Minimap shows new floor layout</li>
+</ul>
+
+<h3>Minimap Coordinates</h3>
+
+<p>The minimap automatically calculates room positions:</p>
+
+<strong>How It Works:</strong>
+<ul>
+<li>Starting room is set as origin (0, 0, 0)</li>
+<li>North increases Y coordinate</li>
+<li>South decreases Y coordinate</li>
+<li>East increases X coordinate</li>
+<li>West decreases X coordinate</li>
+<li>Up increases Z coordinate</li>
+<li>Down decreases Z coordinate</li>
+</ul>
+
+<strong>Inference:</strong>
+<ul>
+<li>System calculates room positions from exits</li>
+<li>Creates grid-based map</li>
+<li>Handles complex layouts</li>
+</ul>
+
+<h3>Minimap Hover Information</h3>
+
+<strong>Mouse Over Rooms:</strong>
+<ul>
+<li>Shows room name in tooltip</li>
+<li>Quick reference without traveling</li>
+<li>Helps plan routes</li>
+</ul>
+
+<h3>Minimap Limitations</h3>
+
+<strong>Important Notes:</strong>
+
+<ol>
+<li><strong>Session-Based</strong></li>
+<ul>
+<li>Resets when you reload the page</li>
+<li>Uses browser session storage</li>
+<li>Not permanently saved</li>
+</ul>
+</ol>
+
+<ol>
+<li><strong>Cardinal Directions Only</strong></li>
+<ul>
+<li>Special exits don't create map connections</li>
+<li>Complex areas may not map perfectly</li>
+<li>Teleportation breaks mapping</li>
+</ul>
+</ol>
+
+<ol>
+<li><strong>Current Floor Only</strong></li>
+<ul>
+<li>Multi-level dungeons require mental tracking</li>
+<li>Minimap clears when changing floors</li>
+</ul>
+</ol>
+
+<ol>
+<li><strong>Visual Only</strong></li>
+<ul>
+<li>Doesn't provide navigation commands</li>
+<li>Reference tool, not autopilot</li>
+</ul>
+</ol>
+
+<h2>Exploration Strategies</h2>
+
+<h3>Systematic Exploration</h3>
+
+<strong>Methodical Approach:</strong>
+
+<ol>
+<li><strong>Pick a Direction</strong></li>
+<ul>
+<li>Choose north, south, east, or west</li>
+<li>Stick with it until dead end</li>
+</ul>
+</ol>
+
+<ol>
+<li><strong>Map Thoroughly</strong></li>
+<ul>
+<li>Visit every room</li>
+<li>Check all exits</li>
+<li>Note important locations</li>
+</ul>
+</ol>
+
+<ol>
+<li><strong>Mark Key Locations</strong></li>
+<ul>
+<li>Towns (merchants, quest givers)</li>
+<li>Dangerous areas (high-level enemies)</li>
+<li>Quest objectives</li>
+<li>Useful resources</li>
+</ul>
+</ol>
+
+<ol>
+<li><strong>Return to Hub</strong></li>
+<ul>
+<li>Use main town as base</li>
+<li>Venture out from there</li>
+<li>Return to resupply</li>
+</ul>
+</ol>
+
+<strong>Pattern:</strong>
+<p>``<code></p>
+<p>Start → North → North → East → South → West → Return</p>
+</code>`<code>
+
+<h3>Using Breadcrumbs</h3>
+
+<strong>Mental Mapping:</strong>
+<ul>
+<li>Remember the path you took</li>
+<li>Count turns</li>
+<li>Note distinctive rooms</li>
+<li>Use room names as landmarks</li>
+</ul>
+
+<strong>Example:</strong>
+</code>`<code>
+<p>Town → North → Forest Path → East → River Crossing → North → Cave Entrance</p>
+</code>`<code>
+
+<p>To return: South → West → South</p>
+
+<h3>Efficient Pathfinding</h3>
+
+<strong>Shortest Routes:</strong>
+<ul>
+<li>Use minimap to visualize paths</li>
+<li>Count steps between locations</li>
+<li>Find shortcuts</li>
+<li>Avoid unnecessary detours</li>
+</ul>
+
+<strong>Quick Navigation:</strong>
+<ul>
+<li>Learn major routes</li>
+<li>Use cardinal directions for speed</li>
+<li>Type directions faster than clicking buttons</li>
+</ul>
+
+<strong>Example:</strong>
+<p>Fast path from Town to Cave:</p>
+</code>`<code>
+<p>n</p>
+<p>n</p>
+<p>e</p>
+<p>n</p>
+</code>`<code>
+
+<h2>Navigation Tips</h2>
+
+<h3>Avoiding Getting Lost</h3>
+
+<strong>Best Practices:</strong>
+
+<ol>
+<li><strong>Use the Minimap</strong></li>
+<ul>
+<li>Check frequently</li>
+<li>Reference current location</li>
+<li>Plan return route</li>
+</ul>
+</ol>
+
+<ol>
+<li><strong>Remember Key Rooms</strong></li>
+<ul>
+<li>"Four-way intersection"</li>
+<li>"Ancient oak tree"</li>
+<li>"Stone bridge"</li>
+<li>These are landmarks</li>
+</ul>
+</ol>
+
+<ol>
+<li><strong>Look Command</strong></li>
+<ul>
+<li>Type </code>look<code> to refresh room info</li>
+<li>Re-read descriptions</li>
+<li>Confirm location</li>
+</ul>
+</ol>
+
+<ol>
+<li><strong>Bind Point</strong></li>
+<ul>
+<li>Set bind in safe locations</li>
+<li>Provides emergency return (via death)</li>
+<li>Not ideal but works in crisis</li>
+</ul>
+</ol>
+
+<h3>When You're Lost</h3>
+
+<strong>Solutions:</strong>
+
+<ol>
+<li><strong>Check Minimap</strong></li>
+<ul>
+<li>Find your position</li>
+<li>Trace path back to known location</li>
+<li>Look for connecting rooms</li>
+</ul>
+</ol>
+
+<ol>
+<li><strong>Systematic Search</strong></li>
+<ul>
+<li>Try all exits</li>
+<li>Map current area</li>
+<li>Find familiar room</li>
+</ul>
+</ol>
+
+<ol>
+<li><strong>Ask for Help</strong></li>
+<ul>
+<li>Use </code>who<code> to see other players</li>
+<li>Ask in chat (if multiplayer)</li>
+<li>Request directions</li>
+</ul>
+</ol>
+
+<ol>
+<li><strong>Return to Bind</strong></li>
+<ul>
+<li>Last resort: die intentionally</li>
+<li>Respawn at bind point</li>
+<li>Lose progress but not lost anymore</li>
+</ul>
+</ol>
+
+<strong>Prevention:</strong>
+<ul>
+<li>Don't explore when low HP</li>
+<li>Stay aware of path taken</li>
+<li>Use minimap constantly</li>
+</ul>
+
+<h2>Area Types</h2>
+
+<h3>Towns and Cities</h3>
+
+<strong>Characteristics:</strong>
+<ul>
+<li>Safe zones (no combat)</li>
+<li>Merchants for buying/selling</li>
+<li>Quest NPCs</li>
+<li>Inns for binding</li>
+<li>Multiple exits to other areas</li>
+</ul>
+
+<strong>Key Services:</strong>
+<ul>
+<li>Equipment shops</li>
+<li>Potion vendors</li>
+<li>Quest givers</li>
+<li>Trainers (if class system exists)</li>
+</ul>
+
+<strong>Navigation:</strong>
+<ul>
+<li>Usually central hub</li>
+<li>Multiple connections to wilderness</li>
+<li>Easy to find (near starting area)</li>
+</ul>
+
+<h3>Wilderness</h3>
+
+<strong>Characteristics:</strong>
+<ul>
+<li>Open areas between towns</li>
+<li>Mix of safe and dangerous rooms</li>
+<li>Random enemy encounters</li>
+<li>Natural features (forests, plains, hills)</li>
+</ul>
+
+<strong>Dangers:</strong>
+<ul>
+<li>Wandering enemies</li>
+<li>Can get lost easily</li>
+<li>Weather/environmental effects (if implemented)</li>
+</ul>
+
+<strong>Tips:</strong>
+<ul>
+<li>Stay on paths when possible</li>
+<li>Watch for enemy levels</li>
+<li>Keep track of direction</li>
+</ul>
+
+<h3>Dungeons</h3>
+
+<strong>Characteristics:</strong>
+<ul>
+<li>Enclosed spaces (caves, ruins, castles)</li>
+<li>Higher enemy density</li>
+<li>Valuable loot</li>
+<li>Boss encounters</li>
+<li>Multiple floors/levels</li>
+</ul>
+
+<strong>Challenges:</strong>
+<ul>
+<li>Easy to get lost</li>
+<li>All enemies often aggressive</li>
+<li>Minimap resets per floor</li>
+<li>May need keys or quest items</li>
+</ul>
+
+<strong>Preparation:</strong>
+<ul>
+<li>Stock up on potions</li>
+<li>Ensure good equipment</li>
+<li>Set bind point nearby</li>
+<li>Map carefully</li>
+</ul>
+
+<h3>Special Areas</h3>
+
+<strong>Quest Locations:</strong>
+<ul>
+<li>Specific to quest objectives</li>
+<li>May be hidden or hard to find</li>
+<li>Often contain unique items or NPCs</li>
+</ul>
+
+<strong>Hidden Areas:</strong>
+<ul>
+<li>Secret rooms or passages</li>
+<li>Special commands to access</li>
+<li>Valuable rewards</li>
+<li>Easter eggs</li>
+</ul>
+
+<h2>Environmental Clues</h2>
+
+<h3>Reading Room Descriptions</h3>
+
+<strong>Look For:</strong>
+
+<strong>Exits Mentioned:</strong>
+</code>`<code>
+<p>"A path leads north into the forest. To the east,</p>
+<p>you see a cave entrance."</p>
+</code>`<code>
+<p>→ North and East exits available</p>
+
+<strong>Hidden Exits:</strong>
+</code>`<code>
+<p>"Behind the waterfall, you notice a gap."</p>
+</code>`<code>
+<p>→ May need special command: </code>enter gap<code></p>
+
+<strong>Dangers:</strong>
+</code>`<code>
+<p>"The air feels cold and hostile here."</p>
+</code>`<code>
+<p>→ Warning: dangerous area ahead</p>
+
+<strong>Quest Clues:</strong>
+</code>`<code>
+<p>"An old man sits by the fire."</p>
+</code>`<code>
+<p>→ Potential quest giver</p>
+
+<h3>Special Room Actions</h3>
+
+<p>Some rooms have interactive elements:</p>
+
+<strong>Common Actions:</strong>
+<ul>
+<li></code>pull lever<code> - Activate mechanism</li>
+<li></code>push button<code> - Trigger event</li>
+<li></code>read sign<code> - Get information</li>
+<li></code>examine statue<code> - Discover secrets</li>
+<li></code>open door<code> - Access new area</li>
+</ul>
+
+<strong>Finding Them:</strong>
+<ul>
+<li>Read room descriptions carefully</li>
+<li>Look for mentioned objects</li>
+<li>Experiment with commands</li>
+<li>Check Action Bar for room actions</li>
+</ul>
+
+<h2>Tracking Your Journey</h2>
+
+<h3>Manual Methods</h3>
+
+<strong>Mental Notes:</strong>
+<ul>
+<li>Remember important locations</li>
+<li>Recall quest destinations</li>
+<li>Track merchant locations</li>
+</ul>
+
+<strong>External Tools:</strong>
+<ul>
+<li>Draw paper maps (old school!)</li>
+<li>Take screenshots</li>
+<li>Write notes in separate file</li>
+</ul>
+
+<h3>In-Game Tracking</h3>
+
+<strong>Minimap:</strong>
+<ul>
+<li>Visual reference for explored areas</li>
+<li>Automatic position tracking</li>
+<li>Connection mapping</li>
+</ul>
+
+<strong>Quest Log:</strong>
+<ul>
+<li>Quest locations mentioned</li>
+<li>Return destinations noted</li>
+<li>Progress tracking</li>
+</ul>
+
+<strong>Bind Points:</strong>
+<ul>
+<li>Strategic save locations</li>
+<li>Quick return points</li>
+</ul>
+
+<h2>Discovery and Secrets</h2>
+
+<h3>Finding Hidden Content</h3>
+
+<strong>Exploration Rewards:</strong>
+<ul>
+<li>Discovery XP (if implemented)</li>
+<li>Hidden treasure</li>
+<li>Secret quests</li>
+<li>Easter eggs</li>
+<li>Unique items</li>
+</ul>
+
+<strong>How to Find:</strong>
+<ul>
+<li>Explore thoroughly</li>
+<li>Try unusual directions</li>
+<li>Examine everything</li>
+<li>Talk to all NPCs</li>
+<li>Read all signs and books</li>
+<li>Experiment with commands</li>
+</ul>
+
+<h3>Off-the-Beaten-Path</h3>
+
+<strong>Remote Locations:</strong>
+<ul>
+<li>Far from main paths</li>
+<li>Require multiple direction changes</li>
+<li>Often have better rewards</li>
+<li>Fewer players find them</li>
+</ul>
+
+<strong>Example:</strong>
+</code>`<code>
+<p>Town → North x5 → East x3 → Up → Secret Mountain Cave</p>
+</code>`<code>
+
+<h2>Travel Efficiency</h2>
+
+<h3>Speed Tips</h3>
+
+<strong>Fast Movement:</strong>
+<ul>
+<li>Type direction shortcuts: </code>n<code>, </code>s<code>, </code>e<code>, </code>w<code></li>
+<li>Chain commands (if supported): </code>n; e; n<code></li>
+<li>Use buttons for occasional travel</li>
+<li>Type for frequent routes</li>
+</ul>
+
+<strong>Route Optimization:</strong>
+<ul>
+<li>Learn shortest paths</li>
+<li>Avoid unnecessary rooms</li>
+<li>Use special exits when available</li>
+<li>Plan multi-stop journeys</li>
+</ul>
+
+<strong>Time Management:</strong>
+<ul>
+<li>Group quests by location</li>
+<li>Complete all objectives in area before leaving</li>
+<li>Return to towns less frequently (but stay supplied)</li>
+</ul>
+
+<h3>Waypoint System (If Implemented)</h3>
+
+<p>Some games offer fast travel:</p>
+<ul>
+<li>Unlocked waypoints</li>
+<li>Instant travel between discovered locations</li>
+<li>May cost gold or have cooldown</li>
+<li>Saves significant time</li>
+</ul>
+
+<strong>Check for:</strong>
+<ul>
+<li>Fast travel NPCs</li>
+<li>Teleportation devices</li>
+<li>Portal networks</li>
+<li>Recall spells</li>
+</ul>
+
+<h2>Exploration Checklist</h2>
+
+<h3>New Area Checklist</h3>
+
+<p>When entering a new area:</p>
+
+<ul>
+<li>[ ] Read room description thoroughly</li>
+<li>[ ] Check available exits</li>
+<li>[ ] Look for NPCs (quest givers, merchants)</li>
+<li>[ ] Check for ground items</li>
+<li>[ ] Note enemy types and levels</li>
+<li>[ ] Set bind point if safe area</li>
+<li>[ ] Map systematically</li>
+<li>[ ] Look for special interactions</li>
+</ul>
+
+<h3>Before Long Journey</h3>
+
+<ul>
+<li>[ ] Set bind point in safe location</li>
+<li>[ ] Stock healing potions (10+)</li>
+<li>[ ] Check equipment condition</li>
+<li>[ ] Review quest objectives</li>
+<li>[ ] Plan route using minimap</li>
+<li>[ ] Ensure inventory space</li>
+<li>[ ] Note return path</li>
+</ul>
+
+<h2>Exploration Commands</h2>
+
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></code>look<code></td>
+<td>Examine current room</td>
+</tr>
+<tr>
+<td></code>examine [object]<code></td>
+<td>Look closely at something</td>
+</tr>
+<tr>
+<td></code>n<code>, </code>s<code>, </code>e<code>, </code>w<code></td>
+<td>Move in cardinal directions</td>
+</tr>
+<tr>
+<td></code>up<code>, </code>down<code></td>
+<td>Vertical movement</td>
+</tr>
+<tr>
+<td></code>bind`</td>
+<td>Set respawn point</td>
+</tr>
+<tr>
+<td>View Minimap Widget</td>
+<td>Check explored areas</td>
+</tr>
+</tbody>
+</table>
+
+<h2>Troubleshooting Navigation</h2>
+
+<h3>"I can't find the quest location"</h3>
+
+<strong>Solutions:</strong>
+<ol>
+<li>Re-read quest description</li>
+<li>Check minimap for unexplored areas</li>
+<li>Ask quest giver for hints (talk again)</li>
+<li>Explore systematically</li>
+<li>Look for special exits mentioned in descriptions</li>
+</ol>
+
+<h3>"Minimap isn't showing correctly"</h3>
+
+<strong>Causes:</strong>
+<ul>
+<li>Special exits don't map</li>
+<li>Teleportation broke tracking</li>
+<li>Complex non-grid layout</li>
+</ul>
+
+<strong>Solutions:</strong>
+<ul>
+<li>Use manual tracking</li>
+<li>Focus on room names</li>
+<li>Ask other players</li>
+<li>Explore multiple times to memorize</li>
+</ul>
+
+<h3>"I keep going in circles"</h3>
+
+<strong>Solutions:</strong>
+<ol>
+<li>Look at minimap</li>
+<li>Choose unexplored direction</li>
+<li>Count steps</li>
+<li>Use different strategy (always turn right, etc.)</li>
+<li>Mark rooms mentally ("been here")</li>
+</ol>
+
+<h2>Next Steps</h2>
+
+<ul>
+<li>Use navigation for <a href="07-quests.html">Quest System</a> objectives</li>
+<li>Plan efficient <a href="06-combat.html">Combat System</a> grinding routes</li>
+<li>Find merchants for <a href="05-inventory-equipment.html">Inventory & Equipment</a> needs</li>
+<li>Talk to NPCs using <a href="09-npcs.html">NPC Interactions</a> skills</li>
+</ul>
+
+<strong>Adventure awaits! Start exploring!</strong>
+
+
+      <div class="doc-nav">
+  <a href="07-quests.html" class="doc-nav-link">
+    <span class="doc-nav-label">Previous</span>
+    <span class="doc-nav-title">Quest System</span>
+  </a>
+  <a href="09-npcs.html" class="doc-nav-link">
+    <span class="doc-nav-label">Next</span>
+    <span class="doc-nav-title">NPC Interactions</span>
+  </a>
+</div>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-copy">&copy; 2026 Veilspan - TalesMUD Documentation</div>
+  </footer>
+
+</body>
+</html>

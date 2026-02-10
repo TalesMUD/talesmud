@@ -104,6 +104,7 @@ func runImport(folderName, sqlitePath string, verbose, dryRun bool) {
 	fmt.Printf("  Items:       %d\n", result.ItemsImported)
 	fmt.Printf("  Loot Tables: %d\n", result.LootTablesImported)
 	fmt.Printf("  NPCs:        %d\n", result.NPCsImported)
+	fmt.Printf("  Spawners:    %d\n", result.SpawnersImported)
 	fmt.Printf("  Dialogs:     %d\n", result.DialogsImported)
 	fmt.Printf("  Rooms:       %d\n", result.RoomsImported)
 	fmt.Printf("  Assets:      %d\n", result.AssetsImported)

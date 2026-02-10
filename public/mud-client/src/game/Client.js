@@ -54,6 +54,9 @@ function createClient(renderer, characterCreator, muxStore) {
 
       // Clear any active dialog when entering a new room
       mux.clearDialog();
+
+      // Track room visit for minimap
+      mux.trackRoomVisit(activeRoom);
     }
   };
 

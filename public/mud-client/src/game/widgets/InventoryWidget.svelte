@@ -7,10 +7,11 @@
   let gold = 0;
   let detailItem = null;
   let collapsedCategories = {};
-  let viewMode = 'grid'; // 'grid' or 'list'
+  let viewMode = localStorage.getItem('inventoryViewMode') || 'grid';
 
   function toggleViewMode() {
     viewMode = viewMode === 'grid' ? 'list' : 'grid';
+    localStorage.setItem('inventoryViewMode', viewMode);
   }
 
   // Category definitions
@@ -145,6 +146,11 @@
   function handleUnequip(item) {
     const name = item.instanceSuffix ? item.name + '-' + item.instanceSuffix : item.name;
     sendCmd('unequip ' + name);
+  }
+
+  function handleExamine(item) {
+    const name = item.instanceSuffix ? item.name + '-' + item.instanceSuffix : item.name;
+    sendCmd('examine ' + name);
   }
 
   function getItemTooltip(item) {
@@ -708,6 +714,8 @@
     font-size: 1.1em;
   }
 
+  .detail-action-btn.examine { color: #a78bfa; border-color: rgba(167, 139, 250, 0.3); }
+  .detail-action-btn.examine:hover { background: rgba(167, 139, 250, 0.15); }
   .detail-action-btn.equip { color: #22c55e; border-color: rgba(34, 197, 94, 0.3); }
   .detail-action-btn.equip:hover { background: rgba(34, 197, 94, 0.15); }
   .detail-action-btn.unequip { color: #f59e0b; border-color: rgba(245, 158, 11, 0.3); }
@@ -928,6 +936,9 @@
       {/if}
 
       <div class="detail-actions">
+        <button class="detail-action-btn examine" on:click={() => handleExamine(detailItem)}>
+          <i class="material-icons">search</i> Examine
+        </button>
         {#if equipped}
           <button class="detail-action-btn unequip" on:click={() => handleUnequip(detailItem)}>
             <i class="material-icons">remove_circle_outline</i> Unequip

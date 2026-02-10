@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Character System - TalesMUD Documentation</title>
+  <meta name="description" content="Character System guide for TalesMUD players.">
+  <link rel="stylesheet" href="docs-style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="../index.html" class="nav-brand"><span>&gt;</span> talesmud.veilspan</a>
+    <ul class="nav-links">
+      <li><a href="../index.html">Home</a></li>
+      <li><a href="../index.html#lore">Lore</a></li>
+      <li><a href="index.html">Docs</a></li>
+      <li><a href="../play">Play</a></li>
+    </ul>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="docs-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h2 class="sidebar-title">Documentation</h2>
+      <nav class="sidebar-nav">
+  <li><a href="01-getting-started.html">01. Getting Started</a></li>
+  <li><a href="02-user-interface.html">02. User Interface</a></li>
+  <li><a href="03-commands.html">03. Commands Reference</a></li>
+  <li><a href="04-character.html" class="active">04. Character System</a></li>
+  <li><a href="05-inventory-equipment.html">05. Inventory & Equipment</a></li>
+  <li><a href="06-combat.html">06. Combat System</a></li>
+  <li><a href="07-quests.html">07. Quest System</a></li>
+  <li><a href="08-exploration.html">08. Exploration & Minimap</a></li>
+  <li><a href="09-npcs.html">09. NPC Interactions</a></li>
+  <li><a href="10-settings.html">10. Settings & Customization</a></li>
+  <li><a href="11-mobile.html">11. Mobile Play</a></li>
+  <li><a href="12-quick-reference.html">12. Quick Reference</a></li>
+  <li><a href="13-glossary.html">13. Glossary</a></li>
+</nav>
+    </aside>
+
+    <!-- Content -->
+    <main class="content">
+      <div class="doc-header">
+        <span class="doc-category">// Game Systems</span>
+      </div>
+      
+      <h1>Character System</h1>
+
+<p>Understanding your character's stats, progression, and capabilities.</p>
+
+<h2>Character Information</h2>
+
+<h3>Basic Information</h3>
+
+<p>Your character has the following core attributes:</p>
+
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Name</strong></td>
+<td>Your character's unique name</td>
+</tr>
+<tr>
+<td><strong>Race</strong></td>
+<td>Your character's race (Human, Elf, Dwarf, Orc, etc.)</td>
+</tr>
+<tr>
+<td><strong>Class</strong></td>
+<td>Your character's class (Warrior, Mage, Rogue, Cleric, etc.)</td>
+</tr>
+<tr>
+<td><strong>Level</strong></td>
+<td>Current experience level (1-∞)</td>
+</tr>
+</tbody>
+</table>
+
+<h3>Viewing Your Character</h3>
+
+<p>Use these methods to view your character:</p>
+
+<ol>
+<li><strong>Character Widget</strong> - Always-visible panel (if enabled)</li>
+<li><strong><code>character</code> command</strong> - Type in terminal</li>
+<li><strong>Character button</strong> - Click in Action Bar</li>
+</ol>
+
+<h2>Vital Statistics</h2>
+
+<h3>Hit Points (HP)</h3>
+
+<strong>Health points</strong> represent your life force.
+
+<ul>
+<li><strong>Current HP</strong> - How much health you have now</li>
+<li><strong>Max HP</strong> - Your maximum health capacity</li>
+<li><strong>HP Bar</strong> - Visual representation (green = healthy, red = critical)</li>
+</ul>
+
+<strong>When HP reaches 0:</strong>
+<ul>
+<li>Your character dies</li>
+<li>You may respawn at your bind point</li>
+<li>Possible penalties (varies by game rules)</li>
+</ul>
+
+<strong>Restoring HP:</strong>
+<ul>
+<li>Use healing potions</li>
+<li>Rest in safe locations</li>
+<li>Visit healers</li>
+<li>Level up (restores to max)</li>
+<li>Some equipment provides regeneration</li>
+</ul>
+
+<h3>Experience Points (XP)</h3>
+
+<strong>Experience</strong> measures your progression toward the next level.
+
+<ul>
+<li><strong>Current XP</strong> - Total experience gained</li>
+<li><strong>XP to Next Level</strong> - Experience needed to level up</li>
+<li><strong>XP Bar</strong> - Visual progress indicator</li>
+</ul>
+
+<strong>Gaining XP:</strong>
+<ul>
+<li>Defeating enemies in combat</li>
+<li>Completing quests</li>
+<li>Discovering new locations</li>
+<li>Solving puzzles</li>
+<li>Special achievements</li>
+</ul>
+
+<h3>Level</h3>
+
+<p>Your <strong>character level</strong> indicates overall power and progression.</p>
+
+<strong>Benefits of Leveling Up:</strong>
+<ul>
+<li>Increased maximum HP</li>
+<li>Higher stats/attributes</li>
+<li>Access to better equipment</li>
+<li>New abilities (class-dependent)</li>
+<li>Increased carrying capacity</li>
+<li>Stronger in combat</li>
+</ul>
+
+<strong>Level Display:</strong>
+<ul>
+<li>Shown on Character Widget</li>
+<li>Visible to other players</li>
+<li>Determines equipment requirements</li>
+</ul>
+
+<h3>Gold</h3>
+
+<strong>Currency</strong> used throughout the game world.
+
+<ul>
+<li><strong>Display Format:</strong></li>
+<li>Under 1,000: Shows exact amount (e.g., "523 Gold")</li>
+<li>1,000+: Shows abbreviated (e.g., "1.5K Gold")</li>
+<li>1,000,000+: Shows abbreviated (e.g., "2.3M Gold")</li>
+</ul>
+
+<strong>Earning Gold:</strong>
+<ul>
+<li>Defeating enemies (loot drops)</li>
+<li>Completing quests (rewards)</li>
+<li>Selling items to merchants</li>
+<li>Finding treasure chests</li>
+<li>Trading with other players</li>
+</ul>
+
+<strong>Spending Gold:</strong>
+<ul>
+<li>Buying equipment from merchants</li>
+<li>Purchasing consumables (potions, food)</li>
+<li>Paying for services (training, repairs)</li>
+<li>Unlocking special features</li>
+</ul>
+
+<h2>Attributes</h2>
+
+<strong>Attributes</strong> are your character's core stats that affect various aspects of gameplay.
+
+<h3>Common Attributes</h3>
+
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Affects</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Strength</strong></td>
+<td>Physical damage, carrying capacity</td>
+</tr>
+<tr>
+<td><strong>Agility</strong></td>
+<td>Attack speed, dodge chance, critical hit chance</td>
+</tr>
+<tr>
+<td><strong>Intelligence</strong></td>
+<td>Magic damage, mana pool, spell effectiveness</td>
+</tr>
+<tr>
+<td><strong>Constitution</strong></td>
+<td>Maximum HP, health regeneration</td>
+</tr>
+<tr>
+<td><strong>Wisdom</strong></td>
+<td>Magic resistance, mana regeneration</td>
+</tr>
+<tr>
+<td><strong>Dexterity</strong></td>
+<td>Accuracy, ranged damage, evasion</td>
+</tr>
+<tr>
+<td><strong>Charisma</strong></td>
+<td>Merchant prices, NPC reactions, leadership</td>
+</tr>
+<tr>
+<td><strong>Luck</strong></td>
+<td>Critical hit chance, loot quality, random events</td>
+</tr>
+</tbody>
+</table>
+
+<strong>Note:</strong> Actual attributes may vary. Check your Character Widget to see which attributes your character has.
+
+<h3>How Attributes Work</h3>
+
+<strong>Base Attributes:</strong>
+<ul>
+<li>Set by race and class during character creation</li>
+<li>Increase when you level up</li>
+</ul>
+
+<strong>Equipment Bonuses:</strong>
+<ul>
+<li>Weapons, armor, and accessories add attribute points</li>
+<li>Bonuses shown on item details</li>
+<li>Stacks with base attributes</li>
+</ul>
+
+<strong>Temporary Buffs:</strong>
+<ul>
+<li>Potions, spells, and abilities can temporarily boost attributes</li>
+<li>Effects wear off after duration</li>
+<li>May stack with equipment</li>
+</ul>
+
+<h3>Viewing Attributes</h3>
+
+<p>The Character Widget shows all attributes in a grid:</p>
+<ul>
+<li>Attribute name</li>
+<li>Current value (including all bonuses)</li>
+<li>Color-coded or formatted display</li>
+</ul>
+
+<h2>Character Progression</h2>
+
+<h3>Leveling Process</h3>
+
+<ol>
+<li><strong>Gain Experience</strong> - Defeat enemies, complete quests</li>
+<li><strong>Fill XP Bar</strong> - Progress toward next level</li>
+<li><strong>Level Up</strong> - Automatic when XP requirement is met</li>
+<li><strong>Stat Increases</strong> - HP, attributes automatically improve</li>
+<li><strong>Notification</strong> - You'll be informed of the level up</li>
+</ol>
+
+<h3>Level Milestones</h3>
+
+<p>Different levels may unlock:</p>
+<ul>
+<li><strong>Level 5</strong> - New equipment tier available</li>
+<li><strong>Level 10</strong> - Advanced areas accessible</li>
+<li><strong>Level 20</strong> - Elite equipment unlocked</li>
+<li><strong>Level 30+</strong> - Endgame content available</li>
+</ul>
+
+<strong>Note:</strong> Specific milestones depend on game design.
+
+<h3>Power Curve</h3>
+
+<p>As you level up:</p>
+<ul>
+<li>Enemies in starter areas become trivial</li>
+<li>New areas with tougher enemies become accessible</li>
+<li>Equipment requirements increase</li>
+<li>Quest difficulty scales</li>
+<li>Rewards improve</li>
+</ul>
+
+<h2>Character States</h2>
+
+<h3>Normal State</h3>
+<ul>
+<li>Full access to all commands</li>
+<li>Can move freely</li>
+<li>Can interact with NPCs and objects</li>
+<li>Stats display normally</li>
+</ul>
+
+<h3>In Combat</h3>
+<ul>
+<li>Character Widget glows red</li>
+<li>"IN COMBAT" badge shown</li>
+<li>Movement restricted (must flee first)</li>
+<li>Combat commands replace standard commands</li>
+<li>HP changes visible in real-time</li>
+</ul>
+
+<h3>Dead</h3>
+<ul>
+<li>HP at 0</li>
+<li>Cannot perform most actions</li>
+<li>May need to respawn</li>
+<li>Possible penalties apply</li>
+</ul>
+
+<h3>Bind Point</h3>
+
+<p>Your <strong>bind point</strong> is where you respawn after death.</p>
+
+<strong>Setting Bind Point:</strong>
+<ul>
+<li>Use <code>bind</code> command in a safe location</li>
+<li>Some locations (inns, temples) allow binding</li>
+<li>Starting area is default bind point</li>
+</ul>
+
+<strong>Benefits:</strong>
+<ul>
+<li>Quick return to familiar location</li>
+<li>Strategic positioning near quest areas</li>
+<li>Safety net for exploration</li>
+</ul>
+
+<h2>Character Display</h2>
+
+<h3>Character Widget Features</h3>
+
+<p>The Character Widget shows:</p>
+<ul>
+<li>Portrait or icon (if available)</li>
+<li>Name, race, class, level</li>
+<li>HP bar with current/max values</li>
+<li>XP bar with progress percentage</li>
+<li>Gold amount (formatted)</li>
+<li>Attributes grid</li>
+<li>Combat status indicator</li>
+</ul>
+
+<h3>HP Bar Colors</h3>
+
+<table>
+<thead>
+<tr>
+<th>Color</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Green</strong></td>
+<td>Healthy (75-100% HP)</td>
+</tr>
+<tr>
+<td><strong>Yellow</strong></td>
+<td>Wounded (25-75% HP)</td>
+</tr>
+<tr>
+<td><strong>Red</strong></td>
+<td>Critical (0-25% HP)</td>
+</tr>
+</tbody>
+</table>
+
+<h3>XP Bar</h3>
+
+<ul>
+<li>Fills from left to right</li>
+<li>Shows progress to next level</li>
+<li>Resets upon leveling up</li>
+<li>Percentage display available</li>
+</ul>
+
+<h2>Character Optimization</h2>
+
+<h3>Maximizing Stats</h3>
+
+<strong>Through Equipment:</strong>
+<ul>
+<li>Equip items with attribute bonuses</li>
+<li>Prioritize attributes for your class</li>
+<li>Warriors: Strength, Constitution</li>
+<li>Mages: Intelligence, Wisdom</li>
+<li>Rogues: Agility, Dexterity</li>
+<li>Match gear to your playstyle</li>
+</ul>
+
+<strong>Through Leveling:</strong>
+<ul>
+<li>Complete quests for extra XP</li>
+<li>Fight enemies at or above your level</li>
+<li>Explore for discovery XP</li>
+<li>Efficient progression path</li>
+</ul>
+
+<h3>Survival Tips</h3>
+
+<strong>Keep HP High:</strong>
+<ul>
+<li>Carry healing potions</li>
+<li>Rest after combat</li>
+<li>Don't overextend in dangerous areas</li>
+<li>Watch HP bar during fights</li>
+</ul>
+
+<strong>Manage Gold:</strong>
+<ul>
+<li>Save for important upgrades</li>
+<li>Sell unneeded items</li>
+<li>Complete quests for gold rewards</li>
+<li>Don't buy every item you see</li>
+</ul>
+
+<strong>Level Efficiently:</strong>
+<ul>
+<li>Focus on quests (better XP than grinding)</li>
+<li>Fight appropriate-level enemies</li>
+<li>Explore new areas</li>
+<li>Complete objectives systematically</li>
+</ul>
+
+<h2>Character Comparison</h2>
+
+<h3>Checking Other Characters</h3>
+
+<p>When viewing other players or NPCs, you can see:</p>
+<ul>
+<li>Their name and level</li>
+<li>Their race and class (usually)</li>
+<li>Their equipped items (sometimes)</li>
+</ul>
+
+<strong>Level Differences:</strong>
+<ul>
+<li>Much higher level = Very dangerous enemy or strong player</li>
+<li>Similar level = Balanced encounter</li>
+<li>Much lower level = Easy opponent or newer player</li>
+</ul>
+
+<h2>Stats Summary</h2>
+
+<h3>Essential Stats to Watch</h3>
+
+<table>
+<thead>
+<tr>
+<th>Stat</th>
+<th>Why Important</th>
+<th>Monitor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>HP</strong></td>
+<td>Survival</td>
+<td>Always</td>
+</tr>
+<tr>
+<td><strong>XP</strong></td>
+<td>Progression</td>
+<td>After each battle/quest</td>
+</tr>
+<tr>
+<td><strong>Gold</strong></td>
+<td>Equipment upgrades</td>
+<td>Before shopping</td>
+</tr>
+<tr>
+<td><strong>Level</strong></td>
+<td>Overall power</td>
+<td>After XP gains</td>
+</tr>
+<tr>
+<td><strong>Attributes</strong></td>
+<td>Combat effectiveness</td>
+<td>When equipping items</td>
+</tr>
+</tbody>
+</table>
+
+<h3>Quick Reference Command</h3>
+
+<p>Type <code>character</code> or <code>c</code> anytime to review all stats.</p>
+
+<h2>Advanced Character Topics</h2>
+
+<h3>Character Building</h3>
+
+<strong>Race Selection:</strong>
+<ul>
+<li>Affects starting attributes</li>
+<li>May have racial abilities</li>
+<li>Cosmetic differences in descriptions</li>
+</ul>
+
+<strong>Class Selection:</strong>
+<ul>
+<li>Determines playstyle</li>
+<li>Affects available equipment</li>
+<li>May unlock class-specific abilities</li>
+</ul>
+
+<strong>Hybrid Builds:</strong>
+<ul>
+<li>Balance multiple attributes</li>
+<li>Flexibility vs. specialization trade-off</li>
+<li>Requires more strategic equipment choices</li>
+</ul>
+
+<h3>Min-Maxing</h3>
+
+<p>For competitive players:</p>
+<ul>
+<li>Focus all resources on key attributes</li>
+<li>Optimize every equipment slot</li>
+<li>Efficient quest pathing for maximum XP</li>
+<li>Strategic combat choices</li>
+</ul>
+
+<strong>Note:</strong> Not necessary for casual play!
+
+<h2>Next Steps</h2>
+
+<ul>
+<li>Learn about <a href="05-inventory-equipment.html">Inventory & Equipment</a> to gear up your character</li>
+<li>Master <a href="06-combat.html">Combat System</a> to level up effectively</li>
+<li>Check <a href="07-quests.html">Quest System</a> for efficient XP and gold gains</li>
+</ul>
+
+
+      <div class="doc-nav">
+  <a href="03-commands.html" class="doc-nav-link">
+    <span class="doc-nav-label">Previous</span>
+    <span class="doc-nav-title">Commands Reference</span>
+  </a>
+  <a href="05-inventory-equipment.html" class="doc-nav-link">
+    <span class="doc-nav-label">Next</span>
+    <span class="doc-nav-title">Inventory & Equipment</span>
+  </a>
+</div>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-copy">&copy; 2026 Veilspan - TalesMUD Documentation</div>
+  </footer>
+
+</body>
+</html>

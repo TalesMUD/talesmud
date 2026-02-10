@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventory & Equipment - TalesMUD Documentation</title>
+  <meta name="description" content="Inventory & Equipment guide for TalesMUD players.">
+  <link rel="stylesheet" href="docs-style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="../index.html" class="nav-brand"><span>&gt;</span> talesmud.veilspan</a>
+    <ul class="nav-links">
+      <li><a href="../index.html">Home</a></li>
+      <li><a href="../index.html#lore">Lore</a></li>
+      <li><a href="index.html">Docs</a></li>
+      <li><a href="../play">Play</a></li>
+    </ul>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="docs-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h2 class="sidebar-title">Documentation</h2>
+      <nav class="sidebar-nav">
+  <li><a href="01-getting-started.html">01. Getting Started</a></li>
+  <li><a href="02-user-interface.html">02. User Interface</a></li>
+  <li><a href="03-commands.html">03. Commands Reference</a></li>
+  <li><a href="04-character.html">04. Character System</a></li>
+  <li><a href="05-inventory-equipment.html" class="active">05. Inventory & Equipment</a></li>
+  <li><a href="06-combat.html">06. Combat System</a></li>
+  <li><a href="07-quests.html">07. Quest System</a></li>
+  <li><a href="08-exploration.html">08. Exploration & Minimap</a></li>
+  <li><a href="09-npcs.html">09. NPC Interactions</a></li>
+  <li><a href="10-settings.html">10. Settings & Customization</a></li>
+  <li><a href="11-mobile.html">11. Mobile Play</a></li>
+  <li><a href="12-quick-reference.html">12. Quick Reference</a></li>
+  <li><a href="13-glossary.html">13. Glossary</a></li>
+</nav>
+    </aside>
+
+    <!-- Content -->
+    <main class="content">
+      <div class="doc-header">
+        <span class="doc-category">// Game Systems</span>
+      </div>
+      
+      <h1>Inventory & Equipment</h1>
+
+<p>Complete guide to managing items, gear, and your character's belongings.</p>
+
+<h2>Inventory System</h2>
+
+<p>Your <strong>inventory</strong> holds all items you're carrying, whether equipped or not.</p>
+
+<h3>Viewing Inventory</h3>
+
+<strong>Methods:</strong>
+<ol>
+<li><strong>Inventory Widget</strong> - Visual panel with item icons</li>
+<li><strong><code>inventory</code> command</strong> - List in terminal</li>
+<li><strong>Inventory button</strong> - In Action Bar</li>
+</ol>
+
+<h3>Inventory Organization</h3>
+
+<p>Items are organized into categories:</p>
+
+<h4>Equipment</h4>
+<ul>
+<li>Weapons (swords, bows, staves)</li>
+<li>Armor (helmets, chest pieces, boots)</li>
+<li>Accessories (rings, amulets, belts)</li>
+</ul>
+
+<h4>Consumables</h4>
+<ul>
+<li>Healing potions</li>
+<li>Mana potions</li>
+<li>Food and drink</li>
+<li>Temporary buff items</li>
+</ul>
+
+<h4>Quest Items</h4>
+<ul>
+<li>Items needed for quests</li>
+<li>Cannot be dropped or sold</li>
+<li>Automatically removed when quest completes</li>
+</ul>
+
+<h4>Other</h4>
+<ul>
+<li>Crafting materials</li>
+<li>Collectibles</li>
+<li>Currency items</li>
+<li>Miscellaneous items</li>
+</ul>
+
+<h3>View Modes</h3>
+
+<strong>Grid View:</strong>
+<ul>
+<li>Shows item thumbnails/icons</li>
+<li>Visual representation</li>
+<li>Easier to identify items at a glance</li>
+<li>Best for players who prefer visual interfaces</li>
+</ul>
+
+<strong>List View:</strong>
+<ul>
+<li>Compact text list</li>
+<li>Shows more items at once</li>
+<li>Item names and key stats</li>
+<li>Best for fast scanning</li>
+</ul>
+
+<strong>Toggle:</strong> Click the view mode button in the Inventory Widget.
+
+<h3>Inventory Capacity</h3>
+
+<ul>
+<li><strong>Limited Space</strong> - You can only carry so much</li>
+<li><strong>Weight/Slot System</strong> - May use weight or slot limits</li>
+<li><strong>Overencumbered</strong> - Too many items may slow you down</li>
+<li><strong>Managing Space:</strong></li>
+<li>Drop unneeded items</li>
+<li>Sell to merchants</li>
+<li>Use/consume items</li>
+<li>Store in banks (if available)</li>
+</ul>
+
+<h2>Item Types</h2>
+
+<h3>Weapons</h3>
+
+<strong>Melee Weapons:</strong>
+<ul>
+<li>Swords, axes, maces, daggers</li>
+<li>Equipped in Main Hand or Off Hand</li>
+<li>Primary attribute: Damage</li>
+<li>Secondary: Strength, Critical, Speed</li>
+</ul>
+
+<strong>Ranged Weapons:</strong>
+<ul>
+<li>Bows, crossbows</li>
+<li>Equipped in Main Hand</li>
+<li>Primary attribute: Damage</li>
+<li>Secondary: Agility, Critical</li>
+</ul>
+
+<strong>Magic Weapons:</strong>
+<ul>
+<li>Staves, wands, orbs</li>
+<li>Equipped in Main Hand</li>
+<li>Primary attribute: Magic Damage</li>
+<li>Secondary: Intelligence, Mana</li>
+</ul>
+
+<h3>Armor</h3>
+
+<strong>Heavy Armor:</strong>
+<ul>
+<li>High defense rating</li>
+<li>Worn by Warriors, Paladins</li>
+<li>May reduce speed/agility</li>
+<li>Slots: Head, Chest, Hands, Legs, Boots</li>
+</ul>
+
+<strong>Light Armor:</strong>
+<ul>
+<li>Moderate defense</li>
+<li>Worn by Rogues, Rangers</li>
+<li>Agility bonuses</li>
+<li>Allows mobility</li>
+</ul>
+
+<strong>Cloth Armor:</strong>
+<ul>
+<li>Low defense, high magic stats</li>
+<li>Worn by Mages, Clerics</li>
+<li>Intelligence/Wisdom bonuses</li>
+<li>Mana regeneration</li>
+</ul>
+
+<h3>Accessories</h3>
+
+<strong>Rings:</strong>
+<ul>
+<li>Two ring slots</li>
+<li>Various attribute bonuses</li>
+<li>Magic effects</li>
+<li>Stackable bonuses</li>
+</ul>
+
+<strong>Amulets/Necklaces:</strong>
+<ul>
+<li>One neck slot</li>
+<li>Powerful unique effects</li>
+<li>Often quest rewards or rare drops</li>
+</ul>
+
+<h3>Consumables</h3>
+
+<strong>Potions:</strong>
+<ul>
+<li>Instant or over-time effects</li>
+<li>Restore HP or Mana</li>
+<li>Temporary attribute buffs</li>
+<li>Single use</li>
+</ul>
+
+<strong>Food:</strong>
+<ul>
+<li>Restores HP gradually</li>
+<li>May provide temporary buffs</li>
+<li>Stackable</li>
+</ul>
+
+<strong>Scrolls:</strong>
+<ul>
+<li>One-time spell effects</li>
+<li>Don't require magic ability</li>
+<li>Consumed on use</li>
+</ul>
+
+<h2>Item Quality</h2>
+
+<p>Items have quality ratings that indicate rarity and power:</p>
+
+<h3>Quality Tiers</h3>
+
+<table>
+<thead>
+<tr>
+<th>Quality</th>
+<th>Color</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Normal</strong></td>
+<td>Gray</td>
+<td>Common items, basic stats</td>
+</tr>
+<tr>
+<td><strong>Magic</strong></td>
+<td>Blue</td>
+<td>Uncommon, improved stats</td>
+</tr>
+<tr>
+<td><strong>Rare</strong></td>
+<td>Purple</td>
+<td>Rare finds, strong bonuses</td>
+</tr>
+<tr>
+<td><strong>Legendary</strong></td>
+<td>Orange</td>
+<td>Very rare, excellent stats</td>
+</tr>
+<tr>
+<td><strong>Mythic</strong></td>
+<td>Red</td>
+<td>Extremely rare, best-in-slot</td>
+</tr>
+</tbody>
+</table>
+
+<h3>Quality Indicators</h3>
+
+<strong>Visual Cues:</strong>
+<ul>
+<li><strong>Border Color</strong> - Colored border around item icon</li>
+<li><strong>Text Color</strong> - Item name displayed in quality color</li>
+<li><strong>Glow Effects</strong> - Higher quality items may glow</li>
+</ul>
+
+<strong>Stat Differences:</strong>
+<ul>
+<li>Higher quality = Better attributes</li>
+<li>More attribute bonuses on high-quality items</li>
+<li>Unique effects on Legendary/Mythic items</li>
+</ul>
+
+<h2>Item Attributes</h2>
+
+<p>Items can have various stat bonuses:</p>
+
+<h3>Offensive Attributes</h3>
+
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Damage</strong></td>
+<td>Increases weapon damage</td>
+</tr>
+<tr>
+<td><strong>Strength</strong></td>
+<td>Boosts physical damage</td>
+</tr>
+<tr>
+<td><strong>Critical</strong></td>
+<td>Increases critical hit chance</td>
+</tr>
+<tr>
+<td><strong>Speed</strong></td>
+<td>Faster attack rate</td>
+</tr>
+</tbody>
+</table>
+
+<h3>Defensive Attributes</h3>
+
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Defense</strong></td>
+<td>Reduces damage taken</td>
+</tr>
+<tr>
+<td><strong>Armor</strong></td>
+<td>Physical damage reduction</td>
+</tr>
+<tr>
+<td><strong>Health</strong></td>
+<td>Increases max HP</td>
+</tr>
+</tbody>
+</table>
+
+<h3>Magic Attributes</h3>
+
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Intelligence</strong></td>
+<td>Increases magic damage</td>
+</tr>
+<tr>
+<td><strong>Mana</strong></td>
+<td>Increases max mana pool</td>
+</tr>
+</tbody>
+</table>
+
+<h3>Other Attributes</h3>
+
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Agility</strong></td>
+<td>Improves dodge, crit chance</td>
+</tr>
+</tbody>
+</table>
+
+<h2>Equipment System</h2>
+
+<h3>Equipment Slots</h3>
+
+<p>Your character has the following equipment slots:</p>
+
+<table>
+<thead>
+<tr>
+<th>Slot</th>
+<th>Item Type</th>
+<th>Examples</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Head</strong></td>
+<td>Helmets, hats, crowns</td>
+<td>Iron Helmet, Wizard Hat</td>
+</tr>
+<tr>
+<td><strong>Neck</strong></td>
+<td>Amulets, necklaces</td>
+<td>Amulet of Protection</td>
+</tr>
+<tr>
+<td><strong>Chest</strong></td>
+<td>Armor, robes</td>
+<td>Leather Chestpiece, Mage Robe</td>
+</tr>
+<tr>
+<td><strong>Main Hand</strong></td>
+<td>Primary weapon</td>
+<td>Longsword, Staff, Bow</td>
+</tr>
+<tr>
+<td><strong>Off Hand</strong></td>
+<td>Shield, secondary weapon</td>
+<td>Wooden Shield, Dagger</td>
+</tr>
+<tr>
+<td><strong>Hands</strong></td>
+<td>Gloves, gauntlets</td>
+<td>Leather Gloves</td>
+</tr>
+<tr>
+<td><strong>Legs</strong></td>
+<td>Pants, leg armor</td>
+<td>Chain Leggings</td>
+</tr>
+<tr>
+<td><strong>Boots</strong></td>
+<td>Footwear</td>
+<td>Iron Boots, Soft Shoes</td>
+</tr>
+<tr>
+<td><strong>Ring 1</strong></td>
+<td>Ring</td>
+<td>Ring of Strength</td>
+</tr>
+<tr>
+<td><strong>Ring 2</strong></td>
+<td>Ring</td>
+<td>Ring of Protection</td>
+</tr>
+</tbody>
+</table>
+
+<h3>Viewing Equipment</h3>
+
+<strong>Methods:</strong>
+<ol>
+<li><strong>Equipment Widget</strong> - Visual slot display</li>
+<li><strong><code>equipment</code> command</strong> - List in terminal</li>
+<li><strong>Equipment button</strong> - In Action Bar</li>
+</ol>
+
+<h3>Equipment Display</h3>
+
+<p>The Equipment Widget shows:</p>
+<ul>
+<li>All equipment slots in a grid</li>
+<li>Empty slots (gray/transparent)</li>
+<li>Equipped items with icons</li>
+<li>Item names and quality colors</li>
+</ul>
+
+<h2>Managing Items</h2>
+
+<h3>Picking Up Items</h3>
+
+<p>When items are on the ground:</p>
+
+<strong>Method 1 - Button:</strong>
+<ol>
+<li>Look for "Pickup" button in Action Bar</li>
+<li>Click to see list of available items</li>
+<li>Select item to pick up</li>
+</ol>
+
+<strong>Method 2 - Command:</strong>
+<p>``<code></p>
+<p>pickup [item name]</p>
+</code>`<code>
+
+<strong>Example:</strong>
+</code>`<code>
+<p>pickup rusty sword</p>
+<p>pickup health potion</p>
+</code>`<code>
+
+<h3>Dropping Items</h3>
+
+<strong>Method 1 - Inventory Widget:</strong>
+<ol>
+<li>Open Inventory Widget</li>
+<li>Click on item</li>
+<li>Click "Drop" button in item details popup</li>
+</ol>
+
+<strong>Method 2 - Command:</strong>
+</code>`<code>
+<p>drop [item name]</p>
+</code>`<code>
+
+<strong>Note:</strong> Some items cannot be dropped (quest items, bound items).
+
+<h3>Using Items</h3>
+
+<strong>Method 1 - Inventory Widget:</strong>
+<ol>
+<li>Click item in inventory</li>
+<li>Click "Use" button in popup</li>
+</ol>
+
+<strong>Method 2 - Command:</strong>
+</code>`<code>
+<p>use [item name]</p>
+</code>`<code>
+
+<strong>What Happens:</strong>
+<ul>
+<li><strong>Consumables</strong> - Item is consumed and effect applied</li>
+<li><strong>Tools</strong> - Item is used (may stay in inventory)</li>
+<li><strong>Quest Items</strong> - May trigger quest progression</li>
+</ul>
+
+<h3>Equipping Items</h3>
+
+<strong>Method 1 - Inventory Widget:</strong>
+<ol>
+<li>Click item in inventory</li>
+<li>Click "Equip" button in popup</li>
+</ol>
+
+<strong>Method 2 - Command:</strong>
+</code>`<code>
+<p>equip [item name]</p>
+</code>`<code>
+
+<strong>Requirements:</strong>
+<ul>
+<li>Item must match your class/race (if restricted)</li>
+<li>Must meet level requirement</li>
+<li>Must have correct slot available</li>
+</ul>
+
+<strong>Auto-Swap:</strong>
+<ul>
+<li>If slot is occupied, previous item is unequipped</li>
+<li>Unequipped item stays in inventory</li>
+</ul>
+
+<h3>Unequipping Items</h3>
+
+<strong>Method 1 - Equipment Widget:</strong>
+<ol>
+<li>Click equipped item</li>
+<li>Click "Unequip" button in popup</li>
+</ol>
+
+<strong>Method 2 - Inventory Widget:</strong>
+<ol>
+<li>Click equipped item (marked with icon)</li>
+<li>Click "Unequip" button</li>
+</ol>
+
+<strong>Method 3 - Command:</strong>
+</code>`<code>
+<p>unequip [item name]</p>
+</code>`<code>
+
+<strong>Result:</strong>
+<ul>
+<li>Item moves to inventory (remains unequipped)</li>
+<li>Slot becomes empty</li>
+<li>Stats/bonuses removed</li>
+</ul>
+
+<h2>Item Details Popup</h2>
+
+<p>When you click any item, a popup shows:</p>
+
+<h3>Information Displayed</h3>
+
+<ul>
+<li><strong>Item Name</strong> (with quality color)</li>
+<li><strong>Item Type</strong> (Weapon, Armor, Consumable, etc.)</li>
+<li><strong>Quality</strong> (Normal, Magic, Rare, etc.)</li>
+<li><strong>Equipment Slot</strong> (if equippable)</li>
+<li><strong>Level Requirement</strong> (if any)</li>
+<li><strong>Attributes</strong> (all stat bonuses)</li>
+<li><strong>Description</strong> (flavor text or effect description)</li>
+</ul>
+
+<h3>Attribute Display</h3>
+
+<strong>Color Coding:</strong>
+<ul>
+<li><strong>Red Numbers</strong> - Offensive stats (Damage, Strength, Critical)</li>
+<li><strong>Blue Numbers</strong> - Defensive stats (Defense, Armor, Health)</li>
+<li><strong>Green Numbers</strong> - Magic stats (Intelligence, Mana)</li>
+</ul>
+
+<h3>Available Actions</h3>
+
+<p>Buttons shown depend on item and context:</p>
+<ul>
+<li><strong>Equip</strong> - If item is equippable and not equipped</li>
+<li><strong>Unequip</strong> - If item is currently equipped</li>
+<li><strong>Use</strong> - If item is consumable or usable</li>
+<li><strong>Drop</strong> - If item can be dropped</li>
+</ul>
+
+<h2>Item Comparison</h2>
+
+<h3>Comparing Gear</h3>
+
+<p>When deciding between items:</p>
+
+<strong>Check:</strong>
+<ol>
+<li><strong>Quality</strong> - Higher quality usually better</li>
+<li><strong>Level Requirement</strong> - Can you use it?</li>
+<li><strong>Attributes</strong> - Does it boost stats you need?</li>
+<li><strong>Slot</strong> - Does it replace something you have?</li>
+</ol>
+
+<strong>Example Decision:</strong>
+
+<p>Current: Normal Iron Sword (Damage +10, Strength +2)</p>
+<p>New: Magic Steel Sword (Damage +15, Strength +3, Critical +5)</p>
+
+<p>→ Magic Steel Sword is better in all ways!</p>
+
+<h3>Best Practices</h3>
+
+<strong>For Warriors:</strong>
+<ul>
+<li>Prioritize Strength, Damage, Defense</li>
+<li>Heavy armor over light</li>
+<li>Weapons with high damage</li>
+</ul>
+
+<strong>For Mages:</strong>
+<ul>
+<li>Prioritize Intelligence, Mana</li>
+<li>Cloth armor with magic bonuses</li>
+<li>Staves and wands</li>
+</ul>
+
+<strong>For Rogues:</strong>
+<ul>
+<li>Prioritize Agility, Critical, Speed</li>
+<li>Light armor for mobility</li>
+<li>Fast weapons with high crit</li>
+</ul>
+
+<h2>Selling and Trading</h2>
+
+<h3>Selling to Merchants</h3>
+
+<p>When near a merchant NPC:</p>
+
+<ol>
+<li>Click "Trade" button on merchant card</li>
+<li>View your inventory</li>
+<li>Select items to sell</li>
+<li>Confirm sale</li>
+<li>Receive gold</li>
+</ol>
+
+<strong>Tip:</strong> Sell items you don't need to make space and earn gold.
+
+<h3>Item Value</h3>
+
+<ul>
+<li>Higher quality items sell for more</li>
+<li>Equipment generally worth more than consumables</li>
+<li>Quest items typically cannot be sold</li>
+</ul>
+
+<h3>Buying from Merchants</h3>
+
+<ol>
+<li>Click "Trade" or use </code>list` command</li>
+<li>Browse merchant's inventory</li>
+<li>Select item to buy</li>
+<li>Confirm purchase (if you have enough gold)</li>
+</ol>
+
+<h2>Stackable Items</h2>
+
+<p>Some items stack in a single inventory slot:</p>
+
+<strong>Stackable:</strong>
+<ul>
+<li>Consumables (potions, food)</li>
+<li>Crafting materials</li>
+<li>Currency items</li>
+<li>Arrows/ammunition</li>
+</ul>
+
+<strong>Display:</strong>
+<ul>
+<li>Shows quantity (e.g., "Health Potion x5")</li>
+<li>Uses one inventory slot regardless of quantity</li>
+</ul>
+
+<strong>Using Stacked Items:</strong>
+<ul>
+<li>Uses one from the stack</li>
+<li>Quantity decreases</li>
+<li>Slot freed when last one is used</li>
+</ul>
+
+<h2>Special Item Types</h2>
+
+<h3>Quest Items</h3>
+
+<ul>
+<li>Marked with "Quest" type</li>
+<li>Cannot be dropped or sold</li>
+<li>Required for quest completion</li>
+<li>Automatically removed when no longer needed</li>
+</ul>
+
+<h3>Bound Items</h3>
+
+<ul>
+<li>Bound to your character</li>
+<li>Cannot be traded or dropped</li>
+<li>Usually powerful rewards</li>
+<li>Marked with "Bound" indicator</li>
+</ul>
+
+<h3>Keys</h3>
+
+<ul>
+<li>Used to unlock doors or chests</li>
+<li>May be consumed on use or reusable</li>
+<li>Quest-specific or general</li>
+</ul>
+
+<h2>Inventory Management Tips</h2>
+
+<h3>Keep Your Inventory Clean</h3>
+
+<strong>Regular Maintenance:</strong>
+<ul>
+<li>Sell items you don't need</li>
+<li>Drop vendor trash in safe locations</li>
+<li>Use consumables rather than hoarding</li>
+<li>Store valuables in bank (if available)</li>
+</ul>
+
+<h3>Prioritize Space</h3>
+
+<strong>What to Keep:</strong>
+<ul>
+<li>Current equipment upgrades</li>
+<li>Healing items (always!)</li>
+<li>Quest items (automatic)</li>
+<li>Valuable items for selling</li>
+</ul>
+
+<strong>What to Drop/Sell:</strong>
+<ul>
+<li>Lower-quality equipment you've outgrown</li>
+<li>Excess consumables beyond stack needs</li>
+<li>Items below your level</li>
+<li>Duplicate equipment</li>
+</ul>
+
+<h3>Organize by Category</h3>
+
+<p>The Inventory Widget automatically categorizes items:</p>
+<ul>
+<li>Collapse categories you don't need to view</li>
+<li>Expand categories you use frequently</li>
+<li>Toggle view mode for different situations</li>
+</ul>
+
+<h3>Quick Equipment Swaps</h3>
+
+<strong>Situation-Based Gear:</strong>
+<ul>
+<li>Combat gear (high defense)</li>
+<li>Magic gear (high intelligence)</li>
+<li>Travel gear (high speed)</li>
+</ul>
+
+<p>Keep alternate sets for different situations.</p>
+
+<h2>Gold Management</h2>
+
+<h3>Earning Gold</h3>
+
+<strong>Best Sources:</strong>
+<ul>
+<li>Quest rewards</li>
+<li>Selling unneeded equipment</li>
+<li>Defeating enemies</li>
+<li>Finding treasure chests</li>
+</ul>
+
+<h3>Spending Gold Wisely</h3>
+
+<strong>Priority Spending:</strong>
+<ol>
+<li><strong>Equipment Upgrades</strong> - Biggest power increase</li>
+<li><strong>Healing Potions</strong> - Survival essential</li>
+<li><strong>Quest Requirements</strong> - Progress blockers</li>
+</ol>
+
+<strong>Avoid:</strong>
+<ul>
+<li>Buying low-quality items you'll replace soon</li>
+<li>Excessive consumables you won't use</li>
+<li>Cosmetic items (unless you really want them!)</li>
+</ul>
+
+<h3>Gold Display</h3>
+
+<ul>
+<li>Shows in Character Widget</li>
+<li>Formatted for readability (1.5K, 2.3M, etc.)</li>
+<li>Updates in real-time</li>
+</ul>
+
+<h2>Next Steps</h2>
+
+<ul>
+<li>Master <a href="06-combat.html">Combat System</a> to use your gear effectively</li>
+<li>Complete <a href="07-quests.html">Quests</a> to earn better equipment</li>
+<li>Learn <a href="03-commands.html">Commands</a> for faster item management</li>
+</ul>
+
+
+      <div class="doc-nav">
+  <a href="04-character.html" class="doc-nav-link">
+    <span class="doc-nav-label">Previous</span>
+    <span class="doc-nav-title">Character System</span>
+  </a>
+  <a href="06-combat.html" class="doc-nav-link">
+    <span class="doc-nav-label">Next</span>
+    <span class="doc-nav-title">Combat System</span>
+  </a>
+</div>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-copy">&copy; 2026 Veilspan - TalesMUD Documentation</div>
+  </footer>
+
+</body>
+</html>
