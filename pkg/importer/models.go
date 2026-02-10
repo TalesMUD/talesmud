@@ -64,6 +64,7 @@ type YAMLAction struct {
 	Type        string                 `yaml:"type"`
 	Description string                 `yaml:"description"`
 	Response    string                 `yaml:"response"`
+	ScriptId    string                 `yaml:"scriptId"`
 	Params      map[string]interface{} `yaml:"params"`
 }
 
@@ -134,20 +135,36 @@ type YAMLItemMeta struct {
 	Img string `yaml:"img"`
 }
 
+// YAMLRace represents NPC race info
+type YAMLRace struct {
+	ID   string `yaml:"id"`
+	Name string `yaml:"name"`
+}
+
+// YAMLClass represents NPC class info
+type YAMLClass struct {
+	ID   string `yaml:"id"`
+	Name string `yaml:"name"`
+}
+
 // YAMLNPC represents an NPC in YAML format
 type YAMLNPC struct {
-	ID            string         `yaml:"id"`
-	Name          string         `yaml:"name"`
-	Description   string         `yaml:"description"`
-	Detail        string         `yaml:"detail"`
-	Type          string         `yaml:"type"`
-	Tags          []string       `yaml:"tags"`
-	Level         int32          `yaml:"level"`
-	MaxHitPoints  int32          `yaml:"maxHitPoints"`
-	DialogID      string         `yaml:"dialogID"`
-	EnemyTrait    *YAMLEnemyTrait `yaml:"enemyTrait"`
+	ID            string             `yaml:"id"`
+	Name          string             `yaml:"name"`
+	Description   string             `yaml:"description"`
+	Detail        string             `yaml:"detail"`
+	Type          string             `yaml:"type"`
+	Tags          []string           `yaml:"tags"`
+	Level         int32              `yaml:"level"`
+	MaxHitPoints  int32              `yaml:"maxHitPoints"`
+	Race          YAMLRace           `yaml:"race"`
+	Class         YAMLClass          `yaml:"class"`
+	SpawnRoomId   string             `yaml:"spawnRoomId"`
+	DialogID      string             `yaml:"dialogID"`
+	RespawnTime   string             `yaml:"respawnTime"`
+	EnemyTrait    *YAMLEnemyTrait    `yaml:"enemyTrait"`
 	MerchantTrait *YAMLMerchantTrait `yaml:"merchantTrait"`
-	Meta          YAMLNPCMeta    `yaml:"meta"`
+	Meta          YAMLNPCMeta        `yaml:"meta"`
 }
 
 // YAMLEnemyTrait contains enemy-specific configuration
@@ -163,21 +180,27 @@ type YAMLEnemyTrait struct {
 	CallForHelp   bool    `yaml:"callForHelp"`
 	FleeThreshold float64 `yaml:"fleeThreshold"`
 	XPReward      int64   `yaml:"xpReward"`
-	LootTableID   string  `yaml:"lootTableID"`
+	LootTableID   string  `yaml:"lootTableId"`
+	OnAggroScript string  `yaml:"onAggroScript"`
+	OnDeathScript string  `yaml:"onDeathScript"`
+	OnFleeScript  string  `yaml:"onFleeScript"`
 }
 
 // YAMLMerchantTrait contains merchant-specific configuration
 type YAMLMerchantTrait struct {
-	ShopName       string                      `yaml:"shopName"`
-	BuyRate        float64                     `yaml:"buyRate"`
-	SellRate       float64                     `yaml:"sellRate"`
+	MerchantType   string                      `yaml:"merchantType"`
+	BuyMultiplier  float64                     `yaml:"buyMultiplier"`
+	SellMultiplier float64                     `yaml:"sellMultiplier"`
 	Inventory      []YAMLMerchantInventoryItem `yaml:"inventory"`
 }
 
 // YAMLMerchantInventoryItem represents an item in a merchant's inventory
 type YAMLMerchantInventoryItem struct {
-	ItemTemplateID string `yaml:"itemTemplateID"`
+	ItemTemplateID string `yaml:"itemTemplateId"`
 	Stock          int32  `yaml:"stock"`
+	BasePrice      int64  `yaml:"basePrice"`
+	Quantity       int32  `yaml:"quantity"`
+	MaxQuantity    int32  `yaml:"maxQuantity"`
 }
 
 // YAMLNPCMeta contains NPC metadata
@@ -229,30 +252,30 @@ type YAMLDialogOption struct {
 
 // YAMLLootTable represents a loot table in YAML format
 type YAMLLootTable struct {
-	ID          string           `yaml:"id"`
-	Name        string           `yaml:"name"`
-	Type        string           `yaml:"type"`
-	Description string           `yaml:"description"`
-	Entries     []YAMLLootEntry  `yaml:"entries"`
-	Guaranteed  []string         `yaml:"guaranteed"`
-	GoldRange   []int32          `yaml:"gold_range"`
-	Tags        []string         `yaml:"tags"`
-	Flags       YAMLLootFlags    `yaml:"flags"`
+	ID          string          `yaml:"id"`
+	Name        string          `yaml:"name"`
+	Description string          `yaml:"description"`
+	Entries     []YAMLLootEntry `yaml:"entries"`
 }
 
-// YAMLLootEntry represents a loot table entry
+// YAMLLootEntry represents a loot table entry (new format)
 type YAMLLootEntry struct {
-	Item       string   `yaml:"item"`
-	Weight     int      `yaml:"weight"`
-	MinCount   int32    `yaml:"min_count"`
-	MaxCount   int32    `yaml:"max_count"`
-	Conditions []string `yaml:"conditions"`
+	ItemTemplateID string  `yaml:"itemTemplateId"`
+	DropChance     float64 `yaml:"dropChance"`
+	MinQuantity    int32   `yaml:"minQuantity"`
+	MaxQuantity    int32   `yaml:"maxQuantity"`
+	Guaranteed     bool    `yaml:"guaranteed"`
 }
 
-// YAMLLootFlags contains loot table flags
-type YAMLLootFlags struct {
-	ScalesWithLevel bool `yaml:"scales_with_level"`
-	BossLoot        bool `yaml:"boss_loot"`
+// YAMLSpawner represents an NPC spawner in YAML format
+type YAMLSpawner struct {
+	ID            string `yaml:"id"`
+	Name          string `yaml:"name"`
+	TemplateID    string `yaml:"templateId"`
+	RoomID        string `yaml:"roomId"`
+	MaxInstances  int    `yaml:"maxInstances"`
+	SpawnInterval string `yaml:"spawnInterval"`
+	InitialCount  int    `yaml:"initialCount"`
 }
 
 // ImportConfig contains configuration for the import process

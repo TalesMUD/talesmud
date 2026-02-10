@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NPC Interactions - TalesMUD Documentation</title>
+  <meta name="description" content="NPC Interactions guide for TalesMUD players.">
+  <link rel="stylesheet" href="docs-style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="../index.html" class="nav-brand"><span>&gt;</span> talesmud.veilspan</a>
+    <ul class="nav-links">
+      <li><a href="../index.html">Home</a></li>
+      <li><a href="../index.html#lore">Lore</a></li>
+      <li><a href="index.html">Docs</a></li>
+      <li><a href="../play">Play</a></li>
+    </ul>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="docs-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h2 class="sidebar-title">Documentation</h2>
+      <nav class="sidebar-nav">
+  <li><a href="01-getting-started.html">01. Getting Started</a></li>
+  <li><a href="02-user-interface.html">02. User Interface</a></li>
+  <li><a href="03-commands.html">03. Commands Reference</a></li>
+  <li><a href="04-character.html">04. Character System</a></li>
+  <li><a href="05-inventory-equipment.html">05. Inventory & Equipment</a></li>
+  <li><a href="06-combat.html">06. Combat System</a></li>
+  <li><a href="07-quests.html">07. Quest System</a></li>
+  <li><a href="08-exploration.html">08. Exploration & Minimap</a></li>
+  <li><a href="09-npcs.html" class="active">09. NPC Interactions</a></li>
+  <li><a href="10-settings.html">10. Settings & Customization</a></li>
+  <li><a href="11-mobile.html">11. Mobile Play</a></li>
+  <li><a href="12-quick-reference.html">12. Quick Reference</a></li>
+  <li><a href="13-glossary.html">13. Glossary</a></li>
+</nav>
+    </aside>
+
+    <!-- Content -->
+    <main class="content">
+      <div class="doc-header">
+        <span class="doc-category">// Gameplay Features</span>
+      </div>
+      
+      <h1>NPC Interactions</h1>
+
+<p>Learn how to interact with non-player characters (NPCs) for quests, trading, and story progression.</p>
+
+<h2>NPC Overview</h2>
+
+<strong>NPCs (Non-Player Characters)</strong> are computer-controlled characters that populate the game world. They provide quests, sell items, give information, and bring the world to life.
+
+<h2>NPC Types</h2>
+
+<h3>Friendly NPCs</h3>
+
+<strong>Characteristics:</strong>
+<ul>
+<li>Won't attack you</li>
+<li>Often have quests</li>
+<li>Provide information</li>
+<li>Part of story</li>
+</ul>
+
+<strong>Visual Indicators:</strong>
+<ul>
+<li>Blue "Talk" button</li>
+<li>Neutral or friendly name color</li>
+<li>May have special markers</li>
+</ul>
+
+<strong>Examples:</strong>
+<ul>
+<li>Quest givers</li>
+<li>Town guards</li>
+<li>Story characters</li>
+<li>Trainers</li>
+</ul>
+
+<h3>Merchants</h3>
+
+<strong>Characteristics:</strong>
+<ul>
+<li>Buy and sell items</li>
+<li>Fixed inventory</li>
+<li>Respawn items periodically</li>
+<li>Located in towns usually</li>
+</ul>
+
+<strong>Visual Indicators:</strong>
+<ul>
+<li>Green "Trade" button</li>
+<li>Merchant type label</li>
+<li>Often in shop locations</li>
+</ul>
+
+<strong>Services:</strong>
+<ul>
+<li>Sell equipment</li>
+<li>Sell consumables</li>
+<li>Buy your items</li>
+<li>Specialized goods</li>
+</ul>
+
+<h3>Enemies</h3>
+
+<strong>Characteristics:</strong>
+<ul>
+<li>Hostile creatures</li>
+<li>Will attack or can be attacked</li>
+<li>Drop loot when defeated</li>
+<li>Provide XP</li>
+</ul>
+
+<strong>Visual Indicators:</strong>
+<ul>
+<li>Red "Attack" button</li>
+<li>Enemy type label</li>
+<li>Health bars</li>
+<li>Level display</li>
+</ul>
+
+<strong>Examples:</strong>
+<ul>
+<li>Wolves, bandits, goblins</li>
+<li>Dungeon monsters</li>
+<li>Boss enemies</li>
+</ul>
+
+<h2>Talking to NPCs</h2>
+
+<h3>Initiating Conversation</h3>
+
+<strong>Method 1 - Button:</strong>
+<ol>
+<li>Look at NPC entity card in Room Widget</li>
+<li>Click blue "Talk" button</li>
+</ol>
+
+<strong>Method 2 - Command:</strong>
+<p>``<code></p>
+<p>talk [npc name]</p>
+</code>`<code>
+
+<strong>Examples:</strong>
+</code>`<code>
+<p>talk guard</p>
+<p>talk village elder</p>
+<p>talk merchant</p>
+<p>talk mysterious stranger</p>
+</code>`<code>
+
+<h3>Dialog System</h3>
+
+<p>When you talk to an NPC:</p>
+
+<strong>Dialog Box Appears:</strong>
+<ul>
+<li>Semi-transparent overlay</li>
+<li>NPC icon or portrait</li>
+<li>NPC name at top</li>
+<li>Dialog text (what they say)</li>
+<li>Numbered response options</li>
+</ul>
+
+<strong>Example:</strong>
+</code>`<code>
+<p>Village Elder:</p>
+<p>"Wolves have been attacking travelers. Can you help?"</p>
+
+<ol>
+<li>"I'll take care of the wolves."</li>
+<li>"Tell me more about the problem."</li>
+<li>"I'm not interested."</li>
+</ol>
+</code>`<code>
+
+<h3>Selecting Responses</h3>
+
+<strong>Type the number</strong> of your chosen response:
+
+</code>`<code>
+<p>1</p>
+</code>`<code>
+
+<strong>Response Effects:</strong>
+<ul>
+<li>Option 1: Usually accepts quest</li>
+<li>Option 2: Usually asks for more information</li>
+<li>Option 3: Usually declines or ends conversation</li>
+</ul>
+
+<strong>Multiple Choice:</strong>
+<ul>
+<li>Each option leads to different outcome</li>
+<li>Some choices affect quest path</li>
+<li>Some choices just provide info</li>
+<li>Dead-end choices may close dialog</li>
+</ul>
+
+<h3>Dialog Flow</h3>
+
+<strong>Conversation Structure:</strong>
+
+<ol>
+<li><strong>Initial Greeting</strong></li>
+<ul>
+<li>NPC introduces themselves or situation</li>
+<li>Presents main options</li>
+</ul>
+</ol>
+
+<ol>
+<li><strong>Information Gathering</strong></li>
+<ul>
+<li>Select "Tell me more" options</li>
+<li>Learn background</li>
+<li>Get quest details</li>
+</ul>
+</ol>
+
+<ol>
+<li><strong>Decision Point</strong></li>
+<ul>
+<li>Accept quest</li>
+<li>Decline quest</li>
+<li>Ask more questions</li>
+</ul>
+</ol>
+
+<ol>
+<li><strong>Conclusion</strong></li>
+<ul>
+<li>Quest accepted and added to log</li>
+<li>Dialog ends</li>
+<li>NPC returns to idle state</li>
+</ul>
+</ol>
+
+<h3>Ending Dialog</h3>
+
+<strong>Dialog Ends When:</strong>
+<ul>
+<li>You accept a quest</li>
+<li>You decline and close conversation</li>
+<li>You select final option</li>
+<li>NPC has nothing more to say</li>
+</ul>
+
+<strong>After Dialog:</strong>
+<ul>
+<li>You return to normal game mode</li>
+<li>Can talk to NPC again if needed</li>
+<li>New dialog options may appear after quest progress</li>
+</ul>
+
+<h2>NPC Information Display</h2>
+
+<h3>Entity Cards</h3>
+
+<p>NPCs are displayed as entity cards in the Room Widget:</p>
+
+<strong>Information Shown:</strong>
+<ul>
+<li><strong>Name</strong> - NPC's name</li>
+<li><strong>Type</strong> - Friendly, Merchant, or Enemy</li>
+<li><strong>Level</strong> - Their level (if applicable)</li>
+<li><strong>Health Bar</strong> - Current HP (for enemies)</li>
+</ul>
+
+<strong>Action Buttons:</strong>
+<ul>
+<li><strong>Talk</strong> (Blue) - Friendly NPCs</li>
+<li><strong>Trade</strong> (Green) - Merchants</li>
+<li><strong>Attack</strong> (Red) - Enemies</li>
+</ul>
+
+<h3>Health Bars (Enemies)</h3>
+
+<p>Enemy NPCs display health bars:</p>
+
+<strong>Colors:</strong>
+<ul>
+<li><strong>Green</strong> - Healthy (75-100% HP)</li>
+<li><strong>Orange/Yellow</strong> - Wounded (25-75% HP)</li>
+<li><strong>Red</strong> - Critical (0-25% HP)</li>
+</ul>
+
+<strong>Usage:</strong>
+<ul>
+<li>Gauge combat difficulty</li>
+<li>Decide when to flee</li>
+<li>Track battle progress</li>
+</ul>
+
+<h2>Merchant NPCs</h2>
+
+<h3>Finding Merchants</h3>
+
+<strong>Common Locations:</strong>
+<ul>
+<li>Town centers</li>
+<li>Market squares</li>
+<li>Trading posts</li>
+<li>Shops and stores</li>
+<li>Inns and taverns</li>
+</ul>
+
+<strong>Identifying:</strong>
+<ul>
+<li>Labeled as "Merchant" or specific role</li>
+<li>Green "Trade" button</li>
+<li>Often stationary</li>
+<li>Shop-themed room descriptions</li>
+</ul>
+
+<h3>Trading with Merchants</h3>
+
+<strong>Opening Trade:</strong>
+
+<strong>Method 1 - Button:</strong>
+<ol>
+<li>Click green "Trade" button on merchant card</li>
+</ol>
+
+<strong>Method 2 - Command:</strong>
+</code>`<code>
+<p>list</p>
+</code>`<code>
+
+<strong>Trade Interface:</strong>
+<ul>
+<li>Merchant's inventory displayed</li>
+<li>Your inventory shown</li>
+<li>Gold totals visible</li>
+<li>Buy/Sell options</li>
+</ul>
+
+<h3>Buying Items</h3>
+
+<strong>Steps:</strong>
+<ol>
+<li>Open trade with merchant</li>
+<li>Browse their inventory</li>
+<li>Select item to buy</li>
+<li>Confirm purchase (if you have enough gold)</li>
+<li>Item added to your inventory</li>
+<li>Gold deducted</li>
+</ol>
+
+<strong>Command:</strong>
+</code>`<code>
+<p>buy [item name]</p>
+</code>`<code>
+
+<strong>Example:</strong>
+</code>`<code>
+<p>buy iron sword</p>
+<p>buy health potion</p>
+</code>`<code>
+
+<h3>Selling Items</h3>
+
+<strong>Steps:</strong>
+<ol>
+<li>Open trade with merchant</li>
+<li>Select item from your inventory</li>
+<li>Click "Sell" option</li>
+<li>Confirm sale</li>
+<li>Item removed from inventory</li>
+<li>Gold added</li>
+</ol>
+
+<strong>Command:</strong>
+</code>`<code>
+<p>sell [item name]</p>
+</code>`<code>
+
+<strong>Example:</strong>
+</code>`<code>
+<p>sell rusty dagger</p>
+<p>sell wolf pelt</p>
+</code>`<code>
+
+<h3>Merchant Types</h3>
+
+<strong>General Merchants:</strong>
+<ul>
+<li>Buy and sell most items</li>
+<li>Balanced prices</li>
+<li>General inventory</li>
+</ul>
+
+<strong>Specialized Merchants:</strong>
+<ul>
+<li><strong>Weaponsmith</strong> - Weapons only</li>
+<li><strong>Armorer</strong> - Armor only</li>
+<li><strong>Alchemist</strong> - Potions and ingredients</li>
+<li><strong>Food Vendor</strong> - Consumables</li>
+<li><strong>Magic Shop</strong> - Scrolls and enchanted items</li>
+</ul>
+
+<strong>Better Prices:</strong>
+<ul>
+<li>Sell items to appropriate specialist</li>
+<li>Weaponsmith pays more for weapons</li>
+<li>Alchemist pays more for potions</li>
+</ul>
+
+<h3>Merchant Inventory</h3>
+
+<strong>Stock:</strong>
+<ul>
+<li>Fixed set of items</li>
+<li>May refresh periodically</li>
+<li>Some items always available</li>
+<li>Rare items may stock out</li>
+</ul>
+
+<strong>Pricing:</strong>
+<ul>
+<li>Fixed buy prices</li>
+<li>Fixed sell prices (usually ~50% of buy price)</li>
+<li>May be affected by Charisma stat</li>
+<li>Special discounts (quests, reputation)</li>
+</ul>
+
+<h2>Quest-Related NPCs</h2>
+
+<h3>Quest Givers</h3>
+
+<strong>Finding Them:</strong>
+<ul>
+<li>Marked with special indicators (often)</li>
+<li>Mentioned in quest text</li>
+<li>Located in key story locations</li>
+<li>Sometimes hidden</li>
+</ul>
+
+<strong>Starting Quests:</strong>
+<ol>
+<li>Talk to quest giver</li>
+<li>Read their dialog</li>
+<li>Accept quest (option 1 usually)</li>
+<li>Quest added to log</li>
+</ol>
+
+<h3>Quest Turn-In</h3>
+
+<strong>Completing Quests:</strong>
+<ol>
+<li>Complete all objectives</li>
+<li>Return to quest giver</li>
+<li>Talk to them</li>
+<li>Select completion option</li>
+<li>Receive rewards</li>
+</ol>
+
+<strong>Multiple Visits:</strong>
+<ul>
+<li>First visit: Accept quest</li>
+<li>During: May provide hints</li>
+<li>Final visit: Turn in quest</li>
+</ul>
+
+<h3>Quest Dialog Options</h3>
+
+<strong>Common Options:</strong>
+
+<strong>"Tell me about..."</strong>
+<ul>
+<li>Background information</li>
+<li>Quest hints</li>
+<li>Lore</li>
+</ul>
+
+<strong>"What should I do?"</strong>
+<ul>
+<li>Reminder of objectives</li>
+<li>Hints on location</li>
+<li>Strategy tips</li>
+</ul>
+
+<strong>"I'm ready" / "I accept"</strong>
+<ul>
+<li>Quest acceptance</li>
+<li>Start quest chain</li>
+<li>Commit to task</li>
+</ul>
+
+<strong>"I've completed your task"</strong>
+<ul>
+<li>Quest turn-in</li>
+<li>Receive rewards</li>
+<li>Progress story</li>
+</ul>
+
+<h2>NPC Behavior</h2>
+
+<h3>Stationary NPCs</h3>
+
+<strong>Characteristics:</strong>
+<ul>
+<li>Stay in one room</li>
+<li>Always available</li>
+<li>Predictable location</li>
+<li>Easy to find</li>
+</ul>
+
+<strong>Examples:</strong>
+<ul>
+<li>Shop merchants</li>
+<li>Quest givers in towns</li>
+<li>Guards</li>
+<li>Innkeepers</li>
+</ul>
+
+<h3>Wandering NPCs</h3>
+
+<strong>Characteristics:</strong>
+<ul>
+<li>Move between rooms</li>
+<li>May have patrol routes</li>
+<li>Harder to find</li>
+<li>More realistic</li>
+</ul>
+
+<strong>Examples:</strong>
+<ul>
+<li>Traveling merchants</li>
+<li>Patrol guards</li>
+<li>Wandering adventurers</li>
+</ul>
+
+<strong>Finding Them:</strong>
+<ul>
+<li>Check multiple rooms</li>
+<li>Wait for them to return</li>
+<li>Follow patrol route</li>
+<li>Ask other players</li>
+</ul>
+
+<h3>Event-Based NPCs</h3>
+
+<strong>Characteristics:</strong>
+<ul>
+<li>Only appear during certain times</li>
+<li>Triggered by quest progress</li>
+<li>Temporary presence</li>
+<li>Special circumstances</li>
+</ul>
+
+<strong>Examples:</strong>
+<ul>
+<li>Quest-specific characters</li>
+<li>Boss enemies</li>
+<li>Special event NPCs</li>
+</ul>
+
+<h2>Dialog Tips and Strategies</h2>
+
+<h3>Getting Information</h3>
+
+<strong>Ask Questions:</strong>
+<ul>
+<li>Select "Tell me more" options</li>
+<li>Exhaust all dialog trees</li>
+<li>NPCs often have hidden information</li>
+<li>Some conversations unlock secrets</li>
+</ul>
+
+<strong>Example Flow:</strong>
+</code>`<code>
+<ol>
+<li>"Who are you?"</li>
+</ol>
+<p>   → Learn about NPC</p>
+<ol>
+<li>"Tell me about this area"</li>
+</ol>
+<p>   → Get location tips</p>
+<ol>
+<li>"Do you have any work?"</li>
+</ol>
+<p>   → Reveals quest</p>
+<ol>
+<li>"I'll help"</li>
+</ol>
+<p>   → Accept quest</p>
+</code>`<code>
+
+<h3>Quest Optimization</h3>
+
+<strong>Gather All Quests:</strong>
+<ul>
+<li>Talk to all NPCs in an area</li>
+<li>Accept multiple quests</li>
+<li>Complete them together</li>
+<li>Return to turn in</li>
+</ul>
+
+<strong>Check Back:</strong>
+<ul>
+<li>NPCs may have new quests after you level</li>
+<li>Return periodically</li>
+<li>Story progression unlocks new dialog</li>
+</ul>
+
+<h3>Dialog Choices Matter</h3>
+
+<strong>Be Careful:</strong>
+<ul>
+<li>Some choices affect outcomes</li>
+<li>Rude responses may anger NPCs</li>
+<li>Helpful choices may give bonuses</li>
+<li>Quest paths may diverge</li>
+</ul>
+
+<strong>Read Carefully:</strong>
+<ul>
+<li>Understand what each option means</li>
+<li>Think about consequences</li>
+<li>Roleplay or min-max (your choice)</li>
+</ul>
+
+<h2>Special NPC Interactions</h2>
+
+<h3>Innkeepers</h3>
+
+<strong>Services:</strong>
+<ul>
+<li>Set bind point (respawn location)</li>
+<li>Rent rooms (if implemented)</li>
+<li>Sell food and drink</li>
+<li>Provide local information</li>
+</ul>
+
+<strong>Commands:</strong>
+</code>`<code>
+<p>bind</p>
+<p>talk innkeeper</p>
+</code>`<code>
+
+<h3>Trainers</h3>
+
+<strong>Services:</strong>
+<ul>
+<li>Teach new abilities (if system exists)</li>
+<li>Improve skills</li>
+<li>Class specialization</li>
+<li>Cost gold usually</li>
+</ul>
+
+<strong>Requirements:</strong>
+<ul>
+<li>Minimum level</li>
+<li>Class restrictions</li>
+<li>Quest completion</li>
+</ul>
+
+<h3>Guards</h3>
+
+<strong>Behavior:</strong>
+<ul>
+<li>Protect towns</li>
+<li>Attack aggressors</li>
+<li>Provide information</li>
+<li>May give security quests</li>
+</ul>
+
+<strong>Tips:</strong>
+<ul>
+<li>Don't attack in towns (guards retaliate)</li>
+<li>Ask for directions</li>
+<li>Some have patrol quests</li>
+</ul>
+
+<h2>Common NPC Commands</h2>
+
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></code>talk [npc]<code></td>
+<td>Start conversation</td>
+<td></code>talk guard<code></td>
+</tr>
+<tr>
+<td></code>[number]<code></td>
+<td>Select dialog option</td>
+<td></code>1<code></td>
+</tr>
+<tr>
+<td></code>list<code></td>
+<td>View merchant inventory</td>
+<td></code>list<code></td>
+</tr>
+<tr>
+<td></code>buy [item]<code></td>
+<td>Purchase item</td>
+<td></code>buy sword<code></td>
+</tr>
+<tr>
+<td></code>sell [item]<code></td>
+<td>Sell item</td>
+<td></code>sell pelt<code></td>
+</tr>
+<tr>
+<td></code>attack [npc]<code></td>
+<td>Engage enemy NPC</td>
+<td></code>attack goblin`</td>
+</tr>
+</tbody>
+</table>
+
+<h2>Troubleshooting NPC Interactions</h2>
+
+<h3>"NPC won't talk to me"</h3>
+
+<strong>Possible Causes:</strong>
+<ul>
+<li>NPC is enemy type (use attack instead)</li>
+<li>Already in dialog with someone else</li>
+<li>Quest prerequisite not met</li>
+<li>NPC is event-based and not available</li>
+</ul>
+
+<strong>Solutions:</strong>
+<ul>
+<li>Check NPC type (button color)</li>
+<li>Wait a moment and try again</li>
+<li>Complete prerequisite quests</li>
+<li>Check quest requirements</li>
+</ul>
+
+<h3>"Dialog options don't appear"</h3>
+
+<strong>Solutions:</strong>
+<ul>
+<li>Dialog may be auto-progressing</li>
+<li>Wait for text to fully display</li>
+<li>Check terminal for options</li>
+<li>Try talking again</li>
+</ul>
+
+<h3>"Can't find the NPC"</h3>
+
+<strong>Solutions:</strong>
+<ul>
+<li>NPC may be wandering (check nearby rooms)</li>
+<li>Wrong location (re-read quest)</li>
+<li>Event-based (not spawned yet)</li>
+<li>Ask other players</li>
+</ul>
+
+<h3>"Merchant won't buy my items"</h3>
+
+<strong>Reasons:</strong>
+<ul>
+<li>Item is quest-bound</li>
+<li>Item cannot be sold</li>
+<li>Merchant doesn't buy that type</li>
+<li>Try different merchant</li>
+</ul>
+
+<h2>NPC Etiquette (Multiplayer)</h2>
+
+<strong>If game has multiplayer:</strong>
+
+<strong>Don't:</strong>
+<ul>
+<li>Kill quest-giving NPCs (if possible)</li>
+<li>Monopolize merchant time</li>
+<li>Spam talk commands</li>
+<li>Grief other players' interactions</li>
+</ul>
+
+<strong>Do:</strong>
+<ul>
+<li>Wait your turn</li>
+<li>Share quest information</li>
+<li>Help others find NPCs</li>
+<li>Report NPC bugs</li>
+</ul>
+
+<h2>Next Steps</h2>
+
+<ul>
+<li>Accept quests from NPCs: <a href="07-quests.html">Quest System</a></li>
+<li>Trade for better gear: <a href="05-inventory-equipment.html">Inventory & Equipment</a></li>
+<li>Fight enemy NPCs: <a href="06-combat.html">Combat System</a></li>
+<li>Learn all commands: <a href="03-commands.html">Commands Reference</a></li>
+</ul>
+
+<strong>Talk to everyone - you never know what adventures await!</strong>
+
+
+      <div class="doc-nav">
+  <a href="08-exploration.html" class="doc-nav-link">
+    <span class="doc-nav-label">Previous</span>
+    <span class="doc-nav-title">Exploration & Minimap</span>
+  </a>
+  <a href="10-settings.html" class="doc-nav-link">
+    <span class="doc-nav-label">Next</span>
+    <span class="doc-nav-title">Settings & Customization</span>
+  </a>
+</div>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-copy">&copy; 2026 Veilspan - TalesMUD Documentation</div>
+  </footer>
+
+</body>
+</html>

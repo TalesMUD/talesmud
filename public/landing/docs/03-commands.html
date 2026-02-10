@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Commands Reference - TalesMUD Documentation</title>
+  <meta name="description" content="Commands Reference guide for TalesMUD players.">
+  <link rel="stylesheet" href="docs-style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="../index.html" class="nav-brand"><span>&gt;</span> talesmud.veilspan</a>
+    <ul class="nav-links">
+      <li><a href="../index.html">Home</a></li>
+      <li><a href="../index.html#lore">Lore</a></li>
+      <li><a href="index.html">Docs</a></li>
+      <li><a href="../play">Play</a></li>
+    </ul>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="docs-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h2 class="sidebar-title">Documentation</h2>
+      <nav class="sidebar-nav">
+  <li><a href="01-getting-started.html">01. Getting Started</a></li>
+  <li><a href="02-user-interface.html">02. User Interface</a></li>
+  <li><a href="03-commands.html" class="active">03. Commands Reference</a></li>
+  <li><a href="04-character.html">04. Character System</a></li>
+  <li><a href="05-inventory-equipment.html">05. Inventory & Equipment</a></li>
+  <li><a href="06-combat.html">06. Combat System</a></li>
+  <li><a href="07-quests.html">07. Quest System</a></li>
+  <li><a href="08-exploration.html">08. Exploration & Minimap</a></li>
+  <li><a href="09-npcs.html">09. NPC Interactions</a></li>
+  <li><a href="10-settings.html">10. Settings & Customization</a></li>
+  <li><a href="11-mobile.html">11. Mobile Play</a></li>
+  <li><a href="12-quick-reference.html">12. Quick Reference</a></li>
+  <li><a href="13-glossary.html">13. Glossary</a></li>
+</nav>
+    </aside>
+
+    <!-- Content -->
+    <main class="content">
+      <div class="doc-header">
+        <span class="doc-category">// Command Reference</span>
+      </div>
+      
+      <h1>Commands Reference</h1>
+
+<p>Complete reference of all commands available in TalesMUD.</p>
+
+<h2>Movement Commands</h2>
+
+<h3>Cardinal Directions</h3>
+
+<p>Move in the four main directions:</p>
+
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Shortcut</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>north</code></td>
+<td><code>n</code></td>
+<td>Move north</td>
+</tr>
+<tr>
+<td><code>south</code></td>
+<td><code>s</code></td>
+<td>Move south</td>
+</tr>
+<tr>
+<td><code>east</code></td>
+<td><code>e</code></td>
+<td>Move east</td>
+</tr>
+<tr>
+<td><code>west</code></td>
+<td><code>w</code></td>
+<td>Move west</td>
+</tr>
+</tbody>
+</table>
+
+<strong>Note:</strong> Only available exits will appear as buttons in the Action Bar.
+
+<h3>Vertical Movement</h3>
+
+<p>Move up and down:</p>
+
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Shortcut</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>up</code></td>
+<td><code>u</code></td>
+<td>Go up (stairs, ladders, etc.)</td>
+</tr>
+<tr>
+<td><code>down</code></td>
+<td><code>d</code></td>
+<td>Go down</td>
+</tr>
+</tbody>
+</table>
+
+<h3>Special Exits</h3>
+
+<p>Some rooms have unique exits with custom names (e.g., "enter portal", "climb tree"). These will appear as buttons when available.</p>
+
+<h2>Information Commands</h2>
+
+<p>View game state and character info:</p>
+
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Shortcut</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>look</code></td>
+<td><code>l</code></td>
+<td>Examine the current room</td>
+</tr>
+<tr>
+<td><code>inventory</code></td>
+<td><code>i</code></td>
+<td>View your inventory</td>
+</tr>
+<tr>
+<td><code>equipment</code></td>
+<td><code>eq</code></td>
+<td>View equipped gear</td>
+</tr>
+<tr>
+<td><code>character</code></td>
+<td><code>c</code></td>
+<td>View character stats</td>
+</tr>
+<tr>
+<td><code>who</code></td>
+<td>-</td>
+<td>List players currently online</td>
+</tr>
+<tr>
+<td><code>help</code></td>
+<td><code>?</code></td>
+<td>Display help information</td>
+</tr>
+</tbody>
+</table>
+
+<h2>Interaction Commands</h2>
+
+<h3>Looking and Examining</h3>
+
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>look</code></td>
+<td>Re-examine the current room</td>
+<td><code>look</code></td>
+</tr>
+<tr>
+<td><code>examine [target]</code></td>
+<td>Look closely at something</td>
+<td><code>examine statue</code></td>
+</tr>
+</tbody>
+</table>
+
+<h3>Item Commands</h3>
+
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pickup [item]</code></td>
+<td>Pick up an item from the ground</td>
+<td><code>pickup sword</code></td>
+</tr>
+<tr>
+<td><code>drop [item]</code></td>
+<td>Drop an item from inventory</td>
+<td><code>drop torch</code></td>
+</tr>
+<tr>
+<td><code>use [item]</code></td>
+<td>Use or consume an item</td>
+<td><code>use potion</code></td>
+</tr>
+<tr>
+<td><code>equip [item]</code></td>
+<td>Equip an item from inventory</td>
+<td><code>equip helmet</code></td>
+</tr>
+<tr>
+<td><code>unequip [item]</code></td>
+<td>Remove equipped item</td>
+<td><code>unequip shield</code></td>
+</tr>
+</tbody>
+</table>
+
+<strong>Tip:</strong> You can also use interactive buttons on item cards instead of typing these commands.
+
+<h3>NPC Interaction</h3>
+
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>talk [npc]</code></td>
+<td>Start conversation with NPC</td>
+<td><code>talk guard</code></td>
+</tr>
+<tr>
+<td><code>[number]</code></td>
+<td>Select dialog option</td>
+<td><code>1</code> or <code>2</code></td>
+</tr>
+</tbody>
+</table>
+
+<p>During conversations, you'll be presented with numbered options. Type the number to select your response.</p>
+
+<h2>Combat Commands</h2>
+
+<p>These commands are available during combat encounters:</p>
+
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>attack</code></td>
+<td>Attack the enemy</td>
+</tr>
+<tr>
+<td><code>defend</code></td>
+<td>Take defensive stance (reduce damage)</td>
+</tr>
+<tr>
+<td><code>flee</code></td>
+<td>Attempt to escape combat</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>Check current combat status</td>
+</tr>
+</tbody>
+</table>
+
+<strong>Combat Flow:</strong>
+<ol>
+<li>Initiate combat by attacking an enemy</li>
+<li>Action Bar switches to combat commands</li>
+<li>Choose your action each turn</li>
+<li>Combat ends when enemy is defeated, you die, or you flee successfully</li>
+</ol>
+
+<h2>Social Commands (Emotes)</h2>
+
+<p>Express yourself with emotes:</p>
+
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>shrug</code></td>
+<td>Shrug your shoulders</td>
+</tr>
+<tr>
+<td><code>scream</code></td>
+<td>Let out a scream</td>
+</tr>
+</tbody>
+</table>
+
+<strong>Note:</strong> More emotes may be available - check the "More" menu.
+
+<h2>Merchant Commands</h2>
+
+<p>When near a merchant NPC:</p>
+
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>list</code></td>
+<td>View merchant's inventory</td>
+</tr>
+<tr>
+<td><code>buy [item]</code></td>
+<td>Purchase an item</td>
+</tr>
+<tr>
+<td><code>sell [item]</code></td>
+<td>Sell an item from inventory</td>
+</tr>
+</tbody>
+</table>
+
+<strong>Note:</strong> The <code>list</code> button appears automatically when a merchant is present.
+
+<h2>Utility Commands</h2>
+
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bind</code></td>
+<td>Set your bind point (recall location)</td>
+</tr>
+</tbody>
+</table>
+
+<h2>Room-Specific Actions</h2>
+
+<p>Some rooms have special actions you can perform:</p>
+
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Example Rooms</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pull [object]</code></td>
+<td>Lever, rope, chain</td>
+</tr>
+<tr>
+<td><code>push [object]</code></td>
+<td>Button, door, block</td>
+</tr>
+<tr>
+<td><code>read [object]</code></td>
+<td>Sign, book, scroll</td>
+</tr>
+<tr>
+<td><code>open [object]</code></td>
+<td>Chest, door, container</td>
+</tr>
+<tr>
+<td><code>close [object]</code></td>
+<td>Door, container</td>
+</tr>
+<tr>
+<td><code>unlock [object]</code></td>
+<td>Locked door, chest</td>
+</tr>
+</tbody>
+</table>
+
+<strong>Note:</strong> Available actions appear as buttons in the Action Bar or in the "Actions" menu.
+
+<h2>Command Syntax</h2>
+
+<h3>Basic Rules</h3>
+
+<ol>
+<li><strong>Case insensitive</strong> - <code>NORTH</code>, <code>North</code>, and <code>north</code> all work</li>
+<li><strong>Shortcuts available</strong> - Most commands have short versions</li>
+<li><strong>Spaces separate arguments</strong> - <code>pickup rusty sword</code></li>
+<li><strong>Tab completion</strong> - Start typing and press Tab</li>
+</ol>
+
+<h3>Target Names</h3>
+
+<p>When targeting items or NPCs:</p>
+
+<ul>
+<li>Use the exact name: <code>talk merchant</code></li>
+<li>Multi-word names need full text: <code>pickup iron sword</code></li>
+<li>Some commands accept partial matches: <code>attack gob</code> might work for "goblin"</li>
+</ul>
+
+<h3>Examples</h3>
+
+<p>``<code></p>
+<p>look                    # Examine room</p>
+<p>look at statue         # Alternative syntax</p>
+<p>inventory              # View items</p>
+<p>i                      # Same as inventory</p>
+<p>pickup sword           # Pick up item</p>
+<p>equip iron helmet      # Equip specific item</p>
+<p>talk to guard          # Talk to NPC</p>
+<p>1                      # Select first dialog option</p>
+<p>attack wolf            # Start combat</p>
+<p>flee                   # Escape combat</p>
+</code>`<code>
+
+<h2>Button vs Text Commands</h2>
+
+<p>Many actions can be performed two ways:</p>
+
+<h3>Using Buttons</h3>
+<ul>
+<li>Click direction buttons (N, E, S, W)</li>
+<li>Click command buttons (Look, Inventory, etc.)</li>
+<li>Click action buttons on entity/item cards</li>
+<li>Click "More" for additional commands</li>
+</ul>
+
+<h3>Using Text</h3>
+<ul>
+<li>Type commands in the terminal</li>
+<li>Faster for experienced players</li>
+<li>Access to command history (Up/Down arrows)</li>
+<li>Auto-complete support</li>
+</ul>
+
+<strong>Recommendation:</strong> Use buttons while learning, switch to text commands for speed.
+
+<h2>Command Availability</h2>
+
+<h3>Always Available</h3>
+<ul>
+<li>Movement (north, south, east, west, up, down)</li>
+<li>Information (look, inventory, equipment, character)</li>
+<li>Item management (pickup, drop, use, equip)</li>
+<li>Social (who, help)</li>
+</ul>
+
+<h3>Context-Dependent</h3>
+<ul>
+<li><strong>Combat commands</strong> - Only during combat</li>
+<li><strong>Merchant commands</strong> - Only near merchants</li>
+<li><strong>Room actions</strong> - Only in specific rooms</li>
+<li><strong>Dialog options</strong> - Only during NPC conversations</li>
+</ul>
+
+<h3>Disabled During</h3>
+<ul>
+<li><strong>Movement</strong> - While in combat (must flee first)</li>
+<li><strong>Standard commands</strong> - Replaced by combat commands during fights</li>
+<li><strong>Some actions</strong> - While in dialog with NPC</li>
+</ul>
+
+<h2>Special Command Notes</h2>
+
+<h3>Look Command</h3>
+<ul>
+<li>Refreshes room information</li>
+<li>Shows current entities and items</li>
+<li>Updates exit availability</li>
+<li>Useful after combat or item pickups</li>
+</ul>
+
+<h3>Inventory vs Equipment</h3>
+<ul>
+<li><strong>Inventory</strong> - Items you're carrying (not equipped)</li>
+<li><strong>Equipment</strong> - Items currently worn/wielded</li>
+<li>Some items are in both (equipped items still "in" inventory)</li>
+</ul>
+
+<h3>Use Command</h3>
+<ul>
+<li>Consumables (potions, food) - Consumed and removed</li>
+<li>Tools (keys, torches) - Used but kept</li>
+<li>Quest items - May trigger quest events</li>
+<li>Effect varies by item type</li>
+</ul>
+
+<h2>Advanced Command Tips</h2>
+
+<h3>Command History</h3>
+<ul>
+<li><strong>Up Arrow</strong> - Cycle to previous command</li>
+<li><strong>Down Arrow</strong> - Cycle to next command</li>
+<li>Repeats recent commands quickly</li>
+<li>Saved per terminal session</li>
+</ul>
+
+<h3>Auto-Complete</h3>
+<ul>
+<li>Type partial command + Tab</li>
+<li>Works for common commands</li>
+<li>Suggests completions</li>
+<li>Saves typing time</li>
+</ul>
+
+<h3>Batch Actions</h3>
+<p>Most actions happen one at a time. To perform multiple actions:</p>
+</code>`<code>
+<p>pickup sword</p>
+<p>equip sword</p>
+<p>look</p>
+</code>`<code>
+
+<p>Enter each command separately.</p>
+
+<h2>Getting Help</h2>
+
+<h3>In-Game Help</h3>
+<ul>
+<li>Type </code>help<code> for general help</li>
+<li>Type </code>help [command]` for specific command help (if supported)</li>
+<li>Check the "More" menu for less common commands</li>
+</ul>
+
+<h3>This Documentation</h3>
+<ul>
+<li>Return to this reference anytime</li>
+<li>Each section has more detailed command explanations</li>
+<li>See specific system guides for advanced tactics</li>
+</ul>
+
+<h2>Command Categories Summary</h2>
+
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Commands</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Movement</strong></td>
+<td>north, south, east, west, up, down, [special exits]</td>
+</tr>
+<tr>
+<td><strong>Information</strong></td>
+<td>look, inventory, equipment, character, who, help</td>
+</tr>
+<tr>
+<td><strong>Items</strong></td>
+<td>pickup, drop, use, equip, unequip</td>
+</tr>
+<tr>
+<td><strong>Combat</strong></td>
+<td>attack, defend, flee, status</td>
+</tr>
+<tr>
+<td><strong>NPC</strong></td>
+<td>talk, [dialog numbers]</td>
+</tr>
+<tr>
+<td><strong>Merchant</strong></td>
+<td>list, buy, sell</td>
+</tr>
+<tr>
+<td><strong>Social</strong></td>
+<td>shrug, scream</td>
+</tr>
+<tr>
+<td><strong>Utility</strong></td>
+<td>bind, examine</td>
+</tr>
+<tr>
+<td><strong>Room Actions</strong></td>
+<td>pull, push, read, open, close, unlock</td>
+</tr>
+</tbody>
+</table>
+
+<h2>Next Steps</h2>
+
+<ul>
+<li>Learn about <a href="04-character.html">Character System</a> to understand stats</li>
+<li>Read <a href="06-combat.html">Combat System</a> for fighting strategies</li>
+<li>Check <a href="05-inventory-equipment.html">Inventory & Equipment</a> for item management</li>
+</ul>
+
+
+      <div class="doc-nav">
+  <a href="02-user-interface.html" class="doc-nav-link">
+    <span class="doc-nav-label">Previous</span>
+    <span class="doc-nav-title">User Interface</span>
+  </a>
+  <a href="04-character.html" class="doc-nav-link">
+    <span class="doc-nav-label">Next</span>
+    <span class="doc-nav-title">Character System</span>
+  </a>
+</div>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-copy">&copy; 2026 Veilspan - TalesMUD Documentation</div>
+  </footer>
+
+</body>
+</html>

@@ -31,17 +31,18 @@ type WorldImporter struct {
 
 // ImportResult contains the results of an import operation
 type ImportResult struct {
-	Backup        string
-	RoomsImported int
-	ItemsImported int
-	NPCsImported  int
-	ScriptsImported int
-	DialogsImported int
-	LootTablesImported int
+	Backup              string
+	RoomsImported       int
+	ItemsImported       int
+	NPCsImported        int
+	SpawnersImported    int
+	ScriptsImported     int
+	DialogsImported     int
+	LootTablesImported  int
 	CharactersRelocated int
-	AssetsImported int
-	Errors        []string
-	Duration      time.Duration
+	AssetsImported      int
+	Errors              []string
+	Duration            time.Duration
 }
 
 // New creates a new WorldImporter
@@ -99,6 +100,10 @@ func (w *WorldImporter) Import() (*ImportResult, error) {
 	if err != nil {
 		w.addError("Failed to load rooms: %v", err)
 	}
+	yamlSpawners, err := w.loadSpawners()
+	if err != nil {
+		w.addError("Failed to load spawners: %v", err)
+	}
 
 	log.WithFields(log.Fields{
 		"scripts":     len(yamlScripts),
@@ -107,6 +112,7 @@ func (w *WorldImporter) Import() (*ImportResult, error) {
 		"npcs":        len(yamlNPCs),
 		"dialogs":     len(yamlDialogs),
 		"rooms":       len(yamlRooms),
+		"spawners":    len(yamlSpawners),
 	}).Info("Loaded YAML data")
 
 	if w.dryRun {
@@ -150,6 +156,9 @@ func (w *WorldImporter) Import() (*ImportResult, error) {
 
 	log.Info("Importing rooms...")
 	result.RoomsImported = w.importRooms(yamlRooms)
+
+	log.Info("Importing NPC spawners...")
+	result.SpawnersImported = w.importSpawners(yamlSpawners)
 
 	// Copy assets
 	log.Info("Copying assets...")
@@ -225,6 +234,11 @@ func (w *WorldImporter) createBackup() (string, error) {
 	// Backup loot tables
 	if lootTables, err := w.repos.LootTables().FindAll(); err == nil {
 		backup["lootTables"] = lootTables
+	}
+
+	// Backup NPC spawners
+	if spawners, err := w.repos.NPCSpawners().FindAll(); err == nil {
+		backup["npcSpawners"] = spawners
 	}
 
 	data, err := json.MarshalIndent(backup, "", "  ")
@@ -390,6 +404,19 @@ func (w *WorldImporter) loadRooms() ([]*YAMLRoom, error) {
 	return result, err
 }
 
+func (w *WorldImporter) loadSpawners() ([]*YAMLSpawner, error) {
+	var result []*YAMLSpawner
+	err := w.loadYAMLFiles("npc_spawners", func(data []byte) error {
+		var s YAMLSpawner
+		if err := yaml.Unmarshal(data, &s); err != nil {
+			return err
+		}
+		result = append(result, &s)
+		return nil
+	})
+	return result, err
+}
+
 // Import functions
 
 func (w *WorldImporter) importScripts(yamlScripts []*YAMLScript) int {
@@ -466,6 +493,22 @@ func (w *WorldImporter) importNPCs(yamlNPCs []*YAMLNPC) int {
 			count++
 			if w.verbose {
 				log.WithField("id", n.ID).Debug("Imported NPC")
+			}
+		}
+	}
+	return count
+}
+
+func (w *WorldImporter) importSpawners(yamlSpawners []*YAMLSpawner) int {
+	count := 0
+	for _, s := range yamlSpawners {
+		entity := s.ToEntity()
+		if _, err := w.repos.NPCSpawners().Import(entity); err != nil {
+			w.addError("Failed to import spawner %s: %v", s.ID, err)
+		} else {
+			count++
+			if w.verbose {
+				log.WithField("id", s.ID).Debug("Imported spawner")
 			}
 		}
 	}
@@ -582,10 +625,11 @@ func (w *WorldImporter) relocateCharacters() (int, error) {
 
 // Exported entity types for use in main
 type (
-	Script    = scripts.Script
-	Item      = items.Item
-	LootTable = items.LootTable
-	NPC       = npc.NPC
-	Dialog    = dialogs.Dialog
-	Room      = rooms.Room
+	Script     = scripts.Script
+	Item       = items.Item
+	LootTable  = items.LootTable
+	NPC        = npc.NPC
+	NPCSpawner = npc.NPCSpawner
+	Dialog     = dialogs.Dialog
+	Room       = rooms.Room
 )

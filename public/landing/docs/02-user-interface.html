@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Interface - TalesMUD Documentation</title>
+  <meta name="description" content="User Interface guide for TalesMUD players.">
+  <link rel="stylesheet" href="docs-style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="../index.html" class="nav-brand"><span>&gt;</span> talesmud.veilspan</a>
+    <ul class="nav-links">
+      <li><a href="../index.html">Home</a></li>
+      <li><a href="../index.html#lore">Lore</a></li>
+      <li><a href="index.html">Docs</a></li>
+      <li><a href="../play">Play</a></li>
+    </ul>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="docs-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h2 class="sidebar-title">Documentation</h2>
+      <nav class="sidebar-nav">
+  <li><a href="01-getting-started.html">01. Getting Started</a></li>
+  <li><a href="02-user-interface.html" class="active">02. User Interface</a></li>
+  <li><a href="03-commands.html">03. Commands Reference</a></li>
+  <li><a href="04-character.html">04. Character System</a></li>
+  <li><a href="05-inventory-equipment.html">05. Inventory & Equipment</a></li>
+  <li><a href="06-combat.html">06. Combat System</a></li>
+  <li><a href="07-quests.html">07. Quest System</a></li>
+  <li><a href="08-exploration.html">08. Exploration & Minimap</a></li>
+  <li><a href="09-npcs.html">09. NPC Interactions</a></li>
+  <li><a href="10-settings.html">10. Settings & Customization</a></li>
+  <li><a href="11-mobile.html">11. Mobile Play</a></li>
+  <li><a href="12-quick-reference.html">12. Quick Reference</a></li>
+  <li><a href="13-glossary.html">13. Glossary</a></li>
+</nav>
+    </aside>
+
+    <!-- Content -->
+    <main class="content">
+      <div class="doc-header">
+        <span class="doc-category">// Interface Guide</span>
+      </div>
+      
+      <h1>User Interface Guide</h1>
+
+<p>TalesMUD features a modern, customizable interface with multiple display panels (widgets) that show different aspects of the game.</p>
+
+<h2>Widget System</h2>
+
+<p>Widgets are movable, resizable panels that display game information. You can customize their position and size to create your perfect layout.</p>
+
+<h3>Available Widgets</h3>
+
+<h4>Room Widget</h4>
+<p>Displays your current location with rich visual information.</p>
+
+<strong>Features:</strong>
+<ul>
+<li><strong>Room Image</strong> - Pixelated background artwork for each location</li>
+<li><strong>Room Name</strong> - Centered with decorative styling</li>
+<li><strong>Room Description</strong> - Detailed text describing your surroundings</li>
+<li><strong>Parchment Style</strong> - Optional background texture (enable in Settings)</li>
+<li><strong>NPCs/Entities</strong> - Cards showing creatures and people in the room</li>
+<li><strong>Entity Details</strong> - Name, type, level, and health bars</li>
+</ul>
+
+<strong>Entity Actions:</strong>
+<ul>
+<li><strong>Talk</strong> (Blue button) - Converse with friendly NPCs</li>
+<li><strong>Trade</strong> (Green button) - Buy/sell with merchants</li>
+<li><strong>Attack</strong> (Red button) - Engage enemies in combat</li>
+</ul>
+
+<h4>Terminal Widget (Classic)</h4>
+<p>Traditional MUD terminal using xterm.js rendering.</p>
+
+<strong>Features:</strong>
+<ul>
+<li>Classic monospaced terminal display</li>
+<li>Command history (Up/Down arrow keys)</li>
+<li>Auto-complete suggestions</li>
+<li>Font size controls (S/M/L buttons)</li>
+<li>Line wrapping for long text</li>
+<li>Cursor blink indicator</li>
+</ul>
+
+<strong>Best for:</strong> Players who prefer traditional MUD gameplay
+
+<h4>Terminal X Widget (Enhanced)</h4>
+<p>Modern terminal with enhanced visual styling.</p>
+
+<strong>Features:</strong>
+<ul>
+<li>Syntax highlighting (cyan exits, bright room names)</li>
+<li>Custom color classification</li>
+<li>Improved readability</li>
+<li>Font size controls</li>
+<li>Same command capabilities as classic terminal</li>
+</ul>
+
+<strong>Best for:</strong> Players who want enhanced visuals while keeping terminal play
+
+<h4>Action Bar Widget</h4>
+<p>Quick-access command interface.</p>
+
+<strong>Features:</strong>
+<ul>
+<li><strong>Direction Buttons</strong> - N, E, S, W, Up, Down (only available exits shown)</li>
+<li><strong>Standard Commands</strong> - Look, Inventory, Equipment, Character</li>
+<li><strong>Combat Commands</strong> - Attack, Defend, Flee (when in combat)</li>
+<li><strong>More Menu</strong> - Additional commands (Who, Help, Drop, Use, etc.)</li>
+<li><strong>Room Actions</strong> - Context-specific actions (Pull, Push, etc.)</li>
+<li><strong>Pickup Menu</strong> - Select items from the ground</li>
+</ul>
+
+<strong>Layout:</strong>
+<ul>
+<li>Automatically adapts based on game state</li>
+<li>Combat mode replaces standard commands with combat options</li>
+<li>Merchant present adds "List" button</li>
+<li>Room actions appear inline or in "Actions" menu</li>
+</ul>
+
+<h4>Character Widget</h4>
+<p>Displays your character's vital statistics.</p>
+
+<strong>Information Shown:</strong>
+<ul>
+<li><strong>Name</strong> - Your character's name</li>
+<li><strong>Race</strong> - Character race (Human, Elf, Dwarf, etc.)</li>
+<li><strong>Class</strong> - Character class (Warrior, Mage, Rogue, etc.)</li>
+<li><strong>Level</strong> - Current level</li>
+<li><strong>HP Bar</strong> - Health points (current/max) with visual bar</li>
+<li><strong>XP Bar</strong> - Experience points (current/next level) with progress bar</li>
+<li><strong>Gold</strong> - Amount of currency (formatted: 1.5K, 2.3M, etc.)</li>
+<li><strong>Attributes</strong> - Grid showing all character stats (Strength, Agility, etc.)</li>
+</ul>
+
+<strong>Visual Indicators:</strong>
+<ul>
+<li><strong>Red Glow</strong> - When in combat</li>
+<li><strong>Combat Badge</strong> - Shows "IN COMBAT" status</li>
+</ul>
+
+<h4>Inventory Widget</h4>
+<p>Manage items you're carrying.</p>
+
+<strong>Features:</strong>
+<ul>
+<li><strong>Category Organization</strong> - Equipment, Consumables, Quest Items, Other</li>
+<li><strong>Collapsible Categories</strong> - Click to expand/collapse</li>
+<li><strong>View Modes:</strong></li>
+<li><strong>Grid View</strong> - Thumbnails with item icons</li>
+<li><strong>List View</strong> - Compact text list</li>
+<li><strong>Item Details</strong> - Click any item to see full stats</li>
+<li><strong>Item Actions</strong> - Equip, Use, Drop buttons</li>
+<li><strong>Item Quality Colors:</strong></li>
+<li>Gray - Normal</li>
+<li>Blue - Magic</li>
+<li>Purple - Rare</li>
+<li>Orange - Legendary</li>
+<li>Red - Mythic</li>
+</ul>
+
+<strong>Item Information:</strong>
+<ul>
+<li>Name and quality</li>
+<li>Type (Weapon, Armor, Consumable, etc.)</li>
+<li>Attributes (Damage, Defense, Strength, etc.)</li>
+<li>Level requirement</li>
+<li>Equipment slot</li>
+<li>Stack quantity (for stackable items)</li>
+</ul>
+
+<h4>Equipment Widget</h4>
+<p>Shows gear currently equipped on your character.</p>
+
+<strong>Equipment Slots:</strong>
+<ul>
+<li><strong>Head</strong> - Helmets, hats, crowns</li>
+<li><strong>Neck</strong> - Amulets, necklaces</li>
+<li><strong>Chest</strong> - Armor, robes, shirts</li>
+<li><strong>Main Hand</strong> - Primary weapons, tools</li>
+<li><strong>Off Hand</strong> - Shields, secondary weapons</li>
+<li><strong>Hands</strong> - Gloves, gauntlets</li>
+<li><strong>Legs</strong> - Pants, leggings, leg armor</li>
+<li><strong>Boots</strong> - Footwear</li>
+<li><strong>Ring 1</strong> - First ring slot</li>
+<li><strong>Ring 2</strong> - Second ring slot</li>
+</ul>
+
+<strong>Features:</strong>
+<ul>
+<li>Visual grid showing all slots</li>
+<li>Empty slots clearly indicated</li>
+<li>Click equipped item to see details</li>
+<li>Unequip button on item details popup</li>
+</ul>
+
+<h4>Quest Log Widget</h4>
+<p>Track your quest progress.</p>
+
+<strong>Features:</strong>
+<ul>
+<li><strong>Active Quests</strong> - Quests you're currently working on</li>
+<li><strong>Completed Quests</strong> - Quests you've finished</li>
+<li><strong>Quest Details:</strong></li>
+<li>Quest name and description</li>
+<li>List of objectives</li>
+<li>Progress tracking (e.g., "2/5 wolves defeated")</li>
+<li>Checkmarks for completed objectives</li>
+<li><strong>Expandable View</strong> - Click quest to expand/collapse details</li>
+</ul>
+
+<strong>Quest Notifications:</strong>
+<ul>
+<li><strong>Quest Accepted</strong> - Toast notification when starting a quest</li>
+<li><strong>Quest Progress</strong> - Updates when objectives advance</li>
+<li><strong>Quest Completed</strong> - Notification with reward details</li>
+</ul>
+
+<h4>Minimap Widget</h4>
+<p>Visual map of explored areas.</p>
+
+<strong>Features:</strong>
+<ul>
+<li><strong>Room Grid</strong> - Canvas-based map showing room positions</li>
+<li><strong>Current Location</strong> - Highlighted in distinct color</li>
+<li><strong>Visited Rooms</strong> - Shows all rooms you've explored</li>
+<li><strong>Floor-Based</strong> - Only displays current Z-level (floor)</li>
+<li><strong>Room Connections</strong> - Lines showing exits between rooms</li>
+<li><strong>Distance Fade</strong> - Rooms farther away are more transparent</li>
+<li><strong>Hover Tooltips</strong> - Mouse over rooms to see names</li>
+<li><strong>Auto-Updates</strong> - Tracks as you explore</li>
+</ul>
+
+<strong>Limitations:</strong>
+<ul>
+<li>Resets when you reload the page (session storage)</li>
+<li>Only tracks rooms with cardinal directions</li>
+<li>Shows up to 5 rooms away</li>
+</ul>
+
+<h2>Layout Customization</h2>
+
+<h3>Edit Mode</h3>
+
+<p>To customize your layout:</p>
+
+<ol>
+<li>Click <strong>Edit Layout</strong> button</li>
+<li><strong>Drag widgets</strong> by their title bars to move them</li>
+<li><strong>Resize widgets</strong> by dragging their corners/edges</li>
+<li><strong>Add widgets</strong> using the widget menu</li>
+<li><strong>Remove widgets</strong> by clicking the X button</li>
+<li>Click <strong>Save Layout</strong> to persist changes</li>
+</ol>
+
+<h3>Default Layout</h3>
+
+<p>The standard layout includes:</p>
+<ul>
+<li><strong>Left:</strong> Room Widget</li>
+<li><strong>Right:</strong> Terminal Widget</li>
+<li><strong>Bottom:</strong> Action Bar Widget</li>
+<li><strong>Side Panels:</strong> Character, Inventory, Equipment, Quest Log, Minimap</li>
+</ul>
+
+<h3>Layout Tips</h3>
+
+<ul>
+<li><strong>Keep Action Bar visible</strong> - Essential for navigation</li>
+<li><strong>Terminal + Room side-by-side</strong> - Classic MUD experience</li>
+<li><strong>Stack vertically on smaller screens</strong> - Better for narrow displays</li>
+<li><strong>Hide unused widgets</strong> - Reduce clutter</li>
+<li><strong>Save multiple layouts</strong> - Create different setups for different activities</li>
+</ul>
+
+<h2>Room Text Overlay</h2>
+
+<p>An optional feature that displays game messages as overlays on the room image.</p>
+
+<strong>Features:</strong>
+<ul>
+<li>Messages appear over the room image</li>
+<li>Auto-fade after a few seconds</li>
+<li>Supports bold formatting (<code><strong>text</strong></code>)</li>
+<li>Slide-in animation</li>
+<li>Always enabled on mobile</li>
+</ul>
+
+<strong>Enable/Disable:</strong> Settings → Interface → Room Text Overlay
+
+<h2>Terminal Features</h2>
+
+<h3>Command History</h3>
+
+<ul>
+<li>Press <strong>Up Arrow</strong> - Previous command</li>
+<li>Press <strong>Down Arrow</strong> - Next command</li>
+<li>Cycles through your recent commands</li>
+</ul>
+
+<h3>Auto-Complete</h3>
+
+<p>Start typing common commands and press Tab:</p>
+<ul>
+<li><code>nor</code> + Tab → <code>north</code></li>
+<li><code>sou</code> + Tab → <code>south</code></li>
+<li><code>say</code> + Tab → <code>say </code></li>
+</ul>
+
+<h3>Font Sizing</h3>
+
+<p>Both Terminal and Terminal X widgets have S/M/L buttons to adjust font size:</p>
+<ul>
+<li><strong>S</strong> - Small (compact, more lines visible)</li>
+<li><strong>M</strong> - Medium (balanced)</li>
+<li><strong>L</strong> - Large (easier to read)</li>
+</ul>
+
+<p>Your preference is saved automatically.</p>
+
+<h2>Widget Descriptions</h2>
+
+<h3>When to Use Each Widget</h3>
+
+<table>
+<thead>
+<tr>
+<th>Widget</th>
+<th>Use When</th>
+<th>Skip When</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Room</td>
+<td>Always recommended</td>
+<td>You prefer pure text</td>
+</tr>
+<tr>
+<td>Terminal/TerminalX</td>
+<td>You like typing commands</td>
+<td>You only use buttons</td>
+</tr>
+<tr>
+<td>Action Bar</td>
+<td>Always recommended</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Character</td>
+<td>You want quick stat visibility</td>
+<td>You check stats rarely</td>
+</tr>
+<tr>
+<td>Inventory</td>
+<td>Managing items frequently</td>
+<td>You use terminal commands</td>
+</tr>
+<tr>
+<td>Equipment</td>
+<td>Optimizing gear setup</td>
+<td>You rarely change equipment</td>
+</tr>
+<tr>
+<td>Quest Log</td>
+<td>Tracking objectives</td>
+<td>You're not questing</td>
+</tr>
+<tr>
+<td>Minimap</td>
+<td>Navigating complex areas</td>
+<td>You know the world well</td>
+</tr>
+</tbody>
+</table>
+
+<h2>Mobile Interface Differences</h2>
+
+<p>On mobile devices, the interface adapts:</p>
+
+<ul>
+<li><strong>Tab-based layout</strong> - Switch between Room and Console tabs</li>
+<li><strong>Bottom sheets</strong> - Character, Inventory, Equipment in drawers</li>
+<li><strong>Touch-optimized buttons</strong> - Larger hit targets (44px minimum)</li>
+<li><strong>Vertical stacking</strong> - Widgets stack instead of side-by-side</li>
+<li><strong>Room text overlay</strong> - Always enabled</li>
+<li><strong>Safe area padding</strong> - Respects device notches</li>
+</ul>
+
+<p>See the <a href="11-mobile.html">Mobile Play Guide</a> for full details.</p>
+
+<h2>Next Steps</h2>
+
+<ul>
+<li>Learn all available commands in the <a href="03-commands.html">Commands Reference</a></li>
+<li>Understand your character stats in <a href="04-character.html">Character System</a></li>
+<li>Master item management in <a href="05-inventory-equipment.html">Inventory & Equipment</a></li>
+</ul>
+
+
+      <div class="doc-nav">
+  <a href="01-getting-started.html" class="doc-nav-link">
+    <span class="doc-nav-label">Previous</span>
+    <span class="doc-nav-title">Getting Started</span>
+  </a>
+  <a href="03-commands.html" class="doc-nav-link">
+    <span class="doc-nav-label">Next</span>
+    <span class="doc-nav-title">Commands Reference</span>
+  </a>
+</div>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-copy">&copy; 2026 Veilspan - TalesMUD Documentation</div>
+  </footer>
+
+</body>
+</html>

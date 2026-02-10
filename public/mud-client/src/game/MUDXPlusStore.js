@@ -4,6 +4,31 @@ import { writable, derived } from "svelte/store";
 const CARDINAL_DIRECTIONS = ["north", "south", "east", "west"];
 const VERTICAL_DIRECTIONS = ["up", "down"];
 
+// Offsets for cardinal directions (x, y)
+const DIRECTION_OFFSETS = {
+  north: [0, -1],
+  south: [0, 1],
+  east: [1, 0],
+  west: [-1, 0],
+};
+
+const VISITED_ROOMS_KEY = 'talesmud_visitedRooms';
+
+function loadVisitedRooms() {
+  try {
+    const data = localStorage.getItem(VISITED_ROOMS_KEY);
+    return data ? JSON.parse(data) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveVisitedRooms(rooms) {
+  try {
+    localStorage.setItem(VISITED_ROOMS_KEY, JSON.stringify(rooms));
+  } catch { /* storage full or unavailable */ }
+}
+
 function createStore() {
   const { subscribe, set, update } = writable({
     // Room data
@@ -47,6 +72,10 @@ function createStore() {
     // Quest state
     quests: [], // Array of quest log entries
     questNotifications: [], // Recent quest events for toast notifications
+
+    // Minimap state (persisted to localStorage)
+    currentRoomId: null,
+    visitedRooms: loadVisitedRooms(), // { [roomId]: { id, name, coords: {x,y,z}, cardinalExits: [{dir, targetId}] } }
   });
 
   const store = {
@@ -206,6 +235,79 @@ function createStore() {
           return state;
         });
       }, 5000);
+    },
+
+    // Minimap methods
+    trackRoomVisit: (room) => {
+      update((state) => {
+        const prevRoomId = state.currentRoomId;
+        state.currentRoomId = room.id;
+
+        // Extract cardinal exits from the room
+        const cardinalExits = (room.exits || [])
+          .filter(e => {
+            const name = (e.name || e.Name || "").toLowerCase();
+            return CARDINAL_DIRECTIONS.includes(name) && !e.hidden;
+          })
+          .map(e => ({
+            dir: (e.name || e.Name || "").toLowerCase(),
+            targetId: e.target || e.Target || "",
+          }));
+
+        // Determine coords
+        let coords = null;
+        if (room.coords) {
+          coords = { x: room.coords.x, y: room.coords.y, z: room.coords.z || 0 };
+        } else if (prevRoomId && state.visitedRooms[prevRoomId]) {
+          // Infer coords from previous room's exit direction
+          const prevRoom = state.visitedRooms[prevRoomId];
+          if (prevRoom.coords) {
+            const exitToHere = prevRoom.cardinalExits.find(e => e.targetId === room.id);
+            if (exitToHere && DIRECTION_OFFSETS[exitToHere.dir]) {
+              const [dx, dy] = DIRECTION_OFFSETS[exitToHere.dir];
+              coords = { x: prevRoom.coords.x + dx, y: prevRoom.coords.y + dy, z: prevRoom.coords.z };
+            }
+          }
+        }
+
+        // Default first room to origin
+        if (!coords && Object.keys(state.visitedRooms).length === 0) {
+          coords = { x: 0, y: 0, z: 0 };
+        }
+
+        // Store room data (only update if we have coords or room wasn't visited yet)
+        if (coords || !state.visitedRooms[room.id]) {
+          state.visitedRooms = {
+            ...state.visitedRooms,
+            [room.id]: {
+              id: room.id,
+              name: room.name || "",
+              coords,
+              cardinalExits,
+            },
+          };
+        } else if (state.visitedRooms[room.id]) {
+          // Update exits even if we can't determine coords
+          state.visitedRooms = {
+            ...state.visitedRooms,
+            [room.id]: {
+              ...state.visitedRooms[room.id],
+              cardinalExits,
+            },
+          };
+        }
+
+        saveVisitedRooms(state.visitedRooms);
+        return state;
+      });
+    },
+    clearVisitedRooms: () => {
+      update((state) => {
+        state.visitedRooms = {};
+        state.currentRoomId = null;
+        saveVisitedRooms({});
+        return state;
+      });
     },
   };
 

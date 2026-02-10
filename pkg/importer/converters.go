@@ -1,7 +1,10 @@
 package importer
 
 import (
+	"time"
+
 	"github.com/talesmud/talesmud/pkg/entities"
+	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/dialogs"
 	"github.com/talesmud/talesmud/pkg/entities/items"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
@@ -47,6 +50,7 @@ func (y *YAMLRoom) ToEntity() *rooms.Room {
 				Type:        rooms.RoomActionType(a.Type),
 				Description: a.Description,
 				Response:    a.Response,
+				ScriptId:    a.ScriptId,
 				Params:      a.Params,
 			}
 		}
@@ -124,6 +128,11 @@ func (y *YAMLItem) ToEntity() *items.Item {
 
 // ToEntity converts a YAMLNPC to an NPC entity
 func (y *YAMLNPC) ToEntity() *npc.NPC {
+	// Determine if this is a template:
+	// - NPCs with spawnRoomId are unique (non-template) — they reside in their room
+	// - NPCs without spawnRoomId are templates — they're spawned via spawners
+	isTemplate := y.SpawnRoomId == ""
+
 	n := &npc.NPC{
 		Entity:           &entities.Entity{ID: y.ID},
 		Name:             y.Name,
@@ -132,8 +141,25 @@ func (y *YAMLNPC) ToEntity() *npc.NPC {
 		MaxHitPoints:     y.MaxHitPoints,
 		CurrentHitPoints: y.MaxHitPoints, // Start at full health
 		DialogID:         y.DialogID,
-		IsTemplate:       true, // Imported NPCs are templates
+		IsTemplate:       isTemplate,
+		SpawnRoomID:      y.SpawnRoomId,
 		State:            "idle",
+	}
+
+	// Set race if provided
+	if y.Race.ID != "" {
+		n.Race = characters.Race{
+			ID:   y.Race.ID,
+			Name: y.Race.Name,
+		}
+	}
+
+	// Set class if provided
+	if y.Class.ID != "" {
+		n.Class = characters.Class{
+			ID:   y.Class.ID,
+			Name: y.Class.Name,
+		}
 	}
 
 	// Convert enemy trait if present
@@ -151,26 +177,38 @@ func (y *YAMLNPC) ToEntity() *npc.NPC {
 			FleeThreshold: y.EnemyTrait.FleeThreshold,
 			XPReward:      y.EnemyTrait.XPReward,
 			LootTableID:   y.EnemyTrait.LootTableID,
+			OnAggroScript: y.EnemyTrait.OnAggroScript,
+			OnDeathScript: y.EnemyTrait.OnDeathScript,
+			OnFleeScript:  y.EnemyTrait.OnFleeScript,
 		}
 	}
 
 	// Convert merchant trait if present
 	if y.MerchantTrait != nil {
 		mt := &npc.MerchantTrait{
-			BuyMultiplier:  y.MerchantTrait.BuyRate,
-			SellMultiplier: y.MerchantTrait.SellRate,
+			MerchantType:   y.MerchantTrait.MerchantType,
+			BuyMultiplier:  y.MerchantTrait.BuyMultiplier,
+			SellMultiplier: y.MerchantTrait.SellMultiplier,
 			Inventory:      make([]npc.MerchantItem, 0),
 		}
 		// Convert inventory items
 		for _, item := range y.MerchantTrait.Inventory {
-			stock := item.Stock
-			if stock == 0 {
-				stock = -1 // Default to unlimited if not specified
+			qty := item.Quantity
+			if qty == 0 {
+				qty = item.Stock
+			}
+			if qty == 0 {
+				qty = -1 // Default to unlimited if not specified
+			}
+			maxQty := item.MaxQuantity
+			if maxQty == 0 {
+				maxQty = qty
 			}
 			mt.Inventory = append(mt.Inventory, npc.MerchantItem{
 				ItemTemplateID: item.ItemTemplateID,
-				Quantity:       stock,
-				MaxQuantity:    stock,
+				BasePrice:      item.BasePrice,
+				Quantity:       qty,
+				MaxQuantity:    maxQty,
 			})
 		}
 		n.MerchantTrait = mt
@@ -260,50 +298,64 @@ func convertDialogOptions(options []YAMLDialogOption, tree map[string]YAMLDialog
 // ToEntity converts a YAMLLootTable to a LootTable entity
 func (y *YAMLLootTable) ToEntity() *items.LootTable {
 	lt := &items.LootTable{
-		Entity:      &entities.Entity{ID: y.ID},
-		Name:        y.Name,
-		Description: y.Description,
-		Entries:     make([]items.LootEntry, 0),
+		Entity:         &entities.Entity{ID: y.ID},
+		Name:           y.Name,
+		Description:    y.Description,
+		Entries:        make([]items.LootEntry, 0),
 		GoldMultiplier: 1.0,
 		DropBonus:      0.0,
 	}
 
-	// Convert entries
+	// Convert entries (new format: itemTemplateId, dropChance, minQuantity, maxQuantity, guaranteed)
 	for _, e := range y.Entries {
-		// Convert weight (0-100) to drop chance (0.0-1.0)
-		dropChance := float64(e.Weight) / 100.0
-		if dropChance > 1.0 {
-			dropChance = 1.0
-		}
-
-		minQty := e.MinCount
+		minQty := e.MinQuantity
 		if minQty == 0 {
 			minQty = 1
 		}
-		maxQty := e.MaxCount
+		maxQty := e.MaxQuantity
 		if maxQty == 0 {
 			maxQty = 1
 		}
 
 		lt.Entries = append(lt.Entries, items.LootEntry{
-			ItemTemplateID: e.Item,
-			DropChance:     dropChance,
+			ItemTemplateID: e.ItemTemplateID,
+			DropChance:     e.DropChance,
 			MinQuantity:    minQty,
 			MaxQuantity:    maxQty,
-			Guaranteed:     e.Weight >= 100,
-		})
-	}
-
-	// Add guaranteed items
-	for _, itemID := range y.Guaranteed {
-		lt.Entries = append(lt.Entries, items.LootEntry{
-			ItemTemplateID: itemID,
-			DropChance:     1.0,
-			MinQuantity:    1,
-			MaxQuantity:    1,
-			Guaranteed:     true,
+			Guaranteed:     e.Guaranteed,
 		})
 	}
 
 	return lt
+}
+
+// parseDuration parses a duration string like "5m" or "30s"
+func parseDuration(s string) time.Duration {
+	if s == "" {
+		return 5 * time.Minute // default
+	}
+	d, err := time.ParseDuration(s)
+	if err != nil {
+		return 5 * time.Minute
+	}
+	return d
+}
+
+// ToEntity converts a YAMLSpawner to an NPCSpawner entity
+func (y *YAMLSpawner) ToEntity() *npc.NPCSpawner {
+	initialCount := y.InitialCount
+	if initialCount == 0 {
+		initialCount = 1
+	}
+
+	return &npc.NPCSpawner{
+		Entity:        &entities.Entity{ID: y.ID},
+		Name:          y.Name,
+		TemplateID:    y.TemplateID,
+		RoomID:        y.RoomID,
+		MaxInstances:  y.MaxInstances,
+		SpawnInterval: parseDuration(y.SpawnInterval),
+		InitialCount:  initialCount,
+		Created:       time.Now(),
+	}
 }

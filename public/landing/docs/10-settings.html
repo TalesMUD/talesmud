@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings & Customization - TalesMUD Documentation</title>
+  <meta name="description" content="Settings & Customization guide for TalesMUD players.">
+  <link rel="stylesheet" href="docs-style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="../index.html" class="nav-brand"><span>&gt;</span> talesmud.veilspan</a>
+    <ul class="nav-links">
+      <li><a href="../index.html">Home</a></li>
+      <li><a href="../index.html#lore">Lore</a></li>
+      <li><a href="index.html">Docs</a></li>
+      <li><a href="../play">Play</a></li>
+    </ul>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="docs-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h2 class="sidebar-title">Documentation</h2>
+      <nav class="sidebar-nav">
+  <li><a href="01-getting-started.html">01. Getting Started</a></li>
+  <li><a href="02-user-interface.html">02. User Interface</a></li>
+  <li><a href="03-commands.html">03. Commands Reference</a></li>
+  <li><a href="04-character.html">04. Character System</a></li>
+  <li><a href="05-inventory-equipment.html">05. Inventory & Equipment</a></li>
+  <li><a href="06-combat.html">06. Combat System</a></li>
+  <li><a href="07-quests.html">07. Quest System</a></li>
+  <li><a href="08-exploration.html">08. Exploration & Minimap</a></li>
+  <li><a href="09-npcs.html">09. NPC Interactions</a></li>
+  <li><a href="10-settings.html" class="active">10. Settings & Customization</a></li>
+  <li><a href="11-mobile.html">11. Mobile Play</a></li>
+  <li><a href="12-quick-reference.html">12. Quick Reference</a></li>
+  <li><a href="13-glossary.html">13. Glossary</a></li>
+</nav>
+    </aside>
+
+    <!-- Content -->
+    <main class="content">
+      <div class="doc-header">
+        <span class="doc-category">// Customization</span>
+      </div>
+      
+      <h1>Settings & Customization</h1>
+
+<p>Customize your TalesMUD experience with various settings and layout options.</p>
+
+<h2>Accessing Settings</h2>
+
+<strong>Opening Settings:</strong>
+<ol>
+<li>Look for Settings icon/button (usually gear icon)</li>
+<li>Click to open Settings modal</li>
+<li>Browse settings tabs</li>
+<li>Make changes</li>
+<li>Settings save automatically</li>
+</ol>
+
+<h2>Settings Categories</h2>
+
+<h3>General Settings</h3>
+
+<p>Audio and general game preferences.</p>
+
+<h4>Sound Enabled</h4>
+
+<strong>Toggle:</strong> On/Off
+
+<strong>Effect:</strong>
+<ul>
+<li>Master audio switch</li>
+<li>Enables/disables all game sounds</li>
+<li>Affects music and sound effects</li>
+</ul>
+
+<strong>When to Disable:</strong>
+<ul>
+<li>Playing in public places</li>
+<li>Need quiet environment</li>
+<li>Audio distracting</li>
+</ul>
+
+<h4>Music Volume</h4>
+
+<strong>Range:</strong> 0-100
+
+<strong>Effect:</strong>
+<ul>
+<li>Controls background music volume</li>
+<li>Independent from sound effects</li>
+<li>0 = muted, 100 = full volume</li>
+</ul>
+
+<strong>Recommended:</strong>
+<ul>
+<li>30-50 for subtle background</li>
+<li>70+ for immersive experience</li>
+<li>0 if you prefer your own music</li>
+</ul>
+
+<h4>SFX Volume</h4>
+
+<strong>Range:</strong> 0-100
+
+<strong>Effect:</strong>
+<ul>
+<li>Controls sound effects volume</li>
+<li>Combat sounds, UI sounds, etc.</li>
+<li>Independent from music</li>
+</ul>
+
+<strong>Recommended:</strong>
+<ul>
+<li>50-70 for balanced experience</li>
+<li>Higher for important audio cues</li>
+<li>Lower if sound effects are distracting</li>
+</ul>
+
+<strong>Note:</strong> Audio system framework exists but may not be fully implemented.
+
+<h3>Interface Settings</h3>
+
+<p>Visual and UI customization options.</p>
+
+<h4>Parchment Background</h4>
+
+<strong>Toggle:</strong> On/Off
+
+<strong>Effect:</strong>
+<ul>
+<li>Adds parchment texture to room descriptions</li>
+<li>Enhances fantasy atmosphere</li>
+<li>Slight readability trade-off</li>
+</ul>
+
+<strong>When to Enable:</strong>
+<ul>
+<li>You prefer thematic UI</li>
+<li>Enjoy immersive visuals</li>
+<li>Like the aesthetic</li>
+</ul>
+
+<strong>When to Disable:</strong>
+<ul>
+<li>Prefer clean, minimal interface</li>
+<li>Need maximum readability</li>
+<li>Performance concerns</li>
+</ul>
+
+<h4>Compact Mode</h4>
+
+<strong>Toggle:</strong> On/Off
+
+<strong>Effect:</strong>
+<ul>
+<li>Reduces spacing and padding in UI</li>
+<li>Shows more information on screen</li>
+<li>Tighter, denser layout</li>
+</ul>
+
+<strong>When to Enable:</strong>
+<ul>
+<li>Small screen</li>
+<li>Want to see more at once</li>
+<li>Prefer information-dense interface</li>
+</ul>
+
+<strong>When to Disable:</strong>
+<ul>
+<li>Large screen with plenty of space</li>
+<li>Prefer comfortable spacing</li>
+<li>Accessibility needs</li>
+</ul>
+
+<h4>Room Text Overlay</h4>
+
+<strong>Toggle:</strong> On/Off (Always on for mobile)
+
+<strong>Effect:</strong>
+<ul>
+<li>Displays game messages as overlays on room image</li>
+<li>Messages fade after a few seconds</li>
+<li>Supports bold text formatting</li>
+</ul>
+
+<strong>Features:</strong>
+<ul>
+<li>Auto-fade (configurable duration)</li>
+<li>Slide-in animation</li>
+<li>Appears on top of room background</li>
+<li>Good for important messages</li>
+</ul>
+
+<strong>When to Enable:</strong>
+<ul>
+<li>Want cinematic feel</li>
+<li>Prefer messages on visuals</li>
+<li>Like animated notifications</li>
+</ul>
+
+<strong>When to Disable:</strong>
+<ul>
+<li>Prefer all text in terminal</li>
+<li>Find overlays distracting</li>
+<li>Terminal-only playstyle</li>
+</ul>
+
+<strong>Mobile Note:</strong> Always enabled on mobile for better readability.
+
+<h2>Settings Persistence</h2>
+
+<strong>Automatic Saving:</strong>
+<ul>
+<li>All settings saved to browser localStorage</li>
+<li>Persist across sessions</li>
+<li>Version controlled (settings_v1)</li>
+<li>No manual save needed</li>
+</ul>
+
+<strong>Storage Key:</strong>
+<ul>
+<li><code>talesmud_settings_v1</code></li>
+<li>Browser-specific</li>
+<li>Per-device storage</li>
+</ul>
+
+<strong>Clearing Settings:</strong>
+<ul>
+<li>Clear browser data to reset</li>
+<li>Settings will return to defaults</li>
+<li>Can reconfigure anytime</li>
+</ul>
+
+<h2>Layout Customization</h2>
+
+<h3>Edit Mode</h3>
+
+<strong>Entering Edit Mode:</strong>
+<ol>
+<li>Click "Edit Layout" button</li>
+<li>Interface switches to edit mode</li>
+<li>Widgets become draggable and resizable</li>
+<li>Edit toolbar appears</li>
+</ol>
+
+<strong>In Edit Mode:</strong>
+<ul>
+<li>Drag widgets by title bars</li>
+<li>Resize by dragging corners/edges</li>
+<li>Add/remove widgets</li>
+<li>Rearrange interface</li>
+</ul>
+
+<strong>Exiting Edit Mode:</strong>
+<ol>
+<li>Click "Save Layout" button</li>
+<li>Or click "Cancel" to discard changes</li>
+<li>Layout saved to localStorage</li>
+<li>Return to normal mode</li>
+</ol>
+
+<h3>Moving Widgets</h3>
+
+<strong>Drag and Drop:</strong>
+<ol>
+<li>Enter edit mode</li>
+<li>Click and hold widget title bar</li>
+<li>Drag to desired position</li>
+<li>Release to place</li>
+<li>Widget snaps to grid</li>
+</ol>
+
+<strong>Tips:</strong>
+<ul>
+<li>Widgets can overlap (adjust as needed)</li>
+<li>Maintain important widgets visible</li>
+<li>Keep Action Bar accessible</li>
+<li>Room or Terminal should be prominent</li>
+</ul>
+
+<h3>Resizing Widgets</h3>
+
+<strong>Resize Controls:</strong>
+<ol>
+<li>Enter edit mode</li>
+<li>Hover over widget corners or edges</li>
+<li>Cursor changes to resize indicator</li>
+<li>Click and drag to resize</li>
+<li>Release when desired size reached</li>
+</ol>
+
+<strong>Constraints:</strong>
+<ul>
+<li>Minimum size enforced</li>
+<li>Maximum size enforced</li>
+<li>Maintains aspect ratio (some widgets)</li>
+<li>Prevents too-small or too-large sizes</li>
+</ul>
+
+<h3>Adding Widgets</h3>
+
+<strong>Add New Widget:</strong>
+<ol>
+<li>Enter edit mode</li>
+<li>Click "Add Widget" or widget menu</li>
+<li>Select widget type from list</li>
+<li>Widget appears in default position</li>
+<li>Drag to desired location</li>
+<li>Resize as needed</li>
+</ol>
+
+<strong>Available Widgets:</strong>
+<ul>
+<li>Room Widget</li>
+<li>Terminal Widget</li>
+<li>Terminal X Widget</li>
+<li>Action Bar Widget</li>
+<li>Character Widget</li>
+<li>Inventory Widget</li>
+<li>Equipment Widget</li>
+<li>Quest Log Widget</li>
+<li>Minimap Widget</li>
+</ul>
+
+<strong>Single-Instance Widgets:</strong>
+<ul>
+<li>Most widgets can only be added once</li>
+<li>Can't have two Room Widgets (pointless)</li>
+<li>Prevents duplicates</li>
+</ul>
+
+<h3>Removing Widgets</h3>
+
+<strong>Delete Widget:</strong>
+<ol>
+<li>Enter edit mode</li>
+<li>Look for X or close button on widget</li>
+<li>Click to remove</li>
+<li>Widget disappears from layout</li>
+<li>Can be re-added later</li>
+</ol>
+
+<strong>Essential Widgets:</strong>
+<ul>
+<li>Action Bar (highly recommended)</li>
+<li>Room or Terminal (at least one!)</li>
+<li>Don't remove all navigation</li>
+</ul>
+
+<h3>Default Layout</h3>
+
+<strong>Standard Configuration:</strong>
+<ul>
+<li><strong>Left Panel:</strong> Room Widget</li>
+<li><strong>Right Panel:</strong> Terminal Widget</li>
+<li><strong>Bottom:</strong> Action Bar Widget</li>
+<li><strong>Side Panels:</strong> Character, Inventory, Equipment, Quest Log, Minimap</li>
+</ul>
+
+<strong>Resetting to Default:</strong>
+<ul>
+<li>Delete layout from localStorage</li>
+<li>Clear site data</li>
+<li>Reload page</li>
+<li>Default layout loads</li>
+</ul>
+
+<h3>Layout Presets (Ideas)</h3>
+
+<strong>Terminal-Only Layout:</strong>
+<ul>
+<li>Large Terminal Widget (80% of screen)</li>
+<li>Action Bar at bottom</li>
+<li>Character/Inventory in small side panel</li>
+</ul>
+
+<strong>Visual-First Layout:</strong>
+<ul>
+<li>Large Room Widget (60% of screen)</li>
+<li>Small Terminal X Widget (sidebar)</li>
+<li>Action Bar and Character visible</li>
+<li>Minimal terminal use</li>
+</ul>
+
+<strong>Balanced Layout:</strong>
+<ul>
+<li>Room and Terminal side-by-side (50/50)</li>
+<li>Action Bar bottom</li>
+<li>All info widgets in panels</li>
+</ul>
+
+<strong>Mobile-Optimized Layout:</strong>
+<ul>
+<li>Vertical stacking</li>
+<li>Full-width widgets</li>
+<li>Tab-based switching</li>
+</ul>
+
+<h2>Terminal Customization</h2>
+
+<h3>Font Size (Classic Terminal)</h3>
+
+<strong>Options:</strong> Small (S), Medium (M), Large (L)
+
+<strong>Buttons:</strong> S, M, L in terminal header
+
+<strong>Effect:</strong>
+<ul>
+<li>Changes text size in xterm terminal</li>
+<li>Affects line count visible</li>
+<li>Improves readability</li>
+</ul>
+
+<strong>Saved:</strong> <code>talesmud_term_fontsize</code>
+
+<strong>Recommendations:</strong>
+<ul>
+<li>Small: For advanced users, see more text</li>
+<li>Medium: Balanced default</li>
+<li>Large: Better readability, accessibility</li>
+</ul>
+
+<h3>Font Size (Terminal X)</h3>
+
+<strong>Options:</strong> Small (S), Medium (M), Large (L)
+
+<strong>Buttons:</strong> S, M, L in Terminal X header
+
+<strong>Effect:</strong>
+<ul>
+<li>Changes text size in custom terminal</li>
+<li>Independent from classic terminal</li>
+<li>Syntax highlighting maintained</li>
+</ul>
+
+<strong>Saved:</strong> <code>talesmud_termx_fontsize</code>
+
+<h3>Terminal Choice</h3>
+
+<strong>Classic Terminal:</strong>
+<ul>
+<li>Uses xterm.js</li>
+<li>Traditional monospace display</li>
+<li>Best for purists</li>
+<li>Standard command interface</li>
+</ul>
+
+<strong>Terminal X:</strong>
+<ul>
+<li>Enhanced custom terminal</li>
+<li>Syntax highlighting</li>
+<li>Color-coded text</li>
+<li>Modern styling</li>
+</ul>
+
+<strong>Both Available:</strong>
+<ul>
+<li>Can add both to layout</li>
+<li>Use whichever you prefer</li>
+<li>Or switch between them</li>
+</ul>
+
+<h2>Inventory Customization</h2>
+
+<h3>View Mode</h3>
+
+<strong>Grid View:</strong>
+<ul>
+<li>Thumbnail/icon based</li>
+<li>Visual representation</li>
+<li>Easier to recognize items</li>
+<li>More space per item</li>
+</ul>
+
+<strong>List View:</strong>
+<ul>
+<li>Compact text list</li>
+<li>See more items at once</li>
+<li>Faster scanning</li>
+<li>Less visual clutter</li>
+</ul>
+
+<strong>Toggle:</strong> Button in Inventory Widget header
+
+<strong>Saved:</strong> <code>talesmud_inventory_view</code> (localStorage)
+
+<strong>Preference:</strong>
+<ul>
+<li>Use Grid for new players</li>
+<li>Use List for experienced players</li>
+<li>Try both and decide</li>
+</ul>
+
+<h3>Category Collapse</h3>
+
+<strong>Collapsible Sections:</strong>
+<ul>
+<li>Equipment</li>
+<li>Consumables</li>
+<li>Quest Items</li>
+<li>Other</li>
+</ul>
+
+<strong>Click to Collapse/Expand:</strong>
+<ul>
+<li>Hide categories you don't use</li>
+<li>Show only what you need</li>
+<li>Reduce scrolling</li>
+</ul>
+
+<h2>Performance Settings</h2>
+
+<strong>Not Explicitly Configurable, but Tips:</strong>
+
+<h3>Reduce Visual Overhead</h3>
+
+<strong>Disable:</strong>
+<ul>
+<li>Parchment backgrounds</li>
+<li>Room text overlays</li>
+<li>Unnecessary widgets</li>
+</ul>
+
+<strong>Enable:</strong>
+<ul>
+<li>Compact mode</li>
+<li>Terminal-only layout</li>
+</ul>
+
+<h3>Browser Optimization</h3>
+
+<strong>Clear Cache:</strong>
+<ul>
+<li>Remove old data</li>
+<li>Refresh resources</li>
+<li>Improve loading</li>
+</ul>
+
+<strong>Close Other Tabs:</strong>
+<ul>
+<li>Free memory</li>
+<li>Better performance</li>
+<li>Smoother experience</li>
+</ul>
+
+<strong>Update Browser:</strong>
+<ul>
+<li>Latest features</li>
+<li>Better rendering</li>
+<li>Bug fixes</li>
+</ul>
+
+<h2>Accessibility Options</h2>
+
+<h3>Visual Accessibility</h3>
+
+<strong>Font Sizes:</strong>
+<ul>
+<li>Increase terminal font size (L)</li>
+<li>Better for visual impairment</li>
+<li>Reduce eye strain</li>
+</ul>
+
+<strong>Contrast:</strong>
+<ul>
+<li>Dark theme by default (high contrast)</li>
+<li>Gold/amber accents visible</li>
+<li>Consider browser zoom</li>
+</ul>
+
+<strong>Spacing:</strong>
+<ul>
+<li>Disable compact mode</li>
+<li>More comfortable spacing</li>
+<li>Easier to click targets</li>
+</ul>
+
+<h3>Audio Accessibility</h3>
+
+<strong>Disable Sounds:</strong>
+<ul>
+<li>If audio distracts</li>
+<li>For sensory needs</li>
+<li>Personal preference</li>
+</ul>
+
+<strong>Volume Control:</strong>
+<ul>
+<li>Adjust to comfortable levels</li>
+<li>Balance music and SFX</li>
+<li>Independent controls</li>
+</ul>
+
+<h2>Advanced Customization</h2>
+
+<h3>Browser Developer Tools</h3>
+
+<strong>For Power Users:</strong>
+
+<strong>Access localStorage:</strong>
+<p>``<code>javascript</p>
+<p>// View current settings</p>
+<p>localStorage.getItem('talesmud_settings_v1')</p>
+
+<p>// View layout</p>
+<p>localStorage.getItem('talesmud_layout_v1')</p>
+
+<p>// Clear specific setting</p>
+<p>localStorage.removeItem('talesmud_settings_v1')</p>
+
+<p>// Clear all TalesMUD data</p>
+<p>Object.keys(localStorage)</p>
+<p>  .filter(key => key.startsWith('talesmud_'))</p>
+<p>  .forEach(key => localStorage.removeItem(key))</p>
+</code>``
+
+<strong>Warning:</strong> Advanced users only! Can break configuration.
+
+<h3>Custom CSS (External)</h3>
+
+<strong>If using browser extensions:</strong>
+<ul>
+<li>Stylus, Stylish, etc.</li>
+<li>Custom styles possible</li>
+<li>Modify colors, fonts, spacing</li>
+<li>At your own risk</li>
+</ul>
+
+<strong>Not officially supported.</strong>
+
+<h2>Settings Tips</h2>
+
+<h3>Recommended Settings for New Players</h3>
+
+<strong>General:</strong>
+<ul>
+<li>Sound Enabled: On (if available)</li>
+<li>Music Volume: 40</li>
+<li>SFX Volume: 50</li>
+</ul>
+
+<strong>Interface:</strong>
+<ul>
+<li>Parchment Background: On (immersive)</li>
+<li>Compact Mode: Off (comfortable)</li>
+<li>Room Text Overlay: On (helpful)</li>
+</ul>
+
+<strong>Layout:</strong>
+<ul>
+<li>Default layout (Room + Terminal)</li>
+<li>Add Character Widget</li>
+<li>Add Quest Log Widget</li>
+</ul>
+
+<h3>Recommended Settings for Experienced Players</h3>
+
+<strong>General:</strong>
+<ul>
+<li>Sound: Personal preference</li>
+<li>Volumes: As desired</li>
+</ul>
+
+<strong>Interface:</strong>
+<ul>
+<li>Parchment Background: Off (efficiency)</li>
+<li>Compact Mode: On (more info)</li>
+<li>Room Text Overlay: Off (terminal only)</li>
+</ul>
+
+<strong>Layout:</strong>
+<ul>
+<li>Custom layout (optimized for your flow)</li>
+<li>Larger terminal (typing efficiency)</li>
+<li>Minimap for navigation</li>
+<li>Inventory List view</li>
+</ul>
+
+<h3>Recommended Settings for Mobile</h3>
+
+<strong>See:</strong> <a href="11-mobile.html">Mobile Play Guide</a>
+
+<strong>Interface:</strong>
+<ul>
+<li>Compact Mode: On</li>
+<li>Room Text Overlay: On (automatic)</li>
+</ul>
+
+<strong>Layout:</strong>
+<ul>
+<li>Vertical stacking</li>
+<li>Tab-based interface</li>
+<li>Touch-optimized</li>
+</ul>
+
+<h2>Troubleshooting Settings</h2>
+
+<h3>"Settings won't save"</h3>
+
+<strong>Possible Causes:</strong>
+<ul>
+<li>Browser blocking localStorage</li>
+<li>Private/incognito mode</li>
+<li>Browser storage full</li>
+</ul>
+
+<strong>Solutions:</strong>
+<ul>
+<li>Check browser permissions</li>
+<li>Use normal browsing mode</li>
+<li>Clear old localStorage data</li>
+<li>Try different browser</li>
+</ul>
+
+<h3>"Layout keeps resetting"</h3>
+
+<strong>Causes:</strong>
+<ul>
+<li>Browser clearing data automatically</li>
+<li>localStorage disabled</li>
+<li>Browser privacy settings</li>
+</ul>
+
+<strong>Solutions:</strong>
+<ul>
+<li>Disable auto-clear</li>
+<li>Whitelist the site</li>
+<li>Adjust privacy settings</li>
+</ul>
+
+<h3>"Interface looks broken"</h3>
+
+<strong>Solutions:</strong>
+<ul>
+<li>Reset to default layout</li>
+<li>Clear localStorage</li>
+<li>Reload page</li>
+<li>Check browser console for errors</li>
+</ul>
+
+<h3>"Audio doesn't work"</h3>
+
+<strong>Check:</strong>
+<ul>
+<li>Sound Enabled toggle</li>
+<li>Volume sliders not at 0</li>
+<li>Browser allows audio</li>
+<li>Audio system implementation status</li>
+</ul>
+
+<h2>Settings Summary</h2>
+
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Type</th>
+<th>Default</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sound Enabled</td>
+<td>Toggle</td>
+<td>On</td>
+<td>Master audio switch</td>
+</tr>
+<tr>
+<td>Music Volume</td>
+<td>0-100</td>
+<td>50</td>
+<td>Background music level</td>
+</tr>
+<tr>
+<td>SFX Volume</td>
+<td>0-100</td>
+<td>50</td>
+<td>Sound effects level</td>
+</tr>
+<tr>
+<td>Parchment Background</td>
+<td>Toggle</td>
+<td>On</td>
+<td>Room description texture</td>
+</tr>
+<tr>
+<td>Compact Mode</td>
+<td>Toggle</td>
+<td>Off</td>
+<td>Dense UI layout</td>
+</tr>
+<tr>
+<td>Room Text Overlay</td>
+<td>Toggle</td>
+<td>On</td>
+<td>Message overlays on room</td>
+</tr>
+</tbody>
+</table>
+
+<h2>Next Steps</h2>
+
+<ul>
+<li>Optimize for your device: <a href="11-mobile.html">Mobile Play Guide</a></li>
+<li>Customize layout for efficiency</li>
+<li>Experiment with settings to find your preference</li>
+<li>Return to <a href="01-getting-started.html">Getting Started</a> with your optimized setup</li>
+</ul>
+
+<strong>Make TalesMUD yours!</strong>
+
+
+      <div class="doc-nav">
+  <a href="09-npcs.html" class="doc-nav-link">
+    <span class="doc-nav-label">Previous</span>
+    <span class="doc-nav-title">NPC Interactions</span>
+  </a>
+  <a href="11-mobile.html" class="doc-nav-link">
+    <span class="doc-nav-label">Next</span>
+    <span class="doc-nav-title">Mobile Play</span>
+  </a>
+</div>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-copy">&copy; 2026 Veilspan - TalesMUD Documentation</div>
+  </footer>
+
+</body>
+</html>

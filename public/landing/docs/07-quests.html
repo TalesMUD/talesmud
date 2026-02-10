@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quest System - TalesMUD Documentation</title>
+  <meta name="description" content="Quest System guide for TalesMUD players.">
+  <link rel="stylesheet" href="docs-style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="../index.html" class="nav-brand"><span>&gt;</span> talesmud.veilspan</a>
+    <ul class="nav-links">
+      <li><a href="../index.html">Home</a></li>
+      <li><a href="../index.html#lore">Lore</a></li>
+      <li><a href="index.html">Docs</a></li>
+      <li><a href="../play">Play</a></li>
+    </ul>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="docs-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h2 class="sidebar-title">Documentation</h2>
+      <nav class="sidebar-nav">
+  <li><a href="01-getting-started.html">01. Getting Started</a></li>
+  <li><a href="02-user-interface.html">02. User Interface</a></li>
+  <li><a href="03-commands.html">03. Commands Reference</a></li>
+  <li><a href="04-character.html">04. Character System</a></li>
+  <li><a href="05-inventory-equipment.html">05. Inventory & Equipment</a></li>
+  <li><a href="06-combat.html">06. Combat System</a></li>
+  <li><a href="07-quests.html" class="active">07. Quest System</a></li>
+  <li><a href="08-exploration.html">08. Exploration & Minimap</a></li>
+  <li><a href="09-npcs.html">09. NPC Interactions</a></li>
+  <li><a href="10-settings.html">10. Settings & Customization</a></li>
+  <li><a href="11-mobile.html">11. Mobile Play</a></li>
+  <li><a href="12-quick-reference.html">12. Quick Reference</a></li>
+  <li><a href="13-glossary.html">13. Glossary</a></li>
+</nav>
+    </aside>
+
+    <!-- Content -->
+    <main class="content">
+      <div class="doc-header">
+        <span class="doc-category">// Gameplay Features</span>
+      </div>
+      
+      <h1>Quest System</h1>
+
+<p>Complete quests to earn experience, gold, and powerful rewards while uncovering the stories of the game world.</p>
+
+<h2>Quest Overview</h2>
+
+<p>Quests are missions given by NPCs that involve objectives to complete. They're the primary way to progress through the game's story and earn substantial rewards.</p>
+
+<h2>Finding Quests</h2>
+
+<h3>Quest Givers</h3>
+
+<strong>Where to Find Them:</strong>
+<ul>
+<li>Town NPCs (often marked with special indicators)</li>
+<li>Travelers on roads</li>
+<li>Important characters in story areas</li>
+<li>Hidden NPCs in remote locations</li>
+</ul>
+
+<strong>Identifying Quest Givers:</strong>
+<ul>
+<li>NPCs with special markers or symbols</li>
+<li>NPCs mentioned in area descriptions</li>
+<li>Characters who greet you when you enter</li>
+<li>Try talking to everyone!</li>
+</ul>
+
+<h3>Starting a Quest</h3>
+
+<strong>Steps:</strong>
+
+<ol>
+<li><strong>Talk to the NPC</strong></li>
+<ul>
+<li>Click blue "Talk" button on NPC card</li>
+<li>Or type: <code>talk [npc name]</code></li>
+</ul>
+</ol>
+
+<ol>
+<li><strong>Read the Dialog</strong></li>
+<ul>
+<li>NPC explains the situation</li>
+<li>Describes what needs to be done</li>
+<li>May provide background story</li>
+</ul>
+</ol>
+
+<ol>
+<li><strong>Accept the Quest</strong></li>
+<ul>
+<li>Select the "Accept" dialog option (usually option 1 or 2)</li>
+<li>Type the number of the option</li>
+</ul>
+</ol>
+
+<ol>
+<li><strong>Confirmation</strong></li>
+<ul>
+<li>Quest accepted notification appears</li>
+<li>Quest added to your Quest Log</li>
+<li>Objectives listed</li>
+</ul>
+</ol>
+
+<strong>Example:</strong>
+<p>``<code></p>
+<p>talk village elder</p>
+<p>> 1 (to accept the quest)</p>
+</code>`<code>
+
+<h2>Quest Log</h2>
+
+<h3>Viewing Your Quests</h3>
+
+<strong>Methods:</strong>
+<ol>
+<li><strong>Quest Log Widget</strong> - Always-visible panel showing all quests</li>
+<li>Check notifications - Toasts appear when quests update</li>
+</ol>
+
+<h3>Quest Log Layout</h3>
+
+<strong>Two Sections:</strong>
+
+<h4>Active Quests</h4>
+<ul>
+<li>Quests you're currently working on</li>
+<li>Can have multiple active at once</li>
+<li>Shows progress on objectives</li>
+<li>Expandable for full details</li>
+</ul>
+
+<h4>Completed Quests</h4>
+<ul>
+<li>Quests you've finished</li>
+<li>Historical record</li>
+<li>Can review for story</li>
+<li>Shows rewards received</li>
+</ul>
+
+<h3>Quest Information</h3>
+
+<p>Each quest displays:</p>
+
+<strong>Quest Name:</strong>
+<ul>
+<li>Title of the quest</li>
+<li>Often hints at the objective</li>
+</ul>
+
+<strong>Description:</strong>
+<ul>
+<li>Background story</li>
+<li>Why this quest matters</li>
+<li>Context for objectives</li>
+</ul>
+
+<strong>Objectives:</strong>
+<ul>
+<li>List of tasks to complete</li>
+<li>Progress tracking (e.g., "2/5 completed")</li>
+<li>Checkmarks when finished</li>
+<li>Multiple objectives per quest</li>
+</ul>
+
+<strong>Example Quest Display:</strong>
+</code>`<code>
+<p>Quest: The Wolf Problem</p>
+<p>Description: Wolves have been attacking travelers.</p>
+<p>Help protect the road by dealing with them.</p>
+
+<p>Objectives:</p>
+<p>✓ Talk to Village Elder</p>
+<p>✓ Defeat wolves (5/5)</p>
+<p>☐ Return to Village Elder</p>
+</code>`<code>
+
+<h2>Quest Types</h2>
+
+<h3>Kill Quests</h3>
+
+<strong>Objective:</strong> Defeat a certain number of enemies
+
+<strong>Example:</strong>
+<ul>
+<li>"Defeat 5 wolves"</li>
+<li>"Kill 10 bandits"</li>
+<li>"Eliminate the goblin chief"</li>
+</ul>
+
+<strong>Tips:</strong>
+<ul>
+<li>Track progress in Quest Log</li>
+<li>Enemies must be in specific area (usually)</li>
+<li>Bosses often count for more</li>
+</ul>
+
+<h3>Collection Quests</h3>
+
+<strong>Objective:</strong> Gather specific items
+
+<strong>Example:</strong>
+<ul>
+<li>"Collect 10 wolf pelts"</li>
+<li>"Gather 5 rare herbs"</li>
+<li>"Find 3 ancient artifacts"</li>
+</ul>
+
+<strong>Tips:</strong>
+<ul>
+<li>Items may drop from enemies</li>
+<li>Items may be found in specific locations</li>
+<li>Check ground items carefully</li>
+</ul>
+
+<h3>Delivery Quests</h3>
+
+<strong>Objective:</strong> Take item to another NPC
+
+<strong>Example:</strong>
+<ul>
+<li>"Deliver letter to the mayor"</li>
+<li>"Bring medicine to the healer"</li>
+</ul>
+
+<strong>Tips:</strong>
+<ul>
+<li>Item appears in inventory (quest item)</li>
+<li>Travel to specified location</li>
+<li>Talk to target NPC to deliver</li>
+</ul>
+
+<h3>Exploration Quests</h3>
+
+<strong>Objective:</strong> Discover new locations
+
+<strong>Example:</strong>
+<ul>
+<li>"Find the hidden cave"</li>
+<li>"Explore the ancient ruins"</li>
+<li>"Reach the mountain peak"</li>
+</ul>
+
+<strong>Tips:</strong>
+<ul>
+<li>Use minimap to track progress</li>
+<li>Read room descriptions for clues</li>
+<li>May unlock new areas</li>
+</ul>
+
+<h3>Dialog Quests</h3>
+
+<strong>Objective:</strong> Talk to specific NPCs
+
+<strong>Example:</strong>
+<ul>
+<li>"Speak with the three elders"</li>
+<li>"Gather information from townspeople"</li>
+</ul>
+
+<strong>Tips:</strong>
+<ul>
+<li>NPCs may be in different locations</li>
+<li>Dialog options matter</li>
+<li>Pay attention to names</li>
+</ul>
+
+<h3>Compound Quests</h3>
+
+<strong>Objective:</strong> Multiple different tasks
+
+<strong>Example:</strong>
+<ul>
+<li>"Defeat 5 bandits AND collect their insignia"</li>
+<li>"Find the merchant AND escort him to town"</li>
+</ul>
+
+<strong>Tips:</strong>
+<ul>
+<li>All objectives must be completed</li>
+<li>Order may matter</li>
+<li>Check Quest Log frequently</li>
+</ul>
+
+<h2>Quest Objectives</h2>
+
+<h3>Progress Tracking</h3>
+
+<strong>Counters:</strong>
+<ul>
+<li>Shows current vs required (e.g., "3/10")</li>
+<li>Updates automatically when you make progress</li>
+<li>Visual checkmarks when complete</li>
+</ul>
+
+<strong>Real-Time Updates:</strong>
+<ul>
+<li>Quest Log updates immediately</li>
+<li>Notifications appear for major milestones</li>
+<li>No need to check manually constantly</li>
+</ul>
+
+<h3>Multiple Objectives</h3>
+
+<p>Some quests have sequential objectives:</p>
+
+<strong>Example:</strong>
+<ol>
+<li>"Talk to the guard" (must complete first)</li>
+<li>"Defeat bandits" (unlocks after step 1)</li>
+<li>"Return to guard" (unlocks after step 2)</li>
+</ol>
+
+<strong>Others have parallel objectives:</strong>
+<ul>
+<li>"Defeat 5 wolves AND collect 5 pelts"</li>
+<li>Both can be done simultaneously</li>
+<li>Quest completes when all are done</li>
+</ul>
+
+<h2>Completing Quests</h2>
+
+<h3>Finishing Objectives</h3>
+
+<strong>When all objectives show checkmarks:</strong>
+<ol>
+<li>Quest is ready to turn in</li>
+<li>Return to the quest giver (usually)</li>
+<li>Talk to them again</li>
+<li>Select completion dialog option</li>
+</ol>
+
+<strong>Example:</strong>
+</code>`<code>
+<p>talk village elder</p>
+<p>> 1 (complete quest)</p>
+</code>`<code>
+
+<h3>Quest Rewards</h3>
+
+<strong>Common Rewards:</strong>
+
+<strong>Experience Points:</strong>
+<ul>
+<li>Large XP bonus</li>
+<li>Often equivalent to many enemy kills</li>
+<li>Scales with quest level</li>
+<li>May grant level up!</li>
+</ul>
+
+<strong>Gold:</strong>
+<ul>
+<li>Currency reward</li>
+<li>Buy better equipment</li>
+<li>Save for expensive items</li>
+</ul>
+
+<strong>Items:</strong>
+<ul>
+<li>Equipment (weapons, armor)</li>
+<li>Consumables (potions)</li>
+<li>Quest-specific unique items</li>
+<li>May be rare or legendary quality</li>
+</ul>
+
+<strong>Other:</strong>
+<ul>
+<li>Reputation increases (if system exists)</li>
+<li>Unlock new quests</li>
+<li>Access to new areas</li>
+<li>Story progression</li>
+</ul>
+
+<h3>Reward Notification</h3>
+
+<p>When you complete a quest:</p>
+
+<strong>Toast Notification Appears:</strong>
+</code>`<code>
+<p>Quest Completed: The Wolf Problem</p>
+
+<p>Rewards:</p>
+<ul>
+<li>500 XP</li>
+<li>50 Gold</li>
+<li>Iron Sword</li>
+</ul>
+</code>`<code>
+
+<strong>Automatic:</strong>
+<ul>
+<li>Rewards added to character</li>
+<li>XP applied</li>
+<li>Gold added</li>
+<li>Items go to inventory</li>
+</ul>
+
+<h2>Quest Notifications</h2>
+
+<h3>Notification Types</h3>
+
+<strong>Quest Accepted:</strong>
+</code>`<code>
+<p>Quest Accepted: The Wolf Problem</p>
+</code>`<code>
+<ul>
+<li>Appears when you accept</li>
+<li>Brief confirmation</li>
+<li>Auto-dismisses after 5 seconds</li>
+</ul>
+
+<strong>Quest Progress:</strong>
+</code>`<code>
+<p>Quest Progress: Wolves Defeated (3/5)</p>
+</code>`<code>
+<ul>
+<li>Updates on major milestones</li>
+<li>Keeps you informed</li>
+<li>Useful during multi-step quests</li>
+</ul>
+
+<strong>Quest Completed:</strong>
+</code>`<code>
+<p>Quest Completed: The Wolf Problem</p>
+<p>+ 500 XP</p>
+<p>+ 50 Gold</p>
+<p>+ Iron Sword</p>
+</code>`<code>
+<ul>
+<li>Shows all rewards</li>
+<li>Celebration moment</li>
+<li>Detailed breakdown</li>
+</ul>
+
+<h2>Quest Strategies</h2>
+
+<h3>Efficient Questing</h3>
+
+<strong>Tips for Fast Progression:</strong>
+
+<ol>
+<li><strong>Accept Multiple Quests</strong></li>
+<ul>
+<li>Take all available quests in an area</li>
+<li>Complete objectives simultaneously</li>
+<li>Return to turn in together</li>
+</ul>
+</ol>
+
+<ol>
+<li><strong>Group Similar Quests</strong></li>
+<ul>
+<li>"Kill wolves" + "Collect wolf pelts" = Same enemies</li>
+<li>Do both at once for efficiency</li>
+</ul>
+</ol>
+
+<ol>
+<li><strong>Read Carefully</strong></li>
+<ul>
+<li>Objectives sometimes overlap</li>
+<li>Locations may be near each other</li>
+<li>Plan efficient routes</li>
+</ul>
+</ol>
+
+<ol>
+<li><strong>Use the Minimap</strong></li>
+<ul>
+<li>Track where you've been</li>
+<li>Avoid getting lost</li>
+<li>Find your way back to quest givers</li>
+</ul>
+</ol>
+
+<h3>Quest Prioritization</h3>
+
+<strong>Do First:</strong>
+<ul>
+<li>Main story quests (usually give best rewards)</li>
+<li>Quests at your level</li>
+<li>Quests with equipment rewards</li>
+<li>Quests that unlock new areas</li>
+</ul>
+
+<strong>Do Later:</strong>
+<ul>
+<li>Side quests below your level (less XP)</li>
+<li>Collection quests (can be tedious)</li>
+<li>Delivery quests to far locations (save for travel)</li>
+</ul>
+
+<strong>Stack and Complete:</strong>
+<ul>
+<li>Take all quests in a town</li>
+<li>Go to quest areas</li>
+<li>Complete all objectives</li>
+<li>Return to town</li>
+<li>Turn in all at once</li>
+</ul>
+
+<h3>Quest Chains</h3>
+
+<p>Some quests are part of chains:</p>
+
+<strong>Example:</strong>
+<ol>
+<li>"The Wolf Problem" (Part 1)</li>
+<li>"The Alpha Wolf" (Part 2) - Unlocks after Part 1</li>
+<li>"The Cure" (Part 3) - Unlocks after Part 2</li>
+</ol>
+
+<strong>Benefits:</strong>
+<ul>
+<li>Tell longer stories</li>
+<li>Better rewards at chain end</li>
+<li>Progressive difficulty</li>
+<li>Character development</li>
+</ul>
+
+<strong>Tips:</strong>
+<ul>
+<li>Complete chains in order</li>
+<li>Don't abandon mid-chain</li>
+<li>Final quest usually gives best reward</li>
+</ul>
+
+<h2>Quest Management</h2>
+
+<h3>Active Quest Limit</h3>
+
+<p>Some games limit active quests:</p>
+<ul>
+<li>May have maximum (e.g., 10 active)</li>
+<li>Abandon quests to free space (if needed)</li>
+<li>Prioritize important quests</li>
+</ul>
+
+<h3>Abandoning Quests</h3>
+
+<p>If you need to drop a quest:</p>
+<ul>
+<li>May have "Abandon" option in Quest Log</li>
+<li>Quest removed from active list</li>
+<li>Can usually re-accept from NPC</li>
+<li>Progress may be lost</li>
+</ul>
+
+<strong>When to Abandon:</strong>
+<ul>
+<li>Quest too difficult for your level</li>
+<li>Not interested in rewards</li>
+<li>Need space for other quests</li>
+<li>Stuck and can't complete</li>
+</ul>
+
+<h3>Quest Items</h3>
+
+<p>Items for quests appear in inventory:</p>
+
+<strong>Characteristics:</strong>
+<ul>
+<li>Marked as "Quest Item"</li>
+<li>Cannot be dropped or sold</li>
+<li>Automatically used when appropriate</li>
+<li>Removed when quest completes or is abandoned</li>
+</ul>
+
+<strong>Storage:</strong>
+<ul>
+<li>Don't count toward inventory limit (usually)</li>
+<li>Separate category in inventory</li>
+<li>Clearly marked</li>
+</ul>
+
+<h2>Quest Difficulty</h2>
+
+<h3>Level Recommendations</h3>
+
+<p>Quests often have recommended levels:</p>
+
+<strong>At Your Level:</strong>
+<ul>
+<li>Balanced challenge</li>
+<li>Appropriate XP reward</li>
+<li>Good difficulty</li>
+</ul>
+
+<strong>Above Your Level:</strong>
+<ul>
+<li>More difficult</li>
+<li>May need better gear</li>
+<li>Consider grouping or leveling first</li>
+<li>Better rewards</li>
+</ul>
+
+<strong>Below Your Level:</strong>
+<ul>
+<li>Very easy</li>
+<li>Reduced XP (or none)</li>
+<li>Quick completion</li>
+<li>Mainly for story/completion</li>
+</ul>
+
+<h3>Quest Colors (If Implemented)</h3>
+
+<p>Some games color-code quests:</p>
+
+<ul>
+<li><strong>Gray</strong> - Trivial, no XP</li>
+<li><strong>Green</strong> - Easy, low XP</li>
+<li><strong>Yellow</strong> - At level, normal XP</li>
+<li><strong>Orange</strong> - Hard, good XP</li>
+<li><strong>Red</strong> - Very hard, great XP</li>
+</ul>
+
+<h2>Story and Lore</h2>
+
+<h3>Reading Quest Text</h3>
+
+<strong>Why It Matters:</strong>
+<ul>
+<li>Understand game world</li>
+<li>Enjoy narrative</li>
+<li>Find clues for objectives</li>
+<li>Immersion</li>
+</ul>
+
+<strong>When to Skip:</strong>
+<ul>
+<li>Repeating quests you've done</li>
+<li>Pure grind/collection quests</li>
+<li>If you're just focused on mechanics</li>
+</ul>
+
+<h3>Dialog Choices</h3>
+
+<p>Some quests have dialog choices:</p>
+
+<strong>May Affect:</strong>
+<ul>
+<li>Quest outcomes</li>
+<li>Rewards received</li>
+<li>NPC reactions</li>
+<li>Story branches</li>
+<li>Reputation</li>
+</ul>
+
+<strong>Tip:</strong> Choose thoughtfully if you care about story!
+
+<h2>Quest Tips and Tricks</h2>
+
+<h3>General Tips</h3>
+
+<ol>
+<li><strong>Talk to everyone</strong> - Many NPCs have quests</li>
+<li><strong>Read descriptions</strong> - Clues for objectives often in text</li>
+<li><strong>Check Quest Log often</strong> - Track progress</li>
+<li><strong>Don't hoard quests</strong> - Complete and turn in regularly</li>
+<li><strong>Group quests by area</strong> - Efficient completion</li>
+<li><strong>Keep inventory space</strong> - Room for quest items and rewards</li>
+</ol>
+
+<h3>Common Mistakes</h3>
+
+<strong>Avoid:</strong>
+<ul>
+<li>Accepting quests without reading</li>
+<li>Ignoring Quest Log</li>
+<li>Not checking quest levels</li>
+<li>Abandoning quests needlessly</li>
+<li>Missing quest turn-ins</li>
+<li>Selling quest items (usually can't, but be careful)</li>
+</ul>
+
+<h3>Maximizing Rewards</h3>
+
+<strong>Best Practices:</strong>
+<ul>
+<li>Do quests at or slightly above your level</li>
+<li>Complete quest chains fully</li>
+<li>Look for quests with equipment rewards</li>
+<li>Stack quests before completing</li>
+<li>Don't outlevel quest areas (reduced XP)</li>
+</ul>
+
+<h2>Quest-Related Commands</h2>
+
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></code>talk [npc]<code></td>
+<td>Start quest conversation</td>
+</tr>
+<tr>
+<td></code>[number]`</td>
+<td>Select dialog/quest option</td>
+</tr>
+<tr>
+<td>View Quest Log Widget</td>
+<td>See all quests and progress</td>
+</tr>
+</tbody>
+</table>
+
+<h2>Troubleshooting</h2>
+
+<h3>Quest Won't Complete</h3>
+
+<strong>Check:</strong>
+<ul>
+<li>All objectives have checkmarks</li>
+<li>You're talking to correct NPC</li>
+<li>You're selecting right dialog option</li>
+<li>Quest items still in inventory</li>
+</ul>
+
+<h3>Lost Track of Quest</h3>
+
+<strong>Solutions:</strong>
+<ul>
+<li>Open Quest Log Widget</li>
+<li>Read quest description</li>
+<li>Check objectives list</li>
+<li>Return to quest giver for hints</li>
+</ul>
+
+<h3>Can't Find Quest NPC</h3>
+
+<strong>Tips:</strong>
+<ul>
+<li>Use minimap to navigate</li>
+<li>Re-read quest text for location</li>
+<li>Ask in chat (if multiplayer)</li>
+<li>Explore systematically</li>
+</ul>
+
+<h2>Next Steps</h2>
+
+<ul>
+<li>Level up faster with <a href="06-combat.html">Combat System</a></li>
+<li>Earn gold for better gear in <a href="05-inventory-equipment.html">Inventory & Equipment</a></li>
+<li>Navigate efficiently with <a href="08-exploration.html">Exploration & Minimap</a></li>
+<li>Talk to NPCs using <a href="09-npcs.html">NPC Interactions</a></li>
+</ul>
+
+<strong>Happy questing!</strong>
+
+
+      <div class="doc-nav">
+  <a href="06-combat.html" class="doc-nav-link">
+    <span class="doc-nav-label">Previous</span>
+    <span class="doc-nav-title">Combat System</span>
+  </a>
+  <a href="08-exploration.html" class="doc-nav-link">
+    <span class="doc-nav-label">Next</span>
+    <span class="doc-nav-title">Exploration & Minimap</span>
+  </a>
+</div>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-copy">&copy; 2026 Veilspan - TalesMUD Documentation</div>
+  </footer>
+
+</body>
+</html>

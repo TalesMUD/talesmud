@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Combat System - TalesMUD Documentation</title>
+  <meta name="description" content="Combat System guide for TalesMUD players.">
+  <link rel="stylesheet" href="docs-style.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="../index.html" class="nav-brand"><span>&gt;</span> talesmud.veilspan</a>
+    <ul class="nav-links">
+      <li><a href="../index.html">Home</a></li>
+      <li><a href="../index.html#lore">Lore</a></li>
+      <li><a href="index.html">Docs</a></li>
+      <li><a href="../play">Play</a></li>
+    </ul>
+  </nav>
+
+  <!-- Main Container -->
+  <div class="docs-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h2 class="sidebar-title">Documentation</h2>
+      <nav class="sidebar-nav">
+  <li><a href="01-getting-started.html">01. Getting Started</a></li>
+  <li><a href="02-user-interface.html">02. User Interface</a></li>
+  <li><a href="03-commands.html">03. Commands Reference</a></li>
+  <li><a href="04-character.html">04. Character System</a></li>
+  <li><a href="05-inventory-equipment.html">05. Inventory & Equipment</a></li>
+  <li><a href="06-combat.html" class="active">06. Combat System</a></li>
+  <li><a href="07-quests.html">07. Quest System</a></li>
+  <li><a href="08-exploration.html">08. Exploration & Minimap</a></li>
+  <li><a href="09-npcs.html">09. NPC Interactions</a></li>
+  <li><a href="10-settings.html">10. Settings & Customization</a></li>
+  <li><a href="11-mobile.html">11. Mobile Play</a></li>
+  <li><a href="12-quick-reference.html">12. Quick Reference</a></li>
+  <li><a href="13-glossary.html">13. Glossary</a></li>
+</nav>
+    </aside>
+
+    <!-- Content -->
+    <main class="content">
+      <div class="doc-header">
+        <span class="doc-category">// Game Systems</span>
+      </div>
+      
+      <h1>Combat System</h1>
+
+<p>Master the art of battle and emerge victorious against enemies throughout the game world.</p>
+
+<h2>Combat Overview</h2>
+
+<p>Combat in TalesMUD is turn-based, with you and your enemies taking actions until one side is defeated or flees.</p>
+
+<h3>Entering Combat</h3>
+
+<strong>Initiating Combat:</strong>
+
+<strong>Method 1 - Button:</strong>
+<ol>
+<li>Click red "Attack" button on enemy entity card in Room Widget</li>
+</ol>
+
+<strong>Method 2 - Command:</strong>
+<p>``<code></p>
+<p>attack [enemy name]</p>
+</code>`<code>
+
+<strong>Example:</strong>
+</code>`<code>
+<p>attack goblin</p>
+<p>attack wolf</p>
+<p>attack bandit</p>
+</code>`<code>
+
+<strong>What Happens:</strong>
+<ul>
+<li>Combat state begins</li>
+<li>Your Character Widget glows red</li>
+<li>"IN COMBAT" badge appears</li>
+<li>Action Bar switches to combat commands</li>
+<li>Movement is restricted</li>
+</ul>
+
+<h3>Combat Interface Changes</h3>
+
+<p>When combat starts, the interface adapts:</p>
+
+<strong>Action Bar:</strong>
+<ul>
+<li>Standard commands (Look, Inventory, etc.) are replaced</li>
+<li>Combat commands appear: Attack, Defend, Flee, Status</li>
+</ul>
+
+<strong>Character Widget:</strong>
+<ul>
+<li>Glows red to indicate combat</li>
+<li>Shows "IN COMBAT" status</li>
+<li>HP updates in real-time as damage is taken/healed</li>
+</ul>
+
+<strong>Terminal:</strong>
+<ul>
+<li>Displays combat messages</li>
+<li>Shows attack results</li>
+<li>Reports damage dealt and taken</li>
+<li>Announces combat events</li>
+</ul>
+
+<h2>Combat Commands</h2>
+
+<h3>Attack</h3>
+
+<strong>Command:</strong> </code>attack<code>
+
+<strong>Effect:</strong>
+<ul>
+<li>Deal damage to the enemy</li>
+<li>Your primary offensive action</li>
+<li>Damage based on your weapon, Strength, and other factors</li>
+</ul>
+
+<strong>When to Use:</strong>
+<ul>
+<li>Default action in most situations</li>
+<li>When enemy HP is high</li>
+<li>To finish off wounded enemies</li>
+</ul>
+
+<h3>Defend</h3>
+
+<strong>Command:</strong> </code>defend<code>
+
+<strong>Effect:</strong>
+<ul>
+<li>Take defensive stance</li>
+<li>Reduces damage from enemy attacks</li>
+<li>May slightly reduce your damage output</li>
+</ul>
+
+<strong>When to Use:</strong>
+<ul>
+<li>When your HP is low</li>
+<li>Against powerful enemies</li>
+<li>To survive until help arrives or cooldowns refresh</li>
+</ul>
+
+<h3>Flee</h3>
+
+<strong>Command:</strong> </code>flee<code>
+
+<strong>Effect:</strong>
+<ul>
+<li>Attempt to escape combat</li>
+<li>May succeed or fail (chance-based)</li>
+<li>If successful, moves you to a random adjacent room</li>
+<li>If failed, enemy gets a free attack</li>
+</ul>
+
+<strong>When to Use:</strong>
+<ul>
+<li>When HP is critically low</li>
+<li>Against enemies far above your level</li>
+<li>When outnumbered</li>
+<li>Strategic retreat to heal</li>
+</ul>
+
+<h3>Status</h3>
+
+<strong>Command:</strong> </code>status<code>
+
+<strong>Effect:</strong>
+<ul>
+<li>Displays current combat situation</li>
+<li>Shows your HP and enemy HP</li>
+<li>Lists active effects or buffs</li>
+<li>Provides tactical information</li>
+</ul>
+
+<strong>When to Use:</strong>
+<ul>
+<li>Check enemy health</li>
+<li>Verify your HP</li>
+<li>See combat state details</li>
+</ul>
+
+<h2>Combat Flow</h2>
+
+<h3>Turn-Based System</h3>
+
+<p>Combat proceeds in turns:</p>
+
+<ol>
+<li><strong>Player Action Phase</strong></li>
+<ul>
+<li>Choose your action (Attack/Defend/Flee)</li>
+<li>System processes your action</li>
+<li>Damage/effects applied</li>
+</ul>
+</ol>
+
+<ol>
+<li><strong>Enemy Action Phase</strong></li>
+<ul>
+<li>Enemy AI chooses action</li>
+<li>Enemy attack processed</li>
+<li>Damage/effects applied to you</li>
+</ul>
+</ol>
+
+<ol>
+<li><strong>Status Update</strong></li>
+<ul>
+<li>HP changes displayed</li>
+<li>Combat messages shown</li>
+<li>Turn counter increments</li>
+</ul>
+</ol>
+
+<ol>
+<li><strong>Repeat</strong></li>
+<ul>
+<li>Until victory, defeat, or flee</li>
+</ul>
+</ol>
+
+<h3>Combat Messages</h3>
+
+<strong>Message Types:</strong>
+
+<strong>Combat Start:</strong>
+</code>`<code>
+<p>You engage the goblin in combat!</p>
+</code>`<code>
+
+<strong>Attack Messages:</strong>
+</code>`<code>
+<p>You strike the goblin for 15 damage!</p>
+<p>The goblin attacks you for 8 damage!</p>
+</code>`<code>
+
+<strong>Critical Hits:</strong>
+</code>`<code>
+<p>Critical hit! You deal 30 damage!</p>
+</code>`<code>
+
+<strong>Misses:</strong>
+</code>`<code>
+<p>You miss the goblin!</p>
+<p>The goblin's attack misses you!</p>
+</code>`<code>
+
+<strong>Death:</strong>
+</code>`<code>
+<p>You have defeated the goblin!</p>
+<p>The goblin has fallen!</p>
+</code>`<code>
+
+<h3>Victory Conditions</h3>
+
+<strong>You Win When:</strong>
+<ul>
+<li>Enemy HP reaches 0</li>
+<li>Enemy flees successfully</li>
+<li>Special victory conditions met</li>
+</ul>
+
+<strong>You Lose When:</strong>
+<ul>
+<li>Your HP reaches 0</li>
+<li>Fatal game mechanic triggered</li>
+</ul>
+
+<strong>Stalemate:</strong>
+<ul>
+<li>You flee successfully</li>
+<li>Combat times out (rare)</li>
+</ul>
+
+<h2>Combat Statistics</h2>
+
+<h3>Damage Calculation</h3>
+
+<p>Your damage output depends on:</p>
+
+<strong>Weapon Damage:</strong>
+<ul>
+<li>Base weapon damage value</li>
+<li>Weapon quality multiplier</li>
+<li>Weapon type effectiveness</li>
+</ul>
+
+<strong>Character Stats:</strong>
+<ul>
+<li>Strength (for physical weapons)</li>
+<li>Intelligence (for magic weapons)</li>
+<li>Agility (affects critical hits)</li>
+</ul>
+
+<strong>Equipment Bonuses:</strong>
+<ul>
+<li>All equipped items with damage bonuses</li>
+<li>Set bonuses (if applicable)</li>
+<li>Temporary buff effects</li>
+</ul>
+
+<h3>Defense Calculation</h3>
+
+<p>Damage you take is reduced by:</p>
+
+<strong>Armor:</strong>
+<ul>
+<li>Equipped armor pieces</li>
+<li>Total armor rating</li>
+<li>Armor type effectiveness</li>
+</ul>
+
+<strong>Character Stats:</strong>
+<ul>
+<li>Constitution (damage reduction)</li>
+<li>Agility (dodge chance)</li>
+</ul>
+
+<strong>Active Effects:</strong>
+<ul>
+<li>Defend command bonus</li>
+<li>Defensive buff potions</li>
+<li>Shield equipped</li>
+</ul>
+
+<h3>Critical Hits</h3>
+
+<strong>Chance:</strong>
+<ul>
+<li>Base critical hit chance (varies by class)</li>
+<li>Agility/Dexterity bonus</li>
+<li>Critical attribute from equipment</li>
+<li>Weapon critical modifiers</li>
+</ul>
+
+<strong>Effect:</strong>
+<ul>
+<li>Deals bonus damage (often 2x or more)</li>
+<li>Special visual/text indicator</li>
+<li>May apply special effects</li>
+</ul>
+
+<h2>Combat Strategy</h2>
+
+<h3>Basic Tactics</h3>
+
+<strong>Against Weak Enemies:</strong>
+<ul>
+<li>Spam attack</li>
+<li>Don't waste potions</li>
+<li>Quick victories</li>
+</ul>
+
+<strong>Against Equal Enemies:</strong>
+<ul>
+<li>Attack primarily</li>
+<li>Defend if HP drops below 50%</li>
+<li>Use potions if HP critical</li>
+<li>Consider flee if losing badly</li>
+</ul>
+
+<strong>Against Strong Enemies:</strong>
+<ul>
+<li>Check their level first</li>
+<li>Use defend more often</li>
+<li>Keep HP above 50%</li>
+<li>Flee if outmatched</li>
+<li>Come back at higher level</li>
+</ul>
+
+<h3>Health Management</h3>
+
+<strong>During Combat:</strong>
+<ul>
+<li>Monitor HP bar constantly</li>
+<li>Use healing potions when HP drops below 30%</li>
+<li>Don't wait until the last second</li>
+<li>Better to "waste" a potion than die</li>
+</ul>
+
+<strong>HP Thresholds:</strong>
+<ul>
+<li><strong>75-100%</strong> - Safe, attack freely</li>
+<li><strong>50-75%</strong> - Cautious, watch carefully</li>
+<li><strong>25-50%</strong> - Danger zone, use potions or defend</li>
+<li><strong>0-25%</strong> - Critical, heal immediately or flee</li>
+</ul>
+
+<h3>Potion Usage</h3>
+
+<strong>When to Use Healing Potions:</strong>
+<ul>
+<li>HP below 30-40% against tough enemies</li>
+<li>HP below 50% against bosses</li>
+<li>Before final attacks in close fights</li>
+<li>After combat if no enemies nearby</li>
+</ul>
+
+<strong>How to Use in Combat:</strong>
+</code>`<code>
+<p>use health potion</p>
+<p>use healing draught</p>
+<p>use small potion</p>
+</code>`<code>
+
+<strong>Tip:</strong> Keep potions in easy-to-access inventory slots.
+
+<h3>Knowing When to Flee</h3>
+
+<strong>Flee If:</strong>
+<ul>
+<li>Enemy level is 3+ levels above you</li>
+<li>Your HP drops below 20% early in fight</li>
+<li>Enemy has barely taken damage</li>
+<li>You're surprised by enemy strength</li>
+<li>Better to retreat and prepare</li>
+</ul>
+
+<strong>Don't Flee If:</strong>
+<ul>
+<li>Enemy is nearly dead</li>
+<li>You have healing potions</li>
+<li>Enemy is fleeing too</li>
+<li>Victory is certain</li>
+</ul>
+
+<h2>Enemy Types</h2>
+
+<h3>Regular Enemies</h3>
+
+<strong>Characteristics:</strong>
+<ul>
+<li>Standard HP and damage</li>
+<li>Basic AI behavior</li>
+<li>Fair loot drops</li>
+<li>Level-appropriate challenge</li>
+</ul>
+
+<strong>Examples:</strong> Wolves, bandits, goblins, spiders
+
+<h3>Elite Enemies</h3>
+
+<strong>Characteristics:</strong>
+<ul>
+<li>Higher HP than normal</li>
+<li>Increased damage output</li>
+<li>Better loot</li>
+<li>May have special abilities</li>
+</ul>
+
+<strong>Indicators:</strong>
+<ul>
+<li>Special name formatting</li>
+<li>Higher level display</li>
+<li>Elite badge/marker</li>
+</ul>
+
+<h3>Bosses</h3>
+
+<strong>Characteristics:</strong>
+<ul>
+<li>Massive HP pools</li>
+<li>Powerful attacks</li>
+<li>Unique mechanics</li>
+<li>Exceptional loot and XP</li>
+</ul>
+
+<strong>Preparation:</strong>
+<ul>
+<li>Stock up on potions</li>
+<li>Ensure best equipment</li>
+<li>Consider grouping (if multiplayer)</li>
+<li>Study boss patterns</li>
+</ul>
+
+<h3>Aggressive vs Passive</h3>
+
+<strong>Aggressive Enemies:</strong>
+<ul>
+<li>Attack you on sight</li>
+<li>Marked with red coloring</li>
+<li>Cannot avoid combat</li>
+<li>Must defeat or flee</li>
+</ul>
+
+<strong>Passive Enemies:</strong>
+<ul>
+<li>Don't attack unless provoked</li>
+<li>Neutral coloring</li>
+<li>You must initiate combat</li>
+<li>Can be avoided</li>
+</ul>
+
+<h2>Combat Rewards</h2>
+
+<h3>Experience Points</h3>
+
+<strong>XP Gain:</strong>
+<ul>
+<li>Based on enemy level</li>
+<li>Higher-level enemies give more XP</li>
+<li>Defeating enemies your level or higher is most efficient</li>
+<li>Boss kills grant bonus XP</li>
+</ul>
+
+<strong>XP Penalties:</strong>
+<ul>
+<li>Enemies far below your level give reduced XP</li>
+<li>May give no XP if too low-level</li>
+</ul>
+
+<h3>Loot Drops</h3>
+
+<strong>What Enemies Drop:</strong>
+<ul>
+<li>Gold/currency</li>
+<li>Equipment (weapons, armor)</li>
+<li>Consumables (potions)</li>
+<li>Crafting materials</li>
+<li>Quest items (if needed)</li>
+</ul>
+
+<strong>Loot Quality:</strong>
+<ul>
+<li>Based on enemy type and level</li>
+<li>Elites drop better loot</li>
+<li>Bosses drop rare/legendary items</li>
+<li>Random chance involved</li>
+</ul>
+
+<strong>Auto-Pickup vs Manual:</strong>
+<ul>
+<li>Some items auto-pickup (gold)</li>
+<li>Equipment appears on ground</li>
+<li>Use pickup command/button to collect</li>
+</ul>
+
+<h2>Death and Respawn</h2>
+
+<h3>When You Die</h3>
+
+<strong>What Happens:</strong>
+<ol>
+<li>Combat ends</li>
+<li>Death message displayed</li>
+<li>Respawn prompt appears</li>
+<li>You return to bind point</li>
+</ol>
+
+<strong>Penalties:</strong>
+<ul>
+<li>May lose some experience</li>
+<li>May drop some gold</li>
+<li>May have temporary stat debuff</li>
+<li>Equipment stays with you (usually)</li>
+</ul>
+
+<h3>Respawning</h3>
+
+<strong>Respawn Location:</strong>
+<ul>
+<li>Your bind point (set with </code>bind<code> command)</li>
+<li>Default: Starting area</li>
+<li>Can be reset at inns or temples</li>
+</ul>
+
+<strong>After Respawn:</strong>
+<ul>
+<li>Full HP restored</li>
+<li>Back in safe location</li>
+<li>Can re-equip and prepare</li>
+<li>Can return to challenge enemy again</li>
+</ul>
+
+<h2>Advanced Combat</h2>
+
+<h3>Combat Buffs</h3>
+
+<strong>Temporary Boosts:</strong>
+<ul>
+<li>Strength potions (+damage)</li>
+<li>Defense elixirs (+armor)</li>
+<li>Speed tonics (+agility)</li>
+<li>Resistance potions (-damage taken)</li>
+</ul>
+
+<strong>Duration:</strong>
+<ul>
+<li>Time-limited (e.g., 5 minutes)</li>
+<li>Effect shown in status</li>
+<li>Stack with equipment (usually)</li>
+</ul>
+
+<h3>Equipment Swaps</h3>
+
+<strong>Situational Gear:</strong>
+<ul>
+<li>Fire resistance armor vs fire enemies</li>
+<li>Magic weapons vs magic-resistant foes</li>
+<li>Heavy armor vs physical enemies</li>
+</ul>
+
+<strong>Mid-Combat Changes:</strong>
+<ul>
+<li>Usually not allowed</li>
+<li>Plan equipment before fight</li>
+<li>Swap between battles</li>
+</ul>
+
+<h3>Combat Analytics</h3>
+
+<strong>Tracking Performance:</strong>
+<ul>
+<li>Damage per turn</li>
+<li>Average fight duration</li>
+<li>Potion usage rate</li>
+<li>Win/loss ratio</li>
+</ul>
+
+<strong>Improvement:</strong>
+<ul>
+<li>Better equipment = more damage, less taken</li>
+<li>Higher stats = easier fights</li>
+<li>Better tactics = fewer potions used</li>
+</ul>
+
+<h2>Enemy Health Bars</h2>
+
+<h3>Visual Indicators</h3>
+
+<p>Enemies display health bars above their entity cards:</p>
+
+<strong>Colors:</strong>
+<ul>
+<li><strong>Green</strong> - Healthy (75-100% HP)</li>
+<li><strong>Orange/Yellow</strong> - Wounded (25-75% HP)</li>
+<li><strong>Red</strong> - Critical (0-25% HP)</li>
+</ul>
+
+<strong>Tactical Use:</strong>
+<ul>
+<li>Gauge when to flee</li>
+<li>Know when victory is near</li>
+<li>Decide whether to use potions</li>
+</ul>
+
+<h2>Group Combat (Multiplayer)</h2>
+
+<p>If the game supports multiplayer combat:</p>
+
+<strong>Fighting Together:</strong>
+<ul>
+<li>Combined damage</li>
+<li>Shared XP and loot</li>
+<li>Coordinated tactics (tank, healer, DPS roles)</li>
+<li>Communication essential</li>
+</ul>
+
+<strong>Benefits:</strong>
+<ul>
+<li>Defeat stronger enemies</li>
+<li>Faster leveling</li>
+<li>Safer exploration</li>
+<li>Social gameplay</li>
+</ul>
+
+<h2>Combat Tips and Tricks</h2>
+
+<h3>General Tips</h3>
+
+<ol>
+<li><strong>Always carry healing potions</strong> - Minimum 5 at all times</li>
+<li><strong>Fight enemies at your level</strong> - Best XP and loot balance</li>
+<li><strong>Upgrade weapons first</strong> - Damage > Defense for efficiency</li>
+<li><strong>Learn enemy patterns</strong> - Some enemies telegraph attacks</li>
+<li><strong>Rest between fights</strong> - Let HP regenerate naturally</li>
+<li><strong>Don't be greedy</strong> - Flee if outmatched</li>
+<li><strong>Save before bosses</strong> - Set bind point nearby</li>
+</ol>
+
+<h3>Common Mistakes</h3>
+
+<strong>Avoid These:</strong>
+<ul>
+<li>Fighting without potions</li>
+<li>Ignoring HP warnings</li>
+<li>Taking on enemies far above your level</li>
+<li>Forgetting to equip better gear</li>
+<li>Not fleeing when losing</li>
+<li>Using all potions on one fight</li>
+</ul>
+
+<h3>Efficiency Tips</h3>
+
+<strong>Leveling Fast:</strong>
+<ul>
+<li>Fight enemies slightly above your level</li>
+<li>Complete combat quests</li>
+<li>Use all equipment slots</li>
+<li>Don't waste time on trivial enemies</li>
+</ul>
+
+<strong>Staying Alive:</strong>
+<ul>
+<li>Keep HP above 50% between fights</li>
+<li>Rest in safe locations</li>
+<li>Stock up in towns before exploring</li>
+<li>Bind near dangerous areas</li>
+</ul>
+
+<h2>Combat Commands Summary</h2>
+
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Effect</th>
+<th>Best Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></code>attack<code></td>
+<td>Deal damage</td>
+<td>Primary offensive action</td>
+</tr>
+<tr>
+<td></code>defend<code></td>
+<td>Reduce damage taken</td>
+<td>Low HP, strong enemy</td>
+</tr>
+<tr>
+<td></code>flee<code></td>
+<td>Escape combat</td>
+<td>Losing badly, need to retreat</td>
+</tr>
+<tr>
+<td></code>status<code></td>
+<td>Check combat state</td>
+<td>Verify HP, assess situation</td>
+</tr>
+<tr>
+<td></code>use [potion]`</td>
+<td>Heal or buff</td>
+<td>HP critical, need boost</td>
+</tr>
+</tbody>
+</table>
+
+<h2>Next Steps</h2>
+
+<ul>
+<li>Optimize your loadout in <a href="05-inventory-equipment.html">Inventory & Equipment</a></li>
+<li>Level up efficiently with <a href="07-quests.html">Quest System</a></li>
+<li>Understand your stats in <a href="04-character.html">Character System</a></li>
+<li>Learn all commands in <a href="03-commands.html">Commands Reference</a></li>
+</ul>
+
+<strong>Now go forth and conquer!</strong>
+
+
+      <div class="doc-nav">
+  <a href="05-inventory-equipment.html" class="doc-nav-link">
+    <span class="doc-nav-label">Previous</span>
+    <span class="doc-nav-title">Inventory & Equipment</span>
+  </a>
+  <a href="07-quests.html" class="doc-nav-link">
+    <span class="doc-nav-label">Next</span>
+    <span class="doc-nav-title">Quest System</span>
+  </a>
+</div>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-copy">&copy; 2026 Veilspan - TalesMUD Documentation</div>
+  </footer>
+
+</body>
+</html>

@@ -225,13 +225,6 @@ func examineItem(item *items.Item, equippedItems map[items.ItemSlot]*items.Item)
 		}
 	}
 
-	// Tags
-	if len(item.Tags) > 0 {
-		sb.WriteString("\nTags: ")
-		sb.WriteString(strings.Join(item.Tags, ", "))
-		sb.WriteString("\n")
-	}
-
 	return sb.String()
 }
 

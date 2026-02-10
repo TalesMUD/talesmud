@@ -16,6 +16,7 @@
   import InventoryWidget from '../widgets/InventoryWidget.svelte';
   import EquipmentWidget from '../widgets/EquipmentWidget.svelte';
   import QuestLogWidget from '../widgets/QuestLogWidget.svelte';
+  import MinimapWidget from '../widgets/MinimapWidget.svelte';
 
   export let store;
   export let sendMessage;
@@ -31,7 +32,8 @@
     character: CharacterWidget,
     inventory: InventoryWidget,
     equipment: EquipmentWidget,
-    questlog: QuestLogWidget
+    questlog: QuestLogWidget,
+    minimap: MinimapWidget
   };
 
   // Grid configuration
@@ -130,6 +132,8 @@
       case 'equipment':
         return { store, sendMessage };
       case 'character':
+        return { store, sendMessage };
+      case 'minimap':
         return { store, sendMessage };
       default:
         return baseProps;
