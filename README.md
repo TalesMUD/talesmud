@@ -334,11 +334,19 @@ Data-driven quest definitions with:
 
 ## 📖 Documentation
 
+### Core Documentation
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** — System design, data flow, and component structure
 - **[PROJECT.md](PROJECT.md)** — Feature list, configuration, and development status
-- **[game-design/GAME_DESIGN.md](game-design/GAME_DESIGN.md)** — Game design document and roadmap
-- **[game-design/SCRIPTING.md](game-design/SCRIPTING.md)** — Lua scripting API and examples
-- **[game-design/QUEST_AUTHORING.md](game-design/QUEST_AUTHORING.md)** — Quest creation guide
+
+### Design & Development
+- **[docs/design/GAME_DESIGN.md](docs/design/GAME_DESIGN.md)** — Game design document and roadmap
+- **[docs/design/SCRIPTING.md](docs/design/SCRIPTING.md)** — Lua scripting API and examples
+- **[docs/design/QUEST_AUTHORING.md](docs/design/QUEST_AUTHORING.md)** — Quest creation guide
+- **[docs/design/](docs/design/)** — Complete design documentation (PRDs, dialog system, world maps)
+- **[docs/development/](docs/development/)** — Developer documentation (agents, combat balance)
+
+### Player Guide
+- **[docs/player-guide/](docs/player-guide/)** — Complete player documentation and tutorials
 
 ---
 
