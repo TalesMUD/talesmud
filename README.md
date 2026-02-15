@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎭 TalesMUD
+# ⚔️ TalesMUD
 
 ### A Modern, Extensible MUD Framework for Web-Based RPGs
 
