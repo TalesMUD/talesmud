@@ -114,13 +114,15 @@ func CreateRoomDescription(room *rooms.Room, user *entities.User, game def.GameC
 
 // RoomItem represents item data for frontend UI rendering
 type RoomItem struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	NoPickup bool   `json:"noPickup,omitempty"`
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	NoPickup     bool   `json:"noPickup,omitempty"`
+	CopyOnPickup bool   `json:"copyOnPickup,omitempty"`
 }
 
-// GetRoomItems returns item data for frontend rendering
-func GetRoomItems(room *rooms.Room, game def.GameCtrl) []RoomItem {
+// GetRoomItems returns item data for frontend rendering.
+// If char is non-nil, CopyOnPickup items already collected by this character are hidden.
+func GetRoomItems(room *rooms.Room, game def.GameCtrl, char *characters.Character) []RoomItem {
 	if room.Items == nil || len(*room.Items) == 0 {
 		return []RoomItem{}
 	}
@@ -131,10 +133,23 @@ func GetRoomItems(room *rooms.Room, game def.GameCtrl) []RoomItem {
 		if err != nil {
 			continue
 		}
+
+		// Hide CopyOnPickup items the character has already collected
+		if item.CopyOnPickup && char != nil {
+			templateID := item.TemplateID
+			if templateID == "" {
+				templateID = item.ID // For templates, the ID is the template ID
+			}
+			if char.HasCollectedCopyItem(templateID) {
+				continue
+			}
+		}
+
 		result = append(result, RoomItem{
-			ID:       item.ID,
-			Name:     item.Name,
-			NoPickup: item.NoPickup,
+			ID:           item.ID,
+			Name:         item.Name,
+			NoPickup:     item.NoPickup,
+			CopyOnPickup: item.CopyOnPickup,
 		})
 	}
 

@@ -112,7 +112,8 @@ type Item struct {
 	MaxItems int32  `bson:"maxItems,omitempty" json:"maxItems,omitempty"`
 
 	// misc
-	NoPickup bool `bson:"noPickup,omitempty" json:"noPickup,omitempty"`
+	NoPickup     bool `bson:"noPickup,omitempty" json:"noPickup,omitempty"`
+	CopyOnPickup bool `bson:"copyOnPickup,omitempty" json:"copyOnPickup,omitempty"`
 
 	// stacking and economy
 	Stackable bool  `bson:"stackable,omitempty" json:"stackable,omitempty"`

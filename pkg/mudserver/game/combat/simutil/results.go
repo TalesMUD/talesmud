@@ -78,18 +78,24 @@ func FormatStatTable(levels []int32) string {
 	return sb.String()
 }
 
-// FormatEnemyTable prints all enemy stats
+// FormatEnemyTable prints all enemy stats (with difficulty multipliers applied)
 func FormatEnemyTable() string {
 	var sb strings.Builder
 
-	sb.WriteString("\n=== ENEMY STATS ===\n\n")
+	sb.WriteString("\n=== ENEMY STATS (with difficulty multipliers) ===\n\n")
 	sb.WriteString(fmt.Sprintf("%-18s %5s %6s %6s %6s %10s\n",
 		"Enemy", "Level", "HP", "ATK", "DEF", "Difficulty"))
 	sb.WriteString(strings.Repeat("-", 60) + "\n")
 
 	for _, e := range AllEnemyConfigs() {
+		// Create an actual enemy to get the multiplied stats
+		enemy := CreateEnemy(e)
 		sb.WriteString(fmt.Sprintf("%-18s %5d %6d %6d %6d %10s\n",
-			e.Name, e.Level, e.HP, e.AttackPower, e.Defense, e.Difficulty))
+			e.Name, e.Level,
+			enemy.MaxHitPoints,
+			enemy.EnemyTrait.AttackPower,
+			enemy.EnemyTrait.Defense,
+			e.Difficulty))
 	}
 
 	return sb.String()

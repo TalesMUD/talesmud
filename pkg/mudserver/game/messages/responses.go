@@ -129,8 +129,9 @@ type EnterRoomMessage struct {
 	Items []util.RoomItem `json:"items"`
 }
 
-//NewEnterRoomMessage ...
-func NewEnterRoomMessage(room *rooms.Room, user *entities.User, game def.GameCtrl) *EnterRoomMessage {
+//NewEnterRoomMessage creates a new enter room message.
+// char is optional — if provided, CopyOnPickup items already collected by this character are hidden.
+func NewEnterRoomMessage(room *rooms.Room, user *entities.User, game def.GameCtrl, char *characters.Character) *EnterRoomMessage {
 	// Get NPC data for frontend rendering
 	roomNPCs := util.GetRoomNPCs(room, game)
 	npcs := make([]RoomNPC, len(roomNPCs))
@@ -148,14 +149,46 @@ func NewEnterRoomMessage(room *rooms.Room, user *entities.User, game def.GameCtr
 		}
 	}
 
-	// Get item data for frontend rendering
-	roomItems := util.GetRoomItems(room, game)
+	// Get item data for frontend rendering (filtered by character)
+	roomItems := util.GetRoomItems(room, game, char)
 
 	return &EnterRoomMessage{
 		MessageResponse: MessageResponse{
 			Audience: MessageAudienceOrigin,
 			Type:     MessageTypeEnterRoom,
 			Message:  util.CreateRoomDescription(room, user, game),
+		},
+		Room:  *room,
+		NPCs:  npcs,
+		Items: roomItems,
+	}
+}
+
+// NewRoomUpdateMessage creates a silent room update that refreshes exits/items/NPCs
+// on the client without re-rendering the full room description text.
+func NewRoomUpdateMessage(room *rooms.Room, game def.GameCtrl, char *characters.Character) *EnterRoomMessage {
+	roomNPCs := util.GetRoomNPCs(room, game)
+	npcs := make([]RoomNPC, len(roomNPCs))
+	for i, n := range roomNPCs {
+		npcs[i] = RoomNPC{
+			ID:          n.ID,
+			Name:        n.Name,
+			DisplayName: n.DisplayName,
+			IsEnemy:     n.IsEnemy,
+			IsMerchant:  n.IsMerchant,
+			CurrentHP:   n.CurrentHP,
+			MaxHP:       n.MaxHP,
+			Level:       n.Level,
+			State:       n.State,
+		}
+	}
+
+	roomItems := util.GetRoomItems(room, game, char)
+
+	return &EnterRoomMessage{
+		MessageResponse: MessageResponse{
+			Audience: MessageAudienceOrigin,
+			Type:     MessageTypeRoomUpdate,
 		},
 		Room:  *room,
 		NPCs:  npcs,

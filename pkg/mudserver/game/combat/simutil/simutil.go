@@ -165,9 +165,12 @@ func RunMatchup(config MatchupConfig) *SimResult {
 	result.PlayerDefense = sampleChar.GetArmorDefense()
 	result.PlayerMaxHP = sampleChar.MaxHitPoints
 	result.PlayerSTRMod = sampleChar.GetPrimaryAttackMod()
-	result.EnemyAttackPower = config.EnemyConfigs[0].AttackPower
-	result.EnemyDefense = config.EnemyConfigs[0].Defense
-	result.EnemyMaxHP = config.EnemyConfigs[0].HP
+
+	// Create a sample enemy to get multiplied stats
+	sampleEnemy := CreateEnemy(config.EnemyConfigs[0])
+	result.EnemyAttackPower = sampleEnemy.EnemyTrait.AttackPower
+	result.EnemyDefense = sampleEnemy.EnemyTrait.Defense
+	result.EnemyMaxHP = sampleEnemy.MaxHitPoints
 
 	result.Label = formatLabel(result.PlayerName, result.PlayerLevel, result.EnemyName, result.EnemyLevel)
 

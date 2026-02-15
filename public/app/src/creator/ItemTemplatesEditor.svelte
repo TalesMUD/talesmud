@@ -146,6 +146,7 @@
       properties: {},
       attributes: {},
       noPickup: false,
+      copyOnPickup: false,
       tags: [],
       isTemplate: true,
       isNew: true,
@@ -270,6 +271,15 @@
             bind:checked={$store.selectedElement.stackable}
           />
           <span class="text-sm text-slate-300">Stackable</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            class="w-4 h-4 rounded border-slate-600 bg-slate-800 text-primary focus:ring-primary focus:ring-offset-0"
+            bind:checked={$store.selectedElement.copyOnPickup}
+          />
+          <span class="text-sm text-slate-300">Copy on Pickup</span>
+          <span class="text-[10px] text-slate-500">(Each player gets a copy; item stays in room)</span>
         </label>
       </div>
       {#if $store.selectedElement.stackable}

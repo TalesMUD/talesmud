@@ -8,6 +8,7 @@ import (
 
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
 )
 
 // DropCommand handles dropping items to the room
@@ -58,6 +59,50 @@ func (command *DropCommand) Execute(game def.GameCtrl, message *messages.Message
 	if item == nil {
 		game.SendMessage() <- message.Reply("You don't have a '" + itemName + "' in your inventory.")
 		return true
+	}
+
+	// Handle dropping CopyOnPickup instances — destroy instead of placing in room
+	if item.TemplateID != "" {
+		template, terr := game.GetFacade().ItemsService().FindByID(item.TemplateID)
+		if terr == nil && template != nil && template.CopyOnPickup {
+			// Remove from inventory
+			_, err := message.Character.Inventory.RemoveItem(item.ID)
+			if err != nil {
+				log.WithError(err).Error("Error removing copy-on-pickup item from inventory")
+				game.SendMessage() <- message.Reply("You can't seem to let go of " + item.Name + ".")
+				return true
+			}
+
+			// Clear the collected flag so player can pick it up again
+			if message.Character.Flags != nil {
+				delete(message.Character.Flags, "collected_item:"+item.TemplateID)
+			}
+
+			// Persist character
+			err = game.GetFacade().CharactersService().Update(message.Character.ID, message.Character)
+			if err != nil {
+				log.WithError(err).Error("Error updating character")
+			}
+
+			// Delete the personal instance from DB
+			game.GetFacade().ItemsService().Delete(item.ID)
+
+			game.SendMessage() <- message.Reply("You discard " + item.Name + ". It fades away.")
+			if inv := messages.NewInventoryUpdateMessage(message); inv != nil {
+				game.SendMessage() <- inv
+			}
+
+			// Refresh room display so the CopyOnPickup item reappears for this player
+			room, rerr := game.GetFacade().RoomsService().FindByID(message.Character.CurrentRoomID)
+			if rerr == nil && room != nil {
+				roomView := util.RoomWithCharacterReveals(room, message.Character)
+				enterRoom := messages.NewEnterRoomMessage(roomView, message.FromUser, game, message.Character)
+				enterRoom.AudienceID = message.FromUser.ID
+				game.SendMessage() <- enterRoom
+			}
+
+			return true
+		}
 	}
 
 	// Get current room

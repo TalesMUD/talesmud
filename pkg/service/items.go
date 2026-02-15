@@ -119,7 +119,8 @@ func (srv *itemsService) CreateInstanceFromTemplate(templateID string) (*items.I
 		Properties:  copyMap(template.Properties),
 		Attributes:  copyMap(template.Attributes),
 		Tags:        append([]string{}, template.Tags...),
-		NoPickup:    template.NoPickup,
+		NoPickup:     template.NoPickup,
+		CopyOnPickup: false, // Instances are personal copies, not world items
 
 		// Template reference
 		IsTemplate:     false,

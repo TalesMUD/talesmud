@@ -269,6 +269,30 @@ func (c *Character) GetArmorDefense() int32 {
 	return totalDefense
 }
 
+// HasCollectedCopyItem checks if the character has already collected a CopyOnPickup item
+func (c *Character) HasCollectedCopyItem(templateID string) bool {
+	if c.Flags == nil {
+		return false
+	}
+	key := "collected_item:" + templateID
+	val, ok := c.Flags[key]
+	if !ok {
+		return false
+	}
+	if b, ok := val.(bool); ok {
+		return b
+	}
+	return false
+}
+
+// MarkCollectedCopyItem records that the character has collected a CopyOnPickup item
+func (c *Character) MarkCollectedCopyItem(templateID string) {
+	if c.Flags == nil {
+		c.Flags = make(map[string]interface{})
+	}
+	c.Flags["collected_item:"+templateID] = true
+}
+
 // HasRevealedExit checks if the character has revealed a specific hidden exit in a room
 func (c *Character) HasRevealedExit(roomID, exitName string) bool {
 	if c.RevealedExits == nil {

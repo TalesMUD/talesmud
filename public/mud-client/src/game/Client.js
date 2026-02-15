@@ -60,6 +60,34 @@ function createClient(renderer, characterCreator, muxStore) {
     }
   };
 
+  // Silent room update: refresh exits/items/NPCs without re-rendering the room description.
+  // Used by revealExit so narrative messages aren't buried by a full room re-display.
+  messageHandlers["roomUpdate"] = (msg) => {
+    activeRoom = msg.room;
+
+    if (mux) {
+      mux.setExits(activeRoom.exits);
+
+      if (activeRoom.meta != undefined && activeRoom.meta.background != undefined){
+        mux.setBackground(activeRoom.meta.background)
+      }
+
+      if (activeRoom.actions != undefined) {
+        mux.setActions(activeRoom.actions);
+      } else {
+        mux.setActions([]);
+      }
+
+      if (msg.npcs != undefined) {
+        mux.setNPCs(msg.npcs);
+      } else {
+        mux.setNPCs([]);
+      }
+
+      mux.setGroundItems(msg.items || []);
+    }
+  };
+
   messageHandlers["createCharacter"] = (msg) => {
     renderer(msg.message);
 

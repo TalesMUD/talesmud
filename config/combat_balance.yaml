@@ -1,0 +1,35 @@
+# Combat Balance Configuration
+# Multipliers applied to base enemy stats based on difficulty tier
+# Formula: final_stat = base_stat * multiplier
+
+difficulty_multipliers:
+  trivial:
+    hp: 3.75        # Catacomb Rat: 8 * 3.75 = 30 HP
+    attack: 4.0     # Catacomb Rat: 1 * 4.0 = 4 ATK
+    defense: 1.0    # No change for trivial enemies
+
+  easy:
+    hp: 2.9         # Sewer Rat: 12 * 2.9 = ~35 HP
+    attack: 1.67    # Sewer Rat: 3 * 1.67 = ~5 ATK
+    defense: 1.0    # Tunnel Mole: 2 * 1.0 = 2 DEF
+
+  normal:
+    hp: 2.67        # Meadow Wolf: 18 * 2.67 = ~48 HP
+    attack: 1.5     # Meadow Wolf: 4 * 1.5 = 6 ATK
+    defense: 2.0    # Meadow Wolf: 1 * 2.0 = 2 DEF
+
+  hard:
+    hp: 1.25        # Thornback Bear: 80 * 1.25 = 100 HP
+    attack: 1.18    # Thornback Bear: 11 * 1.18 = ~13 ATK
+    defense: 1.25   # Thornback Bear: 4 * 1.25 = 5 DEF
+
+  boss:
+    hp: 2.0         # Burrow Brute: 55 * 2.0 = 110 HP
+    attack: 1.5     # Burrow Brute: 8 * 1.5 = 12 ATK
+    defense: 1.67   # Burrow Brute: 3 * 1.67 = ~5 DEF
+
+# Notes:
+# - These multipliers were tuned to make L1 players take ~5-6 rounds against L1 enemies
+# - Higher difficulty tiers provide more challenging encounters
+# - Boss enemies have boosted stats to make them memorable fights
+# - Adjust these values to fine-tune combat difficulty globally

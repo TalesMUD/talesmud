@@ -124,8 +124,9 @@ type YAMLItem struct {
 	BasePrice   int64                  `yaml:"basePrice"`
 	Stackable   bool                   `yaml:"stackable"`
 	MaxStack    int32                  `yaml:"maxStack"`
-	Consumable  bool                   `yaml:"consumable"`
-	Tags        []string               `yaml:"tags"`
+	Consumable   bool                   `yaml:"consumable"`
+	CopyOnPickup bool                   `yaml:"copyOnPickup"`
+	Tags         []string               `yaml:"tags"`
 	Attributes  map[string]interface{} `yaml:"attributes"`
 	Properties  map[string]interface{} `yaml:"properties"`
 	Meta        YAMLItemMeta           `yaml:"meta"`

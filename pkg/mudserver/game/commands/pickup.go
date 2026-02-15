@@ -7,6 +7,7 @@ import (
 
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
 )
 
 // PickupCommand handles picking up items from the room
@@ -120,6 +121,67 @@ func (command *PickupCommand) Execute(game def.GameCtrl, message *messages.Messa
 	// Check NoPickup flag
 	if item.NoPickup {
 		game.SendMessage() <- message.Reply("You can't pick up " + item.Name + ".")
+		return true
+	}
+
+	// Handle CopyOnPickup items — create a personal copy instead of removing from room
+	if item.CopyOnPickup {
+		templateID := item.TemplateID
+		if templateID == "" {
+			templateID = item.ID // Item IS the template
+		}
+
+		// Check if player already collected this
+		if message.Character.HasCollectedCopyItem(templateID) {
+			game.SendMessage() <- message.Reply("You have already collected " + item.Name + ".")
+			return true
+		}
+
+		// Check inventory capacity
+		if message.Character.Inventory.IsFull() {
+			game.SendMessage() <- message.Reply("Your inventory is full.")
+			return true
+		}
+
+		// Create instance from template
+		instance, err := game.GetFacade().ItemsService().CreateInstanceFromTemplate(templateID)
+		if err != nil {
+			log.WithError(err).Error("Error creating copy-on-pickup instance")
+			game.SendMessage() <- message.Reply("Error picking up item.")
+			return true
+		}
+
+		// Add instance to inventory
+		err = message.Character.Inventory.AddItem(instance)
+		if err != nil {
+			game.SendMessage() <- message.Reply("Failed to pick up item: " + err.Error())
+			return true
+		}
+
+		// Mark as collected (so it's hidden and can't be picked up again)
+		message.Character.MarkCollectedCopyItem(templateID)
+
+		// Persist character (inventory + flags updated; room is NOT modified)
+		err = game.GetFacade().CharactersService().Update(message.Character.ID, message.Character)
+		if err != nil {
+			log.WithError(err).Error("Error updating character")
+		}
+
+		// Track quest progress (instance has TemplateID set, so quest tracker matches)
+		NotifyQuestItemPickup(game, message.Character.ID, message.FromUser.ID, instance)
+
+		// Send pickup message
+		game.SendMessage() <- message.Reply("You pick up " + item.Name + ".")
+		if inv := messages.NewInventoryUpdateMessage(message); inv != nil {
+			game.SendMessage() <- inv
+		}
+
+		// Refresh room display so the collected item disappears for this player
+		roomView := util.RoomWithCharacterReveals(room, message.Character)
+		enterRoom := messages.NewEnterRoomMessage(roomView, message.FromUser, game, message.Character)
+		enterRoom.AudienceID = message.FromUser.ID
+		game.SendMessage() <- enterRoom
+
 		return true
 	}
 

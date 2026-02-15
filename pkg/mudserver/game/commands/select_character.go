@@ -133,7 +133,7 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 	currentRoom.AddCharacter(character.ID)
 	game.GetFacade().RoomsService().Update(currentRoom.ID, currentRoom)
 
-	enterRoom := m.NewEnterRoomMessage(util.RoomWithCharacterReveals(currentRoom, character), user, game)
+	enterRoom := m.NewEnterRoomMessage(util.RoomWithCharacterReveals(currentRoom, character), user, game, character)
 	enterRoom.AudienceID = user.ID
 	game.SendMessage() <- enterRoom
 
