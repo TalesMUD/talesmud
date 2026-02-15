@@ -356,7 +356,25 @@ type CombatantRef struct {
     MaxHP, CurrentHP int32
     AttackPower, Defense int32
     STRMod, DEXMod, CONMod int      // Attribute modifiers
+    INTMod, WISMod int              // Magic attribute modifiers
     DefenseBonus    int32           // From defend action
+
+    // Mana & Skills
+    MaxMana, CurrentMana, ManaRegen int32
+    EquippedSkills []string         // Skill IDs available in combat
+    SkillCooldowns map[string]int   // SkillID → rounds remaining
+    StatusEffects  []StatusEffect   // Active buffs/debuffs/DoTs/HoTs
+    QueuedSkillID  string           // Skill queued for next action
+}
+
+type StatusEffect struct {
+    ID, SkillID, Name string
+    Type    string    // "buff", "debuff", "dot", "hot", "stun"
+    Stat    string    // "attack", "defense", "dodge"
+    Value   int32     // Flat value modifier
+    Percent float64   // Percentage modifier (e.g. 0.30 = +30%)
+    Duration int      // Rounds remaining
+    SourceID string   // Caster ID
 }
 ```
 
@@ -369,9 +387,12 @@ type CombatantRef struct {
    └── Roll initiative (1d20 + DEX mod), sort turn order
 
 2. COMBAT ROUND
+   └── At round start: tick cooldowns, regenerate mana
    └── For each combatant in turn order:
+       ├── Process status effects (DoT damage, HoT healing, stun skip)
        ├── Player turn: 60-second timer, choose action
        │   ├── attack <target> - Roll to hit, deal damage
+       │   ├── cast <skill> [target] - Use skill (mana/cooldown cost)
        │   ├── defend - +50% defense until next turn
        │   ├── flee - Chance-based escape (50% + DEX bonus)
        │   └── timeout - Auto-defend after 60s
@@ -390,8 +411,10 @@ type CombatantRef struct {
 | Command | Aliases | Description |
 |---------|---------|-------------|
 | `attack <target>` | `a`, `hit` | Attack enemy (or initiate combat) |
+| `cast <skill> [target]` | `spell` | Use a skill in combat (costs mana or sets cooldown) |
 | `defend` | `d`, `guard` | Take defensive stance (+50% defense) |
 | `flee` | `run`, `escape` | Attempt to escape (50% + DEX bonus) |
+| `skills` | `spells`, `abilities` | List/equip/unequip skills (out of combat) |
 | `status` | `cs`, `combat` | Show combat status |
 | `bind` | - | Bind respawn point at current room |
 
@@ -542,6 +565,7 @@ type Facade interface {
     ConversationsService() ConversationsService
     LootTablesService() LootTablesService
     QuestsService() QuestsService
+    SkillsService() SkillsService
     Runner() scripts.ScriptRunner
 }
 ```
@@ -558,6 +582,7 @@ type Facade interface {
 | PartiesService | Party/group management |
 | LootTablesService | Loot table CRUD, loot rolling |
 | QuestsService | Quest definition CRUD, quest progress tracking, accept/abandon/complete quests, objective progress, prerequisite checks |
+| SkillsService | Skill CRUD, DB seeding on first run, in-memory cache refresh on mutations |
 
 ### Repository Layer (`pkg/repository/`)
 
@@ -613,6 +638,7 @@ NewQueryParams().
 | loot_tables | Loot drop configurations |
 | quests | Quest definitions (objectives, rewards, prerequisites) |
 | quest_progress | Per-character quest state and objective progress |
+| skills | Skill/spell definitions (multi-class, cached in memory) |
 
 ## Entity Model
 
@@ -657,11 +683,13 @@ type Character struct {
     Race, Class
 
     CurrentHitPoints, MaxHitPoints int32
+    CurrentMana, MaxMana int32          // Mana resource (casters only)
     XP, Level int32
     Gold int64
 
-    Inventory     items.Inventory
-    EquippedItems map[items.ItemSlot]*items.Item
+    Inventory      items.Inventory
+    EquippedItems  map[items.ItemSlot]*items.Item
+    EquippedSkills []string             // Skill IDs in active slots
 
     // Combat state
     InCombat         bool    // Currently in combat
@@ -678,9 +706,11 @@ type Character struct {
 Helper methods for combat:
 - `GetAttribute(short)` - Get attribute value by short name (STR, DEX, etc.)
 - `GetAttributeModifier(short)` - Get modifier ((value - 10) / 2)
-- `GetSTRMod()`, `GetDEXMod()`, `GetCONMod()` - Specific modifiers
+- `GetSTRMod()`, `GetDEXMod()`, `GetCONMod()`, `GetINTMod()`, `GetWISMod()` - Specific modifiers
 - `GetWeaponDamage()` - Main hand weapon damage (1 if unarmed)
 - `GetArmorDefense()` - Total defense from equipped armor
+- `CalculateMaxMana()` - Max mana based on class, level, and INT (casters: `20 + Level*5 + INTMod*4`)
+- `CalculateManaRegen()` - In-combat mana regen (`1 + WISMod`, minimum 1)
 
 ### Room Entity
 
@@ -940,6 +970,68 @@ type Item struct {
 - Use `CreateInstanceFromTemplate(templateID)` to spawn new instances
 - Instances track their source template via `TemplateID`
 
+### Skill Entity (`pkg/entities/skills/`)
+
+Skills are class-specific abilities used in combat. They are stored in the database and loaded into an in-memory cache at startup. Editable via Creator UI (Skills tab).
+
+```go
+type Skill struct {
+    *entities.Entity               // DB ID
+    Name           string
+    Description    string
+    ClassIDs       []string        // Multi-class: ["warrior"], ["cleric", "druid"], etc.
+    LevelRequired  int32
+    ResourceType   ResourceType    // "mana" (casters) or "cooldown" (physical)
+    ManaCost       int32           // Mana cost per use (mana-based skills)
+    CooldownRounds int             // Rounds before reuse (cooldown-based skills)
+    Target         TargetType      // "enemy", "self", "all_enemies"
+    Effect         EffectType      // "damage", "heal", "buff", "debuff", "dot", "hot"
+    ScalingAttr    string          // "STR", "DEX", "INT", "WIS"
+    BasePower      int32
+    ScalingFactor  float64
+    Duration       int             // Rounds (0 = instant)
+    BuffStat       string          // "ATK", "DEF", "STR", etc.
+    BuffPercent    float64         // e.g. 0.30 = +30%
+    IgnoresDefense bool
+    HitCount       int
+    // Secondary effect fields (optional)
+}
+```
+
+**Storage pattern:** DB-backed with in-memory cache. `LoadFromDB()` at startup, `RefreshCache()` after CRUD. Combat engine and commands read from cache (zero service threading needed). 29 default skills seeded on first run when DB is empty.
+
+**Registry functions:**
+- `SkillByID(id)` - Look up skill by ID (from cache)
+- `SkillsForClass(classID)` - All skills for a class (checks `ClassIDs` slice)
+- `AvailableSkills(classID, level)` - Skills available at a given level
+- `MaxSkillSlots(classID, level)` - Equippable slot count (casters start with 2, physical with 1)
+- `IsCasterClass(classID)` - Whether class uses mana
+- `HasClass(classID)` - Skill method to check if a class can use this skill
+
+**Class ID normalization:** The registry maps `"wizard"` → `"mage"` since `ClassWizard.ID` is `"wizard"` but skills are registered under `"mage"`.
+
+**API routes:** `GET /api/skills`, `GET /api/skills/:id`, `POST/PUT/DELETE /api/skills` (creator).
+
+**Skill slot progression:**
+
+| Class | L1 | L10 | L15 | L20 | L30 |
+|-------|:--:|:---:|:---:|:---:|:---:|
+| Mage/Cleric/Druid | 2 | 2 | 3 | 3 | 4 |
+| Warrior/Rogue/Ranger | 1 | 2 | 2 | 3 | 4 |
+
+### Combat Engine — Skill Processing (`pkg/mudserver/game/combat/engine_skills.go`)
+
+The skill processing pipeline in the combat engine:
+
+1. **`ProcessSkill(instance, casterID, skillID, targetID)`** — Validates skill ownership, checks mana/cooldown resources, deducts costs, then dispatches by effect type
+2. **`ProcessStatusEffects(instance, combatant)`** — Called at turn start: ticks DoTs/HoTs, checks stun (skip turn), decrements durations, removes expired effects
+3. **`ProcessManaRegen(instance, combatant)`** — Adds `ManaRegen` to `CurrentMana` at round start
+4. **`TickCooldowns(instance, combatant)`** — Decrements all cooldowns at round start
+
+**Skill damage formula:** `basePower + int32(float64(attrMod) * scalingFactor)`
+
+**Buff/debuff application:** Status effects modify combat stats (attack power, defense, dodge chance) by percentage for a set duration.
+
 ## Dialog System
 
 ### Dialog Structure
@@ -1140,7 +1232,7 @@ All entity editors (Rooms, Items, Item Templates, NPCs, Dialogs, Quests, Scripts
 |-------|---------|
 | `stores.js` | Global user state, menu state |
 | `auth.js` | Auth0 authentication state |
-| `MUDXPlusStore.js` | Game UI state (exits, actions, background) |
+| `MUDXPlusStore.js` | Game UI state (exits, actions, background, mana, equipped skills) |
 | `CRUDEditorStore.js` | Editor state (elements, selection, filters, table filter/sort state, detail panel open/close) |
 | `Client.js` | WebSocket client state (room, character) |
 | `overlayStore.js` | Transient text overlay messages (auto-dismiss with timers) |
@@ -1300,7 +1392,9 @@ pkg/
 │   └── traits/        # Shared behaviors
 ├── mudserver/         # Game server
 │   ├── game/          # Game engine
+│   │   ├── combat/    # Combat engine, skill processing, simulator
 │   │   ├── commands/  # Command handlers
+│   │   ├── leveling/  # XP curves, level-up logic, stat scaling
 │   │   ├── messages/  # Message types
 │   │   └── def/       # Interfaces
 │   └── mudserver.go   # WebSocket handling
@@ -1388,7 +1482,7 @@ The scripting system uses Lua (via gopher-lua) for dynamic game content. JavaScr
 | `hasItem(characterID, itemID)` | Check if character has item (by ID or TemplateID) |
 | `getFlag(characterID, flagName)` | Get a game flag from character's Flags map |
 | `setFlag(characterID, flagName, value)` | Set a game flag (persisted to DB) |
-| `revealExit(roomID, exitName)` | Unhide a hidden exit in a room (persisted) |
+| `revealExit(roomID, exitName, characterID)` | Reveal a hidden exit for a specific character (per-character, persisted on character) |
 | `giveItem(characterID, templateID)` | Create item from template and add to inventory |
 | `hasEquipped(characterID, slotName)` | Check if character has item in equipment slot |
 

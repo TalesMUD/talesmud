@@ -33,9 +33,23 @@ const (
 	CombatActionAttack  CombatAction = "attack"
 	CombatActionDefend  CombatAction = "defend"
 	CombatActionItem    CombatAction = "item"
+	CombatActionSkill   CombatAction = "skill"
 	CombatActionFlee    CombatAction = "flee"
 	CombatActionTimeout CombatAction = "timeout" // Forced defend due to timeout
 )
+
+// StatusEffect represents an active buff, debuff, DoT, or HoT on a combatant
+type StatusEffect struct {
+	ID       string  `json:"id"`
+	SkillID  string  `json:"skillId"`
+	Name     string  `json:"name"`
+	Type     string  `json:"type"`     // "buff", "debuff", "dot", "hot", "stun"
+	Stat     string  `json:"stat"`     // "attack", "defense", "dodge", "mana_shield"
+	Value    int32   `json:"value"`    // Flat modifier or damage/heal per tick
+	Percent  float64 `json:"percent"`  // Percentage modifier (e.g. 0.30 = +30%)
+	Duration int     `json:"duration"` // Rounds remaining
+	SourceID string  `json:"sourceId"` // Who applied this effect
+}
 
 // CombatantRef represents a participant in combat with their combat stats
 type CombatantRef struct {
@@ -56,14 +70,29 @@ type CombatantRef struct {
 	STRMod int `json:"strMod"`
 	DEXMod int `json:"dexMod"`
 	CONMod int `json:"conMod"`
+	INTMod int `json:"intMod"`
+	WISMod int `json:"wisMod"`
+
+	// Mana (for caster classes)
+	MaxMana     int32 `json:"maxMana,omitempty"`
+	CurrentMana int32 `json:"currentMana,omitempty"`
+	ManaRegen   int32 `json:"manaRegen,omitempty"`
 
 	// Status effects
-	DefenseBonus int32 `json:"defenseBonus"` // From defend action
+	DefenseBonus  int32          `json:"defenseBonus"`                    // From defend action
+	StatusEffects []StatusEffect `json:"statusEffects,omitempty"`         // Active buffs, debuffs, DoTs, HoTs
+
+	// Skill cooldowns (skillID → rounds remaining)
+	SkillCooldowns map[string]int `json:"skillCooldowns,omitempty"`
+
+	// Equipped skills (copied from character at combat start)
+	EquippedSkills []string `json:"equippedSkills,omitempty"`
 
 	// Auto-attack system
 	AutoAttackTargetID string       `json:"autoAttackTargetId,omitempty"` // Persistent target for auto-attacks
-	QueuedAction       CombatAction `json:"queuedAction,omitempty"`      // Next action override (flee, defend, attack)
+	QueuedAction       CombatAction `json:"queuedAction,omitempty"`      // Next action override (flee, defend, attack, skill)
 	QueuedTargetID     string       `json:"queuedTargetId,omitempty"`    // Target for queued attack
+	QueuedSkillID      string       `json:"queuedSkillId,omitempty"`     // Skill ID for queued skill action
 }
 
 // CombatLogEntry represents a single action in the combat log

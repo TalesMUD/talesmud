@@ -6,6 +6,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
 )
 
@@ -22,7 +23,8 @@ type CharacterLeftRoom struct {
 // CharacterSelected ...
 type CharacterSelected struct {
 	MessageResponse
-	Character *characters.Character `json:"character"`
+	Character      *characters.Character `json:"character"`
+	XPForNextLevel int32                 `json:"xpForNextLevel"`
 }
 
 // NewUserQuit ... creates a new User Joined event
@@ -253,13 +255,27 @@ func NewInventoryUpdateMessage(msg *Message) *InventoryUpdateMessage {
 // CharacterUpdateMessage sends updated character stats to the client (e.g., after combat damage)
 type CharacterUpdateMessage struct {
 	MessageResponse
-	CurrentHitPoints int32                    `json:"currentHitPoints"`
-	MaxHitPoints     int32                    `json:"maxHitPoints"`
-	XP               int32                    `json:"xp"`
-	Level            int32                    `json:"level"`
-	Gold             int64                    `json:"gold"`
-	InCombat         bool                     `json:"inCombat"`
-	Attributes       characters.Attributes    `json:"attributes,omitempty"`
+	CurrentHitPoints       int32                 `json:"currentHitPoints"`
+	MaxHitPoints           int32                 `json:"maxHitPoints"`
+	CurrentMana            int32                 `json:"currentMana"`
+	MaxMana                int32                 `json:"maxMana"`
+	XP                     int32                 `json:"xp"`
+	XPForNextLevel         int32                 `json:"xpForNextLevel"`
+	Level                  int32                 `json:"level"`
+	Gold                   int64                 `json:"gold"`
+	InCombat               bool                  `json:"inCombat"`
+	Attributes             characters.Attributes `json:"attributes,omitempty"`
+	EquippedSkills         []string              `json:"equippedSkills,omitempty"`
+	UnspentAttributePoints int32                 `json:"unspentAttributePoints"`
+	SpentAttributePoints   map[string]int32      `json:"spentAttributePoints,omitempty"`
+
+	// Derived combat stats (computed from attributes + equipment)
+	AttackPower    int32  `json:"attackPower"`
+	AttackAttr     string `json:"attackAttr"`
+	WeaponDamage   int32  `json:"weaponDamage"`
+	AttackMod      int32  `json:"attackMod"`
+	Defense        int32  `json:"defense"`
+	ManaRegen      int32  `json:"manaRegen,omitempty"`
 }
 
 // NewCharacterUpdateMessage creates a character update from the current character state
@@ -267,6 +283,15 @@ func NewCharacterUpdateMessage(userID string, ch *characters.Character) *Charact
 	if ch == nil {
 		return nil
 	}
+
+	// Compute derived combat stats using class primary attribute
+	weaponDmg := ch.GetWeaponDamage()
+	atkMod := int32(ch.GetPrimaryAttackMod())
+	attackPower := weaponDmg + atkMod
+	if attackPower < 1 {
+		attackPower = 1
+	}
+
 	return &CharacterUpdateMessage{
 		MessageResponse: MessageResponse{
 			Audience:   MessageAudienceOrigin,
@@ -275,11 +300,23 @@ func NewCharacterUpdateMessage(userID string, ch *characters.Character) *Charact
 		},
 		CurrentHitPoints: ch.CurrentHitPoints,
 		MaxHitPoints:     ch.MaxHitPoints,
+		CurrentMana:      ch.CurrentMana,
+		MaxMana:          ch.MaxMana,
 		XP:               ch.XP,
+		XPForNextLevel:   leveling.GetXPRequired(ch.Level + 1),
 		Level:            ch.Level,
 		Gold:             ch.Gold,
 		InCombat:         ch.InCombat,
-		Attributes:       ch.Attributes,
+		Attributes:             ch.Attributes,
+		EquippedSkills:         ch.EquippedSkills,
+		UnspentAttributePoints: ch.UnspentAttributePoints,
+		SpentAttributePoints:   ch.SpentAttributePoints,
+		AttackPower:            attackPower,
+		AttackAttr:             ch.GetPrimaryAttackAttribute(),
+		WeaponDamage:           weaponDmg,
+		AttackMod:              atkMod,
+		Defense:                ch.GetArmorDefense(),
+		ManaRegen:              ch.CalculateManaRegen(),
 	}
 }
 

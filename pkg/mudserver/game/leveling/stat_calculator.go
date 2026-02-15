@@ -2,6 +2,7 @@ package leveling
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 )
@@ -41,14 +42,18 @@ func CalculateHPGain(char *characters.Character, levelsGained int) int32 {
 
 // GetPrimaryAttribute returns the primary attribute short name for a class
 func GetPrimaryAttribute(class characters.Class) string {
-	switch class {
-	case characters.ClassWarrior:
+	switch strings.ToLower(class.ID) {
+	case "warrior":
 		return "STR"
-	case characters.ClassHunter:
+	case "hunter", "ranger":
 		return "DEX"
-	case characters.ClassRogue:
+	case "rogue":
 		return "DEX"
-	case characters.ClassWizard:
+	case "wizard", "mage":
+		return "INT"
+	case "cleric":
+		return "WIS"
+	case "druid":
 		return "INT"
 	default:
 		return "STR" // Default to STR if unknown class
@@ -57,14 +62,18 @@ func GetPrimaryAttribute(class characters.Class) string {
 
 // GetSecondaryAttribute returns the secondary attribute short name for a class
 func GetSecondaryAttribute(class characters.Class) string {
-	switch class {
-	case characters.ClassWarrior:
+	switch strings.ToLower(class.ID) {
+	case "warrior":
 		return "STA"
-	case characters.ClassHunter:
+	case "hunter", "ranger":
 		return "STA"
-	case characters.ClassRogue:
+	case "rogue":
 		return "STR"
-	case characters.ClassWizard:
+	case "wizard", "mage":
+		return "WIS"
+	case "cleric":
+		return "INT"
+	case "druid":
 		return "WIS"
 	default:
 		return "STA" // Default to STA if unknown class

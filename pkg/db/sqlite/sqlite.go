@@ -84,6 +84,7 @@ func (c *Client) InitSchema() error {
 		`CREATE TABLE IF NOT EXISTS server_settings (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
 		`CREATE TABLE IF NOT EXISTS quests (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
 		`CREATE TABLE IF NOT EXISTS quest_progress (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
+		`CREATE TABLE IF NOT EXISTS skills (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
 	}
 	for _, stmt := range stmts {
 		if _, err := c.db.Exec(stmt); err != nil {

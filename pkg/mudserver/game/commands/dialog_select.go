@@ -69,14 +69,29 @@ func DialogSelectCommand(room *rooms.Room, game def.GameCtrl, message *messages.
 	// Get filtered options
 	filteredOptions := game.GetFacade().ConversationsService().GetFilteredOptions(activeConv, currentNode)
 
-	// Validate option index (1-based)
-	if optionIndex < 1 || optionIndex > len(filteredOptions) {
-		game.SendMessage() <- message.Reply("Invalid option. Please choose 1-" + strconv.Itoa(len(filteredOptions)))
-		return true
+	// Re-compute quest options for this NPC (only at root level)
+	var questOptions []questDialogOption
+	if activeConv.TargetID != "" && (activeConv.CurrentNodeID == "" || activeConv.CurrentNodeID == "main") {
+		npcManager := game.GetNPCInstanceManager()
+		if npcManager != nil {
+			npcInst := npcManager.GetInstance(activeConv.TargetID)
+			if npcInst != nil {
+				templateID := npcInst.TemplateID
+				if templateID == "" {
+					templateID = npcInst.ID
+				}
+				questOptions = getQuestDialogOptions(game, message.Character.ID, templateID, npcInst.ID)
+			}
+		}
 	}
 
-	// Get selected option
-	selectedOption := filteredOptions[optionIndex-1]
+	totalOptions := len(filteredOptions) + len(questOptions)
+
+	// Validate option index (1-based)
+	if optionIndex < 1 || optionIndex > totalOptions {
+		game.SendMessage() <- message.Reply("Invalid option. Please choose 1-" + strconv.Itoa(totalOptions))
+		return true
+	}
 
 	// Get NPC name for responses
 	npcName := activeConv.Context["NPC"]
@@ -84,7 +99,20 @@ func DialogSelectCommand(room *rooms.Room, game def.GameCtrl, message *messages.
 		npcName = "NPC"
 	}
 
-	// Check if this is a quest option
+	// Check if this is a quest option (index beyond dialog options)
+	if optionIndex > len(filteredOptions) {
+		questIdx := optionIndex - len(filteredOptions) - 1
+		if questIdx < len(questOptions) {
+			qo := questOptions[questIdx]
+			handleQuestDialogOption(game, message, qo, npcName, activeConv)
+		}
+		return true
+	}
+
+	// Get selected dialog option
+	selectedOption := filteredOptions[optionIndex-1]
+
+	// Check if this is a quest option embedded in the dialog tree
 	if selectedOption.QuestID != "" && selectedOption.Action != "" {
 		handleQuestAction(game, message, selectedOption, npcName, activeConv)
 		return true
@@ -166,11 +194,48 @@ func DialogSelectCommand(room *rooms.Room, game def.GameCtrl, message *messages.
 				activeConv.ID,
 			)
 			game.SendMessage() <- dialogMsg
-		} else {
-			// Answer has no options - just show it and end or return to parent
-			game.SendMessage() <- message.Reply("[" + npcName + "] " + answerText)
+		} else if selectedOption.Answer.NodeID != "" {
+			// Answer has no inline options but references a node (back-reference).
+			// Navigate to that node and show its options if it has any.
+			activeConv.CurrentNodeID = selectedOption.Answer.NodeID
+			game.GetFacade().ConversationsService().Update(activeConv.ID, activeConv)
 
-			// Reset to main for next conversation
+			targetNode := game.GetFacade().ConversationsService().GetCurrentNode(activeConv, dialog)
+			if targetNode != nil && len(targetNode.Options) > 0 {
+				dialogState := &dialogs.DialogState{
+					CurrentDialogID: activeConv.CurrentNodeID,
+					DialogVisited:   activeConv.VisitedNodes,
+					Context:         activeConv.Context,
+				}
+				nodeText := targetNode.Render(dialogState)
+				options := make([]messages.DialogOption, 0)
+				navOptions := game.GetFacade().ConversationsService().GetFilteredOptions(activeConv, targetNode)
+				for i, opt := range navOptions {
+					optText := opt.Text
+					if optText == "" {
+						optText = opt.RenderPlain(dialogState)
+					}
+					options = append(options, messages.DialogOption{
+						Index: i + 1,
+						Text:  optText,
+					})
+				}
+				dialogMsg := messages.NewDialogMessage(
+					message.FromUser.ID,
+					npcName,
+					nodeText,
+					options,
+					activeConv.ID,
+				)
+				game.SendMessage() <- dialogMsg
+			} else {
+				// Target node not found or has no options — end conversation
+				game.SendMessage() <- message.Reply("[" + npcName + "] " + answerText)
+				game.GetFacade().ConversationsService().ResetConversation(activeConv)
+			}
+		} else {
+			// Answer has no options and no node reference - just show it and end
+			game.SendMessage() <- message.Reply("[" + npcName + "] " + answerText)
 			game.GetFacade().ConversationsService().ResetConversation(activeConv)
 		}
 	} else if len(selectedOption.Options) > 0 {
@@ -371,6 +436,142 @@ func handleQuestAction(game def.GameCtrl, message *messages.Message, selectedOpt
 			}
 		}
 
+		game.SendMessage() <- message.Reply(progressMsg)
+	}
+
+	// End dialog after quest action
+	game.GetFacade().ConversationsService().ResetConversation(activeConv)
+}
+
+// handleQuestDialogOption handles a quest option that was injected into the dialog by the talk command.
+// It shows the NPC response text and then performs the quest action (accept/complete/progress).
+func handleQuestDialogOption(game def.GameCtrl, message *messages.Message, qo questDialogOption, npcName string, activeConv *conversations.Conversation) {
+	char := message.Character
+
+	// Show NPC response text if available
+	if qo.npcText != "" {
+		game.SendMessage() <- message.Reply("[" + npcName + "] " + qo.npcText)
+	}
+
+	switch qo.action {
+	case "accept":
+		_, err := game.GetFacade().QuestsService().AcceptQuest(char.ID, qo.questID)
+		if err != nil {
+			game.SendMessage() <- message.Reply(fmt.Sprintf("[%s] %s", npcName, err.Error()))
+			return
+		}
+
+		quest, _ := game.GetFacade().QuestsService().FindByID(qo.questID)
+		if quest == nil {
+			return
+		}
+
+		acceptMsg := fmt.Sprintf("╔══════════════════════════════════════════════════╗\n")
+		acceptMsg += fmt.Sprintf("║         QUEST ACCEPTED                            ║\n")
+		acceptMsg += fmt.Sprintf("╚══════════════════════════════════════════════════╝\n\n")
+		acceptMsg += fmt.Sprintf("%s\n\n", quest.Name)
+		acceptMsg += fmt.Sprintf("%s\n\n", quest.Description)
+		acceptMsg += fmt.Sprintf("OBJECTIVES:\n")
+		for i, obj := range quest.Objectives {
+			acceptMsg += fmt.Sprintf("  %d. %s\n", i+1, obj.Description)
+		}
+		acceptMsg += fmt.Sprintf("\n══════════════════════════════════════════════════")
+
+		game.SendMessage() <- messages.MessageResponse{
+			Audience:   messages.MessageAudienceUser,
+			AudienceID: char.BelongsUserID,
+			Type:       messages.MessageTypeQuestAccepted,
+			Message:    acceptMsg,
+		}
+
+		// Send quest log update
+		questLog, _ := game.GetFacade().QuestsService().GetQuestLog(char.ID)
+		questLogEntries := convertQuestLogToEntries(questLog)
+		game.SendMessage() <- messages.QuestLogMessage{
+			MessageResponse: messages.MessageResponse{
+				Audience:   messages.MessageAudienceUser,
+				AudienceID: char.BelongsUserID,
+				Type:       messages.MessageTypeQuestLog,
+			},
+			Quests: questLogEntries,
+		}
+
+		log.WithFields(log.Fields{
+			"characterID": char.ID,
+			"questID":     qo.questID,
+			"questName":   quest.Name,
+		}).Info("Quest accepted via dialog")
+
+	case "complete":
+		_, err := game.GetFacade().QuestsService().CompleteQuest(char.ID, qo.questID)
+		if err != nil {
+			game.SendMessage() <- message.Reply(fmt.Sprintf("[%s] %s", npcName, err.Error()))
+			return
+		}
+
+		grantedItems, err := game.GetFacade().QuestsService().GrantQuestRewards(char.ID, qo.questID)
+		if err != nil {
+			log.WithError(err).Error("Failed to grant quest rewards")
+			game.SendMessage() <- message.Reply("[System] Quest completed but failed to grant rewards.")
+			return
+		}
+
+		quest, _ := game.GetFacade().QuestsService().FindByID(qo.questID)
+		if quest != nil {
+			rewardMsg := buildQuestRewardMessage(quest, grantedItems)
+			game.SendMessage() <- messages.MessageResponse{
+				Audience:   messages.MessageAudienceUser,
+				AudienceID: char.BelongsUserID,
+				Type:       messages.MessageTypeQuestCompleted,
+				Message:    rewardMsg,
+			}
+		}
+
+		updatedChar, _ := game.GetFacade().CharactersService().FindByID(char.ID)
+		if updatedChar != nil {
+			game.SendMessage() <- messages.NewCharacterUpdateMessage(char.BelongsUserID, updatedChar)
+		}
+
+		if len(grantedItems) > 0 && updatedChar != nil {
+			inventoryMsg := &messages.Message{
+				FromUser:  message.FromUser,
+				Character: updatedChar,
+			}
+			game.SendMessage() <- messages.NewInventoryUpdateMessage(inventoryMsg)
+		}
+
+		questLog, _ := game.GetFacade().QuestsService().GetQuestLog(char.ID)
+		questLogEntries := convertQuestLogToEntries(questLog)
+		game.SendMessage() <- messages.QuestLogMessage{
+			MessageResponse: messages.MessageResponse{
+				Audience:   messages.MessageAudienceUser,
+				AudienceID: char.BelongsUserID,
+				Type:       messages.MessageTypeQuestLog,
+			},
+			Quests: questLogEntries,
+		}
+
+	case "progress":
+		progress, err := game.GetFacade().QuestsService().GetProgress(char.ID, qo.questID)
+		if err != nil || progress == nil {
+			game.SendMessage() <- message.Reply(fmt.Sprintf("[%s] I don't have any information about that quest.", npcName))
+			return
+		}
+
+		quest, _ := game.GetFacade().QuestsService().FindByID(qo.questID)
+		if quest == nil {
+			return
+		}
+
+		progressMsg := fmt.Sprintf("[%s] Let me check your progress on \"%s\":\n\n", npcName, quest.Name)
+		for i, objProgress := range progress.Objectives {
+			obj := quest.Objectives[i]
+			if objProgress.Completed {
+				progressMsg += fmt.Sprintf("  ✓ %s (Complete)\n", obj.Description)
+			} else {
+				progressMsg += fmt.Sprintf("  ○ %s (%d/%d)\n", obj.Description, objProgress.Current, objProgress.Required)
+			}
+		}
 		game.SendMessage() <- message.Reply(progressMsg)
 	}
 

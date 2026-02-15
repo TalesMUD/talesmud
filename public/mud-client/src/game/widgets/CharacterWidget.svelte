@@ -30,15 +30,31 @@
   $: gold = stats.gold || 0;
   $: inCombat = stats.inCombat || false;
   $: attributes = stats.attributes || character?.attributes || [];
+  $: currentMana = stats.currentMana || 0;
+  $: maxMana = stats.maxMana || 0;
+  $: hasMana = maxMana > 0;
+  $: attackPower = stats.attackPower || 0;
+  $: attackAttr = stats.attackAttr || 'STR';
+  $: weaponDamage = stats.weaponDamage || 0;
+  $: attackMod = stats.attackMod || 0;
+  $: defense = stats.defense || 0;
+  $: manaRegen = stats.manaRegen || 0;
 
   // HP percentage and color
   $: hpPercent = maxHp > 0 ? Math.min(100, (currentHp / maxHp) * 100) : 0;
   $: hpColor = hpPercent > 60 ? '#22c55e' : hpPercent > 30 ? '#f59e0b' : '#ef4444';
   $: hpGlow = hpPercent > 60 ? 'rgba(34,197,94,0.4)' : hpPercent > 30 ? 'rgba(245,158,11,0.4)' : 'rgba(239,68,68,0.4)';
 
-  // XP - estimate xpToNext as level * 1000 if not provided by server
-  $: xpToNext = level > 0 ? level * 1000 : 1000;
+  // Mana percentage
+  $: manaPercent = maxMana > 0 ? Math.min(100, (currentMana / maxMana) * 100) : 0;
+
+  // XP - use server-provided threshold, fallback to level * 1000
+  $: xpToNext = stats.xpForNextLevel > 0 ? stats.xpForNextLevel : (level > 0 ? level * 1000 : 1000);
   $: xpPercent = xpToNext > 0 ? Math.min(100, (xp / xpToNext) * 100) : 0;
+
+  // Attribute points
+  $: unspentPoints = stats.unspentAttributePoints || 0;
+  $: hasUnspentPoints = unspentPoints > 0;
 
   $: hasData = character !== null;
 
@@ -50,6 +66,40 @@
 
   function getAttrShort(attr) {
     return attr.short || attr.name?.slice(0, 3).toUpperCase() || '???';
+  }
+
+  // Compute D&D-style modifier: (value - 10) / 2, rounded down
+  function getModifier(value) {
+    return Math.floor((value - 10) / 2);
+  }
+
+  function formatMod(mod) {
+    return mod >= 0 ? '+' + mod : String(mod);
+  }
+
+  function isPrimaryAttr(attr) {
+    return getAttrShort(attr) === attackAttr;
+  }
+
+  function getAttrTooltip(attr) {
+    const short = getAttrShort(attr);
+    const mod = getModifier(attr.value);
+    let tip = `${attr.name || short}: ${attr.value} (modifier: ${formatMod(mod)})`;
+    if (short === attackAttr) {
+      tip += `\nPrimary attack attribute for ${charClass}`;
+    }
+    return tip;
+  }
+
+  // Build ATK formula tooltip
+  $: atkFormula = weaponDamage === 1
+    ? `ATK = Unarmed (1) ${formatMod(attackMod)} ${attackAttr} mod = ${attackPower}`
+    : `ATK = Weapon (${weaponDamage}) ${formatMod(attackMod)} ${attackAttr} mod = ${attackPower}`;
+
+  function spendPoint(attrShort) {
+    if (sendMessage && hasUnspentPoints) {
+      sendMessage('spend ' + attrShort);
+    }
   }
 </script>
 
@@ -178,6 +228,7 @@
   .bar-label.hp { color: #4ade80; }
   .bar-label.hp.danger { color: #f59e0b; }
   .bar-label.hp.critical { color: #ef4444; }
+  .bar-label.mana { color: #60a5fa; }
   .bar-label.xp { color: #c084fc; }
 
   .bar-value {
@@ -204,6 +255,11 @@
   .bar-fill.hp {
     background: linear-gradient(90deg, var(--hp-color), var(--hp-color));
     box-shadow: 0 0 8px var(--hp-glow);
+  }
+
+  .bar-fill.mana {
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
   }
 
   .bar-fill.xp {
@@ -291,11 +347,21 @@
     background: rgba(255, 255, 255, 0.04);
     border-radius: 6px;
     border: 1px solid rgba(255, 255, 255, 0.06);
-    transition: background 0.15s ease;
+    transition: background 0.15s ease, border-color 0.15s ease;
+    position: relative;
   }
 
   .attr-item:hover {
     background: rgba(255, 255, 255, 0.08);
+  }
+
+  .attr-item.has-points {
+    border-color: rgba(74, 222, 128, 0.15);
+  }
+
+  .attr-item.primary-attr {
+    border-color: rgba(248, 113, 113, 0.25);
+    background: rgba(248, 113, 113, 0.06);
   }
 
   .attr-value {
@@ -305,12 +371,119 @@
     line-height: 1.2;
   }
 
+  .attr-mod {
+    font-size: 0.65em;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .attr-mod.positive { color: #4ade80; }
+  .attr-mod.negative { color: #f87171; }
+
   .attr-name {
     font-size: 0.6em;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: #6b7280;
     margin-top: 0.1em;
+  }
+
+  /* Unspent points badge */
+  .unspent-badge {
+    font-size: 0.65em;
+    font-weight: 700;
+    color: #4ade80;
+    background: rgba(74, 222, 128, 0.15);
+    padding: 0.15em 0.5em;
+    border-radius: 4px;
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    animation: unspentPulse 2s ease-in-out infinite;
+    white-space: nowrap;
+  }
+
+  @keyframes unspentPulse {
+    0%, 100% { opacity: 0.8; }
+    50% { opacity: 1; }
+  }
+
+  /* Attribute spend button */
+  .attr-spend-btn {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1px solid rgba(74, 222, 128, 0.4);
+    background: rgba(74, 222, 128, 0.15);
+    color: #4ade80;
+    font-size: 0.75em;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    padding: 0;
+    line-height: 1;
+  }
+
+  .attr-spend-btn:hover {
+    background: rgba(74, 222, 128, 0.3);
+    border-color: rgba(74, 222, 128, 0.6);
+    transform: scale(1.1);
+  }
+
+  /* Combat stats grid */
+  .combat-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.35em;
+  }
+
+  .combat-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.45em;
+    padding: 0.4em 0.5em;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .stat-icon {
+    font-size: 1em;
+    opacity: 0.7;
+  }
+
+  .stat-icon.atk { color: #f87171; }
+  .stat-icon.def { color: #60a5fa; }
+  .stat-icon.mpr { color: #a78bfa; }
+
+  .combat-stat-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .combat-stat-value {
+    font-size: 0.95em;
+    font-weight: 700;
+    color: #f3f4f6;
+    line-height: 1.2;
+  }
+
+  .combat-stat-label {
+    font-size: 0.55em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6b7280;
+  }
+
+  .combat-stat-formula {
+    font-size: 0.5em;
+    color: #9ca3af;
+    font-style: italic;
+    white-space: nowrap;
   }
 
   /* Empty state */
@@ -368,6 +541,22 @@
         </div>
       </div>
 
+      <!-- Mana Bar (only for caster classes) -->
+      {#if hasMana}
+        <div class="bar-container">
+          <div class="bar-header">
+            <span class="bar-label mana">MP</span>
+            <span class="bar-value">{currentMana} / {maxMana}</span>
+          </div>
+          <div class="bar-track">
+            <div
+              class="bar-fill mana"
+              style="width: {manaPercent}%"
+            ></div>
+          </div>
+        </div>
+      {/if}
+
       <!-- XP Bar -->
       <div class="bar-container">
         <div class="bar-header">
@@ -396,16 +585,55 @@
     {#if attributes && attributes.length > 0}
       <div class="section-divider">
         <span>Attributes</span>
+        {#if hasUnspentPoints}
+          <span class="unspent-badge">{unspentPoints} pts</span>
+        {/if}
       </div>
       <div class="attributes-grid">
         {#each attributes as attr}
-          <div class="attr-item" title={attr.name || ''}>
+          <div class="attr-item" class:has-points={hasUnspentPoints} class:primary-attr={isPrimaryAttr(attr)} title={getAttrTooltip(attr)}>
             <span class="attr-value">{attr.value}</span>
+            <span class="attr-mod" class:positive={getModifier(attr.value) >= 0} class:negative={getModifier(attr.value) < 0}>{formatMod(getModifier(attr.value))}</span>
             <span class="attr-name">{getAttrShort(attr)}</span>
+            {#if hasUnspentPoints}
+              <button class="attr-spend-btn" on:click={() => spendPoint(getAttrShort(attr))} title="Spend 1 point on {getAttrShort(attr)}">+</button>
+            {/if}
           </div>
         {/each}
       </div>
     {/if}
+
+    <!-- Derived Combat Stats -->
+    <div class="section-divider">
+      <span>Combat Stats</span>
+    </div>
+    <div class="combat-stats-grid">
+      <div class="combat-stat" title={atkFormula}>
+        <i class="material-icons stat-icon atk">gavel</i>
+        <div class="combat-stat-info">
+          <span class="combat-stat-value">{attackPower}</span>
+          <span class="combat-stat-label">ATK</span>
+          <span class="combat-stat-formula">{weaponDamage === 1 ? 'Unarmed' : 'Wpn ' + weaponDamage} {formatMod(attackMod)} {attackAttr}</span>
+        </div>
+      </div>
+      <div class="combat-stat" title="Total armor defense from equipped items">
+        <i class="material-icons stat-icon def">shield</i>
+        <div class="combat-stat-info">
+          <span class="combat-stat-value">{defense}</span>
+          <span class="combat-stat-label">DEF</span>
+          <span class="combat-stat-formula">Armor</span>
+        </div>
+      </div>
+      {#if hasMana}
+        <div class="combat-stat" title="Mana regenerated per combat round">
+          <i class="material-icons stat-icon mpr">auto_fix_high</i>
+          <div class="combat-stat-info">
+            <span class="combat-stat-value">{manaRegen}</span>
+            <span class="combat-stat-label">MP/RND</span>
+          </div>
+        </div>
+      {/if}
+    </div>
   {:else}
     <div class="empty-state">
       <i class="material-icons">person_off</i>

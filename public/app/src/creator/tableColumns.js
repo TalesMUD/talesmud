@@ -176,3 +176,30 @@ export const characterTemplateColumns = [
   },
   { key: "level", label: "Lvl", width: 50, type: "number", priority: 2 },
 ];
+
+export const skillColumns = [
+  {
+    key: "id", label: "ID", width: 90, mono: true, priority: 1,
+    accessor: (el) => el.id?.length > 10 ? el.id.slice(0, 8) + "\u2026" : el.id,
+  },
+  { key: "name", label: "Name", width: 160, priority: 1 },
+  {
+    key: "_classes", label: "Classes", width: 140, type: "computed", priority: 1,
+    accessor: (el) => el.classIds?.join(", ") || "-",
+    sortAccessor: (el) => el.classIds?.[0] || "",
+  },
+  { key: "levelRequired", label: "Lvl", width: 50, type: "number", priority: 2 },
+  {
+    key: "resourceType", label: "Resource", width: 90, type: "select", priority: 2,
+    options: ["mana", "cooldown"],
+  },
+  {
+    key: "effect", label: "Effect", width: 80, type: "select", priority: 2,
+    options: ["damage", "heal", "buff", "debuff", "dot", "hot"],
+  },
+  {
+    key: "target", label: "Target", width: 90, type: "select", priority: 3,
+    options: ["enemy", "self", "all_enemies"],
+  },
+  { key: "basePower", label: "Power", width: 60, type: "number", priority: 3 },
+];

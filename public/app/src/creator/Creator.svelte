@@ -9,6 +9,7 @@
     { name: "Dialogs", nav: "/creator/dialogs" },
     { name: "Dialog Graph", nav: "/creator/dialog-graph" },
     { name: "Quests", nav: "/creator/quests" },
+    { name: "Skills", nav: "/creator/skills" },
     { name: "Scripts", nav: "/creator/scripts" },
     { name: "World", nav: "/creator/world" },
     { name: "Settings", nav: "/creator/settings" },

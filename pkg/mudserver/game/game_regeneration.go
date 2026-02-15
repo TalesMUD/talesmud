@@ -8,8 +8,10 @@ import (
 )
 
 const (
-	passiveRegenPercent = 0.02 // 2% per tick (out of combat)
-	restingRegenPercent = 0.10 // 10% per tick (resting)
+	passiveRegenPercent    = 0.02  // 2% per tick (out of combat)
+	restingRegenPercent    = 0.10  // 10% per tick (resting)
+	combatHPRegenPercent   = 0.005 // 0.5% per tick (in combat) — 1/4 of passive
+	combatManaRegenPercent = 0.01  // 1% per tick (in combat) — 1/5 of passive
 )
 
 // handleRegenerationUpdates processes HP regeneration for all online players.
@@ -32,29 +34,30 @@ func (g *Game) handleRegenerationUpdates() {
 			continue
 		}
 
-		// Skip if character is dead or at full HP
-		if char.CurrentHitPoints <= 0 || char.CurrentHitPoints >= char.MaxHitPoints {
-			// If resting and at full HP, send completion message
-			if char.CurrentHitPoints >= char.MaxHitPoints && isResting(char) {
+		// Check if fully recovered (HP and mana)
+		hpFull := char.CurrentHitPoints >= char.MaxHitPoints
+		manaFull := char.MaxMana <= 0 || char.CurrentMana >= char.MaxMana
+		if char.CurrentHitPoints <= 0 || (hpFull && manaFull) {
+			if hpFull && manaFull && isResting(char) {
 				g.clearRestingState(char, user.ID)
 				g.SendMessage() <- messages.Reply(user.ID, "You are now fully rested and recovered.")
 			}
 			continue
 		}
 
-		// Skip if in combat
-		if char.InCombat {
-			// Clear resting state if in combat
-			if isResting(char) {
-				g.clearRestingState(char, user.ID)
-			}
-			continue
+		// Clear resting state if in combat
+		if char.InCombat && isResting(char) {
+			g.clearRestingState(char, user.ID)
 		}
 
-		// Calculate and apply regeneration
+		// Calculate and apply HP regeneration (reduced in combat)
 		regenAmount := g.calculateRegenAmount(char)
-		if regenAmount > 0 {
-			g.applyRegeneration(char, user.ID, regenAmount)
+
+		// Calculate mana regeneration (reduced in combat)
+		manaRegenAmount := g.calculateManaRegenAmount(char)
+
+		if regenAmount > 0 || manaRegenAmount > 0 {
+			g.applyRegeneration(char, user.ID, regenAmount, manaRegenAmount)
 		}
 	}
 }
@@ -63,7 +66,9 @@ func (g *Game) handleRegenerationUpdates() {
 func (g *Game) calculateRegenAmount(char *characters.Character) int32 {
 	var regenPercent float64
 
-	if isResting(char) {
+	if char.InCombat {
+		regenPercent = combatHPRegenPercent
+	} else if isResting(char) {
 		regenPercent = restingRegenPercent
 	} else {
 		regenPercent = passiveRegenPercent
@@ -78,12 +83,44 @@ func (g *Game) calculateRegenAmount(char *characters.Character) int32 {
 	return amount
 }
 
-// applyRegeneration applies HP regeneration to a character.
-func (g *Game) applyRegeneration(char *characters.Character, userID string, amount int32) {
+// calculateManaRegenAmount determines how much mana to regenerate based on character state.
+func (g *Game) calculateManaRegenAmount(char *characters.Character) int32 {
+	if char.MaxMana <= 0 || char.CurrentMana >= char.MaxMana {
+		return 0
+	}
+
+	var regenPercent float64
+	if char.InCombat {
+		regenPercent = combatManaRegenPercent
+	} else if isResting(char) {
+		regenPercent = 0.15 // 15% per tick while resting
+	} else {
+		regenPercent = 0.05 // 5% per tick out of combat
+	}
+
+	amount := int32(float64(char.MaxMana) * regenPercent)
+	if amount < 1 {
+		amount = 1
+	}
+	return amount
+}
+
+// applyRegeneration applies HP and mana regeneration to a character.
+func (g *Game) applyRegeneration(char *characters.Character, userID string, hpAmount int32, manaAmount int32) {
 	// Add HP and cap at MaxHP
-	char.CurrentHitPoints += amount
-	if char.CurrentHitPoints > char.MaxHitPoints {
-		char.CurrentHitPoints = char.MaxHitPoints
+	if hpAmount > 0 {
+		char.CurrentHitPoints += hpAmount
+		if char.CurrentHitPoints > char.MaxHitPoints {
+			char.CurrentHitPoints = char.MaxHitPoints
+		}
+	}
+
+	// Add mana and cap at MaxMana
+	if manaAmount > 0 {
+		char.CurrentMana += manaAmount
+		if char.CurrentMana > char.MaxMana {
+			char.CurrentMana = char.MaxMana
+		}
 	}
 
 	// Save character
@@ -95,8 +132,10 @@ func (g *Game) applyRegeneration(char *characters.Character, userID string, amou
 	// Send character update message
 	g.SendMessage() <- messages.NewCharacterUpdateMessage(userID, char)
 
-	// If resting and now at full HP, send completion message
-	if char.CurrentHitPoints >= char.MaxHitPoints && isResting(char) {
+	// If resting and now fully recovered, send completion message
+	hpFull := char.CurrentHitPoints >= char.MaxHitPoints
+	manaFull := char.MaxMana <= 0 || char.CurrentMana >= char.MaxMana
+	if hpFull && manaFull && isResting(char) {
 		g.clearRestingState(char, userID)
 		g.SendMessage() <- messages.Reply(userID, "You are now fully rested and recovered.")
 	}

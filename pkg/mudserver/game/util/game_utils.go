@@ -2,8 +2,10 @@ package util
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/talesmud/talesmud/pkg/entities"
+	"github.com/talesmud/talesmud/pkg/entities/characters"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
@@ -208,6 +210,38 @@ func BuildNPCDisplayNames(npcs []*npc.NPC) map[string]string {
 	}
 
 	return result
+}
+
+// RoomWithCharacterReveals returns a room view with character-specific hidden exits revealed.
+// If the character has no reveals for this room, the original room pointer is returned (no copy).
+// Otherwise a shallow copy with modified exits is returned.
+func RoomWithCharacterReveals(room *rooms.Room, char *characters.Character) *rooms.Room {
+	if char == nil || char.RevealedExits == nil || room.Exits == nil {
+		return room
+	}
+	revealed, ok := char.RevealedExits[room.ID]
+	if !ok || len(revealed) == 0 {
+		return room
+	}
+
+	// Make a shallow copy of the room and its exits
+	roomCopy := *room
+	exitsCopy := make(rooms.Exits, len(*room.Exits))
+	copy(exitsCopy, *room.Exits)
+
+	for i := range exitsCopy {
+		if exitsCopy[i].Hidden {
+			for _, name := range revealed {
+				if strings.EqualFold(exitsCopy[i].Name, name) {
+					exitsCopy[i].Hidden = false
+					break
+				}
+			}
+		}
+	}
+
+	roomCopy.Exits = &exitsCopy
+	return &roomCopy
 }
 
 //RemoveStringFromSlice ...

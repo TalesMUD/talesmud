@@ -88,6 +88,10 @@ func (roomProcessor *RoomProcessor) matchesDynamicCommand(key string, room *room
 
 	if room.Exits != nil {
 		for _, exit := range *room.Exits {
+			// Skip hidden exits the character hasn't revealed
+			if exit.Hidden && !message.Character.HasRevealedExit(room.ID, exit.Name) {
+				continue
+			}
 			if strings.HasPrefix(message.Data, exit.Name) {
 				// custom exit
 				return TakeExit(exit.Name), true
@@ -152,6 +156,7 @@ func (roomProcessor *RoomProcessor) matchesDynamicCommand(key string, room *room
 						ctx.Set("room", room)
 						ctx.Set("roomID", room.ID)
 						ctx.Set("character", message.Character)
+						ctx.Set("characterID", message.Character.ID)
 						if actionCopy.Params != nil {
 							ctx.Set("params", actionCopy.Params)
 						}

@@ -112,6 +112,10 @@ func (app *app) setupRoutes() {
 		Service: app.Facade.QuestsService(),
 	}
 
+	skillsHandler := &handler.SkillsHandler{
+		Service: app.Facade.SkillsService(),
+	}
+
 	generate := &handler.GenerateHandler{
 		GroqClient: groq.NewClient(),
 	}
@@ -206,6 +210,8 @@ func (app *app) setupRoutes() {
 		protected.GET("settings", serverSettings.GetServerSettings)
 		protected.GET("quests", questsHandler.GetQuests)
 		protected.GET("quests/:id", questsHandler.GetQuestByID)
+		protected.GET("skills", skillsHandler.GetSkills)
+		protected.GET("skills/:id", skillsHandler.GetSkillByID)
 		protected.GET("quest-progress/:characterId", questsHandler.GetQuestLog)
 		protected.POST("quest-progress/:characterId/accept/:questId", questsHandler.AcceptQuest)
 		protected.POST("quest-progress/:characterId/abandon/:questId", questsHandler.AbandonQuest)
@@ -269,6 +275,11 @@ func (app *app) setupRoutes() {
 			creator.POST("quests", questsHandler.PostQuest)
 			creator.PUT("quests/:id", questsHandler.UpdateQuestByID)
 			creator.DELETE("quests/:id", questsHandler.DeleteQuestByID)
+
+			// Skills
+			creator.POST("skills", skillsHandler.PostSkill)
+			creator.PUT("skills/:id", skillsHandler.UpdateSkillByID)
+			creator.DELETE("skills/:id", skillsHandler.DeleteSkillByID)
 
 			// Backgrounds
 			creator.POST("backgrounds/upload", backgrounds.UploadBackground)

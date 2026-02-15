@@ -143,12 +143,27 @@ func applyBuiltInEffects(game def.GameCtrl, message *messages.Message, item *ite
 		}
 	}
 
-	// Mana restoration (placeholder for future mana system)
+	// Mana restoration
 	if val, ok := item.Attributes["manaRestore"]; ok {
 		amount := toInt32(val)
 		if amount > 0 {
-			game.SendMessage() <- message.Reply("You use " + item.Name + " and feel your magical energy restored.")
-			applied = true
+			if char.MaxMana <= 0 {
+				game.SendMessage() <- message.Reply("You use " + item.Name + " but you have no use for magical energy.")
+				applied = true
+			} else {
+				oldMana := char.CurrentMana
+				char.CurrentMana += amount
+				if char.CurrentMana > char.MaxMana {
+					char.CurrentMana = char.MaxMana
+				}
+				restored := char.CurrentMana - oldMana
+				if restored > 0 {
+					game.SendMessage() <- message.Reply("You use " + item.Name + " and restore " + itoa(int(restored)) + " mana.")
+				} else {
+					game.SendMessage() <- message.Reply("You use " + item.Name + " but your mana is already full.")
+				}
+				applied = true
+			}
 		}
 	}
 

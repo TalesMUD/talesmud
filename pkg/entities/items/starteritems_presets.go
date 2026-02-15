@@ -161,6 +161,43 @@ func StarterItemTemplatePresets() []*Item {
 				"healthRestore": 75,
 			},
 		},
+		// Consumables - Mana Potions
+		{
+			IsTemplate:  true,
+			Name:        "Small Mana Potion",
+			Description: "A small vial of shimmering blue liquid that restores 15 mana.",
+			Type:        ItemTypeConsumable,
+			Quality:     ItemQualityNormal,
+			Consumable:  true,
+			Stackable:   true,
+			Attributes: map[string]interface{}{
+				"manaRestore": 15,
+			},
+		},
+		{
+			IsTemplate:  true,
+			Name:        "Mana Potion",
+			Description: "A vial of luminous blue liquid that restores 30 mana.",
+			Type:        ItemTypeConsumable,
+			Quality:     ItemQualityMagic,
+			Consumable:  true,
+			Stackable:   true,
+			Attributes: map[string]interface{}{
+				"manaRestore": 30,
+			},
+		},
+		{
+			IsTemplate:  true,
+			Name:        "Large Mana Potion",
+			Description: "A large flask of brilliant azure elixir that restores 60 mana.",
+			Type:        ItemTypeConsumable,
+			Quality:     ItemQualityRare,
+			Consumable:  true,
+			Stackable:   true,
+			Attributes: map[string]interface{}{
+				"manaRestore": 60,
+			},
+		},
 	}
 }
 

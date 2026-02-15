@@ -5,6 +5,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	m "github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
 )
 
 // TakeExit ... executes scream command
@@ -13,6 +14,12 @@ func TakeExit(exit string) RoomCommand {
 	return func(room *rooms.Room, game def.GameCtrl, message *messages.Message) bool {
 
 		if exit, ok := room.GetExit(exit); ok {
+
+			// Block traversal of hidden exits the character hasn't revealed
+			if exit.Hidden && !message.Character.HasRevealedExit(room.ID, exit.Name) {
+				game.SendMessage() <- message.Reply("You don't see an exit in that direction.")
+				return true
+			}
 
 			characterID := message.Character.ID
 
@@ -48,12 +55,15 @@ func TakeExit(exit string) RoomCommand {
 				}
 
 				// send player a message to change room
-				enterRoom := messages.NewEnterRoomMessage(next, message.FromUser, game)
+				enterRoom := messages.NewEnterRoomMessage(util.RoomWithCharacterReveals(next, message.Character), message.FromUser, game)
 				enterRoom.AudienceID = message.FromUser.ID
 				game.SendMessage() <- enterRoom
 
 				// Track quest progress for room entry
 				NotifyQuestRoomEnter(game, characterID, message.FromUser.ID, next)
+
+				// TODO: exploration XP disabled for now, re-enable when client XP display is updated
+				// GrantExplorationXP(game, message.Character, message.FromUser.ID, next)
 
 				// send all players in new room a joined message
 				game.SendMessage() <- messages.CharacterJoinedRoom{

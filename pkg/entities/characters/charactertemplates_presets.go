@@ -23,7 +23,8 @@ func SystemCharacterTemplatePresets() []*CharacterTemplate {
 				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Rusty Sword"},
 				{Slot: items.ItemSlotChest, ItemTemplateName: "Leather Armor"},
 			},
-			Source: "system",
+			DefaultSkills: []string{"warrior_power_strike"},
+			Source:         "system",
 		},
 		{
 			Entity:            nil,
@@ -42,7 +43,8 @@ func SystemCharacterTemplatePresets() []*CharacterTemplate {
 				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Worn Dagger"},
 				{Slot: items.ItemSlotChest, ItemTemplateName: "Leather Armor"},
 			},
-			Source: "system",
+			DefaultSkills: []string{"rogue_backstab"},
+			Source:         "system",
 		},
 		{
 			Entity:            nil,
@@ -56,12 +58,15 @@ func SystemCharacterTemplatePresets() []*CharacterTemplate {
 			Level:             1,
 			CurrentHitPoints:  17,
 			MaxHitPoints:      17,
+			CurrentMana:       41,
+			MaxMana:           41, // 20 + (1*5) + (4*4) = 41 (INT=18, mod=4)
 			Attributes:        createBaseAttributes(4, 6, 18, 14, 8),
 			StartingItems: []StartingItem{
 				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Apprentice Staff"},
 				{Slot: items.ItemSlotChest, ItemTemplateName: "Cloth Robe"},
 			},
-			Source: "system",
+			DefaultSkills: []string{"mage_fireball", "mage_frost_shield"},
+			Source:         "system",
 		},
 		{
 			Entity:            nil,
@@ -81,12 +86,15 @@ func SystemCharacterTemplatePresets() []*CharacterTemplate {
 			Level:            1,
 			CurrentHitPoints: 22,
 			MaxHitPoints:     22,
+			CurrentMana:       25,
+			MaxMana:           25, // 20 + (1*5) + (0*4) = 25 (INT=10, mod=0)
 			Attributes:       createBaseAttributes(6, 7, 10, 18, 9),
 			StartingItems: []StartingItem{
 				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Simple Mace"},
 				{Slot: items.ItemSlotChest, ItemTemplateName: "Cloth Robe"},
 			},
-			Source: "system",
+			DefaultSkills: []string{"cleric_heal", "cleric_holy_strike"},
+			Source:         "system",
 		},
 		{
 			Entity:            nil,
@@ -105,7 +113,8 @@ func SystemCharacterTemplatePresets() []*CharacterTemplate {
 				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Short Bow"},
 				{Slot: items.ItemSlotChest, ItemTemplateName: "Leather Armor"},
 			},
-			Source: "system",
+			DefaultSkills: []string{"ranger_aimed_shot"},
+			Source:         "system",
 		},
 		{
 			Entity:            nil,
@@ -125,12 +134,15 @@ func SystemCharacterTemplatePresets() []*CharacterTemplate {
 			Level:            1,
 			CurrentHitPoints: 20,
 			MaxHitPoints:     20,
+			CurrentMana:       33,
+			MaxMana:           33, // 20 + (1*5) + (2*4) = 33 (INT=14, mod=2)
 			Attributes:       createBaseAttributes(5, 8, 14, 18, 5),
 			StartingItems: []StartingItem{
 				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Wooden Staff"},
 				{Slot: items.ItemSlotChest, ItemTemplateName: "Cloth Robe"},
 			},
-			Source: "system",
+			DefaultSkills: []string{"druid_wrath", "druid_rejuvenation"},
+			Source:         "system",
 		},
 	}
 }

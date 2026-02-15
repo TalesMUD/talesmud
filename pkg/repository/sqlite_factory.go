@@ -72,6 +72,10 @@ func (f *SQLiteFactory) QuestProgress() QuestProgressRepository {
 	return NewSQLiteQuestProgressRepository(f.client)
 }
 
+func (f *SQLiteFactory) Skills() SkillsRepository {
+	return NewSQLiteSkillsRepository(f.client)
+}
+
 func (f *SQLiteFactory) Close() error {
 	return f.client.Close()
 }

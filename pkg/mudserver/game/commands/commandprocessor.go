@@ -103,6 +103,9 @@ func (commandProcessor *CommandProcessor) registerCommands() {
 	commandProcessor.RegisterCommand(&DefendCommand{}, "Take defensive stance in combat", "defend", "d", "guard")
 	commandProcessor.RegisterCommand(&FleeCommand{}, "Attempt to flee from combat", "flee", "run", "escape")
 	commandProcessor.RegisterCommand(&CombatStatusCommand{}, "Show combat status", "status", "cs", "combat")
+	commandProcessor.RegisterCommand(&CastCommand{}, "Use a skill in combat: cast <skill> [target]", "cast", "spell")
+	commandProcessor.RegisterCommand(&SkillsCommand{}, "Manage skills: skills [equip|unequip] [name]", "skills", "spells", "abilities")
+	commandProcessor.RegisterCommand(&SkillShortcutCommand{}, "Quick-cast skill by slot number (in combat): 1, 2, 3, 4", "1", "2", "3", "4")
 
 	// Quest commands
 	commandProcessor.RegisterCommand(&QuestLogCommand{}, "Show your quest log", "quests", "ql", "questlog")
@@ -114,5 +117,8 @@ func (commandProcessor *CommandProcessor) registerCommands() {
 
 	// HP Recovery commands
 	commandProcessor.RegisterCommand(&RestCommand{}, "Rest to recover HP faster: rest", "rest")
+
+	// Character progression commands
+	commandProcessor.RegisterCommand(&SpendCommand{}, "Spend attribute points: spend <attr> [amount]", "spend")
 
 }

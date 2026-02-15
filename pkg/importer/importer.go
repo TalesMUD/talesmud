@@ -15,7 +15,9 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/dialogs"
 	"github.com/talesmud/talesmud/pkg/entities/items"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
+	"github.com/talesmud/talesmud/pkg/entities/quests"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
+	"github.com/talesmud/talesmud/pkg/entities/skills"
 	"github.com/talesmud/talesmud/pkg/repository"
 	"github.com/talesmud/talesmud/pkg/scripts"
 )
@@ -39,6 +41,8 @@ type ImportResult struct {
 	ScriptsImported     int
 	DialogsImported     int
 	LootTablesImported  int
+	QuestsImported      int
+	SkillsImported      int
 	CharactersRelocated int
 	AssetsImported      int
 	Errors              []string
@@ -104,6 +108,14 @@ func (w *WorldImporter) Import() (*ImportResult, error) {
 	if err != nil {
 		w.addError("Failed to load spawners: %v", err)
 	}
+	yamlQuests, err := w.loadQuests()
+	if err != nil {
+		w.addError("Failed to load quests: %v", err)
+	}
+	yamlSkills, err := w.loadSkills()
+	if err != nil {
+		w.addError("Failed to load skills: %v", err)
+	}
 
 	log.WithFields(log.Fields{
 		"scripts":     len(yamlScripts),
@@ -113,6 +125,8 @@ func (w *WorldImporter) Import() (*ImportResult, error) {
 		"dialogs":     len(yamlDialogs),
 		"rooms":       len(yamlRooms),
 		"spawners":    len(yamlSpawners),
+		"quests":      len(yamlQuests),
+		"skills":      len(yamlSkills),
 	}).Info("Loaded YAML data")
 
 	if w.dryRun {
@@ -159,6 +173,12 @@ func (w *WorldImporter) Import() (*ImportResult, error) {
 
 	log.Info("Importing NPC spawners...")
 	result.SpawnersImported = w.importSpawners(yamlSpawners)
+
+	log.Info("Importing quests...")
+	result.QuestsImported = w.importQuests(yamlQuests)
+
+	log.Info("Importing skills...")
+	result.SkillsImported = w.importSkills(yamlSkills)
 
 	// Copy assets
 	log.Info("Copying assets...")
@@ -241,6 +261,16 @@ func (w *WorldImporter) createBackup() (string, error) {
 		backup["npcSpawners"] = spawners
 	}
 
+	// Backup quests
+	if quests, err := w.repos.Quests().FindAll(); err == nil {
+		backup["quests"] = quests
+	}
+
+	// Backup skills
+	if skills, err := w.repos.Skills().FindAll(); err == nil {
+		backup["skills"] = skills
+	}
+
 	data, err := json.MarshalIndent(backup, "", "  ")
 	if err != nil {
 		return "", err
@@ -258,6 +288,12 @@ func (w *WorldImporter) clearWorldData() error {
 	// Drop in reverse dependency order
 	if err := w.repos.NPCSpawners().Drop(); err != nil {
 		log.WithError(err).Warn("Failed to drop NPC spawners")
+	}
+	if err := w.repos.Quests().Drop(); err != nil {
+		log.WithError(err).Warn("Failed to drop quests")
+	}
+	if err := w.repos.Skills().Drop(); err != nil {
+		log.WithError(err).Warn("Failed to drop skills")
 	}
 	if err := w.repos.Rooms().Drop(); err != nil {
 		return fmt.Errorf("failed to drop rooms: %w", err)
@@ -417,6 +453,32 @@ func (w *WorldImporter) loadSpawners() ([]*YAMLSpawner, error) {
 	return result, err
 }
 
+func (w *WorldImporter) loadQuests() ([]*YAMLQuest, error) {
+	var result []*YAMLQuest
+	err := w.loadYAMLFiles("quests", func(data []byte) error {
+		var q YAMLQuest
+		if err := yaml.Unmarshal(data, &q); err != nil {
+			return err
+		}
+		result = append(result, &q)
+		return nil
+	})
+	return result, err
+}
+
+func (w *WorldImporter) loadSkills() ([]*YAMLSkill, error) {
+	var result []*YAMLSkill
+	err := w.loadYAMLFiles("skills", func(data []byte) error {
+		var s YAMLSkill
+		if err := yaml.Unmarshal(data, &s); err != nil {
+			return err
+		}
+		result = append(result, &s)
+		return nil
+	})
+	return result, err
+}
+
 // Import functions
 
 func (w *WorldImporter) importScripts(yamlScripts []*YAMLScript) int {
@@ -510,6 +572,44 @@ func (w *WorldImporter) importSpawners(yamlSpawners []*YAMLSpawner) int {
 			if w.verbose {
 				log.WithField("id", s.ID).Debug("Imported spawner")
 			}
+		}
+	}
+	return count
+}
+
+func (w *WorldImporter) importQuests(yamlQuests []*YAMLQuest) int {
+	count := 0
+	for _, q := range yamlQuests {
+		entity := q.ToEntity()
+		if _, err := w.repos.Quests().Import(entity); err != nil {
+			w.addError("Failed to import quest %s: %v", q.ID, err)
+		} else {
+			count++
+			if w.verbose {
+				log.WithField("id", q.ID).Debug("Imported quest")
+			}
+		}
+	}
+	return count
+}
+
+func (w *WorldImporter) importSkills(yamlSkills []*YAMLSkill) int {
+	count := 0
+	for _, s := range yamlSkills {
+		entity := s.ToEntity()
+		if _, err := w.repos.Skills().Import(entity); err != nil {
+			w.addError("Failed to import skill %s: %v", s.ID, err)
+		} else {
+			count++
+			if w.verbose {
+				log.WithField("id", s.ID).Debug("Imported skill")
+			}
+		}
+	}
+	// Refresh the in-memory cache after import
+	if count > 0 {
+		if all, err := w.repos.Skills().FindAll(); err == nil {
+			skills.RefreshCache(all)
 		}
 	}
 	return count
@@ -632,4 +732,10 @@ type (
 	NPCSpawner = npc.NPCSpawner
 	Dialog     = dialogs.Dialog
 	Room       = rooms.Room
+	Quest      = quests.Quest
+	Skill      = skills.Skill
+	Objective     = quests.Objective
+	ObjectiveType = quests.ObjectiveType
+	Reward        = quests.Reward
+	QuestSource   = quests.QuestSource
 )

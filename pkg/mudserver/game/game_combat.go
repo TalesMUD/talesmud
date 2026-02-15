@@ -14,6 +14,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
 )
 
 // CombatController wraps the combat engine and implements CombatEngineCtrl interface
@@ -160,6 +161,44 @@ func (c *CombatController) ProcessPlayerFlee(characterID string) (success bool, 
 	return success, message, combatEnded, endState
 }
 
+// ProcessPlayerSkill handles a player using a skill in combat
+func (c *CombatController) ProcessPlayerSkill(characterID, skillID, targetID string) (message string, combatEnded bool, endState combat.CombatState) {
+	instance := c.manager.GetInstanceByPlayerID(characterID)
+	if instance == nil {
+		return "You are not in combat.", false, combat.CombatStateActive
+	}
+
+	result := c.engine.ProcessSkill(instance, characterID, skillID, targetID)
+	message = strings.Join(result.Messages, "\n")
+
+	if !result.Success {
+		return message, false, combat.CombatStateActive
+	}
+
+	// Advance turn
+	c.engine.NextTurn(instance)
+
+	// Check if combat ended
+	endState = c.engine.CheckCombatEnd(instance)
+	if endState != combat.CombatStateActive {
+		c.engine.EndCombat(instance, endState)
+		combatEnded = true
+		return
+	}
+
+	// Process NPC turns if any
+	c.processNPCTurns(instance)
+
+	// Check again after NPC turns
+	endState = c.engine.CheckCombatEnd(instance)
+	if endState != combat.CombatStateActive {
+		c.engine.EndCombat(instance, endState)
+		combatEnded = true
+	}
+
+	return
+}
+
 // GetCombatStatus returns a formatted status string for the combat
 func (c *CombatController) GetCombatStatus(characterID string) string {
 	instance := c.manager.GetInstanceByPlayerID(characterID)
@@ -186,6 +225,17 @@ func (c *CombatController) GetCombatStatus(characterID string) string {
 			status = " [FLED]"
 		}
 		sb.WriteString(fmt.Sprintf("%s%-16s %s %d/%d HP%s\n", marker, player.Name, hpBar, player.CurrentHP, player.MaxHP, status))
+		if player.MaxMana > 0 {
+			manaBar := createManaBar(player.CurrentMana, player.MaxMana)
+			sb.WriteString(fmt.Sprintf("  %-16s %s %d/%d MP\n", "", manaBar, player.CurrentMana, player.MaxMana))
+		}
+		if len(player.StatusEffects) > 0 {
+			var effects []string
+			for _, se := range player.StatusEffects {
+				effects = append(effects, fmt.Sprintf("%s(%d)", se.Name, se.Duration))
+			}
+			sb.WriteString(fmt.Sprintf("  %-16s Effects: %s\n", "", strings.Join(effects, ", ")))
+		}
 	}
 
 	sb.WriteString("\nENEMIES:\n")
@@ -196,6 +246,13 @@ func (c *CombatController) GetCombatStatus(characterID string) string {
 			status = " [DEAD]"
 		}
 		sb.WriteString(fmt.Sprintf("  %-16s %s %d/%d HP%s\n", enemy.Name, hpBar, enemy.CurrentHP, enemy.MaxHP, status))
+		if len(enemy.StatusEffects) > 0 {
+			var effects []string
+			for _, se := range enemy.StatusEffects {
+				effects = append(effects, fmt.Sprintf("%s(%d)", se.Name, se.Duration))
+			}
+			sb.WriteString(fmt.Sprintf("  %-16s Effects: %s\n", "", strings.Join(effects, ", ")))
+		}
 	}
 
 	// Show turn order
@@ -232,7 +289,7 @@ func (c *CombatController) GetCombatStatus(characterID string) string {
 		}
 	}
 
-	sb.WriteString("\n\nCombat is automatic. Commands: attack <target> (switch target) | defend | flee | status")
+	sb.WriteString("\n\nCommands: attack <target> | defend | flee | cast <skill> [target] | status")
 	sb.WriteString("\n═══════════════════════════════════════════════════════")
 
 	return sb.String()
@@ -353,8 +410,9 @@ func (c *CombatController) sendPlayerCharacterUpdate(instance *combat.CombatInst
 		if err != nil {
 			continue
 		}
-		// Reflect combat HP in the update
+		// Reflect combat HP and mana in the update
 		char.CurrentHitPoints = player.CurrentHP
+		char.CurrentMana = player.CurrentMana
 		char.InCombat = true
 
 		update := messages.NewCharacterUpdateMessage(char.BelongsUserID, char)
@@ -400,6 +458,32 @@ func createHPBar(current, max int32) string {
 	return bar
 }
 
+// createManaBar creates a visual mana bar
+func createManaBar(current, max int32) string {
+	if max <= 0 {
+		return "[░░░░░░░░░░]"
+	}
+	ratio := float64(current) / float64(max)
+	filled := int(ratio * 10)
+	if filled > 10 {
+		filled = 10
+	}
+	if filled < 0 {
+		filled = 0
+	}
+
+	bar := "["
+	for i := 0; i < 10; i++ {
+		if i < filled {
+			bar += "▓"
+		} else {
+			bar += "░"
+		}
+	}
+	bar += "]"
+	return bar
+}
+
 // Update handles combat updates (called from game loop)
 func (c *CombatController) Update() {
 	instances := c.manager.GetActiveInstances()
@@ -425,6 +509,36 @@ func (c *CombatController) processAllTurns(instance *combat.CombatInstance) {
 		current := instance.GetCurrentTurnCombatant()
 		if current == nil {
 			break
+		}
+
+		// Process status effects at start of turn (DoTs, HoTs, stun check)
+		logLenBefore := len(instance.Log)
+		stunned := c.engine.ProcessStatusEffects(instance, current)
+
+		// Notify players of status effect messages
+		for j := logLenBefore; j < len(instance.Log); j++ {
+			if instance.Log[j].Message != "" {
+				c.notifyPlayersInCombat(instance, instance.Log[j].Message)
+			}
+		}
+
+		// Re-fetch current (may have been modified by status effects)
+		current = instance.GetCurrentTurnCombatant()
+		if current == nil || !current.IsAlive {
+			endState := c.engine.CheckCombatEnd(instance)
+			if endState != combat.CombatStateActive {
+				c.engine.EndCombat(instance, endState)
+				c.cleanupCombatInstance(instance, endState)
+				return
+			}
+			c.engine.NextTurn(instance)
+			continue
+		}
+
+		if stunned {
+			c.sendPlayerCharacterUpdate(instance)
+			c.engine.NextTurn(instance)
+			continue
 		}
 
 		if current.Type == combat.CombatantTypeNPC {
@@ -496,8 +610,9 @@ func (c *CombatController) cleanupCombatInstance(instance *combat.CombatInstance
 		char.InCombat = false
 		char.CombatInstanceID = ""
 
-		// Sync HP
+		// Sync HP and mana
 		char.CurrentHitPoints = player.CurrentHP
+		char.CurrentMana = player.CurrentMana
 
 		c.game.Facade.CharactersService().Update(player.ID, char)
 
@@ -516,6 +631,10 @@ func (c *CombatController) cleanupCombatInstance(instance *combat.CombatInstance
 			n.CurrentHitPoints = enemy.CurrentHP
 			if enemy.IsAlive {
 				n.State = "idle"
+			} else {
+				n.IsDead = true
+				n.State = "dead"
+				n.DeathTime = time.Now()
 			}
 		})
 	}
@@ -534,7 +653,7 @@ func (c *CombatController) cleanupCombatInstance(instance *combat.CombatInstance
 			if err != nil {
 				continue
 			}
-			enterRoom := messages.NewEnterRoomMessage(room, user, c.game)
+			enterRoom := messages.NewEnterRoomMessage(util.RoomWithCharacterReveals(room, char), user, c.game)
 			enterRoom.AudienceID = user.ID
 			c.game.sendMessage <- enterRoom
 		}
@@ -795,6 +914,24 @@ func (c *CombatController) QueuePlayerAction(characterID string, action combat.C
 	c.engine.UpdateCombatant(instance, player)
 }
 
+// QueuePlayerSkill queues a skill for a player's next turn
+func (c *CombatController) QueuePlayerSkill(characterID, skillID, targetID string) {
+	instance := c.manager.GetInstanceByPlayerID(characterID)
+	if instance == nil {
+		return
+	}
+
+	player := instance.GetPlayerByID(characterID)
+	if player == nil {
+		return
+	}
+
+	player.QueuedAction = combat.CombatActionSkill
+	player.QueuedSkillID = skillID
+	player.QueuedTargetID = targetID
+	c.engine.UpdateCombatant(instance, player)
+}
+
 // SetAutoAttackTarget sets the persistent auto-attack target for a player
 func (c *CombatController) SetAutoAttackTarget(characterID string, targetID string) {
 	instance := c.manager.GetInstanceByPlayerID(characterID)
@@ -828,6 +965,18 @@ func (c *CombatController) processPlayerAutoAttack(instance *combat.CombatInstan
 			result := c.engine.ProcessDefend(instance, player.ID)
 			c.notifyPlayersInCombat(instance, result.Message)
 
+		case combat.CombatActionSkill:
+			skillResult := c.engine.ProcessSkill(instance, player.ID, player.QueuedSkillID, player.QueuedTargetID)
+			for _, msg := range skillResult.Messages {
+				c.notifyPlayersInCombat(instance, msg)
+			}
+			for _, diedID := range skillResult.TargetsDied {
+				target := instance.GetCombatantByID(diedID)
+				if target != nil && target.Type == combat.CombatantTypePlayer {
+					c.syncPlayerHP(diedID, 0)
+				}
+			}
+
 		case combat.CombatActionAttack:
 			targetID := player.QueuedTargetID
 			if targetID != "" {
@@ -859,6 +1008,7 @@ func (c *CombatController) processPlayerAutoAttack(instance *combat.CombatInstan
 		if playerRef != nil {
 			playerRef.QueuedAction = ""
 			playerRef.QueuedTargetID = ""
+			playerRef.QueuedSkillID = ""
 			c.engine.UpdateCombatant(instance, playerRef)
 		}
 		return

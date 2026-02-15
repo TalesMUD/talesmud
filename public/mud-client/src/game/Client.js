@@ -73,6 +73,7 @@ function createClient(renderer, characterCreator, muxStore) {
     renderer(msg.message);
     if (mux && msg.character) {
       mux.setCharacter(msg.character);
+      mux.updateCharacterStats({ xpForNextLevel: msg.xpForNextLevel });
     }
   };
 
@@ -89,11 +90,23 @@ function createClient(renderer, characterCreator, muxStore) {
       mux.updateCharacterStats({
         currentHitPoints: msg.currentHitPoints,
         maxHitPoints: msg.maxHitPoints,
+        currentMana: msg.currentMana,
+        maxMana: msg.maxMana,
         xp: msg.xp,
+        xpForNextLevel: msg.xpForNextLevel,
         level: msg.level,
         gold: msg.gold,
         inCombat: msg.inCombat,
         attributes: msg.attributes,
+        equippedSkills: msg.equippedSkills,
+        unspentAttributePoints: msg.unspentAttributePoints,
+        spentAttributePoints: msg.spentAttributePoints,
+        attackPower: msg.attackPower,
+        attackAttr: msg.attackAttr,
+        weaponDamage: msg.weaponDamage,
+        attackMod: msg.attackMod,
+        defense: msg.defense,
+        manaRegen: msg.manaRegen,
       });
     }
   };

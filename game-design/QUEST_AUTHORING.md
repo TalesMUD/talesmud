@@ -1046,7 +1046,7 @@ end
 -- Remove quest items from inventory, spawn new NPC, reveal exit, etc.
 local characterID = ctx.character.id
 tales.game.msgToUser(ctx.user.id, "The way forward is now clear.")
-tales.game.revealExit(ctx.room.id, "hidden_passage")
+tales.game.revealExit(ctx.room.id, "hidden_passage", characterID)
 ```
 
 ---

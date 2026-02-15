@@ -164,12 +164,21 @@
         state.selectedElement.attributes = {};
       }
       if (newAttributeName) {
-        state.selectedElement.attributes[newAttributeName] = "value";
+        state.selectedElement.attributes[newAttributeName] = 0;
         newAttributeName = "";
       }
       return state;
     });
   };
+
+  // Coerce attribute value: convert numeric strings to actual numbers.
+  // HTML inputs always produce strings, but the Go backend needs numeric types
+  // for damage, defense, etc. to work in combat calculations.
+  function coerceAttrValue(key, val) {
+    if (typeof val === "string" && val !== "" && !isNaN(Number(val))) {
+      $store.selectedElement.attributes[key] = Number(val);
+    }
+  }
 
   const addProperty = () => {
     store.update((state) => {
@@ -325,7 +334,7 @@
           {#each Object.entries($store.selectedElement.attributes || {}) as [key, value]}
             <div class="flex items-center gap-2">
               <span class="text-xs font-mono text-slate-400">{key}</span>
-              <input class="input-base text-xs flex-1" bind:value={$store.selectedElement.attributes[key]} />
+              <input class="input-base text-xs flex-1" bind:value={$store.selectedElement.attributes[key]} on:blur={() => coerceAttrValue(key, $store.selectedElement.attributes[key])} />
             </div>
           {/each}
         </div>
