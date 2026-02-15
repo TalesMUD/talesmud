@@ -338,15 +338,17 @@ func RegisterGameModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 			return 1
 		}
 
-		// Send room refresh to the character so the revealed exit appears immediately
+		// Send a silent room update so the client learns about the new exit
+		// without re-rendering the full room description (which would bury
+		// any narrative messages the script already sent).
 		if game != nil {
 			charUser, err := facade.UsersService().FindByID(character.BelongsUserID)
 			if err == nil && charUser != nil {
 				roomView := util.RoomWithCharacterReveals(room, character)
-				enterRoom := messages.NewEnterRoomMessage(roomView, charUser, game)
-				enterRoom.Audience = messages.MessageAudienceUser
-				enterRoom.AudienceID = charUser.ID
-				game.SendMessage() <- enterRoom
+				roomUpdate := messages.NewRoomUpdateMessage(roomView, game, character)
+				roomUpdate.Audience = messages.MessageAudienceUser
+				roomUpdate.AudienceID = charUser.ID
+				game.SendMessage() <- roomUpdate
 			}
 		}
 
@@ -419,6 +421,51 @@ func RegisterGameModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 		slot := items.ItemSlot(slotName)
 		item, ok := character.EquippedItems[slot]
 		L.Push(lua.LBool(ok && item != nil))
+		return 1
+	}))
+
+	// tales.game.hasCollectedItem(characterID, templateID) - Check if character collected a CopyOnPickup item
+	mod.RawSetString("hasCollectedItem", L.NewFunction(func(L *lua.LState) int {
+		characterID := L.CheckString(1)
+		templateID := L.CheckString(2)
+		facade := runner.GetFacade()
+		if facade == nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+
+		character, err := facade.CharactersService().FindByID(characterID)
+		if err != nil || character == nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+
+		L.Push(lua.LBool(character.HasCollectedCopyItem(templateID)))
+		return 1
+	}))
+
+	// tales.game.resetCollectedItem(characterID, templateID) - Reset a collected CopyOnPickup item flag
+	mod.RawSetString("resetCollectedItem", L.NewFunction(func(L *lua.LState) int {
+		characterID := L.CheckString(1)
+		templateID := L.CheckString(2)
+		facade := runner.GetFacade()
+		if facade == nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+
+		character, err := facade.CharactersService().FindByID(characterID)
+		if err != nil || character == nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+
+		if character.Flags != nil {
+			delete(character.Flags, "collected_item:"+templateID)
+		}
+		facade.CharactersService().Update(characterID, character)
+
+		L.Push(lua.LBool(true))
 		return 1
 	}))
 

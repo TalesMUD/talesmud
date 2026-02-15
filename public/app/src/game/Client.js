@@ -36,6 +36,25 @@ function createClient(renderer, characterCreator, muxStore) {
     }
   };
 
+  // Silent room update: refresh exits/actions/background without re-rendering description
+  messageHandlers["roomUpdate"] = (msg) => {
+    activeRoom = msg.room;
+
+    if (mux) {
+      mux.setExits(activeRoom.exits);
+
+      if (activeRoom.meta != undefined && activeRoom.meta.background != undefined){
+        mux.setBackground(activeRoom.meta.background)
+      }
+
+      if (activeRoom.actions != undefined) {
+        mux.setActions(activeRoom.actions);
+      } else {
+        mux.setActions([]);
+      }
+    }
+  };
+
   messageHandlers["createCharacter"] = (msg) => {
     renderer(msg.message);
 

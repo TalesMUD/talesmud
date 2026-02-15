@@ -3,6 +3,7 @@ package simutil
 import (
 	"github.com/talesmud/talesmud/pkg/entities"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/balance"
 )
 
 // EnemyConfig holds the definition for an enemy type
@@ -65,16 +66,25 @@ func EnemyConfigsByLevel(maxLevel int32) []EnemyConfig {
 }
 
 // CreateEnemy creates an NPC enemy from an EnemyConfig
+// Applies difficulty-based multipliers to base stats
 func CreateEnemy(config EnemyConfig) *npc.NPC {
+	// Apply difficulty multipliers to base stats
+	finalHP, finalAttack, finalDefense := balance.ApplyMultipliers(
+		config.HP,
+		config.AttackPower,
+		config.Defense,
+		config.Difficulty,
+	)
+
 	return &npc.NPC{
 		Entity:           entities.NewEntity(),
 		Name:             config.Name,
 		Level:            config.Level,
-		MaxHitPoints:     config.HP,
-		CurrentHitPoints: config.HP,
+		MaxHitPoints:     finalHP,
+		CurrentHitPoints: finalHP,
 		EnemyTrait: &npc.EnemyTrait{
-			AttackPower: config.AttackPower,
-			Defense:     config.Defense,
+			AttackPower: finalAttack,
+			Defense:     finalDefense,
 			Difficulty:  config.Difficulty,
 		},
 	}

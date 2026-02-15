@@ -30,6 +30,9 @@ const (
 	MessageTypeCharacterUpdate = "characterUpdate" // Character stats changed (HP, XP, etc.)
 	MessageTypeLevelUp         = "levelUp"         // Player leveled up
 
+	// Room update (silent refresh of exits/items/NPCs without re-rendering description)
+	MessageTypeRoomUpdate = "roomUpdate"
+
 	// Quest messages
 	MessageTypeQuestAccepted  = "questAccepted"  // Quest accepted
 	MessageTypeQuestProgress  = "questProgress"  // Quest objective progress updated

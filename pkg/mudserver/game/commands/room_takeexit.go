@@ -55,7 +55,7 @@ func TakeExit(exit string) RoomCommand {
 				}
 
 				// send player a message to change room
-				enterRoom := messages.NewEnterRoomMessage(util.RoomWithCharacterReveals(next, message.Character), message.FromUser, game)
+				enterRoom := messages.NewEnterRoomMessage(util.RoomWithCharacterReveals(next, message.Character), message.FromUser, game, message.Character)
 				enterRoom.AudienceID = message.FromUser.ID
 				game.SendMessage() <- enterRoom
 

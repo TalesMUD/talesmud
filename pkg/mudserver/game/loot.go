@@ -7,6 +7,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/items"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
@@ -37,7 +38,7 @@ func DropLootFromNPC(facade service.Facade, deadNPC *npc.NPC, room *rooms.Room, 
 
 	enemy := deadNPC.EnemyTrait
 
-	// Roll gold drop
+	// Roll gold drop - use configured GoldDrop range or calculate from level/difficulty
 	if enemy.GoldDrop.Max > 0 {
 		goldMin := enemy.GoldDrop.Min
 		goldMax := enemy.GoldDrop.Max
@@ -46,6 +47,8 @@ func DropLootFromNPC(facade service.Facade, deadNPC *npc.NPC, room *rooms.Room, 
 		} else {
 			result.Gold = int64(goldMin)
 		}
+	} else {
+		result.Gold = leveling.RollEnemyGold(deadNPC.Level, enemy.Difficulty, rand.Intn)
 	}
 
 	// Process guaranteed loot

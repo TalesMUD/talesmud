@@ -653,7 +653,7 @@ func (c *CombatController) cleanupCombatInstance(instance *combat.CombatInstance
 			if err != nil {
 				continue
 			}
-			enterRoom := messages.NewEnterRoomMessage(util.RoomWithCharacterReveals(room, char), user, c.game)
+			enterRoom := messages.NewEnterRoomMessage(util.RoomWithCharacterReveals(room, char), user, c.game, char)
 			enterRoom.AudienceID = user.ID
 			c.game.sendMessage <- enterRoom
 		}
@@ -693,12 +693,16 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 		}
 		totalXP += xpReward
 
-		// Roll gold
+		// Roll gold - use configured GoldDrop range or calculate from level/difficulty
 		goldRange := npcData.EnemyTrait.GoldDrop
-		if goldRange.Max > goldRange.Min {
-			totalGold += int64(goldRange.Min) + int64(rand.Intn(int(goldRange.Max-goldRange.Min+1)))
-		} else if goldRange.Min > 0 {
-			totalGold += int64(goldRange.Min)
+		if goldRange.Max > 0 {
+			if goldRange.Max > goldRange.Min {
+				totalGold += int64(goldRange.Min) + int64(rand.Intn(int(goldRange.Max-goldRange.Min+1)))
+			} else {
+				totalGold += int64(goldRange.Min)
+			}
+		} else {
+			totalGold += leveling.RollEnemyGold(npcData.Level, npcData.EnemyTrait.Difficulty, rand.Intn)
 		}
 
 		// Process loot drops (items placed in room)

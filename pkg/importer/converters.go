@@ -12,6 +12,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/entities/skills"
 	"github.com/talesmud/talesmud/pkg/entities/traits"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/balance"
 	"github.com/talesmud/talesmud/pkg/scripts"
 )
 
@@ -111,8 +112,9 @@ func (y *YAMLItem) ToEntity() *items.Item {
 		BasePrice:   y.BasePrice,
 		Stackable:   y.Stackable,
 		MaxStack:    y.MaxStack,
-		Consumable:  y.Consumable,
-		Tags:        y.Tags,
+		Consumable:   y.Consumable,
+		CopyOnPickup: y.CopyOnPickup,
+		Tags:         y.Tags,
 		Attributes:  y.Attributes,
 		Properties:  y.Properties,
 		OnUseScriptID: y.OnUseScript,
@@ -173,12 +175,24 @@ func (y *YAMLNPC) ToEntity() *npc.NPC {
 
 	// Convert enemy trait if present
 	if y.EnemyTrait != nil {
+		// Apply difficulty-based multipliers to base stats
+		finalHP, finalAttack, finalDefense := balance.ApplyMultipliers(
+			y.MaxHitPoints,
+			y.EnemyTrait.AttackPower,
+			y.EnemyTrait.Defense,
+			y.EnemyTrait.Difficulty,
+		)
+
+		// Update NPC HP with multiplied value
+		n.MaxHitPoints = finalHP
+		n.CurrentHitPoints = finalHP
+
 		n.EnemyTrait = &npc.EnemyTrait{
 			CreatureType:  y.EnemyTrait.CreatureType,
 			CombatStyle:   y.EnemyTrait.CombatStyle,
 			Difficulty:    y.EnemyTrait.Difficulty,
-			AttackPower:   y.EnemyTrait.AttackPower,
-			Defense:       y.EnemyTrait.Defense,
+			AttackPower:   finalAttack,
+			Defense:       finalDefense,
 			AttackSpeed:   y.EnemyTrait.AttackSpeed,
 			AggroRadius:   y.EnemyTrait.AggroRadius,
 			AggroOnSight:  y.EnemyTrait.AggroOnSight,
