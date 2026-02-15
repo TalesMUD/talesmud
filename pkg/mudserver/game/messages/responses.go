@@ -121,12 +121,20 @@ type RoomNPC struct {
 	State       string `json:"state"` // idle, combat, dead
 }
 
+// RoomPlayer represents player character data sent to the frontend for UI rendering
+type RoomPlayer struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	IsYou bool  `json:"isYou"`
+}
+
 // EnterRoomMessage ... Define our message object
 type EnterRoomMessage struct {
 	MessageResponse
-	Room  rooms.Room     `json:"room"`
-	NPCs  []RoomNPC      `json:"npcs"`
-	Items []util.RoomItem `json:"items"`
+	Room    rooms.Room      `json:"room"`
+	NPCs    []RoomNPC       `json:"npcs"`
+	Items   []util.RoomItem `json:"items"`
+	Players []RoomPlayer    `json:"players"`
 }
 
 //NewEnterRoomMessage creates a new enter room message.
@@ -152,21 +160,33 @@ func NewEnterRoomMessage(room *rooms.Room, user *entities.User, game def.GameCtr
 	// Get item data for frontend rendering (filtered by character)
 	roomItems := util.GetRoomItems(room, game, char)
 
+	// Get player character data for frontend rendering
+	roomChars := util.GetRoomCharacters(room, user, game)
+	players := make([]RoomPlayer, len(roomChars))
+	for i, c := range roomChars {
+		players[i] = RoomPlayer{
+			ID:   c.ID,
+			Name: c.Name,
+			IsYou: c.IsYou,
+		}
+	}
+
 	return &EnterRoomMessage{
 		MessageResponse: MessageResponse{
 			Audience: MessageAudienceOrigin,
 			Type:     MessageTypeEnterRoom,
 			Message:  util.CreateRoomDescription(room, user, game),
 		},
-		Room:  *room,
-		NPCs:  npcs,
-		Items: roomItems,
+		Room:    *room,
+		NPCs:    npcs,
+		Items:   roomItems,
+		Players: players,
 	}
 }
 
-// NewRoomUpdateMessage creates a silent room update that refreshes exits/items/NPCs
+// NewRoomUpdateMessage creates a silent room update that refreshes exits/items/NPCs/players
 // on the client without re-rendering the full room description text.
-func NewRoomUpdateMessage(room *rooms.Room, game def.GameCtrl, char *characters.Character) *EnterRoomMessage {
+func NewRoomUpdateMessage(room *rooms.Room, user *entities.User, game def.GameCtrl, char *characters.Character) *EnterRoomMessage {
 	roomNPCs := util.GetRoomNPCs(room, game)
 	npcs := make([]RoomNPC, len(roomNPCs))
 	for i, n := range roomNPCs {
@@ -185,14 +205,26 @@ func NewRoomUpdateMessage(room *rooms.Room, game def.GameCtrl, char *characters.
 
 	roomItems := util.GetRoomItems(room, game, char)
 
+	// Get player character data for frontend rendering
+	roomChars := util.GetRoomCharacters(room, user, game)
+	players := make([]RoomPlayer, len(roomChars))
+	for i, c := range roomChars {
+		players[i] = RoomPlayer{
+			ID:   c.ID,
+			Name: c.Name,
+			IsYou: c.IsYou,
+		}
+	}
+
 	return &EnterRoomMessage{
 		MessageResponse: MessageResponse{
 			Audience: MessageAudienceOrigin,
 			Type:     MessageTypeRoomUpdate,
 		},
-		Room:  *room,
-		NPCs:  npcs,
-		Items: roomItems,
+		Room:    *room,
+		NPCs:    npcs,
+		Items:   roomItems,
+		Players: players,
 	}
 }
 

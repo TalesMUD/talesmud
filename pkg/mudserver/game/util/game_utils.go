@@ -22,15 +22,16 @@ func CreateRoomDescription(room *rooms.Room, user *entities.User, game def.GameC
 
 		for _, char := range *room.Characters {
 			if character, err := game.GetFacade().CharactersService().FindByID(char); err == nil {
+				// Always include the requesting user's own character
+				if character.ID == user.LastCharacter {
+					onlineChars = append(onlineChars, character.Name+"(you)")
+					continue
+				}
 				// Check if the character's owner is online
 				if charUser, err := game.GetFacade().UsersService().FindByID(character.BelongsUserID); err == nil {
 					// Only show if user is online AND this is their active character
 					if charUser.IsOnline && charUser.LastCharacter == character.ID {
-						charName := character.Name
-						if character.ID == user.LastCharacter {
-							charName += "(you)"
-						}
-						onlineChars = append(onlineChars, charName)
+						onlineChars = append(onlineChars, character.Name)
 					}
 				}
 			}
@@ -110,6 +111,54 @@ func CreateRoomDescription(room *rooms.Room, user *entities.User, game def.GameC
 	}
 
 	return description
+}
+
+// RoomCharacter represents player character data for frontend UI rendering
+type RoomCharacter struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	IsYou bool  `json:"isYou"`
+}
+
+// GetRoomCharacters returns online player character data for frontend rendering.
+// The requesting user's own character is always included.
+func GetRoomCharacters(room *rooms.Room, user *entities.User, game def.GameCtrl) []RoomCharacter {
+	if room.Characters == nil || len(*room.Characters) == 0 {
+		return []RoomCharacter{}
+	}
+
+	result := make([]RoomCharacter, 0, len(*room.Characters))
+	for _, charID := range *room.Characters {
+		character, err := game.GetFacade().CharactersService().FindByID(charID)
+		if err != nil {
+			continue
+		}
+
+		// Always include the requesting user's own character
+		if character.ID == user.LastCharacter {
+			result = append(result, RoomCharacter{
+				ID:   character.ID,
+				Name: character.Name,
+				IsYou: true,
+			})
+			continue
+		}
+
+		// Check if the character's owner is online
+		charUser, err := game.GetFacade().UsersService().FindByID(character.BelongsUserID)
+		if err != nil {
+			continue
+		}
+		if charUser.IsOnline && charUser.LastCharacter == character.ID {
+			result = append(result, RoomCharacter{
+				ID:   character.ID,
+				Name: character.Name,
+				IsYou: false,
+			})
+		}
+	}
+
+	return result
 }
 
 // RoomItem represents item data for frontend UI rendering

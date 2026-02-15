@@ -35,6 +35,7 @@ function createStore() {
     exits: [],
     actions: [],
     npcs: [],
+    players: [],
     background: "oldtown-griphon",
     roomName: "",
     roomDescription: "",
@@ -119,6 +120,12 @@ function createStore() {
         state.npcs = npcs || [];
         // Derive hasMerchant from NPCs
         state.hasMerchant = (npcs || []).some(n => n.isMerchant);
+        return state;
+      });
+    },
+    setPlayers: (players) => {
+      update((state) => {
+        state.players = players || [];
         return state;
       });
     },

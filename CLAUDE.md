@@ -23,6 +23,17 @@ Update `ARCHITECTURE.md` whenever you:
 - Modify deployment architecture
 - Update infrastructure components
 
+### FEATURES.md Updates
+Update `FEATURES.md` whenever you:
+- Add new entity fields or change data structures
+- Add new Lua API functions or scripting capabilities
+- Implement new game systems or mechanics
+- Add new Creator UI features or components
+- Change existing feature behavior
+- Add new best practices or patterns
+- Implement new per-character state tracking
+- Add new script execution contexts
+
 ## Update Process
 1. After completing a feature or architectural change, review the relevant documentation file
 2. Update the documentation to reflect the current state of the project

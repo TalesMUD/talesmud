@@ -97,6 +97,13 @@
     return html;
   }
 
+  /** Render a chat message with a colored player name. */
+  function renderPlayerMessage(username, message, color) {
+    const nameHtml = `<span class="tx-player-name" style="color:${color}">${escapeHtml(username)}</span>`;
+    const msgHtml = renderLine(message);
+    return nameHtml + ':  ' + msgHtml;
+  }
+
   // ── Add a line to the output buffer ──
 
   function addLine(text, cls = '') {
@@ -173,6 +180,26 @@
     // Create the renderer function that receives game output
     const renderer = (data) => {
       if (data == null) return;
+
+      // Structured chat message with colored player name
+      if (typeof data === 'object' && data.username) {
+        const parts = String(data.message).split('\n');
+        // First line gets the colored player name prefix
+        if (parts.length > 0) {
+          const html = renderPlayerMessage(data.username, parts[0], data.color);
+          lineCounter++;
+          lines.push({ html, cls: '', id: lineCounter });
+          if (lines.length > MAX_LINES) lines = lines.slice(lines.length - MAX_LINES);
+          else lines = lines;
+        }
+        // Remaining lines rendered normally
+        for (let i = 1; i < parts.length; i++) {
+          addLine(parts[i]);
+        }
+        scrollToBottom();
+        return;
+      }
+
       const parts = String(data).split('\n');
       parts.forEach(part => addLine(part));
       scrollToBottom();
@@ -344,6 +371,11 @@
   /* Inline **bold** highlight */
   .tx-line :global(.tx-highlight) {
     color: #e8e6e3;
+    font-weight: 500;
+  }
+
+  /* Player name in chat messages — color set via inline style */
+  .tx-line :global(.tx-player-name) {
     font-weight: 500;
   }
 

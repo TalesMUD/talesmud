@@ -173,12 +173,13 @@ func (command *AttackCommand) handleInitiateCombat(game def.GameCtrl, message *m
 
 	game.SendMessage() <- message.Reply("\nCombat is automatic. Commands: attack <target> (switch target) | defend | flee | status")
 
-	// Notify other players in the room
+	// Notify other players in the room (use default message type so their
+	// client doesn't enter combat mode — only the attacker should get combatStart)
 	roomMsg := messages.MessageResponse{
 		Audience:   messages.MessageAudienceRoomWithoutOrigin,
 		AudienceID: message.Character.CurrentRoomID,
 		OriginID:   message.FromUser.ID,
-		Type:       messages.MessageTypeCombatStart,
+		Type:       messages.MessageTypeDefault,
 		Message:    fmt.Sprintf("%s engages %s in combat!", message.Character.Name, strings.Join(enemyNames, ", ")),
 	}
 	game.SendMessage() <- roomMsg

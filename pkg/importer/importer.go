@@ -45,6 +45,7 @@ type ImportResult struct {
 	SkillsImported      int
 	CharactersRelocated int
 	AssetsImported      int
+	ValidationWarnings  int
 	Errors              []string
 	Duration            time.Duration
 }
@@ -128,6 +129,19 @@ func (w *WorldImporter) Import() (*ImportResult, error) {
 		"quests":      len(yamlQuests),
 		"skills":      len(yamlSkills),
 	}).Info("Loaded YAML data")
+
+	// Validate cross-references and script code
+	log.Info("Validating data consistency...")
+	validationWarnings := w.validateData(
+		yamlRooms, yamlItems, yamlNPCs, yamlScripts,
+		yamlDialogs, yamlLootTables, yamlSpawners, yamlQuests, yamlSkills,
+	)
+	result.ValidationWarnings = validationWarnings
+	if validationWarnings > 0 {
+		log.WithField("warnings", validationWarnings).Warn("Data validation found issues")
+	} else {
+		log.Info("Data validation passed — no issues found")
+	}
 
 	if w.dryRun {
 		log.Info("Dry-run mode: skipping actual import")

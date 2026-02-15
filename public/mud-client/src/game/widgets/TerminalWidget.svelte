@@ -5,6 +5,7 @@
   import { FitAddon } from 'xterm-addon-fit';
   import LocalEchoController from '../echo/LocalEchoController';
   import '../../../node_modules/xterm/css/xterm.css';
+  import { hexToRgb } from '../playerColors.js';
 
   export let onTerminalReady = () => {};
   export let onInput = () => {};
@@ -116,6 +117,15 @@
     // Create renderer function
     const renderer = (data) => {
       localEcho.clearInput();
+
+      // Structured chat message with colored player name
+      if (typeof data === 'object' && data.username) {
+        const { r, g, b } = hexToRgb(data.color);
+        const coloredName = `\x1b[1;38;2;${r};${g};${b}m${data.username}\x1b[0m`;
+        term.writeln(coloredName + ':  ' + data.message);
+        return;
+      }
+
       term.writeln(data);
     };
 
