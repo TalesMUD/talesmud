@@ -5,7 +5,7 @@
 - `pkg/` contains core Go packages (DB, services, scripting, embedded web UI).
 - `public/app/` is the Svelte/Vite admin frontend; `public/mud-client/` is the Svelte/Rollup game client.
 - `api/` stores HTTP request examples and import/export fixtures.
-- `data/`, `designs/`, and `game-design/` hold content/design assets; `bin/` is the build output location.
+- `data/` and `docs/` hold content/design assets; `bin/` is the build output location.
 
 ## Build, Test, and Development Commands
 - `make build`: builds both frontends, copies dist assets into `pkg/`, and compiles `bin/tales`.
@@ -19,7 +19,7 @@
 - The server is split between a Gin HTTP API (`pkg/server/`) and the WebSocket MUD server/game loop (`pkg/mudserver/`).
 - Business logic lives in `pkg/service/` with repositories in `pkg/repository/` for MongoDB/SQLite.
 - Set `DB_DRIVER=mongo|sqlite` and `SQLITE_PATH` (SQLite). Auth uses Auth0 JWTs.
-- Scripts run via Otto JS in `pkg/scripts/`; see `game-design/SCRIPTING.md` for hooks.
+- Scripts run via Lua in `pkg/scripts/`; see `docs/design/SCRIPTING.md` for hooks.
 
 ## Coding Style & Naming Conventions
 - Go code follows standard `gofmt` formatting; keep packages lowercase and file names short and descriptive.
@@ -38,8 +38,8 @@
 
 ## Configuration & Data Notes
 - Local data files (e.g., `talesmud.db`) live at the repo root; avoid committing generated data.
-- When adding new content assets, place them under `data/` or `designs/` and document paths in PRs.
+- When adding new content assets, place them under `data/` or `docs/` and document paths in PRs.
 
 ## Documentation & Design References
 - `PROJECT.md` and `ARCHITECTURE.md` summarize system goals, routes, and major components.
-- The `game-design/` folder tracks the MVP backlog, scripting system, and world map implementation details.
+- The `docs/design/` folder tracks the MVP backlog, scripting system, and world map implementation details.
