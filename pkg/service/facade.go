@@ -20,6 +20,7 @@ type Facade interface {
 	LootTablesService() LootTablesService
 	ServerSettingsService() ServerSettingsService
 	QuestsService() QuestsService
+	SkillsService() SkillsService
 	CharacterTemplatesRepo() repository.CharacterTemplatesRepository
 
 	Runner() scripts.ScriptRunner
@@ -39,6 +40,7 @@ type facade struct {
 	lts   LootTablesService
 	sss   ServerSettingsService
 	qs    QuestsService
+	skls  SkillsService
 	sr    scripts.ScriptRunner
 	repos repository.Factory
 }
@@ -61,12 +63,15 @@ func NewFacade(repos repository.Factory, runner scripts.ScriptRunner) Facade {
 	serverSettingsRepo := repos.ServerSettings()
 	questsRepo := repos.Quests()
 	questProgressRepo := repos.QuestProgress()
+	skillsRepo := repos.Skills()
 
 	// Create services
 	ss := NewScriptsService(scriptsRepo)
 	is := NewItemsService(itemsRepo)
 	lts := NewLootTablesService(lootTablesRepo, is)
 	qs := NewQuestsService(questsRepo, questProgressRepo)
+
+	skls := NewSkillsService(skillsRepo)
 
 	f := &facade{
 		css:   NewCharactersService(charactersRepo, characterTemplatesRepo),
@@ -82,6 +87,7 @@ func NewFacade(repos repository.Factory, runner scripts.ScriptRunner) Facade {
 		lts:   lts,
 		sss:   NewServerSettingsService(serverSettingsRepo),
 		qs:    qs,
+		skls:  skls,
 		sr:    runner,
 		repos: repos,
 	}
@@ -140,6 +146,10 @@ func (f *facade) ServerSettingsService() ServerSettingsService {
 
 func (f *facade) QuestsService() QuestsService {
 	return f.qs
+}
+
+func (f *facade) SkillsService() SkillsService {
+	return f.skls
 }
 
 func (f *facade) CharacterTemplatesRepo() repository.CharacterTemplatesRepository {

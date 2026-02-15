@@ -13,13 +13,13 @@ func TestXPCurveFormula(t *testing.T) {
 		target   int32
 		maxError float64 // Maximum acceptable percentage error
 	}{
-		{2, 150, 20.0},      // Target ~150 XP
-		{5, 661, 20.0},      // Target ~661 XP
-		{10, 1681, 20.0},    // Target ~1681 XP
-		{20, 5478, 20.0},    // Target ~5478 XP
-		{30, 11935, 20.0},   // Target ~11935 XP
-		{40, 20905, 20.0},   // Target ~20905 XP
-		{50, 35455, 20.0},   // Target ~35455 XP
+		{2, 45, 20.0},       // Target ~45 XP (flattened early game)
+		{5, 203, 20.0},      // Target ~203 XP
+		{10, 1120, 20.0},    // Target ~1120 XP
+		{20, 4947, 20.0},    // Target ~4947 XP
+		{30, 11794, 20.0},   // Target ~11794 XP
+		{40, 21271, 20.0},   // Target ~21271 XP
+		{50, 33454, 20.0},   // Target ~33454 XP
 	}
 
 	for _, tt := range tests {
@@ -313,12 +313,12 @@ func TestEnemyXPReward(t *testing.T) {
 		enemyLevel int32
 		expectedXP int64
 	}{
-		{1, 10},
-		{5, 50},
-		{10, 100},
-		{20, 200},
-		{30, 300},
-		{50, 500},
+		{1, 20},
+		{5, 80},
+		{10, 155},
+		{20, 305},
+		{30, 455},
+		{50, 755},
 	}
 
 	for _, tt := range tests {
@@ -332,9 +332,9 @@ func TestEnemyXPReward(t *testing.T) {
 
 // TestGetXPForNextLevel tests the XP remaining calculation
 func TestGetXPForNextLevel(t *testing.T) {
-	// Level 1 with 50 XP (needs 150 for level 2)
-	remaining := GetXPForNextLevel(1, 50)
-	expected := GetXPRequired(2) - 50
+	// Level 1 with 20 XP (needs ~45 for level 2)
+	remaining := GetXPForNextLevel(1, 20)
+	expected := GetXPRequired(2) - 20
 
 	if remaining != expected {
 		t.Errorf("Expected %d XP remaining, got %d", expected, remaining)
@@ -375,8 +375,11 @@ func TestClassAttributeMapping(t *testing.T) {
 	}{
 		{characters.ClassWarrior, "STR", "STA"},
 		{characters.ClassHunter, "DEX", "STA"},
+		{characters.ClassRanger, "DEX", "STA"},
 		{characters.ClassRogue, "DEX", "STR"},
 		{characters.ClassWizard, "INT", "WIS"},
+		{characters.Class{ID: "cleric", Name: "Cleric"}, "WIS", "INT"},
+		{characters.Class{ID: "druid", Name: "Druid"}, "INT", "WIS"},
 	}
 
 	for _, tt := range tests {

@@ -10,6 +10,7 @@ import (
 
 	"github.com/talesmud/talesmud/pkg/entities/items"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
 	luarunner "github.com/talesmud/talesmud/pkg/scripts/runner/lua"
 )
 
@@ -282,16 +283,20 @@ func RegisterGameModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 		return 1
 	}))
 
-	// tales.game.revealExit(roomID, exitName) - Unhide a hidden exit in a room
+	// tales.game.revealExit(roomID, exitName, characterID) - Reveal a hidden exit for a specific character
+	// The exit stays globally hidden; only the specified character can see and traverse it.
 	mod.RawSetString("revealExit", L.NewFunction(func(L *lua.LState) int {
 		roomID := L.CheckString(1)
 		exitName := L.CheckString(2)
+		characterID := L.CheckString(3)
 		facade := runner.GetFacade()
+		game := runner.GetGame()
 		if facade == nil {
 			L.Push(lua.LBool(false))
 			return 1
 		}
 
+		// Validate the exit exists on the room
 		room, err := facade.RoomsService().FindByID(roomID)
 		if err != nil || room == nil {
 			logrus.WithField("roomID", roomID).WithError(err).Warn("[Script] revealExit: room not found")
@@ -305,9 +310,8 @@ func RegisterGameModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 		}
 
 		found := false
-		for i := range *room.Exits {
-			if strings.EqualFold((*room.Exits)[i].Name, exitName) {
-				(*room.Exits)[i].Hidden = false
+		for _, exit := range *room.Exits {
+			if strings.EqualFold(exit.Name, exitName) {
 				found = true
 				break
 			}
@@ -319,10 +323,31 @@ func RegisterGameModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 			return 1
 		}
 
-		if err := facade.RoomsService().Update(roomID, room); err != nil {
-			logrus.WithField("roomID", roomID).WithError(err).Warn("[Script] revealExit: failed to persist room")
+		// Track the reveal on the character (not the room)
+		character, err := facade.CharactersService().FindByID(characterID)
+		if err != nil || character == nil {
+			logrus.WithField("characterID", characterID).WithError(err).Warn("[Script] revealExit: character not found")
 			L.Push(lua.LBool(false))
 			return 1
+		}
+
+		character.RevealExit(roomID, exitName)
+		if err := facade.CharactersService().Update(characterID, character); err != nil {
+			logrus.WithField("characterID", characterID).WithError(err).Warn("[Script] revealExit: failed to persist character")
+			L.Push(lua.LBool(false))
+			return 1
+		}
+
+		// Send room refresh to the character so the revealed exit appears immediately
+		if game != nil {
+			charUser, err := facade.UsersService().FindByID(character.BelongsUserID)
+			if err == nil && charUser != nil {
+				roomView := util.RoomWithCharacterReveals(room, character)
+				enterRoom := messages.NewEnterRoomMessage(roomView, charUser, game)
+				enterRoom.Audience = messages.MessageAudienceUser
+				enterRoom.AudienceID = charUser.ID
+				game.SendMessage() <- enterRoom
+			}
 		}
 
 		L.Push(lua.LBool(true))

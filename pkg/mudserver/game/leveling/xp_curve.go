@@ -17,19 +17,27 @@ func init() {
 }
 
 // CalculateXPRequired computes the cumulative XP needed to reach a specific level
-// Formula: 85 + (17 * level^1.10) per level increment
-// This creates a gentle exponential curve where early levels are fast and later levels progressively harder
-// Targets: L2≈150, L5≈661, L10≈1681, L20≈5478, L30≈11935, L40≈20905, L50≈35455
+// Uses a piecewise formula: early levels are very flat, transitioning to steeper scaling at higher levels
+// Targets: L2≈45, L5≈203, L10≈1120, L20≈4947, L30≈11794, L40≈21271, L50≈33454
 func CalculateXPRequired(level int32) int32 {
 	if level <= 1 {
 		return 0
 	}
 
-	// Cumulative XP calculation
+	// Cumulative XP calculation with piecewise scaling
 	var total float64
 	for l := int32(2); l <= level; l++ {
-		// XP needed to go from level (l-1) to level l
-		xpForLevel := 85.0 + (17.0 * math.Pow(float64(l), 1.10))
+		var xpForLevel float64
+		if l <= 5 {
+			// Early game: much flatter curve for fast initial leveling
+			xpForLevel = 30.0 + (10.0 * math.Pow(float64(l), 0.60))
+		} else if l <= 15 {
+			// Mid-early: transition zone with moderate scaling
+			xpForLevel = 50.0 + (15.0 * math.Pow(float64(l), 1.05))
+		} else {
+			// Mid-to-late: original steeper scaling
+			xpForLevel = 85.0 + (17.0 * math.Pow(float64(l), 1.10))
+		}
 		total += xpForLevel
 	}
 
@@ -66,13 +74,14 @@ func GetXPForNextLevel(currentLevel int32, currentXP int32) int32 {
 }
 
 // CalculateEnemyXPReward returns the XP granted by an enemy based on its level
-// Formula: 10 * enemy_level
+// Formula: 15 * enemy_level + 5
 // This creates natural progression where higher-level enemies grant more XP
+// Note: Only used as fallback when an enemy's EnemyTrait.XPReward is 0
 func CalculateEnemyXPReward(enemyLevel int32) int64 {
 	if enemyLevel < 1 {
 		enemyLevel = 1
 	}
-	return int64(enemyLevel) * 10
+	return int64(enemyLevel)*15 + 5
 }
 
 // GetXPProgress returns the percentage progress to next level (0-100)

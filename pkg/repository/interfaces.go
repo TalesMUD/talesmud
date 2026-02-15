@@ -10,6 +10,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/quests"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/entities/settings"
+	"github.com/talesmud/talesmud/pkg/entities/skills"
 	"github.com/talesmud/talesmud/pkg/scripts"
 )
 
@@ -223,5 +224,16 @@ type QuestProgressRepository interface {
 	Store(progress *quests.QuestProgress) (*quests.QuestProgress, error)
 	Import(progress *quests.QuestProgress) (*quests.QuestProgress, error)
 	Update(id string, progress *quests.QuestProgress) error
+	Delete(id string) error
+}
+
+// SkillsRepository provides access to skill data.
+type SkillsRepository interface {
+	Drop() error
+	FindAll() ([]*skills.Skill, error)
+	FindByID(id string) (*skills.Skill, error)
+	Store(skill *skills.Skill) (*skills.Skill, error)
+	Import(skill *skills.Skill) (*skills.Skill, error)
+	Update(id string, skill *skills.Skill) error
 	Delete(id string) error
 }

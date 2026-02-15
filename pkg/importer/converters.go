@@ -8,7 +8,9 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/dialogs"
 	"github.com/talesmud/talesmud/pkg/entities/items"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
+	"github.com/talesmud/talesmud/pkg/entities/quests"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
+	"github.com/talesmud/talesmud/pkg/entities/skills"
 	"github.com/talesmud/talesmud/pkg/entities/traits"
 	"github.com/talesmud/talesmud/pkg/scripts"
 )
@@ -111,6 +113,8 @@ func (y *YAMLItem) ToEntity() *items.Item {
 		MaxStack:    y.MaxStack,
 		Consumable:  y.Consumable,
 		Tags:        y.Tags,
+		Attributes:  y.Attributes,
+		Properties:  y.Properties,
 		OnUseScriptID: y.OnUseScript,
 	}
 
@@ -144,6 +148,11 @@ func (y *YAMLNPC) ToEntity() *npc.NPC {
 		IsTemplate:       isTemplate,
 		SpawnRoomID:      y.SpawnRoomId,
 		State:            "idle",
+	}
+
+	// For unique NPCs (non-templates), set current room to spawn room
+	if !isTemplate {
+		n.CurrentRoomID = y.SpawnRoomId
 	}
 
 	// Set race if provided
@@ -358,4 +367,93 @@ func (y *YAMLSpawner) ToEntity() *npc.NPCSpawner {
 		InitialCount:  initialCount,
 		Created:       time.Now(),
 	}
+}
+
+// ToEntity converts a YAMLQuest to a Quest entity
+func (y *YAMLQuest) ToEntity() *quests.Quest {
+	quest := &quests.Quest{
+		Entity:             &entities.Entity{ID: y.ID},
+		Name:               y.Name,
+		Description:        y.Description,
+		Category:           y.Category,
+		Level:              y.Level,
+		Repeatable:         y.Repeatable,
+		RequiredQuestIDs:   y.RequiredQuestIDs,
+		RequiredLevel:      y.RequiredLevel,
+		AcceptDialogText:   y.AcceptDialogText,
+		ProgressDialogText: y.ProgressDialogText,
+		CompleteDialogText: y.CompleteDialogText,
+		OnCompleteScriptID: y.OnCompleteScriptID,
+		Created:            time.Now(),
+		Updated:            time.Now(),
+	}
+
+	// Convert source
+	quest.Source = quests.QuestSource{
+		Type:   y.Source.Type,
+		NPCID:  y.Source.NPCID,
+		ItemID: y.Source.ItemID,
+	}
+
+	// Convert objectives
+	if len(y.Objectives) > 0 {
+		quest.Objectives = make([]quests.Objective, len(y.Objectives))
+		for i, obj := range y.Objectives {
+			quest.Objectives[i] = quests.Objective{
+				ID:               obj.ID,
+				Type:             quests.ObjectiveType(obj.Type),
+				Description:      obj.Description,
+				TargetID:         obj.TargetID,
+				TargetName:       obj.TargetName,
+				Amount:           obj.Amount,
+				DeliverToNPCID:   obj.DeliverToNPCID,
+				DeliverToNPCName: obj.DeliverToNPCName,
+				DialogNodeID:     obj.DialogNodeID,
+				CheckScriptID:    obj.CheckScriptID,
+				Order:            obj.Order,
+			}
+		}
+	}
+
+	// Convert rewards
+	quest.Rewards = quests.Reward{
+		XP:              y.Rewards.XP,
+		Gold:            y.Rewards.Gold,
+		ItemTemplateIDs: y.Rewards.ItemTemplateIDs,
+	}
+
+	return quest
+}
+
+// ToEntity converts a YAMLSkill to a Skill entity
+func (y *YAMLSkill) ToEntity() *skills.Skill {
+	s := &skills.Skill{
+		Entity:         &entities.Entity{ID: y.ID},
+		Name:           y.Name,
+		Description:    y.Description,
+		ClassIDs:       y.ClassIDs,
+		LevelRequired:  y.LevelRequired,
+		ResourceType:   skills.ResourceType(y.ResourceType),
+		ManaCost:       y.ManaCost,
+		CooldownRounds: y.CooldownRounds,
+		Target:         skills.TargetType(y.Target),
+		Effect:         skills.EffectType(y.Effect),
+		ScalingAttr:    y.ScalingAttr,
+		BasePower:      y.BasePower,
+		ScalingFactor:  y.ScalingFactor,
+		Duration:       y.Duration,
+		BuffStat:       y.BuffStat,
+		BuffPercent:    y.BuffPercent,
+		IgnoresDefense: y.IgnoresDefense,
+		HitCount:       y.HitCount,
+	}
+
+	if y.SecondaryEffect != "" {
+		s.SecondaryEffect = skills.EffectType(y.SecondaryEffect)
+		s.SecondaryBasePower = y.SecondaryBasePower
+		s.SecondaryScaling = y.SecondaryScaling
+		s.SecondaryTarget = skills.TargetType(y.SecondaryTarget)
+	}
+
+	return s
 }

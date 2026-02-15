@@ -74,10 +74,10 @@ var CharacterCreationTemplates = []CharacterCreationTemplate{
 
 func createBaseAttributes(str, dex, _int, wis, sta int32) Attributes {
 	return []Attribute{
-		NewAttribute("Strength", "str", str),
-		NewAttribute("Dexterity", "dex", dex),
-		NewAttribute("Intelligence", "int", _int),
-		NewAttribute("Wisdom", "wis", wis),
-		NewAttribute("Stamina", "sta", sta),
+		NewAttribute("Strength", "STR", str),
+		NewAttribute("Dexterity", "DEX", dex),
+		NewAttribute("Intelligence", "INT", _int),
+		NewAttribute("Wisdom", "WIS", wis),
+		NewAttribute("Stamina", "STA", sta),
 	}
 }

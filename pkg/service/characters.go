@@ -63,15 +63,22 @@ func (srv *charactersService) CreateNewCharacter(dto *dto.CreateCharacterDTO) (*
 }
 
 func characterFromTemplate(template *characters.CharacterTemplate) *characters.Character {
-	return &characters.Character{
+	ch := &characters.Character{
 		Race:             template.Race,
 		Class:            template.Class,
 		CurrentHitPoints: template.CurrentHitPoints,
 		MaxHitPoints:     template.MaxHitPoints,
+		CurrentMana:      template.CurrentMana,
+		MaxMana:          template.MaxMana,
 		XP:               0,
 		Level:            template.Level,
 		Attributes:       template.Attributes,
 	}
+	if len(template.DefaultSkills) > 0 {
+		ch.EquippedSkills = make([]string, len(template.DefaultSkills))
+		copy(ch.EquippedSkills, template.DefaultSkills)
+	}
+	return ch
 }
 
 //IsCharacterNameTaken ...

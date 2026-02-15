@@ -10,8 +10,10 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	m "github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
 )
 
 // SelectCharacterCommand ... select a character
@@ -42,6 +44,24 @@ func (command *SelectCharacterCommand) Execute(game def.GameCtrl, message *messa
 }
 
 func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *characters.Character) {
+
+	// Normalize attribute short names to uppercase (migration for pre-fix characters)
+	character.NormalizeAttributeShorts()
+
+	// Ensure mana is initialized for caster classes (migration for pre-mana characters)
+	expectedMaxMana := character.CalculateMaxMana()
+	if expectedMaxMana > 0 && character.MaxMana == 0 {
+		character.MaxMana = expectedMaxMana
+		character.CurrentMana = expectedMaxMana
+		game.GetFacade().CharactersService().Update(character.ID, character)
+	}
+
+	// Retroactive migration: grant distributable attribute points for existing leveled characters
+	if character.Level > 1 && character.UnspentAttributePoints == 0 && len(character.SpentAttributePoints) == 0 {
+		retroactivePoints := (character.Level - 1) * int32(leveling.PointsPerLevel)
+		character.UnspentAttributePoints = retroactivePoints
+		game.GetFacade().CharactersService().Update(character.ID, character)
+	}
 
 	// handle Character deselection
 	if user.LastCharacter != "" && user.LastCharacter != character.ID {
@@ -76,7 +96,8 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 			Type:       messages.MessageTypeCharacterSelected,
 			Message:    fmt.Sprintf("You are now playing as [%v]", character.Name),
 		},
-		Character: character,
+		Character:      character,
+		XPForNextLevel: leveling.GetXPRequired(character.Level + 1),
 	}
 
 	game.SendMessage() <- characterSelected
@@ -112,7 +133,7 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 	currentRoom.AddCharacter(character.ID)
 	game.GetFacade().RoomsService().Update(currentRoom.ID, currentRoom)
 
-	enterRoom := m.NewEnterRoomMessage(currentRoom, user, game)
+	enterRoom := m.NewEnterRoomMessage(util.RoomWithCharacterReveals(currentRoom, character), user, game)
 	enterRoom.AudienceID = user.ID
 	game.SendMessage() <- enterRoom
 
@@ -124,6 +145,9 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 			Message:    character.Name + " entered.",
 		},
 	}
+
+	// Send initial character stats (HP, mana, XP, etc.) to the client
+	game.SendMessage() <- m.NewCharacterUpdateMessage(user.ID, character)
 
 	// Send initial inventory state to the client
 	game.SendMessage() <- &m.InventoryUpdateMessage{

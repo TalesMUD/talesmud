@@ -120,6 +120,14 @@ func (s *questsService) AcceptQuest(characterID, questID string) (*quests.QuestP
 		return nil, errors.New("quest already completed")
 	}
 
+	// Check prerequisite quests are completed
+	for _, reqID := range quest.RequiredQuestIDs {
+		reqProgress, _ := s.progressRepo.FindByCharacterAndQuest(characterID, reqID)
+		if reqProgress == nil || reqProgress.Status != quests.QuestStatusCompleted {
+			return nil, errors.New("prerequisite quest not completed")
+		}
+	}
+
 	// If previously completed/abandoned and repeatable, delete old progress
 	if existing != nil {
 		_ = s.progressRepo.Delete(existing.ID)

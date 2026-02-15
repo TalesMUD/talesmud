@@ -35,9 +35,13 @@ type CharacterTemplate struct {
 	CurrentHitPoints int32 `bson:"currentHitPoints,omitempty" json:"currentHitPoints"`
 	MaxHitPoints     int32 `bson:"maxHitPoints,omitempty" json:"maxHitPoints"`
 
+	CurrentMana int32 `bson:"currentMana,omitempty" json:"currentMana"`
+	MaxMana     int32 `bson:"maxMana,omitempty" json:"maxMana"`
+
 	Attributes Attributes `bson:"attributes,omitempty" json:"attributes,omitempty"`
 
-	StartingItems []StartingItem `bson:"startingItems,omitempty" json:"startingItems,omitempty"`
+	StartingItems  []StartingItem `bson:"startingItems,omitempty" json:"startingItems,omitempty"`
+	DefaultSkills  []string       `bson:"defaultSkills,omitempty" json:"defaultSkills,omitempty"`
 
 	// Meta
 	Source  string    `bson:"source,omitempty" json:"source,omitempty"` // "db" | "system"

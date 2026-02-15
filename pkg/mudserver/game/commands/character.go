@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/talesmud/talesmud/pkg/entities/items"
@@ -75,6 +76,11 @@ func (command *CharacterCommand) Execute(game def.GameCtrl, message *m.Message) 
 		}
 	} else {
 		sb.WriteString("  (No attributes defined)\n")
+	}
+	if char.UnspentAttributePoints > 0 {
+		sb.WriteString("\n  Unspent Points: ")
+		sb.WriteString(itoa(int(char.UnspentAttributePoints)))
+		sb.WriteString("\n  (Use 'spend <attr> [amount]' to allocate)\n")
 	}
 
 	// Combat stats
@@ -156,7 +162,8 @@ func (command *CharacterCommand) Execute(game def.GameCtrl, message *m.Message) 
 	return true
 }
 
-// formatAttrValue converts an attribute value to string
+// formatAttrValue converts an attribute value to string.
+// Handles numeric types as well as string values (Creator UI stores numbers as strings).
 func formatAttrValue(val interface{}) string {
 	switch v := val.(type) {
 	case float64:
@@ -167,6 +174,15 @@ func formatAttrValue(val interface{}) string {
 		return itoa(int(v))
 	case int64:
 		return itoa64(v)
+	case string:
+		// Creator UI stores attribute values as strings via HTML inputs
+		if _, err := strconv.Atoi(v); err == nil {
+			return v
+		}
+		if f, err := strconv.ParseFloat(v, 64); err == nil {
+			return itoa(int(f))
+		}
+		return v
 	default:
 		return "?"
 	}

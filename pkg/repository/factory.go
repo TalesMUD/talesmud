@@ -17,5 +17,6 @@ type Factory interface {
 	ServerSettings() ServerSettingsRepository
 	Quests() QuestsRepository
 	QuestProgress() QuestProgressRepository
+	Skills() SkillsRepository
 	Close() error
 }

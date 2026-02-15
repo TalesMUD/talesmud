@@ -57,6 +57,10 @@ type CombatEngineCtrl interface {
 	QueuePlayerAction(characterID string, action combat.CombatAction, targetID string)
 	// SetAutoAttackTarget sets the persistent auto-attack target for a player
 	SetAutoAttackTarget(characterID string, targetID string)
+	// ProcessPlayerSkill handles a player using a skill in combat
+	ProcessPlayerSkill(characterID, skillID, targetID string) (message string, combatEnded bool, endState combat.CombatState)
+	// QueuePlayerSkill queues a skill for a player's next turn
+	QueuePlayerSkill(characterID, skillID, targetID string)
 }
 
 // QuestTrackerCtrl provides access to the quest tracker for event notifications

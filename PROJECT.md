@@ -43,8 +43,35 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Six-attribute system (STR, DEX, CON, INT, WIS, CHA)
   - Equipment system with 10 equipment slots
   - Inventory management
-  - Experience and leveling
-  - All-time statistics tracking
+  - Experience and leveling with flattened early-game XP curve (piecewise formula: gentle L2-5, transitional L6-15, steeper L16+)
+  - Exploration XP: awards 5 XP per new room discovered, 15 XP for first room in a new area/zone
+  - **Distributable Attribute Points**: 2 points per level-up for players to allocate freely into STR, DEX, INT, WIS, or STA
+  - Class-based attribute caps prevent degenerate builds (e.g., warriors cap INT at 5, wizards cap STR at 5)
+  - Terminal command `spend <attr> [amount]` to allocate points; `spend` with no args shows status table with current values, spent/cap per attribute
+  - Character widget shows unspent points badge and interactive "+" buttons on each attribute when points are available
+  - **Derived Combat Stats Display**: Character widget shows computed ATK (weapon damage + STR modifier), DEF (total armor from equipment), and MP/RND (mana regen per combat round, caster classes only). These update live when equipment or attributes change.
+  - Existing characters receive retroactive points on login ((level - 1) * 2)
+  - Server-side room/area discovery tracking per character
+  - All-time statistics tracking (including rooms discovered)
+  - Mana system for caster classes (Mage, Cleric, Druid) with level and INT scaling
+  - Mana regeneration: out-of-combat (5%/tick passive, 15%/tick resting), in-combat (1+WISMod per round)
+  - Mana potions (Small/Medium/Large) as consumable items
+
+- **Skills & Spells System**
+  - Database-stored skills, editable via Creator UI (Skills tab)
+  - Multi-class support: skills can be assigned to multiple classes (e.g., Heal for Cleric and Druid)
+  - 29 default abilities across 6 classes, seeded on first run
+  - Two resource types: mana-based (casters) and cooldown-based (physical classes)
+  - Equippable skill slots (1-4 per class, level-gated progression)
+  - Skill management: equip/unequip outside combat, locked during combat
+  - Skill effects: damage, heal, buff, debuff, DoT, HoT, stun, multi-hit, AoE
+  - Status effect system: buffs, debuffs, DoTs, HoTs with duration tracking
+  - Attribute-scaled damage: STR (warrior), DEX (rogue/ranger), INT (mage/druid), WIS (cleric)
+  - Mana shield absorption mechanic
+  - Skill cooldown tracking per combat instance
+  - In-combat commands: `cast <skill> [target]`, numeric shortcuts `1`-`4`
+  - Management commands: `skills`, `skills equip <name>`, `skills unequip <name>`
+  - YAML import/export for skills data
 
 - **Item System**
   - Multiple item types: Currency, Consumable, Armor, Weapon, Collectible, Quest, Crafting Material
@@ -90,7 +117,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
 ### Content Creation
 
 - **Web-Based Editor**
-  - Full-width filterable data tables for browsing all entity types (Rooms, Items, Item Templates, NPCs, Dialogs, Quests, Scripts, Character Templates)
+  - Full-width filterable data tables for browsing all entity types (Rooms, Items, Item Templates, NPCs, Dialogs, Quests, Skills, Scripts, Character Templates)
   - Per-column filtering (text search, enum dropdowns) with instant client-side filtering and sorting
   - Side-by-side master-detail layout: data table + edit form shown together, closeable to full-width table view
   - **Entity Selection Modal**: All entity ID selectors (rooms, NPCs, items, scripts, dialogs, quests) use a centered modal dialog with a full filterable DataTable instead of simple dropdowns. This scales to hundreds of entries with per-column search, sort, and filter support. Components: `EntitySelectButton` (inline trigger) + `EntitySelectModal` (table dialog). **UI Guideline: Never use `<select>` dropdowns for entity ID references. Always use `EntitySelectButton` with the appropriate column definitions from `tableColumns.js`.**
@@ -100,6 +127,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Lua script editor with syntax highlighting and integrated test runner
   - Dialog tree editor with options and alternate texts
   - Character template editor with archetype selection and starting gear
+  - Skills editor with multi-class assignment, resource types, effects, and secondary effects
   - World map visualization (GridWorldEditor)
   - CRUD operations with live preview
 
@@ -110,7 +138,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Item behavior scripts
   - NPC behavior scripts
   - Quest scripting support
-  - Game API: messaging, inventory checks (`hasItem`, `hasEquipped`), character flags (`getFlag`/`setFlag`), item rewards (`giveItem`), exit manipulation (`revealExit`)
+  - Game API: messaging, inventory checks (`hasItem`, `hasEquipped`), character flags (`getFlag`/`setFlag`), item rewards (`giveItem`), per-character exit reveals (`revealExit`)
 
 ### AI / LLM Integration
 
@@ -228,9 +256,12 @@ talesmud/
 | `defend` | `d`, `guard` | Queue defensive stance for next combat turn |
 | `flee` | `run`, `escape` | Queue flee attempt for next combat turn |
 | `status` | `cs`, `combat` | Show combat status |
+| `cast` | `spell` | Use a skill in combat: cast \<skill\> [target] |
+| `skills` | `spells`, `abilities` | Manage skills: skills [equip\|unequip] [name] |
 | `quests` | `ql`, `questlog` | Show quest log |
 | `quest` | - | Show quest details: quest [name] |
 | `abandon` | - | Abandon a quest: abandon [name] |
+| `spend` | - | Spend attribute points: spend \<attr\> [amount] |
 
 ## Current Development Status
 
@@ -381,7 +412,7 @@ go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
 ### Protected Endpoints (Require Auth - Player Level)
 - `GET /api/characters`, `POST /api/newcharacter` - Character management
 - `POST /api/generate/character` - AI-powered character name/description generation
-- `GET /api/rooms`, `GET /api/items` - Read game data
+- `GET /api/rooms`, `GET /api/items`, `GET /api/skills` - Read game data
 - `GET /api/user`, `PUT /api/user` - User profile
 
 ### Protected Endpoints (Player Level - Quests)
@@ -398,6 +429,7 @@ go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
 - `POST/PUT/DELETE /api/npcs` - NPC management
 - `POST/PUT/DELETE /api/dialogs` - Dialog management
 - `POST/PUT/DELETE /api/quests` - Quest management
+- `POST/PUT/DELETE /api/skills` - Skill management
 - `PUT /api/settings` - Server settings
 
 ### Admin API Endpoints (Require Admin Role)

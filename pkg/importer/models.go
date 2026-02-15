@@ -112,22 +112,24 @@ func (c *YAMLCoords) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 // YAMLItem represents an item in YAML format
 type YAMLItem struct {
-	ID          string       `yaml:"id"`
-	Name        string       `yaml:"name"`
-	Description string       `yaml:"description"`
-	Detail      string       `yaml:"detail"`
-	Type        string       `yaml:"type"`
-	SubType     string       `yaml:"subType"`
-	Slot        string       `yaml:"slot"`
-	Quality     string       `yaml:"quality"`
-	Level       int32        `yaml:"level"`
-	BasePrice   int64        `yaml:"basePrice"`
-	Stackable   bool         `yaml:"stackable"`
-	MaxStack    int32        `yaml:"maxStack"`
-	Consumable  bool         `yaml:"consumable"`
-	Tags        []string     `yaml:"tags"`
-	Meta        YAMLItemMeta `yaml:"meta"`
-	OnUseScript string       `yaml:"onUseScript"`
+	ID          string                 `yaml:"id"`
+	Name        string                 `yaml:"name"`
+	Description string                 `yaml:"description"`
+	Detail      string                 `yaml:"detail"`
+	Type        string                 `yaml:"type"`
+	SubType     string                 `yaml:"subType"`
+	Slot        string                 `yaml:"slot"`
+	Quality     string                 `yaml:"quality"`
+	Level       int32                  `yaml:"level"`
+	BasePrice   int64                  `yaml:"basePrice"`
+	Stackable   bool                   `yaml:"stackable"`
+	MaxStack    int32                  `yaml:"maxStack"`
+	Consumable  bool                   `yaml:"consumable"`
+	Tags        []string               `yaml:"tags"`
+	Attributes  map[string]interface{} `yaml:"attributes"`
+	Properties  map[string]interface{} `yaml:"properties"`
+	Meta        YAMLItemMeta           `yaml:"meta"`
+	OnUseScript string                 `yaml:"onUseScript"`
 }
 
 // YAMLItemMeta contains item metadata
@@ -276,6 +278,81 @@ type YAMLSpawner struct {
 	MaxInstances  int    `yaml:"maxInstances"`
 	SpawnInterval string `yaml:"spawnInterval"`
 	InitialCount  int    `yaml:"initialCount"`
+}
+
+// YAMLQuest represents a quest in YAML format
+type YAMLQuest struct {
+	ID          string              `yaml:"id"`
+	Name        string              `yaml:"name"`
+	Description string              `yaml:"description"`
+	Category    string              `yaml:"category"`
+	Level       int32               `yaml:"level"`
+	Repeatable  bool                `yaml:"repeatable"`
+	Source      YAMLQuestSource     `yaml:"source"`
+	Objectives  []YAMLQuestObjective `yaml:"objectives"`
+	Rewards     YAMLQuestRewards    `yaml:"rewards"`
+	RequiredQuestIDs []string       `yaml:"requiredQuestIds"`
+	RequiredLevel    int32          `yaml:"requiredLevel"`
+	AcceptDialogText   string       `yaml:"acceptDialogText"`
+	ProgressDialogText string       `yaml:"progressDialogText"`
+	CompleteDialogText string       `yaml:"completeDialogText"`
+	OnCompleteScriptID string       `yaml:"onCompleteScriptId"`
+}
+
+// YAMLQuestSource represents how a quest is obtained
+type YAMLQuestSource struct {
+	Type   string `yaml:"type"`
+	NPCID  string `yaml:"npcId"`
+	ItemID string `yaml:"itemId"`
+}
+
+// YAMLQuestObjective represents a quest objective
+type YAMLQuestObjective struct {
+	ID               string `yaml:"id"`
+	Type             string `yaml:"type"`
+	Description      string `yaml:"description"`
+	TargetID         string `yaml:"targetId"`
+	TargetName       string `yaml:"targetName"`
+	Amount           int32  `yaml:"amount"`
+	DeliverToNPCID   string `yaml:"deliverToNpcId"`
+	DeliverToNPCName string `yaml:"deliverToNpcName"`
+	DialogNodeID     string `yaml:"dialogNodeId"`
+	CheckScriptID    string `yaml:"checkScriptId"`
+	Order            int32  `yaml:"order"`
+}
+
+// YAMLQuestRewards represents quest completion rewards
+type YAMLQuestRewards struct {
+	XP              int32    `yaml:"xp"`
+	Gold            int64    `yaml:"gold"`
+	ItemTemplateIDs []string `yaml:"itemTemplateIds"`
+}
+
+// YAMLSkill represents a skill in YAML format
+type YAMLSkill struct {
+	ID             string   `yaml:"id"`
+	Name           string   `yaml:"name"`
+	Description    string   `yaml:"description"`
+	ClassIDs       []string `yaml:"classIds"`
+	LevelRequired  int32    `yaml:"levelRequired"`
+	ResourceType   string   `yaml:"resourceType"`
+	ManaCost       int32    `yaml:"manaCost"`
+	CooldownRounds int      `yaml:"cooldownRounds"`
+	Target         string   `yaml:"target"`
+	Effect         string   `yaml:"effect"`
+	ScalingAttr    string   `yaml:"scalingAttr"`
+	BasePower      int32    `yaml:"basePower"`
+	ScalingFactor  float64  `yaml:"scalingFactor"`
+	Duration       int      `yaml:"duration"`
+	BuffStat       string   `yaml:"buffStat"`
+	BuffPercent    float64  `yaml:"buffPercent"`
+	IgnoresDefense bool     `yaml:"ignoresDefense"`
+	HitCount       int      `yaml:"hitCount"`
+
+	SecondaryEffect    string  `yaml:"secondaryEffect,omitempty"`
+	SecondaryBasePower int32   `yaml:"secondaryBasePower,omitempty"`
+	SecondaryScaling   float64 `yaml:"secondaryScaling,omitempty"`
+	SecondaryTarget    string  `yaml:"secondaryTarget,omitempty"`
 }
 
 // ImportConfig contains configuration for the import process

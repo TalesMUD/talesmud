@@ -58,7 +58,15 @@ func (srv *conversationsService) GetCurrentNode(conv *conversations.Conversation
 	if conv.CurrentNodeID == "" || conv.CurrentNodeID == "main" {
 		return dialog
 	}
-	return dialog.FindDialog(conv.CurrentNodeID)
+	node := dialog.FindDialog(conv.CurrentNodeID)
+	// The importer creates both the choice and the answer with the same NodeID.
+	// FindDialog may return the choice (no Options) instead of the answer
+	// (which has the actual sub-options). If so, follow through to the Answer.
+	if node != nil && len(node.Options) == 0 && node.Answer != nil &&
+		node.Answer.NodeID == node.NodeID && len(node.Answer.Options) > 0 {
+		return node.Answer
+	}
+	return node
 }
 
 // GetFilteredOptions returns dialog options that the player is allowed to see

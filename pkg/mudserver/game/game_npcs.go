@@ -15,9 +15,14 @@ func (g *Game) handleNPCUpdates() {
 			continue
 		}
 
-		// Handle dead NPCs - check respawn
+		// Handle dead NPCs
 		if inst.IsDead {
-			if inst.ShouldRespawn() {
+			if inst.IsInstance() {
+				// Spawner-created instances: delete the dead instance.
+				// The spawner will create a fresh replacement on its next cycle.
+				g.NPCManager.RemoveInstance(inst.Entity.ID)
+			} else if inst.ShouldRespawn() {
+				// Unique/resident NPCs: recycle in place after respawn timer
 				g.respawnNPC(inst)
 			}
 			continue

@@ -69,6 +69,7 @@ func (game *Game) attachCharacterToMessage(msg *messages.Message) {
 	}
 
 	if character, err := game.Facade.CharactersService().FindByID(msg.FromUser.LastCharacter); err == nil {
+		character.NormalizeAttributeShorts()
 		msg.Character = character
 	} else {
 		log.Error("Couldt not load character for user")

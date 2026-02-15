@@ -6,6 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/conversations"
 	"github.com/talesmud/talesmud/pkg/entities/dialogs"
 	"github.com/talesmud/talesmud/pkg/entities/quests"
@@ -117,12 +118,15 @@ func (command *TalkCommand) Execute(game def.GameCtrl, message *messages.Message
 
 // questDialogOption represents a quest-related dialog option
 type questDialogOption struct {
-	text    string
-	questID string
-	action  string // "accept", "complete", "progress"
+	text        string // Player-facing label shown in the option list
+	npcText     string // NPC response shown after the player selects this option
+	questID     string
+	questName   string
+	action      string // "accept", "complete", "progress"
 }
 
-// getQuestDialogOptions checks for quest-related dialog options for an NPC
+// getQuestDialogOptions checks for quest-related dialog options for an NPC.
+// Only shows quests whose prerequisites are met.
 func getQuestDialogOptions(game def.GameCtrl, characterID, npcTemplateID, npcInstanceID string) []questDialogOption {
 	var options []questDialogOption
 
@@ -140,19 +144,24 @@ func getQuestDialogOptions(game def.GameCtrl, characterID, npcTemplateID, npcIns
 		}
 	}
 
+	// Load character for level check
+	char, _ := game.GetFacade().CharactersService().FindByID(characterID)
+
 	for _, quest := range npcQuests {
 		progress, _ := game.GetFacade().QuestsService().GetProgress(characterID, quest.ID)
 
 		if progress == nil || progress.Status == quests.QuestStatusAbandoned {
-			// Quest available to accept
-			text := quest.AcceptDialogText
-			if text == "" {
-				text = fmt.Sprintf("[Quest] %s", quest.Name)
+			// Check prerequisites before offering
+			if !questPrereqsMet(game, characterID, quest, char) {
+				continue
 			}
+
 			options = append(options, questDialogOption{
-				text:    text,
-				questID: quest.ID,
-				action:  "accept",
+				text:      fmt.Sprintf("[Quest] %s", quest.Name),
+				npcText:   quest.AcceptDialogText,
+				questID:   quest.ID,
+				questName: quest.Name,
+				action:    "accept",
 			})
 		} else if progress.Status == quests.QuestStatusActive {
 			// Check if all objectives are complete
@@ -164,30 +173,44 @@ func getQuestDialogOptions(game def.GameCtrl, characterID, npcTemplateID, npcIns
 				}
 			}
 			if allComplete {
-				text := quest.CompleteDialogText
-				if text == "" {
-					text = fmt.Sprintf("[Turn In] %s", quest.Name)
-				}
 				options = append(options, questDialogOption{
-					text:    text,
-					questID: quest.ID,
-					action:  "complete",
+					text:      fmt.Sprintf("[Turn In] %s", quest.Name),
+					npcText:   quest.CompleteDialogText,
+					questID:   quest.ID,
+					questName: quest.Name,
+					action:    "complete",
 				})
 			} else {
-				text := quest.ProgressDialogText
-				if text == "" {
-					text = fmt.Sprintf("[In Progress] %s", quest.Name)
-				}
 				options = append(options, questDialogOption{
-					text:    text,
-					questID: quest.ID,
-					action:  "progress",
+					text:      fmt.Sprintf("[In Progress] %s", quest.Name),
+					npcText:   quest.ProgressDialogText,
+					questID:   quest.ID,
+					questName: quest.Name,
+					action:    "progress",
 				})
 			}
 		}
 	}
 
 	return options
+}
+
+// questPrereqsMet checks if a character meets the prerequisites for a quest
+func questPrereqsMet(game def.GameCtrl, characterID string, quest *quests.Quest, char *characters.Character) bool {
+	// Check level requirement
+	if quest.RequiredLevel > 0 && char != nil && char.Level < quest.RequiredLevel {
+		return false
+	}
+
+	// Check required quests are completed
+	for _, reqID := range quest.RequiredQuestIDs {
+		reqProgress, _ := game.GetFacade().QuestsService().GetProgress(characterID, reqID)
+		if reqProgress == nil || reqProgress.Status != quests.QuestStatusCompleted {
+			return false
+		}
+	}
+
+	return true
 }
 
 // sendQuestOnlyDialog sends a dialog with only quest options (for NPCs without dialogs)

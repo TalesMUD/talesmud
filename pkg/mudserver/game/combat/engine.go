@@ -64,13 +64,13 @@ func (e *Engine) CreateCombatantFromCharacter(char *characters.Character) combat
 	// Calculate defense from equipment
 	defense := char.GetArmorDefense()
 
-	// Calculate attack power from weapon
-	attackPower := char.GetWeaponDamage() + int32(char.GetSTRMod())
+	// Calculate attack power from weapon + class primary attribute modifier
+	attackPower := char.GetWeaponDamage() + int32(char.GetPrimaryAttackMod())
 	if attackPower < 1 {
 		attackPower = 1
 	}
 
-	return combat.CombatantRef{
+	ref := combat.CombatantRef{
 		ID:          char.Entity.ID,
 		Type:        combat.CombatantTypePlayer,
 		Name:        char.Name,
@@ -81,10 +81,21 @@ func (e *Engine) CreateCombatantFromCharacter(char *characters.Character) combat
 		CurrentHP:   char.CurrentHitPoints,
 		AttackPower: attackPower,
 		Defense:     defense,
-		STRMod:      char.GetSTRMod(),
+		STRMod:      char.GetPrimaryAttackMod(), // Uses class primary attribute (STR/DEX/INT/WIS)
 		DEXMod:      char.GetDEXMod(),
 		CONMod:      char.GetCONMod(),
+		INTMod:      char.GetINTMod(),
+		WISMod:      char.GetWISMod(),
+		MaxMana:     char.MaxMana,
+		CurrentMana: char.CurrentMana,
+		ManaRegen:   char.CalculateManaRegen(),
 	}
+	if len(char.EquippedSkills) > 0 {
+		ref.EquippedSkills = make([]string, len(char.EquippedSkills))
+		copy(ref.EquippedSkills, char.EquippedSkills)
+		ref.SkillCooldowns = make(map[string]int)
+	}
+	return ref
 }
 
 // CreateCombatantFromNPC creates a CombatantRef from an NPC
@@ -226,6 +237,27 @@ func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targ
 		return AttackResult{Miss: true, Message: "Target is already dead"}
 	}
 
+	// Check dodge from status effects (e.g. Evasion)
+	if dodgeChance := getDodgeBuffPercent(target); dodgeChance > 0 {
+		dodgeRoll := rand.Intn(100) + 1
+		if dodgeRoll <= int(dodgeChance*100) {
+			dodgeResult := AttackResult{
+				Miss:    true,
+				Message: fmt.Sprintf("%s attacks %s but %s dodges!", attacker.Name, target.Name, target.Name),
+			}
+			instance.AddLogEntry(combat.CombatLogEntry{
+				ActorID:    attacker.ID,
+				ActorName:  attacker.Name,
+				Action:     combat.CombatActionAttack,
+				TargetID:   target.ID,
+				TargetName: target.Name,
+				Result:     "dodged",
+				Message:    dodgeResult.Message,
+			})
+			return dodgeResult
+		}
+	}
+
 	// Roll to hit: 1d20 + STR modifier
 	roll := rand.Intn(20) + 1
 	toHit := roll + attacker.STRMod
@@ -260,6 +292,19 @@ func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targ
 
 	// Calculate damage
 	result.Damage = e.CalculateDamage(attacker, target, result.Critical)
+
+	// Mana shield absorption
+	if shield := hasManaShield(target); shield != nil && shield.Value > 0 {
+		absorbed := result.Damage
+		if absorbed > shield.Value {
+			absorbed = shield.Value
+		}
+		shield.Value -= absorbed
+		result.Damage -= absorbed
+		if shield.Value <= 0 {
+			removeStatusEffectByID(target, shield.ID)
+		}
+	}
 
 	// Apply damage to target
 	target.CurrentHP -= result.Damage
@@ -306,13 +351,28 @@ func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targ
 	return result
 }
 
-// CalculateDamage computes damage from attacker to target
+// CalculateDamage computes damage from attacker to target, accounting for status effect buffs
 func (e *Engine) CalculateDamage(attacker, target *combat.CombatantRef, critical bool) int32 {
 	// Base damage = AttackPower (includes weapon damage + STR for players)
 	baseDamage := attacker.AttackPower
 
-	// Defense reduction = target defense / 2
-	reduction := target.Defense / 2
+	// Apply attack buffs from status effects
+	if atkBuff := getAttackBuffPercent(attacker); atkBuff != 0 {
+		baseDamage = int32(float64(baseDamage) * (1 + atkBuff))
+		if baseDamage < 1 {
+			baseDamage = 1
+		}
+	}
+
+	// Defense reduction with status effect buffs
+	effectiveDefense := target.Defense
+	if defBuff := getDefenseBuffPercent(target); defBuff != 0 {
+		effectiveDefense = int32(float64(effectiveDefense) * (1 + defBuff))
+		if effectiveDefense < 0 {
+			effectiveDefense = 0
+		}
+	}
+	reduction := effectiveDefense / 2
 
 	// Final damage (minimum 1)
 	damage := baseDamage - reduction
@@ -465,6 +525,9 @@ func (e *Engine) NextTurn(instance *combat.CombatInstance) *combat.CombatantRef 
 		if len(instance.TurnOrder) == 0 {
 			return nil
 		}
+
+		// Round-start processing: tick cooldowns and mana regen
+		e.ProcessRoundStart(instance)
 
 		instance.AddLogEntry(combat.CombatLogEntry{
 			Message: fmt.Sprintf("--- Round %d ---", instance.Round),
