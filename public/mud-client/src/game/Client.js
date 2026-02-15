@@ -3,6 +3,7 @@
 import { onMount } from "svelte";
 import { writable, get } from "svelte/store";
 import { overlayStore } from "./ui/overlayStore.js";
+import { getPlayerColor } from "./playerColors.js";
 
 const GAME_CLIENT = writable(null);
 
@@ -49,6 +50,9 @@ function createClient(renderer, characterCreator, muxStore) {
         mux.setNPCs([]);
       }
 
+      // Set player characters in the room for UI rendering
+      mux.setPlayers(msg.players || []);
+
       // Set ground items from server-resolved item details
       mux.setGroundItems(msg.items || []);
 
@@ -83,6 +87,9 @@ function createClient(renderer, characterCreator, muxStore) {
       } else {
         mux.setNPCs([]);
       }
+
+      // Set player characters in the room
+      mux.setPlayers(msg.players || []);
 
       mux.setGroundItems(msg.items || []);
     }
@@ -331,10 +338,14 @@ function createClient(renderer, characterCreator, muxStore) {
         }
 
         if (msg.username) {
-          message = msg.username + ":  " + msg.message;
+          // Pass structured data so terminals can color the player name
+          const color = getPlayerColor(msg.username);
+          renderer({ username: msg.username, message: msg.message, color });
+          overlayStore.pushMessage(msg.username + ":  " + msg.message);
+        } else {
+          renderer(message);
+          overlayStore.pushMessage(message);
         }
-        renderer(message);
-        overlayStore.pushMessage(message);
       }
     });
 

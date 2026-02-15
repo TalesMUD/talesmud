@@ -211,7 +211,41 @@ tales.game.msgToRoomExcept(roomID, "Others see this", excludeCharacterID)
 
 -- Log a message
 tales.game.log("info", "Something happened")
+
+-- Game flags (per-character persistent state)
+tales.game.setFlag(characterID, "puzzle_solved", true)
+local val = tales.game.getFlag(characterID, "puzzle_solved")
+
+-- Inventory
+local has = tales.game.hasItem(characterID, "ITM0001")       -- by ID or TemplateID
+tales.game.giveItem(characterID, "ITM0001")                   -- create from template
+local equipped = tales.game.hasEquipped(characterID, "mainHand")
+local collected = tales.game.hasCollectedItem(characterID, "ITM0001")
+tales.game.resetCollectedItem(characterID, "ITM0001")
+
+-- Hidden exits
+tales.game.revealExit(roomID, "north", characterID)           -- reveal for one character
+local revealed = tales.game.hasRevealedExit(characterID, roomID, "north") -- check state
 ```
+
+#### State Reconciliation Pattern
+
+When a puzzle or quest reveals a hidden exit, the effect is stored per-character. If the
+content changes after a character already completed the puzzle (e.g., a new hidden exit is
+added), old characters may be in an inconsistent state. To fix this, add reconciliation
+logic to the room's `onEnterScript`:
+
+```lua
+-- At the top of the room entry script, before atmospheric messages:
+local solved = tales.game.getFlag(charID, "puzzle_solved")
+if solved and not tales.game.hasRevealedExit(charID, roomID, "exit_name") then
+  tales.game.revealExit(roomID, "exit_name", charID)
+  tales.game.msgToCharacter(charID, "The passage stands open.")
+end
+```
+
+`revealExit` is idempotent — calling it when the exit is already revealed is a no-op
+(no DB write, no room update sent). This makes it safe to call unconditionally.
 
 ### tales.utils
 

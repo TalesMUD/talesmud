@@ -20,6 +20,11 @@
     padding: 0.6rem 1rem;
   }
 
+  :global(#dropdown1.dropdown-content li:hover),
+  :global(#dropdown1.dropdown-content li.active) {
+    background-color: rgba(61, 220, 132, 0.08);
+  }
+
   :global(#dropdown1.dropdown-content li > a:hover) {
     background: rgba(61, 220, 132, 0.08);
     color: #e8e6e3;

@@ -331,6 +331,12 @@ func RegisterGameModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 			return 1
 		}
 
+		// Skip if already revealed (avoid unnecessary DB write and room update)
+		if character.HasRevealedExit(roomID, exitName) {
+			L.Push(lua.LBool(true))
+			return 1
+		}
+
 		character.RevealExit(roomID, exitName)
 		if err := facade.CharactersService().Update(characterID, character); err != nil {
 			logrus.WithField("characterID", characterID).WithError(err).Warn("[Script] revealExit: failed to persist character")
@@ -345,7 +351,7 @@ func RegisterGameModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 			charUser, err := facade.UsersService().FindByID(character.BelongsUserID)
 			if err == nil && charUser != nil {
 				roomView := util.RoomWithCharacterReveals(room, character)
-				roomUpdate := messages.NewRoomUpdateMessage(roomView, game, character)
+				roomUpdate := messages.NewRoomUpdateMessage(roomView, charUser, game, character)
 				roomUpdate.Audience = messages.MessageAudienceUser
 				roomUpdate.AudienceID = charUser.ID
 				game.SendMessage() <- roomUpdate
@@ -353,6 +359,27 @@ func RegisterGameModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 		}
 
 		L.Push(lua.LBool(true))
+		return 1
+	}))
+
+	// tales.game.hasRevealedExit(characterID, roomID, exitName) - Check if character has revealed a hidden exit
+	mod.RawSetString("hasRevealedExit", L.NewFunction(func(L *lua.LState) int {
+		characterID := L.CheckString(1)
+		roomID := L.CheckString(2)
+		exitName := L.CheckString(3)
+		facade := runner.GetFacade()
+		if facade == nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+
+		character, err := facade.CharactersService().FindByID(characterID)
+		if err != nil || character == nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+
+		L.Push(lua.LBool(character.HasRevealedExit(roomID, exitName)))
 		return 1
 	}))
 
