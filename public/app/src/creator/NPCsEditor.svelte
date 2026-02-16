@@ -315,7 +315,7 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="space-y-1.5">
-        <label class="label-caps">Dialog</label>
+        <div class="label-caps">Dialog</div>
         <EntitySelectButton
           value={$store.selectedElement.dialogID}
           elements={$dialogsValueHelp || []}
@@ -326,7 +326,7 @@
         />
       </div>
       <div class="space-y-1.5">
-        <label class="label-caps">Idle Dialog</label>
+        <div class="label-caps">Idle Dialog</div>
         <EntitySelectButton
           value={$store.selectedElement.idleDialogID}
           elements={$dialogsValueHelp || []}
@@ -340,7 +340,7 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div class="space-y-1.5">
-        <label class="label-caps">Current Room</label>
+        <div class="label-caps">Current Room</div>
         <EntitySelectButton
           value={$store.selectedElement.currentRoomID}
           elements={$roomsValueHelp || []}

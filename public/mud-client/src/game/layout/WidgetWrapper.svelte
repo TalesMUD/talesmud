@@ -9,9 +9,14 @@
   const dispatch = createEventDispatcher();
 
   $: config = getWidgetConfig(widget.widgetType);
+  $: isTabContainer = widget.widgetType === 'tabcontainer';
 
   function handleRemove() {
     dispatch('remove', { id: widget.id });
+  }
+
+  function handleConfigure() {
+    dispatch('configure', { id: widget.id });
   }
 </script>
 
@@ -94,6 +99,34 @@
   }
 
   .remove-btn i {
+    font-size: 18px;
+  }
+
+  .configure-btn {
+    position: absolute;
+    top: 8px;
+    right: 44px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(59, 130, 246, 0.9);
+    border: none;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    transition: all 0.15s ease;
+    z-index: 120;
+  }
+
+  .configure-btn:hover {
+    background: #3b82f6;
+    transform: scale(1.1);
+  }
+
+  .configure-btn i {
     font-size: 18px;
   }
 
@@ -276,6 +309,11 @@
       </span>
       <span class="resize-hint">Drag to move, edges to resize</span>
     </div>
+    {#if isTabContainer}
+      <button class="configure-btn" on:click={handleConfigure} title="Configure tabs">
+        <i class="material-icons">settings</i>
+      </button>
+    {/if}
     <button class="remove-btn" on:click={handleRemove} title="Remove widget">
       <i class="material-icons">close</i>
     </button>

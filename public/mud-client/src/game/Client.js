@@ -239,6 +239,8 @@ function createClient(renderer, characterCreator, muxStore) {
     // Show notification
     if (mux) {
       mux.addQuestNotification({
+        id: `quest-accepted-${msg.questId || Date.now()}`,
+        questId: msg.questId,
         type: 'accepted',
         questName: msg.questName || 'Quest',
         message: msg.message || 'Quest accepted',
@@ -257,6 +259,8 @@ function createClient(renderer, characterCreator, muxStore) {
       const completedObjective = msg.objectives.find(o => o.completed);
       if (completedObjective) {
         mux.addQuestNotification({
+          id: `quest-progress-${msg.questId || Date.now()}-${completedObjective.objectiveId}`,
+          questId: msg.questId,
           type: 'progress',
           questName: msg.questName || 'Quest',
           message: `Objective complete: ${completedObjective.description || 'Objective completed'}`,
@@ -275,6 +279,8 @@ function createClient(renderer, characterCreator, muxStore) {
     // Show completion notification with rewards
     if (mux) {
       mux.addQuestNotification({
+        id: `quest-completed-${msg.questId || Date.now()}`,
+        questId: msg.questId,
         type: 'completed',
         questName: msg.questName || 'Quest',
         message: msg.message || 'Quest completed!',

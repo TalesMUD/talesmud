@@ -142,6 +142,11 @@ func examineItem(item *items.Item, equippedItems map[items.ItemSlot]*items.Item)
 		sb.WriteString("Status: [EQUIPPED]\n")
 	}
 
+	// Bound status
+	if item.IsBound() {
+		sb.WriteString("Status: [BOUND]\n")
+	}
+
 	// Stack info
 	if item.Stackable {
 		sb.WriteString("Stack: ")

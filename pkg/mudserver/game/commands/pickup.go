@@ -151,6 +151,9 @@ func (command *PickupCommand) Execute(game def.GameCtrl, message *messages.Messa
 			return true
 		}
 
+		// Bind the instance to this character
+		instance.BoundToCharacterID = message.Character.ID
+
 		// Add instance to inventory
 		err = message.Character.Inventory.AddItem(instance)
 		if err != nil {

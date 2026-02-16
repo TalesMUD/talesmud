@@ -87,16 +87,61 @@ func (h *QuestsHandler) DeleteQuestByID(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"status": "deleted"})
 }
 
-// GetQuestLog returns quest progress for a character
+// QuestLogEntry combines quest progress with quest definition for frontend
+type QuestLogEntry struct {
+	QuestID     string                      `json:"questId"`
+	QuestName   string                      `json:"questName"`
+	Status      string                      `json:"status"`
+	Description string                      `json:"description"`
+	Category    string                      `json:"category,omitempty"`
+	Level       int32                       `json:"level,omitempty"`
+	Objectives  []quests.ObjectiveProgress  `json:"objectives"`
+	Rewards     *quests.Reward              `json:"rewards,omitempty"`
+	AcceptedAt  string                      `json:"acceptedAt,omitempty"`
+	CompletedAt string                      `json:"completedAt,omitempty"`
+}
+
+// GetQuestLog returns quest progress for a character with full quest details
 func (h *QuestsHandler) GetQuestLog(c *gin.Context) {
 	characterID := c.Param("characterId")
 
-	result, err := h.Service.GetQuestLog(characterID)
+	progressList, err := h.Service.GetQuestLog(characterID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, result)
+
+	// Build enriched quest log with quest definitions
+	entries := make([]QuestLogEntry, 0, len(progressList))
+	for _, progress := range progressList {
+		quest, err := h.Service.FindByID(progress.QuestID)
+		if err != nil || quest == nil {
+			// Skip if quest definition not found
+			continue
+		}
+
+		entry := QuestLogEntry{
+			QuestID:     progress.QuestID,
+			QuestName:   quest.Name,
+			Status:      string(progress.Status),
+			Description: quest.Description,
+			Category:    quest.Category,
+			Level:       quest.Level,
+			Objectives:  progress.Objectives,
+			Rewards:     &quest.Rewards,
+		}
+
+		if !progress.AcceptedAt.IsZero() {
+			entry.AcceptedAt = progress.AcceptedAt.Format("2006-01-02T15:04:05Z07:00")
+		}
+		if !progress.CompletedAt.IsZero() {
+			entry.CompletedAt = progress.CompletedAt.Format("2006-01-02T15:04:05Z07:00")
+		}
+
+		entries = append(entries, entry)
+	}
+
+	c.JSON(http.StatusOK, entries)
 }
 
 // AcceptQuest accepts a quest for a character

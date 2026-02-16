@@ -768,7 +768,7 @@
       </div>
 
       <div class="space-y-1.5">
-        <label class="label-caps">On Enter Script</label>
+        <div class="label-caps">On Enter Script</div>
         <EntitySelectButton
           value={$store.selectedElement.onEnterScriptID}
           elements={$scriptsValueHelp || []}

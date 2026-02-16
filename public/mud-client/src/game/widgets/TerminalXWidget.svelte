@@ -67,7 +67,7 @@
     if (/^Exits?:/i.test(trimmed)) return 'tx-cyan';
 
     // Room entities
-    if (trimmed.startsWith('- In the room:')) return 'tx-muted';
+    if (trimmed.startsWith('- In the area:')) return 'tx-muted';
 
     // System / feedback
     if (trimmed === 'You look around ...') return 'tx-muted';

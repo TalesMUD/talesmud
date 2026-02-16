@@ -108,7 +108,7 @@ func runImport(folderName, sqlitePath string, verbose, dryRun bool) {
 	fmt.Printf("  Dialogs:     %d\n", result.DialogsImported)
 	fmt.Printf("  Rooms:       %d\n", result.RoomsImported)
 	fmt.Printf("  Assets:      %d\n", result.AssetsImported)
-	fmt.Printf("  Characters:  %d relocated\n", result.CharactersRelocated)
+	fmt.Printf("  Characters:  %d relocated (room no longer exists)\n", result.CharactersRelocated)
 	fmt.Printf("  Duration:    %v\n", result.Duration)
 
 	if result.Backup != "" {

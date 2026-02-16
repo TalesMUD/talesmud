@@ -1403,10 +1403,6 @@
     pointer-events: none;
   }
 
-  .area-bounds {
-    pointer-events: none;
-  }
-
   .area-label {
     pointer-events: none;
     font-family: system-ui, -apple-system, sans-serif;

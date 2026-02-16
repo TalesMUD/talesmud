@@ -107,26 +107,26 @@
       <!-- Basic Info -->
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Name</label>
-          <input type="text" bind:value={$store.selectedElement.name}
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1" for="skill-name">Name</label>
+          <input id="skill-name" type="text" bind:value={$store.selectedElement.name}
             class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm" />
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Level Required</label>
-          <input type="number" bind:value={$store.selectedElement.levelRequired} min="1"
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1" for="skill-level">Level Required</label>
+          <input id="skill-level" type="number" bind:value={$store.selectedElement.levelRequired} min="1"
             class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm" />
         </div>
       </div>
 
       <div>
-        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Description</label>
-        <textarea bind:value={$store.selectedElement.description} rows="2"
+        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1" for="skill-description">Description</label>
+        <textarea id="skill-description" bind:value={$store.selectedElement.description} rows="2"
           class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm"></textarea>
       </div>
 
       <!-- Classes (multi-select checkboxes) -->
       <div>
-        <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Classes</label>
+        <div class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Classes</div>
         <div class="flex flex-wrap gap-3">
           {#each classOptions as cls}
             <label class="inline-flex items-center gap-1.5 text-sm cursor-pointer">
@@ -143,8 +143,8 @@
       <!-- Resource Type -->
       <div class="grid grid-cols-3 gap-4">
         <div>
-          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Resource Type</label>
-          <select bind:value={$store.selectedElement.resourceType}
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1" for="skill-resource-type">Resource Type</label>
+          <select id="skill-resource-type" bind:value={$store.selectedElement.resourceType}
             class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm">
             {#each resourceTypes as rt}
               <option value={rt.value}>{rt.label}</option>
@@ -153,15 +153,15 @@
         </div>
         {#if showMana}
           <div>
-            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Mana Cost</label>
-            <input type="number" bind:value={$store.selectedElement.manaCost} min="0"
+            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1" for="skill-mana-cost">Mana Cost</label>
+            <input id="skill-mana-cost" type="number" bind:value={$store.selectedElement.manaCost} min="0"
               class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm" />
           </div>
         {/if}
         {#if showCooldown}
           <div>
-            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Cooldown (rounds)</label>
-            <input type="number" bind:value={$store.selectedElement.cooldownRounds} min="0"
+            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1" for="skill-cooldown">Cooldown (rounds)</label>
+            <input id="skill-cooldown" type="number" bind:value={$store.selectedElement.cooldownRounds} min="0"
               class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm" />
           </div>
         {/if}
@@ -170,8 +170,8 @@
       <!-- Targeting & Effect -->
       <div class="grid grid-cols-3 gap-4">
         <div>
-          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Target</label>
-          <select bind:value={$store.selectedElement.target}
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1" for="skill-target">Target</label>
+          <select id="skill-target" bind:value={$store.selectedElement.target}
             class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm">
             {#each targetTypes as t}
               <option value={t.value}>{t.label}</option>
@@ -179,8 +179,8 @@
           </select>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Effect</label>
-          <select bind:value={$store.selectedElement.effect}
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1" for="skill-effect">Effect</label>
+          <select id="skill-effect" bind:value={$store.selectedElement.effect}
             class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm">
             {#each effectTypes as e}
               <option value={e.value}>{e.label}</option>
@@ -188,8 +188,8 @@
           </select>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Scaling Attribute</label>
-          <select bind:value={$store.selectedElement.scalingAttr}
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1" for="skill-scaling-attr">Scaling Attribute</label>
+          <select id="skill-scaling-attr" bind:value={$store.selectedElement.scalingAttr}
             class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm">
             {#each scalingAttrs as attr}
               <option value={attr}>{attr}</option>
@@ -201,18 +201,18 @@
       <!-- Power & Scaling -->
       <div class="grid grid-cols-3 gap-4">
         <div>
-          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Base Power</label>
-          <input type="number" bind:value={$store.selectedElement.basePower} min="0"
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1" for="skill-base-power">Base Power</label>
+          <input id="skill-base-power" type="number" bind:value={$store.selectedElement.basePower} min="0"
             class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm" />
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Scaling Factor</label>
-          <input type="number" bind:value={$store.selectedElement.scalingFactor} min="0" step="0.1"
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1" for="skill-scaling-factor">Scaling Factor</label>
+          <input id="skill-scaling-factor" type="number" bind:value={$store.selectedElement.scalingFactor} min="0" step="0.1"
             class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm" />
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Hit Count</label>
-          <input type="number" bind:value={$store.selectedElement.hitCount} min="1"
+          <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1" for="skill-hit-count">Hit Count</label>
+          <input id="skill-hit-count" type="number" bind:value={$store.selectedElement.hitCount} min="1"
             class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm" />
         </div>
       </div>
@@ -221,14 +221,14 @@
       {#if showDuration}
         <div class="grid grid-cols-3 gap-4">
           <div>
-            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Duration (rounds)</label>
-            <input type="number" bind:value={$store.selectedElement.duration} min="0"
+            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1" for="skill-duration">Duration (rounds)</label>
+            <input id="skill-duration" type="number" bind:value={$store.selectedElement.duration} min="0"
               class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm" />
           </div>
           {#if showBuffFields}
             <div>
-              <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Buff Stat</label>
-              <select bind:value={$store.selectedElement.buffStat}
+              <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1" for="skill-buff-stat">Buff Stat</label>
+              <select id="skill-buff-stat" bind:value={$store.selectedElement.buffStat}
                 class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm">
                 <option value="">None</option>
                 <option value="ATK">ATK</option>
@@ -240,8 +240,8 @@
               </select>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Buff %</label>
-              <input type="number" bind:value={$store.selectedElement.buffPercent} step="0.05"
+              <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1" for="skill-buff-percent">Buff %</label>
+              <input id="skill-buff-percent" type="number" bind:value={$store.selectedElement.buffPercent} step="0.05"
                 class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm" />
             </div>
           {/if}
@@ -262,8 +262,8 @@
         <summary class="text-xs font-semibold text-slate-500 dark:text-slate-400 cursor-pointer">Secondary Effect</summary>
         <div class="grid grid-cols-2 gap-4 mt-3">
           <div>
-            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Effect</label>
-            <select bind:value={$store.selectedElement.secondaryEffect}
+            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1" for="skill-secondary-effect">Effect</label>
+            <select id="skill-secondary-effect" bind:value={$store.selectedElement.secondaryEffect}
               class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm">
               <option value="">None</option>
               {#each effectTypes as e}
@@ -272,8 +272,8 @@
             </select>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Target</label>
-            <select bind:value={$store.selectedElement.secondaryTarget}
+            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1" for="skill-secondary-target">Target</label>
+            <select id="skill-secondary-target" bind:value={$store.selectedElement.secondaryTarget}
               class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm">
               <option value="">Same as primary</option>
               {#each targetTypes as t}
@@ -282,13 +282,13 @@
             </select>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Base Power</label>
-            <input type="number" bind:value={$store.selectedElement.secondaryBasePower} min="0"
+            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1" for="skill-secondary-base-power">Base Power</label>
+            <input id="skill-secondary-base-power" type="number" bind:value={$store.selectedElement.secondaryBasePower} min="0"
               class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm" />
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Scaling Factor</label>
-            <input type="number" bind:value={$store.selectedElement.secondaryScaling} min="0" step="0.1"
+            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1" for="skill-secondary-scaling">Scaling Factor</label>
+            <input id="skill-secondary-scaling" type="number" bind:value={$store.selectedElement.secondaryScaling} min="0" step="0.1"
               class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm" />
           </div>
         </div>

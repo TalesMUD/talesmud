@@ -121,25 +121,4 @@
   .exit-slot.has-exit .direction-label {
     color: #4caf50;
   }
-
-  .exit-select {
-    width: 100%;
-    padding: 6px 8px;
-    font-size: 12px;
-    background: #2a2a2a;
-    border: 1px solid #3a3a3a;
-    border-radius: 4px;
-    color: #fff;
-    cursor: pointer;
-  }
-
-  .exit-select:focus {
-    outline: none;
-    border-color: #00bcd4;
-  }
-
-  .exit-select option {
-    background: #2a2a2a;
-    color: #fff;
-  }
 </style>

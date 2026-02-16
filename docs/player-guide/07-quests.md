@@ -56,23 +56,78 @@ talk village elder
 
 **Methods:**
 1. **Quest Log Widget** - Always-visible panel showing all quests
-2. Check notifications - Toasts appear when quests update
+2. **Quest Log Overlay** - Press Q or click quest icon to open full screen view
+3. **Quest Notifications** - Toast notifications appear when quests update
 
-### Quest Log Layout
+### Quest Log Features
 
-**Two Sections:**
+#### Search Quests 🔍
+Find quests quickly by typing in the search bar:
+- Searches quest names, descriptions, and objectives
+- Real-time filtering as you type
+- Click × to clear search
+- Case-insensitive matching
+
+**Example:**
+- Type "goblin" to find all goblin-related quests
+- Type "collect" to find collection objectives
+
+#### Filter Quests 📂
+Organize your quest log with filters:
+
+**Category Filter:**
+- All Types (default)
+- Main - Story quests
+- Side - Optional quests
+- Daily - Repeatable daily quests
+
+**Visibility Toggles:**
+- ☑ Completed - Show/hide completed quests
+- ☐ Abandoned - Show/hide abandoned quests
+
+#### Sort Quests 📊
+Change quest order with sort options:
+- **Sort: Status** - Groups by Active → Completed → Abandoned
+- **Sort: Name** - Alphabetical order
+- **Sort: Level** - Lowest to highest level
+- **Sort: Type** - Groups by category
+
+#### Pin Important Quests 📌
+Keep track of priority quests:
+- Click "Pin Quest" button in quest details
+- Pinned quests appear in special "📌 Pinned" section at top
+- Pin up to 5 quests at once
+- Pinned quests have golden pulsing indicator
+- Click "Unpin Quest" to remove
+
+**Why Pin Quests?**
+- Focus on main story quests
+- Track time-limited quests
+- Remember which quests to complete first
+- Quick access to important objectives
+
+### Quest Log Sections
+
+#### 📌 Pinned Quests (if any)
+- Your priority quests
+- Always at the top
+- Special golden highlighting
+- Quick access to objectives
 
 #### Active Quests
 - Quests you're currently working on
 - Can have multiple active at once
-- Shows progress on objectives
-- Expandable for full details
+- Shows progress on objectives (X/Y format)
+- Click to expand for full details
+- Pin button to mark as priority
+- Abandon button to drop quest
 
 #### Completed Quests
 - Quests you've finished
 - Historical record
-- Can review for story
-- Shows rewards received
+- Click to expand and review
+- Shows completion date
+- Displays rewards earned
 
 ### Quest Information
 
@@ -82,28 +137,128 @@ Each quest displays:
 - Title of the quest
 - Often hints at the objective
 
+**Quest Badges:**
+- **Level Badge** - Shows recommended level (e.g., "L5")
+- **Category Badge** - Quest type (Main/Side/Daily)
+  - 🟠 Main - Amber/Orange color
+  - 🔵 Side - Blue color
+  - 🟣 Daily - Purple color
+
 **Description:**
 - Background story
 - Why this quest matters
 - Context for objectives
+- Expandable in quest details
 
 **Objectives:**
 - List of tasks to complete
 - Progress tracking (e.g., "2/5 completed")
-- Checkmarks when finished
+- Real-time updates as you progress
+- ✓ Checkmarks when finished
 - Multiple objectives per quest
+
+**Rewards Preview:**
+- 💫 Experience Points (XP)
+- 💰 Gold
+- 🎁 Items (count shown)
+- Visible before completing quest
 
 **Example Quest Display:**
 ```
-Quest: The Wolf Problem
+📌 Quest: The Wolf Problem [L3] [Main]
 Description: Wolves have been attacking travelers.
 Help protect the road by dealing with them.
 
 Objectives:
-✓ Talk to Village Elder
-✓ Defeat wolves (5/5)
-☐ Return to Village Elder
+✓ Talk to Village Elder (1/1)
+⬜ Defeat wolves (3/5)
+⬜ Return to Village Elder (0/1)
+
+Rewards:
+💫 500 XP
+💰 50 Gold
+🎁 1 item(s)
+
+[Pin Quest] [Abandon Quest]
 ```
+
+### Quest History & Statistics 📊
+
+Click the 📊 button in the quest log header to view your quest statistics:
+
+**Quest Summary:**
+- Total Quests - All quests you've encountered
+- Active - Currently in progress
+- Completed - Successfully finished
+- Completion Rate - Your success percentage
+
+**Total Rewards Earned:**
+- 💫 Cumulative XP from all completed quests
+- 💰 Total gold earned from quests
+- Tracks your overall quest progress
+
+**Category Breakdown:**
+- Main quests completed
+- Side quests completed
+- Daily quests completed
+
+**Quest Achievements:** See [Quest Achievements](#quest-achievements) section below
+
+### Quest Achievements 🏆
+
+Unlock achievements by completing quests:
+
+#### Progression Achievements
+1. **🏆 First Steps** - Complete your first quest
+2. **🏆 Quest Novice** - Complete 5 quests
+3. **🏆 Quest Veteran** - Complete 10 quests
+4. **🏆 Quest Master** - Complete 25 quests
+
+#### Category Achievements
+5. **🏆 Story Seeker** - Complete 5 main quests
+6. **🏆 Side Quest Hero** - Complete 10 side quests
+7. **🏆 Daily Devotee** - Complete 5 daily quests
+
+#### Special Achievements
+8. **🏆 Completionist** - Achieve 100% completion rate (minimum 5 quests)
+
+**Achievement Display:**
+- Unlocked achievements shown with 🏆 gold trophy
+- Locked achievements shown with 🔒 and grayed out
+- Click "Locked Achievements" to see what you can unlock next
+- Achievements tracked automatically
+- View in Quest History panel (📊 button)
+
+## Quest Categories
+
+Quests are organized into three main categories:
+
+### Main Quests 🟠
+- **Badge Color:** Amber/Orange
+- **Purpose:** Advance the main story
+- **Rewards:** Best rewards, significant XP
+- **Recommended:** Do these first
+- **Impact:** Unlock new areas and features
+
+### Side Quests 🔵
+- **Badge Color:** Blue
+- **Purpose:** Optional content, side stories
+- **Rewards:** Good rewards, moderate XP
+- **Recommended:** Do when available
+- **Impact:** Extra gear, gold, and lore
+
+### Daily Quests 🟣
+- **Badge Color:** Purple
+- **Purpose:** Repeatable quests for daily rewards
+- **Rewards:** Consistent XP and gold
+- **Recommended:** Do daily for steady progress
+- **Impact:** Regular income and experience
+
+**Filtering by Category:**
+- Use category dropdown in Quest Log
+- Select Main/Side/Daily to filter
+- Helps focus on specific quest types
+- "All Types" shows everything
 
 ## Quest Types
 
@@ -281,34 +436,57 @@ Rewards:
 
 ## Quest Notifications
 
+Quest notifications appear in the top-right corner when quests update.
+
 ### Notification Types
 
 **Quest Accepted:**
 ```
-Quest Accepted: The Wolf Problem
+Quest Name
+Quest accepted
 ```
-- Appears when you accept
-- Brief confirmation
+- Appears when you accept a quest
+- Border: Amber/orange
 - Auto-dismisses after 5 seconds
 
 **Quest Progress:**
 ```
-Quest Progress: Wolves Defeated (3/5)
+Quest Name
+Objective complete: [objective description]
 ```
+- Shows when you complete an objective
+- Border: Blue
 - Updates on major milestones
-- Keeps you informed
-- Useful during multi-step quests
+- Auto-dismisses after 5 seconds
 
 **Quest Completed:**
 ```
-Quest Completed: The Wolf Problem
-+ 500 XP
-+ 50 Gold
-+ Iron Sword
+Quest Name
+Quest completed!
 ```
-- Shows all rewards
+- Appears when all objectives are done
+- Border: Green
 - Celebration moment
-- Detailed breakdown
+- Auto-dismisses after 5 seconds
+
+### Notification Interactions
+
+**Click to View:**
+- Click anywhere on a notification
+- Opens quest in Quest Log
+- Automatically dismisses notification
+- Quick way to check quest details
+
+**Manual Dismiss:**
+- Click the × button on the right
+- Immediately removes notification
+- Smooth slide-out animation
+- No need to wait for auto-dismiss
+
+**Hover Effects:**
+- Notifications highlight when you hover
+- Shows they're interactive
+- Slight movement animation indicates clickability
 
 ## Quest Strategies
 
@@ -337,8 +515,22 @@ Quest Completed: The Wolf Problem
 
 ### Quest Prioritization
 
+**Using Quest Pinning:**
+1. **Pin Main Story Quests** - Keep story progression visible
+2. **Pin Time-Limited Quests** - Daily quests or events
+3. **Pin Gear Upgrade Quests** - Equipment reward quests
+4. **Pin Quest Chain Ends** - Track multi-part quest progress
+5. **Maximum 5 Pins** - Choose wisely
+
+**Filtering for Focus:**
+- Filter by "Main" to focus on story
+- Filter by "Side" for completion runs
+- Filter by "Daily" for daily routine
+- Sort by "Level" to find appropriate quests
+
 **Do First:**
-- Main story quests (usually give best rewards)
+- Pinned quests (your priorities)
+- Main story quests (🟠 badge, best rewards)
 - Quests at your level
 - Quests with equipment rewards
 - Quests that unlock new areas
@@ -349,7 +541,9 @@ Quest Completed: The Wolf Problem
 - Delivery quests to far locations (save for travel)
 
 **Stack and Complete:**
+- Use search to find similar quests (e.g., search "wolf")
 - Take all quests in a town
+- Pin the most important ones
 - Go to quest areas
 - Complete all objectives
 - Return to town
@@ -387,16 +581,32 @@ Some games limit active quests:
 ### Abandoning Quests
 
 If you need to drop a quest:
-- May have "Abandon" option in Quest Log
+
+**How to Abandon:**
+1. Open the quest in Quest Log
+2. Click to expand quest details
+3. Click red "Abandon Quest" button
+4. Confirm the abandonment dialog
+
+**What Happens:**
 - Quest removed from active list
-- Can usually re-accept from NPC
-- Progress may be lost
+- Moves to "Abandoned" section (if "Show Abandoned" is checked)
+- Progress is lost
+- Can usually re-accept from original NPC
+- Quest items may be removed from inventory
 
 **When to Abandon:**
-- Quest too difficult for your level
-- Not interested in rewards
-- Need space for other quests
+- Quest too difficult for your current level
+- Not interested in the rewards
+- Accidentally accepted wrong quest
 - Stuck and can't complete
+- Want to focus on other quests
+
+**Tips:**
+- Don't abandon quest chains mid-way
+- Check rewards before abandoning
+- Consider coming back when higher level instead
+- Some quests may have time limits
 
 ### Quest Items
 
@@ -479,11 +689,36 @@ Some quests have dialog choices:
 ### General Tips
 
 1. **Talk to everyone** - Many NPCs have quests
-2. **Read descriptions** - Clues for objectives often in text
-3. **Check Quest Log often** - Track progress
-4. **Don't hoard quests** - Complete and turn in regularly
-5. **Group quests by area** - Efficient completion
-6. **Keep inventory space** - Room for quest items and rewards
+2. **Use Search** - Type keywords to find specific quests quickly
+3. **Pin Important Quests** - Keep priorities visible at top
+4. **Filter by Category** - Focus on Main/Side/Daily as needed
+5. **Check Quest History** - Track your overall progress and achievements
+6. **Read Rewards Before Starting** - Know what you'll earn
+7. **Sort by Level** - Find quests appropriate for your character
+8. **Click Notifications** - Quick way to open quest details
+9. **Group quests by area** - Use search to find location-based quests
+10. **Keep inventory space** - Room for quest items and rewards
+
+### Advanced Quest Features
+
+**Quest Search Tips:**
+- Search by enemy type: "goblin", "wolf", "bandit"
+- Search by action: "collect", "defeat", "deliver"
+- Search by location: "marsh", "forest", "cave"
+- Search by item: "herb", "sword", "letter"
+
+**Quest History Features:**
+- Track completion rate percentage
+- See total XP and gold earned from quests
+- View category breakdown (Main/Side/Daily)
+- Monitor achievement progress
+- Review completed quest count
+
+**Quest Organization:**
+- Pin up to 5 most important quests
+- Filter out completed quests when focusing on active
+- Show abandoned quests to see what you've dropped
+- Sort by different criteria for different workflows
 
 ### Common Mistakes
 
@@ -506,37 +741,90 @@ Some quests have dialog choices:
 
 ## Quest-Related Commands
 
-| Command | Description |
-|---------|-------------|
+| Command | Action |
+|---------|--------|
 | `talk [npc]` | Start quest conversation |
 | `[number]` | Select dialog/quest option |
-| View Quest Log Widget | See all quests and progress |
+| `abandon [quest name]` | Abandon an active quest |
+| Open Quest Log Widget | Click quest icon or view always-visible widget |
+| Click 📊 button | Open Quest History & Statistics panel |
+| Type in search bar | Filter quests by keywords |
+| Click notification | Open quest details from notification |
+
+## Quest Log Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| **Q** | Toggle Quest Log overlay (if implemented) |
+| **Esc** | Close Quest Log overlay |
+| **Click quest** | Expand/collapse quest details |
+| **Click 📌 pin button** | Pin/unpin quest |
+| **Click × dismiss** | Dismiss notification |
 
 ## Troubleshooting
 
 ### Quest Won't Complete
 
 **Check:**
-- All objectives have checkmarks
+- All objectives have checkmarks (✓)
 - You're talking to correct NPC
 - You're selecting right dialog option
 - Quest items still in inventory
+- Quest hasn't been abandoned
+
+**Quick Fix:**
+- Expand quest in Quest Log
+- Verify all objectives show (X/X) completion
+- Look for completion requirements in description
 
 ### Lost Track of Quest
 
 **Solutions:**
-- Open Quest Log Widget
-- Read quest description
-- Check objectives list
-- Return to quest giver for hints
+1. **Use Quest Search** - Type quest name or keywords
+2. **Check Quest Log** - Open and expand the quest
+3. **Read Description** - Quest details explain objectives
+4. **Pin the Quest** - Keep it visible at top
+5. **Check Objectives** - See what's remaining
 
-### Can't Find Quest NPC
+**Filter Tips:**
+- Make sure quest isn't filtered out
+- Check "Show Completed" if looking for finished quest
+- Check "Show Abandoned" if you dropped it
+
+### Can't Find Quest Objective
 
 **Tips:**
-- Use minimap to navigate
-- Re-read quest text for location
-- Ask in chat (if multiplayer)
-- Explore systematically
+- Read objective description carefully
+- Use search to find similar completed quests for hints
+- Check quest category badge (Main quests often in story areas)
+- Expand quest to see full description
+- Use minimap to navigate to quest areas
+
+### Too Many Active Quests
+
+**Solutions:**
+1. **Use Filters** - Hide completed quests
+2. **Pin Important Ones** - Keep 5 priorities visible
+3. **Abandon Unnecessary** - Drop quests you won't do
+4. **Sort by Level** - Focus on appropriate difficulty
+5. **Use Categories** - Filter Main/Side/Daily
+
+### Quest Search Not Finding Quest
+
+**Check:**
+- Spelling of search terms
+- Try searching for part of the name
+- Search for objective keywords instead
+- Clear search and browse manually
+- Quest might be in filtered category
+
+### Achievement Not Unlocking
+
+**Verify:**
+- Check exact requirements in Quest History (📊)
+- Some achievements need specific quest categories
+- Completionist needs minimum 5 quests
+- Progress may be delayed, refresh Quest History
 
 ## Next Steps
 

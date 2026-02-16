@@ -201,9 +201,9 @@ func (w *WorldImporter) Import() (*ImportResult, error) {
 		w.addError("Failed to copy assets: %v", err)
 	}
 
-	// Relocate characters to starting room
-	log.Info("Relocating characters to starting room...")
-	result.CharactersRelocated, err = w.relocateCharacters()
+	// Relocate characters whose rooms no longer exist
+	log.Info("Checking character room assignments...")
+	result.CharactersRelocated, err = w.relocateCharacters(yamlRooms)
 	if err != nil {
 		w.addError("Failed to relocate characters: %v", err)
 	}
@@ -711,9 +711,17 @@ func copyFile(src, dst string) error {
 	return err
 }
 
-// relocateCharacters moves all characters to the starting room (R0001)
-func (w *WorldImporter) relocateCharacters() (int, error) {
+// relocateCharacters checks each character's room against the imported world.
+// Characters whose current room still exists are left in place.
+// Characters whose room no longer exists are moved to the starting room (R0001).
+func (w *WorldImporter) relocateCharacters(yamlRooms []*YAMLRoom) (int, error) {
 	startRoomID := "R0001"
+
+	// Build a set of valid room IDs from the newly imported rooms
+	validRooms := make(map[string]bool, len(yamlRooms))
+	for _, r := range yamlRooms {
+		validRooms[r.ID] = true
+	}
 
 	chars, err := w.repos.Characters().FindAll()
 	if err != nil {
@@ -722,15 +730,36 @@ func (w *WorldImporter) relocateCharacters() (int, error) {
 
 	count := 0
 	for _, char := range chars {
-		char.CurrentRoomID = startRoomID
-		char.BoundRoomID = startRoomID
+		needsUpdate := false
+
+		if !validRooms[char.CurrentRoomID] {
+			log.WithFields(log.Fields{
+				"name":    char.Name,
+				"oldRoom": char.CurrentRoomID,
+			}).Info("Room no longer exists, relocating to starting room")
+			char.CurrentRoomID = startRoomID
+			needsUpdate = true
+		}
+
+		if !validRooms[char.BoundRoomID] {
+			char.BoundRoomID = startRoomID
+			needsUpdate = true
+		}
+
+		if !needsUpdate {
+			if w.verbose {
+				log.WithFields(log.Fields{
+					"name": char.Name,
+					"room": char.CurrentRoomID,
+				}).Debug("Character room still exists, keeping in place")
+			}
+			continue
+		}
+
 		if err := w.repos.Characters().Update(char.ID, char); err != nil {
 			w.addError("Failed to relocate character %s: %v", char.Name, err)
 		} else {
 			count++
-			if w.verbose {
-				log.WithField("name", char.Name).Debug("Relocated character")
-			}
 		}
 	}
 

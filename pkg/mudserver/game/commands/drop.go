@@ -8,7 +8,6 @@ import (
 
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
-	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
 )
 
 // DropCommand handles dropping items to the room
@@ -61,46 +60,19 @@ func (command *DropCommand) Execute(game def.GameCtrl, message *messages.Message
 		return true
 	}
 
-	// Handle dropping CopyOnPickup instances — destroy instead of placing in room
+	// Handle bound items — cannot be dropped to the ground
+	if item.IsBound() {
+		game.SendMessage() <- message.Reply("You cannot drop " + item.Name + ". It is bound to you. Use 'destroy " + item.Name + "' to discard it.")
+		return true
+	}
+
+	// Legacy fallback: check if this is an old CopyOnPickup instance without BoundToCharacterID
 	if item.TemplateID != "" {
 		template, terr := game.GetFacade().ItemsService().FindByID(item.TemplateID)
 		if terr == nil && template != nil && template.CopyOnPickup {
-			// Remove from inventory
-			_, err := message.Character.Inventory.RemoveItem(item.ID)
-			if err != nil {
-				log.WithError(err).Error("Error removing copy-on-pickup item from inventory")
-				game.SendMessage() <- message.Reply("You can't seem to let go of " + item.Name + ".")
-				return true
-			}
-
-			// Clear the collected flag so player can pick it up again
-			if message.Character.Flags != nil {
-				delete(message.Character.Flags, "collected_item:"+item.TemplateID)
-			}
-
-			// Persist character
-			err = game.GetFacade().CharactersService().Update(message.Character.ID, message.Character)
-			if err != nil {
-				log.WithError(err).Error("Error updating character")
-			}
-
-			// Delete the personal instance from DB
-			game.GetFacade().ItemsService().Delete(item.ID)
-
-			game.SendMessage() <- message.Reply("You discard " + item.Name + ". It fades away.")
-			if inv := messages.NewInventoryUpdateMessage(message); inv != nil {
-				game.SendMessage() <- inv
-			}
-
-			// Refresh room display so the CopyOnPickup item reappears for this player
-			room, rerr := game.GetFacade().RoomsService().FindByID(message.Character.CurrentRoomID)
-			if rerr == nil && room != nil {
-				roomView := util.RoomWithCharacterReveals(room, message.Character)
-				enterRoom := messages.NewEnterRoomMessage(roomView, message.FromUser, game, message.Character)
-				enterRoom.AudienceID = message.FromUser.ID
-				game.SendMessage() <- enterRoom
-			}
-
+			// Auto-bind the legacy item for future checks
+			item.BoundToCharacterID = message.Character.ID
+			game.SendMessage() <- message.Reply("You cannot drop " + item.Name + ". It is bound to you. Use 'destroy " + item.Name + "' to discard it.")
 			return true
 		}
 	}

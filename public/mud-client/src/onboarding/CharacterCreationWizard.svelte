@@ -572,6 +572,7 @@
   let showSuccess = false;
   let generatingName = false;
   let generatingDesc = false;
+  let nameInput;
 
   const backgrounds = [
     'img/bg/castle-1.png',
@@ -582,6 +583,11 @@
   $: currentBg = backgrounds[step - 1] || backgrounds[0];
   $: canProceedStep1 = selectedTemplate !== null;
   $: canProceedStep2 = characterName.trim().length >= 2;
+
+  // Focus name input when reaching step 2
+  $: if (step === 2 && nameInput) {
+    setTimeout(() => nameInput.focus(), 0);
+  }
 
   onMount(() => {
     getCharacterTemplates(
@@ -818,6 +824,7 @@
             <label class="form-label" for="char-name">Character Name</label>
             <div class="input-with-generate">
               <input
+                bind:this={nameInput}
                 id="char-name"
                 class="form-input"
                 type="text"
@@ -825,7 +832,6 @@
                 placeholder="Enter a name..."
                 on:keydown={handleNameKeydown}
                 maxlength="40"
-                autofocus
               />
               <button
                 class="btn-generate"

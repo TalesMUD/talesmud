@@ -328,15 +328,22 @@
 
 <!-- Ban Confirmation Modal -->
 {#if banModalOpen && targetUser}
-  <!-- svelte-ignore a11y-click-events-have-key-events -->
+  <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
   <div
+    role="dialog"
+    aria-modal="true"
+    tabindex="-1"
     class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
     on:click={closeBanModal}
+    on:keydown={(e) => { if (e.key === 'Escape') closeBanModal(); }}
   >
-    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
     <div
+      role="document"
+      tabindex="-1"
       class="card mx-4 w-full max-w-md p-6 space-y-4"
       on:click|stopPropagation
+      on:keydown|stopPropagation
     >
       {#if banConfirmStep === 1}
         <div class="flex items-center gap-3">
