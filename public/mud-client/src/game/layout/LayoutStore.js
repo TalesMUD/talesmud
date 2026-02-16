@@ -42,8 +42,6 @@ function toGridItems(widgets, editable = false) {
       y: widget.y,
       w: widget.w,
       h: widget.h,
-      min: { w: 4, h: 3 },
-      max: { w: 24, h: 20 },
       draggable: editable,
       resizable: editable,
       customResizer: editable  // Use custom resizers when in edit mode
@@ -53,15 +51,23 @@ function toGridItems(widgets, editable = false) {
 
 // Convert svelte-grid items back to our format
 function fromGridItems(items) {
-  return items.map(item => ({
-    id: item.id,
-    widgetType: item.widgetType,
-    x: item[24]?.x ?? item.x,
-    y: item[24]?.y ?? item.y,
-    w: item[24]?.w ?? item.w,
-    h: item[24]?.h ?? item.h,
-    visible: item.visible ?? true
-  }));
+  return items.map(item => {
+    const base = {
+      id: item.id,
+      widgetType: item.widgetType,
+      x: item[24]?.x ?? item.x,
+      y: item[24]?.y ?? item.y,
+      w: item[24]?.w ?? item.w,
+      h: item[24]?.h ?? item.h,
+      visible: item.visible ?? true
+    };
+    // Preserve tab container data
+    if (item.widgetType === 'tabcontainer') {
+      base.tabs = item.tabs || [];
+      base.activeTabIndex = item.activeTabIndex || 0;
+    }
+    return base;
+  });
 }
 
 // Set draggable/resizable on all widgets
@@ -190,13 +196,13 @@ function createLayoutStore() {
         w: config.defaultSize?.w || 6,
         h: config.defaultSize?.h || 6,
         visible: true,
+        // Initialize tab container data
+        ...(widgetType === 'tabcontainer' ? { tabs: [], activeTabIndex: 0 } : {}),
         [24]: {
           x: 0,
           y: 0,
           w: config.defaultSize?.w || 6,
           h: config.defaultSize?.h || 6,
-          min: { w: config.minSize?.w || 4, h: config.minSize?.h || 3 },
-          max: { w: 24, h: 20 },
           draggable: true,
           resizable: true,
           customResizer: true
@@ -241,13 +247,67 @@ function createLayoutStore() {
     },
 
     // Check if widget type can be added (respects maxInstances)
+    // Counts both top-level widgets and widgets inside tab containers
     canAddWidget(widgetType, registry) {
       const state = get({ subscribe });
       const config = registry[widgetType];
       if (!config) return false;
 
-      const currentCount = state.widgets.filter(w => w.widgetType === widgetType).length;
+      // Count top-level widgets of this type
+      let currentCount = state.widgets.filter(w => w.widgetType === widgetType).length;
+
+      // Also count widgets inside tab containers
+      for (const w of state.widgets) {
+        if (w.widgetType === 'tabcontainer' && w.tabs) {
+          currentCount += w.tabs.filter(t => t.widgetType === widgetType).length;
+        }
+      }
+
       return currentCount < (config.maxInstances || Infinity);
+    },
+
+    // Add a widget tab to a tab container
+    addTabToContainer(containerId, widgetType) {
+      const tabId = `tab-${widgetType}-${Date.now()}`;
+      update(state => ({
+        ...state,
+        widgets: state.widgets.map(w => {
+          if (w.id === containerId && w.widgetType === 'tabcontainer') {
+            const newTabs = [...(w.tabs || []), { widgetType, id: tabId }];
+            return { ...w, tabs: newTabs, activeTabIndex: newTabs.length - 1 };
+          }
+          return w;
+        })
+      }));
+      return tabId;
+    },
+
+    // Remove a widget tab from a tab container
+    removeTabFromContainer(containerId, tabIndex) {
+      update(state => ({
+        ...state,
+        widgets: state.widgets.map(w => {
+          if (w.id === containerId && w.widgetType === 'tabcontainer') {
+            const newTabs = w.tabs.filter((_, i) => i !== tabIndex);
+            const newActive = Math.min(w.activeTabIndex || 0, Math.max(0, newTabs.length - 1));
+            return { ...w, tabs: newTabs, activeTabIndex: newActive };
+          }
+          return w;
+        })
+      }));
+    },
+
+    // Set active tab index on a tab container
+    setActiveTab(containerId, tabIndex) {
+      update(state => ({
+        ...state,
+        widgets: state.widgets.map(w => {
+          if (w.id === containerId && w.widgetType === 'tabcontainer') {
+            return { ...w, activeTabIndex: tabIndex };
+          }
+          return w;
+        })
+      }));
     }
   };
 }

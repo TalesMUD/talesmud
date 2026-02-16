@@ -70,7 +70,7 @@
 
   {#if action.type === "script"}
     <div class="space-y-1.5">
-      <label class="label-caps">Script</label>
+      <div class="label-caps">Script</div>
       <EntitySelectButton
         value={action.scriptId}
         elements={scriptsValueHelp || []}

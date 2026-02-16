@@ -310,7 +310,7 @@
 
     <!-- On Use Script -->
     <div class="space-y-1.5">
-      <label class="label-caps">On Use Script</label>
+      <div class="label-caps">On Use Script</div>
       <EntitySelectButton
         value={$store.selectedElement.onUseScriptId}
         elements={$scriptsValueHelp || []}

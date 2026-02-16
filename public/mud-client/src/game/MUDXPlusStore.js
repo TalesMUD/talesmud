@@ -3,13 +3,26 @@ import { writable, derived } from "svelte/store";
 // Cardinal direction names for compass filtering
 const CARDINAL_DIRECTIONS = ["north", "south", "east", "west"];
 const VERTICAL_DIRECTIONS = ["up", "down"];
+const ALL_MAPPED_DIRECTIONS = [...CARDINAL_DIRECTIONS, ...VERTICAL_DIRECTIONS];
 
-// Offsets for cardinal directions (x, y)
+// Common aliases for direction names
+const DIRECTION_ALIASES = {
+  upward: "up",
+  upwards: "up",
+  ascend: "up",
+  downward: "down",
+  downwards: "down",
+  descend: "down",
+};
+
+// Offsets for all mapped directions (x, y, z)
 const DIRECTION_OFFSETS = {
-  north: [0, -1],
-  south: [0, 1],
-  east: [1, 0],
-  west: [-1, 0],
+  north: [0, -1, 0],
+  south: [0, 1, 0],
+  east: [1, 0, 0],
+  west: [-1, 0, 0],
+  up: [0, 0, 1],
+  down: [0, 0, -1],
 };
 
 const VISITED_ROOMS_KEY = 'talesmud_visitedRooms';
@@ -286,29 +299,54 @@ function createStore() {
         const prevRoomId = state.currentRoomId;
         state.currentRoomId = room.id;
 
-        // Extract cardinal exits from the room
+        // Extract navigable exits (cardinal + vertical) for spatial tracking
+        // Note: hidden exits are included — they still define spatial relationships
         const cardinalExits = (room.exits || [])
           .filter(e => {
             const name = (e.name || e.Name || "").toLowerCase();
-            return CARDINAL_DIRECTIONS.includes(name) && !e.hidden;
+            const normalized = DIRECTION_ALIASES[name] || name;
+            return ALL_MAPPED_DIRECTIONS.includes(normalized);
           })
-          .map(e => ({
-            dir: (e.name || e.Name || "").toLowerCase(),
-            targetId: e.target || e.Target || "",
-          }));
+          .map(e => {
+            const name = (e.name || e.Name || "").toLowerCase();
+            return {
+              dir: DIRECTION_ALIASES[name] || name,
+              targetId: e.target || e.Target || "",
+            };
+          });
 
         // Determine coords
         let coords = null;
         if (room.coords) {
           coords = { x: room.coords.x, y: room.coords.y, z: room.coords.z || 0 };
         } else if (prevRoomId && state.visitedRooms[prevRoomId]) {
-          // Infer coords from previous room's exit direction
           const prevRoom = state.visitedRooms[prevRoomId];
           if (prevRoom.coords) {
+            // Try mapped direction exit from prevRoom to this room
             const exitToHere = prevRoom.cardinalExits.find(e => e.targetId === room.id);
             if (exitToHere && DIRECTION_OFFSETS[exitToHere.dir]) {
-              const [dx, dy] = DIRECTION_OFFSETS[exitToHere.dir];
-              coords = { x: prevRoom.coords.x + dx, y: prevRoom.coords.y + dy, z: prevRoom.coords.z };
+              const [dx, dy, dz] = DIRECTION_OFFSETS[exitToHere.dir];
+              coords = { x: prevRoom.coords.x + dx, y: prevRoom.coords.y + dy, z: prevRoom.coords.z + dz };
+            } else {
+              // Fallback: we navigated from prevRoom but exit name is non-standard
+              // (e.g., "residence", "portal", etc.) — place adjacent to prevent coord chain break
+              const occupiedKeys = new Set(
+                Object.values(state.visitedRooms)
+                  .filter(r => r.coords && r.coords.z === prevRoom.coords.z)
+                  .map(r => `${r.coords.x},${r.coords.y}`)
+              );
+              const fallbackOffsets = [[1, 0], [0, -1], [-1, 0], [0, 1], [1, -1], [-1, -1], [1, 1], [-1, 1]];
+              for (const [dx, dy] of fallbackOffsets) {
+                const key = `${prevRoom.coords.x + dx},${prevRoom.coords.y + dy}`;
+                if (!occupiedKeys.has(key)) {
+                  coords = { x: prevRoom.coords.x + dx, y: prevRoom.coords.y + dy, z: prevRoom.coords.z };
+                  break;
+                }
+              }
+              // Last resort: place at offset even if occupied
+              if (!coords) {
+                coords = { x: prevRoom.coords.x + 2, y: prevRoom.coords.y, z: prevRoom.coords.z };
+              }
             }
           }
         }

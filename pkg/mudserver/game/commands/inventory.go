@@ -130,6 +130,11 @@ func formatItemList(sb *strings.Builder, itemList []*items.Item, equipped map[st
 			sb.WriteString(" [EQUIPPED]")
 		}
 
+		// Show bound indicator
+		if item.IsBound() {
+			sb.WriteString(" [BOUND]")
+		}
+
 		// Show quality indicator for non-normal quality
 		if item.Quality != "" && item.Quality != items.ItemQualityNormal {
 			sb.WriteString(" [")

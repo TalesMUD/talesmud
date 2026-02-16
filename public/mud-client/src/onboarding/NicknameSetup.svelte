@@ -171,6 +171,7 @@
 </style>
 
 <script>
+  import { onMount } from "svelte";
   import { updateUser } from "../api/user.js";
 
   export let authToken;
@@ -182,6 +183,7 @@
   let validationError = "";
   let saving = false;
   let apiError = "";
+  let nicknameInput;
 
   // Pre-fill from Auth0 or backend data
   $: {
@@ -208,6 +210,12 @@
     validationError = "";
     return true;
   }
+
+  onMount(() => {
+    if (nicknameInput) {
+      nicknameInput.focus();
+    }
+  });
 
   async function handleSubmit() {
     if (!validate() || saving) return;
@@ -262,6 +270,7 @@
     <div class="input-group">
       <label class="input-label" for="nickname-input">Display Name</label>
       <input
+        bind:this={nicknameInput}
         id="nickname-input"
         class="nickname-input"
         type="text"
@@ -270,7 +279,6 @@
         on:keydown={handleKeydown}
         on:input={() => { validationError = ""; apiError = ""; }}
         maxlength="30"
-        autofocus
       />
       <div class="validation-msg">
         {validationError}

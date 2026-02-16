@@ -161,4 +161,76 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 		Gold:          character.Gold,
 	}
 
+	// Send initial quest log to the client
+	sendQuestLogToPlayer(game, user.ID, character.ID)
+
+}
+
+// sendQuestLogToPlayer sends the full quest log with enriched quest details
+func sendQuestLogToPlayer(game def.GameCtrl, userID, characterID string) {
+	progressList, err := game.GetFacade().QuestsService().GetQuestLog(characterID)
+	if err != nil {
+		return
+	}
+
+	// Build enriched quest log entries
+	entries := make([]m.QuestLogEntry, 0, len(progressList))
+	for _, progress := range progressList {
+		quest, err := game.GetFacade().QuestsService().FindByID(progress.QuestID)
+		if err != nil || quest == nil {
+			continue
+		}
+
+		// Build objective progress list
+		objectives := make([]m.QuestObjectiveProgress, len(progress.Objectives))
+		for i, op := range progress.Objectives {
+			// Find matching objective definition to get description
+			objDesc := ""
+			objRequired := op.Required
+			for _, questObj := range quest.Objectives {
+				if questObj.ID == op.ObjectiveID {
+					objDesc = questObj.Description
+					if questObj.Amount > 0 {
+						objRequired = questObj.Amount
+					}
+					break
+				}
+			}
+
+			objectives[i] = m.QuestObjectiveProgress{
+				ObjectiveID: op.ObjectiveID,
+				Description: objDesc,
+				Current:     op.Current,
+				Required:    objRequired,
+				Completed:   op.Completed,
+			}
+		}
+
+		entry := m.QuestLogEntry{
+			QuestID:     progress.QuestID,
+			QuestName:   quest.Name,
+			Status:      string(progress.Status),
+			Description: quest.Description,
+			Category:    quest.Category,
+			Level:       quest.Level,
+			Objectives:  objectives,
+			Rewards: &m.QuestReward{
+				XP:              quest.Rewards.XP,
+				Gold:            quest.Rewards.Gold,
+				ItemTemplateIDs: quest.Rewards.ItemTemplateIDs,
+			},
+		}
+
+		if !progress.AcceptedAt.IsZero() {
+			entry.AcceptedAt = progress.AcceptedAt.Format("2006-01-02T15:04:05Z07:00")
+		}
+		if !progress.CompletedAt.IsZero() {
+			entry.CompletedAt = progress.CompletedAt.Format("2006-01-02T15:04:05Z07:00")
+		}
+
+		entries = append(entries, entry)
+	}
+
+	// Send quest log message
+	game.SendMessage() <- m.NewQuestLogMessage(userID, entries)
 }

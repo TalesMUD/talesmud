@@ -20,6 +20,8 @@
 10. [Scripting System (Lua API)](#scripting-system-lua-api)
 11. [Creator UI Capabilities](#creator-ui-capabilities)
 12. [Recent Features & Best Practices](#recent-features--best-practices)
+13. [Game Client Minimap](#game-client-minimap)
+14. [Game Client Tab Container Widget](#game-client-tab-container-widget)
 
 ---
 
@@ -168,8 +170,9 @@ type Item struct {
     MaxItems int32
 
     // Interaction Flags
-    NoPickup     bool  // Cannot be picked up
-    CopyOnPickup bool  // Create personal copy instead of removing from room
+    NoPickup           bool    // Cannot be picked up
+    CopyOnPickup       bool    // Create personal copy instead of removing from room
+    BoundToCharacterID string  // Item is bound to this character (cannot drop/sell/trade)
 
     // Stacking & Economy
     Stackable bool
@@ -207,10 +210,19 @@ type Item struct {
 ### CopyOnPickup Feature
 When `Item.CopyOnPickup = true`:
 1. **First pickup**: Creates a personal instance from template, adds to inventory
-2. **Room remains unchanged** - Item stays in room for other players
-3. **Character tracking**: Marks item as collected via `Character.Flags["collected_copy_items"]`
-4. **Subsequent pickups**: Player sees "You have already collected X"
-5. **Client behavior**: Item is hidden in room display for that character
+2. **Instance is bound**: `BoundToCharacterID` is set on the instance, making it character-bound
+3. **Room remains unchanged** - Item stays in room for other players
+4. **Character tracking**: Marks item as collected via `Character.Flags["collected_item:<templateID>"]`
+5. **Subsequent pickups**: Player sees "You have already collected X"
+6. **Client behavior**: Item is hidden in room display for that character
+
+**Bound item restrictions** (enforced on items with `BoundToCharacterID`):
+- Cannot be dropped (`drop` command rejects with message to use `destroy`)
+- Cannot be sold to merchants
+- Cannot be traded
+- `destroy` command removes from inventory, clears collected flag, and refreshes room
+
+**Helper methods**: `Item.IsBound()`, `Item.IsOwnedBy(characterID)`
 
 **Use case**: Quest items, story artifacts that all players should find
 
@@ -824,6 +836,260 @@ quest <name>    # Show quest details
 abandon <name>  # Abandon active quest
 ```
 
+### Quest UI Features
+
+#### Quest Log Widget
+The quest log widget provides a comprehensive quest management interface:
+
+**Core Features:**
+- **Real-time Quest Search**
+  - Search across quest names, descriptions, and objectives
+  - Case-insensitive, instant filtering
+  - Clear button (×) to reset search
+
+- **Category Filtering**
+  - Filter by: All Types, Main, Side, Daily
+  - Toggle visibility: Completed quests, Abandoned quests
+  - Helps focus on relevant quests
+
+- **Sort Options**
+  - Sort by Status (Active → Completed → Abandoned)
+  - Sort by Name (alphabetical)
+  - Sort by Level (ascending)
+  - Sort by Category (Main/Side/Daily)
+
+- **Quest Pinning System**
+  - Pin up to 5 priority quests
+  - Pinned section always at top
+  - Golden pulsing indicator for pinned quests
+  - Persisted in localStorage
+  - Pin/Unpin buttons in quest details
+
+**Quest Display:**
+- Quest name with level badge (e.g., "L5")
+- Category badge with color coding:
+  - 🟠 Main quests (amber/orange #f59e0b)
+  - 🔵 Side quests (blue #3b82f6)
+  - 🟣 Daily quests (purple #8b5cf6)
+- Expandable quest details
+- Objective progress (X/Y format) with checkmarks
+- Rewards preview (XP, Gold, Items)
+- Abandon button for active quests
+- Pin/Unpin button for tracking
+
+**Quest Sections:**
+1. **📌 Pinned** - Priority quests (if any)
+2. **Active** - In-progress quests
+3. **Completed** - Finished quests with completion dates
+4. **Abandoned** - Dropped quests (when visible)
+5. **Failed** - Failed quests (when visible)
+
+#### Quest History & Statistics Panel
+
+Click the 📊 button in quest log header to access:
+
+**Quest Statistics:**
+- Total quests encountered
+- Active quest count
+- Completed quest count
+- Completion rate percentage
+- Total XP earned from quests
+- Total gold earned from quests
+
+**Category Breakdown:**
+- Main quests completed
+- Side quests completed
+- Daily quests completed
+
+**Quest Achievements:**
+8 built-in achievements that unlock automatically:
+
+| Achievement | Requirement |
+|-------------|-------------|
+| First Steps | Complete 1 quest |
+| Quest Novice | Complete 5 quests |
+| Quest Veteran | Complete 10 quests |
+| Quest Master | Complete 25 quests |
+| Story Seeker | Complete 5 main quests |
+| Side Quest Hero | Complete 10 side quests |
+| Daily Devotee | Complete 5 daily quests |
+| Completionist | 100% completion rate (min 5 quests) |
+
+**Achievement Display:**
+- 🏆 Unlocked achievements (gold border, highlighted)
+- 🔒 Locked achievements (grayed out, collapsible)
+- Shows name and description
+- Real-time progress tracking
+
+#### Quest Notifications
+
+Enhanced notification system with interactions:
+
+**Notification Types:**
+- **Quest Accepted** (amber border)
+- **Quest Progress** (blue border) - shows completed objective
+- **Quest Completed** (green border)
+
+**Interactions:**
+- **Click to View** - Opens quest in quest log
+- **Dismiss Button (×)** - Manual dismiss with slide-out animation
+- **Hover Effects** - Highlights notification
+- **Auto-dismiss** - Removes after 5 seconds
+
+**Features:**
+- Unique notification IDs
+- Slide-in and slide-out animations
+- Smooth transitions
+- Top-right positioning
+
+### Quest API Endpoints
+
+#### Get Quest Log with Full Details
+```
+GET /api/quest-progress/:characterId
+```
+
+**Response includes:**
+- Quest progress (status, objectives)
+- Quest definition (name, description, category, level)
+- Rewards (XP, gold, item template IDs)
+- Timestamps (acceptedAt, completedAt)
+
+**Response Format:**
+```json
+[
+  {
+    "questId": "quest-uuid",
+    "questName": "The Wolf Problem",
+    "status": "active",
+    "description": "Wolves have been attacking travelers...",
+    "category": "main",
+    "level": 3,
+    "objectives": [
+      {
+        "objectiveId": "obj-1",
+        "description": "Defeat wolves",
+        "current": 3,
+        "required": 5,
+        "completed": false
+      }
+    ],
+    "rewards": {
+      "xp": 500,
+      "gold": 50,
+      "itemTemplateIds": ["item-template-1"]
+    },
+    "acceptedAt": "2026-02-16T10:30:00Z",
+    "completedAt": null
+  }
+]
+```
+
+### Quest WebSocket Messages
+
+#### Quest Log Message
+Sent on character selection and quest updates:
+```json
+{
+  "type": "questLog",
+  "quests": [ /* array of QuestLogEntry */ ]
+}
+```
+
+#### Quest Update Messages
+```json
+{
+  "type": "questAccepted",
+  "questId": "quest-uuid",
+  "questName": "The Wolf Problem",
+  "message": "Quest accepted!"
+}
+
+{
+  "type": "questProgress",
+  "questId": "quest-uuid",
+  "questName": "The Wolf Problem",
+  "objectives": [ /* updated objectives */ ]
+}
+
+{
+  "type": "questCompleted",
+  "questId": "quest-uuid",
+  "questName": "The Wolf Problem",
+  "message": "Quest completed!"
+}
+```
+
+### Quest Client Store
+
+The MUD client stores quest data in `MUDXPlusStore`:
+
+**State:**
+```javascript
+{
+  quests: [],              // Full quest log with details
+  questNotifications: [],  // Active notifications
+  pinnedQuests: []        // Stored in localStorage
+}
+```
+
+**Methods:**
+- `updateQuests(questLog)` - Update full quest list
+- `addQuestNotification(notification)` - Add notification with auto-dismiss
+
+**LocalStorage:**
+- `pinnedQuests` - JSON array of quest IDs (max 5)
+- Persists across sessions
+- Shared between widget and overlay
+
+### Quest Tracker Implementation
+
+Automatic progress tracking on game events:
+
+**OnNPCKilled(characterID, userID, deadNPC):**
+- Checks all active quests for kill objectives
+- Matches NPC template ID
+- Increments objective counter
+- Sends progress update message
+
+**OnItemPickup(characterID, userID, item):**
+- Checks collect objectives
+- Matches item template ID
+- Increments counter
+- Sends progress update
+
+**OnRoomEnter(characterID, userID, room):**
+- Checks visit objectives
+- Matches room ID
+- Marks objective complete
+- Sends progress update
+
+**OnDialogNode(characterID, userID, npcID, dialogID, nodeID):**
+- Checks talk objectives
+- Matches NPC and optional dialog node
+- Marks complete
+- Sends progress update
+
+**OnTalkToNPC(characterID, userID, npc):**
+- Checks deliver objectives
+- Verifies player has required item
+- Marks complete
+- Sends progress update
+
+### Quest Completion Flow
+
+1. **Check Objectives** - All must be complete (checked server-side)
+2. **Mark Complete** - Update quest progress status
+3. **Grant Rewards**
+   - Add XP to character
+   - Add gold to character
+   - Create items from templates
+   - Add to character inventory
+4. **Send Notification** - WebSocket message with rewards
+5. **Update Quest Log** - Client refreshes via API call
+6. **Update Achievements** - Calculated client-side on quest log update
+```
+
 ### Quest Scripting API
 ```lua
 -- Check quest status
@@ -1419,15 +1685,17 @@ end
 - `hasRevealedExit(characterID, roomID, exitName)` — character first
 
 ### CopyOnPickup Items
-**Feature**: Items that create personal copies instead of removing from room.
+**Feature**: Items that create personal copies instead of removing from room. Instances are bound to the collecting character.
 
 **Best Practice**:
 - Use for **quest items** that all players should find
 - Use for **story artifacts** that don't deplete
 - Set `Item.CopyOnPickup = true` in Creator UI
-- System tracks via `Character.Flags["collected_copy_items"]`
+- System tracks via `Character.Flags["collected_item:<templateID>"]`
+- Instances are automatically bound (`BoundToCharacterID`) — cannot be dropped, sold, or traded
+- Players use `destroy` command to discard bound items (clears collected flag, allowing re-pickup)
 
-**Example**: Ancient scroll in library - all players can read it, but each gets a copy
+**Example**: Ancient scroll in library - all players can read it, but each gets a bound copy
 
 ### Item Consumables with Lua Scripts
 **Feature**: Items can have both data-driven effects AND custom Lua logic.
@@ -1595,6 +1863,86 @@ instance, err := service.CreateInstanceFromTemplate(templateID)
 
 **Room Action**:
 - `Action.ScriptId` - Player triggers action
+
+---
+
+## Game Client Minimap
+
+### Overview
+The minimap widget renders an auto-discovered map from visited rooms. It is canvas-based and tracks room positions via coordinate inference from directional exits.
+
+### Room Rendering
+- **Current room**: Amber glow + amber border (highlighted)
+- **Nearby rooms** (BFS distance <= 2): Slightly brighter fill/border
+- **All other rooms**: Uniform color, full opacity (no distance-based fading)
+- **Travel path**: Rooms on the click-to-travel path highlighted in blue
+- **Vertical exits**: Purple triangle indicators (up/down arrows) on rooms with vertical exits
+- **Z-level label**: Shows current floor in the top-left corner
+
+### Coordinate Inference
+Rooms are positioned on a grid using coordinate inference:
+- Server-provided `coords` are used when available
+- Otherwise, coords are inferred from the previous room's exit direction
+- Supports cardinal directions (north/south/east/west) and vertical directions (up/down)
+- Direction aliases handled: "upward" -> "up", "downward" -> "down", etc.
+- Hidden exits are included in spatial tracking (they define room adjacency)
+- Fallback: non-standard exit names (e.g., "residence", "portal") place rooms at the nearest unoccupied adjacent position to prevent coordinate chain breaks
+
+### Interaction
+- **Click-to-travel**: Click a room to auto-navigate via BFS pathfinding
+- **Panning**: Click and drag to pan the map view; auto-recenters on room change
+- **Recenter button**: Appears when panned; click the crosshair icon to snap back to current room
+- **Maximize/minimize**: Button in the top-left expands the minimap to a fullscreen overlay
+- **Tooltips**: Hover over rooms to see their names
+
+### State Persistence
+- Visited rooms stored in browser `localStorage` under key `talesmud_visitedRooms`
+- Rooms accumulate across zone transitions (not cleared on zone change)
+- "Clear map data" button resets all visited room data
+
+---
+
+## Game Client Tab Container Widget
+
+### Overview
+The Tab Container widget allows players to group multiple widgets into a single resizable container with switchable tabs. This reduces layout clutter, especially on smaller screens (e.g., Character + Inventory + Equipment in one tab group).
+
+### Features
+- **Multiple tab containers**: Unlimited tab containers can exist on screen simultaneously
+- **Tab switching**: Click tabs to switch between contained widgets; active tab is highlighted amber
+- **State preservation**: All tab content is kept mounted (via CSS visibility) — scroll positions, terminal buffers, and widget state are preserved when switching tabs
+- **Tab labels**: Automatically derived from widget registry (icon + name)
+- **Add/remove tabs**: Available in edit mode only — "+" button opens a dropdown of available widget types, "x" button removes individual tabs
+- **No nesting**: Tab containers cannot be placed inside other tab containers (enforced at registry, store, and UI levels)
+- **maxInstances enforcement**: Widgets inside tab containers count toward their `maxInstances` limit (e.g., you can't add Character both as a standalone widget and inside a tab)
+- **Persistence**: Tab configuration (which widgets, active tab) persists to localStorage alongside layout data
+
+### Data Model
+Tab containers store extra fields on the widget layout item:
+```javascript
+{
+  id: 'tabcontainer-1707000000000',
+  widgetType: 'tabcontainer',
+  tabs: [
+    { widgetType: 'character', id: 'tab-character-001' },
+    { widgetType: 'inventory', id: 'tab-inventory-002' }
+  ],
+  activeTabIndex: 0
+}
+```
+
+### Key Files
+- `public/mud-client/src/game/widgets/TabContainerWidget.svelte` — The tab container component
+- `public/mud-client/src/game/layout/WidgetComponents.js` — Shared component map used by both WidgetGrid and TabContainerWidget
+- `public/mud-client/src/game/layout/WidgetRegistry.js` — Registry entry (`tabcontainer` type, `layout` category)
+- `public/mud-client/src/game/layout/LayoutStore.js` — Tab management methods (`addTabToContainer`, `removeTabFromContainer`, `setActiveTab`)
+
+### LayoutStore Tab Methods
+```javascript
+layoutStore.addTabToContainer(containerId, widgetType)  // Add a widget as a new tab
+layoutStore.removeTabFromContainer(containerId, tabIndex) // Remove a tab by index
+layoutStore.setActiveTab(containerId, tabIndex)           // Switch active tab
+```
 
 ---
 

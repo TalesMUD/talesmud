@@ -233,7 +233,7 @@
         </div>
         {#if $store.selectedElement.source.type === "npc"}
           <div class="space-y-1.5 md:col-span-2">
-            <label class="label-caps">Source NPC</label>
+            <div class="label-caps">Source NPC</div>
             <EntitySelectButton
               value={$store.selectedElement.source.npcId}
               elements={$npcList}
@@ -246,7 +246,7 @@
         {/if}
         {#if $store.selectedElement.source.type === "item"}
           <div class="space-y-1.5 md:col-span-2">
-            <label class="label-caps">Source Item</label>
+            <div class="label-caps">Source Item</div>
             <EntitySelectButton
               value={$store.selectedElement.source.itemId}
               elements={$itemTemplateList}
@@ -298,24 +298,26 @@
 
             <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div class="space-y-1.5">
-                <label class="label-caps">ID</label>
+                <label class="label-caps" for="obj-id-{i}">ID</label>
                 <input
+                  id="obj-id-{i}"
                   type="text"
                   class="input-base font-mono text-xs"
                   bind:value={obj.id}
                 />
               </div>
               <div class="space-y-1.5">
-                <label class="label-caps">Type</label>
-                <select class="input-base" bind:value={obj.type}>
+                <label class="label-caps" for="obj-type-{i}">Type</label>
+                <select id="obj-type-{i}" class="input-base" bind:value={obj.type}>
                   {#each objectiveTypes as ot}
                     <option value={ot.value}>{ot.label}</option>
                   {/each}
                 </select>
               </div>
               <div class="space-y-1.5 md:col-span-2">
-                <label class="label-caps">Description</label>
+                <label class="label-caps" for="obj-desc-{i}">Description</label>
                 <input
+                  id="obj-desc-{i}"
                   type="text"
                   class="input-base"
                   bind:value={obj.description}
@@ -327,7 +329,7 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
               {#if obj.type === "kill" || obj.type === "collect" || obj.type === "visit" || obj.type === "talk"}
                 <div class="space-y-1.5">
-                  <label class="label-caps">Target</label>
+                  <div class="label-caps">Target</div>
                   {#if obj.type === "visit"}
                     <EntitySelectButton
                       value={obj.targetId}
@@ -367,8 +369,9 @@
                   {/if}
                 </div>
                 <div class="space-y-1.5">
-                  <label class="label-caps">Target Name</label>
+                  <label class="label-caps" for="obj-targetname-{i}">Target Name</label>
                   <input
+                    id="obj-targetname-{i}"
                     type="text"
                     class="input-base"
                     bind:value={obj.targetName}
@@ -378,8 +381,9 @@
               {/if}
               {#if obj.type === "kill" || obj.type === "collect"}
                 <div class="space-y-1.5">
-                  <label class="label-caps">Amount</label>
+                  <label class="label-caps" for="obj-amount-{i}">Amount</label>
                   <input
+                    id="obj-amount-{i}"
                     type="number"
                     class="input-base"
                     bind:value={obj.amount}
@@ -392,7 +396,7 @@
             {#if obj.type === "deliver"}
               <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div class="space-y-1.5">
-                  <label class="label-caps">Item</label>
+                  <div class="label-caps">Item</div>
                   <EntitySelectButton
                     value={obj.targetId}
                     elements={$itemTemplateList}
@@ -403,7 +407,7 @@
                   />
                 </div>
                 <div class="space-y-1.5">
-                  <label class="label-caps">Deliver To NPC</label>
+                  <div class="label-caps">Deliver To NPC</div>
                   <EntitySelectButton
                     value={obj.deliverToNpcId}
                     elements={$npcList}
@@ -414,8 +418,9 @@
                   />
                 </div>
                 <div class="space-y-1.5">
-                  <label class="label-caps">NPC Name</label>
+                  <label class="label-caps" for="obj-npcname-{i}">NPC Name</label>
                   <input
+                    id="obj-npcname-{i}"
                     type="text"
                     class="input-base"
                     bind:value={obj.deliverToNpcName}
@@ -427,7 +432,7 @@
             {#if obj.type === "talk"}
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div class="space-y-1.5">
-                  <label class="label-caps">Dialog Node (optional)</label>
+                  <div class="label-caps">Dialog Node (optional)</div>
                   <EntitySelectButton
                     value={obj.dialogNodeId}
                     elements={$dialogList}
@@ -443,7 +448,7 @@
             {#if obj.type === "custom"}
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div class="space-y-1.5">
-                  <label class="label-caps">Check Script</label>
+                  <div class="label-caps">Check Script</div>
                   <EntitySelectButton
                     value={obj.checkScriptId}
                     elements={$scriptList}
@@ -454,8 +459,9 @@
                   />
                 </div>
                 <div class="space-y-1.5">
-                  <label class="label-caps">Amount</label>
+                  <label class="label-caps" for="obj-custom-amount-{i}">Amount</label>
                   <input
+                    id="obj-custom-amount-{i}"
                     type="number"
                     class="input-base"
                     bind:value={obj.amount}
@@ -501,7 +507,7 @@
 
       <div class="space-y-2">
         <div class="flex items-center justify-between">
-          <label class="label-caps">Reward Items</label>
+          <div class="label-caps">Reward Items</div>
           <button
             class="btn btn-ghost text-xs"
             type="button"
@@ -560,7 +566,7 @@
 
       <div class="space-y-2">
         <div class="flex items-center justify-between">
-          <label class="label-caps">Required Quests</label>
+          <div class="label-caps">Required Quests</div>
           <button
             class="btn btn-ghost text-xs"
             type="button"
@@ -644,7 +650,7 @@
 
     <!-- On Complete Script -->
     <div class="space-y-1.5">
-      <label class="label-caps">On Complete Script</label>
+      <div class="label-caps">On Complete Script</div>
       <EntitySelectButton
         value={$store.selectedElement.onCompleteScriptId}
         elements={$scriptList}

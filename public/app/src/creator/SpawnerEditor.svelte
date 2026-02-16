@@ -119,7 +119,7 @@
       />
     </div>
     <div class="space-y-1.5">
-      <label class="label-caps">NPC Template</label>
+      <div class="label-caps">NPC Template</div>
       <EntitySelectButton
         value={spawner.templateId}
         elements={npcTemplates}

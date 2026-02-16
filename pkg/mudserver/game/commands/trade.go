@@ -319,6 +319,12 @@ func (command *SellCommand) Execute(game def.GameCtrl, message *messages.Message
 		return true
 	}
 
+	// Check if item is bound (cannot be sold)
+	if item.IsBound() {
+		game.SendMessage() <- message.Reply("You cannot sell " + item.Name + ". It is bound to you.")
+		return true
+	}
+
 	// Check quantity for stackable items
 	if item.Stackable && quantity > item.Quantity {
 		game.SendMessage() <- message.Reply("You only have " + itoa(int(item.Quantity)) + " of those.")
@@ -418,6 +424,12 @@ func (command *ValueCommand) Execute(game def.GameCtrl, message *messages.Messag
 	}
 	if item == nil {
 		game.SendMessage() <- message.Reply("You don't have '" + itemName + "' in your inventory.")
+		return true
+	}
+
+	// Check if item is bound
+	if item.IsBound() {
+		game.SendMessage() <- message.Reply(item.Name + " is bound to you and has no trade value.")
 		return true
 	}
 

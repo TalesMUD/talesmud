@@ -6,7 +6,6 @@ export const WIDGET_TYPES = {
     name: 'Room',
     description: 'Room image, name, description, and entities',
     defaultSize: { w: 12, h: 14 },
-    minSize: { w: 6, h: 8 },
     maxInstances: 1,
     icon: 'landscape',
     category: 'core'
@@ -15,7 +14,6 @@ export const WIDGET_TYPES = {
     name: 'Terminal',
     description: 'Classic MUD text terminal',
     defaultSize: { w: 12, h: 14 },
-    minSize: { w: 6, h: 6 },
     maxInstances: 1,
     icon: 'terminal',
     category: 'core'
@@ -24,7 +22,6 @@ export const WIDGET_TYPES = {
     name: 'Terminal X',
     description: 'Veilspan-style MUD terminal with CRT effects',
     defaultSize: { w: 12, h: 14 },
-    minSize: { w: 6, h: 6 },
     maxInstances: 1,
     icon: 'computer',
     category: 'core'
@@ -33,7 +30,6 @@ export const WIDGET_TYPES = {
     name: 'Action Bar',
     description: 'Commands, compass, and quick actions',
     defaultSize: { w: 24, h: 3 },
-    minSize: { w: 12, h: 2 },
     maxInstances: 1,
     icon: 'gamepad',
     category: 'core'
@@ -42,7 +38,6 @@ export const WIDGET_TYPES = {
     name: 'Character',
     description: 'Player stats and character sheet',
     defaultSize: { w: 6, h: 8 },
-    minSize: { w: 4, h: 4 },
     maxInstances: 1,
     icon: 'person',
     category: 'player'
@@ -51,7 +46,6 @@ export const WIDGET_TYPES = {
     name: 'Inventory',
     description: 'Player inventory items',
     defaultSize: { w: 6, h: 8 },
-    minSize: { w: 4, h: 4 },
     maxInstances: 1,
     icon: 'inventory_2',
     category: 'player'
@@ -60,7 +54,6 @@ export const WIDGET_TYPES = {
     name: 'Equipment',
     description: 'Worn and equipped items',
     defaultSize: { w: 6, h: 8 },
-    minSize: { w: 4, h: 4 },
     maxInstances: 1,
     icon: 'shield',
     category: 'player'
@@ -69,7 +62,6 @@ export const WIDGET_TYPES = {
     name: 'Quest Log',
     description: 'Active and completed quests',
     defaultSize: { w: 6, h: 10 },
-    minSize: { w: 4, h: 6 },
     maxInstances: 1,
     icon: 'assignment',
     category: 'player'
@@ -78,10 +70,17 @@ export const WIDGET_TYPES = {
     name: 'Minimap',
     description: 'Explored room map for current floor',
     defaultSize: { w: 6, h: 8 },
-    minSize: { w: 3, h: 3 },
     maxInstances: 1,
     icon: 'map',
     category: 'core'
+  },
+  tabcontainer: {
+    name: 'Tab Container',
+    description: 'Group multiple widgets into switchable tabs',
+    defaultSize: { w: 8, h: 10 },
+    maxInstances: Infinity,
+    icon: 'tab',
+    category: 'layout'
   }
 };
 
@@ -94,12 +93,6 @@ export function getWidgetConfig(widgetType) {
 export function getDefaultSize(widgetType) {
   const config = WIDGET_TYPES[widgetType];
   return config?.defaultSize || { w: 6, h: 6 };
-}
-
-// Get minimum size for a widget type
-export function getMinSize(widgetType) {
-  const config = WIDGET_TYPES[widgetType];
-  return config?.minSize || { w: 2, h: 2 };
 }
 
 // Get all widget types as array for UI rendering
@@ -129,5 +122,14 @@ export const WIDGET_CATEGORIES = {
   player: {
     name: 'Player',
     description: 'Character and inventory widgets'
+  },
+  layout: {
+    name: 'Layout',
+    description: 'Layout and organizational widgets'
   }
 };
+
+// Check if a widget type can be placed inside a tab container
+export function canBeTabChild(widgetType) {
+  return widgetType !== 'tabcontainer';
+}

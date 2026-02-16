@@ -115,6 +115,10 @@ type Item struct {
 	NoPickup     bool `bson:"noPickup,omitempty" json:"noPickup,omitempty"`
 	CopyOnPickup bool `bson:"copyOnPickup,omitempty" json:"copyOnPickup,omitempty"`
 
+	// BoundToCharacterID indicates this item is bound to a specific character.
+	// Bound items cannot be dropped, sold, or traded. Set at pickup time for CopyOnPickup items.
+	BoundToCharacterID string `bson:"boundToCharacterId,omitempty" json:"boundToCharacterId,omitempty"`
+
 	// stacking and economy
 	Stackable bool  `bson:"stackable,omitempty" json:"stackable,omitempty"`
 	Quantity  int32 `bson:"quantity,omitempty" json:"quantity,omitempty"`
@@ -185,4 +189,14 @@ func (item *Item) IsTwoHanded() bool {
 // IsEquippable returns true if this item can be equipped
 func (item *Item) IsEquippable() bool {
 	return item.Slot != "" && item.Slot != ItemSlotInventory && item.Slot != ItemSlotContainer && item.Slot != ItemSlotPurse
+}
+
+// IsBound returns true if this item is bound to a character
+func (item *Item) IsBound() bool {
+	return item.BoundToCharacterID != ""
+}
+
+// IsOwnedBy returns true if this item is bound to the specified character
+func (item *Item) IsOwnedBy(characterID string) bool {
+	return item.BoundToCharacterID == characterID
 }

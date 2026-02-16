@@ -403,14 +403,25 @@ type QuestUpdateMessage struct {
 	Objectives []QuestObjectiveProgress  `json:"objectives,omitempty"`
 }
 
+// QuestReward represents quest rewards sent to the client
+type QuestReward struct {
+	XP              int32    `json:"xp,omitempty"`
+	Gold            int64    `json:"gold,omitempty"`
+	ItemTemplateIDs []string `json:"itemTemplateIds,omitempty"`
+}
+
 // QuestLogEntry represents a quest in the quest log
 type QuestLogEntry struct {
 	QuestID     string                    `json:"questId"`
 	QuestName   string                    `json:"questName"`
-	Description string                    `json:"description"`
-	Category    string                    `json:"category"`
+	Description string                    `json:"description,omitempty"`
+	Category    string                    `json:"category,omitempty"`
+	Level       int32                     `json:"level,omitempty"`
 	Status      string                    `json:"status"`
 	Objectives  []QuestObjectiveProgress  `json:"objectives"`
+	Rewards     *QuestReward              `json:"rewards,omitempty"`
+	AcceptedAt  string                    `json:"acceptedAt,omitempty"`
+	CompletedAt string                    `json:"completedAt,omitempty"`
 }
 
 // QuestLogMessage sends the full quest log to the client

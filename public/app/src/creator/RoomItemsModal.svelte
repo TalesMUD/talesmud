@@ -323,21 +323,6 @@
     gap: 10px;
   }
 
-  .template-select {
-    flex: 1;
-    padding: 10px 12px;
-    font-size: 13px;
-    background: #2a2a2a;
-    border: 1px solid #3a3a3a;
-    border-radius: 6px;
-    color: #fff;
-  }
-
-  .template-select:focus {
-    outline: none;
-    border-color: #00bcd4;
-  }
-
   .add-btn {
     display: flex;
     align-items: center;

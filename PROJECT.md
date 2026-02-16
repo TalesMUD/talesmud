@@ -265,6 +265,18 @@ talesmud/
 | `quest` | - | Show quest details: quest [name] |
 | `abandon` | - | Abandon a quest: abandon [name] |
 | `spend` | - | Spend attribute points: spend \<attr\> [amount] |
+| `pickup` | `get`, `take` | Pick up an item from the room |
+| `drop` | - | Drop an item to the room (blocked for bound items) |
+| `destroy` | `discard` | Destroy an item from inventory |
+| `examine` | `inspect` | Examine an item in detail |
+| `use` | `eat`, `drink`, `consume` | Use a consumable item |
+| `equip` | `wear` | Equip an item |
+| `unequip` | `remove` | Unequip an item |
+| `equipment` | `eq`, `gear` | Show equipped items |
+| `list` | `shop` | List merchant inventory |
+| `buy` | - | Buy from merchant |
+| `sell` | - | Sell to merchant (blocked for bound items) |
+| `value` | `price` | Check item sell price |
 
 ## Current Development Status
 

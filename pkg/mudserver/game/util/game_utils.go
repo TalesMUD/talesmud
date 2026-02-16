@@ -39,7 +39,7 @@ func CreateRoomDescription(room *rooms.Room, user *entities.User, game def.GameC
 
 		if len(onlineChars) > 0 {
 			description += "\n"
-			charResult := "- In the room: "
+			charResult := "- In the area: "
 			for i, name := range onlineChars {
 				if i > 0 {
 					charResult += ", "
@@ -180,6 +180,11 @@ func GetRoomItems(room *rooms.Room, game def.GameCtrl, char *characters.Characte
 	for _, itemID := range *room.Items {
 		item, err := game.GetFacade().ItemsService().FindByID(itemID)
 		if err != nil {
+			continue
+		}
+
+		// Safety net: never show bound items on the ground
+		if item.IsBound() {
 			continue
 		}
 

@@ -13,28 +13,20 @@
   const ROOM_SIZE = 18;
   const CELL_SPACING = 40;
   const LINE_WIDTH = 2;
-  const MAX_VISIBLE_DISTANCE = 5;
-  const ROOM_RADIUS = 3; // border-radius for rounded squares
+  const ROOM_RADIUS = 3;
 
   // Colors
   const COLOR_CURRENT = '#f59e0b';
   const COLOR_CURRENT_FILL = '#2a2000';
+  const COLOR_NEARBY_BORDER = '#9ca3af';
+  const COLOR_NEARBY_FILL = '#1f2937';
   const COLOR_ROOM_BORDER = '#6b7280';
-  const COLOR_ROOM_FILL = '#1f2937';
+  const COLOR_ROOM_FILL = '#1a1f2b';
   const COLOR_LINE = '#4b5563';
+  const COLOR_LINE_DIM = '#374151';
   const COLOR_TARGET = '#22d3ee';
   const COLOR_TARGET_FILL = '#002a2e';
   const COLOR_PATH = '#0ea5e9';
-
-  // Opacity per BFS distance
-  function getOpacity(distance) {
-    if (distance === 0) return 1.0;
-    if (distance === 1) return 0.85;
-    if (distance === 2) return 0.65;
-    if (distance === 3) return 0.45;
-    if (distance === 4) return 0.25;
-    return 0;
-  }
 
   // Reactive store data
   let visitedRooms = {};
@@ -42,34 +34,61 @@
 
   // Travel state
   let travelTargetId = null;
-  let travelPath = []; // [{roomId, direction}] — remaining steps
+  let travelPath = [];
   let isTraveling = false;
-  let travelPathRoomIds = new Set(); // room IDs on the travel path (for rendering)
+  let travelPathRoomIds = new Set();
+
+  // Pan state
+  let panOffsetX = 0;
+  let panOffsetY = 0;
+  let isPanning = false;
+  let panStartX = 0;
+  let panStartY = 0;
+  let panStartOffsetX = 0;
+  let panStartOffsetY = 0;
+  let didDrag = false;
+
+  // Maximize state
+  let maximized = false;
+
+  // Portal action — moves element to document.body so it escapes widget grid stacking contexts
+  function portal(node) {
+    document.body.appendChild(node);
+    return {
+      destroy() {
+        if (node.parentNode) {
+          node.parentNode.removeChild(node);
+        }
+      }
+    };
+  }
 
   $: if (store) {
     visitedRooms = $store.visitedRooms || {};
     const newRoomId = $store.currentRoomId;
     if (newRoomId !== currentRoomId) {
-      const prevRoomId = currentRoomId;
       currentRoomId = newRoomId;
-      // Advance travel when room changes
+      panOffsetX = 0;
+      panOffsetY = 0;
       if (isTraveling && newRoomId) {
         advanceTravel(newRoomId);
       }
     }
   }
 
-  // Recompute and redraw whenever store data changes
   $: if (canvas && currentRoomId) {
     draw(visitedRooms, currentRoomId);
   }
 
-  // Also redraw when travel state changes
   $: if (canvas && currentRoomId && (travelTargetId || travelTargetId === null)) {
     draw(visitedRooms, currentRoomId);
   }
 
-  // BFS to calculate distance from current room through visited rooms
+  $: if (canvas && currentRoomId && (panOffsetX !== undefined || panOffsetY !== undefined)) {
+    draw(visitedRooms, currentRoomId);
+  }
+
+  // BFS distance from current room
   function computeDistances(rooms, startId) {
     const distances = {};
     if (!startId || !rooms[startId]) return distances;
@@ -93,14 +112,14 @@
     return distances;
   }
 
-  // BFS pathfinding: returns array of {roomId, direction} steps from startId to targetId
+  // BFS pathfinding
   function findPath(rooms, startId, targetId) {
     if (!startId || !targetId || !rooms[startId] || !rooms[targetId]) return null;
     if (startId === targetId) return [];
 
     const queue = [startId];
     const visited = new Set([startId]);
-    const parent = {}; // parent[childId] = {parentId, direction}
+    const parent = {};
 
     while (queue.length > 0) {
       const id = queue.shift();
@@ -114,7 +133,6 @@
           queue.push(exit.targetId);
 
           if (exit.targetId === targetId) {
-            // Reconstruct path
             const path = [];
             let cur = targetId;
             while (parent[cur]) {
@@ -127,7 +145,7 @@
       }
     }
 
-    return null; // unreachable
+    return null;
   }
 
   function startTravel(targetId) {
@@ -141,7 +159,6 @@
     isTraveling = true;
     travelPathRoomIds = new Set(path.map(s => s.roomId));
 
-    // Send first step
     sendNextStep();
   }
 
@@ -169,249 +186,48 @@
       return;
     }
 
-    // Check if we arrived at the expected next room
     if (travelPath[0].roomId === newRoomId) {
       travelPath = travelPath.slice(1);
       travelPathRoomIds = new Set(travelPath.map(s => s.roomId));
 
       if (travelPath.length === 0) {
-        // Arrived at destination
         cancelTravel();
       } else {
-        // Small delay between steps for visual feedback
         setTimeout(() => sendNextStep(), 150);
       }
     } else {
-      // Unexpected room — cancel travel
       cancelTravel();
     }
   }
 
-  function handleCanvasClick(e) {
+  // --- Pan handlers ---
+
+  function handlePointerDown(e) {
     if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
+    isPanning = true;
+    didDrag = false;
+    panStartX = e.clientX;
+    panStartY = e.clientY;
+    panStartOffsetX = panOffsetX;
+    panStartOffsetY = panOffsetY;
+    canvas.setPointerCapture(e.pointerId);
+  }
 
-    let found = null;
-    for (const entry of roomsByPixel) {
-      if (mx >= entry.x && mx <= entry.x + entry.w &&
-          my >= entry.y && my <= entry.y + entry.h) {
-        found = entry;
-        break;
+  function handlePointerMove(e) {
+    if (!canvas) return;
+
+    if (isPanning) {
+      const dx = e.clientX - panStartX;
+      const dy = e.clientY - panStartY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        didDrag = true;
       }
-    }
-
-    if (!found) return;
-
-    const clickedId = found.room.id;
-    if (clickedId === currentRoomId) return;
-
-    // If clicking current target, cancel travel
-    if (clickedId === travelTargetId) {
-      cancelTravel();
+      panOffsetX = panStartOffsetX + dx;
+      panOffsetY = panStartOffsetY + dy;
       return;
     }
 
-    // Start new travel (cancels any existing)
-    cancelTravel();
-    startTravel(clickedId);
-  }
-
-  function handleClearMap() {
-    cancelTravel();
-    if (store) {
-      store.clearVisitedRooms();
-    }
-  }
-
-  // Build a lookup from coords string to room for hit testing
-  let roomsByPixel = []; // [{x, y, w, h, room}] for hit testing
-
-  function draw(rooms, curId) {
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
-
-    // Work in CSS pixel space
-    const w = canvas.width / dpr;
-    const h = canvas.height / dpr;
-
-    ctx.save();
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.imageSmoothingEnabled = false;
-    ctx.clearRect(0, 0, w, h);
-
-    const currentRoom = rooms[curId];
-    if (!currentRoom || !currentRoom.coords) return;
-
-    const currentZ = currentRoom.coords.z;
-
-    // Filter to same z-level and rooms with coords
-    const visibleRoomIds = Object.keys(rooms).filter(id => {
-      const r = rooms[id];
-      return r.coords && r.coords.z === currentZ;
-    });
-
-    if (visibleRoomIds.length === 0) return;
-
-    // BFS distances
-    const distances = computeDistances(rooms, curId);
-
-    // Filter to rooms within visible distance
-    const drawableIds = visibleRoomIds.filter(id =>
-      distances.hasOwnProperty(id) && distances[id] <= MAX_VISIBLE_DISTANCE
-    );
-
-    if (drawableIds.length === 0) return;
-
-    // Center viewport on current room — snap to integer pixels
-    const cx = currentRoom.coords.x;
-    const cy = currentRoom.coords.y;
-    const centerX = Math.round(w / 2);
-    const centerY = Math.round(h / 2);
-
-    // Convert world coords to pixel coords — fixed spacing, Y flipped (north=up)
-    function toPixel(worldX, worldY) {
-      return {
-        px: Math.round(centerX + (worldX - cx) * CELL_SPACING),
-        py: Math.round(centerY + (worldY - cy) * CELL_SPACING),
-      };
-    }
-
-    // Only draw rooms that fit within the canvas (with margin for room size)
-    const margin = ROOM_SIZE / 2 + 2;
-    const visibleDrawableIds = drawableIds.filter(id => {
-      const room = rooms[id];
-      const { px, py } = toPixel(room.coords.x, room.coords.y);
-      return px - margin >= 0 && px + margin <= w && py - margin >= 0 && py + margin <= h;
-    });
-
-    // Reset hit-test data
-    roomsByPixel = [];
-
-    // Draw connections first (below rooms)
-    for (const id of visibleDrawableIds) {
-      const room = rooms[id];
-      const dist = distances[id];
-      const { px: x1, py: y1 } = toPixel(room.coords.x, room.coords.y);
-
-      for (const exit of room.cardinalExits || []) {
-        const target = rooms[exit.targetId];
-        if (!target || !target.coords || target.coords.z !== currentZ) continue;
-        const targetDist = distances[exit.targetId];
-        if (targetDist === undefined || targetDist > MAX_VISIBLE_DISTANCE) continue;
-
-        // Use the max distance of the two endpoints for line opacity
-        const lineDist = Math.max(dist, targetDist);
-        const opacity = getOpacity(lineDist);
-        if (opacity <= 0) continue;
-
-        const { px: x2, py: y2 } = toPixel(target.coords.x, target.coords.y);
-
-        // Highlight path connections
-        const isPathConnection = travelPathRoomIds.has(id) || travelPathRoomIds.has(exit.targetId);
-
-        ctx.save();
-        ctx.globalAlpha = isPathConnection ? 1.0 : opacity;
-        ctx.strokeStyle = isPathConnection ? COLOR_PATH : COLOR_LINE;
-        ctx.lineWidth = isPathConnection ? 3 : LINE_WIDTH;
-        ctx.beginPath();
-        // For even lineWidth, draw on integer coords; for odd, offset by 0.5
-        const lw = isPathConnection ? 3 : LINE_WIDTH;
-        const offset = lw % 2 === 0 ? 0 : 0.5;
-        ctx.moveTo(x1 + offset, y1 + offset);
-        ctx.lineTo(x2 + offset, y2 + offset);
-        ctx.stroke();
-        ctx.restore();
-      }
-    }
-
-    // Draw rooms
-    for (const id of visibleDrawableIds) {
-      const room = rooms[id];
-      const dist = distances[id];
-      const opacity = getOpacity(dist);
-      if (opacity <= 0) continue;
-
-      const { px, py } = toPixel(room.coords.x, room.coords.y);
-      const half = ROOM_SIZE / 2;
-      const rx = px - half;
-      const ry = py - half;
-      const isCurrent = id === curId;
-      const isTarget = id === travelTargetId;
-      const isOnPath = travelPathRoomIds.has(id);
-
-      ctx.save();
-      ctx.globalAlpha = (isTarget || isOnPath) ? 1.0 : opacity;
-
-      // Glow for current room or travel target
-      if (isCurrent) {
-        ctx.shadowColor = COLOR_CURRENT;
-        ctx.shadowBlur = 12;
-      } else if (isTarget) {
-        ctx.shadowColor = COLOR_TARGET;
-        ctx.shadowBlur = 12;
-      }
-
-      // Room fill
-      let fillColor = COLOR_ROOM_FILL;
-      if (isCurrent) fillColor = COLOR_CURRENT_FILL;
-      else if (isTarget) fillColor = COLOR_TARGET_FILL;
-      ctx.fillStyle = fillColor;
-      roundRect(ctx, rx, ry, ROOM_SIZE, ROOM_SIZE, ROOM_RADIUS);
-      ctx.fill();
-
-      // Room border
-      ctx.shadowBlur = 0;
-      let borderColor = COLOR_ROOM_BORDER;
-      if (isCurrent) borderColor = COLOR_CURRENT;
-      else if (isTarget) borderColor = COLOR_TARGET;
-      else if (isOnPath) borderColor = COLOR_PATH;
-      ctx.strokeStyle = borderColor;
-
-      const thick = isCurrent || isTarget;
-      ctx.lineWidth = thick ? 2 : 1;
-      if (!thick) {
-        roundRect(ctx, rx + 0.5, ry + 0.5, ROOM_SIZE - 1, ROOM_SIZE - 1, ROOM_RADIUS);
-      } else {
-        roundRect(ctx, rx, ry, ROOM_SIZE, ROOM_SIZE, ROOM_RADIUS);
-      }
-      ctx.stroke();
-
-      ctx.restore();
-
-      // Store for hit testing
-      roomsByPixel.push({
-        x: rx,
-        y: ry,
-        w: ROOM_SIZE,
-        h: ROOM_SIZE,
-        room,
-      });
-    }
-
-    // Restore the DPR transform
-    ctx.restore();
-  }
-
-  // Rounded rect helper
-  function roundRect(ctx, x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-    ctx.lineTo(x + r, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-    ctx.lineTo(x, y + r);
-    ctx.quadraticCurveTo(x, y, x + r, y);
-    ctx.closePath();
-  }
-
-  function handleMouseMove(e) {
-    if (!canvas) return;
+    // Tooltip on hover
     const rect = canvas.getBoundingClientRect();
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
@@ -427,26 +243,284 @@
 
     if (found) {
       const roomName = found.room.name || found.room.id;
-      const isTarget = found.room.id === travelTargetId;
       const isCurrent = found.room.id === currentRoomId;
+      const isTarget = found.room.id === travelTargetId;
       let text = roomName;
       if (isCurrent) text += ' (you are here)';
       else if (isTarget && isTraveling) text += ' (traveling...)';
       else if (isTarget) text += ' (target)';
       else text += ' (click to travel)';
-      tooltip = {
-        visible: true,
-        text,
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      };
+      tooltip = { visible: true, text, x: e.clientX - rect.left, y: e.clientY - rect.top };
     } else {
       tooltip = { ...tooltip, visible: false };
     }
   }
 
+  function handlePointerUp(e) {
+    if (!canvas) return;
+    canvas.releasePointerCapture(e.pointerId);
+
+    if (isPanning && !didDrag) {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+
+      let found = null;
+      for (const entry of roomsByPixel) {
+        if (mx >= entry.x && mx <= entry.x + entry.w &&
+            my >= entry.y && my <= entry.y + entry.h) {
+          found = entry;
+          break;
+        }
+      }
+
+      if (found) {
+        const clickedId = found.room.id;
+        if (clickedId !== currentRoomId) {
+          if (clickedId === travelTargetId) {
+            cancelTravel();
+          } else {
+            cancelTravel();
+            startTravel(clickedId);
+          }
+        }
+      }
+    }
+
+    isPanning = false;
+    didDrag = false;
+  }
+
   function handleMouseLeave() {
     tooltip = { ...tooltip, visible: false };
+  }
+
+  function recenter() {
+    panOffsetX = 0;
+    panOffsetY = 0;
+  }
+
+  function toggleMaximize() {
+    maximized = !maximized;
+    // After Svelte swaps the DOM (container/canvas change via bind:this),
+    // the ResizeObserver reactive block picks it up automatically.
+    // But we need a small delay for the portal to mount.
+    setTimeout(() => resizeCanvas(), 30);
+  }
+
+  function handleBackdropClick(e) {
+    // Close modal when clicking the dark backdrop area (not the modal content)
+    if (e.target === e.currentTarget) {
+      toggleMaximize();
+    }
+  }
+
+  function handleBackdropKeydown(e) {
+    if (e.key === 'Escape') {
+      toggleMaximize();
+    }
+  }
+
+  function handleClearMap() {
+    cancelTravel();
+    if (store) {
+      store.clearVisitedRooms();
+    }
+  }
+
+  // Hit-test data
+  let roomsByPixel = [];
+
+  function draw(rooms, curId) {
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+
+    const w = canvas.width / dpr;
+    const h = canvas.height / dpr;
+
+    ctx.save();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, w, h);
+
+    const currentRoom = rooms[curId];
+    if (!currentRoom || !currentRoom.coords) {
+      ctx.restore();
+      return;
+    }
+
+    const currentZ = currentRoom.coords.z;
+
+    const visibleRoomIds = Object.keys(rooms).filter(id => {
+      const r = rooms[id];
+      return r.coords && r.coords.z === currentZ;
+    });
+
+    if (visibleRoomIds.length === 0) {
+      ctx.restore();
+      return;
+    }
+
+    const distances = computeDistances(rooms, curId);
+
+    const cx = currentRoom.coords.x;
+    const cy = currentRoom.coords.y;
+    const centerX = Math.round(w / 2) + panOffsetX;
+    const centerY = Math.round(h / 2) + panOffsetY;
+
+    function toPixel(worldX, worldY) {
+      return {
+        px: Math.round(centerX + (worldX - cx) * CELL_SPACING),
+        py: Math.round(centerY + (worldY - cy) * CELL_SPACING),
+      };
+    }
+
+    const cullMargin = CELL_SPACING + ROOM_SIZE;
+    const drawableIds = visibleRoomIds.filter(id => {
+      const room = rooms[id];
+      const { px, py } = toPixel(room.coords.x, room.coords.y);
+      return px + cullMargin >= 0 && px - cullMargin <= w &&
+             py + cullMargin >= 0 && py - cullMargin <= h;
+    });
+
+    if (drawableIds.length === 0) {
+      ctx.restore();
+      return;
+    }
+
+    const drawableSet = new Set(drawableIds);
+
+    roomsByPixel = [];
+
+    // Draw connections
+    for (const id of drawableIds) {
+      const room = rooms[id];
+      const dist = distances[id];
+      const { px: x1, py: y1 } = toPixel(room.coords.x, room.coords.y);
+
+      for (const exit of room.cardinalExits || []) {
+        const target = rooms[exit.targetId];
+        if (!target || !target.coords || target.coords.z !== currentZ) continue;
+        if (!drawableSet.has(exit.targetId)) continue;
+
+        const isPathConnection = travelPathRoomIds.has(id) || travelPathRoomIds.has(exit.targetId);
+        const isNearby = dist !== undefined && dist <= 2;
+
+        const { px: x2, py: y2 } = toPixel(target.coords.x, target.coords.y);
+
+        ctx.save();
+        ctx.globalAlpha = 1.0;
+        ctx.strokeStyle = isPathConnection ? COLOR_PATH : (isNearby ? COLOR_LINE : COLOR_LINE_DIM);
+        ctx.lineWidth = isPathConnection ? 3 : LINE_WIDTH;
+        ctx.beginPath();
+        const lw = isPathConnection ? 3 : LINE_WIDTH;
+        const offset = lw % 2 === 0 ? 0 : 0.5;
+        ctx.moveTo(x1 + offset, y1 + offset);
+        ctx.lineTo(x2 + offset, y2 + offset);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // Draw rooms
+    for (const id of drawableIds) {
+      const room = rooms[id];
+      const dist = distances[id];
+
+      const { px, py } = toPixel(room.coords.x, room.coords.y);
+      const half = ROOM_SIZE / 2;
+      const rx = px - half;
+      const ry = py - half;
+      const isCurrent = id === curId;
+      const isTarget = id === travelTargetId;
+      const isOnPath = travelPathRoomIds.has(id);
+      const isNearby = !isCurrent && !isTarget && dist !== undefined && dist <= 2;
+
+      ctx.save();
+      ctx.globalAlpha = 1.0;
+
+      if (isCurrent) {
+        ctx.shadowColor = COLOR_CURRENT;
+        ctx.shadowBlur = 12;
+      } else if (isTarget) {
+        ctx.shadowColor = COLOR_TARGET;
+        ctx.shadowBlur = 12;
+      }
+
+      let fillColor = COLOR_ROOM_FILL;
+      if (isCurrent) fillColor = COLOR_CURRENT_FILL;
+      else if (isTarget) fillColor = COLOR_TARGET_FILL;
+      else if (isNearby) fillColor = COLOR_NEARBY_FILL;
+      ctx.fillStyle = fillColor;
+      roundRect(ctx, rx, ry, ROOM_SIZE, ROOM_SIZE, ROOM_RADIUS);
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
+      let borderColor = COLOR_ROOM_BORDER;
+      if (isCurrent) borderColor = COLOR_CURRENT;
+      else if (isTarget) borderColor = COLOR_TARGET;
+      else if (isOnPath) borderColor = COLOR_PATH;
+      else if (isNearby) borderColor = COLOR_NEARBY_BORDER;
+      ctx.strokeStyle = borderColor;
+
+      const thick = isCurrent || isTarget;
+      ctx.lineWidth = thick ? 2 : 1;
+      if (!thick) {
+        roundRect(ctx, rx + 0.5, ry + 0.5, ROOM_SIZE - 1, ROOM_SIZE - 1, ROOM_RADIUS);
+      } else {
+        roundRect(ctx, rx, ry, ROOM_SIZE, ROOM_SIZE, ROOM_RADIUS);
+      }
+      ctx.stroke();
+
+      // Up/down indicators
+      const hasUp = (room.cardinalExits || []).some(e => e.dir === 'up');
+      const hasDown = (room.cardinalExits || []).some(e => e.dir === 'down');
+      if (hasUp || hasDown) {
+        ctx.save();
+        ctx.font = `bold ${Math.round(ROOM_SIZE * 0.55)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#a78bfa';
+        if (hasUp) {
+          ctx.fillText('\u25B2', px, ry - 4);
+        }
+        if (hasDown) {
+          ctx.fillText('\u25BC', px, ry + ROOM_SIZE + 5);
+        }
+        ctx.restore();
+      }
+
+      ctx.restore();
+
+      roomsByPixel.push({ x: rx, y: ry, w: ROOM_SIZE, h: ROOM_SIZE, room });
+    }
+
+    // Z-level indicator
+    ctx.save();
+    ctx.font = '11px monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#6b7280';
+    const zLabel = currentZ === 0 ? 'Ground' : currentZ > 0 ? `Floor +${currentZ}` : `Floor ${currentZ}`;
+    ctx.fillText(zLabel, 6, 6);
+    ctx.restore();
+
+    ctx.restore();
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
   }
 
   function resizeCanvas() {
@@ -463,7 +537,6 @@
     draw(visitedRooms, currentRoomId);
   }
 
-  // Re-observe whenever the container element appears/changes ({#if} toggle)
   let observedContainer = null;
   $: if (container !== observedContainer) {
     if (resizeObserver) resizeObserver.disconnect();
@@ -478,10 +551,12 @@
   onDestroy(() => {
     if (resizeObserver) resizeObserver.disconnect();
     cancelTravel();
+    maximized = false;
   });
 </script>
 
 <style>
+  /* --- Inline widget styles --- */
   .minimap-container {
     width: 100%;
     height: 100%;
@@ -565,7 +640,12 @@
 
   canvas {
     display: block;
-    cursor: pointer;
+    cursor: grab;
+    touch-action: none;
+  }
+
+  canvas:active {
+    cursor: grabbing;
   }
 
   .tooltip {
@@ -600,35 +680,163 @@
     display: block;
     color: #374151;
   }
+
+  .maximized-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #4b5563;
+    font-size: 12px;
+    text-align: center;
+  }
+
+  /* --- Modal overlay styles (portaled to body) --- */
+  .modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10000;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .modal-panel {
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid #21262d;
+    font-size: 13px;
+    font-weight: 600;
+    color: #c9d1d9;
+    flex-shrink: 0;
+  }
+
+  .modal-header i {
+    font-size: 16px;
+    color: #8b949e;
+  }
+
+  .modal-header .header-spacer {
+    flex: 1;
+  }
+
+  .modal-canvas-wrap {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
 </style>
 
+<!-- Maximized modal — portaled to document.body -->
+{#if maximized}
+  <div class="modal-backdrop" use:portal on:click={handleBackdropClick} on:keydown={handleBackdropKeydown}>
+    <div class="modal-panel">
+      <div class="modal-header">
+        <i class="material-icons">map</i>
+        Map
+        {#if isTraveling}
+          <span class="travel-indicator">Traveling...</span>
+        {/if}
+        <span class="header-spacer"></span>
+        {#if panOffsetX !== 0 || panOffsetY !== 0}
+          <button class="header-btn" title="Re-center on current room" on:click={recenter}>
+            <i class="material-icons" style="font-size: inherit">my_location</i>
+          </button>
+        {/if}
+        {#if isTraveling}
+          <button class="header-btn cancel" title="Cancel travel" on:click={cancelTravel}>
+            <i class="material-icons" style="font-size: inherit">close</i>
+          </button>
+        {/if}
+        {#if currentRoomId && Object.keys(visitedRooms).length > 0}
+          <button class="header-btn" title="Clear map data" on:click={handleClearMap}>
+            <i class="material-icons" style="font-size: inherit">delete_sweep</i>
+          </button>
+        {/if}
+        <button class="header-btn" title="Close map" on:click={toggleMaximize}>
+          <i class="material-icons" style="font-size: inherit">close</i>
+        </button>
+      </div>
+      <div class="modal-canvas-wrap" bind:this={container}>
+        <canvas
+          bind:this={canvas}
+          on:pointerdown={handlePointerDown}
+          on:pointermove={handlePointerMove}
+          on:pointerup={handlePointerUp}
+          on:pointerleave={handleMouseLeave}
+        ></canvas>
+        {#if tooltip.visible}
+          <div class="tooltip" style="left: {tooltip.x}px; top: {tooltip.y}px;">
+            {tooltip.text}
+          </div>
+        {/if}
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Inline widget (always present in the grid slot) -->
 <div class="minimap-container">
   <div class="minimap-header">
+    <button class="header-btn" title="Expand map" on:click={toggleMaximize}>
+      <i class="material-icons" style="font-size: inherit">open_in_full</i>
+    </button>
     <i class="material-icons">map</i>
     Minimap
-    {#if isTraveling}
+    {#if isTraveling && !maximized}
       <span class="travel-indicator">Traveling...</span>
     {/if}
     <span class="header-spacer"></span>
-    {#if isTraveling}
+    {#if !maximized && (panOffsetX !== 0 || panOffsetY !== 0)}
+      <button class="header-btn" title="Re-center on current room" on:click={recenter}>
+        <i class="material-icons" style="font-size: inherit">my_location</i>
+      </button>
+    {/if}
+    {#if isTraveling && !maximized}
       <button class="header-btn cancel" title="Cancel travel" on:click={cancelTravel}>
         <i class="material-icons" style="font-size: inherit">close</i>
       </button>
     {/if}
-    {#if currentRoomId && Object.keys(visitedRooms).length > 0}
+    {#if !maximized && currentRoomId && Object.keys(visitedRooms).length > 0}
       <button class="header-btn" title="Clear map data" on:click={handleClearMap}>
         <i class="material-icons" style="font-size: inherit">delete_sweep</i>
       </button>
     {/if}
   </div>
 
-  {#if currentRoomId && Object.keys(visitedRooms).length > 0}
+  {#if maximized}
+    <div class="maximized-placeholder">
+      Map is expanded
+    </div>
+  {:else if currentRoomId && Object.keys(visitedRooms).length > 0}
     <div class="canvas-wrap" bind:this={container}>
       <canvas
         bind:this={canvas}
-        on:mousemove={handleMouseMove}
-        on:mouseleave={handleMouseLeave}
-        on:click={handleCanvasClick}
+        on:pointerdown={handlePointerDown}
+        on:pointermove={handlePointerMove}
+        on:pointerup={handlePointerUp}
+        on:pointerleave={handleMouseLeave}
       ></canvas>
       {#if tooltip.visible}
         <div class="tooltip" style="left: {tooltip.x}px; top: {tooltip.y}px;">

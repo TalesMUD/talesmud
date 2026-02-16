@@ -4,36 +4,23 @@
   import Grid from 'svelte-grid';
   import gridHelp from 'svelte-grid/build/helper/index.mjs';
   import { layoutStore } from './LayoutStore.js';
-  import { WIDGET_TYPES, getMinSize } from './WidgetRegistry.js';
+  import { WIDGET_TYPES } from './WidgetRegistry.js';
   import WidgetWrapper from './WidgetWrapper.svelte';
+  import TabConfigPanel from './TabConfigPanel.svelte';
 
-  // Widget components
-  import RoomWidget from '../widgets/RoomWidget.svelte';
-  import TerminalWidget from '../widgets/TerminalWidget.svelte';
-  import TerminalXWidget from '../widgets/TerminalXWidget.svelte';
-  import ActionBarWidget from '../widgets/ActionBarWidget.svelte';
-  import CharacterWidget from '../widgets/CharacterWidget.svelte';
-  import InventoryWidget from '../widgets/InventoryWidget.svelte';
-  import EquipmentWidget from '../widgets/EquipmentWidget.svelte';
-  import QuestLogWidget from '../widgets/QuestLogWidget.svelte';
-  import MinimapWidget from '../widgets/MinimapWidget.svelte';
+  // Widget components - shared map + tab container
+  import { childWidgetComponents, getChildWidgetProps } from './WidgetComponents.js';
+  import TabContainerWidget from '../widgets/TabContainerWidget.svelte';
 
   export let store;
   export let sendMessage;
   export let onTerminalReady = () => {};
   export let onTerminalInput = () => {};
 
-  // Map widget types to components
+  // Map widget types to components (shared + tabcontainer added locally to avoid circular imports)
   const widgetComponents = {
-    room: RoomWidget,
-    terminal: TerminalWidget,
-    terminalx: TerminalXWidget,
-    actionbar: ActionBarWidget,
-    character: CharacterWidget,
-    inventory: InventoryWidget,
-    equipment: EquipmentWidget,
-    questlog: QuestLogWidget,
-    minimap: MinimapWidget
+    ...childWidgetComponents,
+    tabcontainer: TabContainerWidget
   };
 
   // Grid configuration
@@ -83,9 +70,6 @@
             y: unsafeItem[cols].y,
             w: unsafeItem[cols].w,
             h: unsafeItem[cols].h,
-            // Preserve min/max constraints and customResizer
-            min: w[cols]?.min || { w: 4, h: 3 },
-            max: w[cols]?.max || { w: 24, h: 20 },
             customResizer: w[cols]?.customResizer ?? true
           }
         };
@@ -94,6 +78,17 @@
     });
 
     layoutStore.updateWidgets(widgets);
+  }
+
+  // Tab container configuration
+  let configuringWidgetId = null;
+
+  function handleConfigure(e) {
+    configuringWidgetId = e.detail.id;
+  }
+
+  function closeConfigPanel() {
+    configuringWidgetId = null;
   }
 
   // Handle widget removal
@@ -110,34 +105,18 @@
 
   // Get props for each widget type
   function getWidgetProps(widget) {
-    const baseProps = {};
-
-    switch (widget.widgetType) {
-      case 'room':
-        return { store, sendMessage };
-      case 'terminal':
-        return {
-          onTerminalReady,
-          onInput: onTerminalInput
-        };
-      case 'terminalx':
-        return {
-          onTerminalReady,
-          onInput: onTerminalInput
-        };
-      case 'actionbar':
-        return { store, sendMessage, term: null };
-      case 'inventory':
-        return { store, sendMessage };
-      case 'equipment':
-        return { store, sendMessage };
-      case 'character':
-        return { store, sendMessage };
-      case 'minimap':
-        return { store, sendMessage };
-      default:
-        return baseProps;
+    if (widget.widgetType === 'tabcontainer') {
+      return {
+        store,
+        sendMessage,
+        onTerminalReady,
+        onTerminalInput,
+        widget
+      };
     }
+    return getChildWidgetProps(widget.widgetType, {
+      store, sendMessage, onTerminalReady, onTerminalInput
+    });
   }
 </script>
 
@@ -212,6 +191,7 @@
         {editMode}
         {resizePointerDown}
         on:remove={handleRemove}
+        on:configure={handleConfigure}
       >
         {#if getComponent(dataItem.widgetType)}
           <svelte:component
@@ -225,3 +205,7 @@
     </div>
   </Grid>
 </div>
+
+{#if configuringWidgetId}
+  <TabConfigPanel widgetId={configuringWidgetId} on:close={closeConfigPanel} />
+{/if}
