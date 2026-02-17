@@ -42,22 +42,26 @@
     flex-direction: column;
     width: 100%;
     height: 100%;
-    background: rgba(15, 15, 25, 0.95);
-    border-radius: 8px;
+    background: var(--panel-bg);
+    border-radius: var(--panel-radius);
     overflow: hidden;
+    border: 1px solid var(--panel-border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: var(--panel-shadow);
   }
 
   .tab-bar {
     display: flex;
     align-items: stretch;
-    background: rgba(0, 0, 0, 0.4);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    min-height: 36px;
+    background: var(--panel-header-bg);
+    border-bottom: 1px solid var(--panel-header-border);
+    min-height: 38px;
     flex-shrink: 0;
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
   }
 
   .tab-bar::-webkit-scrollbar {
@@ -67,7 +71,7 @@
     background: transparent;
   }
   .tab-bar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--scrollbar-thumb);
     border-radius: 2px;
   }
 
@@ -75,12 +79,13 @@
     display: flex;
     align-items: center;
     gap: 0.35em;
-    padding: 0.4em 0.75em;
+    padding: 0.4em 0.8em;
     background: transparent;
     border: none;
     border-bottom: 2px solid transparent;
-    color: #9ca3af;
-    font-size: 0.8em;
+    color: var(--text-secondary);
+    font-family: var(--font-display);
+    font-size: var(--text-sm);
     font-weight: 500;
     cursor: pointer;
     white-space: nowrap;
@@ -88,14 +93,14 @@
   }
 
   .tab:hover {
-    color: #e5e7eb;
-    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+    background: var(--tab-hover-bg);
   }
 
   .tab.active {
-    color: #f59e0b;
-    border-bottom-color: #f59e0b;
-    background: rgba(245, 158, 11, 0.08);
+    color: var(--tab-active-color);
+    border-bottom-color: var(--tab-active-border);
+    background: var(--tab-active-bg);
   }
 
   .tab i.tab-icon {
@@ -109,9 +114,11 @@
   }
 
   /* Hide child widget headers inside tabs — the tab bar already shows the name.
+     Also hide game-panel-header since we now use that class.
      !important needed because Svelte's double-hash scoping on child components
      gives them equal specificity (0,3,0) and they load later in the bundle. */
-  .tab-pane :global(.widget-header) {
+  .tab-pane :global(.widget-header),
+  .tab-pane :global(.game-panel-header) {
     display: none !important;
   }
 
@@ -134,7 +141,7 @@
     align-items: center;
     justify-content: center;
     height: 100%;
-    color: #6b7280;
+    color: var(--text-dim);
     gap: 0.75em;
     padding: 1em;
     text-align: center;
@@ -142,11 +149,11 @@
 
   .empty-state i {
     font-size: 2.5em;
-    color: #4b5563;
+    color: var(--text-dim);
   }
 
   .empty-state .hint {
-    font-size: 0.85em;
+    font-size: var(--text-sm);
     max-width: 200px;
   }
 </style>

@@ -184,36 +184,13 @@
 </script>
 
 <style>
+  /* Base panel styling comes from global .game-panel class in themes.css */
   .inventory-widget {
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    padding: 1em;
-    height: 100%;
-    overflow-y: auto;
-    color: #e5e7eb;
     position: relative;
   }
 
-  .widget-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5em;
-    margin-bottom: 1em;
-    padding-bottom: 0.75em;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  .widget-header i {
-    color: #f59e0b;
-  }
-
   .widget-title {
-    font-size: 1em;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    flex: 1;
   }
 
   .widget-toolbar {
@@ -223,15 +200,15 @@
     gap: 0.75em;
     margin-bottom: 0.75em;
     padding-bottom: 0.5em;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid var(--divider-color);
   }
 
   .gold-display {
     display: flex;
     align-items: center;
     gap: 0.25em;
-    font-size: 0.8em;
-    color: #f59e0b;
+    font-size: var(--text-sm);
+    color: var(--color-gold);
   }
 
   .gold-display i {
@@ -239,8 +216,8 @@
   }
 
   .item-count {
-    font-size: 0.8em;
-    color: #6b7280;
+    font-size: var(--text-sm);
+    color: var(--text-dim);
   }
 
   .view-toggle {
@@ -251,12 +228,12 @@
     padding: 0.2em;
     border-radius: 4px;
     transition: background 0.15s ease, color 0.15s ease;
-    color: #6b7280;
+    color: var(--text-dim);
   }
 
   .view-toggle:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #e5e7eb;
+    background: var(--panel-inner-hover);
+    color: var(--text-primary);
   }
 
   .view-toggle i {
@@ -272,18 +249,18 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.4em 0.5em;
+    padding: 0.45em 0.55em;
     margin-bottom: 0.4em;
     cursor: pointer;
     border-radius: 6px;
-    background: rgba(255, 255, 255, 0.03);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    background: var(--panel-inner-bg);
+    border-bottom: 1px solid var(--panel-inner-border);
     transition: background 0.15s ease;
     user-select: none;
   }
 
   .category-header:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--panel-inner-hover);
   }
 
   .category-header-left {
@@ -293,28 +270,28 @@
   }
 
   .category-icon {
-    font-size: 0.9em;
+    font-size: 1em;
   }
 
   .category-label {
-    font-size: 0.75em;
+    font-size: var(--text-sm);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: #d1d5db;
+    color: var(--text-primary);
   }
 
   .category-count {
-    font-size: 0.65em;
-    color: #6b7280;
-    background: rgba(255, 255, 255, 0.08);
+    font-size: var(--text-xs);
+    color: var(--text-dim);
+    background: var(--panel-inner-bg);
     padding: 0.1em 0.4em;
     border-radius: 8px;
   }
 
   .category-chevron {
     font-size: 1em;
-    color: #6b7280;
+    color: var(--text-dim);
     transition: transform 0.2s ease;
   }
 
@@ -324,14 +301,14 @@
 
   .inventory-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
     gap: 0.5em;
   }
 
   .item-slot {
     aspect-ratio: 1;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--panel-inner-bg);
+    border: 1px solid var(--panel-inner-border);
     border-radius: 8px;
     display: flex;
     flex-direction: column;
@@ -344,14 +321,14 @@
   }
 
   .item-slot:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: var(--panel-inner-hover);
+    border-color: var(--panel-border-hover);
     transform: translateY(-2px);
   }
 
   .item-slot.selected {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.3);
+    background: var(--accent-glow);
+    border-color: var(--accent-primary);
   }
 
   .item-slot.equipped-item {
@@ -360,9 +337,9 @@
 
   .equipped-badge {
     position: absolute;
-    top: 2px;
-    left: 2px;
-    font-size: 0.55em;
+    top: 3px;
+    left: 3px;
+    font-size: var(--text-xs);
     background: rgba(34, 197, 94, 0.8);
     color: #fff;
     padding: 0.1em 0.3em;
@@ -373,15 +350,15 @@
   }
 
   .item-icon {
-    font-size: 1.5em;
+    font-size: 1.6em;
     margin-bottom: 0.2em;
   }
 
   .item-name {
-    font-size: 0.65em;
+    font-size: var(--text-xs);
     text-align: center;
     line-height: 1.2;
-    color: #d1d5db;
+    color: var(--text-primary);
     overflow: hidden;
     text-overflow: ellipsis;
     display: -webkit-box;
@@ -396,7 +373,7 @@
     background: rgba(0, 0, 0, 0.7);
     padding: 0.15em 0.35em;
     border-radius: 4px;
-    font-size: 0.65em;
+    font-size: var(--text-xs);
     font-weight: 600;
   }
 
@@ -404,16 +381,16 @@
   .inventory-list {
     display: flex;
     flex-direction: column;
-    gap: 0.2em;
+    gap: 0.25em;
   }
 
   .list-item {
     display: flex;
     align-items: center;
     gap: 0.5em;
-    padding: 0.35em 0.5em;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 0.4em 0.55em;
+    background: var(--panel-inner-bg);
+    border: 1px solid var(--panel-inner-border);
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.15s ease;
@@ -421,13 +398,13 @@
   }
 
   .list-item:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.15);
+    background: var(--panel-inner-hover);
+    border-color: var(--panel-border-hover);
   }
 
   .list-item.selected {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: var(--accent-glow);
+    border-color: var(--accent-primary);
   }
 
   .list-item.equipped-item {
@@ -435,7 +412,7 @@
   }
 
   .list-item-icon {
-    font-size: 1.15em;
+    font-size: 1.2em;
     flex-shrink: 0;
   }
 
@@ -448,17 +425,17 @@
   }
 
   .list-item-name {
-    font-size: 0.8em;
+    font-size: var(--text-base);
     font-weight: 600;
-    color: #e5e7eb;
+    color: var(--text-primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .list-item-meta {
-    font-size: 0.65em;
-    color: #6b7280;
+    font-size: var(--text-xs);
+    color: var(--text-dim);
     display: flex;
     align-items: center;
     gap: 0.4em;
@@ -481,7 +458,7 @@
   }
 
   .list-equipped-tag {
-    font-size: 0.6em;
+    font-size: var(--text-xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.3px;
@@ -492,8 +469,8 @@
   }
 
   .list-item-qty {
-    font-size: 0.7em;
-    color: #9ca3af;
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
     font-weight: 600;
   }
 
@@ -503,7 +480,7 @@
     inset: 0;
     background: rgba(0, 0, 0, 0.5);
     z-index: 99;
-    border-radius: 12px;
+    border-radius: var(--panel-radius);
   }
 
   .detail-overlay {
@@ -512,15 +489,17 @@
     left: 50%;
     transform: translate(-50%, -50%);
     width: calc(100% - 2em);
-    max-width: 280px;
+    max-width: 300px;
     max-height: calc(100% - 2em);
     overflow-y: auto;
-    background: rgba(18, 18, 28, 0.97);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 10px;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--panel-radius);
     padding: 1em;
     z-index: 100;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
   }
 
   .detail-header {
@@ -529,7 +508,7 @@
     align-items: flex-start;
     margin-bottom: 0.75em;
     padding-bottom: 0.6em;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--divider-color);
   }
 
   .detail-title-row {
@@ -549,14 +528,15 @@
   }
 
   .detail-name {
-    font-size: 1em;
+    font-family: var(--font-display);
+    font-size: var(--text-base);
     font-weight: 700;
   }
 
   .detail-meta {
     display: flex;
     gap: 0.4em;
-    font-size: 0.7em;
+    font-size: var(--text-xs);
     text-transform: capitalize;
   }
 
@@ -565,34 +545,34 @@
   }
 
   .detail-type {
-    color: #9ca3af;
+    color: var(--text-secondary);
   }
 
   .detail-close {
     cursor: pointer;
-    color: #6b7280;
+    color: var(--text-dim);
     font-size: 1.2em;
     transition: color 0.15s;
     flex-shrink: 0;
   }
 
   .detail-close:hover {
-    color: #e5e7eb;
+    color: var(--text-primary);
   }
 
   .detail-slot {
     display: flex;
     align-items: center;
     gap: 0.35em;
-    font-size: 0.75em;
-    color: #9ca3af;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
     text-transform: capitalize;
     margin-bottom: 0.6em;
   }
 
   .detail-stats {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: var(--panel-inner-bg);
+    border: 1px solid var(--panel-inner-border);
     border-radius: 6px;
     padding: 0.5em 0.6em;
     margin-bottom: 0.6em;
@@ -602,21 +582,21 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.2em 0;
-    font-size: 0.8em;
+    padding: 0.25em 0;
+    font-size: var(--text-sm);
   }
 
   .stat-row + .stat-row {
-    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    border-top: 1px solid var(--divider-color);
   }
 
   .stat-label {
-    color: #9ca3af;
+    color: var(--text-secondary);
   }
 
   .stat-value {
     font-weight: 600;
-    color: #e5e7eb;
+    color: var(--text-primary);
   }
 
   .stat-offensive {
@@ -628,8 +608,8 @@
   }
 
   .detail-description {
-    font-size: 0.78em;
-    color: #9ca3af;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
     line-height: 1.5;
     margin-bottom: 0.6em;
     font-style: italic;
@@ -646,34 +626,34 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: var(--panel-inner-bg);
+    border: 1px solid var(--panel-inner-border);
     border-radius: 6px;
     padding: 0.35em 0.4em;
   }
 
   .info-label {
-    font-size: 0.6em;
-    color: #6b7280;
+    font-size: var(--text-xs);
+    color: var(--text-dim);
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
 
   .info-value {
-    font-size: 0.8em;
+    font-size: var(--text-sm);
     font-weight: 600;
-    color: #e5e7eb;
+    color: var(--text-primary);
   }
 
   .detail-gold {
-    color: #f59e0b;
+    color: var(--color-gold);
   }
 
   .detail-equipped-tag {
     display: inline-flex;
     align-items: center;
     gap: 0.3em;
-    font-size: 0.72em;
+    font-size: var(--text-xs);
     color: #22c55e;
     background: rgba(34, 197, 94, 0.1);
     padding: 0.2em 0.5em;
@@ -687,27 +667,27 @@
     flex-wrap: wrap;
     margin-top: 0.5em;
     padding-top: 0.6em;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid var(--divider-color);
   }
 
   .detail-action-btn {
     display: flex;
     align-items: center;
     gap: 0.3em;
-    padding: 0.4em 0.7em;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.45em 0.75em;
+    border: 1px solid var(--panel-inner-border);
     border-radius: 6px;
-    background: rgba(255, 255, 255, 0.06);
-    color: #e5e7eb;
+    background: var(--panel-inner-bg);
+    color: var(--text-primary);
     cursor: pointer;
-    font-size: 0.75em;
+    font-size: var(--text-sm);
     font-family: inherit;
     transition: all 0.15s;
   }
 
   .detail-action-btn:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: var(--panel-inner-hover);
+    border-color: var(--panel-border-hover);
   }
 
   .detail-action-btn i {
@@ -727,9 +707,9 @@
 
   .empty-state {
     text-align: center;
-    color: #6b7280;
+    color: var(--text-dim);
     padding: 2em 1em;
-    font-size: 0.85em;
+    font-size: var(--text-sm);
   }
 
   .empty-state i {
@@ -740,8 +720,8 @@
   }
 </style>
 
-<div class="inventory-widget">
-  <div class="widget-header">
+<div class="inventory-widget game-panel">
+  <div class="game-panel-header">
     <i class="material-icons">inventory_2</i>
     <span class="widget-title">Inventory</span>
   </div>

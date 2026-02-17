@@ -104,20 +104,13 @@
 </script>
 
 <style>
+  /* Base panel styling comes from global .game-panel class in themes.css */
   .character-widget {
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    padding: 1em;
-    height: 100%;
-    overflow-y: auto;
-    color: #e5e7eb;
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
   }
 
   .character-widget.in-combat {
-    border-color: rgba(239, 68, 68, 0.5);
+    border-color: rgba(239, 68, 68, 0.5) !important;
     box-shadow: 0 0 20px rgba(239, 68, 68, 0.15), inset 0 0 20px rgba(239, 68, 68, 0.05);
     animation: combatPulse 2s ease-in-out infinite;
   }
@@ -127,29 +120,13 @@
     50% { border-color: rgba(239, 68, 68, 0.6); box-shadow: 0 0 25px rgba(239, 68, 68, 0.2); }
   }
 
-  .widget-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5em;
-    margin-bottom: 1em;
-    padding-bottom: 0.75em;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  .widget-header i {
-    color: #f59e0b;
-  }
-
+  /* Header uses global .game-panel-header */
   .widget-title {
-    font-size: 1em;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
     flex: 1;
   }
 
   .combat-badge {
-    font-size: 0.65em;
+    font-size: var(--text-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -172,15 +149,16 @@
   }
 
   .char-name {
-    font-size: 1.1em;
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
     font-weight: 700;
-    color: #f3f4f6;
+    color: var(--text-primary);
     margin-bottom: 0.15em;
   }
 
   .char-info {
-    font-size: 0.8em;
-    color: #9ca3af;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
     display: flex;
     align-items: center;
     gap: 0.4em;
@@ -190,13 +168,13 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: rgba(245, 158, 11, 0.15);
-    color: #f59e0b;
+    background: var(--accent-subtle);
+    color: var(--accent-primary);
     font-weight: 700;
     font-size: 0.85em;
     padding: 0.1em 0.45em;
     border-radius: 4px;
-    border: 1px solid rgba(245, 158, 11, 0.25);
+    border: 1px solid var(--panel-inner-border);
   }
 
   /* Stat bars */
@@ -219,7 +197,7 @@
   }
 
   .bar-label {
-    font-size: 0.75em;
+    font-size: var(--text-sm);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -232,22 +210,23 @@
   .bar-label.xp { color: #c084fc; }
 
   .bar-value {
-    font-size: 0.75em;
-    color: #9ca3af;
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
     font-variant-numeric: tabular-nums;
   }
 
   .bar-track {
-    height: 8px;
-    background: rgba(255, 255, 255, 0.08);
-    border-radius: 4px;
+    height: var(--bar-height);
+    background: var(--bar-track-bg);
+    border: var(--bar-track-border);
+    border-radius: var(--bar-radius);
     overflow: hidden;
     position: relative;
   }
 
   .bar-fill {
     height: 100%;
-    border-radius: 4px;
+    border-radius: var(--bar-radius);
     transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
   }
@@ -275,7 +254,7 @@
     right: 0;
     height: 50%;
     background: linear-gradient(to bottom, rgba(255,255,255,0.15), transparent);
-    border-radius: 4px 4px 0 0;
+    border-radius: var(--bar-radius) var(--bar-radius) 0 0;
   }
 
   /* Gold row */
@@ -286,7 +265,7 @@
     padding: 0.5em 0.6em;
     background: rgba(251, 191, 36, 0.08);
     border-radius: 6px;
-    border: 1px solid rgba(251, 191, 36, 0.12);
+    border: 1px solid rgba(251, 191, 36, 0.15);
     margin-bottom: 0.75em;
   }
 
@@ -294,85 +273,63 @@
     display: flex;
     align-items: center;
     gap: 0.35em;
-    font-size: 0.8em;
-    color: #d1d5db;
+    font-size: var(--text-sm);
+    color: var(--text-primary);
   }
 
   .gold-label i {
     font-size: 1.1em;
-    color: #fbbf24;
+    color: var(--color-gold);
   }
 
   .gold-value {
-    font-size: 1em;
+    font-size: var(--text-base);
     font-weight: 700;
-    color: #fbbf24;
+    color: var(--color-gold);
     font-variant-numeric: tabular-nums;
   }
 
-  /* Attributes section */
-  .section-divider {
-    display: flex;
-    align-items: center;
-    gap: 0.5em;
-    margin: 0.75em 0 0.5em 0;
-  }
-
-  .section-divider span {
-    font-size: 0.7em;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #6b7280;
-    white-space: nowrap;
-  }
-
-  .section-divider::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: rgba(255, 255, 255, 0.08);
-  }
-
+  /* Attributes grid */
   .attributes-grid {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    gap: 0.35em;
+    gap: 0.4em;
   }
 
   .attr-item {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 0.4em 0.3em;
-    background: rgba(255, 255, 255, 0.04);
+    padding: 0.45em 0.35em;
+    background: var(--panel-inner-bg);
     border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--panel-inner-border);
     transition: background 0.15s ease, border-color 0.15s ease;
     position: relative;
   }
 
   .attr-item:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--panel-inner-hover);
   }
 
   .attr-item.has-points {
-    border-color: rgba(74, 222, 128, 0.15);
+    border-color: rgba(74, 222, 128, 0.2);
   }
 
   .attr-item.primary-attr {
-    border-color: rgba(248, 113, 113, 0.25);
-    background: rgba(248, 113, 113, 0.06);
+    border-color: rgba(248, 113, 113, 0.3);
+    background: rgba(248, 113, 113, 0.08);
   }
 
   .attr-value {
-    font-size: 1em;
+    font-size: var(--text-base);
     font-weight: 700;
-    color: #f3f4f6;
+    color: var(--text-primary);
     line-height: 1.2;
   }
 
   .attr-mod {
-    font-size: 0.65em;
+    font-size: var(--text-xs);
     font-weight: 600;
     line-height: 1;
   }
@@ -381,16 +338,16 @@
   .attr-mod.negative { color: #f87171; }
 
   .attr-name {
-    font-size: 0.6em;
+    font-size: var(--text-xs);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: #6b7280;
+    color: var(--text-dim);
     margin-top: 0.1em;
   }
 
   /* Unspent points badge */
   .unspent-badge {
-    font-size: 0.65em;
+    font-size: var(--text-xs);
     font-weight: 700;
     color: #4ade80;
     background: rgba(74, 222, 128, 0.15);
@@ -411,13 +368,13 @@
     position: absolute;
     top: 2px;
     right: 2px;
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     border: 1px solid rgba(74, 222, 128, 0.4);
     background: rgba(74, 222, 128, 0.15);
     color: #4ade80;
-    font-size: 0.75em;
+    font-size: var(--text-xs);
     font-weight: 700;
     cursor: pointer;
     display: flex;
@@ -438,22 +395,22 @@
   .combat-stats-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0.35em;
+    gap: 0.4em;
   }
 
   .combat-stat {
     display: flex;
     align-items: center;
-    gap: 0.45em;
-    padding: 0.4em 0.5em;
-    background: rgba(255, 255, 255, 0.04);
+    gap: 0.5em;
+    padding: 0.45em 0.55em;
+    background: var(--panel-inner-bg);
     border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--panel-inner-border);
   }
 
   .stat-icon {
-    font-size: 1em;
-    opacity: 0.7;
+    font-size: 1.1em;
+    opacity: 0.8;
   }
 
   .stat-icon.atk { color: #f87171; }
@@ -466,22 +423,22 @@
   }
 
   .combat-stat-value {
-    font-size: 0.95em;
+    font-size: var(--text-base);
     font-weight: 700;
-    color: #f3f4f6;
+    color: var(--text-primary);
     line-height: 1.2;
   }
 
   .combat-stat-label {
-    font-size: 0.55em;
+    font-size: var(--text-xs);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: #6b7280;
+    color: var(--text-dim);
   }
 
   .combat-stat-formula {
-    font-size: 0.5em;
-    color: #9ca3af;
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
     font-style: italic;
     white-space: nowrap;
   }
@@ -493,7 +450,7 @@
     align-items: center;
     justify-content: center;
     height: calc(100% - 3em);
-    color: #6b7280;
+    color: var(--text-dim);
     text-align: center;
     gap: 0.5em;
   }
@@ -504,12 +461,12 @@
   }
 
   .empty-state span {
-    font-size: 0.85em;
+    font-size: var(--text-sm);
   }
 </style>
 
-<div class="character-widget" class:in-combat={inCombat}>
-  <div class="widget-header">
+<div class="character-widget game-panel" class:in-combat={inCombat}>
+  <div class="game-panel-header">
     <i class="material-icons">{inCombat ? 'swords' : 'person'}</i>
     <span class="widget-title">Character</span>
     {#if inCombat}
@@ -583,7 +540,7 @@
 
     <!-- Attributes -->
     {#if attributes && attributes.length > 0}
-      <div class="section-divider">
+      <div class="game-panel-divider">
         <span>Attributes</span>
         {#if hasUnspentPoints}
           <span class="unspent-badge">{unspentPoints} pts</span>
@@ -604,7 +561,7 @@
     {/if}
 
     <!-- Derived Combat Stats -->
-    <div class="section-divider">
+    <div class="game-panel-divider">
       <span>Combat Stats</span>
     </div>
     <div class="combat-stats-grid">

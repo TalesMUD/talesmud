@@ -254,10 +254,10 @@
     background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.4) 100%);
   }
 
-  /* ── Title bar (macOS style) ── */
+  /* ── Title bar ── */
   .tx-titlebar {
-    background: #111820;
-    padding: 0.6rem 1rem;
+    background: rgba(17, 24, 32, 0.6);
+    padding: 0.35rem 1rem;
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -266,21 +266,11 @@
     flex-shrink: 0;
   }
 
-  .tx-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-  }
-
-  .tx-dot-red { background: #5c1a1a; }
-  .tx-dot-amber { background: #5c4419; }
-  .tx-dot-green { background: #1a5c38; }
-
   .tx-title {
+    font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
     font-size: 0.6rem;
-    color: #3d3a36;
+    color: #4a5568;
     letter-spacing: 0.1em;
-    margin-left: 0.5rem;
     flex: 1;
   }
 
@@ -441,12 +431,9 @@
   <div class="tx-scanlines"></div>
   <div class="tx-vignette"></div>
 
-  <!-- macOS-style title bar -->
+  <!-- Title bar -->
   <div class="tx-titlebar">
-    <div class="tx-dot tx-dot-red"></div>
-    <div class="tx-dot tx-dot-amber"></div>
-    <div class="tx-dot tx-dot-green"></div>
-    <span class="tx-title">talesmud &mdash; terminal session</span>
+    <span class="tx-title">terminal</span>
     <button class="tx-fontsize-btn" on:click|stopPropagation={cycleFontSize} title="Font size: {FONT_SIZES[fontSizeIndex].key}">
       {currentFontLabel}
     </button>

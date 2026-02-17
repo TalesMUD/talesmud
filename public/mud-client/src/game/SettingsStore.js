@@ -11,6 +11,7 @@ const DEFAULT_SETTINGS = {
   },
   // Interface settings
   interface: {
+    theme: 'dark-fantasy',       // UI theme: 'dark-fantasy' or 'clean-hud'
     parchmentBackground: false,  // Room description parchment style (default off)
     compactMode: false,
     roomTextOverlay: false       // Show game text overlay on room image (always on for mobile)
@@ -43,11 +44,13 @@ function createSettingsStore() {
         if (stored) {
           const data = JSON.parse(stored);
           if (data.version === 1) {
+            const iface = { ...DEFAULT_SETTINGS.interface, ...data.interface };
             update(state => ({
               ...state,
               general: { ...DEFAULT_SETTINGS.general, ...data.general },
-              interface: { ...DEFAULT_SETTINGS.interface, ...data.interface }
+              interface: iface
             }));
+            this.applyTheme(iface.theme);
             return true;
           }
         }
@@ -75,6 +78,13 @@ function createSettingsStore() {
       }
     },
 
+    // Apply the current theme to the document body
+    applyTheme(theme) {
+      if (typeof document !== 'undefined') {
+        document.body.dataset.theme = theme || 'dark-fantasy';
+      }
+    },
+
     // Update a specific setting
     setSetting(category, key, value) {
       update(state => ({
@@ -84,6 +94,10 @@ function createSettingsStore() {
           [key]: value
         }
       }));
+      // Apply theme immediately when changed
+      if (category === 'interface' && key === 'theme') {
+        this.applyTheme(value);
+      }
       this.saveToStorage();
     },
 

@@ -106,35 +106,13 @@
 </script>
 
 <style>
+  /* Base panel styling comes from global .game-panel class in themes.css */
   .equipment-widget {
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    padding: 1em;
-    height: 100%;
-    overflow-y: auto;
-    color: #e5e7eb;
-  }
-
-  .widget-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5em;
-    margin-bottom: 1em;
-    padding-bottom: 0.75em;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  .widget-header i {
-    color: #f59e0b;
+    /* component-specific overrides only */
   }
 
   .widget-title {
-    font-size: 1em;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    flex: 1;
   }
 
   .equipment-grid {
@@ -150,27 +128,32 @@
 
   .equipment-slot {
     flex: 1;
-    min-height: 60px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    min-height: 70px;
+    background: var(--panel-inner-bg);
+    border: 1px solid var(--panel-inner-border);
     border-radius: 8px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 0.5em;
+    padding: 0.55em;
     cursor: pointer;
     transition: all 0.15s ease;
   }
 
   .equipment-slot:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: var(--panel-inner-hover);
+    border-color: var(--panel-border-hover);
   }
 
   .equipment-slot.empty {
-    opacity: 0.5;
+    opacity: 0.6;
     cursor: default;
+    border-style: dashed;
+  }
+
+  .equipment-slot.filled {
+    box-shadow: 0 0 8px var(--accent-glow);
   }
 
   .equipment-slot.filled:hover {
@@ -179,22 +162,22 @@
   }
 
   .slot-label {
-    font-size: 0.65em;
+    font-size: var(--text-xs);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: #6b7280;
+    color: var(--text-dim);
     margin-bottom: 0.3em;
   }
 
   .slot-icon {
-    font-size: 1.3em;
+    font-size: 1.5em;
     margin-bottom: 0.2em;
   }
 
   .slot-name {
-    font-size: 0.7em;
+    font-size: var(--text-sm);
     text-align: center;
-    color: #d1d5db;
+    color: var(--text-primary);
     line-height: 1.2;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -204,13 +187,13 @@
   }
 
   .slot-empty {
-    font-size: 0.7em;
-    color: #4b5563;
+    font-size: var(--text-xs);
+    color: var(--text-dim);
     font-style: italic;
   }
 
   .unequip-hint {
-    font-size: 0.55em;
+    font-size: var(--text-xs);
     color: #ef4444;
     opacity: 0;
     transition: opacity 0.15s ease;
@@ -222,8 +205,8 @@
   }
 </style>
 
-<div class="equipment-widget">
-  <div class="widget-header">
+<div class="equipment-widget game-panel">
+  <div class="game-panel-header">
     <i class="material-icons">shield</i>
     <span class="widget-title">Equipment</span>
   </div>

@@ -15,12 +15,13 @@
     gap: 0.5em;
     align-items: center;
     justify-content: center;
-    padding: 0.4em 0.75em;
-    background: rgba(0, 0, 0, 0.6);
+    padding: 0.45em 0.85em;
+    background: var(--panel-bg, rgba(0, 0, 0, 0.6));
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--panel-radius, 12px);
+    border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.1));
+    box-shadow: var(--panel-shadow, none);
     flex-shrink: 0;
     margin-bottom: 1em;
   }
@@ -45,8 +46,8 @@
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 8px;
     padding: 0.5em 0.85em;
-    color: #e5e7eb;
-    font-size: 12px;
+    color: var(--text-primary, #e5e7eb);
+    font-size: var(--text-sm, 12px);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.15s ease;
@@ -147,7 +148,7 @@
   .separator {
     width: 1px;
     height: 24px;
-    background: rgba(255, 255, 255, 0.15);
+    background: var(--panel-border, rgba(255, 255, 255, 0.15));
     margin: 0 0.3em;
     flex-shrink: 0;
   }
