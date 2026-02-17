@@ -153,7 +153,7 @@
   $: lockedAchievements = achievements.filter(a => !a.unlocked);
 </script>
 
-<div class="questlog-widget">
+<div class="questlog-widget game-panel">
   <div class="questlog-header">
     <div class="header-title-row">
       <h2>Quest Log</h2>
@@ -600,26 +600,23 @@
 </div>
 
 <style>
+  /* Base panel styling from global .game-panel in themes.css.
+     Override padding/overflow so the flex layout works correctly. */
   .questlog-widget {
-    height: 100%;
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
     display: flex;
     flex-direction: column;
-    color: #e5e7eb;
-    font-family: "Fira Code", "Cascadia Code", monospace;
-    font-size: 13px;
     overflow: hidden;
+    padding: 0;
   }
 
   .questlog-header {
-    padding: 12px 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.8em 1em;
+    background: var(--panel-header-bg);
+    border-bottom: 1px solid var(--panel-header-border);
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 0.5em;
+    flex-shrink: 0;
   }
 
   .header-title-row {
@@ -630,16 +627,18 @@
 
   .questlog-header h2 {
     margin: 0;
-    font-size: 14px;
+    font-family: var(--font-display);
+    font-size: var(--text-header);
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: #f59e0b;
+    color: var(--panel-header-color);
+    text-shadow: var(--panel-header-shadow);
   }
 
   .history-btn {
-    background: rgba(245, 158, 11, 0.1);
-    border: 1px solid rgba(245, 158, 11, 0.3);
-    color: #f59e0b;
+    background: var(--btn-bg);
+    border: 1px solid var(--btn-border);
+    color: var(--accent-primary);
     padding: 6px 10px;
     border-radius: 4px;
     cursor: pointer;
@@ -649,8 +648,8 @@
   }
 
   .history-btn:hover {
-    background: rgba(245, 158, 11, 0.2);
-    border-color: rgba(245, 158, 11, 0.5);
+    background: var(--btn-hover-bg);
+    border-color: var(--btn-hover-border);
   }
 
   .search-bar {
@@ -661,23 +660,23 @@
 
   .search-input {
     flex: 1;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #e5e7eb;
-    padding: 6px 32px 6px 10px;
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    color: var(--text-primary);
+    padding: 7px 32px 7px 10px;
     border-radius: 4px;
-    font-size: 12px;
+    font-size: var(--text-sm);
     font-family: inherit;
   }
 
   .search-input:focus {
     outline: none;
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(245, 158, 11, 0.5);
+    background: var(--panel-inner-hover);
+    border-color: var(--input-focus-border);
   }
 
   .search-input::placeholder {
-    color: #6b7280;
+    color: var(--text-dim);
   }
 
   .clear-search-btn {
@@ -685,7 +684,7 @@
     right: 6px;
     background: none;
     border: none;
-    color: #6b7280;
+    color: var(--text-dim);
     font-size: 18px;
     cursor: pointer;
     padding: 0;
@@ -698,8 +697,8 @@
   }
 
   .clear-search-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #e5e7eb;
+    background: var(--panel-inner-hover);
+    color: var(--text-primary);
   }
 
   .filter-controls {
@@ -709,29 +708,29 @@
 
   .filter-select {
     flex: 1;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #e5e7eb;
-    padding: 4px 8px;
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    color: var(--text-primary);
+    padding: 5px 8px;
     border-radius: 4px;
-    font-size: 11px;
+    font-size: var(--text-xs);
     font-family: inherit;
     cursor: pointer;
   }
 
   .filter-select:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--panel-inner-hover);
   }
 
   .filter-select option {
     background: #1f2937;
-    color: #e5e7eb;
+    color: var(--text-primary);
   }
 
   .toggle-controls {
     display: flex;
     gap: 12px;
-    font-size: 11px;
+    font-size: var(--text-xs);
   }
 
   .toggle-label {
@@ -739,11 +738,11 @@
     align-items: center;
     gap: 4px;
     cursor: pointer;
-    color: #9ca3af;
+    color: var(--text-secondary);
   }
 
   .toggle-label:hover {
-    color: #e5e7eb;
+    color: var(--text-primary);
   }
 
   .toggle-label input[type="checkbox"] {
@@ -757,28 +756,43 @@
   .questlog-content {
     flex: 1;
     overflow-y: auto;
-    padding: 12px;
+    padding: 0.75em;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
+
+  .questlog-content::-webkit-scrollbar {
+    width: 6px;
+  }
+  .questlog-content::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
+  .questlog-content::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 3px;
   }
 
   .empty-state {
-    color: #6b7280;
+    color: var(--text-dim);
     text-align: center;
-    padding: 32px 16px;
+    padding: 2em 1em;
     font-style: italic;
+    font-size: var(--text-sm);
   }
 
   .quest-section {
-    margin-bottom: 16px;
+    margin-bottom: 1em;
   }
 
   .section-title {
-    font-size: 10px;
+    font-family: var(--font-display);
+    font-size: var(--text-xs);
     text-transform: uppercase;
     letter-spacing: 0.15em;
-    color: #6b7280;
-    margin: 0 0 8px 0;
-    padding-bottom: 4px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+    margin: 0 0 0.5em 0;
+    padding-bottom: 0.3em;
+    border-bottom: 1px solid var(--divider-color);
   }
 
   .quest-entry {
@@ -788,7 +802,7 @@
   }
 
   .quest-entry.expanded {
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--panel-inner-bg);
   }
 
   .quest-name {
@@ -796,19 +810,19 @@
     align-items: center;
     gap: 8px;
     width: 100%;
-    padding: 8px 10px;
+    padding: 0.5em 0.6em;
     background: none;
     border: none;
-    color: #e5e7eb;
+    color: var(--text-primary);
     cursor: pointer;
-    font-size: 13px;
+    font-size: var(--text-sm);
     text-align: left;
     border-radius: 6px;
     font-family: inherit;
   }
 
   .quest-name:hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--panel-inner-hover);
   }
 
   .quest-title-row {
@@ -835,17 +849,18 @@
 
   .badge {
     display: inline-block;
-    padding: 2px 6px;
+    padding: 2px 7px;
     border-radius: 3px;
-    font-size: 9px;
+    font-size: var(--text-xs);
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
 
   .level-badge {
-    background: #4b5563;
-    color: #e5e7eb;
+    background: var(--panel-inner-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--panel-inner-border);
   }
 
   .category-badge {
@@ -853,15 +868,15 @@
   }
 
   .quest-indicator {
-    width: 8px;
-    height: 8px;
+    width: 9px;
+    height: 9px;
     border-radius: 50%;
     flex-shrink: 0;
   }
 
   .quest-indicator.active {
-    background: #f59e0b;
-    box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
+    background: var(--accent-primary);
+    box-shadow: 0 0 6px var(--accent-glow);
   }
 
   .quest-indicator.active.pinned {
@@ -880,28 +895,28 @@
   }
 
   .quest-indicator.completed {
-    background: #22c55e;
+    background: var(--color-success);
   }
 
   .quest-indicator.abandoned {
-    background: #6b7280;
+    background: var(--text-dim);
   }
 
   .quest-indicator.failed {
-    background: #ef4444;
+    background: var(--color-danger);
   }
 
   .quest-entry.pinned {
-    background: rgba(245, 158, 11, 0.05);
-    border: 1px solid rgba(245, 158, 11, 0.2);
+    background: var(--accent-subtle);
+    border: 1px solid var(--btn-border);
     border-radius: 6px;
     margin-bottom: 8px;
   }
 
   .expand-icon {
     margin-left: auto;
-    color: #6b7280;
-    font-size: 11px;
+    color: var(--text-dim);
+    font-size: var(--text-xs);
   }
 
   .quest-details {
@@ -909,10 +924,10 @@
   }
 
   .quest-description {
-    color: #9ca3af;
-    font-size: 12px;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
     margin: 0 0 8px 0;
-    line-height: 1.4;
+    line-height: 1.5;
   }
 
   .objectives {
@@ -925,44 +940,44 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 12px;
-    color: #d1d5db;
+    font-size: var(--text-sm);
+    color: var(--text-primary);
   }
 
   .objective.completed {
-    color: #22c55e;
+    color: var(--color-success);
   }
 
   .check {
     font-family: monospace;
     flex-shrink: 0;
-    color: #6b7280;
+    color: var(--text-dim);
   }
 
   .objective.completed .check {
-    color: #22c55e;
+    color: var(--color-success);
   }
 
   .progress {
     margin-left: auto;
-    color: #6b7280;
-    font-size: 11px;
+    color: var(--text-dim);
+    font-size: var(--text-xs);
   }
 
   .quest-entry.completed .quest-name .quest-title {
-    color: #9ca3af;
+    color: var(--text-secondary);
   }
 
   .quest-entry.abandoned .quest-name,
   .quest-entry.failed .quest-name {
-    color: #6b7280;
+    color: var(--text-dim);
   }
 
   .objectives-header,
   .rewards-header {
-    font-size: 11px;
+    font-size: var(--text-xs);
     font-weight: bold;
-    color: #9ca3af;
+    color: var(--text-secondary);
     margin-bottom: 6px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -971,24 +986,24 @@
   .rewards {
     margin-top: 12px;
     padding-top: 8px;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-top: 1px solid var(--divider-color);
   }
 
   .reward-item {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 12px;
-    color: #d1d5db;
+    font-size: var(--text-sm);
+    color: var(--text-primary);
     padding: 2px 0;
   }
 
   .reward-item.earned {
-    color: #22c55e;
+    color: var(--color-success);
   }
 
   .reward-icon {
-    font-size: 14px;
+    font-size: 1.1em;
     flex-shrink: 0;
   }
 
@@ -999,18 +1014,18 @@
   .quest-actions {
     margin-top: 12px;
     padding-top: 8px;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-top: 1px solid var(--divider-color);
     display: flex;
     gap: 8px;
   }
 
   .abandon-btn {
-    padding: 6px 12px;
+    padding: 6px 14px;
     background: rgba(239, 68, 68, 0.1);
     border: 1px solid rgba(239, 68, 68, 0.3);
     color: #ef4444;
     border-radius: 4px;
-    font-size: 11px;
+    font-size: var(--text-xs);
     cursor: pointer;
     font-family: inherit;
     text-transform: uppercase;
@@ -1025,12 +1040,12 @@
   }
 
   .pin-btn {
-    padding: 6px 12px;
-    background: rgba(245, 158, 11, 0.1);
-    border: 1px solid rgba(245, 158, 11, 0.3);
-    color: #f59e0b;
+    padding: 6px 14px;
+    background: var(--btn-bg);
+    border: 1px solid var(--btn-border);
+    color: var(--accent-primary);
     border-radius: 4px;
-    font-size: 11px;
+    font-size: var(--text-xs);
     cursor: pointer;
     font-family: inherit;
     text-transform: uppercase;
@@ -1040,13 +1055,13 @@
   }
 
   .pin-btn:hover {
-    background: rgba(245, 158, 11, 0.2);
-    border-color: rgba(245, 158, 11, 0.5);
+    background: var(--btn-hover-bg);
+    border-color: var(--btn-hover-border);
   }
 
   .pin-btn.pinned {
-    background: rgba(245, 158, 11, 0.2);
-    border-color: rgba(245, 158, 11, 0.4);
+    background: var(--btn-hover-bg);
+    border-color: var(--btn-hover-border);
   }
 
   .pin-btn.pinned:hover {
@@ -1057,15 +1072,15 @@
 
   .quest-timestamp {
     margin-top: 8px;
-    font-size: 10px;
-    color: #6b7280;
+    font-size: var(--text-xs);
+    color: var(--text-dim);
     font-style: italic;
     text-align: right;
   }
 
   /* History Panel Styles */
   .history-panel {
-    padding: 12px;
+    padding: 0.75em;
     animation: fadeIn 0.3s ease-out;
   }
 
@@ -1078,21 +1093,22 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 16px;
+    margin-bottom: 1em;
   }
 
   .history-header h3 {
     margin: 0;
-    font-size: 13px;
+    font-family: var(--font-display);
+    font-size: var(--text-sm);
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: #f59e0b;
+    color: var(--panel-header-color);
   }
 
   .close-history-btn {
     background: none;
     border: none;
-    color: #6b7280;
+    color: var(--text-dim);
     font-size: 20px;
     cursor: pointer;
     padding: 0;
@@ -1105,22 +1121,22 @@
   }
 
   .close-history-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #e5e7eb;
+    background: var(--panel-inner-hover);
+    color: var(--text-primary);
   }
 
   .stats-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 1em;
   }
 
   .stat-card {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--panel-inner-bg);
+    border: 1px solid var(--panel-inner-border);
     border-radius: 6px;
-    padding: 12px;
+    padding: 0.75em;
     text-align: center;
   }
 
@@ -1140,35 +1156,35 @@
   }
 
   .stat-value {
-    font-size: 20px;
+    font-size: var(--text-xl);
     font-weight: bold;
-    color: #e5e7eb;
+    color: var(--text-primary);
     margin-bottom: 4px;
   }
 
   .stat-label {
-    font-size: 10px;
+    font-size: var(--text-xs);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #9ca3af;
+    color: var(--text-secondary);
   }
 
   .rewards-summary,
   .category-breakdown,
   .achievements-section {
-    margin-bottom: 16px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 1em;
+    padding-bottom: 1em;
+    border-bottom: 1px solid var(--divider-color);
   }
 
   .rewards-summary h4,
   .category-breakdown h4,
   .achievements-section h4 {
-    margin: 0 0 8px 0;
-    font-size: 11px;
+    margin: 0 0 0.5em 0;
+    font-size: var(--text-xs);
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: #9ca3af;
+    color: var(--text-secondary);
   }
 
   .reward-summary-row {
@@ -1176,11 +1192,11 @@
     align-items: center;
     gap: 8px;
     padding: 4px 0;
-    font-size: 13px;
+    font-size: var(--text-sm);
   }
 
   .reward-amount {
-    color: #22c55e;
+    color: var(--color-success);
     font-weight: bold;
   }
 
@@ -1188,7 +1204,7 @@
     display: flex;
     justify-content: space-between;
     padding: 4px 0;
-    font-size: 12px;
+    font-size: var(--text-sm);
   }
 
   .category-name {
@@ -1196,7 +1212,7 @@
   }
 
   .category-count {
-    color: #9ca3af;
+    color: var(--text-secondary);
   }
 
   .achievements-list {
@@ -1209,15 +1225,15 @@
     display: flex;
     align-items: flex-start;
     gap: 8px;
-    padding: 8px;
+    padding: 0.5em;
     border-radius: 6px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--panel-inner-bg);
+    border: 1px solid var(--panel-inner-border);
   }
 
   .achievement.unlocked {
-    border-color: rgba(245, 158, 11, 0.3);
-    background: rgba(245, 158, 11, 0.05);
+    border-color: var(--btn-border);
+    background: var(--accent-subtle);
   }
 
   .achievement.locked {
@@ -1225,7 +1241,7 @@
   }
 
   .achievement-icon {
-    font-size: 18px;
+    font-size: 1.2em;
     flex-shrink: 0;
   }
 
@@ -1235,15 +1251,15 @@
   }
 
   .achievement-name {
-    font-size: 12px;
+    font-size: var(--text-sm);
     font-weight: bold;
-    color: #e5e7eb;
+    color: var(--text-primary);
     margin-bottom: 2px;
   }
 
   .achievement-desc {
-    font-size: 10px;
-    color: #9ca3af;
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
     line-height: 1.3;
   }
 
@@ -1253,14 +1269,14 @@
 
   .locked-achievements summary {
     cursor: pointer;
-    font-size: 11px;
-    color: #9ca3af;
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
     padding: 6px 0;
     user-select: none;
   }
 
   .locked-achievements summary:hover {
-    color: #e5e7eb;
+    color: var(--text-primary);
   }
 
   .locked-achievements .achievements-list {
@@ -1269,12 +1285,12 @@
 
   .back-to-quests-btn {
     width: 100%;
-    padding: 10px;
-    background: rgba(245, 158, 11, 0.1);
-    border: 1px solid rgba(245, 158, 11, 0.3);
-    color: #f59e0b;
+    padding: 0.6em;
+    background: var(--btn-bg);
+    border: 1px solid var(--btn-border);
+    color: var(--accent-primary);
     border-radius: 6px;
-    font-size: 12px;
+    font-size: var(--text-sm);
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -1284,7 +1300,7 @@
   }
 
   .back-to-quests-btn:hover {
-    background: rgba(245, 158, 11, 0.2);
-    border-color: rgba(245, 158, 11, 0.5);
+    background: var(--btn-hover-bg);
+    border-color: var(--btn-hover-border);
   }
 </style>

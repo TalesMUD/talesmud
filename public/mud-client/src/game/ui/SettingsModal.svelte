@@ -22,6 +22,10 @@
     const currentValue = $settingsStore[category]?.[key];
     settingsStore.setSetting(category, key, !currentValue);
   }
+
+  function setTheme(theme) {
+    settingsStore.setSetting('interface', 'theme', theme);
+  }
 </script>
 
 <style>
@@ -247,6 +251,139 @@
     background-color: #93c5fd;
   }
 
+  /* Theme selector */
+  .theme-options {
+    display: flex;
+    gap: 0.75em;
+  }
+
+  .theme-option {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5em;
+    padding: 1em 0.75em;
+    background: rgba(255, 255, 255, 0.03);
+    border: 2px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #9ca3af;
+  }
+
+  .theme-option:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  .theme-option.active-dark-fantasy {
+    border-color: #d4a44a;
+    background: rgba(212, 164, 74, 0.1);
+    color: #d4a44a;
+  }
+
+  .theme-option.active-clean-hud {
+    border-color: #5b8def;
+    background: rgba(91, 141, 239, 0.1);
+    color: #5b8def;
+  }
+
+  .theme-preview {
+    width: 100%;
+    height: 48px;
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .theme-preview.dark-fantasy {
+    background: linear-gradient(135deg, rgba(15, 10, 5, 0.95), rgba(40, 25, 10, 0.9));
+    border: 1px solid rgba(180, 130, 60, 0.4);
+  }
+
+  .theme-preview.dark-fantasy::before {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 8px;
+    height: 8px;
+    border-top: 2px solid rgba(212, 164, 74, 0.6);
+    border-left: 2px solid rgba(212, 164, 74, 0.6);
+  }
+
+  .theme-preview.dark-fantasy::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 8px;
+    height: 8px;
+    border-top: 2px solid rgba(212, 164, 74, 0.6);
+    border-right: 2px solid rgba(212, 164, 74, 0.6);
+  }
+
+  .theme-preview.clean-hud {
+    background: linear-gradient(180deg, rgba(8, 12, 24, 0.95), rgba(15, 20, 40, 0.9));
+    border: 1px solid rgba(60, 100, 180, 0.3);
+    box-shadow: inset 0 1px 0 rgba(91, 141, 239, 0.3);
+  }
+
+  .theme-preview-bars {
+    position: absolute;
+    bottom: 6px;
+    left: 8px;
+    right: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .theme-preview-bar {
+    height: 4px;
+    border-radius: 2px;
+  }
+
+  .dark-fantasy .theme-preview-bar:nth-child(1) {
+    background: rgba(180, 130, 60, 0.5);
+    width: 70%;
+  }
+  .dark-fantasy .theme-preview-bar:nth-child(2) {
+    background: rgba(180, 130, 60, 0.3);
+    width: 45%;
+  }
+
+  .clean-hud .theme-preview-bar:nth-child(1) {
+    background: rgba(91, 141, 239, 0.5);
+    width: 70%;
+  }
+  .clean-hud .theme-preview-bar:nth-child(2) {
+    background: rgba(91, 141, 239, 0.3);
+    width: 45%;
+  }
+
+  .theme-name {
+    font-size: 0.9em;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+
+  .theme-check {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    font-size: 16px;
+  }
+
+  .active-dark-fantasy .theme-check {
+    color: #d4a44a;
+  }
+
+  .active-clean-hud .theme-check {
+    color: #5b8def;
+  }
+
   /* Responsive */
   @media screen and (max-width: 500px) {
     .modal-container {
@@ -325,6 +462,44 @@
           {/if}
 
           {#if activeTab === 'interface'}
+            <div class="settings-section">
+              <div class="section-title">Theme</div>
+              <div class="theme-options">
+                <button
+                  class="theme-option"
+                  class:active-dark-fantasy={$settingsStore.interface?.theme === 'dark-fantasy'}
+                  on:click={() => setTheme('dark-fantasy')}
+                >
+                  <div class="theme-preview dark-fantasy">
+                    <div class="theme-preview-bars">
+                      <div class="theme-preview-bar"></div>
+                      <div class="theme-preview-bar"></div>
+                    </div>
+                    {#if $settingsStore.interface?.theme === 'dark-fantasy'}
+                      <i class="material-icons theme-check">check_circle</i>
+                    {/if}
+                  </div>
+                  <span class="theme-name">Dark Fantasy</span>
+                </button>
+                <button
+                  class="theme-option"
+                  class:active-clean-hud={$settingsStore.interface?.theme === 'clean-hud'}
+                  on:click={() => setTheme('clean-hud')}
+                >
+                  <div class="theme-preview clean-hud">
+                    <div class="theme-preview-bars">
+                      <div class="theme-preview-bar"></div>
+                      <div class="theme-preview-bar"></div>
+                    </div>
+                    {#if $settingsStore.interface?.theme === 'clean-hud'}
+                      <i class="material-icons theme-check">check_circle</i>
+                    {/if}
+                  </div>
+                  <span class="theme-name">Clean HUD</span>
+                </button>
+              </div>
+            </div>
+
             <div class="settings-section">
               <div class="section-title">Room Display</div>
 

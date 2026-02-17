@@ -1,0 +1,346 @@
+/* ============================================================
+   TalesMUD Theme System
+   Two switchable themes: Dark Fantasy & Clean HUD
+   Driven by data-theme attribute on <body>
+   ============================================================ */
+
+/* === Shared Design Tokens (both themes) === */
+:root {
+  /* Display font for headers */
+  --font-display: 'Cinzel', serif;
+
+  /* Panel structure */
+  --panel-radius: 10px;
+  --panel-padding: 1.1em;
+
+  /* Typography scale — intentionally LARGER than before */
+  --text-xs: 0.8em;
+  --text-sm: 0.9em;
+  --text-base: 1em;
+  --text-lg: 1.15em;
+  --text-xl: 1.3em;
+  --text-header: 1em;
+
+  /* Bars */
+  --bar-height: 10px;
+  --bar-radius: 5px;
+
+  /* Semantic colors (shared across themes) */
+  --color-hp: #22c55e;
+  --color-hp-warn: #f59e0b;
+  --color-hp-danger: #ef4444;
+  --color-mana: #3b82f6;
+  --color-xp: #a855f7;
+  --color-gold: #fbbf24;
+  --color-danger: #ef4444;
+  --color-success: #22c55e;
+
+  /* Quality colors */
+  --color-quality-normal: #9ca3af;
+  --color-quality-magic: #22c55e;
+  --color-quality-rare: #3b82f6;
+  --color-quality-legendary: #a855f7;
+  --color-quality-mythic: #f59e0b;
+}
+
+
+/* ============================================================
+   DARK FANTASY THEME (Diablo / Path of Exile style)
+   Warm golden accents, ornate corners, aged parchment feel
+   ============================================================ */
+[data-theme="dark-fantasy"] {
+  /* Panel */
+  --panel-bg: rgba(15, 10, 5, 0.92);
+  --panel-border: rgba(180, 130, 60, 0.35);
+  --panel-border-hover: rgba(200, 150, 70, 0.5);
+  --panel-shadow: 0 2px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(180, 130, 60, 0.08);
+
+  /* Panel header */
+  --panel-header-bg: linear-gradient(180deg, rgba(180, 130, 60, 0.12) 0%, rgba(180, 130, 60, 0.03) 100%);
+  --panel-header-color: #d4a44a;
+  --panel-header-border: rgba(180, 130, 60, 0.25);
+  --panel-header-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+
+  /* Inner elements */
+  --panel-inner-bg: rgba(180, 130, 60, 0.06);
+  --panel-inner-border: rgba(180, 130, 60, 0.12);
+  --panel-inner-hover: rgba(180, 130, 60, 0.12);
+
+  /* Accent */
+  --accent-primary: #d4a44a;
+  --accent-glow: rgba(212, 164, 74, 0.15);
+  --accent-subtle: rgba(212, 164, 74, 0.08);
+
+  /* Text */
+  --text-primary: #e8dcc8;
+  --text-secondary: #a89878;
+  --text-dim: #6d5f48;
+
+  /* Tabs */
+  --tab-active-color: #d4a44a;
+  --tab-active-bg: rgba(212, 164, 74, 0.1);
+  --tab-active-border: #d4a44a;
+  --tab-hover-bg: rgba(212, 164, 74, 0.06);
+
+  /* Scrollbar */
+  --scrollbar-thumb: rgba(180, 130, 60, 0.3);
+  --scrollbar-thumb-hover: rgba(180, 130, 60, 0.45);
+  --scrollbar-track: rgba(0, 0, 0, 0.3);
+
+  /* Buttons */
+  --btn-bg: rgba(180, 130, 60, 0.1);
+  --btn-border: rgba(180, 130, 60, 0.3);
+  --btn-hover-bg: rgba(180, 130, 60, 0.2);
+  --btn-hover-border: rgba(180, 130, 60, 0.5);
+
+  /* Inputs */
+  --input-bg: rgba(180, 130, 60, 0.05);
+  --input-border: rgba(180, 130, 60, 0.15);
+  --input-focus-border: rgba(212, 164, 74, 0.5);
+
+  /* Bar track */
+  --bar-track-bg: rgba(180, 130, 60, 0.08);
+  --bar-track-border: 1px solid rgba(180, 130, 60, 0.1);
+
+  /* Dividers */
+  --divider-color: rgba(180, 130, 60, 0.15);
+}
+
+
+/* ============================================================
+   CLEAN HUD THEME (WoW / Lost Ark style)
+   Cool blue accents, sleek gradients, polished glass
+   ============================================================ */
+[data-theme="clean-hud"] {
+  /* Panel */
+  --panel-bg: rgba(8, 12, 24, 0.90);
+  --panel-border: rgba(60, 100, 180, 0.25);
+  --panel-border-hover: rgba(80, 130, 220, 0.4);
+  --panel-shadow: 0 2px 12px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(100, 150, 255, 0.06);
+
+  /* Panel header */
+  --panel-header-bg: linear-gradient(180deg, rgba(60, 100, 180, 0.1) 0%, transparent 100%);
+  --panel-header-color: #7da8f0;
+  --panel-header-border: rgba(60, 100, 180, 0.2);
+  --panel-header-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+
+  /* Inner elements */
+  --panel-inner-bg: rgba(60, 100, 180, 0.05);
+  --panel-inner-border: rgba(60, 100, 180, 0.1);
+  --panel-inner-hover: rgba(60, 100, 180, 0.1);
+
+  /* Accent */
+  --accent-primary: #5b8def;
+  --accent-glow: rgba(91, 141, 239, 0.12);
+  --accent-subtle: rgba(91, 141, 239, 0.06);
+
+  /* Text */
+  --text-primary: #e0e6f0;
+  --text-secondary: #7888a8;
+  --text-dim: #4a5568;
+
+  /* Tabs */
+  --tab-active-color: #5b8def;
+  --tab-active-bg: rgba(91, 141, 239, 0.1);
+  --tab-active-border: #5b8def;
+  --tab-hover-bg: rgba(91, 141, 239, 0.06);
+
+  /* Scrollbar */
+  --scrollbar-thumb: rgba(60, 100, 180, 0.3);
+  --scrollbar-thumb-hover: rgba(60, 100, 180, 0.45);
+  --scrollbar-track: rgba(0, 0, 0, 0.3);
+
+  /* Buttons */
+  --btn-bg: rgba(60, 100, 180, 0.1);
+  --btn-border: rgba(60, 100, 180, 0.25);
+  --btn-hover-bg: rgba(60, 100, 180, 0.2);
+  --btn-hover-border: rgba(60, 100, 180, 0.4);
+
+  /* Inputs */
+  --input-bg: rgba(60, 100, 180, 0.05);
+  --input-border: rgba(60, 100, 180, 0.15);
+  --input-focus-border: rgba(91, 141, 239, 0.5);
+
+  /* Bar track */
+  --bar-track-bg: rgba(60, 100, 180, 0.06);
+  --bar-track-border: 1px solid rgba(60, 100, 180, 0.08);
+
+  /* Dividers */
+  --divider-color: rgba(60, 100, 180, 0.12);
+}
+
+
+/* ============================================================
+   SHARED GAME PANEL STYLES
+   Used by all widget containers for consistent look
+   ============================================================ */
+
+.game-panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--panel-radius);
+  padding: var(--panel-padding);
+  box-sizing: border-box;
+  height: 100%;
+  overflow-y: auto;
+  color: var(--text-primary);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--panel-shadow);
+  position: relative;
+  transition: border-color 0.3s ease;
+}
+
+.game-panel:hover {
+  border-color: var(--panel-border-hover);
+}
+
+/* Themed scrollbar inside panels */
+.game-panel::-webkit-scrollbar {
+  width: 6px;
+}
+.game-panel::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 3px;
+}
+.game-panel::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+.game-panel::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* Panel header — Cinzel font, themed colors */
+.game-panel-header {
+  font-family: var(--font-display);
+  font-size: var(--text-header);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--panel-header-color);
+  background: var(--panel-header-bg);
+  border-bottom: 1px solid var(--panel-header-border);
+  text-shadow: var(--panel-header-shadow);
+  padding: 0.65em 0.85em;
+  margin: calc(-1 * var(--panel-padding)) calc(-1 * var(--panel-padding)) 0.85em;
+  border-radius: var(--panel-radius) var(--panel-radius) 0 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.game-panel-header i {
+  font-size: 1.15em;
+  opacity: 0.85;
+}
+
+/* Dark Fantasy: corner ornaments */
+[data-theme="dark-fantasy"] .game-panel::before,
+[data-theme="dark-fantasy"] .game-panel::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: var(--accent-primary);
+  border-style: solid;
+  opacity: 0.45;
+  pointer-events: none;
+  z-index: 1;
+}
+[data-theme="dark-fantasy"] .game-panel::before {
+  bottom: 5px;
+  left: 5px;
+  border-width: 0 0 2px 2px;
+}
+[data-theme="dark-fantasy"] .game-panel::after {
+  bottom: 5px;
+  right: 5px;
+  border-width: 0 2px 2px 0;
+}
+
+/* Clean HUD: top edge glow line */
+[data-theme="clean-hud"] .game-panel-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
+  opacity: 0.4;
+}
+
+/* Inner element cards (attribute boxes, stat rows, etc.) */
+.game-panel-inner {
+  background: var(--panel-inner-bg);
+  border: 1px solid var(--panel-inner-border);
+  border-radius: 6px;
+  padding: 0.5em;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.game-panel-inner:hover {
+  background: var(--panel-inner-hover);
+}
+
+/* Section divider inside panels */
+.game-panel-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin: 0.85em 0 0.55em 0;
+}
+
+.game-panel-divider span {
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.game-panel-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--divider-color);
+}
+
+
+/* ============================================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================================ */
+
+/* iPad Pro landscape and similar tablets (768px - 1400px) */
+@media (min-width: 768px) and (max-width: 1400px) {
+  :root {
+    --panel-padding: 0.95em;
+    --text-xs: 0.82em;
+    --text-sm: 0.92em;
+    --text-base: 1.02em;
+    --text-header: 1.05em;
+    --bar-height: 11px;
+  }
+}
+
+/* Large screens (> 1800px) */
+@media (min-width: 1800px) {
+  :root {
+    --text-xs: 0.8em;
+    --text-sm: 0.9em;
+    --bar-height: 10px;
+  }
+}
+
+/* Very large / 4K screens */
+@media (min-width: 2400px) {
+  :root {
+    --panel-padding: 1.3em;
+    --text-xs: 0.82em;
+    --text-sm: 0.92em;
+    --text-header: 1.1em;
+    --bar-height: 12px;
+  }
+}

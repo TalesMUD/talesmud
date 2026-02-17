@@ -562,8 +562,10 @@
     height: 100%;
     position: relative;
     overflow: hidden;
-    background: #0d1117;
-    border-radius: 8px;
+    background: var(--panel-bg, #0d1117);
+    border-radius: var(--panel-radius, 8px);
+    border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.1));
+    box-shadow: var(--panel-shadow, none);
   }
 
   .minimap-header {
@@ -572,9 +574,10 @@
     left: 0;
     right: 0;
     padding: 6px 10px;
-    font-size: 11px;
+    font-family: var(--font-display, inherit);
+    font-size: var(--text-xs, 11px);
     font-weight: 600;
-    color: #9ca3af;
+    color: var(--panel-header-color, #9ca3af);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     display: flex;
@@ -586,7 +589,7 @@
 
   .minimap-header i {
     font-size: 14px;
-    color: #6b7280;
+    color: var(--text-dim, #6b7280);
   }
 
   .header-spacer {

@@ -44,7 +44,9 @@ function toGridItems(widgets, editable = false) {
       h: widget.h,
       draggable: editable,
       resizable: editable,
-      customResizer: editable  // Use custom resizers when in edit mode
+      customResizer: editable,
+      min: { w: 2, h: 2 },
+      max: {}
     }
   }));
 }
@@ -205,7 +207,9 @@ function createLayoutStore() {
           h: config.defaultSize?.h || 6,
           draggable: true,
           resizable: true,
-          customResizer: true
+          customResizer: true,
+          min: { w: 2, h: 2 },
+          max: {}
         }
       };
 
