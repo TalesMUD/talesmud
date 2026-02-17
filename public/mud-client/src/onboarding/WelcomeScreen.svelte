@@ -132,6 +132,30 @@
     color: #e5e7eb;
   }
 
+  .btn-welcome.guest {
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.08);
+  }
+
+  .btn-welcome.guest:hover {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.5);
+    transform: translateY(-1px);
+  }
+
+  .btn-welcome.guest:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .guest-note {
+    font-size: 0.7rem;
+    color: #6b7280;
+    text-align: center;
+  }
+
   .error-banner {
     font-size: 0.8rem;
     color: #f87171;
@@ -149,6 +173,10 @@
   export let login;
   export let serverName = "Tales";
   export let authError = null;
+  export let onGuestPlay = null;
+
+  let guestLoading = false;
+  let guestError = null;
 
   function handleSignup() {
     login(null, { screen_hint: "signup" });
@@ -156,6 +184,20 @@
 
   function handleLogin() {
     login();
+  }
+
+  function handleGuest() {
+    if (onGuestPlay) {
+      guestLoading = true;
+      guestError = null;
+      onGuestPlay(
+        () => { guestLoading = false; },
+        (err) => {
+          guestLoading = false;
+          guestError = err;
+        }
+      );
+    }
   }
 </script>
 
@@ -180,6 +222,12 @@
       </div>
     {/if}
 
+    {#if guestError}
+      <div class="error-banner">
+        {guestError}
+      </div>
+    {/if}
+
     <div class="buttons">
       <button class="btn-welcome primary" on:click={handleSignup}>
         Sign Up
@@ -187,6 +235,19 @@
       <button class="btn-welcome secondary" on:click={handleLogin}>
         Log In
       </button>
+
+      <div class="divider" style="width: 100%; margin: 0.25rem 0;"></div>
+
+      <button
+        class="btn-welcome guest"
+        on:click={handleGuest}
+        disabled={guestLoading}
+      >
+        {guestLoading ? 'Starting...' : 'Play as Guest'}
+      </button>
+      <span class="guest-note">
+        30 min session, no login required
+      </span>
     </div>
   </div>
 </div>

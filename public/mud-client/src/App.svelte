@@ -77,6 +77,7 @@
   import UserMenu from "./UserMenu.svelte";
   import SettingsModal from "./game/ui/SettingsModal.svelte";
   import { createAuth } from "./auth.js";
+  import { createGuestSession } from "./api/guest.js";
   import { getServerInfo } from "./api/server-info.js";
   import { getUser } from "./api/user.js";
   import { getMyCharacters } from "./api/characters.js";
@@ -102,6 +103,7 @@
   let serverName = "Tales";
   let currentUser = null;
   let loadingUser = false;
+  let isGuest = false;
 
   String.prototype.capitalize = function () {
     return this.charAt(0).toUpperCase() + this.slice(1);
@@ -121,12 +123,35 @@
   // Phase detection: single reactive block to avoid race conditions
   // between auth state changes and onboarding data loading
   $: if (!$isLoading) {
-    if (!$isAuthenticated) {
+    if (isGuest && $authToken) {
+      // Guest users skip onboarding entirely (character already created server-side)
+      phase = "ready";
+    } else if (!$isAuthenticated) {
       phase = "welcome";
     } else if ($authToken && !loadingUser && phase === "loading") {
       // Only trigger once (when phase is still "loading")
       loadOnboardingData();
     }
+  }
+
+  // Handle "Play as Guest" button from WelcomeScreen
+  function handleGuestPlay(onDone, onError) {
+    createGuestSession(
+      (data) => {
+        // Store in sessionStorage (not localStorage - dies with tab close)
+        sessionStorage.setItem("talesmud_guest_token", data.token);
+        authToken.set(data.token);
+        isAuthenticated.set(true);
+        isGuest = true;
+        phase = "ready";
+        onDone();
+      },
+      (err) => {
+        console.error("Guest session failed:", err);
+        const msg = err?.response?.data?.error || "Could not start guest session. Please try again.";
+        onError(msg);
+      }
+    );
   }
 
   function loadOnboardingData() {
@@ -203,7 +228,7 @@
   <LoadingScreen />
 
 {:else if phase === "welcome"}
-  <WelcomeScreen {login} {serverName} authError={$authError} />
+  <WelcomeScreen {login} {serverName} authError={$authError} onGuestPlay={handleGuestPlay} />
 
 {:else if phase === "nickname"}
   <div class="user-menu-wrapper">
@@ -245,7 +270,7 @@
     <!-- User menu in top right -->
     <div class="user-menu-wrapper">
       <ul>
-        <UserMenu />
+        <UserMenu {isGuest} {login} />
       </ul>
     </div>
 

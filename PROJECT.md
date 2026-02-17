@@ -95,13 +95,29 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Creator UI: full quest editor with objectives, rewards, prerequisites, and dialog text configuration
   - Player commands: `quests`/`ql` (quest log), `quest <name>` (details), `abandon <name>` (abandon quest)
 
+- **Guest Mode (Play as Guest)**
+  - Anonymous 30-minute demo sessions without Auth0 registration
+  - "Play as Guest" button on welcome screen
+  - Random character with random class from system templates
+  - Full starter items equipped automatically
+  - Per-character level cap of 5 for guest characters
+  - Full chat access during session
+  - 5-minute warning before session expiry
+  - Auto-deletion of guest user + character after session ends or disconnect (5-min grace period for reconnection)
+  - Server-configurable: `GuestsAllowed` (default: true), `MaxGuestAccounts` (default: 20)
+  - IP-based rate limiting (10 guest sessions per IP per hour)
+  - HMAC-SHA256 guest tokens (separate from Auth0 JWTs), signed with `GUEST_SECRET` env var
+  - Background cleanup goroutine removes expired guest accounts every 5 minutes
+
 - **New Player Onboarding**
   - Phase-based flow: Welcome Screen, Nickname Setup, Character Creation Wizard, Game
   - Unauthenticated users see a cinematic welcome landing screen (not the game UI)
   - Signup and Login via Auth0 with dedicated CTA buttons
+  - "Play as Guest" option for anonymous demo play
   - First-time users prompted to choose a display name/nickname
   - Three-step character creation wizard: Choose Template, Name Character, Confirm & Create
   - Automatic phase detection from user profile and character data
+  - Guest users skip onboarding (character auto-created server-side)
 
 - **Room Text Overlay**
   - Game text (combat, actions, player messages) displayed as translucent overlay on room image
@@ -157,6 +173,8 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
 - **Authentication & Authorization**
   - Auth0 OAuth2 integration
   - JWT-based API protection
+  - Guest mode with HMAC-SHA256 tokens (no Auth0 required)
+  - Dual auth middleware: tries guest token first, falls back to Auth0 JWT
   - Basic auth for legacy admin endpoints (export/import)
   - Session management
   - Three-tier role system: MUD Admin, MUD Creator, Player
@@ -363,6 +381,10 @@ ADMIN_PASSWORD=admin
 # The user with this OAuth ID gets full admin access
 MUD_ADMIN_OAUTHID=
 
+# Guest mode secret key for signing guest JWTs (HMAC-SHA256)
+# If not set, a random key is generated at startup (guest tokens won't survive server restart)
+GUEST_SECRET=
+
 # Optional landing page (path to directory with index.html + static assets)
 # LANDING_PATH=./public/landing
 
@@ -423,6 +445,8 @@ go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
 - `GET /health` - Health check
 - `GET /api/templates/characters` - Character creation templates
 - `GET /api/room-of-the-day` - Featured room
+- `POST /api/guest` - Create guest session (returns HMAC token)
+- `GET /api/server-info` - Public server info (guest mode status)
 
 ### Protected Endpoints (Require Auth - Player Level)
 - `GET /api/characters`, `POST /api/newcharacter` - Character management

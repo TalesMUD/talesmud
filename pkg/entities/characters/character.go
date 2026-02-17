@@ -90,6 +90,10 @@ type Character struct {
 	Level int32 `json:"level"`
 	Gold  int64 `json:"gold"`
 
+	// MaxLevelCap is the per-character level cap. 0 means use the global MaxLevel.
+	// Used to restrict guest characters (e.g., capped at level 5).
+	MaxLevelCap int32 `bson:"maxLevelCap,omitempty" json:"maxLevelCap,omitempty"`
+
 	Created    time.Time  `bson:"created" json:"created,omitempty"`
 	Attributes Attributes `bson:"attributes" json:"attributes,omitempty"`
 
@@ -316,4 +320,14 @@ func (c *Character) RevealExit(roomID, exitName string) {
 		return
 	}
 	c.RevealedExits[roomID] = append(c.RevealedExits[roomID], exitName)
+}
+
+// GetEffectiveMaxLevel returns the effective max level for this character.
+// If MaxLevelCap is set (> 0) and less than globalMax, returns MaxLevelCap;
+// otherwise returns globalMax.
+func (c *Character) GetEffectiveMaxLevel(globalMax int32) int32 {
+	if c.MaxLevelCap > 0 && c.MaxLevelCap < globalMax {
+		return c.MaxLevelCap
+	}
+	return globalMax
 }

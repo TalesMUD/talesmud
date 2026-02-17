@@ -45,6 +45,12 @@ type User struct {
 
 	// BannedEmail stores the email at the time of banning (for email-based ban enforcement)
 	BannedEmail string `json:"bannedEmail,omitempty"`
+
+	// IsGuest indicates this is a temporary guest account (auto-deleted on expiry)
+	IsGuest bool `json:"isGuest"`
+
+	// GuestExpiresAt is the UTC time when this guest session expires (zero for non-guests)
+	GuestExpiresAt time.Time `json:"guestExpiresAt,omitempty"`
 }
 
 // NewUser creates a new user

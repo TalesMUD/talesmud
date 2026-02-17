@@ -25,10 +25,13 @@ type LevelUpResult struct {
 // CheckLevelUp determines if a character should level up based on their current XP
 // Returns the number of levels gained and the new level
 // Supports gaining multiple levels at once (for massive XP grants)
+// Respects the character's MaxLevelCap if set (e.g., guest characters capped at level 5)
 func CheckLevelUp(char *characters.Character) (levelsGained int, newLevel int32) {
+	effectiveMax := char.GetEffectiveMaxLevel(MaxLevel)
+
 	// Already at max level
-	if char.Level >= MaxLevel {
-		return 0, MaxLevel
+	if char.Level >= effectiveMax {
+		return 0, effectiveMax
 	}
 
 	levelsGained = 0
@@ -36,7 +39,7 @@ func CheckLevelUp(char *characters.Character) (levelsGained int, newLevel int32)
 	currentXP := char.XP
 
 	// Check if character has enough XP to level up (possibly multiple times)
-	for currentLevel < MaxLevel {
+	for currentLevel < effectiveMax {
 		xpNeeded := GetXPRequired(currentLevel + 1)
 		if currentXP >= xpNeeded {
 			levelsGained++
@@ -52,17 +55,20 @@ func CheckLevelUp(char *characters.Character) (levelsGained int, newLevel int32)
 // ApplyLevelUp applies all stat changes for leveling up
 // Updates character level, HP, and attributes
 // Returns a LevelUpResult with details for messaging and events
+// Respects the character's MaxLevelCap if set (e.g., guest characters capped at level 5)
 func ApplyLevelUp(char *characters.Character, levelsGained int) *LevelUpResult {
 	if levelsGained <= 0 {
 		return nil
 	}
 
+	effectiveMax := char.GetEffectiveMaxLevel(MaxLevel)
+
 	oldLevel := char.Level
 	newLevel := oldLevel + int32(levelsGained)
 
-	// Enforce level cap
-	if newLevel > MaxLevel {
-		newLevel = MaxLevel
+	// Enforce level cap (per-character or global)
+	if newLevel > effectiveMax {
+		newLevel = effectiveMax
 		levelsGained = int(newLevel - oldLevel)
 	}
 

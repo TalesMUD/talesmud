@@ -118,11 +118,14 @@ Optional middleware that serves a static landing page from the OS filesystem whe
 **File:** `pkg/server/auth.go`
 
 ```
-Request → Extract JWT → Validate with Auth0 JWKS → Find/Create User → Check Ban → Set Context
+Request → Extract Token → Try Guest HMAC → (if fail) Validate Auth0 JWT → Find/Create User → Check Ban → Set Context
 ```
 
 - Supports both query parameter (`?access_token=`) and Authorization header
-- Validates against Auth0 JWKS endpoint
+- **Dual token validation**: Tries guest HMAC-SHA256 token first (fast), falls back to Auth0 JWT
+- Guest tokens signed with `GUEST_SECRET` env var, validated via `GuestService.ValidateGuestToken()`
+- Guest session expiry checked at auth layer (returns 401 if expired)
+- Auth0 tokens validated against JWKS endpoint (with in-memory cache, 1-hour TTL)
 - Creates new user on first login
 - Syncs admin role from `MUD_ADMIN_OAUTHID` env var on every login
 - Rejects banned users with 403 at the auth layer
@@ -170,12 +173,15 @@ type server struct {
 
 #### Concurrent Goroutines
 
-The MUD server runs 4 concurrent goroutines:
+The MUD server runs 4+ concurrent goroutines:
 
 1. **Message Receiver** - Routes game output to appropriate clients
 2. **Game Loop** - Processes commands and updates game state
 3. **Broadcast Handler** - Sends global messages to all clients
 4. **Timeout Handler** - Sends ping every 60 seconds
+5. **Guest Cleanup Loop** - Removes expired guest accounts every 5 minutes
+6. **Per-Guest Timeout** (per connection) - Warning at 25 min, disconnect at 30 min
+7. **Per-Guest Disconnect Cleanup** (per connection) - 5-min grace period before deleting guest data
 
 #### Message Flow
 
@@ -566,6 +572,7 @@ type Facade interface {
     LootTablesService() LootTablesService
     QuestsService() QuestsService
     SkillsService() SkillsService
+    GuestService() GuestService
     Runner() scripts.ScriptRunner
 }
 ```
@@ -583,6 +590,7 @@ type Facade interface {
 | LootTablesService | Loot table CRUD, loot rolling |
 | QuestsService | Quest definition CRUD, quest progress tracking, accept/abandon/complete quests, objective progress, prerequisite checks |
 | SkillsService | Skill CRUD, DB seeding on first run, in-memory cache refresh on mutations |
+| GuestService | Guest session creation, HMAC token signing/validation, expired guest cleanup, IP rate limiting |
 
 ### Repository Layer (`pkg/repository/`)
 
@@ -1164,6 +1172,8 @@ The MUD client (`/play`) uses a phase-based routing system in `App.svelte` to gu
 App.svelte (phase-based routing)
 ├── LoadingScreen           (phase: "loading" — Auth0 initializing)
 ├── WelcomeScreen           (phase: "welcome" — unauthenticated)
+│   ├── Login / Signup (Auth0)
+│   └── Play as Guest (POST /api/guest → skip onboarding, go to "ready")
 ├── NicknameSetup           (phase: "nickname" — new user, needs display name)
 ├── CharacterCreationWizard (phase: "character" — no characters yet)
 │   ├── Step 1: Choose Template (from GET /api/templates/characters)
@@ -1331,31 +1341,49 @@ main()
 ### Authentication Flow
 
 ```
-Client → Auth0 Login → JWT Token
-                          │
-                          ▼
-HTTP Request with JWT → AuthMiddleware
-                          │
-                          ▼
-                    Validate JWT
-                    (JWKS lookup)
-                          │
-                          ▼
-                    Find/Create User
-                          │
-                          ▼
-                    Set Context (userid, user)
-                          │
-                          ▼
-                    Handler executes
+Client → Auth0 Login OR Guest Session → Token (JWT or HMAC)
+                                              │
+                                              ▼
+HTTP/WS Request with Token → AuthMiddleware
+                                              │
+                                              ▼
+                                    Try Guest HMAC Validation
+                                     (fast, local HMAC check)
+                                              │
+                                    ┌─────────┴─────────┐
+                                    ▼ (valid)            ▼ (invalid)
+                              Load Guest User    Validate Auth0 JWT
+                              Check Expiry       (JWKS lookup)
+                                    │                    │
+                                    ▼                    ▼
+                              Set Context          Find/Create User
+                              (userid, user)             │
+                                    │                    ▼
+                                    │              Set Context
+                                    │              (userid, user)
+                                    │                    │
+                                    ▼                    ▼
+                                  Handler executes
 ```
+
+### Guest Authentication
+
+**File:** `pkg/service/guest.go`
+
+Guest sessions use HMAC-SHA256 tokens (not Auth0 JWTs):
+1. Client calls `POST /api/guest` (public, no auth)
+2. Server creates temporary User + Character, signs HMAC token with `GUEST_SECRET`
+3. Client stores token in `sessionStorage` (dies with browser tab)
+4. Auth middleware validates HMAC token before trying Auth0 JWT
+5. Guest sessions expire after 30 minutes; cleanup goroutine deletes stale data
 
 ### Authorization
 
-- Protected endpoints require valid JWT
+- Protected endpoints require valid JWT or guest HMAC token
 - Legacy admin endpoints (export/import) require basic auth
 - Three-tier role system enforced via middleware:
   - **Player** (default): Can access own characters, read game data, play the game
+  - **Guest**: Same as Player but with level cap (5) and session timeout (30 min)
   - **MUD Creator**: Full access to Creator area (write rooms, items, scripts, NPCs, etc.)
   - **MUD Admin**: All Creator access plus User Management (promote/demote/ban users)
 - Admin role is assigned exclusively via `MUD_ADMIN_OAUTHID` environment variable
