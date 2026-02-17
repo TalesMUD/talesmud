@@ -148,6 +148,36 @@ func (server *server) HandleConnections(c *gin.Context) {
 		User: user,
 	}
 
+	// Guest session timeout: warn 5 minutes before expiry, then disconnect
+	if user.IsGuest && !user.GuestExpiresAt.IsZero() {
+		go func() {
+			warnAt := time.Until(user.GuestExpiresAt) - 5*time.Minute
+			if warnAt > 0 {
+				time.Sleep(warnAt)
+				server.sendMessage(user.ID, messages.MessageResponse{
+					Type:    messages.MessageTypeDefault,
+					Message: "\n[SYSTEM] Your guest session expires in 5 minutes. Create an account to save your progress!\n",
+				})
+			}
+		}()
+		go func() {
+			timeout := time.Until(user.GuestExpiresAt)
+			if timeout <= 0 {
+				timeout = 1 * time.Second
+			}
+			time.Sleep(timeout)
+			server.sendMessage(user.ID, messages.MessageResponse{
+				Type:    messages.MessageTypeDefault,
+				Message: "\n[SYSTEM] Your guest session has expired. Thank you for playing! Create an account to continue your adventure.\n",
+			})
+			// Brief delay so the message can be delivered before close
+			time.Sleep(500 * time.Millisecond)
+			if client, ok := server.Clients[user.ID]; ok {
+				client.ws.Close()
+			}
+		}()
+	}
+
 	for {
 		// Read in a new message as JSON and map it to a Message object
 		var msg messages.IncomingMessage
@@ -159,6 +189,27 @@ func (server *server) HandleConnections(c *gin.Context) {
 
 			log.Printf("error: %v", err)
 			delete(server.Clients, user.ID)
+
+			// Guest disconnect cleanup with 5-minute grace period for reconnection
+			if user.IsGuest {
+				go func(userID string) {
+					time.Sleep(5 * time.Minute)
+					// Check if user reconnected during grace period
+					if _, ok := server.Clients[userID]; ok {
+						return // Reconnected, don't clean up
+					}
+					// Delete all characters for this guest
+					if chars, err := server.Facade.CharactersService().FindAllForUser(userID); err == nil {
+						for _, ch := range chars {
+							server.Facade.CharactersService().Delete(ch.ID)
+						}
+					}
+					// Delete the guest user
+					server.Facade.UsersService().Delete(userID)
+					log.WithField("userID", userID).Info("Guest user cleaned up after disconnect grace period")
+				}(user.ID)
+			}
+
 			break
 		}
 

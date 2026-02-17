@@ -13,7 +13,6 @@ import (
 
 	"github.com/buger/jsonparser"
 	"github.com/dgrijalva/jwt-go"
-	"github.com/dgrijalva/jwt-go/request"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	e "github.com/talesmud/talesmud/pkg/entities"
@@ -196,23 +195,53 @@ func setUser(c *gin.Context, facade service.Facade) {
 
 // AuthMiddleware is a gin middleware function for authentication.
 // It verifies the JWT token from the query parameter or the authorization header.
-// If the token is valid, it sets the user ID and user in the gin context.
+// Supports both Auth0 JWTs and guest HMAC tokens (tried first for fast validation).
 func AuthMiddleware(facade service.Facade) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		log.Info("GIN JWT MIDDLEWARE")
 
+		// Extract token string from query param or Authorization header
+		var tokenStr string
+		if fromQuery, ok := c.GetQuery("access_token"); ok {
+			tokenStr = fromQuery
+		} else {
+			authHeader := c.GetHeader("Authorization")
+			if strings.HasPrefix(authHeader, "Bearer ") {
+				tokenStr = strings.TrimPrefix(authHeader, "Bearer ")
+			}
+		}
+
+		if tokenStr == "" {
+			c.AbortWithStatus(401)
+			return
+		}
+
+		// Try guest token validation first (fast HMAC check)
+		if guestSvc := facade.GuestService(); guestSvc != nil {
+			if userID, err := guestSvc.ValidateGuestToken(tokenStr); err == nil {
+				if user, err := facade.UsersService().FindByID(userID); err == nil {
+					// Check if guest session has expired
+					if user.IsGuest && !user.GuestExpiresAt.IsZero() && time.Now().After(user.GuestExpiresAt) {
+						c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+							"error": "Guest session expired",
+						})
+						return
+					}
+					c.Set("userid", user.RefID)
+					c.Set("user", user)
+					c.Next()
+					return
+				}
+			}
+		}
+
+		// Fall back to Auth0 JWT validation
 		keyFunc := getKeyFunc()
 
 		var token *jwt.Token
 		var err error
 
-		if fromQuery, ok := c.GetQuery("access_token"); ok {
-			log.Info("Found access token in query param")
-			token, err = jwt.Parse(fromQuery, keyFunc)
-		} else {
-			log.Info("Found access token in http header")
-			token, err = request.ParseFromRequest(c.Request, request.AuthorizationHeaderExtractor, keyFunc)
-		}
+		token, err = jwt.Parse(tokenStr, keyFunc)
 
 		if err != nil {
 			handleTokenError(c, err, token)

@@ -52,10 +52,13 @@
   import { layoutStore } from "./game/layout/LayoutStore.js";
   import { settingsStore } from "./game/SettingsStore.js";
 
+  export let isGuest = false;
+  export let login = null; // For guest "Create Account" button
+
   const {
     isLoading,
     isAuthenticated,
-    login,
+    login: authLogin,
     logout,
     authToken,
     authError,
@@ -74,8 +77,8 @@
     );
   }
 
-  // Load user data whenever authToken changes and user is authenticated
-  $: if ($isAuthenticated && $authToken) {
+  // Load user data whenever authToken changes and user is authenticated (skip for guests)
+  $: if ($isAuthenticated && $authToken && !isGuest) {
     loadUserData();
   }
 
@@ -90,36 +93,61 @@
 
 <!-- Dropdown Structure -->
 <ul id="dropdown1" class="dropdown-content">
-  <li>
-    <!-- svelte-ignore a11y-invalid-attribute -->
-    <a href="#!" on:click="{() => layoutStore.enterEditMode()}">
-      <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">dashboard_customize</i>
-      Edit Layout
-    </a>
-  </li>
-  <li>
-    <!-- svelte-ignore a11y-invalid-attribute -->
-    <a href="#!" on:click="{() => settingsStore.openModal()}">
-      <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">settings</i>
-      Settings
-    </a>
-  </li>
-  {#if $user && ($user.role === "creator" || $user.role === "admin")}
+  {#if isGuest}
     <li>
-      <a href="/creator" target="_blank">
-        <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">public</i>
-        World Builder
+      <!-- svelte-ignore a11y-invalid-attribute -->
+      <a href="#!" on:click="{() => login ? login(null, { screen_hint: 'signup' }) : authLogin()}">
+        <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">person_add</i>
+        Create Account
+      </a>
+    </li>
+    <li>
+      <!-- svelte-ignore a11y-invalid-attribute -->
+      <a href="#!" on:click="{() => settingsStore.openModal()}">
+        <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">settings</i>
+        Settings
+      </a>
+    </li>
+    <li class="divider"></li>
+    <li>
+      <!-- svelte-ignore a11y-invalid-attribute -->
+      <a href="#!" on:click="{() => { sessionStorage.removeItem('talesmud_guest_token'); window.location.reload(); }}">
+        <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">logout</i>
+        End Session
+      </a>
+    </li>
+  {:else}
+    <li>
+      <!-- svelte-ignore a11y-invalid-attribute -->
+      <a href="#!" on:click="{() => layoutStore.enterEditMode()}">
+        <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">dashboard_customize</i>
+        Edit Layout
+      </a>
+    </li>
+    <li>
+      <!-- svelte-ignore a11y-invalid-attribute -->
+      <a href="#!" on:click="{() => settingsStore.openModal()}">
+        <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">settings</i>
+        Settings
+      </a>
+    </li>
+    {#if $user && ($user.role === "creator" || $user.role === "admin")}
+      <li>
+        <a href="/creator" target="_blank">
+          <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">public</i>
+          World Builder
+        </a>
+      </li>
+    {/if}
+    <li class="divider"></li>
+    <li>
+      <!-- svelte-ignore a11y-invalid-attribute -->
+      <a href="#!" on:click="{() => logout()}">
+        <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">logout</i>
+        Logout
       </a>
     </li>
   {/if}
-  <li class="divider"></li>
-  <li>
-    <!-- svelte-ignore a11y-invalid-attribute -->
-    <a href="#!" on:click="{() => logout()}">
-      <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">logout</i>
-      Logout
-    </a>
-  </li>
 </ul>
 
 {#if $isLoading}
@@ -132,7 +160,13 @@
     <span class="valign-wrapper">
 
       {#if $isAuthenticated}
-        <img src="{$userInfo.picture}" alt="" class="circle img " />
+        {#if isGuest}
+          <i class="material-icons" style="font-size: 36px; color: #f59e0b;">person</i>
+        {:else if $userInfo.picture}
+          <img src="{$userInfo.picture}" alt="" class="circle img" />
+        {:else}
+          <i class="material-icons" style="font-size: 36px; color: #9ca3af;">person</i>
+        {/if}
         <i class="material-icons left">arrow_drop_down</i>
       {/if}
     </span>

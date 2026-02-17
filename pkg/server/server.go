@@ -317,10 +317,19 @@ func (app *app) setupRoutes() {
 
 		// Public server info (no auth, used by MUD client)
 		public.GET("server-info", serverSettings.GetServerInfo)
+
+		// Guest session creation (public, no auth required)
+		guest := &handler.GuestHandler{
+			GuestService: app.Facade.GuestService(),
+		}
+		public.POST("guest", guest.CreateGuestSession)
 	}
 
 	// Start MUD Server
 	app.mud.Run()
+
+	// Start guest cleanup loop (removes expired guest accounts every 5 minutes)
+	app.Facade.GuestService().StartCleanupLoop()
 
 	ws := r.Group("/ws")
 	ws.Use(AuthMiddleware(app.Facade))

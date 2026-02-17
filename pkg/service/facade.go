@@ -22,6 +22,7 @@ type Facade interface {
 	QuestsService() QuestsService
 	SkillsService() SkillsService
 	CharacterTemplatesRepo() repository.CharacterTemplatesRepository
+	GuestService() GuestService
 
 	Runner() scripts.ScriptRunner
 }
@@ -41,6 +42,7 @@ type facade struct {
 	sss   ServerSettingsService
 	qs    QuestsService
 	skls  SkillsService
+	gs    GuestService
 	sr    scripts.ScriptRunner
 	repos repository.Factory
 }
@@ -94,6 +96,9 @@ func NewFacade(repos repository.Factory, runner scripts.ScriptRunner) Facade {
 
 	// Set facade reference in quests service for reward granting
 	qs.SetFacade(f)
+
+	// Initialize guest service (needs facade for user/character access)
+	f.gs = NewGuestService(f)
 
 	return f
 }
@@ -154,4 +159,8 @@ func (f *facade) SkillsService() SkillsService {
 
 func (f *facade) CharacterTemplatesRepo() repository.CharacterTemplatesRepository {
 	return f.repos.CharacterTemplates()
+}
+
+func (f *facade) GuestService() GuestService {
+	return f.gs
 }

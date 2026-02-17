@@ -273,6 +273,7 @@ type Character struct {
     CurrentMana, MaxMana int32  // Casters only
     XP, Level int32
     Gold int64
+    MaxLevelCap int32  // Per-character level cap (0 = use global MaxLevel)
 
     // Attribute System
     Attributes Attributes  // []{Name, Short, Value} - STR, DEX, CON, INT, WIS, CHA
@@ -1943,6 +1944,72 @@ layoutStore.addTabToContainer(containerId, widgetType)  // Add a widget as a new
 layoutStore.removeTabFromContainer(containerId, tabIndex) // Remove a tab by index
 layoutStore.setActiveTab(containerId, tabIndex)           // Switch active tab
 ```
+
+---
+
+## Guest Mode System
+
+### Overview
+Guest mode allows anonymous visitors to play TalesMUD for 30 minutes without Auth0 registration. Designed for embedding a live demo on the website.
+
+### Guest Service (`pkg/service/guest.go`)
+```go
+type GuestService interface {
+    CreateGuestSession(remoteIP string) (token string, err error)
+    ValidateGuestToken(tokenStr string) (userID string, err error)
+    CleanupExpiredGuests()
+    StartCleanupLoop()
+}
+```
+
+### Guest Session Lifecycle
+1. Client calls `POST /api/guest` (public endpoint)
+2. Server checks `ServerSettings.GuestsAllowed` and `MaxGuestAccounts`
+3. IP rate limit checked (10 per hour per IP)
+4. Random character created from system template presets with full starter items
+5. Character `MaxLevelCap` set to 5
+6. User created with `IsGuest=true`, `GuestExpiresAt=now+30min`
+7. HMAC-SHA256 token signed with `GUEST_SECRET` env var
+8. Token returned to client, stored in `sessionStorage`
+9. On WebSocket connect: timeout goroutines start (5-min warning + expiry)
+10. On disconnect: 5-min grace period before deleting guest data
+11. Background cleanup loop removes expired guests every 5 minutes
+
+### Server Configuration
+```go
+// In ServerSettings:
+GuestsAllowed    bool  // Enable/disable guest mode (default: true)
+MaxGuestAccounts int   // Max concurrent guests (default: 20, 0 = unlimited)
+```
+
+### User Entity Guest Fields
+```go
+// In User:
+IsGuest        bool       // Marks temporary guest account
+GuestExpiresAt time.Time  // When guest session expires
+```
+
+### Per-Character Level Cap
+```go
+// In Character:
+MaxLevelCap int32  // 0 = use global MaxLevel, otherwise per-character cap
+
+// Helper method:
+func (c *Character) GetEffectiveMaxLevel(globalMax int32) int32
+```
+
+The leveling system (`CheckLevelUp`, `ApplyLevelUp`) respects `MaxLevelCap` automatically.
+
+### Frontend Guest Flow
+- `WelcomeScreen.svelte` — "Play as Guest" button (amber/gold styling)
+- `App.svelte` — `handleGuestPlay()` stores token in sessionStorage, skips onboarding
+- `UserMenu.svelte` — Guest-aware: shows "Create Account" and "End Session" instead of Auth0 controls
+- `api/guest.js` — `createGuestSession()` API client
+
+### Authentication
+- Guest HMAC tokens are validated before Auth0 JWTs in `AuthMiddleware`
+- Token claims: `sub` (RefID), `uid` (user entity ID), `exp` (30min), `guest: true`
+- If `GUEST_SECRET` is not set, a random key is generated at startup
 
 ---
 
