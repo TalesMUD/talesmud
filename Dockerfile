@@ -5,7 +5,7 @@ FROM node:20-alpine AS build-frontend
 
 WORKDIR /src/public/app
 COPY public/app/package.json public/app/package-lock.json* ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 COPY public/app/ ./
 RUN npm run build
 
@@ -16,7 +16,7 @@ FROM node:20-alpine AS build-mud-client
 
 WORKDIR /src/public/mud-client
 COPY public/mud-client/package.json public/mud-client/package-lock.json* ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 COPY public/mud-client/ ./
 RUN npm run build
 

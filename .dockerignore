@@ -33,10 +33,9 @@ pkg/webuiplay/dist/
 .DS_Store
 *.Zone.Identifier
 
-# Docs (not needed at runtime)
+# Docs (not needed for build)
 docs/
 *.md
-!zones/**/*.md
 
 # Images and assets not needed for build
 img/

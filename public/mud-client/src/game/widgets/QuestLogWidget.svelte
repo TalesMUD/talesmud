@@ -315,10 +315,10 @@
                 <span class="quest-title">{quest.questName || 'Unnamed Quest'}</span>
                 <div class="quest-badges">
                   {#if quest.level}
-                    <span class="badge level-badge">L{quest.level}</span>
+                    <span class="quest-badge level-badge">L{quest.level}</span>
                   {/if}
                   {#if quest.category}
-                    <span class="badge category-badge" style="background: {getCategoryColor(quest.category)}">
+                    <span class="quest-badge category-badge" style="background: {getCategoryColor(quest.category)}">
                       {getCategoryLabel(quest.category)}
                     </span>
                   {/if}
@@ -339,7 +339,7 @@
                     <div class="objective" class:completed={obj.completed}>
                       <span class="check">{obj.completed ? "[x]" : "[ ]"}</span>
                       <span class="obj-text">{obj.description}</span>
-                      <span class="progress">({obj.current}/{obj.required})</span>
+                      <span class="quest-progress">({obj.current}/{obj.required})</span>
                     </div>
                   {/each}
                 </div>
@@ -403,10 +403,10 @@
                 <span class="quest-title">{quest.questName || 'Unnamed Quest'}</span>
                 <div class="quest-badges">
                   {#if quest.level}
-                    <span class="badge level-badge">L{quest.level}</span>
+                    <span class="quest-badge level-badge">L{quest.level}</span>
                   {/if}
                   {#if quest.category}
-                    <span class="badge category-badge" style="background: {getCategoryColor(quest.category)}">
+                    <span class="quest-badge category-badge" style="background: {getCategoryColor(quest.category)}">
                       {getCategoryLabel(quest.category)}
                     </span>
                   {/if}
@@ -427,7 +427,7 @@
                     <div class="objective" class:completed={obj.completed}>
                       <span class="check">{obj.completed ? "[x]" : "[ ]"}</span>
                       <span class="obj-text">{obj.description}</span>
-                      <span class="progress">({obj.current}/{obj.required})</span>
+                      <span class="quest-progress">({obj.current}/{obj.required})</span>
                     </div>
                   {/each}
                 </div>
@@ -491,10 +491,10 @@
                 <span class="quest-title">{quest.questName || 'Unnamed Quest'}</span>
                 <div class="quest-badges">
                   {#if quest.level}
-                    <span class="badge level-badge">L{quest.level}</span>
+                    <span class="quest-badge level-badge">L{quest.level}</span>
                   {/if}
                   {#if quest.category}
-                    <span class="badge category-badge" style="background: {getCategoryColor(quest.category)}">
+                    <span class="quest-badge category-badge" style="background: {getCategoryColor(quest.category)}">
                       {getCategoryLabel(quest.category)}
                     </span>
                   {/if}
@@ -515,7 +515,7 @@
                     <div class="objective completed">
                       <span class="check">[x]</span>
                       <span class="obj-text">{obj.description}</span>
-                      <span class="progress">({obj.required}/{obj.required})</span>
+                      <span class="quest-progress">({obj.required}/{obj.required})</span>
                     </div>
                   {/each}
                 </div>
@@ -755,8 +755,11 @@
 
   .questlog-content {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
     padding: 0.75em;
+    display: flex;
+    flex-direction: column;
     scrollbar-width: thin;
     scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
   }
@@ -782,6 +785,7 @@
 
   .quest-section {
     margin-bottom: 1em;
+    flex-shrink: 0;
   }
 
   .section-title {
@@ -796,9 +800,10 @@
   }
 
   .quest-entry {
+    display: flex;
+    flex-direction: column;
     margin-bottom: 4px;
     border-radius: 6px;
-    overflow: hidden;
   }
 
   .quest-entry.expanded {
@@ -847,7 +852,7 @@
     flex-wrap: wrap;
   }
 
-  .badge {
+  .quest-badge {
     display: inline-block;
     padding: 2px 7px;
     border-radius: 3px;
@@ -958,7 +963,7 @@
     color: var(--color-success);
   }
 
-  .progress {
+  .quest-progress {
     margin-left: auto;
     color: var(--text-dim);
     font-size: var(--text-xs);
