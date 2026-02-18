@@ -38,7 +38,7 @@ COPY . .
 COPY --from=build-frontend /src/public/app/dist/ pkg/webui/dist/
 COPY --from=build-mud-client /src/public/mud-client/public/ pkg/webuiplay/dist/
 
-# Build a statically-linked binary
+# Build statically-linked binary
 RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /tales cmd/tales/main.go
 
 # ============================================================

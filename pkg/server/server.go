@@ -167,7 +167,6 @@ func (app *app) setupRoutes() {
 	{
 		authorized.GET("export", exp.Export)
 		authorized.POST("import", exp.Import)
-		authorized.GET("world", worldRenderer.Render)
 	}
 
 	// Protected API routes (JWT auth required)
@@ -196,7 +195,6 @@ func (app *app) setupRoutes() {
 		protected.GET("items/:id", items.GetItemByID)
 		protected.GET("scripts", scripts.GetScripts)
 		protected.GET("script-types", scripts.GetScriptTypes)
-		protected.GET("world/map", worldRenderer.Render)
 		protected.GET("world/graph", worldRenderer.RenderGraphData)
 		protected.GET("world/rooms-minimal", worldRenderer.GetMinimalRooms)
 		protected.GET("npcs", npcs.GetNPCs)

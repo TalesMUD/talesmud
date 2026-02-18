@@ -302,12 +302,12 @@
           <div class="quest-section">
             <h3 class="section-title">📌 Pinned ({pinnedQuestList.length})</h3>
             {#each pinnedQuestList as quest}
-              <div class="quest-entry pinned" class:expanded={expandedQuest === quest.questId}>
+              <div class="quest-entry is-pinned" class:expanded={expandedQuest === quest.questId}>
                 <button
                   class="quest-name"
                   on:click={() => toggleQuest(quest.questId)}
                 >
-                  <span class="quest-indicator active pinned"></span>
+                  <span class="quest-indicator active is-pinned"></span>
                   <div class="quest-title-row">
                     <span class="quest-title">{quest.questName || 'Unnamed Quest'}</span>
                     <div class="quest-badges">
@@ -367,7 +367,7 @@
 
                     <div class="quest-actions">
                       <button
-                        class="pin-btn pinned"
+                        class="pin-btn is-pinned"
                         on:click|stopPropagation={() => togglePin(quest.questId)}
                       >
                         Unpin Quest
@@ -897,7 +897,7 @@
     box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
   }
 
-  .quest-indicator.active.pinned {
+  .quest-indicator.active.is-pinned {
     background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
     box-shadow: 0 0 8px rgba(245, 158, 11, 0.8);
     animation: pulse 2s ease-in-out infinite;
@@ -924,7 +924,7 @@
     background: #ef4444;
   }
 
-  .quest-entry.pinned {
+  .quest-entry.is-pinned {
     background: rgba(245, 158, 11, 0.05);
     border: 1px solid rgba(245, 158, 11, 0.2);
     border-radius: 6px;
@@ -1077,12 +1077,12 @@
     border-color: rgba(245, 158, 11, 0.5);
   }
 
-  .pin-btn.pinned {
+  .pin-btn.is-pinned {
     background: rgba(245, 158, 11, 0.2);
     border-color: rgba(245, 158, 11, 0.4);
   }
 
-  .pin-btn.pinned:hover {
+  .pin-btn.is-pinned:hover {
     background: rgba(239, 68, 68, 0.1);
     border-color: rgba(239, 68, 68, 0.3);
     color: #ef4444;
