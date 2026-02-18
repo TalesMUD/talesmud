@@ -1,0 +1,54 @@
+# Git
+.git
+.gitignore
+
+# IDE / editor
+.idea/
+.vscode/
+.cursor/
+.claude/
+
+# CI/CD
+.github/
+
+# Node modules (rebuilt in container)
+node_modules/
+public/app/node_modules/
+public/mud-client/node_modules/
+
+# Build artifacts (rebuilt in container)
+bin/
+dist/
+build/
+out/
+pkg/webui/dist/
+pkg/webuiplay/dist/
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# OS files
+.DS_Store
+*.Zone.Identifier
+
+# Docs (not needed at runtime)
+docs/
+*.md
+!zones/**/*.md
+
+# Images and assets not needed for build
+img/
+public/assets/img/
+public/landing/*.png
+
+# Temp files
+export.json
+out.json
+dialog1.json
+backups/
+uploads/
+
+# Import data (not needed in image)
+import/

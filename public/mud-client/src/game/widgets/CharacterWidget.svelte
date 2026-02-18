@@ -106,6 +106,8 @@
 <style>
   /* Base panel styling comes from global .game-panel class in themes.css */
   .character-widget {
+    container-type: inline-size;
+    container-name: character;
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
   }
 
@@ -462,6 +464,140 @@
 
   .empty-state span {
     font-size: var(--text-sm);
+  }
+
+  /* ── Responsive: narrow containers (< 240px) ── */
+  @container character (max-width: 240px) {
+    .char-identity {
+      margin-bottom: 0.6em;
+    }
+
+    .char-name {
+      font-size: var(--text-base);
+    }
+
+    .char-info {
+      font-size: var(--text-xs);
+    }
+
+    .stat-bars {
+      gap: 0.4em;
+      margin-bottom: 0.5em;
+    }
+
+    .bar-label, .bar-value {
+      font-size: var(--text-xs);
+    }
+
+    .gold-row {
+      padding: 0.35em 0.45em;
+      margin-bottom: 0.5em;
+    }
+
+    .gold-label {
+      font-size: var(--text-xs);
+    }
+
+    .gold-value {
+      font-size: var(--text-sm);
+    }
+
+    .attributes-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 0.3em;
+    }
+
+    .attr-item {
+      padding: 0.35em 0.25em;
+    }
+
+    .attr-value {
+      font-size: var(--text-sm);
+    }
+
+    .combat-stats-grid {
+      gap: 0.3em;
+    }
+
+    .combat-stat {
+      padding: 0.35em 0.4em;
+      gap: 0.35em;
+    }
+
+    .combat-stat-value {
+      font-size: var(--text-sm);
+    }
+
+    .combat-stat-formula {
+      font-size: 0.7em;
+    }
+  }
+
+  /* ── Responsive: very narrow containers (< 180px) ── */
+  @container character (max-width: 180px) {
+    .char-name {
+      font-size: var(--text-sm);
+    }
+
+    .stat-bars {
+      gap: 0.3em;
+      margin-bottom: 0.4em;
+    }
+
+    .bar-header {
+      margin-bottom: 0.1em;
+    }
+
+    .gold-row {
+      padding: 0.25em 0.35em;
+      margin-bottom: 0.4em;
+    }
+
+    .attributes-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 0.25em;
+    }
+
+    .attr-item {
+      padding: 0.25em 0.15em;
+    }
+
+    .attr-value {
+      font-size: var(--text-xs);
+    }
+
+    .attr-mod {
+      font-size: 0.65em;
+    }
+
+    .combat-stats-grid {
+      grid-template-columns: 1fr;
+      gap: 0.25em;
+    }
+
+    .combat-stat {
+      padding: 0.3em 0.35em;
+      gap: 0.3em;
+    }
+
+    .stat-icon {
+      font-size: 0.95em;
+    }
+
+    .combat-stat-value {
+      font-size: var(--text-xs);
+    }
+  }
+
+  /* ── Responsive: wider containers (> 320px) ── */
+  @container character (min-width: 320px) {
+    .attributes-grid {
+      grid-template-columns: repeat(5, 1fr);
+    }
+
+    .combat-stats-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
   }
 </style>
 
