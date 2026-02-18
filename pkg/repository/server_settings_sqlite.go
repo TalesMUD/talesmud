@@ -18,7 +18,8 @@ type sqliteServerSettingsRepository struct {
 func NewSQLiteServerSettingsRepository(client *dbsqlite.Client) ServerSettingsRepository {
 	return &sqliteServerSettingsRepository{
 		sqliteGenericRepo: newSQLiteGenericRepo(client.DB(), "server_settings", func() interface{} {
-			return &settings.ServerSettings{}
+			// Start with defaults so missing JSON fields keep their intended values.
+			return settings.NewDefaultServerSettings()
 		}),
 	}
 }
