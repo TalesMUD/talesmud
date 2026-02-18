@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"time"
+
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/conversations"
@@ -236,4 +238,21 @@ type SkillsRepository interface {
 	Import(skill *skills.Skill) (*skills.Skill, error)
 	Update(id string, skill *skills.Skill) error
 	Delete(id string) error
+}
+
+// DailyGuestStat holds aggregated statistics for a single day.
+type DailyGuestStat struct {
+	Date               string  `json:"date"`
+	Count              int     `json:"count"`
+	AvgDurationSeconds float64 `json:"avgDurationSeconds"`
+}
+
+// GuestStatsRepository provides access to guest session analytics data.
+type GuestStatsRepository interface {
+	Store(session *entities.GuestStatSession) error
+	FindByGuestRefID(refID string) (*entities.GuestStatSession, error)
+	MarkEnded(id string, endedAt time.Time, durationSeconds int64) error
+	CountAll() (int, error)
+	CountActive() (int, error)
+	GetDailyStats(days int) ([]*DailyGuestStat, error)
 }

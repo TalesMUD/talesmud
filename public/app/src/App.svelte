@@ -40,6 +40,8 @@
 
   let playMenuOpen = false;
   let playMenuEl;
+  let adminMenuOpen = false;
+  let adminMenuEl;
 
   function togglePlayMenu(e) {
     e.preventDefault();
@@ -47,9 +49,16 @@
     playMenuOpen = !playMenuOpen;
   }
 
+  function toggleAdminMenu(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    adminMenuOpen = !adminMenuOpen;
+  }
+
   function onDocumentClick(e) {
     if (!playMenuEl) return;
     if (!playMenuEl.contains(e.target)) playMenuOpen = false;
+    if (adminMenuEl && !adminMenuEl.contains(e.target)) adminMenuOpen = false;
   }
 
   onMount(() => {
@@ -108,7 +117,39 @@
               <a class="hover:text-primary transition-colors" href="/creator/rooms">Creator</a>
             {/if}
             {#if isAdmin}
-              <a class="hover:text-primary transition-colors" href="/manage/users">Admin</a>
+              <div class="relative flex items-center gap-1" bind:this={adminMenuEl}>
+                <a class="hover:text-primary transition-colors" href="/manage/users">Admin</a>
+                <button
+                  class="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  type="button"
+                  aria-haspopup="menu"
+                  aria-expanded={adminMenuOpen}
+                  on:click={toggleAdminMenu}
+                >
+                  <span class="material-symbols-outlined text-base">arrow_drop_down</span>
+                </button>
+                {#if adminMenuOpen}
+                  <div
+                    class="absolute left-0 top-full mt-2 w-48 rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-800 dark:bg-slate-900 overflow-hidden"
+                    role="menu"
+                  >
+                    <a
+                      class="block px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                      href="/manage/users"
+                      role="menuitem"
+                    >
+                      User Management
+                    </a>
+                    <a
+                      class="block px-3 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                      href="/manage/guest-stats"
+                      role="menuitem"
+                    >
+                      Guest Statistics
+                    </a>
+                  </div>
+                {/if}
+              </div>
             {/if}
           {/if}
           <a class="hover:text-primary transition-colors" href="/news">News</a>

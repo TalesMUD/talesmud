@@ -20,6 +20,7 @@
   import UserForm from "./UserForm.svelte";
   import News from "./news/News.svelte";
   import UserManagement from "./admin/UserManagement.svelte";
+  import GuestStatistics from "./admin/GuestStatistics.svelte";
 </script>
 
 <main class="min-h-[calc(100vh-72px)]">
@@ -93,6 +94,9 @@
   </Route>
   <Route exact path="/manage/users">
     <UserManagement />
+  </Route>
+  <Route exact path="/manage/guest-stats">
+    <GuestStatistics />
   </Route>
   <Route exact path="/list" component="{Characters}" />
   <Route exact path="/characters/new" component="{NewCharacter}" />

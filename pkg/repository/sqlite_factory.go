@@ -76,6 +76,10 @@ func (f *SQLiteFactory) Skills() SkillsRepository {
 	return NewSQLiteSkillsRepository(f.client)
 }
 
+func (f *SQLiteFactory) GuestStats() GuestStatsRepository {
+	return NewSQLiteGuestStatsRepository(f.client)
+}
+
 func (f *SQLiteFactory) Close() error {
 	return f.client.Close()
 }
