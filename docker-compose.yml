@@ -1,16 +1,24 @@
-version: '3'
 services:
   talesmud:
     build: .
+    image: ghcr.io/talesmud/talesmud:latest
     ports:
-     - "8010:8010"
+      - "8010:8010"
     environment:
-     - GIN_MODE=debug
-     - SQLITE_PATH=/data/talesmud.db
-     - AUTH0_AUDIENCE=http://talesofapirate.com/dnd/api
-     - AUTH0_DOMAIN=https://owndnd.eu.auth0.com/
-     - AUTH0_WK_JWKS=https://owndnd.eu.auth0.com/.well-known/jwks.json
-     - ADMIN_USER=admin
-     - ADMIN_PASSWORD=admin
+      - GIN_MODE=release
+      - SQLITE_PATH=/app/data/talesmud.db
+      - AUTH0_AUDIENCE=http://talesofapirate.com/dnd/api
+      - AUTH0_DOMAIN=https://owndnd.eu.auth0.com/
+      - AUTH0_WK_JWKS=https://owndnd.eu.auth0.com/.well-known/jwks.json
+      - ADMIN_USER=admin
+      - ADMIN_PASSWORD=admin
     volumes:
-     - ~/volumes/talesmud/data:/data
+      - talesmud-data:/app/data
+      - talesmud-uploads:/app/uploads
+      - talesmud-backups:/app/backups
+    restart: unless-stopped
+
+volumes:
+  talesmud-data:
+  talesmud-uploads:
+  talesmud-backups:
