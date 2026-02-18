@@ -366,7 +366,12 @@ func (app *app) Run() {
 	corsHandler := handlers.CORS(
 		handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}),
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "HEAD", "DELETE", "OPTIONS"}),
-		handlers.AllowedOrigins([]string{"*"}))(app.Router)
+		handlers.AllowedOrigins([]string{
+			"https://veilspan.com",
+			"https://www.veilspan.com",
+			"https://talesmud.io",
+			"https://www.talesmud.io",
+		}))(app.Router)
 
 	log.WithField("PORT", port).Info(fmt.Sprintf("TalesMUD Server is running, listening on port %v", port))
 	log.Fatal(http.ListenAndServe(server, corsHandler))
