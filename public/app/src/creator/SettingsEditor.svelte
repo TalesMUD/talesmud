@@ -5,7 +5,7 @@
 
   const { isAuthenticated, authToken } = getAuth();
 
-  let settings = { serverName: "", about: "" };
+  let settings = { serverName: "", about: "", guestsAllowed: false, maxGuestAccounts: 0 };
   let saving = false;
   let saveMessage = "";
   let hasLoaded = false;
@@ -15,10 +15,7 @@
     getSettings(
       $authToken,
       (data) => {
-        settings = {
-          serverName: data.serverName || "",
-          about: data.about || "",
-        };
+        settings = { ...data };
         hasLoaded = true;
       },
       (err) => console.error("Failed to load settings:", err)
@@ -112,6 +109,40 @@
               />
               <p class="text-xs text-slate-400 dark:text-slate-500">
                 A longer description of your server and game world.
+              </p>
+            </div>
+          </div>
+
+          <div class="card p-6 space-y-6 mt-6">
+            <h2 class="text-lg font-semibold">Guest Mode</h2>
+
+            <div class="flex items-center gap-3">
+              <input
+                id="guests_allowed"
+                type="checkbox"
+                class="accent-indigo-500 w-4 h-4"
+                bind:checked={settings.guestsAllowed}
+              />
+              <label for="guests_allowed" class="text-sm">
+                Allow guest sessions
+              </label>
+            </div>
+            <p class="text-xs text-slate-400 dark:text-slate-500 -mt-4">
+              When enabled, visitors can try the game without creating an account.
+            </p>
+
+            <div class="space-y-1.5">
+              <label class="label-caps" for="max_guests">Max Concurrent Guests</label>
+              <input
+                id="max_guests"
+                type="number"
+                min="0"
+                class="input-base w-32"
+                bind:value={settings.maxGuestAccounts}
+                disabled={!settings.guestsAllowed}
+              />
+              <p class="text-xs text-slate-400 dark:text-slate-500">
+                Maximum number of concurrent guest accounts. Set to 0 for unlimited.
               </p>
             </div>
           </div>
