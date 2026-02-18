@@ -85,6 +85,7 @@ func (c *Client) InitSchema() error {
 		`CREATE TABLE IF NOT EXISTS quests (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
 		`CREATE TABLE IF NOT EXISTS quest_progress (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
 		`CREATE TABLE IF NOT EXISTS skills (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
+		`CREATE TABLE IF NOT EXISTS guest_statistics (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
 	}
 	for _, stmt := range stmts {
 		if _, err := c.db.Exec(stmt); err != nil {
@@ -121,6 +122,11 @@ func (c *Client) createIndexes() error {
 
 		// Quest progress: queried by character
 		`CREATE INDEX IF NOT EXISTS idx_quest_progress_char ON quest_progress(json_extract(data, '$.characterID'));`,
+
+		// Guest statistics: queried by guestRefID and date
+		`CREATE INDEX IF NOT EXISTS idx_guest_stats_ref ON guest_statistics(json_extract(data, '$.guestRefID'));`,
+		`CREATE INDEX IF NOT EXISTS idx_guest_stats_date ON guest_statistics(json_extract(data, '$.date'));`,
+		`CREATE INDEX IF NOT EXISTS idx_guest_stats_started ON guest_statistics(json_extract(data, '$.startedAt'));`,
 	}
 
 	for _, idx := range indexes {

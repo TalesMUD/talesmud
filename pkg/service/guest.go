@@ -30,17 +30,19 @@ type GuestService interface {
 	ValidateGuestToken(tokenStr string) (userID string, err error)
 	CleanupExpiredGuests()
 	StartCleanupLoop()
+	CountActiveGuests() int
 }
 
 type guestService struct {
 	facade     Facade
+	stats      GuestStatsService
 	secret     []byte
 	rateLimits map[string][]time.Time
 	mu         sync.Mutex
 }
 
 // NewGuestService creates a new guest service. Reads GUEST_SECRET from env.
-func NewGuestService(facade Facade) GuestService {
+func NewGuestService(facade Facade, stats GuestStatsService) GuestService {
 	secret := os.Getenv("GUEST_SECRET")
 	if secret == "" {
 		b := make([]byte, 32)
@@ -50,6 +52,7 @@ func NewGuestService(facade Facade) GuestService {
 	}
 	return &guestService{
 		facade:     facade,
+		stats:      stats,
 		secret:     []byte(secret),
 		rateLimits: make(map[string][]time.Time),
 	}
@@ -209,6 +212,11 @@ func (gs *guestService) CreateGuestSession(remoteIP string) (string, error) {
 		"expiresAt": user.GuestExpiresAt.Format(time.RFC3339),
 	}).Info("Guest session created")
 
+	// Record session start for analytics (non-blocking, best-effort)
+	if gs.stats != nil {
+		gs.stats.RecordSessionStart(refID)
+	}
+
 	return tokenStr, nil
 }
 
@@ -264,6 +272,11 @@ func (gs *guestService) CleanupExpiredGuests() {
 			continue
 		}
 
+		// Record session end for analytics before deleting the user
+		if gs.stats != nil {
+			gs.stats.RecordSessionEnd(user.RefID, user.GuestExpiresAt)
+		}
+
 		// Delete all characters for this guest
 		if chars, err := gs.facade.CharactersService().FindAllForUser(user.ID); err == nil {
 			for _, ch := range chars {
@@ -295,6 +308,11 @@ func (gs *guestService) StartCleanupLoop() {
 		}
 	}()
 	log.Info("Guest cleanup loop started")
+}
+
+// CountActiveGuests counts the number of currently active (non-expired) guest users.
+func (gs *guestService) CountActiveGuests() int {
+	return gs.countActiveGuests()
 }
 
 // countActiveGuests counts the number of currently active (non-expired) guest users.

@@ -18,5 +18,6 @@ type Factory interface {
 	Quests() QuestsRepository
 	QuestProgress() QuestProgressRepository
 	Skills() SkillsRepository
+	GuestStats() GuestStatsRepository
 	Close() error
 }

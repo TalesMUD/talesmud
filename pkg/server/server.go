@@ -151,6 +151,11 @@ func (app *app) setupRoutes() {
 		Service: app.Facade.UsersService(),
 	}
 
+	guestStats := &handler.GuestStatsHandler{
+		StatsService: app.Facade.GuestStatsService(),
+		GuestService: app.Facade.GuestService(),
+	}
+
 	r.GET("/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "API is up and running")
 	})
@@ -298,6 +303,10 @@ func (app *app) setupRoutes() {
 			adminAPI.POST("users/:id/ban", userMgmt.BanUser)
 			adminAPI.POST("users/:id/unban", userMgmt.UnbanUser)
 			adminAPI.DELETE("users/:id", userMgmt.DeleteUser)
+
+			// Guest session analytics
+			adminAPI.GET("stats/guests", guestStats.GetSummary)
+			adminAPI.GET("stats/guests/daily", guestStats.GetDailyStats)
 		}
 	}
 
