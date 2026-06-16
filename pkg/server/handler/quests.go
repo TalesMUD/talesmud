@@ -118,16 +118,25 @@ func (h *QuestsHandler) DeleteQuestByID(c *gin.Context) {
 
 // QuestLogEntry combines quest progress with quest definition for frontend
 type QuestLogEntry struct {
-	QuestID     string                     `json:"questId"`
-	QuestName   string                     `json:"questName"`
-	Status      string                     `json:"status"`
-	Description string                     `json:"description"`
-	Category    string                     `json:"category,omitempty"`
-	Level       int32                      `json:"level,omitempty"`
-	Objectives  []quests.ObjectiveProgress `json:"objectives"`
-	Rewards     *quests.Reward             `json:"rewards,omitempty"`
-	AcceptedAt  string                     `json:"acceptedAt,omitempty"`
-	CompletedAt string                     `json:"completedAt,omitempty"`
+	QuestID     string                   `json:"questId"`
+	QuestName   string                   `json:"questName"`
+	Status      string                   `json:"status"`
+	Description string                   `json:"description"`
+	Category    string                   `json:"category,omitempty"`
+	Level       int32                    `json:"level,omitempty"`
+	Objectives  []QuestObjectiveProgress `json:"objectives"`
+	Rewards     *quests.Reward           `json:"rewards,omitempty"`
+	AcceptedAt  string                   `json:"acceptedAt,omitempty"`
+	CompletedAt string                   `json:"completedAt,omitempty"`
+}
+
+// QuestObjectiveProgress combines objective progress with definition text.
+type QuestObjectiveProgress struct {
+	ObjectiveID string `json:"objectiveId"`
+	Description string `json:"description"`
+	Current     int32  `json:"current"`
+	Required    int32  `json:"required"`
+	Completed   bool   `json:"completed"`
 }
 
 // GetQuestLog returns quest progress for a character with full quest details
@@ -159,7 +168,7 @@ func (h *QuestsHandler) GetQuestLog(c *gin.Context) {
 			Description: quest.Description,
 			Category:    quest.Category,
 			Level:       quest.Level,
-			Objectives:  progress.Objectives,
+			Objectives:  buildQuestLogObjectives(quest, progress),
 			Rewards:     &quest.Rewards,
 		}
 
@@ -174,6 +183,31 @@ func (h *QuestsHandler) GetQuestLog(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, entries)
+}
+
+func buildQuestLogObjectives(quest *quests.Quest, progress *quests.QuestProgress) []QuestObjectiveProgress {
+	definitionsByID := make(map[string]quests.Objective, len(quest.Objectives))
+	for _, objective := range quest.Objectives {
+		definitionsByID[objective.ID] = objective
+	}
+
+	objectives := make([]QuestObjectiveProgress, 0, len(progress.Objectives))
+	for _, objectiveProgress := range progress.Objectives {
+		objective := QuestObjectiveProgress{
+			ObjectiveID: objectiveProgress.ObjectiveID,
+			Current:     objectiveProgress.Current,
+			Required:    objectiveProgress.Required,
+			Completed:   objectiveProgress.Completed,
+		}
+		if definition, ok := definitionsByID[objectiveProgress.ObjectiveID]; ok {
+			objective.Description = definition.Description
+			if objective.Required == 0 {
+				objective.Required = definition.Amount
+			}
+		}
+		objectives = append(objectives, objective)
+	}
+	return objectives
 }
 
 // AcceptQuest accepts a quest for a character

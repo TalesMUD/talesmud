@@ -255,17 +255,40 @@ function createClient(renderer, characterCreator, muxStore) {
     requestQuestLog();
 
     // Show objective progress notification
-    if (mux && msg.objectives) {
-      const completedObjective = msg.objectives.find(o => o.completed);
-      if (completedObjective) {
+    if (mux) {
+      const changedObjective = msg.changedObjective || (msg.objectives || []).find(o => o.completed);
+      if (changedObjective) {
+        const progressText = changedObjective.completed
+          ? `Objective complete: ${changedObjective.description || 'Objective completed'}`
+          : `${changedObjective.description || 'Objective'}: ${changedObjective.current}/${changedObjective.required}`;
         mux.addQuestNotification({
-          id: `quest-progress-${msg.questId || Date.now()}-${completedObjective.objectiveId}`,
+          id: `quest-progress-${msg.questId || Date.now()}-${changedObjective.objectiveId}-${Date.now()}`,
           questId: msg.questId,
           type: 'progress',
           questName: msg.questName || 'Quest',
-          message: `Objective complete: ${completedObjective.description || 'Objective completed'}`,
+          message: progressText,
         });
       }
+    }
+  };
+
+  messageHandlers["questReady"] = (msg) => {
+    renderer(msg.message);
+    overlayStore.pushMessage(msg.message);
+
+    requestQuestLog();
+
+    if (mux) {
+      const changedObjective = msg.changedObjective || (msg.objectives || []).find(o => o.completed);
+      mux.addQuestNotification({
+        id: `quest-ready-${msg.questId || Date.now()}`,
+        questId: msg.questId,
+        type: 'ready',
+        questName: msg.questName || 'Quest',
+        message: changedObjective?.description
+          ? `Ready to turn in. Last objective: ${changedObjective.description}`
+          : 'Ready to turn in.',
+      });
     }
   };
 
