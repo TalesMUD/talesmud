@@ -41,7 +41,7 @@ func NewUserJoined(user *e.User) *UserJoined {
 	}
 }
 
-//AudienceType type
+// AudienceType type
 type AudienceType int
 
 const (
@@ -64,27 +64,27 @@ type MessageResponse struct {
 	Message  string      `json:"message"`
 }
 
-//GetAudience ,,,
+// GetAudience ,,,
 func (m MessageResponse) GetAudience() AudienceType {
 	return m.Audience
 }
 
-//GetAudienceID ,,,
+// GetAudienceID ,,,
 func (m MessageResponse) GetAudienceID() string {
 	return m.AudienceID
 }
 
-//GetOriginID ,,,
+// GetOriginID ,,,
 func (m MessageResponse) GetOriginID() string {
 	return m.OriginID
 }
 
-//GetMessage ,,,
+// GetMessage ,,,
 func (m MessageResponse) GetMessage() string {
 	return m.Message
 }
 
-//MessageResponder ...
+// MessageResponder ...
 type MessageResponder interface {
 	GetAudience() AudienceType
 	GetAudienceID() string
@@ -97,7 +97,7 @@ type MultiResponse struct {
 	Responses []MessageResponse
 }
 
-//NewMultiResponse ...
+// NewMultiResponse ...
 func NewMultiResponse(responses ...MessageResponse) MultiResponse {
 	mr := MultiResponse{
 		Responses: []MessageResponse{},
@@ -123,9 +123,9 @@ type RoomNPC struct {
 
 // RoomPlayer represents player character data sent to the frontend for UI rendering
 type RoomPlayer struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-	IsYou bool  `json:"isYou"`
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	IsYou bool   `json:"isYou"`
 }
 
 // EnterRoomMessage ... Define our message object
@@ -137,7 +137,7 @@ type EnterRoomMessage struct {
 	Players []RoomPlayer    `json:"players"`
 }
 
-//NewEnterRoomMessage creates a new enter room message.
+// NewEnterRoomMessage creates a new enter room message.
 // char is optional — if provided, CopyOnPickup items already collected by this character are hidden.
 func NewEnterRoomMessage(room *rooms.Room, user *entities.User, game def.GameCtrl, char *characters.Character) *EnterRoomMessage {
 	// Get NPC data for frontend rendering
@@ -165,8 +165,8 @@ func NewEnterRoomMessage(room *rooms.Room, user *entities.User, game def.GameCtr
 	players := make([]RoomPlayer, len(roomChars))
 	for i, c := range roomChars {
 		players[i] = RoomPlayer{
-			ID:   c.ID,
-			Name: c.Name,
+			ID:    c.ID,
+			Name:  c.Name,
 			IsYou: c.IsYou,
 		}
 	}
@@ -210,8 +210,8 @@ func NewRoomUpdateMessage(room *rooms.Room, user *entities.User, game def.GameCt
 	players := make([]RoomPlayer, len(roomChars))
 	for i, c := range roomChars {
 		players[i] = RoomPlayer{
-			ID:   c.ID,
-			Name: c.Name,
+			ID:    c.ID,
+			Name:  c.Name,
 			IsYou: c.IsYou,
 		}
 	}
@@ -335,12 +335,12 @@ type CharacterUpdateMessage struct {
 	SpentAttributePoints   map[string]int32      `json:"spentAttributePoints,omitempty"`
 
 	// Derived combat stats (computed from attributes + equipment)
-	AttackPower    int32  `json:"attackPower"`
-	AttackAttr     string `json:"attackAttr"`
-	WeaponDamage   int32  `json:"weaponDamage"`
-	AttackMod      int32  `json:"attackMod"`
-	Defense        int32  `json:"defense"`
-	ManaRegen      int32  `json:"manaRegen,omitempty"`
+	AttackPower  int32  `json:"attackPower"`
+	AttackAttr   string `json:"attackAttr"`
+	WeaponDamage int32  `json:"weaponDamage"`
+	AttackMod    int32  `json:"attackMod"`
+	Defense      int32  `json:"defense"`
+	ManaRegen    int32  `json:"manaRegen,omitempty"`
 }
 
 // NewCharacterUpdateMessage creates a character update from the current character state
@@ -363,15 +363,15 @@ func NewCharacterUpdateMessage(userID string, ch *characters.Character) *Charact
 			AudienceID: userID,
 			Type:       MessageTypeCharacterUpdate,
 		},
-		CurrentHitPoints: ch.CurrentHitPoints,
-		MaxHitPoints:     ch.MaxHitPoints,
-		CurrentMana:      ch.CurrentMana,
-		MaxMana:          ch.MaxMana,
-		XP:               ch.XP,
-		XPForNextLevel:   leveling.GetXPRequired(ch.Level + 1),
-		Level:            ch.Level,
-		Gold:             ch.Gold,
-		InCombat:         ch.InCombat,
+		CurrentHitPoints:       ch.CurrentHitPoints,
+		MaxHitPoints:           ch.MaxHitPoints,
+		CurrentMana:            ch.CurrentMana,
+		MaxMana:                ch.MaxMana,
+		XP:                     ch.XP,
+		XPForNextLevel:         leveling.GetXPRequired(ch.Level + 1),
+		Level:                  ch.Level,
+		Gold:                   ch.Gold,
+		InCombat:               ch.InCombat,
 		Attributes:             ch.Attributes,
 		EquippedSkills:         ch.EquippedSkills,
 		UnspentAttributePoints: ch.UnspentAttributePoints,
@@ -397,10 +397,11 @@ type QuestObjectiveProgress struct {
 // QuestUpdateMessage notifies the client of a quest status change
 type QuestUpdateMessage struct {
 	MessageResponse
-	QuestName  string                    `json:"questName"`
-	QuestID    string                    `json:"questId"`
-	Status     string                    `json:"status"`
-	Objectives []QuestObjectiveProgress  `json:"objectives,omitempty"`
+	QuestName        string                   `json:"questName"`
+	QuestID          string                   `json:"questId"`
+	Status           string                   `json:"status"`
+	Objectives       []QuestObjectiveProgress `json:"objectives,omitempty"`
+	ChangedObjective *QuestObjectiveProgress  `json:"changedObjective,omitempty"`
 }
 
 // QuestReward represents quest rewards sent to the client
@@ -412,16 +413,16 @@ type QuestReward struct {
 
 // QuestLogEntry represents a quest in the quest log
 type QuestLogEntry struct {
-	QuestID     string                    `json:"questId"`
-	QuestName   string                    `json:"questName"`
-	Description string                    `json:"description,omitempty"`
-	Category    string                    `json:"category,omitempty"`
-	Level       int32                     `json:"level,omitempty"`
-	Status      string                    `json:"status"`
-	Objectives  []QuestObjectiveProgress  `json:"objectives"`
-	Rewards     *QuestReward              `json:"rewards,omitempty"`
-	AcceptedAt  string                    `json:"acceptedAt,omitempty"`
-	CompletedAt string                    `json:"completedAt,omitempty"`
+	QuestID     string                   `json:"questId"`
+	QuestName   string                   `json:"questName"`
+	Description string                   `json:"description,omitempty"`
+	Category    string                   `json:"category,omitempty"`
+	Level       int32                    `json:"level,omitempty"`
+	Status      string                   `json:"status"`
+	Objectives  []QuestObjectiveProgress `json:"objectives"`
+	Rewards     *QuestReward             `json:"rewards,omitempty"`
+	AcceptedAt  string                   `json:"acceptedAt,omitempty"`
+	CompletedAt string                   `json:"completedAt,omitempty"`
 }
 
 // QuestLogMessage sends the full quest log to the client
