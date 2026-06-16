@@ -328,7 +328,7 @@ func handleQuestAction(game def.GameCtrl, message *messages.Message, selectedOpt
 
 		// Send quest log update
 		questLog, _ := game.GetFacade().QuestsService().GetQuestLog(char.ID)
-		questLogEntries := convertQuestLogToEntries(questLog)
+		questLogEntries := convertQuestLogToEntries(game, questLog)
 		game.SendMessage() <- messages.QuestLogMessage{
 			MessageResponse: messages.MessageResponse{
 				Audience:   messages.MessageAudienceUser,
@@ -396,7 +396,7 @@ func handleQuestAction(game def.GameCtrl, message *messages.Message, selectedOpt
 
 		// Send updated quest log
 		questLog, _ := game.GetFacade().QuestsService().GetQuestLog(char.ID)
-		questLogEntries := convertQuestLogToEntries(questLog)
+		questLogEntries := convertQuestLogToEntries(game, questLog)
 		game.SendMessage() <- messages.QuestLogMessage{
 			MessageResponse: messages.MessageResponse{
 				Audience:   messages.MessageAudienceUser,
@@ -446,137 +446,12 @@ func handleQuestAction(game def.GameCtrl, message *messages.Message, selectedOpt
 // handleQuestDialogOption handles a quest option that was injected into the dialog by the talk command.
 // It shows the NPC response text and then performs the quest action (accept/complete/progress).
 func handleQuestDialogOption(game def.GameCtrl, message *messages.Message, qo questDialogOption, npcName string, activeConv *conversations.Conversation) {
-	char := message.Character
-
 	// Show NPC response text if available
 	if qo.npcText != "" {
 		game.SendMessage() <- message.Reply("[" + npcName + "] " + qo.npcText)
 	}
 
-	switch qo.action {
-	case "accept":
-		_, err := game.GetFacade().QuestsService().AcceptQuest(char.ID, qo.questID)
-		if err != nil {
-			game.SendMessage() <- message.Reply(fmt.Sprintf("[%s] %s", npcName, err.Error()))
-			return
-		}
-
-		quest, _ := game.GetFacade().QuestsService().FindByID(qo.questID)
-		if quest == nil {
-			return
-		}
-
-		acceptMsg := fmt.Sprintf("╔══════════════════════════════════════════════════╗\n")
-		acceptMsg += fmt.Sprintf("║         QUEST ACCEPTED                            ║\n")
-		acceptMsg += fmt.Sprintf("╚══════════════════════════════════════════════════╝\n\n")
-		acceptMsg += fmt.Sprintf("%s\n\n", quest.Name)
-		acceptMsg += fmt.Sprintf("%s\n\n", quest.Description)
-		acceptMsg += fmt.Sprintf("OBJECTIVES:\n")
-		for i, obj := range quest.Objectives {
-			acceptMsg += fmt.Sprintf("  %d. %s\n", i+1, obj.Description)
-		}
-		acceptMsg += fmt.Sprintf("\n══════════════════════════════════════════════════")
-
-		game.SendMessage() <- messages.MessageResponse{
-			Audience:   messages.MessageAudienceUser,
-			AudienceID: char.BelongsUserID,
-			Type:       messages.MessageTypeQuestAccepted,
-			Message:    acceptMsg,
-		}
-
-		// Send quest log update
-		questLog, _ := game.GetFacade().QuestsService().GetQuestLog(char.ID)
-		questLogEntries := convertQuestLogToEntries(questLog)
-		game.SendMessage() <- messages.QuestLogMessage{
-			MessageResponse: messages.MessageResponse{
-				Audience:   messages.MessageAudienceUser,
-				AudienceID: char.BelongsUserID,
-				Type:       messages.MessageTypeQuestLog,
-			},
-			Quests: questLogEntries,
-		}
-
-		log.WithFields(log.Fields{
-			"characterID": char.ID,
-			"questID":     qo.questID,
-			"questName":   quest.Name,
-		}).Info("Quest accepted via dialog")
-
-	case "complete":
-		_, err := game.GetFacade().QuestsService().CompleteQuest(char.ID, qo.questID)
-		if err != nil {
-			game.SendMessage() <- message.Reply(fmt.Sprintf("[%s] %s", npcName, err.Error()))
-			return
-		}
-
-		grantedItems, err := game.GetFacade().QuestsService().GrantQuestRewards(char.ID, qo.questID)
-		if err != nil {
-			log.WithError(err).Error("Failed to grant quest rewards")
-			game.SendMessage() <- message.Reply("[System] Quest completed but failed to grant rewards.")
-			return
-		}
-
-		quest, _ := game.GetFacade().QuestsService().FindByID(qo.questID)
-		if quest != nil {
-			rewardMsg := buildQuestRewardMessage(quest, grantedItems)
-			game.SendMessage() <- messages.MessageResponse{
-				Audience:   messages.MessageAudienceUser,
-				AudienceID: char.BelongsUserID,
-				Type:       messages.MessageTypeQuestCompleted,
-				Message:    rewardMsg,
-			}
-		}
-
-		updatedChar, _ := game.GetFacade().CharactersService().FindByID(char.ID)
-		if updatedChar != nil {
-			game.SendMessage() <- messages.NewCharacterUpdateMessage(char.BelongsUserID, updatedChar)
-		}
-
-		if len(grantedItems) > 0 && updatedChar != nil {
-			inventoryMsg := &messages.Message{
-				FromUser:  message.FromUser,
-				Character: updatedChar,
-			}
-			game.SendMessage() <- messages.NewInventoryUpdateMessage(inventoryMsg)
-		}
-
-		questLog, _ := game.GetFacade().QuestsService().GetQuestLog(char.ID)
-		questLogEntries := convertQuestLogToEntries(questLog)
-		game.SendMessage() <- messages.QuestLogMessage{
-			MessageResponse: messages.MessageResponse{
-				Audience:   messages.MessageAudienceUser,
-				AudienceID: char.BelongsUserID,
-				Type:       messages.MessageTypeQuestLog,
-			},
-			Quests: questLogEntries,
-		}
-
-	case "progress":
-		progress, err := game.GetFacade().QuestsService().GetProgress(char.ID, qo.questID)
-		if err != nil || progress == nil {
-			game.SendMessage() <- message.Reply(fmt.Sprintf("[%s] I don't have any information about that quest.", npcName))
-			return
-		}
-
-		quest, _ := game.GetFacade().QuestsService().FindByID(qo.questID)
-		if quest == nil {
-			return
-		}
-
-		progressMsg := fmt.Sprintf("[%s] Let me check your progress on \"%s\":\n\n", npcName, quest.Name)
-		for i, objProgress := range progress.Objectives {
-			obj := quest.Objectives[i]
-			if objProgress.Completed {
-				progressMsg += fmt.Sprintf("  ✓ %s (Complete)\n", obj.Description)
-			} else {
-				progressMsg += fmt.Sprintf("  ○ %s (%d/%d)\n", obj.Description, objProgress.Current, objProgress.Required)
-			}
-		}
-		game.SendMessage() <- message.Reply(progressMsg)
-	}
-
-	// End dialog after quest action
-	game.GetFacade().ConversationsService().ResetConversation(activeConv)
+	handleQuestAction(game, message, &dialogs.Dialog{QuestID: qo.questID, Action: qo.action}, npcName, activeConv)
 }
 
 // buildQuestRewardMessage formats the quest completion reward message
@@ -609,26 +484,60 @@ func buildQuestRewardMessage(quest *quests.Quest, grantedItems []string) string 
 }
 
 // convertQuestLogToEntries converts quest progress to quest log entries for messages
-func convertQuestLogToEntries(progressList []*quests.QuestProgress) []messages.QuestLogEntry {
+func buildQuestLogEntry(quest *quests.Quest, progress *quests.QuestProgress) messages.QuestLogEntry {
+	objectives := make([]messages.QuestObjectiveProgress, 0, len(progress.Objectives))
+	for _, op := range progress.Objectives {
+		objDesc := ""
+		required := op.Required
+		for _, obj := range quest.Objectives {
+			if obj.ID == op.ObjectiveID {
+				objDesc = obj.Description
+				if obj.Amount > 0 {
+					required = obj.Amount
+				}
+				break
+			}
+		}
+		objectives = append(objectives, messages.QuestObjectiveProgress{
+			ObjectiveID: op.ObjectiveID,
+			Description: objDesc,
+			Current:     op.Current,
+			Required:    required,
+			Completed:   op.Completed,
+		})
+	}
+
+	entry := messages.QuestLogEntry{
+		QuestID:     progress.QuestID,
+		QuestName:   quest.Name,
+		Status:      string(progress.Status),
+		Description: quest.Description,
+		Category:    quest.Category,
+		Level:       quest.Level,
+		Objectives:  objectives,
+		Rewards: &messages.QuestReward{
+			XP:              quest.Rewards.XP,
+			Gold:            quest.Rewards.Gold,
+			ItemTemplateIDs: quest.Rewards.ItemTemplateIDs,
+		},
+	}
+	if !progress.AcceptedAt.IsZero() {
+		entry.AcceptedAt = progress.AcceptedAt.Format("2006-01-02T15:04:05Z07:00")
+	}
+	if !progress.CompletedAt.IsZero() {
+		entry.CompletedAt = progress.CompletedAt.Format("2006-01-02T15:04:05Z07:00")
+	}
+	return entry
+}
+
+func convertQuestLogToEntries(game def.GameCtrl, progressList []*quests.QuestProgress) []messages.QuestLogEntry {
 	entries := make([]messages.QuestLogEntry, 0, len(progressList))
 	for _, p := range progressList {
-		objectives := make([]messages.QuestObjectiveProgress, 0, len(p.Objectives))
-		for _, obj := range p.Objectives {
-			objectives = append(objectives, messages.QuestObjectiveProgress{
-				ObjectiveID: obj.ObjectiveID,
-				Current:     obj.Current,
-				Required:    obj.Required,
-				Completed:   obj.Completed,
-			})
+		quest, err := game.GetFacade().QuestsService().FindByID(p.QuestID)
+		if err != nil || quest == nil {
+			continue
 		}
-		entries = append(entries, messages.QuestLogEntry{
-			QuestID:     p.QuestID,
-			QuestName:   "", // Will be populated by client or needs quest definition lookup
-			Description: "",
-			Category:    "",
-			Status:      string(p.Status),
-			Objectives:  objectives,
-		})
+		entries = append(entries, buildQuestLogEntry(quest, p))
 	}
 	return entries
 }

@@ -181,54 +181,7 @@ func sendQuestLogToPlayer(game def.GameCtrl, userID, characterID string) {
 			continue
 		}
 
-		// Build objective progress list
-		objectives := make([]m.QuestObjectiveProgress, len(progress.Objectives))
-		for i, op := range progress.Objectives {
-			// Find matching objective definition to get description
-			objDesc := ""
-			objRequired := op.Required
-			for _, questObj := range quest.Objectives {
-				if questObj.ID == op.ObjectiveID {
-					objDesc = questObj.Description
-					if questObj.Amount > 0 {
-						objRequired = questObj.Amount
-					}
-					break
-				}
-			}
-
-			objectives[i] = m.QuestObjectiveProgress{
-				ObjectiveID: op.ObjectiveID,
-				Description: objDesc,
-				Current:     op.Current,
-				Required:    objRequired,
-				Completed:   op.Completed,
-			}
-		}
-
-		entry := m.QuestLogEntry{
-			QuestID:     progress.QuestID,
-			QuestName:   quest.Name,
-			Status:      string(progress.Status),
-			Description: quest.Description,
-			Category:    quest.Category,
-			Level:       quest.Level,
-			Objectives:  objectives,
-			Rewards: &m.QuestReward{
-				XP:              quest.Rewards.XP,
-				Gold:            quest.Rewards.Gold,
-				ItemTemplateIDs: quest.Rewards.ItemTemplateIDs,
-			},
-		}
-
-		if !progress.AcceptedAt.IsZero() {
-			entry.AcceptedAt = progress.AcceptedAt.Format("2006-01-02T15:04:05Z07:00")
-		}
-		if !progress.CompletedAt.IsZero() {
-			entry.CompletedAt = progress.CompletedAt.Format("2006-01-02T15:04:05Z07:00")
-		}
-
-		entries = append(entries, entry)
+		entries = append(entries, buildQuestLogEntry(quest, progress))
 	}
 
 	// Send quest log message
