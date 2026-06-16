@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-//Inventory data
+// Inventory data
 type Inventory struct {
 	Size  int32   `json:"size"`
 	Items []*Item `json:"items"`
@@ -78,6 +78,62 @@ func (inv *Inventory) RemoveItem(itemID string) (*Item, error) {
 		}
 	}
 	return nil, errors.New("item not found in inventory")
+}
+
+func itemMatchesTemplateOrID(item *Item, targetID string) bool {
+	if item == nil || targetID == "" {
+		return false
+	}
+	if item.TemplateID != "" {
+		return item.TemplateID == targetID
+	}
+	return item.ID == targetID
+}
+
+func (inv *Inventory) CountMatchingTemplate(targetID string) int32 {
+	var count int32
+	for _, item := range inv.Items {
+		if !itemMatchesTemplateOrID(item, targetID) {
+			continue
+		}
+		if item.Quantity > 0 {
+			count += item.Quantity
+		} else {
+			count++
+		}
+	}
+	return count
+}
+
+func (inv *Inventory) ConsumeMatchingTemplate(targetID string, amount int32) error {
+	if amount < 1 {
+		amount = 1
+	}
+	if inv.CountMatchingTemplate(targetID) < amount {
+		return errors.New("not enough matching items in inventory")
+	}
+
+	remaining := amount
+	filtered := inv.Items[:0]
+	for _, item := range inv.Items {
+		if remaining > 0 && itemMatchesTemplateOrID(item, targetID) {
+			qty := item.Quantity
+			if qty < 1 {
+				qty = 1
+			}
+			if item.Stackable && qty > remaining {
+				item.Quantity = qty - remaining
+				remaining = 0
+				filtered = append(filtered, item)
+				continue
+			}
+			remaining -= qty
+			continue
+		}
+		filtered = append(filtered, item)
+	}
+	inv.Items = filtered
+	return nil
 }
 
 // RemoveItemByName removes the first item matching the name and returns it

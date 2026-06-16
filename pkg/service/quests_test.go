@@ -210,3 +210,96 @@ func TestStoreQuestAcceptsCompleteNPCKillQuest(t *testing.T) {
 		t.Fatalf("store valid quest: %v", err)
 	}
 }
+
+func TestCompleteDeliveryObjectiveRequiresAndConsumesItems(t *testing.T) {
+	facade := newTestFacade(t)
+	templateID := "sealed-letter-template"
+	if _, err := facade.ItemsService().Import(&items.Item{Entity: &entities.Entity{ID: templateID}, Name: "Sealed Letter", IsTemplate: true, Stackable: true}); err != nil {
+		t.Fatalf("store delivery item template: %v", err)
+	}
+	if _, err := facade.NPCsService().Import(&npc.NPC{Entity: &entities.Entity{ID: "captain"}, Name: "Captain"}); err != nil {
+		t.Fatalf("store delivery npc: %v", err)
+	}
+
+	character := &characters.Character{
+		Entity:      &entities.Entity{ID: "char-deliver"},
+		Name:        "Courier",
+		BelongsUser: *traits.BelongsToUser("user-1"),
+		Inventory: items.Inventory{
+			Size: 10,
+			Items: []*items.Item{
+				{Entity: &entities.Entity{ID: "letter-stack"}, TemplateID: templateID, Name: "Sealed Letter", Stackable: true, Quantity: 2},
+			},
+		},
+	}
+	if _, err := facade.CharactersService().Store(character); err != nil {
+		t.Fatalf("store character: %v", err)
+	}
+
+	quest := &quests.Quest{
+		Entity:      &entities.Entity{ID: "quest-deliver"},
+		Name:        "Courier Run",
+		Description: "Deliver the letters.",
+		Source:      quests.QuestSource{Type: "auto"},
+		Objectives: []quests.Objective{
+			{ID: "deliver-letters", Type: quests.ObjectiveDeliver, Description: "Deliver 2 letters", TargetID: templateID, DeliverToNPCID: "captain", Amount: 2},
+		},
+	}
+	if _, err := facade.QuestsService().Store(quest); err != nil {
+		t.Fatalf("store quest: %v", err)
+	}
+	if _, err := facade.QuestsService().AcceptQuest(character.ID, quest.ID); err != nil {
+		t.Fatalf("accept quest: %v", err)
+	}
+
+	updated, err := facade.QuestsService().CompleteDeliveryObjective(character.ID, quest.ID, "deliver-letters")
+	if err != nil {
+		t.Fatalf("complete delivery: %v", err)
+	}
+	if !updated.Objectives[0].Completed || updated.Objectives[0].Current != 2 {
+		t.Fatalf("expected completed delivery objective, got %#v", updated.Objectives[0])
+	}
+	stored, _ := facade.CharactersService().FindByID(character.ID)
+	if got := stored.Inventory.CountMatchingTemplate(templateID); got != 0 {
+		t.Fatalf("expected delivered items consumed, got %d", got)
+	}
+}
+
+func TestCompleteDeliveryObjectiveRejectsMissingItems(t *testing.T) {
+	facade := newTestFacade(t)
+	if _, err := facade.ItemsService().Import(&items.Item{Entity: &entities.Entity{ID: "item-template"}, Name: "Quest Item", IsTemplate: true}); err != nil {
+		t.Fatalf("store delivery item template: %v", err)
+	}
+	if _, err := facade.NPCsService().Import(&npc.NPC{Entity: &entities.Entity{ID: "captain"}, Name: "Captain"}); err != nil {
+		t.Fatalf("store delivery npc: %v", err)
+	}
+
+	character := &characters.Character{
+		Entity:      &entities.Entity{ID: "char-empty"},
+		Name:        "Empty Courier",
+		BelongsUser: *traits.BelongsToUser("user-1"),
+		Inventory:   items.Inventory{Size: 10},
+	}
+	if _, err := facade.CharactersService().Store(character); err != nil {
+		t.Fatalf("store character: %v", err)
+	}
+
+	quest := &quests.Quest{
+		Entity:      &entities.Entity{ID: "quest-missing-delivery"},
+		Name:        "Missing Item",
+		Description: "Deliver an item.",
+		Source:      quests.QuestSource{Type: "auto"},
+		Objectives: []quests.Objective{
+			{ID: "deliver", Type: quests.ObjectiveDeliver, Description: "Deliver item", TargetID: "item-template", DeliverToNPCID: "captain", Amount: 1},
+		},
+	}
+	if _, err := facade.QuestsService().Store(quest); err != nil {
+		t.Fatalf("store quest: %v", err)
+	}
+	if _, err := facade.QuestsService().AcceptQuest(character.ID, quest.ID); err != nil {
+		t.Fatalf("accept quest: %v", err)
+	}
+	if _, err := facade.QuestsService().CompleteDeliveryObjective(character.ID, quest.ID, "deliver"); err == nil {
+		t.Fatal("expected missing delivery item error")
+	}
+}
