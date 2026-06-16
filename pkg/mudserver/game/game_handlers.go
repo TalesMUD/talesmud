@@ -39,8 +39,19 @@ func (game *Game) handleUserQuit(user *entities.User) {
 	user.IsOnline = false
 	game.Facade.UsersService().Update(user.RefID, user)
 
-	character, _ := game.Facade.CharactersService().FindByID(user.LastCharacter)
-	room, _ := game.Facade.RoomsService().FindByID(character.CurrentRoomID)
+	if user.LastCharacter == "" {
+		return
+	}
+	character, err := game.Facade.CharactersService().FindByID(user.LastCharacter)
+	if err != nil || character == nil {
+		log.WithField("characterID", user.LastCharacter).WithError(err).Warn("Could not load character during user quit")
+		return
+	}
+	room, err := game.Facade.RoomsService().FindByID(character.CurrentRoomID)
+	if err != nil || room == nil {
+		log.WithField("roomID", character.CurrentRoomID).WithError(err).Warn("Could not load room during user quit")
+		return
+	}
 
 	//TOOD: move update to queue
 	room.RemoveCharacter(character.ID)

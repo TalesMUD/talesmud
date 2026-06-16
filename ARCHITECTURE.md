@@ -58,6 +58,12 @@ func main() {
 ### Server Layer (`pkg/server/`)
 
 The HTTP server handles REST API requests and serves as the entry point for WebSocket connections.
+It wraps the Gin router with CORS handling that allows the production domains,
+local development origins for the Creator and MUD clients, and optional
+additional origins from `CORS_ALLOWED_ORIGINS`.
+Authenticated profile updates derive the target user from the JWT subject in
+request context and only merge editable profile fields, rather than trusting
+identity or authorization fields from the request body.
 
 #### Server Structure
 
@@ -82,7 +88,7 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
 /health                    # Health check
 /ws                        # WebSocket (game connection)
 /api/
-    ├── characters/        # Character CRUD (player level)
+    ├── characters/        # Character CRUD (owner/admin for direct object access)
     ├── rooms/ (GET)       # Room read (player level)
     ├── rooms/ (POST/PUT/DELETE) # Room write (creator level)
     ├── items/ (GET)       # Item read (player level)
@@ -90,15 +96,15 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
     ├── scripts/           # Script CRUD (creator level)
     ├── npcs/              # NPC CRUD (creator level for writes)
     ├── dialogs/           # Dialog CRUD (creator level for writes)
-    ├── quests/            # Quest CRUD (creator for writes), quest progress (player level)
-    ├── quest-progress/    # Quest log per character (player level)
+    ├── quests/            # Quest CRUD (creator for writes)
+    ├── quest-progress/    # Quest log per character (owner/admin)
     ├── user               # User profile (player level)
     ├── admin/
     │   └── users/         # User management (admin only)
     └── templates/         # Public templates
 /admin/
-    ├── export             # World export (basic auth)
-    ├── import             # World import (basic auth)
+    ├── export             # World export (explicit basic auth credentials required)
+    ├── import             # World import (explicit basic auth credentials required, validates before drop)
     └── world              # World map (basic auth)
 ```
 
@@ -165,7 +171,7 @@ type Connection struct {
 type server struct {
     Facade    service.Facade           // Service access
     Game      *game.Game               // Game instance
-    Clients   map[string]*Connection   // Active connections
+    Clients   *clientRegistry          // Mutex-protected active connections
     Broadcast chan interface{}         // Global messages
     Upgrader  websocket.Upgrader       // HTTP→WS upgrade
 }
@@ -408,7 +414,7 @@ type StatusEffect struct {
 
 3. RESOLUTION
    ├── Victory (all enemies dead) → XP/gold rewards, loot drops
-   ├── Defeat (all players dead) → 10% gold loss, respawn at bind point
+   ├── Defeat (all players dead) → 10% XP loss, 1 gold loss, respawn at bind point
    └── Fled (all players escaped) → NPCs reset to idle
 ```
 
@@ -524,9 +530,9 @@ Execute matched command
 
 | Command | Aliases | Description |
 |---------|---------|-------------|
-| `list` | `shop` | Show merchant inventory |
-| `buy <item> [qty]` | - | Purchase from merchant |
-| `sell <item> [qty]` | - | Sell to merchant |
+| `list` | `shop`, `trade` | Show merchant inventory |
+| `buy <item> [qty]` | - | Purchase from merchant; stackable quantities can occupy one inventory stack |
+| `sell <item> [qty]` | - | Sell to merchant if accepted and not bound |
 | `value <item>` | `price` | Check sell price |
 
 ### Quest Commands
@@ -848,6 +854,8 @@ type MerchantItem struct {
 }
 ```
 
+Merchant inventories live on NPC instances at runtime. Merchant commands lazily restock eligible inventories, reject trading while the player is in combat, and send inventory updates after successful buy/sell operations.
+
 ### NPCSpawner Entity
 
 Defines automatic NPC spawning points:
@@ -901,6 +909,7 @@ type Quest struct {
     Name        string       // Quest display name
     Description string       // Quest journal text
     Category    string       // "main", "side", "daily"
+    Area        string       // Optional region label for filtering and organization
     Level       int32        // Recommended level
     Repeatable  bool         // Can be completed again
 
@@ -916,6 +925,8 @@ type Quest struct {
     OnCompleteScriptID string // Optional Lua script on completion
 }
 ```
+
+When a collect quest is accepted, `QuestsService` initializes objective progress from matching items already in the character inventory. Stackable item quantities count toward the initial progress total.
 
 #### QuestProgress (Per-Character State)
 
@@ -1380,7 +1391,8 @@ Guest sessions use HMAC-SHA256 tokens (not Auth0 JWTs):
 ### Authorization
 
 - Protected endpoints require valid JWT or guest HMAC token
-- Legacy admin endpoints (export/import) require basic auth
+- Legacy admin endpoints (export/import) require explicit basic auth credentials; unset credentials disable the endpoints and `admin/admin` is rejected in release mode
+- Direct character access and quest progress routes are limited to the owning user or admins
 - Three-tier role system enforced via middleware:
   - **Player** (default): Can access own characters, read game data, play the game
   - **Guest**: Same as Player but with level cap (5) and session timeout (30 min)

@@ -5,13 +5,42 @@ import (
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/quests"
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
 // QuestsHandler handles HTTP requests for quests
 type QuestsHandler struct {
-	Service service.QuestsService
+	Service           service.QuestsService
+	CharactersService service.CharactersService
+}
+
+func (h *QuestsHandler) canAccessCharacter(c *gin.Context, characterID string) bool {
+	usr, exists := c.Get("user")
+	if !exists || h.CharactersService == nil {
+		return false
+	}
+	user, ok := usr.(*entities.User)
+	if !ok {
+		return false
+	}
+	if user.IsAdmin() {
+		return true
+	}
+	character, err := h.CharactersService.FindByID(characterID)
+	if err != nil || character == nil {
+		return false
+	}
+	return character.BelongsUserID == user.ID
+}
+
+func (h *QuestsHandler) requireCharacterAccess(c *gin.Context, characterID string) bool {
+	if h.canAccessCharacter(c, characterID) {
+		return true
+	}
+	c.JSON(http.StatusForbidden, gin.H{"error": "character access denied"})
+	return false
 }
 
 // GetQuests returns all quest definitions
@@ -89,21 +118,24 @@ func (h *QuestsHandler) DeleteQuestByID(c *gin.Context) {
 
 // QuestLogEntry combines quest progress with quest definition for frontend
 type QuestLogEntry struct {
-	QuestID     string                      `json:"questId"`
-	QuestName   string                      `json:"questName"`
-	Status      string                      `json:"status"`
-	Description string                      `json:"description"`
-	Category    string                      `json:"category,omitempty"`
-	Level       int32                       `json:"level,omitempty"`
-	Objectives  []quests.ObjectiveProgress  `json:"objectives"`
-	Rewards     *quests.Reward              `json:"rewards,omitempty"`
-	AcceptedAt  string                      `json:"acceptedAt,omitempty"`
-	CompletedAt string                      `json:"completedAt,omitempty"`
+	QuestID     string                     `json:"questId"`
+	QuestName   string                     `json:"questName"`
+	Status      string                     `json:"status"`
+	Description string                     `json:"description"`
+	Category    string                     `json:"category,omitempty"`
+	Level       int32                      `json:"level,omitempty"`
+	Objectives  []quests.ObjectiveProgress `json:"objectives"`
+	Rewards     *quests.Reward             `json:"rewards,omitempty"`
+	AcceptedAt  string                     `json:"acceptedAt,omitempty"`
+	CompletedAt string                     `json:"completedAt,omitempty"`
 }
 
 // GetQuestLog returns quest progress for a character with full quest details
 func (h *QuestsHandler) GetQuestLog(c *gin.Context) {
 	characterID := c.Param("characterId")
+	if !h.requireCharacterAccess(c, characterID) {
+		return
+	}
 
 	progressList, err := h.Service.GetQuestLog(characterID)
 	if err != nil {
@@ -148,6 +180,9 @@ func (h *QuestsHandler) GetQuestLog(c *gin.Context) {
 func (h *QuestsHandler) AcceptQuest(c *gin.Context) {
 	characterID := c.Param("characterId")
 	questID := c.Param("questId")
+	if !h.requireCharacterAccess(c, characterID) {
+		return
+	}
 
 	progress, err := h.Service.AcceptQuest(characterID, questID)
 	if err != nil {
@@ -161,6 +196,9 @@ func (h *QuestsHandler) AcceptQuest(c *gin.Context) {
 func (h *QuestsHandler) AbandonQuest(c *gin.Context) {
 	characterID := c.Param("characterId")
 	questID := c.Param("questId")
+	if !h.requireCharacterAccess(c, characterID) {
+		return
+	}
 
 	if err := h.Service.AbandonQuest(characterID, questID); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -173,6 +211,9 @@ func (h *QuestsHandler) AbandonQuest(c *gin.Context) {
 func (h *QuestsHandler) CompleteQuest(c *gin.Context) {
 	characterID := c.Param("characterId")
 	questID := c.Param("questId")
+	if !h.requireCharacterAccess(c, characterID) {
+		return
+	}
 
 	// 1. Verify all objectives complete
 	progress, err := h.Service.GetProgress(characterID, questID)

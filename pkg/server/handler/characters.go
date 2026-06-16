@@ -12,22 +12,61 @@ import (
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
-//CharactersHandler ...
+// CharactersHandler ...
 type CharactersHandler struct {
 	Service service.CharactersService
 }
 
-//GetCharacters returns the list of item templates
-func (csh *CharactersHandler) GetCharacters(c *gin.Context) {
+func canAccessCharacter(c *gin.Context, character *characters.Character) bool {
+	if character == nil {
+		return false
+	}
+	usr, exists := c.Get("user")
+	if !exists {
+		return false
+	}
+	user, ok := usr.(*entities.User)
+	if !ok {
+		return false
+	}
+	return user.IsAdmin() || character.BelongsUserID == user.ID
+}
 
-	if characters, err := csh.Service.FindAll(); err == nil {
-		c.JSON(http.StatusOK, characters)
+func currentUserFromContext(c *gin.Context) (*entities.User, bool) {
+	usr, exists := c.Get("user")
+	if !exists {
+		return nil, false
+	}
+	user, ok := usr.(*entities.User)
+	return user, ok
+}
+
+// GetCharacters returns the list of item templates
+func (csh *CharactersHandler) GetCharacters(c *gin.Context) {
+	user, ok := currentUserFromContext(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
+		return
+	}
+
+	var (
+		result []*characters.Character
+		err    error
+	)
+	if user.IsAdmin() {
+		result, err = csh.Service.FindAll()
+	} else {
+		result, err = csh.Service.FindAllForUser(user.ID)
+	}
+
+	if err == nil {
+		c.JSON(http.StatusOK, result)
 	} else {
 		c.Error(err)
 	}
 }
 
-//GetMyCharacters returns only the authenticated user's characters
+// GetMyCharacters returns only the authenticated user's characters
 func (csh *CharactersHandler) GetMyCharacters(c *gin.Context) {
 	user, ok := c.Get("user")
 	if !ok {
@@ -48,27 +87,40 @@ func (csh *CharactersHandler) GetMyCharacters(c *gin.Context) {
 	}
 }
 
-//GetCharacterTemplates returns the list of item templates
+// GetCharacterTemplates returns the list of item templates
 func (csh *CharactersHandler) GetCharacterTemplates(c *gin.Context) {
 	c.JSON(http.StatusOK, csh.Service.GetCharacterTemplates())
 }
 
-//GetCharacterByID returns a single charactersheet
+// GetCharacterByID returns a single charactersheet
 func (csh *CharactersHandler) GetCharacterByID(c *gin.Context) {
 
 	id := c.Param("id")
 
 	if character, err := csh.Service.FindByID(id); err == nil {
+		if !canAccessCharacter(c, character) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "character access denied"})
+			return
+		}
 		c.JSON(http.StatusOK, character)
 	} else {
 		c.Error(err)
 	}
 }
 
-//DeleteCharacterByID returns a single charactersheet
+// DeleteCharacterByID returns a single charactersheet
 func (csh *CharactersHandler) DeleteCharacterByID(c *gin.Context) {
 
 	id := c.Param("id")
+	character, err := csh.Service.FindByID(id)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+	if !canAccessCharacter(c, character) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "character access denied"})
+		return
+	}
 
 	if err := csh.Service.Delete(id); err == nil {
 		c.JSON(http.StatusOK, "deleted")
@@ -77,15 +129,26 @@ func (csh *CharactersHandler) DeleteCharacterByID(c *gin.Context) {
 	}
 }
 
-//UpdateCharacterByID creates a new charactersheet
+// UpdateCharacterByID creates a new charactersheet
 func (csh *CharactersHandler) UpdateCharacterByID(c *gin.Context) {
 
 	id := c.Param("id")
+	existing, err := csh.Service.FindByID(id)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+	if !canAccessCharacter(c, existing) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "character access denied"})
+		return
+	}
+
 	var character characters.Character
 	if err := c.ShouldBindJSON(&character); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	character.BelongsUserID = existing.BelongsUserID
 
 	log.WithField("character", character.Name).Info("Updating character")
 
@@ -96,7 +159,7 @@ func (csh *CharactersHandler) UpdateCharacterByID(c *gin.Context) {
 	}
 }
 
-//PostCharacter ... creates a new charactersheet
+// PostCharacter ... creates a new charactersheet
 func (csh *CharactersHandler) PostCharacter(c *gin.Context) {
 
 	var character characters.Character
@@ -106,6 +169,18 @@ func (csh *CharactersHandler) PostCharacter(c *gin.Context) {
 	}
 
 	log.WithField("character", character.Name).Info("Creating new character")
+	user, ok := currentUserFromContext(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found in context"})
+		return
+	}
+	if character.BelongsUserID == "" {
+		character.BelongsUserID = user.ID
+	}
+	if !user.IsAdmin() && character.BelongsUserID != user.ID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "character access denied"})
+		return
+	}
 
 	if newCharacter, err := csh.Service.Store(&character); err == nil {
 		c.JSON(http.StatusOK, newCharacter)
@@ -114,7 +189,7 @@ func (csh *CharactersHandler) PostCharacter(c *gin.Context) {
 	}
 }
 
-//CreateNewCharacter ... creates a new charactersheet
+// CreateNewCharacter ... creates a new charactersheet
 func (csh *CharactersHandler) CreateNewCharacter(c *gin.Context) {
 
 	var dto dto.CreateCharacterDTO

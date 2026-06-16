@@ -142,6 +142,7 @@ export const questColumns = [
     accessor: (el) => el.id?.length > 10 ? el.id.slice(0, 8) + "\u2026" : el.id,
   },
   { key: "name", label: "Name", width: 200, priority: 1 },
+  { key: "area", label: "Area", width: 140, type: "select", options: [], priority: 2 },
   {
     key: "category", label: "Category", width: 90, type: "select", priority: 2,
     options: ["main", "side", "daily"],

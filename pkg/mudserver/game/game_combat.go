@@ -866,11 +866,20 @@ func (c *CombatController) processCombatDefeat(instance *combat.CombatInstance) 
 		sb.WriteString("═══════════════════════════════════════════════════\n\n")
 		sb.WriteString("You have been defeated!\n\n")
 
-		// Gold loss penalty (10%)
-		goldLoss := int64(float64(char.Gold) * 0.10)
-		if goldLoss > 0 {
-			char.Gold -= goldLoss
-			sb.WriteString(fmt.Sprintf("PENALTY: Lost %d gold\n", goldLoss))
+		// XP loss penalty (10%)
+		xpLoss := int32(float64(char.XP) * 0.10)
+		if xpLoss > 0 {
+			char.XP -= xpLoss
+			if char.XP < 0 {
+				char.XP = 0
+			}
+			sb.WriteString(fmt.Sprintf("PENALTY: Lost %d experience\n", xpLoss))
+		}
+
+		// Gold loss penalty (1 gold)
+		if char.Gold > 0 {
+			char.Gold -= 1
+			sb.WriteString("PENALTY: Lost 1 gold\n")
 		}
 
 		// Respawn with 50% HP

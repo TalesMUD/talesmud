@@ -47,7 +47,7 @@ type server struct {
 
 	Game *game.Game
 
-	Clients   map[string]*Connection
+	Clients   *clientRegistry
 	Broadcast chan interface{}
 	Upgrader  websocket.Upgrader
 }
@@ -56,7 +56,7 @@ func (server *server) GameCtrl() def.GameCtrl {
 	return server.Game
 }
 
-//New creates a new mud server
+// New creates a new mud server
 func New(facade service.Facade) MUDServer {
 
 	game := game.New(facade)
@@ -68,7 +68,7 @@ func New(facade service.Facade) MUDServer {
 				return true
 			},
 		},
-		Clients:   make(map[string]*Connection),
+		Clients:   newClientRegistry(),
 		Broadcast: make(chan interface{}),
 		Game:      game,
 	}
@@ -102,15 +102,15 @@ func (server *server) handleClientTimeouts() {
 
 func (server *server) sendUserPings() {
 
-	for _, con := range server.Clients {
+	server.Clients.ForEach(func(_ string, con *Connection) {
 		server.sendMessage(con.User.ID, messages.MessageResponse{
 			Type: messages.MessageTypePing,
 		})
-	}
+	})
 
 }
 
-//HandleConnections asd
+// HandleConnections asd
 func (server *server) HandleConnections(c *gin.Context) {
 
 	var user *entities.User
@@ -119,11 +119,16 @@ func (server *server) HandleConnections(c *gin.Context) {
 		log.WithField("User", usr.(*entities.User).Nickname).Info("User logged in")
 		user = usr.(*entities.User)
 	}
+	if user == nil {
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
 
 	// Upgrade initial GET request to a websocket
 	ws, err := server.Upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		log.Fatal(err)
+		log.WithError(err).Warn("Failed to upgrade websocket connection")
+		return
 	}
 	// Make sure we close the connection when the function returns
 	defer ws.Close()
@@ -131,11 +136,11 @@ func (server *server) HandleConnections(c *gin.Context) {
 	log.Info("Upgraded client connection")
 
 	// Register our new client
-	server.Clients[user.ID] = &Connection{
+	server.Clients.Set(user.ID, &Connection{
 		User:   user,
 		ws:     ws,
 		active: true,
-	}
+	})
 
 	// Send Welcome message with dynamic server name
 	serverName := "TalesMUD"
@@ -172,7 +177,7 @@ func (server *server) HandleConnections(c *gin.Context) {
 			})
 			// Brief delay so the message can be delivered before close
 			time.Sleep(500 * time.Millisecond)
-			if client, ok := server.Clients[user.ID]; ok {
+			if client, ok := server.Clients.Get(user.ID); ok {
 				client.ws.Close()
 			}
 		}()
@@ -188,14 +193,14 @@ func (server *server) HandleConnections(c *gin.Context) {
 			server.Facade.UsersService().Update(user.RefID, user)
 
 			log.Printf("error: %v", err)
-			delete(server.Clients, user.ID)
+			server.Clients.Delete(user.ID)
 
 			// Guest disconnect cleanup with 5-minute grace period for reconnection
 			if user.IsGuest {
 				go func(userID string) {
 					time.Sleep(5 * time.Minute)
 					// Check if user reconnected during grace period
-					if _, ok := server.Clients[userID]; ok {
+					if _, ok := server.Clients.Get(userID); ok {
 						return // Reconnected, don't clean up
 					}
 					// Delete all characters for this guest
@@ -233,7 +238,7 @@ func contains(s []string, e string) bool {
 }
 func (server *server) sendMessage(id string, msg interface{}) {
 
-	if client, ok := server.Clients[id]; ok {
+	if client, ok := server.Clients.Get(id); ok {
 		//dont directly write to websocket, use this mutex protected method
 		err := client.send(msg)
 		if err != nil {
@@ -250,7 +255,7 @@ func (server *server) sendMessage(id string, msg interface{}) {
 
 			log.Printf("error: %v", err)
 			client.ws.Close()
-			delete(server.Clients, id)
+			server.Clients.Delete(id)
 		}
 	}
 }
@@ -307,7 +312,7 @@ func (server *server) handleBroadcastMessages() {
 		msg := <-server.Broadcast
 
 		// Send it out to every client that is currently connected
-		for _, client := range server.Clients {
+		server.Clients.ForEach(func(_ string, client *Connection) {
 			err := client.send(msg)
 			if err != nil {
 				log.Printf("error: %v", err)
@@ -317,10 +322,10 @@ func (server *server) handleBroadcastMessages() {
 				}
 
 				client.ws.Close()
-				delete(server.Clients, client.User.ID)
+				server.Clients.Delete(client.User.ID)
 
 			}
-		}
+		})
 	}
 }
 

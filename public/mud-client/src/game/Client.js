@@ -288,6 +288,13 @@ function createClient(renderer, characterCreator, muxStore) {
     }
   };
 
+  messageHandlers["questAbandoned"] = (msg) => {
+    renderer(msg.message);
+
+    // Refresh quest log so the abandoned quest is removed from the active list
+    requestQuestLog();
+  };
+
   messageHandlers["questLog"] = (msg) => {
     // Update full quest log
     if (mux && msg.quests) {

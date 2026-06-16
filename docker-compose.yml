@@ -10,8 +10,8 @@ services:
       - AUTH0_AUDIENCE=http://talesofapirate.com/dnd/api
       - AUTH0_DOMAIN=https://owndnd.eu.auth0.com/
       - AUTH0_WK_JWKS=https://owndnd.eu.auth0.com/.well-known/jwks.json
-      - ADMIN_USER=admin
-      - ADMIN_PASSWORD=admin
+      - ADMIN_USER=${ADMIN_USER:?set ADMIN_USER for admin import/export}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:?set ADMIN_PASSWORD for admin import/export}
     volumes:
       - talesmud-data:/app/data
       - talesmud-uploads:/app/uploads

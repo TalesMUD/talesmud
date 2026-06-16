@@ -41,6 +41,12 @@ func (handler *ExportHandler) Export(c *gin.Context) {
 // Import Imports all data structures
 func (handler *ExportHandler) Import(c *gin.Context) {
 
+	var data exporter.Data
+	if err := c.ShouldBindJSON(&data); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	// drop all collections before importing
 	handler.RoomsService.Drop()
 	handler.CharactersService.Drop()
@@ -49,12 +55,6 @@ func (handler *ExportHandler) Import(c *gin.Context) {
 	handler.ScriptService.Drop()
 	handler.NPCsService.Drop()
 	handler.DialogsService.Drop()
-
-	var data exporter.Data
-	if err := c.ShouldBindJSON(&data); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
 
 	for _, room := range data.Rooms {
 		handler.RoomsService.Import(room)

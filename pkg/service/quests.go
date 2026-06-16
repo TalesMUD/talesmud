@@ -148,6 +148,40 @@ func (s *questsService) AcceptQuest(characterID, questID string) (*quests.QuestP
 		}
 	}
 
+	// Pre-fill collect objectives if items are already in inventory
+	if s.facade != nil {
+		char, charErr := s.facade.CharactersService().FindByID(characterID)
+		if charErr == nil && char != nil {
+			for i, obj := range quest.Objectives {
+				if obj.Type != quests.ObjectiveCollect || obj.TargetID == "" {
+					continue
+				}
+				// Count matching items in inventory
+				var count int32
+				for _, item := range char.Inventory.Items {
+					tid := item.TemplateID
+					if tid == "" {
+						tid = item.ID
+					}
+					if tid == obj.TargetID {
+						if item.Quantity > 0 {
+							count += item.Quantity
+						} else {
+							count++
+						}
+					}
+				}
+				if count > 0 {
+					if count >= objectives[i].Required {
+						count = objectives[i].Required
+						objectives[i].Completed = true
+					}
+					objectives[i].Current = count
+				}
+			}
+		}
+	}
+
 	progress := &quests.QuestProgress{
 		CharacterID: characterID,
 		QuestID:     questID,

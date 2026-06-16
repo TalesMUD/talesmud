@@ -3,6 +3,7 @@
   import { v4 as uuidv4 } from "uuid";
   import CRUDEditor from "./CRUDEditor.svelte";
   import { createStore } from "./CRUDEditorStore.js";
+  import EntitySelectButton from "./EntitySelectButton.svelte";
   import { getAuth } from "../auth.js";
 
   import {
@@ -15,7 +16,7 @@
   } from "../api/character-templates.js";
 
   import { getItemTemplates } from "../api/items.js";
-  import { characterTemplateColumns } from "./tableColumns.js";
+  import { characterTemplateColumns, itemTemplateColumns } from "./tableColumns.js";
   import { knownCharacterAttributes } from "./fieldSuggestions.js";
 
   const store = createStore();
@@ -380,21 +381,16 @@
                 {/each}
               </select>
 
-              <!-- Item Template searchable dropdown -->
-              <label class="sr-only" for={`item_${i}`}>Item Template</label>
-              <select
-                id={`item_${i}`}
-                class="input-base text-xs flex-1"
-                value={item.itemTemplateId || ""}
-                on:change={(e) => onItemTemplateSelect(i, e.target.value)}
-              >
-                <option value="">-- Select Item Template --</option>
-                {#each itemTemplates as template}
-                  <option value={template.id}>
-                    {template.name} ({template.type || "item"})
-                  </option>
-                {/each}
-              </select>
+              <div class="flex-1">
+                <EntitySelectButton
+                  value={item.itemTemplateId || ""}
+                  elements={itemTemplates}
+                  columns={itemTemplateColumns}
+                  title="Select Starting Item Template"
+                  placeholder="Select item template..."
+                  on:change={(e) => onItemTemplateSelect(i, e.detail)}
+                />
+              </div>
 
               <button class="text-xs text-red-400 hover:text-red-300" type="button" on:click={() => removeStartingItem(i)}>
                 ✕
@@ -405,7 +401,7 @@
       </div>
 
       <p class="text-xs text-slate-500">
-        Select item templates from the dropdown. When a character is created from this template, actual items will be generated from these templates.
+        Select item templates for generated starting gear. When a character is created from this template, actual items will be generated from these templates.
       </p>
     </div>
   </div>

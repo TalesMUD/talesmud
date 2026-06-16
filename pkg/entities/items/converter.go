@@ -21,7 +21,7 @@ func ItemFromJSONString(input string) (*Item, error) {
 func ItemsFromJSONString(input string) (Items, error) {
 	bytes := []byte(input)
 	var its Items
-	if err := json.Unmarshal(bytes, its); err != nil {
+	if err := json.Unmarshal(bytes, &its); err != nil {
 		logrus.WithField("input", input).WithError(err).Info("Could not unmarshal items array from string")
 		return nil, err
 	}

@@ -32,6 +32,50 @@ type app struct {
 	mud    mud.MUDServer
 }
 
+func adminAuthMiddleware() gin.HandlerFunc {
+	user := strings.TrimSpace(os.Getenv("ADMIN_USER"))
+	pass := strings.TrimSpace(os.Getenv("ADMIN_PASSWORD"))
+	if user == "" || pass == "" {
+		return func(c *gin.Context) {
+			c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{
+				"error": "admin import/export credentials are not configured",
+			})
+		}
+	}
+	if strings.EqualFold(os.Getenv("GIN_MODE"), "release") && user == "admin" && pass == "admin" {
+		return func(c *gin.Context) {
+			c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{
+				"error": "admin import/export credentials are insecure",
+			})
+		}
+	}
+	return gin.BasicAuth(gin.Accounts{user: pass})
+}
+
+func allowedCORSOrigins() []string {
+	origins := []string{
+		"https://veilspan.com",
+		"https://www.veilspan.com",
+		"https://talesmud.io",
+		"https://www.talesmud.io",
+		"http://localhost:5000",
+		"http://127.0.0.1:5000",
+		"http://localhost:5173",
+		"http://127.0.0.1:5173",
+		"http://localhost:8010",
+		"http://127.0.0.1:8010",
+	}
+
+	for _, origin := range strings.Split(os.Getenv("CORS_ALLOWED_ORIGINS"), ",") {
+		origin = strings.TrimSpace(origin)
+		if origin != "" {
+			origins = append(origins, origin)
+		}
+	}
+
+	return origins
+}
+
 // NewApp returns an application instance
 // this is the primary stateless server providing an API interface
 func NewApp() App {
@@ -67,24 +111,24 @@ func (app *app) setupRoutes() {
 	r := app.Router
 
 	csh := &handler.CharactersHandler{
-		app.Facade.CharactersService(),
+		Service: app.Facade.CharactersService(),
 	}
 
 	usr := &handler.UsersHandler{
-		app.Facade.UsersService(),
+		Service: app.Facade.UsersService(),
 	}
 
 	rooms := &handler.RoomsHandler{
-		app.Facade.RoomsService(),
+		Service: app.Facade.RoomsService(),
 	}
 
 	items := &handler.ItemsHandler{
-		app.Facade.ItemsService(),
+		Service: app.Facade.ItemsService(),
 	}
 
 	scripts := &handler.ScriptsHandler{
-		app.Facade.ScriptsService(),
-		app.Facade.Runner(),
+		Service: app.Facade.ScriptsService(),
+		Runner:  app.Facade.Runner(),
 	}
 
 	npcs := &handler.NPCsHandler{
@@ -109,7 +153,8 @@ func (app *app) setupRoutes() {
 	}
 
 	questsHandler := &handler.QuestsHandler{
-		Service: app.Facade.QuestsService(),
+		Service:           app.Facade.QuestsService(),
+		CharactersService: app.Facade.CharactersService(),
 	}
 
 	skillsHandler := &handler.SkillsHandler{
@@ -161,9 +206,7 @@ func (app *app) setupRoutes() {
 	})
 
 	// admin endpoints (basic auth for export/import)
-	authorized := r.Group("/admin/", gin.BasicAuth(gin.Accounts{
-		os.Getenv("ADMIN_USER"): os.Getenv("ADMIN_PASSWORD"),
-	}))
+	authorized := r.Group("/admin/", adminAuthMiddleware())
 	{
 		authorized.GET("export", exp.Export)
 		authorized.POST("import", exp.Import)
@@ -373,12 +416,7 @@ func (app *app) Run() {
 	corsHandler := handlers.CORS(
 		handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}),
 		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "HEAD", "DELETE", "OPTIONS"}),
-		handlers.AllowedOrigins([]string{
-			"https://veilspan.com",
-			"https://www.veilspan.com",
-			"https://talesmud.io",
-			"https://www.talesmud.io",
-		}))(app.Router)
+		handlers.AllowedOrigins(allowedCORSOrigins()))(app.Router)
 
 	log.WithField("PORT", port).Info(fmt.Sprintf("TalesMUD Server is running, listening on port %v", port))
 	log.Fatal(http.ListenAndServe(server, corsHandler))
