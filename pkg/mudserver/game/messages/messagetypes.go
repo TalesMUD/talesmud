@@ -1,6 +1,6 @@
 package messages
 
-//MessageType type
+// MessageType type
 type MessageType string
 
 const (
@@ -36,6 +36,7 @@ const (
 	// Quest messages
 	MessageTypeQuestAccepted  = "questAccepted"  // Quest accepted
 	MessageTypeQuestProgress  = "questProgress"  // Quest objective progress updated
+	MessageTypeQuestReady     = "questReady"     // Quest objectives complete and ready for turn-in
 	MessageTypeQuestCompleted = "questCompleted" // Quest completed
 	MessageTypeQuestAbandoned = "questAbandoned" // Quest abandoned
 	MessageTypeQuestLog       = "questLog"       // Full quest log
