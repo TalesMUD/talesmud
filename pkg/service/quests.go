@@ -5,6 +5,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/quests"
 	r "github.com/talesmud/talesmud/pkg/repository"
 )
@@ -78,12 +79,29 @@ func (s *questsService) FindBySourceNPC(npcID string) ([]*quests.Quest, error) {
 }
 
 func (s *questsService) Store(quest *quests.Quest) (*quests.Quest, error) {
+	if err := validateQuestDefinition(quest); err != nil {
+		return nil, err
+	}
+	if err := validateQuestReferences(quest, s.facade); err != nil {
+		return nil, err
+	}
 	quest.Created = time.Now()
 	quest.Updated = time.Now()
 	return s.questsRepo.Store(quest)
 }
 
 func (s *questsService) Update(id string, quest *quests.Quest) error {
+	if quest.Entity == nil {
+		quest.Entity = &entities.Entity{ID: id}
+	} else if quest.ID == "" {
+		quest.ID = id
+	}
+	if err := validateQuestDefinition(quest); err != nil {
+		return err
+	}
+	if err := validateQuestReferences(quest, s.facade); err != nil {
+		return err
+	}
 	quest.Updated = time.Now()
 	return s.questsRepo.Update(id, quest)
 }
