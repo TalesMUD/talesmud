@@ -181,7 +181,7 @@
   }
 
   function trade(npc) {
-    sendMessage(`trade ${npc.displayName}`);
+    sendMessage(`list`);
   }
 
   function getEntityType(npc) {

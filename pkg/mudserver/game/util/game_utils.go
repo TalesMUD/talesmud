@@ -115,9 +115,9 @@ func CreateRoomDescription(room *rooms.Room, user *entities.User, game def.GameC
 
 // RoomCharacter represents player character data for frontend UI rendering
 type RoomCharacter struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-	IsYou bool  `json:"isYou"`
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	IsYou bool   `json:"isYou"`
 }
 
 // GetRoomCharacters returns online player character data for frontend rendering.
@@ -137,8 +137,8 @@ func GetRoomCharacters(room *rooms.Room, user *entities.User, game def.GameCtrl)
 		// Always include the requesting user's own character
 		if character.ID == user.LastCharacter {
 			result = append(result, RoomCharacter{
-				ID:   character.ID,
-				Name: character.Name,
+				ID:    character.ID,
+				Name:  character.Name,
 				IsYou: true,
 			})
 			continue
@@ -151,8 +151,8 @@ func GetRoomCharacters(room *rooms.Room, user *entities.User, game def.GameCtrl)
 		}
 		if charUser.IsOnline && charUser.LastCharacter == character.ID {
 			result = append(result, RoomCharacter{
-				ID:   character.ID,
-				Name: character.Name,
+				ID:    character.ID,
+				Name:  character.Name,
 				IsYou: false,
 			})
 		}
@@ -313,13 +313,13 @@ func RoomWithCharacterReveals(room *rooms.Room, char *characters.Character) *roo
 	return &roomCopy
 }
 
-//RemoveStringFromSlice ...
+// RemoveStringFromSlice ...
 func RemoveStringFromSlice(slice []string, inst string) []string {
 
 	for i, elem := range slice {
 		if elem == inst {
 			if i == len(slice)-1 {
-				return append(slice[:i-1])
+				return slice[:i]
 			}
 			return append(slice[:i], slice[i+1:]...)
 		}

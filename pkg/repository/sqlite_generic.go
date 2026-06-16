@@ -150,8 +150,18 @@ func (repo *sqliteGenericRepo) Store(entity interface{}) (interface{}, error) {
 }
 
 func (repo *sqliteGenericRepo) Delete(id string) error {
-	_, err := repo.db.Exec(fmt.Sprintf("DELETE FROM %s WHERE id = ?", repo.table), id)
-	return err
+	result, err := repo.db.Exec(fmt.Sprintf("DELETE FROM %s WHERE id = ?", repo.table), id)
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return fmt.Errorf("entity not found: %s", id)
+	}
+	return nil
 }
 
 func (repo *sqliteGenericRepo) Update(item interface{}, id string) error {
@@ -159,12 +169,22 @@ func (repo *sqliteGenericRepo) Update(item interface{}, id string) error {
 	if err != nil {
 		return err
 	}
-	_, err = repo.db.Exec(
+	result, err := repo.db.Exec(
 		fmt.Sprintf("UPDATE %s SET data = ? WHERE id = ?", repo.table),
 		string(payload),
 		id,
 	)
-	return err
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return fmt.Errorf("entity not found: %s", id)
+	}
+	return nil
 }
 
 func buildWhere(params *db.QueryParams) (string, []interface{}) {

@@ -37,5 +37,6 @@ const (
 	MessageTypeQuestAccepted  = "questAccepted"  // Quest accepted
 	MessageTypeQuestProgress  = "questProgress"  // Quest objective progress updated
 	MessageTypeQuestCompleted = "questCompleted" // Quest completed
+	MessageTypeQuestAbandoned = "questAbandoned" // Quest abandoned
 	MessageTypeQuestLog       = "questLog"       // Full quest log
 )

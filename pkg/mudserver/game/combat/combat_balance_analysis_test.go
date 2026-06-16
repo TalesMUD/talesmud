@@ -9,6 +9,17 @@ import (
 	"github.com/talesmud/talesmud/pkg/mudserver/game/combat/simutil"
 )
 
+func enemyConfig(name string, level, hp, attackPower, defense int32, difficulty string) simutil.EnemyConfig {
+	return simutil.EnemyConfig{
+		Name:        name,
+		Level:       level,
+		HP:          hp,
+		AttackPower: attackPower,
+		Defense:     defense,
+		Difficulty:  difficulty,
+	}
+}
+
 // TestWarriorBalanceAnalysis runs detailed "what-if" scenarios for Warrior tuning
 func TestWarriorBalanceAnalysis(t *testing.T) {
 	warrior := *simutil.ClassConfigByName("Warrior")
@@ -23,7 +34,7 @@ func TestWarriorBalanceAnalysis(t *testing.T) {
 		r := simutil.RunMatchup(simutil.MatchupConfig{
 			PlayerConfigs: []simutil.ClassConfig{warrior},
 			PlayerLevel:   lvl,
-			EnemyConfigs:  []simutil.EnemyConfig{{"Hollow Knight", 6, 150, 13, 6, "boss"}},
+			EnemyConfigs:  []simutil.EnemyConfig{enemyConfig("Hollow Knight", 6, 150, 13, 6, "boss")},
 			Iterations:    500,
 		})
 		fmt.Printf("  Warrior L%d vs HK(150/13/6): win=%5.1f%% avgRnds=%4.1f  P[ATK=%d DEF=%d HP=%d]\n",
@@ -36,7 +47,7 @@ func TestWarriorBalanceAnalysis(t *testing.T) {
 		r := simutil.RunMatchup(simutil.MatchupConfig{
 			PlayerConfigs: []simutil.ClassConfig{warrior},
 			PlayerLevel:   6,
-			EnemyConfigs:  []simutil.EnemyConfig{{"Hollow Knight", 6, hp, 13, 6, "boss"}},
+			EnemyConfigs:  []simutil.EnemyConfig{enemyConfig("Hollow Knight", 6, hp, 13, 6, "boss")},
 			Iterations:    500,
 		})
 		fmt.Printf("  Warrior L6 vs HK(HP=%3d, ATK=13, DEF=6): win=%5.1f%%  avgRnds=%4.1f\n",
@@ -49,7 +60,7 @@ func TestWarriorBalanceAnalysis(t *testing.T) {
 		r := simutil.RunMatchup(simutil.MatchupConfig{
 			PlayerConfigs: []simutil.ClassConfig{warrior},
 			PlayerLevel:   6,
-			EnemyConfigs:  []simutil.EnemyConfig{{"Hollow Knight", 6, 150, 13, def, "boss"}},
+			EnemyConfigs:  []simutil.EnemyConfig{enemyConfig("Hollow Knight", 6, 150, 13, def, "boss")},
 			Iterations:    500,
 		})
 		fmt.Printf("  Warrior L6 vs HK(HP=150, ATK=13, DEF=%d): win=%5.1f%%  avgRnds=%4.1f\n",
@@ -62,7 +73,7 @@ func TestWarriorBalanceAnalysis(t *testing.T) {
 		r := simutil.RunMatchup(simutil.MatchupConfig{
 			PlayerConfigs: []simutil.ClassConfig{warrior},
 			PlayerLevel:   6,
-			EnemyConfigs:  []simutil.EnemyConfig{{"Hollow Knight", 6, 150, atk, 6, "boss"}},
+			EnemyConfigs:  []simutil.EnemyConfig{enemyConfig("Hollow Knight", 6, 150, atk, 6, "boss")},
 			Iterations:    500,
 		})
 		fmt.Printf("  Warrior L6 vs HK(HP=150, ATK=%2d, DEF=6): win=%5.1f%%  avgRnds=%4.1f\n",
@@ -80,7 +91,7 @@ func TestWarriorBalanceAnalysis(t *testing.T) {
 		r := simutil.RunMatchup(simutil.MatchupConfig{
 			PlayerConfigs: []simutil.ClassConfig{warrior},
 			PlayerLevel:   6,
-			EnemyConfigs:  []simutil.EnemyConfig{{"Hollow Knight", 6, c.hp, c.atk, c.def, "boss"}},
+			EnemyConfigs:  []simutil.EnemyConfig{enemyConfig("Hollow Knight", 6, c.hp, c.atk, c.def, "boss")},
 			Iterations:    500,
 		})
 		fmt.Printf("  Warrior L6 vs HK(HP=%3d, ATK=%2d, DEF=%d): win=%5.1f%%  avgRnds=%4.1f\n",
@@ -103,7 +114,7 @@ func TestWarriorBalanceAnalysis(t *testing.T) {
 			r := simutil.RunMatchup(simutil.MatchupConfig{
 				PlayerConfigs: []simutil.ClassConfig{warrior},
 				PlayerLevel:   lvl,
-				EnemyConfigs:  []simutil.EnemyConfig{{"Hollow Knight", 6, c.hp, c.atk, c.def, "boss"}},
+				EnemyConfigs:  []simutil.EnemyConfig{enemyConfig("Hollow Knight", 6, c.hp, c.atk, c.def, "boss")},
 				Iterations:    500,
 			})
 			fmt.Printf("    L%2d: win=%5.1f%%  avgRnds=%4.1f\n", lvl, r.WinRate*100, r.AvgRounds)
@@ -194,7 +205,7 @@ func TestHollowKnightSweetSpot(t *testing.T) {
 			r := simutil.RunMatchup(simutil.MatchupConfig{
 				PlayerConfigs: []simutil.ClassConfig{warrior},
 				PlayerLevel:   lvl,
-				EnemyConfigs:  []simutil.EnemyConfig{{"Hollow Knight", 6, c.hp, c.atk, c.def, "boss"}},
+				EnemyConfigs:  []simutil.EnemyConfig{enemyConfig("Hollow Knight", 6, c.hp, c.atk, c.def, "boss")},
 				Iterations:    500,
 			})
 			fmt.Printf("  %5.1f%%", r.WinRate*100)
@@ -207,10 +218,10 @@ func TestHollowKnightSweetSpot(t *testing.T) {
 	fmt.Printf("  %-30s  %6s  %6s  %6s  %6s  %6s\n", "Bear Stats", "L3", "L4", "L5", "L6", "L7")
 	fmt.Println("  " + "----------------------------------------------------------------------")
 	bearCombos := []struct{ hp, atk, def int32 }{
-		{80, 11, 4},  // current
-		{60, 9, 3},   // nerfed
-		{70, 10, 3},  // slight nerf
-		{50, 8, 2},   // big nerf
+		{80, 11, 4}, // current
+		{60, 9, 3},  // nerfed
+		{70, 10, 3}, // slight nerf
+		{50, 8, 2},  // big nerf
 	}
 	for _, c := range bearCombos {
 		label := fmt.Sprintf("HP=%3d ATK=%2d DEF=%d", c.hp, c.atk, c.def)
@@ -219,7 +230,7 @@ func TestHollowKnightSweetSpot(t *testing.T) {
 			r := simutil.RunMatchup(simutil.MatchupConfig{
 				PlayerConfigs: []simutil.ClassConfig{warrior},
 				PlayerLevel:   lvl,
-				EnemyConfigs:  []simutil.EnemyConfig{{"Thornback Bear", 5, c.hp, c.atk, c.def, "hard"}},
+				EnemyConfigs:  []simutil.EnemyConfig{enemyConfig("Thornback Bear", 5, c.hp, c.atk, c.def, "hard")},
 				Iterations:    500,
 			})
 			fmt.Printf("  %5.1f%%", r.WinRate*100)

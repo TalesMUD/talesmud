@@ -480,6 +480,14 @@ type MerchantItem struct {
 }
 ```
 
+Merchant commands are available in rooms with merchant NPCs:
+- `list`, `shop`, or `trade` shows current stock and prices
+- `buy <item> [quantity]` purchases stock; stackable quantities can fit in one inventory stack
+- `sell <item> [quantity]` sells accepted, unbound inventory items
+- `value <item>` / `price <item>` checks the merchant's sell price
+
+Trading is blocked while the character is in combat. Merchant stock can restock lazily when a player interacts after the configured interval.
+
 ### NPC Spawner System
 ```go
 type NPCSpawner struct {
@@ -598,7 +606,7 @@ type StatusEffect struct {
 
 6. RESOLUTION
    - Victory (all enemies dead) → XP, gold, loot
-   - Defeat (all players dead) → 10% gold loss, respawn at bind point
+   - Defeat (all players dead) → 10% XP loss, 1 gold loss, respawn at bind point
    - Fled (all players escaped) → NPCs reset to idle
    - Timeout (30 minutes) → Combat ends, no rewards
 ```
@@ -743,6 +751,7 @@ type Quest struct {
 
     Name, Description string
     Category    string  // "main", "side", "daily"
+    Area        string  // Optional region/zone label
     Level       int32
     Repeatable  bool
 
@@ -950,6 +959,8 @@ Enhanced notification system with interactions:
 GET /api/quest-progress/:characterId
 ```
 
+Requires the authenticated user to own `characterId`, unless the user is an admin.
+
 **Response includes:**
 - Quest progress (status, objectives)
 - Quest definition (name, description, category, level)
@@ -1058,6 +1069,8 @@ Automatic progress tracking on game events:
 - Matches item template ID
 - Increments counter
 - Sends progress update
+
+When a collect quest is accepted, matching items already in inventory initialize objective progress. Stackable quantities count toward the initial objective amount.
 
 **OnRoomEnter(characterID, userID, room):**
 - Checks visit objectives
@@ -1598,7 +1611,7 @@ All entity editors use a unified **filterable, sortable data table**:
 6. **Quests** - Quest editor (objectives, rewards, prerequisites)
 7. **Skills** - Skill/spell editor (multi-class, effects)
 8. **Scripts** - Lua script editor with syntax highlighting
-9. **Character Templates** - Archetype editor
+9. **Character Templates** - Archetype editor with modal item-template selection for starting gear
 10. **World Map** - Grid-based world visualization
 
 ### Room Editor Features
@@ -1623,6 +1636,7 @@ All entity editors use a unified **filterable, sortable data table**:
 
 ### Quest Editor Features
 - **Objectives** - Add kill/collect/deliver/visit/talk/custom objectives
+- **Area** - Optional regional label with dynamic suggestions and table filtering
 - **Rewards** - XP, gold, item grants
 - **Prerequisites** - Required quests, level requirement
 - **Dialog integration** - Accept/progress/complete text

@@ -21,7 +21,7 @@ func RoomFromJSONString(input string) (*Room, error) {
 func RoomsFromJSONString(input string) (Rooms, error) {
 	bytes := []byte(input)
 	var its Rooms
-	if err := json.Unmarshal(bytes, its); err != nil {
+	if err := json.Unmarshal(bytes, &its); err != nil {
 		logrus.WithField("input", input).WithError(err).Info("Could not unmarshal rooms array from string")
 		return nil, err
 	}

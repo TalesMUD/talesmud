@@ -57,6 +57,7 @@ func NewMerchantTrait() *MerchantTrait {
 		Inventory:      make([]MerchantItem, 0),
 		BuyMultiplier:  1.0,
 		SellMultiplier: 0.5,
+		LastRestock:    time.Now(),
 	}
 }
 

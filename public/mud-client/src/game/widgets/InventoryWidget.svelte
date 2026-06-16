@@ -5,9 +5,15 @@
   let inventory = [];
   let equippedItems = {};
   let gold = 0;
+  let hasMerchant = false;
   let detailItem = null;
   let collapsedCategories = {};
   let viewMode = localStorage.getItem('inventoryViewMode') || 'grid';
+
+  // Sell quantity popup state
+  let showSellPopup = false;
+  let sellItem = null;
+  let sellQuantity = 1;
 
   function toggleViewMode() {
     viewMode = viewMode === 'grid' ? 'list' : 'grid';
@@ -31,6 +37,7 @@
     inventory = $store.inventory || [];
     equippedItems = $store.equippedItems || {};
     gold = $store.gold || 0;
+    hasMerchant = $store.hasMerchant || false;
   }
 
   // Group items by category, only include non-empty categories
@@ -78,6 +85,14 @@
   function isEquipped(item) {
     if (!equippedItems) return false;
     return Object.values(equippedItems).some(eq => eq && eq.id === item.id);
+  }
+
+  function isBound(item) {
+    return !!item.boundToCharacterId;
+  }
+
+  function canSell(item) {
+    return hasMerchant && item && item.type !== 'quest' && !isBound(item) && !isEquipped(item);
   }
 
   function toggleActions(item) {
@@ -151,6 +166,57 @@
   function handleExamine(item) {
     const name = item.instanceSuffix ? item.name + '-' + item.instanceSuffix : item.name;
     sendCmd('examine ' + name);
+  }
+
+  function handleSell(item) {
+    if (!canSell(item)) return;
+    if (item.stackable && item.quantity > 1) {
+      // Show quantity popup for stacked items
+      sellItem = item;
+      sellQuantity = 1;
+      detailItem = null;
+      showSellPopup = true;
+    } else {
+      // Sell single item directly
+      const name = item.instanceSuffix ? item.name + '-' + item.instanceSuffix : item.name;
+      sendCmd('sell ' + name);
+    }
+  }
+
+  function confirmSell() {
+    if (!sellItem) return;
+    const name = sellItem.instanceSuffix ? sellItem.name + '-' + sellItem.instanceSuffix : sellItem.name;
+    const quantity = clampSellQuantity(sellQuantity, sellItem.quantity || 1);
+    if (quantity > 1) {
+      sendCmd('sell ' + name + ' ' + quantity);
+    } else {
+      sendCmd('sell ' + name);
+    }
+    closeSellPopup();
+  }
+
+  function closeSellPopup() {
+    showSellPopup = false;
+    sellItem = null;
+    sellQuantity = 1;
+  }
+
+  function sellAll() {
+    if (!sellItem) return;
+    sellQuantity = clampSellQuantity(sellItem.quantity || 1, sellItem.quantity || 1);
+  }
+
+  function clampSellQuantity(value, max) {
+    const limit = Math.max(1, Number(max) || 1);
+    const parsed = Number.parseInt(value, 10);
+    if (!Number.isFinite(parsed) || parsed < 1) return 1;
+    if (parsed > limit) return limit;
+    return parsed;
+  }
+
+  function onSellQuantityInput() {
+    if (!sellItem) return;
+    sellQuantity = clampSellQuantity(sellQuantity, sellItem.quantity || 1);
   }
 
   function getItemTooltip(item) {
@@ -476,21 +542,20 @@
 
   /* Detail overlay */
   .detail-backdrop {
-    position: absolute;
+    position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.5);
     z-index: 99;
-    border-radius: var(--panel-radius);
   }
 
   .detail-overlay {
-    position: absolute;
+    position: fixed;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: calc(100% - 2em);
+    width: calc(100vw - 4em);
     max-width: 300px;
-    max-height: calc(100% - 2em);
+    max-height: calc(100vh - 4em);
     overflow-y: auto;
     background: var(--panel-bg);
     border: 1px solid var(--panel-border);
@@ -702,8 +767,170 @@
   .detail-action-btn.unequip:hover { background: rgba(245, 158, 11, 0.15); }
   .detail-action-btn.use { color: #3b82f6; border-color: rgba(59, 130, 246, 0.3); }
   .detail-action-btn.use:hover { background: rgba(59, 130, 246, 0.15); }
+  .detail-action-btn.sell { color: #f59e0b; border-color: rgba(245, 158, 11, 0.3); }
+  .detail-action-btn.sell:hover { background: rgba(245, 158, 11, 0.15); }
   .detail-action-btn.drop { color: #ef4444; border-color: rgba(239, 68, 68, 0.3); }
   .detail-action-btn.drop:hover { background: rgba(239, 68, 68, 0.15); }
+
+  /* Sell quantity popup */
+  .sell-popup-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 110;
+  }
+
+  .sell-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: calc(100vw - 4em);
+    max-width: 280px;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--panel-radius);
+    padding: 1em;
+    z-index: 111;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .sell-popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75em;
+    padding-bottom: 0.5em;
+    border-bottom: 1px solid var(--divider-color);
+  }
+
+  .sell-popup-title {
+    font-family: var(--font-display);
+    font-size: var(--text-base);
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .sell-popup-close {
+    cursor: pointer;
+    color: var(--text-dim);
+    font-size: 1.2em;
+    transition: color 0.15s;
+  }
+
+  .sell-popup-close:hover {
+    color: var(--text-primary);
+  }
+
+  .sell-popup-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75em;
+    margin-bottom: 0.75em;
+  }
+
+  .sell-popup-info {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  .sell-popup-quantity {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35em;
+  }
+
+  .sell-popup-quantity label {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+
+  .qty-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.35em;
+  }
+
+  .qty-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2em;
+    height: 2em;
+    border: 1px solid var(--panel-inner-border);
+    border-radius: 6px;
+    background: var(--panel-inner-bg);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: var(--text-base);
+    font-family: inherit;
+    font-weight: 700;
+    transition: all 0.15s;
+  }
+
+  .qty-btn:hover {
+    background: var(--panel-inner-hover);
+    border-color: var(--panel-border-hover);
+  }
+
+  .qty-all-btn {
+    padding: 0.35em 0.6em;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 6px;
+    background: var(--panel-inner-bg);
+    color: #f59e0b;
+    cursor: pointer;
+    font-size: var(--text-sm);
+    font-family: inherit;
+    font-weight: 600;
+    transition: all 0.15s;
+  }
+
+  .qty-all-btn:hover {
+    background: rgba(245, 158, 11, 0.15);
+  }
+
+  .qty-controls input[type="number"] {
+    width: 3.5em;
+    text-align: center;
+    border: 1px solid var(--panel-inner-border);
+    border-radius: 6px;
+    background: var(--panel-inner-bg);
+    color: var(--text-primary);
+    font-size: var(--text-base);
+    font-family: inherit;
+    padding: 0.3em;
+    -moz-appearance: textfield;
+  }
+
+  .qty-controls input[type="number"]::-webkit-inner-spin-button,
+  .qty-controls input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  .sell-popup-total {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--text-primary);
+    padding: 0.4em 0.6em;
+    background: var(--panel-inner-bg);
+    border: 1px solid var(--panel-inner-border);
+    border-radius: 6px;
+    text-align: center;
+  }
+
+  .sell-popup-actions {
+    display: flex;
+    gap: 0.4em;
+    justify-content: flex-end;
+    padding-top: 0.5em;
+    border-top: 1px solid var(--divider-color);
+  }
 
   .empty-state {
     text-align: center;
@@ -727,12 +954,10 @@
   </div>
 
   <div class="widget-toolbar">
-    {#if gold > 0}
-      <span class="gold-display">
-        <i class="material-icons">paid</i>
-        {gold}
-      </span>
-    {/if}
+    <span class="gold-display">
+      <i class="material-icons">paid</i>
+      {gold}
+    </span>
     <span class="item-count">{inventory.length} items</span>
     <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
     <span
@@ -935,8 +1160,62 @@
             </button>
           {/if}
         {/if}
+        {#if canSell(detailItem)}
+          <button class="detail-action-btn sell" on:click={() => handleSell(detailItem)}>
+            <i class="material-icons">sell</i> Sell
+          </button>
+        {/if}
         <button class="detail-action-btn drop" on:click={() => handleDrop(detailItem)}>
           <i class="material-icons">delete_outline</i> Drop
+        </button>
+      </div>
+    </div>
+  {/if}
+
+  {#if showSellPopup && sellItem}
+    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+    <div class="sell-popup-backdrop" on:click={closeSellPopup}></div>
+    <div class="sell-popup">
+      <div class="sell-popup-header">
+        <span class="sell-popup-title">Sell {sellItem.name}</span>
+        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+        <i class="material-icons sell-popup-close" on:click={closeSellPopup}>close</i>
+      </div>
+      <div class="sell-popup-body">
+        <div class="sell-popup-info">
+          You have <strong>{sellItem.quantity}</strong> in your inventory.
+          {#if sellItem.basePrice}
+            <br/>Base value: <span class="detail-gold">{sellItem.basePrice} gold each</span>
+          {/if}
+        </div>
+        <div class="sell-popup-quantity">
+          <label for="sell-qty">Quantity:</label>
+          <div class="qty-controls">
+            <button class="qty-btn" on:click={() => { if (sellQuantity > 1) sellQuantity--; }}>-</button>
+            <input
+              id="sell-qty"
+              type="number"
+	              min="1"
+	              max={sellItem.quantity}
+	              bind:value={sellQuantity}
+	              on:input={onSellQuantityInput}
+	            />
+            <button class="qty-btn" on:click={() => { if (sellQuantity < sellItem.quantity) sellQuantity++; }}>+</button>
+            <button class="qty-all-btn" on:click={sellAll}>All</button>
+          </div>
+        </div>
+        {#if sellItem.basePrice}
+          <div class="sell-popup-total">
+            Base value: <span class="detail-gold">{sellItem.basePrice * sellQuantity} gold</span>
+          </div>
+        {/if}
+      </div>
+      <div class="sell-popup-actions">
+        <button class="detail-action-btn sell" on:click={confirmSell}>
+          <i class="material-icons">sell</i> Sell {sellQuantity > 1 ? `x${sellQuantity}` : ''}
+        </button>
+        <button class="detail-action-btn drop" on:click={closeSellPopup}>
+          Cancel
         </button>
       </div>
     </div>

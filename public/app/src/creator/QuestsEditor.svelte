@@ -21,6 +21,7 @@
     questColumns, npcColumns, itemTemplateColumns,
     roomColumns, scriptColumns, dialogColumns,
   } from "./tableColumns.js";
+  import { uniqueValues } from "./fieldSuggestions.js";
 
   const { isAuthenticated, authToken } = getAuth();
 
@@ -62,6 +63,16 @@
     loadEntityType("quests");
   }
 
+  // Populate area column filter options dynamically
+  const columns = questColumns;
+  $: {
+    const areaCol = columns.find((c) => c.key === "area");
+    if (areaCol && $store.elements.length) {
+      areaCol.options = uniqueValues($store.elements, "area");
+    }
+  }
+  $: areaSuggestions = uniqueValues($store.elements, "area");
+
   const objectiveTypes = [
     { value: "kill", label: "Kill" },
     { value: "collect", label: "Collect" },
@@ -94,6 +105,7 @@
       name: "New Quest",
       description: "Quest description...",
       category: "side",
+      area: "",
       level: 1,
       repeatable: false,
       source: { type: "npc", npcId: "" },
@@ -174,7 +186,7 @@
 <CRUDEditor {store} {config}>
   <div slot="content" class="space-y-6">
     <!-- General Settings -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div class="space-y-1.5">
         <label class="label-caps" for="quest-category">Category</label>
         <select
@@ -187,6 +199,22 @@
           <option value="side">Side</option>
           <option value="daily">Daily</option>
         </select>
+      </div>
+      <div class="space-y-1.5">
+        <label class="label-caps" for="quest-area">Area</label>
+        <input
+          id="quest-area"
+          type="text"
+          class="input-base"
+          list="quest-area-suggestions"
+          bind:value={$store.selectedElement.area}
+          placeholder="e.g. Gloomfen Marsh"
+        />
+        <datalist id="quest-area-suggestions">
+          {#each areaSuggestions as val}
+            <option value={val} />
+          {/each}
+        </datalist>
       </div>
       <div class="space-y-1.5">
         <label class="label-caps" for="quest-level">Level</label>

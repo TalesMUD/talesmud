@@ -29,6 +29,12 @@ func (command *ListCommand) Execute(game def.GameCtrl, message *messages.Message
 		return true
 	}
 
+	// Block trading while in combat
+	if combatEngine := game.GetCombatEngine(); combatEngine != nil && combatEngine.IsPlayerInCombat(message.Character.Entity.ID) {
+		game.SendMessage() <- message.Reply("You can't trade while in combat!")
+		return true
+	}
+
 	// Find merchant in room
 	merchant := findMerchantInRoom(game, message.Character.CurrentRoomID)
 	if merchant == nil {
@@ -113,6 +119,12 @@ func (command *BuyCommand) Execute(game def.GameCtrl, message *messages.Message)
 		return true
 	}
 
+	// Block trading while in combat
+	if combatEngine := game.GetCombatEngine(); combatEngine != nil && combatEngine.IsPlayerInCombat(message.Character.Entity.ID) {
+		game.SendMessage() <- message.Reply("You can't trade while in combat!")
+		return true
+	}
+
 	// Parse: "buy <item> [quantity]"
 	parts := strings.Fields(message.Data)
 	if len(parts) < 2 {
@@ -129,6 +141,11 @@ func (command *BuyCommand) Execute(game def.GameCtrl, message *messages.Message)
 		itemName = strings.Join(parts[1:len(parts)-1], " ")
 	} else {
 		itemName = strings.Join(parts[1:], " ")
+	}
+
+	if quantity <= 0 {
+		game.SendMessage() <- message.Reply("Invalid quantity.")
+		return true
 	}
 
 	// Find merchant
@@ -179,7 +196,11 @@ func (command *BuyCommand) Execute(game def.GameCtrl, message *messages.Message)
 	}
 
 	// Get item template for pricing
-	itemTemplate, _ := game.GetFacade().ItemsService().FindByID(foundItem.ItemTemplateID)
+	itemTemplate, err := game.GetFacade().ItemsService().FindByID(foundItem.ItemTemplateID)
+	if err != nil || itemTemplate == nil {
+		game.SendMessage() <- message.Reply("Error: item template not found.")
+		return true
+	}
 	price := merchant.MerchantTrait.GetBuyPrice(foundItem, itemTemplate.BasePrice)
 	totalPrice := price * int64(quantity)
 
@@ -195,56 +216,93 @@ func (command *BuyCommand) Execute(game def.GameCtrl, message *messages.Message)
 		return true
 	}
 
-	// Check inventory space
-	if message.Character.Inventory.IsFull() {
+	// Check inventory space. Stackable purchases may merge into an existing stack or
+	// occupy one new slot, so do not cap their quantity by open slot count.
+	if message.Character.Inventory.IsFull() && !itemTemplate.Stackable {
 		game.SendMessage() <- message.Reply("Your inventory is full.")
 		return true
 	}
 
-	// Create item instance(s)
-	for i := int32(0); i < quantity; i++ {
-		newItem, err := game.GetFacade().ItemsService().CreateInstanceFromTemplate(foundItem.ItemTemplateID)
-		if err != nil {
-			log.WithError(err).Error("Failed to create item instance")
+	// Cap quantity to available inventory slots (for non-stackable items)
+	if !itemTemplate.Stackable && message.Character.Inventory.Size > 0 {
+		availableSlots := message.Character.Inventory.Size - int32(message.Character.Inventory.Count())
+		if quantity > availableSlots {
+			quantity = availableSlots
+			totalPrice = price * int64(quantity)
+		}
+	}
+
+	// Re-check gold after potential quantity adjustment
+	if message.Character.Gold < totalPrice {
+		game.SendMessage() <- message.Reply("You don't have enough gold. Need " + itoa64(totalPrice) + " gold.")
+		return true
+	}
+
+	// Create item instance(s), tracking how many are actually delivered
+	var delivered int32
+	if itemTemplate.Stackable && quantity > 1 {
+		// For stackable items, create a single instance with the full quantity
+		newItem, createErr := game.GetFacade().ItemsService().CreateInstanceFromTemplate(foundItem.ItemTemplateID)
+		if createErr != nil {
+			log.WithError(createErr).Error("Failed to create item instance")
 			game.SendMessage() <- message.Reply("Error creating item.")
 			return true
 		}
+		newItem.Quantity = quantity
 
-		// Store the item
-		storedItem, err := game.GetFacade().ItemsService().Store(newItem)
-		if err != nil {
-			log.WithError(err).Error("Failed to store item")
-			continue
+		addErr := message.Character.Inventory.AddItem(newItem)
+		if addErr != nil {
+			game.GetFacade().ItemsService().Delete(newItem.ID)
+			log.WithError(addErr).Error("Failed to add item to inventory")
+			game.SendMessage() <- message.Reply("Your inventory is full.")
+			return true
 		}
+		delivered = quantity
+	} else {
+		// For non-stackable items (or quantity 1), create individual instances
+		for i := int32(0); i < quantity; i++ {
+			newItem, createErr := game.GetFacade().ItemsService().CreateInstanceFromTemplate(foundItem.ItemTemplateID)
+			if createErr != nil {
+				log.WithError(createErr).Error("Failed to create item instance")
+				break
+			}
 
-		// Add to inventory
-		err = message.Character.Inventory.AddItem(storedItem)
-		if err != nil {
-			log.WithError(err).Error("Failed to add item to inventory")
-			continue
+			addErr := message.Character.Inventory.AddItem(newItem)
+			if addErr != nil {
+				game.GetFacade().ItemsService().Delete(newItem.ID)
+				log.WithError(addErr).Error("Failed to add item to inventory")
+				break
+			}
+			delivered++
 		}
 	}
 
-	// Deduct gold
-	message.Character.Gold -= totalPrice
+	if delivered == 0 {
+		game.SendMessage() <- message.Reply("Error creating item.")
+		return true
+	}
 
-	// Update stock
+	// Only charge for items actually delivered
+	actualPrice := price * int64(delivered)
+	message.Character.Gold -= actualPrice
+
+	// Only decrement stock for delivered items
 	if foundItem.Quantity >= 0 {
-		merchant.MerchantTrait.Inventory[foundIndex].Quantity -= quantity
+		merchant.MerchantTrait.Inventory[foundIndex].Quantity -= delivered
 	}
 
 	// Persist character
-	err := game.GetFacade().CharactersService().Update(message.Character.ID, message.Character)
+	err = game.GetFacade().CharactersService().Update(message.Character.ID, message.Character)
 	if err != nil {
 		log.WithError(err).Error("Failed to update character")
 	}
 
 	// Send confirmation
 	var msg string
-	if quantity > 1 {
-		msg = "You buy " + itoa(int(quantity)) + "x " + itemTemplate.Name + " for " + itoa64(totalPrice) + " gold."
+	if delivered > 1 {
+		msg = "You buy " + itoa(int(delivered)) + "x " + itemTemplate.Name + " for " + itoa64(actualPrice) + " gold."
 	} else {
-		msg = "You buy " + itemTemplate.Name + " for " + itoa64(totalPrice) + " gold."
+		msg = "You buy " + itemTemplate.Name + " for " + itoa64(actualPrice) + " gold."
 	}
 	game.SendMessage() <- message.Reply(msg)
 	if inv := messages.NewInventoryUpdateMessage(message); inv != nil {
@@ -273,6 +331,12 @@ func (command *SellCommand) Execute(game def.GameCtrl, message *messages.Message
 		return true
 	}
 
+	// Block trading while in combat
+	if combatEngine := game.GetCombatEngine(); combatEngine != nil && combatEngine.IsPlayerInCombat(message.Character.Entity.ID) {
+		game.SendMessage() <- message.Reply("You can't trade while in combat!")
+		return true
+	}
+
 	// Parse: "sell <item> [quantity]"
 	parts := strings.Fields(message.Data)
 	if len(parts) < 2 {
@@ -289,6 +353,11 @@ func (command *SellCommand) Execute(game def.GameCtrl, message *messages.Message
 		itemName = strings.Join(parts[1:len(parts)-1], " ")
 	} else {
 		itemName = strings.Join(parts[1:], " ")
+	}
+
+	if quantity <= 0 {
+		game.SendMessage() <- message.Reply("Invalid quantity.")
+		return true
 	}
 
 	// Find merchant
@@ -323,6 +392,11 @@ func (command *SellCommand) Execute(game def.GameCtrl, message *messages.Message
 	if item.IsBound() {
 		game.SendMessage() <- message.Reply("You cannot sell " + item.Name + ". It is bound to you.")
 		return true
+	}
+
+	// Non-stackable items can only be sold one at a time
+	if !item.Stackable {
+		quantity = 1
 	}
 
 	// Check quantity for stackable items
@@ -396,6 +470,12 @@ func (command *ValueCommand) Execute(game def.GameCtrl, message *messages.Messag
 		return true
 	}
 
+	// Block trading while in combat
+	if combatEngine := game.GetCombatEngine(); combatEngine != nil && combatEngine.IsPlayerInCombat(message.Character.Entity.ID) {
+		game.SendMessage() <- message.Reply("You can't trade while in combat!")
+		return true
+	}
+
 	// Parse: "value <item>"
 	parts := strings.Fields(message.Data)
 	if len(parts) < 2 {
@@ -459,6 +539,10 @@ func findMerchantInRoom(game def.GameCtrl, roomID string) *npc.NPC {
 	instances := npcManager.GetInstancesInRoom(roomID)
 	for _, inst := range instances {
 		if inst.IsMerchant() {
+			// Lazy restock check
+			if inst.MerchantTrait.NeedsRestock() {
+				inst.MerchantTrait.Restock()
+			}
 			return inst
 		}
 	}

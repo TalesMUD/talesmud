@@ -199,7 +199,14 @@ func (cmd *AbandonQuestCommand) Execute(game def.GameCtrl, message *messages.Mes
 				game.SendMessage() <- message.Reply("Failed to abandon quest: " + err.Error())
 				return true
 			}
-			game.SendMessage() <- message.Reply("Quest abandoned: " + quest.Name)
+
+			// Send typed questAbandoned message so the client refreshes the quest log
+			game.SendMessage() <- messages.MessageResponse{
+				Audience:   messages.MessageAudienceOrigin,
+				AudienceID: message.FromUser.ID,
+				Type:       messages.MessageTypeQuestAbandoned,
+				Message:    "Quest abandoned: " + quest.Name,
+			}
 			return true
 		}
 	}

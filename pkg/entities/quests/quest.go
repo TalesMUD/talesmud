@@ -66,6 +66,7 @@ type Quest struct {
 
 	// Classification
 	Category   string `json:"category,omitempty"` // "main", "side", "daily"
+	Area       string `json:"area,omitempty"`
 	Level      int32  `json:"level,omitempty"`
 	Repeatable bool   `json:"repeatable,omitempty"`
 

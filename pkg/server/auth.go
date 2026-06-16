@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -95,6 +94,9 @@ func getPemCert(token *jwt.Token) (string, error) {
 
 	for _, key := range keys {
 		if token.Header["kid"] == key.Kid {
+			if len(key.X5c) == 0 {
+				return "", errors.New("matching key has no certificate")
+			}
 			return "-----BEGIN CERTIFICATE-----\n" + key.X5c[0] + "\n-----END CERTIFICATE-----", nil
 		}
 	}
@@ -121,7 +123,7 @@ func getKeyFunc() jwt.Keyfunc {
 
 		cert, err := getPemCert(token)
 		if err != nil {
-			panic(err.Error())
+			return nil, err
 		}
 
 		result, _ := jwt.ParseRSAPublicKeyFromPEM([]byte(cert))
@@ -132,8 +134,7 @@ func getKeyFunc() jwt.Keyfunc {
 // handleTokenError handles the case where the JWT token is invalid.
 // It logs the error and aborts the gin context with a 401 status.
 func handleTokenError(c *gin.Context, err error, token *jwt.Token) {
-	fmt.Println(err)
-	fmt.Println("Token is not valid:", token)
+	log.WithError(err).Warn("Token is not valid")
 
 	c.AbortWithStatus(401)
 }
@@ -169,6 +170,10 @@ func handleTokenSuccess(c *gin.Context, token *jwt.Token, facade service.Facade)
 // It decodes the JWT token and extracts the 'sub' claim.
 func setUserId(c *gin.Context, token *jwt.Token) {
 	splitted := strings.Split(token.Raw, ".")
+	if len(splitted) < 2 {
+		log.Error("Could not decode token: invalid JWT segment count")
+		return
+	}
 	// JWTs use URL-safe base64 encoding (RawURLEncoding), not standard base64
 	if decoded, err := base64.RawURLEncoding.DecodeString(splitted[1]); err == nil {
 		if sub, err := jsonparser.GetString(decoded, "sub"); err == nil {
@@ -177,8 +182,7 @@ func setUserId(c *gin.Context, token *jwt.Token) {
 			log.WithError(err).Error("Could not get sub part from JSON")
 		}
 	} else {
-		//TODO: remove token logging
-		log.WithError(err).WithField("RawToken", token.Raw).Error("Could not decode token part")
+		log.WithError(err).Error("Could not decode token part")
 	}
 }
 

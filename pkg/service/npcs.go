@@ -147,7 +147,7 @@ func (srv *npcsService) SpawnFromTemplate(templateID, roomID string) (*npc.NPC, 
 
 		// Copy traits
 		EnemyTrait:    template.EnemyTrait,
-		MerchantTrait: template.MerchantTrait,
+		MerchantTrait: deepCopyMerchantTrait(template.MerchantTrait),
 
 		Created: time.Now(),
 	}
@@ -156,4 +156,26 @@ func (srv *npcsService) SpawnFromTemplate(templateID, roomID string) (*npc.NPC, 
 	instance.CurrentRoomID = roomID
 
 	return instance, nil
+}
+
+// deepCopyMerchantTrait creates an independent copy of a MerchantTrait so
+// spawned instances don't share mutable inventory state with the template.
+func deepCopyMerchantTrait(src *npc.MerchantTrait) *npc.MerchantTrait {
+	if src == nil {
+		return nil
+	}
+	dst := *src // struct value copy
+	// Deep copy the inventory slice
+	if src.Inventory != nil {
+		dst.Inventory = make([]npc.MerchantItem, len(src.Inventory))
+		copy(dst.Inventory, src.Inventory)
+	}
+	// Deep copy slice fields
+	if src.AcceptedTypes != nil {
+		dst.AcceptedTypes = append([]string{}, src.AcceptedTypes...)
+	}
+	if src.RejectedTags != nil {
+		dst.RejectedTags = append([]string{}, src.RejectedTags...)
+	}
+	return &dst
 }

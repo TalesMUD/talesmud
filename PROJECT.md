@@ -89,8 +89,9 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Quest rewards: XP, Gold, and item grants on completion
   - Quest prerequisites: required quest completions and level requirements
   - Repeatable quests support
-  - Quest categories: Main, Side, Daily
+  - Quest categories and area labels for filtering and organizing regional quest lines
   - QuestTracker: automatic progress updates from game events (NPC kills, item pickups, room entries, dialog nodes)
+  - Accepting a collect quest pre-fills progress from matching items already in the character inventory, including stack quantities
   - Lua scripting API (`tales.quests`) for custom quest logic
   - Creator UI: full quest editor with objectives, rewards, prerequisites, and dialog text configuration
   - Player commands: `quests`/`ql` (quest log), `quest <name>` (details), `abandon <name>` (abandon quest)
@@ -139,10 +140,10 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Full-width filterable data tables for browsing all entity types (Rooms, Items, Item Templates, NPCs, Dialogs, Quests, Skills, Scripts, Character Templates)
   - Per-column filtering (text search, enum dropdowns) with instant client-side filtering and sorting
   - Side-by-side master-detail layout: data table + edit form shown together, closeable to full-width table view
-  - **Entity Selection Modal**: All entity ID selectors (rooms, NPCs, items, scripts, dialogs, quests) use a centered modal dialog with a full filterable DataTable instead of simple dropdowns. This scales to hundreds of entries with per-column search, sort, and filter support. Components: `EntitySelectButton` (inline trigger) + `EntitySelectModal` (table dialog). **UI Guideline: Never use `<select>` dropdowns for entity ID references. Always use `EntitySelectButton` with the appropriate column definitions from `tableColumns.js`.**
+  - **Entity Selection Modal**: All entity ID selectors (rooms, NPCs, items, scripts, dialogs, quests, character template starting items) use a centered modal dialog with a full filterable DataTable instead of simple dropdowns. This scales to hundreds of entries with per-column search, sort, and filter support. Components: `EntitySelectButton` (inline trigger) + `EntitySelectModal` (table dialog). **UI Guideline: Never use `<select>` dropdowns for entity ID references. Always use `EntitySelectButton` with the appropriate column definitions from `tableColumns.js`.**
   - Room editor with exit, action, spawner, items, and NPC resident configuration
   - Item and item template management with attributes and properties
-  - NPC editor with enemy and merchant trait configuration
+  - NPC editor with enemy and merchant trait configuration, including merchant stock, pricing, and restock settings
   - Lua script editor with syntax highlighting and integrated test runner
   - Dialog tree editor with options and alternate texts
   - Character template editor with archetype selection and starting gear
@@ -175,12 +176,12 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - JWT-based API protection
   - Guest mode with HMAC-SHA256 tokens (no Auth0 required)
   - Dual auth middleware: tries guest token first, falls back to Auth0 JWT
-  - Basic auth for legacy admin endpoints (export/import)
+  - Basic auth for legacy admin endpoints (export/import), with explicit credentials required and insecure release defaults rejected
   - Session management
   - Three-tier role system: MUD Admin, MUD Creator, Player
   - MUD Admin configured via `MUD_ADMIN_OAUTHID` env var (has full access)
   - MUD Creators can modify game content (Creator area)
-  - Players can play the game, view rankings, and news
+  - Players can play the game and access only their own characters and quest progress
   - User ban system (bans by Reference ID and email)
 
 - **User Management (Admin Only)**
@@ -291,9 +292,9 @@ talesmud/
 | `equip` | `wear` | Equip an item |
 | `unequip` | `remove` | Unequip an item |
 | `equipment` | `eq`, `gear` | Show equipped items |
-| `list` | `shop` | List merchant inventory |
-| `buy` | - | Buy from merchant |
-| `sell` | - | Sell to merchant (blocked for bound items) |
+| `list` | `shop`, `trade` | List merchant inventory |
+| `buy` | - | Buy from merchant; stackable quantities fit in a single stack when possible |
+| `sell` | - | Sell to merchant (blocked for bound items and unsupported item types) |
 | `value` | `price` | Check item sell price |
 
 ## Current Development Status
@@ -364,6 +365,10 @@ The NPCs branch represents the latest development work, focusing on NPC systems 
 GIN_MODE=debug
 PORT=8010
 
+# Optional comma-separated CORS origins in addition to the built-in production
+# domains and local dev origins for the Creator and MUD clients.
+CORS_ALLOWED_ORIGINS=
+
 # SQLite database path
 SQLITE_PATH=./talesmud.db
 
@@ -373,9 +378,11 @@ AUTH0_DOMAIN=https://owndnd.eu.auth0.com/
 AUTH0_WK_JWKS=https://owndnd.eu.auth0.com/.well-known/jwks.json
 AUTH_ENABLED=false
 
-# Admin (basic auth for export/import)
+# Admin (basic auth for legacy export/import)
+# Leave either value blank to disable these endpoints.
+# admin/admin is rejected in release mode.
 ADMIN_USER=admin
-ADMIN_PASSWORD=admin
+ADMIN_PASSWORD=changeme
 
 # MUD Admin OAuth ID (Auth0 sub claim, e.g. "twitter|16651340")
 # The user with this OAuth ID gets full admin access
@@ -449,7 +456,7 @@ go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
 - `GET /api/server-info` - Public server info (guest mode status)
 
 ### Protected Endpoints (Require Auth - Player Level)
-- `GET /api/characters`, `POST /api/newcharacter` - Character management
+- `GET /api/characters`, `POST /api/newcharacter` - Character management; direct character object access is owner/admin only
 - `POST /api/generate/character` - AI-powered character name/description generation
 - `GET /api/rooms`, `GET /api/items`, `GET /api/skills` - Read game data
 - `GET /api/user`, `PUT /api/user` - User profile
@@ -457,9 +464,9 @@ go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
 ### Protected Endpoints (Player Level - Quests)
 - `GET /api/quests` - List all quest definitions
 - `GET /api/quests/:id` - Get quest by ID
-- `GET /api/quest-progress/:characterId` - Get character quest log
-- `POST /api/quest-progress/:characterId/accept/:questId` - Accept quest
-- `POST /api/quest-progress/:characterId/abandon/:questId` - Abandon quest
+- `GET /api/quest-progress/:characterId` - Get character quest log for own/admin character
+- `POST /api/quest-progress/:characterId/accept/:questId` - Accept quest for own/admin character
+- `POST /api/quest-progress/:characterId/abandon/:questId` - Abandon quest for own/admin character
 
 ### Creator Endpoints (Require Creator or Admin Role)
 - `POST/PUT/DELETE /api/rooms` - Room management
@@ -478,8 +485,8 @@ go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
 - `POST /api/admin/users/:id/unban` - Unban user
 
 ### Legacy Admin Endpoints (Basic Auth)
-- `GET /admin/export` - Export world data
-- `POST /admin/import` - Import world data
+- `GET /admin/export` - Export world data; requires explicit `ADMIN_USER` and `ADMIN_PASSWORD`
+- `POST /admin/import` - Import world data; validates JSON before replacing stored data
 - `GET /admin/world` - World map rendering
 
 ### WebSocket
