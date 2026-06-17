@@ -780,18 +780,18 @@ type QuestSource struct {
 ### Objective Types
 ```go
 type Objective struct {
+    ID          string
     Type        ObjectiveType  // "kill", "collect", "deliver", "visit", "talk", "custom"
     Description string
 
     // Type-specific fields
-    TargetNPCTemplateID string  // For kill
-    TargetItemTemplateID string // For collect
-    TargetRoomID        string  // For visit/deliver
-    TargetDialogNodeID  string  // For talk
-    ScriptID            string  // For custom (Lua)
-
-    CurrentCount, RequiredCount int32
-    Complete     bool
+    TargetID        string  // NPC/item/room target depending on type
+    TargetName      string
+    Amount          int32
+    DeliverToNPCID  string  // For deliver
+    DialogNodeID    string  // Optional for talk
+    CheckScriptID   string  // For custom (Lua)
+    Order           int32
 }
 ```
 
@@ -817,16 +817,25 @@ type Reward struct {
 }
 ```
 
+### Quest Definition Validation
+Quest create/update validates impossible definitions before persistence:
+- Required name, description, source type, and at least one objective
+- Required source references for NPC/item sources
+- Required objective IDs, descriptions, target fields, and custom scripts
+- Duplicate objective IDs, negative objective amounts, negative rewards
+- Empty reward/prerequisite IDs and self-prerequisites
+- Missing referenced NPCs, item templates, rooms, scripts, and prerequisite quests
+
 ### Quest Tracker (Automatic Progress)
 The `QuestTracker` listens to game events and updates objectives:
 
 | Event | Source | Objectives Updated |
 |-------|--------|-------------------|
 | NPC killed | Combat victory | Kill objectives (matches template ID) |
-| Item pickup | Pickup command | Collect objectives (matches template ID) |
+| Item pickup | Pickup command | Collect objectives (matches template ID and stack quantity) |
 | Room enter | Room navigation | Visit objectives (matches room ID) |
 | Dialog node | Talk command | Talk objectives (matches NPC + node) |
-| Talk to NPC | Talk command | Deliver objectives (if has required item) |
+| Talk to NPC | Talk command | Deliver objectives (requires and consumes matching item quantity) |
 
 ### Quest Dialog Integration
 When talking to a quest-source NPC:
@@ -863,7 +872,7 @@ The quest log widget provides a comprehensive quest management interface:
   - Helps focus on relevant quests
 
 - **Sort Options**
-  - Sort by Status (Active → Completed → Abandoned)
+- Sort by Status (Ready → Active → Completed → Abandoned)
   - Sort by Name (alphabetical)
   - Sort by Level (ascending)
   - Sort by Category (Main/Side/Daily)
@@ -877,12 +886,14 @@ The quest log widget provides a comprehensive quest management interface:
 
 **Quest Display:**
 - Quest name with level badge (e.g., "L5")
+- Ready-to-turn-in badge and highlighted row when all active objectives are complete
 - Category badge with color coding:
   - 🟠 Main quests (amber/orange #f59e0b)
   - 🔵 Side quests (blue #3b82f6)
   - 🟣 Daily quests (purple #8b5cf6)
 - Expandable quest details
 - Objective progress (X/Y format) with checkmarks
+- Objective descriptions are populated from quest definitions in both REST quest-log refreshes and WebSocket quest-log messages
 - Rewards preview (XP, Gold, Items)
 - Abandon button for active quests
 - Pin/Unpin button for tracking
@@ -937,7 +948,8 @@ Enhanced notification system with interactions:
 
 **Notification Types:**
 - **Quest Accepted** (amber border)
-- **Quest Progress** (blue border) - shows completed objective
+- **Quest Progress** (blue border) - shows the changed objective and current/required counts
+- **Quest Ready** (yellow border) - shown when all objectives are complete and the quest can be turned in
 - **Quest Completed** (green border)
 
 **Interactions:**
@@ -948,6 +960,7 @@ Enhanced notification system with interactions:
 
 **Features:**
 - Unique notification IDs
+- Notification queue capped to the latest 4 visible events
 - Slide-in and slide-out animations
 - Smooth transitions
 - Top-right positioning
@@ -963,7 +976,7 @@ Requires the authenticated user to own `characterId`, unless the user is an admi
 
 **Response includes:**
 - Quest progress (status, objectives)
-- Quest definition (name, description, category, level)
+- Quest definition (name, description, category, level, objective descriptions)
 - Rewards (XP, gold, item template IDs)
 - Timestamps (acceptedAt, completedAt)
 
@@ -1021,7 +1034,22 @@ Sent on character selection and quest updates:
   "type": "questProgress",
   "questId": "quest-uuid",
   "questName": "The Wolf Problem",
-  "objectives": [ /* updated objectives */ ]
+  "objectives": [ /* updated objectives */ ],
+  "changedObjective": {
+    "objectiveId": "obj-1",
+    "description": "Defeat wolves",
+    "current": 5,
+    "required": 5,
+    "completed": true
+  }
+}
+
+{
+  "type": "questReady",
+  "questId": "quest-uuid",
+  "questName": "The Wolf Problem",
+  "objectives": [ /* all objectives complete */ ],
+  "changedObjective": { /* last changed objective */ }
 }
 
 {
@@ -1048,6 +1076,7 @@ The MUD client stores quest data in `MUDXPlusStore`:
 **Methods:**
 - `updateQuests(questLog)` - Update full quest list
 - `addQuestNotification(notification)` - Add notification with auto-dismiss
+- Quest notifications auto-dismiss after 5 seconds and keep only the newest 4 visible entries
 
 **LocalStorage:**
 - `pinnedQuests` - JSON array of quest IDs (max 5)
@@ -1067,7 +1096,7 @@ Automatic progress tracking on game events:
 **OnItemPickup(characterID, userID, item):**
 - Checks collect objectives
 - Matches item template ID
-- Increments counter
+- Increments by picked-up stack quantity when present
 - Sends progress update
 
 When a collect quest is accepted, matching items already in inventory initialize objective progress. Stackable quantities count toward the initial objective amount.
@@ -1086,8 +1115,9 @@ When a collect quest is accepted, matching items already in inventory initialize
 
 **OnTalkToNPC(characterID, userID, npc):**
 - Checks deliver objectives
-- Verifies player has required item
-- Marks complete
+- Verifies player has required item quantity
+- Consumes matching items from inventory
+- Marks objective complete
 - Sends progress update
 
 ### Quest Completion Flow
@@ -1642,6 +1672,8 @@ All entity editors use a unified **filterable, sortable data table**:
 - **Dialog integration** - Accept/progress/complete text
 - **Repeatable** - Daily/recurring quests
 - **OnComplete script** - Lua script on quest completion
+- **Validation panel** - Flags missing source references, objective targets, duplicate IDs, invalid rewards, missing scripts, self-prerequisites, and unresolved entity IDs before save
+- **Player flow preview** - Summarizes offer source, objective lines, ready turn-in target, and rewards for quick testing while authoring
 
 ### Skill Editor Features
 - **Multi-class assignment** - Skills can belong to multiple classes
@@ -1766,6 +1798,7 @@ tales.game.msgToCharacter(charID, "A warm glow surrounds you.")
 - System automatically adds quest options at runtime
 - Set `AcceptDialogText`, `ProgressDialogText`, `CompleteDialogText` on Quest
 - Quest-giver NPC should have general greeting dialog
+- Use the Quest editor validation/preview panel before saving to confirm the offer, progress, ready turn-in, and reward flow
 
 ### Exploration XP System
 **Feature**: Automatic XP rewards for discovering rooms/areas.
