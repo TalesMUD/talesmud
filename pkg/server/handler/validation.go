@@ -57,19 +57,118 @@ func (h *ValidationHandler) ValidateEntity(c *gin.Context) {
 }
 
 func (h *ValidationHandler) PreviewDialog(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"summary": "Dialog preview is available.", "issues": []validation.Issue{}})
+	var dialog dialogs.Dialog
+	if err := c.ShouldBindJSON(&dialog); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	snapshot, ok := validationSnapshot(c, h.Facade)
+	if !ok {
+		return
+	}
+	result := validation.ValidateDialog(&dialog, snapshot)
+	c.JSON(http.StatusOK, gin.H{
+		"name":         dialog.Name,
+		"nodeId":       dialog.NodeID,
+		"text":         dialog.Text,
+		"optionsCount": len(dialog.Options),
+		"issues":       result.Issues,
+	})
 }
 
 func (h *ValidationHandler) PreviewQuest(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"summary": "Quest preview is available.", "issues": []validation.Issue{}})
+	var quest quests.Quest
+	if err := c.ShouldBindJSON(&quest); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	snapshot, ok := validationSnapshot(c, h.Facade)
+	if !ok {
+		return
+	}
+	result := validation.ValidateQuest(&quest, snapshot)
+	c.JSON(http.StatusOK, gin.H{
+		"name":            quest.Name,
+		"source":          quest.Source,
+		"objectivesCount": len(quest.Objectives),
+		"rewards":         quest.Rewards,
+		"issues":          result.Issues,
+	})
 }
 
 func (h *ValidationHandler) PreviewRoom(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"summary": "Room preview is available.", "issues": []validation.Issue{}})
+	var room rooms.Room
+	if err := c.ShouldBindJSON(&room); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	snapshot, ok := validationSnapshot(c, h.Facade)
+	if !ok {
+		return
+	}
+	result := validation.ValidateRoom(&room, snapshot)
+	exitsCount, actionsCount, itemsCount, npcsCount := 0, 0, 0, 0
+	if room.Exits != nil {
+		exitsCount = len(*room.Exits)
+	}
+	if room.Actions != nil {
+		actionsCount = len(*room.Actions)
+	}
+	if room.Items != nil {
+		itemsCount = len(*room.Items)
+	}
+	if room.NPCs != nil {
+		npcsCount = len(*room.NPCs)
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"name":         room.Name,
+		"area":         room.Area,
+		"description":  room.Description,
+		"exitsCount":   exitsCount,
+		"actionsCount": actionsCount,
+		"itemsCount":   itemsCount,
+		"npcsCount":    npcsCount,
+		"issues":       result.Issues,
+	})
 }
 
 func (h *ValidationHandler) PreviewMerchant(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"summary": "Merchant preview is available.", "issues": []validation.Issue{}})
+	var n npc.NPC
+	if err := c.ShouldBindJSON(&n); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	snapshot, ok := validationSnapshot(c, h.Facade)
+	if !ok {
+		return
+	}
+	result := validation.ValidateNPC(&n, snapshot)
+	rows := []gin.H{}
+	if n.MerchantTrait != nil {
+		for _, stock := range n.MerchantTrait.Inventory {
+			itemName := stock.ItemTemplateID
+			basePrice := stock.BasePrice
+			if item := snapshot.Items[stock.ItemTemplateID]; item != nil {
+				itemName = item.Name
+				if basePrice == 0 {
+					basePrice = item.BasePrice
+				}
+			}
+			rows = append(rows, gin.H{
+				"itemTemplateId": stock.ItemTemplateID,
+				"itemName":       itemName,
+				"quantity":       stock.Quantity,
+				"maxQuantity":    stock.MaxQuantity,
+				"buyPrice":       n.MerchantTrait.GetBuyPrice(&stock, basePrice),
+				"requiredLevel":  stock.RequiredLevel,
+			})
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"name":   n.Name,
+		"stock":  rows,
+		"issues": result.Issues,
+	})
 }
 
 func rejectIfInvalid(c *gin.Context, result validation.Result) bool {
