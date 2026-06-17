@@ -201,6 +201,10 @@ func (app *app) setupRoutes() {
 		GuestService: app.Facade.GuestService(),
 	}
 
+	validationHandler := &handler.ValidationHandler{
+		Facade: app.Facade,
+	}
+
 	r.GET("/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "API is up and running")
 	})
@@ -276,6 +280,14 @@ func (app *app) setupRoutes() {
 			creator.PUT("rooms/:id", rooms.PutRoom)
 			creator.DELETE("rooms/:id", rooms.DeleteRoom)
 			creator.PUT("world/rooms-coords", worldRenderer.BatchUpdateCoords)
+
+			// Creator quality diagnostics
+			creator.GET("diagnostics/world", validationHandler.WorldDiagnostics)
+			creator.POST("validate/:entityType", validationHandler.ValidateEntity)
+			creator.POST("preview/dialog", validationHandler.PreviewDialog)
+			creator.POST("preview/quest", validationHandler.PreviewQuest)
+			creator.POST("preview/room", validationHandler.PreviewRoom)
+			creator.POST("preview/merchant", validationHandler.PreviewMerchant)
 
 			// Items
 			creator.POST("items", items.PostItem)

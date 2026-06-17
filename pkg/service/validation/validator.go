@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/talesmud/talesmud/pkg/entities/dialogs"
@@ -10,6 +11,105 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/scripts"
 )
+
+func IsSupportedEntityType(entityType string) bool {
+	switch entityType {
+	case "room", "npc", "dialog", "quest", "loottable", "item", "script", "spawner":
+		return true
+	default:
+		return false
+	}
+}
+
+func ValidateWorld(snapshot WorldSnapshot) Result {
+	result := NewResult()
+	for _, room := range snapshot.Rooms {
+		result.Merge(ValidateRoom(room, snapshot))
+	}
+	for _, n := range snapshot.NPCs {
+		result.Merge(ValidateNPC(n, snapshot))
+	}
+	for _, dialog := range snapshot.Dialogs {
+		result.Merge(ValidateDialog(dialog, snapshot))
+	}
+	for _, quest := range snapshot.Quests {
+		result.Merge(ValidateQuest(quest, snapshot))
+	}
+	for _, table := range snapshot.LootTables {
+		result.Merge(ValidateLootTable(table, snapshot))
+	}
+	for _, item := range snapshot.Items {
+		result.Merge(ValidateItem(item, snapshot))
+	}
+	for _, spawner := range snapshot.Spawners {
+		result.Merge(ValidateSpawner(spawner, snapshot))
+	}
+	roomOnEnterScripts := map[string]bool{}
+	for _, room := range snapshot.Rooms {
+		if room.OnEnterScriptID != "" {
+			roomOnEnterScripts[room.OnEnterScriptID] = true
+		}
+	}
+	for _, script := range snapshot.Scripts {
+		result.Merge(ValidateScript(script, snapshot, roomOnEnterScripts[script.ID]))
+	}
+	return result
+}
+
+func ValidateJSONEntity(entityType string, data []byte, snapshot WorldSnapshot) (Result, error) {
+	switch entityType {
+	case "room":
+		var entity rooms.Room
+		if err := json.Unmarshal(data, &entity); err != nil {
+			return NewResult(), err
+		}
+		return ValidateRoom(&entity, snapshot), nil
+	case "npc":
+		var entity npc.NPC
+		if err := json.Unmarshal(data, &entity); err != nil {
+			return NewResult(), err
+		}
+		return ValidateNPC(&entity, snapshot), nil
+	case "dialog":
+		var entity dialogs.Dialog
+		if err := json.Unmarshal(data, &entity); err != nil {
+			return NewResult(), err
+		}
+		return ValidateDialog(&entity, snapshot), nil
+	case "quest":
+		var entity quests.Quest
+		if err := json.Unmarshal(data, &entity); err != nil {
+			return NewResult(), err
+		}
+		return ValidateQuest(&entity, snapshot), nil
+	case "loottable":
+		var entity items.LootTable
+		if err := json.Unmarshal(data, &entity); err != nil {
+			return NewResult(), err
+		}
+		return ValidateLootTable(&entity, snapshot), nil
+	case "item":
+		var entity items.Item
+		if err := json.Unmarshal(data, &entity); err != nil {
+			return NewResult(), err
+		}
+		return ValidateItem(&entity, snapshot), nil
+	case "script":
+		var entity scripts.Script
+		if err := json.Unmarshal(data, &entity); err != nil {
+			return NewResult(), err
+		}
+		return ValidateScript(&entity, snapshot, false), nil
+	case "spawner":
+		var entity npc.NPCSpawner
+		if err := json.Unmarshal(data, &entity); err != nil {
+			return NewResult(), err
+		}
+		return ValidateSpawner(&entity, snapshot), nil
+	default:
+		return NewResult(), fmt.Errorf("unsupported entity type")
+	}
+}
 
 func ValidateRoom(room *rooms.Room, snapshot WorldSnapshot) Result {
 	result := NewResult()
