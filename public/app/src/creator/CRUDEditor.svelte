@@ -1,7 +1,7 @@
 <script>
   import { onDestroy, onMount } from "svelte";
   import { getAuth } from "../auth.js";
-  import { validateEntityAsync } from "../api/validation.js";
+  import { getWorldDiagnosticsAsync, validateEntityAsync } from "../api/validation.js";
   import DataTable from "./DataTable.svelte";
   import ValidationPanel from "./ValidationPanel.svelte";
 
@@ -19,6 +19,7 @@
   let validationLoading = false;
   let validationUnavailable = "";
   let validationTimer;
+  let issuesByEntity = {};
 
   $: hasValidationErrors = (validationResult?.errors || 0) > 0;
 
@@ -30,10 +31,27 @@
       (all) => {
         store.setElements(all);
         hasLoadedData = true;
+        loadDiagnostics();
         if (cb) cb();
       },
       (err) => console.log(err)
     );
+  };
+
+  const loadDiagnostics = async () => {
+    if (!config.entityType || !$isAuthenticated || !$authToken) return;
+    try {
+      const diagnostics = await getWorldDiagnosticsAsync($authToken);
+      const grouped = {};
+      for (const issue of diagnostics?.issues || []) {
+        if (issue.entityType !== config.entityType || !issue.entityId) continue;
+        if (!grouped[issue.entityId]) grouped[issue.entityId] = [];
+        grouped[issue.entityId].push(issue);
+      }
+      issuesByEntity = grouped;
+    } catch (err) {
+      issuesByEntity = {};
+    }
   };
 
   // Reactively load data when auth becomes available
@@ -181,6 +199,17 @@
     });
   };
 
+  const issueIndicator = (element) => {
+    const issues = issuesByEntity[element.id] || [];
+    if (issues.some((issue) => issue.severity === "error")) {
+      return { color: "#ef4444", title: "Has validation errors" };
+    }
+    if (issues.length) {
+      return { color: "#f59e0b", title: "Has validation warnings" };
+    }
+    return null;
+  };
+
   const labels = {
     create: config?.labels?.create || "Create",
     update: config?.labels?.update || "Update",
@@ -281,7 +310,7 @@
           sortKey={$store.sortKey}
           sortDir={$store.sortDir}
           compact={$store.detailOpen}
-          rowIndicator={config.rowIndicator || null}
+          rowIndicator={config.rowIndicator || issueIndicator}
           on:select={(e) => selectElement(e.detail)}
           on:sort={(e) => store.setSort(e.detail.key, e.detail.dir)}
           on:filterChange={(e) => store.setTableFilter(e.detail.key, e.detail.value)}
