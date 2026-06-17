@@ -9,6 +9,7 @@ import (
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/entities/quests"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
+	"github.com/talesmud/talesmud/pkg/scripts"
 )
 
 func TestResultAddCountsErrorsAndWarnings(t *testing.T) {
@@ -120,6 +121,25 @@ func TestValidateDialogReportsBrokenQuestLink(t *testing.T) {
 
 	if result.Errors != 1 {
 		t.Fatalf("Errors = %d, want 1: %#v", result.Errors, result.Issues)
+	}
+}
+
+func TestValidateLuaScriptReportsUnknownGameFunction(t *testing.T) {
+	script := &scripts.Script{
+		Entity:   &entities.Entity{ID: "script-a"},
+		Name:     "Bad Script",
+		Language: scripts.ScriptLanguageLua,
+		Type:     scripts.ScriptTypeRoom,
+		Code:     `tales.game.nope("x")`,
+	}
+
+	result := ValidateLuaScript(script, true)
+
+	if result.Warnings != 1 {
+		t.Fatalf("Warnings = %d, want 1: %#v", result.Warnings, result.Issues)
+	}
+	if result.Issues[0].Code != "unknown_lua_game_function" {
+		t.Fatalf("Code = %s, want unknown_lua_game_function", result.Issues[0].Code)
 	}
 }
 

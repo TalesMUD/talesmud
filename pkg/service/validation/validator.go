@@ -324,5 +324,5 @@ func ValidateSpawner(spawner *npc.NPCSpawner, snapshot WorldSnapshot) Result {
 }
 
 func ValidateScript(script *scripts.Script, snapshot WorldSnapshot, roomOnEnter bool) Result {
-	return NewResult()
+	return ValidateLuaScript(script, roomOnEnter)
 }
