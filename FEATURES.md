@@ -1602,6 +1602,14 @@ All entity editors use a unified **filterable, sortable data table**:
 />
 ```
 
+### Creator Validation And Diagnostics
+Creator editors share backend validation rules from `pkg/service/validation`:
+- Inline validation panels show errors and warnings for the selected draft entity.
+- Save/update requests for rooms, items, NPCs, NPC spawners, dialogs, loot tables, quests, and scripts reject error-severity broken references before data is stored.
+- World Health runs cross-world diagnostics and reports structured issues with `severity`, `entityType`, `entityId`, `field`, `code`, and `message`.
+- Data table rows surface warning/error indicators when stored entities have diagnostics.
+- Preview/test tools validate draft dialogs, quests, rooms, merchants, and Lua scripts before content is published into the world.
+
 ### Creator Tabs
 1. **Rooms** - Full room editor (exits, actions, spawners, NPCs, items, scripts)
 2. **Items** - Item instances and templates
@@ -1612,7 +1620,8 @@ All entity editors use a unified **filterable, sortable data table**:
 7. **Skills** - Skill/spell editor (multi-class, effects)
 8. **Scripts** - Lua script editor with syntax highlighting
 9. **Character Templates** - Archetype editor with modal item-template selection for starting gear
-10. **World Map** - Grid-based world visualization
+10. **World Health** - Cross-world validation diagnostics and broken-reference review
+11. **World Map** - Grid-based world visualization
 
 ### Room Editor Features
 - **Exit management** - Add/edit/delete exits, toggle hidden
@@ -1653,6 +1662,7 @@ All entity editors use a unified **filterable, sortable data table**:
 ### Script Editor Features
 - **Syntax highlighting** - Lua code highlighting
 - **Test runner** - Execute scripts with test context
+- **Shared validation** - Static Lua checks are shared with import validation and Creator save/preview flows
 - **Type categorization** - item, room, npc, quest, event, custom
 
 ---
