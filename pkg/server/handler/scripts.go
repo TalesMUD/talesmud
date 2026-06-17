@@ -17,6 +17,7 @@ import (
 type ScriptsHandler struct {
 	Service service.ScriptsService
 	Runner  s.ScriptRunner
+	Facade  service.Facade
 }
 
 //GetScripts returns the list of scripts
@@ -46,6 +47,10 @@ func (handler *ScriptsHandler) PostScript(c *gin.Context) {
 	}
 
 	log.WithField("script", script.Name).Info("Creating new script")
+
+	if rejectInvalidScript(c, handler.Facade, &script) {
+		return
+	}
 
 	if script, err := handler.Service.Store(&script); err == nil {
 		c.JSON(http.StatusOK, script)
@@ -123,6 +128,10 @@ func (handler *ScriptsHandler) PutScript(c *gin.Context) {
 	script.Language = scripts.ScriptLanguageLua
 
 	log.WithField("script", script.Name).Info("Updating script")
+
+	if rejectInvalidScript(c, handler.Facade, &script) {
+		return
+	}
 
 	if err := handler.Service.Update(id, &script); err == nil {
 		c.JSON(http.StatusOK, gin.H{"status": "updated script"})
