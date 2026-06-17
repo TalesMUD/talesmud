@@ -12,6 +12,7 @@ import (
 // DialogsHandler handles dialog-related HTTP requests
 type DialogsHandler struct {
 	Service service.DialogsService
+	Facade  service.Facade
 }
 
 // GetDialogs returns all dialogs
@@ -44,6 +45,10 @@ func (h *DialogsHandler) PostDialog(c *gin.Context) {
 
 	log.WithField("dialog", dialog.Name).Info("Creating new dialog")
 
+	if rejectInvalidDialog(c, h.Facade, &dialog) {
+		return
+	}
+
 	if newDialog, err := h.Service.Store(&dialog); err == nil {
 		c.JSON(http.StatusOK, newDialog)
 	} else {
@@ -61,6 +66,10 @@ func (h *DialogsHandler) UpdateDialogByID(c *gin.Context) {
 	}
 
 	log.WithField("dialog", dialog.Name).Info("Updating dialog")
+
+	if rejectInvalidDialog(c, h.Facade, &dialog) {
+		return
+	}
 
 	if err := h.Service.Update(id, &dialog); err == nil {
 		c.JSON(http.StatusOK, gin.H{"status": "updated dialog"})
