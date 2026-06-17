@@ -9,6 +9,7 @@
   import ActionEditor from "./ActionEditor.svelte";
   import SpawnerEditor from "./SpawnerEditor.svelte";
   import RoomItemsModal from "./RoomItemsModal.svelte";
+  import RoomPreviewModal from "./RoomPreviewModal.svelte";
   import EntitySelectButton from "./EntitySelectButton.svelte";
   import { scriptColumns, npcColumns } from "./tableColumns.js";
 
@@ -43,6 +44,7 @@
     getItemTemplates,
     createItemFromTemplate,
   } from "../api/items.js";
+  import { previewRoom } from "../api/previews.js";
 
   // Clone columns so we can populate dynamic dropdown options
   const columns = roomColumns.map((c) => ({ ...c }));
@@ -80,6 +82,8 @@
 
   // Items modal state
   let showItemsModal = false;
+  let showRoomPreview = false;
+  let roomPreview = null;
 
   // Residents (unique NPCs) state
   let selectedResidentId = "";
@@ -160,12 +164,34 @@
     });
   };
 
+  const runRoomPreview = () => {
+    if (!$isAuthenticated || !$authToken || !$store.selectedElement) return;
+    previewRoom(
+      $authToken,
+      $store.selectedElement,
+      (preview) => {
+        roomPreview = preview;
+        showRoomPreview = true;
+      },
+      (err) => {
+        console.error("Failed to preview room:", err);
+        alert("Failed to preview room. Please try again.");
+      }
+    );
+  };
+
   config.extraActions = [
     {
       label: "Create Room",
       icon: "add_box",
       variant: "btn-outline",
       onClick: createNewRoom,
+    },
+    {
+      label: "Preview Room",
+      icon: "visibility",
+      variant: "btn-outline",
+      onClick: runRoomPreview,
     },
   ];
 
@@ -1085,6 +1111,12 @@
   itemTemplates={$itemTemplates}
   on:close={handleItemsModalClose}
   on:createFromTemplate={handleCreateItemFromTemplate}
+/>
+
+<RoomPreviewModal
+  open={showRoomPreview}
+  preview={roomPreview}
+  on:close={() => showRoomPreview = false}
 />
 
 <style>

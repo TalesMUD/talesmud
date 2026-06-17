@@ -3,6 +3,7 @@
   import { v4 as uuidv4 } from "uuid";
   import CRUDEditor from "./CRUDEditor.svelte";
   import { createStore } from "./CRUDEditorStore.js";
+  import MerchantPreviewModal from "./MerchantPreviewModal.svelte";
   import EntitySelectButton from "./EntitySelectButton.svelte";
   import { getAuth } from "../auth.js";
 
@@ -17,6 +18,7 @@
   import { getRoomsValueHelp } from "../api/rooms.js";
   import { npcColumns, dialogColumns, roomColumns } from "./tableColumns.js";
   import { knownRaces, knownClasses } from "./fieldSuggestions.js";
+  import { previewMerchant } from "../api/previews.js";
 
   // Clone columns so we can populate dynamic dropdown options
   const columns = npcColumns.map((c) => ({ ...c }));
@@ -36,6 +38,8 @@
   const store = createStore();
   let hasLoadedDialogs = false;
   let hasLoadedRooms = false;
+  let showMerchantPreview = false;
+  let merchantPreview = null;
 
   let levels = [];
   for (let i = 1; i <= 50; i += 1) levels.push(i);
@@ -162,6 +166,31 @@
       return { color: "#64748b", title: "Neutral" };
     },
   };
+
+  const runMerchantPreview = () => {
+    if (!$isAuthenticated || !$authToken || !$store.selectedElement) return;
+    previewMerchant(
+      $authToken,
+      $store.selectedElement,
+      (preview) => {
+        merchantPreview = preview;
+        showMerchantPreview = true;
+      },
+      (err) => {
+        console.error("Failed to preview merchant:", err);
+        alert("Failed to preview merchant. Please try again.");
+      }
+    );
+  };
+
+  config.extraActions = [
+    {
+      label: "Preview Merchant",
+      icon: "storefront",
+      variant: "btn-outline",
+      onClick: runMerchantPreview,
+    },
+  ];
 
   const toggleEnemyTrait = () => {
     store.update((state) => {
@@ -518,6 +547,12 @@
     </div>
   </div>
 </CRUDEditor>
+
+<MerchantPreviewModal
+  open={showMerchantPreview}
+  preview={merchantPreview}
+  on:close={() => showMerchantPreview = false}
+/>
 
 <style>
   /* Tab Styles */
