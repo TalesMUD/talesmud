@@ -21,3 +21,20 @@ func TestResultAddCountsErrorsAndWarnings(t *testing.T) {
 		t.Fatalf("Issues length = %d, want 2", len(result.Issues))
 	}
 }
+
+func TestSnapshotHasRoomAndScriptLookupHelpers(t *testing.T) {
+	snapshot := WorldSnapshot{
+		RoomIDs:   map[string]bool{"room-a": true},
+		ScriptIDs: map[string]bool{"script-a": true},
+	}
+
+	if !snapshot.HasRoom("room-a") {
+		t.Fatalf("HasRoom(room-a) = false, want true")
+	}
+	if snapshot.HasRoom("missing-room") {
+		t.Fatalf("HasRoom(missing-room) = true, want false")
+	}
+	if !snapshot.HasScript("script-a") {
+		t.Fatalf("HasScript(script-a) = false, want true")
+	}
+}
