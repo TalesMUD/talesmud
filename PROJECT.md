@@ -149,6 +149,8 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Character template editor with archetype selection and starting gear
   - Skills editor with multi-class assignment, resource types, effects, and secondary effects
   - World map visualization (GridWorldEditor)
+  - Creator quality validation: inline warnings/errors, broken-reference detection, save blocking for invalid references, and a world health diagnostics tab
+  - Preview/test tools for dialogs, quests, rooms, merchants, and Lua scripts
   - CRUD operations with live preview
 
 - **Scripting System**
@@ -476,6 +478,9 @@ go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
 - `POST/PUT/DELETE /api/dialogs` - Dialog management
 - `POST/PUT/DELETE /api/quests` - Quest management
 - `POST/PUT/DELETE /api/skills` - Skill management
+- `GET /api/diagnostics/world` - World health diagnostics across rooms, NPCs, dialogs, quests, loot, items, and scripts
+- `POST /api/validate/:entityType` - Validate a draft Creator entity before save
+- `POST /api/preview/dialog`, `/api/preview/quest`, `/api/preview/room`, `/api/preview/merchant` - Preview/test draft content with validation issues
 - `PUT /api/settings` - Server settings
 
 ### Admin API Endpoints (Require Admin Role)

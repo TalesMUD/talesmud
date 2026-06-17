@@ -98,6 +98,9 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
     ├── dialogs/           # Dialog CRUD (creator level for writes)
     ├── quests/            # Quest CRUD (creator for writes)
     ├── quest-progress/    # Quest log per character (owner/admin)
+    ├── diagnostics/world  # Creator world health diagnostics
+    ├── validate/:entityType # Draft Creator entity validation
+    ├── preview/dialog|quest|room|merchant # Draft preview/test endpoints
     ├── user               # User profile (player level)
     ├── admin/
     │   └── users/         # User management (admin only)
@@ -597,6 +600,10 @@ type Facade interface {
 | QuestsService | Quest definition CRUD, quest progress tracking, accept/abandon/complete quests, objective progress, prerequisite checks |
 | SkillsService | Skill CRUD, DB seeding on first run, in-memory cache refresh on mutations |
 | GuestService | Guest session creation, HMAC token signing/validation, expired guest cleanup, IP rate limiting |
+
+#### Creator Validation Service
+
+`pkg/service/validation` provides shared validation rules for Creator-authored content. It loads a `WorldSnapshot` from the facade, validates draft JSON entities and stored world data, and returns structured issues with severity, entity type, entity ID, field path, code, and message. Creator save handlers use the same rules to reject broken references before writes, and `/api/diagnostics/world` runs the rules across the whole world for health checks.
 
 ### Repository Layer (`pkg/repository/`)
 
@@ -1219,8 +1226,10 @@ App.svelte (role-aware navigation: Creator/Admin links gated by user role)
 │   │   └── CharacterCreator.svelte
 │   ├── Creator.svelte (editor, creator/admin role)
 │   │   ├── CRUDEditor.svelte (shared master-detail layout)
+│   │   │   ├── ValidationPanel.svelte (inline validation issues)
 │   │   │   ├── DataTable.svelte (filterable, sortable data table)
 │   │   │   └── DataTableFilterBar.svelte (per-column filter inputs)
+│   │   ├── WorldHealth.svelte (world diagnostics)
 │   │   ├── RoomsEditor.svelte
 │   │   ├── ItemsEditor.svelte
 │   │   ├── ItemTemplatesEditor.svelte
@@ -1246,6 +1255,8 @@ All entity editors (Rooms, Items, Item Templates, NPCs, Dialogs, Quests, Scripts
 - **Column definitions**: Defined in `tableColumns.js` per entity type, supporting text, number, select, boolean, and computed column types.
 - **Client-side filtering**: Instant filtering on the full preloaded dataset with per-column filter inputs (text search, dropdowns for enums). No API calls per filter change.
 - **Client-side sorting**: Click column headers to sort (ascending → descending → none).
+- **Inline validation**: Editors with an `entityType` call `/api/validate/:entityType` for draft validation, show broken-reference warnings/errors through `ValidationPanel`, and disable save while error-severity issues are present.
+- **World health diagnostics**: `WorldHealth.svelte` calls `/api/diagnostics/world` to list cross-entity issues and surface row indicators in Creator tables.
 
 ### State Management
 
