@@ -2,38 +2,10 @@ package importer
 
 import (
 	"fmt"
-	"regexp"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
-)
-
-// knownGameFunctions lists all valid tales.game.* function names with their required argument counts.
-// Source of truth: pkg/scripts/runner/lua/modules/game.go
-var knownGameFunctions = map[string]int{
-	"msgToRoom":          2, // (roomID, message)
-	"msgToCharacter":     2, // (characterID, message)
-	"msgToUser":          2, // (userID, message)
-	"broadcast":          1, // (message)
-	"msgToRoomExcept":    3, // (roomID, message, excludeCharacterID)
-	"log":                2, // (level, message)
-	"hasItem":            2, // (characterID, itemID)
-	"getFlag":            2, // (characterID, flagName)
-	"setFlag":            3, // (characterID, flagName, value)
-	"revealExit":         3, // (roomID, exitName, characterID)
-	"hasRevealedExit":    3, // (characterID, roomID, exitName)
-	"giveItem":           2, // (characterID, templateID)
-	"hasEquipped":        2, // (characterID, slotName)
-	"hasCollectedItem":   2, // (characterID, templateID)
-	"resetCollectedItem": 2, // (characterID, templateID)
-}
-
-// Regex patterns for Lua script analysis
-var (
-	// Matches tales.game.functionName( capturing the function name
-	reGameCall = regexp.MustCompile(`tales\.game\.(\w+)\s*\(`)
-	// Matches ctx.roomID usage (only valid in action scripts, not room scripts)
-	reCtxRoomID = regexp.MustCompile(`ctx\.roomID\b`)
+	"github.com/talesmud/talesmud/pkg/scripts"
+	"github.com/talesmud/talesmud/pkg/service/validation"
 )
 
 // validateData runs all consistency checks on loaded YAML data.
@@ -291,137 +263,19 @@ func checkDuplicateIDs[T any](w *WorldImporter, entityType string, entities []*T
 // - Wrong argument counts for known functions
 // - Context variable misuse (ctx.roomID in onEnter scripts)
 func (w *WorldImporter) validateScriptCode(scriptID, scriptName, scriptType, code string, isOnEnterScript bool) int {
+	result := validation.ValidateLuaScript(&scripts.Script{
+		Entity:      nil,
+		Name:        scriptName,
+		Code:        code,
+		Type:        scripts.ScriptType(scriptType),
+		Language:    scripts.ScriptLanguageLua,
+	}, isOnEnterScript)
 	warnings := 0
-
-	// Check for unknown tales.game.* calls and wrong argument counts
-	matches := reGameCall.FindAllStringSubmatchIndex(code, -1)
-	for _, loc := range matches {
-		funcName := code[loc[2]:loc[3]]
-		callStart := loc[0]
-		parenStart := loc[1] - 1 // Position of the '('
-
-		expectedArgs, known := knownGameFunctions[funcName]
-		if !known {
-			w.addValidation("Script %s (%s): calls unknown function tales.game.%s()", scriptID, scriptName, funcName)
-			warnings++
-			continue
-		}
-
-		// Count arguments by finding the matching ')' and counting top-level commas
-		argCount := countArguments(code, parenStart)
-		if argCount >= 0 && argCount != expectedArgs {
-			// Extract a short snippet around the call for context
-			snippet := extractSnippet(code, callStart, 80)
-			w.addValidation("Script %s (%s): tales.game.%s() called with %d args, expected %d — %s",
-				scriptID, scriptName, funcName, argCount, expectedArgs, snippet)
+	for _, issue := range result.Issues {
+		if issue.Severity == validation.SeverityWarning {
+			w.addValidation("%s", issue.Message)
 			warnings++
 		}
 	}
-
-	// Check for ctx.roomID usage in onEnter scripts (should use ctx.room.ID)
-	if isOnEnterScript || scriptType == "room" {
-		if reCtxRoomID.MatchString(code) {
-			w.addValidation("Script %s (%s): uses ctx.roomID in a room-type script (onEnter); use ctx.room.ID instead", scriptID, scriptName)
-			warnings++
-		}
-	}
-
 	return warnings
-}
-
-// countArguments counts the number of arguments in a function call starting at the '(' position.
-// Returns -1 if it can't reliably determine the count (e.g., multiline with complex nesting).
-func countArguments(code string, parenPos int) int {
-	if parenPos >= len(code) || code[parenPos] != '(' {
-		return -1
-	}
-
-	depth := 0
-	commas := 0
-	inString := false
-	stringChar := byte(0)
-	hasContent := false
-
-	for i := parenPos; i < len(code); i++ {
-		ch := code[i]
-
-		// Handle string literals
-		if inString {
-			if ch == stringChar && (i == 0 || code[i-1] != '\\') {
-				inString = false
-			}
-			continue
-		}
-
-		// Handle Lua long strings [[ ... ]]
-		if ch == '[' && i+1 < len(code) && code[i+1] == '[' {
-			// Skip to matching ]]
-			end := strings.Index(code[i+2:], "]]")
-			if end >= 0 {
-				i += 2 + end + 1
-			}
-			hasContent = true
-			continue
-		}
-
-		if ch == '"' || ch == '\'' {
-			inString = true
-			stringChar = ch
-			hasContent = true
-			continue
-		}
-
-		// Handle Lua line comments
-		if ch == '-' && i+1 < len(code) && code[i+1] == '-' {
-			// Skip to end of line
-			nl := strings.IndexByte(code[i:], '\n')
-			if nl >= 0 {
-				i += nl
-			} else {
-				i = len(code) - 1
-			}
-			continue
-		}
-
-		switch ch {
-		case '(':
-			depth++
-		case ')':
-			depth--
-			if depth == 0 {
-				if !hasContent {
-					return 0 // empty parens: f()
-				}
-				return commas + 1
-			}
-		case ',':
-			if depth == 1 {
-				commas++
-			}
-		default:
-			if depth == 1 && ch != ' ' && ch != '\t' && ch != '\n' && ch != '\r' {
-				hasContent = true
-			}
-		}
-	}
-
-	return -1 // unmatched parens
-}
-
-// extractSnippet returns a short code snippet around the given position for error messages.
-func extractSnippet(code string, pos, maxLen int) string {
-	end := pos + maxLen
-	if end > len(code) {
-		end = len(code)
-	}
-	snippet := code[pos:end]
-	// Trim to end of the line containing the call
-	if nl := strings.IndexByte(snippet, '\n'); nl >= 0 {
-		snippet = snippet[:nl]
-	}
-	snippet = strings.TrimSpace(snippet)
-	if len(snippet) > maxLen {
-		snippet = snippet[:maxLen-3] + "..."
-	}
-	return snippet
 }
