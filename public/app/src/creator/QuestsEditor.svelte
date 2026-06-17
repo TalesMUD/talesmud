@@ -181,10 +181,246 @@
     $store.selectedElement.requiredQuestIds =
       $store.selectedElement.requiredQuestIds.filter((_, i) => i !== index);
   }
+
+  function hasText(value) {
+    return String(value || "").trim().length > 0;
+  }
+
+  function findEntity(list, id) {
+    if (!id) return null;
+    return (list || []).find((entity) => entity.id === id) || null;
+  }
+
+  function entityLabel(list, id, fallback = "Unselected") {
+    if (!id) return fallback;
+    const entity = findEntity(list, id);
+    return entity?.name || entity?.id || id;
+  }
+
+  function requiredAmount(obj) {
+    return Number(obj?.amount) > 0 ? Number(obj.amount) : 1;
+  }
+
+  function addIssue(issues, severity, text) {
+    issues.push({ severity, text });
+  }
+
+  function validateQuest(quest) {
+    if (!quest) return [];
+
+    const issues = [];
+    const source = quest.source || {};
+    const objectives = quest.objectives || [];
+    const rewards = quest.rewards || {};
+    const seenObjectiveIds = new Map();
+
+    if (!hasText(quest.name)) addIssue(issues, "error", "Quest name is required.");
+    if (!hasText(quest.description)) addIssue(issues, "error", "Quest description is required.");
+    if (!hasText(source.type)) addIssue(issues, "error", "Source type is required.");
+
+    if (source.type === "npc") {
+      if (!hasText(source.npcId)) addIssue(issues, "error", "NPC-sourced quests need a source NPC.");
+      else if (!findEntity($npcList, source.npcId)) addIssue(issues, "error", `Source NPC '${source.npcId}' was not found.`);
+    } else if (source.type === "item") {
+      if (!hasText(source.itemId)) addIssue(issues, "error", "Item-sourced quests need a source item template.");
+      else if (!findEntity($itemTemplateList, source.itemId)) addIssue(issues, "error", `Source item '${source.itemId}' was not found.`);
+    } else if (source.type === "script") {
+      addIssue(issues, "info", "Script-sourced quests are accepted by Lua or custom server flow.");
+    } else if (source.type && !["auto", "script"].includes(source.type)) {
+      addIssue(issues, "error", `Source type '${source.type}' is not supported.`);
+    }
+
+    if (objectives.length === 0) {
+      addIssue(issues, "error", "Add at least one objective.");
+    }
+
+    objectives.forEach((obj, index) => {
+      const path = `Objective ${index + 1}`;
+
+      if (!hasText(obj.id)) {
+        addIssue(issues, "error", `${path} needs an ID.`);
+      } else if (seenObjectiveIds.has(obj.id)) {
+        addIssue(issues, "error", `${path} duplicates objective ID '${obj.id}'.`);
+      } else {
+        seenObjectiveIds.set(obj.id, index);
+      }
+
+      if (!hasText(obj.description)) addIssue(issues, "error", `${path} needs player-facing description text.`);
+      if (Number(obj.amount) < 0) addIssue(issues, "error", `${path} amount cannot be negative.`);
+
+      if (obj.type === "kill") {
+        if (!hasText(obj.targetId)) addIssue(issues, "error", `${path} needs a target NPC.`);
+        else if (!findEntity($npcList, obj.targetId)) addIssue(issues, "error", `${path} target NPC '${obj.targetId}' was not found.`);
+      } else if (obj.type === "collect") {
+        if (!hasText(obj.targetId)) addIssue(issues, "error", `${path} needs a target item template.`);
+        else if (!findEntity($itemTemplateList, obj.targetId)) addIssue(issues, "error", `${path} target item '${obj.targetId}' was not found.`);
+      } else if (obj.type === "deliver") {
+        if (!hasText(obj.targetId)) addIssue(issues, "error", `${path} needs a delivery item template.`);
+        else if (!findEntity($itemTemplateList, obj.targetId)) addIssue(issues, "error", `${path} delivery item '${obj.targetId}' was not found.`);
+        if (!hasText(obj.deliverToNpcId)) addIssue(issues, "error", `${path} needs a delivery NPC.`);
+        else if (!findEntity($npcList, obj.deliverToNpcId)) addIssue(issues, "error", `${path} delivery NPC '${obj.deliverToNpcId}' was not found.`);
+      } else if (obj.type === "visit") {
+        if (!hasText(obj.targetId)) addIssue(issues, "error", `${path} needs a target room.`);
+        else if (!findEntity($roomList, obj.targetId)) addIssue(issues, "error", `${path} target room '${obj.targetId}' was not found.`);
+      } else if (obj.type === "talk") {
+        if (!hasText(obj.targetId) && !hasText(obj.dialogNodeId)) {
+          addIssue(issues, "error", `${path} needs a target NPC or dialog node.`);
+        }
+        if (hasText(obj.targetId) && !findEntity($npcList, obj.targetId)) {
+          addIssue(issues, "error", `${path} target NPC '${obj.targetId}' was not found.`);
+        }
+        if (hasText(obj.dialogNodeId) && !findEntity($dialogList, obj.dialogNodeId)) {
+          addIssue(issues, "error", `${path} dialog '${obj.dialogNodeId}' was not found.`);
+        }
+      } else if (obj.type === "custom") {
+        if (!hasText(obj.checkScriptId)) addIssue(issues, "error", `${path} needs a check script.`);
+        else if (!findEntity($scriptList, obj.checkScriptId)) addIssue(issues, "error", `${path} check script '${obj.checkScriptId}' was not found.`);
+      } else {
+        addIssue(issues, "error", `${path} type is required.`);
+      }
+    });
+
+    if (Number(rewards.xp) < 0) addIssue(issues, "error", "XP reward cannot be negative.");
+    if (Number(rewards.gold) < 0) addIssue(issues, "error", "Gold reward cannot be negative.");
+    (rewards.itemTemplateIds || []).forEach((itemId, index) => {
+      if (!hasText(itemId)) addIssue(issues, "error", `Reward item ${index + 1} cannot be empty.`);
+      else if (!findEntity($itemTemplateList, itemId)) addIssue(issues, "error", `Reward item '${itemId}' was not found.`);
+    });
+
+    (quest.requiredQuestIds || []).forEach((questId, index) => {
+      if (!hasText(questId)) addIssue(issues, "error", `Required quest ${index + 1} cannot be empty.`);
+      else if (questId === quest.id) addIssue(issues, "error", "A quest cannot require itself.");
+      else if (!findEntity($questList, questId)) addIssue(issues, "error", `Required quest '${questId}' was not found.`);
+    });
+
+    if (hasText(quest.onCompleteScriptId) && !findEntity($scriptList, quest.onCompleteScriptId)) {
+      addIssue(issues, "error", `On-complete script '${quest.onCompleteScriptId}' was not found.`);
+    }
+
+    if (!issues.some((issue) => issue.severity === "error")) {
+      addIssue(issues, "success", "Quest definition is ready for server validation.");
+    }
+
+    return issues;
+  }
+
+  function objectivePreview(obj, index) {
+    const count = requiredAmount(obj);
+    if (obj.type === "kill") return `${index + 1}. Kill ${count} x ${entityLabel($npcList, obj.targetId, "NPC")}`;
+    if (obj.type === "collect") return `${index + 1}. Collect ${count} x ${entityLabel($itemTemplateList, obj.targetId, "item")}`;
+    if (obj.type === "deliver") return `${index + 1}. Deliver ${entityLabel($itemTemplateList, obj.targetId, "item")} to ${entityLabel($npcList, obj.deliverToNpcId, "NPC")}`;
+    if (obj.type === "visit") return `${index + 1}. Visit ${entityLabel($roomList, obj.targetId, "room")}`;
+    if (obj.type === "talk") return `${index + 1}. Talk to ${entityLabel($npcList, obj.targetId, "NPC or dialog")}`;
+    if (obj.type === "custom") return `${index + 1}. Run check script ${entityLabel($scriptList, obj.checkScriptId, "script")}`;
+    return `${index + 1}. Configure objective`;
+  }
+
+  function sourcePreview(quest) {
+    const source = quest?.source || {};
+    if (source.type === "npc") return `Offered by ${entityLabel($npcList, source.npcId, "an NPC")}`;
+    if (source.type === "item") return `Started from ${entityLabel($itemTemplateList, source.itemId, "an item")}`;
+    if (source.type === "auto") return "Automatically available when prerequisites are met";
+    if (source.type === "script") return "Started by Lua or custom server flow";
+    return "Source not configured";
+  }
+
+  function turnInPreview(quest) {
+    const source = quest?.source || {};
+    const deliveryObjective = (quest?.objectives || []).find((obj) => obj.type === "deliver" && obj.deliverToNpcId);
+    if (deliveryObjective) return `Ready turn-in: ${entityLabel($npcList, deliveryObjective.deliverToNpcId, "delivery NPC")}`;
+    if (source.type === "npc" && source.npcId) return `Ready turn-in: ${entityLabel($npcList, source.npcId, "source NPC")}`;
+    return "Ready turn-in: complete through quest action or script";
+  }
+
+  function rewardsPreview(quest) {
+    const rewards = quest?.rewards || {};
+    const parts = [];
+    if (Number(rewards.xp) > 0) parts.push(`${rewards.xp} XP`);
+    if (Number(rewards.gold) > 0) parts.push(`${rewards.gold} gold`);
+    if ((rewards.itemTemplateIds || []).length > 0) {
+      parts.push(`${rewards.itemTemplateIds.length} item reward(s)`);
+    }
+    return parts.length ? parts.join(", ") : "No rewards configured";
+  }
+
+  $: questValidationIssues = validateQuest($store.selectedElement);
+  $: questValidationErrors = questValidationIssues.filter((issue) => issue.severity === "error");
 </script>
 
 <CRUDEditor {store} {config}>
   <div slot="content" class="space-y-6">
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <section
+        class={`rounded-lg border p-4 space-y-3 ${
+          questValidationErrors.length
+            ? "border-red-500/40 bg-red-950/10"
+            : "border-emerald-500/30 bg-emerald-950/10"
+        }`}
+      >
+        <div class="flex items-center justify-between gap-3">
+          <h3 class="label-caps">Validation</h3>
+          <span
+            class={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded ${
+              questValidationErrors.length
+                ? "bg-red-500/15 text-red-300"
+                : "bg-emerald-500/15 text-emerald-300"
+            }`}
+          >
+            {questValidationErrors.length ? `${questValidationErrors.length} issue(s)` : "Ready"}
+          </span>
+        </div>
+        <ul class="space-y-2 text-sm">
+          {#each questValidationIssues as issue}
+            <li
+              class={`flex gap-2 ${
+                issue.severity === "error"
+                  ? "text-red-300"
+                  : issue.severity === "success"
+                    ? "text-emerald-300"
+                    : "text-slate-300"
+              }`}
+            >
+              <span class="material-symbols-outlined text-base mt-0.5">
+                {issue.severity === "error" ? "error" : issue.severity === "success" ? "check_circle" : "info"}
+              </span>
+              <span>{issue.text}</span>
+            </li>
+          {/each}
+        </ul>
+      </section>
+
+      <section class="rounded-lg border border-slate-700/60 bg-slate-950/20 p-4 space-y-3">
+        <div class="flex items-center justify-between gap-3">
+          <h3 class="label-caps">Player Flow Preview</h3>
+          <span class="text-[10px] uppercase tracking-wider text-slate-400">
+            {($store.selectedElement.objectives || []).length} objective(s)
+          </span>
+        </div>
+        <div class="space-y-2 text-sm text-slate-300">
+          <div class="flex gap-2">
+            <span class="material-symbols-outlined text-base text-amber-300">flag</span>
+            <span>{sourcePreview($store.selectedElement)}</span>
+          </div>
+          <div class="space-y-1">
+            {#each $store.selectedElement.objectives || [] as obj, i}
+              <div class="flex gap-2">
+                <span class="material-symbols-outlined text-base text-sky-300">checklist</span>
+                <span>{objectivePreview(obj, i)}</span>
+              </div>
+            {/each}
+          </div>
+          <div class="flex gap-2">
+            <span class="material-symbols-outlined text-base text-yellow-300">notifications</span>
+            <span>{turnInPreview($store.selectedElement)}</span>
+          </div>
+          <div class="flex gap-2">
+            <span class="material-symbols-outlined text-base text-emerald-300">redeem</span>
+            <span>{rewardsPreview($store.selectedElement)}</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
     <!-- General Settings -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div class="space-y-1.5">
