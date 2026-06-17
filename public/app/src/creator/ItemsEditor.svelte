@@ -23,6 +23,7 @@
 
   const config = {
     title: "Manage Items",
+    entityType: "item",
     subtitle: "Create and update live items in the world.",
     listTitle: "Items",
     columns: columns,

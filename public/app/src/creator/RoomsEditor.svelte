@@ -116,6 +116,7 @@
 
   const config = {
     title: "Manage Rooms",
+    entityType: "room",
     subtitle: "Configure environment, exits, and NPC populations.",
     listTitle: "Rooms",
     columns: columns,

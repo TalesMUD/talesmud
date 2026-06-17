@@ -105,6 +105,7 @@
 
   const config = {
     title: "Manage NPCs",
+    entityType: "npc",
     subtitle: "Configure NPC profiles, traits, and dialog bindings.",
     listTitle: "NPCs",
     columns: columns,

@@ -43,6 +43,7 @@
 
   const config = {
     title: "Manage Dialogs",
+    entityType: "dialog",
     subtitle: "Author NPC dialog trees and alternate text responses.",
     listTitle: "Dialogs",
     columns: dialogColumns,

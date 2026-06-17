@@ -84,6 +84,7 @@
 
   const config = {
     title: "Manage Quests",
+    entityType: "quest",
     subtitle: "Create and configure quests with objectives and rewards.",
     listTitle: "Quests",
     columns: questColumns,

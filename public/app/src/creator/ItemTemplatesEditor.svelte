@@ -102,6 +102,7 @@
 
   const config = {
     title: "Item Template Editor",
+    entityType: "item",
     subtitle: "Design base attributes and script behaviors for world items.",
     listTitle: "Templates",
     columns: columns,
