@@ -2,7 +2,7 @@
   export let npcName = "";
   export let npcText = "";
   export let options = [];
-  export let npcType = "npc"; // "enemy", "merchant", or "npc"
+  export let npcType = "npc"; // "enemy", "merchant", "quest", or "npc"
   export let sendMessage;
 
   function handleOption(index) {
@@ -16,6 +16,8 @@
         return "swords";
       case "merchant":
         return "store";
+      case "quest":
+        return "assignment";
       default:
         return "person";
     }
@@ -28,9 +30,15 @@
         return "icon-enemy";
       case "merchant":
         return "icon-merchant";
+      case "quest":
+        return "icon-quest";
       default:
         return "icon-npc";
     }
+  }
+
+  function isQuestOption(option) {
+    return option?.text?.startsWith("[Quest]") || option?.text?.startsWith("[Turn In]");
   }
 </script>
 
@@ -94,6 +102,12 @@
     color: #86efac;
   }
 
+  .icon-quest {
+    background: rgba(245, 158, 11, 0.2);
+    border: 2px solid rgba(245, 158, 11, 0.5);
+    color: #fcd34d;
+  }
+
   .icon-npc {
     background: rgba(59, 130, 246, 0.2);
     border: 2px solid rgba(59, 130, 246, 0.5);
@@ -115,6 +129,10 @@
     background: rgba(255, 255, 255, 0.05);
     border-radius: 8px;
     border-left: 3px solid rgba(59, 130, 246, 0.5);
+  }
+
+  .dialog-text.quest {
+    border-left-color: rgba(245, 158, 11, 0.65);
   }
 
   .dialog-options {
@@ -144,6 +162,17 @@
     transform: translateX(4px);
   }
 
+  .dialog-option-btn.quest {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.35);
+    color: #fcd34d;
+  }
+
+  .dialog-option-btn.quest:hover {
+    background: rgba(245, 158, 11, 0.25);
+    border-color: rgba(245, 158, 11, 0.55);
+  }
+
   .dialog-option-btn:active {
     transform: translateX(2px);
   }
@@ -159,6 +188,10 @@
     font-weight: 600;
     font-size: 0.9em;
     flex-shrink: 0;
+  }
+
+  .dialog-option-btn.quest .option-index {
+    background: rgba(245, 158, 11, 0.28);
   }
 
   .option-text {
@@ -204,7 +237,7 @@
     <span class="npc-name">{npcName}</span>
   </div>
 
-  <div class="dialog-text">
+  <div class="dialog-text" class:quest={npcType === "quest"}>
     {npcText}
   </div>
 
@@ -213,6 +246,7 @@
       {#each options as option}
         <button
           class="dialog-option-btn"
+          class:quest={isQuestOption(option)}
           on:click={() => handleOption(option.index)}
         >
           <span class="option-index">{option.index}</span>

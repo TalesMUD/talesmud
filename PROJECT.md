@@ -152,7 +152,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - **Entity Selection Modal**: All entity ID selectors (rooms, NPCs, items, scripts, dialogs, quests, character template starting items) use a centered modal dialog with a full filterable DataTable instead of simple dropdowns. This scales to hundreds of entries with per-column search, sort, and filter support. Components: `EntitySelectButton` (inline trigger) + `EntitySelectModal` (table dialog). **UI Guideline: Never use `<select>` dropdowns for entity ID references. Always use `EntitySelectButton` with the appropriate column definitions from `tableColumns.js`.**
   - Room editor with exit, action, spawner, items, and NPC resident configuration
   - Item and item template management with attributes and properties
-  - NPC editor with enemy and merchant trait configuration, including merchant stock, pricing, and restock settings
+  - NPC editor with behavior controls for state, spawn room, wander radius, patrol paths, idle chatter, enemy traits, and merchant traits
   - Lua script editor with syntax highlighting and integrated test runner
   - Dialog tree editor with options and alternate texts
   - Quest editor with validation and player flow preview for source, objectives, turn-in, and rewards
@@ -349,12 +349,6 @@ The NPCs branch represents the latest development work, focusing on NPC systems 
    - Dialog exit markers
    - YAML serialization for dialog definitions
 
-#### In Progress
-
-- Integration of dialog system into game commands
-- Talk/speak command implementation
-- Frontend dialog UI
-
 4. **Auto-Attack Combat System**
    - Automatic combat rounds (players and NPCs auto-attack each turn)
    - Turn-order initiative system with auto-processing
@@ -362,11 +356,12 @@ The NPCs branch represents the latest development work, focusing on NPC systems 
    - Combat starts with `attack`/`kill` and proceeds automatically
    - No turn timeouts or AFK mechanics needed
 
-#### Planned Features
-
-- Quest-giving NPCs
-- NPC movement and patrol paths
-- More authored quest content
+5. **NPC Behavior and Quest Interaction**
+   - NPC update loop handles idle wandering, ordered patrol paths, respawn cleanup, and idle chatter cooldowns
+   - `talk` and `speak` open NPC dialogs and inject quest offer/progress/turn-in options
+   - Quest-giving NPCs without a main dialog open quest-only conversations for numbered quest choices
+   - MUD client NPC cards show enemy, merchant, quest giver, dialog, idle chatter, and current state badges
+   - Creator NPC editor exposes behavior controls and uses modal entity selectors for patrol and room references
 
 ### Recent Commits (NPCs Branch)
 

@@ -110,15 +110,18 @@ func NewMultiResponse(responses ...MessageResponse) MultiResponse {
 
 // RoomNPC represents NPC data sent to the frontend for UI rendering
 type RoomNPC struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	DisplayName string `json:"displayName"` // includes #1, #2 suffix for duplicates
-	IsEnemy     bool   `json:"isEnemy"`
-	IsMerchant  bool   `json:"isMerchant"`
-	CurrentHP   int32  `json:"currentHp,omitempty"`
-	MaxHP       int32  `json:"maxHp,omitempty"`
-	Level       int32  `json:"level,omitempty"`
-	State       string `json:"state"` // idle, combat, dead
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	DisplayName   string `json:"displayName"` // includes #1, #2 suffix for duplicates
+	IsEnemy       bool   `json:"isEnemy"`
+	IsMerchant    bool   `json:"isMerchant"`
+	IsQuestGiver  bool   `json:"isQuestGiver"`
+	HasDialog     bool   `json:"hasDialog"`
+	HasIdleDialog bool   `json:"hasIdleDialog"`
+	CurrentHP     int32  `json:"currentHp,omitempty"`
+	MaxHP         int32  `json:"maxHp,omitempty"`
+	Level         int32  `json:"level,omitempty"`
+	State         string `json:"state"` // idle, patrol, combat, dead
 }
 
 // RoomPlayer represents player character data sent to the frontend for UI rendering
@@ -153,15 +156,18 @@ func NewEnterRoomMessage(room *rooms.Room, user *entities.User, game def.GameCtr
 	npcs := make([]RoomNPC, len(roomNPCs))
 	for i, n := range roomNPCs {
 		npcs[i] = RoomNPC{
-			ID:          n.ID,
-			Name:        n.Name,
-			DisplayName: n.DisplayName,
-			IsEnemy:     n.IsEnemy,
-			IsMerchant:  n.IsMerchant,
-			CurrentHP:   n.CurrentHP,
-			MaxHP:       n.MaxHP,
-			Level:       n.Level,
-			State:       n.State,
+			ID:            n.ID,
+			Name:          n.Name,
+			DisplayName:   n.DisplayName,
+			IsEnemy:       n.IsEnemy,
+			IsMerchant:    n.IsMerchant,
+			IsQuestGiver:  n.IsQuestGiver,
+			HasDialog:     n.HasDialog,
+			HasIdleDialog: n.HasIdleDialog,
+			CurrentHP:     n.CurrentHP,
+			MaxHP:         n.MaxHP,
+			Level:         n.Level,
+			State:         n.State,
 		}
 	}
 
@@ -199,15 +205,18 @@ func NewRoomUpdateMessage(room *rooms.Room, user *entities.User, game def.GameCt
 	npcs := make([]RoomNPC, len(roomNPCs))
 	for i, n := range roomNPCs {
 		npcs[i] = RoomNPC{
-			ID:          n.ID,
-			Name:        n.Name,
-			DisplayName: n.DisplayName,
-			IsEnemy:     n.IsEnemy,
-			IsMerchant:  n.IsMerchant,
-			CurrentHP:   n.CurrentHP,
-			MaxHP:       n.MaxHP,
-			Level:       n.Level,
-			State:       n.State,
+			ID:            n.ID,
+			Name:          n.Name,
+			DisplayName:   n.DisplayName,
+			IsEnemy:       n.IsEnemy,
+			IsMerchant:    n.IsMerchant,
+			IsQuestGiver:  n.IsQuestGiver,
+			HasDialog:     n.HasDialog,
+			HasIdleDialog: n.HasIdleDialog,
+			CurrentHP:     n.CurrentHP,
+			MaxHP:         n.MaxHP,
+			Level:         n.Level,
+			State:         n.State,
 		}
 	}
 

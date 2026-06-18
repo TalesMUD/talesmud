@@ -80,7 +80,7 @@ func (commandProcessor *CommandProcessor) registerCommands() {
 	commandProcessor.RegisterCommand(&InventoryCommand{}, "Display your inventory", "inventory", "i")
 	commandProcessor.RegisterCommand(&CharacterCommand{}, "Display character stats", "character", "char", "stats")
 	commandProcessor.RegisterCommand(&NewCharacterCommand{}, "Create a new character", "newcharacter", "nc")
-	commandProcessor.RegisterCommand(&TalkCommand{}, "Talk to an NPC: talk [npc-name]", "talk")
+	commandProcessor.RegisterCommand(&TalkCommand{}, "Talk to an NPC: talk [npc-name]", "talk", "speak")
 
 	// Item commands
 	commandProcessor.RegisterCommand(&PickupCommand{}, "Pick up an item: pickup [item]", "pickup", "get", "take")

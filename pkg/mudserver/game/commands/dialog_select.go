@@ -57,21 +57,27 @@ func DialogSelectCommand(room *rooms.Room, game def.GameCtrl, message *messages.
 		return handleQuestOnlyDialogSelection(game, message, activeConv, optionIndex)
 	}
 
-	// Load the dialog
-	dialog, err := game.GetFacade().DialogsService().FindByID(activeConv.DialogID)
-	if err != nil {
-		log.WithError(err).Error("Error loading dialog for conversation")
-		return false
-	}
+	var dialog *dialogs.Dialog
+	var filteredOptions []*dialogs.Dialog
 
-	// Get current node
-	currentNode := game.GetFacade().ConversationsService().GetCurrentNode(activeConv, dialog)
-	if currentNode == nil {
-		return false
-	}
+	if activeConv.DialogID != "" {
+		// Load the dialog
+		loadedDialog, err := game.GetFacade().DialogsService().FindByID(activeConv.DialogID)
+		if err != nil {
+			log.WithError(err).Error("Error loading dialog for conversation")
+			return false
+		}
+		dialog = loadedDialog
 
-	// Get filtered options
-	filteredOptions := game.GetFacade().ConversationsService().GetFilteredOptions(activeConv, currentNode)
+		// Get current node
+		currentNode := game.GetFacade().ConversationsService().GetCurrentNode(activeConv, dialog)
+		if currentNode == nil {
+			return false
+		}
+
+		// Get filtered options
+		filteredOptions = game.GetFacade().ConversationsService().GetFilteredOptions(activeConv, currentNode)
+	}
 
 	// Re-compute quest options for this NPC (only at root level)
 	var questOptions []questDialogOption
