@@ -10,7 +10,6 @@ const GAME_CLIENT = writable(null);
 function createClient(renderer, characterCreator, muxStore) {
   let ws;
   let messageHandlers = new Map();
-  let wsurl = "";
 
   let mux = muxStore;
 
@@ -331,7 +330,6 @@ function createClient(renderer, characterCreator, muxStore) {
 
   const setWSClient = async (wscl) => {
     ws = wscl;
-    wsurl = ws.url;
 
     updateClient(ws);
   };
@@ -374,15 +372,12 @@ function createClient(renderer, characterCreator, muxStore) {
   };
 
   const sendMessage = (msg) => {
-    if (!ws) return;
-
-    if (
-      ws.readyState == WebSocket.CLOSING ||
-      ws.readyState == WebSocket.CLOSED
-    ) {
-      ws = new WebSocket(wsurl);
-      updateClient(ws);
-      renderer("reconnecting ...\n");
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      renderer("Connection is reconnecting. Try again in a moment.");
+      if (mux) {
+        mux.setConnectionState("reconnecting", "Reconnecting to the game server...");
+      }
+      return;
     }
 
     ws.send(

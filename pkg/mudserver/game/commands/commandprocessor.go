@@ -70,6 +70,7 @@ func (commandProcessor *CommandProcessor) registerCommands() {
 	// Chat commands
 	commandProcessor.RegisterCommand(&SayCommand{}, "Speak to the current room: say <message>", "say")
 	commandProcessor.RegisterCommand(&TellCommand{}, "Send private message: tell <player> <message>", "tell", "whisper", "pm")
+	commandProcessor.RegisterCommand(&PartyCommand{}, "Party commands: party invite|accept|decline|leave|list or party <message>", "party", "p")
 	commandProcessor.RegisterCommand(&ScreamCommand{}, "Scream through the room", "scream")
 	commandProcessor.RegisterCommand(&ShrugCommand{}, "Shrug emote", "shrug")
 	commandProcessor.RegisterCommand(&SelectCharacterCommand{}, "Select a character, use: sc [charactername]", "sc", "selectcharacter")

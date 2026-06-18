@@ -177,6 +177,19 @@ type server struct {
 }
 ```
 
+#### Live Session Registry
+
+The game engine owns an in-memory session registry for live player state. The
+registry maps connected user IDs to their currently selected character, room,
+and last-seen timestamp. WebSocket connect/read/disconnect paths update this
+registry and persist `User.IsOnline` as a secondary status field.
+
+Room message fan-out, `who`, private tells, regeneration ticks, and room player
+payloads use the live session registry instead of scanning all users with
+stale `IsOnline` flags. Persisted `Room.Characters` still records character
+location and is periodically cleaned, but it is no longer the source of truth
+for whether a player is reachable.
+
 #### Concurrent Goroutines
 
 The MUD server runs 4+ concurrent goroutines:
@@ -1253,7 +1266,7 @@ All entity editors (Rooms, Items, Item Templates, NPCs, Dialogs, Quests, Scripts
 |-------|---------|
 | `stores.js` | Global user state, menu state |
 | `auth.js` | Auth0 authentication state |
-| `MUDXPlusStore.js` | Game UI state (exits, actions, background, mana, equipped skills) |
+| `MUDXPlusStore.js` | Game UI state (exits, actions, background, mana, equipped skills, connection state) |
 | `CRUDEditorStore.js` | Editor state (elements, selection, filters, table filter/sort state, detail panel open/close) |
 | `Client.js` | WebSocket client state (room, character) |
 | `overlayStore.js` | Transient text overlay messages (auto-dismiss with timers) |
@@ -1273,6 +1286,12 @@ class GameClient {
     onMessage(type, handler)  // Register handler
 }
 ```
+
+`Game.svelte` owns reconnect scheduling because it has access to auth state and
+the active token. `Client.js` only sends over an open socket and reports
+reconnecting state to the UI store when a player tries to send while offline.
+`CharacterSwitcher.svelte` loads `/api/my-characters`, shows the active
+character and connection state, and sends `sc <name>` to switch characters.
 
 ### Terminal Integration
 
