@@ -135,12 +135,21 @@ func (server *server) HandleConnections(c *gin.Context) {
 
 	log.Info("Upgraded client connection")
 
+	if existing, ok := server.Clients.Get(user.ID); ok {
+		_ = existing.ws.Close()
+	}
+
 	// Register our new client
-	server.Clients.Set(user.ID, &Connection{
+	connection := &Connection{
 		User:   user,
 		ws:     ws,
 		active: true,
-	})
+	}
+	server.Clients.Set(user.ID, connection)
+
+	user.LastSeen = time.Now()
+	user.IsOnline = true
+	server.Facade.UsersService().Update(user.RefID, user)
 
 	// Send Welcome message with dynamic server name
 	serverName := "TalesMUD"
@@ -188,32 +197,27 @@ func (server *server) HandleConnections(c *gin.Context) {
 		var msg messages.IncomingMessage
 		err := ws.ReadJSON(&msg)
 		if err != nil {
-
-			server.Game.OnUserQuit <- &messages.UserQuit{
-				User: user,
-			}
-
 			log.Printf("error: %v", err)
-			server.Clients.Delete(user.ID)
-
-			// Guest disconnect cleanup with 5-minute grace period for reconnection
-			if user.IsGuest {
-				go func(userID string) {
-					time.Sleep(5 * time.Minute)
-					// Check if user reconnected during grace period
-					if _, ok := server.Clients.Get(userID); ok {
-						return // Reconnected, don't clean up
-					}
-					// Delete all characters for this guest
-					if chars, err := server.Facade.CharactersService().FindAllForUser(userID); err == nil {
-						for _, ch := range chars {
-							server.Facade.CharactersService().Delete(ch.ID)
+			if server.handleConnectionClosed(user, connection) {
+				// Guest disconnect cleanup with 5-minute grace period for reconnection
+				if user.IsGuest {
+					go func(userID string) {
+						time.Sleep(5 * time.Minute)
+						// Check if user reconnected during grace period
+						if _, ok := server.Clients.Get(userID); ok {
+							return // Reconnected, don't clean up
 						}
-					}
-					// Delete the guest user
-					server.Facade.UsersService().Delete(userID)
-					log.WithField("userID", userID).Info("Guest user cleaned up after disconnect grace period")
-				}(user.ID)
+						// Delete all characters for this guest
+						if chars, err := server.Facade.CharactersService().FindAllForUser(userID); err == nil {
+							for _, ch := range chars {
+								server.Facade.CharactersService().Delete(ch.ID)
+							}
+						}
+						// Delete the guest user
+						server.Facade.UsersService().Delete(userID)
+						log.WithField("userID", userID).Info("Guest user cleaned up after disconnect grace period")
+					}(user.ID)
+				}
 			}
 
 			break
@@ -221,12 +225,37 @@ func (server *server) HandleConnections(c *gin.Context) {
 
 		// update user online status
 		server.Game.ConnectUserSession(user)
+		user.LastSeen = time.Now()
+		user.IsOnline = true
+		server.Facade.UsersService().Update(user.RefID, user)
 
 		if msg.Message != "" {
 			server.Game.OnMessageReceived() <- messages.NewMessage(user, msg.Message)
 		}
 	}
 }
+
+func (server *server) handleConnectionClosed(user *entities.User, connection *Connection) bool {
+	if user == nil || connection == nil {
+		return false
+	}
+	if !server.Clients.DeleteIf(user.ID, connection) {
+		return false
+	}
+
+	connection.active = false
+
+	server.Game.OnUserQuit <- &messages.UserQuit{
+		User: user,
+	}
+
+	user.IsOnline = false
+	user.LastSeen = time.Now()
+	server.Facade.UsersService().Update(user.RefID, user)
+
+	return true
+}
+
 func (server *server) sendMessage(id string, msg interface{}) {
 
 	if client, ok := server.Clients.Get(id); ok {
@@ -235,13 +264,9 @@ func (server *server) sendMessage(id string, msg interface{}) {
 		if err != nil {
 
 			// tell the game that the user quit as the websocket closes/closed...
-			server.Game.OnUserQuit <- &messages.UserQuit{
-				User: client.User,
-			}
-
 			log.Printf("error: %v", err)
 			client.ws.Close()
-			server.Clients.Delete(id)
+			server.handleConnectionClosed(client.User, client)
 		}
 	}
 }
@@ -287,12 +312,8 @@ func (server *server) handleBroadcastMessages() {
 			if err != nil {
 				log.Printf("error: %v", err)
 
-				server.Game.OnUserQuit <- &messages.UserQuit{
-					User: client.User,
-				}
-
 				client.ws.Close()
-				server.Clients.Delete(client.User.ID)
+				server.handleConnectionClosed(client.User, client)
 
 			}
 		})
