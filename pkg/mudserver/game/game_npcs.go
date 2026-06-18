@@ -5,6 +5,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/talesmud/talesmud/pkg/entities/dialogs"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
@@ -244,12 +245,12 @@ func (g *Game) triggerIdleDialog(inst *npc.NPC) {
 	if inst == nil || !inst.HasIdleDialog() || inst.IdleDialogTimeout <= 0 {
 		return
 	}
-	key := "npc_idle_dialog:" + inst.Entity.ID
-	if value, ok := GetState().Get(key); ok {
-		if last, ok := value.(time.Time); ok && time.Since(last) < inst.IdleDialogTimeout {
-			return
-		}
+
+	now := time.Now()
+	if !inst.LastIdleDialog.IsZero() && now.Sub(inst.LastIdleDialog) < inst.IdleDialogTimeout {
+		return
 	}
+
 	dialog, err := g.Facade.DialogsService().FindByID(inst.IdleDialogID)
 	if err != nil || dialog == nil {
 		log.WithError(err).WithFields(log.Fields{
@@ -258,14 +259,30 @@ func (g *Game) triggerIdleDialog(inst *npc.NPC) {
 		}).Warn("NPC idle dialog not found")
 		return
 	}
-	GetState().Set(key, time.Now())
+
+	text := dialog.Render(&dialogs.DialogState{
+		CurrentDialogID: "main",
+		Context: map[string]string{
+			"NPC": inst.GetDisplayName(),
+		},
+	})
+	if text == "" {
+		text = dialog.GetText()
+	}
+	if text == "" {
+		return
+	}
+
 	g.SendMessage() <- messages.MessageResponse{
 		Audience:   messages.MessageAudienceRoom,
 		AudienceID: inst.CurrentRoomID,
 		Type:       messages.MessageTypeDefault,
 		Username:   inst.GetDisplayName(),
-		Message:    dialog.GetText(),
+		Message:    text,
 	}
+	g.NPCManager.UpdateInstance(inst.Entity.ID, func(n *npc.NPC) {
+		n.LastIdleDialog = now
+	})
 }
 
 func (g *Game) broadcastNPCMovements(movements []npcMovementEvent) {

@@ -123,6 +123,7 @@ func (command *TalkCommand) Execute(game def.GameCtrl, message *messages.Message
 	}
 
 	// Set context for template rendering
+	conv.DialogID = npc.DialogID
 	conv.SetContext("PLAYER", message.Character.Name)
 	conv.SetContext("NPC", npc.Name)
 	game.GetFacade().ConversationsService().Update(conv.ID, conv)

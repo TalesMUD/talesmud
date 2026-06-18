@@ -39,6 +39,7 @@
     if (!$store.dialogActive) return 'npc';
     const npc = findNpcByName($store.npcs, $store.dialogNpcName);
     if (npc?.isEnemy) return 'enemy';
+    if (npc?.isQuestGiver) return 'quest';
     if (npc?.isMerchant) return 'merchant';
     return 'npc';
   })();

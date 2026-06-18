@@ -208,15 +208,18 @@ func GetRoomItems(room *rooms.Room, game def.GameCtrl, char *characters.Characte
 
 // RoomNPC represents NPC data for frontend UI rendering
 type RoomNPC struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	DisplayName string `json:"displayName"`
-	IsEnemy     bool   `json:"isEnemy"`
-	IsMerchant  bool   `json:"isMerchant"`
-	CurrentHP   int32  `json:"currentHp,omitempty"`
-	MaxHP       int32  `json:"maxHp,omitempty"`
-	Level       int32  `json:"level,omitempty"`
-	State       string `json:"state"`
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	DisplayName   string `json:"displayName"`
+	IsEnemy       bool   `json:"isEnemy"`
+	IsMerchant    bool   `json:"isMerchant"`
+	IsQuestGiver  bool   `json:"isQuestGiver"`
+	HasDialog     bool   `json:"hasDialog"`
+	HasIdleDialog bool   `json:"hasIdleDialog"`
+	CurrentHP     int32  `json:"currentHp,omitempty"`
+	MaxHP         int32  `json:"maxHp,omitempty"`
+	Level         int32  `json:"level,omitempty"`
+	State         string `json:"state"`
 }
 
 // GetRoomNPCs returns NPC data for frontend rendering
@@ -231,20 +234,40 @@ func GetRoomNPCs(room *rooms.Room, game def.GameCtrl) []RoomNPC {
 
 	for _, n := range npcs {
 		roomNPC := RoomNPC{
-			ID:          n.Entity.ID,
-			Name:        n.Name,
-			DisplayName: displayNames[n.Entity.ID],
-			IsEnemy:     n.IsEnemy(),
-			IsMerchant:  n.IsMerchant(),
-			CurrentHP:   n.CurrentHitPoints,
-			MaxHP:       n.MaxHitPoints,
-			Level:       n.Level,
-			State:       n.State,
+			ID:            n.Entity.ID,
+			Name:          n.Name,
+			DisplayName:   displayNames[n.Entity.ID],
+			IsEnemy:       n.IsEnemy(),
+			IsMerchant:    n.IsMerchant(),
+			IsQuestGiver:  isQuestGiver(n, game),
+			HasDialog:     n.HasDialog(),
+			HasIdleDialog: n.HasIdleDialog(),
+			CurrentHP:     n.CurrentHitPoints,
+			MaxHP:         n.MaxHitPoints,
+			Level:         n.Level,
+			State:         n.State,
 		}
 		result = append(result, roomNPC)
 	}
 
 	return result
+}
+
+func isQuestGiver(n *npc.NPC, game def.GameCtrl) bool {
+	if n == nil || n.Entity == nil {
+		return false
+	}
+	ids := []string{n.Entity.ID}
+	if n.TemplateID != "" {
+		ids = append(ids, n.TemplateID)
+	}
+	for _, id := range ids {
+		quests, err := game.GetFacade().QuestsService().FindBySourceNPC(id)
+		if err == nil && len(quests) > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // BuildNPCDisplayNames creates display names for NPCs, adding numbers when duplicates exist
