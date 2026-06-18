@@ -2,7 +2,7 @@
 
 **Purpose**: This document catalogs ALL core systems, data structures, features, and APIs available in TalesMUD. It is designed to provide complete context for AI agents reworking game content to leverage the latest capabilities.
 
-**Last Updated**: 2026-02-15
+**Last Updated**: 2026-06-18
 
 ---
 
@@ -405,14 +405,34 @@ or auto-selects the first owned character. Selecting another character with
 `sc <name>` removes the previous character from its room, updates
 `User.LastCharacter`, refreshes the live session, sends `characterSelected`,
 then sends the current room, character stats, inventory, and quest log.
+Character switch, room movement, and disconnect paths emit silent room presence
+refreshes so other clients update player lists without waiting for a full room
+render.
+
+### Room Presence WebSocket Message
+```json
+{
+  "type": "roomPresence",
+  "roomId": "room-uuid",
+  "players": [
+    { "id": "character-uuid", "name": "Aster", "isYou": false }
+  ]
+}
+```
+
+The server broadcasts this to rooms with online active characters only. The
+client marks `isYou` locally based on the currently selected character because a
+single broadcast is shared by multiple users.
 
 ### Party Commands
 ```bash
+party create           # Create a party with the current character
 party invite <player>  # Invite an online player to your party
 party accept           # Accept a pending party invite
 party decline          # Decline a pending party invite
 party list             # Show party members
 party leave            # Leave the current party
+party say <message>    # Send party chat
 party <message>        # Send party chat
 
 p <message>            # Alias for party chat/commands
@@ -427,7 +447,8 @@ The MUD client exposes connection state in `MUDXPlusStore`:
 `Game.svelte` owns reconnect scheduling and retries automatically after socket
 close. `CharacterSwitcher.svelte` shows the active character, connection state,
 and the user's character list from `/api/my-characters`; switching sends the
-existing `sc <name>` command.
+existing `sc <name>` command. `Client.js` handles `roomPresence` messages and
+updates `MUDXPlusStore.players` without changing the room description.
 
 ---
 

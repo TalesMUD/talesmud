@@ -171,6 +171,8 @@ type Connection struct {
 }
 ```
 
+The client registry supports stale-safe replacement for reconnects. When a user opens a new WebSocket, the server replaces the previous connection and only a matching current connection can mark the user offline or emit quit cleanup. This prevents an old socket close from deleting a fresh connection or incorrectly clearing online state.
+
 #### Server Components
 
 ```go
@@ -233,6 +235,8 @@ receiveMessages() routes by Audience
        ├──► sendToRoomWithout()     [Room except origin]
        └──► Broadcast channel       [Global]
 ```
+
+Character selection, room movement, and disconnect cleanup also emit `roomPresence` messages. These are silent room-scoped WebSocket payloads that refresh the client player list without re-rendering the full room description.
 
 ### Game Engine (`pkg/mudserver/game/`)
 
@@ -1297,9 +1301,9 @@ All entity editors (Rooms, Items, Item Templates, NPCs, Dialogs, Quests, Scripts
 |-------|---------|
 | `stores.js` | Global user state, menu state |
 | `auth.js` | Auth0 authentication state |
-| `MUDXPlusStore.js` | Game UI state (exits, actions, background, mana, equipped skills, connection state) |
+| `MUDXPlusStore.js` | Game UI state (exits, actions, background, mana, equipped skills, connection status, room players) |
 | `CRUDEditorStore.js` | Editor state (elements, selection, filters, table filter/sort state, detail panel open/close) |
-| `Client.js` | WebSocket client state (room, character) |
+| `Client.js` | WebSocket client state (room, character, reconnect lifecycle, room presence messages) |
 | `overlayStore.js` | Transient text overlay messages (auto-dismiss with timers) |
 
 ### WebSocket Client
@@ -1321,6 +1325,8 @@ class GameClient {
 `Game.svelte` owns reconnect scheduling because it has access to auth state and
 the active token. `Client.js` only sends over an open socket and reports
 reconnecting state to the UI store when a player tries to send while offline.
+It also handles `roomPresence` messages by updating `MUDXPlusStore.players`
+without re-rendering the full room.
 `CharacterSwitcher.svelte` loads `/api/my-characters`, shows the active
 character and connection state, and sends `sc <name>` to switch characters.
 

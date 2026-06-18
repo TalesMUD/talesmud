@@ -73,6 +73,7 @@
   import { mobileStore } from "./mobile/mobileStore.js";
   import MobileLayout from "./mobile/MobileLayout.svelte";
   import QuestNotifications from "./ui/QuestNotifications.svelte";
+  import CharacterSwitcher from "./ui/CharacterSwitcher.svelte";
 
   import { onMount, onDestroy } from "svelte";
   import { getAuth } from "../auth.js";

@@ -137,6 +137,14 @@ type EnterRoomMessage struct {
 	Players []RoomPlayer    `json:"players"`
 }
 
+// RoomPresenceMessage refreshes the online player list for a room without
+// re-rendering the room description or entities.
+type RoomPresenceMessage struct {
+	MessageResponse
+	RoomID  string       `json:"roomId"`
+	Players []RoomPlayer `json:"players"`
+}
+
 // NewEnterRoomMessage creates a new enter room message.
 // char is optional — if provided, CopyOnPickup items already collected by this character are hidden.
 func NewEnterRoomMessage(room *rooms.Room, user *entities.User, game def.GameCtrl, char *characters.Character) *EnterRoomMessage {
@@ -224,6 +232,31 @@ func NewRoomUpdateMessage(room *rooms.Room, user *entities.User, game def.GameCt
 		Room:    *room,
 		NPCs:    npcs,
 		Items:   roomItems,
+		Players: players,
+	}
+}
+
+// NewRoomPresenceMessage creates a silent player-presence update for all clients
+// in a room. IsYou is intentionally false; the client marks the current
+// character locally because this message is broadcast to multiple users.
+func NewRoomPresenceMessage(room *rooms.Room, game def.GameCtrl) *RoomPresenceMessage {
+	roomChars := util.GetRoomPresenceCharacters(room, game)
+	players := make([]RoomPlayer, len(roomChars))
+	for i, c := range roomChars {
+		players[i] = RoomPlayer{
+			ID:    c.ID,
+			Name:  c.Name,
+			IsYou: false,
+		}
+	}
+
+	return &RoomPresenceMessage{
+		MessageResponse: MessageResponse{
+			Audience:   MessageAudienceRoom,
+			AudienceID: room.ID,
+			Type:       MessageTypeRoomPresence,
+		},
+		RoomID:  room.ID,
 		Players: players,
 	}
 }
