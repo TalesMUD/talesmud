@@ -35,9 +35,7 @@ func (game *Game) handleUserQuit(user *entities.User) {
 
 	log.Info("Handle User Quit " + user.Nickname)
 
-	// set user offline
-	user.IsOnline = false
-	game.Facade.UsersService().Update(user.RefID, user)
+	game.DisconnectUserSession(user.ID)
 
 	if user.LastCharacter == "" {
 		return
@@ -88,6 +86,7 @@ func (game *Game) attachCharacterToMessage(msg *messages.Message) {
 }
 
 func (game *Game) handleUserJoined(user *entities.User) {
+	game.ConnectUserSession(user)
 
 	// get active character for user
 	if user.LastCharacter == "" {

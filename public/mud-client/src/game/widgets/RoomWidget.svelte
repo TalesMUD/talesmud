@@ -12,8 +12,7 @@
   let toggleImage = true;
   let showPlayersOverlay = false;
 
-  // Derive other players (not "you") for badge count
-  $: otherPlayers = ($store.players || []).filter(p => !p.isYou);
+  // Room population from live backend presence
   $: playerCount = ($store.players || []).length;
 
   // Auto-close overlay when changing rooms
@@ -410,7 +409,7 @@
       </div>
     {/if}
 
-    {#if otherPlayers.length > 0}
+    {#if playerCount > 0}
       <button
         class="player-badge"
         class:active={showPlayersOverlay}
@@ -423,7 +422,7 @@
 
       {#if showPlayersOverlay}
         <div class="players-overlay">
-          <div class="players-overlay-title">Players in room</div>
+          <div class="players-overlay-title">In this room</div>
           {#each $store.players as player (player.id)}
             <div class="player-row">
               <div class="player-info">

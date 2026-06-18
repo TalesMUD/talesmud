@@ -17,19 +17,18 @@ const (
 // handleRegenerationUpdates processes HP regeneration for all online players.
 // Called every 10 seconds by the regeneration ticker.
 func (g *Game) handleRegenerationUpdates() {
-	// Get all online users
-	onlineUsers, err := g.GetFacade().UsersService().FindAllOnline()
-	if err != nil || len(onlineUsers) == 0 {
+	onlinePlayers := g.GetOnlinePlayers()
+	if len(onlinePlayers) == 0 {
 		return
 	}
 
-	for _, user := range onlineUsers {
-		if user.LastCharacter == "" {
+	for _, player := range onlinePlayers {
+		if player.CharacterID == "" {
 			continue
 		}
 
 		// Load character
-		char, err := g.GetFacade().CharactersService().FindByID(user.LastCharacter)
+		char, err := g.GetFacade().CharactersService().FindByID(player.CharacterID)
 		if err != nil || char == nil {
 			continue
 		}
@@ -39,15 +38,15 @@ func (g *Game) handleRegenerationUpdates() {
 		manaFull := char.MaxMana <= 0 || char.CurrentMana >= char.MaxMana
 		if char.CurrentHitPoints <= 0 || (hpFull && manaFull) {
 			if hpFull && manaFull && isResting(char) {
-				g.clearRestingState(char, user.ID)
-				g.SendMessage() <- messages.Reply(user.ID, "You are now fully rested and recovered.")
+				g.clearRestingState(char, player.UserID)
+				g.SendMessage() <- messages.Reply(player.UserID, "You are now fully rested and recovered.")
 			}
 			continue
 		}
 
 		// Clear resting state if in combat
 		if char.InCombat && isResting(char) {
-			g.clearRestingState(char, user.ID)
+			g.clearRestingState(char, player.UserID)
 		}
 
 		// Calculate and apply HP regeneration (reduced in combat)
@@ -57,7 +56,7 @@ func (g *Game) handleRegenerationUpdates() {
 		manaRegenAmount := g.calculateManaRegenAmount(char)
 
 		if regenAmount > 0 || manaRegenAmount > 0 {
-			g.applyRegeneration(char, user.ID, regenAmount, manaRegenAmount)
+			g.applyRegeneration(char, player.UserID, regenAmount, manaRegenAmount)
 		}
 	}
 }
