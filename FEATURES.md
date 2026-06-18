@@ -924,6 +924,8 @@ The `QuestTracker` listens to game events and updates objectives:
 | Dialog node | Talk command | Talk objectives (matches NPC + node) |
 | Talk to NPC | Talk command | Deliver objectives (requires and consumes matching item quantity) |
 
+`QuestsService.ApplyQuestEvent` provides the same normalized event matching for service-level workflows and tests, returning progress or ready-to-turn-in results. `QuestsService.TurnInQuest` validates the turn-in NPC, completes the quest, grants rewards, and returns the reward summary in one call.
+
 ### Quest Dialog Integration
 When talking to a quest-source NPC:
 1. **Offer option** - If quest is available and prerequisites met

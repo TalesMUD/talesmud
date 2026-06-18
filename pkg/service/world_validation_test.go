@@ -14,7 +14,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/repository"
 )
 
-func worldValidationTestFacade(t *testing.T) Facade {
+func worldValidationTestFacade(t *testing.T) (Facade, repository.Factory) {
 	t.Helper()
 
 	client, err := sqlite.Open(filepath.Join(t.TempDir(), "world-validation.db"))
@@ -23,11 +23,12 @@ func worldValidationTestFacade(t *testing.T) Facade {
 	}
 	t.Cleanup(func() { _ = client.Close() })
 
-	return NewFacade(repository.NewSQLiteFactory(client), nil)
+	factory := repository.NewSQLiteFactory(client)
+	return NewFacade(factory, nil), factory
 }
 
 func TestWorldValidationReportsBrokenReferences(t *testing.T) {
-	facade := worldValidationTestFacade(t)
+	facade, repos := worldValidationTestFacade(t)
 
 	validTemplate := &items.Item{
 		Entity:     &entities.Entity{ID: "item-template-valid"},
@@ -102,7 +103,7 @@ func TestWorldValidationReportsBrokenReferences(t *testing.T) {
 		t.Fatalf("store character template: %v", err)
 	}
 
-	storedQuest, err := facade.QuestsService().Store(&quests.Quest{
+	storedQuest, err := repos.Quests().Import(&quests.Quest{
 		Entity: &entities.Entity{ID: "quest-1"},
 		Name:   "Broken Quest",
 		Source: quests.QuestSource{Type: "npc", NPCID: "missing-source-npc"},
@@ -150,7 +151,7 @@ func TestWorldValidationReportsBrokenReferences(t *testing.T) {
 }
 
 func TestWorldValidationAcceptsMinimalValidWorld(t *testing.T) {
-	facade := worldValidationTestFacade(t)
+	facade, _ := worldValidationTestFacade(t)
 
 	template := &items.Item{
 		Entity:     &entities.Entity{ID: "item-template-valid"},
@@ -173,14 +174,16 @@ func TestWorldValidationAcceptsMinimalValidWorld(t *testing.T) {
 		t.Fatalf("store npc: %v", err)
 	}
 	if _, err := facade.QuestsService().Store(&quests.Quest{
-		Entity: &entities.Entity{ID: "quest-1"},
-		Name:   "Quest",
-		Source: quests.QuestSource{Type: "npc", NPCID: "npc-1"},
+		Entity:      &entities.Entity{ID: "quest-1"},
+		Name:        "Quest",
+		Description: "Visit the room.",
+		Source:      quests.QuestSource{Type: "npc", NPCID: "npc-1"},
 		Objectives: []quests.Objective{{
-			ID:       "visit",
-			Type:     quests.ObjectiveVisit,
-			TargetID: "room-1",
-			Amount:   1,
+			ID:          "visit",
+			Type:        quests.ObjectiveVisit,
+			Description: "Visit the room.",
+			TargetID:    "room-1",
+			Amount:      1,
 		}},
 		Rewards: quests.Reward{ItemTemplateIDs: []string{"item-template-valid"}},
 	}); err != nil {

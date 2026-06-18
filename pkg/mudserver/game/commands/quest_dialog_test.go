@@ -8,6 +8,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/entities/quests"
+	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/entities/traits"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/commands"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
@@ -37,6 +38,17 @@ func TestQuestOnlyNPCDialogCanAcceptQuestAndSendsEnrichedQuestLog(t *testing.T) 
 		MaxHitPoints:     10,
 	}
 	g.NPCManager.RegisterExistingNPC(questGiver, "room-quest")
+	if _, err := facade.NPCsService().Import(questGiver); err != nil {
+		t.Fatalf("store quest giver: %v", err)
+	}
+	if _, err := facade.RoomsService().Import(&rooms.Room{
+		Entity:      &entities.Entity{ID: "room-archive"},
+		Name:        "Archive",
+		Description: "Archive",
+		Exits:       &rooms.Exits{},
+	}); err != nil {
+		t.Fatalf("store archive room: %v", err)
+	}
 
 	quest := &quests.Quest{
 		Entity:      &entities.Entity{ID: "quest-missing-satchel"},

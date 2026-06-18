@@ -623,7 +623,7 @@ type Facade interface {
 | ScriptsService | Script CRUD, execution |
 | PartiesService | Party/group management |
 | LootTablesService | Loot table CRUD, loot rolling |
-| QuestsService | Quest definition CRUD, quest progress tracking, accept/abandon/complete quests, objective progress, prerequisite checks |
+| QuestsService | Quest definition CRUD, quest progress tracking, normalized event application, accept/abandon/complete/turn-in quests, objective progress, prerequisite checks |
 | SkillsService | Skill CRUD, DB seeding on first run, in-memory cache refresh on mutations |
 | GuestService | Guest session creation, HMAC token signing/validation, expired guest cleanup, IP rate limiting |
 

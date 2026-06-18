@@ -105,6 +105,9 @@ func TestQuestOnlyNPCSelectionAcceptsQuest(t *testing.T) {
 		State:       "idle",
 	}
 	g.NPCManager.RegisterExistingNPC(questGiver, "quest-room")
+	if _, err := facade.NPCsService().Import(questGiver); err != nil {
+		t.Fatalf("store quest giver: %v", err)
+	}
 
 	quest := &quests.Quest{
 		Entity:           &entities.Entity{ID: "quest-1"},
