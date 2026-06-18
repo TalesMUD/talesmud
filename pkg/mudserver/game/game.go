@@ -48,6 +48,8 @@ type Game struct {
 
 	Avatars map[string]*Avatar
 
+	Sessions *sessionRegistry
+
 	//world *World
 }
 
@@ -69,7 +71,8 @@ func New(facade service.Facade) *Game {
 		// game update listeners
 		//	Receivers: make([]Receiver, 0, 10),
 
-		Avatars: make(map[string]*Avatar),
+		Avatars:  make(map[string]*Avatar),
+		Sessions: newSessionRegistry(),
 
 		Facade: facade,
 	}
@@ -144,8 +147,8 @@ func (g *Game) GetQuestTracker() def.QuestTrackerCtrl {
 const roomUpdateInterval = 10
 const npcUpdateInterval = 10
 const spawnerUpdateInterval = 5
-const combatUpdateInterval = 2   // Combat checks every 2 seconds
-const regenUpdateInterval = 10    // HP regeneration every 10 seconds
+const combatUpdateInterval = 2 // Combat checks every 2 seconds
+const regenUpdateInterval = 10 // HP regeneration every 10 seconds
 
 func (g *Game) handleGameUpdates() {
 

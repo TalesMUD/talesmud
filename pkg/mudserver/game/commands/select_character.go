@@ -86,8 +86,7 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 	}
 
 	// update player
-	user.LastCharacter = character.ID
-	game.GetFacade().UsersService().Update(user.RefID, user)
+	game.SetUserSessionCharacter(user, character)
 
 	characterSelected := &messages.CharacterSelected{
 		MessageResponse: messages.MessageResponse{

@@ -1,6 +1,9 @@
 package def
 
 import (
+	"time"
+
+	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/combat"
 	"github.com/talesmud/talesmud/pkg/entities/items"
@@ -72,6 +75,27 @@ type QuestTrackerCtrl interface {
 	OnTalkToNPC(characterID, userID string, npc *npc.NPC)
 }
 
+// OnlinePlayer describes a character currently attached to a live user session.
+type OnlinePlayer struct {
+	UserID        string
+	CharacterID   string
+	CharacterName string
+	RoomID        string
+	IsYou         bool
+	LastSeen      time.Time
+}
+
+// PartyInvite describes a pending invitation to join a party.
+type PartyInvite struct {
+	PartyID              string
+	InviterUserID        string
+	InviterCharacterID   string
+	InviterCharacterName string
+	TargetCharacterID    string
+	TargetCharacterName  string
+	CreatedAt            time.Time
+}
+
 // GameCtrl def
 // interface for commands package to communicate back to game instance
 type GameCtrl interface {
@@ -89,4 +113,22 @@ type GameCtrl interface {
 	GetQuestTracker() QuestTrackerCtrl
 	// InterruptRest stops a character from resting
 	InterruptRest(char *characters.Character)
+	// ConnectUserSession marks a user as attached to a live websocket session.
+	ConnectUserSession(user *entities.User)
+	// DisconnectUserSession removes a user's live session.
+	DisconnectUserSession(userID string)
+	// SetUserSessionCharacter attaches the selected character to a user's live session.
+	SetUserSessionCharacter(user *entities.User, char *characters.Character)
+	// GetOnlinePlayers returns characters attached to live sessions.
+	GetOnlinePlayers() []OnlinePlayer
+	// FindOnlinePlayerByName finds a live player by active character name.
+	FindOnlinePlayerByName(name string) (OnlinePlayer, bool)
+	// GetRoomPlayers returns live players in a room.
+	GetRoomPlayers(roomID, viewerCharacterID string) []OnlinePlayer
+	// SetPartyInvite stores a pending invite for a live target character.
+	SetPartyInvite(invite PartyInvite)
+	// GetPartyInvite returns a pending invite for a target character.
+	GetPartyInvite(targetCharacterID string) (PartyInvite, bool)
+	// ClearPartyInvite removes a pending invite.
+	ClearPartyInvite(targetCharacterID string)
 }

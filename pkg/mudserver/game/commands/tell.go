@@ -36,53 +36,25 @@ func (command *TellCommand) Execute(game def.GameCtrl, message *messages.Message
 	}
 
 	// Find online player
-	targetUserID, targetCharName, found := findOnlinePlayer(game, targetName)
+	targetPlayer, found := game.FindOnlinePlayerByName(targetName)
 	if !found {
 		game.SendMessage() <- messages.Reply(message.FromUser.ID, "Player '"+targetName+"' is not online.")
 		return true
 	}
 
 	// Check not sending to self
-	if targetUserID == message.FromUser.ID {
+	if targetPlayer.UserID == message.FromUser.ID {
 		game.SendMessage() <- messages.Reply(message.FromUser.ID, "You can't send a tell to yourself.")
 		return true
 	}
 
 	// Send message to target
 	targetMessage := message.Character.Name + " tells you: " + text
-	game.SendMessage() <- messages.Reply(targetUserID, targetMessage)
+	game.SendMessage() <- messages.Reply(targetPlayer.UserID, targetMessage)
 
 	// Send confirmation to sender
-	confirmMessage := "You tell " + targetCharName + ": " + text
+	confirmMessage := "You tell " + targetPlayer.CharacterName + ": " + text
 	game.SendMessage() <- messages.Reply(message.FromUser.ID, confirmMessage)
 
 	return true
-}
-
-// findOnlinePlayer searches for an online player by character name (case-insensitive).
-// Returns (userID, characterName, found).
-func findOnlinePlayer(game def.GameCtrl, name string) (string, string, bool) {
-	users, err := game.GetFacade().UsersService().FindAllOnline()
-	if err != nil {
-		return "", "", false
-	}
-
-	nameLower := strings.ToLower(name)
-
-	for _, user := range users {
-		if user.LastCharacter == "" {
-			continue
-		}
-
-		char, err := game.GetFacade().CharactersService().FindByID(user.LastCharacter)
-		if err != nil || char == nil {
-			continue
-		}
-
-		if strings.ToLower(char.Name) == nameLower {
-			return user.ID, char.Name, true
-		}
-	}
-
-	return "", "", false
 }

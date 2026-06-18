@@ -28,6 +28,10 @@ func (g *Game) updateRoom(room *rooms.Room) {
 func (g *Game) removeOfflineCharacters(room *rooms.Room) {
 
 	needsUpdate := false
+	liveCharacters := map[string]bool{}
+	for _, player := range g.GetRoomPlayers(room.ID, "") {
+		liveCharacters[player.CharacterID] = true
+	}
 
 	// iterate on copy so we can modify src during iteration
 	chars := make(rooms.Characters, len(*room.Characters))
@@ -40,16 +44,8 @@ func (g *Game) removeOfflineCharacters(room *rooms.Room) {
 			// check if character is still in this room
 			if character.CurrentRoomID != room.ID {
 				remove = true
-			} else {
-				if user, err := g.Facade.UsersService().FindByID(character.BelongsUserID); err == nil {
-					//check if user is logged in with another character
-					if user.LastCharacter != char {
-						remove = true
-					} else if user.LastCharacter == char && !user.IsOnline {
-						// check if player is offline
-						remove = true
-					}
-				}
+			} else if !liveCharacters[char] {
+				remove = true
 			}
 		} else {
 			// error finding character? remove it from the room
