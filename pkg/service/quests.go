@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -36,8 +37,19 @@ type QuestsService interface {
 	// Reward granting
 	GrantQuestRewards(characterID, questID string) ([]string, error)
 
+	// Definition validation
+	ValidateQuest(quest *quests.Quest) []QuestValidationIssue
+
 	// Internal setter for facade dependency
 	SetFacade(facade Facade)
+}
+
+// QuestValidationIssue describes a quest authoring problem.
+type QuestValidationIssue struct {
+	Severity string `json:"severity"`
+	Path     string `json:"path"`
+	Code     string `json:"code"`
+	Message  string `json:"message"`
 }
 
 type questsService struct {
@@ -90,6 +102,166 @@ func (s *questsService) Update(id string, quest *quests.Quest) error {
 
 func (s *questsService) Delete(id string) error {
 	return s.questsRepo.Delete(id)
+}
+
+func (s *questsService) ValidateQuest(quest *quests.Quest) []QuestValidationIssue {
+	var issues []QuestValidationIssue
+	addError := func(path, code, message string) {
+		issues = append(issues, QuestValidationIssue{
+			Severity: "error",
+			Path:     path,
+			Code:     code,
+			Message:  message,
+		})
+	}
+
+	if quest == nil {
+		addError("", "missing_quest", "Quest payload is required.")
+		return issues
+	}
+
+	if strings.TrimSpace(quest.Name) == "" {
+		addError("name", "missing_name", "Quest name is required.")
+	}
+	if strings.TrimSpace(quest.Description) == "" {
+		addError("description", "missing_description", "Quest description is required.")
+	}
+
+	switch quest.Source.Type {
+	case "npc":
+		if strings.TrimSpace(quest.Source.NPCID) == "" {
+			addError("source.npcId", "missing_source_npc", "NPC source quests require a source NPC.")
+		} else if !s.npcExists(quest.Source.NPCID) {
+			addError("source.npcId", "missing_source_npc", "Source NPC does not exist.")
+		}
+	case "item":
+		if strings.TrimSpace(quest.Source.ItemID) == "" {
+			addError("source.itemId", "missing_source_item", "Item source quests require a source item.")
+		} else if !s.itemExists(quest.Source.ItemID) {
+			addError("source.itemId", "missing_source_item", "Source item does not exist.")
+		}
+	case "auto", "script":
+	default:
+		addError("source.type", "invalid_source_type", "Quest source type must be npc, item, auto, or script.")
+	}
+
+	if len(quest.Objectives) == 0 {
+		addError("objectives", "missing_objectives", "At least one objective is required.")
+	}
+
+	objectiveIDs := map[string]bool{}
+	hasTurnInNPC := quest.Source.Type == "npc" && strings.TrimSpace(quest.Source.NPCID) != ""
+	for i, obj := range quest.Objectives {
+		path := "objectives"
+		if obj.ID == "" {
+			addError(path, "missing_objective_id", "Objective ID is required.")
+		} else if objectiveIDs[obj.ID] {
+			addError(path, "duplicate_objective_id", "Objective IDs must be unique within a quest.")
+		}
+		objectiveIDs[obj.ID] = true
+
+		if strings.TrimSpace(obj.Description) == "" {
+			addError(path, "missing_objective_description", "Objective description is required.")
+		}
+		if obj.Amount < 1 {
+			addError(path, "invalid_objective_amount", "Objective amount must be at least 1.")
+		}
+
+		switch obj.Type {
+		case quests.ObjectiveKill:
+			if strings.TrimSpace(obj.TargetID) == "" || !s.npcExists(obj.TargetID) {
+				addError(path, "missing_objective_npc", "Kill objectives require an existing NPC target.")
+			}
+		case quests.ObjectiveCollect:
+			if strings.TrimSpace(obj.TargetID) == "" || !s.itemExists(obj.TargetID) {
+				addError(path, "missing_objective_item", "Collect objectives require an existing item template target.")
+			}
+		case quests.ObjectiveDeliver:
+			if strings.TrimSpace(obj.TargetID) == "" || !s.itemExists(obj.TargetID) {
+				addError(path, "missing_objective_item", "Deliver objectives require an existing item template target.")
+			}
+			if strings.TrimSpace(obj.DeliverToNPCID) == "" || !s.npcExists(obj.DeliverToNPCID) {
+				addError(path, "missing_delivery_npc", "Deliver objectives require an existing delivery NPC.")
+			} else {
+				hasTurnInNPC = true
+			}
+		case quests.ObjectiveVisit:
+			if strings.TrimSpace(obj.TargetID) == "" || !s.roomExists(obj.TargetID) {
+				addError(path, "missing_objective_room", "Visit objectives require an existing room target.")
+			}
+		case quests.ObjectiveTalk:
+			if strings.TrimSpace(obj.TargetID) == "" || !s.npcExists(obj.TargetID) {
+				addError(path, "missing_objective_npc", "Talk objectives require an existing NPC target.")
+			}
+		case quests.ObjectiveCustom:
+			if strings.TrimSpace(obj.CheckScriptID) == "" || !s.scriptExists(obj.CheckScriptID) {
+				addError(path, "missing_check_script", "Custom objectives require an existing check script.")
+			}
+		default:
+			addError(path, "invalid_objective_type", "Objective type is invalid.")
+		}
+
+		_ = i
+	}
+
+	if !hasTurnInNPC {
+		addError("source", "missing_turn_in_npc", "Quest needs an NPC source or a deliver objective with a delivery NPC so it can be turned in.")
+	}
+
+	for _, itemID := range quest.Rewards.ItemTemplateIDs {
+		if strings.TrimSpace(itemID) == "" || !s.itemExists(itemID) {
+			addError("rewards.itemTemplateIds", "missing_reward_item", "Reward item template does not exist.")
+		}
+	}
+
+	for _, reqID := range quest.RequiredQuestIDs {
+		if reqID == quest.ID && quest.ID != "" {
+			addError("requiredQuestIds", "self_prerequisite", "A quest cannot require itself.")
+			continue
+		}
+		if strings.TrimSpace(reqID) == "" || !s.questExists(reqID) {
+			addError("requiredQuestIds", "missing_required_quest", "Required quest does not exist.")
+		}
+	}
+
+	return issues
+}
+
+func (s *questsService) npcExists(id string) bool {
+	if s.facade == nil || s.facade.NPCsService() == nil {
+		return strings.TrimSpace(id) != ""
+	}
+	found, err := s.facade.NPCsService().FindByID(id)
+	return err == nil && found != nil
+}
+
+func (s *questsService) itemExists(id string) bool {
+	if s.facade == nil || s.facade.ItemsService() == nil {
+		return strings.TrimSpace(id) != ""
+	}
+	found, err := s.facade.ItemsService().FindByID(id)
+	return err == nil && found != nil
+}
+
+func (s *questsService) roomExists(id string) bool {
+	if s.facade == nil || s.facade.RoomsService() == nil {
+		return strings.TrimSpace(id) != ""
+	}
+	found, err := s.facade.RoomsService().FindByID(id)
+	return err == nil && found != nil
+}
+
+func (s *questsService) scriptExists(id string) bool {
+	if s.facade == nil || s.facade.ScriptsService() == nil {
+		return strings.TrimSpace(id) != ""
+	}
+	found, err := s.facade.ScriptsService().FindByID(id)
+	return err == nil && found != nil
+}
+
+func (s *questsService) questExists(id string) bool {
+	found, err := s.questsRepo.FindByID(id)
+	return err == nil && found != nil
 }
 
 // --- Quest progress operations ---
