@@ -12,16 +12,17 @@
 2. [Room System](#room-system)
 3. [Item System](#item-system)
 4. [Character System](#character-system)
-5. [NPC System](#npc-system)
-6. [Combat System](#combat-system)
-7. [Skills & Spells System](#skills--spells-system)
-8. [Quest System](#quest-system)
-9. [Dialog System](#dialog-system)
-10. [Scripting System (Lua API)](#scripting-system-lua-api)
-11. [Creator UI Capabilities](#creator-ui-capabilities)
-12. [Recent Features & Best Practices](#recent-features--best-practices)
-13. [Game Client Minimap](#game-client-minimap)
-14. [Game Client Tab Container Widget](#game-client-tab-container-widget)
+5. [Multiplayer Session & Social System](#multiplayer-session--social-system)
+6. [NPC System](#npc-system)
+7. [Combat System](#combat-system)
+8. [Skills & Spells System](#skills--spells-system)
+9. [Quest System](#quest-system)
+10. [Dialog System](#dialog-system)
+11. [Scripting System (Lua API)](#scripting-system-lua-api)
+12. [Creator UI Capabilities](#creator-ui-capabilities)
+13. [Recent Features & Best Practices](#recent-features--best-practices)
+14. [Game Client Minimap](#game-client-minimap)
+15. [Game Client Tab Container Widget](#game-client-tab-container-widget)
 
 ---
 
@@ -374,6 +375,57 @@ MarkCollectedCopyItem(templateID string)
 
 // Stored in Flags["collected_copy_items"] as array of template IDs
 ```
+
+---
+
+## Multiplayer Session & Social System
+
+### Live Session Presence
+The game engine keeps an in-memory live session registry keyed by connected
+user ID. Each live session tracks the selected character, character name,
+current room, and last-seen timestamp.
+
+Uses:
+- Room player lists in `enterRoom` and `roomUpdate` WebSocket messages
+- Room chat and room-based message fan-out
+- `who` command output
+- `tell`/`whisper` target lookup
+- Passive regeneration ticks
+- Periodic cleanup of stale `Room.Characters` entries
+
+`User.IsOnline` remains persisted for administrative/status visibility, but
+live routing and room presence use the session registry so stale database flags
+do not make disconnected players appear reachable.
+
+### Character Selection Lifecycle
+On WebSocket connect, the game attaches the user's last character if available
+or auto-selects the first owned character. Selecting another character with
+`sc <name>` removes the previous character from its room, updates
+`User.LastCharacter`, refreshes the live session, sends `characterSelected`,
+then sends the current room, character stats, inventory, and quest log.
+
+### Party Commands
+```bash
+party invite <player>  # Invite an online player to your party
+party accept           # Accept a pending party invite
+party decline          # Decline a pending party invite
+party list             # Show party members
+party leave            # Leave the current party
+party <message>        # Send party chat
+
+p <message>            # Alias for party chat/commands
+```
+
+Party membership is persisted in the existing `Party` entity. Pending invites
+are live-session state and must be accepted while both players are online.
+
+### Client Session UX
+The MUD client exposes connection state in `MUDXPlusStore`:
+`disconnected`, `connecting`, `connected`, and `reconnecting`.
+`Game.svelte` owns reconnect scheduling and retries automatically after socket
+close. `CharacterSwitcher.svelte` shows the active character, connection state,
+and the user's character list from `/api/my-characters`; switching sends the
+existing `sc <name>` command.
 
 ---
 

@@ -79,11 +79,15 @@
   import { showCharacterWizard } from "../onboarding/onboardingStore.js";
   import { createClient } from "./Client";
   import { backend, wsbackend } from "../api/base.js";
+  import CharacterSwitcher from "./ui/CharacterSwitcher.svelte";
 
   let client;
   let term;
   let ws;
   let renderers = [];
+  let reconnectTimer;
+  let reconnectAttempt = 0;
+  let destroyed = false;
 
   // Multi-renderer dispatches output to all registered terminal widgets
   function multiRenderer(data) {
@@ -104,14 +108,6 @@
   $: editMode = $layoutStore.editMode;
 
   $: {
-    // Only connect when: client exists, no existing ws, auth is loaded, user is authenticated, and token exists
-    if (client && !ws && !$isLoading && $isAuthenticated && $authToken) {
-      console.log("Connecting to websocket with token:", $authToken.slice(0, 20) + "...");
-      const url = wsbackend + "?access_token=";
-      ws = new WebSocket(url + $authToken);
-      client.setWSClient(ws);
-    }
-
     // set document background (blurred)
     if ($muxStore.background) {
       const bgUrl = backend + "/backgrounds/" + $muxStore.background + ".png";
@@ -125,6 +121,56 @@
       };
       testImg.src = bgUrl;
     }
+  }
+
+  $: if (client && !ws && !$isLoading && $isAuthenticated && $authToken && !destroyed) {
+    connectWebSocket(false);
+  }
+
+  function connectWebSocket(isReconnect = false) {
+    if (!client || ws || !$authToken) return;
+
+    muxStore.setConnectionState(
+      isReconnect ? "reconnecting" : "connecting",
+      isReconnect ? "Reconnecting to the game server..." : "Connecting to the game server...",
+      reconnectAttempt
+    );
+
+    const url = wsbackend + "?access_token=";
+    const nextWs = new WebSocket(url + $authToken);
+    ws = nextWs;
+    client.setWSClient(nextWs);
+
+    nextWs.addEventListener("open", () => {
+      reconnectAttempt = 0;
+      muxStore.setConnectionState("connected", "Connected");
+    });
+
+    nextWs.addEventListener("close", () => {
+      if (destroyed || ws !== nextWs) return;
+      ws = null;
+      scheduleReconnect();
+    });
+
+    nextWs.addEventListener("error", () => {
+      muxStore.setConnectionState("reconnecting", "Connection interrupted. Reconnecting...", reconnectAttempt);
+    });
+  }
+
+  function scheduleReconnect() {
+    if (destroyed || !$isAuthenticated || !$authToken) {
+      muxStore.setConnectionState("disconnected", "Disconnected");
+      return;
+    }
+    reconnectAttempt += 1;
+    const delay = Math.min(1000 * reconnectAttempt, 5000);
+    muxStore.setConnectionState(
+      "reconnecting",
+      `Connection lost. Reconnecting in ${Math.ceil(delay / 1000)}s...`,
+      reconnectAttempt
+    );
+    clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(() => connectWebSocket(true), delay);
   }
 
   const characterCreator = () => {
@@ -180,6 +226,13 @@
   });
 
   onDestroy(async () => {
+    destroyed = true;
+    clearTimeout(reconnectTimer);
+    if (ws) {
+      ws.close();
+      ws = null;
+    }
+
     document.body.style.backgroundImage = "";
     document.body.style.backgroundAttachment = "";
 
@@ -193,6 +246,12 @@
 <div class="bg-overlay"></div>
 
 <div class="gameContainer" class:mobile={$isMobile}>
+  <CharacterSwitcher
+    store={muxStore}
+    authToken={$authToken}
+    {sendMessage}
+  />
+
   {#if $isMobile}
     <MobileLayout
       store={muxStore}

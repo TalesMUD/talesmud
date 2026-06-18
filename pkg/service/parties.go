@@ -17,7 +17,9 @@ type PartiesService interface {
 	FindAll() ([]*e.Party, error)
 	Store(party *e.Party) (*e.Party, error)
 
+	FindByCharacterID(characterID string) (*e.Party, error)
 	AddCharacterToParty(party *e.Party, character *characters.Character) error
+	RemoveCharacterFromParty(party *e.Party, characterID string) error
 }
 
 type partiesService struct {
@@ -63,6 +65,44 @@ func (s *partiesService) Store(party *e.Party) (*e.Party, error) {
 	return s.repo.Store(party)
 }
 
+func (s *partiesService) FindByCharacterID(characterID string) (*e.Party, error) {
+	parties, err := s.repo.FindAll()
+	if err != nil {
+		return nil, err
+	}
+	for _, party := range parties {
+		for _, memberID := range party.Characters {
+			if memberID == characterID {
+				return party, nil
+			}
+		}
+	}
+	return nil, nil
+}
+
 func (s *partiesService) AddCharacterToParty(party *e.Party, character *characters.Character) error {
-	return nil
+	if party == nil || character == nil {
+		return nil
+	}
+	for _, memberID := range party.Characters {
+		if memberID == character.ID {
+			return nil
+		}
+	}
+	party.Characters = append(party.Characters, character.ID)
+	return s.repo.Update(party.ID, party)
+}
+
+func (s *partiesService) RemoveCharacterFromParty(party *e.Party, characterID string) error {
+	if party == nil || characterID == "" {
+		return nil
+	}
+	next := make([]string, 0, len(party.Characters))
+	for _, memberID := range party.Characters {
+		if memberID != characterID {
+			next = append(next, memberID)
+		}
+	}
+	party.Characters = next
+	return s.repo.Update(party.ID, party)
 }

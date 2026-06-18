@@ -189,8 +189,9 @@ func (server *server) HandleConnections(c *gin.Context) {
 		err := ws.ReadJSON(&msg)
 		if err != nil {
 
-			user.IsOnline = false
-			server.Facade.UsersService().Update(user.RefID, user)
+			server.Game.OnUserQuit <- &messages.UserQuit{
+				User: user,
+			}
 
 			log.Printf("error: %v", err)
 			server.Clients.Delete(user.ID)
@@ -219,22 +220,12 @@ func (server *server) HandleConnections(c *gin.Context) {
 		}
 
 		// update user online status
-		user.LastSeen = time.Now()
-		user.IsOnline = true
-		server.Facade.UsersService().Update(user.RefID, user)
+		server.Game.ConnectUserSession(user)
 
 		if msg.Message != "" {
 			server.Game.OnMessageReceived() <- messages.NewMessage(user, msg.Message)
 		}
 	}
-}
-func contains(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
 }
 func (server *server) sendMessage(id string, msg interface{}) {
 
@@ -247,11 +238,6 @@ func (server *server) sendMessage(id string, msg interface{}) {
 			server.Game.OnUserQuit <- &messages.UserQuit{
 				User: client.User,
 			}
-
-			// update user online status
-			user := client.User
-			user.IsOnline = false
-			server.Facade.UsersService().Update(user.RefID, user)
 
 			log.Printf("error: %v", err)
 			client.ws.Close()
@@ -278,27 +264,11 @@ func (server *server) sendToRoomWithout(id string, room *rooms.Room, msg interfa
 
 	usersInRoom := []string{}
 
-	//TODO build service that reads all users from
-	allUsers, _ := server.Facade.UsersService().FindAll()
-	updateRoom := false
-	for _, usr := range allUsers {
-		if usr.LastCharacter != id && contains(*room.Characters, usr.LastCharacter) {
-
-			// check if character is really in this room or remove
-			if chr, err := server.Facade.CharactersService().FindByID(usr.LastCharacter); err == nil {
-				if chr.CurrentRoomID == room.ID {
-					usersInRoom = append(usersInRoom, usr.ID)
-				} else {
-					// remove character from current room
-					room.RemoveCharacter(chr.ID)
-					updateRoom = true
-				}
-			}
+	for _, player := range server.Game.GetRoomPlayers(room.ID, "") {
+		if player.CharacterID == id {
+			continue
 		}
-	}
-
-	if updateRoom {
-		server.Facade.RoomsService().Update(room.ID, room)
+		usersInRoom = append(usersInRoom, player.UserID)
 	}
 
 	for _, usr := range usersInRoom {

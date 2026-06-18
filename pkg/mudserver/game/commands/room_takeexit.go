@@ -43,6 +43,7 @@ func TakeExit(exit string) RoomCommand {
 				character := message.Character
 				character.CurrentRoomID = next.ID
 				game.GetFacade().CharactersService().Update(character.ID, character)
+				game.SetUserSessionCharacter(message.FromUser, character)
 
 				// send all players a left room message
 				game.SendMessage() <- messages.CharacterLeftRoom{
