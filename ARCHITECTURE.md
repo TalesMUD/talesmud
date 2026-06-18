@@ -165,6 +165,8 @@ type Connection struct {
 }
 ```
 
+The client registry supports stale-safe replacement for reconnects. When a user opens a new WebSocket, the server replaces the previous connection and only a matching current connection can mark the user offline or emit quit cleanup. This prevents an old socket close from deleting a fresh connection or incorrectly clearing online state.
+
 #### Server Components
 
 ```go
@@ -214,6 +216,8 @@ receiveMessages() routes by Audience
        ├──► sendToRoomWithout()     [Room except origin]
        └──► Broadcast channel       [Global]
 ```
+
+Character selection, room movement, and disconnect cleanup also emit `roomPresence` messages. These are silent room-scoped WebSocket payloads that refresh the client player list without re-rendering the full room description.
 
 ### Game Engine (`pkg/mudserver/game/`)
 
@@ -1253,9 +1257,9 @@ All entity editors (Rooms, Items, Item Templates, NPCs, Dialogs, Quests, Scripts
 |-------|---------|
 | `stores.js` | Global user state, menu state |
 | `auth.js` | Auth0 authentication state |
-| `MUDXPlusStore.js` | Game UI state (exits, actions, background, mana, equipped skills) |
+| `MUDXPlusStore.js` | Game UI state (exits, actions, background, mana, equipped skills, connection status, room players) |
 | `CRUDEditorStore.js` | Editor state (elements, selection, filters, table filter/sort state, detail panel open/close) |
-| `Client.js` | WebSocket client state (room, character) |
+| `Client.js` | WebSocket client state (room, character, reconnect lifecycle, room presence messages) |
 | `overlayStore.js` | Transient text overlay messages (auto-dismiss with timers) |
 
 ### WebSocket Client
@@ -1273,6 +1277,8 @@ class GameClient {
     onMessage(type, handler)  // Register handler
 }
 ```
+
+The MUD client tracks `connecting`, `connected`, `reconnecting`, and `disconnected` states in `MUDXPlusStore`. On close it schedules retry attempts using the same authenticated WebSocket URL. The game shell displays this state alongside an in-game character switcher that loads `/api/my-characters` and sends `sc <name>` to switch characters.
 
 ### Terminal Integration
 

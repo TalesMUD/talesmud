@@ -30,6 +30,16 @@ func (r *clientRegistry) Delete(id string) {
 	delete(r.clients, id)
 }
 
+func (r *clientRegistry) DeleteIf(id string, con *Connection) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if current, ok := r.clients[id]; ok && current == con {
+		delete(r.clients, id)
+		return true
+	}
+	return false
+}
+
 func (r *clientRegistry) ForEach(fn func(id string, con *Connection)) {
 	r.mu.RLock()
 	snapshot := make(map[string]*Connection, len(r.clients))

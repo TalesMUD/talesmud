@@ -65,6 +65,7 @@ func (game *Game) handleUserQuit(user *entities.User) {
 			Message:    character.Name + " left.",
 		},
 	}
+	game.SendMessage() <- messages.NewRoomPresenceMessage(room, game)
 }
 
 // Find the matching character for the user where the message originated

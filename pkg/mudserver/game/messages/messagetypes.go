@@ -1,6 +1,6 @@
 package messages
 
-//MessageType type
+// MessageType type
 type MessageType string
 
 const (
@@ -32,6 +32,8 @@ const (
 
 	// Room update (silent refresh of exits/items/NPCs without re-rendering description)
 	MessageTypeRoomUpdate = "roomUpdate"
+	// Room presence update (silent refresh of online player list only)
+	MessageTypeRoomPresence = "roomPresence"
 
 	// Quest messages
 	MessageTypeQuestAccepted  = "questAccepted"  // Quest accepted

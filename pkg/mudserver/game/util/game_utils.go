@@ -161,6 +161,33 @@ func GetRoomCharacters(room *rooms.Room, user *entities.User, game def.GameCtrl)
 	return result
 }
 
+// GetRoomPresenceCharacters returns online active player characters for room-wide
+// presence broadcasts. The client marks its own character locally.
+func GetRoomPresenceCharacters(room *rooms.Room, game def.GameCtrl) []RoomCharacter {
+	if room.Characters == nil || len(*room.Characters) == 0 {
+		return []RoomCharacter{}
+	}
+
+	result := make([]RoomCharacter, 0, len(*room.Characters))
+	for _, charID := range *room.Characters {
+		character, err := game.GetFacade().CharactersService().FindByID(charID)
+		if err != nil {
+			continue
+		}
+		charUser, err := game.GetFacade().UsersService().FindByID(character.BelongsUserID)
+		if err != nil || !charUser.IsOnline || charUser.LastCharacter != character.ID {
+			continue
+		}
+		result = append(result, RoomCharacter{
+			ID:    character.ID,
+			Name:  character.Name,
+			IsYou: false,
+		})
+	}
+
+	return result
+}
+
 // RoomItem represents item data for frontend UI rendering
 type RoomItem struct {
 	ID           string `json:"id"`

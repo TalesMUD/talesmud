@@ -131,8 +131,11 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Real-time player interactions via WebSocket
   - Players see each other in rooms
   - Global and room-based chat
+  - Party foundations: create, invite, accept, leave, and party chat commands
   - Emote system
-  - Player presence tracking
+  - Player presence tracking with silent room presence refreshes on join, leave, movement, character switch, and disconnect
+  - Client reconnect status and automatic reconnect attempts
+  - In-game character switcher for changing active characters without leaving the play UI
 
 ### Content Creation
 
@@ -271,6 +274,7 @@ talesmud/
 | `listcharacters` | `lc` | List your characters |
 | `newcharacter` | `nc` | Create new character |
 | `who` | - | List online players |
+| `party` | `p` | Party commands: create, invite, accept, leave, say |
 | `scream` | - | Broadcast to room |
 | `shrug` | - | Emote action |
 | `help` | `h` | Show help |
