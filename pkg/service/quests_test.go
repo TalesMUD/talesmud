@@ -125,6 +125,157 @@ func TestBuildQuestLogIncludesObjectiveDescriptionsAndReadyFlag(t *testing.T) {
 	}
 }
 
+func TestApplyQuestEventKillUpdatesMatchingActiveObjective(t *testing.T) {
+	fixture := newQuestRuleTestFixture(validTestQuest())
+
+	results, err := fixture.svc.ApplyQuestEvent(QuestEvent{
+		Type:        QuestEventNPCKilled,
+		CharacterID: "char1",
+		NPCID:       "npc1",
+	})
+
+	if err != nil {
+		t.Fatalf("ApplyQuestEvent returned error: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected 1 event result, got %d", len(results))
+	}
+	if results[0].Kind != QuestEventResultReadyToTurnIn {
+		t.Fatalf("expected ready-to-turn-in result, got %q", results[0].Kind)
+	}
+	progress := fixture.progressRepo.progress[0]
+	if got := progress.Objectives[0].Current; got != 1 {
+		t.Fatalf("expected kill objective current to be 1, got %d", got)
+	}
+	if !progress.Objectives[0].Completed {
+		t.Fatalf("expected kill objective to be completed")
+	}
+}
+
+func TestApplyQuestEventVisitDoesNotIncrementCompletedObjective(t *testing.T) {
+	quest := validTestQuest()
+	quest.Objectives = []quests.Objective{{
+		ID:          "obj1",
+		Type:        quests.ObjectiveVisit,
+		Description: "Visit the hall",
+		TargetID:    "room1",
+		Amount:      1,
+	}}
+	fixture := newQuestRuleTestFixture(quest)
+	fixture.progressRepo.progress[0].Objectives[0].Current = 1
+	fixture.progressRepo.progress[0].Objectives[0].Completed = true
+
+	results, err := fixture.svc.ApplyQuestEvent(QuestEvent{
+		Type:        QuestEventRoomEnter,
+		CharacterID: "char1",
+		RoomID:      "room1",
+	})
+
+	if err != nil {
+		t.Fatalf("ApplyQuestEvent returned error: %v", err)
+	}
+	if len(results) != 0 {
+		t.Fatalf("expected no result for already completed objective, got %#v", results)
+	}
+	if got := fixture.progressRepo.progress[0].Objectives[0].Current; got != 1 {
+		t.Fatalf("expected completed visit current to stay 1, got %d", got)
+	}
+}
+
+func TestApplyQuestEventDeliverRequiresMatchingNPCAndItem(t *testing.T) {
+	quest := validTestQuest()
+	quest.Objectives = []quests.Objective{{
+		ID:             "obj1",
+		Type:           quests.ObjectiveDeliver,
+		Description:    "Deliver the relic",
+		TargetID:       "item1",
+		DeliverToNPCID: "npc1",
+		Amount:         1,
+	}}
+	fixture := newQuestRuleTestFixture(quest)
+
+	results, err := fixture.svc.ApplyQuestEvent(QuestEvent{
+		Type:        QuestEventTalkToNPC,
+		CharacterID: "char1",
+		NPCID:       "npc1",
+	})
+	if err != nil {
+		t.Fatalf("ApplyQuestEvent returned error without item: %v", err)
+	}
+	if len(results) != 0 {
+		t.Fatalf("expected no deliver progress without item, got %#v", results)
+	}
+
+	fixture.character.Inventory.Items = append(fixture.character.Inventory.Items, &items.Item{
+		Entity:     &entities.Entity{ID: "item-instance-1"},
+		Name:       "Relic",
+		TemplateID: "item1",
+	})
+	results, err = fixture.svc.ApplyQuestEvent(QuestEvent{
+		Type:        QuestEventTalkToNPC,
+		CharacterID: "char1",
+		NPCID:       "npc1",
+	})
+
+	if err != nil {
+		t.Fatalf("ApplyQuestEvent returned error with item: %v", err)
+	}
+	if len(results) != 1 || results[0].Kind != QuestEventResultReadyToTurnIn {
+		t.Fatalf("expected ready deliver result, got %#v", results)
+	}
+	if !fixture.progressRepo.progress[0].Objectives[0].Completed {
+		t.Fatalf("expected deliver objective to complete")
+	}
+}
+
+func TestTurnInQuestGrantsRewardsAndCompletesOnce(t *testing.T) {
+	quest := validTestQuest()
+	quest.Rewards.XP = 25
+	quest.Rewards.Gold = 7
+	quest.Rewards.ItemTemplateIDs = []string{"item1"}
+	fixture := newQuestRuleTestFixture(quest)
+	fixture.progressRepo.progress[0].Objectives[0].Current = 1
+	fixture.progressRepo.progress[0].Objectives[0].Completed = true
+
+	result, err := fixture.svc.TurnInQuest("char1", quest.ID, "npc1")
+
+	if err != nil {
+		t.Fatalf("TurnInQuest returned error: %v", err)
+	}
+	if result.QuestName != quest.Name {
+		t.Fatalf("expected turn-in result quest name %q, got %q", quest.Name, result.QuestName)
+	}
+	if fixture.progressRepo.progress[0].Status != quests.QuestStatusCompleted {
+		t.Fatalf("expected quest progress to be completed, got %q", fixture.progressRepo.progress[0].Status)
+	}
+	if fixture.character.XP != 25 || fixture.character.Gold != 7 {
+		t.Fatalf("expected rewards to update XP/gold, got xp=%d gold=%d", fixture.character.XP, fixture.character.Gold)
+	}
+	if len(fixture.character.Inventory.Items) != 1 {
+		t.Fatalf("expected one reward item in inventory, got %d", len(fixture.character.Inventory.Items))
+	}
+
+	_, err = fixture.svc.TurnInQuest("char1", quest.ID, "npc1")
+	if err == nil {
+		t.Fatalf("expected second turn-in to fail")
+	}
+}
+
+func TestTurnInQuestRejectsWrongNPC(t *testing.T) {
+	fixture := newQuestRuleTestFixture(validTestQuest())
+	fixture.progressRepo.progress[0].Objectives[0].Current = 1
+	fixture.progressRepo.progress[0].Objectives[0].Completed = true
+
+	_, err := fixture.svc.TurnInQuest("char1", "quest1", "npc2")
+
+	if err == nil {
+		t.Fatalf("expected wrong turn-in NPC to be rejected")
+	}
+	if fixture.progressRepo.progress[0].Status != quests.QuestStatusActive {
+		t.Fatalf("expected quest to remain active, got %q", fixture.progressRepo.progress[0].Status)
+	}
+}
+
 func assertHasIssue(t *testing.T, issues []QuestValidationIssue, code string) {
 	t.Helper()
 	for _, issue := range issues {
@@ -174,14 +325,67 @@ func newQuestValidationTestService() QuestsService {
 	return svc
 }
 
+type questRuleTestFixture struct {
+	svc          QuestsService
+	progressRepo *fakeQuestProgressRepo
+	character    *characters.Character
+}
+
+func newQuestRuleTestFixture(quest *quests.Quest) questRuleTestFixture {
+	progressRepo := &fakeQuestProgressRepo{progress: []*quests.QuestProgress{{
+		Entity:      &entities.Entity{ID: "progress1"},
+		CharacterID: "char1",
+		QuestID:     quest.ID,
+		Status:      quests.QuestStatusActive,
+		Objectives: []quests.ObjectiveProgress{{
+			ObjectiveID: quest.Objectives[0].ID,
+			Current:     0,
+			Required:    1,
+			Completed:   false,
+		}},
+	}}}
+	questRepo := &fakeQuestsRepo{quests: map[string]*quests.Quest{
+		quest.ID: quest,
+	}}
+	character := &characters.Character{
+		Entity: &entities.Entity{ID: "char1"},
+		Name:   "Hero",
+		Inventory: items.Inventory{
+			Size:  10,
+			Items: []*items.Item{},
+		},
+	}
+	svc := NewQuestsService(questRepo, progressRepo)
+	svc.SetFacade(&fakeQuestValidationFacade{
+		chars: &fakeCharactersService{characters: map[string]*characters.Character{
+			"char1": character,
+		}},
+		npcs: &fakeNPCsRepo{npcs: map[string]*npc.NPC{
+			"npc1": {Entity: &entities.Entity{ID: "npc1"}, Name: "Guard", IsTemplate: true},
+			"npc2": {Entity: &entities.Entity{ID: "npc2"}, Name: "Other", IsTemplate: true},
+		}},
+		items: &fakeItemsRepo{items: map[string]*items.Item{
+			"item1": {Entity: &entities.Entity{ID: "item1"}, Name: "Relic", IsTemplate: true},
+		}},
+		rooms: &fakeRoomsRepo{rooms: map[string]*rooms.Room{
+			"room1": {Entity: &entities.Entity{ID: "room1"}, Name: "Hall"},
+		}},
+		scripts: &fakeScriptsRepo{scripts: map[string]*scripts.Script{
+			"script1": {Entity: &entities.Entity{ID: "script1"}, Name: "Quest Check"},
+		}},
+	})
+	return questRuleTestFixture{svc: svc, progressRepo: progressRepo, character: character}
+}
+
 type fakeQuestValidationFacade struct {
+	chars   *fakeCharactersService
 	npcs    *fakeNPCsRepo
 	items   *fakeItemsRepo
 	rooms   *fakeRoomsRepo
 	scripts *fakeScriptsRepo
 }
 
-func (f *fakeQuestValidationFacade) CharactersService() CharactersService { return nil }
+func (f *fakeQuestValidationFacade) CharactersService() CharactersService { return f.chars }
 func (f *fakeQuestValidationFacade) PartiesService() PartiesService       { return nil }
 func (f *fakeQuestValidationFacade) UsersService() UsersService           { return nil }
 func (f *fakeQuestValidationFacade) RoomsService() RoomsService           { return NewRoomsService(f.rooms) }
@@ -431,36 +635,44 @@ func (r *fakeScriptsRepo) Import(script *scripts.Script) (*scripts.Script, error
 	return r.Store(script)
 }
 
-var _ CharactersService = (*unusedCharactersService)(nil)
+var _ CharactersService = (*fakeCharactersService)(nil)
 
-type unusedCharactersService struct{}
-
-func (s *unusedCharactersService) Drop() error { return nil }
-func (s *unusedCharactersService) FindByID(id string) (*characters.Character, error) {
-	return nil, errors.New("unused")
+type fakeCharactersService struct {
+	characters map[string]*characters.Character
 }
-func (s *unusedCharactersService) FindAllForUser(userID string) ([]*characters.Character, error) {
+
+func (s *fakeCharactersService) Drop() error { return nil }
+func (s *fakeCharactersService) FindByID(id string) (*characters.Character, error) {
+	if character, ok := s.characters[id]; ok {
+		return character, nil
+	}
+	return nil, errors.New("character not found")
+}
+func (s *fakeCharactersService) FindAllForUser(userID string) ([]*characters.Character, error) {
 	return nil, nil
 }
-func (s *unusedCharactersService) FindByName(name string) ([]*characters.Character, error) {
+func (s *fakeCharactersService) FindByName(name string) ([]*characters.Character, error) {
 	return nil, nil
 }
-func (s *unusedCharactersService) FindAll() ([]*characters.Character, error) { return nil, nil }
-func (s *unusedCharactersService) Update(id string, character *characters.Character) error {
+func (s *fakeCharactersService) FindAll() ([]*characters.Character, error) { return nil, nil }
+func (s *fakeCharactersService) Update(id string, character *characters.Character) error {
+	s.characters[id] = character
 	return nil
 }
-func (s *unusedCharactersService) Delete(id string) error { return nil }
-func (s *unusedCharactersService) Store(character *characters.Character) (*characters.Character, error) {
+func (s *fakeCharactersService) Delete(id string) error { return nil }
+func (s *fakeCharactersService) Store(character *characters.Character) (*characters.Character, error) {
+	s.characters[character.ID] = character
 	return character, nil
 }
-func (s *unusedCharactersService) Import(character *characters.Character) (*characters.Character, error) {
+func (s *fakeCharactersService) Import(character *characters.Character) (*characters.Character, error) {
+	s.characters[character.ID] = character
 	return character, nil
 }
-func (s *unusedCharactersService) IsCharacterNameTaken(name string) bool { return false }
-func (s *unusedCharactersService) GetCharacterTemplates() []*characters.CharacterTemplate {
+func (s *fakeCharactersService) IsCharacterNameTaken(name string) bool { return false }
+func (s *fakeCharactersService) GetCharacterTemplates() []*characters.CharacterTemplate {
 	return nil
 }
-func (s *unusedCharactersService) CreateNewCharacter(dto *dto.CreateCharacterDTO) (*characters.Character, error) {
+func (s *fakeCharactersService) CreateNewCharacter(dto *dto.CreateCharacterDTO) (*characters.Character, error) {
 	return nil, errors.New("unused")
 }
 
