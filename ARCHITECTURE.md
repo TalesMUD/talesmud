@@ -98,6 +98,7 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
     ├── dialogs/           # Dialog CRUD (creator level for writes)
     ├── quests/            # Quest CRUD (creator for writes)
     ├── quest-progress/    # Quest log per character (owner/admin)
+    ├── world/validation   # Creator world health diagnostics
     ├── user               # User profile (player level)
     ├── admin/
     │   └── users/         # User management (admin only)
@@ -277,7 +278,9 @@ The game runs multiple update tickers:
 2. **NPC Updates** (10 seconds)
    - Process NPC state machine (idle, patrol, combat, fleeing)
    - Handle respawning for dead NPCs
-   - Execute behavior updates (wander, patrol paths)
+   - Execute behavior updates: patrol advances through configured room IDs; idle wandering chooses visible exits within `WanderRadius` from spawn
+   - Trigger idle dialog messages using `IdleDialogTimeout`
+   - Send silent room updates to online occupants in rooms affected by NPC movement
 
 3. **Spawner Updates** (5 seconds)
    - Check each spawner's instance count
@@ -430,6 +433,8 @@ type StatusEffect struct {
 | `status` | `cs`, `combat` | Show combat status |
 | `bind` | - | Bind respawn point at current room |
 
+Combat commands validate that the character's persisted combat flag still maps to a live combat instance. If not, they clear `InCombat` and `CombatInstanceID` before responding, preventing stale state from blocking normal play.
+
 #### Combat Update Cycle (2 seconds)
 
 ```go
@@ -555,7 +560,7 @@ Listens to game events and automatically updates quest objective progress:
 | Dialog node | `talk.go` command | Talk objectives matching NPC + dialog node |
 | Talk to NPC | `talk.go` command | Deliver objectives (if player has required item) |
 
-When talking to a quest-source NPC, quest dialog options (offer, progress check, turn-in) are automatically injected into the NPC's conversation.
+When talking to a quest-source NPC, quest dialog options (offer, progress check, turn-in) are automatically injected into the NPC's conversation. NPCs that have quests but no full dialog tree use a synthetic quest-only conversation so numeric option selection still goes through `DialogSelectCommand`. Dialog quest actions send enriched `questLog` WebSocket payloads using the same quest definition details as character selection.
 
 ### Service Layer (`pkg/service/`)
 
@@ -947,6 +952,8 @@ type QuestProgress struct {
 
 Items use a unified template/instance pattern similar to NPCs:
 
+Stackable item quantity changes from consumable use and partial stack drops are persisted to both the embedded character inventory and the backing item instance, keeping future room/world references consistent.
+
 ```go
 type Item struct {
     *entities.Entity
@@ -1239,6 +1246,8 @@ App.svelte (role-aware navigation: Creator/Admin links gated by user role)
 
 #### Creator UI Data Table Pattern
 
+The Creator World Health route calls `GET /api/world/validation` to surface broken cross-system references, including rooms, NPCs, items, loot tables, quests, dialogs, scripts, spawners, and character template starting item references.
+
 All entity editors (Rooms, Items, Item Templates, NPCs, Dialogs, Quests, Scripts, Character Templates) share the `CRUDEditor` component which provides a side-by-side master-detail layout:
 
 - **Table panel (left)**: Full-width filterable, sortable data table showing entity-specific columns. When no entity is selected/detail is closed, the table expands to full width.
@@ -1391,6 +1400,7 @@ Guest sessions use HMAC-SHA256 tokens (not Auth0 JWTs):
 ### Authorization
 
 - Protected endpoints require valid JWT or guest HMAC token
+- Frontend auth/session debug state must not log or retain token values, including truncated token excerpts
 - Legacy admin endpoints (export/import) require explicit basic auth credentials; unset credentials disable the endpoints and `admin/admin` is rejected in release mode
 - Direct character access and quest progress routes are limited to the owning user or admins
 - Three-tier role system enforced via middleware:

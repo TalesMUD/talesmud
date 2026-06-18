@@ -53,6 +53,10 @@ func DialogSelectCommand(room *rooms.Room, game def.GameCtrl, message *messages.
 		return false // No active conversation, let other handlers process
 	}
 
+	if isQuestOnlyConversation(activeConv) {
+		return handleQuestOnlyDialogSelection(game, message, activeConv, optionIndex)
+	}
+
 	// Load the dialog
 	dialog, err := game.GetFacade().DialogsService().FindByID(activeConv.DialogID)
 	if err != nil {
@@ -72,17 +76,7 @@ func DialogSelectCommand(room *rooms.Room, game def.GameCtrl, message *messages.
 	// Re-compute quest options for this NPC (only at root level)
 	var questOptions []questDialogOption
 	if activeConv.TargetID != "" && (activeConv.CurrentNodeID == "" || activeConv.CurrentNodeID == "main") {
-		npcManager := game.GetNPCInstanceManager()
-		if npcManager != nil {
-			npcInst := npcManager.GetInstance(activeConv.TargetID)
-			if npcInst != nil {
-				templateID := npcInst.TemplateID
-				if templateID == "" {
-					templateID = npcInst.ID
-				}
-				questOptions = getQuestDialogOptions(game, message.Character.ID, templateID, npcInst.ID)
-			}
-		}
+		questOptions = questOptionsForConversation(game, message.Character.ID, activeConv)
 	}
 
 	totalOptions := len(filteredOptions) + len(questOptions)
@@ -285,6 +279,50 @@ func DialogSelectCommand(room *rooms.Room, game def.GameCtrl, message *messages.
 	return true
 }
 
+func isQuestOnlyConversation(conv *conversations.Conversation) bool {
+	return conv != nil && conv.TargetType == conversations.TargetTypeNPC && (conv.DialogID == questOnlyDialogID || conv.DialogID == "")
+}
+
+func handleQuestOnlyDialogSelection(game def.GameCtrl, message *messages.Message, activeConv *conversations.Conversation, optionIndex int) bool {
+	questOptions := questOptionsForConversation(game, message.Character.ID, activeConv)
+	totalOptions := len(questOptions)
+	if optionIndex < 1 || optionIndex > totalOptions {
+		game.SendMessage() <- message.Reply("Invalid option. Please choose 1-" + strconv.Itoa(totalOptions))
+		return true
+	}
+
+	npcName := activeConv.Context["NPC"]
+	if npcName == "" {
+		npcName = "NPC"
+	}
+
+	qo := questOptions[optionIndex-1]
+	handleQuestDialogOption(game, message, qo, npcName, activeConv)
+	return true
+}
+
+func questOptionsForConversation(game def.GameCtrl, characterID string, conv *conversations.Conversation) []questDialogOption {
+	if conv == nil || conv.TargetID == "" {
+		return nil
+	}
+
+	npcManager := game.GetNPCInstanceManager()
+	if npcManager == nil {
+		return nil
+	}
+
+	npcInst := npcManager.GetInstance(conv.TargetID)
+	if npcInst == nil {
+		return nil
+	}
+
+	templateID := npcInst.TemplateID
+	if templateID == "" {
+		templateID = npcInst.ID
+	}
+	return getQuestDialogOptions(game, characterID, templateID, npcInst.ID)
+}
+
 // handleQuestAction processes quest accept/complete/progress actions from dialog options
 func handleQuestAction(game def.GameCtrl, message *messages.Message, selectedOption *dialogs.Dialog, npcName string, activeConv *conversations.Conversation) {
 	char := message.Character
@@ -328,7 +366,7 @@ func handleQuestAction(game def.GameCtrl, message *messages.Message, selectedOpt
 
 		// Send quest log update
 		questLog, _ := game.GetFacade().QuestsService().GetQuestLog(char.ID)
-		questLogEntries := convertQuestLogToEntries(questLog)
+		questLogEntries := buildQuestLogEntries(game, questLog)
 		game.SendMessage() <- messages.QuestLogMessage{
 			MessageResponse: messages.MessageResponse{
 				Audience:   messages.MessageAudienceUser,
@@ -396,7 +434,7 @@ func handleQuestAction(game def.GameCtrl, message *messages.Message, selectedOpt
 
 		// Send updated quest log
 		questLog, _ := game.GetFacade().QuestsService().GetQuestLog(char.ID)
-		questLogEntries := convertQuestLogToEntries(questLog)
+		questLogEntries := buildQuestLogEntries(game, questLog)
 		game.SendMessage() <- messages.QuestLogMessage{
 			MessageResponse: messages.MessageResponse{
 				Audience:   messages.MessageAudienceUser,
@@ -486,7 +524,7 @@ func handleQuestDialogOption(game def.GameCtrl, message *messages.Message, qo qu
 
 		// Send quest log update
 		questLog, _ := game.GetFacade().QuestsService().GetQuestLog(char.ID)
-		questLogEntries := convertQuestLogToEntries(questLog)
+		questLogEntries := buildQuestLogEntries(game, questLog)
 		game.SendMessage() <- messages.QuestLogMessage{
 			MessageResponse: messages.MessageResponse{
 				Audience:   messages.MessageAudienceUser,
@@ -541,7 +579,7 @@ func handleQuestDialogOption(game def.GameCtrl, message *messages.Message, qo qu
 		}
 
 		questLog, _ := game.GetFacade().QuestsService().GetQuestLog(char.ID)
-		questLogEntries := convertQuestLogToEntries(questLog)
+		questLogEntries := buildQuestLogEntries(game, questLog)
 		game.SendMessage() <- messages.QuestLogMessage{
 			MessageResponse: messages.MessageResponse{
 				Audience:   messages.MessageAudienceUser,
@@ -606,29 +644,4 @@ func buildQuestRewardMessage(quest *quests.Quest, grantedItems []string) string 
 	sb.WriteString("\n══════════════════════════════════════════════════")
 
 	return sb.String()
-}
-
-// convertQuestLogToEntries converts quest progress to quest log entries for messages
-func convertQuestLogToEntries(progressList []*quests.QuestProgress) []messages.QuestLogEntry {
-	entries := make([]messages.QuestLogEntry, 0, len(progressList))
-	for _, p := range progressList {
-		objectives := make([]messages.QuestObjectiveProgress, 0, len(p.Objectives))
-		for _, obj := range p.Objectives {
-			objectives = append(objectives, messages.QuestObjectiveProgress{
-				ObjectiveID: obj.ObjectiveID,
-				Current:     obj.Current,
-				Required:    obj.Required,
-				Completed:   obj.Completed,
-			})
-		}
-		entries = append(entries, messages.QuestLogEntry{
-			QuestID:     p.QuestID,
-			QuestName:   "", // Will be populated by client or needs quest definition lookup
-			Description: "",
-			Category:    "",
-			Status:      string(p.Status),
-			Objectives:  objectives,
-		})
-	}
-	return entries
 }

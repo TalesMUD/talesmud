@@ -187,6 +187,9 @@ func (app *app) setupRoutes() {
 	worldRenderer := &handler.WorldRendererHandler{
 		RoomsService: app.Facade.RoomsService(),
 	}
+	worldValidation := &handler.WorldValidationHandler{
+		Service: service.NewWorldValidationService(app.Facade),
+	}
 
 	serverSettings := &handler.ServerSettingsHandler{
 		Service: app.Facade.ServerSettingsService(),
@@ -276,6 +279,7 @@ func (app *app) setupRoutes() {
 			creator.PUT("rooms/:id", rooms.PutRoom)
 			creator.DELETE("rooms/:id", rooms.DeleteRoom)
 			creator.PUT("world/rooms-coords", worldRenderer.BatchUpdateCoords)
+			creator.GET("world/validation", worldValidation.GetWorldValidation)
 
 			// Items
 			creator.POST("items", items.PostItem)

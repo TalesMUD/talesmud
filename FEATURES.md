@@ -193,6 +193,8 @@ type Item struct {
 ```
 
 ### Item Types & Slots
+Stackable item quantities are kept consistent when consumed or partially dropped: the character inventory and backing item instance are both updated.
+
 **Item Types**:
 - `currency` - Gold, tokens
 - `consumable` - Potions, food, scrolls
@@ -424,6 +426,12 @@ type NPC struct {
 }
 ```
 
+Runtime behavior:
+- `State="patrol"` advances through `PatrolPath` in order and wraps to the first room.
+- Idle NPCs with `WanderRadius > 0` move through visible exits while staying within that many rooms from `SpawnRoomID`.
+- Idle dialogs emit ambient room messages after `IdleDialogTimeout`.
+- NPC movement sends silent room updates so clients refresh NPC presence without reprinting the room description.
+
 ### Enemy Trait
 ```go
 type EnemyTrait struct {
@@ -605,11 +613,12 @@ type StatusEffect struct {
    - Check stun effects
 
 6. RESOLUTION
-   - Victory (all enemies dead) → XP, gold, loot
-   - Defeat (all players dead) → 10% XP loss, 1 gold loss, respawn at bind point
-   - Fled (all players escaped) → NPCs reset to idle
-   - Timeout (30 minutes) → Combat ends, no rewards
+  - Victory (all enemies dead) → XP, gold, loot
+  - Defeat (all players dead) → 10% XP loss, 1 gold loss, respawn at bind point
+  - Fled (all players escaped) → NPCs reset to idle
+  - Timeout (30 minutes) → Combat ends, no rewards
 ```
+If a character remains flagged as in combat after the runtime combat instance is gone, combat commands clear the stale flag and return the normal not-in-combat response.
 
 ### Combat Commands
 ```bash
@@ -835,6 +844,7 @@ When talking to a quest-source NPC:
 3. **Turn-in option** - If all objectives complete
 
 Dialog options are **automatically injected** into NPC conversations.
+Quest-source NPCs do not need a full dialog tree: if an NPC has quest options but no `DialogID`, the server opens a quest-only conversation and numeric selection accepts, checks, or turns in the quest.
 
 ### Quest Commands
 ```bash
@@ -1007,6 +1017,7 @@ Sent on character selection and quest updates:
   "quests": [ /* array of QuestLogEntry */ ]
 }
 ```
+Dialog-driven quest accepts and completions send the same enriched quest entries as character selection, including quest name, description, category, level, objective descriptions, rewards, and timestamps when available.
 
 #### Quest Update Messages
 ```json
@@ -1613,6 +1624,7 @@ All entity editors use a unified **filterable, sortable data table**:
 8. **Scripts** - Lua script editor with syntax highlighting
 9. **Character Templates** - Archetype editor with modal item-template selection for starting gear
 10. **World Map** - Grid-based world visualization
+11. **World Health** - Cross-system diagnostics for broken entity references and suspicious content values, including character template starting item references
 
 ### Room Editor Features
 - **Exit management** - Add/edit/delete exits, toggle hidden

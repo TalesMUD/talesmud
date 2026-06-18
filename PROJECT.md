@@ -72,6 +72,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Attribute-scaled damage: STR (warrior), DEX (rogue/ranger), INT (mage/druid), WIS (cleric)
   - Mana shield absorption mechanic
   - Skill cooldown tracking per combat instance
+  - Combat commands clear stale character combat flags when no live combat instance exists
   - In-combat commands: `cast <skill> [target]`, numeric shortcuts `1`-`4`
   - Management commands: `skills`, `skills equip <name>`, `skills unequip <name>`
   - YAML import/export for skills data
@@ -80,12 +81,14 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Multiple item types: Currency, Consumable, Armor, Weapon, Collectible, Quest, Crafting Material
   - Quality tiers: Normal, Magic, Rare, Legendary, Mythic
   - Item templates for reusable definitions
+  - Stackable consumables and partial drops persist reduced quantities consistently between character inventory and item instances
   - Container support with nested items
 
 - **Quest System**
   - Data-driven quest definitions with multiple objective types: Kill, Collect, Deliver, Visit, Talk, Custom (Lua)
   - Quest progress tracking per character with persistent state
-  - NPC dialog integration: automatic quest offer/turn-in options injected into NPC conversations
+  - NPC dialog integration: automatic quest offer/turn-in options injected into NPC conversations, including quest-only NPCs without full dialog trees
+  - Real-time quest log WebSocket updates include quest definition details, objectives, and rewards after dialog quest actions
   - Quest rewards: XP, Gold, and item grants on completion
   - Quest prerequisites: required quest completions and level requirements
   - Repeatable quests support
@@ -149,6 +152,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Character template editor with archetype selection and starting gear
   - Skills editor with multi-class assignment, resource types, effects, and secondary effects
   - World map visualization (GridWorldEditor)
+  - World Health diagnostics for broken cross-system references across rooms, NPCs, items, loot tables, quests, dialogs, scripts, spawners, and character template starting gear
   - CRUD operations with live preview
 
 - **Scripting System**
@@ -176,6 +180,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - JWT-based API protection
   - Guest mode with HMAC-SHA256 tokens (no Auth0 required)
   - Dual auth middleware: tries guest token first, falls back to Auth0 JWT
+  - Frontend session state avoids logging or retaining auth token excerpts
   - Basic auth for legacy admin endpoints (export/import), with explicit credentials required and insecure release defaults rejected
   - Session management
   - Three-tier role system: MUD Admin, MUD Creator, Player
@@ -310,6 +315,8 @@ The NPCs branch represents the latest development work, focusing on NPC systems 
    - Trait-based composition (DialogTrait, MerchantTrait, EnemyTrait)
    - Room integration with NPC presence tracking
    - Health, level, and class systems
+   - Runtime NPC behavior loop for idle, patrol, dead/respawn, and combat states
+   - Deterministic patrol paths and bounded wandering from spawn rooms
 
 2. **Dialog Engine**
    - Full dialog tree system with branching conversations
@@ -330,7 +337,6 @@ The NPCs branch represents the latest development work, focusing on NPC systems 
 #### In Progress
 
 - Integration of dialog system into game commands
-- NPC behavior loop in game update cycle
 - Talk/speak command implementation
 - Frontend dialog UI
 
@@ -343,7 +349,6 @@ The NPCs branch represents the latest development work, focusing on NPC systems 
 
 #### Planned Features
 
-- NPC movement and patrol paths
 - Quest-giving NPCs
 
 ### Recent Commits (NPCs Branch)
@@ -476,6 +481,7 @@ go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
 - `POST/PUT/DELETE /api/dialogs` - Dialog management
 - `POST/PUT/DELETE /api/quests` - Quest management
 - `POST/PUT/DELETE /api/skills` - Skill management
+- `GET /api/world/validation` - World Health diagnostics
 - `PUT /api/settings` - Server settings
 
 ### Admin API Endpoints (Require Admin Role)

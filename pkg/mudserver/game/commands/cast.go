@@ -23,7 +23,7 @@ func (command *CastCommand) Execute(game def.GameCtrl, message *messages.Message
 	}
 
 	combatEngine := game.GetCombatEngine()
-	if combatEngine == nil || !combatEngine.IsPlayerInCombat(message.Character.Entity.ID) {
+	if !isInActiveCombat(game, message.Character, combatEngine) {
 		game.SendMessage() <- message.Reply("You can only use skills in combat.")
 		return true
 	}

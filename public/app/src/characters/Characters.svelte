@@ -23,7 +23,6 @@
     isAuthenticated: $isAuthenticated,
     authError: $authError,
     userInfo: $userInfo ? $userInfo.name : null,
-    authToken: $authToken.slice(0, 20),
   };
 
   const loadData = async () => {
