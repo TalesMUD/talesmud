@@ -79,4 +79,34 @@ function batchUpdateCoordsAsync(token, updates) {
     .then((result) => result.data);
 }
 
-export { getWorldMap, getWorldGraph, getWorldGraphAsync, getMinimalRooms, getMinimalRoomsAsync, batchUpdateCoordsAsync };
+function getWorldValidation(token, cb, errorCb) {
+  axios
+    .get(`${backend}/world/validation`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    .then((result) => cb(result.data))
+    .catch((err) => errorCb(err));
+}
+
+function getWorldValidationAsync(token) {
+  return axios
+    .get(`${backend}/world/validation`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    .then((result) => result.data);
+}
+
+export {
+  getWorldMap,
+  getWorldGraph,
+  getWorldGraphAsync,
+  getMinimalRooms,
+  getMinimalRoomsAsync,
+  batchUpdateCoordsAsync,
+  getWorldValidation,
+  getWorldValidationAsync,
+};

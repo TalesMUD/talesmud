@@ -107,6 +107,13 @@ func (command *DropCommand) Execute(game def.GameCtrl, message *messages.Message
 			return true
 		}
 
+		if err := game.GetFacade().ItemsService().Update(item.ID, item); err != nil {
+			log.WithError(err).Error("Error updating carried item stack")
+			item.Quantity += quantity
+			game.SendMessage() <- message.Reply("Error dropping item.")
+			return true
+		}
+
 		// Add dropped item to room
 		err = room.AddItem(storedItem.ID)
 		if err != nil {

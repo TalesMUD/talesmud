@@ -14,6 +14,8 @@ import (
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 )
 
+const questOnlyDialogID = "__quest_options__"
+
 // TalkCommand handles talking to NPCs
 type TalkCommand struct {
 }
@@ -74,7 +76,25 @@ func (command *TalkCommand) Execute(game def.GameCtrl, message *messages.Message
 	if !npc.HasDialog() {
 		// If NPC has quest options but no dialog, show quest dialog
 		if len(questOptions) > 0 {
-			sendQuestOnlyDialog(game, message, npc.Name, questOptions)
+			conv, err := game.GetFacade().ConversationsService().GetOrCreateConversation(
+				message.Character.ID,
+				npc.ID,
+				conversations.TargetTypeNPC,
+				questOnlyDialogID,
+			)
+			if err != nil {
+				log.WithError(err).Error("Error creating quest-only conversation")
+				game.SendMessage() <- message.Reply("Something went wrong starting the conversation.")
+				return true
+			}
+
+			conv.DialogID = questOnlyDialogID
+			conv.CurrentNodeID = "main"
+			conv.SetContext("PLAYER", message.Character.Name)
+			conv.SetContext("NPC", npc.Name)
+			game.GetFacade().ConversationsService().Update(conv.ID, conv)
+
+			sendQuestOnlyDialog(game, message, npc.Name, conv, questOptions)
 			return true
 		}
 		game.SendMessage() <- message.Reply(npc.Name + " doesn't seem to want to talk.")
@@ -118,11 +138,11 @@ func (command *TalkCommand) Execute(game def.GameCtrl, message *messages.Message
 
 // questDialogOption represents a quest-related dialog option
 type questDialogOption struct {
-	text        string // Player-facing label shown in the option list
-	npcText     string // NPC response shown after the player selects this option
-	questID     string
-	questName   string
-	action      string // "accept", "complete", "progress"
+	text      string // Player-facing label shown in the option list
+	npcText   string // NPC response shown after the player selects this option
+	questID   string
+	questName string
+	action    string // "accept", "complete", "progress"
 }
 
 // getQuestDialogOptions checks for quest-related dialog options for an NPC.
@@ -214,7 +234,7 @@ func questPrereqsMet(game def.GameCtrl, characterID string, quest *quests.Quest,
 }
 
 // sendQuestOnlyDialog sends a dialog with only quest options (for NPCs without dialogs)
-func sendQuestOnlyDialog(game def.GameCtrl, message *messages.Message, npcName string, questOptions []questDialogOption) {
+func sendQuestOnlyDialog(game def.GameCtrl, message *messages.Message, npcName string, conv *conversations.Conversation, questOptions []questDialogOption) {
 	options := make([]messages.DialogOption, len(questOptions))
 	for i, qo := range questOptions {
 		options[i] = messages.DialogOption{
@@ -228,7 +248,7 @@ func sendQuestOnlyDialog(game def.GameCtrl, message *messages.Message, npcName s
 		npcName,
 		npcName+" looks at you expectantly.",
 		options,
-		"",
+		conv.ID,
 	)
 
 	game.SendMessage() <- dialogMsg

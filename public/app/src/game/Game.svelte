@@ -142,7 +142,6 @@
   const { isAuthenticated, authToken } = getAuth();
   $: state = {
     isAuthenticated: $isAuthenticated,
-    authToken: $authToken.slice(0, 20),
     background: $muxStore.background,
   };
 

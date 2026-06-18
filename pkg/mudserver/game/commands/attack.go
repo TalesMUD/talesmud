@@ -47,7 +47,7 @@ func (command *AttackCommand) Execute(game def.GameCtrl, message *messages.Messa
 	}
 
 	// Check if player is already in combat
-	if combatEngine.IsPlayerInCombat(message.Character.Entity.ID) {
+	if isInActiveCombat(game, message.Character, combatEngine) {
 		// Player is in combat - this is an in-combat attack
 		return command.handleInCombatAttack(game, message, combatEngine, targetName)
 	}
@@ -285,7 +285,7 @@ func (command *DefendCommand) Execute(game def.GameCtrl, message *messages.Messa
 	}
 
 	combatEngine := game.GetCombatEngine()
-	if combatEngine == nil || !combatEngine.IsPlayerInCombat(message.Character.Entity.ID) {
+	if !isInActiveCombat(game, message.Character, combatEngine) {
 		game.SendMessage() <- message.Reply("You are not in combat.")
 		return true
 	}
@@ -311,7 +311,7 @@ func (command *FleeCommand) Execute(game def.GameCtrl, message *messages.Message
 	}
 
 	combatEngine := game.GetCombatEngine()
-	if combatEngine == nil || !combatEngine.IsPlayerInCombat(message.Character.Entity.ID) {
+	if !isInActiveCombat(game, message.Character, combatEngine) {
 		game.SendMessage() <- message.Reply("You are not in combat. There's nothing to flee from.")
 		return true
 	}
@@ -337,7 +337,7 @@ func (command *CombatStatusCommand) Execute(game def.GameCtrl, message *messages
 	}
 
 	combatEngine := game.GetCombatEngine()
-	if combatEngine == nil || !combatEngine.IsPlayerInCombat(message.Character.Entity.ID) {
+	if !isInActiveCombat(game, message.Character, combatEngine) {
 		game.SendMessage() <- message.Reply("You are not in combat.")
 		return true
 	}

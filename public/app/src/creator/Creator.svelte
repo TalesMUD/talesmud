@@ -12,6 +12,7 @@
     { name: "Skills", nav: "/creator/skills" },
     { name: "Scripts", nav: "/creator/scripts" },
     { name: "World", nav: "/creator/world" },
+    { name: "Health", nav: "/creator/health" },
     { name: "Settings", nav: "/creator/settings" },
   ];
 

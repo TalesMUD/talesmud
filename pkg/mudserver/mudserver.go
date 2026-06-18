@@ -339,7 +339,7 @@ func (server *server) receiveMessages() {
 
 		// Room-enter trigger: run a room-attached script whenever a player enters a room.
 		// This is observed via the outgoing EnterRoomMessage (sent to the entering player).
-		if enter, ok := message.(*messages.EnterRoomMessage); ok {
+		if enter, ok := message.(*messages.EnterRoomMessage); ok && enter.Type == messages.MessageTypeEnterRoom {
 			server.runRoomEnterScript(enter)
 		}
 

@@ -211,6 +211,9 @@ func consumeItem(game def.GameCtrl, message *messages.Message, item *items.Item)
 	if item.Stackable && item.Quantity > 1 {
 		// Decrement quantity
 		item.Quantity--
+		if err := game.GetFacade().ItemsService().Update(item.ID, item); err != nil {
+			log.WithField("itemID", item.ID).WithError(err).Warn("Failed to update consumed stack quantity")
+		}
 	} else {
 		// Remove item from inventory
 		message.Character.Inventory.RemoveItem(item.ID)
