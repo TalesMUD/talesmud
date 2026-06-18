@@ -23,9 +23,10 @@ func buildQuestLogEntries(game def.GameCtrl, progressList []*quests.QuestProgres
 
 func buildQuestLogEntry(quest *quests.Quest, progress *quests.QuestProgress) messages.QuestLogEntry {
 	entry := messages.QuestLogEntry{
-		QuestID:    progress.QuestID,
-		Status:     string(progress.Status),
-		Objectives: buildObjectiveProgress(progress, quest),
+		QuestID:       progress.QuestID,
+		Status:        string(progress.Status),
+		ReadyToTurnIn: progress.Status == quests.QuestStatusActive && questLogObjectivesComplete(progress.Objectives),
+		Objectives:    buildObjectiveProgress(progress, quest),
 	}
 
 	if quest != nil {
@@ -48,6 +49,18 @@ func buildQuestLogEntry(quest *quests.Quest, progress *quests.QuestProgress) mes
 	}
 
 	return entry
+}
+
+func questLogObjectivesComplete(objectives []quests.ObjectiveProgress) bool {
+	if len(objectives) == 0 {
+		return false
+	}
+	for _, objective := range objectives {
+		if !objective.Completed {
+			return false
+		}
+	}
+	return true
 }
 
 func buildObjectiveProgress(progress *quests.QuestProgress, quest *quests.Quest) []messages.QuestObjectiveProgress {
