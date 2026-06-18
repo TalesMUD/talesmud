@@ -116,13 +116,13 @@ func (srv *npcsService) SpawnFromTemplate(templateID, roomID string) (*npc.NPC, 
 
 	// Create instance with copied template data
 	instance := &npc.NPC{
-		Entity:         entities.NewEntity(),
-		Name:           template.Name,
-		Description:    template.Description,
-		Race:           template.Race,
-		Class:          template.Class,
-		Level:          template.Level,
-		MaxHitPoints:   template.MaxHitPoints,
+		Entity:           entities.NewEntity(),
+		Name:             template.Name,
+		Description:      template.Description,
+		Race:             template.Race,
+		Class:            template.Class,
+		Level:            template.Level,
+		MaxHitPoints:     template.MaxHitPoints,
 		CurrentHitPoints: template.MaxHitPoints, // Full HP on spawn
 
 		// Template reference
@@ -138,7 +138,7 @@ func (srv *npcsService) SpawnFromTemplate(templateID, roomID string) (*npc.NPC, 
 
 		// Initial state
 		IsDead: false,
-		State:  "idle",
+		State:  initialNPCState(template.State),
 
 		// Dialog references
 		DialogID:          template.DialogID,
@@ -156,6 +156,13 @@ func (srv *npcsService) SpawnFromTemplate(templateID, roomID string) (*npc.NPC, 
 	instance.CurrentRoomID = roomID
 
 	return instance, nil
+}
+
+func initialNPCState(templateState string) string {
+	if templateState == "" {
+		return "idle"
+	}
+	return templateState
 }
 
 // deepCopyMerchantTrait creates an independent copy of a MerchantTrait so

@@ -60,6 +60,8 @@ type NPC struct {
 	// IdleDialogID references an optional idle dialog that triggers automatically
 	IdleDialogID      string        `bson:"idleDialogID,omitempty" json:"idleDialogID,omitempty"`
 	IdleDialogTimeout time.Duration `bson:"idleDialogTimeout,omitempty" json:"idleDialogTimeout,omitempty"`
+	// LastIdleDialog tracks the last automatic idle dialog trigger for cooldowns
+	LastIdleDialog time.Time `bson:"lastIdleDialog,omitempty" json:"lastIdleDialog,omitempty"`
 
 	// Traits for specialized behaviors
 	EnemyTrait    *EnemyTrait    `bson:"enemyTrait,omitempty" json:"enemyTrait,omitempty"`

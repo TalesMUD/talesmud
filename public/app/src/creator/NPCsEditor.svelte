@@ -101,7 +101,7 @@
   let selectedClassId = "commoner";
 
   // Tab state for traits section
-  let activeTraitTab = "enemy";
+  let activeTraitTab = "behavior";
 
   const config = {
     title: "Manage NPCs",
@@ -121,6 +121,7 @@
     beforeSelect: (element) => {
       if (!element.race) element.race = getRaceById("human");
       if (!element.class) element.class = getClassById("commoner");
+      ensureBehaviorDefaults(element);
       selectedRaceId = element.race.id || "human";
       selectedClassId = element.class.id || "commoner";
     },
@@ -138,7 +139,12 @@
         maxHitPoints: 10,
         dialogID: "",
         idleDialogID: "",
+        idleDialogTimeout: 0,
         currentRoomID: "",
+        spawnRoomID: "",
+        state: "idle",
+        wanderRadius: 0,
+        patrolPath: [],
         enemyTrait: null,
         merchantTrait: null,
         isTemplate: true,  // Default to template for spawning
@@ -202,6 +208,54 @@
   const onClassChange = () => {
     store.update((state) => {
       state.selectedElement.class = getClassById(selectedClassId);
+      return state;
+    });
+  };
+
+  const ensureBehaviorDefaults = (element) => {
+    if (!element) return;
+    if (!element.state) element.state = "idle";
+    if (!Array.isArray(element.patrolPath)) element.patrolPath = [];
+    if (element.wanderRadius === undefined || element.wanderRadius === null) element.wanderRadius = 0;
+    if (element.idleDialogTimeout === undefined || element.idleDialogTimeout === null) element.idleDialogTimeout = 0;
+  };
+
+  const durationToSeconds = (duration) => Math.floor((Number(duration) || 0) / 1000000000);
+  const secondsToDuration = (seconds) => Math.max(0, Number(seconds) || 0) * 1000000000;
+
+  const setIdleDialogTimeoutSeconds = (seconds) => {
+    store.update((state) => {
+      state.selectedElement.idleDialogTimeout = secondsToDuration(seconds);
+      return state;
+    });
+  };
+
+  const addPatrolStop = () => {
+    store.update((state) => {
+      ensureBehaviorDefaults(state.selectedElement);
+      state.selectedElement.patrolPath = [...state.selectedElement.patrolPath, ""];
+      if (state.selectedElement.state === "idle") {
+        state.selectedElement.state = "patrol";
+      }
+      return state;
+    });
+  };
+
+  const updatePatrolStop = (index, roomID) => {
+    store.update((state) => {
+      ensureBehaviorDefaults(state.selectedElement);
+      state.selectedElement.patrolPath[index] = roomID;
+      return state;
+    });
+  };
+
+  const removePatrolStop = (index) => {
+    store.update((state) => {
+      ensureBehaviorDefaults(state.selectedElement);
+      state.selectedElement.patrolPath = state.selectedElement.patrolPath.filter((_, i) => i !== index);
+      if (state.selectedElement.patrolPath.length === 0 && state.selectedElement.state === "patrol") {
+        state.selectedElement.state = "idle";
+      }
       return state;
     });
   };
@@ -367,6 +421,18 @@
       <button
         type="button"
         class="tab-btn"
+        class:active={activeTraitTab === "behavior"}
+        on:click={() => activeTraitTab = "behavior"}
+      >
+        <span class="material-symbols-outlined text-base">route</span>
+        Behavior
+        {#if ($store.selectedElement.wanderRadius || 0) > 0 || ($store.selectedElement.patrolPath || []).length > 0 || $store.selectedElement.idleDialogID}
+          <span class="tab-badge active-badge">ON</span>
+        {/if}
+      </button>
+      <button
+        type="button"
+        class="tab-btn"
         class:active={activeTraitTab === "enemy"}
         on:click={() => activeTraitTab = "enemy"}
       >
@@ -392,7 +458,117 @@
 
     <!-- Tab Content -->
     <div class="tab-content">
-      {#if activeTraitTab === "enemy"}
+      {#if activeTraitTab === "behavior"}
+        <div class="card p-6 space-y-5">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-2">
+              <span class="material-symbols-outlined text-lg">route</span>
+              Movement and Idle Behavior
+            </h3>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="space-y-1.5">
+              <label class="label-caps" for="npc-state">State</label>
+              <select id="npc-state" class="input-base text-xs" bind:value={$store.selectedElement.state}>
+                <option value="idle">Idle</option>
+                <option value="patrol">Patrol</option>
+                <option value="combat">Combat</option>
+                <option value="fleeing">Fleeing</option>
+              </select>
+            </div>
+            <div class="space-y-1.5">
+              <label class="label-caps" for="npc-wander-radius">Wander Radius</label>
+              <input
+                id="npc-wander-radius"
+                class="input-base text-xs text-center"
+                type="number"
+                min="0"
+                step="1"
+                bind:value={$store.selectedElement.wanderRadius}
+              />
+            </div>
+            <div class="space-y-1.5">
+              <label class="label-caps" for="npc-idle-timeout">Idle Chatter Seconds</label>
+              <input
+                id="npc-idle-timeout"
+                class="input-base text-xs text-center"
+                type="number"
+                min="0"
+                step="5"
+                value={durationToSeconds($store.selectedElement.idleDialogTimeout)}
+                on:input={(e) => setIdleDialogTimeoutSeconds(e.currentTarget.value)}
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-1.5">
+              <div class="label-caps">Spawn Room</div>
+              <EntitySelectButton
+                value={$store.selectedElement.spawnRoomID}
+                elements={$roomsValueHelp || []}
+                columns={roomColumns}
+                title="Select Spawn Room"
+                placeholder="None"
+                on:change={(e) => $store.selectedElement.spawnRoomID = e.detail}
+              />
+            </div>
+            <div class="space-y-1.5">
+              <div class="label-caps">Idle Chatter Dialog</div>
+              <EntitySelectButton
+                value={$store.selectedElement.idleDialogID}
+                elements={$dialogsValueHelp || []}
+                columns={dialogColumns}
+                title="Select Idle Dialog"
+                placeholder="None"
+                on:change={(e) => $store.selectedElement.idleDialogID = e.detail}
+              />
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <h4 class="label-caps">Patrol Path</h4>
+              <button class="text-xs text-primary hover:underline" type="button" on:click={addPatrolStop}>
+                + Add Room
+              </button>
+            </div>
+
+            {#if ($store.selectedElement.patrolPath || []).length > 0}
+              <div class="space-y-2">
+                {#each $store.selectedElement.patrolPath as roomID, index}
+                  <div class="grid grid-cols-[32px_1fr_auto] gap-2 items-center">
+                    <span class="text-xs font-bold text-slate-500 text-center">{index + 1}</span>
+                    <EntitySelectButton
+                      value={roomID}
+                      elements={$roomsValueHelp || []}
+                      columns={roomColumns}
+                      title="Select Patrol Room"
+                      placeholder="Select room..."
+                      on:change={(e) => updatePatrolStop(index, e.detail)}
+                    />
+                    <button
+                      type="button"
+                      class="text-xs text-red-400 hover:text-red-300 px-2"
+                      on:click={() => removePatrolStop(index)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                {/each}
+              </div>
+            {:else}
+              <div class="p-4 rounded-lg bg-slate-800/30 border border-slate-700/50 text-center">
+                <span class="material-symbols-outlined text-3xl text-slate-600 mb-2">route</span>
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                  No patrol route configured. Add rooms to make this NPC follow a loop.
+                </p>
+              </div>
+            {/if}
+          </div>
+        </div>
+      {:else if activeTraitTab === "enemy"}
         <div class="card p-6 space-y-4">
           <div class="flex items-center justify-between">
             <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-2">
