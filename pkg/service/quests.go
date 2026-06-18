@@ -5,6 +5,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/quests"
 	r "github.com/talesmud/talesmud/pkg/repository"
 )
@@ -31,6 +32,7 @@ type QuestsService interface {
 
 	// Objective progress (called by QuestTracker)
 	IncrementObjective(characterID, questID, objectiveID string, amount int32) (*quests.QuestProgress, error)
+	CompleteDeliveryObjective(characterID, questID, objectiveID string) (*quests.QuestProgress, error)
 	CheckObjectives(characterID, questID string) (bool, error)
 
 	// Reward granting
@@ -78,12 +80,29 @@ func (s *questsService) FindBySourceNPC(npcID string) ([]*quests.Quest, error) {
 }
 
 func (s *questsService) Store(quest *quests.Quest) (*quests.Quest, error) {
+	if err := validateQuestDefinition(quest); err != nil {
+		return nil, err
+	}
+	if err := validateQuestReferences(quest, s.facade); err != nil {
+		return nil, err
+	}
 	quest.Created = time.Now()
 	quest.Updated = time.Now()
 	return s.questsRepo.Store(quest)
 }
 
 func (s *questsService) Update(id string, quest *quests.Quest) error {
+	if quest.Entity == nil {
+		quest.Entity = &entities.Entity{ID: id}
+	} else if quest.ID == "" {
+		quest.ID = id
+	}
+	if err := validateQuestDefinition(quest); err != nil {
+		return err
+	}
+	if err := validateQuestReferences(quest, s.facade); err != nil {
+		return err
+	}
 	quest.Updated = time.Now()
 	return s.questsRepo.Update(id, quest)
 }
@@ -305,6 +324,49 @@ func (s *questsService) IncrementObjective(characterID, questID, objectiveID str
 	}
 
 	return progress, nil
+}
+
+func (s *questsService) CompleteDeliveryObjective(characterID, questID, objectiveID string) (*quests.QuestProgress, error) {
+	if s.facade == nil {
+		return nil, errors.New("facade not initialized")
+	}
+
+	quest, err := s.questsRepo.FindByID(questID)
+	if err != nil || quest == nil {
+		return nil, errors.New("quest not found")
+	}
+
+	var objective *quests.Objective
+	for i := range quest.Objectives {
+		if quest.Objectives[i].ID == objectiveID && quest.Objectives[i].Type == quests.ObjectiveDeliver {
+			objective = &quest.Objectives[i]
+			break
+		}
+	}
+	if objective == nil {
+		return nil, errors.New("delivery objective not found")
+	}
+
+	character, err := s.facade.CharactersService().FindByID(characterID)
+	if err != nil || character == nil {
+		return nil, errors.New("character not found")
+	}
+
+	required := objective.Amount
+	if required < 1 {
+		required = 1
+	}
+	if character.Inventory.CountMatchingTemplate(objective.TargetID) < required {
+		return nil, errors.New("required delivery item is not in inventory")
+	}
+	if err := character.Inventory.ConsumeMatchingTemplate(objective.TargetID, required); err != nil {
+		return nil, err
+	}
+	if err := s.facade.CharactersService().Update(character.ID, character); err != nil {
+		return nil, err
+	}
+
+	return s.IncrementObjective(characterID, questID, objectiveID, required)
 }
 
 func (s *questsService) CheckObjectives(characterID, questID string) (bool, error) {

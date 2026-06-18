@@ -61,7 +61,7 @@ func (qt *QuestTracker) OnNPCKilled(characterID, userID string, deadNPC *npc.NPC
 				continue
 			}
 
-			qt.sendProgressUpdate(userID, quest, updated)
+			qt.sendProgressUpdate(userID, quest, updated, obj.ID)
 		}
 	}
 }
@@ -96,13 +96,17 @@ func (qt *QuestTracker) OnItemPickup(characterID, userID string, item *items.Ite
 				continue
 			}
 
-			updated, err := qt.facade.QuestsService().IncrementObjective(characterID, progress.QuestID, obj.ID, 1)
+			amount := item.Quantity
+			if amount < 1 {
+				amount = 1
+			}
+			updated, err := qt.facade.QuestsService().IncrementObjective(characterID, progress.QuestID, obj.ID, amount)
 			if err != nil {
 				log.WithError(err).Error("Failed to increment collect objective")
 				continue
 			}
 
-			qt.sendProgressUpdate(userID, quest, updated)
+			qt.sendProgressUpdate(userID, quest, updated, obj.ID)
 		}
 	}
 }
@@ -138,7 +142,7 @@ func (qt *QuestTracker) OnRoomEnter(characterID, userID string, room *rooms.Room
 				continue
 			}
 
-			qt.sendProgressUpdate(userID, quest, updated)
+			qt.sendProgressUpdate(userID, quest, updated, obj.ID)
 		}
 	}
 }
@@ -178,7 +182,7 @@ func (qt *QuestTracker) OnDialogNode(characterID, userID, npcID, dialogID, nodeI
 				continue
 			}
 
-			qt.sendProgressUpdate(userID, quest, updated)
+			qt.sendProgressUpdate(userID, quest, updated, obj.ID)
 		}
 	}
 }
@@ -214,47 +218,54 @@ func (qt *QuestTracker) OnTalkToNPC(characterID, userID string, talkNPC *npc.NPC
 				continue
 			}
 
-			// Check if objective already completed
+			objectiveCompleted := false
 			for _, op := range progress.Objectives {
 				if op.ObjectiveID == obj.ID && op.Completed {
-					continue
+					objectiveCompleted = true
+					break
 				}
 			}
+			if objectiveCompleted {
+				continue
+			}
 
-			updated, err := qt.facade.QuestsService().IncrementObjective(characterID, progress.QuestID, obj.ID, 1)
+			updated, err := qt.facade.QuestsService().CompleteDeliveryObjective(characterID, progress.QuestID, obj.ID)
 			if err != nil {
 				continue
 			}
 
-			qt.sendProgressUpdate(userID, quest, updated)
+			qt.sendProgressUpdate(userID, quest, updated, obj.ID)
 		}
 	}
 }
 
 // sendProgressUpdate sends a quest progress update to the player
-func (qt *QuestTracker) sendProgressUpdate(userID string, quest *quests.Quest, progress *quests.QuestProgress) {
+func (qt *QuestTracker) sendProgressUpdate(userID string, quest *quests.Quest, progress *quests.QuestProgress, changedObjectiveID string) {
 	if progress == nil || quest == nil {
 		return
 	}
 
 	objectives := qt.buildObjectiveProgress(quest, progress)
+	msgType := questProgressMessageType(progress)
+	msg := messages.NewQuestUpdateMessage(userID, quest.ID, quest.Name, string(msgType), objectives)
 
-	// Check if all objectives are complete
-	allComplete := true
-	for _, obj := range progress.Objectives {
-		if !obj.Completed {
-			allComplete = false
+	for i := range objectives {
+		if objectives[i].ObjectiveID == changedObjectiveID {
+			msg.ChangedObjective = &objectives[i]
 			break
 		}
 	}
 
-	msgType := messages.MessageTypeQuestProgress
-	if allComplete {
-		msgType = messages.MessageTypeQuestCompleted
-	}
-
-	msg := messages.NewQuestUpdateMessage(userID, quest.ID, quest.Name, string(msgType), objectives)
 	qt.game.SendMessage() <- msg
+}
+
+func questProgressMessageType(progress *quests.QuestProgress) messages.MessageType {
+	for _, obj := range progress.Objectives {
+		if !obj.Completed {
+			return messages.MessageTypeQuestProgress
+		}
+	}
+	return messages.MessageTypeQuestReady
 }
 
 // buildObjectiveProgress builds the objective progress list for messages

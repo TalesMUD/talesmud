@@ -280,7 +280,7 @@ function createStore() {
     },
     addQuestNotification: (notification) => {
       update((state) => {
-        state.questNotifications = [...state.questNotifications, notification];
+        state.questNotifications = [...state.questNotifications, notification].slice(-4);
         return state;
       });
 
