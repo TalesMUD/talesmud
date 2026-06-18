@@ -13,6 +13,7 @@ import (
 // ItemsHandler ...
 type ItemsHandler struct {
 	Service service.ItemsService
+	Facade  service.Facade
 }
 
 // GetItems returns the list of items
@@ -115,6 +116,10 @@ func (h *ItemsHandler) UpdateItemByID(c *gin.Context) {
 
 	log.WithField("item", item.Name).Info("Updating item")
 
+	if rejectInvalidItem(c, h.Facade, &item) {
+		return
+	}
+
 	if err := h.Service.Update(id, &item); err == nil {
 		c.JSON(http.StatusOK, gin.H{"status": "updated item"})
 	} else {
@@ -131,6 +136,10 @@ func (h *ItemsHandler) PostItem(c *gin.Context) {
 	}
 
 	log.WithField("item", item.Name).WithField("isTemplate", item.IsTemplate).Info("Creating new item")
+
+	if rejectInvalidItem(c, h.Facade, &item) {
+		return
+	}
 
 	if newItem, err := h.Service.Store(&item); err == nil {
 		c.JSON(http.StatusOK, newItem)

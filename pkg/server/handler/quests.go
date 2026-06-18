@@ -14,6 +14,7 @@ import (
 type QuestsHandler struct {
 	Service           service.QuestsService
 	CharactersService service.CharactersService
+	Facade            service.Facade
 }
 
 func (h *QuestsHandler) canAccessCharacter(c *gin.Context, characterID string) bool {
@@ -79,6 +80,10 @@ func (h *QuestsHandler) PostQuest(c *gin.Context) {
 
 	log.WithField("name", quest.Name).Info("Creating new quest")
 
+	if rejectInvalidQuest(c, h.Facade, &quest) {
+		return
+	}
+
 	newQuest, err := h.Service.Store(&quest)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -97,6 +102,10 @@ func (h *QuestsHandler) UpdateQuestByID(c *gin.Context) {
 	}
 
 	log.WithField("name", quest.Name).Info("Updating quest")
+
+	if rejectInvalidQuest(c, h.Facade, &quest) {
+		return
+	}
 
 	if err := h.Service.Update(id, &quest); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

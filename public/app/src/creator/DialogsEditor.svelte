@@ -3,6 +3,7 @@
   import { v4 as uuidv4 } from "uuid";
   import CRUDEditor from "./CRUDEditor.svelte";
   import { createStore } from "./CRUDEditorStore.js";
+  import DialogPreviewModal from "./DialogPreviewModal.svelte";
   import EntitySelectButton from "./EntitySelectButton.svelte";
   import { getAuth } from "../auth.js";
 
@@ -14,11 +15,14 @@
     deleteDialog,
   } from "../api/dialogs.js";
   import { dialogColumns } from "./tableColumns.js";
+  import { previewDialog } from "../api/previews.js";
 
   const { isAuthenticated, authToken } = getAuth();
   const allDialogs = writable([]);
   const store = createStore();
   let hasLoadedAllDialogs = false;
+  let showDialogPreview = false;
+  let dialogPreview = null;
 
   const loadAllDialogs = () => {
     if (hasLoadedAllDialogs) return;
@@ -43,6 +47,7 @@
 
   const config = {
     title: "Manage Dialogs",
+    entityType: "dialog",
     subtitle: "Author NPC dialog trees and alternate text responses.",
     listTitle: "Dialogs",
     columns: dialogColumns,
@@ -72,6 +77,31 @@
       });
     },
   };
+
+  const runDialogPreview = () => {
+    if (!$isAuthenticated || !$authToken || !$store.selectedElement) return;
+    previewDialog(
+      $authToken,
+      $store.selectedElement,
+      (preview) => {
+        dialogPreview = preview;
+        showDialogPreview = true;
+      },
+      (err) => {
+        console.error("Failed to preview dialog:", err);
+        alert("Failed to preview dialog. Please try again.");
+      }
+    );
+  };
+
+  config.extraActions = [
+    {
+      label: "Preview Dialog",
+      icon: "visibility",
+      variant: "btn-outline",
+      onClick: runDialogPreview,
+    },
+  ];
 
   const addOption = () => {
     store.update((state) => {
@@ -158,3 +188,9 @@
     </div>
   </div>
 </CRUDEditor>
+
+<DialogPreviewModal
+  open={showDialogPreview}
+  preview={dialogPreview}
+  on:close={() => showDialogPreview = false}
+/>

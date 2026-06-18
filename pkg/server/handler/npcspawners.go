@@ -12,6 +12,7 @@ import (
 // NPCSpawnersHandler handles NPC spawner-related HTTP requests
 type NPCSpawnersHandler struct {
 	Service service.NPCSpawnersService
+	Facade  service.Facade
 }
 
 // GetSpawners returns all NPC spawners
@@ -64,6 +65,10 @@ func (h *NPCSpawnersHandler) PostSpawner(c *gin.Context) {
 		"max":      s.MaxInstances,
 	}).Info("Creating new NPC spawner")
 
+	if rejectInvalidSpawner(c, h.Facade, &s) {
+		return
+	}
+
 	newSpawner, err := h.Service.Store(&s)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -82,6 +87,10 @@ func (h *NPCSpawnersHandler) UpdateSpawnerByID(c *gin.Context) {
 	}
 
 	log.WithField("spawner", id).Info("Updating NPC spawner")
+
+	if rejectInvalidSpawner(c, h.Facade, &s) {
+		return
+	}
 
 	if err := h.Service.Update(id, &s); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

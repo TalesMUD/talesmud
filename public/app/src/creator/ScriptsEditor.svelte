@@ -68,6 +68,7 @@
 
   const config = {
     title: "Manage Scripts",
+    entityType: "script",
     subtitle: "Configure logic for game events and objects.",
     listTitle: "Scripts",
     columns: columns,
