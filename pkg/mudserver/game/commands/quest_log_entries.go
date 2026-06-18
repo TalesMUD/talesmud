@@ -9,36 +9,45 @@ import (
 func buildQuestLogEntries(game def.GameCtrl, progressList []*quests.QuestProgress) []messages.QuestLogEntry {
 	entries := make([]messages.QuestLogEntry, 0, len(progressList))
 	for _, progress := range progressList {
-		entry := messages.QuestLogEntry{
-			QuestID:    progress.QuestID,
-			Status:     string(progress.Status),
-			Objectives: buildObjectiveProgress(progress, nil),
-		}
-
 		quest, err := game.GetFacade().QuestsService().FindByID(progress.QuestID)
 		if err == nil && quest != nil {
-			entry.QuestName = quest.Name
-			entry.Description = quest.Description
-			entry.Category = quest.Category
-			entry.Level = quest.Level
-			entry.Objectives = buildObjectiveProgress(progress, quest)
-			entry.Rewards = &messages.QuestReward{
-				XP:              quest.Rewards.XP,
-				Gold:            quest.Rewards.Gold,
-				ItemTemplateIDs: quest.Rewards.ItemTemplateIDs,
-			}
+			entries = append(entries, buildQuestLogEntry(quest, progress))
+			continue
 		}
 
-		if !progress.AcceptedAt.IsZero() {
-			entry.AcceptedAt = progress.AcceptedAt.Format("2006-01-02T15:04:05Z07:00")
-		}
-		if !progress.CompletedAt.IsZero() {
-			entry.CompletedAt = progress.CompletedAt.Format("2006-01-02T15:04:05Z07:00")
-		}
-
+		entry := buildQuestLogEntry(nil, progress)
 		entries = append(entries, entry)
 	}
 	return entries
+}
+
+func buildQuestLogEntry(quest *quests.Quest, progress *quests.QuestProgress) messages.QuestLogEntry {
+	entry := messages.QuestLogEntry{
+		QuestID:    progress.QuestID,
+		Status:     string(progress.Status),
+		Objectives: buildObjectiveProgress(progress, quest),
+	}
+
+	if quest != nil {
+		entry.QuestName = quest.Name
+		entry.Description = quest.Description
+		entry.Category = quest.Category
+		entry.Level = quest.Level
+		entry.Rewards = &messages.QuestReward{
+			XP:              quest.Rewards.XP,
+			Gold:            quest.Rewards.Gold,
+			ItemTemplateIDs: quest.Rewards.ItemTemplateIDs,
+		}
+	}
+
+	if !progress.AcceptedAt.IsZero() {
+		entry.AcceptedAt = progress.AcceptedAt.Format("2006-01-02T15:04:05Z07:00")
+	}
+	if !progress.CompletedAt.IsZero() {
+		entry.CompletedAt = progress.CompletedAt.Format("2006-01-02T15:04:05Z07:00")
+	}
+
+	return entry
 }
 
 func buildObjectiveProgress(progress *quests.QuestProgress, quest *quests.Quest) []messages.QuestObjectiveProgress {

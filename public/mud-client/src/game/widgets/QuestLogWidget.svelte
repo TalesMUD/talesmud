@@ -57,8 +57,8 @@
         return (a.category || '').localeCompare(b.category || '');
       case 'status':
       default:
-        const statusOrder = { active: 0, completed: 1, abandoned: 2, failed: 3 };
-        return (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99);
+        const statusOrder = { ready: 0, active: 1, completed: 2, abandoned: 3, failed: 4 };
+        return (questStatusRank(a, statusOrder) ?? 99) - (questStatusRank(b, statusOrder) ?? 99);
     }
   });
 
@@ -151,6 +151,20 @@
 
   $: unlockedAchievements = achievements.filter(a => a.unlocked);
   $: lockedAchievements = achievements.filter(a => !a.unlocked);
+
+  function isQuestReady(quest) {
+    return quest.status === 'active'
+      && (quest.objectives || []).length > 0
+      && (quest.objectives || []).every((obj) => obj.completed);
+  }
+
+  function questStatusRank(quest, statusOrder) {
+    return isQuestReady(quest) ? statusOrder.ready : statusOrder[quest.status];
+  }
+
+  function objectiveText(objective) {
+    return objective.description || 'Objective';
+  }
 </script>
 
 <div class="questlog-widget game-panel">
@@ -305,15 +319,18 @@
       <div class="quest-section">
         <h3 class="section-title">📌 Pinned ({pinnedQuestList.length})</h3>
         {#each pinnedQuestList as quest}
-          <div class="quest-entry is-pinned" class:expanded={expandedQuest === quest.questId}>
+          <div class="quest-entry is-pinned" class:ready={isQuestReady(quest)} class:expanded={expandedQuest === quest.questId}>
             <button
               class="quest-name"
               on:click={() => toggleQuest(quest.questId)}
             >
-              <span class="quest-indicator active is-pinned"></span>
+              <span class="quest-indicator active is-pinned" class:ready={isQuestReady(quest)}></span>
               <div class="quest-title-row">
                 <span class="quest-title">{quest.questName || 'Unnamed Quest'}</span>
                 <div class="quest-badges">
+                  {#if isQuestReady(quest)}
+                    <span class="quest-badge ready-badge">Ready</span>
+                  {/if}
                   {#if quest.level}
                     <span class="quest-badge level-badge">L{quest.level}</span>
                   {/if}
@@ -338,7 +355,7 @@
                   {#each quest.objectives || [] as obj}
                     <div class="objective" class:completed={obj.completed}>
                       <span class="check">{obj.completed ? "[x]" : "[ ]"}</span>
-                      <span class="obj-text">{obj.description}</span>
+                      <span class="obj-text">{objectiveText(obj)}</span>
                       <span class="quest-progress">({obj.current}/{obj.required})</span>
                     </div>
                   {/each}
@@ -393,15 +410,18 @@
       <div class="quest-section">
         <h3 class="section-title">Active ({unpinnedActiveQuests.length})</h3>
         {#each unpinnedActiveQuests as quest}
-          <div class="quest-entry" class:expanded={expandedQuest === quest.questId}>
+          <div class="quest-entry" class:ready={isQuestReady(quest)} class:expanded={expandedQuest === quest.questId}>
             <button
               class="quest-name"
               on:click={() => toggleQuest(quest.questId)}
             >
-              <span class="quest-indicator active"></span>
+              <span class="quest-indicator active" class:ready={isQuestReady(quest)}></span>
               <div class="quest-title-row">
                 <span class="quest-title">{quest.questName || 'Unnamed Quest'}</span>
                 <div class="quest-badges">
+                  {#if isQuestReady(quest)}
+                    <span class="quest-badge ready-badge">Ready</span>
+                  {/if}
                   {#if quest.level}
                     <span class="quest-badge level-badge">L{quest.level}</span>
                   {/if}
@@ -426,7 +446,7 @@
                   {#each quest.objectives || [] as obj}
                     <div class="objective" class:completed={obj.completed}>
                       <span class="check">{obj.completed ? "[x]" : "[ ]"}</span>
-                      <span class="obj-text">{obj.description}</span>
+                      <span class="obj-text">{objectiveText(obj)}</span>
                       <span class="quest-progress">({obj.current}/{obj.required})</span>
                     </div>
                   {/each}
@@ -514,7 +534,7 @@
                   {#each quest.objectives || [] as obj}
                     <div class="objective completed">
                       <span class="check">[x]</span>
-                      <span class="obj-text">{obj.description}</span>
+                      <span class="obj-text">{objectiveText(obj)}</span>
                       <span class="quest-progress">({obj.required}/{obj.required})</span>
                     </div>
                   {/each}
@@ -872,6 +892,12 @@
     color: #ffffff;
   }
 
+  .ready-badge {
+    background: rgba(250, 204, 21, 0.18);
+    border: 1px solid rgba(250, 204, 21, 0.45);
+    color: #fde68a;
+  }
+
   .quest-indicator {
     width: 9px;
     height: 9px;
@@ -888,6 +914,11 @@
     background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
     box-shadow: 0 0 8px rgba(245, 158, 11, 0.8);
     animation: pulse 2s ease-in-out infinite;
+  }
+
+  .quest-indicator.active.ready {
+    background: #facc15;
+    box-shadow: 0 0 8px rgba(250, 204, 21, 0.8);
   }
 
   @keyframes pulse {
@@ -916,6 +947,12 @@
     border: 1px solid var(--btn-border);
     border-radius: 6px;
     margin-bottom: 8px;
+  }
+
+  .quest-entry.ready {
+    background: rgba(250, 204, 21, 0.06);
+    border: 1px solid rgba(250, 204, 21, 0.28);
+    border-radius: 6px;
   }
 
   .expand-icon {

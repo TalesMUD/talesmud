@@ -129,6 +129,10 @@
     border-left: 4px solid #22c55e;
   }
 
+  .notification.ready {
+    border-left: 4px solid #facc15;
+  }
+
   .notification-title {
     font-weight: bold;
     margin-bottom: 4px;
@@ -141,6 +145,10 @@
 
   .notification.completed .notification-title {
     color: #22c55e;
+  }
+
+  .notification.ready .notification-title {
+    color: #facc15;
   }
 
   .notification-message {

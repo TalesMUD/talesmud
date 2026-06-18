@@ -93,10 +93,12 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Quest prerequisites: required quest completions and level requirements
   - Repeatable quests support
   - Quest categories and area labels for filtering and organizing regional quest lines
-  - QuestTracker: automatic progress updates from game events (NPC kills, item pickups, room entries, dialog nodes)
+  - QuestTracker: automatic progress updates from game events (NPC kills, item pickups with stack quantities, room entries, dialog nodes, NPC delivery checks)
   - Accepting a collect quest pre-fills progress from matching items already in the character inventory, including stack quantities
+  - Delivery objectives require and consume matching inventory items before progress is granted
+  - Player quest log shows enriched objective descriptions, ready-to-turn-in state, and quest notifications for accept/progress/ready/complete events
   - Lua scripting API (`tales.quests`) for custom quest logic
-  - Creator UI: full quest editor with objectives, rewards, prerequisites, and dialog text configuration
+  - Creator UI: full quest editor with objectives, rewards, prerequisites, dialog text configuration, validation feedback, and player flow preview
   - Player commands: `quests`/`ql` (quest log), `quest <name>` (details), `abandon <name>` (abandon quest)
 
 - **Guest Mode (Play as Guest)**
@@ -149,6 +151,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - NPC editor with enemy and merchant trait configuration, including merchant stock, pricing, and restock settings
   - Lua script editor with syntax highlighting and integrated test runner
   - Dialog tree editor with options and alternate texts
+  - Quest editor with validation and player flow preview for source, objectives, turn-in, and rewards
   - Character template editor with archetype selection and starting gear
   - Skills editor with multi-class assignment, resource types, effects, and secondary effects
   - World map visualization (GridWorldEditor)
@@ -352,6 +355,8 @@ The NPCs branch represents the latest development work, focusing on NPC systems 
 #### Planned Features
 
 - Quest-giving NPCs
+- NPC movement and patrol paths
+- More authored quest content
 
 ### Recent Commits (NPCs Branch)
 
@@ -474,6 +479,7 @@ go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
 - `GET /api/quest-progress/:characterId` - Get character quest log for own/admin character
 - `POST /api/quest-progress/:characterId/accept/:questId` - Accept quest for own/admin character
 - `POST /api/quest-progress/:characterId/abandon/:questId` - Abandon quest for own/admin character
+- `POST /api/quest-progress/:characterId/complete/:questId` - Complete a ready quest for own/admin character
 
 ### Creator Endpoints (Require Creator or Admin Role)
 - `POST/PUT/DELETE /api/rooms` - Room management

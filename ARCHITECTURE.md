@@ -112,6 +112,8 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
     └── world              # World map (basic auth)
 ```
 
+`GET /api/quest-progress/:characterId` returns quest progress merged with quest definition fields for the player UI. Objective rows include `objectiveId`, definition `description`, current/required counts, and completion state so REST refreshes and WebSocket quest log messages have matching player-facing text.
+
 #### Landing Page Middleware
 
 **File:** `pkg/server/landing.go`
@@ -558,10 +560,12 @@ Listens to game events and automatically updates quest objective progress:
 | Event | Source | Objectives Updated |
 |-------|--------|-------------------|
 | NPC killed | `game_combat.go` (processCombatVictory) | Kill objectives matching NPC template |
-| Item pickup | `pickup.go` command | Collect objectives matching item template |
+| Item pickup | `pickup.go` command | Collect objectives matching item template and picked-up stack quantity |
 | Room enter | `room_takeexit.go` command | Visit objectives matching room ID |
 | Dialog node | `talk.go` command | Talk objectives matching NPC + dialog node |
-| Talk to NPC | `talk.go` command | Deliver objectives (if player has required item) |
+| Talk to NPC | `talk.go` command | Deliver objectives; required inventory items are consumed before progress is granted |
+
+Progress updates include the changed objective when available. If all objectives are complete, the tracker sends a `questReady` message instead of a generic progress message so the client can show turn-in state clearly.
 
 When talking to a quest-source NPC, quest dialog options (offer, progress check, turn-in) are automatically injected into the NPC's conversation. NPCs that have quests but no full dialog tree use a synthetic quest-only conversation so numeric option selection still goes through `DialogSelectCommand`. Dialog quest actions send enriched `questLog` WebSocket payloads using the same quest definition details as character selection.
 
@@ -940,6 +944,10 @@ type Quest struct {
 
 When a collect quest is accepted, `QuestsService` initializes objective progress from matching items already in the character inventory. Stackable item quantities count toward the initial progress total.
 
+Delivery objectives are completed through `QuestsService.CompleteDeliveryObjective`, which verifies matching inventory item/template quantities, consumes the required items, persists the character inventory, and then advances the objective.
+
+Quest definitions are validated on create/update for required source fields, objective target fields, duplicate objective IDs, negative rewards, self-prerequisites, and missing referenced NPCs, items, rooms, scripts, or prerequisite quests.
+
 #### QuestProgress (Per-Character State)
 
 ```go
@@ -1143,6 +1151,7 @@ const (
     MessageTypePing             // Keep-alive
     MessageTypeQuestAccepted    // Quest accepted
     MessageTypeQuestProgress    // Quest objective updated
+    MessageTypeQuestReady       // Quest objectives complete and ready for turn-in
     MessageTypeQuestCompleted   // Quest completed
     MessageTypeQuestLog         // Full quest log
 )
@@ -1266,6 +1275,8 @@ All entity editors (Rooms, Items, Item Templates, NPCs, Dialogs, Quests, Scripts
 - **Client-side sorting**: Click column headers to sort (ascending → descending → none).
 - **Inline validation**: Editors with an `entityType` call `/api/validate/:entityType` for draft validation, show broken-reference warnings/errors through `ValidationPanel`, and disable save while error-severity issues are present.
 - **World health diagnostics**: `WorldHealth.svelte` calls `/api/diagnostics/world` to list cross-entity issues and surface row indicators in Creator tables.
+
+`QuestsEditor.svelte` adds quest-specific validation and player flow preview inside the shared detail panel. The validation mirrors server-side quest definition checks where possible and resolves entity references from the preloaded Creator datasets. The preview summarizes source, objective progression, ready turn-in target, and rewards before the creator saves.
 
 ### State Management
 

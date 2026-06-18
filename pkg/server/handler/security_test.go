@@ -265,7 +265,18 @@ func TestQuestProgressHandlersRejectCrossUserCharacterAccess(t *testing.T) {
 		Entity:      &entities.Entity{ID: "quest-1"},
 		Name:        "Simple Quest",
 		Description: "A simple quest",
-		Objectives:  []quests.Objective{},
+		Source:      quests.QuestSource{Type: "auto"},
+		Objectives: []quests.Objective{
+			{
+				ID:          "visit-room",
+				Type:        quests.ObjectiveVisit,
+				Description: "Visit the test room",
+				TargetID:    "room-quest",
+			},
+		},
+	}
+	if _, err := facade.RoomsService().Store(&rooms.Room{Entity: &entities.Entity{ID: "room-quest"}, Name: "Quest Room"}); err != nil {
+		t.Fatalf("store quest room: %v", err)
 	}
 	if _, err := facade.QuestsService().Store(quest); err != nil {
 		t.Fatalf("store quest: %v", err)
