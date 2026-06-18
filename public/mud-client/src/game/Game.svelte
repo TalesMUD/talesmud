@@ -80,7 +80,6 @@
   import { showCharacterWizard } from "../onboarding/onboardingStore.js";
   import { createClient } from "./Client";
   import { backend, wsbackend } from "../api/base.js";
-  import CharacterSwitcher from "./ui/CharacterSwitcher.svelte";
 
   let client;
   let term;

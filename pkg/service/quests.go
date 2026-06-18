@@ -7,6 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/entities"
+	"github.com/talesmud/talesmud/pkg/entities/items"
 	"github.com/talesmud/talesmud/pkg/entities/quests"
 	r "github.com/talesmud/talesmud/pkg/repository"
 )
@@ -33,11 +34,13 @@ type QuestsService interface {
 	GetAvailableQuests(characterID string) ([]*quests.Quest, error)
 
 	// Objective progress (called by QuestTracker)
+	ApplyQuestEvent(event QuestEvent) ([]QuestEventResult, error)
 	IncrementObjective(characterID, questID, objectiveID string, amount int32) (*quests.QuestProgress, error)
 	CompleteDeliveryObjective(characterID, questID, objectiveID string) (*quests.QuestProgress, error)
 	CheckObjectives(characterID, questID string) (bool, error)
 
 	// Reward granting
+	TurnInQuest(characterID, questID, npcID string) (*QuestTurnInResult, error)
 	GrantQuestRewards(characterID, questID string) ([]string, error)
 
 	// Definition validation
@@ -84,6 +87,58 @@ type QuestLogEntry struct {
 	Rewards       *QuestRewardEntry             `json:"rewards,omitempty"`
 	AcceptedAt    string                        `json:"acceptedAt,omitempty"`
 	CompletedAt   string                        `json:"completedAt,omitempty"`
+}
+
+// QuestEventType identifies a game event that can advance active quest objectives.
+type QuestEventType string
+
+const (
+	QuestEventNPCKilled  QuestEventType = "npcKilled"
+	QuestEventItemPickup QuestEventType = "itemPickup"
+	QuestEventRoomEnter  QuestEventType = "roomEnter"
+	QuestEventDialogNode QuestEventType = "dialogNode"
+	QuestEventTalkToNPC  QuestEventType = "talkToNPC"
+)
+
+// QuestEvent describes a normalized game event for quest progress rules.
+type QuestEvent struct {
+	Type           QuestEventType
+	CharacterID    string
+	NPCID          string
+	RoomID         string
+	DialogID       string
+	DialogNodeID   string
+	Item           *items.Item
+	ItemTemplateID string
+	Amount         int32
+}
+
+// QuestEventResultKind identifies the user-facing result of applying an event.
+type QuestEventResultKind string
+
+const (
+	QuestEventResultProgress      QuestEventResultKind = "progress"
+	QuestEventResultReadyToTurnIn QuestEventResultKind = "readyToTurnIn"
+)
+
+// QuestEventResult describes a quest objective changed by an event.
+type QuestEventResult struct {
+	Kind        QuestEventResultKind
+	QuestID     string
+	QuestName   string
+	ObjectiveID string
+	Progress    *quests.QuestProgress
+}
+
+// QuestTurnInResult describes rewards granted by a successful quest turn-in.
+type QuestTurnInResult struct {
+	QuestID       string
+	QuestName     string
+	GrantedItems  []string
+	XP            int32
+	Gold          int64
+	CompletedAt   time.Time
+	QuestProgress *quests.QuestProgress
 }
 
 type questsService struct {
@@ -580,6 +635,124 @@ func (s *questsService) checkPrereqs(quest *quests.Quest, questStatus map[string
 	return true
 }
 
+func (s *questsService) ApplyQuestEvent(event QuestEvent) ([]QuestEventResult, error) {
+	if strings.TrimSpace(event.CharacterID) == "" {
+		return nil, errors.New("character id is required")
+	}
+
+	progressList, err := s.GetQuestLog(event.CharacterID)
+	if err != nil {
+		return nil, err
+	}
+
+	results := make([]QuestEventResult, 0)
+	for _, progress := range progressList {
+		if progress == nil || progress.Status != quests.QuestStatusActive {
+			continue
+		}
+
+		quest, err := s.FindByID(progress.QuestID)
+		if err != nil || quest == nil {
+			continue
+		}
+
+		for _, objective := range quest.Objectives {
+			if !questEventMatchesObjective(event, objective) || questObjectiveAlreadyComplete(progress, objective.ID) {
+				continue
+			}
+
+			updated, err := s.applyQuestEventObjective(event, progress, objective)
+			if err != nil {
+				if objective.Type == quests.ObjectiveDeliver {
+					continue
+				}
+				return results, err
+			}
+			if updated == nil {
+				continue
+			}
+
+			kind := QuestEventResultProgress
+			if allObjectivesComplete(updated.Objectives) {
+				kind = QuestEventResultReadyToTurnIn
+			}
+			results = append(results, QuestEventResult{
+				Kind:        kind,
+				QuestID:     quest.ID,
+				QuestName:   quest.Name,
+				ObjectiveID: objective.ID,
+				Progress:    updated,
+			})
+		}
+	}
+
+	return results, nil
+}
+
+func (s *questsService) applyQuestEventObjective(event QuestEvent, progress *quests.QuestProgress, objective quests.Objective) (*quests.QuestProgress, error) {
+	switch objective.Type {
+	case quests.ObjectiveDeliver:
+		return s.CompleteDeliveryObjective(event.CharacterID, progress.QuestID, objective.ID)
+	default:
+		return s.IncrementObjective(event.CharacterID, progress.QuestID, objective.ID, questEventAmount(event))
+	}
+}
+
+func questEventMatchesObjective(event QuestEvent, objective quests.Objective) bool {
+	switch event.Type {
+	case QuestEventNPCKilled:
+		return objective.Type == quests.ObjectiveKill && objective.TargetID == event.NPCID
+	case QuestEventItemPickup:
+		return objective.Type == quests.ObjectiveCollect && objective.TargetID == questEventItemTemplateID(event)
+	case QuestEventRoomEnter:
+		return objective.Type == quests.ObjectiveVisit && objective.TargetID == event.RoomID
+	case QuestEventDialogNode:
+		return objective.Type == quests.ObjectiveTalk &&
+			(objective.TargetID == "" || objective.TargetID == event.NPCID) &&
+			(objective.DialogNodeID == "" || objective.DialogNodeID == event.DialogNodeID)
+	case QuestEventTalkToNPC:
+		switch objective.Type {
+		case quests.ObjectiveTalk:
+			return objective.TargetID == "" || objective.TargetID == event.NPCID
+		case quests.ObjectiveDeliver:
+			return objective.DeliverToNPCID == event.NPCID
+		}
+	}
+	return false
+}
+
+func questEventAmount(event QuestEvent) int32 {
+	if event.Amount > 0 {
+		return event.Amount
+	}
+	if event.Item != nil && event.Item.Quantity > 0 {
+		return event.Item.Quantity
+	}
+	return 1
+}
+
+func questEventItemTemplateID(event QuestEvent) string {
+	if event.ItemTemplateID != "" {
+		return event.ItemTemplateID
+	}
+	if event.Item == nil {
+		return ""
+	}
+	if event.Item.TemplateID != "" {
+		return event.Item.TemplateID
+	}
+	return event.Item.ID
+}
+
+func questObjectiveAlreadyComplete(progress *quests.QuestProgress, objectiveID string) bool {
+	for _, obj := range progress.Objectives {
+		if obj.ObjectiveID == objectiveID {
+			return obj.Completed
+		}
+	}
+	return false
+}
+
 func (s *questsService) IncrementObjective(characterID, questID, objectiveID string, amount int32) (*quests.QuestProgress, error) {
 	progress, err := s.progressRepo.FindByCharacterAndQuest(characterID, questID)
 	if err != nil || progress == nil {
@@ -663,6 +836,51 @@ func (s *questsService) CheckObjectives(characterID, questID string) (bool, erro
 		}
 	}
 	return true, nil
+}
+
+func (s *questsService) TurnInQuest(characterID, questID, npcID string) (*QuestTurnInResult, error) {
+	quest, err := s.FindByID(questID)
+	if err != nil || quest == nil {
+		return nil, errors.New("quest not found")
+	}
+	if !questCanTurnInAtNPC(quest, npcID) {
+		return nil, errors.New("quest cannot be turned in to this NPC")
+	}
+
+	progress, err := s.CompleteQuest(characterID, questID)
+	if err != nil {
+		return nil, err
+	}
+
+	grantedItems, err := s.GrantQuestRewards(characterID, questID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &QuestTurnInResult{
+		QuestID:       quest.ID,
+		QuestName:     quest.Name,
+		GrantedItems:  grantedItems,
+		XP:            quest.Rewards.XP,
+		Gold:          quest.Rewards.Gold,
+		CompletedAt:   progress.CompletedAt,
+		QuestProgress: progress,
+	}, nil
+}
+
+func questCanTurnInAtNPC(quest *quests.Quest, npcID string) bool {
+	if strings.TrimSpace(npcID) == "" {
+		return false
+	}
+	if quest.Source.Type == "npc" && quest.Source.NPCID == npcID {
+		return true
+	}
+	for _, objective := range quest.Objectives {
+		if objective.Type == quests.ObjectiveDeliver && objective.DeliverToNPCID == npcID {
+			return true
+		}
+	}
+	return false
 }
 
 // GrantQuestRewards awards XP, gold, and items to character upon quest completion

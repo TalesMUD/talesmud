@@ -164,6 +164,9 @@ func TestGetRoomNPCsIncludesInteractionState(t *testing.T) {
 		IdleDialogID: "elder-bark",
 	}
 	g.NPCManager.RegisterExistingNPC(elder, "square")
+	if _, err := facade.NPCsService().Import(elder); err != nil {
+		t.Fatalf("store elder: %v", err)
+	}
 
 	if _, err := facade.QuestsService().Store(&quests.Quest{
 		Entity:      &entities.Entity{ID: "elder-quest"},
@@ -173,6 +176,13 @@ func TestGetRoomNPCsIncludesInteractionState(t *testing.T) {
 			Type:  "npc",
 			NPCID: elder.ID,
 		},
+		Objectives: []quests.Objective{{
+			ID:          "talk-elder",
+			Type:        quests.ObjectiveTalk,
+			Description: "Talk to the elder.",
+			TargetID:    elder.ID,
+			Amount:      1,
+		}},
 	}); err != nil {
 		t.Fatalf("store quest: %v", err)
 	}
