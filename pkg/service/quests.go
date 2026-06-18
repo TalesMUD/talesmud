@@ -23,6 +23,7 @@ type QuestsService interface {
 
 	// Quest progress operations
 	GetQuestLog(characterID string) ([]*quests.QuestProgress, error)
+	BuildQuestLog(characterID string) ([]QuestLogEntry, error)
 	GetProgress(characterID, questID string) (*quests.QuestProgress, error)
 	AcceptQuest(characterID, questID string) (*quests.QuestProgress, error)
 	AbandonQuest(characterID, questID string) error
@@ -50,6 +51,37 @@ type QuestValidationIssue struct {
 	Path     string `json:"path"`
 	Code     string `json:"code"`
 	Message  string `json:"message"`
+}
+
+// QuestObjectiveProgressEntry combines objective definition text with player progress.
+type QuestObjectiveProgressEntry struct {
+	ObjectiveID string `json:"objectiveId"`
+	Description string `json:"description"`
+	Current     int32  `json:"current"`
+	Required    int32  `json:"required"`
+	Completed   bool   `json:"completed"`
+}
+
+// QuestRewardEntry describes rewards in player-facing quest log responses.
+type QuestRewardEntry struct {
+	XP              int32    `json:"xp,omitempty"`
+	Gold            int64    `json:"gold,omitempty"`
+	ItemTemplateIDs []string `json:"itemTemplateIds,omitempty"`
+}
+
+// QuestLogEntry is an enriched quest log entry for APIs and WebSocket messages.
+type QuestLogEntry struct {
+	QuestID       string                        `json:"questId"`
+	QuestName     string                        `json:"questName"`
+	Description   string                        `json:"description,omitempty"`
+	Category      string                        `json:"category,omitempty"`
+	Level         int32                         `json:"level,omitempty"`
+	Status        string                        `json:"status"`
+	ReadyToTurnIn bool                          `json:"readyToTurnIn"`
+	Objectives    []QuestObjectiveProgressEntry `json:"objectives"`
+	Rewards       *QuestRewardEntry             `json:"rewards,omitempty"`
+	AcceptedAt    string                        `json:"acceptedAt,omitempty"`
+	CompletedAt   string                        `json:"completedAt,omitempty"`
 }
 
 type questsService struct {
@@ -268,6 +300,84 @@ func (s *questsService) questExists(id string) bool {
 
 func (s *questsService) GetQuestLog(characterID string) ([]*quests.QuestProgress, error) {
 	return s.progressRepo.FindByCharacterID(characterID)
+}
+
+func (s *questsService) BuildQuestLog(characterID string) ([]QuestLogEntry, error) {
+	progressList, err := s.GetQuestLog(characterID)
+	if err != nil {
+		return nil, err
+	}
+
+	entries := make([]QuestLogEntry, 0, len(progressList))
+	for _, progress := range progressList {
+		quest, err := s.FindByID(progress.QuestID)
+		if err != nil || quest == nil {
+			continue
+		}
+
+		entry := QuestLogEntry{
+			QuestID:       progress.QuestID,
+			QuestName:     quest.Name,
+			Description:   quest.Description,
+			Category:      quest.Category,
+			Level:         quest.Level,
+			Status:        string(progress.Status),
+			ReadyToTurnIn: progress.Status == quests.QuestStatusActive && allObjectivesComplete(progress.Objectives),
+			Objectives:    buildQuestObjectiveEntries(quest, progress),
+			Rewards: &QuestRewardEntry{
+				XP:              quest.Rewards.XP,
+				Gold:            quest.Rewards.Gold,
+				ItemTemplateIDs: quest.Rewards.ItemTemplateIDs,
+			},
+		}
+		if !progress.AcceptedAt.IsZero() {
+			entry.AcceptedAt = progress.AcceptedAt.Format("2006-01-02T15:04:05Z07:00")
+		}
+		if !progress.CompletedAt.IsZero() {
+			entry.CompletedAt = progress.CompletedAt.Format("2006-01-02T15:04:05Z07:00")
+		}
+		entries = append(entries, entry)
+	}
+
+	return entries, nil
+}
+
+func allObjectivesComplete(objectives []quests.ObjectiveProgress) bool {
+	if len(objectives) == 0 {
+		return false
+	}
+	for _, obj := range objectives {
+		if !obj.Completed {
+			return false
+		}
+	}
+	return true
+}
+
+func buildQuestObjectiveEntries(quest *quests.Quest, progress *quests.QuestProgress) []QuestObjectiveProgressEntry {
+	entries := make([]QuestObjectiveProgressEntry, 0, len(progress.Objectives))
+	for _, objProgress := range progress.Objectives {
+		entry := QuestObjectiveProgressEntry{
+			ObjectiveID: objProgress.ObjectiveID,
+			Current:     objProgress.Current,
+			Required:    objProgress.Required,
+			Completed:   objProgress.Completed,
+		}
+		for _, objective := range quest.Objectives {
+			if objective.ID == objProgress.ObjectiveID {
+				entry.Description = objective.Description
+				if objective.Amount > 0 {
+					entry.Required = objective.Amount
+				}
+				break
+			}
+		}
+		if entry.Required < 1 {
+			entry.Required = 1
+		}
+		entries = append(entries, entry)
+	}
+	return entries
 }
 
 func (s *questsService) GetProgress(characterID, questID string) (*quests.QuestProgress, error) {
