@@ -84,6 +84,47 @@ func TestValidateQuestAcceptsValidNPCQuest(t *testing.T) {
 	}
 }
 
+func TestBuildQuestLogIncludesObjectiveDescriptionsAndReadyFlag(t *testing.T) {
+	quest := validTestQuest()
+	quest.Objectives[0].Description = "Bring back the relic"
+	quest.Objectives[0].Amount = 1
+	questRepo := &fakeQuestsRepo{quests: map[string]*quests.Quest{
+		quest.ID: quest,
+	}}
+	progressRepo := &fakeQuestProgressRepo{progress: []*quests.QuestProgress{{
+		Entity:      &entities.Entity{ID: "progress1"},
+		CharacterID: "char1",
+		QuestID:     quest.ID,
+		Status:      quests.QuestStatusActive,
+		Objectives: []quests.ObjectiveProgress{{
+			ObjectiveID: "obj1",
+			Current:     1,
+			Required:    1,
+			Completed:   true,
+		}},
+	}}}
+	svc := NewQuestsService(questRepo, progressRepo)
+
+	entries, err := svc.BuildQuestLog("char1")
+
+	if err != nil {
+		t.Fatalf("BuildQuestLog returned error: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 quest log entry, got %d", len(entries))
+	}
+	entry := entries[0]
+	if entry.QuestName != "Find the Relic" {
+		t.Fatalf("expected quest name to be enriched, got %q", entry.QuestName)
+	}
+	if len(entry.Objectives) != 1 || entry.Objectives[0].Description != "Bring back the relic" {
+		t.Fatalf("expected objective description to be enriched, got %#v", entry.Objectives)
+	}
+	if !entry.ReadyToTurnIn {
+		t.Fatalf("expected completed active quest to be ready to turn in")
+	}
+}
+
 func assertHasIssue(t *testing.T, issues []QuestValidationIssue, code string) {
 	t.Helper()
 	for _, issue := range issues {
@@ -209,26 +250,62 @@ func (r *fakeQuestsRepo) Delete(id string) error {
 }
 func (r *fakeQuestsRepo) Drop() error { return nil }
 
-type fakeQuestProgressRepo struct{}
+type fakeQuestProgressRepo struct {
+	progress []*quests.QuestProgress
+}
 
-func (r *fakeQuestProgressRepo) FindAll() ([]*quests.QuestProgress, error) { return nil, nil }
+func (r *fakeQuestProgressRepo) FindAll() ([]*quests.QuestProgress, error) { return r.progress, nil }
 func (r *fakeQuestProgressRepo) FindByID(id string) (*quests.QuestProgress, error) {
+	for _, progress := range r.progress {
+		if progress.ID == id {
+			return progress, nil
+		}
+	}
 	return nil, errors.New("not found")
 }
 func (r *fakeQuestProgressRepo) FindByCharacterID(characterID string) ([]*quests.QuestProgress, error) {
-	return nil, nil
+	var result []*quests.QuestProgress
+	for _, progress := range r.progress {
+		if progress.CharacterID == characterID {
+			result = append(result, progress)
+		}
+	}
+	return result, nil
 }
 func (r *fakeQuestProgressRepo) FindByCharacterAndQuest(characterID, questID string) (*quests.QuestProgress, error) {
+	for _, progress := range r.progress {
+		if progress.CharacterID == characterID && progress.QuestID == questID {
+			return progress, nil
+		}
+	}
 	return nil, nil
 }
 func (r *fakeQuestProgressRepo) Store(progress *quests.QuestProgress) (*quests.QuestProgress, error) {
+	r.progress = append(r.progress, progress)
 	return progress, nil
 }
 func (r *fakeQuestProgressRepo) Import(progress *quests.QuestProgress) (*quests.QuestProgress, error) {
 	return progress, nil
 }
-func (r *fakeQuestProgressRepo) Update(id string, progress *quests.QuestProgress) error { return nil }
-func (r *fakeQuestProgressRepo) Delete(id string) error                                 { return nil }
+func (r *fakeQuestProgressRepo) Update(id string, progress *quests.QuestProgress) error {
+	for i, existing := range r.progress {
+		if existing.ID == id {
+			r.progress[i] = progress
+			return nil
+		}
+	}
+	r.progress = append(r.progress, progress)
+	return nil
+}
+func (r *fakeQuestProgressRepo) Delete(id string) error {
+	for i, progress := range r.progress {
+		if progress.ID == id {
+			r.progress = append(r.progress[:i], r.progress[i+1:]...)
+			return nil
+		}
+	}
+	return nil
+}
 
 type fakeNPCsRepo struct {
 	npcs map[string]*npc.NPC
