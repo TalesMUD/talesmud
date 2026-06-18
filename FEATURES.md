@@ -421,8 +421,18 @@ type NPC struct {
     DialogID          string          // Main dialog tree
     IdleDialogID      string          // Ambient chatter
     IdleDialogTimeout time.Duration   // Idle dialog frequency
+    LastIdleDialog    time.Time       // Last ambient chatter trigger
 }
 ```
+
+### NPC Behavior Loop
+NPCs are processed by the game update loop every 10 seconds:
+- `idle` NPCs with `WanderRadius > 0` move through visible exits while staying within that many room hops from `SpawnRoomID`.
+- `patrol` NPCs follow `PatrolPath` as a looping ordered list of room IDs. If the current room is not in the path, the NPC moves to the first patrol room.
+- NPCs with `IdleDialogID` and `IdleDialogTimeout` broadcast ambient chatter to their current room when the cooldown has elapsed.
+- Dead spawned instances are removed for spawner replacement; dead unique NPCs respawn at `SpawnRoomID` after `RespawnTime`.
+
+Room NPC payloads sent to the MUD client include `isEnemy`, `isMerchant`, `isQuestGiver`, `hasDialog`, `hasIdleDialog`, and `state` so the UI can show interaction badges without duplicating backend lookup rules.
 
 ### Enemy Trait
 ```go
@@ -1631,7 +1641,7 @@ All entity editors use a unified **filterable, sortable data table**:
 - **Enemy trait** - Combat stats, difficulty, loot, AI behavior
 - **Merchant trait** - Inventory, pricing, restock, accepted items
 - **Dialog assignment** - Main dialog, idle dialog
-- **Behavior** - Wander radius, patrol path, respawn time
+- **Behavior** - State, spawn room, wander radius, patrol path, idle chatter dialog, idle chatter timeout, respawn time
 - **Resident placement** - Assign `CurrentRoomID` for auto-spawn
 
 ### Quest Editor Features
@@ -1766,6 +1776,7 @@ tales.game.msgToCharacter(charID, "A warm glow surrounds you.")
 - System automatically adds quest options at runtime
 - Set `AcceptDialogText`, `ProgressDialogText`, `CompleteDialogText` on Quest
 - Quest-giver NPC should have general greeting dialog
+- Quest-source NPCs without a main dialog still open a quest-only conversation so numbered quest choices can accept, show progress, or turn in quests.
 
 ### Exploration XP System
 **Feature**: Automatic XP rewards for discovering rooms/areas.
