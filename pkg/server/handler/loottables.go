@@ -12,6 +12,7 @@ import (
 // LootTablesHandler handles HTTP requests for loot tables
 type LootTablesHandler struct {
 	Service service.LootTablesService
+	Facade  service.Facade
 }
 
 // GetLootTables returns all loot tables
@@ -50,6 +51,10 @@ func (h *LootTablesHandler) PostLootTable(c *gin.Context) {
 
 	log.WithField("name", lootTable.Name).Info("Creating new loot table")
 
+	if rejectInvalidLootTable(c, h.Facade, &lootTable) {
+		return
+	}
+
 	newLootTable, err := h.Service.Store(&lootTable)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -68,6 +73,10 @@ func (h *LootTablesHandler) UpdateLootTableByID(c *gin.Context) {
 	}
 
 	log.WithField("name", lootTable.Name).Info("Updating loot table")
+
+	if rejectInvalidLootTable(c, h.Facade, &lootTable) {
+		return
+	}
 
 	if err := h.Service.Update(id, &lootTable); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

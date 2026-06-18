@@ -12,6 +12,7 @@ import (
 // NPCsHandler handles NPC-related HTTP requests
 type NPCsHandler struct {
 	Service service.NPCsService
+	Facade  service.Facade
 }
 
 // GetNPCs returns all NPCs with optional filtering
@@ -70,6 +71,10 @@ func (h *NPCsHandler) PostNPC(c *gin.Context) {
 
 	log.WithField("npc", n.Name).Info("Creating new NPC")
 
+	if rejectInvalidNPC(c, h.Facade, &n) {
+		return
+	}
+
 	if newNPC, err := h.Service.Store(&n); err == nil {
 		c.JSON(http.StatusOK, newNPC)
 	} else {
@@ -87,6 +92,10 @@ func (h *NPCsHandler) UpdateNPCByID(c *gin.Context) {
 	}
 
 	log.WithField("npc", n.Name).Info("Updating NPC")
+
+	if rejectInvalidNPC(c, h.Facade, &n) {
+		return
+	}
 
 	if err := h.Service.Update(id, &n); err == nil {
 		c.JSON(http.StatusOK, gin.H{"status": "updated NPC"})

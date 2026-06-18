@@ -120,27 +120,33 @@ func (app *app) setupRoutes() {
 
 	rooms := &handler.RoomsHandler{
 		Service: app.Facade.RoomsService(),
+		Facade:  app.Facade,
 	}
 
 	items := &handler.ItemsHandler{
 		Service: app.Facade.ItemsService(),
+		Facade:  app.Facade,
 	}
 
 	scripts := &handler.ScriptsHandler{
 		Service: app.Facade.ScriptsService(),
 		Runner:  app.Facade.Runner(),
+		Facade:  app.Facade,
 	}
 
 	npcs := &handler.NPCsHandler{
 		Service: app.Facade.NPCsService(),
+		Facade:  app.Facade,
 	}
 
 	npcSpawners := &handler.NPCSpawnersHandler{
 		Service: app.Facade.NPCSpawnersService(),
+		Facade:  app.Facade,
 	}
 
 	dialogs := &handler.DialogsHandler{
 		Service: app.Facade.DialogsService(),
+		Facade:  app.Facade,
 	}
 
 	charTemplates := &handler.CharacterTemplatesHandler{
@@ -150,11 +156,13 @@ func (app *app) setupRoutes() {
 
 	lootTables := &handler.LootTablesHandler{
 		Service: app.Facade.LootTablesService(),
+		Facade:  app.Facade,
 	}
 
 	questsHandler := &handler.QuestsHandler{
 		Service:           app.Facade.QuestsService(),
 		CharactersService: app.Facade.CharactersService(),
+		Facade:            app.Facade,
 	}
 
 	skillsHandler := &handler.SkillsHandler{
@@ -202,6 +210,10 @@ func (app *app) setupRoutes() {
 	guestStats := &handler.GuestStatsHandler{
 		StatsService: app.Facade.GuestStatsService(),
 		GuestService: app.Facade.GuestService(),
+	}
+
+	validationHandler := &handler.ValidationHandler{
+		Facade: app.Facade,
 	}
 
 	r.GET("/health", func(c *gin.Context) {
@@ -280,6 +292,14 @@ func (app *app) setupRoutes() {
 			creator.DELETE("rooms/:id", rooms.DeleteRoom)
 			creator.PUT("world/rooms-coords", worldRenderer.BatchUpdateCoords)
 			creator.GET("world/validation", worldValidation.GetWorldValidation)
+
+			// Creator quality diagnostics
+			creator.GET("diagnostics/world", validationHandler.WorldDiagnostics)
+			creator.POST("validate/:entityType", validationHandler.ValidateEntity)
+			creator.POST("preview/dialog", validationHandler.PreviewDialog)
+			creator.POST("preview/quest", validationHandler.PreviewQuest)
+			creator.POST("preview/room", validationHandler.PreviewRoom)
+			creator.POST("preview/merchant", validationHandler.PreviewMerchant)
 
 			// Items
 			creator.POST("items", items.PostItem)

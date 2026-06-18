@@ -1,7 +1,9 @@
 <script>
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
   import { getAuth } from "../auth.js";
+  import { getWorldDiagnosticsAsync, validateEntityAsync } from "../api/validation.js";
   import DataTable from "./DataTable.svelte";
+  import ValidationPanel from "./ValidationPanel.svelte";
 
   export let config;
   export let store;
@@ -12,6 +14,13 @@
   };
 
   let hasLoadedData = false;
+  let validationResult = null;
+  let validationLoading = false;
+  let validationUnavailable = "";
+  let validationTimer;
+  let issuesByEntity = {};
+
+  $: hasValidationErrors = (validationResult?.errors || 0) > 0;
 
   const loadData = async (cb) => {
     if (!$isAuthenticated || !$authToken) return;
@@ -21,10 +30,27 @@
       (all) => {
         store.setElements(all);
         hasLoadedData = true;
+        loadDiagnostics();
         if (cb) cb();
       },
       (err) => console.log(err)
     );
+  };
+
+  const loadDiagnostics = async () => {
+    if (!config.entityType || !$isAuthenticated || !$authToken) return;
+    try {
+      const diagnostics = await getWorldDiagnosticsAsync($authToken);
+      const grouped = {};
+      for (const issue of diagnostics?.issues || []) {
+        if (issue.entityType !== config.entityType || !issue.entityId) continue;
+        if (!grouped[issue.entityId]) grouped[issue.entityId] = [];
+        grouped[issue.entityId].push(issue);
+      }
+      issuesByEntity = grouped;
+    } catch (err) {
+      issuesByEntity = {};
+    }
   };
 
   // Reactively load data when auth becomes available
@@ -35,6 +61,53 @@
   onMount(async () => {
     loadData();
   });
+
+  onDestroy(() => {
+    if (validationTimer) clearTimeout(validationTimer);
+  });
+
+  const extractValidationResult = (err) => {
+    const data = err?.response?.data;
+    if (data?.issues) return data;
+    return null;
+  };
+
+  const runValidation = async (entity = $store.selectedElement) => {
+    if (!config.entityType || !$isAuthenticated || !$authToken || !entity) {
+      validationResult = null;
+      validationUnavailable = "";
+      return null;
+    }
+
+    validationLoading = true;
+    validationUnavailable = "";
+    try {
+      validationResult = await validateEntityAsync($authToken, config.entityType, entity);
+      return validationResult;
+    } catch (err) {
+      const backendResult = extractValidationResult(err);
+      if (backendResult) {
+        validationResult = backendResult;
+        return backendResult;
+      }
+      validationUnavailable = "Validation is unavailable right now.";
+      return null;
+    } finally {
+      validationLoading = false;
+    }
+  };
+
+  const scheduleValidation = () => {
+    if (!config.entityType || !$store.selectedElement) return;
+    if (validationTimer) clearTimeout(validationTimer);
+    validationTimer = setTimeout(() => {
+      runValidation();
+    }, 350);
+  };
+
+  $: if (config.entityType && $isAuthenticated && $authToken && $store.selectedElement) {
+    scheduleValidation();
+  }
 
   const isDraft = (isnew) => {
     if (isnew === true) return "border border-dashed border-amber-400/60";
@@ -60,6 +133,8 @@
   };
 
   const create = async () => {
+    const result = await runValidation();
+    if (result?.errors > 0) return;
     config.create(
       $authToken,
       $store.selectedElement,
@@ -67,8 +142,13 @@
         loadData();
         selectElement(element);
       },
-      () => {
-        console.log("create error.");
+      (err) => {
+        const backendResult = extractValidationResult(err);
+        if (backendResult) {
+          validationResult = backendResult;
+        } else {
+          console.log("create error.");
+        }
       }
     );
   };
@@ -96,6 +176,9 @@
   };
 
   const update = () => {
+    runValidation().then((result) => {
+      if (result?.errors > 0) return;
+
     config.update(
       $authToken,
       $store.selectedElement.id,
@@ -103,10 +186,27 @@
       () => {
         loadData();
       },
-      () => {
-        console.log("update error.");
+      (err) => {
+        const backendResult = extractValidationResult(err);
+        if (backendResult) {
+          validationResult = backendResult;
+        } else {
+          console.log("update error.");
+        }
       }
     );
+    });
+  };
+
+  const issueIndicator = (element) => {
+    const issues = issuesByEntity[element.id] || [];
+    if (issues.some((issue) => issue.severity === "error")) {
+      return { color: "#ef4444", title: "Has validation errors" };
+    }
+    if (issues.length) {
+      return { color: "#f59e0b", title: "Has validation warnings" };
+    }
+    return null;
   };
 
   const labels = {
@@ -173,9 +273,9 @@
             <span class="material-symbols-outlined text-sm">add</span>
             New
           </button>
-          {#if $store.selectedElement && $store.detailOpen}
-            {#if $store.selectedElement.isNew}
-              <button class="btn btn-primary" type="button" on:click={() => create()}>
+            {#if $store.selectedElement && $store.detailOpen}
+              {#if $store.selectedElement.isNew}
+              <button class="btn btn-primary" type="button" disabled={hasValidationErrors} on:click={() => create()}>
                 <span class="material-symbols-outlined text-sm">add_box</span>
                 {labels.create}
               </button>
@@ -184,7 +284,7 @@
                 <span class="material-symbols-outlined text-sm">delete</span>
                 {labels.delete}
               </button>
-              <button class="btn btn-primary" type="button" on:click={() => update()}>
+              <button class="btn btn-primary" type="button" disabled={hasValidationErrors} on:click={() => update()}>
                 <span class="material-symbols-outlined text-sm">save</span>
                 {labels.update}
               </button>
@@ -209,7 +309,7 @@
           sortKey={$store.sortKey}
           sortDir={$store.sortDir}
           compact={$store.detailOpen}
-          rowIndicator={config.rowIndicator || null}
+          rowIndicator={config.rowIndicator || issueIndicator}
           on:select={(e) => selectElement(e.detail)}
           on:sort={(e) => store.setSort(e.detail.key, e.detail.dir)}
           on:filterChange={(e) => store.setTableFilter(e.detail.key, e.detail.value)}
@@ -253,6 +353,14 @@
 
           <!-- Detail form -->
           <div class={`card p-6 space-y-6 ${isDraft($store.selectedElement.isNew)} relative`}>
+            {#if config.entityType}
+              <ValidationPanel
+                result={validationResult}
+                loading={validationLoading}
+                unavailable={validationUnavailable}
+              />
+            {/if}
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div class="md:col-span-2 space-y-4">
                 <div class="space-y-1.5">

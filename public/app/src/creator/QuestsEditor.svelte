@@ -3,6 +3,7 @@
   import { v4 as uuidv4 } from "uuid";
   import CRUDEditor from "./CRUDEditor.svelte";
   import { createStore } from "./CRUDEditorStore.js";
+  import QuestPreviewModal from "./QuestPreviewModal.svelte";
   import EntitySelectButton from "./EntitySelectButton.svelte";
   import { getAuth } from "../auth.js";
   import {
@@ -22,6 +23,7 @@
     roomColumns, scriptColumns, dialogColumns,
   } from "./tableColumns.js";
   import { uniqueValues } from "./fieldSuggestions.js";
+  import { previewQuest } from "../api/previews.js";
 
   const { isAuthenticated, authToken } = getAuth();
 
@@ -33,6 +35,8 @@
   const dialogList = writable([]);
   const questList = writable([]);
   let loadedTypes = {};
+  let showQuestPreview = false;
+  let questPreview = null;
 
   function loadEntityType(type) {
     if (loadedTypes[type]) return;
@@ -84,6 +88,7 @@
 
   const config = {
     title: "Manage Quests",
+    entityType: "quest",
     subtitle: "Create and configure quests with objectives and rewards.",
     listTitle: "Quests",
     columns: questColumns,
@@ -98,6 +103,31 @@
     update: updateQuest,
     delete: deleteQuest,
   };
+
+  const runQuestPreview = () => {
+    if (!$isAuthenticated || !$authToken || !$store.selectedElement) return;
+    previewQuest(
+      $authToken,
+      $store.selectedElement,
+      (preview) => {
+        questPreview = preview;
+        showQuestPreview = true;
+      },
+      (err) => {
+        console.error("Failed to preview quest:", err);
+        alert("Failed to preview quest. Please try again.");
+      }
+    );
+  };
+
+  config.extraActions = [
+    {
+      label: "Preview Quest",
+      icon: "visibility",
+      variant: "btn-outline",
+      onClick: runQuestPreview,
+    },
+  ];
 
   config.new = (select) => {
     select({
@@ -690,3 +720,9 @@
     </div>
   </div>
 </CRUDEditor>
+
+<QuestPreviewModal
+  open={showQuestPreview}
+  preview={questPreview}
+  on:close={() => showQuestPreview = false}
+/>

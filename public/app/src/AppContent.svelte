@@ -14,8 +14,8 @@
   import SkillsEditor from "./creator/SkillsEditor.svelte";
   import ScriptsEditor from "./creator/ScriptsEditor.svelte";
   import WorldEditor from "./creator/GridWorldEditor.svelte";
-  import WorldHealthPanel from "./creator/WorldHealthPanel.svelte";
   import SettingsEditor from "./creator/SettingsEditor.svelte";
+  import WorldHealth from "./creator/WorldHealth.svelte";
   import Characters from "./characters/Characters.svelte";
   import NewCharacter from "./characters/NewCharacter.svelte";
   import UserForm from "./UserForm.svelte";
@@ -90,7 +90,7 @@
   </Route>
   <Route exact path="/creator/health">
     <CreatorLayout>
-      <WorldHealthPanel />
+      <WorldHealth />
     </CreatorLayout>
   </Route>
   <Route exact path="/creator/settings">

@@ -15,6 +15,7 @@ import (
 //RoomsHandler ...
 type RoomsHandler struct {
 	Service service.RoomsService
+	Facade  service.Facade
 }
 
 //GetRooms returns the list of item templates
@@ -79,6 +80,10 @@ func (handler *RoomsHandler) PostRoom(c *gin.Context) {
 
 	log.WithField("room", room.Name).Info("Creating new room")
 
+	if rejectInvalidRoom(c, handler.Facade, &room) {
+		return
+	}
+
 	if room, err := handler.Service.Store(&room); err == nil {
 		c.JSON(http.StatusOK, room)
 	} else {
@@ -97,6 +102,10 @@ func (handler *RoomsHandler) PutRoom(c *gin.Context) {
 	}
 
 	log.WithField("room", room.Name).Info("Updating room")
+
+	if rejectInvalidRoom(c, handler.Facade, &room) {
+		return
+	}
 
 	if err := handler.Service.Update(id, &room); err == nil {
 		c.JSON(http.StatusOK, gin.H{"status": "updated room"})
