@@ -11,6 +11,8 @@ function createClient(renderer, characterCreator, muxStore) {
   let ws;
   let messageHandlers = new Map();
   let wsurl = "";
+  let reconnectTimer = null;
+  let reconnectAttempt = 0;
 
   let mux = muxStore;
 
@@ -92,6 +94,17 @@ function createClient(renderer, characterCreator, muxStore) {
       mux.setPlayers(msg.players || []);
 
       mux.setGroundItems(msg.items || []);
+    }
+  };
+
+  messageHandlers["roomPresence"] = (msg) => {
+    if (mux) {
+      const currentId = currentCharacter?.id || "";
+      const players = (msg.players || []).map(player => ({
+        ...player,
+        isYou: player.id === currentId,
+      }));
+      mux.setPlayers(players);
     }
   };
 
@@ -336,8 +349,45 @@ function createClient(renderer, characterCreator, muxStore) {
     updateClient(ws);
   };
 
-  const updateClient = (ws) => {
-    ws.addEventListener("message", function (e) {
+  const connect = () => {
+    if (!wsurl) return;
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    if (mux) {
+      mux.setConnectionState(reconnectAttempt > 0 ? "reconnecting" : "connecting", reconnectAttempt > 0 ? "Reconnecting..." : "Connecting...", reconnectAttempt);
+    }
+    ws = new WebSocket(wsurl);
+    updateClient(ws);
+  };
+
+  const scheduleReconnect = () => {
+    if (!wsurl || reconnectTimer) return;
+    reconnectAttempt += 1;
+    const delay = Math.min(1000 * reconnectAttempt, 5000);
+    if (mux) {
+      mux.setConnectionState("reconnecting", `Reconnecting in ${Math.ceil(delay / 1000)}s...`, reconnectAttempt);
+    }
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      connect();
+    }, delay);
+  };
+
+  const updateClient = (socket) => {
+    if (mux) {
+      mux.setConnectionState("connecting", "Connecting...", reconnectAttempt);
+    }
+
+    socket.addEventListener("open", function () {
+      reconnectAttempt = 0;
+      if (mux) {
+        mux.setConnectionState("connected", "Connected", 0);
+      }
+    });
+
+    socket.addEventListener("message", function (e) {
       var msg = JSON.parse(e.data);
 
       if (messageHandlers[msg.type]) {
@@ -362,8 +412,18 @@ function createClient(renderer, characterCreator, muxStore) {
       }
     });
 
-    ws.addEventListener("close", function (e) {
+    socket.addEventListener("close", function () {
+      if (mux) {
+        mux.setConnectionState("disconnected", "Connection closed", reconnectAttempt);
+      }
       renderer("Connection Closed.");
+      scheduleReconnect();
+    });
+
+    socket.addEventListener("error", function () {
+      if (mux) {
+        mux.setConnectionState("disconnected", "Connection error", reconnectAttempt);
+      }
     });
   };
 
@@ -374,15 +434,18 @@ function createClient(renderer, characterCreator, muxStore) {
   };
 
   const sendMessage = (msg) => {
-    if (!ws) return;
+    if (!ws) {
+      connect();
+      return;
+    }
 
     if (
       ws.readyState == WebSocket.CLOSING ||
       ws.readyState == WebSocket.CLOSED
     ) {
-      ws = new WebSocket(wsurl);
-      updateClient(ws);
+      connect();
       renderer("reconnecting ...\n");
+      return;
     }
 
     ws.send(

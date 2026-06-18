@@ -81,6 +81,7 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 
 				room.RemoveCharacter(character.ID)
 				game.GetFacade().RoomsService().Update(room.ID, room)
+				game.SendMessage() <- m.NewRoomPresenceMessage(room, game)
 			}
 		}
 	}
@@ -145,6 +146,7 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 			Message:    character.Name + " entered.",
 		},
 	}
+	game.SendMessage() <- m.NewRoomPresenceMessage(currentRoom, game)
 
 	// Send initial character stats (HP, mana, XP, etc.) to the client
 	game.SendMessage() <- m.NewCharacterUpdateMessage(user.ID, character)

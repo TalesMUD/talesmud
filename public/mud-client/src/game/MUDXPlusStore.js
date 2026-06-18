@@ -53,6 +53,11 @@ function createStore() {
     roomName: "",
     roomDescription: "",
 
+    // Connection state
+    connectionStatus: "idle",
+    connectionMessage: "Not connected",
+    reconnectAttempt: 0,
+
     // Dialog state
     dialogActive: false,
     dialogNpcName: "",
@@ -146,6 +151,14 @@ function createStore() {
       update((state) => {
         state.roomName = name || "";
         state.roomDescription = description || "";
+        return state;
+      });
+    },
+    setConnectionState: (status, message = "", reconnectAttempt = 0) => {
+      update((state) => {
+        state.connectionStatus = status || "idle";
+        state.connectionMessage = message || "";
+        state.reconnectAttempt = reconnectAttempt || 0;
         return state;
       });
     },

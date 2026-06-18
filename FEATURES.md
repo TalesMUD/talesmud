@@ -2,7 +2,7 @@
 
 **Purpose**: This document catalogs ALL core systems, data structures, features, and APIs available in TalesMUD. It is designed to provide complete context for AI agents reworking game content to leverage the latest capabilities.
 
-**Last Updated**: 2026-02-15
+**Last Updated**: 2026-06-18
 
 ---
 
@@ -22,6 +22,7 @@
 12. [Recent Features & Best Practices](#recent-features--best-practices)
 13. [Game Client Minimap](#game-client-minimap)
 14. [Game Client Tab Container Widget](#game-client-tab-container-widget)
+15. [Multiplayer Session and Presence](#multiplayer-session-and-presence)
 
 ---
 
@@ -2024,6 +2025,49 @@ The leveling system (`CheckLevelUp`, `ApplyLevelUp`) respects `MaxLevelCap` auto
 - Guest HMAC tokens are validated before Auth0 JWTs in `AuthMiddleware`
 - Token claims: `sub` (RefID), `uid` (user entity ID), `exp` (30min), `guest: true`
 - If `GUEST_SECRET` is not set, a random key is generated at startup
+
+---
+
+## Multiplayer Session and Presence
+
+### Character Selection Lifecycle
+- WebSocket connect marks the user online immediately and reselects the user's `LastCharacter`.
+- Selecting a character updates `User.LastCharacter`, removes any previous active character from its old room, adds the selected character to its current room, and sends the initial room, character, inventory, and quest state.
+- Character switch and movement paths emit silent room presence refreshes so other clients update player lists without waiting for a full room render.
+
+### Room Presence WebSocket Message
+```json
+{
+  "type": "roomPresence",
+  "roomId": "room-uuid",
+  "players": [
+    { "id": "character-uuid", "name": "Aster", "isYou": false }
+  ]
+}
+```
+
+The server broadcasts this to the room with online active characters only. The client marks `isYou` locally based on the currently selected character because a single broadcast is shared by multiple users.
+
+### Reconnect Behavior
+- The MUD server replaces an existing WebSocket connection when the same user reconnects.
+- Stale socket close events cannot remove the replacement connection or mark the user offline.
+- The client tracks `connecting`, `connected`, `reconnecting`, and `disconnected` states and retries with the same authenticated WebSocket URL.
+
+### Party Commands
+| Command | Description |
+|---------|-------------|
+| `party create` | Create a party with the current character as the first member |
+| `party invite <player>` | Invite an online player by active character name |
+| `party accept` | Accept the pending in-memory party invite |
+| `party leave` | Leave the current party |
+| `party say <message>` | Send party chat to online active party members |
+
+Party membership is persisted by character ID in the existing `Party` entity. Party invites are an in-memory foundation layer and are only valid while the server process is running.
+
+### Game Client UX
+- `CharacterSwitcher.svelte` shows the selected character, connection state, and available characters from `/api/my-characters`.
+- Switching characters sends `sc <character name>` over the existing command channel.
+- `Client.js` handles `roomPresence` messages and updates `MUDXPlusStore.players` without changing the room description.
 
 ---
 
