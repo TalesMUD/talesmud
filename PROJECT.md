@@ -420,7 +420,7 @@ GROQ_API_KEY=
 ## Building & Running
 
 ### Prerequisites
-- Go 1.18+
+- Go 1.24+
 - Node.js (for frontend build)
 
 ### Build Commands
@@ -434,6 +434,10 @@ make build-frontend
 
 # Build backend only
 make build-backend
+
+# Backend-only builds and server runs prepare fallback embedded frontend assets
+# if pkg/webui/dist or pkg/webuiplay/dist has not been generated yet. Run
+# `make build` to embed freshly rebuilt frontend bundles.
 
 # Run the server
 make run-server

@@ -15,7 +15,23 @@ build-mud-client:
 	mkdir -p pkg/webuiplay/dist
 	cp -r public/mud-client/public/* pkg/webuiplay/dist/
 
-build-backend:
+prepare-embedded-assets:
+	@if [ ! -e pkg/webui/dist/index.html ]; then \
+		echo "Preparing fallback Creator UI embedded assets"; \
+		mkdir -p pkg/webui/dist; \
+		if [ -e public/app/dist/index.html ]; then \
+			cp -r public/app/dist/* pkg/webui/dist/; \
+		else \
+			printf '%s\n' '<!doctype html><title>TalesMUD Creator</title><main>Run make build-frontend to embed the Creator UI.</main>' > pkg/webui/dist/index.html; \
+		fi; \
+	fi
+	@if [ ! -e pkg/webuiplay/dist/index.html ]; then \
+		echo "Preparing MUD client embedded assets"; \
+		mkdir -p pkg/webuiplay/dist; \
+		cp -r public/mud-client/public/* pkg/webuiplay/dist/; \
+	fi
+
+build-backend: prepare-embedded-assets
 	echo "Building backend"
 	go build -o bin/tales cmd/tales/main.go
 
@@ -27,7 +43,7 @@ run-dialogs-sandbox:
 	echo "Starting dialogs sandbox..."
 	go run cmd/dialog_sandbox/main.go
 
-run-server:
+run-server: prepare-embedded-assets
 	echo "Starting tales server ..."
 	go run cmd/tales/main.go
 
