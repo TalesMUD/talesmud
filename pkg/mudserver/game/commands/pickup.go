@@ -126,11 +126,13 @@ func (command *PickupCommand) Execute(game def.GameCtrl, message *messages.Messa
 		return true
 	}
 
-	// Handle CopyOnPickup items and room-placed templates — copy instead of stealing the template
-	if item.CopyOnPickup || item.IsTemplate {
+	// Room-placed catalog items (templates, copyOnPickup, or world IDs
+	// with no templateId) instantiate a personal copy. Never delete the
+	// world blueprint — a later guest must still find the torch.
+	if item.IsRoomBlueprint() {
 		templateID := item.TemplateID
 		if templateID == "" {
-			templateID = item.ID // Item IS the template
+			templateID = item.ID // Item IS the catalog blueprint
 		}
 
 		// Check if player already collected this

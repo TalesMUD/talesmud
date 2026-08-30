@@ -171,7 +171,7 @@ func (w *WorldImporter) Import() (*ImportResult, error) {
 	result.ScriptsImported = w.importScripts(yamlScripts)
 
 	log.Info("Importing items...")
-	result.ItemsImported = w.importItems(yamlItems)
+	result.ItemsImported = w.importItems(yamlItems, roomPlacedItemIDs(yamlRooms))
 
 	log.Info("Importing loot tables...")
 	result.LootTablesImported = w.importLootTables(yamlLootTables)
@@ -516,10 +516,25 @@ func (w *WorldImporter) importScripts(yamlScripts []*YAMLScript) int {
 	return count
 }
 
-func (w *WorldImporter) importItems(yamlItems []*YAMLItem) int {
+func roomPlacedItemIDs(yamlRooms []*YAMLRoom) map[string]bool {
+	ids := make(map[string]bool)
+	for _, r := range yamlRooms {
+		for _, item := range r.Items {
+			if item.ID != "" {
+				ids[item.ID] = true
+			}
+		}
+	}
+	return ids
+}
+
+func (w *WorldImporter) importItems(yamlItems []*YAMLItem, roomPlaced map[string]bool) int {
 	count := 0
 	for _, item := range yamlItems {
 		entity := item.ToEntity()
+		if roomPlaced[item.ID] {
+			entity.CopyOnPickup = true
+		}
 		if _, err := w.repos.Items().Import(entity); err != nil {
 			w.addError("Failed to import item %s: %v", item.ID, err)
 		} else {

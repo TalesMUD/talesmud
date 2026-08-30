@@ -184,11 +184,11 @@ func GetRoomItems(room *rooms.Room, game def.GameCtrl, char *characters.Characte
 			continue
 		}
 
-		// Hide CopyOnPickup / room-template items the character has already collected
-		if (item.CopyOnPickup || item.IsTemplate) && char != nil {
+		// Hide room blueprints this character has already copied
+		if item.IsRoomBlueprint() && char != nil {
 			templateID := item.TemplateID
 			if templateID == "" {
-				templateID = item.ID // For templates, the ID is the template ID
+				templateID = item.ID
 			}
 			if char.HasCollectedCopyItem(templateID) {
 				continue
@@ -199,7 +199,7 @@ func GetRoomItems(room *rooms.Room, game def.GameCtrl, char *characters.Characte
 			ID:           item.ID,
 			Name:         item.Name,
 			NoPickup:     item.NoPickup,
-			CopyOnPickup: item.CopyOnPickup,
+			CopyOnPickup: item.CopyOnPickup || item.IsRoomBlueprint(),
 		})
 	}
 

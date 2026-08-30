@@ -308,7 +308,7 @@ talesmud/
 | `quest` | - | Show quest details: quest [name] |
 | `abandon` | - | Abandon a quest: abandon [name] |
 | `spend` | - | Spend attribute points: spend \<attr\> [amount] |
-| `pickup` | `get`, `take` | Pick up an item from the room (room-placed templates copy per character and stay for the next guest) |
+| `pickup` | `get`, `take` | Pick up an item from the room (room-placed catalog items copy per character and stay for the next guest; dropped loot is still taken) |
 | `drop` | - | Drop an item to the room (blocked for bound items) |
 | `destroy` | `discard` | Destroy an item from inventory |
 | `examine` | `inspect` | Examine an item in detail |

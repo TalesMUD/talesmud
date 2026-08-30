@@ -139,7 +139,7 @@ func (repo *sqliteGenericRepo) Store(entity interface{}) (interface{}, error) {
 		return nil, err
 	}
 	_, err = repo.db.Exec(
-		fmt.Sprintf("INSERT INTO %s (id, data) VALUES (?, ?)", repo.table),
+		fmt.Sprintf("INSERT INTO %s (id, data) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data", repo.table),
 		id,
 		string(payload),
 	)

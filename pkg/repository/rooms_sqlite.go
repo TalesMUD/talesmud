@@ -97,9 +97,9 @@ func (repo *sqliteRoomsRepository) Store(rep *r.Room) (*r.Room, error) {
 }
 
 func (repo *sqliteRoomsRepository) Import(rep *r.Room) (*r.Room, error) {
-	if result, err := repo.sqliteGenericRepo.Store(rep); err == nil {
-		return result.(*r.Room), nil
-	} else {
-		return result.(*r.Room), nil
+	result, err := repo.sqliteGenericRepo.Store(rep)
+	if err != nil {
+		return nil, err
 	}
+	return result.(*r.Room), nil
 }
