@@ -1,5 +1,6 @@
 <script>
   import { onDestroy, tick } from 'svelte';
+  import { readStageSize, shouldRepaintSize, applyCanvasBitmap } from './atlasLayout.js';
 
   export let store = null;
   export let sendMessage = null;
@@ -34,7 +35,10 @@
   let widgetWrap, widgetCanvas;
   let modalWrap, modalCanvas;
   let widgetObserver, modalObserver;
-  let hits = [];
+  const hitState = { items: [] };
+  let lastWidgetSize = null;
+  let lastModalSize = null;
+  let drawRaf = 0;
 
   function emptyAtlas() {
     return { characterId: '', currentRoomId: '', currentLayer: '', layers: [], places: [], paths: [], regions: [] };
@@ -61,25 +65,33 @@
   }
 
   $: if (store) {
-    atlas = $store.atlas && Array.isArray($store.atlas.places) ? $store.atlas : emptyAtlas();
-    const newRoomId = $store.currentRoomId || atlas.currentRoomId || null;
-    if (newRoomId !== currentRoomId) {
+    const nextAtlas = $store.atlas && Array.isArray($store.atlas.places) ? $store.atlas : emptyAtlas();
+    const newRoomId = $store.currentRoomId || nextAtlas.currentRoomId || null;
+    const roomChanged = newRoomId !== currentRoomId;
+    const atlasChanged = nextAtlas !== atlas;
+    if (atlasChanged) {
+      atlas = nextAtlas;
+    }
+    if (roomChanged) {
       currentRoomId = newRoomId;
       panX = 0;
       panY = 0;
       userScale = 1;
       if (isTraveling && newRoomId) advanceTravel(newRoomId);
     }
-    activeLayer = resolveLayer(atlas, currentRoomId, $store.atlasLayer || activeLayer);
+    const nextLayer = resolveLayer(atlas, currentRoomId, $store.atlasLayer || activeLayer);
+    const layerChanged = nextLayer !== activeLayer;
+    if (layerChanged) {
+      activeLayer = nextLayer;
+    }
+    if (atlasChanged || roomChanged || layerChanged) {
+      scheduleDraw();
+    }
   }
 
   $: visiblePlaces = (atlas.places || []).filter(p => p.layer === activeLayer);
   $: visibleRegions = (atlas.regions || []).filter(r => r.layer === activeLayer);
   $: layers = atlas.layers || [];
-
-  $: if (widgetCanvas || modalCanvas || visiblePlaces || panX || panY || userScale || maximized) {
-    draw();
-  }
 
   function placeById(id) {
     return (atlas.places || []).find(p => p.id === id);
@@ -194,17 +206,12 @@
 
   function paint(canvas, wrap) {
     if (!canvas || !wrap) return;
-    const rect = wrap.getBoundingClientRect();
-    if (rect.width < 4 || rect.height < 4) return;
+    const size = readStageSize(wrap);
+    if (size.w < 4 || size.h < 4) return;
     const dpr = window.devicePixelRatio || 1;
-    const w = rect.width;
-    const h = rect.height;
-    const pw = Math.round(w * dpr);
-    const ph = Math.round(h * dpr);
-    if (canvas.width !== pw) canvas.width = pw;
-    if (canvas.height !== ph) canvas.height = ph;
-    canvas.style.width = w + 'px';
-    canvas.style.height = h + 'px';
+    applyCanvasBitmap(canvas, size.w, size.h, dpr);
+    const w = size.w;
+    const h = size.h;
 
     const ctx = canvas.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -321,7 +328,7 @@
         }
       }
     }
-    hits = localHits;
+    hitState.items = localHits;
   }
 
   function drawGlyph(ctx, place, px, py, spacing) {
@@ -390,15 +397,21 @@
     return r;
   }
 
-  function draw() {
-    paint(widgetCanvas, widgetWrap);
-    if (maximized) paint(modalCanvas, modalWrap);
+  function scheduleDraw() {
+    if (drawRaf) return;
+    const raf = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : (fn) => setTimeout(fn, 16);
+    drawRaf = raf(() => {
+      drawRaf = 0;
+      paint(widgetCanvas, widgetWrap);
+      if (maximized) paint(modalCanvas, modalWrap);
+    });
   }
 
   function hitTest(canvas, mx, my) {
     if (!canvas) return null;
-    for (let i = hits.length - 1; i >= 0; i--) {
-      const h = hits[i];
+    const items = hitState.items;
+    for (let i = items.length - 1; i >= 0; i--) {
+      const h = items[i];
       const dx = mx - h.px;
       const dy = my - h.py;
       if (dx * dx + dy * dy <= h.r * h.r) return h.place;
@@ -420,7 +433,7 @@
       if (Math.abs(dx) > 3 || Math.abs(dy) > 3) didDrag = true;
       panX = panStart.panX + dx;
       panY = panStart.panY + dy;
-      draw();
+      scheduleDraw();
       return;
     }
     const rect = canvas.getBoundingClientRect();
@@ -447,7 +460,7 @@
           cancelTravel();
           startTravel(found.id);
         }
-        draw();
+        scheduleDraw();
       }
     }
     isPanning = false;
@@ -457,14 +470,14 @@
   function onWheel(e) {
     e.preventDefault();
     userScale = Math.min(2.6, Math.max(0.55, userScale * (e.deltaY < 0 ? 1.12 : 0.89)));
-    draw();
+    scheduleDraw();
   }
 
   function recenter() {
     panX = 0;
     panY = 0;
     userScale = 1;
-    draw();
+    scheduleDraw();
   }
 
   async function toggleMaximize() {
@@ -474,17 +487,26 @@
       panY = 0;
       userScale = 1;
       await tick();
-      draw();
     }
+    lastModalSize = null;
+    scheduleDraw();
   }
 
   function selectLayer(id) {
+    if (id === activeLayer) return;
     activeLayer = id;
     if (store && store.setAtlasLayer) store.setAtlasLayer(id);
     panX = 0;
     panY = 0;
     userScale = 1;
-    draw();
+    scheduleDraw();
+  }
+
+  function onStageResize(wrap, lastRef, setLast) {
+    const next = readStageSize(wrap);
+    if (!shouldRepaintSize(lastRef, next)) return;
+    setLast(next);
+    scheduleDraw();
   }
 
   let observedWidget = null;
@@ -492,23 +514,32 @@
   $: if (widgetWrap !== observedWidget) {
     if (widgetObserver) widgetObserver.disconnect();
     observedWidget = widgetWrap;
+    lastWidgetSize = null;
     if (widgetWrap) {
-      widgetObserver = new ResizeObserver(() => draw());
+      widgetObserver = new ResizeObserver(() => {
+        onStageResize(widgetWrap, lastWidgetSize, (s) => { lastWidgetSize = s; });
+      });
       widgetObserver.observe(widgetWrap);
-      draw();
+      lastWidgetSize = readStageSize(widgetWrap);
+      scheduleDraw();
     }
   }
   $: if (modalWrap !== observedModal) {
     if (modalObserver) modalObserver.disconnect();
     observedModal = modalWrap;
+    lastModalSize = null;
     if (modalWrap) {
-      modalObserver = new ResizeObserver(() => draw());
+      modalObserver = new ResizeObserver(() => {
+        onStageResize(modalWrap, lastModalSize, (s) => { lastModalSize = s; });
+      });
       modalObserver.observe(modalWrap);
-      draw();
+      lastModalSize = readStageSize(modalWrap);
+      scheduleDraw();
     }
   }
 
   onDestroy(() => {
+    if (drawRaf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(drawRaf);
     if (widgetObserver) widgetObserver.disconnect();
     if (modalObserver) modalObserver.disconnect();
     cancelTravel();
@@ -569,8 +600,8 @@
   }
   .layer-tab.active { background: #f59e0b; border-color: #f59e0b; color: #111827; }
   .travel { font-size: 10px; color: #22d3ee; text-transform: none; letter-spacing: 0; }
-  .stage { flex: 1 1 auto; min-height: 0; position: relative; }
-  canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+  .stage { flex: 1 1 0; min-height: 0; position: relative; overflow: hidden; }
+  canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
   canvas:active { cursor: grabbing; }
   .tooltip {
     position: absolute;
