@@ -31,13 +31,7 @@ func (g *Game) updateSpawner(spawner *npc.NPCSpawner) {
 	// Count current alive instances
 	aliveCount := g.NPCManager.CountAliveForSpawner(spawner.ID)
 
-	// Check if we're at max capacity
-	if aliveCount >= spawner.MaxInstances {
-		return
-	}
-
-	// Check spawn interval
-	if time.Since(state.LastSpawnTime) < spawner.SpawnInterval {
+	if !spawnerShouldSpawn(aliveCount, spawner.InitialCount, spawner.MaxInstances, spawner.SpawnInterval, state.LastSpawnTime, time.Now()) {
 		return
 	}
 
@@ -59,4 +53,23 @@ func (g *Game) updateSpawner(spawner *npc.NPCSpawner) {
 		"count":    aliveCount + 1,
 		"max":      spawner.MaxInstances,
 	}).Debug("Spawner created new NPC instance")
+}
+
+// spawnerShouldSpawn keeps InitialCount filled immediately (so a second
+// guest still finds the tutorial rat). SpawnInterval only throttles extra
+// instances between InitialCount and MaxInstances.
+func spawnerShouldSpawn(alive, initial, max int, interval time.Duration, lastSpawn, now time.Time) bool {
+	if max <= 0 {
+		max = 1
+	}
+	if alive >= max {
+		return false
+	}
+	if initial > 0 && alive < initial {
+		return true
+	}
+	if interval <= 0 {
+		return true
+	}
+	return now.Sub(lastSpawn) >= interval
 }

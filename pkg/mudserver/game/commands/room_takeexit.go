@@ -1,6 +1,9 @@
 package commands
 
 import (
+	log "github.com/sirupsen/logrus"
+
+	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
@@ -27,7 +30,8 @@ func TakeExit(exit string) RoomCommand {
 			game.InterruptRest(message.Character)
 
 			// find next room
-			if next, err := game.GetFacade().RoomsService().FindByID(exit.Target); err == nil {
+			next, err := game.GetFacade().RoomsService().FindByID(exit.Target)
+			if err == nil && next != nil {
 
 				// update old room
 				room.RemoveCharacter(characterID)
@@ -39,10 +43,21 @@ func TakeExit(exit string) RoomCommand {
 				next.AddCharacter(characterID)
 				game.GetFacade().RoomsService().Update(next.ID, next)
 
-				// update player
+				// Persist room under the per-character lock so an on-enter
+				// setFlag cannot last-write-win and drop CurrentRoomID.
+				if err := game.GetFacade().CharactersService().Modify(characterID, func(ch *characters.Character) error {
+					ch.CurrentRoomID = next.ID
+					return nil
+				}); err != nil {
+					log.WithError(err).WithField("characterID", characterID).Error("TakeExit: failed to persist current room")
+				}
 				character := message.Character
-				character.CurrentRoomID = next.ID
-				game.GetFacade().CharactersService().Update(character.ID, character)
+				if fresh, ferr := game.GetFacade().CharactersService().FindByID(characterID); ferr == nil && fresh != nil {
+					character = fresh
+					message.Character = fresh
+				} else {
+					character.CurrentRoomID = next.ID
+				}
 				game.SetUserSessionCharacter(message.FromUser, character)
 
 				// send all players a left room message
@@ -80,6 +95,9 @@ func TakeExit(exit string) RoomCommand {
 
 				return true
 			}
+			log.WithError(err).WithField("target", exit.Target).Warn("TakeExit: destination room not found")
+			game.SendMessage() <- message.Reply("You can't go that way.")
+			return true
 		}
 		return false
 	}

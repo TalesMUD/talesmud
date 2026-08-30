@@ -2,6 +2,7 @@ package rooms
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/traits"
@@ -110,9 +111,11 @@ type Rooms []*Room
 
 //GetExit ...
 func (room *Room) GetExit(exit string) (Exit, bool) {
-
+	if room == nil || room.Exits == nil {
+		return Exit{}, false
+	}
 	for _, e := range *room.Exits {
-		if e.Name == exit {
+		if strings.EqualFold(e.Name, exit) {
 			return e, true
 		}
 	}
