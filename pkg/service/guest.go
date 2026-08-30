@@ -156,6 +156,10 @@ func (gs *guestService) CreateGuestSession(remoteIP string) (string, error) {
 		Created:          now,
 	}
 	character.BelongsUserID = user.ID
+	if startID := ResolveStartRoomID(gs.facade.ServerSettingsService(), gs.facade.RoomsService()); startID != "" {
+		character.CurrentRoomID = startID
+		character.BoundRoomID = startID
+	}
 
 	if len(template.DefaultSkills) > 0 {
 		character.EquippedSkills = make([]string, len(template.DefaultSkills))
@@ -185,6 +189,12 @@ func (gs *guestService) CreateGuestSession(remoteIP string) (string, error) {
 		// Clean up user on failure
 		gs.facade.UsersService().Delete(user.ID)
 		return "", fmt.Errorf("could not create guest character: %v", err)
+	}
+
+	if storedChar.CurrentRoomID != "" {
+		if room, rerr := gs.facade.RoomsService().FindByID(storedChar.CurrentRoomID); rerr == nil && room != nil {
+			gs.facade.QuestsService().GrantAutoQuests(storedChar.ID, room.Area)
+		}
 	}
 
 	// Link character to user

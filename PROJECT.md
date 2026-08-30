@@ -35,6 +35,8 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Interconnected rooms with customizable exits (directional, named, teleport)
   - Hidden/secret exits (toggleable visibility in editor)
   - Room actions for custom player interactions (respond, broadcast, run script)
+  - Room action names match case-insensitively and beat global `examine`/`take`/`use` when they collide
+  - Response actions send the narrative `response` text, not the help `description`
   - Action descriptions shown in room text ("You can:" section)
   - Visual backgrounds and mood settings
   - Coordinate-based world mapping (X, Y, Z grid)
@@ -105,6 +107,8 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Anonymous 30-minute demo sessions without Auth0 registration
   - "Play as Guest" button on welcome screen
   - Random character with random class from system templates
+  - Spawns in `ServerSettings.StartRoomID` (default `R0001` when that room exists)
+  - Auto-grants `source.type: auto` quests for the start room's zone (Z00 catacombs: QST0001–QST0004)
   - Full starter items equipped automatically
   - Per-character level cap of 5 for guest characters
   - Full chat access during session
@@ -304,7 +308,7 @@ talesmud/
 | `quest` | - | Show quest details: quest [name] |
 | `abandon` | - | Abandon a quest: abandon [name] |
 | `spend` | - | Spend attribute points: spend \<attr\> [amount] |
-| `pickup` | `get`, `take` | Pick up an item from the room |
+| `pickup` | `get`, `take` | Pick up an item from the room (room-placed templates copy per character and stay for the next guest) |
 | `drop` | - | Drop an item to the room (blocked for bound items) |
 | `destroy` | `discard` | Destroy an item from inventory |
 | `examine` | `inspect` | Examine an item in detail |

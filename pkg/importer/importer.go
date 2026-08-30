@@ -201,6 +201,11 @@ func (w *WorldImporter) Import() (*ImportResult, error) {
 		w.addError("Failed to copy assets: %v", err)
 	}
 
+	// Persist start room so guests spawn in R0001, not rooms[0]
+	if err := w.applyStartRoom(yamlRooms); err != nil {
+		w.addError("Failed to set start room: %v", err)
+	}
+
 	// Relocate characters whose rooms no longer exist
 	log.Info("Checking character room assignments...")
 	result.CharactersRelocated, err = w.relocateCharacters(yamlRooms)
@@ -714,6 +719,28 @@ func copyFile(src, dst string) error {
 // relocateCharacters checks each character's room against the imported world.
 // Characters whose current room still exists are left in place.
 // Characters whose room no longer exists are moved to the starting room (R0001).
+func (w *WorldImporter) applyStartRoom(yamlRooms []*YAMLRoom) error {
+	startRoomID := "R0001"
+	found := false
+	for _, r := range yamlRooms {
+		if r.ID == startRoomID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil
+	}
+
+	s, err := w.repos.ServerSettings().Get()
+	if err != nil || s == nil {
+		return err
+	}
+	s.StartRoomID = startRoomID
+	log.WithField("startRoomID", startRoomID).Info("Setting server start room")
+	return w.repos.ServerSettings().Upsert(s)
+}
+
 func (w *WorldImporter) relocateCharacters(yamlRooms []*YAMLRoom) (int, error) {
 	startRoomID := "R0001"
 

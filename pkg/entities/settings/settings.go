@@ -13,6 +13,11 @@ type ServerSettings struct {
 
 	// MaxGuestAccounts is the maximum number of concurrent guest accounts (0 = unlimited).
 	MaxGuestAccounts int `json:"maxGuestAccounts"`
+
+	// StartRoomID is where new and guest characters spawn. Empty means
+	// "R0001 if that room exists". Never use an arbitrary rooms[0] while
+	// a configured or Veilspan start room is available.
+	StartRoomID string `json:"startRoomID"`
 }
 
 // NewDefaultServerSettings returns settings with default values.
@@ -25,5 +30,6 @@ func NewDefaultServerSettings() *ServerSettings {
 		About:            "",
 		GuestsAllowed:    true,
 		MaxGuestAccounts: 20,
+		StartRoomID:      "R0001",
 	}
 }

@@ -8,6 +8,7 @@ import (
 	lua "github.com/yuin/gopher-lua"
 	luar "layeh.com/gopher-luar"
 
+	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/items"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
@@ -248,32 +249,25 @@ func RegisterGameModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 			return 1
 		}
 
-		character, err := facade.CharactersService().FindByID(characterID)
-		if err != nil || character == nil {
-			logrus.WithField("characterID", characterID).WithError(err).Warn("[Script] setFlag: character not found")
-			L.Push(lua.LBool(false))
-			return 1
-		}
-
-		if character.Flags == nil {
-			character.Flags = make(map[string]interface{})
-		}
-
-		// Convert Lua value to Go value for storage
-		switch v := value.(type) {
-		case lua.LBool:
-			character.Flags[flagName] = bool(v)
-		case lua.LNumber:
-			character.Flags[flagName] = float64(v)
-		case lua.LString:
-			character.Flags[flagName] = string(v)
-		case *lua.LNilType:
-			delete(character.Flags, flagName)
-		default:
-			character.Flags[flagName] = fmt.Sprintf("%v", v)
-		}
-
-		if err := facade.CharactersService().Update(characterID, character); err != nil {
+		err := facade.CharactersService().Modify(characterID, func(character *characters.Character) error {
+			if character.Flags == nil {
+				character.Flags = make(map[string]interface{})
+			}
+			switch v := value.(type) {
+			case lua.LBool:
+				character.Flags[flagName] = bool(v)
+			case lua.LNumber:
+				character.Flags[flagName] = float64(v)
+			case lua.LString:
+				character.Flags[flagName] = string(v)
+			case *lua.LNilType:
+				delete(character.Flags, flagName)
+			default:
+				character.Flags[flagName] = fmt.Sprintf("%v", v)
+			}
+			return nil
+		})
+		if err != nil {
 			logrus.WithField("characterID", characterID).WithError(err).Warn("[Script] setFlag: failed to persist character")
 			L.Push(lua.LBool(false))
 			return 1
@@ -393,13 +387,6 @@ func RegisterGameModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 			return 1
 		}
 
-		character, err := facade.CharactersService().FindByID(characterID)
-		if err != nil || character == nil {
-			logrus.WithField("characterID", characterID).WithError(err).Warn("[Script] giveItem: character not found")
-			L.Push(lua.LBool(false))
-			return 1
-		}
-
 		item, err := facade.ItemsService().CreateInstanceFromTemplate(templateID)
 		if err != nil || item == nil {
 			logrus.WithField("templateID", templateID).WithError(err).Warn("[Script] giveItem: failed to create item from template")
@@ -407,14 +394,11 @@ func RegisterGameModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 			return 1
 		}
 
-		if err := character.Inventory.AddItem(item); err != nil {
-			logrus.WithField("characterID", characterID).WithField("item", item.Name).WithError(err).Warn("[Script] giveItem: failed to add item to inventory")
-			L.Push(lua.LBool(false))
-			return 1
-		}
-
-		if err := facade.CharactersService().Update(characterID, character); err != nil {
-			logrus.WithField("characterID", characterID).WithError(err).Warn("[Script] giveItem: failed to persist character")
+		err = facade.CharactersService().Modify(characterID, func(character *characters.Character) error {
+			return character.Inventory.AddItem(item)
+		})
+		if err != nil {
+			logrus.WithField("characterID", characterID).WithField("item", templateID).WithError(err).Warn("[Script] giveItem: failed to persist character")
 			L.Push(lua.LBool(false))
 			return 1
 		}

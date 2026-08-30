@@ -77,11 +77,14 @@ func NewFacade(repos repository.Factory, runner scripts.ScriptRunner) Facade {
 
 	skls := NewSkillsService(skillsRepo)
 
+	rs := NewRoomsService(roomsRepo)
+	sss := NewServerSettingsService(serverSettingsRepo)
+
 	f := &facade{
-		css:   NewCharactersService(charactersRepo, characterTemplatesRepo),
+		css:   NewCharactersService(charactersRepo, characterTemplatesRepo, sss, rs),
 		ps:    NewPartiesService(partiesRepo),
 		us:    NewUsersService(usersRepo),
-		rs:    NewRoomsService(roomsRepo),
+		rs:    rs,
 		ss:    ss,
 		is:    is,
 		ns:    NewNPCsService(npcsRepo),
@@ -89,7 +92,7 @@ func NewFacade(repos repository.Factory, runner scripts.ScriptRunner) Facade {
 		ds:    NewDialogsService(dialogsRepo),
 		convs: NewConversationsService(conversationsRepo),
 		lts:   lts,
-		sss:   NewServerSettingsService(serverSettingsRepo),
+		sss:   sss,
 		qs:    qs,
 		skls:  skls,
 		sr:    runner,

@@ -11,6 +11,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/items"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/entities/quests"
+	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/entities/traits"
 	"github.com/talesmud/talesmud/pkg/repository"
 )
@@ -25,6 +26,55 @@ func newTestFacade(t *testing.T) Facade {
 	t.Cleanup(func() { _ = client.Close() })
 
 	return NewFacade(repository.NewSQLiteFactory(client), nil)
+}
+
+func TestGrantAutoQuestsAcceptsZ00TutorialQuests(t *testing.T) {
+	facade := newTestFacade(t)
+	exits := rooms.Exits{}
+	chars := rooms.Characters{}
+	roomsByID := map[string]string{"R0006": "Z00_catacombs_intro", "R0102": "Z01_meadows_forest_path"}
+	for id, area := range roomsByID {
+		if _, err := facade.RoomsService().Import(&rooms.Room{
+			Entity: &entities.Entity{ID: id}, Name: id, Area: area, Exits: &exits, Characters: &chars,
+		}); err != nil {
+			t.Fatalf("import %s: %v", id, err)
+		}
+	}
+	character, err := facade.CharactersService().Store(&characters.Character{
+		Name:        "Wanderer",
+		BelongsUser: *traits.BelongsToUser("user-1"),
+	})
+	if err != nil {
+		t.Fatalf("store character: %v", err)
+	}
+	storeAuto := func(name, target string) *quests.Quest {
+		t.Helper()
+		q, err := facade.QuestsService().Store(&quests.Quest{
+			Name:        name,
+			Description: name,
+			Source:      quests.QuestSource{Type: "auto"},
+			Objectives: []quests.Objective{{
+				ID: "obj", Type: quests.ObjectiveVisit, Description: "go", TargetID: target, Amount: 1,
+			}},
+		})
+		if err != nil {
+			t.Fatalf("store %s: %v", name, err)
+		}
+		return q
+	}
+	z00 := storeAuto("Find the Exit", "R0006")
+	z01 := storeAuto("A Breath of Fresh Air", "R0102")
+
+	granted := facade.QuestsService().GrantAutoQuests(character.ID, "Z00_catacombs_intro")
+	if granted != 1 {
+		t.Fatalf("expected 1 Z00 auto quest, granted %d", granted)
+	}
+	if p, _ := facade.QuestsService().GetProgress(character.ID, z00.ID); p == nil {
+		t.Fatal("Z00 auto quest not granted")
+	}
+	if p, _ := facade.QuestsService().GetProgress(character.ID, z01.ID); p != nil {
+		t.Fatal("Z01 auto quest should not grant in Z00")
+	}
 }
 
 func TestAcceptQuestPrefillsCollectObjectiveWithStackQuantity(t *testing.T) {
