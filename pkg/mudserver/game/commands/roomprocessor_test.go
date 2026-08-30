@@ -77,6 +77,47 @@ func TestRoomActionBeatsExamineAndSendsResponse(t *testing.T) {
 	}
 }
 
+func TestGatherHerbsRoomActionMatches(t *testing.T) {
+	g, facade := newSelectionTestGame(t)
+	actions := rooms.Actions{
+		{Name: "GATHER HERBS", Type: rooms.RoomActionTypeResponse, Response: "You pinch herbs from the meadow."},
+	}
+	exits := rooms.Exits{}
+	chars := rooms.Characters{}
+	roomItems := rooms.Items{}
+	if _, err := facade.RoomsService().Import(&rooms.Room{
+		Entity:     &entities.Entity{ID: "R0102"},
+		Name:       "Wildflower Field",
+		Exits:      &exits,
+		Characters: &chars,
+		Items:      &roomItems,
+		Actions:    &actions,
+	}); err != nil {
+		t.Fatalf("import room: %v", err)
+	}
+	user := &entities.User{Entity: &entities.Entity{ID: "user-1"}, RefID: "auth|1"}
+	character := &characters.Character{
+		Entity:      &entities.Entity{ID: "char-1"},
+		Name:        "Wanderer",
+		BelongsUser: *traits.BelongsToUser("user-1"),
+		CurrentRoom: traits.CurrentRoom{CurrentRoomID: "R0102"},
+	}
+	if _, err := facade.CharactersService().Import(character); err != nil {
+		t.Fatalf("import character: %v", err)
+	}
+	msg := &messages.Message{FromUser: user, Character: character, Data: "gather herbs"}
+	processPlayerInput(g, msg)
+	var found bool
+	for _, out := range drainSelectionMessages(g.SendMessage()) {
+		if resp, ok := out.(messages.MessageResponse); ok && resp.Message == "You pinch herbs from the meadow." {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("gather herbs did not match the room action")
+	}
+}
+
 func TestPickupRoomTemplateLeavesTemplateInRoom(t *testing.T) {
 	g, facade := newSelectionTestGame(t)
 	torch := &items.Item{

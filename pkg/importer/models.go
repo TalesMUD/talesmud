@@ -194,6 +194,7 @@ type YAMLMerchantTrait struct {
 	MerchantType   string                      `yaml:"merchantType"`
 	BuyMultiplier  float64                     `yaml:"buyMultiplier"`
 	SellMultiplier float64                     `yaml:"sellMultiplier"`
+	AcceptedTypes  []string                    `yaml:"acceptedTypes"`
 	Inventory      []YAMLMerchantInventoryItem `yaml:"inventory"`
 }
 

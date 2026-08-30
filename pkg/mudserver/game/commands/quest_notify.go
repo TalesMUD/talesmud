@@ -16,6 +16,9 @@ func NotifyQuestItemPickup(game def.GameCtrl, characterID, userID string, item *
 
 // NotifyQuestRoomEnter notifies the quest tracker of a room entry
 func NotifyQuestRoomEnter(game def.GameCtrl, characterID, userID string, room *rooms.Room) {
+	if room != nil && room.Area != "" && game.GetFacade() != nil {
+		game.GetFacade().QuestsService().GrantAutoQuests(characterID, room.Area)
+	}
 	if qt := game.GetQuestTracker(); qt != nil {
 		qt.OnRoomEnter(characterID, userID, room)
 	}
