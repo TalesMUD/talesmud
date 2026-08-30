@@ -15,6 +15,7 @@ import (
 	m "github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
 	"github.com/talesmud/talesmud/pkg/service"
+	"github.com/talesmud/talesmud/pkg/worldmap"
 )
 
 // SelectCharacterCommand ... select a character
@@ -131,6 +132,20 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 		log.WithField("character", character.Name).Error("No start room available for character")
 		game.SendMessage() <- messages.Reply(user.ID, "The world has no starting room. Ask a creator to set startRoomID.")
 		return
+	}
+
+	if err := game.GetFacade().CharactersService().Modify(character.ID, func(ch *characters.Character) error {
+		ch.CurrentRoomID = currentRoom.ID
+		if ch.BoundRoomID == "" {
+			ch.BoundRoomID = currentRoom.ID
+		}
+		worldmap.MarkOn(ch, currentRoom)
+		return nil
+	}); err != nil {
+		log.WithError(err).WithField("characterID", character.ID).Warn("select character: failed to persist discovery")
+	} else if fresh, ferr := game.GetFacade().CharactersService().FindByID(character.ID); ferr == nil && fresh != nil {
+		character = fresh
+		game.SetUserSessionCharacter(user, character)
 	}
 
 	// update room // send these state change messages via channel

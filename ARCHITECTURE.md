@@ -98,6 +98,7 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
     ├── dialogs/           # Dialog CRUD (creator level for writes)
     ├── quests/            # Quest CRUD (creator for writes)
     ├── quest-progress/    # Quest log per character (owner/admin)
+    ├── characters/:id/map # Per-character discovered-world atlas (owner/admin)
     ├── world/validation   # Creator world health diagnostics
     ├── diagnostics/world  # Creator world health diagnostics
     ├── validate/:entityType # Draft Creator entity validation
@@ -113,6 +114,8 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
 ```
 
 `GET /api/quest-progress/:characterId` returns quest progress merged with quest definition fields for the player UI. Objective rows include `objectiveId`, definition `description`, current/required counts, and completion state so REST refreshes and WebSocket quest log messages have matching player-facing text.
+
+`GET /api/characters/:id/map` returns that character's fog-of-war atlas. `pkg/worldmap` compiles a stable layout from room exits (optional `coords` as pins), then reveals discovered rooms, uncharted neighbors through visible exits, area hulls, and overworld/lower/upper layers. Hidden exits stay off the map until revealed. The JSON is the contract for both the web atlas widget and a future mobile renderer.
 
 #### Landing Page Middleware
 
@@ -626,6 +629,8 @@ type Facade interface {
 | QuestsService | Quest definition CRUD, quest progress tracking, normalized event application, accept/abandon/complete/turn-in quests, objective progress, prerequisite checks |
 | SkillsService | Skill CRUD, DB seeding on first run, in-memory cache refresh on mutations |
 | GuestService | Guest session creation, HMAC token signing/validation, expired guest cleanup, IP rate limiting |
+
+`pkg/worldmap` is a layout compiler (not a facade service). `Compile` places the whole world from directional exits; `Reveal` applies per-character discovery. `worldmap.MarkOn` records entered rooms on the character document during `TakeExit` and character select.
 
 #### Creator Validation Service
 

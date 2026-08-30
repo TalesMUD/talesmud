@@ -40,7 +40,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Response actions send the narrative `response` text, not the help `description`
   - Action descriptions shown in room text ("You can:" section)
   - Visual backgrounds and mood settings
-  - Coordinate-based world mapping (X, Y, Z grid)
+  - Coordinate-based world mapping (X, Y, Z grid) plus a compiled atlas: compass exits become geography, areas become organic hulls, per-character fog of war is served at `GET /api/characters/:id/map`
   - Dynamic item and NPC spawning
   - Unique NPCs auto-spawn into their assigned room on server start via `CurrentRoomID`
 
@@ -57,7 +57,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Character widget shows unspent points badge and interactive "+" buttons on each attribute when points are available
   - **Derived Combat Stats Display**: Character widget shows computed ATK (weapon damage + STR modifier), DEF (total armor from equipment), and MP/RND (mana regen per combat round, caster classes only). These update live when equipment or attributes change.
   - Existing characters receive retroactive points on login ((level - 1) * 2)
-  - Server-side room/area discovery tracking per character
+  - Server-side room/area discovery tracking per character, used by the discovered-world atlas (web + mobile JSON)
   - All-time statistics tracking (including rooms discovered)
   - Mana system for caster classes (Mage, Cleric, Druid) with level and INT scaling
   - Mana regeneration: out-of-combat (5%/tick passive, 15%/tick resting), in-combat (1+WISMod per round)

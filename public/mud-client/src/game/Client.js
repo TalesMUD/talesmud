@@ -58,8 +58,9 @@ function createClient(renderer, characterCreator, muxStore) {
       // Clear any active dialog when entering a new room
       mux.clearDialog();
 
-      // Track room visit for minimap
+      // Track room visit for minimap fallback and refresh the atlas
       mux.trackRoomVisit(activeRoom);
+      requestAtlas();
     }
   };
 
@@ -91,6 +92,7 @@ function createClient(renderer, characterCreator, muxStore) {
       mux.setPlayers(msg.players || []);
 
       mux.setGroundItems(msg.items || []);
+      requestAtlas();
     }
   };
 
@@ -108,6 +110,7 @@ function createClient(renderer, characterCreator, muxStore) {
     if (mux && msg.character) {
       mux.setCharacter(msg.character);
       mux.updateCharacterStats({ xpForNextLevel: msg.xpForNextLevel });
+      requestAtlas();
     }
   };
 
@@ -322,6 +325,29 @@ function createClient(renderer, characterCreator, muxStore) {
     if (mux && msg.quests) {
       mux.updateQuests(msg.quests);
     }
+  };
+
+  const requestAtlas = () => {
+    if (!currentCharacter || !currentCharacter.id) return;
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    fetch(`/api/characters/${currentCharacter.id}/map`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    })
+    .then(data => {
+      if (mux && data) {
+        mux.setAtlas(data);
+      }
+    })
+    .catch(() => { /* atlas is optional until the character is selected */ });
   };
 
   // Helper function to fetch quest log from API
