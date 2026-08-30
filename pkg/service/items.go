@@ -99,8 +99,8 @@ func (srv *itemsService) CreateInstanceFromTemplate(templateID string) (*items.I
 	if template == nil {
 		return nil, fmt.Errorf("template %s not found", templateID)
 	}
-	if !template.IsTemplate {
-		return nil, fmt.Errorf("item %s is not a template", templateID)
+	if !template.IsTemplate && template.TemplateID != "" {
+		return srv.CreateInstanceFromTemplate(template.TemplateID)
 	}
 
 	// Generate unique suffix

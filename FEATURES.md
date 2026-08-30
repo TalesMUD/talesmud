@@ -211,13 +211,14 @@ Stackable item quantities are kept consistent when consumed or partially dropped
 - Special: Two-handed weapons occupy both hand slots
 
 ### CopyOnPickup Feature
-When `Item.CopyOnPickup = true`:
-1. **First pickup**: Creates a personal instance from template, adds to inventory
+When `Item.CopyOnPickup = true`, `Item.IsTemplate = true`, or the item is a world catalog ID placed in a room (no `templateId` / instance suffix):
+1. **First pickup**: Creates a personal instance from the blueprint, adds to inventory
 2. **Instance is bound**: `BoundToCharacterID` is set on the instance, making it character-bound
-3. **Room remains unchanged** - Item stays in room for other players
+3. **Room remains unchanged** - the world item stays for other players and later guests
 4. **Character tracking**: Marks item as collected via `Character.Flags["collected_item:<templateID>"]`
 5. **Subsequent pickups**: Player sees "You have already collected X"
 6. **Client behavior**: Item is hidden in room display for that character
+World import sets `copyOnPickup` on every item referenced by a room so tutorial caches (torch, flint, dagger, fragments) cannot be consumed by the first guest. Dropped loot instances (templateId set, not a template) are still taken from the room.
 
 **Bound item restrictions** (enforced on items with `BoundToCharacterID`):
 - Cannot be dropped (`drop` command rejects with message to use `destroy`)
@@ -1833,12 +1834,12 @@ end
 - `hasRevealedExit(characterID, roomID, exitName)` — character first
 
 ### CopyOnPickup Items
-**Feature**: Items that create personal copies instead of removing from room. Instances are bound to the collecting character.
+**Feature**: Items that create personal copies instead of removing from room. Instances are bound to the collecting character. Room-placed catalog items are treated as copy-on-pickup even if the YAML flag was omitted.
 
 **Best Practice**:
 - Use for **quest items** that all players should find
 - Use for **story artifacts** that don't deplete
-- Set `Item.CopyOnPickup = true` in Creator UI
+- Set `Item.CopyOnPickup = true` in Creator UI (import also sets this for any item listed on a room)
 - System tracks via `Character.Flags["collected_item:<templateID>"]`
 - Instances are automatically bound (`BoundToCharacterID`) — cannot be dropped, sold, or traded
 - Players use `destroy` command to discard bound items (clears collected flag, allowing re-pickup)

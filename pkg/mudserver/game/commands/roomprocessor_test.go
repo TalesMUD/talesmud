@@ -137,3 +137,130 @@ func TestPickupRoomTemplateLeavesTemplateInRoom(t *testing.T) {
 		t.Fatal("character did not receive a torch copy")
 	}
 }
+
+func TestTwoCharactersCopyRoomTorchWithoutStealing(t *testing.T) {
+	g, facade := newSelectionTestGame(t)
+	torch := &items.Item{
+		Entity:     &entities.Entity{ID: "ITM0001"},
+		Name:       "Dusty Torch",
+		IsTemplate: true,
+	}
+	if _, err := facade.ItemsService().Import(torch); err != nil {
+		t.Fatalf("import template: %v", err)
+	}
+	exits := rooms.Exits{}
+	chars := rooms.Characters{}
+	roomItems := rooms.Items{"ITM0001"}
+	if _, err := facade.RoomsService().Import(&rooms.Room{
+		Entity:      &entities.Entity{ID: "R0003"},
+		Name:        "Torch Alcove",
+		Description: "Cache.",
+		Exits:       &exits,
+		Characters:  &chars,
+		Items:       &roomItems,
+	}); err != nil {
+		t.Fatalf("import room: %v", err)
+	}
+
+	pickupAs := func(userID, charName string) {
+		t.Helper()
+		user := &entities.User{Entity: &entities.Entity{ID: userID}, RefID: userID}
+		character, err := facade.CharactersService().Store(&characters.Character{
+			Name:        charName,
+			BelongsUser: *traits.BelongsToUser(userID),
+			CurrentRoom: traits.CurrentRoom{CurrentRoomID: "R0003"},
+			Inventory:   items.Inventory{Size: 10},
+		})
+		if err != nil {
+			t.Fatalf("store %s: %v", charName, err)
+		}
+		msg := &messages.Message{FromUser: user, Character: character, Data: "take torch"}
+		if !(&commands.PickupCommand{}).Execute(g, msg) {
+			t.Fatalf("%s pickup did not handle command", charName)
+		}
+		updated, err := facade.CharactersService().FindByID(character.ID)
+		if err != nil {
+			t.Fatalf("load %s: %v", charName, err)
+		}
+		if updated.Inventory.FindItemByName("Dusty Torch") == nil {
+			t.Fatalf("%s did not receive a torch copy", charName)
+		}
+	}
+
+	pickupAs("user-1", "FirstGuest")
+	pickupAs("user-2", "SecondGuest")
+
+	room, err := facade.RoomsService().FindByID("R0003")
+	if err != nil {
+		t.Fatalf("load room: %v", err)
+	}
+	found := false
+	for _, id := range room.GetItemIDs() {
+		if id == "ITM0001" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("second guest stole the world torch template")
+	}
+}
+
+func TestPickupCopiesCatalogItemEvenWithoutIsTemplateFlag(t *testing.T) {
+	g, facade := newSelectionTestGame(t)
+	flint := &items.Item{
+		Entity:     &entities.Entity{ID: "ITM0002"},
+		Name:       "Flint and Steel",
+		IsTemplate: false,
+	}
+	if _, err := facade.ItemsService().Import(flint); err != nil {
+		t.Fatalf("import catalog item: %v", err)
+	}
+	exits := rooms.Exits{}
+	chars := rooms.Characters{}
+	roomItems := rooms.Items{"ITM0002"}
+	if _, err := facade.RoomsService().Import(&rooms.Room{
+		Entity:      &entities.Entity{ID: "R0003"},
+		Name:        "Torch Alcove",
+		Exits:       &exits,
+		Characters:  &chars,
+		Items:       &roomItems,
+	}); err != nil {
+		t.Fatalf("import room: %v", err)
+	}
+	user := &entities.User{Entity: &entities.Entity{ID: "user-1"}, RefID: "auth|1"}
+	character, err := facade.CharactersService().Store(&characters.Character{
+		Name:        "Wanderer",
+		BelongsUser: *traits.BelongsToUser("user-1"),
+		CurrentRoom: traits.CurrentRoom{CurrentRoomID: "R0003"},
+		Inventory:   items.Inventory{Size: 10},
+	})
+	if err != nil {
+		t.Fatalf("store character: %v", err)
+	}
+
+	msg := &messages.Message{FromUser: user, Character: character, Data: "take flint"}
+	if !(&commands.PickupCommand{}).Execute(g, msg) {
+		t.Fatal("pickup did not handle command")
+	}
+
+	room, err := facade.RoomsService().FindByID("R0003")
+	if err != nil {
+		t.Fatalf("load room: %v", err)
+	}
+	found := false
+	for _, id := range room.GetItemIDs() {
+		if id == "ITM0002" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("catalog flint was stolen from the room")
+	}
+	updated, err := facade.CharactersService().FindByID(character.ID)
+	if err != nil {
+		t.Fatalf("load character: %v", err)
+	}
+	if updated.Inventory.FindItemByName("Flint and Steel") == nil {
+		t.Fatal("character did not receive a flint copy")
+	}
+}

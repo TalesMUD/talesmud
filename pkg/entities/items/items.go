@@ -196,6 +196,18 @@ func (item *Item) IsBound() bool {
 	return item.BoundToCharacterID != ""
 }
 
+// IsRoomBlueprint is a world catalog item that must copy-on-pickup.
+// Dropped loot instances (templateId set, not a template) can still be taken from the room.
+func (item *Item) IsRoomBlueprint() bool {
+	if item == nil {
+		return false
+	}
+	if item.CopyOnPickup || item.IsTemplate {
+		return true
+	}
+	return item.TemplateID == "" && item.InstanceSuffix == ""
+}
+
 // IsOwnedBy returns true if this item is bound to the specified character
 func (item *Item) IsOwnedBy(characterID string) bool {
 	return item.BoundToCharacterID == characterID
