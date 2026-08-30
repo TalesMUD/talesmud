@@ -77,6 +77,7 @@ func (m *NPCInstanceManager) Initialize() error {
 // NPCs are discovered two ways:
 //  1. Listed in a Room's NPC list (Room.NPCs field)
 //  2. Have a CurrentRoomID set directly on the NPC record
+//  3. Have a SpawnRoomID (unique NPCs whose current room was cleared)
 //
 // This ensures unique NPCs always spawn into their assigned room on server start.
 func (m *NPCInstanceManager) initializeResidents() error {
@@ -122,10 +123,14 @@ func (m *NPCInstanceManager) initializeResidents() error {
 			if registered[n.Entity.ID] {
 				continue // already loaded from room list
 			}
-			if n.CurrentRoomID == "" {
+			roomID := n.CurrentRoomID
+			if roomID == "" {
+				roomID = n.SpawnRoomID
+			}
+			if roomID == "" {
 				continue // no room assigned
 			}
-			m.RegisterExistingNPC(n, n.CurrentRoomID)
+			m.RegisterExistingNPC(n, roomID)
 			registered[n.Entity.ID] = true
 		}
 	}

@@ -220,6 +220,8 @@ When `Item.CopyOnPickup = true`, `Item.IsTemplate = true`, or the item is a worl
 6. **Client behavior**: Item is hidden in room display for that character
 World import sets `copyOnPickup` on every item referenced by a room so tutorial caches (torch, flint, dagger, fragments) cannot be consumed by the first guest. Dropped loot instances (templateId set, not a template) are still taken from the room.
 
+Room presence and other room-audience messages are fanned out from in-memory sessions, not a SQLite room reload on the send goroutine. Reloading there can deadlock the game loop after an on-enter script, so a follow-up `north` never leaves the room. Unique NPCs with only `spawnRoomId` (empty `currentRoomID`) are still placed on server start. Spawners refill to `initialCount` immediately; `spawnInterval` only throttles extra instances up to `maxInstances`.
+
 **Bound item restrictions** (enforced on items with `BoundToCharacterID`):
 - Cannot be dropped (`drop` command rejects with message to use `destroy`)
 - Cannot be sold to merchants

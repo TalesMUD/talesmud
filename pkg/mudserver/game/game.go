@@ -64,7 +64,7 @@ func New(facade service.Facade) *Game {
 
 		// event channels
 		onMessageReceived: make(chan interface{}, 20),
-		sendMessage:       make(chan interface{}, 20),
+		sendMessage:       make(chan interface{}, 256),
 		OnUserJoined:      make(chan *m.UserJoined, 20),
 		OnUserQuit:        make(chan *m.UserQuit, 20),
 

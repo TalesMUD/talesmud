@@ -2,6 +2,18 @@ package rooms
 
 import "testing"
 
+func TestGetExitMatchesCaseInsensitively(t *testing.T) {
+	exits := Exits{{Name: "north", Target: "R0004"}}
+	room := &Room{Exits: &exits}
+	got, ok := room.GetExit("NORTH")
+	if !ok || got.Target != "R0004" {
+		t.Fatalf("expected north -> R0004, ok=%v got=%#v", ok, got)
+	}
+	if _, ok := room.GetExit("west"); ok {
+		t.Fatal("west should not match")
+	}
+}
+
 func TestRoomsFromJSONStringParsesArray(t *testing.T) {
 	got, err := RoomsFromJSONString(`[{"id":"room-1","name":"Start"},{"id":"room-2","name":"North"}]`)
 	if err != nil {

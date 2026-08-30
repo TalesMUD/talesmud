@@ -36,6 +36,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Hidden/secret exits (toggleable visibility in editor)
   - Room actions for custom player interactions (respond, broadcast, run script)
   - Room action names match case-insensitively and beat global `examine`/`take`/`use` when they collide
+  - Movement exits match case-insensitively; room presence fan-out does not block the game loop on SQLite
   - Response actions send the narrative `response` text, not the help `description`
   - Action descriptions shown in room text ("You can:" section)
   - Visual backgrounds and mood settings

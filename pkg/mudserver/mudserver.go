@@ -272,32 +272,34 @@ func (server *server) sendMessage(id string, msg interface{}) {
 }
 
 func (server *server) sendToRoom(room *rooms.Room, msg interface{}) {
-	server.sendToRoomWithout("", room, msg)
+	if room == nil {
+		log.Info("MUDServer::sendToRoom - room is nil (user has no character?)")
+		return
+	}
+	server.sendToRoomID(room.ID, "", msg)
 }
 
 // sendToRoomWithout sends a message to all clients except the one with the given id
 func (server *server) sendToRoomWithout(id string, room *rooms.Room, msg interface{}) {
-
-	if id != "" {
-		log.WithField("origin", id).Info("Sending to room without origin")
-	}
-
 	if room == nil {
 		log.WithField("origin", id).Info("MUDServer::sendToRoomWithout - room is nil (user has no character?)")
 		return
 	}
+	server.sendToRoomID(room.ID, id, msg)
+}
 
-	usersInRoom := []string{}
-
-	for _, player := range server.Game.GetRoomPlayers(room.ID, "") {
-		if player.CharacterID == id {
+func (server *server) sendToRoomID(roomID, exceptCharacterID string, msg interface{}) {
+	if exceptCharacterID != "" {
+		log.WithField("origin", exceptCharacterID).Info("Sending to room without origin")
+	}
+	if roomID == "" {
+		return
+	}
+	for _, player := range server.Game.GetRoomPlayers(roomID, "") {
+		if player.CharacterID == exceptCharacterID {
 			continue
 		}
-		usersInRoom = append(usersInRoom, player.UserID)
-	}
-
-	for _, usr := range usersInRoom {
-		server.sendMessage(usr, msg)
+		server.sendMessage(player.UserID, msg)
 	}
 }
 
@@ -343,13 +345,14 @@ func (server *server) receiveMessages() {
 				server.sendMessage(msg.GetAudienceID(), msg)
 				break
 			case messages.MessageAudienceRoom:
-				room, _ := server.Facade.RoomsService().FindByID(msg.GetAudienceID())
-				server.sendToRoom(room, msg)
+				// Do not load rooms from SQLite here: this goroutine drains
+				// sendMessage. A DB wait while the game loop is also sending
+				// deadlocks movement after on-enter scripts.
+				server.sendToRoomID(msg.GetAudienceID(), "", msg)
 				break
 
 			case messages.MessageAudienceRoomWithoutOrigin:
-				room, _ := server.Facade.RoomsService().FindByID(msg.GetAudienceID())
-				server.sendToRoomWithout(msg.GetOriginID(), room, msg)
+				server.sendToRoomID(msg.GetAudienceID(), msg.GetOriginID(), msg)
 				break
 
 			case messages.MessageAudienceGlobal:
