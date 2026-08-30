@@ -67,8 +67,8 @@ export const WIDGET_TYPES = {
     category: 'player'
   },
   minimap: {
-    name: 'Minimap',
-    description: 'Explored room map for current floor',
+    name: 'Atlas',
+    description: 'Discovered world atlas with layers and click-to-travel',
     defaultSize: { w: 6, h: 8 },
     maxInstances: 1,
     icon: 'map',

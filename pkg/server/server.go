@@ -113,6 +113,10 @@ func (app *app) setupRoutes() {
 	csh := &handler.CharactersHandler{
 		Service: app.Facade.CharactersService(),
 	}
+	characterMap := &handler.CharacterMapHandler{
+		Characters: app.Facade.CharactersService(),
+		Rooms:      app.Facade.RoomsService(),
+	}
 
 	usr := &handler.UsersHandler{
 		Service: app.Facade.UsersService(),
@@ -238,6 +242,7 @@ func (app *app) setupRoutes() {
 		protected.GET("my-characters", csh.GetMyCharacters)
 		protected.POST("characters", csh.PostCharacter)
 		protected.GET("characters/:id", csh.GetCharacterByID)
+		protected.GET("characters/:id/map", characterMap.GetCharacterMap)
 		protected.DELETE("characters/:id", csh.DeleteCharacterByID)
 		protected.PUT("characters/:id", csh.UpdateCharacterByID)
 		protected.POST("newcharacter", csh.CreateNewCharacter)

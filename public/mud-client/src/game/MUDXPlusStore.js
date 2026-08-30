@@ -27,6 +27,18 @@ const DIRECTION_OFFSETS = {
 
 const VISITED_ROOMS_KEY = 'talesmud_visitedRooms';
 
+function emptyAtlas() {
+  return {
+    characterId: "",
+    currentRoomId: "",
+    currentLayer: "overworld",
+    layers: [],
+    places: [],
+    paths: [],
+    regions: [],
+  };
+}
+
 function loadVisitedRooms() {
   try {
     const data = localStorage.getItem(VISITED_ROOMS_KEY);
@@ -104,9 +116,11 @@ function createStore() {
     quests: [], // Array of quest log entries
     questNotifications: [], // Recent quest events for toast notifications
 
-    // Minimap state (persisted to localStorage)
+    // Minimap / atlas state
     currentRoomId: null,
-    visitedRooms: loadVisitedRooms(), // { [roomId]: { id, name, coords: {x,y,z}, cardinalExits: [{dir, targetId}] } }
+    visitedRooms: loadVisitedRooms(),
+    atlas: emptyAtlas(),
+    atlasLayer: null,
   });
 
   const store = {
@@ -400,6 +414,26 @@ function createStore() {
         state.visitedRooms = {};
         state.currentRoomId = null;
         saveVisitedRooms({});
+        return state;
+      });
+    },
+
+    setAtlas: (atlas) => {
+      update((state) => {
+        state.atlas = atlas && Array.isArray(atlas.places) ? atlas : emptyAtlas();
+        if (state.atlas.currentRoomId) {
+          state.currentRoomId = state.atlas.currentRoomId;
+        }
+        if (!state.atlasLayer && state.atlas.currentLayer) {
+          state.atlasLayer = state.atlas.currentLayer;
+        }
+        return state;
+      });
+    },
+
+    setAtlasLayer: (layerId) => {
+      update((state) => {
+        state.atlasLayer = layerId;
         return state;
       });
     },

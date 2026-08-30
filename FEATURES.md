@@ -21,7 +21,7 @@
 11. [Scripting System (Lua API)](#scripting-system-lua-api)
 12. [Creator UI Capabilities](#creator-ui-capabilities)
 13. [Recent Features & Best Practices](#recent-features--best-practices)
-14. [Game Client Minimap](#game-client-minimap)
+14. [Discovered World Atlas](#discovered-world-atlas)
 15. [Game Client Tab Container Widget](#game-client-tab-container-widget)
 
 ---
@@ -134,8 +134,10 @@ DiscoveredAreas map[string]bool  // Area names
 ```
 
 **Exploration XP Rewards**:
-- **5 XP** per new room discovered
+- **5 XP** per new room discovered (grant path is currently gated; discovery itself still records)
 - **15 XP** for first room in a new area/zone
+
+**Atlas API**: `GET /api/characters/:id/map` returns the character's fog-of-war atlas (places, paths, area hulls, overworld/lower/upper layers). Layout is compiled from existing directional exits plus optional `coords`; authors do not need a new coordinate pass. Hidden exits stay off the map until `revealExit`.
 
 ---
 
@@ -2019,39 +2021,45 @@ instance, err := service.CreateInstanceFromTemplate(templateID)
 
 ---
 
-## Game Client Minimap
+## Discovered World Atlas
 
 ### Overview
-The minimap widget renders an auto-discovered map from visited rooms. It is canvas-based and tracks room positions via coordinate inference from directional exits.
+The atlas is a per-character fog-of-war map. The server compiles a **stable world layout** from room exits (and optional `coords`), then reveals only rooms this character has entered plus unnamed fog neighbors through visible exits. Web and mobile clients render the same JSON.
 
-### Room Rendering
-- **Current room**: Amber glow + amber border (highlighted)
-- **Nearby rooms** (BFS distance <= 2): Slightly brighter fill/border
-- **All other rooms**: Uniform color, full opacity (no distance-based fading)
-- **Travel path**: Rooms on the click-to-travel path highlighted in blue
-- **Vertical exits**: Purple triangle indicators (up/down arrows) on rooms with vertical exits
-- **Z-level label**: Shows current floor in the top-left corner
+This is not a grid of room rectangles. Nearby rooms stay next to each other because compass exits (`n/s/e/w` plus diagonals) are treated as geography. Areas get organic hulls. The client draws parchment, biome blobs, curved trails, and place glyphs (stars, houses, diamonds) instead of boxes.
 
-### Coordinate Inference
-Rooms are positioned on a grid using coordinate inference:
-- Server-provided `coords` are used when available
-- Otherwise, coords are inferred from the previous room's exit direction
-- Supports cardinal directions (north/south/east/west) and vertical directions (up/down)
-- Direction aliases handled: "upward" -> "up", "downward" -> "down", etc.
-- Hidden exits are included in spatial tracking (they define room adjacency)
-- Fallback: non-standard exit names (e.g., "residence", "portal") place rooms at the nearest unoccupied adjacent position to prevent coordinate chain breaks
+### Server
+- `Character.DiscoveredRooms` / `DiscoveredAreas` persist on enter (`worldmap.MarkOn` during `TakeExit` and character select)
+- `GET /api/characters/:id/map` (owner or admin) returns `PlayerMap`
+- Layout package: `pkg/worldmap` — `Compile(rooms)` then `Reveal(world, character)`
+- Layers: `overworld` (z=0), `lower` (z<0), `upper` (z>0), inferred from `up`/`down` and outdoor vs underground tags
+- Hidden exits do not appear until the character has revealed them
+- Optional room `coords` pin a room; everything else is inferred. No extra YAML required.
 
-### Interaction
-- **Click-to-travel**: Click a room to auto-navigate via BFS pathfinding
-- **Panning**: Click and drag to pan the map view; auto-recenters on room change
-- **Recenter button**: Appears when panned; click the crosshair icon to snap back to current room
-- **Maximize/minimize**: Button in the top-left expands the minimap to a fullscreen overlay
-- **Tooltips**: Hover over rooms to see their names
+### Payload
+```json
+{
+  "characterId": "...",
+  "currentRoomId": "R0102",
+  "currentLayer": "overworld",
+  "layers": [{"id": "overworld", "name": "Overworld", "kind": "overworld"}],
+  "places": [{"id": "R0102", "name": "Wildflower Field", "x": 2, "y": -1, "layer": "overworld", "biome": "meadow", "kind": "wild", "discovered": true, "canTravel": true}],
+  "paths": [{"from": "R0101", "to": "R0102", "dir": "north", "kind": "trail", "layer": "overworld"}],
+  "regions": [{"id": "Z01_meadows_forest_path:overworld", "name": "Meadows Forest Path", "hull": [[1.2, -1.8], ...], "biome": "meadow"}]
+}
+```
+Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "uncharted"`.
 
-### State Persistence
-- Visited rooms stored in browser `localStorage` under key `talesmud_visitedRooms`
-- Rooms accumulate across zone transitions (not cleared on zone change)
-- "Clear map data" button resets all visited room data
+### Client
+- Atlas widget (same `minimap` widget slot) fetches the endpoint on character select, room enter, and room update
+- Layer tabs, pan, wheel zoom, click-to-travel along discovered paths
+- Expand overlay for a full atlas view
+- Same JSON is the contract for a future mobile renderer
+
+### Key Files
+- `pkg/worldmap/` — layout, biomes, hulls, discovery, reveal
+- `pkg/server/handler/charactermap.go` — REST endpoint
+- `public/mud-client/src/game/widgets/MinimapWidget.svelte` — parchment atlas renderer
 
 ---
 

@@ -9,6 +9,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	m "github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
+	"github.com/talesmud/talesmud/pkg/worldmap"
 )
 
 // TakeExit ... executes scream command
@@ -47,6 +48,7 @@ func TakeExit(exit string) RoomCommand {
 				// setFlag cannot last-write-win and drop CurrentRoomID.
 				if err := game.GetFacade().CharactersService().Modify(characterID, func(ch *characters.Character) error {
 					ch.CurrentRoomID = next.ID
+					worldmap.MarkOn(ch, next)
 					return nil
 				}); err != nil {
 					log.WithError(err).WithField("characterID", characterID).Error("TakeExit: failed to persist current room")
