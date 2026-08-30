@@ -212,6 +212,7 @@ func (y *YAMLNPC) ToEntity() *npc.NPC {
 			MerchantType:   y.MerchantTrait.MerchantType,
 			BuyMultiplier:  y.MerchantTrait.BuyMultiplier,
 			SellMultiplier: y.MerchantTrait.SellMultiplier,
+			AcceptedTypes:  append([]string{}, y.MerchantTrait.AcceptedTypes...),
 			Inventory:      make([]npc.MerchantItem, 0),
 		}
 		// Convert inventory items

@@ -3,11 +3,15 @@ package rooms
 import "testing"
 
 func TestGetExitMatchesCaseInsensitively(t *testing.T) {
-	exits := Exits{{Name: "north", Target: "R0004"}}
+	exits := Exits{{Name: "north", Target: "R0004"}, {Name: "down", Target: "R0109", Hidden: true}}
 	room := &Room{Exits: &exits}
 	got, ok := room.GetExit("NORTH")
 	if !ok || got.Target != "R0004" {
 		t.Fatalf("expected north -> R0004, ok=%v got=%#v", ok, got)
+	}
+	down, ok := room.GetExit("DOWN")
+	if !ok || down.Target != "R0109" || !down.Hidden {
+		t.Fatalf("expected hidden down -> R0109, ok=%v got=%#v", ok, down)
 	}
 	if _, ok := room.GetExit("west"); ok {
 		t.Fatal("west should not match")

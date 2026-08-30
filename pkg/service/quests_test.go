@@ -75,6 +75,14 @@ func TestGrantAutoQuestsAcceptsZ00TutorialQuests(t *testing.T) {
 	if p, _ := facade.QuestsService().GetProgress(character.ID, z01.ID); p != nil {
 		t.Fatal("Z01 auto quest should not grant in Z00")
 	}
+
+	grantedZ01 := facade.QuestsService().GrantAutoQuests(character.ID, "Z01_meadows_forest_path")
+	if grantedZ01 != 1 {
+		t.Fatalf("expected 1 Z01 auto quest, granted %d", grantedZ01)
+	}
+	if p, _ := facade.QuestsService().GetProgress(character.ID, z01.ID); p == nil {
+		t.Fatal("Z01 auto quest not granted on meadows enter")
+	}
 }
 
 func TestAcceptQuestPrefillsCollectObjectiveWithStackQuantity(t *testing.T) {

@@ -331,8 +331,12 @@ func RegisterGameModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 			return 1
 		}
 
-		character.RevealExit(roomID, exitName)
-		if err := facade.CharactersService().Update(characterID, character); err != nil {
+		err = facade.CharactersService().Modify(characterID, func(ch *characters.Character) error {
+			ch.RevealExit(roomID, exitName)
+			character = ch
+			return nil
+		})
+		if err != nil {
 			logrus.WithField("characterID", characterID).WithError(err).Warn("[Script] revealExit: failed to persist character")
 			L.Push(lua.LBool(false))
 			return 1
@@ -401,6 +405,16 @@ func RegisterGameModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 			logrus.WithField("characterID", characterID).WithField("item", templateID).WithError(err).Warn("[Script] giveItem: failed to persist character")
 			L.Push(lua.LBool(false))
 			return 1
+		}
+
+		if game := runner.GetGame(); game != nil {
+			if qt := game.GetQuestTracker(); qt != nil {
+				userID := ""
+				if ch, ferr := facade.CharactersService().FindByID(characterID); ferr == nil && ch != nil {
+					userID = ch.BelongsUserID
+				}
+				qt.OnItemPickup(characterID, userID, item)
+			}
 		}
 
 		L.Push(lua.LBool(true))
