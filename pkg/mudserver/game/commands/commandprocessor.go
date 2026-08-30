@@ -48,7 +48,11 @@ func (commandProcessor *CommandProcessor) Process(game def.GameCtrl, message *me
 	parts := strings.Fields(message.Data)
 
 	if len(parts) > 0 {
-		var key = parts[0]
+		if roomActionMatches(game, message) {
+			return false
+		}
+
+		var key = strings.ToLower(parts[0])
 		if val, ok := commandProcessor.commands[key]; ok {
 
 			// support for commands without parameters to enable input like "i did find something" but still support the command "i" for inventory

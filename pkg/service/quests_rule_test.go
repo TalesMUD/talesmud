@@ -672,6 +672,17 @@ func (s *fakeCharactersService) IsCharacterNameTaken(name string) bool { return 
 func (s *fakeCharactersService) GetCharacterTemplates() []*characters.CharacterTemplate {
 	return nil
 }
+func (s *fakeCharactersService) Modify(id string, fn func(*characters.Character) error) error {
+	ch, ok := s.characters[id]
+	if !ok || ch == nil {
+		return errors.New("character not found")
+	}
+	if err := fn(ch); err != nil {
+		return err
+	}
+	s.characters[id] = ch
+	return nil
+}
 func (s *fakeCharactersService) CreateNewCharacter(dto *dto.CreateCharacterDTO) (*characters.Character, error) {
 	return nil, errors.New("unused")
 }

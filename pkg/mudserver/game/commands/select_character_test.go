@@ -89,6 +89,69 @@ func TestSelectCharacterSendsRoomPresenceRefresh(t *testing.T) {
 	}
 }
 
+func TestSelectCharacterEmptyRoomSpawnsInR0001NotFirstRoom(t *testing.T) {
+	g, facade := newSelectionTestGame(t)
+	roomExits := rooms.Exits{}
+	decoyChars := rooms.Characters{}
+	startChars := rooms.Characters{}
+	if _, err := facade.RoomsService().Import(&rooms.Room{
+		Entity:      &entities.Entity{ID: "R1901"},
+		Name:        "Decoy",
+		Description: "Should not spawn here.",
+		Exits:       &roomExits,
+		Characters:  &decoyChars,
+	}); err != nil {
+		t.Fatalf("import decoy: %v", err)
+	}
+	if _, err := facade.RoomsService().Import(&rooms.Room{
+		Entity:      &entities.Entity{ID: "R0001"},
+		Name:        "Awakening Chamber",
+		Description: "Start here.",
+		Exits:       &roomExits,
+		Characters:  &startChars,
+	}); err != nil {
+		t.Fatalf("import start room: %v", err)
+	}
+	user := &entities.User{Entity: &entities.Entity{ID: "user-1"}, RefID: "auth|1", IsOnline: true}
+	if _, err := facade.UsersService().Import(user); err != nil {
+		t.Fatalf("import user: %v", err)
+	}
+	if _, err := facade.CharactersService().Import(&characters.Character{
+		Entity:      &entities.Entity{ID: "char-1"},
+		Name:        "Wanderer",
+		BelongsUser: *traits.BelongsToUser("user-1"),
+	}); err != nil {
+		t.Fatalf("import character: %v", err)
+	}
+
+	msg := &messages.Message{FromUser: user, Data: "sc Wanderer"}
+	if !(&commands.SelectCharacterCommand{}).Execute(g, msg) {
+		t.Fatal("select character did not handle command")
+	}
+
+	char, err := facade.CharactersService().FindByID("char-1")
+	if err != nil {
+		t.Fatalf("load character: %v", err)
+	}
+	if char.CurrentRoomID != "R0001" {
+		t.Fatalf("expected spawn in R0001, got %q", char.CurrentRoomID)
+	}
+	startRoom, err := facade.RoomsService().FindByID("R0001")
+	if err != nil {
+		t.Fatalf("load start room: %v", err)
+	}
+	if !startRoom.IsCharacterInRoom("char-1") {
+		t.Fatal("expected character added to R0001")
+	}
+	decoy, err := facade.RoomsService().FindByID("R1901")
+	if err != nil {
+		t.Fatalf("load decoy: %v", err)
+	}
+	if decoy.IsCharacterInRoom("char-1") {
+		t.Fatal("character spawned in rooms[0] decoy instead of R0001")
+	}
+}
+
 func TestSelectCharacterSwitchRemovesPreviousCharacterFromRoom(t *testing.T) {
 	g, facade := newSelectionTestGame(t)
 	roomExits := rooms.Exits{}

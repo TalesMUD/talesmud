@@ -55,7 +55,7 @@ func (roomProcessor *RoomProcessor) Process(game def.GameCtrl, message *messages
 		parts := strings.Fields(message.Data)
 
 		if len(parts) > 0 {
-			var key = parts[0]
+			var key = strings.ToLower(parts[0])
 			if command, ok := roomProcessor.commands[key]; ok {
 
 				log.Println("Found command " + key + " executing...")
@@ -92,8 +92,7 @@ func (roomProcessor *RoomProcessor) matchesDynamicCommand(key string, room *room
 			if exit.Hidden && !message.Character.HasRevealedExit(room.ID, exit.Name) {
 				continue
 			}
-			if strings.HasPrefix(message.Data, exit.Name) {
-				// custom exit
+			if commandEquals(message.Data, exit.Name) || strings.EqualFold(key, exit.Name) {
 				return TakeExit(exit.Name), true
 			}
 		}
@@ -108,30 +107,35 @@ func (roomProcessor *RoomProcessor) matchesDynamicCommand(key string, room *room
 
 	if room.Actions != nil {
 		for _, action := range *room.Actions {
-			// support "longer" command inputs as custom action triggers: e.g. "move rocks"
-			if strings.HasPrefix(message.Data, action.Name) {
+			if !commandEquals(message.Data, action.Name) {
+				continue
+			}
 
-				desc := mustache.Render(action.Description, context)
+			replyText := action.Response
+			if replyText == "" {
+				replyText = action.Description
+			}
+			replyText = mustache.Render(replyText, context)
 
-				switch action.Type {
+			switch action.Type {
 
-				case rooms.RoomActionTypeResponse:
-					return func(room *rooms.Room, game def.GameCtrl, message *messages.Message) bool {
+			case rooms.RoomActionTypeResponse:
+				return func(room *rooms.Room, game def.GameCtrl, message *messages.Message) bool {
 
-						game.SendMessage() <- message.Reply(desc)
-						return true
-					}, true
+					game.SendMessage() <- message.Reply(replyText)
+					return true
+				}, true
 
-				case rooms.RoomActionTypeRoomResponse:
-					return func(room *rooms.Room, game def.GameCtrl, message *messages.Message) bool {
+			case rooms.RoomActionTypeRoomResponse:
+				return func(room *rooms.Room, game def.GameCtrl, message *messages.Message) bool {
 
-						actionResponseToRoom := message.Reply(desc)
-						actionResponseToRoom.AudienceID = room.ID
-						actionResponseToRoom.Audience = messages.MessageAudienceRoom
+					actionResponseToRoom := message.Reply(replyText)
+					actionResponseToRoom.AudienceID = room.ID
+					actionResponseToRoom.Audience = messages.MessageAudienceRoom
 
-						game.SendMessage() <- actionResponseToRoom
-						return true
-					}, true
+					game.SendMessage() <- actionResponseToRoom
+					return true
+				}, true
 
 				case rooms.RoomActionTypeScript:
 					scriptID := action.ScriptId
@@ -169,10 +173,8 @@ func (roomProcessor *RoomProcessor) matchesDynamicCommand(key string, room *room
 						return true
 					}, true
 
-				default:
-					log.WithField("type", action.Type).WithField("name", action.Name).Error("matched action name but unsupported or empty action type")
-				}
-
+			default:
+				log.WithField("type", action.Type).WithField("name", action.Name).Error("matched action name but unsupported or empty action type")
 			}
 		}
 	}

@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
@@ -20,6 +21,9 @@ type CharactersService interface {
 	GetCharacterTemplates() []*characters.CharacterTemplate
 
 	CreateNewCharacter(dto *dto.CreateCharacterDTO) (*characters.Character, error)
+	// Modify loads the character, applies fn, and saves under a per-character
+	// lock so concurrent script flags and pickups cannot drop inventory.
+	Modify(id string, fn func(*characters.Character) error) error
 }
 
 //--- Implementations
@@ -27,13 +31,18 @@ type CharactersService interface {
 type charactersService struct {
 	r.CharactersRepository
 	templatesRepo r.CharacterTemplatesRepository
+	settings      ServerSettingsService
+	rooms         RoomsService
+	locks         sync.Map
 }
 
 //NewCharactersService creates a new item service
-func NewCharactersService(charactersRepo r.CharactersRepository, templatesRepo r.CharacterTemplatesRepository) CharactersService {
+func NewCharactersService(charactersRepo r.CharactersRepository, templatesRepo r.CharacterTemplatesRepository, settings ServerSettingsService, rooms RoomsService) CharactersService {
 	return &charactersService{
 		CharactersRepository: charactersRepo,
 		templatesRepo:        templatesRepo,
+		settings:             settings,
+		rooms:                rooms,
 	}
 }
 func (srv *charactersService) CreateNewCharacter(dto *dto.CreateCharacterDTO) (*characters.Character, error) {
@@ -53,6 +62,10 @@ func (srv *charactersService) CreateNewCharacter(dto *dto.CreateCharacterDTO) (*
 	character.Name = dto.Name
 	character.Description = dto.Description
 	character.BelongsUserID = dto.UserID
+	if startID := ResolveStartRoomID(srv.settings, srv.rooms); startID != "" {
+		character.CurrentRoomID = startID
+		character.BoundRoomID = startID
+	}
 
 	if createdCharacter, err := srv.Store(character); err == nil {
 		log.Info("Created new character based on template")
@@ -100,6 +113,28 @@ func (srv *charactersService) Store(character *characters.Character) (*character
 		return nil, errors.New("character name already taken")
 	}
 	return srv.CharactersRepository.Store(character)
+}
+
+func (srv *charactersService) lockFor(id string) *sync.Mutex {
+	muI, _ := srv.locks.LoadOrStore(id, &sync.Mutex{})
+	return muI.(*sync.Mutex)
+}
+
+func (srv *charactersService) Modify(id string, fn func(*characters.Character) error) error {
+	if id == "" {
+		return errors.New("empty character id")
+	}
+	mu := srv.lockFor(id)
+	mu.Lock()
+	defer mu.Unlock()
+	character, err := srv.CharactersRepository.FindByID(id)
+	if err != nil {
+		return err
+	}
+	if err := fn(character); err != nil {
+		return err
+	}
+	return srv.CharactersRepository.Update(id, character)
 }
 
 func (srv *charactersService) GetCharacterTemplates() []*characters.CharacterTemplate {

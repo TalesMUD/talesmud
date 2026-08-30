@@ -2116,19 +2116,21 @@ type GuestService interface {
 2. Server checks `ServerSettings.GuestsAllowed` and `MaxGuestAccounts`
 3. IP rate limit checked (10 per hour per IP)
 4. Random character created from system template presets with full starter items
-5. Character `MaxLevelCap` set to 5
-6. User created with `IsGuest=true`, `GuestExpiresAt=now+30min`
-7. HMAC-SHA256 token signed with `GUEST_SECRET` env var
-8. Token returned to client, stored in `sessionStorage`
-9. On WebSocket connect: timeout goroutines start (5-min warning + expiry)
-10. On disconnect: 5-min grace period before deleting guest data
-11. Background cleanup loop removes expired guests every 5 minutes
+5. Character spawned in `ServerSettings.StartRoomID` (default `R0001` if that room exists); auto quests for that zone are granted
+6. Character `MaxLevelCap` set to 5
+7. User created with `IsGuest=true`, `GuestExpiresAt=now+30min`
+8. HMAC-SHA256 token signed with `GUEST_SECRET` env var
+9. Token returned to client, stored in `sessionStorage`
+10. On WebSocket connect: timeout goroutines start (5-min warning + expiry)
+11. On disconnect: 5-min grace period before deleting guest data
+12. Background cleanup loop removes expired guests every 5 minutes
 
 ### Server Configuration
 ```go
 // In ServerSettings:
 GuestsAllowed    bool  // Enable/disable guest mode (default: true)
 MaxGuestAccounts int   // Max concurrent guests (default: 20, 0 = unlimited)
+StartRoomID      string // New/guest spawn room (default "R0001")
 ```
 
 ### User Entity Guest Fields

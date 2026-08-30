@@ -589,6 +589,25 @@ func (c *CombatController) processAllTurns(instance *combat.CombatInstance) {
 // cleanupCombatInstance cleans up after combat ends, processes rewards, and notifies players
 func (c *CombatController) cleanupCombatInstance(instance *combat.CombatInstance, endState combat.CombatState) {
 
+	// Mark NPCs dead, then refresh the origin room, THEN send victory
+	// text. The room update must not be queued after combatEnd or a
+	// player who already left will see the fight room again.
+	for _, enemy := range instance.Enemies {
+		c.game.NPCManager.UpdateInstance(enemy.ID, func(n *npc.NPC) {
+			n.InCombat = false
+			n.CombatInstanceID = ""
+			n.CurrentHitPoints = enemy.CurrentHP
+			if enemy.IsAlive {
+				n.State = "idle"
+			} else {
+				n.IsDead = true
+				n.State = "dead"
+				n.DeathTime = time.Now()
+			}
+		})
+	}
+	c.refreshOriginRoomAfterCombat(instance)
+
 	// Process combat end based on state
 	switch endState {
 	case combat.CombatStateVictory:
@@ -623,46 +642,39 @@ func (c *CombatController) cleanupCombatInstance(instance *combat.CombatInstance
 		}
 	}
 
-	// Clear combat state from NPCs
-	for _, enemy := range instance.Enemies {
-		c.game.NPCManager.UpdateInstance(enemy.ID, func(n *npc.NPC) {
-			n.InCombat = false
-			n.CombatInstanceID = ""
-			n.CurrentHitPoints = enemy.CurrentHP
-			if enemy.IsAlive {
-				n.State = "idle"
-			} else {
-				n.IsDead = true
-				n.State = "dead"
-				n.DeathTime = time.Now()
-			}
-		})
-	}
-
 	// Remove the instance
 	c.manager.RemoveInstance(instance.ID)
-
-	// Send a room refresh to all players so dead NPCs disappear from the UI
-	if room, err := c.game.Facade.RoomsService().FindByID(instance.OriginRoomID); err == nil && room != nil {
-		for _, player := range instance.Players {
-			char, err := c.game.Facade.CharactersService().FindByID(player.ID)
-			if err != nil {
-				continue
-			}
-			user, err := c.game.Facade.UsersService().FindByID(char.BelongsUserID)
-			if err != nil {
-				continue
-			}
-			enterRoom := messages.NewEnterRoomMessage(util.RoomWithCharacterReveals(room, char), user, c.game, char)
-			enterRoom.AudienceID = user.ID
-			c.game.sendMessage <- enterRoom
-		}
-	}
 
 	log.WithFields(log.Fields{
 		"instanceID": instance.ID,
 		"endState":   endState,
 	}).Info("Combat instance cleaned up")
+}
+
+func (c *CombatController) refreshOriginRoomAfterCombat(instance *combat.CombatInstance) {
+	if instance == nil || instance.OriginRoomID == "" {
+		return
+	}
+	room, err := c.game.Facade.RoomsService().FindByID(instance.OriginRoomID)
+	if err != nil || room == nil {
+		return
+	}
+	for _, player := range instance.Players {
+		char, err := c.game.Facade.CharactersService().FindByID(player.ID)
+		if err != nil || char == nil {
+			continue
+		}
+		if char.CurrentRoomID != instance.OriginRoomID {
+			continue
+		}
+		user, err := c.game.Facade.UsersService().FindByID(char.BelongsUserID)
+		if err != nil {
+			continue
+		}
+		roomUpdate := messages.NewRoomUpdateMessage(util.RoomWithCharacterReveals(room, char), user, c.game, char)
+		roomUpdate.AudienceID = user.ID
+		c.game.sendMessage <- roomUpdate
+	}
 }
 
 // processCombatVictory handles XP, gold, loot rewards and sends the victory message

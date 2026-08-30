@@ -14,6 +14,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	m "github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
+	"github.com/talesmud/talesmud/pkg/service"
 )
 
 // SelectCharacterCommand ... select a character
@@ -115,18 +116,21 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 
 	// new character or not part of a room?
 	if character.CurrentRoomID == "" {
-		// find a random room to start in or get starting room
-		rooms, _ := game.GetFacade().RoomsService().FindAll()
-
-		if len(rooms) > 0 {
-			// TOOD make this random or select a starting room
-			currentRoom = rooms[0]
-
-			//TODO: send this as message
+		facade := game.GetFacade()
+		currentRoom = service.ResolveStartRoom(facade.ServerSettingsService(), facade.RoomsService())
+		if currentRoom != nil {
 			character.CurrentRoomID = currentRoom.ID
+			if character.BoundRoomID == "" {
+				character.BoundRoomID = currentRoom.ID
+			}
 			game.GetFacade().CharactersService().Update(character.ID, character)
-
 		}
+	}
+
+	if currentRoom == nil {
+		log.WithField("character", character.Name).Error("No start room available for character")
+		game.SendMessage() <- messages.Reply(user.ID, "The world has no starting room. Ask a creator to set startRoomID.")
+		return
 	}
 
 	// update room // send these state change messages via channel
@@ -161,6 +165,8 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 		EquippedItems: character.EquippedItems,
 		Gold:          character.Gold,
 	}
+
+	game.GetFacade().QuestsService().GrantAutoQuests(character.ID, currentRoom.Area)
 
 	// Send initial quest log to the client
 	sendQuestLogToPlayer(game, user.ID, character.ID)

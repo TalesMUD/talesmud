@@ -1,10 +1,12 @@
 package commands
 
 import (
+	"fmt"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
@@ -124,8 +126,8 @@ func (command *PickupCommand) Execute(game def.GameCtrl, message *messages.Messa
 		return true
 	}
 
-	// Handle CopyOnPickup items — create a personal copy instead of removing from room
-	if item.CopyOnPickup {
+	// Handle CopyOnPickup items and room-placed templates — copy instead of stealing the template
+	if item.CopyOnPickup || item.IsTemplate {
 		templateID := item.TemplateID
 		if templateID == "" {
 			templateID = item.ID // Item IS the template
@@ -151,23 +153,29 @@ func (command *PickupCommand) Execute(game def.GameCtrl, message *messages.Messa
 			return true
 		}
 
-		// Bind the instance to this character
 		instance.BoundToCharacterID = message.Character.ID
 
-		// Add instance to inventory
-		err = message.Character.Inventory.AddItem(instance)
+		err = game.GetFacade().CharactersService().Modify(message.Character.ID, func(ch *characters.Character) error {
+			if ch.HasCollectedCopyItem(templateID) {
+				return fmt.Errorf("already collected")
+			}
+			if err := ch.Inventory.AddItem(instance); err != nil {
+				return err
+			}
+			ch.MarkCollectedCopyItem(templateID)
+			return nil
+		})
 		if err != nil {
+			if err.Error() == "already collected" {
+				game.SendMessage() <- message.Reply("You have already collected " + item.Name + ".")
+				return true
+			}
 			game.SendMessage() <- message.Reply("Failed to pick up item: " + err.Error())
 			return true
 		}
-
-		// Mark as collected (so it's hidden and can't be picked up again)
-		message.Character.MarkCollectedCopyItem(templateID)
-
-		// Persist character (inventory + flags updated; room is NOT modified)
-		err = game.GetFacade().CharactersService().Update(message.Character.ID, message.Character)
-		if err != nil {
-			log.WithError(err).Error("Error updating character")
+		fresh, ferr := game.GetFacade().CharactersService().FindByID(message.Character.ID)
+		if ferr == nil && fresh != nil {
+			message.Character = fresh
 		}
 
 		// Track quest progress (instance has TemplateID set, so quest tracker matches)
@@ -179,11 +187,11 @@ func (command *PickupCommand) Execute(game def.GameCtrl, message *messages.Messa
 			game.SendMessage() <- inv
 		}
 
-		// Refresh room display so the collected item disappears for this player
+		// Refresh ground items without re-entering the room
 		roomView := util.RoomWithCharacterReveals(room, message.Character)
-		enterRoom := messages.NewEnterRoomMessage(roomView, message.FromUser, game, message.Character)
-		enterRoom.AudienceID = message.FromUser.ID
-		game.SendMessage() <- enterRoom
+		roomUpdate := messages.NewRoomUpdateMessage(roomView, message.FromUser, game, message.Character)
+		roomUpdate.AudienceID = message.FromUser.ID
+		game.SendMessage() <- roomUpdate
 
 		return true
 	}

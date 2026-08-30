@@ -32,6 +32,7 @@ type QuestsService interface {
 	UpdateProgress(progress *quests.QuestProgress) error
 	CompleteQuest(characterID, questID string) (*quests.QuestProgress, error)
 	GetAvailableQuests(characterID string) ([]*quests.Quest, error)
+	GrantAutoQuests(characterID, roomArea string) int
 
 	// Objective progress (called by QuestTracker)
 	ApplyQuestEvent(event QuestEvent) ([]QuestEventResult, error)
@@ -589,6 +590,55 @@ func (s *questsService) CompleteQuest(characterID, questID string) (*quests.Ques
 	}
 
 	return progress, nil
+}
+
+// GrantAutoQuests accepts every auto-source quest that belongs to the
+// character's current room area (Z00 catacombs -> QST0001-QST0004).
+func (s *questsService) GrantAutoQuests(characterID, roomArea string) int {
+	allQuests, err := s.FindAll()
+	if err != nil {
+		return 0
+	}
+	granted := 0
+	for _, q := range allQuests {
+		if q == nil || !strings.EqualFold(q.Source.Type, "auto") {
+			continue
+		}
+		if !s.autoQuestBelongsToArea(q, roomArea) {
+			continue
+		}
+		if _, err := s.AcceptQuest(characterID, q.ID); err != nil {
+			log.WithError(err).WithField("questID", q.ID).Debug("auto-grant skipped")
+			continue
+		}
+		granted++
+	}
+	return granted
+}
+
+func (s *questsService) autoQuestBelongsToArea(q *quests.Quest, roomArea string) bool {
+	if q == nil {
+		return false
+	}
+	if strings.HasPrefix(roomArea, "Z00") && strings.HasPrefix(q.ID, "QST000") {
+		return true
+	}
+	if strings.HasPrefix(roomArea, "Z01") && strings.HasPrefix(q.ID, "QST010") {
+		return true
+	}
+	if s.facade == nil || roomArea == "" {
+		return false
+	}
+	for _, obj := range q.Objectives {
+		if obj.Type != quests.ObjectiveVisit || obj.TargetID == "" {
+			continue
+		}
+		room, err := s.facade.RoomsService().FindByID(obj.TargetID)
+		if err == nil && room != nil && room.Area == roomArea {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *questsService) GetAvailableQuests(characterID string) ([]*quests.Quest, error) {

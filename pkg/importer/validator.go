@@ -236,10 +236,10 @@ func (w *WorldImporter) validateData(
 	return warnings
 }
 
-// addValidation logs a validation warning and appends it to the errors list.
+// addValidation logs a validation warning. Warnings are counted separately
+// and must not fail an otherwise successful import (incomplete later zones).
 func (w *WorldImporter) addValidation(format string, args ...interface{}) {
 	msg := fmt.Sprintf("[VALIDATE] "+format, args...)
-	w.errors = append(w.errors, msg)
 	log.Warn(msg)
 }
 
