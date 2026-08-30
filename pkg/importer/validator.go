@@ -172,6 +172,10 @@ func (w *WorldImporter) validateData(
 			w.addValidation("Quest %s (%s): source.itemId references unknown item %s", q.ID, q.Name, q.Source.ItemID)
 			warnings++
 		}
+		if q.OnAcceptScriptID != "" && !scriptIDs[q.OnAcceptScriptID] {
+			w.addValidation("Quest %s (%s): onAcceptScriptId references unknown script %s", q.ID, q.Name, q.OnAcceptScriptID)
+			warnings++
+		}
 		if q.OnCompleteScriptID != "" && !scriptIDs[q.OnCompleteScriptID] {
 			w.addValidation("Quest %s (%s): onCompleteScriptId references unknown script %s", q.ID, q.Name, q.OnCompleteScriptID)
 			warnings++

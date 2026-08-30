@@ -282,8 +282,10 @@ func convertDialogOptions(options []YAMLDialogOption, tree map[string]YAMLDialog
 	result := make([]*dialogs.Dialog, 0, len(options))
 	for _, opt := range options {
 		optDialog := &dialogs.Dialog{
-			NodeID: opt.Next,
-			Text:   opt.PlayerText,
+			NodeID:  opt.Next,
+			Text:    opt.PlayerText,
+			QuestID: opt.QuestID,
+			Action:  opt.Action,
 		}
 
 		// If this option leads to another node and we haven't visited it, set up the answer
@@ -398,6 +400,7 @@ func (y *YAMLQuest) ToEntity() *quests.Quest {
 		AcceptDialogText:   y.AcceptDialogText,
 		ProgressDialogText: y.ProgressDialogText,
 		CompleteDialogText: y.CompleteDialogText,
+		OnAcceptScriptID:   y.OnAcceptScriptID,
 		OnCompleteScriptID: y.OnCompleteScriptID,
 		Created:            time.Now(),
 		Updated:            time.Now(),
