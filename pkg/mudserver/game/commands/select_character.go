@@ -147,6 +147,7 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 		character = fresh
 		game.SetUserSessionCharacter(user, character)
 	}
+	PushAtlas(game, user.ID, character)
 
 	// update room // send these state change messages via channel
 	currentRoom.AddCharacter(character.ID)

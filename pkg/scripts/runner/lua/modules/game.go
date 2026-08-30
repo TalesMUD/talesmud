@@ -13,6 +13,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
 	luarunner "github.com/talesmud/talesmud/pkg/scripts/runner/lua"
+	"github.com/talesmud/talesmud/pkg/worldmap"
 )
 
 // RegisterGameModule registers the tales.game module
@@ -353,6 +354,10 @@ func RegisterGameModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 				roomUpdate.Audience = messages.MessageAudienceUser
 				roomUpdate.AudienceID = charUser.ID
 				game.SendMessage() <- roomUpdate
+				if rs, rerr := facade.RoomsService().FindAll(); rerr == nil {
+					atlas := worldmap.Reveal(worldmap.Compile(rs), character)
+					game.SendMessage() <- messages.NewAtlasMessage(charUser.ID, atlas)
+				}
 			}
 		}
 

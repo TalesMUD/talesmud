@@ -42,4 +42,7 @@ const (
 	MessageTypeQuestCompleted = "questCompleted" // Quest completed
 	MessageTypeQuestAbandoned = "questAbandoned" // Quest abandoned
 	MessageTypeQuestLog       = "questLog"       // Full quest log
+
+	// Discovered-world atlas for web/mobile map widgets
+	MessageTypeAtlas = "atlas"
 )

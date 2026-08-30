@@ -15,6 +15,20 @@ function createClient(renderer, characterCreator, muxStore) {
 
   let activeRoom = {};
   let currentCharacter = {};
+  let authToken = "";
+
+  const getAuthToken = () => {
+    if (authToken) return authToken;
+    try {
+      const guest = sessionStorage.getItem("talesmud_guest_token");
+      if (guest) return guest;
+    } catch (e) { /* ignore */ }
+    try {
+      const stored = localStorage.getItem("token");
+      if (stored) return stored;
+    } catch (e) { /* ignore */ }
+    return "";
+  };
 
 
   messageHandlers["enterRoom"] = (msg) => {
@@ -110,7 +124,12 @@ function createClient(renderer, characterCreator, muxStore) {
     if (mux && msg.character) {
       mux.setCharacter(msg.character);
       mux.updateCharacterStats({ xpForNextLevel: msg.xpForNextLevel });
-      requestAtlas();
+    }
+  };
+
+  messageHandlers["atlas"] = (msg) => {
+    if (mux && msg.atlas) {
+      mux.setAtlas(msg.atlas);
     }
   };
 
@@ -329,7 +348,7 @@ function createClient(renderer, characterCreator, muxStore) {
 
   const requestAtlas = () => {
     if (!currentCharacter || !currentCharacter.id) return;
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     if (!token) return;
 
     fetch(`/api/characters/${currentCharacter.id}/map`, {
@@ -347,7 +366,7 @@ function createClient(renderer, characterCreator, muxStore) {
         mux.setAtlas(data);
       }
     })
-    .catch(() => { /* atlas is optional until the character is selected */ });
+    .catch((err) => { console.warn("atlas fetch failed", err); });
   };
 
   // Helper function to fetch quest log from API
@@ -449,6 +468,7 @@ function createClient(renderer, characterCreator, muxStore) {
     onInput,
     setWSClient,
     sendMessage,
+    setAuthToken: (token) => { authToken = token || ""; },
   };
 
   // Set the client object in the store

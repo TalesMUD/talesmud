@@ -8,6 +8,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
+	"github.com/talesmud/talesmud/pkg/worldmap"
 )
 
 // CharacterJoinedRoom ... asdd
@@ -500,6 +501,25 @@ func NewQuestLogMessage(userID string, entries []QuestLogEntry) *QuestLogMessage
 			Message:    "Quest Log",
 		},
 		Quests: entries,
+	}
+}
+
+// AtlasMessage is the fog-of-war world map for a character.
+type AtlasMessage struct {
+	MessageResponse
+	Atlas worldmap.PlayerMap `json:"atlas"`
+}
+
+// NewAtlasMessage sends a compiled atlas to one player.
+func NewAtlasMessage(userID string, atlas worldmap.PlayerMap) *AtlasMessage {
+	return &AtlasMessage{
+		MessageResponse: MessageResponse{
+			Audience:   MessageAudienceOrigin,
+			AudienceID: userID,
+			Type:       MessageTypeAtlas,
+			Message:    "Atlas",
+		},
+		Atlas: atlas,
 	}
 }
 

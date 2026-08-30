@@ -123,6 +123,10 @@
     }
   }
 
+  $: if (client && $authToken) {
+    client.setAuthToken($authToken);
+  }
+
   $: if (client && !ws && !$isLoading && $isAuthenticated && $authToken && !destroyed) {
     connectWebSocket(false);
   }
