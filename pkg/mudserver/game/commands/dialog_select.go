@@ -14,6 +14,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/scripts"
 )
 
 // conversationTimeout defines how long a conversation stays "active" after last interaction
@@ -388,6 +389,8 @@ func handleQuestAction(game def.GameCtrl, message *messages.Message, selectedOpt
 			"questName":   quest.Name,
 		}).Info("Quest accepted via dialog")
 
+		runQuestAcceptScript(game, message, quest.OnAcceptScriptID)
+
 	case "complete":
 		// Complete the quest and grant rewards
 		_, err := game.GetFacade().QuestsService().CompleteQuest(char.ID, questID)
@@ -525,4 +528,25 @@ func buildQuestRewardMessage(quest *quests.Quest, grantedItems []string) string 
 	sb.WriteString("\n══════════════════════════════════════════════════")
 
 	return sb.String()
+}
+
+func runQuestAcceptScript(game def.GameCtrl, message *messages.Message, scriptID string) {
+	if scriptID == "" || game == nil || game.GetFacade() == nil || game.GetFacade().Runner() == nil {
+		return
+	}
+	script, err := game.GetFacade().ScriptsService().FindByID(scriptID)
+	if err != nil || script == nil {
+		log.WithField("scriptID", scriptID).WithError(err).Warn("quest accept script not found")
+		return
+	}
+	ctx := scripts.NewScriptContext()
+	ctx.Set("eventType", "quest.accept")
+	if message != nil && message.Character != nil {
+		ctx.Set("character", message.Character)
+		ctx.Set("characterID", message.Character.ID)
+	}
+	result := game.GetFacade().Runner().RunWithResult(*script, ctx)
+	if result != nil && !result.Success {
+		log.WithField("script", script.Name).WithField("error", result.Error).Warn("quest accept script failed")
+	}
 }

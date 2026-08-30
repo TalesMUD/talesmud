@@ -2122,6 +2122,7 @@ type GuestService interface {
 5. Character spawned in `ServerSettings.StartRoomID` (default `R0001` if that room exists); auto quests for that zone are granted
 5a. Entering a room grants auto-source quests for that room's area (Z01 meadows: QST010*) so they fire after leaving Z00
 5b. Lua `tales.game.giveItem` notifies collect-quest progress (foraging, script rewards)
+5c. Quest YAML `onAcceptScriptId` runs after a dialog accept (Z01 Wren reveals the creek burrow)
 6. Character `MaxLevelCap` set to 5
 7. User created with `IsGuest=true`, `GuestExpiresAt=now+30min`
 8. HMAC-SHA256 token signed with `GUEST_SECRET` env var

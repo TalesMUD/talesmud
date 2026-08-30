@@ -77,6 +77,7 @@ type Quest struct {
 	Objectives []Objective `json:"objectives"`
 
 	// Completion
+	OnAcceptScriptID   string `json:"onAcceptScriptId,omitempty"`
 	OnCompleteScriptID string `json:"onCompleteScriptId,omitempty"`
 	Rewards            Reward `json:"rewards"`
 

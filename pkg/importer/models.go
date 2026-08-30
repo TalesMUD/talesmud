@@ -252,6 +252,8 @@ type YAMLDialogOption struct {
 	PlayerText string   `yaml:"player_text"`
 	Next       string   `yaml:"next"`
 	Conditions []string `yaml:"conditions"`
+	QuestID    string   `yaml:"questId"`
+	Action     string   `yaml:"action"`
 }
 
 // YAMLLootTable represents a loot table in YAML format
@@ -298,7 +300,8 @@ type YAMLQuest struct {
 	AcceptDialogText   string       `yaml:"acceptDialogText"`
 	ProgressDialogText string       `yaml:"progressDialogText"`
 	CompleteDialogText string       `yaml:"completeDialogText"`
-	OnCompleteScriptID string       `yaml:"onCompleteScriptId"`
+	OnAcceptScriptID   string `yaml:"onAcceptScriptId"`
+	OnCompleteScriptID string `yaml:"onCompleteScriptId"`
 }
 
 // YAMLQuestSource represents how a quest is obtained

@@ -1,6 +1,7 @@
 package commands_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/talesmud/talesmud/pkg/entities"
@@ -74,6 +75,47 @@ func TestRoomActionBeatsExamineAndSendsResponse(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("expected narrative response, got %#v", replies)
+	}
+}
+
+func TestExamineMoonsRoomActionMatches(t *testing.T) {
+	g, facade := newSelectionTestGame(t)
+	actions := rooms.Actions{
+		{Name: "EXAMINE MOONS", Type: rooms.RoomActionTypeResponse, Response: "Two discs hang in the blue."},
+	}
+	exits := rooms.Exits{}
+	chars := rooms.Characters{}
+	roomItems := rooms.Items{}
+	if _, err := facade.RoomsService().Import(&rooms.Room{
+		Entity:     &entities.Entity{ID: "R0101"},
+		Name:       "Meadow Emergence",
+		Exits:      &exits,
+		Characters: &chars,
+		Items:      &roomItems,
+		Actions:    &actions,
+	}); err != nil {
+		t.Fatalf("import room: %v", err)
+	}
+	user := &entities.User{Entity: &entities.Entity{ID: "user-1"}, RefID: "auth|1"}
+	character := &characters.Character{
+		Entity:      &entities.Entity{ID: "char-1"},
+		Name:        "Wanderer",
+		BelongsUser: *traits.BelongsToUser("user-1"),
+		CurrentRoom: traits.CurrentRoom{CurrentRoomID: "R0101"},
+	}
+	if _, err := facade.CharactersService().Import(character); err != nil {
+		t.Fatalf("import character: %v", err)
+	}
+	msg := &messages.Message{FromUser: user, Character: character, Data: "examine moons"}
+	processPlayerInput(g, msg)
+	var found bool
+	for _, out := range drainSelectionMessages(g.SendMessage()) {
+		if resp, ok := out.(messages.MessageResponse); ok && strings.Contains(resp.Message, "Two discs hang") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("examine moons did not match the room action")
 	}
 }
 
