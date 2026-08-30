@@ -1,48 +1,43 @@
 <script>
-  import { onDestroy } from 'svelte';
+  import { onDestroy, tick } from 'svelte';
 
   export let store = null;
   export let sendMessage = null;
 
-  let canvas;
-  let container;
-  let resizeObserver;
-  let tooltip = { visible: false, text: '', x: 0, y: 0 };
-
-  const CELL = 56;
   const BIOME = {
-    meadow: { fill: 'rgba(176, 196, 132, 0.42)', ink: '#6f8448' },
-    forest: { fill: 'rgba(96, 130, 86, 0.40)', ink: '#3f5c38' },
-    water: { fill: 'rgba(110, 158, 176, 0.38)', ink: '#3d6a7a' },
-    dungeon: { fill: 'rgba(138, 118, 98, 0.38)', ink: '#5c4a3a' },
-    settlement: { fill: 'rgba(196, 168, 118, 0.42)', ink: '#7a5c32' },
-    wild: { fill: 'rgba(176, 168, 132, 0.36)', ink: '#5e5844' },
+    meadow: { fill: 'rgba(132, 184, 92, 0.28)', ink: '#86efac', path: '#4ade80' },
+    forest: { fill: 'rgba(52, 120, 72, 0.32)', ink: '#34d399', path: '#22c55e' },
+    water: { fill: 'rgba(56, 132, 176, 0.30)', ink: '#7dd3fc', path: '#38bdf8' },
+    dungeon: { fill: 'rgba(148, 92, 64, 0.30)', ink: '#fdba74', path: '#fb923c' },
+    settlement: { fill: 'rgba(196, 148, 72, 0.28)', ink: '#fcd34d', path: '#fbbf24' },
+    wild: { fill: 'rgba(120, 130, 150, 0.22)', ink: '#cbd5e1', path: '#94a3b8' },
   };
 
   let atlas = emptyAtlas();
   let currentRoomId = null;
-  let activeLayer = 'overworld';
+  let activeLayer = '';
 
   let travelTargetId = null;
   let travelPath = [];
   let isTraveling = false;
   let travelPathRoomIds = new Set();
 
-  let panOffsetX = 0;
-  let panOffsetY = 0;
+  let panX = 0;
+  let panY = 0;
+  let userScale = 1;
   let isPanning = false;
-  let panStartX = 0;
-  let panStartY = 0;
-  let panStartOffsetX = 0;
-  let panStartOffsetY = 0;
   let didDrag = false;
-  let scale = 1;
+  let panStart = { x: 0, y: 0, panX: 0, panY: 0 };
   let maximized = false;
+  let tooltip = { visible: false, text: '', x: 0, y: 0 };
 
-  let hitPlaces = [];
+  let widgetWrap, widgetCanvas;
+  let modalWrap, modalCanvas;
+  let widgetObserver, modalObserver;
+  let hits = [];
 
   function emptyAtlas() {
-    return { characterId: '', currentRoomId: '', currentLayer: 'overworld', layers: [], places: [], paths: [], regions: [] };
+    return { characterId: '', currentRoomId: '', currentLayer: '', layers: [], places: [], paths: [], regions: [] };
   }
 
   function portal(node) {
@@ -54,41 +49,70 @@
     };
   }
 
+  function resolveLayer(data, roomId, preferred) {
+    const places = data.places || [];
+    const here = places.find(p => p.id === roomId);
+    if (here && here.layer) return here.layer;
+    if (preferred && places.some(p => p.layer === preferred)) return preferred;
+    if (data.currentLayer && places.some(p => p.layer === data.currentLayer)) return data.currentLayer;
+    if (data.layers && data.layers[0]) return data.layers[0].id;
+    const first = places[0];
+    return (first && first.layer) || 'overworld';
+  }
+
   $: if (store) {
     atlas = $store.atlas && Array.isArray($store.atlas.places) ? $store.atlas : emptyAtlas();
     const newRoomId = $store.currentRoomId || atlas.currentRoomId || null;
-    const storeLayer = $store.atlasLayer || atlas.currentLayer || 'overworld';
     if (newRoomId !== currentRoomId) {
       currentRoomId = newRoomId;
-      panOffsetX = 0;
-      panOffsetY = 0;
-      const here = (atlas.places || []).find(p => p.id === newRoomId);
-      if (here && here.layer) {
-        activeLayer = here.layer;
-        if (store.setAtlasLayer) store.setAtlasLayer(here.layer);
-      }
-      if (isTraveling && newRoomId) {
-        advanceTravel(newRoomId);
-      }
-    } else {
-      activeLayer = storeLayer;
+      panX = 0;
+      panY = 0;
+      userScale = 1;
+      if (isTraveling && newRoomId) advanceTravel(newRoomId);
     }
-  }
-
-  $: if (canvas && atlas) {
-    draw();
+    activeLayer = resolveLayer(atlas, currentRoomId, $store.atlasLayer || activeLayer);
   }
 
   $: visiblePlaces = (atlas.places || []).filter(p => p.layer === activeLayer);
   $: visibleRegions = (atlas.regions || []).filter(r => r.layer === activeLayer);
-  $: visiblePaths = (atlas.paths || []).filter(p => {
-    const from = placeById(p.from);
-    const to = placeById(p.to);
-    return from && to && (from.layer === activeLayer || to.layer === activeLayer);
-  });
+  $: layers = atlas.layers || [];
+
+  $: if (widgetCanvas || modalCanvas || visiblePlaces || panX || panY || userScale || maximized) {
+    draw();
+  }
 
   function placeById(id) {
     return (atlas.places || []).find(p => p.id === id);
+  }
+
+  function camera(places, regions, w, h) {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    const consider = (x, y) => {
+      if (x < minX) minX = x;
+      if (y < minY) minY = y;
+      if (x > maxX) maxX = x;
+      if (y > maxY) maxY = y;
+    };
+    for (const p of places) consider(p.x, p.y);
+    for (const region of regions || []) {
+      for (const pt of region.hull || []) consider(pt[0], pt[1]);
+    }
+    if (!isFinite(minX)) {
+      minX = maxX = minY = maxY = 0;
+    }
+    const dx = Math.max(1.4, maxX - minX);
+    const dy = Math.max(1.4, maxY - minY);
+    const pad = Math.max(28, Math.min(w, h) * 0.16);
+    const fit = Math.min((w - pad * 2) / dx, (h - pad * 2) / dy);
+    const spacing = Math.max(22, Math.min(fit * userScale, 110));
+    return { spacing, ox: (minX + maxX) / 2, oy: (minY + maxY) / 2 };
+  }
+
+  function project(place, cam, w, h) {
+    return {
+      px: w / 2 + panX + (place.x - cam.ox) * cam.spacing,
+      py: h / 2 + panY + (place.y - cam.oy) * cam.spacing,
+    };
   }
 
   function findPath(startId, targetId) {
@@ -100,8 +124,7 @@
     }
     const adj = {};
     for (const path of atlas.paths || []) {
-      if (!byId[path.from] || !byId[path.to]) continue;
-      if (!byId[path.from].discovered) continue;
+      if (!byId[path.from] || !byId[path.to] || !byId[path.from].discovered) continue;
       if (!adj[path.from]) adj[path.from] = [];
       adj[path.from].push({ to: path.to, dir: path.dir });
     }
@@ -117,13 +140,13 @@
         parent[edge.to] = { parentId: id, direction: edge.dir };
         queue.push(edge.to);
         if (edge.to === targetId) {
-          const path = [];
+          const steps = [];
           let cur = targetId;
           while (parent[cur]) {
-            path.unshift({ roomId: cur, direction: parent[cur].direction });
+            steps.unshift({ roomId: cur, direction: parent[cur].direction });
             cur = parent[cur].parentId;
           }
-          return path;
+          return steps;
         }
       }
     }
@@ -133,12 +156,12 @@
   function startTravel(targetId) {
     if (!currentRoomId || targetId === currentRoomId) return;
     const path = findPath(currentRoomId, targetId);
-    if (!path || path.length === 0) return;
+    if (!path || !path.length) return;
     travelTargetId = targetId;
     travelPath = path;
     isTraveling = true;
     travelPathRoomIds = new Set(path.map(s => s.roomId));
-    sendNextStep();
+    if (sendMessage) sendMessage(path[0].direction);
   }
 
   function cancelTravel() {
@@ -148,24 +171,16 @@
     travelPathRoomIds = new Set();
   }
 
-  function sendNextStep() {
-    if (!isTraveling || travelPath.length === 0) {
-      cancelTravel();
-      return;
-    }
-    if (sendMessage) sendMessage(travelPath[0].direction);
-  }
-
   function advanceTravel(newRoomId) {
-    if (!isTraveling || travelPath.length === 0) {
+    if (!isTraveling || !travelPath.length) {
       cancelTravel();
       return;
     }
     if (travelPath[0].roomId === newRoomId) {
       travelPath = travelPath.slice(1);
       travelPathRoomIds = new Set(travelPath.map(s => s.roomId));
-      if (travelPath.length === 0) cancelTravel();
-      else setTimeout(() => sendNextStep(), 160);
+      if (!travelPath.length) cancelTravel();
+      else setTimeout(() => { if (sendMessage && travelPath[0]) sendMessage(travelPath[0].direction); }, 160);
     } else {
       cancelTravel();
     }
@@ -177,50 +192,255 @@
     return h >>> 0;
   }
 
-  function handlePointerDown(e) {
-    if (!canvas) return;
-    isPanning = true;
-    didDrag = false;
-    panStartX = e.clientX;
-    panStartY = e.clientY;
-    panStartOffsetX = panOffsetX;
-    panStartOffsetY = panOffsetY;
-    canvas.setPointerCapture(e.pointerId);
+  function paint(canvas, wrap) {
+    if (!canvas || !wrap) return;
+    const rect = wrap.getBoundingClientRect();
+    if (rect.width < 4 || rect.height < 4) return;
+    const dpr = window.devicePixelRatio || 1;
+    const w = rect.width;
+    const h = rect.height;
+    const pw = Math.round(w * dpr);
+    const ph = Math.round(h * dpr);
+    if (canvas.width !== pw) canvas.width = pw;
+    if (canvas.height !== ph) canvas.height = ph;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    ctx.fillStyle = '#0e141c';
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.07)';
+    for (let x = 16; x < w; x += 22) {
+      for (let y = 16; y < h; y += 22) {
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+
+    if (!visiblePlaces.length) {
+      ctx.fillStyle = '#64748b';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(currentRoomId ? 'Charting this floor…' : 'Walk to fill your atlas', w / 2, h / 2);
+      return;
+    }
+
+    const cam = camera(visiblePlaces, visibleRegions, w, h);
+    const byId = {};
+    for (const p of atlas.places || []) byId[p.id] = p;
+
+    for (const region of visibleRegions) {
+      const pts = (region.hull || []).map(([x, y]) => [
+        w / 2 + panX + (x - cam.ox) * cam.spacing,
+        h / 2 + panY + (y - cam.oy) * cam.spacing,
+      ]);
+      if (!pts.length) continue;
+      const biome = BIOME[region.biome] || BIOME.wild;
+      ctx.beginPath();
+      if (pts.length === 1) {
+        ctx.arc(pts[0][0], pts[0][1], cam.spacing * 0.55, 0, Math.PI * 2);
+      } else {
+        ctx.moveTo((pts[0][0] + pts[pts.length - 1][0]) / 2, (pts[0][1] + pts[pts.length - 1][1]) / 2);
+        for (let i = 0; i < pts.length; i++) {
+          const p0 = pts[i];
+          const p1 = pts[(i + 1) % pts.length];
+          ctx.quadraticCurveTo(p0[0], p0[1], (p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2);
+        }
+        ctx.closePath();
+      }
+      ctx.fillStyle = biome.fill;
+      ctx.fill();
+      ctx.strokeStyle = biome.ink;
+      ctx.globalAlpha = 0.55;
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length;
+      const cy = pts.reduce((a, p) => a + p[1], 0) / pts.length;
+      ctx.font = '600 11px sans-serif';
+      ctx.fillStyle = 'rgba(226, 232, 240, 0.72)';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(region.name || '', cx, cy - cam.spacing * 0.42);
+    }
+
+    const layerPaths = (atlas.paths || []).filter(path => {
+      const a = byId[path.from];
+      const b = byId[path.to];
+      return a && b && (a.layer === activeLayer || b.layer === activeLayer);
+    });
+
+    for (const path of layerPaths) {
+      const a = byId[path.from];
+      const b = byId[path.to];
+      const pa = project(a, cam, w, h);
+      const pb = project(b, cam, w, h);
+      const mx = (pa.px + pb.px) / 2;
+      const my = (pa.py + pb.py) / 2;
+      const dx = pb.py - pa.py;
+      const dy = pa.px - pb.px;
+      const len = Math.hypot(dx, dy) || 1;
+      const wobble = ((hash32(path.from + '>' + path.to) % 9) - 4) / 4 * Math.min(14, cam.spacing * 0.18);
+      const onTravel = travelPathRoomIds.has(path.from) && travelPathRoomIds.has(path.to)
+        || travelPathRoomIds.has(path.to) && path.from === currentRoomId;
+      ctx.beginPath();
+      ctx.moveTo(pa.px, pa.py);
+      ctx.quadraticCurveTo(mx + dx / len * wobble, my + dy / len * wobble, pb.px, pb.py);
+      ctx.strokeStyle = onTravel ? '#38bdf8' : (BIOME[a.biome] || BIOME.wild).path;
+      ctx.lineWidth = onTravel ? 3 : path.kind === 'road' ? 2.6 : 2;
+      ctx.globalAlpha = a.discovered && b.discovered ? 0.95 : 0.4;
+      if (path.kind === 'stair' || path.kind === 'hidden' || path.kind === 'passage') {
+        ctx.setLineDash([5, 4]);
+      } else {
+        ctx.setLineDash([]);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+    }
+
+    const localHits = [];
+    for (const place of visiblePlaces) {
+      const { px, py } = project(place, cam, w, h);
+      const r = drawGlyph(ctx, place, px, py, cam.spacing);
+      localHits.push({ px, py, r: r + 6, place });
+      if (place.discovered && place.name) {
+        const showName = place.current || place.landmark || maximized || visiblePlaces.length <= 8;
+        if (showName) {
+          ctx.font = place.current ? '700 11px sans-serif' : '600 10px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = 'rgba(8, 12, 18, 0.85)';
+          ctx.strokeText(place.name, px, py + r + 2);
+          ctx.fillStyle = place.current ? '#fbbf24' : '#e2e8f0';
+          ctx.fillText(place.name, px, py + r + 2);
+        }
+      }
+    }
+    hits = localHits;
   }
 
-  function handlePointerMove(e) {
-    if (!canvas) return;
+  function drawGlyph(ctx, place, px, py, spacing) {
+    const r = Math.max(6, Math.min(11, spacing * 0.16)) * (place.landmark || place.current ? 1.25 : 1);
+    ctx.save();
+    ctx.translate(px, py);
+    if (place.current) {
+      ctx.beginPath();
+      ctx.arc(0, 0, r + 7, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(251, 191, 36, 0.9)';
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, 0, r + 3, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(251, 191, 36, 0.18)';
+      ctx.fill();
+    }
+    if (place.id === travelTargetId) {
+      ctx.beginPath();
+      ctx.arc(0, 0, r + 6, 0, Math.PI * 2);
+      ctx.strokeStyle = '#22d3ee';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    const ink = place.current ? '#fbbf24' : (BIOME[place.biome] || BIOME.wild).ink;
+    ctx.fillStyle = ink;
+    ctx.strokeStyle = '#020617';
+    ctx.lineWidth = 1.4;
+    if (place.kind === 'uncharted') {
+      ctx.setLineDash([2, 2]);
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.strokeStyle = '#94a3b8';
+      ctx.stroke();
+      ctx.setLineDash([]);
+    } else if (place.kind === 'dungeon') {
+      ctx.beginPath();
+      ctx.moveTo(0, -r); ctx.lineTo(r, 0); ctx.lineTo(0, r); ctx.lineTo(-r, 0);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    } else if (place.kind === 'settlement') {
+      ctx.beginPath();
+      ctx.moveTo(0, -r);
+      ctx.lineTo(r, -1); ctx.lineTo(r, r); ctx.lineTo(-r, r); ctx.lineTo(-r, -1);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    } else if (place.kind === 'water') {
+      ctx.beginPath();
+      ctx.moveTo(0, r);
+      ctx.quadraticCurveTo(r, 0, 0, -r);
+      ctx.quadraticCurveTo(-r, 0, 0, r);
+      ctx.fill(); ctx.stroke();
+    } else if (place.landmark) {
+      ctx.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const ang = (Math.PI / 5) * i - Math.PI / 2;
+        const rad = i % 2 === 0 ? r + 1 : r * 0.45;
+        if (i === 0) ctx.moveTo(Math.cos(ang) * rad, Math.sin(ang) * rad);
+        else ctx.lineTo(Math.cos(ang) * rad, Math.sin(ang) * rad);
+      }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill(); ctx.stroke();
+    }
+    ctx.restore();
+    return r;
+  }
+
+  function draw() {
+    paint(widgetCanvas, widgetWrap);
+    if (maximized) paint(modalCanvas, modalWrap);
+  }
+
+  function hitTest(canvas, mx, my) {
+    if (!canvas) return null;
+    for (let i = hits.length - 1; i >= 0; i--) {
+      const h = hits[i];
+      const dx = mx - h.px;
+      const dy = my - h.py;
+      if (dx * dx + dy * dy <= h.r * h.r) return h.place;
+    }
+    return null;
+  }
+
+  function pointerDown(e) {
+    isPanning = true;
+    didDrag = false;
+    panStart = { x: e.clientX, y: e.clientY, panX, panY };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function pointerMove(e, canvas) {
     if (isPanning) {
-      const dx = e.clientX - panStartX;
-      const dy = e.clientY - panStartY;
+      const dx = e.clientX - panStart.x;
+      const dy = e.clientY - panStart.y;
       if (Math.abs(dx) > 3 || Math.abs(dy) > 3) didDrag = true;
-      panOffsetX = panStartOffsetX + dx;
-      panOffsetY = panStartOffsetY + dy;
+      panX = panStart.panX + dx;
+      panY = panStart.panY + dy;
       draw();
       return;
     }
     const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    const found = hitTest(mx, my);
+    const found = hitTest(canvas, e.clientX - rect.left, e.clientY - rect.top);
     if (found) {
       let text = found.discovered ? (found.name || found.id) : 'Uncharted';
       if (found.areaName && found.discovered) text += ' · ' + found.areaName;
       if (found.current) text += ' (you are here)';
-      else if (found.id === travelTargetId && isTraveling) text += ' (traveling…)';
-      else if (found.discovered && found.canTravel) text += ' (click to travel)';
-      tooltip = { visible: true, text, x: mx, y: my };
+      else if (found.discovered) text += ' (click to travel)';
+      tooltip = { visible: true, text, x: e.clientX - rect.left, y: e.clientY - rect.top };
     } else {
       tooltip = { ...tooltip, visible: false };
     }
   }
 
-  function handlePointerUp(e) {
-    if (!canvas) return;
-    canvas.releasePointerCapture(e.pointerId);
+  function pointerUp(e, canvas) {
+    e.currentTarget.releasePointerCapture(e.pointerId);
     if (isPanning && !didDrag) {
       const rect = canvas.getBoundingClientRect();
-      const found = hitTest(e.clientX - rect.left, e.clientY - rect.top);
+      const found = hitTest(canvas, e.clientX - rect.left, e.clientY - rect.top);
       if (found && found.discovered && found.id !== currentRoomId) {
         if (found.id === travelTargetId) cancelTravel();
         else {
@@ -234,464 +454,231 @@
     didDrag = false;
   }
 
-  function handleMouseLeave() {
-    tooltip = { ...tooltip, visible: false };
-  }
-
-  function handleWheel(e) {
+  function onWheel(e) {
     e.preventDefault();
-    const next = Math.min(2.4, Math.max(0.45, scale * (e.deltaY < 0 ? 1.12 : 0.89)));
-    scale = next;
+    userScale = Math.min(2.6, Math.max(0.55, userScale * (e.deltaY < 0 ? 1.12 : 0.89)));
     draw();
-  }
-
-  function hitTest(mx, my) {
-    for (let i = hitPlaces.length - 1; i >= 0; i--) {
-      const h = hitPlaces[i];
-      const dx = mx - h.px;
-      const dy = my - h.py;
-      if (dx * dx + dy * dy <= h.r * h.r) return h.place;
-    }
-    return null;
   }
 
   function recenter() {
-    panOffsetX = 0;
-    panOffsetY = 0;
+    panX = 0;
+    panY = 0;
+    userScale = 1;
     draw();
   }
 
-  function toggleMaximize() {
+  async function toggleMaximize() {
     maximized = !maximized;
-    setTimeout(() => resizeCanvas(), 30);
-  }
-
-  function handleBackdropClick(e) {
-    if (e.target === e.currentTarget) toggleMaximize();
-  }
-
-  function handleBackdropKeydown(e) {
-    if (e.key === 'Escape') toggleMaximize();
+    if (maximized) {
+      panX = 0;
+      panY = 0;
+      userScale = 1;
+      await tick();
+      draw();
+    }
   }
 
   function selectLayer(id) {
     activeLayer = id;
     if (store && store.setAtlasLayer) store.setAtlasLayer(id);
-    panOffsetX = 0;
-    panOffsetY = 0;
+    panX = 0;
+    panY = 0;
+    userScale = 1;
     draw();
   }
 
-  function project(place, origin, w, h) {
-    const spacing = CELL * scale;
-    return {
-      px: Math.round(w / 2 + panOffsetX + (place.x - origin.x) * spacing),
-      py: Math.round(h / 2 + panOffsetY + (place.y - origin.y) * spacing),
-    };
+  let observedWidget = null;
+  let observedModal = null;
+  $: if (widgetWrap !== observedWidget) {
+    if (widgetObserver) widgetObserver.disconnect();
+    observedWidget = widgetWrap;
+    if (widgetWrap) {
+      widgetObserver = new ResizeObserver(() => draw());
+      widgetObserver.observe(widgetWrap);
+      draw();
+    }
   }
-
-  function drawSmoothHull(ctx, pts) {
-    if (!pts || pts.length === 0) return;
-    if (pts.length === 1) {
-      ctx.arc(pts[0][0], pts[0][1], CELL * scale * 0.7, 0, Math.PI * 2);
-      return;
-    }
-    ctx.moveTo(pts[0][0], pts[0][1]);
-    for (let i = 0; i < pts.length; i++) {
-      const p0 = pts[i];
-      const p1 = pts[(i + 1) % pts.length];
-      const mx = (p0[0] + p1[0]) / 2;
-      const my = (p0[1] + p1[1]) / 2;
-      ctx.quadraticCurveTo(p0[0], p0[1], mx, my);
-    }
-    ctx.closePath();
-  }
-
-  function drawPlaceGlyph(ctx, place, px, py) {
-    const r = place.landmark ? 8 : place.kind === 'uncharted' ? 5 : 6;
-    ctx.save();
-    ctx.translate(px, py);
-    if (place.current) {
-      ctx.beginPath();
-      ctx.arc(0, 0, r + 6, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(245, 158, 11, 0.85)';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-    if (place.id === travelTargetId) {
-      ctx.beginPath();
-      ctx.arc(0, 0, r + 5, 0, Math.PI * 2);
-      ctx.strokeStyle = '#22d3ee';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-    ctx.fillStyle = place.current ? '#f59e0b' : (BIOME[place.biome] || BIOME.wild).ink;
-    ctx.strokeStyle = '#2a241c';
-    ctx.lineWidth = 1.2;
-    if (place.kind === 'uncharted') {
-      ctx.setLineDash([2, 2]);
-      ctx.beginPath();
-      ctx.arc(0, 0, r, 0, Math.PI * 2);
-      ctx.strokeStyle = '#6b6358';
-      ctx.stroke();
-      ctx.setLineDash([]);
-    } else if (place.kind === 'dungeon') {
-      ctx.beginPath();
-      ctx.moveTo(0, -r);
-      ctx.lineTo(r, 0);
-      ctx.lineTo(0, r);
-      ctx.lineTo(-r, 0);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-    } else if (place.kind === 'settlement') {
-      ctx.beginPath();
-      ctx.moveTo(0, -r);
-      ctx.lineTo(r, -1);
-      ctx.lineTo(r, r);
-      ctx.lineTo(-r, r);
-      ctx.lineTo(-r, -1);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-    } else if (place.kind === 'water') {
-      ctx.beginPath();
-      ctx.moveTo(0, r);
-      ctx.quadraticCurveTo(r, 0, 0, -r);
-      ctx.quadraticCurveTo(-r, 0, 0, r);
-      ctx.fill();
-      ctx.stroke();
-    } else if (place.landmark) {
-      star(ctx, 0, 0, r + 1, r * 0.45, 5);
-      ctx.fill();
-      ctx.stroke();
-    } else {
-      ctx.beginPath();
-      ctx.arc(0, 0, r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-    }
-    ctx.restore();
-    return r + (place.current ? 8 : 4);
-  }
-
-  function star(ctx, x, y, r, ir, n) {
-    ctx.beginPath();
-    for (let i = 0; i < n * 2; i++) {
-      const ang = (Math.PI / n) * i - Math.PI / 2;
-      const rad = i % 2 === 0 ? r : ir;
-      const fn = i === 0 ? ctx.moveTo : ctx.lineTo;
-      fn.call(ctx, x + Math.cos(ang) * rad, y + Math.sin(ang) * rad);
-    }
-    ctx.closePath();
-  }
-
-  function originPlace() {
-    const here = (atlas.places || []).find(p => p.id === currentRoomId && p.layer === activeLayer);
-    if (here) return here;
-    const layerPlaces = visiblePlaces;
-    if (layerPlaces.length === 0) return { x: 0, y: 0 };
-    const discovered = layerPlaces.filter(p => p.discovered);
-    const src = discovered.length ? discovered : layerPlaces;
-    const sx = src.reduce((a, p) => a + p.x, 0) / src.length;
-    const sy = src.reduce((a, p) => a + p.y, 0) / src.length;
-    return { x: sx, y: sy };
-  }
-
-  function draw() {
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
-    const w = canvas.width / dpr;
-    const h = canvas.height / dpr;
-    ctx.save();
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, w, h);
-
-    const paper = ctx.createRadialGradient(w * 0.5, h * 0.4, 12, w * 0.5, h * 0.5, Math.max(w, h) * 0.75);
-    paper.addColorStop(0, '#e7d7b1');
-    paper.addColorStop(1, '#cbb892');
-    ctx.fillStyle = paper;
-    ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = 'rgba(90, 70, 40, 0.04)';
-    for (let y = 0; y < h; y += 7) {
-      ctx.fillRect(0, y, w, 1);
-    }
-
-    const origin = originPlace();
-    const spacing = CELL * scale;
-    hitPlaces = [];
-
-    for (const region of visibleRegions) {
-      const pts = (region.hull || []).map(([x, y]) => {
-        const px = w / 2 + panOffsetX + (x - origin.x) * spacing;
-        const py = h / 2 + panOffsetY + (y - origin.y) * spacing;
-        return [px, py];
-      });
-      const biome = BIOME[region.biome] || BIOME.wild;
-      ctx.beginPath();
-      drawSmoothHull(ctx, pts);
-      ctx.fillStyle = biome.fill;
-      ctx.fill();
-      ctx.strokeStyle = biome.ink;
-      ctx.globalAlpha = 0.45;
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-      if (pts.length) {
-        const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length;
-        const cy = pts.reduce((a, p) => a + p[1], 0) / pts.length;
-        ctx.save();
-        ctx.font = '600 11px Georgia, serif';
-        ctx.fillStyle = 'rgba(62, 48, 28, 0.72)';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(region.name || '', cx, cy - spacing * 0.55);
-        ctx.restore();
-      }
-    }
-
-    const byId = {};
-    for (const p of atlas.places || []) byId[p.id] = p;
-
-    for (const path of visiblePaths) {
-      const a = byId[path.from];
-      const b = byId[path.to];
-      if (!a || !b) continue;
-      const pa = project(a, origin, w, h);
-      const pb = project(b, origin, w, h);
-      const mx = (pa.px + pb.px) / 2;
-      const my = (pa.py + pb.py) / 2;
-      const dx = pb.py - pa.py;
-      const dy = pa.px - pb.px;
-      const len = Math.hypot(dx, dy) || 1;
-      const wobble = ((hash32(path.from + path.to + path.dir) % 11) - 5) / 5 * 10 * scale;
-      const cx = mx + dx / len * wobble;
-      const cy = my + dy / len * wobble;
-      const onTravel = travelPathRoomIds.has(path.from) || travelPathRoomIds.has(path.to);
-      ctx.beginPath();
-      ctx.moveTo(pa.px, pa.py);
-      ctx.quadraticCurveTo(cx, cy, pb.px, pb.py);
-      ctx.strokeStyle = onTravel ? '#0ea5e9' : (path.kind === 'road' ? '#6b4f2e' : '#5a4a38');
-      ctx.lineWidth = onTravel ? 3 : path.kind === 'road' ? 2.4 : 1.4;
-      ctx.globalAlpha = a.discovered && b.discovered ? 0.9 : 0.35;
-      if (path.kind === 'stair') ctx.setLineDash([4, 3]);
-      else if (path.kind === 'hidden' || path.kind === 'passage') ctx.setLineDash([2, 3]);
-      else ctx.setLineDash([]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.globalAlpha = 1;
-    }
-
-    for (const place of visiblePlaces) {
-      const { px, py } = project(place, origin, w, h);
-      const r = drawPlaceGlyph(ctx, place, px, py);
-      hitPlaces.push({ px, py, r: r + 4, place });
-      if (place.current && place.name) {
-        ctx.save();
-        ctx.font = '700 11px Georgia, serif';
-        ctx.fillStyle = '#3b2c16';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.fillText(place.name, px, py + r + 2);
-        ctx.restore();
-      } else if (place.landmark && place.discovered && place.name && maximized) {
-        ctx.save();
-        ctx.font = '600 10px Georgia, serif';
-        ctx.fillStyle = 'rgba(59, 44, 22, 0.85)';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.fillText(place.name, px, py + r + 1);
-        ctx.restore();
-      }
-    }
-
-    ctx.restore();
-  }
-
-  function resizeCanvas() {
-    if (!canvas || !container) return;
-    const rect = container.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) return;
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = Math.round(rect.width * dpr);
-    canvas.height = Math.round(rect.height * dpr);
-    canvas.style.width = rect.width + 'px';
-    canvas.style.height = rect.height + 'px';
-    draw();
-  }
-
-  let observedContainer = null;
-  $: if (container !== observedContainer) {
-    if (resizeObserver) resizeObserver.disconnect();
-    observedContainer = container;
-    if (container) {
-      resizeObserver = new ResizeObserver(() => resizeCanvas());
-      resizeObserver.observe(container);
-      resizeCanvas();
+  $: if (modalWrap !== observedModal) {
+    if (modalObserver) modalObserver.disconnect();
+    observedModal = modalWrap;
+    if (modalWrap) {
+      modalObserver = new ResizeObserver(() => draw());
+      modalObserver.observe(modalWrap);
+      draw();
     }
   }
 
   onDestroy(() => {
-    if (resizeObserver) resizeObserver.disconnect();
+    if (widgetObserver) widgetObserver.disconnect();
+    if (modalObserver) modalObserver.disconnect();
     cancelTravel();
     maximized = false;
   });
 </script>
 
 <style>
-  .minimap-container {
+  .atlas {
     width: 100%;
     height: 100%;
-    position: relative;
-    overflow: hidden;
-    background: #cbb892;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--panel-bg, #0d1117);
     border-radius: var(--panel-radius, 8px);
     border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.1));
-    box-shadow: var(--panel-shadow, none);
+    overflow: hidden;
   }
-  .minimap-header {
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    padding: 6px 10px;
-    font-family: var(--font-display, Georgia, serif);
-    font-size: 11px;
-    font-weight: 600;
-    color: #4a3b28;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+  .toolbar {
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
     gap: 6px;
-    z-index: 2;
-    pointer-events: none;
+    padding: 6px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    color: #cbd5e1;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
-  .minimap-header i { font-size: 14px; color: #6b5a44; }
-  .header-spacer { flex: 1; }
-  .header-btn {
-    pointer-events: auto;
+  .toolbar i { font-size: 16px; color: #94a3b8; }
+  .spacer { flex: 1; }
+  .icon-btn {
     cursor: pointer;
     background: none;
     border: none;
-    color: #5c4a32;
+    color: #94a3b8;
     padding: 2px;
     border-radius: 4px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    font-size: 14px;
   }
-  .header-btn:hover { background: rgba(90, 60, 20, 0.12); }
-  .header-btn.cancel { color: #b45309; }
-  .layer-tabs {
-    pointer-events: auto;
-    display: flex;
-    gap: 2px;
-  }
+  .icon-btn:hover { color: #e2e8f0; background: rgba(255,255,255,0.08); }
+  .icon-btn.cancel { color: #f87171; }
+  .layer-tabs { display: flex; gap: 4px; }
   .layer-tab {
-    border: 1px solid rgba(90, 70, 40, 0.35);
-    background: rgba(255, 248, 230, 0.5);
-    color: #5c4a32;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: transparent;
+    color: #94a3b8;
     font-size: 10px;
     text-transform: none;
     letter-spacing: 0;
-    padding: 1px 6px;
+    padding: 2px 7px;
     border-radius: 999px;
     cursor: pointer;
   }
-  .layer-tab.active {
-    background: #5c4a32;
-    color: #f4e6c5;
-  }
-  .travel-indicator {
-    pointer-events: auto;
-    font-size: 10px;
-    font-weight: 600;
-    color: #0e7490;
-    text-transform: none;
-    letter-spacing: 0;
-  }
-  .canvas-wrap { position: absolute; inset: 0; }
-  canvas { display: block; cursor: grab; touch-action: none; }
+  .layer-tab.active { background: #f59e0b; border-color: #f59e0b; color: #111827; }
+  .travel { font-size: 10px; color: #22d3ee; text-transform: none; letter-spacing: 0; }
+  .stage { flex: 1 1 auto; min-height: 0; position: relative; }
+  canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
   canvas:active { cursor: grabbing; }
   .tooltip {
     position: absolute;
-    background: rgba(42, 32, 20, 0.92);
-    color: #f4e6c5;
+    background: rgba(2, 6, 23, 0.92);
+    color: #e2e8f0;
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 11px;
     pointer-events: none;
     white-space: nowrap;
-    z-index: 10;
-    transform: translate(-50%, -100%);
-    margin-top: -8px;
+    transform: translate(-50%, -110%);
+    border: 1px solid rgba(148,163,184,0.25);
   }
-  .empty-state {
-    display: flex; align-items: center; justify-content: center;
-    height: 100%; color: #6b5a44; font-size: 12px; text-align: center; padding: 16px;
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(0, 0, 0, 0.72);
+    display: flex;
+    padding: 3vh 3vw;
   }
-  .maximized-placeholder {
-    display: flex; align-items: center; justify-content: center;
-    height: 100%; color: #6b5a44; font-size: 12px;
-  }
-  .modal-backdrop {
-    position: fixed; inset: 0; z-index: 10000;
-    background: rgba(0, 0, 0, 0.7);
-    display: flex; align-items: center; justify-content: center; padding: 24px;
-  }
-  .modal-panel {
-    width: 100%; height: 100%;
-    background: #cbb892;
-    border: 1px solid #8a7350;
+  .modal {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: #0b1220;
+    border: 1px solid rgba(255,255,255,0.12);
     border-radius: 12px;
-    display: flex; flex-direction: column; overflow: hidden; position: relative;
+    overflow: hidden;
   }
-  .modal-header {
-    display: flex; align-items: center; gap: 8px;
-    padding: 10px 14px; border-bottom: 1px solid rgba(90,70,40,0.25);
-    font-size: 13px; font-weight: 600; color: #3b2c16; flex-shrink: 0;
-  }
-  .modal-canvas-wrap { flex: 1; position: relative; overflow: hidden; }
 </style>
 
+<div class="atlas">
+  <div class="toolbar">
+    <button class="icon-btn" title="Expand map" on:click={toggleMaximize}>
+      <i class="material-icons">open_in_full</i>
+    </button>
+    <i class="material-icons">map</i>
+    Atlas
+    {#if isTraveling}<span class="travel">Traveling…</span>{/if}
+    <div class="layer-tabs">
+      {#each layers as layer}
+        <button class="layer-tab" class:active={activeLayer === layer.id} on:click={() => selectLayer(layer.id)}>{layer.name}</button>
+      {/each}
+    </div>
+    <span class="spacer"></span>
+    {#if panX !== 0 || panY !== 0 || userScale !== 1}
+      <button class="icon-btn" title="Fit map" on:click={recenter}>
+        <i class="material-icons">my_location</i>
+      </button>
+    {/if}
+    {#if isTraveling}
+      <button class="icon-btn cancel" title="Cancel travel" on:click={cancelTravel}>
+        <i class="material-icons">close</i>
+      </button>
+    {/if}
+  </div>
+  <div class="stage" bind:this={widgetWrap}>
+    <canvas
+      bind:this={widgetCanvas}
+      on:pointerdown={pointerDown}
+      on:pointermove={(e) => pointerMove(e, widgetCanvas)}
+      on:pointerup={(e) => pointerUp(e, widgetCanvas)}
+      on:pointerleave={() => tooltip = { ...tooltip, visible: false }}
+      on:wheel={onWheel}
+    ></canvas>
+    {#if tooltip.visible && !maximized}
+      <div class="tooltip" style="left: {tooltip.x}px; top: {tooltip.y}px;">{tooltip.text}</div>
+    {/if}
+  </div>
+</div>
+
 {#if maximized}
-  <div class="modal-backdrop" use:portal on:click={handleBackdropClick} on:keydown={handleBackdropKeydown}>
-    <div class="modal-panel">
-      <div class="modal-header">
+  <div class="backdrop" use:portal on:click={(e) => { if (e.target === e.currentTarget) toggleMaximize(); }} on:keydown={(e) => { if (e.key === 'Escape') toggleMaximize(); }}>
+    <div class="modal">
+      <div class="toolbar">
         <i class="material-icons">map</i>
         Atlas
-        {#if isTraveling}<span class="travel-indicator">Traveling…</span>{/if}
+        {#if isTraveling}<span class="travel">Traveling…</span>{/if}
         <div class="layer-tabs">
-          {#each atlas.layers || [] as layer}
-            <button class="layer-tab" class:active={activeLayer === layer.id} on:click={() => selectLayer(layer.id)}>
-              {layer.name}
-            </button>
+          {#each layers as layer}
+            <button class="layer-tab" class:active={activeLayer === layer.id} on:click={() => selectLayer(layer.id)}>{layer.name}</button>
           {/each}
         </div>
-        <span class="header-spacer"></span>
-        {#if panOffsetX !== 0 || panOffsetY !== 0}
-          <button class="header-btn" title="Re-center" on:click={recenter}>
-            <i class="material-icons" style="font-size: inherit">my_location</i>
+        <span class="spacer"></span>
+        {#if panX !== 0 || panY !== 0 || userScale !== 1}
+          <button class="icon-btn" title="Fit map" on:click={recenter}>
+            <i class="material-icons">my_location</i>
           </button>
         {/if}
         {#if isTraveling}
-          <button class="header-btn cancel" title="Cancel travel" on:click={cancelTravel}>
-            <i class="material-icons" style="font-size: inherit">close</i>
+          <button class="icon-btn cancel" title="Cancel travel" on:click={cancelTravel}>
+            <i class="material-icons">close</i>
           </button>
         {/if}
-        <button class="header-btn" title="Close map" on:click={toggleMaximize}>
-          <i class="material-icons" style="font-size: inherit">close</i>
+        <button class="icon-btn" title="Close" on:click={toggleMaximize}>
+          <i class="material-icons">close</i>
         </button>
       </div>
-      <div class="modal-canvas-wrap" bind:this={container}>
+      <div class="stage" bind:this={modalWrap}>
         <canvas
-          bind:this={canvas}
-          on:pointerdown={handlePointerDown}
-          on:pointermove={handlePointerMove}
-          on:pointerup={handlePointerUp}
-          on:pointerleave={handleMouseLeave}
-          on:wheel={handleWheel}
+          bind:this={modalCanvas}
+          on:pointerdown={pointerDown}
+          on:pointermove={(e) => pointerMove(e, modalCanvas)}
+          on:pointerup={(e) => pointerUp(e, modalCanvas)}
+          on:pointerleave={() => tooltip = { ...tooltip, visible: false }}
+          on:wheel={onWheel}
         ></canvas>
         {#if tooltip.visible}
           <div class="tooltip" style="left: {tooltip.x}px; top: {tooltip.y}px;">{tooltip.text}</div>
@@ -700,52 +687,3 @@
     </div>
   </div>
 {/if}
-
-<div class="minimap-container">
-  <div class="minimap-header">
-    <button class="header-btn" title="Expand map" on:click={toggleMaximize}>
-      <i class="material-icons" style="font-size: inherit">open_in_full</i>
-    </button>
-    <i class="material-icons">map</i>
-    Atlas
-    {#if isTraveling && !maximized}<span class="travel-indicator">Traveling…</span>{/if}
-    <div class="layer-tabs">
-      {#each atlas.layers || [] as layer}
-        <button class="layer-tab" class:active={activeLayer === layer.id} on:click={() => selectLayer(layer.id)}>
-          {layer.name}
-        </button>
-      {/each}
-    </div>
-    <span class="header-spacer"></span>
-    {#if !maximized && (panOffsetX !== 0 || panOffsetY !== 0)}
-      <button class="header-btn" title="Re-center" on:click={recenter}>
-        <i class="material-icons" style="font-size: inherit">my_location</i>
-      </button>
-    {/if}
-    {#if isTraveling && !maximized}
-      <button class="header-btn cancel" title="Cancel travel" on:click={cancelTravel}>
-        <i class="material-icons" style="font-size: inherit">close</i>
-      </button>
-    {/if}
-  </div>
-
-  {#if maximized}
-    <div class="maximized-placeholder">Map is expanded</div>
-  {:else if currentRoomId && visiblePlaces.length > 0}
-    <div class="canvas-wrap" bind:this={container}>
-      <canvas
-        bind:this={canvas}
-        on:pointerdown={handlePointerDown}
-        on:pointermove={handlePointerMove}
-        on:pointerup={handlePointerUp}
-        on:pointerleave={handleMouseLeave}
-        on:wheel={handleWheel}
-      ></canvas>
-      {#if tooltip.visible}
-        <div class="tooltip" style="left: {tooltip.x}px; top: {tooltip.y}px;">{tooltip.text}</div>
-      {/if}
-    </div>
-  {:else}
-    <div class="empty-state">Walk the world to fill your atlas.</div>
-  {/if}
-</div>

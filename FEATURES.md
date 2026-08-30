@@ -2051,7 +2051,8 @@ This is not a grid of room rectangles. Nearby rooms stay next to each other beca
 Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "uncharted"`.
 
 ### Client
-- Atlas widget (same `minimap` widget slot) fetches the endpoint on character select, room enter, and room update
+- Atlas widget (same `minimap` widget slot) receives the atlas over WebSocket on enter, and can also fetch `GET /api/characters/:id/map`
+- The widget auto-fits discovered places into its panel; the expand control opens a fullscreen popup of the same map
 - Layer tabs, pan, wheel zoom, click-to-travel along discovered paths
 - Expand overlay for a full atlas view
 - Same JSON is the contract for a future mobile renderer

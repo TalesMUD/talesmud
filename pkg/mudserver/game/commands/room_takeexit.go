@@ -61,6 +61,7 @@ func TakeExit(exit string) RoomCommand {
 					character.CurrentRoomID = next.ID
 				}
 				game.SetUserSessionCharacter(message.FromUser, character)
+				PushAtlas(game, message.FromUser.ID, character)
 
 				// send all players a left room message
 				game.SendMessage() <- messages.CharacterLeftRoom{
