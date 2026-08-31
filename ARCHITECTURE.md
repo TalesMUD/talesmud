@@ -116,7 +116,7 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
 
 `GET /api/quest-progress/:characterId` returns quest progress merged with quest definition fields for the player UI. Objective rows include `objectiveId`, definition `description`, current/required counts, and completion state so REST refreshes and WebSocket quest log messages have matching player-facing text.
 
-`GET /api/portraits/:filename` is public (no Auth0), same pattern as room backgrounds. The importer copies `assets/images/npcs/` into `uploads/portraits/`. Room NPC payloads include `portrait` URLs; the web client falls back to hashed `img/avatars` so faces always render.
+`GET /api/portraits/:filename` is public (no Auth0), same pattern as room backgrounds. The importer copies `assets/images/npcs/` and `assets/images/sprites/{npcs,enemies}/` into `uploads/portraits/` (flat `{id}.png`). Room NPC payloads include `portrait` URLs; the web client falls back to hashed `img/avatars` so faces always render.
 
 Private cellars: an exit with `type: instance` or `instance: true`, or a normal exit from a non-instance room into a room tagged `instance`/`instanced`, clones the dest room plus rooms reachable without returning to the hub. Each character gets their own copy; the hub stays shared. Empty instances are deleted.
 

@@ -140,7 +140,7 @@ DiscoveredAreas map[string]bool  // Area names
 **Atlas API**: `GET /api/characters/:id/map` returns the character's fog-of-war atlas (places, paths, area hulls, overworld/lower/upper layers). Layout is compiled from existing directional exits plus optional `coords`; authors do not need a new coordinate pass. Hidden exits stay off the map until `revealExit`.
 
 ### NPC / enemy portraits
-Room presence and combat send `portrait` URLs (`/api/portraits/{templateOrId}.png`). That route is public (guest, no Auth0). Content can drop PNGs in `assets/images/npcs/`; import copies them. The Svelte client always shows a face: portrait file, else hashed `img/avatars/{1-14}p.png`.
+Room presence and combat send `portrait` URLs (`/api/portraits/{templateOrId}.png`). That route is public (guest, no Auth0). Import copies `assets/images/npcs/` and `assets/images/sprites/{npcs,enemies}/` (skipping `_raw` / previews) into `uploads/portraits/`. Sprites are full-figure 512px art shown with `object-fit: contain`. If the file is missing, the Svelte client falls back to hashed `img/avatars/{1-14}p.png`.
 
 ### Instanced cellars
 Exits with `type: instance` or `instance: true`, or a normal directional exit from a shared/hub room into a room tagged `instance`/`instanced`, create a private copy of the destination plus rooms reachable without walking back into the hub. Two guests share the town room (e.g. The Weary Wanderer `R0203`) and get different cellar IDs (`R0215~aabbccdd`). Hidden cellar wings (R0230+) are cloned with the entrance. When the last occupant leaves, clones and copied NPCs are destroyed.

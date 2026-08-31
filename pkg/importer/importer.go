@@ -679,8 +679,40 @@ func (w *WorldImporter) copyAssets() (int, error) {
 	if err != nil {
 		return n1, err
 	}
-	n2, err := w.copyImageDir(filepath.Join(w.importPath, "assets", "images", "npcs"), pt)
-	return n1 + n2, err
+	portraitSrcs := []string{
+		filepath.Join(w.importPath, "assets", "images", "npcs"),
+		filepath.Join(w.importPath, "assets", "images", "sprites", "npcs"),
+		filepath.Join(w.importPath, "assets", "images", "sprites", "enemies"),
+	}
+	n2 := 0
+	for _, src := range portraitSrcs {
+		c, err := w.copyImageDir(src, pt)
+		n2 += c
+		if err != nil {
+			return n1 + n2, err
+		}
+	}
+	return n1 + n2, nil
+}
+
+func skipAssetPath(path string) bool {
+	if strings.Contains(path, "Zone.Identifier") {
+		return true
+	}
+	parts := strings.Split(filepath.ToSlash(path), "/")
+	for _, p := range parts {
+		if p == "_raw" || p == "previews" {
+			return true
+		}
+	}
+	base := strings.ToLower(filepath.Base(path))
+	if base == "contact_sheet.png" {
+		return true
+	}
+	if strings.HasSuffix(base, ".tmp") || strings.HasSuffix(base, ".temp") || strings.HasSuffix(base, ".bak") || strings.HasSuffix(base, "~") {
+		return true
+	}
+	return false
 }
 
 func (w *WorldImporter) copyImageDir(srcDir, dstDir string) (int, error) {
@@ -702,7 +734,7 @@ func (w *WorldImporter) copyImageDir(srcDir, dstDir string) (int, error) {
 		if ext != ".png" && ext != ".jpg" && ext != ".jpeg" && ext != ".webp" {
 			return nil
 		}
-		if strings.Contains(path, "Zone.Identifier") {
+		if skipAssetPath(path) {
 			return nil
 		}
 		if err := copyFile(path, filepath.Join(dstDir, info.Name())); err != nil {
