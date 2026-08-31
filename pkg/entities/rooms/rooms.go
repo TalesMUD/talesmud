@@ -27,7 +27,7 @@ type Action struct {
 	Params      map[string]interface{} `bson:"params,omitempty" json:"params"`
 }
 
-//Actions type
+// Actions type
 type Actions []Action
 
 // RoomExitType type
@@ -45,23 +45,24 @@ type Exit struct {
 	Description string                 `bson:"description,omitempty" json:"description,omitempty"`
 	Type        RoomExitType           `bson:"type,omitempty" json:"type,omitempty"`
 	Hidden      bool                   `bson:"hidden,omitempty" json:"hidden,omitempty"`
+	Instance    bool                   `bson:"instance,omitempty" json:"instance,omitempty"`
 	Target      string                 `bson:"target,omitempty" json:"target,omitempty"`
 	Params      map[string]interface{} `bson:"params,omitempty" json:"params"`
 }
 
-//Exits type
+// Exits type
 type Exits []Exit
 
-//Characters type
+// Characters type
 type Characters []string
 
-//Items type
+// Items type
 type Items []string
 
-//NPCs type
+// NPCs type
 type NPCs []string
 
-//Room data
+// Room data
 type Room struct {
 	*entities.Entity `bson:",inline"`
 	traits.LookAt    `bson:",inline"` // provides detail
@@ -106,10 +107,10 @@ type Room struct {
 	CanBind bool `bson:"canBind" json:"canBind"`
 }
 
-//Rooms type
+// Rooms type
 type Rooms []*Room
 
-//GetExit ...
+// GetExit ...
 func (room *Room) GetExit(exit string) (Exit, bool) {
 	if room == nil || room.Exits == nil {
 		return Exit{}, false
@@ -122,7 +123,7 @@ func (room *Room) GetExit(exit string) (Exit, bool) {
 	return Exit{}, false
 }
 
-//IsCharacterInRoom ,,,
+// IsCharacterInRoom ,,,
 func (room *Room) IsCharacterInRoom(character string) bool {
 
 	// only check if there are characters in the room
@@ -138,7 +139,7 @@ func (room *Room) IsCharacterInRoom(character string) bool {
 	return false
 }
 
-//AddCharacter ,,,
+// AddCharacter ,,,
 func (room *Room) AddCharacter(character string) error {
 
 	if room.IsCharacterInRoom(character) {
@@ -156,7 +157,7 @@ func (room *Room) AddCharacter(character string) error {
 	return nil
 }
 
-//RemoveCharacter ,,,
+// RemoveCharacter ,,,
 func (room *Room) RemoveCharacter(character string) error {
 
 	if !room.IsCharacterInRoom(character) {
@@ -177,7 +178,7 @@ func (room *Room) RemoveCharacter(character string) error {
 	return nil
 }
 
-//IsItemInRoom checks if an item is in the room
+// IsItemInRoom checks if an item is in the room
 func (room *Room) IsItemInRoom(itemID string) bool {
 	if room.Items == nil || len(*room.Items) == 0 {
 		return false
@@ -191,7 +192,7 @@ func (room *Room) IsItemInRoom(itemID string) bool {
 	return false
 }
 
-//AddItem adds an item ID to the room
+// AddItem adds an item ID to the room
 func (room *Room) AddItem(itemID string) error {
 	if room.IsItemInRoom(itemID) {
 		return errors.New("Item already in room")
@@ -207,7 +208,7 @@ func (room *Room) AddItem(itemID string) error {
 	return nil
 }
 
-//RemoveItem removes an item ID from the room
+// RemoveItem removes an item ID from the room
 func (room *Room) RemoveItem(itemID string) error {
 	if !room.IsItemInRoom(itemID) {
 		return errors.New("Item is not in room")
@@ -225,7 +226,7 @@ func (room *Room) RemoveItem(itemID string) error {
 	return nil
 }
 
-//GetItemIDs returns a copy of the item IDs in the room
+// GetItemIDs returns a copy of the item IDs in the room
 func (room *Room) GetItemIDs() []string {
 	if room.Items == nil || len(*room.Items) == 0 {
 		return []string{}
@@ -236,7 +237,7 @@ func (room *Room) GetItemIDs() []string {
 	return result
 }
 
-//GetNPCIDs returns a copy of the NPC IDs in the room (residents)
+// GetNPCIDs returns a copy of the NPC IDs in the room (residents)
 func (room *Room) GetNPCIDs() []string {
 	if room.NPCs == nil || len(*room.NPCs) == 0 {
 		return []string{}

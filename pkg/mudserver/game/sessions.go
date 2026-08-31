@@ -37,6 +37,12 @@ func (r *sessionRegistry) connect(user *entities.User) {
 	r.players[user.ID] = current
 }
 
+func (r *sessionRegistry) characterID(userID string) string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.players[userID].CharacterID
+}
+
 func (r *sessionRegistry) disconnect(userID string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -153,6 +159,9 @@ func (g *Game) DisconnectUserSession(userID string) {
 		if user.RefID != "" {
 			_ = g.Facade.UsersService().Update(user.RefID, user)
 		}
+	}
+	if charID := g.Sessions.characterID(userID); charID != "" && g.RoomInstances != nil {
+		g.RoomInstances.DestroyCharacterInstance(charID)
 	}
 	g.Sessions.disconnect(userID)
 }

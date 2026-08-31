@@ -215,6 +215,7 @@ function createClient(renderer, characterCreator, muxStore) {
     if (mux) {
       mux.setGameContext({ inCombat: true });
       mux.updateCharacterStats({ inCombat: true });
+      mux.setCombatants(msg.enemies || [], msg.players || []);
     }
   };
 
@@ -246,6 +247,7 @@ function createClient(renderer, characterCreator, muxStore) {
     if (mux) {
       mux.setGameContext({ inCombat: false });
       mux.updateCharacterStats({ inCombat: false });
+      mux.setCombatants([], []);
     }
   };
 

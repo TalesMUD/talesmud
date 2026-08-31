@@ -5,6 +5,7 @@ import (
 
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
+	"github.com/talesmud/talesmud/pkg/instances"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	m "github.com/talesmud/talesmud/pkg/mudserver/game/messages"
@@ -30,8 +31,17 @@ func TakeExit(exit string) RoomCommand {
 			// Interrupt rest when moving
 			game.InterruptRest(message.Character)
 
+			destID := exit.Target
+			if inst := game.GetRoomInstances(); inst != nil && instances.IsInstanceEntrance(exit) && !inst.IsClone(room.ID) {
+				if cloned, ierr := inst.Enter(characterID, room.ID, exit.Target); ierr == nil && cloned != "" {
+					destID = cloned
+				} else if ierr != nil {
+					log.WithError(ierr).WithField("dest", exit.Target).Warn("TakeExit: instance enter failed")
+				}
+			}
+
 			// find next room
-			next, err := game.GetFacade().RoomsService().FindByID(exit.Target)
+			next, err := game.GetFacade().RoomsService().FindByID(destID)
 			if err == nil && next != nil {
 
 				// update old room
@@ -61,6 +71,9 @@ func TakeExit(exit string) RoomCommand {
 					character.CurrentRoomID = next.ID
 				}
 				game.SetUserSessionCharacter(message.FromUser, character)
+				if inst := game.GetRoomInstances(); inst != nil && inst.IsClone(room.ID) {
+					inst.NoteLeave(characterID, room.ID, next.ID)
+				}
 				PushAtlas(game, message.FromUser.ID, character)
 
 				// send all players a left room message

@@ -123,6 +123,8 @@ type RoomNPC struct {
 	MaxHP         int32  `json:"maxHp,omitempty"`
 	Level         int32  `json:"level,omitempty"`
 	State         string `json:"state"` // idle, patrol, combat, dead
+	Portrait      string `json:"portrait,omitempty"`
+	TemplateID    string `json:"templateId,omitempty"`
 }
 
 // RoomPlayer represents player character data sent to the frontend for UI rendering
@@ -169,6 +171,8 @@ func NewEnterRoomMessage(room *rooms.Room, user *entities.User, game def.GameCtr
 			MaxHP:         n.MaxHP,
 			Level:         n.Level,
 			State:         n.State,
+			Portrait:      n.Portrait,
+			TemplateID:    n.TemplateID,
 		}
 	}
 
@@ -218,6 +222,8 @@ func NewRoomUpdateMessage(room *rooms.Room, user *entities.User, game def.GameCt
 			MaxHP:         n.MaxHP,
 			Level:         n.Level,
 			State:         n.State,
+			Portrait:      n.Portrait,
+			TemplateID:    n.TemplateID,
 		}
 	}
 
@@ -508,6 +514,36 @@ func NewQuestLogMessage(userID string, entries []QuestLogEntry) *QuestLogMessage
 type AtlasMessage struct {
 	MessageResponse
 	Atlas worldmap.PlayerMap `json:"atlas"`
+}
+
+// CombatantView is a portrait-bearing combatant for the web client.
+type CombatantView struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Portrait string `json:"portrait,omitempty"`
+	HP       int32  `json:"hp"`
+	MaxHP    int32  `json:"maxHp"`
+}
+
+// CombatStartMessage is the structured combat UI payload (portraits, HP).
+type CombatStartMessage struct {
+	MessageResponse
+	Enemies []CombatantView `json:"enemies"`
+	Players []CombatantView `json:"players"`
+}
+
+// NewCombatStartMessage builds a combatStart for the attacker.
+func NewCombatStartMessage(userID, text string, enemies, players []CombatantView) *CombatStartMessage {
+	return &CombatStartMessage{
+		MessageResponse: MessageResponse{
+			Audience:   MessageAudienceOrigin,
+			AudienceID: userID,
+			Type:       MessageTypeCombatStart,
+			Message:    text,
+		},
+		Enemies: enemies,
+		Players: players,
+	}
 }
 
 // NewAtlasMessage sends a compiled atlas to one player.

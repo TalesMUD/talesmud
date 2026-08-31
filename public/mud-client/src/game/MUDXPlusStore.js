@@ -79,6 +79,8 @@ function createStore() {
 
     // Game context flags
     inCombat: false,
+    combatEnemies: [],
+    combatPlayers: [],
     hasItems: false,
     hasMerchant: false,
     groundItems: [],
@@ -289,6 +291,14 @@ function createStore() {
     },
 
     // Game context methods
+    setCombatants: (enemies, players) => {
+      update((state) => {
+        state.combatEnemies = enemies || [];
+        state.combatPlayers = players || [];
+        return state;
+      });
+    },
+
     setGameContext: ({ inCombat, hasItems, hasMerchant } = {}) => {
       update((state) => {
         if (inCombat !== undefined) state.inCombat = inCombat;

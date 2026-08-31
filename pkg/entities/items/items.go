@@ -7,10 +7,10 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/traits"
 )
 
-//ItemType type
+// ItemType type
 type ItemType string
 
-//ItemTypes ...
+// ItemTypes ...
 type ItemTypes []ItemType
 
 const (
@@ -24,10 +24,10 @@ const (
 	ItemTypeCraftingMaterial = "crafting_material"
 )
 
-//ItemSubType type
+// ItemSubType type
 type ItemSubType string
 
-//ItemSubTypes ...
+// ItemSubTypes ...
 type ItemSubTypes []ItemSubType
 
 const (
@@ -41,10 +41,10 @@ const (
 	ItemSubTypeShield = "shield"
 )
 
-//ItemSlot type
+// ItemSlot type
 type ItemSlot string
 
-//ItemSlots type
+// ItemSlots type
 type ItemSlots []ItemSlot
 
 const (
@@ -63,10 +63,10 @@ const (
 	ItemSlotOffHand            = "off_hand"
 )
 
-//ItemQuality ...
+// ItemQuality ...
 type ItemQuality string
 
-//ItemQualities type
+// ItemQualities type
 type ItemQualities []ItemQuality
 
 const (
@@ -77,7 +77,7 @@ const (
 	ItemQualityMythic                = "mythic"
 )
 
-//Item data
+// Item data
 type Item struct {
 	*entities.Entity `bson:",inline"`
 	traits.LookAt    `bson:",inline"` // "detail"
@@ -125,6 +125,10 @@ type Item struct {
 	MaxStack  int32 `bson:"maxStack,omitempty" json:"maxStack,omitempty"`
 	BasePrice int64 `bson:"basePrice,omitempty" json:"basePrice,omitempty"`
 
+	// Armor wear. Dying chips durability; repair restores it. Items are never deleted.
+	Durability    int32 `bson:"durability,omitempty" json:"durability,omitempty"`
+	MaxDurability int32 `bson:"maxDurability,omitempty" json:"maxDurability,omitempty"`
+
 	// scripts
 	// OnUseScriptID is a Lua script executed when item is used
 	// Script context: ctx.item, ctx.character, ctx.room
@@ -144,7 +148,7 @@ type Item struct {
 	} `bson:"meta,omitempty" meta:"coords,omitempty"`
 }
 
-//Items type
+// Items type
 type Items []*Item
 
 // IsInstance returns true if this Item was created from a template

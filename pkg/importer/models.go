@@ -56,6 +56,7 @@ type YAMLExit struct {
 	Type        string `yaml:"type"`
 	Description string `yaml:"description"`
 	Hidden      bool   `yaml:"hidden"`
+	Instance    bool   `yaml:"instance"`
 }
 
 // YAMLAction represents a room action
@@ -112,25 +113,25 @@ func (c *YAMLCoords) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 // YAMLItem represents an item in YAML format
 type YAMLItem struct {
-	ID          string                 `yaml:"id"`
-	Name        string                 `yaml:"name"`
-	Description string                 `yaml:"description"`
-	Detail      string                 `yaml:"detail"`
-	Type        string                 `yaml:"type"`
-	SubType     string                 `yaml:"subType"`
-	Slot        string                 `yaml:"slot"`
-	Quality     string                 `yaml:"quality"`
-	Level       int32                  `yaml:"level"`
-	BasePrice   int64                  `yaml:"basePrice"`
-	Stackable   bool                   `yaml:"stackable"`
-	MaxStack    int32                  `yaml:"maxStack"`
+	ID           string                 `yaml:"id"`
+	Name         string                 `yaml:"name"`
+	Description  string                 `yaml:"description"`
+	Detail       string                 `yaml:"detail"`
+	Type         string                 `yaml:"type"`
+	SubType      string                 `yaml:"subType"`
+	Slot         string                 `yaml:"slot"`
+	Quality      string                 `yaml:"quality"`
+	Level        int32                  `yaml:"level"`
+	BasePrice    int64                  `yaml:"basePrice"`
+	Stackable    bool                   `yaml:"stackable"`
+	MaxStack     int32                  `yaml:"maxStack"`
 	Consumable   bool                   `yaml:"consumable"`
 	CopyOnPickup bool                   `yaml:"copyOnPickup"`
 	Tags         []string               `yaml:"tags"`
-	Attributes  map[string]interface{} `yaml:"attributes"`
-	Properties  map[string]interface{} `yaml:"properties"`
-	Meta        YAMLItemMeta           `yaml:"meta"`
-	OnUseScript string                 `yaml:"onUseScript"`
+	Attributes   map[string]interface{} `yaml:"attributes"`
+	Properties   map[string]interface{} `yaml:"properties"`
+	Meta         YAMLItemMeta           `yaml:"meta"`
+	OnUseScript  string                 `yaml:"onUseScript"`
 }
 
 // YAMLItemMeta contains item metadata
@@ -224,14 +225,14 @@ type YAMLScript struct {
 
 // YAMLDialog represents a dialog tree in YAML format
 type YAMLDialog struct {
-	ID          string                   `yaml:"id"`
-	Name        string                   `yaml:"name"`
-	Type        string                   `yaml:"type"`
-	NPCRef      string                   `yaml:"npc_ref"`
-	Description string                   `yaml:"description"`
-	Barks       []YAMLBark               `yaml:"barks"`
+	ID          string                    `yaml:"id"`
+	Name        string                    `yaml:"name"`
+	Type        string                    `yaml:"type"`
+	NPCRef      string                    `yaml:"npc_ref"`
+	Description string                    `yaml:"description"`
+	Barks       []YAMLBark                `yaml:"barks"`
 	Tree        map[string]YAMLDialogNode `yaml:"tree"`
-	Tags        []string                 `yaml:"tags"`
+	Tags        []string                  `yaml:"tags"`
 }
 
 // YAMLBark represents an idle/bark line
@@ -286,22 +287,22 @@ type YAMLSpawner struct {
 
 // YAMLQuest represents a quest in YAML format
 type YAMLQuest struct {
-	ID          string              `yaml:"id"`
-	Name        string              `yaml:"name"`
-	Description string              `yaml:"description"`
-	Category    string              `yaml:"category"`
-	Level       int32               `yaml:"level"`
-	Repeatable  bool                `yaml:"repeatable"`
-	Source      YAMLQuestSource     `yaml:"source"`
-	Objectives  []YAMLQuestObjective `yaml:"objectives"`
-	Rewards     YAMLQuestRewards    `yaml:"rewards"`
-	RequiredQuestIDs []string       `yaml:"requiredQuestIds"`
-	RequiredLevel    int32          `yaml:"requiredLevel"`
-	AcceptDialogText   string       `yaml:"acceptDialogText"`
-	ProgressDialogText string       `yaml:"progressDialogText"`
-	CompleteDialogText string       `yaml:"completeDialogText"`
-	OnAcceptScriptID   string `yaml:"onAcceptScriptId"`
-	OnCompleteScriptID string `yaml:"onCompleteScriptId"`
+	ID                 string               `yaml:"id"`
+	Name               string               `yaml:"name"`
+	Description        string               `yaml:"description"`
+	Category           string               `yaml:"category"`
+	Level              int32                `yaml:"level"`
+	Repeatable         bool                 `yaml:"repeatable"`
+	Source             YAMLQuestSource      `yaml:"source"`
+	Objectives         []YAMLQuestObjective `yaml:"objectives"`
+	Rewards            YAMLQuestRewards     `yaml:"rewards"`
+	RequiredQuestIDs   []string             `yaml:"requiredQuestIds"`
+	RequiredLevel      int32                `yaml:"requiredLevel"`
+	AcceptDialogText   string               `yaml:"acceptDialogText"`
+	ProgressDialogText string               `yaml:"progressDialogText"`
+	CompleteDialogText string               `yaml:"completeDialogText"`
+	OnAcceptScriptID   string               `yaml:"onAcceptScriptId"`
+	OnCompleteScriptID string               `yaml:"onCompleteScriptId"`
 }
 
 // YAMLQuestSource represents how a quest is obtained

@@ -894,6 +894,16 @@ func (c *CombatController) processCombatDefeat(instance *combat.CombatInstance) 
 			sb.WriteString("PENALTY: Lost 1 gold\n")
 		}
 
+		if damaged := char.DamageEquippedArmor(); len(damaged) > 0 {
+			sb.WriteString("Your armor is battered:\n")
+			for _, name := range damaged {
+				sb.WriteString("  - ")
+				sb.WriteString(name)
+				sb.WriteString("\n")
+			}
+			sb.WriteString("A merchant can repair it.\n")
+		}
+
 		// Respawn with 50% HP
 		char.CurrentHitPoints = char.MaxHitPoints / 2
 		if char.CurrentHitPoints < 1 {

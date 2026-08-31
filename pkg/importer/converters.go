@@ -19,13 +19,13 @@ import (
 // ToEntity converts a YAMLRoom to a Room entity
 func (y *YAMLRoom) ToEntity() *rooms.Room {
 	room := &rooms.Room{
-		Entity:  &entities.Entity{ID: y.ID},
-		LookAt:  traits.LookAt{Detail: y.Detail},
-		Name:    y.Name,
-		Description: y.Description,
-		Area:    y.Area,
-		Tags:    y.Tags,
-		CanBind: y.CanBind,
+		Entity:          &entities.Entity{ID: y.ID},
+		LookAt:          traits.LookAt{Detail: y.Detail},
+		Name:            y.Name,
+		Description:     y.Description,
+		Area:            y.Area,
+		Tags:            y.Tags,
+		CanBind:         y.CanBind,
 		OnEnterScriptID: y.OnEnter,
 	}
 
@@ -39,6 +39,7 @@ func (y *YAMLRoom) ToEntity() *rooms.Room {
 				Type:        rooms.RoomExitType(e.Type),
 				Description: e.Description,
 				Hidden:      e.Hidden,
+				Instance:    e.Instance,
 			}
 		}
 		room.Exits = &exits
@@ -99,24 +100,24 @@ func (y *YAMLRoom) ToEntity() *rooms.Room {
 // ToEntity converts a YAMLItem to an Item entity
 func (y *YAMLItem) ToEntity() *items.Item {
 	item := &items.Item{
-		Entity:      &entities.Entity{ID: y.ID},
-		LookAt:      traits.LookAt{Detail: y.Detail},
-		IsTemplate:  true, // Imported items are always templates
-		Name:        y.Name,
-		Description: y.Description,
-		Type:        items.ItemType(y.Type),
-		SubType:     items.ItemSubType(y.SubType),
-		Slot:        items.ItemSlot(y.Slot),
-		Quality:     items.ItemQuality(y.Quality),
-		Level:       y.Level,
-		BasePrice:   y.BasePrice,
-		Stackable:   y.Stackable,
-		MaxStack:    y.MaxStack,
-		Consumable:   y.Consumable,
-		CopyOnPickup: y.CopyOnPickup,
-		Tags:         y.Tags,
-		Attributes:  y.Attributes,
-		Properties:  y.Properties,
+		Entity:        &entities.Entity{ID: y.ID},
+		LookAt:        traits.LookAt{Detail: y.Detail},
+		IsTemplate:    true, // Imported items are always templates
+		Name:          y.Name,
+		Description:   y.Description,
+		Type:          items.ItemType(y.Type),
+		SubType:       items.ItemSubType(y.SubType),
+		Slot:          items.ItemSlot(y.Slot),
+		Quality:       items.ItemQuality(y.Quality),
+		Level:         y.Level,
+		BasePrice:     y.BasePrice,
+		Stackable:     y.Stackable,
+		MaxStack:      y.MaxStack,
+		Consumable:    y.Consumable,
+		CopyOnPickup:  y.CopyOnPickup,
+		Tags:          y.Tags,
+		Attributes:    y.Attributes,
+		Properties:    y.Properties,
 		OnUseScriptID: y.OnUseScript,
 	}
 
