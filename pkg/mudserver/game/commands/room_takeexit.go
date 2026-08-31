@@ -32,7 +32,9 @@ func TakeExit(exit string) RoomCommand {
 			game.InterruptRest(message.Character)
 
 			destID := exit.Target
-			if inst := game.GetRoomInstances(); inst != nil && instances.IsInstanceEntrance(exit) && !inst.IsClone(room.ID) {
+			templateDest, _ := game.GetFacade().RoomsService().FindByID(exit.Target)
+			if inst := game.GetRoomInstances(); inst != nil && !inst.IsClone(room.ID) &&
+				instances.CrossingIntoInstance(room, templateDest, exit) {
 				if cloned, ierr := inst.Enter(characterID, room.ID, exit.Target); ierr == nil && cloned != "" {
 					destID = cloned
 				} else if ierr != nil {

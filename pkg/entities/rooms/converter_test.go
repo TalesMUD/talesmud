@@ -1,6 +1,28 @@
 package rooms
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/talesmud/talesmud/pkg/entities"
+)
+
+func TestHasTagAndInstanceTemplate(t *testing.T) {
+	cellar := &Room{Entity: &entities.Entity{ID: "R0215"}, Tags: []string{"indoor", "instance"}}
+	if !cellar.HasTag("INSTANCE") || !cellar.IsInstanceTemplate() {
+		t.Fatal("tagged cellar must be an instance template")
+	}
+	hub := &Room{Entity: &entities.Entity{ID: "R0203"}, Tags: []string{"shared", "inn"}}
+	if hub.IsInstanceTemplate() {
+		t.Fatal("shared hub is not an instance template")
+	}
+	clone := &Room{Entity: &entities.Entity{ID: "R0215~aabbccdd"}, Tags: []string{"instance"}}
+	if clone.IsInstanceTemplate() {
+		t.Fatal("live clone must not look like a template")
+	}
+	if (*Room)(nil).IsInstanceTemplate() {
+		t.Fatal("nil room")
+	}
+}
 
 func TestGetExitMatchesCaseInsensitively(t *testing.T) {
 	exits := Exits{{Name: "north", Target: "R0004"}, {Name: "down", Target: "R0109", Hidden: true}}

@@ -247,3 +247,25 @@ func (room *Room) GetNPCIDs() []string {
 	copy(result, *room.NPCs)
 	return result
 }
+
+// HasTag reports whether the room carries a tag (case-insensitive).
+func (room *Room) HasTag(tag string) bool {
+	if room == nil {
+		return false
+	}
+	for _, t := range room.Tags {
+		if strings.EqualFold(t, tag) {
+			return true
+		}
+	}
+	return false
+}
+
+// IsInstanceTemplate is true for authored cellar/sewer rooms tagged instance,
+// not for live clones (IDs containing "~").
+func (room *Room) IsInstanceTemplate() bool {
+	if room == nil || room.Entity == nil || strings.Contains(room.ID, "~") {
+		return false
+	}
+	return room.HasTag("instance") || room.HasTag("instanced")
+}

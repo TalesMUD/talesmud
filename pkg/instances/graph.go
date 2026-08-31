@@ -45,6 +45,20 @@ func IsInstanceEntrance(ex rooms.Exit) bool {
 	return strings.EqualFold(string(ex.Type), "instance")
 }
 
+// CrossingIntoInstance is true when leaving a shared/hub room into an instance template.
+func CrossingIntoInstance(from, dest *rooms.Room, ex rooms.Exit) bool {
+	if dest == nil {
+		return false
+	}
+	if from != nil && (from.IsInstanceTemplate() || strings.Contains(from.ID, "~")) {
+		return false
+	}
+	if IsInstanceEntrance(ex) {
+		return true
+	}
+	return dest.IsInstanceTemplate()
+}
+
 // CloneID builds a per-instance room id.
 func CloneID(templateID, instanceID string) string {
 	return templateID + "~" + instanceID
