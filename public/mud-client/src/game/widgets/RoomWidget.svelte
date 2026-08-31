@@ -230,28 +230,37 @@
     left: 0;
     right: 0;
     z-index: 10;
-    padding: 0.5em 0.8em;
+    padding: 0.4em 0.6em;
+    max-height: 42%;
+    overflow-x: auto;
+    overflow-y: hidden;
   }
 
   .combat-faces {
     position: absolute;
-    top: 3.2em;
+    top: 3.4em;
     left: 0.6em;
     z-index: 12;
     display: flex;
-    gap: 0.4em;
+    gap: 0.35em;
+    max-width: calc(100% - 5em);
+    overflow-x: auto;
   }
   .combat-face {
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: 56px;
+    width: 52px;
+    flex-shrink: 0;
   }
   .combat-face img {
     width: 48px;
     height: 48px;
     border-radius: 8px;
-    object-fit: cover;
+    object-fit: contain;
+    object-position: center bottom;
+    image-rendering: pixelated;
+    background: rgba(0, 0, 0, 0.45);
     border: 2px solid #ef4444;
   }
   .combat-face span {
