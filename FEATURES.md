@@ -143,7 +143,7 @@ DiscoveredAreas map[string]bool  // Area names
 Room presence and combat send `portrait` URLs (`/api/portraits/{templateOrId}.png`). That route is public (guest, no Auth0). Content can drop PNGs in `assets/images/npcs/`; import copies them. The Svelte client always shows a face: portrait file, else hashed `img/avatars/{1-14}p.png`.
 
 ### Instanced cellars
-Exits with `type: instance` or `instance: true` create a private copy of the destination plus rooms reachable without walking back into the hub. Two guests share the town room and get different cellar IDs (`R0210~aabbccdd`). When the last occupant leaves, clones and copied NPCs are destroyed.
+Exits with `type: instance` or `instance: true`, or a normal directional exit from a shared/hub room into a room tagged `instance`/`instanced`, create a private copy of the destination plus rooms reachable without walking back into the hub. Two guests share the town room (e.g. The Weary Wanderer `R0203`) and get different cellar IDs (`R0215~aabbccdd`). Hidden cellar wings (R0230+) are cloned with the entrance. When the last occupant leaves, clones and copied NPCs are destroyed.
 
 ### Armor durability
 Dying chips equipped armor (default 4 hits to broken). Defense scales with remaining durability. Items are never deleted. `repair` at a merchant restores them.

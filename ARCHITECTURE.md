@@ -118,7 +118,7 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
 
 `GET /api/portraits/:filename` is public (no Auth0), same pattern as room backgrounds. The importer copies `assets/images/npcs/` into `uploads/portraits/`. Room NPC payloads include `portrait` URLs; the web client falls back to hashed `img/avatars` so faces always render.
 
-Private cellars: an exit with `type: instance` or `instance: true` clones the dest room plus rooms reachable without returning to the hub. Each character gets their own copy; the hub stays shared. Empty instances are deleted.
+Private cellars: an exit with `type: instance` or `instance: true`, or a normal exit from a non-instance room into a room tagged `instance`/`instanced`, clones the dest room plus rooms reachable without returning to the hub. Each character gets their own copy; the hub stays shared. Empty instances are deleted.
 
 `GET /api/characters/:id/map` returns that character's fog-of-war atlas. `pkg/worldmap` compiles a stable layout from room exits (optional `coords` as pins), then reveals discovered rooms, uncharted neighbors through visible exits, area hulls, and overworld/lower/upper layers. Hidden exits stay off the map until revealed. The JSON is the contract for both the web atlas widget and a future mobile renderer.
 

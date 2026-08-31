@@ -48,6 +48,46 @@ func TestCollectGraphSingleRoomCellar(t *testing.T) {
 	}
 }
 
+func TestCollectGraphFollowsHiddenCellarWing(t *testing.T) {
+	all := map[string]*rooms.Room{
+		"R0203": room("R0203", rooms.Exit{Name: "down", Target: "R0215", Type: "direction"}),
+		"R0215": room("R0215",
+			rooms.Exit{Name: "up", Target: "R0203"},
+			rooms.Exit{Name: "deeper", Target: "R0230", Hidden: true}),
+		"R0230": room("R0230",
+			rooms.Exit{Name: "back", Target: "R0215"},
+			rooms.Exit{Name: "deeper", Target: "R0231"}),
+		"R0231": room("R0231", rooms.Exit{Name: "back", Target: "R0230"}),
+		"R0205": room("R0205", rooms.Exit{Name: "north", Target: "R0203"}),
+	}
+	got := CollectGraph(all, "R0203", "R0215")
+	set := map[string]bool{}
+	for _, id := range got {
+		set[id] = true
+	}
+	if !set["R0215"] || !set["R0230"] || !set["R0231"] {
+		t.Fatalf("expected inn cellar + hidden wing, got %v", got)
+	}
+	if set["R0203"] || set["R0205"] {
+		t.Fatalf("hub and town must stay shared, got %v", got)
+	}
+}
+
+func TestCrossingIntoInstanceUsesRoomTags(t *testing.T) {
+	hub := room("R0203", rooms.Exit{Name: "down", Target: "R0215", Type: "direction"})
+	hub.Tags = []string{"shared", "inn"}
+	cellar := room("R0215", rooms.Exit{Name: "up", Target: "R0203"})
+	cellar.Tags = []string{"instance", "cellar"}
+	down, _ := hub.GetExit("down")
+	if !CrossingIntoInstance(hub, cellar, down) {
+		t.Fatal("down from shared inn into tagged cellar must instance")
+	}
+	up, _ := cellar.GetExit("up")
+	if CrossingIntoInstance(cellar, hub, up) {
+		t.Fatal("leaving the cellar must not spawn another instance")
+	}
+}
+
 func TestInstanceEntrance(t *testing.T) {
 	if !IsInstanceEntrance(rooms.Exit{Type: "instance"}) {
 		t.Fatal("type=instance should be an entrance")
