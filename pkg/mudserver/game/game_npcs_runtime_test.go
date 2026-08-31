@@ -204,4 +204,7 @@ func TestGetRoomNPCsIncludesInteractionState(t *testing.T) {
 	if !npcs[0].HasIdleDialog {
 		t.Fatal("expected NPC payload to mark idle chatter")
 	}
+	if npcs[0].Portrait != "/api/portraits/elder-1.png" {
+		t.Fatalf("portrait %q", npcs[0].Portrait)
+	}
 }

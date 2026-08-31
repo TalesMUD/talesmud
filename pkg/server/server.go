@@ -385,6 +385,13 @@ func (app *app) setupRoutes() {
 		// Serve background images (public, no auth required)
 		public.GET("backgrounds/:filename", backgrounds.ServeBackground)
 
+		portraitsPath := os.Getenv("PORTRAITS_PATH")
+		if portraitsPath == "" {
+			portraitsPath = "./uploads/portraits"
+		}
+		portraitsHandler := &handler.BackgroundsHandler{BasePath: portraitsPath}
+		public.GET("portraits/:filename", portraitsHandler.ServeBackground)
+
 		// Legacy endpoint for old character creation flow (returns hardcoded templates)
 		public.GET("templates/characters", csh.GetCharacterTemplates)
 		public.GET("item-slots", items.GetItemSlots)

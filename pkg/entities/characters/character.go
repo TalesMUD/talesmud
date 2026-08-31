@@ -56,10 +56,10 @@ type Attribute struct {
 	Value int32  `json:"value"`
 }
 
-//Attributes ...
+// Attributes ...
 type Attributes []Attribute
 
-//NewAttribute ...
+// NewAttribute ...
 func NewAttribute(name, short string, value int32) Attribute {
 	return Attribute{
 		Name:  name,
@@ -68,7 +68,7 @@ func NewAttribute(name, short string, value int32) Attribute {
 	}
 }
 
-//Character data
+// Character data
 type Character struct {
 	*entities.Entity   `bson:",inline"`
 	traits.BelongsUser `bson:",inline"`
@@ -259,18 +259,55 @@ func (c *Character) GetArmorDefense() int32 {
 		if item == nil {
 			continue
 		}
+		scale := item.DefenseMultiplier()
+		if scale <= 0 {
+			continue
+		}
 		if defense, ok := item.Attributes["defense"]; ok {
 			if def, ok := toInt32(defense); ok {
-				totalDefense += def
+				totalDefense += int32(float64(def) * scale)
 			}
 		}
 		if armor, ok := item.Attributes["armor"]; ok {
 			if arm, ok := toInt32(armor); ok {
-				totalDefense += arm
+				totalDefense += int32(float64(arm) * scale)
 			}
 		}
 	}
 	return totalDefense
+}
+
+// DamageEquippedArmor chips worn armor on death. Items stay equipped.
+func (c *Character) DamageEquippedArmor() []string {
+	if c == nil || c.EquippedItems == nil {
+		return nil
+	}
+	var names []string
+	for _, item := range c.EquippedItems {
+		if item == nil || !item.IsArmorPiece() {
+			continue
+		}
+		if item.DamageDurability(1) {
+			names = append(names, item.Name+" ("+item.ConditionLabel()+")")
+		}
+	}
+	return names
+}
+
+// RepairEquippedArmor restores all worn armor.
+func (c *Character) RepairEquippedArmor() int {
+	if c == nil || c.EquippedItems == nil {
+		return 0
+	}
+	n := 0
+	for _, item := range c.EquippedItems {
+		if item == nil || !item.NeedsRepair() {
+			continue
+		}
+		item.Repair()
+		n++
+	}
+	return n
 }
 
 // HasCollectedCopyItem checks if the character has already collected a CopyOnPickup item

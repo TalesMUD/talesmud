@@ -6,13 +6,14 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/entities"
 
+	"github.com/talesmud/talesmud/pkg/instances"
 	c "github.com/talesmud/talesmud/pkg/mudserver/game/commands"
 	def "github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	m "github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
-//Game ... contains live game state
+// Game ... contains live game state
 type Game struct {
 	id    string
 	title string
@@ -30,6 +31,9 @@ type Game struct {
 
 	// Quest tracker for quest progress
 	QuestTracker *QuestTracker
+
+	// Private cellar copies (WoW-style, not a raid platform)
+	RoomInstances *roomInstanceAdapter
 
 	// messages
 	onMessageReceived chan interface{}
@@ -86,7 +90,14 @@ func New(facade service.Facade) *Game {
 	// Initialize Quest tracker
 	g.QuestTracker = NewQuestTracker(facade, g)
 
+	g.RoomInstances = &roomInstanceAdapter{game: g, mgr: instances.NewManager()}
+
 	return g
+}
+
+// GetRoomInstances returns the cellar instance controller.
+func (g *Game) GetRoomInstances() def.RoomInstanceCtrl {
+	return g.RoomInstances
 }
 
 // Subscribe ... sub
@@ -99,7 +110,7 @@ type Receiver interface {
 	OnMessage(message interface{})
 }
 
-//Unsubscribe ...
+// Unsubscribe ...
 func (g *Game) Unsubscribe(receiver *Receiver) {
 	//TODO:
 	//game.Receivers = delete(game.Receivers, receiver)
@@ -119,12 +130,12 @@ func (g *Game) SendMessage() chan interface{} {
 	return g.sendMessage
 }
 
-//OnMessageReceived returns onMessageReceived channel
+// OnMessageReceived returns onMessageReceived channel
 func (g *Game) OnMessageReceived() chan interface{} {
 	return g.onMessageReceived
 }
 
-//GetFacade ...
+// GetFacade ...
 func (g *Game) GetFacade() service.Facade {
 	return g.Facade
 }
@@ -181,7 +192,7 @@ func (g *Game) handleCombatUpdates() {
 	}
 }
 
-//Run main game loop
+// Run main game loop
 func (g *Game) Run() {
 
 	// Initialize NPC instance manager (spawns initial NPCs from spawners)

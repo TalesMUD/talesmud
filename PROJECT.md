@@ -43,11 +43,14 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Coordinate-based world mapping (X, Y, Z grid) plus a compiled atlas: compass exits become geography, areas become organic hulls, per-character fog of war is served at `GET /api/characters/:id/map`
   - Dynamic item and NPC spawning
   - Unique NPCs auto-spawn into their assigned room on server start via `CurrentRoomID`
+  - Guest-public NPC/enemy portraits (`/api/portraits/:filename`, hashed avatar fallback)
+  - WoW-style private cellar instances: `type: instance` exits clone a small room graph per character; town hub stays shared; empty copies are destroyed
 
 - **Character System**
   - Full RPG character creation with races and classes
   - Six-attribute system (STR, DEX, CON, INT, WIS, CHA)
   - Equipment system with 10 equipment slots
+  - Equipped armor takes durability damage on death (not deleted); `repair` at a merchant restores it
   - Inventory management
   - Experience and leveling with flattened early-game XP curve (piecewise formula: gentle L2-5, transitional L6-15, steeper L16+)
   - Exploration XP: awards 5 XP per new room discovered, 15 XP for first room in a new area/zone

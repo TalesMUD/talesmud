@@ -119,15 +119,15 @@ func (w *WorldImporter) Import() (*ImportResult, error) {
 	}
 
 	log.WithFields(log.Fields{
-		"scripts":     len(yamlScripts),
-		"items":       len(yamlItems),
-		"lootTables":  len(yamlLootTables),
-		"npcs":        len(yamlNPCs),
-		"dialogs":     len(yamlDialogs),
-		"rooms":       len(yamlRooms),
-		"spawners":    len(yamlSpawners),
-		"quests":      len(yamlQuests),
-		"skills":      len(yamlSkills),
+		"scripts":    len(yamlScripts),
+		"items":      len(yamlItems),
+		"lootTables": len(yamlLootTables),
+		"npcs":       len(yamlNPCs),
+		"dialogs":    len(yamlDialogs),
+		"rooms":      len(yamlRooms),
+		"spawners":   len(yamlSpawners),
+		"quests":     len(yamlQuests),
+		"skills":     len(yamlSkills),
 	}).Info("Loaded YAML data")
 
 	// Validate cross-references and script code
@@ -665,22 +665,31 @@ func (w *WorldImporter) importRooms(yamlRooms []*YAMLRoom) int {
 	return count
 }
 
-// copyAssets copies room images to the backgrounds folder
+// copyAssets copies room images to backgrounds and NPC portraits to portraits.
 func (w *WorldImporter) copyAssets() (int, error) {
-	srcDir := filepath.Join(w.importPath, "assets", "images", "rooms")
+	bg := os.Getenv("BACKGROUNDS_PATH")
+	if bg == "" {
+		bg = "./uploads/backgrounds"
+	}
+	pt := os.Getenv("PORTRAITS_PATH")
+	if pt == "" {
+		pt = "./uploads/portraits"
+	}
+	n1, err := w.copyImageDir(filepath.Join(w.importPath, "assets", "images", "rooms"), bg)
+	if err != nil {
+		return n1, err
+	}
+	n2, err := w.copyImageDir(filepath.Join(w.importPath, "assets", "images", "npcs"), pt)
+	return n1 + n2, err
+}
+
+func (w *WorldImporter) copyImageDir(srcDir, dstDir string) (int, error) {
 	if _, err := os.Stat(srcDir); os.IsNotExist(err) {
-		return 0, nil // No assets to copy
+		return 0, nil
 	}
-
-	dstDir := os.Getenv("BACKGROUNDS_PATH")
-	if dstDir == "" {
-		dstDir = "./uploads/backgrounds"
-	}
-
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
-		return 0, fmt.Errorf("failed to create backgrounds directory: %w", err)
+		return 0, fmt.Errorf("failed to create %s: %w", dstDir, err)
 	}
-
 	count := 0
 	err := filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -689,28 +698,20 @@ func (w *WorldImporter) copyAssets() (int, error) {
 		if info.IsDir() {
 			return nil
 		}
-		// Only copy image files
 		ext := strings.ToLower(filepath.Ext(path))
 		if ext != ".png" && ext != ".jpg" && ext != ".jpeg" && ext != ".webp" {
 			return nil
 		}
-		// Skip Zone.Identifier files
 		if strings.Contains(path, "Zone.Identifier") {
 			return nil
 		}
-
-		dstPath := filepath.Join(dstDir, info.Name())
-		if err := copyFile(path, dstPath); err != nil {
+		if err := copyFile(path, filepath.Join(dstDir, info.Name())); err != nil {
 			w.addError("Failed to copy asset %s: %v", path, err)
 			return nil
 		}
 		count++
-		if w.verbose {
-			log.WithField("file", info.Name()).Debug("Copied asset")
-		}
 		return nil
 	})
-
 	return count, err
 }
 
@@ -810,15 +811,15 @@ func (w *WorldImporter) relocateCharacters(yamlRooms []*YAMLRoom) (int, error) {
 
 // Exported entity types for use in main
 type (
-	Script     = scripts.Script
-	Item       = items.Item
-	LootTable  = items.LootTable
-	NPC        = npc.NPC
-	NPCSpawner = npc.NPCSpawner
-	Dialog     = dialogs.Dialog
-	Room       = rooms.Room
-	Quest      = quests.Quest
-	Skill      = skills.Skill
+	Script        = scripts.Script
+	Item          = items.Item
+	LootTable     = items.LootTable
+	NPC           = npc.NPC
+	NPCSpawner    = npc.NPCSpawner
+	Dialog        = dialogs.Dialog
+	Room          = rooms.Room
+	Quest         = quests.Quest
+	Skill         = skills.Skill
 	Objective     = quests.Objective
 	ObjectiveType = quests.ObjectiveType
 	Reward        = quests.Reward

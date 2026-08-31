@@ -98,6 +98,7 @@ func (commandProcessor *CommandProcessor) registerCommands() {
 	commandProcessor.RegisterCommand(&BuyCommand{}, "Buy from merchant: buy [item] [quantity]", "buy")
 	commandProcessor.RegisterCommand(&SellCommand{}, "Sell to merchant: sell [item] [quantity]", "sell")
 	commandProcessor.RegisterCommand(&ValueCommand{}, "Check item sell price: value [item]", "value", "price")
+	commandProcessor.RegisterCommand(&RepairCommand{}, "Repair worn armor at a merchant: repair", "repair")
 
 	// Equipment commands
 	commandProcessor.RegisterCommand(&EquipCommand{}, "Equip an item: equip [item]", "equip", "wear")

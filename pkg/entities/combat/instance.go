@@ -56,6 +56,8 @@ type CombatantRef struct {
 	ID         string        `json:"id"`
 	Type       CombatantType `json:"type"`
 	Name       string        `json:"name"`
+	Portrait   string        `json:"portrait,omitempty"`
+	TemplateID string        `json:"templateId,omitempty"`
 	Initiative int           `json:"initiative"`
 	IsAlive    bool          `json:"isAlive"`
 	HasFled    bool          `json:"hasFled"`
@@ -79,8 +81,8 @@ type CombatantRef struct {
 	ManaRegen   int32 `json:"manaRegen,omitempty"`
 
 	// Status effects
-	DefenseBonus  int32          `json:"defenseBonus"`                    // From defend action
-	StatusEffects []StatusEffect `json:"statusEffects,omitempty"`         // Active buffs, debuffs, DoTs, HoTs
+	DefenseBonus  int32          `json:"defenseBonus"`            // From defend action
+	StatusEffects []StatusEffect `json:"statusEffects,omitempty"` // Active buffs, debuffs, DoTs, HoTs
 
 	// Skill cooldowns (skillID → rounds remaining)
 	SkillCooldowns map[string]int `json:"skillCooldowns,omitempty"`
@@ -90,9 +92,9 @@ type CombatantRef struct {
 
 	// Auto-attack system
 	AutoAttackTargetID string       `json:"autoAttackTargetId,omitempty"` // Persistent target for auto-attacks
-	QueuedAction       CombatAction `json:"queuedAction,omitempty"`      // Next action override (flee, defend, attack, skill)
-	QueuedTargetID     string       `json:"queuedTargetId,omitempty"`    // Target for queued attack
-	QueuedSkillID      string       `json:"queuedSkillId,omitempty"`     // Skill ID for queued skill action
+	QueuedAction       CombatAction `json:"queuedAction,omitempty"`       // Next action override (flee, defend, attack, skill)
+	QueuedTargetID     string       `json:"queuedTargetId,omitempty"`     // Target for queued attack
+	QueuedSkillID      string       `json:"queuedSkillId,omitempty"`      // Skill ID for queued skill action
 }
 
 // CombatLogEntry represents a single action in the combat log

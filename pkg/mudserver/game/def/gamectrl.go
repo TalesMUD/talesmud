@@ -96,6 +96,14 @@ type PartyInvite struct {
 	CreatedAt            time.Time
 }
 
+// RoomInstanceCtrl is a WoW-style private copy of a small room graph.
+type RoomInstanceCtrl interface {
+	Enter(characterID, hubID, destID string) (clonedDestID string, err error)
+	NoteLeave(characterID, fromRoomID, toRoomID string)
+	DestroyCharacterInstance(characterID string)
+	IsClone(roomID string) bool
+}
+
 // GameCtrl def
 // interface for commands package to communicate back to game instance
 type GameCtrl interface {
@@ -111,6 +119,8 @@ type GameCtrl interface {
 	GetCombatEngine() CombatEngineCtrl
 	// GetQuestTracker returns the quest tracker controller
 	GetQuestTracker() QuestTrackerCtrl
+	// GetRoomInstances returns the cellar/instance controller
+	GetRoomInstances() RoomInstanceCtrl
 	// InterruptRest stops a character from resting
 	InterruptRest(char *characters.Character)
 	// ConnectUserSession marks a user as attached to a live websocket session.

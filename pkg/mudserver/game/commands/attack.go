@@ -166,7 +166,12 @@ func (command *AttackCommand) handleInitiateCombat(game def.GameCtrl, message *m
 	startMsg += "\n" + combatEngine.GetCombatStatus(message.Character.Entity.ID)
 	startMsg += "\n═══════════════════════════════════════════════════"
 
-	game.SendMessage() <- message.Reply(startMsg)
+	game.SendMessage() <- messages.NewCombatStartMessage(
+		message.FromUser.ID,
+		startMsg,
+		combatViews(instance.Enemies),
+		combatViews(instance.Players),
+	)
 
 	// Set auto-attack target to the initial target
 	combatEngine.SetAutoAttackTarget(message.Character.Entity.ID, target.Entity.ID)
@@ -185,6 +190,16 @@ func (command *AttackCommand) handleInitiateCombat(game def.GameCtrl, message *m
 	game.SendMessage() <- roomMsg
 
 	return true
+}
+
+func combatViews(refs []combat.CombatantRef) []messages.CombatantView {
+	out := make([]messages.CombatantView, 0, len(refs))
+	for _, r := range refs {
+		out = append(out, messages.CombatantView{
+			ID: r.ID, Name: r.Name, Portrait: r.Portrait, HP: r.CurrentHP, MaxHP: r.MaxHP,
+		})
+	}
+	return out
 }
 
 // handleInCombatAttack handles an attack action during combat (queues target switch)

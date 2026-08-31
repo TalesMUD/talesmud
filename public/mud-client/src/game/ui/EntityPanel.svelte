@@ -41,6 +41,17 @@
     border-left: 3px solid #3b82f6;
   }
 
+  .entity-portrait {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    object-fit: cover;
+    display: block;
+    margin-bottom: 0.4em;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+
   .entity-name {
     font-weight: 600;
     font-size: 13px;
@@ -232,6 +243,8 @@
 </style>
 
 <script>
+  import { portraitSrc, onPortraitError } from '../portraitSrc.js';
+
   export let store;
   export let sendMessage;
 
@@ -279,6 +292,7 @@
   <div class="entity-panel">
     {#each $store.npcs as npc (npc.id)}
       <div class="entity-card {getEntityType(npc)}">
+        <img class="entity-portrait" src={portraitSrc(npc)} alt={npc.displayName} on:error={(e) => onPortraitError(e, npc)} />
         <span class="entity-name">{npc.displayName}</span>
         <span class="entity-type {getEntityType(npc)}">{getEntityTypeLabel(npc)}</span>
 

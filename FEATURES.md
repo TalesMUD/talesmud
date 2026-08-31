@@ -139,6 +139,18 @@ DiscoveredAreas map[string]bool  // Area names
 
 **Atlas API**: `GET /api/characters/:id/map` returns the character's fog-of-war atlas (places, paths, area hulls, overworld/lower/upper layers). Layout is compiled from existing directional exits plus optional `coords`; authors do not need a new coordinate pass. Hidden exits stay off the map until `revealExit`.
 
+### NPC / enemy portraits
+Room presence and combat send `portrait` URLs (`/api/portraits/{templateOrId}.png`). That route is public (guest, no Auth0). Content can drop PNGs in `assets/images/npcs/`; import copies them. The Svelte client always shows a face: portrait file, else hashed `img/avatars/{1-14}p.png`.
+
+### Instanced cellars
+Exits with `type: instance` or `instance: true` create a private copy of the destination plus rooms reachable without walking back into the hub. Two guests share the town room and get different cellar IDs (`R0210~aabbccdd`). When the last occupant leaves, clones and copied NPCs are destroyed.
+
+### Armor durability
+Dying chips equipped armor (default 4 hits to broken). Defense scales with remaining durability. Items are never deleted. `repair` at a merchant restores them.
+
+### Merchant prices
+Each NPC `MerchantTrait` has its own `buyMultiplier` / `sellMultiplier` / `priceOverride` on the same item template, so overlapping stock can cost differently per shop.
+
 ---
 
 ## Item System

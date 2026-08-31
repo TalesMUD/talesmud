@@ -10,6 +10,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/combat"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
+	"github.com/talesmud/talesmud/pkg/portraits"
 )
 
 // CombatConfig holds global combat configuration
@@ -116,6 +117,8 @@ func (e *Engine) CreateCombatantFromNPC(n *npc.NPC) combat.CombatantRef {
 		ID:          n.Entity.ID,
 		Type:        combat.CombatantTypeNPC,
 		Name:        n.GetDisplayName(),
+		Portrait:    portraits.ForNPC(n),
+		TemplateID:  n.TemplateID,
 		Initiative:  0, // Will be rolled
 		IsAlive:     true,
 		HasFled:     false,
@@ -209,15 +212,15 @@ func (e *Engine) BuildTurnOrder(instance *combat.CombatInstance) {
 
 // AttackResult contains the result of an attack action
 type AttackResult struct {
-	Hit         bool
-	Critical    bool
-	Miss        bool
-	Damage      int32
-	TargetDied  bool
-	Roll        int
-	ToHit       int
-	TargetAC    int
-	Message     string
+	Hit        bool
+	Critical   bool
+	Miss       bool
+	Damage     int32
+	TargetDied bool
+	Roll       int
+	ToHit      int
+	TargetAC   int
+	Message    string
 }
 
 // ProcessAttack handles an attack from attacker to target
@@ -624,4 +627,3 @@ func (e *Engine) GetNPCAIAction(instance *combat.CombatInstance, npcCombatant *c
 	// No valid target (shouldn't happen in active combat)
 	return combat.CombatActionDefend, ""
 }
-

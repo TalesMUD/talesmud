@@ -9,6 +9,7 @@ import (
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
+	"github.com/talesmud/talesmud/pkg/portraits"
 )
 
 // CreateRoomDescription ...
@@ -220,6 +221,8 @@ type RoomNPC struct {
 	MaxHP         int32  `json:"maxHp,omitempty"`
 	Level         int32  `json:"level,omitempty"`
 	State         string `json:"state"`
+	Portrait      string `json:"portrait,omitempty"`
+	TemplateID    string `json:"templateId,omitempty"`
 }
 
 // GetRoomNPCs returns NPC data for frontend rendering
@@ -246,6 +249,8 @@ func GetRoomNPCs(room *rooms.Room, game def.GameCtrl) []RoomNPC {
 			MaxHP:         n.MaxHitPoints,
 			Level:         n.Level,
 			State:         n.State,
+			Portrait:      portraits.ForNPC(n),
+			TemplateID:    n.TemplateID,
 		}
 		result = append(result, roomNPC)
 	}
