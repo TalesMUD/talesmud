@@ -910,6 +910,12 @@ func (c *CombatController) processCombatDefeat(instance *combat.CombatInstance) 
 			char.CurrentHitPoints = 1
 		}
 
+		if char.BoundRoomID != "" && char.BoundRoomID != char.CurrentRoomID {
+			if boundRoom, ok := c.game.RelocateCharacter(char, char.BelongsUserID, char.BoundRoomID); ok {
+				sb.WriteString(fmt.Sprintf("\nYou find yourself back at %s.\n", boundRoom.Name))
+			}
+		}
+
 		// Update the combatant HP so the later cleanup sync uses the right value
 		for i := range instance.Players {
 			if instance.Players[i].ID == player.ID {

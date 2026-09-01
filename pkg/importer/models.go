@@ -204,6 +204,7 @@ type YAMLMerchantInventoryItem struct {
 	ItemTemplateID string `yaml:"itemTemplateId"`
 	Stock          int32  `yaml:"stock"`
 	BasePrice      int64  `yaml:"basePrice"`
+	PriceOverride  int64  `yaml:"priceOverride"`
 	Quantity       int32  `yaml:"quantity"`
 	MaxQuantity    int32  `yaml:"maxQuantity"`
 }

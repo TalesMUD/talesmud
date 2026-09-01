@@ -59,6 +59,14 @@ func (command *EquipmentCommand) Execute(game def.GameCtrl, message *messages.Me
 			sb.WriteString(item.Name)
 			shownItems[item.ID] = true
 
+			if item.IsArmorPiece() {
+				if label := item.ConditionLabel(); label != "" && label != "fine" {
+					sb.WriteString(" [")
+					sb.WriteString(label)
+					sb.WriteString("]")
+				}
+			}
+
 			// Show quality if not normal
 			if item.Quality != "" && item.Quality != items.ItemQualityNormal {
 				sb.WriteString(" [")
