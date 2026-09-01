@@ -47,44 +47,25 @@
     margin-bottom: 1em;
   }
 
-  .npc-portrait-wrap {
+  /* Same footprint as the old framed portrait; sprite sits on dialog bg, no box */
+  .npc-portrait-slot {
     width: clamp(100px, 22vw, 140px);
     aspect-ratio: 2 / 3;
-    border-radius: 10px;
-    overflow: hidden;
     flex-shrink: 0;
     position: relative;
-    border: 2px solid rgba(255, 255, 255, 0.15);
-    background: #111;
-  }
-
-  .npc-portrait-wrap.enemy {
-    border-color: rgba(239, 68, 68, 0.5);
-  }
-
-  .npc-portrait-wrap.merchant {
-    border-color: rgba(34, 197, 94, 0.5);
-  }
-
-  .npc-portrait-wrap.quest {
-    border-color: rgba(245, 158, 11, 0.5);
-  }
-
-  .npc-portrait-wrap.npc {
-    border-color: rgba(59, 130, 246, 0.5);
+    overflow: hidden;
   }
 
   .npc-portrait {
     position: absolute;
-    inset: 0;
+    left: 0;
+    bottom: 0;
     width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: top center;
-    transform: scale(1.6);
-    transform-origin: top center;
+    height: auto;
+    max-height: none;
     image-rendering: pixelated;
     display: block;
+    pointer-events: none;
   }
 
   .dialog-header-text {
@@ -185,7 +166,7 @@
       padding: 1em;
     }
 
-    .npc-portrait-wrap {
+    .npc-portrait-slot {
       width: clamp(80px, 28vw, 110px);
     }
 
@@ -207,7 +188,7 @@
 
 <div class="dialog-overlay">
   <div class="dialog-header">
-    <div class="npc-portrait-wrap {npcType}">
+    <div class="npc-portrait-slot">
       <img
         class="npc-portrait"
         src={portraitSrc(npc)}
