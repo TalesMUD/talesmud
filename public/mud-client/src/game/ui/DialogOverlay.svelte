@@ -81,6 +81,8 @@
     height: 100%;
     object-fit: cover;
     object-position: top center;
+    transform: scale(1.6);
+    transform-origin: top center;
     image-rendering: pixelated;
     display: block;
   }
