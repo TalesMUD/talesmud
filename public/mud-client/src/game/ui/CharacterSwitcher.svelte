@@ -61,13 +61,12 @@
 <style>
   .switcher {
     position: fixed;
-    top: 0.85rem;
-    left: 50%;
-    transform: translateX(-50%);
+    top: 15px;
+    right: 60px;
     z-index: 900;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-end;
     font-family: 'Cinzel', serif;
     color: #f0e6d3;
     pointer-events: none;
@@ -158,6 +157,7 @@
     background: rgba(7, 9, 12, 0.94);
     box-shadow: 0 18px 46px rgba(0, 0, 0, 0.52);
     backdrop-filter: blur(14px);
+    align-self: flex-end;
   }
 
   .menu-header {
@@ -218,11 +218,11 @@
 
   @media screen and (max-width: 768px) {
     .switcher {
-      top: 0.35rem;
-      left: 0.5rem;
-      right: 0.5rem;
+      top: 10px;
+      right: 10px;
+      left: auto;
       transform: none;
-      align-items: stretch;
+      align-items: flex-end;
     }
   }
 </style>

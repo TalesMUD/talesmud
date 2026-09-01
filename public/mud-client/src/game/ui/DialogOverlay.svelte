@@ -1,40 +1,15 @@
 <script>
+  import { portraitSrc, onPortraitError } from '../portraitSrc.js';
+
   export let npcName = "";
   export let npcText = "";
   export let options = [];
-  export let npcType = "npc"; // "enemy", "merchant", "quest", or "npc"
+  export let npcType = "npc";
+  export let npc = null;
   export let sendMessage;
 
   function handleOption(index) {
     sendMessage(String(index));
-  }
-
-  // Get icon based on NPC type
-  function getNpcIcon(type) {
-    switch (type) {
-      case "enemy":
-        return "swords";
-      case "merchant":
-        return "store";
-      case "quest":
-        return "assignment";
-      default:
-        return "person";
-    }
-  }
-
-  // Get icon color class based on NPC type
-  function getNpcIconClass(type) {
-    switch (type) {
-      case "enemy":
-        return "icon-enemy";
-      case "merchant":
-        return "icon-merchant";
-      case "quest":
-        return "icon-quest";
-      default:
-        return "icon-npc";
-    }
   }
 
   function isQuestOption(option) {
@@ -61,63 +36,68 @@
   }
 
   @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 
   .dialog-header {
     display: flex;
-    align-items: center;
-    gap: 0.75em;
+    align-items: flex-start;
+    gap: 1em;
     margin-bottom: 1em;
   }
 
-  .npc-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  .npc-portrait-wrap {
+    width: 96px;
+    height: 96px;
+    border-radius: 10px;
+    overflow: hidden;
     flex-shrink: 0;
+    background: #000;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    position: relative;
   }
 
-  .npc-icon i {
-    font-size: 28px;
+  .npc-portrait-wrap.enemy {
+    border-color: rgba(239, 68, 68, 0.5);
   }
 
-  .icon-enemy {
-    background: rgba(239, 68, 68, 0.2);
-    border: 2px solid rgba(239, 68, 68, 0.5);
-    color: #fca5a5;
+  .npc-portrait-wrap.merchant {
+    border-color: rgba(34, 197, 94, 0.5);
   }
 
-  .icon-merchant {
-    background: rgba(34, 197, 94, 0.2);
-    border: 2px solid rgba(34, 197, 94, 0.5);
-    color: #86efac;
+  .npc-portrait-wrap.quest {
+    border-color: rgba(245, 158, 11, 0.5);
   }
 
-  .icon-quest {
-    background: rgba(245, 158, 11, 0.2);
-    border: 2px solid rgba(245, 158, 11, 0.5);
-    color: #fcd34d;
+  .npc-portrait-wrap.npc {
+    border-color: rgba(59, 130, 246, 0.5);
   }
 
-  .icon-npc {
-    background: rgba(59, 130, 246, 0.2);
-    border: 2px solid rgba(59, 130, 246, 0.5);
-    color: #93c5fd;
+  .npc-portrait {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    transform: scale(2.4);
+    transform-origin: top center;
+    image-rendering: pixelated;
+    display: block;
+  }
+
+  .dialog-header-text {
+    flex: 1;
+    min-width: 0;
   }
 
   .npc-name {
     font-size: 1.3em;
     font-weight: 600;
     color: #e5e7eb;
+    display: block;
+    margin-bottom: 0.35em;
   }
 
   .dialog-text {
@@ -153,13 +133,13 @@
     color: #93c5fd;
     font-size: 1em;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: background 0.15s ease, border-color 0.15s ease;
   }
 
-  .dialog-option-btn:hover {
+  .dialog-option-btn:hover,
+  .dialog-option-btn:focus {
     background: rgba(59, 130, 246, 0.25);
     border-color: rgba(59, 130, 246, 0.5);
-    transform: translateX(4px);
   }
 
   .dialog-option-btn.quest {
@@ -168,7 +148,8 @@
     color: #fcd34d;
   }
 
-  .dialog-option-btn.quest:hover {
+  .dialog-option-btn.quest:hover,
+  .dialog-option-btn.quest:focus {
     background: rgba(245, 158, 11, 0.25);
     border-color: rgba(245, 158, 11, 0.55);
   }
@@ -198,19 +179,14 @@
     flex: 1;
   }
 
-  /* Responsive adjustments */
   @media screen and (max-width: 600px) {
     .dialog-overlay {
       padding: 1em;
     }
 
-    .npc-icon {
-      width: 40px;
-      height: 40px;
-    }
-
-    .npc-icon i {
-      font-size: 24px;
+    .npc-portrait-wrap {
+      width: 72px;
+      height: 72px;
     }
 
     .npc-name {
@@ -231,14 +207,22 @@
 
 <div class="dialog-overlay">
   <div class="dialog-header">
-    <div class="npc-icon {getNpcIconClass(npcType)}">
-      <i class="material-icons">{getNpcIcon(npcType)}</i>
+    <div class="npc-portrait-wrap {npcType}">
+      <img
+        class="npc-portrait"
+        src={portraitSrc(npc)}
+        alt=""
+        width="96"
+        height="96"
+        on:error={(e) => onPortraitError(e, npc)}
+      />
     </div>
-    <span class="npc-name">{npcName}</span>
-  </div>
-
-  <div class="dialog-text" class:quest={npcType === "quest"}>
-    {npcText}
+    <div class="dialog-header-text">
+      <span class="npc-name">{npcName}</span>
+      <div class="dialog-text" class:quest={npcType === 'quest'}>
+        {npcText}
+      </div>
+    </div>
   </div>
 
   {#if options && options.length > 0}

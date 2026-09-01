@@ -16,12 +16,15 @@
   let descriptionExpanded = false;
 
   // Derive NPC type for dialog overlay
+  $: dialogNpc = $store.dialogActive
+    ? findNpcByName($store.npcs, $store.dialogNpcName)
+    : null;
+
   $: dialogNpcType = (() => {
     if (!$store.dialogActive) return 'npc';
-    const npc = findNpcByName($store.npcs, $store.dialogNpcName);
-    if (npc?.isEnemy) return 'enemy';
-    if (npc?.isQuestGiver) return 'quest';
-    if (npc?.isMerchant) return 'merchant';
+    if (dialogNpc?.isEnemy) return 'enemy';
+    if (dialogNpc?.isQuestGiver) return 'quest';
+    if (dialogNpc?.isMerchant) return 'merchant';
     return 'npc';
   })();
 
@@ -243,6 +246,7 @@
         npcText={$store.dialogNpcText}
         options={$store.dialogOptions}
         npcType={dialogNpcType}
+        npc={dialogNpc}
         sendMessage={sendMessage}
       />
     {/if}

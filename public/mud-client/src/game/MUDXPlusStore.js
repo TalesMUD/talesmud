@@ -39,6 +39,65 @@ function emptyAtlas() {
   };
 }
 
+function mergeAtlas(existing, incoming) {
+  if (!incoming || !Array.isArray(incoming.places)) {
+    return existing && Array.isArray(existing.places) ? existing : emptyAtlas();
+  }
+  const base = existing && Array.isArray(existing.places) ? existing : emptyAtlas();
+
+  const placeMap = new Map();
+  for (const place of base.places) {
+    placeMap.set(place.id, { ...place });
+  }
+  for (const place of incoming.places) {
+    const prev = placeMap.get(place.id);
+    if (!prev) {
+      placeMap.set(place.id, { ...place });
+      continue;
+    }
+    placeMap.set(place.id, {
+      ...prev,
+      ...place,
+      discovered: prev.discovered || place.discovered,
+      name: place.name || prev.name,
+      landmark: prev.landmark || place.landmark,
+    });
+  }
+
+  const pathKeys = new Set();
+  const paths = [];
+  for (const path of [...(base.paths || []), ...(incoming.paths || [])]) {
+    const key = `${path.from}|${path.to}|${path.dir}`;
+    if (pathKeys.has(key)) continue;
+    pathKeys.add(key);
+    paths.push(path);
+  }
+
+  const layerMap = new Map();
+  for (const layer of [...(base.layers || []), ...(incoming.layers || [])]) {
+    layerMap.set(layer.id, layer);
+  }
+
+  const regionMap = new Map();
+  for (const region of [...(base.regions || []), ...(incoming.regions || [])]) {
+    regionMap.set(region.id, region);
+  }
+
+  const characterId = incoming.characterId || base.characterId;
+  const currentRoomId = incoming.currentRoomId || base.currentRoomId;
+  const currentLayer = incoming.currentLayer || base.currentLayer;
+
+  return {
+    characterId,
+    currentRoomId,
+    currentLayer,
+    layers: Array.from(layerMap.values()),
+    places: Array.from(placeMap.values()),
+    paths,
+    regions: Array.from(regionMap.values()),
+  };
+}
+
 function loadVisitedRooms() {
   try {
     const data = localStorage.getItem(VISITED_ROOMS_KEY);
@@ -214,7 +273,14 @@ function createStore() {
     // Character methods
     setCharacter: (character) => {
       update((state) => {
+        const prevId = state.character?.id;
         state.character = character;
+        if (character && character.id !== prevId) {
+          state.atlas = emptyAtlas();
+          state.atlasLayer = null;
+          state.visitedRooms = {};
+          saveVisitedRooms({});
+        }
         if (character) {
           state.characterStats = {
             currentHitPoints: character.currentHitPoints || 0,
@@ -430,7 +496,12 @@ function createStore() {
 
     setAtlas: (atlas) => {
       update((state) => {
-        state.atlas = atlas && Array.isArray(atlas.places) ? atlas : emptyAtlas();
+        const incoming = atlas && Array.isArray(atlas.places) ? atlas : emptyAtlas();
+        const sameCharacter =
+          !state.atlas?.characterId ||
+          !incoming.characterId ||
+          state.atlas.characterId === incoming.characterId;
+        state.atlas = sameCharacter ? mergeAtlas(state.atlas, incoming) : incoming;
         if (state.atlas.currentRoomId) {
           state.currentRoomId = state.atlas.currentRoomId;
         }
