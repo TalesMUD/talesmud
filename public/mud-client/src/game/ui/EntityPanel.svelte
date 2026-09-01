@@ -7,18 +7,14 @@
   }
 
   .entity-card {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.55em;
-    background: rgba(0, 0, 0, 0.72);
+    background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 8px;
-    padding: 0.35em 0.55em 0.35em 0.35em;
-    min-width: 0;
-    max-width: 220px;
+    padding: 0.5em 0.75em;
+    min-width: 100px;
+    max-width: 150px;
     transition: all 0.2s ease;
     animation: slideUp 0.3s ease-out;
   }
@@ -45,23 +41,32 @@
     border-left: 3px solid #3b82f6;
   }
 
-  .entity-portrait {
-    width: 56px;
-    height: 56px;
+  /* 512px full-figure sprites: clip a square around the body, never native size. */
+  .entity-portrait-wrap {
+    width: 48px;
+    height: 48px;
+    overflow: hidden;
     border-radius: 6px;
-    object-fit: contain;
-    object-position: center bottom;
-    image-rendering: pixelated;
-    display: block;
+    margin: 0 auto 0.45em;
+    background: #000;
+    border: 1px solid rgba(255, 255, 255, 0.12);
     flex-shrink: 0;
-    background: rgba(0, 0, 0, 0.35);
-    border: 1px solid rgba(255,255,255, 0.1);
+    position: relative;
   }
 
-  .entity-body {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
+  .entity-portrait {
+    position: absolute;
+    inset: 0;
+    width: 48px;
+    height: 48px;
+    max-width: 48px;
+    max-height: 48px;
+    object-fit: cover;
+    object-position: 50% 78%;
+    transform: scale(2.35);
+    transform-origin: 50% 78%;
+    image-rendering: pixelated;
+    display: block;
   }
 
   .entity-name {
@@ -69,10 +74,7 @@
     font-size: 13px;
     color: #e5e7eb;
     display: block;
-    margin-bottom: 0.15em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    margin-bottom: 0.3em;
   }
 
   .badge-row {
@@ -307,8 +309,20 @@
   <div class="entity-panel">
     {#each $store.npcs as npc (npc.id)}
       <div class="entity-card {getEntityType(npc)}">
-        <img class="entity-portrait" src={portraitSrc(npc)} alt={npc.displayName} on:error={(e) => onPortraitError(e, npc)} />
-        <div class="entity-body">
+        <div
+          class="entity-portrait-wrap"
+          style="width:48px;height:48px;overflow:hidden;margin:0 auto 0.45em;flex-shrink:0;position:relative"
+        >
+          <img
+            class="entity-portrait"
+            src={portraitSrc(npc)}
+            alt=""
+            width="48"
+            height="48"
+            style="width:48px;height:48px;max-width:48px;max-height:48px;object-fit:cover;object-position:50% 78%;transform:scale(2.35);transform-origin:50% 78%;display:block;position:absolute;inset:0"
+            on:error={(e) => onPortraitError(e, npc)}
+          />
+        </div>
         <span class="entity-name">{npc.displayName}</span>
         <span class="entity-type {getEntityType(npc)}">{getEntityTypeLabel(npc)}</span>
 
@@ -333,12 +347,15 @@
               <i class="material-icons">chat_bubble</i> Talk
             </span>
           {/if}
-          {#if npc.state && npc.state !== 'idle'}
-            <span class="state-badge" title="Current state">
-              <i class="material-icons">{npc.state === 'patrol' ? 'route' : 'radio_button_checked'}</i>
-              {getStateLabel(npc.state)}
+          {#if npc.hasIdleDialog}
+            <span class="state-badge chatter" title="Idle chatter">
+              <i class="material-icons">record_voice_over</i> Chatter
             </span>
           {/if}
+          <span class="state-badge" title="Current state">
+            <i class="material-icons">{npc.state === 'patrol' ? 'route' : 'radio_button_checked'}</i>
+            {getStateLabel(npc.state)}
+          </span>
         </div>
 
         {#if npc.level > 0}
@@ -370,7 +387,6 @@
               <i class="material-icons">chat</i> Speak
             </button>
           {/if}
-        </div>
         </div>
       </div>
     {/each}

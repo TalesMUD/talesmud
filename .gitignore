@@ -28,7 +28,6 @@ out/
 *.tsbuildinfo
 pkg/webui/dist/index.html
 public/mud-client/public/bundle.js.map
-public/mud-client/public/extra.css
 
 # Vite/bundler cache
 .vite/

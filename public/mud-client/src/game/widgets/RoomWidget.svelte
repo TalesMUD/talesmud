@@ -5,7 +5,6 @@
   import { findNpcByName } from '../MUDXPlusStore';
   import { settingsStore } from '../SettingsStore.js';
   import { backend } from '../../api/base.js';
-  import { portraitSrc, onPortraitError } from '../portraitSrc.js';
 
   export let store;
   export let sendMessage;
@@ -230,47 +229,7 @@
     left: 0;
     right: 0;
     z-index: 10;
-    padding: 0.4em 0.6em;
-    max-height: 42%;
-    overflow-x: auto;
-    overflow-y: hidden;
-  }
-
-  .combat-faces {
-    position: absolute;
-    top: 3.4em;
-    left: 0.6em;
-    z-index: 12;
-    display: flex;
-    gap: 0.35em;
-    max-width: calc(100% - 5em);
-    overflow-x: auto;
-  }
-  .combat-face {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 52px;
-    flex-shrink: 0;
-  }
-  .combat-face img {
-    width: 48px;
-    height: 48px;
-    border-radius: 8px;
-    object-fit: contain;
-    object-position: center bottom;
-    image-rendering: pixelated;
-    background: rgba(0, 0, 0, 0.45);
-    border: 2px solid #ef4444;
-  }
-  .combat-face span {
-    font-size: 10px;
-    color: #fecaca;
-    text-shadow: 0 1px 2px #000;
-    max-width: 56px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    padding: 0.5em 0.8em;
   }
 
   /* Player count badge */
@@ -501,17 +460,6 @@
         npcType={dialogNpcType}
         sendMessage={sendMessage}
       />
-    {/if}
-
-    {#if $store.inCombat && ($store.combatEnemies || []).length}
-      <div class="combat-faces">
-        {#each $store.combatEnemies as foe (foe.id)}
-          <div class="combat-face" title={foe.name}>
-            <img src={portraitSrc(foe)} alt={foe.name} on:error={(e) => onPortraitError(e, foe)} />
-            <span>{foe.name}</span>
-          </div>
-        {/each}
-      </div>
     {/if}
 
     <div class="entitySection">

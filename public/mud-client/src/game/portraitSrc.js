@@ -19,5 +19,7 @@ export function onPortraitError(ev, entity) {
   const img = ev && ev.currentTarget;
   if (!img || img.dataset.fallback === "1") return;
   img.dataset.fallback = "1";
+  img.style.transform = "none";
+  img.style.objectPosition = "50% 50%";
   img.src = hashedAvatar(entity && (entity.templateId || entity.id || entity.name));
 }
