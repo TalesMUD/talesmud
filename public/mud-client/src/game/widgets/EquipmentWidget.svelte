@@ -1,4 +1,6 @@
 <script>
+  import { itemArtSrc, onItemArtError } from '../itemArtSrc.js';
+
   export let store = null;
   export let sendMessage = null;
 
@@ -40,20 +42,6 @@
       case 'legendary': return '#a855f7';
       case 'mythic': return '#f59e0b';
       default: return '#9ca3af';
-    }
-  }
-
-  function getItemIcon(item) {
-    if (item.meta && item.meta.img) return null;
-    switch (item.type) {
-      case 'weapon': return 'bolt';
-      case 'armor': return 'security';
-      case 'consumable': return 'local_drink';
-      case 'quest': return 'auto_stories';
-      case 'currency': return 'paid';
-      case 'collectible': return 'star';
-      case 'crafting_material': return 'build';
-      default: return 'inventory_2';
     }
   }
 
@@ -169,6 +157,14 @@
     margin-bottom: 0.3em;
   }
 
+  .slot-art {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    margin-bottom: 0.15em;
+  }
+
   .slot-icon {
     font-size: 1.5em;
     margin-bottom: 0.2em;
@@ -227,9 +223,12 @@
           >
             <span class="slot-label">{slot.label}</span>
             {#if item}
-              <i class="material-icons slot-icon" style="color: {getQualityColor(item.quality)}">
-                {getItemIcon(item) || getSlotIcon(slot.key)}
-              </i>
+              <img
+                class="slot-art"
+                src={itemArtSrc(item)}
+                alt=""
+                on:error={(e) => onItemArtError(e, item)}
+              />
               <span class="slot-name">{item.name}</span>
               <span class="unequip-hint">click to unequip</span>
             {:else}

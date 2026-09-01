@@ -15,14 +15,8 @@
     padding: 0.5em 0.75em;
     min-width: 100px;
     max-width: 150px;
-    transition: all 0.2s ease;
     animation: slideUp 0.3s ease-out;
-  }
-
-  .entity-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(255, 255, 255, 0.3);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    position: relative;
   }
 
   .entity-card.enemy {
@@ -41,7 +35,6 @@
     border-left: 3px solid #3b82f6;
   }
 
-  /* 512px full-figure sprites: clip a square around the body, never native size. */
   .entity-portrait-wrap {
     width: 48px;
     height: 48px;
@@ -57,14 +50,12 @@
   .entity-portrait {
     position: absolute;
     inset: 0;
-    width: 48px;
-    height: 48px;
-    max-width: 48px;
-    max-height: 48px;
+    width: 100%;
+    height: 100%;
     object-fit: cover;
-    object-position: 50% 78%;
-    transform: scale(2.35);
-    transform-origin: 50% 78%;
+    object-position: top center;
+    transform: scale(2.6);
+    transform-origin: top center;
     image-rendering: pixelated;
     display: block;
   }
@@ -75,13 +66,15 @@
     color: #e5e7eb;
     display: block;
     margin-bottom: 0.3em;
+    text-align: center;
   }
 
   .badge-row {
     display: flex;
     flex-wrap: wrap;
     gap: 0.25em;
-    margin: 0.35em 0 0.45em;
+    justify-content: center;
+    margin: 0.2em 0 0.45em;
   }
 
   .state-badge {
@@ -121,23 +114,13 @@
     background: rgba(245, 158, 11, 0.14);
   }
 
-  .state-badge.dialog {
-    color: #93c5fd;
-    border-color: rgba(59, 130, 246, 0.35);
-    background: rgba(59, 130, 246, 0.12);
-  }
-
-  .state-badge.chatter {
-    color: #c4b5fd;
-    border-color: rgba(139, 92, 246, 0.35);
-    background: rgba(139, 92, 246, 0.12);
-  }
-
   .entity-type {
     font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 0.4em;
+    text-align: center;
+    display: block;
   }
 
   .entity-type.enemy {
@@ -160,6 +143,8 @@
     font-size: 10px;
     color: #9ca3af;
     margin-bottom: 0.4em;
+    text-align: center;
+    display: block;
   }
 
   .health-bar {
@@ -190,56 +175,86 @@
     display: flex;
     gap: 0.3em;
     flex-wrap: wrap;
+    justify-content: center;
   }
 
   .action-btn {
     font-size: 10px;
-    padding: 0.3em 0.5em;
+    padding: 0.35em 0.55em;
     border-radius: 4px;
     border: 1px solid rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.08);
     color: #e5e7eb;
     cursor: pointer;
-    transition: all 0.15s ease;
     display: inline-flex;
     align-items: center;
     gap: 0.25em;
+    min-height: 28px;
   }
 
   .action-btn i {
     font-size: 13px;
   }
 
-  .action-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.3);
-  }
-
-  .action-btn.attack {
+  .action-btn.primary.attack {
     border-color: rgba(239, 68, 68, 0.5);
     color: #fca5a5;
+    background: rgba(239, 68, 68, 0.15);
   }
 
-  .action-btn.attack:hover {
-    background: rgba(239, 68, 68, 0.2);
-  }
-
-  .action-btn.trade {
+  .action-btn.primary.trade {
     border-color: rgba(34, 197, 94, 0.5);
     color: #86efac;
+    background: rgba(34, 197, 94, 0.15);
   }
 
-  .action-btn.trade:hover {
-    background: rgba(34, 197, 94, 0.2);
-  }
-
-  .action-btn.talk {
+  .action-btn.primary.talk {
     border-color: rgba(59, 130, 246, 0.5);
     color: #93c5fd;
+    background: rgba(59, 130, 246, 0.15);
   }
 
-  .action-btn.talk:hover {
-    background: rgba(59, 130, 246, 0.2);
+  .action-btn.menu-btn {
+    padding: 0.35em;
+    min-width: 28px;
+    justify-content: center;
+  }
+
+  .overflow-menu {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(100% + 4px);
+    background: rgba(9, 10, 12, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    padding: 0.25em;
+    z-index: 20;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  }
+
+  .overflow-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    font-size: 10px;
+    padding: 0.4em 0.5em;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: #e5e7eb;
+    cursor: pointer;
+  }
+
+  .overflow-item:hover,
+  .overflow-item:focus {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .overflow-item.muted {
+    color: #9ca3af;
+    cursor: default;
+    font-style: italic;
   }
 
   @keyframes slideUp {
@@ -252,11 +267,6 @@
       transform: translateY(0);
     }
   }
-
-  /* Empty state */
-  .empty-panel {
-    display: none;
-  }
 </style>
 
 <script>
@@ -264,6 +274,8 @@
 
   export let store;
   export let sendMessage;
+
+  let openMenuId = null;
 
   function getHealthClass(currentHp, maxHp) {
     if (maxHp === 0) return 'healthy';
@@ -274,14 +286,17 @@
   }
 
   function attack(npc) {
+    openMenuId = null;
     sendMessage(`attack ${npc.displayName}`);
   }
 
   function talk(npc) {
+    openMenuId = null;
     sendMessage(`speak to ${npc.displayName}`);
   }
 
   function trade(npc) {
+    openMenuId = null;
     sendMessage(`list`);
   }
 
@@ -303,59 +318,93 @@
     if (!state) return 'Idle';
     return state.charAt(0).toUpperCase() + state.slice(1);
   }
+
+  function toggleMenu(npc) {
+    openMenuId = openMenuId === npc.id ? null : npc.id;
+  }
+
+  function getPrimaryAction(npc) {
+    if (npc.isEnemy) {
+      return { label: 'Attack', kind: 'attack', fn: () => attack(npc) };
+    }
+    if (npc.hasDialog || npc.isQuestGiver) {
+      return { label: 'Talk', kind: 'talk', fn: () => talk(npc) };
+    }
+    if (npc.isMerchant) {
+      return { label: 'Trade', kind: 'trade', fn: () => trade(npc) };
+    }
+    return null;
+  }
+
+  function getOverflowActions(npc) {
+    const primary = getPrimaryAction(npc);
+    const actions = [];
+
+    if (npc.isEnemy && primary?.label !== 'Attack') {
+      actions.push({ label: 'Attack', fn: () => attack(npc) });
+    }
+    if (npc.isMerchant && primary?.label !== 'Trade') {
+      actions.push({ label: 'Trade', fn: () => trade(npc) });
+    }
+    if ((npc.hasDialog || npc.isQuestGiver) && primary?.label !== 'Talk') {
+      actions.push({ label: 'Talk', fn: () => talk(npc) });
+    }
+
+    actions.push({
+      label: `State: ${getStateLabel(npc.state)}`,
+      fn: null,
+      muted: true,
+    });
+
+    if (npc.hasIdleDialog) {
+      actions.push({
+        label: 'Idle chatter',
+        fn: null,
+        muted: true,
+      });
+    }
+
+    return actions;
+  }
+
+  function hasOverflow(npc) {
+    return getOverflowActions(npc).some((a) => !a.muted || a.fn);
+  }
 </script>
 
 {#if $store.npcs && $store.npcs.length > 0}
   <div class="entity-panel">
     {#each $store.npcs as npc (npc.id)}
+      {@const primary = getPrimaryAction(npc)}
       <div class="entity-card {getEntityType(npc)}">
-        <div
-          class="entity-portrait-wrap"
-          style="width:48px;height:48px;overflow:hidden;margin:0 auto 0.45em;flex-shrink:0;position:relative"
-        >
+        <div class="entity-portrait-wrap">
           <img
             class="entity-portrait"
             src={portraitSrc(npc)}
             alt=""
             width="48"
             height="48"
-            style="width:48px;height:48px;max-width:48px;max-height:48px;object-fit:cover;object-position:50% 78%;transform:scale(2.35);transform-origin:50% 78%;display:block;position:absolute;inset:0"
             on:error={(e) => onPortraitError(e, npc)}
           />
         </div>
         <span class="entity-name">{npc.displayName}</span>
-        <span class="entity-type {getEntityType(npc)}">{getEntityTypeLabel(npc)}</span>
 
         <div class="badge-row">
           {#if npc.isEnemy}
-            <span class="state-badge enemy" title="Enemy">
+            <span class="state-badge enemy">
               <i class="material-icons">swords</i> Enemy
             </span>
           {/if}
           {#if npc.isMerchant}
-            <span class="state-badge merchant" title="Merchant">
+            <span class="state-badge merchant">
               <i class="material-icons">store</i> Shop
             </span>
           {/if}
           {#if npc.isQuestGiver}
-            <span class="state-badge quest" title="Quest giver">
+            <span class="state-badge quest">
               <i class="material-icons">assignment</i> Quest
             </span>
           {/if}
-          {#if npc.hasDialog}
-            <span class="state-badge dialog" title="Interactive dialog">
-              <i class="material-icons">chat_bubble</i> Talk
-            </span>
-          {/if}
-          {#if npc.hasIdleDialog}
-            <span class="state-badge chatter" title="Idle chatter">
-              <i class="material-icons">record_voice_over</i> Chatter
-            </span>
-          {/if}
-          <span class="state-badge" title="Current state">
-            <i class="material-icons">{npc.state === 'patrol' ? 'route' : 'radio_button_checked'}</i>
-            {getStateLabel(npc.state)}
-          </span>
         </div>
 
         {#if npc.level > 0}
@@ -372,22 +421,41 @@
         {/if}
 
         <div class="entity-actions">
-          {#if npc.isEnemy}
-            <button class="action-btn attack" on:click={() => attack(npc)} title="Attack {npc.displayName}">
-              <i class="material-icons">swords</i> Attack
+          {#if primary}
+            <button
+              class="action-btn primary {primary.kind}"
+              on:click={primary.fn}
+              title={primary.label}
+            >
+              <i class="material-icons">
+                {primary.kind === 'attack' ? 'swords' : primary.kind === 'trade' ? 'store' : 'chat'}
+              </i>
+              {primary.label}
             </button>
           {/if}
-          {#if npc.isMerchant}
-            <button class="action-btn trade" on:click={() => trade(npc)} title="Trade with {npc.displayName}">
-              <i class="material-icons">store</i> Trade
-            </button>
-          {/if}
-          {#if !npc.isEnemy && (npc.hasDialog || npc.isQuestGiver)}
-            <button class="action-btn talk" on:click={() => talk(npc)} title="Speak to {npc.displayName}">
-              <i class="material-icons">chat</i> Speak
+          {#if hasOverflow(npc)}
+            <button
+              class="action-btn menu-btn"
+              on:click={() => toggleMenu(npc)}
+              aria-label="More actions"
+              title="More actions"
+            >
+              <i class="material-icons">more_horiz</i>
             </button>
           {/if}
         </div>
+
+        {#if openMenuId === npc.id}
+          <div class="overflow-menu">
+            {#each getOverflowActions(npc) as action}
+              {#if action.muted}
+                <span class="overflow-item muted">{action.label}</span>
+              {:else}
+                <button class="overflow-item" on:click={action.fn}>{action.label}</button>
+              {/if}
+            {/each}
+          </div>
+        {/if}
       </div>
     {/each}
   </div>

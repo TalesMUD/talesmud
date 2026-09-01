@@ -1,5 +1,11 @@
 const AVATAR_COUNT = 14;
 
+function stripInstance(id) {
+  const key = String(id || "").trim();
+  const i = key.lastIndexOf("~");
+  return i > 0 ? key.slice(0, i) : key;
+}
+
 export function hashedAvatar(id) {
   const key = String(id || "npc");
   let h = 0;
@@ -12,7 +18,9 @@ export function hashedAvatar(id) {
 export function portraitSrc(entity) {
   if (!entity) return hashedAvatar("npc");
   if (entity.portrait) return entity.portrait;
-  return hashedAvatar(entity.templateId || entity.id || entity.name);
+  const tid = stripInstance(entity.templateId || entity.id);
+  if (tid) return `/api/portraits/${tid}.png`;
+  return hashedAvatar(entity.name || "npc");
 }
 
 export function onPortraitError(ev, entity) {

@@ -1,4 +1,6 @@
 <script>
+  import { itemArtSrc, onItemArtError } from '../itemArtSrc.js';
+
   export let store = null;
   export let sendMessage = null;
 
@@ -57,20 +59,6 @@
       case 'legendary': return '#a855f7';
       case 'mythic': return '#f59e0b';
       default: return '#9ca3af';
-    }
-  }
-
-  function getItemIcon(item) {
-    if (item.meta && item.meta.img) return null; // use image instead
-    switch (item.type) {
-      case 'weapon': return 'bolt';
-      case 'armor': return 'security';
-      case 'consumable': return 'local_drink';
-      case 'quest': return 'auto_stories';
-      case 'currency': return 'paid';
-      case 'collectible': return 'star';
-      case 'crafting_material': return 'build';
-      default: return 'inventory_2';
     }
   }
 
@@ -413,6 +401,42 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.3px;
+  }
+
+  .item-art {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    margin-bottom: 0.2em;
+    image-rendering: pixelated;
+    flex-shrink: 0;
+  }
+
+  .detail-art-wrap {
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .detail-art {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    image-rendering: pixelated;
+  }
+
+  .list-item-art {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    flex-shrink: 0;
   }
 
   .item-icon {
@@ -1007,9 +1031,12 @@
                     <span class="equipped-badge">E</span>
                   {/if}
 
-                  <i class="material-icons item-icon" style="color: {getQualityColor(item.quality)}">
-                    {getItemIcon(item)}
-                  </i>
+                  <img
+                    class="item-art"
+                    src={itemArtSrc(item)}
+                    alt=""
+                    on:error={(e) => onItemArtError(e, item)}
+                  />
                   <span class="item-name">{item.name}</span>
 
                   {#if item.stackable && item.quantity > 1}
@@ -1030,9 +1057,12 @@
                   title={getItemTooltip(item)}
                   on:click={() => toggleActions(item)}
                 >
-                  <i class="material-icons list-item-icon" style="color: {getQualityColor(item.quality)}">
-                    {getItemIcon(item)}
-                  </i>
+                  <img
+                    class="list-item-art"
+                    src={itemArtSrc(item)}
+                    alt=""
+                    on:error={(e) => onItemArtError(e, item)}
+                  />
                   <div class="list-item-info">
                     <span class="list-item-name" style="color: {getQualityColor(item.quality)}">{item.name}</span>
                     <span class="list-item-meta">
@@ -1068,9 +1098,14 @@
     <div class="detail-overlay">
       <div class="detail-header">
         <div class="detail-title-row">
-          <i class="material-icons detail-icon" style="color: {getQualityColor(detailItem.quality)}">
-            {getItemIcon(detailItem)}
-          </i>
+          <div class="detail-art-wrap">
+            <img
+              class="detail-art"
+              src={itemArtSrc(detailItem)}
+              alt=""
+              on:error={(e) => onItemArtError(e, detailItem)}
+            />
+          </div>
           <div class="detail-title-info">
             <span class="detail-name" style="color: {getQualityColor(detailItem.quality)}">{detailItem.name}</span>
             <span class="detail-meta">

@@ -692,7 +692,15 @@ func (w *WorldImporter) copyAssets() (int, error) {
 			return n1 + n2, err
 		}
 	}
-	return n1 + n2, nil
+	it := os.Getenv("ITEM_ART_PATH")
+	if it == "" {
+		it = "./uploads/items"
+	}
+	n3, err := w.copyImageDir(filepath.Join(w.importPath, "assets", "images", "items"), it)
+	if err != nil {
+		return n1 + n2 + n3, err
+	}
+	return n1 + n2 + n3, nil
 }
 
 func skipAssetPath(path string) bool {
