@@ -9,7 +9,7 @@
 
   .entity-card {
     position: relative;
-    width: 96px;
+    width: clamp(88px, 22cqw, 128px);
     aspect-ratio: 2 / 3;
     border-radius: 8px;
     overflow: hidden;
@@ -17,6 +17,15 @@
     animation: slideUp 0.3s ease-out;
     flex-shrink: 0;
     background: #111;
+  }
+
+  .entity-card.clickable {
+    cursor: pointer;
+  }
+
+  .entity-card.clickable:focus-visible {
+    outline: 2px solid rgba(59, 130, 246, 0.65);
+    outline-offset: 2px;
   }
 
   .entity-card.enemy {
@@ -326,11 +335,11 @@
     return null;
   }
 
-  function getOverflowActions(npc) {
+  function getActionableOverflow(npc) {
     const primary = getPrimaryAction(npc);
     const actions = [];
 
-    if (npc.isEnemy) {
+    if (npc.isEnemy && primary?.label !== 'Attack') {
       actions.push({ label: 'Attack', fn: () => attack(npc) });
     }
     if (npc.isMerchant && primary?.label !== 'Trade') {
@@ -340,25 +349,41 @@
       actions.push({ label: 'Talk', fn: () => talk(npc) });
     }
 
-    actions.push({
+    return actions;
+  }
+
+  function hasExtraActions(npc) {
+    return getActionableOverflow(npc).length > 0;
+  }
+
+  function getOverflowMenuItems(npc) {
+    const items = [...getActionableOverflow(npc)];
+    items.push({
       label: `State: ${getStateLabel(npc.state)}`,
       fn: null,
       muted: true,
     });
-
     if (npc.hasIdleDialog) {
-      actions.push({
+      items.push({
         label: 'Idle chatter',
         fn: null,
         muted: true,
       });
     }
-
-    return actions;
+    return items;
   }
 
-  function hasOverflow(npc) {
-    return getOverflowActions(npc).length > 0;
+  function handleCardClick(npc, primary) {
+    if (primary && !hasExtraActions(npc)) {
+      primary.fn();
+    }
+  }
+
+  function handleCardKeydown(event, npc, primary) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleCardClick(npc, primary);
+    }
   }
 </script>
 
@@ -366,7 +391,16 @@
   <div class="entity-panel">
     {#each $store.npcs as npc (npc.id)}
       {@const primary = getPrimaryAction(npc)}
-      <div class="entity-card {getEntityType(npc)}">
+      {@const extraActions = hasExtraActions(npc)}
+      <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+      <div
+        class="entity-card {getEntityType(npc)}"
+        class:clickable={primary && !extraActions}
+        on:click={() => handleCardClick(npc, primary)}
+        on:keydown={(e) => handleCardKeydown(e, npc, primary)}
+        role={primary && !extraActions ? 'button' : undefined}
+        tabindex={primary && !extraActions ? 0 : undefined}
+      >
         <img
           class="entity-bg"
           src={portraitSrc(npc)}
@@ -402,35 +436,35 @@
           {#if npc.level > 0}
             <span class="entity-meta">Lv {npc.level}</span>
           {/if}
-          <div class="entity-actions">
-            {#if primary}
-              <button
-                class="action-btn primary {primary.kind}"
-                on:click={primary.fn}
-                title={primary.label}
-              >
-                <i class="material-icons">
-                  {primary.kind === 'attack' ? 'swords' : primary.kind === 'trade' ? 'store' : 'chat'}
-                </i>
-                {primary.label}
-              </button>
-            {/if}
-            {#if hasOverflow(npc)}
+          {#if extraActions}
+            <div class="entity-actions">
+              {#if primary}
+                <button
+                  class="action-btn primary {primary.kind}"
+                  on:click|stopPropagation={primary.fn}
+                  title={primary.label}
+                >
+                  <i class="material-icons">
+                    {primary.kind === 'attack' ? 'swords' : primary.kind === 'trade' ? 'store' : 'chat'}
+                  </i>
+                  {primary.label}
+                </button>
+              {/if}
               <button
                 class="action-btn menu-btn"
-                on:click={() => toggleMenu(npc)}
+                on:click|stopPropagation={() => toggleMenu(npc)}
                 aria-label="More actions"
                 title="More actions"
               >
                 <i class="material-icons">more_horiz</i>
               </button>
-            {/if}
-          </div>
+            </div>
+          {/if}
         </div>
 
         {#if openMenuId === npc.id}
           <div class="overflow-menu">
-            {#each getOverflowActions(npc) as action}
+            {#each getOverflowMenuItems(npc) as action}
               {#if action.muted}
                 <span class="overflow-item muted">{action.label}</span>
               {:else}
