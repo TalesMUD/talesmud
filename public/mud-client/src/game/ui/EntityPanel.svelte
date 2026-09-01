@@ -4,162 +4,65 @@
     flex-wrap: wrap;
     gap: 0.5em;
     justify-content: flex-start;
+    align-items: flex-end;
   }
 
   .entity-card {
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 8px;
-    padding: 0.5em 0.75em;
-    min-width: 100px;
-    max-width: 150px;
-    animation: slideUp 0.3s ease-out;
     position: relative;
+    width: 96px;
+    aspect-ratio: 2 / 3;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    animation: slideUp 0.3s ease-out;
+    flex-shrink: 0;
+    background: #111;
   }
 
   .entity-card.enemy {
-    border-left: 3px solid #ef4444;
+    border-color: rgba(239, 68, 68, 0.45);
+    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.2);
   }
 
   .entity-card.merchant {
-    border-left: 3px solid #22c55e;
+    border-color: rgba(34, 197, 94, 0.45);
+    box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.2);
   }
 
   .entity-card.quest {
-    border-left-color: #f59e0b;
+    border-color: rgba(245, 158, 11, 0.45);
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.2);
   }
 
   .entity-card.friendly {
-    border-left: 3px solid #3b82f6;
+    border-color: rgba(59, 130, 246, 0.4);
   }
 
-  .entity-portrait-wrap {
-    width: 48px;
-    height: 48px;
-    overflow: hidden;
-    border-radius: 6px;
-    margin: 0 auto 0.45em;
-    background: #000;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    flex-shrink: 0;
-    position: relative;
-  }
-
-  .entity-portrait {
+  .entity-bg {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
     object-position: top center;
-    transform: scale(2.6);
-    transform-origin: top center;
     image-rendering: pixelated;
     display: block;
+    z-index: 0;
   }
 
-  .entity-name {
-    font-weight: 600;
-    font-size: 13px;
-    color: #e5e7eb;
-    display: block;
-    margin-bottom: 0.3em;
-    text-align: center;
-  }
-
-  .badge-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25em;
-    justify-content: center;
-    margin: 0.2em 0 0.45em;
-  }
-
-  .state-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.2em;
-    min-height: 18px;
-    padding: 0.15em 0.4em;
-    border-radius: 4px;
-    background: rgba(255, 255, 255, 0.07);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    color: #cbd5e1;
-    font-size: 9px;
-    font-weight: 700;
-    text-transform: uppercase;
-  }
-
-  .state-badge i {
-    font-size: 12px;
-  }
-
-  .state-badge.enemy {
-    color: #fca5a5;
-    border-color: rgba(239, 68, 68, 0.35);
-    background: rgba(239, 68, 68, 0.12);
-  }
-
-  .state-badge.merchant {
-    color: #86efac;
-    border-color: rgba(34, 197, 94, 0.35);
-    background: rgba(34, 197, 94, 0.12);
-  }
-
-  .state-badge.quest {
-    color: #fcd34d;
-    border-color: rgba(245, 158, 11, 0.4);
-    background: rgba(245, 158, 11, 0.14);
-  }
-
-  .entity-type {
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 0.4em;
-    text-align: center;
-    display: block;
-  }
-
-  .entity-type.enemy {
-    color: #ef4444;
-  }
-
-  .entity-type.merchant {
-    color: #22c55e;
-  }
-
-  .entity-type.quest {
-    color: #f59e0b;
-  }
-
-  .entity-type.friendly {
-    color: #3b82f6;
-  }
-
-  .entity-level {
-    font-size: 10px;
-    color: #9ca3af;
-    margin-bottom: 0.4em;
-    text-align: center;
-    display: block;
-  }
-
-  .health-bar {
-    width: 100%;
-    height: 4px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 2px;
-    overflow: hidden;
-    margin-bottom: 0.5em;
+  .entity-health {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 3;
   }
 
   .health-fill {
     height: 100%;
     background: linear-gradient(90deg, #ef4444, #f87171);
-    border-radius: 2px;
     transition: width 0.3s ease;
   }
 
@@ -171,53 +74,146 @@
     background: linear-gradient(90deg, #f59e0b, #fbbf24);
   }
 
+  .entity-badges {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    z-index: 2;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    max-width: calc(100% - 8px);
+  }
+
+  .state-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.15em;
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #e5e7eb;
+    font-size: 7px;
+    font-weight: 700;
+    text-transform: uppercase;
+    line-height: 1.2;
+  }
+
+  .state-badge i {
+    font-size: 10px;
+  }
+
+  .state-badge.enemy {
+    color: #fca5a5;
+    border-color: rgba(239, 68, 68, 0.4);
+  }
+
+  .state-badge.merchant {
+    color: #86efac;
+    border-color: rgba(34, 197, 94, 0.4);
+  }
+
+  .state-badge.quest {
+    color: #fcd34d;
+    border-color: rgba(245, 158, 11, 0.45);
+  }
+
+  .entity-footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 2;
+    padding: 0.45em 0.35em 0.4em;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3em;
+    pointer-events: none;
+  }
+
+  .entity-footer::before {
+    content: '';
+    position: absolute;
+    inset: -12px 0 0;
+    background: linear-gradient(
+      to top,
+      rgba(0, 0, 0, 0.94) 0%,
+      rgba(0, 0, 0, 0.72) 45%,
+      rgba(0, 0, 0, 0.2) 75%,
+      transparent 100%
+    );
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .entity-name {
+    font-weight: 700;
+    font-size: 11px;
+    color: #f9fafb;
+    line-height: 1.15;
+    text-align: center;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+    word-break: break-word;
+  }
+
+  .entity-meta {
+    font-size: 8px;
+    color: rgba(255, 255, 255, 0.75);
+    text-align: center;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  }
+
   .entity-actions {
     display: flex;
-    gap: 0.3em;
-    flex-wrap: wrap;
+    gap: 0.2em;
     justify-content: center;
+    pointer-events: auto;
   }
 
   .action-btn {
-    font-size: 10px;
-    padding: 0.35em 0.55em;
+    font-size: 9px;
+    padding: 0.28em 0.4em;
     border-radius: 4px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.08);
-    color: #e5e7eb;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: rgba(0, 0, 0, 0.55);
+    color: #f3f4f6;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
-    gap: 0.25em;
-    min-height: 28px;
+    justify-content: center;
+    gap: 0.2em;
+    min-height: 24px;
+    flex: 1;
+    backdrop-filter: blur(4px);
   }
 
   .action-btn i {
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .action-btn.primary.attack {
-    border-color: rgba(239, 68, 68, 0.5);
-    color: #fca5a5;
-    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.55);
+    color: #fecaca;
+    background: rgba(127, 29, 29, 0.65);
   }
 
   .action-btn.primary.trade {
-    border-color: rgba(34, 197, 94, 0.5);
-    color: #86efac;
-    background: rgba(34, 197, 94, 0.15);
+    border-color: rgba(34, 197, 94, 0.55);
+    color: #bbf7d0;
+    background: rgba(20, 83, 45, 0.65);
   }
 
   .action-btn.primary.talk {
-    border-color: rgba(59, 130, 246, 0.5);
-    color: #93c5fd;
-    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.55);
+    color: #bfdbfe;
+    background: rgba(30, 58, 138, 0.65);
   }
 
   .action-btn.menu-btn {
-    padding: 0.35em;
-    min-width: 28px;
-    justify-content: center;
+    flex: 0 0 24px;
+    padding: 0.2em;
+    min-width: 24px;
   }
 
   .overflow-menu {
@@ -231,6 +227,7 @@
     padding: 0.25em;
     z-index: 20;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    pointer-events: auto;
   }
 
   .overflow-item {
@@ -307,13 +304,6 @@
     return 'friendly';
   }
 
-  function getEntityTypeLabel(npc) {
-    if (npc.isEnemy) return 'Enemy';
-    if (npc.isMerchant) return 'Merchant';
-    if (npc.isQuestGiver) return 'Quest';
-    return 'NPC';
-  }
-
   function getStateLabel(state) {
     if (!state) return 'Idle';
     return state.charAt(0).toUpperCase() + state.slice(1);
@@ -324,11 +314,11 @@
   }
 
   function getPrimaryAction(npc) {
-    if (npc.isEnemy) {
-      return { label: 'Attack', kind: 'attack', fn: () => attack(npc) };
-    }
     if (npc.hasDialog || npc.isQuestGiver) {
       return { label: 'Talk', kind: 'talk', fn: () => talk(npc) };
+    }
+    if (npc.isEnemy) {
+      return { label: 'Attack', kind: 'attack', fn: () => attack(npc) };
     }
     if (npc.isMerchant) {
       return { label: 'Trade', kind: 'trade', fn: () => trade(npc) };
@@ -340,7 +330,7 @@
     const primary = getPrimaryAction(npc);
     const actions = [];
 
-    if (npc.isEnemy && primary?.label !== 'Attack') {
+    if (npc.isEnemy) {
       actions.push({ label: 'Attack', fn: () => attack(npc) });
     }
     if (npc.isMerchant && primary?.label !== 'Trade') {
@@ -368,7 +358,7 @@
   }
 
   function hasOverflow(npc) {
-    return getOverflowActions(npc).some((a) => !a.muted || a.fn);
+    return getOverflowActions(npc).length > 0;
   }
 </script>
 
@@ -377,42 +367,15 @@
     {#each $store.npcs as npc (npc.id)}
       {@const primary = getPrimaryAction(npc)}
       <div class="entity-card {getEntityType(npc)}">
-        <div class="entity-portrait-wrap">
-          <img
-            class="entity-portrait"
-            src={portraitSrc(npc)}
-            alt=""
-            width="48"
-            height="48"
-            on:error={(e) => onPortraitError(e, npc)}
-          />
-        </div>
-        <span class="entity-name">{npc.displayName}</span>
-
-        <div class="badge-row">
-          {#if npc.isEnemy}
-            <span class="state-badge enemy">
-              <i class="material-icons">swords</i> Enemy
-            </span>
-          {/if}
-          {#if npc.isMerchant}
-            <span class="state-badge merchant">
-              <i class="material-icons">store</i> Shop
-            </span>
-          {/if}
-          {#if npc.isQuestGiver}
-            <span class="state-badge quest">
-              <i class="material-icons">assignment</i> Quest
-            </span>
-          {/if}
-        </div>
-
-        {#if npc.level > 0}
-          <span class="entity-level">Level {npc.level}</span>
-        {/if}
+        <img
+          class="entity-bg"
+          src={portraitSrc(npc)}
+          alt=""
+          on:error={(e) => onPortraitError(e, npc)}
+        />
 
         {#if npc.isEnemy && npc.maxHp > 0}
-          <div class="health-bar">
+          <div class="entity-health">
             <div
               class="health-fill {getHealthClass(npc.currentHp, npc.maxHp)}"
               style="width: {(npc.currentHp / npc.maxHp) * 100}%"
@@ -420,29 +383,49 @@
           </div>
         {/if}
 
-        <div class="entity-actions">
-          {#if primary}
-            <button
-              class="action-btn primary {primary.kind}"
-              on:click={primary.fn}
-              title={primary.label}
-            >
-              <i class="material-icons">
-                {primary.kind === 'attack' ? 'swords' : primary.kind === 'trade' ? 'store' : 'chat'}
-              </i>
-              {primary.label}
-            </button>
+        {#if npc.isEnemy || npc.isMerchant || npc.isQuestGiver}
+          <div class="entity-badges">
+            {#if npc.isEnemy}
+              <span class="state-badge enemy"><i class="material-icons">swords</i></span>
+            {/if}
+            {#if npc.isMerchant}
+              <span class="state-badge merchant"><i class="material-icons">store</i></span>
+            {/if}
+            {#if npc.isQuestGiver}
+              <span class="state-badge quest"><i class="material-icons">assignment</i></span>
+            {/if}
+          </div>
+        {/if}
+
+        <div class="entity-footer">
+          <span class="entity-name">{npc.displayName}</span>
+          {#if npc.level > 0}
+            <span class="entity-meta">Lv {npc.level}</span>
           {/if}
-          {#if hasOverflow(npc)}
-            <button
-              class="action-btn menu-btn"
-              on:click={() => toggleMenu(npc)}
-              aria-label="More actions"
-              title="More actions"
-            >
-              <i class="material-icons">more_horiz</i>
-            </button>
-          {/if}
+          <div class="entity-actions">
+            {#if primary}
+              <button
+                class="action-btn primary {primary.kind}"
+                on:click={primary.fn}
+                title={primary.label}
+              >
+                <i class="material-icons">
+                  {primary.kind === 'attack' ? 'swords' : primary.kind === 'trade' ? 'store' : 'chat'}
+                </i>
+                {primary.label}
+              </button>
+            {/if}
+            {#if hasOverflow(npc)}
+              <button
+                class="action-btn menu-btn"
+                on:click={() => toggleMenu(npc)}
+                aria-label="More actions"
+                title="More actions"
+              >
+                <i class="material-icons">more_horiz</i>
+              </button>
+            {/if}
+          </div>
         </div>
 
         {#if openMenuId === npc.id}
