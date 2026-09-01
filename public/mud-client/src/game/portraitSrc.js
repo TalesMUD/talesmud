@@ -28,6 +28,6 @@ export function onPortraitError(ev, entity) {
   if (!img || img.dataset.fallback === "1") return;
   img.dataset.fallback = "1";
   img.style.transform = "none";
-  img.style.objectPosition = "50% 50%";
+  img.style.objectPosition = "top center";
   img.src = hashedAvatar(entity && (entity.templateId || entity.id || entity.name));
 }

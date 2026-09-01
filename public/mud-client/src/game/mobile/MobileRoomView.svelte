@@ -134,42 +134,38 @@
     padding: 0.3em 0.5em;
   }
 
-  /* Compact entity cards for mobile */
+  /* Portrait entity cards in room overlay */
   .entity-section :global(.entity-panel) {
     gap: 0.35em;
   }
 
   .entity-section :global(.entity-card) {
-    min-width: 80px;
-    max-width: 120px;
-    padding: 0.3em 0.5em;
+    width: 72px;
+    padding: 0;
     border-radius: 6px;
   }
 
   .entity-section :global(.entity-name) {
-    font-size: 11px;
-    margin-bottom: 0.15em;
+    font-size: 10px;
   }
 
-  .entity-section :global(.entity-type) {
-    font-size: 8px;
-    margin-bottom: 0.2em;
+  .entity-section :global(.entity-meta) {
+    font-size: 7px;
   }
 
-  .entity-section :global(.entity-level) {
-    font-size: 8px;
-    margin-bottom: 0.2em;
-  }
-
-  .entity-section :global(.health-bar) {
-    height: 3px;
-    margin-bottom: 0.3em;
+  .entity-section :global(.entity-health) {
+    height: 2px;
   }
 
   .entity-section :global(.action-btn) {
-    font-size: 9px;
-    padding: 0.2em 0.45em;
-    border-radius: 3px;
+    font-size: 8px;
+    padding: 0.2em 0.35em;
+    min-height: 22px;
+  }
+
+  .entity-section :global(.action-btn.menu-btn) {
+    flex: 0 0 22px;
+    min-width: 22px;
   }
 
   /* Description section */
