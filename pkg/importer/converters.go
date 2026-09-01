@@ -232,6 +232,7 @@ func (y *YAMLNPC) ToEntity() *npc.NPC {
 			mt.Inventory = append(mt.Inventory, npc.MerchantItem{
 				ItemTemplateID: item.ItemTemplateID,
 				BasePrice:      item.BasePrice,
+				PriceOverride:  item.PriceOverride,
 				Quantity:       qty,
 				MaxQuantity:    maxQty,
 			})
