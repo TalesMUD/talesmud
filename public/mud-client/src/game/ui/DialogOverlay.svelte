@@ -48,14 +48,14 @@
   }
 
   .npc-portrait-wrap {
-    width: 96px;
-    height: 96px;
+    width: clamp(100px, 22vw, 140px);
+    aspect-ratio: 2 / 3;
     border-radius: 10px;
     overflow: hidden;
     flex-shrink: 0;
-    background: #000;
-    border: 2px solid rgba(255, 255, 255, 0.15);
     position: relative;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    background: #111;
   }
 
   .npc-portrait-wrap.enemy {
@@ -81,8 +81,6 @@
     height: 100%;
     object-fit: cover;
     object-position: top center;
-    transform: scale(2.4);
-    transform-origin: top center;
     image-rendering: pixelated;
     display: block;
   }
@@ -104,7 +102,7 @@
     font-size: 1.1em;
     line-height: 1.6;
     color: #d1d5db;
-    margin-bottom: 1.5em;
+    margin-bottom: 0;
     padding: 1em;
     background: rgba(255, 255, 255, 0.05);
     border-radius: 8px;
@@ -119,6 +117,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.5em;
+    margin-top: 1em;
   }
 
   .dialog-option-btn {
@@ -185,8 +184,7 @@
     }
 
     .npc-portrait-wrap {
-      width: 72px;
-      height: 72px;
+      width: clamp(80px, 28vw, 110px);
     }
 
     .npc-name {
@@ -212,8 +210,6 @@
         class="npc-portrait"
         src={portraitSrc(npc)}
         alt=""
-        width="96"
-        height="96"
         on:error={(e) => onPortraitError(e, npc)}
       />
     </div>

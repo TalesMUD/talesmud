@@ -233,6 +233,8 @@
     right: 0;
     z-index: 10;
     padding: 0.5em 0.8em;
+    container-type: inline-size;
+    container-name: room-entities;
   }
 
   /* Player count badge */

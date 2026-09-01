@@ -132,6 +132,8 @@
     right: 0;
     z-index: 10;
     padding: 0.3em 0.5em;
+    container-type: inline-size;
+    container-name: room-entities;
   }
 
   /* Portrait entity cards in room overlay */
@@ -140,8 +142,7 @@
   }
 
   .entity-section :global(.entity-card) {
-    width: 72px;
-    padding: 0;
+    width: clamp(72px, 20cqw, 104px);
     border-radius: 6px;
   }
 
