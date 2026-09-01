@@ -54,6 +54,8 @@
     height: 100%;
     object-fit: cover;
     object-position: top center;
+    transform: scale(1.6);
+    transform-origin: top center;
     image-rendering: pixelated;
     display: block;
     z-index: 0;
@@ -85,47 +87,52 @@
 
   .entity-badges {
     position: absolute;
-    top: 4px;
-    left: 4px;
+    top: 5px;
+    left: 5px;
     z-index: 2;
     display: flex;
     flex-wrap: wrap;
-    gap: 2px;
-    max-width: calc(100% - 8px);
+    gap: 3px;
+    max-width: calc(100% - 10px);
   }
 
   .state-badge {
     display: inline-flex;
     align-items: center;
-    gap: 0.15em;
-    padding: 0.1em 0.35em;
-    border-radius: 3px;
-    background: rgba(0, 0, 0, 0.65);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     color: #e5e7eb;
-    font-size: 7px;
-    font-weight: 700;
-    text-transform: uppercase;
-    line-height: 1.2;
+    line-height: 1;
+    flex-shrink: 0;
   }
 
   .state-badge i {
-    font-size: 10px;
+    font-size: 15px;
   }
 
   .state-badge.enemy {
     color: #fca5a5;
-    border-color: rgba(239, 68, 68, 0.4);
+    border-color: rgba(239, 68, 68, 0.45);
   }
 
   .state-badge.merchant {
     color: #86efac;
-    border-color: rgba(34, 197, 94, 0.4);
+    border-color: rgba(34, 197, 94, 0.45);
   }
 
   .state-badge.quest {
     color: #fcd34d;
-    border-color: rgba(245, 158, 11, 0.45);
+    border-color: rgba(245, 158, 11, 0.5);
+  }
+
+  .state-badge.dialog {
+    color: #93c5fd;
+    border-color: rgba(59, 130, 246, 0.45);
   }
 
   .entity-footer {
@@ -313,68 +320,58 @@
     return 'friendly';
   }
 
-  function getStateLabel(state) {
-    if (!state) return 'Idle';
-    return state.charAt(0).toUpperCase() + state.slice(1);
-  }
-
   function toggleMenu(npc) {
     openMenuId = openMenuId === npc.id ? null : npc.id;
   }
 
+  function canTalk(npc) {
+    return npc.hasDialog || npc.isQuestGiver;
+  }
+
+  function canAttack(npc) {
+    return npc.isEnemy;
+  }
+
+  function canTrade(npc) {
+    return npc.isMerchant;
+  }
+
   function getPrimaryAction(npc) {
-    if (npc.hasDialog || npc.isQuestGiver) {
+    if (canTalk(npc)) {
       return { label: 'Talk', kind: 'talk', fn: () => talk(npc) };
     }
-    if (npc.isEnemy) {
+    if (canAttack(npc)) {
       return { label: 'Attack', kind: 'attack', fn: () => attack(npc) };
     }
-    if (npc.isMerchant) {
+    if (canTrade(npc)) {
       return { label: 'Trade', kind: 'trade', fn: () => trade(npc) };
     }
     return null;
   }
 
-  function getActionableOverflow(npc) {
+  function getExtraVerbs(npc) {
     const primary = getPrimaryAction(npc);
-    const actions = [];
+    const verbs = [];
 
-    if (npc.isEnemy && primary?.label !== 'Attack') {
-      actions.push({ label: 'Attack', fn: () => attack(npc) });
+    if (canAttack(npc) && primary?.label !== 'Attack') {
+      verbs.push({ label: 'Attack', kind: 'attack', fn: () => attack(npc) });
     }
-    if (npc.isMerchant && primary?.label !== 'Trade') {
-      actions.push({ label: 'Trade', fn: () => trade(npc) });
+    if (canTrade(npc) && primary?.label !== 'Trade') {
+      verbs.push({ label: 'Trade', kind: 'trade', fn: () => trade(npc) });
     }
-    if ((npc.hasDialog || npc.isQuestGiver) && primary?.label !== 'Talk') {
-      actions.push({ label: 'Talk', fn: () => talk(npc) });
+    if (canTalk(npc) && primary?.label !== 'Talk') {
+      verbs.push({ label: 'Talk', kind: 'talk', fn: () => talk(npc) });
     }
 
-    return actions;
+    return verbs;
   }
 
-  function hasExtraActions(npc) {
-    return getActionableOverflow(npc).length > 0;
-  }
-
-  function getOverflowMenuItems(npc) {
-    const items = [...getActionableOverflow(npc)];
-    items.push({
-      label: `State: ${getStateLabel(npc.state)}`,
-      fn: null,
-      muted: true,
-    });
-    if (npc.hasIdleDialog) {
-      items.push({
-        label: 'Idle chatter',
-        fn: null,
-        muted: true,
-      });
-    }
-    return items;
+  function hasExtraVerbs(npc) {
+    return getExtraVerbs(npc).length > 0;
   }
 
   function handleCardClick(npc, primary) {
-    if (primary && !hasExtraActions(npc)) {
+    if (primary) {
       primary.fn();
     }
   }
@@ -391,15 +388,15 @@
   <div class="entity-panel">
     {#each $store.npcs as npc (npc.id)}
       {@const primary = getPrimaryAction(npc)}
-      {@const extraActions = hasExtraActions(npc)}
+      {@const extraVerbs = hasExtraVerbs(npc)}
       <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
       <div
         class="entity-card {getEntityType(npc)}"
-        class:clickable={primary && !extraActions}
+        class:clickable={primary}
         on:click={() => handleCardClick(npc, primary)}
         on:keydown={(e) => handleCardKeydown(e, npc, primary)}
-        role={primary && !extraActions ? 'button' : undefined}
-        tabindex={primary && !extraActions ? 0 : undefined}
+        role={primary ? 'button' : undefined}
+        tabindex={primary ? 0 : undefined}
       >
         <img
           class="entity-bg"
@@ -417,16 +414,19 @@
           </div>
         {/if}
 
-        {#if npc.isEnemy || npc.isMerchant || npc.isQuestGiver}
+        {#if npc.isEnemy || npc.isMerchant || npc.isQuestGiver || npc.hasDialog}
           <div class="entity-badges">
             {#if npc.isEnemy}
-              <span class="state-badge enemy"><i class="material-icons">swords</i></span>
+              <span class="state-badge enemy" title="Enemy"><i class="material-icons">swords</i></span>
+            {/if}
+            {#if npc.hasDialog}
+              <span class="state-badge dialog" title="Dialog"><i class="material-icons">chat_bubble</i></span>
             {/if}
             {#if npc.isMerchant}
-              <span class="state-badge merchant"><i class="material-icons">store</i></span>
+              <span class="state-badge merchant" title="Merchant"><i class="material-icons">store</i></span>
             {/if}
             {#if npc.isQuestGiver}
-              <span class="state-badge quest"><i class="material-icons">assignment</i></span>
+              <span class="state-badge quest" title="Quest"><i class="material-icons">assignment</i></span>
             {/if}
           </div>
         {/if}
@@ -436,20 +436,8 @@
           {#if npc.level > 0}
             <span class="entity-meta">Lv {npc.level}</span>
           {/if}
-          {#if extraActions}
+          {#if extraVerbs}
             <div class="entity-actions">
-              {#if primary}
-                <button
-                  class="action-btn primary {primary.kind}"
-                  on:click|stopPropagation={primary.fn}
-                  title={primary.label}
-                >
-                  <i class="material-icons">
-                    {primary.kind === 'attack' ? 'swords' : primary.kind === 'trade' ? 'store' : 'chat'}
-                  </i>
-                  {primary.label}
-                </button>
-              {/if}
               <button
                 class="action-btn menu-btn"
                 on:click|stopPropagation={() => toggleMenu(npc)}
@@ -464,12 +452,8 @@
 
         {#if openMenuId === npc.id}
           <div class="overflow-menu">
-            {#each getOverflowMenuItems(npc) as action}
-              {#if action.muted}
-                <span class="overflow-item muted">{action.label}</span>
-              {:else}
-                <button class="overflow-item" on:click={action.fn}>{action.label}</button>
-              {/if}
+            {#each getExtraVerbs(npc) as action}
+              <button class="overflow-item" on:click|stopPropagation={action.fn}>{action.label}</button>
             {/each}
           </div>
         {/if}
