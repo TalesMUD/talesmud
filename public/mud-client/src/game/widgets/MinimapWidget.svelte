@@ -1,18 +1,10 @@
 <script>
   import { onDestroy, tick } from 'svelte';
   import { readStageSize, shouldRepaintSize, applyCanvasBitmap } from './atlasLayout.js';
+  import { paintAtlas } from './atlasRenderer.js';
 
   export let store = null;
   export let sendMessage = null;
-
-  const BIOME = {
-    meadow: { fill: 'rgba(132, 184, 92, 0.28)', ink: '#86efac', path: '#4ade80' },
-    forest: { fill: 'rgba(52, 120, 72, 0.32)', ink: '#34d399', path: '#22c55e' },
-    water: { fill: 'rgba(56, 132, 176, 0.30)', ink: '#7dd3fc', path: '#38bdf8' },
-    dungeon: { fill: 'rgba(148, 92, 64, 0.30)', ink: '#fdba74', path: '#fb923c' },
-    settlement: { fill: 'rgba(196, 148, 72, 0.28)', ink: '#fcd34d', path: '#fbbf24' },
-    wild: { fill: 'rgba(120, 130, 150, 0.22)', ink: '#cbd5e1', path: '#94a3b8' },
-  };
 
   let atlas = emptyAtlas();
   let currentRoomId = null;
@@ -97,36 +89,6 @@
     return (atlas.places || []).find(p => p.id === id);
   }
 
-  function camera(places, regions, w, h) {
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    const consider = (x, y) => {
-      if (x < minX) minX = x;
-      if (y < minY) minY = y;
-      if (x > maxX) maxX = x;
-      if (y > maxY) maxY = y;
-    };
-    for (const p of places) consider(p.x, p.y);
-    for (const region of regions || []) {
-      for (const pt of region.hull || []) consider(pt[0], pt[1]);
-    }
-    if (!isFinite(minX)) {
-      minX = maxX = minY = maxY = 0;
-    }
-    const dx = Math.max(1.4, maxX - minX);
-    const dy = Math.max(1.4, maxY - minY);
-    const pad = Math.max(28, Math.min(w, h) * 0.16);
-    const fit = Math.min((w - pad * 2) / dx, (h - pad * 2) / dy);
-    const spacing = Math.max(22, Math.min(fit * userScale, 110));
-    return { spacing, ox: (minX + maxX) / 2, oy: (minY + maxY) / 2 };
-  }
-
-  function project(place, cam, w, h) {
-    return {
-      px: w / 2 + panX + (place.x - cam.ox) * cam.spacing,
-      py: h / 2 + panY + (place.y - cam.oy) * cam.spacing,
-    };
-  }
-
   function findPath(startId, targetId) {
     if (!startId || !targetId || startId === targetId) return null;
     const byId = {};
@@ -198,12 +160,6 @@
     }
   }
 
-  function hash32(s) {
-    let h = 2166136261;
-    for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
-    return h >>> 0;
-  }
-
   function paint(canvas, wrap) {
     if (!canvas || !wrap) return;
     const size = readStageSize(wrap);
@@ -215,186 +171,23 @@
 
     const ctx = canvas.getContext('2d');
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, w, h);
 
-    ctx.fillStyle = '#0e141c';
-    ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = 'rgba(148, 163, 184, 0.07)';
-    for (let x = 16; x < w; x += 22) {
-      for (let y = 16; y < h; y += 22) {
-        ctx.fillRect(x, y, 1, 1);
-      }
-    }
-
-    if (!visiblePlaces.length) {
-      ctx.fillStyle = '#64748b';
-      ctx.font = '12px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(currentRoomId ? 'Charting this floor…' : 'Walk to fill your atlas', w / 2, h / 2);
-      return;
-    }
-
-    const cam = camera(visiblePlaces, visibleRegions, w, h);
-    const byId = {};
-    for (const p of atlas.places || []) byId[p.id] = p;
-
-    for (const region of visibleRegions) {
-      const pts = (region.hull || []).map(([x, y]) => [
-        w / 2 + panX + (x - cam.ox) * cam.spacing,
-        h / 2 + panY + (y - cam.oy) * cam.spacing,
-      ]);
-      if (!pts.length) continue;
-      const biome = BIOME[region.biome] || BIOME.wild;
-      ctx.beginPath();
-      if (pts.length === 1) {
-        ctx.arc(pts[0][0], pts[0][1], cam.spacing * 0.55, 0, Math.PI * 2);
-      } else {
-        ctx.moveTo((pts[0][0] + pts[pts.length - 1][0]) / 2, (pts[0][1] + pts[pts.length - 1][1]) / 2);
-        for (let i = 0; i < pts.length; i++) {
-          const p0 = pts[i];
-          const p1 = pts[(i + 1) % pts.length];
-          ctx.quadraticCurveTo(p0[0], p0[1], (p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2);
-        }
-        ctx.closePath();
-      }
-      ctx.fillStyle = biome.fill;
-      ctx.fill();
-      ctx.strokeStyle = biome.ink;
-      ctx.globalAlpha = 0.55;
-      ctx.lineWidth = 1.4;
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-      const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length;
-      const cy = pts.reduce((a, p) => a + p[1], 0) / pts.length;
-      ctx.font = '600 11px sans-serif';
-      ctx.fillStyle = 'rgba(226, 232, 240, 0.72)';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(region.name || '', cx, cy - cam.spacing * 0.42);
-    }
-
-    const layerPaths = (atlas.paths || []).filter(path => {
-      const a = byId[path.from];
-      const b = byId[path.to];
-      return a && b && (a.layer === activeLayer || b.layer === activeLayer);
+    const result = paintAtlas(ctx, {
+      w,
+      h,
+      atlas,
+      activeLayer,
+      visiblePlaces,
+      visibleRegions,
+      currentRoomId,
+      maximized,
+      panX,
+      panY,
+      userScale,
+      travelPathRoomIds,
+      travelTargetId,
     });
-
-    for (const path of layerPaths) {
-      const a = byId[path.from];
-      const b = byId[path.to];
-      const pa = project(a, cam, w, h);
-      const pb = project(b, cam, w, h);
-      const mx = (pa.px + pb.px) / 2;
-      const my = (pa.py + pb.py) / 2;
-      const dx = pb.py - pa.py;
-      const dy = pa.px - pb.px;
-      const len = Math.hypot(dx, dy) || 1;
-      const wobble = ((hash32(path.from + '>' + path.to) % 9) - 4) / 4 * Math.min(14, cam.spacing * 0.18);
-      const onTravel = travelPathRoomIds.has(path.from) && travelPathRoomIds.has(path.to)
-        || travelPathRoomIds.has(path.to) && path.from === currentRoomId;
-      ctx.beginPath();
-      ctx.moveTo(pa.px, pa.py);
-      ctx.quadraticCurveTo(mx + dx / len * wobble, my + dy / len * wobble, pb.px, pb.py);
-      ctx.strokeStyle = onTravel ? '#38bdf8' : (BIOME[a.biome] || BIOME.wild).path;
-      ctx.lineWidth = onTravel ? 3 : path.kind === 'road' ? 2.6 : 2;
-      ctx.globalAlpha = a.discovered && b.discovered ? 0.95 : 0.4;
-      if (path.kind === 'stair' || path.kind === 'hidden' || path.kind === 'passage') {
-        ctx.setLineDash([5, 4]);
-      } else {
-        ctx.setLineDash([]);
-      }
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.globalAlpha = 1;
-    }
-
-    const localHits = [];
-    for (const place of visiblePlaces) {
-      const { px, py } = project(place, cam, w, h);
-      const r = drawGlyph(ctx, place, px, py, cam.spacing);
-      localHits.push({ px, py, r: r + 6, place });
-      if (place.discovered && place.name) {
-        const showName = place.current || place.landmark || maximized || visiblePlaces.length <= 8;
-        if (showName) {
-          ctx.font = place.current ? '700 11px sans-serif' : '600 10px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'top';
-          ctx.lineWidth = 3;
-          ctx.strokeStyle = 'rgba(8, 12, 18, 0.85)';
-          ctx.strokeText(place.name, px, py + r + 2);
-          ctx.fillStyle = place.current ? '#fbbf24' : '#e2e8f0';
-          ctx.fillText(place.name, px, py + r + 2);
-        }
-      }
-    }
-    hitState.items = localHits;
-  }
-
-  function drawGlyph(ctx, place, px, py, spacing) {
-    const r = Math.max(6, Math.min(11, spacing * 0.16)) * (place.landmark || place.current ? 1.25 : 1);
-    ctx.save();
-    ctx.translate(px, py);
-    if (place.current) {
-      ctx.beginPath();
-      ctx.arc(0, 0, r + 7, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(251, 191, 36, 0.9)';
-      ctx.lineWidth = 2.4;
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(0, 0, r + 3, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(251, 191, 36, 0.18)';
-      ctx.fill();
-    }
-    if (place.id === travelTargetId) {
-      ctx.beginPath();
-      ctx.arc(0, 0, r + 6, 0, Math.PI * 2);
-      ctx.strokeStyle = '#22d3ee';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-    const ink = place.current ? '#fbbf24' : (BIOME[place.biome] || BIOME.wild).ink;
-    ctx.fillStyle = ink;
-    ctx.strokeStyle = '#020617';
-    ctx.lineWidth = 1.4;
-    if (place.kind === 'uncharted') {
-      ctx.setLineDash([2, 2]);
-      ctx.beginPath();
-      ctx.arc(0, 0, r, 0, Math.PI * 2);
-      ctx.strokeStyle = '#94a3b8';
-      ctx.stroke();
-      ctx.setLineDash([]);
-    } else if (place.kind === 'dungeon') {
-      ctx.beginPath();
-      ctx.moveTo(0, -r); ctx.lineTo(r, 0); ctx.lineTo(0, r); ctx.lineTo(-r, 0);
-      ctx.closePath(); ctx.fill(); ctx.stroke();
-    } else if (place.kind === 'settlement') {
-      ctx.beginPath();
-      ctx.moveTo(0, -r);
-      ctx.lineTo(r, -1); ctx.lineTo(r, r); ctx.lineTo(-r, r); ctx.lineTo(-r, -1);
-      ctx.closePath(); ctx.fill(); ctx.stroke();
-    } else if (place.kind === 'water') {
-      ctx.beginPath();
-      ctx.moveTo(0, r);
-      ctx.quadraticCurveTo(r, 0, 0, -r);
-      ctx.quadraticCurveTo(-r, 0, 0, r);
-      ctx.fill(); ctx.stroke();
-    } else if (place.landmark) {
-      ctx.beginPath();
-      for (let i = 0; i < 10; i++) {
-        const ang = (Math.PI / 5) * i - Math.PI / 2;
-        const rad = i % 2 === 0 ? r + 1 : r * 0.45;
-        if (i === 0) ctx.moveTo(Math.cos(ang) * rad, Math.sin(ang) * rad);
-        else ctx.lineTo(Math.cos(ang) * rad, Math.sin(ang) * rad);
-      }
-      ctx.closePath(); ctx.fill(); ctx.stroke();
-    } else {
-      ctx.beginPath();
-      ctx.arc(0, 0, r, 0, Math.PI * 2);
-      ctx.fill(); ctx.stroke();
-    }
-    ctx.restore();
-    return r;
+    hitState.items = result.hits;
   }
 
   function scheduleDraw() {
