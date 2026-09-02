@@ -53,8 +53,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.65em;
-    padding: 1.25em 1.5em;
+    gap: 0.35em;
+    padding: 0.7em 1em;
     pointer-events: none;
     overflow: hidden;
   }
@@ -62,16 +62,16 @@
   .overlay-message {
     background: rgba(8, 10, 14, 0.88);
     color: #f3f4f6;
-    padding: 1.15em 1.6em;
-    border-radius: 12px;
-    font-size: clamp(1.05rem, 2.2vw, 1.35rem);
+    padding: 0.4em 0.75em;
+    border-radius: 8px;
+    font-size: clamp(0.72rem, 1.15vw, 0.88rem);
     font-weight: 500;
-    line-height: 1.5;
-    letter-spacing: 0.01em;
+    line-height: 1.25;
+    letter-spacing: 0;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    border: 1.5px solid rgba(249, 115, 22, 0.65);
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(249, 115, 22, 0.65);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
     opacity: 1;
     transition: opacity var(--fade-duration) ease-out;
     animation: overlayPopIn 0.22s ease-out;
@@ -79,10 +79,9 @@
     word-break: break-word;
     overflow-wrap: anywhere;
     text-align: center;
-    max-width: min(92%, 34rem);
+    max-width: min(78%, 26rem);
     width: max-content;
-    /* Never clip reaction copy to a tiny ellipsis block */
-    max-height: min(70%, 22rem);
+    max-height: min(38%, 10rem);
     overflow-y: auto;
   }
 
@@ -108,13 +107,14 @@
 
   @media screen and (max-width: 768px) {
     .room-text-overlay {
-      padding: 1em 0.85em;
+      padding: 0.55em 0.65em;
     }
     .overlay-message {
-      font-size: clamp(0.98rem, 3.6vw, 1.2rem);
-      padding: 1em 1.2em;
-      max-width: 94%;
-      max-height: min(65%, 18rem);
+      font-size: clamp(0.7rem, 2.6vw, 0.84rem);
+      line-height: 1.22;
+      padding: 0.35em 0.65em;
+      max-width: 86%;
+      max-height: min(36%, 9rem);
     }
   }
 </style>
