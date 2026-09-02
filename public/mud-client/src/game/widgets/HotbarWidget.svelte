@@ -3,14 +3,17 @@
   import { overlayStore } from '../ui/overlayStore.js';
   import { itemArtSrc, onItemArtError } from '../itemArtSrc.js';
   import {
+    HOTBAR_ACTIONS,
     findInventoryItem,
     isConsumableItem,
+    makeActionBind,
     makeItemBind,
     makeSkillBind,
     normalizeHotbarBinds,
     resolveHotbarActivation,
     skillDisplayName,
-    skillMaterialIcon,
+    skillGenericArtUrl,
+    actionGenericArtUrl,
   } from '../hudPrefs.js';
 
   export let store;
@@ -68,6 +71,14 @@
     closePicker();
   }
 
+  function bindAction(actionId) {
+    if (pickerIndex < 0) return;
+    const next = [...binds];
+    next[pickerIndex] = makeActionBind(actionId);
+    saveBinds(next);
+    closePicker();
+  }
+
   function slotDisabled(bind) {
     if (!bind) return false;
     if (bind.kind === 'skill' && !inCombat) return true;
@@ -116,6 +127,9 @@
     if (bind.kind === 'item') {
       const item = findInventoryItem(inventory, bind);
       return item ? `Use ${item.name}` : `${bind.name || 'Item'} (missing)`;
+    }
+    if (bind.kind === 'action') {
+      return bind.name || bind.id || 'Action';
     }
     return 'Empty';
   }
@@ -359,7 +373,17 @@
             on:error={(e) => onItemArtError(e, item || { type: 'consumable' })}
           />
         {:else if bind?.kind === 'skill'}
-          <i class="material-icons">{skillMaterialIcon(bind.id || bind.name)}</i>
+          <img
+            src={skillGenericArtUrl(bind.id || bind.name)}
+            alt=""
+            on:error={(e) => onItemArtError(e, { type: 'default' })}
+          />
+        {:else if bind?.kind === 'action'}
+          <img
+            src={actionGenericArtUrl(bind.id)}
+            alt=""
+            on:error={(e) => onItemArtError(e, { type: 'default' })}
+          />
         {/if}
       </button>
     {/each}
@@ -383,12 +407,22 @@
         <div class="pick-list">
           {#each equippedSkills as skillId}
             <button type="button" class="pick-btn" on:click={() => bindSkill(skillId)}>
-              <i class="material-icons">{skillMaterialIcon(skillId)}</i>
+              <img src={skillGenericArtUrl(skillId)} alt="" on:error={(e) => onItemArtError(e, { type: 'default' })} />
               {skillDisplayName(skillId)}
             </button>
           {/each}
         </div>
       {/if}
+
+      <div class="section-label">Actions</div>
+      <div class="pick-list">
+        {#each HOTBAR_ACTIONS as action}
+          <button type="button" class="pick-btn" on:click={() => bindAction(action.id)}>
+            <img src={actionGenericArtUrl(action.id)} alt="" on:error={(e) => onItemArtError(e, { type: 'default' })} />
+            {action.label}
+          </button>
+        {/each}
+      </div>
 
       <div class="section-label">Consumables</div>
       {#if consumables.length === 0}
