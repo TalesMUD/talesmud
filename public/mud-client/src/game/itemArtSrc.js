@@ -4,11 +4,23 @@ function stripInstance(id) {
   return i > 0 ? key.slice(0, i) : key;
 }
 
+/** Meta.img is often an art-generation prompt — never treat prose as an <img src>. */
+export function looksLikeArtPath(value) {
+  if (value == null) return false;
+  const s = String(value).trim();
+  if (!s || /\s/.test(s)) return false;
+  if (s.startsWith("/") || s.startsWith("sprites/") || s.startsWith("./")) return true;
+  if (/^https?:\/\//i.test(s)) return true;
+  if (/\.(png|jpe?g|webp|svg|gif)(\?|#|$)/i.test(s)) return true;
+  return false;
+}
+
 export function itemArtGenericKey(item) {
   if (!item) return "default";
   const type = String(item.type || "").toLowerCase();
   const sub = String(item.subType || "").toLowerCase();
-  if (sub.includes("torch")) return "torch";
+  const name = String(item.name || "").toLowerCase();
+  if (sub.includes("torch") || name.includes("torch")) return "torch";
   switch (type) {
     case "weapon":
       return "weapon";
@@ -30,12 +42,14 @@ export function itemArtGenericKey(item) {
 
 export function itemArtSrc(item) {
   if (!item) return "sprites/items/generic-default.svg";
-  if (item.image) return item.image;
+  // Prefer explicit URL fields only when they look like real art paths.
+  if (looksLikeArtPath(item.image)) return item.image;
   const metaImg = item.meta && item.meta.img;
-  if (metaImg) return metaImg;
+  if (looksLikeArtPath(metaImg)) return metaImg;
   const tid = stripInstance(item.templateId || item.id);
   if (tid) return `/api/item-art/${tid}.png`;
-  return `sprites/items/generic-${itemArtGenericKey(item)}.svg`;
+  // No template id — start on generic PNG (SVG is last resort via onItemArtError).
+  return `/api/item-art/generic-${itemArtGenericKey(item)}.png`;
 }
 
 export function onItemArtError(ev, item) {
@@ -51,5 +65,10 @@ export function onItemArtError(ev, item) {
   if (stage === "1") {
     img.dataset.fallback = "2";
     img.src = `sprites/items/generic-${key}.svg`;
+    return;
+  }
+  if (stage === "2") {
+    img.dataset.fallback = "3";
+    img.src = "sprites/items/generic-default.svg";
   }
 }

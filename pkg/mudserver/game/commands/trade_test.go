@@ -198,3 +198,71 @@ func TestListRestocksMerchantInventory(t *testing.T) {
 		t.Fatal("expected shop listing to show restocked quantity")
 	}
 }
+
+func TestListShopImageUsesItemArtURLNeverMetaPrompt(t *testing.T) {
+	g, facade := newTradeTestGame(t)
+
+	template := &items.Item{
+		Entity:     &entities.Entity{ID: "ITM0001"},
+		IsTemplate: true,
+		Name:       "Dusty Torch",
+		Type:       items.ItemTypeCollectible,
+		SubType:    "light_source",
+		Slot:       items.ItemSlotInventory,
+		BasePrice:  2,
+		Meta: &struct {
+			Img string `bson:"img,omitempty" json:"img,omitempty"`
+		}{Img: "An old wooden torch with cloth wrapping, dusty but functional, fantasy item"},
+	}
+	if _, err := facade.ItemsService().Import(template); err != nil {
+		t.Fatalf("import item template: %v", err)
+	}
+
+	character := &characters.Character{
+		Entity:      &entities.Entity{ID: "char-shop-img"},
+		Name:        "Browser",
+		BelongsUser: *traits.BelongsToUser("user-1"),
+		CurrentRoom: traits.CurrentRoom{CurrentRoomID: "room-shop"},
+		Gold:        10,
+	}
+	merchant := &npc.NPC{
+		Entity:      &entities.Entity{ID: "merchant-img"},
+		Name:        "Bramwick",
+		CurrentRoom: traits.CurrentRoom{CurrentRoomID: "room-shop"},
+		MerchantTrait: &npc.MerchantTrait{
+			MerchantType:   "general",
+			BuyMultiplier:  1,
+			SellMultiplier: 0.5,
+			Inventory: []npc.MerchantItem{
+				{ItemTemplateID: template.ID, Quantity: 3, MaxQuantity: 3},
+			},
+		},
+	}
+	g.NPCManager.RegisterExistingNPC(merchant, "room-shop")
+
+	msg := &messages.Message{
+		FromUser:  &entities.User{Entity: &entities.Entity{ID: "user-1"}},
+		Character: character,
+		Data:      "list",
+	}
+	if !(&commands.ListCommand{}).Execute(g, msg) {
+		t.Fatal("list command did not handle message")
+	}
+
+	var shop *messages.ShopMessage
+	for _, out := range drainTradeMessages(g.SendMessage()) {
+		if s, ok := out.(*messages.ShopMessage); ok {
+			shop = s
+			break
+		}
+	}
+	if shop == nil || len(shop.Stock) != 1 {
+		t.Fatalf("expected one stock row, got %#v", shop)
+	}
+	if got := shop.Stock[0].Image; got != "/api/item-art/ITM0001.png" {
+		t.Fatalf("image = %q, want itemart URL (not meta prompt)", got)
+	}
+	if strings.Contains(shop.Stock[0].Image, " ") {
+		t.Fatal("shop image must never contain prose prompt whitespace")
+	}
+}
