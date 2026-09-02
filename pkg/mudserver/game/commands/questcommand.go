@@ -214,3 +214,83 @@ func (cmd *AbandonQuestCommand) Execute(game def.GameCtrl, message *messages.Mes
 	game.SendMessage() <- message.Reply("Active quest '" + questName + "' not found.")
 	return true
 }
+
+// CompleteQuestCommand turns in an anywhere-turn-in quest from the log.
+type CompleteQuestCommand struct{}
+
+func (cmd *CompleteQuestCommand) Key() CommandKey { return &StartsWithCommandKey{} }
+
+func (cmd *CompleteQuestCommand) Execute(game def.GameCtrl, message *messages.Message) bool {
+	if message.Character == nil {
+		game.SendMessage() <- message.Reply("You need to select a character first.")
+		return true
+	}
+
+	parts := strings.Fields(message.Data)
+	if len(parts) < 2 {
+		game.SendMessage() <- message.Reply("Usage: complete <quest name>")
+		return true
+	}
+
+	questName := strings.Join(parts[1:], " ")
+	questNameLower := strings.ToLower(questName)
+
+	progressList, err := game.GetFacade().QuestsService().GetQuestLog(message.Character.ID)
+	if err != nil {
+		game.SendMessage() <- message.Reply("Error loading quest log.")
+		return true
+	}
+
+	for _, p := range progressList {
+		if p.Status != quests.QuestStatusActive {
+			continue
+		}
+		quest, err := game.GetFacade().QuestsService().FindByID(p.QuestID)
+		if err != nil || quest == nil {
+			continue
+		}
+		if !strings.Contains(strings.ToLower(quest.Name), questNameLower) {
+			continue
+		}
+
+		result, err := game.GetFacade().QuestsService().TurnInQuestAnywhere(message.Character.ID, p.QuestID)
+		if err != nil {
+			game.SendMessage() <- message.Reply(err.Error())
+			return true
+		}
+
+		rewardMsg := buildQuestRewardMessage(quest, result.GrantedItems)
+		game.SendMessage() <- messages.MessageResponse{
+			Audience:   messages.MessageAudienceUser,
+			AudienceID: message.Character.BelongsUserID,
+			Type:       messages.MessageTypeQuestCompleted,
+			Message:    rewardMsg,
+		}
+
+		updatedChar, _ := game.GetFacade().CharactersService().FindByID(message.Character.ID)
+		if updatedChar != nil {
+			game.SendMessage() <- messages.NewCharacterUpdateMessage(message.Character.BelongsUserID, updatedChar)
+			if len(result.GrantedItems) > 0 {
+				inventoryMsg := &messages.Message{
+					FromUser:  message.FromUser,
+					Character: updatedChar,
+				}
+				game.SendMessage() <- messages.NewInventoryUpdateMessage(inventoryMsg)
+			}
+		}
+
+		questLog, _ := game.GetFacade().QuestsService().GetQuestLog(message.Character.ID)
+		game.SendMessage() <- messages.QuestLogMessage{
+			MessageResponse: messages.MessageResponse{
+				Audience:   messages.MessageAudienceUser,
+				AudienceID: message.Character.BelongsUserID,
+				Type:       messages.MessageTypeQuestLog,
+			},
+			Quests: buildQuestLogEntries(game, questLog),
+		}
+		return true
+	}
+
+	game.SendMessage() <- message.Reply("Active quest '" + questName + "' not found.")
+	return true
+}

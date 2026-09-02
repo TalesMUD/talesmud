@@ -42,6 +42,7 @@ type QuestsService interface {
 
 	// Reward granting
 	TurnInQuest(characterID, questID, npcID string) (*QuestTurnInResult, error)
+	TurnInQuestAnywhere(characterID, questID string) (*QuestTurnInResult, error)
 	GrantQuestRewards(characterID, questID string) ([]string, error)
 
 	// Definition validation
@@ -77,17 +78,20 @@ type QuestRewardEntry struct {
 
 // QuestLogEntry is an enriched quest log entry for APIs and WebSocket messages.
 type QuestLogEntry struct {
-	QuestID       string                        `json:"questId"`
-	QuestName     string                        `json:"questName"`
-	Description   string                        `json:"description,omitempty"`
-	Category      string                        `json:"category,omitempty"`
-	Level         int32                         `json:"level,omitempty"`
-	Status        string                        `json:"status"`
-	ReadyToTurnIn bool                          `json:"readyToTurnIn"`
-	Objectives    []QuestObjectiveProgressEntry `json:"objectives"`
-	Rewards       *QuestRewardEntry             `json:"rewards,omitempty"`
-	AcceptedAt    string                        `json:"acceptedAt,omitempty"`
-	CompletedAt   string                        `json:"completedAt,omitempty"`
+	QuestID        string                        `json:"questId"`
+	QuestName      string                        `json:"questName"`
+	Description    string                        `json:"description,omitempty"`
+	Category       string                        `json:"category,omitempty"`
+	Level          int32                         `json:"level,omitempty"`
+	Status         string                        `json:"status"`
+	ReadyToTurnIn  bool                          `json:"readyToTurnIn"`
+	TurnInAnywhere bool                          `json:"turnInAnywhere,omitempty"`
+	TurnInNpcID    string                        `json:"turnInNpcId,omitempty"`
+	TurnInNpcName  string                        `json:"turnInNpcName,omitempty"`
+	Objectives     []QuestObjectiveProgressEntry `json:"objectives"`
+	Rewards        *QuestRewardEntry             `json:"rewards,omitempty"`
+	AcceptedAt     string                        `json:"acceptedAt,omitempty"`
+	CompletedAt    string                        `json:"completedAt,omitempty"`
 }
 
 // QuestEventType identifies a game event that can advance active quest objectives.
@@ -257,7 +261,6 @@ func (s *questsService) ValidateQuest(quest *quests.Quest) []QuestValidationIssu
 	}
 
 	objectiveIDs := map[string]bool{}
-	hasTurnInNPC := quest.Source.Type == "npc" && strings.TrimSpace(quest.Source.NPCID) != ""
 	for i, obj := range quest.Objectives {
 		path := "objectives"
 		if obj.ID == "" {
@@ -289,8 +292,6 @@ func (s *questsService) ValidateQuest(quest *quests.Quest) []QuestValidationIssu
 			}
 			if strings.TrimSpace(obj.DeliverToNPCID) == "" || !s.npcExists(obj.DeliverToNPCID) {
 				addError(path, "missing_delivery_npc", "Deliver objectives require an existing delivery NPC.")
-			} else {
-				hasTurnInNPC = true
 			}
 		case quests.ObjectiveVisit:
 			if strings.TrimSpace(obj.TargetID) == "" || !s.roomExists(obj.TargetID) {
@@ -311,8 +312,11 @@ func (s *questsService) ValidateQuest(quest *quests.Quest) []QuestValidationIssu
 		_ = i
 	}
 
-	if !hasTurnInNPC {
-		addError("source", "missing_turn_in_npc", "Quest needs an NPC source or a deliver objective with a delivery NPC so it can be turned in.")
+	anywhere, turnInNPC := quest.ResolveTurnIn()
+	if !anywhere && strings.TrimSpace(turnInNPC) == "" {
+		addError("turnIn", "missing_turn_in_npc", "Quest needs turnIn: anywhere, an NPC source, or a deliver objective with a delivery NPC.")
+	} else if strings.TrimSpace(turnInNPC) != "" && !s.npcExists(turnInNPC) {
+		addError("turnIn", "missing_turn_in_npc", "Turn-in NPC does not exist.")
 	}
 
 	for _, itemID := range quest.Rewards.ItemTemplateIDs {
@@ -405,6 +409,7 @@ func (s *questsService) BuildQuestLog(characterID string) ([]QuestLogEntry, erro
 				ItemTemplateIDs: quest.Rewards.ItemTemplateIDs,
 			},
 		}
+		applyQuestLogTurnIn(&entry, quest, s.facade)
 		if !progress.AcceptedAt.IsZero() {
 			entry.AcceptedAt = progress.AcceptedAt.Format("2006-01-02T15:04:05Z07:00")
 		}
@@ -918,19 +923,77 @@ func (s *questsService) TurnInQuest(characterID, questID, npcID string) (*QuestT
 	}, nil
 }
 
+func (s *questsService) TurnInQuestAnywhere(characterID, questID string) (*QuestTurnInResult, error) {
+	quest, err := s.FindByID(questID)
+	if err != nil || quest == nil {
+		return nil, errors.New("quest not found")
+	}
+	if !quest.AllowsAnywhereTurnIn() {
+		npcID := quest.TurnInNPCID()
+		if npcID == "" {
+			return nil, errors.New("this quest must be turned in at an NPC")
+		}
+		name := s.npcName(npcID)
+		if name == "" {
+			name = npcID
+		}
+		return nil, errors.New("turn this quest in at " + name)
+	}
+
+	progress, err := s.CompleteQuest(characterID, questID)
+	if err != nil {
+		return nil, err
+	}
+
+	grantedItems, err := s.GrantQuestRewards(characterID, questID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &QuestTurnInResult{
+		QuestID:       quest.ID,
+		QuestName:     quest.Name,
+		GrantedItems:  grantedItems,
+		XP:            quest.Rewards.XP,
+		Gold:          quest.Rewards.Gold,
+		CompletedAt:   progress.CompletedAt,
+		QuestProgress: progress,
+	}, nil
+}
+
 func questCanTurnInAtNPC(quest *quests.Quest, npcID string) bool {
-	if strings.TrimSpace(npcID) == "" {
+	if strings.TrimSpace(npcID) == "" || quest == nil {
 		return false
 	}
-	if quest.Source.Type == "npc" && quest.Source.NPCID == npcID {
-		return true
+	if quest.AllowsAnywhereTurnIn() {
+		return false
 	}
-	for _, objective := range quest.Objectives {
-		if objective.Type == quests.ObjectiveDeliver && objective.DeliverToNPCID == npcID {
-			return true
+	return quest.TurnInNPCID() == npcID
+}
+
+func applyQuestLogTurnIn(entry *QuestLogEntry, quest *quests.Quest, facade Facade) {
+	if entry == nil || quest == nil {
+		return
+	}
+	anywhere, npcID := quest.ResolveTurnIn()
+	entry.TurnInAnywhere = anywhere
+	entry.TurnInNpcID = npcID
+	if npcID != "" && facade != nil && facade.NPCsService() != nil {
+		if npc, err := facade.NPCsService().FindByID(npcID); err == nil && npc != nil {
+			entry.TurnInNpcName = npc.Name
 		}
 	}
-	return false
+}
+
+func (s *questsService) npcName(id string) string {
+	if s.facade == nil || s.facade.NPCsService() == nil {
+		return ""
+	}
+	npc, err := s.facade.NPCsService().FindByID(id)
+	if err != nil || npc == nil {
+		return ""
+	}
+	return npc.Name
 }
 
 // GrantQuestRewards awards XP, gold, and items to character upon quest completion

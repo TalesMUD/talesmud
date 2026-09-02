@@ -30,7 +30,7 @@ func TestBuildQuestLogEntryIncludesDefinitionDetails(t *testing.T) {
 		},
 	}
 
-	entry := buildQuestLogEntry(quest, progress)
+	entry := buildQuestLogEntry(nil, quest, progress)
 	if entry.QuestName != quest.Name || entry.Description != quest.Description || entry.Objectives[0].Description != "Kill 3 rats" {
 		t.Fatalf("entry missing quest details: %#v", entry)
 	}

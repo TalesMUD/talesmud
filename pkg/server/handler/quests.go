@@ -282,30 +282,18 @@ func (h *QuestsHandler) CompleteQuest(c *gin.Context) {
 		return
 	}
 
-	// 2. Mark quest as completed
-	progress, err = h.Service.CompleteQuest(characterID, questID)
+	result, err := h.Service.TurnInQuestAnywhere(characterID, questID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// 3. Grant rewards
-	grantedItems, err := h.Service.GrantQuestRewards(characterID, questID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	// 4. Get quest definition for reward info
-	quest, _ := h.Service.FindByID(questID)
-
-	// 5. Return completion result
 	c.JSON(http.StatusOK, gin.H{
-		"progress": progress,
+		"progress": result.QuestProgress,
 		"rewards": gin.H{
-			"xp":    quest.Rewards.XP,
-			"gold":  quest.Rewards.Gold,
-			"items": grantedItems,
+			"xp":    result.XP,
+			"gold":  result.Gold,
+			"items": result.GrantedItems,
 		},
 	})
 }
