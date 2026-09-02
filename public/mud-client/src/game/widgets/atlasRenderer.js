@@ -116,11 +116,11 @@ function computeCamera(places, w, h, panX, panY, userScale) {
   };
 }
 
-/** Match Creator: negate Y so higher stored Y reads as north-at-top on screen. */
+/** World coords: north decreases Y. Screen: north at top (canvas Y down). */
 function projectGrid(gx, gy, cam, w, h) {
   return {
     px: w / 2 + cam.panX + (gx - cam.ox) * cam.tileStep,
-    py: h / 2 + cam.panY - (gy - cam.oy) * cam.tileStep,
+    py: h / 2 + cam.panY + (gy - cam.oy) * cam.tileStep,
   };
 }
 
@@ -155,12 +155,10 @@ function isCrossArea(a, b) {
 
 function tileEdgePoint(px, py, half, worldDx, worldDy) {
   if (worldDx === 0 && worldDy === 0) return { px, py };
-  const sdx = worldDx;
-  const sdy = -worldDy;
-  if (Math.abs(sdx) >= Math.abs(sdy)) {
-    return { px: px + (sdx > 0 ? half : -half), py };
+  if (Math.abs(worldDx) >= Math.abs(worldDy)) {
+    return { px: px + (worldDx > 0 ? half : -half), py };
   }
-  return { px, py: py + (sdy > 0 ? half : -half) };
+  return { px, py: py + (worldDy > 0 ? half : -half) };
 }
 
 function roundRect(ctx, x, y, w, h, r) {
@@ -270,7 +268,7 @@ function drawGrid(ctx, cam, w, h, places) {
   }
 }
 
-function drawAreaCells(ctx, places, cam, w, h) {
+function drawAreaCells(ctx, places, cam, w, h, showLabels) {
   const byArea = new Map();
   for (const p of places) {
     if (!p.discovered || !p.area) continue;
@@ -289,7 +287,7 @@ function drawAreaCells(ctx, places, cam, w, h) {
       ctx.fill();
       if (!labelPos) labelPos = { px: px - cell / 2 + 6, py: py - cell / 2 + 10 };
     }
-    if (labelPos && rooms.length > 1) {
+    if (showLabels && labelPos && rooms.length > 1) {
       const name = rooms[0].areaName || area;
       ctx.font = 'italic 600 9px Georgia, serif';
       ctx.fillStyle = 'rgba(220, 200, 160, 0.45)';
@@ -493,6 +491,7 @@ export function paintAtlas(ctx, params) {
   }
 
   const cam = computeCamera(visiblePlaces, w, h, panX, panY, userScale);
+  const showRoomLabels = userScale > 1.08;
   const byId = {};
   for (const p of atlas.places || []) byId[p.id] = p;
 
@@ -502,7 +501,7 @@ export function paintAtlas(ctx, params) {
     drawRegionWash(ctx, region, cam, w, h);
   }
 
-  drawAreaCells(ctx, visiblePlaces, cam, w, h);
+  drawAreaCells(ctx, visiblePlaces, cam, w, h, showRoomLabels);
 
   const layerPaths = (atlas.paths || []).filter((path) => {
     const a = byId[path.from];
@@ -546,9 +545,7 @@ export function paintAtlas(ctx, params) {
   }
 
   for (const place of visiblePlaces) {
-    if (!place.discovered || !place.name) continue;
-    const showName = place.current || place.landmark || maximized || visiblePlaces.length <= 12;
-    if (!showName) continue;
+    if (!showRoomLabels || !place.discovered || !place.name) continue;
     const { px, py } = projectPlace(place, cam, w, h);
     const half = tileHalf(cam.tileStep);
     ctx.font = place.current ? '700 10px Georgia, serif' : '600 9px Georgia, serif';
