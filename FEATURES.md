@@ -1056,7 +1056,7 @@ Click the 📊 button in quest log header to access:
 Enhanced notification system with interactions:
 
 **Notification Types:**
-- **Quest Accepted** (amber border)
+- **Quest Accepted** — large centered overlay above Talk/dialog (amber border), not a top-right chip
 - **Quest Progress** (blue border) - shows the changed objective and current/required counts
 - **Quest Ready** (yellow border) - shown when all objectives are complete and the quest can be turned in
 - **Quest Completed** (green border)
@@ -1065,13 +1065,15 @@ Enhanced notification system with interactions:
 - **Click to View** - Opens quest in quest log
 - **Dismiss Button (×)** - Manual dismiss with slide-out animation
 - **Hover Effects** - Highlights notification
-- **Auto-dismiss** - Removes after 5 seconds
+- **Auto-dismiss** - Corner toasts after 5s; accepted banner after 10s
 
 **Features:**
 - Unique notification IDs
 - Notification queue capped to the latest 4 visible events
 - Slide-in and slide-out animations
 - Smooth transitions
+- Accepting a quest refreshes the open Talk dialog so `[Quest]` becomes `[In Progress]` without closing Talk
+- Quest log: READY + turnInAnywhere shows **Turn In** (`complete <name>`); otherwise a **Turn in: &lt;NPC&gt;** hint
 - Top-right positioning
 
 ### Quest API Endpoints

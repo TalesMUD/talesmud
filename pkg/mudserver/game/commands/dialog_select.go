@@ -364,11 +364,27 @@ func handleQuestAction(game def.GameCtrl, message *messages.Message, selectedOpt
 		}
 		acceptMsg += fmt.Sprintf("\n══════════════════════════════════════════════════")
 
-		game.SendMessage() <- messages.MessageResponse{
-			Audience:   messages.MessageAudienceUser,
-			AudienceID: char.BelongsUserID,
-			Type:       messages.MessageTypeQuestAccepted,
-			Message:    acceptMsg,
+		objectives := make([]messages.QuestObjectiveProgress, 0, len(quest.Objectives))
+		for _, obj := range quest.Objectives {
+			objectives = append(objectives, messages.QuestObjectiveProgress{
+				ObjectiveID: obj.ID,
+				Description: obj.Description,
+				Current:     0,
+				Required:    obj.Amount,
+				Completed:   false,
+			})
+		}
+		game.SendMessage() <- messages.QuestUpdateMessage{
+			MessageResponse: messages.MessageResponse{
+				Audience:   messages.MessageAudienceUser,
+				AudienceID: char.BelongsUserID,
+				Type:       messages.MessageTypeQuestAccepted,
+				Message:    acceptMsg,
+			},
+			QuestName:  quest.Name,
+			QuestID:    quest.ID,
+			Status:     "accepted",
+			Objectives: objectives,
 		}
 
 		// Send quest log update
@@ -390,6 +406,10 @@ func handleQuestAction(game def.GameCtrl, message *messages.Message, selectedOpt
 		}).Info("Quest accepted via dialog")
 
 		runQuestAcceptScript(game, message, quest.OnAcceptScriptID)
+
+		// Keep Talk open: refresh options so [Quest] becomes [In Progress]
+		refreshActiveDialog(game, message, npcName, activeConv)
+		return
 
 	case "complete":
 		// Complete the quest and grant rewards
@@ -486,8 +506,33 @@ func handleQuestAction(game def.GameCtrl, message *messages.Message, selectedOpt
 		game.SendMessage() <- message.Reply(progressMsg)
 	}
 
-	// End dialog after quest action
+	// End dialog after complete/progress (accept refreshes in place above)
 	game.GetFacade().ConversationsService().ResetConversation(activeConv)
+}
+
+// refreshActiveDialog re-sends the open Talk dialog with updated quest options
+// so accepting a quest flips [Quest] → [In Progress] without closing the conversation.
+func refreshActiveDialog(game def.GameCtrl, message *messages.Message, npcName string, activeConv *conversations.Conversation) {
+	if game == nil || message == nil || message.Character == nil || activeConv == nil {
+		return
+	}
+
+	questOptions := questOptionsForConversation(game, message.Character.ID, activeConv)
+
+	if isQuestOnlyConversation(activeConv) {
+		sendQuestOnlyDialog(game, message, npcName, activeConv, questOptions)
+		return
+	}
+
+	if activeConv.DialogID == "" {
+		return
+	}
+	dialog, err := game.GetFacade().DialogsService().FindByID(activeConv.DialogID)
+	if err != nil || dialog == nil {
+		log.WithError(err).Warn("refreshActiveDialog: could not reload dialog")
+		return
+	}
+	sendDialogMessage(game, message, npcName, dialog, activeConv, questOptions)
 }
 
 // handleQuestDialogOption handles a quest option that was injected into the dialog by the talk command.

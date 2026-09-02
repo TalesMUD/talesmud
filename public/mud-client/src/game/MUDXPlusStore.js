@@ -266,6 +266,24 @@ function createStore() {
       });
     },
 
+    /** While Talk is open, flip [Quest] Name → [In Progress] Name after accept. */
+    markDialogQuestAccepted: (questName) => {
+      update((state) => {
+        if (!state.dialogActive) return state;
+        const needle = String(questName || "").trim().toLowerCase();
+        if (!needle) return state;
+        state.dialogOptions = (state.dialogOptions || []).map((opt) => {
+          const text = String(opt?.text || "");
+          const match = text.match(/^\[Quest\]\s*(.+)$/i);
+          if (match && match[1].trim().toLowerCase() === needle) {
+            return { ...opt, text: `[In Progress] ${match[1].trim()}` };
+          }
+          return opt;
+        });
+        return state;
+      });
+    },
+
     setShop: (shop) => {
       update((state) => {
         state.shop = shop || null;
@@ -425,13 +443,14 @@ function createStore() {
         return state;
       });
 
-      // Auto-remove after 5 seconds
+      // Accepted banner stays longer; corner toasts dismiss sooner
+      const ttl = notification?.type === 'accepted' ? 10000 : 5000;
       setTimeout(() => {
         update((state) => {
-          state.questNotifications = state.questNotifications.filter(n => n !== notification);
+          state.questNotifications = state.questNotifications.filter(n => n.id !== notification.id && n !== notification);
           return state;
         });
-      }, 5000);
+      }, ttl);
     },
 
     // Minimap methods
