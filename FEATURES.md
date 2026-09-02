@@ -1056,10 +1056,9 @@ Click the 📊 button in quest log header to access:
 Enhanced notification system with interactions:
 
 **Notification Types:**
-- **Quest Accepted** — large centered overlay above Talk/dialog (amber border), not a top-right chip
+- **Quest Accepted** / **Quest Complete** — Veilspan centered moment cards (amber/brass), not top-right chips
 - **Quest Progress** (blue border) - shows the changed objective and current/required counts
 - **Quest Ready** (yellow border) - shown when all objectives are complete and the quest can be turned in
-- **Quest Completed** (green border)
 
 **Interactions:**
 - **Click to View** - Opens quest in quest log
