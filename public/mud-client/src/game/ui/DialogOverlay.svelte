@@ -1,5 +1,5 @@
 <script>
-  import { portraitSrc, onPortraitError } from '../portraitSrc.js';
+  import { portraitBustSrc, onPortraitBustError } from '../portraitSrc.js';
 
   export let npcName = "";
   export let npcText = "";
@@ -50,7 +50,7 @@
   /* Same footprint as the old framed portrait; sprite sits on dialog bg, no box */
   .npc-portrait-slot {
     width: clamp(100px, 22vw, 140px);
-    aspect-ratio: 2 / 3;
+    aspect-ratio: 1 / 1;
     flex-shrink: 0;
     position: relative;
     overflow: hidden;
@@ -58,11 +58,11 @@
 
   .npc-portrait {
     position: absolute;
-    left: 0;
-    bottom: 0;
+    inset: 0;
     width: 100%;
-    height: auto;
-    max-height: none;
+    height: 100%;
+    object-fit: cover;
+    object-position: center center;
     image-rendering: pixelated;
     display: block;
     pointer-events: none;
@@ -191,9 +191,9 @@
     <div class="npc-portrait-slot">
       <img
         class="npc-portrait"
-        src={portraitSrc(npc)}
+        src={portraitBustSrc(npc)}
         alt=""
-        on:error={(e) => onPortraitError(e, npc)}
+        on:error={(e) => onPortraitBustError(e, npc)}
       />
     </div>
     <div class="dialog-header-text">

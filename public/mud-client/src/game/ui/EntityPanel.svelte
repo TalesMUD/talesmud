@@ -53,9 +53,9 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: top center;
+    object-position: bottom center;
     transform: scale(1.6);
-    transform-origin: top center;
+    transform-origin: bottom center;
     image-rendering: pixelated;
     display: block;
     z-index: 0;
