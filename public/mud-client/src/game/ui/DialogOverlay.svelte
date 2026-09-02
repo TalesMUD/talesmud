@@ -47,13 +47,29 @@
     margin-bottom: 1em;
   }
 
-  /* Same footprint as the old framed portrait; sprite sits on dialog bg, no box */
+  /* Large 1:1 bust in a rounded frame so the flat chest crop is clipped. */
   .npc-portrait-slot {
     width: clamp(100px, 22vw, 140px);
     aspect-ratio: 1 / 1;
     flex-shrink: 0;
     position: relative;
     overflow: hidden;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: #111;
+    box-sizing: border-box;
+  }
+  .npc-portrait-slot.enemy {
+    border-color: rgba(239, 68, 68, 0.45);
+  }
+  .npc-portrait-slot.merchant {
+    border-color: rgba(34, 197, 94, 0.45);
+  }
+  .npc-portrait-slot.quest {
+    border-color: rgba(245, 158, 11, 0.45);
+  }
+  .npc-portrait-slot.npc {
+    border-color: rgba(59, 130, 246, 0.4);
   }
 
   .npc-portrait {
@@ -188,7 +204,7 @@
 
 <div class="dialog-overlay">
   <div class="dialog-header">
-    <div class="npc-portrait-slot">
+    <div class="npc-portrait-slot {npcType}">
       <img
         class="npc-portrait"
         src={portraitBustSrc(npc)}
