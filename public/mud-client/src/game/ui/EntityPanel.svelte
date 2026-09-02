@@ -53,12 +53,22 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: bottom center;
-    transform: scale(1.6);
-    transform-origin: bottom center;
+    object-position: top center;
     image-rendering: pixelated;
     display: block;
     z-index: 0;
+  }
+
+  /* Wide sprite content (animals): show whole figure, letterbox */
+  .entity-bg.fit-wide {
+    object-fit: contain;
+    object-position: center center;
+  }
+
+  /* Tall/narrow sprite content (standing NPCs): fill 2:3, keep head */
+  .entity-bg.fit-tall {
+    object-fit: cover;
+    object-position: top center;
   }
 
   .entity-health {
@@ -382,6 +392,89 @@
       handleCardClick(npc, primary);
     }
   }
+
+  // Card chrome is 2:3. Sprites are often square canvases with tall or wide
+  // content — crop to opaque bbox, then contain (wide) or cover-top (tall).
+  const CARD_ASPECT = 2 / 3;
+  const fitCache = new Map();
+
+  function opaqueBBox(img) {
+    const w = img.naturalWidth;
+    const h = img.naturalHeight;
+    if (!w || !h) return null;
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) return null;
+      ctx.drawImage(img, 0, 0);
+      const data = ctx.getImageData(0, 0, w, h).data;
+      let minX = w, minY = h, maxX = 0, maxY = 0;
+      let found = false;
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          if (data[(y * w + x) * 4 + 3] > 12) {
+            found = true;
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x > maxX) maxX = x;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+      if (!found) return null;
+      // Small pad so pixel edges aren't flush against the crop
+      const pad = 2;
+      minX = Math.max(0, minX - pad);
+      minY = Math.max(0, minY - pad);
+      maxX = Math.min(w - 1, maxX + pad);
+      maxY = Math.min(h - 1, maxY + pad);
+      return { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function fitModeForBox(box, img) {
+    if (box && box.h > 0) {
+      return box.w / box.h > CARD_ASPECT ? 'fit-wide' : 'fit-tall';
+    }
+    if (img.naturalWidth && img.naturalHeight) {
+      return img.naturalWidth / img.naturalHeight > CARD_ASPECT ? 'fit-wide' : 'fit-tall';
+    }
+    return 'fit-tall';
+  }
+
+  function applyCardFit(ev) {
+    const img = ev && ev.currentTarget;
+    if (!img) return;
+    const src = img.currentSrc || img.src;
+    let cached = fitCache.get(src);
+    if (!cached) {
+      const box = opaqueBBox(img);
+      cached = { mode: fitModeForBox(box, img), box };
+      fitCache.set(src, cached);
+    }
+    img.classList.remove('fit-wide', 'fit-tall');
+    img.classList.add(cached.mode);
+    if (cached.box) {
+      const { x, y, w, h } = cached.box;
+      img.style.objectViewBox = `xywh(${x}px ${y}px ${w}px ${h}px)`;
+    } else {
+      img.style.objectViewBox = '';
+    }
+  }
+
+  function handlePortraitError(ev, npc) {
+    onPortraitError(ev, npc);
+    const img = ev && ev.currentTarget;
+    if (!img) return;
+    img.classList.remove('fit-wide', 'fit-tall');
+    img.style.objectViewBox = '';
+    // Avatar fallbacks are square faces — contain looks fine
+    img.classList.add('fit-wide');
+  }
 </script>
 
 {#if $store.npcs && $store.npcs.length > 0}
@@ -402,7 +495,8 @@
           class="entity-bg"
           src={portraitSrc(npc)}
           alt=""
-          on:error={(e) => onPortraitError(e, npc)}
+          on:load={applyCardFit}
+          on:error={(e) => handlePortraitError(e, npc)}
         />
 
         {#if npc.isEnemy && npc.maxHp > 0}
