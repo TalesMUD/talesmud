@@ -121,7 +121,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1.25rem;
+    padding: 0.85rem;
     pointer-events: none;
     background: rgba(0, 0, 0, 0.35);
   }
@@ -129,13 +129,13 @@
   .accept-card {
     pointer-events: auto;
     position: relative;
-    width: min(92vw, 420px);
-    max-height: min(78vh, 520px);
+    width: min(82vw, 340px);
+    max-height: min(62vh, 380px);
     overflow: auto;
     background: rgba(8, 10, 16, 0.94);
     border: 1.5px solid rgba(245, 158, 11, 0.7);
     border-radius: 12px;
-    padding: 1.35rem 1.4rem 1.15rem;
+    padding: 0.85rem 0.95rem 0.8rem;
     box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
     animation: acceptPop 0.28s ease-out;
     font-family: "Fira Code", "Cascadia Code", monospace;
@@ -154,11 +154,11 @@
   }
 
   .accept-title {
-    font-size: clamp(1.15rem, 2.4vw, 1.45rem);
+    font-size: clamp(0.92rem, 1.6vw, 1.08rem);
     font-weight: 700;
     color: #fde68a;
-    margin-bottom: 0.75rem;
-    line-height: 1.25;
+    margin-bottom: 0.45rem;
+    line-height: 1.22;
   }
 
   .accept-body {
@@ -166,9 +166,9 @@
     white-space: pre-wrap;
     word-break: break-word;
     color: #e5e7eb;
-    font-size: 0.78rem;
-    line-height: 1.45;
-    max-height: 14rem;
+    font-size: 0.72rem;
+    line-height: 1.28;
+    max-height: 10rem;
     overflow-y: auto;
   }
 
