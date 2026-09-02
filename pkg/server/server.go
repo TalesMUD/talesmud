@@ -398,6 +398,7 @@ func (app *app) setupRoutes() {
 		}
 		itemsHandler := &handler.BackgroundsHandler{BasePath: itemsPath}
 		public.GET("item-art/:filename", itemsHandler.ServeBackground)
+		public.HEAD("item-art/:filename", itemsHandler.ServeBackground)
 
 		// Legacy endpoint for old character creation flow (returns hardcoded templates)
 		public.GET("templates/characters", csh.GetCharacterTemplates)
