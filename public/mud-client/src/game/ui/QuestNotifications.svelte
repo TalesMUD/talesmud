@@ -5,21 +5,19 @@
   let notifications = [];
   let dismissingIds = new Set();
 
-  // Subscribe to store for reactive updates
   $: if (store) {
     notifications = $store.questNotifications || [];
   }
 
-  $: accepted = notifications.filter((n) => n.type === 'accepted');
-  $: corner = notifications.filter((n) => n.type !== 'accepted');
+  $: momentCards = notifications.filter((n) => n.type === 'accepted' || n.type === 'completed');
+  $: corner = notifications.filter((n) => n.type !== 'accepted' && n.type !== 'completed');
 
   function dismissNotification(notification) {
     if (dismissingIds.has(notification.id)) return;
 
     dismissingIds.add(notification.id);
-    dismissingIds = dismissingIds; // Trigger reactivity
+    dismissingIds = dismissingIds;
 
-    // Wait for animation to finish before removing
     setTimeout(() => {
       if (store) {
         store.update(state => {
@@ -42,22 +40,63 @@
     return dismissingIds.has(notification.id);
   }
 
-  function acceptHeadline(notification) {
+  function kickerFor(notification) {
+    return notification.type === 'completed' ? 'Quest complete' : 'Quest accepted';
+  }
+
+  function titleFor(notification) {
     const name = (notification.questName || '').trim();
     if (name && name.toLowerCase() !== 'quest') return name;
-    return 'Quest accepted';
+    return kickerFor(notification);
+  }
+
+  function stripBoxLines(text) {
+    return String(text || '')
+      .replace(/[\u2500-\u257F╔╗╚╝║═╠╣╦╩╬]/g, '')
+      .split('\n')
+      .map((line) => line.replace(/^\s*[-*•]\s*/, '').trim())
+      .filter((line) => {
+        if (!line) return false;
+        if (/^QUEST\s+(ACCEPTED|COMPLETED)\b/i.test(line)) return false;
+        if (/^(OBJECTIVES|REWARDS)\s*:?$/i.test(line)) return false;
+        if (/^items\s*:?$/i.test(line)) return false;
+        return true;
+      });
+  }
+
+  function detailLines(notification) {
+    const fromObjectives = (notification.objectives || [])
+      .map((o) => (o && (o.description || o.Description)) || '')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (notification.type !== 'completed' && fromObjectives.length) {
+      return fromObjectives;
+    }
+    const fromMessage = stripBoxLines(notification.message);
+    const title = titleFor(notification).toLowerCase();
+    return fromMessage.filter((line) => line.toLowerCase() !== title);
+  }
+
+  function listLabel(notification) {
+    if (notification.type === 'completed') return 'Rewards';
+    return detailLines(notification).length ? 'Objectives' : '';
   }
 </script>
 
-{#if accepted.length > 0}
-  <!-- Large CENTRAL accept banner — not the old top-right chip -->
-  <div class="quest-accept-layer" aria-live="polite">
-    {#each accepted as notification (notification.id || notification)}
+<svelte:head>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+</svelte:head>
+
+{#if momentCards.length > 0}
+  <div class="quest-moment-layer" aria-live="polite">
+    {#each momentCards as notification (notification.id || notification)}
       <div
-        class="accept-card"
+        class="veilspan-card"
         class:slide-out={isDismissing(notification)}
         role="dialog"
-        aria-label="Quest accepted"
+        aria-label={kickerFor(notification)}
       >
         <button
           class="dismiss-btn accept-dismiss"
@@ -67,10 +106,15 @@
         >
           ×
         </button>
-        <div class="accept-kicker">QUEST ACCEPTED</div>
-        <div class="accept-title">{acceptHeadline(notification)}</div>
-        {#if notification.message}
-          <pre class="accept-body">{notification.message}</pre>
+        <div class="card-kicker">{kickerFor(notification)}</div>
+        <div class="card-title">{titleFor(notification)}</div>
+        {#if detailLines(notification).length}
+          <div class="card-list-label">{listLabel(notification)}</div>
+          <ul class="card-list">
+            {#each detailLines(notification) as line}
+              <li>{line}</li>
+            {/each}
+          </ul>
         {/if}
         <button
           class="accept-open"
@@ -114,7 +158,7 @@
 {/if}
 
 <style>
-  .quest-accept-layer {
+  .quest-moment-layer {
     position: fixed;
     inset: 0;
     z-index: 1200;
@@ -123,53 +167,84 @@
     justify-content: center;
     padding: 0.85rem;
     pointer-events: none;
-    background: rgba(0, 0, 0, 0.35);
+    background: rgba(0, 0, 0, 0.38);
   }
 
-  .accept-card {
+  .veilspan-card {
     pointer-events: auto;
     position: relative;
-    width: min(82vw, 340px);
-    max-height: min(62vh, 380px);
+    width: min(84vw, 360px);
+    max-height: min(62vh, 400px);
     overflow: auto;
-    background: rgba(8, 10, 16, 0.94);
-    border: 1.5px solid rgba(245, 158, 11, 0.7);
-    border-radius: 12px;
-    padding: 0.85rem 0.95rem 0.8rem;
-    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+    text-align: center;
+    background:
+      linear-gradient(165deg, rgba(33, 27, 21, 0.96) 0%, rgba(11, 16, 23, 0.96) 100%);
+    border: 1.4px solid rgba(211, 173, 99, 0.55);
+    border-radius: 8px;
+    padding: 1.05rem 1.1rem 0.9rem;
+    box-shadow:
+      0 18px 48px rgba(0, 0, 0, 0.55),
+      inset 0 0 0 1px rgba(116, 91, 51, 0.28);
     animation: acceptPop 0.28s ease-out;
-    font-family: "Fira Code", "Cascadia Code", monospace;
   }
 
-  .accept-card.slide-out {
+  .veilspan-card.slide-out {
     animation: acceptOut 0.25s ease-in forwards;
   }
 
-  .accept-kicker {
+  .card-kicker {
+    font-family: "Cinzel", serif;
     font-size: 0.72rem;
     font-weight: 700;
-    letter-spacing: 0.14em;
-    color: #fbbf24;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #f0c36a;
+    text-shadow: 0 0 10px rgba(255, 215, 140, 0.28);
     margin-bottom: 0.35rem;
   }
 
-  .accept-title {
-    font-size: clamp(1.04rem, 2.0vw, 1.26rem);
-    font-weight: 700;
-    color: #fde68a;
-    margin-bottom: 0.45rem;
+  .card-title {
+    font-family: "Cinzel", serif;
+    font-size: clamp(1.02rem, 2.1vw, 1.28rem);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: #f0e6d3;
+    text-shadow:
+      0 0 10px rgba(255, 215, 140, 0.25),
+      0 2px 4px rgba(0, 0, 0, 0.75);
+    margin-bottom: 0.55rem;
     line-height: 1.3;
   }
 
-  .accept-body {
-    margin: 0 0 0.9rem;
-    white-space: pre-wrap;
-    word-break: break-word;
-    color: #e5e7eb;
-    font-size: 0.88rem;
-    line-height: 1.3;
-    max-height: 10rem;
-    overflow-y: auto;
+  .card-list-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(211, 173, 99, 0.9);
+    margin-bottom: 0.3rem;
+  }
+
+  .card-list {
+    list-style: none;
+    margin: 0 0 0.85rem;
+    padding: 0;
+    text-align: left;
+    color: #e8e0d2;
+    font-size: clamp(0.88rem, 1.68vw, 1.10rem);
+    line-height: 1.35;
+  }
+
+  .card-list li {
+    padding: 0.18rem 0 0.18rem 0.9rem;
+    position: relative;
+  }
+
+  .card-list li::before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: #d3ad63;
   }
 
   .accept-open {
@@ -179,9 +254,9 @@
     width: 100%;
     padding: 0.55rem 0.75rem;
     border-radius: 8px;
-    border: 1px solid rgba(245, 158, 11, 0.45);
-    background: rgba(245, 158, 11, 0.12);
-    color: #fde68a;
+    border: 1px solid rgba(211, 173, 99, 0.45);
+    background: rgba(211, 173, 99, 0.12);
+    color: #f0e6d3;
     font: inherit;
     font-size: 0.85rem;
     font-weight: 600;
@@ -189,7 +264,7 @@
   }
 
   .accept-open:hover {
-    background: rgba(245, 158, 11, 0.22);
+    background: rgba(211, 173, 99, 0.22);
   }
 
   .accept-dismiss {
@@ -252,10 +327,6 @@
     border-left: 4px solid #4a9eff;
   }
 
-  .notification.completed {
-    border-left: 4px solid #22c55e;
-  }
-
   .notification.ready {
     border-left: 4px solid #facc15;
   }
@@ -268,10 +339,6 @@
 
   .notification.progress .notification-title {
     color: #4a9eff;
-  }
-
-  .notification.completed .notification-title {
-    color: #22c55e;
   }
 
   .notification.ready .notification-title {
