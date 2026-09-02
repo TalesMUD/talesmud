@@ -5,6 +5,8 @@
 
   export let store = null;
   export let sendMessage = null;
+  /** When true, hide the inline widget chrome; only render the full Map overview overlay. */
+  export let overlayHost = false;
 
   let atlas = emptyAtlas();
   let currentRoomId = null;
@@ -31,6 +33,23 @@
   let lastWidgetSize = null;
   let lastModalSize = null;
   let drawRaf = 0;
+
+  // External Map pin / host opens overview via store.mapOverviewOpen
+  $: if (store && $store) {
+    const want = !!$store.mapOverviewOpen;
+    if (want !== maximized) {
+      maximized = want;
+      if (maximized) {
+        panX = 0;
+        panY = 0;
+        userScale = 1;
+        lastModalSize = null;
+        tick().then(() => scheduleDraw());
+      } else {
+        scheduleDraw();
+      }
+    }
+  }
 
   function emptyAtlas() {
     return { characterId: '', currentRoomId: '', currentLayer: '', layers: [], places: [], paths: [], regions: [] };
@@ -274,7 +293,12 @@
   }
 
   async function toggleMaximize() {
-    maximized = !maximized;
+    const next = !maximized;
+    if (store && store.setMapOverviewOpen) {
+      store.setMapOverviewOpen(next);
+      return;
+    }
+    maximized = next;
     if (maximized) {
       panX = 0;
       panY = 0;
@@ -337,6 +361,7 @@
     if (modalObserver) modalObserver.disconnect();
     cancelTravel();
     maximized = false;
+    if (store && store.closeMapOverview) store.closeMapOverview();
   });
 </script>
 
@@ -428,13 +453,14 @@
   }
 </style>
 
+{#if !overlayHost}
 <div class="atlas">
   <div class="toolbar">
     <button class="icon-btn" title="Expand map" on:click={toggleMaximize}>
       <i class="material-icons">open_in_full</i>
     </button>
     <i class="material-icons">map</i>
-    Atlas
+    Map
     {#if isTraveling}<span class="travel">Traveling…</span>{/if}
     <div class="layer-tabs">
       {#each layers as layer}
@@ -467,13 +493,14 @@
     {/if}
   </div>
 </div>
+{/if}
 
-{#if maximized}
+{#if maximized && overlayHost}
   <div class="backdrop" use:portal on:click={(e) => { if (e.target === e.currentTarget) toggleMaximize(); }} on:keydown={(e) => { if (e.key === 'Escape') toggleMaximize(); }}>
     <div class="modal">
       <div class="toolbar">
         <i class="material-icons">map</i>
-        Atlas
+        Map
         {#if isTraveling}<span class="travel">Traveling…</span>{/if}
         <div class="layer-tabs">
           {#each layers as layer}

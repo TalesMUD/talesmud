@@ -186,6 +186,8 @@ function createStore() {
     visitedRooms: loadVisitedRooms(),
     atlas: emptyAtlas(),
     atlasLayer: null,
+    mapOverviewOpen: false,
+    inventoryOverlayOpen: false,
   });
 
   const store = {
@@ -312,6 +314,8 @@ function createStore() {
         if (character && character.id !== prevId) {
           state.atlas = emptyAtlas();
           state.atlasLayer = null;
+          state.mapOverviewOpen = false;
+          state.inventoryOverlayOpen = false;
           state.visitedRooms = {};
           saveVisitedRooms({});
         }
@@ -552,6 +556,44 @@ function createStore() {
     setAtlasLayer: (layerId) => {
       update((state) => {
         state.atlasLayer = layerId;
+        return state;
+      });
+    },
+
+    openMapOverview: () => {
+      update((state) => {
+        state.mapOverviewOpen = true;
+        return state;
+      });
+    },
+    closeMapOverview: () => {
+      update((state) => {
+        state.mapOverviewOpen = false;
+        return state;
+      });
+    },
+    setMapOverviewOpen: (open) => {
+      update((state) => {
+        state.mapOverviewOpen = !!open;
+        return state;
+      });
+    },
+
+    openInventoryOverlay: () => {
+      update((state) => {
+        state.inventoryOverlayOpen = true;
+        return state;
+      });
+    },
+    closeInventoryOverlay: () => {
+      update((state) => {
+        state.inventoryOverlayOpen = false;
+        return state;
+      });
+    },
+    setInventoryOverlayOpen: (open) => {
+      update((state) => {
+        state.inventoryOverlayOpen = !!open;
         return state;
       });
     },

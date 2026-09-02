@@ -1,4 +1,10 @@
 import { writable, get } from 'svelte/store';
+import {
+  DEFAULT_ACTION_BAR_PINS,
+  DEFAULT_INVENTORY_OPEN_MODE,
+  normalizeActionBarPins,
+  normalizeInventoryOpenMode,
+} from './hudPrefs.js';
 
 const STORAGE_KEY = 'talesmud_settings_v1';
 
@@ -14,7 +20,9 @@ const DEFAULT_SETTINGS = {
     theme: 'dark-fantasy',       // UI theme: 'dark-fantasy' or 'clean-hud'
     parchmentBackground: false,  // Room description parchment style (default off)
     compactMode: false,
-    roomTextOverlay: false       // Show game text overlay on room image (always on for mobile)
+    roomTextOverlay: false,      // Show game text overlay on room image (always on for mobile)
+    actionBarPins: [...DEFAULT_ACTION_BAR_PINS],
+    inventoryOpenMode: DEFAULT_INVENTORY_OPEN_MODE, // 'overlay' | 'widget'
   }
 };
 
@@ -45,6 +53,8 @@ function createSettingsStore() {
           const data = JSON.parse(stored);
           if (data.version === 1) {
             const iface = { ...DEFAULT_SETTINGS.interface, ...data.interface };
+            iface.actionBarPins = normalizeActionBarPins(iface.actionBarPins);
+            iface.inventoryOpenMode = normalizeInventoryOpenMode(iface.inventoryOpenMode);
             update(state => ({
               ...state,
               general: { ...DEFAULT_SETTINGS.general, ...data.general },
@@ -67,7 +77,11 @@ function createSettingsStore() {
         version: 1,
         savedAt: new Date().toISOString(),
         general: state.general,
-        interface: state.interface
+        interface: {
+          ...state.interface,
+          actionBarPins: normalizeActionBarPins(state.interface.actionBarPins),
+          inventoryOpenMode: normalizeInventoryOpenMode(state.interface.inventoryOpenMode),
+        }
       };
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -87,13 +101,22 @@ function createSettingsStore() {
 
     // Update a specific setting
     setSetting(category, key, value) {
-      update(state => ({
-        ...state,
-        [category]: {
-          ...state[category],
-          [key]: value
+      update(state => {
+        let nextValue = value;
+        if (category === 'interface' && key === 'actionBarPins') {
+          nextValue = normalizeActionBarPins(value);
         }
-      }));
+        if (category === 'interface' && key === 'inventoryOpenMode') {
+          nextValue = normalizeInventoryOpenMode(value);
+        }
+        return {
+          ...state,
+          [category]: {
+            ...state[category],
+            [key]: nextValue
+          }
+        };
+      });
       // Apply theme immediately when changed
       if (category === 'interface' && key === 'theme') {
         this.applyTheme(value);
@@ -111,7 +134,12 @@ function createSettingsStore() {
     resetToDefaults() {
       update(state => ({
         ...state,
-        ...DEFAULT_SETTINGS
+        general: { ...DEFAULT_SETTINGS.general },
+        interface: {
+          ...DEFAULT_SETTINGS.interface,
+          actionBarPins: [...DEFAULT_ACTION_BAR_PINS],
+          inventoryOpenMode: DEFAULT_INVENTORY_OPEN_MODE,
+        }
       }));
       this.saveToStorage();
     }
@@ -119,8 +147,5 @@ function createSettingsStore() {
 }
 
 export const settingsStore = createSettingsStore();
-
-// Initialize on load
-if (typeof window !== 'undefined') {
-  settingsStore.loadFromStorage();
-}
+settingsStore.loadFromStorage();
+export default settingsStore;

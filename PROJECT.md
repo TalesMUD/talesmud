@@ -45,6 +45,9 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Unique NPCs auto-spawn into their assigned room on server start via `CurrentRoomID`
   - Guest-public NPC/enemy portraits (`/api/portraits/:filename`, hashed avatar fallback)
   - Merchant shop overlay in the room widget (structured `shop` WS message; dialog Trade inject; buy/sell)
+  - Player chrome Map (not Atlas): minimap widget + full Map overview overlay; action-bar Map pin
+  - Action bar: always-on compass dirs, room actions beside exits, customizable pinned commands (localStorage)
+  - Inventory pin opens overlay by default (preference: overlay | on-screen widget)
   - WoW-style private cellar instances: `type: instance` exits, or a shared-room exit into a room tagged `instance`, clone a small room graph per character; town hub stays shared; empty copies are destroyed
 
 - **Character System**

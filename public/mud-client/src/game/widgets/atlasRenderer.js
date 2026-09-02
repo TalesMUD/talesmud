@@ -486,7 +486,7 @@ export function paintAtlas(ctx, params) {
     ctx.font = '13px Georgia, serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(currentRoomId ? 'Charting this floor…' : 'Walk to fill your atlas', w / 2, h / 2);
+    ctx.fillText(currentRoomId ? 'Charting this floor…' : 'Walk to fill your map', w / 2, h / 2);
     return { hits: [] };
   }
 

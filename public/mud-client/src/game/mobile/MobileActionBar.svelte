@@ -22,7 +22,6 @@
     flex-shrink: 0;
   }
 
-  /* Base button: 44px min touch target */
   .btn {
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.15);
@@ -54,7 +53,6 @@
     font-size: 16px;
   }
 
-  /* Exit buttons - orange */
   .exit-btn {
     background: rgba(249, 115, 22, 0.2);
     border-color: rgba(249, 115, 22, 0.4);
@@ -65,7 +63,12 @@
     background: rgba(249, 115, 22, 0.35);
   }
 
-  /* Command buttons - blue */
+  .exit-btn.unavailable,
+  .exit-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
   .cmd-btn {
     background: rgba(59, 130, 246, 0.2);
     border-color: rgba(59, 130, 246, 0.4);
@@ -76,7 +79,6 @@
     background: rgba(59, 130, 246, 0.35);
   }
 
-  /* Combat buttons - red */
   .combat-btn {
     background: rgba(239, 68, 68, 0.2);
     border-color: rgba(239, 68, 68, 0.4);
@@ -87,7 +89,6 @@
     background: rgba(239, 68, 68, 0.35);
   }
 
-  /* Context buttons - green */
   .context-btn {
     background: rgba(34, 197, 94, 0.2);
     border-color: rgba(34, 197, 94, 0.4);
@@ -98,7 +99,6 @@
     background: rgba(34, 197, 94, 0.35);
   }
 
-  /* Room action buttons - purple */
   .room-action-btn {
     background: rgba(168, 85, 247, 0.2);
     border-color: rgba(168, 85, 247, 0.4);
@@ -109,54 +109,11 @@
     background: rgba(168, 85, 247, 0.35);
   }
 
-  /* More button */
   .more-btn {
     background: rgba(255, 255, 255, 0.1);
     border-color: rgba(255, 255, 255, 0.2);
   }
 
-  /* Quick access row */
-  .quick-access-row {
-    display: flex;
-    gap: 6px;
-    justify-content: center;
-  }
-
-  .quick-btn {
-    flex: 1;
-    max-width: 120px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    padding: 8px 6px;
-    color: #9ca3af;
-    font-size: 10px;
-    font-weight: 500;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    min-height: 44px;
-    transition: all 0.15s ease;
-    -webkit-tap-highlight-color: transparent;
-    margin: 0;
-  }
-
-  .quick-btn:active {
-    transform: scale(0.95);
-    background: rgba(255, 255, 255, 0.12);
-    color: #e5e7eb;
-  }
-
-  .quick-btn i {
-    font-size: 18px;
-  }
-
-  /* Dialog overlay for menus (reused pattern from MUDXPlus) */
   .dialog-overlay {
     position: fixed;
     inset: 0;
@@ -251,64 +208,91 @@
     font-size: 12px;
     font-weight: 500;
     cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 4px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
     min-height: 44px;
-    margin: 0;
-  }
-
-  .popup-btn:active {
-    transform: scale(0.95);
   }
 
   .popup-btn i {
     font-size: 16px;
   }
 
-  .popup-btn.room-action-popup-btn {
-    background: rgba(168, 85, 247, 0.2);
-    border-color: rgba(168, 85, 247, 0.4);
-    color: #d8b4fe;
-  }
-
-  .popup-btn.pickup-popup-btn {
+  .pickup-popup-btn {
     background: rgba(34, 197, 94, 0.2);
     border-color: rgba(34, 197, 94, 0.4);
     color: #86efac;
   }
 
-  .action-count {
-    background: rgba(168, 85, 247, 0.5);
+  .pin-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 8px;
     border-radius: 8px;
-    padding: 1px 5px;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    background: rgba(255, 255, 255, 0.04);
+    color: #cbd5e1;
+    cursor: pointer;
+    font-size: 12px;
+    min-height: 44px;
+  }
+  .pin-toggle.pinned {
+    border-color: rgba(59, 130, 246, 0.55);
+    background: rgba(59, 130, 246, 0.15);
+    color: #bfdbfe;
+  }
+  .dialog-section-label {
+    grid-column: 1 / -1;
     font-size: 10px;
-    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+  }
+  .pref-row {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-top: 4px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(148, 163, 184, 0.2);
+    color: #94a3b8;
+    font-size: 11px;
+  }
+  .pref-row label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #cbd5e1;
   }
 </style>
 
 <script>
   import { getCardinalExits, getSpecialExits, getVerticalExits } from "../MUDXPlusStore";
   import { mobileStore } from './mobileStore.js';
+  import { settingsStore } from '../SettingsStore.js';
+  import {
+    PINNABLE_COMMANDS,
+    resolvePinnedCommands,
+    togglePin,
+    INVENTORY_OPEN_OVERLAY,
+    INVENTORY_OPEN_WIDGET,
+  } from '../hudPrefs.js';
 
   export let store;
   export let sendMessage;
 
-  // Menu state
   let showMoreMenu = false;
-  let showActionsMenu = false;
   let showPickupMenu = false;
 
-  // Derive exits from store
   $: cardinalExits = getCardinalExits($store.exits);
   $: specialExits = getSpecialExits($store.exits);
   $: verticalExits = getVerticalExits($store.exits);
-  $: availableCardinals = cardinalExits.filter(e => e.available);
   $: allSpecialExits = [...verticalExits, ...specialExits];
-  $: allExits = [...availableCardinals, ...allSpecialExits];
 
   const directionMeta = {
     north: { label: "N", icon: "north" },
@@ -317,33 +301,16 @@
     west:  { label: "W", icon: "west" },
   };
 
-  // Standard commands
-  const standardCommands = [
-    { name: "look", icon: "visibility", label: "Look" },
-  ];
-
-  // Combat commands
   const combatCommands = [
-    { name: "attack", icon: "swords", label: "Attack" },
-    { name: "defend", icon: "security", label: "Defend" },
-    { name: "flee", icon: "directions_run", label: "Flee" },
-    { name: "status", icon: "monitor_heart", label: "Status" },
+    { id: "attack", name: "attack", icon: "swords", label: "Attack", kind: "command" },
+    { id: "defend", name: "defend", icon: "security", label: "Defend", kind: "command" },
+    { id: "flee", name: "flee", icon: "directions_run", label: "Flee", kind: "command" },
+    { id: "status", name: "status", icon: "monitor_heart", label: "Status", kind: "command" },
   ];
 
-  // More menu commands
-  const moreCommands = [
-    { name: "look", icon: "visibility", label: "Look" },
-    { name: "who", icon: "people", label: "Who" },
-    { name: "bind", icon: "location_on", label: "Bind" },
-    { name: "drop", icon: "delete", label: "Drop" },
-    { name: "use", icon: "touch_app", label: "Use" },
-    { name: "examine", icon: "search", label: "Examine" },
-    { name: "shrug", icon: "sentiment_neutral", label: "Shrug" },
-    { name: "scream", icon: "campaign", label: "Scream" },
-    { name: "help", icon: "help", label: "Help" },
-  ];
-
-  $: activeCommands = $store.inCombat ? combatCommands : standardCommands;
+  $: pins = $settingsStore.interface?.actionBarPins;
+  $: inventoryOpenMode = $settingsStore.interface?.inventoryOpenMode || INVENTORY_OPEN_OVERLAY;
+  $: pinnedCommands = $store.inCombat ? combatCommands : resolvePinnedCommands(pins);
   $: contextCommands = $store.inCombat ? [] : [
     ...($store.hasMerchant ? [{ name: "list", icon: "store", label: "Shop" }] : []),
   ];
@@ -355,6 +322,30 @@
     closeMenus();
   }
 
+  function activatePin(pin) {
+    if (!pin) return;
+    if (pin.kind === "map") {
+      if (store?.openMapOverview) store.openMapOverview();
+      closeMenus();
+      return;
+    }
+    if (pin.kind === "inventory") {
+      openInventory();
+      return;
+    }
+    executeCommand(pin.name);
+  }
+
+  function openInventory() {
+    closeMenus();
+    if (inventoryOpenMode === INVENTORY_OPEN_WIDGET) {
+      mobileStore.openBottomSheet('inventory');
+      return;
+    }
+    if (store?.openInventoryOverlay) store.openInventoryOverlay();
+    else mobileStore.openBottomSheet('inventory');
+  }
+
   function pickupItem(item) {
     sendMessage('pickup ' + item.name);
     store.removeGroundItem(item.id);
@@ -362,57 +353,31 @@
 
   function toggleMoreMenu() {
     showMoreMenu = !showMoreMenu;
-    showActionsMenu = false;
-    showPickupMenu = false;
-  }
-
-  function toggleActionsMenu() {
-    showActionsMenu = !showActionsMenu;
-    showMoreMenu = false;
     showPickupMenu = false;
   }
 
   function togglePickupMenu() {
     showPickupMenu = !showPickupMenu;
     showMoreMenu = false;
-    showActionsMenu = false;
   }
 
   function closeMenus() {
     showMoreMenu = false;
-    showActionsMenu = false;
     showPickupMenu = false;
   }
-</script>
 
-<!-- Dialog overlays -->
-{#if showActionsMenu}
-  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-  <div class="dialog-overlay" on:click={closeMenus}>
-    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-    <div class="dialog" on:click|stopPropagation>
-      <div class="dialog-header">
-        <span class="dialog-title">
-          <i class="material-icons">auto_awesome</i>
-          Actions
-        </span>
-        <button class="dialog-close" on:click={closeMenus}>
-          <i class="material-icons">close</i>
-        </button>
-      </div>
-      <div class="dialog-grid">
-        {#each roomActions as action}
-          <button
-            class="popup-btn room-action-popup-btn"
-            on:click={() => executeCommand(action.name)}
-          >
-            {action.name}
-          </button>
-        {/each}
-      </div>
-    </div>
-  </div>
-{/if}
+  function onTogglePin(id) {
+    settingsStore.setSetting('interface', 'actionBarPins', togglePin(pins, id));
+  }
+
+  function setInvMode(mode) {
+    settingsStore.setSetting('interface', 'inventoryOpenMode', mode);
+  }
+
+  function isPinned(id) {
+    return (pins || []).includes(id);
+  }
+</script>
 
 {#if showMoreMenu}
   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
@@ -421,23 +386,54 @@
     <div class="dialog" on:click|stopPropagation>
       <div class="dialog-header">
         <span class="dialog-title">
-          <i class="material-icons">more_horiz</i>
-          Commands
+          <i class="material-icons">tune</i>
+          Customize pins
         </span>
         <button class="dialog-close" on:click={closeMenus}>
           <i class="material-icons">close</i>
         </button>
       </div>
       <div class="dialog-grid">
-        {#each moreCommands as cmd}
+        <div class="dialog-section-label">Tap to pin / unpin</div>
+        {#each PINNABLE_COMMANDS as cmd}
           <button
-            class="popup-btn"
-            on:click={() => executeCommand(cmd.name)}
+            class="pin-toggle"
+            class:pinned={isPinned(cmd.id)}
+            type="button"
+            on:click={() => onTogglePin(cmd.id)}
           >
+            <i class="material-icons">{isPinned(cmd.id) ? 'push_pin' : cmd.icon}</i>
+            {cmd.label}
+          </button>
+        {/each}
+        <div class="dialog-section-label">Run command</div>
+        {#each PINNABLE_COMMANDS as cmd}
+          <button class="popup-btn" type="button" on:click={() => activatePin(cmd)}>
             <i class="material-icons">{cmd.icon}</i>
             {cmd.label}
           </button>
         {/each}
+        <div class="pref-row">
+          Inventory:
+          <label>
+            <input
+              type="radio"
+              name="inv-mode-mobile"
+              checked={inventoryOpenMode === INVENTORY_OPEN_OVERLAY}
+              on:change={() => setInvMode(INVENTORY_OPEN_OVERLAY)}
+            />
+            Popup
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="inv-mode-mobile"
+              checked={inventoryOpenMode === INVENTORY_OPEN_WIDGET}
+              on:change={() => setInvMode(INVENTORY_OPEN_WIDGET)}
+            />
+            Sheet
+          </label>
+        </div>
       </div>
     </div>
   </div>
@@ -459,10 +455,7 @@
       </div>
       <div class="dialog-grid">
         {#each groundItems as item}
-          <button
-            class="popup-btn pickup-popup-btn"
-            on:click={() => pickupItem(item)}
-          >
+          <button class="popup-btn pickup-popup-btn" on:click={() => pickupItem(item)}>
             {item.name}
           </button>
         {/each}
@@ -472,34 +465,35 @@
 {/if}
 
 <div class="mobile-action-bar">
-  <!-- Row 1: Exits + primary commands -->
   <div class="action-row">
-    {#each availableCardinals as exit}
+    {#each cardinalExits as exit}
       <button
         class="btn exit-btn"
-        on:click={() => executeCommand(exit.name)}
+        class:unavailable={!exit.available}
+        disabled={!exit.available}
+        on:click={() => exit.available && executeCommand(exit.name)}
       >
         <i class="material-icons">{directionMeta[exit.name].icon}</i>
         {directionMeta[exit.name].label}
       </button>
     {/each}
     {#each allSpecialExits as exit}
-      <button
-        class="btn exit-btn"
-        on:click={() => executeCommand(exit.name)}
-      >
+      <button class="btn exit-btn" on:click={() => executeCommand(exit.name)}>
         {exit.name}
       </button>
     {/each}
+    {#each roomActions as action}
+      <button class="btn room-action-btn" on:click={() => executeCommand(action.name)}>
+        {action.name}
+      </button>
+    {/each}
 
-    {#if allExits.length > 0}
-      <div class="separator"></div>
-    {/if}
+    <div class="separator"></div>
 
-    {#each activeCommands as cmd}
+    {#each pinnedCommands as cmd}
       <button
         class="btn {$store.inCombat ? 'combat-btn' : 'cmd-btn'}"
-        on:click={() => executeCommand(cmd.name)}
+        on:click={() => activatePin(cmd)}
       >
         <i class="material-icons">{cmd.icon}</i>
         {cmd.label}
@@ -507,10 +501,7 @@
     {/each}
 
     {#each contextCommands as cmd}
-      <button
-        class="btn context-btn"
-        on:click={() => executeCommand(cmd.name)}
-      >
+      <button class="btn context-btn" on:click={() => executeCommand(cmd.name)}>
         <i class="material-icons">{cmd.icon}</i>
         {cmd.label}
       </button>
@@ -523,39 +514,8 @@
       </button>
     {/if}
 
-    {#if roomActions.length === 1}
-      <button
-        class="btn room-action-btn"
-        on:click={() => executeCommand(roomActions[0].name)}
-      >
-        {roomActions[0].name}
-      </button>
-    {:else if roomActions.length > 1}
-      <button class="btn room-action-btn" on:click={toggleActionsMenu}>
-        <i class="material-icons">auto_awesome</i>
-        Actions
-        <span class="action-count">{roomActions.length}</span>
-      </button>
-    {/if}
-
     <button class="btn more-btn" on:click={toggleMoreMenu}>
       <i class="material-icons">more_horiz</i>
-    </button>
-  </div>
-
-  <!-- Row 2: Quick access to Character / Inventory / Equipment sheets -->
-  <div class="quick-access-row">
-    <button class="quick-btn" on:click={() => mobileStore.openBottomSheet('character')}>
-      <i class="material-icons">person</i>
-      <span>Char</span>
-    </button>
-    <button class="quick-btn" on:click={() => mobileStore.openBottomSheet('inventory')}>
-      <i class="material-icons">inventory_2</i>
-      <span>Inv</span>
-    </button>
-    <button class="quick-btn" on:click={() => mobileStore.openBottomSheet('equipment')}>
-      <i class="material-icons">shield</i>
-      <span>Equip</span>
     </button>
   </div>
 </div>
