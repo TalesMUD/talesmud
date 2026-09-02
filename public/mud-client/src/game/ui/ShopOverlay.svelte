@@ -153,17 +153,17 @@
     min-height: 0;
     overflow: auto;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 0.65em;
-    padding: 0.85em;
+    grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
+    gap: 0.35em;
+    padding: 0.45em;
   }
   .shop-card {
     display: flex;
     flex-direction: column;
-    gap: 0.35em;
+    gap: 0.2em;
     text-align: left;
-    padding: 0.65em;
-    border-radius: 10px;
+    padding: 0.35em;
+    border-radius: 8px;
     border: 1px solid rgba(148, 163, 184, 0.22);
     background: rgba(255, 255, 255, 0.04);
     color: #e2e8f0;
@@ -183,18 +183,18 @@
     object-fit: contain;
     image-rendering: pixelated;
     background: #0b1119;
-    border-radius: 6px;
+    border-radius: 4px;
   }
   .shop-name {
     font-weight: 700;
-    font-size: 0.92em;
-    line-height: 1.2;
+    font-size: 0.72em;
+    line-height: 1.15;
   }
   .shop-meta {
     display: flex;
     justify-content: space-between;
-    gap: 0.4em;
-    font-size: 0.8em;
+    gap: 0.25em;
+    font-size: 0.68em;
     color: #94a3b8;
   }
   .shop-price {
