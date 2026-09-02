@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
 
-const MAX_MESSAGES = 5;
+const MAX_MESSAGES = 4;
 
 let messageId = 0;
 
@@ -16,15 +16,14 @@ function createOverlayStore() {
       const id = ++messageId;
       const cleanText = text.trim();
 
-      // Scale display duration by text length: 2s base + 0.5s per 50 chars, max 5s
+      // Give longer reactions enough on-screen time to be read (not a blink).
       const displayDuration = Math.min(
-        2000 + Math.floor(cleanText.length / 50) * 500,
-        5000
+        2800 + Math.floor(cleanText.length / 40) * 700,
+        9000
       );
-      // Scale fade duration by text length: 0.8s base + 0.2s per 50 chars, max 2s
       const fadeOutDuration = Math.min(
-        800 + Math.floor(cleanText.length / 50) * 200,
-        2000
+        900 + Math.floor(cleanText.length / 50) * 250,
+        2200
       );
 
       update(messages => {
@@ -35,7 +34,6 @@ function createOverlayStore() {
           fadeOutDuration,
           fading: false
         }];
-        // Drop oldest if over max
         if (updated.length > MAX_MESSAGES) {
           updated.splice(0, updated.length - MAX_MESSAGES);
         }
