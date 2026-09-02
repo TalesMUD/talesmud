@@ -1,38 +1,47 @@
 <script>
   import { itemArtSrc, onItemArtError } from '../itemArtSrc.js';
+  import { portraitSrc, onPortraitError } from '../portraitSrc.js';
 
   export let store = null;
   export let sendMessage = null;
 
   let equippedItems = {};
+  let character = null;
+  let stats = {};
 
-  // Subscribe to store
   $: if (store) {
     equippedItems = $store.equippedItems || {};
+    character = $store.character || null;
+    stats = $store.characterStats || {};
   }
 
-  // Backend slot keys mapped to display labels, grouped into rows
-  const slotRows = [
-    [
-      { key: 'head', label: 'Head' },
-      { key: 'neck', label: 'Neck' },
-    ],
-    [
-      { key: 'chest', label: 'Chest' },
-    ],
-    [
-      { key: 'main_hand', label: 'Main Hand' },
-      { key: 'hands', label: 'Hands' },
-      { key: 'off_hand', label: 'Off Hand' },
-    ],
-    [
-      { key: 'legs', label: 'Legs' },
-    ],
-    [
-      { key: 'boots', label: 'Boots' },
-      { key: 'ring1', label: 'Ring 1' },
-      { key: 'ring2', label: 'Ring 2' },
-    ],
+  $: name = character?.name || 'Adventurer';
+  $: race = typeof character?.race === 'object' ? (character.race.name || '') : (character?.race || '');
+  $: charClass = typeof character?.class === 'object' ? (character.class.name || '') : (character?.class || '');
+  $: level = character?.level || stats.level || 1;
+  $: attackPower = stats.attackPower ?? character?.attackPower ?? 0;
+  $: defense = stats.defense ?? character?.defense ?? 0;
+  $: currentHp = stats.currentHitPoints ?? character?.currentHitPoints ?? 0;
+  $: maxHp = stats.maxHitPoints ?? character?.maxHitPoints ?? 0;
+  $: currentMana = stats.currentMana ?? character?.currentMana ?? 0;
+  $: maxMana = stats.maxMana ?? character?.maxMana ?? 0;
+
+  // Paper-doll columns — existing engine slots only
+  const leftSlots = [
+    { key: 'head', label: 'Head' },
+    { key: 'neck', label: 'Neck' },
+    { key: 'chest', label: 'Chest' },
+    { key: 'hands', label: 'Hands' },
+  ];
+  const rightSlots = [
+    { key: 'legs', label: 'Legs' },
+    { key: 'boots', label: 'Boots' },
+    { key: 'ring1', label: 'Ring 1' },
+    { key: 'ring2', label: 'Ring 2' },
+  ];
+  const weaponSlots = [
+    { key: 'main_hand', label: 'Main Hand' },
+    { key: 'off_hand', label: 'Off Hand' },
   ];
 
   function getQualityColor(quality) {
@@ -41,7 +50,7 @@
       case 'rare': return '#3b82f6';
       case 'legendary': return '#a855f7';
       case 'mythic': return '#f59e0b';
-      default: return '#9ca3af';
+      default: return 'rgba(148, 163, 184, 0.45)';
     }
   }
 
@@ -62,26 +71,22 @@
   }
 
   function getItemTooltip(item, slotLabel) {
-    if (!item) return slotLabel + ' - Empty';
+    if (!item) return slotLabel + ' — Empty';
     let tip = item.name;
     if (item.quality && item.quality !== 'normal') {
       tip += ' [' + item.quality.toUpperCase() + ']';
     }
-    if (item.type) {
-      tip += ' (' + item.type + ')';
-    }
-    // Show key attributes
+    if (item.type) tip += ' (' + item.type + ')';
+    tip += '\nClick to unequip';
     if (item.attributes) {
-      const stats = [];
-      if (item.attributes.damage != null) stats.push('Dmg: ' + item.attributes.damage);
-      if (item.attributes.defense != null) stats.push('Def: ' + item.attributes.defense);
-      if (item.attributes.armor != null) stats.push('Armor: ' + item.attributes.armor);
-      if (item.attributes.strength != null) stats.push('Str: +' + item.attributes.strength);
-      if (item.attributes.agility != null) stats.push('Agi: +' + item.attributes.agility);
-      if (item.attributes.intelligence != null) stats.push('Int: +' + item.attributes.intelligence);
-      if (stats.length > 0) {
-        tip += '\n' + stats.join(', ');
-      }
+      const parts = [];
+      if (item.attributes.damage != null) parts.push('Dmg: ' + item.attributes.damage);
+      if (item.attributes.defense != null) parts.push('Def: ' + item.attributes.defense);
+      if (item.attributes.armor != null) parts.push('Armor: ' + item.attributes.armor);
+      if (item.attributes.strength != null) parts.push('Str: +' + item.attributes.strength);
+      if (item.attributes.agility != null) parts.push('Agi: +' + item.attributes.agility);
+      if (item.attributes.intelligence != null) parts.push('Int: +' + item.attributes.intelligence);
+      if (parts.length) tip += '\n' + parts.join(', ');
     }
     return tip;
   }
@@ -94,110 +99,178 @@
 </script>
 
 <style>
-  /* Base panel styling comes from global .game-panel class in themes.css */
   .equipment-widget {
-    /* component-specific overrides only */
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
   }
 
   .widget-title {
     flex: 1;
   }
 
-  .equipment-grid {
+  .doll {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 0.45em 0.55em;
+    padding: 0.55em 0.65em 0.35em;
+    align-items: start;
+    justify-items: center;
+  }
+
+  .slot-col {
     display: flex;
     flex-direction: column;
-    gap: 0.5em;
+    gap: 0.4em;
   }
 
-  .equipment-row {
-    display: flex;
-    gap: 0.5em;
-  }
+  .slot-col.left { grid-column: 1; grid-row: 1; }
+  .slot-col.right { grid-column: 3; grid-row: 1; }
 
-  .equipment-slot {
-    flex: 1;
-    min-height: 70px;
-    background: var(--panel-inner-bg);
-    border: 1px solid var(--panel-inner-border);
-    border-radius: 8px;
+  .portrait-col {
+    grid-column: 2;
+    grid-row: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 0.55em;
-    cursor: pointer;
-    transition: all 0.15s ease;
+    gap: 0.35em;
+    min-width: 0;
+    width: 100%;
+    max-width: 140px;
+    align-self: stretch;
   }
 
-  .equipment-slot:hover {
-    background: var(--panel-inner-hover);
-    border-color: var(--panel-border-hover);
+  .portrait-frame {
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    max-height: 210px;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    background: rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
-  .equipment-slot.empty {
-    opacity: 0.6;
+  .portrait-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    image-rendering: pixelated;
+  }
+
+  .portrait-plate {
+    text-align: center;
+    width: 100%;
+  }
+
+  .portrait-name {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-primary, #e5e7eb);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .portrait-meta {
+    font-size: 0.68rem;
+    color: var(--text-dim, #94a3b8);
+    line-height: 1.25;
+  }
+
+  .weapon-row {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: flex;
+    justify-content: center;
+    gap: 0.55em;
+  }
+
+  .equip-slot {
+    width: 72px;
+    height: 72px;
+    border-radius: 6px;
+    border: 1.5px solid rgba(148, 163, 184, 0.35);
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    flex-shrink: 0;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+
+  .equip-slot.empty {
+    opacity: 0.7;
     cursor: default;
     border-style: dashed;
   }
 
-  .equipment-slot.filled {
-    box-shadow: 0 0 8px var(--accent-glow);
+  .equip-slot.filled {
+    cursor: pointer;
   }
 
-  .equipment-slot.filled:hover {
-    background: rgba(239, 68, 68, 0.1);
-    border-color: rgba(239, 68, 68, 0.3);
+  .equip-slot.filled:hover {
+    background: rgba(239, 68, 68, 0.12);
   }
 
-  .slot-label {
-    font-size: var(--text-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--text-dim);
-    margin-bottom: 0.3em;
-  }
-
-  .slot-art {
-    width: 32px;
-    height: 32px;
+  .equip-slot img {
+    width: 64px;
+    height: 64px;
     object-fit: contain;
     image-rendering: pixelated;
-    margin-bottom: 0.15em;
   }
 
-  .slot-icon {
-    font-size: 1.5em;
-    margin-bottom: 0.2em;
+  .equip-slot .slot-glyph {
+    font-size: 26px;
+    color: #4b5563;
   }
 
-  .slot-name {
-    font-size: var(--text-sm);
-    text-align: center;
-    color: var(--text-primary);
-    line-height: 1.2;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+  .equip-slot .slot-tag {
+    position: absolute;
+    left: 3px;
+    top: 2px;
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: rgba(148, 163, 184, 0.85);
+    line-height: 1;
+    pointer-events: none;
   }
 
-  .slot-empty {
-    font-size: var(--text-xs);
-    color: var(--text-dim);
-    font-style: italic;
+  .compact-stats {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.35em 0.75em;
+    padding: 0.35em 0.65em 0.65em;
+    border-top: 1px solid rgba(148, 163, 184, 0.15);
+    font-size: 0.72rem;
+    color: var(--text-dim, #94a3b8);
   }
 
-  .unequip-hint {
-    font-size: var(--text-xs);
-    color: #ef4444;
-    opacity: 0;
-    transition: opacity 0.15s ease;
-    margin-top: 0.2em;
+  .compact-stats span strong {
+    color: var(--text-primary, #e5e7eb);
+    font-weight: 600;
   }
 
-  .equipment-slot.filled:hover .unequip-hint {
-    opacity: 1;
+  @media (max-width: 420px) {
+    .equip-slot {
+      width: 64px;
+      height: 64px;
+    }
+    .equip-slot img {
+      width: 56px;
+      height: 56px;
+    }
+    .portrait-col {
+      max-width: 110px;
+    }
   }
 </style>
 
@@ -207,37 +280,98 @@
     <span class="widget-title">Equipment</span>
   </div>
 
-  <div class="equipment-grid">
-    {#each slotRows as row}
-      <div class="equipment-row">
-        {#each row as slot}
-          {@const item = equippedItems[slot.key]}
-          <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-          <div
-            class="equipment-slot"
-            class:empty={!item}
-            class:filled={!!item}
-            style="border-color: {item ? getQualityColor(item.quality) : 'rgba(255, 255, 255, 0.1)'}"
-            title={getItemTooltip(item, slot.label)}
-            on:click={() => item && handleUnequip(item)}
-          >
-            <span class="slot-label">{slot.label}</span>
-            {#if item}
-              <img
-                class="slot-art"
-                src={itemArtSrc(item)}
-                alt=""
-                on:error={(e) => onItemArtError(e, item)}
-              />
-              <span class="slot-name">{item.name}</span>
-              <span class="unequip-hint">click to unequip</span>
-            {:else}
-              <i class="material-icons slot-icon" style="color: #4b5563">{getSlotIcon(slot.key)}</i>
-              <span class="slot-empty">Empty</span>
-            {/if}
-          </div>
-        {/each}
+  <div class="doll">
+    <div class="slot-col left">
+      {#each leftSlots as slot}
+        {@const item = equippedItems[slot.key]}
+        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+        <div
+          class="equip-slot"
+          class:empty={!item}
+          class:filled={!!item}
+          style="border-color: {item ? getQualityColor(item.quality) : 'rgba(148, 163, 184, 0.35)'}"
+          title={getItemTooltip(item, slot.label)}
+          on:click={() => item && handleUnequip(item)}
+        >
+          <span class="slot-tag">{slot.label}</span>
+          {#if item}
+            <img src={itemArtSrc(item)} alt="" on:error={(e) => onItemArtError(e, item)} />
+          {:else}
+            <i class="material-icons slot-glyph">{getSlotIcon(slot.key)}</i>
+          {/if}
+        </div>
+      {/each}
+    </div>
+
+    <div class="portrait-col">
+      <div class="portrait-frame">
+        {#if character}
+          <img
+            src={portraitSrc(character)}
+            alt=""
+            on:error={(e) => onPortraitError(e, character)}
+          />
+        {:else}
+          <i class="material-icons" style="font-size:48px;color:#4b5563">person</i>
+        {/if}
       </div>
-    {/each}
+      <div class="portrait-plate">
+        <div class="portrait-name">{name}</div>
+        <div class="portrait-meta">Lv {level} {race} {charClass}</div>
+      </div>
+    </div>
+
+    <div class="slot-col right">
+      {#each rightSlots as slot}
+        {@const item = equippedItems[slot.key]}
+        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+        <div
+          class="equip-slot"
+          class:empty={!item}
+          class:filled={!!item}
+          style="border-color: {item ? getQualityColor(item.quality) : 'rgba(148, 163, 184, 0.35)'}"
+          title={getItemTooltip(item, slot.label)}
+          on:click={() => item && handleUnequip(item)}
+        >
+          <span class="slot-tag">{slot.label}</span>
+          {#if item}
+            <img src={itemArtSrc(item)} alt="" on:error={(e) => onItemArtError(e, item)} />
+          {:else}
+            <i class="material-icons slot-glyph">{getSlotIcon(slot.key)}</i>
+          {/if}
+        </div>
+      {/each}
+    </div>
+
+    <div class="weapon-row">
+      {#each weaponSlots as slot}
+        {@const item = equippedItems[slot.key]}
+        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+        <div
+          class="equip-slot"
+          class:empty={!item}
+          class:filled={!!item}
+          style="border-color: {item ? getQualityColor(item.quality) : 'rgba(148, 163, 184, 0.35)'}"
+          title={getItemTooltip(item, slot.label)}
+          on:click={() => item && handleUnequip(item)}
+        >
+          <span class="slot-tag">{slot.label}</span>
+          {#if item}
+            <img src={itemArtSrc(item)} alt="" on:error={(e) => onItemArtError(e, item)} />
+          {:else}
+            <i class="material-icons slot-glyph">{getSlotIcon(slot.key)}</i>
+          {/if}
+        </div>
+      {/each}
+    </div>
+  </div>
+
+  <div class="compact-stats">
+    <span>HP <strong>{currentHp}/{maxHp}</strong></span>
+    {#if maxMana > 0}
+      <span>MP <strong>{currentMana}/{maxMana}</strong></span>
+    {/if}
+    <span>ATK <strong>{attackPower}</strong></span>
+    <span>DEF <strong>{defense}</strong></span>
   </div>
 </div>
