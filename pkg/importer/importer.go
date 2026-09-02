@@ -683,6 +683,7 @@ func (w *WorldImporter) copyAssets() (int, error) {
 		filepath.Join(w.importPath, "assets", "images", "npcs"),
 		filepath.Join(w.importPath, "assets", "images", "sprites", "npcs"),
 		filepath.Join(w.importPath, "assets", "images", "sprites", "enemies"),
+		filepath.Join(w.importPath, "assets", "images", "sprites", "portraits"),
 	}
 	n2 := 0
 	for _, src := range portraitSrcs {
