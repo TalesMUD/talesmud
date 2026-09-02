@@ -165,6 +165,67 @@
     border-color: rgba(255, 255, 255, 0.3);
   }
 
+  .exit-btn.unavailable,
+  .exit-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .exit-btn.unavailable:hover,
+  .exit-btn:disabled:hover {
+    background: rgba(249, 115, 22, 0.2);
+    border-color: rgba(249, 115, 22, 0.4);
+    transform: none;
+  }
+
+  .pin-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.45em;
+    padding: 0.45em 0.55em;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    background: rgba(255, 255, 255, 0.04);
+    color: #cbd5e1;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .pin-toggle.pinned {
+    border-color: rgba(59, 130, 246, 0.55);
+    background: rgba(59, 130, 246, 0.15);
+    color: #bfdbfe;
+  }
+  .pin-toggle i {
+    font-size: 16px;
+  }
+  .pref-row {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5em;
+    align-items: center;
+    margin-top: 0.35em;
+    padding-top: 0.65em;
+    border-top: 1px solid rgba(148, 163, 184, 0.2);
+    color: #94a3b8;
+    font-size: 11px;
+  }
+  .pref-row label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
+    cursor: pointer;
+    color: #cbd5e1;
+  }
+  .dialog-section-label {
+    grid-column: 1 / -1;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+    margin-top: 0.25em;
+  }
+
   /* Popup buttons */
   .popup-btn {
     background: rgba(59, 130, 246, 0.2);
@@ -388,26 +449,28 @@
 
 <script>
   import { getCardinalExits, getSpecialExits, getVerticalExits } from "./MUDXPlusStore";
+  import { settingsStore } from "./SettingsStore.js";
+  import {
+    PINNABLE_COMMANDS,
+    resolvePinnedCommands,
+    togglePin,
+    INVENTORY_OPEN_OVERLAY,
+    INVENTORY_OPEN_WIDGET,
+  } from "./hudPrefs.js";
 
   export let store;
   // svelte-ignore unused-export-let
   export let term;
   export let sendMessage;
 
-  // Menu state
   let showMoreMenu = false;
-  let showActionsMenu = false;
   let showPickupMenu = false;
 
-  // Derive exits from store
   $: cardinalExits = getCardinalExits($store.exits);
   $: specialExits = getSpecialExits($store.exits);
   $: verticalExits = getVerticalExits($store.exits);
+  $: allSpecialExits = [...verticalExits, ...specialExits];
 
-  // Only show available cardinal directions
-  $: availableCardinals = cardinalExits.filter(e => e.available);
-
-  // Direction display config
   const directionMeta = {
     north: { label: "N", icon: "north" },
     south: { label: "S", icon: "south" },
@@ -415,52 +478,20 @@
     west:  { label: "W", icon: "west" },
   };
 
-  // Combined special + vertical exits for display
-  $: allSpecialExits = [...verticalExits, ...specialExits];
-
-  // All directional exits in one section (cardinal + vertical + special)
-  $: allExits = [...availableCardinals, ...allSpecialExits];
-
-  // Standard commands (shown when not in combat)
-  const standardCommands = [
-    { name: "look", icon: "visibility", label: "Look" },
-    { name: "i", icon: "inventory_2", label: "Inv" },
-    { name: "equipment", icon: "shield", label: "Equip" },
-    { name: "character", icon: "person", label: "Stats" },
-  ];
-
-  // Combat commands (replace standard when in combat)
   const combatCommands = [
-    { name: "attack", icon: "swords", label: "Attack" },
-    { name: "defend", icon: "security", label: "Defend" },
-    { name: "flee", icon: "directions_run", label: "Flee" },
-    { name: "status", icon: "monitor_heart", label: "Status" },
+    { id: "attack", name: "attack", icon: "swords", label: "Attack", kind: "command" },
+    { id: "defend", name: "defend", icon: "security", label: "Defend", kind: "command" },
+    { id: "flee", name: "flee", icon: "directions_run", label: "Flee", kind: "command" },
+    { id: "status", name: "status", icon: "monitor_heart", label: "Status", kind: "command" },
   ];
 
-  // Additional commands for "more" menu
-  const moreCommands = [
-    { name: "who", icon: "people", label: "Who" },
-    { name: "bind", icon: "location_on", label: "Bind" },
-    { name: "drop", icon: "delete", label: "Drop" },
-    { name: "use", icon: "touch_app", label: "Use" },
-    { name: "examine", icon: "search", label: "Examine" },
-    { name: "shrug", icon: "sentiment_neutral", label: "Shrug" },
-    { name: "scream", icon: "campaign", label: "Scream" },
-    { name: "help", icon: "help", label: "Help" },
-  ];
-
-  // Select commands based on combat state
-  $: activeCommands = $store.inCombat ? combatCommands : standardCommands;
-
-  // Context-specific commands (only in normal mode)
+  $: pins = $settingsStore.interface?.actionBarPins;
+  $: inventoryOpenMode = $settingsStore.interface?.inventoryOpenMode || INVENTORY_OPEN_OVERLAY;
+  $: pinnedCommands = $store.inCombat ? combatCommands : resolvePinnedCommands(pins);
   $: contextCommands = $store.inCombat ? [] : [
     ...($store.hasMerchant ? [{ name: "list", icon: "store", label: "Shop" }] : []),
   ];
-
-  // Room actions
   $: roomActions = $store.actions || [];
-
-  // Ground items (pickable)
   $: groundItems = ($store.groundItems || []).filter(item => !item.noPickup);
 
   function executeCommand(cmd) {
@@ -468,66 +499,66 @@
     closeMenus();
   }
 
+  function activatePin(pin) {
+    if (!pin) return;
+    if (pin.kind === "map") {
+      if (store?.openMapOverview) store.openMapOverview();
+      closeMenus();
+      return;
+    }
+    if (pin.kind === "inventory") {
+      openInventory();
+      return;
+    }
+    executeCommand(pin.name);
+  }
+
+  function openInventory() {
+    closeMenus();
+    if (inventoryOpenMode === INVENTORY_OPEN_WIDGET) {
+      // Prefer on-screen inventory widget when chosen; still open overlay if user has none.
+      executeCommand("i");
+      return;
+    }
+    if (store?.openInventoryOverlay) store.openInventoryOverlay();
+    else executeCommand("i");
+  }
+
   function pickupItem(item) {
-    sendMessage('pickup ' + item.name);
+    sendMessage("pickup " + item.name);
     store.removeGroundItem(item.id);
   }
 
   function toggleMoreMenu() {
     showMoreMenu = !showMoreMenu;
-    showActionsMenu = false;
-    showPickupMenu = false;
-  }
-
-  function toggleActionsMenu() {
-    showActionsMenu = !showActionsMenu;
-    showMoreMenu = false;
     showPickupMenu = false;
   }
 
   function togglePickupMenu() {
     showPickupMenu = !showPickupMenu;
     showMoreMenu = false;
-    showActionsMenu = false;
   }
 
   function closeMenus() {
     showMoreMenu = false;
-    showActionsMenu = false;
     showPickupMenu = false;
+  }
+
+  function onTogglePin(id) {
+    const next = togglePin(pins, id);
+    settingsStore.setSetting("interface", "actionBarPins", next);
+  }
+
+  function setInvMode(mode) {
+    settingsStore.setSetting("interface", "inventoryOpenMode", mode);
+  }
+
+  function isPinned(id) {
+    return (pins || []).includes(id);
   }
 </script>
 
 <div class="mudx">
-  <!-- Popup area: fills space above action bar, popup aligns to bottom -->
-  {#if showActionsMenu}
-    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-    <div class="dialog-overlay" on:click={closeMenus}>
-      <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-      <div class="dialog" on:click|stopPropagation>
-        <div class="dialog-header">
-          <span class="dialog-title">
-            <i class="material-icons">auto_awesome</i>
-            Actions
-          </span>
-          <button class="dialog-close" on:click={closeMenus}>
-            <i class="material-icons">close</i>
-          </button>
-        </div>
-        <div class="dialog-grid">
-          {#each roomActions as action}
-            <button
-              class="popup-btn room-action-popup-btn"
-              on:click={() => executeCommand(action.name)}
-              title={action.description || action.name}
-            >
-              {action.name}
-            </button>
-          {/each}
-        </div>
-      </div>
-    </div>
-  {/if}
   {#if showMoreMenu}
     <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
     <div class="dialog-overlay" on:click={closeMenus}>
@@ -535,24 +566,60 @@
       <div class="dialog dialog-more" on:click|stopPropagation>
         <div class="dialog-header">
           <span class="dialog-title">
-            <i class="material-icons">more_horiz</i>
-            Commands
+            <i class="material-icons">tune</i>
+            Customize pins
           </span>
           <button class="dialog-close" on:click={closeMenus}>
             <i class="material-icons">close</i>
           </button>
         </div>
         <div class="dialog-grid">
-          {#each moreCommands as cmd}
+          <div class="dialog-section-label">Tap to pin / unpin on the action bar</div>
+          {#each PINNABLE_COMMANDS as cmd}
+            <button
+              class="pin-toggle"
+              class:pinned={isPinned(cmd.id)}
+              type="button"
+              on:click={() => onTogglePin(cmd.id)}
+              title={isPinned(cmd.id) ? `Unpin ${cmd.label}` : `Pin ${cmd.label}`}
+            >
+              <i class="material-icons">{isPinned(cmd.id) ? "push_pin" : cmd.icon}</i>
+              {cmd.label}
+            </button>
+          {/each}
+          <div class="dialog-section-label">Run command</div>
+          {#each PINNABLE_COMMANDS as cmd}
             <button
               class="popup-btn"
-              on:click={() => executeCommand(cmd.name)}
+              type="button"
+              on:click={() => activatePin(cmd)}
               title={cmd.label}
             >
               <i class="material-icons">{cmd.icon}</i>
               {cmd.label}
             </button>
           {/each}
+          <div class="pref-row">
+            Inventory opens as:
+            <label>
+              <input
+                type="radio"
+                name="inv-mode-desktop"
+                checked={inventoryOpenMode === INVENTORY_OPEN_OVERLAY}
+                on:change={() => setInvMode(INVENTORY_OPEN_OVERLAY)}
+              />
+              Popup overlay
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="inv-mode-desktop"
+                checked={inventoryOpenMode === INVENTORY_OPEN_WIDGET}
+                on:change={() => setInvMode(INVENTORY_OPEN_WIDGET)}
+              />
+              On-screen / log
+            </label>
+          </div>
         </div>
       </div>
     </div>
@@ -586,40 +653,48 @@
     </div>
   {/if}
 
-  <!-- Action bar pinned to bottom -->
   <div class="action-bar">
-    <!-- Direction exits: cardinal (N/E/S/W) + vertical + special -->
-    {#if allExits.length > 0}
-      <div class="exits-section">
-        {#each availableCardinals as exit}
-          <button
-            class="btn exit-btn"
-            on:click={() => executeCommand(exit.name)}
-            title={exit.name}
-          >
-            <i class="material-icons">{directionMeta[exit.name].icon}</i>
-            {directionMeta[exit.name].label}
-          </button>
-        {/each}
-        {#each allSpecialExits as exit}
-          <button
-            class="btn exit-btn"
-            on:click={() => executeCommand(exit.name)}
-            title={exit.name}
-          >
-            {exit.name}
-          </button>
-        {/each}
-      </div>
-      <div class="separator"></div>
-    {/if}
+    <!-- Cardinals always; special/vertical when present; room actions adjacent -->
+    <div class="exits-section">
+      {#each cardinalExits as exit}
+        <button
+          class="btn exit-btn"
+          class:unavailable={!exit.available}
+          disabled={!exit.available}
+          on:click={() => exit.available && executeCommand(exit.name)}
+          title={exit.available ? exit.name : `${exit.name} (no exit)`}
+        >
+          <i class="material-icons">{directionMeta[exit.name].icon}</i>
+          {directionMeta[exit.name].label}
+        </button>
+      {/each}
+      {#each allSpecialExits as exit}
+        <button
+          class="btn exit-btn"
+          on:click={() => executeCommand(exit.name)}
+          title={exit.name}
+        >
+          {exit.name}
+        </button>
+      {/each}
+      {#each roomActions as action}
+        <button
+          class="btn room-action-btn"
+          on:click={() => executeCommand(action.name)}
+          title={action.description || action.name}
+        >
+          {action.name}
+        </button>
+      {/each}
+    </div>
 
-    <!-- Main Commands (standard or combat) -->
+    <div class="separator"></div>
+
     <div class="commands-section">
-      {#each activeCommands as cmd}
+      {#each pinnedCommands as cmd}
         <button
           class="btn {$store.inCombat ? 'combat-btn' : 'cmd-btn'}"
-          on:click={() => executeCommand(cmd.name)}
+          on:click={() => activatePin(cmd)}
           title={cmd.label}
         >
           <i class="material-icons">{cmd.icon}</i>
@@ -627,7 +702,6 @@
         </button>
       {/each}
 
-      <!-- Context commands (merchant, items) -->
       {#each contextCommands as cmd}
         <button
           class="btn context-btn"
@@ -640,7 +714,6 @@
       {/each}
     </div>
 
-    <!-- Pickup button (only when items on ground) -->
     {#if groundItems.length > 0}
       <button
         class="btn context-btn"
@@ -653,38 +726,11 @@
       </button>
     {/if}
 
-    <!-- Room-specific actions -->
-    {#if roomActions.length === 1}
-      <!-- Single action: show inline -->
-      <div class="separator"></div>
-      <button
-        class="btn room-action-btn"
-        on:click={() => executeCommand(roomActions[0].name)}
-        title={roomActions[0].description || roomActions[0].name}
-      >
-        {roomActions[0].name}
-      </button>
-    {:else if roomActions.length > 1}
-      <!-- Multiple actions: overflow menu trigger -->
-      <div class="separator"></div>
-      <button
-        class="btn room-actions-btn"
-        class:active={showActionsMenu}
-        on:click={toggleActionsMenu}
-        title="Room actions"
-      >
-        <i class="material-icons">auto_awesome</i>
-        Actions
-        <span class="action-count">{roomActions.length}</span>
-      </button>
-    {/if}
-
-    <!-- More menu button -->
     <button
       class="btn more-btn"
       class:active={showMoreMenu}
       on:click={toggleMoreMenu}
-      title="More commands"
+      title="Customize pinned commands"
     >
       <i class="material-icons">more_horiz</i>
     </button>

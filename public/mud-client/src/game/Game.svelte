@@ -74,6 +74,8 @@
   import MobileLayout from "./mobile/MobileLayout.svelte";
   import QuestNotifications from "./ui/QuestNotifications.svelte";
   import CharacterSwitcher from "./ui/CharacterSwitcher.svelte";
+  import InventoryOverlay from "./ui/InventoryOverlay.svelte";
+  import MinimapWidget from "./widgets/MinimapWidget.svelte";
 
   import { onMount, onDestroy } from "svelte";
   import { getAuth } from "../auth.js";
@@ -284,4 +286,10 @@
 
   <!-- Quest notifications - shown on all layouts -->
   <QuestNotifications store={muxStore} />
+
+  <!-- Map overview host (pin "Map" + widget expand) -->
+  <MinimapWidget store={muxStore} {sendMessage} overlayHost={true} />
+
+  <!-- Inventory popup overlay (default inv open mode) -->
+  <InventoryOverlay store={muxStore} {sendMessage} />
 </div>

@@ -2065,16 +2065,18 @@ This is not a grid of room rectangles. Nearby rooms stay next to each other beca
 Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "uncharted"`.
 
 ### Client
-- Atlas widget (same `minimap` widget slot) receives the atlas over WebSocket on enter, and can also fetch `GET /api/characters/:id/map`
-- The widget auto-fits discovered places into its panel and keeps that fit (canvas is out of flow so it cannot resize the widget); the expand control opens a fullscreen popup of the same map
+- Map widget (player-facing name; same `minimap` widget slot / atlas protocol) receives the atlas over WebSocket on enter, and can also fetch `GET /api/characters/:id/map`
+- The widget auto-fits discovered places into its panel and keeps that fit (canvas is out of flow so it cannot resize the widget); expand or the action-bar **Map** pin opens a fullscreen Map overview overlay
 - Layer tabs, pan, wheel zoom, click-to-travel along discovered paths
-- Expand overlay for a full atlas view
+- Desktop/mobile action bars always show cardinal dirs (dimmed when unavailable), room actions adjacent to dirs, and player-customizable command pins (defaults: look, inv, map) persisted in `talesmud_settings_v1`
+- Inventory pin opens a popup overlay by default; preference can switch to on-screen widget / mobile sheet
 - Same JSON is the contract for a future mobile renderer
 
 ### Key Files
 - `pkg/worldmap/` — layout, biomes, hulls, discovery, reveal
 - `pkg/server/handler/charactermap.go` — REST endpoint
-- `public/mud-client/src/game/widgets/MinimapWidget.svelte` — parchment atlas renderer
+- `public/mud-client/src/game/widgets/MinimapWidget.svelte` — parchment Map renderer + overview host
+- `public/mud-client/src/game/hudPrefs.js` — action-bar pin + inventory open-mode helpers
 
 ---
 
