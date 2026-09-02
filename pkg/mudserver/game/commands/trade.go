@@ -521,13 +521,8 @@ func buildShopMessage(game def.GameCtrl, message *messages.Message, merchant *np
 			continue
 		}
 		price := merchant.MerchantTrait.GetBuyPrice(&invItem, itemTemplate.BasePrice)
-		image := ""
-		if itemTemplate.Meta != nil {
-			image = itemTemplate.Meta.Img
-		}
-		if image == "" {
-			image = itemart.URL(itemTemplate.ID, invItem.ItemTemplateID)
-		}
+		// Meta.Img is an art-generation prompt, never a URL — always serve itemart paths.
+		image := itemart.URL(itemTemplate.ID, invItem.ItemTemplateID)
 		stock = append(stock, messages.ShopStockItem{
 			TemplateID:    invItem.ItemTemplateID,
 			Name:          itemTemplate.Name,
@@ -535,6 +530,7 @@ func buildShopMessage(game def.GameCtrl, message *messages.Message, merchant *np
 			Quantity:      invItem.Quantity,
 			RequiredLevel: invItem.RequiredLevel,
 			Type:          string(itemTemplate.Type),
+			SubType:       string(itemTemplate.SubType),
 			Image:         image,
 		})
 	}

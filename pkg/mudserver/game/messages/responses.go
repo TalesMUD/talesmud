@@ -578,6 +578,7 @@ type ShopStockItem struct {
 	Quantity      int32  `json:"quantity"` // -1 = unlimited
 	RequiredLevel int32  `json:"requiredLevel,omitempty"`
 	Type          string `json:"type,omitempty"`
+	SubType       string `json:"subType,omitempty"`
 	Image         string `json:"image,omitempty"`
 }
 

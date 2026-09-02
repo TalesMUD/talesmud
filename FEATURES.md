@@ -589,7 +589,7 @@ Merchant commands are available in rooms with merchant NPCs:
 - `sell <item> [quantity]` sells accepted, unbound inventory items
 - `value <item>` / `price <item>` checks the merchant's sell price
 
-Web/Flutter clients inject a **Trade / Shop** dialog option when talking to a merchant (`isMerchant`), open a room-widget shop overlay (2-column horizontal buy/sell rows with icon + name + price, paginated; item-art fallbacks), and send bare `list` (not `trade <name>`).
+Web/Flutter clients inject a **Trade / Shop** dialog option when talking to a merchant (`isMerchant`), open a room-widget shop overlay (2-column horizontal buy/sell rows with icon + name + price, paginated), and send bare `list` (not `trade <name>`). Shop/inventory icons use `/api/item-art/{templateId}.png` (never `meta.img` prose prompts), then generic PNG, then local SVG.
 
 Trading is blocked while the character is in combat. Merchant stock can restock lazily when a player interacts after the configured interval.
 

@@ -1,5 +1,5 @@
 <script>
-  import { itemArtSrc, itemArtGenericKey } from '../itemArtSrc.js';
+  import { itemArtSrc, onItemArtError } from '../itemArtSrc.js';
 
   export let store;
   export let sendMessage;
@@ -65,28 +65,6 @@
 
   function rowPrice(item) {
     return tab === 'buy' ? Number(item.price || 0) : sellPrice(item);
-  }
-
-  /** Prefer real art, but fall through to local SVG generics — never leave a broken img. */
-  function shopArtSrc(item) {
-    return itemArtSrc(item);
-  }
-
-  function onShopArtError(ev, item) {
-    const img = ev && ev.currentTarget;
-    if (!img) return;
-    // Skip often-missing generic PNG; go straight to local SVG generics.
-    const stage = img.dataset.fallback || '0';
-    const key = itemArtGenericKey(item);
-    if (stage === '0') {
-      img.dataset.fallback = '1';
-      img.src = `sprites/items/generic-${key}.svg`;
-      return;
-    }
-    if (stage === '1') {
-      img.dataset.fallback = '2';
-      img.src = 'sprites/items/generic-default.svg';
-    }
   }
 
   function buyItem(row) {
@@ -355,9 +333,9 @@
           >
             <div class="shop-icon">
               <img
-                src={shopArtSrc(item)}
+                src={itemArtSrc(item)}
                 alt=""
-                on:error={(e) => onShopArtError(e, item)}
+                on:error={(e) => onItemArtError(e, item)}
               />
               {#if qty != null && qty > 1}
                 <span class="shop-stack">{qty}</span>
