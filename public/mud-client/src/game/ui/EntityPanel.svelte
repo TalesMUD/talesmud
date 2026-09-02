@@ -49,9 +49,10 @@
 
   .entity-bg {
     position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
+    /* ~10% inset so art doesn't kiss the card border */
+    inset: 10%;
+    width: auto;
+    height: auto;
     object-fit: cover;
     object-position: top center;
     image-rendering: pixelated;
