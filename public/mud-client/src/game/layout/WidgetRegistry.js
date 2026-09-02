@@ -34,6 +34,14 @@ export const WIDGET_TYPES = {
     icon: 'gamepad',
     category: 'core'
   },
+  hotbar: {
+    name: 'Spell Bar',
+    description: '8-slot hotbar for equipped skills and consumables',
+    defaultSize: { w: 24, h: 2 },
+    maxInstances: 1,
+    icon: 'auto_awesome',
+    category: 'core'
+  },
   character: {
     name: 'Character',
     description: 'Player stats and character sheet',

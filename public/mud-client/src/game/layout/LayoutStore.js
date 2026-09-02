@@ -2,7 +2,7 @@ import { writable, get } from 'svelte/store';
 
 const STORAGE_KEY = 'talesmud_layout_v1';
 
-// Default layout: Room + Terminal side by side, ActionBar at bottom
+// Default layout: Room + Terminal, Spell Bar between room and Action Bar
 const DEFAULT_LAYOUT = [
   {
     id: 'room-1',
@@ -10,7 +10,7 @@ const DEFAULT_LAYOUT = [
     x: 0,
     y: 0,
     w: 12,
-    h: 14,
+    h: 12,
     visible: true
   },
   {
@@ -19,7 +19,16 @@ const DEFAULT_LAYOUT = [
     x: 12,
     y: 0,
     w: 12,
-    h: 14,
+    h: 12,
+    visible: true
+  },
+  {
+    id: 'hotbar-1',
+    widgetType: 'hotbar',
+    x: 0,
+    y: 12,
+    w: 24,
+    h: 2,
     visible: true
   },
   {
@@ -32,6 +41,37 @@ const DEFAULT_LAYOUT = [
     visible: true
   }
 ];
+
+/** If a saved layout has no hotbar, insert one above the action bar. */
+function ensureHotbarInLayout(widgets) {
+  if (!Array.isArray(widgets) || widgets.some((w) => w.widgetType === 'hotbar')) {
+    return widgets;
+  }
+  const actionbar = widgets.find((w) => w.widgetType === 'actionbar');
+  const hotbarY = actionbar ? actionbar.y : 12;
+  const next = widgets.map((w) => {
+    if (w.widgetType === 'actionbar') {
+      return { ...w, y: hotbarY + 2 };
+    }
+    if (
+      (w.widgetType === 'room' || w.widgetType === 'terminal') &&
+      w.y + w.h > hotbarY
+    ) {
+      return { ...w, h: Math.max(2, hotbarY - w.y) };
+    }
+    return w;
+  });
+  next.push({
+    id: 'hotbar-1',
+    widgetType: 'hotbar',
+    x: 0,
+    y: hotbarY,
+    w: 24,
+    h: 2,
+    visible: true
+  });
+  return next;
+}
 
 // Convert layout items to svelte-grid format (with editing disabled by default)
 function toGridItems(widgets, editable = false) {
@@ -101,9 +141,10 @@ function createLayoutStore() {
         if (stored) {
           const data = JSON.parse(stored);
           if (data.version === 1 && Array.isArray(data.widgets)) {
+            const widgets = ensureHotbarInLayout(data.widgets);
             update(state => ({
               ...state,
-              widgets: toGridItems(data.widgets, state.editMode)
+              widgets: toGridItems(widgets, state.editMode)
             }));
             return true;
           }

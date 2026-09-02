@@ -1,8 +1,10 @@
 import { writable, get } from 'svelte/store';
 import {
   DEFAULT_ACTION_BAR_PINS,
+  DEFAULT_HOTBAR_BINDS,
   DEFAULT_INVENTORY_OPEN_MODE,
   normalizeActionBarPins,
+  normalizeHotbarBinds,
   normalizeInventoryOpenMode,
 } from './hudPrefs.js';
 
@@ -23,6 +25,7 @@ const DEFAULT_SETTINGS = {
     roomTextOverlay: false,      // Show game text overlay on room image (always on for mobile)
     actionBarPins: [...DEFAULT_ACTION_BAR_PINS],
     inventoryOpenMode: DEFAULT_INVENTORY_OPEN_MODE, // 'overlay' | 'widget'
+    hotbarBinds: [...DEFAULT_HOTBAR_BINDS],
   }
 };
 
@@ -55,6 +58,7 @@ function createSettingsStore() {
             const iface = { ...DEFAULT_SETTINGS.interface, ...data.interface };
             iface.actionBarPins = normalizeActionBarPins(iface.actionBarPins);
             iface.inventoryOpenMode = normalizeInventoryOpenMode(iface.inventoryOpenMode);
+            iface.hotbarBinds = normalizeHotbarBinds(iface.hotbarBinds);
             update(state => ({
               ...state,
               general: { ...DEFAULT_SETTINGS.general, ...data.general },
@@ -81,6 +85,7 @@ function createSettingsStore() {
           ...state.interface,
           actionBarPins: normalizeActionBarPins(state.interface.actionBarPins),
           inventoryOpenMode: normalizeInventoryOpenMode(state.interface.inventoryOpenMode),
+          hotbarBinds: normalizeHotbarBinds(state.interface.hotbarBinds),
         }
       };
       try {
@@ -108,6 +113,9 @@ function createSettingsStore() {
         }
         if (category === 'interface' && key === 'inventoryOpenMode') {
           nextValue = normalizeInventoryOpenMode(value);
+        }
+        if (category === 'interface' && key === 'hotbarBinds') {
+          nextValue = normalizeHotbarBinds(value);
         }
         return {
           ...state,
@@ -139,6 +147,7 @@ function createSettingsStore() {
           ...DEFAULT_SETTINGS.interface,
           actionBarPins: [...DEFAULT_ACTION_BAR_PINS],
           inventoryOpenMode: DEFAULT_INVENTORY_OPEN_MODE,
+          hotbarBinds: [...DEFAULT_HOTBAR_BINDS],
         }
       }));
       this.saveToStorage();
