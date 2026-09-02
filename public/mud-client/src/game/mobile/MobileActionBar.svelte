@@ -226,6 +226,45 @@
     color: #86efac;
   }
 
+  .dialog.dialog-say {
+    border-color: rgba(96, 165, 250, 0.45);
+    max-width: 360px;
+  }
+
+  .dialog-say .dialog-title {
+    color: #93c5fd;
+  }
+
+  .say-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .say-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(0, 0, 0, 0.35);
+    color: #e5e7eb;
+    font: inherit;
+    font-size: 16px;
+    min-height: 44px;
+  }
+
+  .say-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .say-actions .popup-btn {
+    text-transform: none;
+    flex: 1;
+  }
+
   .pin-toggle {
     display: flex;
     align-items: center;
@@ -288,6 +327,8 @@
 
   let showMoreMenu = false;
   let showPickupMenu = false;
+  let showSayPrompt = false;
+  let sayText = '';
 
   $: cardinalExits = getCardinalExits($store.exits);
   $: specialExits = getSpecialExits($store.exits);
@@ -333,7 +374,31 @@
       openInventory();
       return;
     }
+    if (pin.kind === "say") {
+      openSayPrompt();
+      return;
+    }
     executeCommand(pin.name);
+  }
+
+  function openSayPrompt() {
+    showMoreMenu = false;
+    showPickupMenu = false;
+    sayText = '';
+    showSayPrompt = true;
+  }
+
+  function closeSayPrompt() {
+    showSayPrompt = false;
+    sayText = '';
+  }
+
+  function submitSay() {
+    const text = String(sayText || '').trim();
+    if (!text) return;
+    sendMessage(`say ${text}`);
+    closeSayPrompt();
+    closeMenus();
   }
 
   function openInventory() {
@@ -460,6 +525,41 @@
           </button>
         {/each}
       </div>
+    </div>
+  </div>
+{/if}
+
+{#if showSayPrompt}
+  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+  <div class="dialog-overlay" on:click={closeSayPrompt}>
+    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+    <div class="dialog dialog-say" on:click|stopPropagation>
+      <div class="dialog-header">
+        <span class="dialog-title">
+          <i class="material-icons">chat</i>
+          Say
+        </span>
+        <button class="dialog-close" type="button" on:click={closeSayPrompt}>
+          <i class="material-icons">close</i>
+        </button>
+      </div>
+      <form class="say-form" on:submit|preventDefault={submitSay}>
+        <input
+          class="say-input"
+          type="text"
+          bind:value={sayText}
+          placeholder="What do you say?"
+          maxlength="240"
+          autofocus
+          aria-label="Say message"
+        />
+        <div class="say-actions">
+          <button class="popup-btn" type="button" on:click={closeSayPrompt}>Cancel</button>
+          <button class="popup-btn" type="submit" disabled={!String(sayText || '').trim()}>
+            Send
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 {/if}

@@ -12,6 +12,7 @@ export const DEFAULT_INVENTORY_OPEN_MODE = INVENTORY_OPEN_OVERLAY;
 /** Catalog of pinnable action-bar commands (id used in pins array). */
 export const PINNABLE_COMMANDS = [
   { id: 'look', name: 'look', icon: 'visibility', label: 'Look', kind: 'command' },
+  { id: 'say', name: 'say', icon: 'chat', label: 'Say', kind: 'say' },
   { id: 'inv', name: 'inv', icon: 'inventory_2', label: 'Inv', kind: 'inventory' },
   { id: 'map', name: 'map', icon: 'map', label: 'Map', kind: 'map' },
   { id: 'rest', name: 'rest', icon: 'hotel', label: 'Rest', kind: 'command' },
@@ -66,6 +67,7 @@ export function togglePin(pins, id) {
 
 export function commandForPin(pin) {
   if (!pin) return null;
+  // Special kinds (inventory / map / say) need UI handlers — never bare commands.
   if (pin.kind === 'command') return pin.name;
   return null;
 }

@@ -47,6 +47,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Merchant shop overlay in the room widget (structured `shop` WS message; dialog Trade inject; buy/sell)
   - Player chrome Map (not Atlas): minimap widget + full Map overview overlay; action-bar Map pin
   - Action bar: always-on compass dirs, room actions beside exits, customizable pinned commands (localStorage)
+  - Pinnable Say (default off): opens a message popup, then sends `say <text>`
   - Inventory pin opens overlay by default (preference: overlay | on-screen widget)
   - Equipment paper-doll: square slots around portrait (head/neck/chest/hands | legs/boots/ring1/ring2; main_hand + off_hand under); compact ATK/DEF strip
   - Room action/system reaction toast: large, centered on room hero art (desktop + mobile)
