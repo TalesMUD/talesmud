@@ -41,3 +41,33 @@ func TestBuildQuestLogEntryIncludesDefinitionDetails(t *testing.T) {
 		t.Fatal("entry missing accepted timestamp")
 	}
 }
+
+func TestBuildQuestRewardMessageOmitsBoxDrawing(t *testing.T) {
+	quest := &quests.Quest{
+		Entity:  &entities.Entity{ID: "quest-exit"},
+		Name:    "Find the Exit",
+		Rewards: quests.Reward{XP: 25, Gold: 4},
+	}
+	got := buildQuestRewardMessage(quest, []string{"Rusty Key"})
+	if got != "+ 25 XP\n+ 4 Gold\nRusty Key" {
+		t.Fatalf("unexpected reward text: %q", got)
+	}
+	for _, ch := range []rune{'╔', '╗', '╚', '╝', '║', '═'} {
+		if containsRune(got, ch) {
+			t.Fatalf("reward text still has box-drawing %q: %q", ch, got)
+		}
+	}
+	msg := questCompletedUpdate("user-1", quest.ID, quest.Name, got)
+	if string(msg.Type) != "questCompleted" || msg.QuestName != "Find the Exit" || msg.Status != "completed" {
+		t.Fatalf("unexpected completed update: %#v", msg)
+	}
+}
+
+func containsRune(s string, r rune) bool {
+	for _, c := range s {
+		if c == r {
+			return true
+		}
+	}
+	return false
+}

@@ -352,17 +352,11 @@ func handleQuestAction(game def.GameCtrl, message *messages.Message, selectedOpt
 			return
 		}
 
-		// Send quest accepted message with formatted response
-		acceptMsg := fmt.Sprintf("╔══════════════════════════════════════════════════╗\n")
-		acceptMsg += fmt.Sprintf("║         QUEST ACCEPTED                            ║\n")
-		acceptMsg += fmt.Sprintf("╚══════════════════════════════════════════════════╝\n\n")
-		acceptMsg += fmt.Sprintf("%s\n\n", quest.Name)
-		acceptMsg += fmt.Sprintf("%s\n\n", quest.Description)
-		acceptMsg += fmt.Sprintf("OBJECTIVES:\n")
-		for i, obj := range quest.Objectives {
-			acceptMsg += fmt.Sprintf("  %d. %s\n", i+1, obj.Description)
+		// Plain text for terminals; rich clients use questName + objectives.
+		acceptMsg := strings.TrimSpace(quest.Name)
+		if desc := strings.TrimSpace(quest.Description); desc != "" {
+			acceptMsg += "\n\n" + desc
 		}
-		acceptMsg += fmt.Sprintf("\n══════════════════════════════════════════════════")
 
 		objectives := make([]messages.QuestObjectiveProgress, 0, len(quest.Objectives))
 		for _, obj := range quest.Objectives {
@@ -434,16 +428,8 @@ func handleQuestAction(game def.GameCtrl, message *messages.Message, selectedOpt
 			return
 		}
 
-		// Build reward message
 		rewardMsg := buildQuestRewardMessage(quest, grantedItems)
-
-		// Send quest completed message with rewards
-		game.SendMessage() <- messages.MessageResponse{
-			Audience:   messages.MessageAudienceUser,
-			AudienceID: char.BelongsUserID,
-			Type:       messages.MessageTypeQuestCompleted,
-			Message:    rewardMsg,
-		}
+		game.SendMessage() <- questCompletedUpdate(char.BelongsUserID, quest.ID, quest.Name, rewardMsg)
 
 		// Get updated character for stats update
 		updatedChar, _ := game.GetFacade().CharactersService().FindByID(char.ID)
@@ -546,33 +532,38 @@ func handleQuestDialogOption(game def.GameCtrl, message *messages.Message, qo qu
 	handleQuestAction(game, message, &dialogs.Dialog{QuestID: qo.questID, Action: qo.action}, npcName, activeConv)
 }
 
-// buildQuestRewardMessage formats the quest completion reward message
+// buildQuestRewardMessage formats rewards as a clean line list (no box-drawing).
 func buildQuestRewardMessage(quest *quests.Quest, grantedItems []string) string {
-	var sb strings.Builder
-
-	sb.WriteString("╔══════════════════════════════════════════════════╗\n")
-	sb.WriteString("║         QUEST COMPLETED!                          ║\n")
-	sb.WriteString("╚══════════════════════════════════════════════════╝\n\n")
-
-	sb.WriteString(fmt.Sprintf("%s\n\n", quest.Name))
-
-	sb.WriteString("REWARDS:\n")
-	if quest.Rewards.XP > 0 {
-		sb.WriteString(fmt.Sprintf("  + %d XP\n", quest.Rewards.XP))
-	}
-	if quest.Rewards.Gold > 0 {
-		sb.WriteString(fmt.Sprintf("  + %d Gold\n", quest.Rewards.Gold))
-	}
-	if len(grantedItems) > 0 {
-		sb.WriteString("  Items:\n")
-		for _, itemName := range grantedItems {
-			sb.WriteString(fmt.Sprintf("    - %s\n", itemName))
+	var lines []string
+	if quest != nil {
+		if quest.Rewards.XP > 0 {
+			lines = append(lines, fmt.Sprintf("+ %d XP", quest.Rewards.XP))
+		}
+		if quest.Rewards.Gold > 0 {
+			lines = append(lines, fmt.Sprintf("+ %d Gold", quest.Rewards.Gold))
 		}
 	}
+	for _, itemName := range grantedItems {
+		name := strings.TrimSpace(itemName)
+		if name != "" {
+			lines = append(lines, name)
+		}
+	}
+	return strings.Join(lines, "\n")
+}
 
-	sb.WriteString("\n══════════════════════════════════════════════════")
-
-	return sb.String()
+func questCompletedUpdate(userID, questID, questName, rewardMsg string) messages.QuestUpdateMessage {
+	return messages.QuestUpdateMessage{
+		MessageResponse: messages.MessageResponse{
+			Audience:   messages.MessageAudienceUser,
+			AudienceID: userID,
+			Type:       messages.MessageTypeQuestCompleted,
+			Message:    rewardMsg,
+		},
+		QuestName: questName,
+		QuestID:   questID,
+		Status:    "completed",
+	}
 }
 
 func runQuestAcceptScript(game def.GameCtrl, message *messages.Message, scriptID string) {

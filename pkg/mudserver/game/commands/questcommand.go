@@ -260,12 +260,7 @@ func (cmd *CompleteQuestCommand) Execute(game def.GameCtrl, message *messages.Me
 		}
 
 		rewardMsg := buildQuestRewardMessage(quest, result.GrantedItems)
-		game.SendMessage() <- messages.MessageResponse{
-			Audience:   messages.MessageAudienceUser,
-			AudienceID: message.Character.BelongsUserID,
-			Type:       messages.MessageTypeQuestCompleted,
-			Message:    rewardMsg,
-		}
+		game.SendMessage() <- questCompletedUpdate(message.Character.BelongsUserID, quest.ID, quest.Name, rewardMsg)
 
 		updatedChar, _ := game.GetFacade().CharactersService().FindByID(message.Character.ID)
 		if updatedChar != nil {

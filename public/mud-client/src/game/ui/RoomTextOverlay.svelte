@@ -44,7 +44,7 @@
 </script>
 
 <style>
-  /* Centered on the room hero art — not parked on the description text. */
+  /* Centered on the room hero art — leave bottom alley for Pip / hotbar. */
   .room-text-overlay {
     position: absolute;
     inset: 0;
@@ -53,36 +53,50 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.35em;
-    padding: 0.7em 1em;
+    gap: 0.55em;
+    padding: 1em 1.25em 5em;
     pointer-events: none;
     overflow: hidden;
+    box-sizing: border-box;
   }
 
+  /*
+   * Midpoint type (e4d6aa1) kept. Cards grow wide/tall enough for a normal LOOK
+   * paragraph; overflow-y only engages for unusually long blobs.
+   */
   .overlay-message {
+    box-sizing: border-box;
     background: rgba(8, 10, 14, 0.88);
     color: #f3f4f6;
-    padding: 0.4em 0.75em;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: clamp(0.88rem, 1.68vw, 1.10rem);
     font-weight: 500;
-    line-height: 1.3;
+    line-height: 1.45;
     letter-spacing: 0;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(249, 115, 22, 0.65);
+    border: 1.5px solid rgba(249, 115, 22, 0.65);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
     opacity: 1;
     transition: opacity var(--fade-duration) ease-out;
     animation: overlayPopIn 0.22s ease-out;
+    text-align: center;
+    max-width: min(90%, 36rem);
+    width: max-content;
+    max-height: min(56%, 22rem);
+    overflow-x: hidden;
+    overflow-y: auto;
+    /* Outer padding is 0 — inner pad lives on the scrollport content so the
+       last line + bottom pad stay fully visible (no half-cut glyphs). */
+    padding: 0;
+  }
+
+  .overlay-message-inner {
+    box-sizing: border-box;
+    padding: 0.95em 1.25em 1.15em;
     white-space: pre-wrap;
     word-break: break-word;
     overflow-wrap: anywhere;
-    text-align: center;
-    max-width: min(78%, 26rem);
-    width: max-content;
-    max-height: min(38%, 10rem);
-    overflow-y: auto;
   }
 
   .overlay-message :global(strong) {
@@ -107,14 +121,17 @@
 
   @media screen and (max-width: 768px) {
     .room-text-overlay {
-      padding: 0.55em 0.65em;
+      padding: 0.75em 0.85em 4.25em;
+      gap: 0.45em;
     }
     .overlay-message {
       font-size: clamp(0.84rem, 3.1vw, 1.02rem);
-      line-height: 1.3;
-      padding: 0.35em 0.65em;
-      max-width: 86%;
-      max-height: min(36%, 9rem);
+      line-height: 1.45;
+      max-width: 94%;
+      max-height: min(52%, 18rem);
+    }
+    .overlay-message-inner {
+      padding: 0.85em 1.05em 1.05em;
     }
   }
 </style>
@@ -127,7 +144,9 @@
         class:fading={msg.fading}
         style="--fade-duration: {msg.fadeOutDuration}ms"
       >
-        {@html formatText(msg.text)}
+        <div class="overlay-message-inner">
+          {@html formatText(msg.text)}
+        </div>
       </div>
     {/each}
   </div>

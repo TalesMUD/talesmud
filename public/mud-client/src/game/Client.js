@@ -286,6 +286,7 @@ function createClient(renderer, characterCreator, muxStore) {
         type: 'accepted',
         questName: msg.questName || 'Quest',
         message: msg.message || 'Quest accepted',
+        objectives: msg.objectives || [],
       });
       if (mux.markDialogQuestAccepted) {
         mux.markDialogQuestAccepted(msg.questName);
@@ -339,19 +340,18 @@ function createClient(renderer, characterCreator, muxStore) {
 
   messageHandlers["questCompleted"] = (msg) => {
     renderer(msg.message);
-    overlayStore.pushMessage(msg.message);
+    // Do not push ASCII/reward blobs to RoomTextOverlay — completed uses the Veilspan card.
 
-    // Refresh quest log
     requestQuestLog();
 
-    // Show completion notification with rewards
     if (mux) {
       mux.addQuestNotification({
         id: `quest-completed-${msg.questId || Date.now()}`,
         questId: msg.questId,
         type: 'completed',
         questName: msg.questName || 'Quest',
-        message: msg.message || 'Quest completed!',
+        message: msg.message || 'Quest complete',
+        objectives: msg.objectives || [],
       });
     }
   };
