@@ -416,6 +416,16 @@
                 {/if}
 
                 <div class="quest-actions">
+                {#if (isQuestReady(quest) || quest.readyToTurnIn) && quest.turnInAnywhere}
+                  <button
+                    class="turnin-btn"
+                    on:click|stopPropagation={() => sendMessage && sendMessage(`complete ${quest.questName}`)}
+                  >
+                    Turn In
+                  </button>
+                {:else if quest.turnInNpcName}
+                  <span class="turnin-hint">Turn in: {quest.turnInNpcName}</span>
+                {/if}
                   <button
                     class="pin-btn is-pinned"
                     on:click|stopPropagation={() => togglePin(quest.questId)}
@@ -507,6 +517,16 @@
                 {/if}
 
                 <div class="quest-actions">
+                {#if (isQuestReady(quest) || quest.readyToTurnIn) && quest.turnInAnywhere}
+                  <button
+                    class="turnin-btn"
+                    on:click|stopPropagation={() => sendMessage && sendMessage(`complete ${quest.questName}`)}
+                  >
+                    Turn In
+                  </button>
+                {:else if quest.turnInNpcName}
+                  <span class="turnin-hint">Turn in: {quest.turnInNpcName}</span>
+                {/if}
                   <button
                     class="pin-btn"
                     on:click|stopPropagation={() => togglePin(quest.questId)}
@@ -1155,6 +1175,34 @@
   .abandon-btn:hover {
     background: rgba(239, 68, 68, 0.2);
     border-color: rgba(239, 68, 68, 0.5);
+  }
+
+
+  .turnin-btn {
+    padding: 6px 14px;
+    background: rgba(250, 204, 21, 0.16);
+    border: 1px solid rgba(250, 204, 21, 0.5);
+    color: #fde68a;
+    border-radius: 4px;
+    font-size: var(--text-xs);
+    cursor: pointer;
+    font-family: inherit;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: bold;
+    transition: all 0.2s;
+  }
+
+  .turnin-btn:hover {
+    background: rgba(250, 204, 21, 0.28);
+    border-color: rgba(250, 204, 21, 0.7);
+  }
+
+  .turnin-hint {
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+    align-self: center;
+    letter-spacing: 0.02em;
   }
 
   .pin-btn {
