@@ -49,15 +49,17 @@
 
   .entity-bg {
     position: absolute;
-    /* ~10% inset so art doesn't kiss the card border */
-    inset: 10%;
-    width: auto;
-    height: auto;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     object-fit: cover;
     object-position: top center;
     image-rendering: pixelated;
     display: block;
     z-index: 0;
+    /* ~10% padding each side — scale after fit so view-box still uses full card */
+    transform: scale(0.8);
+    transform-origin: center center;
   }
 
   /* Wide sprite content (animals): show whole figure, letterbox */
