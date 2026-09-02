@@ -50,6 +50,8 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Inventory pin opens overlay by default (preference: overlay | on-screen widget)
   - Equipment paper-doll: square slots around portrait (head/neck/chest/hands | legs/boots/ring1/ring2; main_hand + off_hand under); compact ATK/DEF strip
   - Room action/system reaction toast: large, centered on room hero art (desktop + mobile)
+  - Quest Accepted: large centered overlay; open Talk dialog refreshes `[Quest]` → `[In Progress]`
+  - Quest log Turn In for anywhere-ready quests; otherwise Turn in: NPC hint
   - WoW-style private cellar instances: `type: instance` exits, or a shared-room exit into a room tagged `instance`, clone a small room graph per character; town hub stays shared; empty copies are destroyed
 
 - **Character System**

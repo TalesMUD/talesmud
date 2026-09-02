@@ -124,9 +124,13 @@ func TestQuestOnlyNPCDialogCanAcceptQuestAndSendsEnrichedQuestLog(t *testing.T) 
 	}
 
 	var questLog *messages.QuestLogMessage
+	var refreshed *messages.DialogMessage
 	for _, out := range drainTradeMessages(g.SendMessage()) {
 		if msg, ok := out.(messages.QuestLogMessage); ok {
 			questLog = &msg
+		}
+		if msg, ok := out.(*messages.DialogMessage); ok {
+			refreshed = msg
 		}
 	}
 	if questLog == nil {
@@ -151,5 +155,11 @@ func TestQuestOnlyNPCDialogCanAcceptQuestAndSendsEnrichedQuestLog(t *testing.T) 
 	}
 	if len(entry.Objectives) != 1 || entry.Objectives[0].Description != "Search the old archive." {
 		t.Fatalf("expected enriched objective description, got %#v", entry.Objectives)
+	}
+	if refreshed == nil {
+		t.Fatal("expected dialog refresh after accepting quest (Talk stays open)")
+	}
+	if len(refreshed.Options) != 1 || !strings.Contains(refreshed.Options[0].Text, "[In Progress]") {
+		t.Fatalf("expected [In Progress] option after accept, got %#v", refreshed.Options)
 	}
 }

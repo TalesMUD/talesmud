@@ -10,6 +10,9 @@
     notifications = $store.questNotifications || [];
   }
 
+  $: accepted = notifications.filter((n) => n.type === 'accepted');
+  $: corner = notifications.filter((n) => n.type !== 'accepted');
+
   function dismissNotification(notification) {
     if (dismissingIds.has(notification.id)) return;
 
@@ -38,35 +41,163 @@
   function isDismissing(notification) {
     return dismissingIds.has(notification.id);
   }
+
+  function acceptHeadline(notification) {
+    const name = (notification.questName || '').trim();
+    if (name && name.toLowerCase() !== 'quest') return name;
+    return 'Quest accepted';
+  }
 </script>
 
-<div class="quest-notifications">
-  {#each notifications as notification (notification.id || notification)}
-    <div
-      class="notification {notification.type}"
-      class:slide-in={!isDismissing(notification)}
-      class:slide-out={isDismissing(notification)}
-      on:click={() => handleNotificationClick(notification)}
-      on:keydown={(e) => e.key === 'Enter' && handleNotificationClick(notification)}
-      role="button"
-      tabindex="0"
-    >
-      <div class="notification-content">
-        <div class="notification-title">{notification.questName}</div>
-        <div class="notification-message">{notification.message}</div>
-      </div>
-      <button
-        class="dismiss-btn"
-        on:click|stopPropagation={() => dismissNotification(notification)}
-        aria-label="Dismiss notification"
+{#if accepted.length > 0}
+  <!-- Large CENTRAL accept banner — not the old top-right chip -->
+  <div class="quest-accept-layer" aria-live="polite">
+    {#each accepted as notification (notification.id || notification)}
+      <div
+        class="accept-card"
+        class:slide-out={isDismissing(notification)}
+        role="dialog"
+        aria-label="Quest accepted"
       >
-        ×
-      </button>
-    </div>
-  {/each}
-</div>
+        <button
+          class="dismiss-btn accept-dismiss"
+          on:click={() => dismissNotification(notification)}
+          aria-label="Dismiss"
+          type="button"
+        >
+          ×
+        </button>
+        <div class="accept-kicker">QUEST ACCEPTED</div>
+        <div class="accept-title">{acceptHeadline(notification)}</div>
+        {#if notification.message}
+          <pre class="accept-body">{notification.message}</pre>
+        {/if}
+        <button
+          class="accept-open"
+          type="button"
+          on:click={() => handleNotificationClick(notification)}
+        >
+          Open quest log
+        </button>
+      </div>
+    {/each}
+  </div>
+{/if}
+
+{#if corner.length > 0}
+  <div class="quest-notifications">
+    {#each corner as notification (notification.id || notification)}
+      <div
+        class="notification {notification.type}"
+        class:slide-in={!isDismissing(notification)}
+        class:slide-out={isDismissing(notification)}
+        on:click={() => handleNotificationClick(notification)}
+        on:keydown={(e) => e.key === 'Enter' && handleNotificationClick(notification)}
+        role="button"
+        tabindex="0"
+      >
+        <div class="notification-content">
+          <div class="notification-title">{notification.questName}</div>
+          <div class="notification-message">{notification.message}</div>
+        </div>
+        <button
+          class="dismiss-btn"
+          on:click|stopPropagation={() => dismissNotification(notification)}
+          aria-label="Dismiss notification"
+          type="button"
+        >
+          ×
+        </button>
+      </div>
+    {/each}
+  </div>
+{/if}
 
 <style>
+  .quest-accept-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem;
+    pointer-events: none;
+    background: rgba(0, 0, 0, 0.35);
+  }
+
+  .accept-card {
+    pointer-events: auto;
+    position: relative;
+    width: min(92vw, 420px);
+    max-height: min(78vh, 520px);
+    overflow: auto;
+    background: rgba(8, 10, 16, 0.94);
+    border: 1.5px solid rgba(245, 158, 11, 0.7);
+    border-radius: 12px;
+    padding: 1.35rem 1.4rem 1.15rem;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+    animation: acceptPop 0.28s ease-out;
+    font-family: "Fira Code", "Cascadia Code", monospace;
+  }
+
+  .accept-card.slide-out {
+    animation: acceptOut 0.25s ease-in forwards;
+  }
+
+  .accept-kicker {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: #fbbf24;
+    margin-bottom: 0.35rem;
+  }
+
+  .accept-title {
+    font-size: clamp(1.15rem, 2.4vw, 1.45rem);
+    font-weight: 700;
+    color: #fde68a;
+    margin-bottom: 0.75rem;
+    line-height: 1.25;
+  }
+
+  .accept-body {
+    margin: 0 0 0.9rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: #e5e7eb;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    max-height: 14rem;
+    overflow-y: auto;
+  }
+
+  .accept-open {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 0.55rem 0.75rem;
+    border-radius: 8px;
+    border: 1px solid rgba(245, 158, 11, 0.45);
+    background: rgba(245, 158, 11, 0.12);
+    color: #fde68a;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .accept-open:hover {
+    background: rgba(245, 158, 11, 0.22);
+  }
+
+  .accept-dismiss {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+  }
+
   .quest-notifications {
     position: fixed;
     top: 80px;
@@ -115,10 +246,6 @@
   .notification-content {
     flex: 1;
     min-width: 0;
-  }
-
-  .notification.accepted {
-    border-left: 4px solid #f59e0b;
   }
 
   .notification.progress {
@@ -178,6 +305,28 @@
   .dismiss-btn:hover {
     background: rgba(255, 255, 255, 0.1);
     color: #e5e7eb;
+  }
+
+  @keyframes acceptPop {
+    from {
+      opacity: 0;
+      transform: scale(0.94) translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  @keyframes acceptOut {
+    from {
+      opacity: 1;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(0.96) translateY(8px);
+    }
   }
 
   @keyframes slideIn {

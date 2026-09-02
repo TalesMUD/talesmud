@@ -273,12 +273,12 @@ function createClient(renderer, characterCreator, muxStore) {
   // Quest message handlers
   messageHandlers["questAccepted"] = (msg) => {
     renderer(msg.message);
-    overlayStore.pushMessage(msg.message);
+    // Do not push to RoomTextOverlay — accepted uses the large centered QuestNotifications card.
 
     // Update quest log
     requestQuestLog();
 
-    // Show notification
+    // Show notification + refresh open Talk options immediately
     if (mux) {
       mux.addQuestNotification({
         id: `quest-accepted-${msg.questId || Date.now()}`,
@@ -287,6 +287,9 @@ function createClient(renderer, characterCreator, muxStore) {
         questName: msg.questName || 'Quest',
         message: msg.message || 'Quest accepted',
       });
+      if (mux.markDialogQuestAccepted) {
+        mux.markDialogQuestAccepted(msg.questName);
+      }
     }
   };
 
