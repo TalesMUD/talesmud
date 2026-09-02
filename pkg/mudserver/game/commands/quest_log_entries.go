@@ -11,17 +11,17 @@ func buildQuestLogEntries(game def.GameCtrl, progressList []*quests.QuestProgres
 	for _, progress := range progressList {
 		quest, err := game.GetFacade().QuestsService().FindByID(progress.QuestID)
 		if err == nil && quest != nil {
-			entries = append(entries, buildQuestLogEntry(quest, progress))
+			entries = append(entries, buildQuestLogEntry(game, quest, progress))
 			continue
 		}
 
-		entry := buildQuestLogEntry(nil, progress)
+		entry := buildQuestLogEntry(game, nil, progress)
 		entries = append(entries, entry)
 	}
 	return entries
 }
 
-func buildQuestLogEntry(quest *quests.Quest, progress *quests.QuestProgress) messages.QuestLogEntry {
+func buildQuestLogEntry(game def.GameCtrl, quest *quests.Quest, progress *quests.QuestProgress) messages.QuestLogEntry {
 	entry := messages.QuestLogEntry{
 		QuestID:       progress.QuestID,
 		Status:        string(progress.Status),
@@ -38,6 +38,14 @@ func buildQuestLogEntry(quest *quests.Quest, progress *quests.QuestProgress) mes
 			XP:              quest.Rewards.XP,
 			Gold:            quest.Rewards.Gold,
 			ItemTemplateIDs: quest.Rewards.ItemTemplateIDs,
+		}
+		anywhere, npcID := quest.ResolveTurnIn()
+		entry.TurnInAnywhere = anywhere
+		entry.TurnInNpcID = npcID
+		if npcID != "" && game != nil && game.GetFacade() != nil && game.GetFacade().NPCsService() != nil {
+			if npc, err := game.GetFacade().NPCsService().FindByID(npcID); err == nil && npc != nil {
+				entry.TurnInNpcName = npc.Name
+			}
 		}
 	}
 

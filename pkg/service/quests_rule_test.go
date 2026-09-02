@@ -58,7 +58,7 @@ func TestValidateQuestRejectsSelfPrerequisite(t *testing.T) {
 func TestValidateQuestRejectsNonNPCSourceWithoutTurnInNPC(t *testing.T) {
 	svc := newQuestValidationTestService()
 	quest := validTestQuest()
-	quest.Source = quests.QuestSource{Type: "auto"}
+	quest.Source = quests.QuestSource{Type: "item", ItemID: "item1"}
 	quest.Objectives = []quests.Objective{{
 		ID:          "obj1",
 		Type:        quests.ObjectiveVisit,
@@ -70,6 +70,100 @@ func TestValidateQuestRejectsNonNPCSourceWithoutTurnInNPC(t *testing.T) {
 	issues := svc.ValidateQuest(quest)
 
 	assertHasIssue(t, issues, "missing_turn_in_npc")
+}
+
+func TestValidateQuestAcceptsAutoSourceAnywhereTurnIn(t *testing.T) {
+	svc := newQuestValidationTestService()
+	quest := validTestQuest()
+	quest.Source = quests.QuestSource{Type: "auto"}
+	quest.TurnIn = "anywhere"
+	quest.Objectives = []quests.Objective{{
+		ID:          "obj1",
+		Type:        quests.ObjectiveVisit,
+		Description: "Find the ruin",
+		TargetID:    "room1",
+		Amount:      1,
+	}}
+
+	issues := svc.ValidateQuest(quest)
+	for _, issue := range issues {
+		if issue.Severity == "error" {
+			t.Fatalf("expected auto anywhere quest to validate, got %#v", issues)
+		}
+	}
+}
+
+func TestTurnInQuestAnywhereCompletesAutoQuest(t *testing.T) {
+	quest := validTestQuest()
+	quest.Source = quests.QuestSource{Type: "auto"}
+	quest.TurnIn = "anywhere"
+	quest.Rewards.XP = 10
+	quest.Objectives = []quests.Objective{{
+		ID:          "obj1",
+		Type:        quests.ObjectiveVisit,
+		Description: "Find the ruin",
+		TargetID:    "room1",
+		Amount:      1,
+	}}
+	fixture := newQuestRuleTestFixture(quest)
+	fixture.progressRepo.progress[0].Objectives[0].Current = 1
+	fixture.progressRepo.progress[0].Objectives[0].Completed = true
+
+	result, err := fixture.svc.TurnInQuestAnywhere("char1", quest.ID)
+	if err != nil {
+		t.Fatalf("TurnInQuestAnywhere returned error: %v", err)
+	}
+	if fixture.progressRepo.progress[0].Status != quests.QuestStatusCompleted {
+		t.Fatalf("expected completed status, got %q", fixture.progressRepo.progress[0].Status)
+	}
+	if result.XP != 10 {
+		t.Fatalf("expected 10 XP, got %d", result.XP)
+	}
+}
+
+func TestTurnInQuestAnywhereRejectsNPCBoundQuest(t *testing.T) {
+	fixture := newQuestRuleTestFixture(validTestQuest())
+	fixture.progressRepo.progress[0].Objectives[0].Current = 1
+	fixture.progressRepo.progress[0].Objectives[0].Completed = true
+
+	_, err := fixture.svc.TurnInQuestAnywhere("char1", "quest1")
+	if err == nil {
+		t.Fatalf("expected NPC-bound quest to reject log turn-in")
+	}
+	if fixture.progressRepo.progress[0].Status != quests.QuestStatusActive {
+		t.Fatalf("expected quest to remain active, got %q", fixture.progressRepo.progress[0].Status)
+	}
+}
+
+func TestBuildQuestLogIncludesTurnInAnywhere(t *testing.T) {
+	quest := validTestQuest()
+	quest.Source = quests.QuestSource{Type: "auto"}
+	quest.TurnIn = "anywhere"
+	quest.Objectives[0].Description = "Find the ruin"
+	questRepo := &fakeQuestsRepo{quests: map[string]*quests.Quest{
+		quest.ID: quest,
+	}}
+	progressRepo := &fakeQuestProgressRepo{progress: []*quests.QuestProgress{{
+		Entity:      &entities.Entity{ID: "progress1"},
+		CharacterID: "char1",
+		QuestID:     quest.ID,
+		Status:      quests.QuestStatusActive,
+		Objectives: []quests.ObjectiveProgress{{
+			ObjectiveID: "obj1",
+			Current:     1,
+			Required:    1,
+			Completed:   true,
+		}},
+	}}}
+	svc := NewQuestsService(questRepo, progressRepo)
+
+	entries, err := svc.BuildQuestLog("char1")
+	if err != nil {
+		t.Fatalf("BuildQuestLog returned error: %v", err)
+	}
+	if len(entries) != 1 || !entries[0].TurnInAnywhere || entries[0].TurnInNpcID != "" {
+		t.Fatalf("expected anywhere turn-in on log entry, got %#v", entries)
+	}
 }
 
 func TestValidateQuestAcceptsValidNPCQuest(t *testing.T) {

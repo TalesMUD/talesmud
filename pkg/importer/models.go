@@ -295,6 +295,7 @@ type YAMLQuest struct {
 	Level              int32                `yaml:"level"`
 	Repeatable         bool                 `yaml:"repeatable"`
 	Source             YAMLQuestSource      `yaml:"source"`
+	TurnIn             string               `yaml:"turnIn"`
 	Objectives         []YAMLQuestObjective `yaml:"objectives"`
 	Rewards            YAMLQuestRewards     `yaml:"rewards"`
 	RequiredQuestIDs   []string             `yaml:"requiredQuestIds"`

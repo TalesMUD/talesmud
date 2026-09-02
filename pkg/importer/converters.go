@@ -404,6 +404,7 @@ func (y *YAMLQuest) ToEntity() *quests.Quest {
 		CompleteDialogText: y.CompleteDialogText,
 		OnAcceptScriptID:   y.OnAcceptScriptID,
 		OnCompleteScriptID: y.OnCompleteScriptID,
+		TurnIn:             y.TurnIn,
 		Created:            time.Now(),
 		Updated:            time.Now(),
 	}

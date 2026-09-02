@@ -118,6 +118,7 @@ func (commandProcessor *CommandProcessor) registerCommands() {
 	commandProcessor.RegisterCommand(&QuestLogCommand{}, "Show your quest log", "quests", "ql", "questlog")
 	commandProcessor.RegisterCommand(&QuestDetailCommand{}, "Show quest details: quest [name]", "quest")
 	commandProcessor.RegisterCommand(&AbandonQuestCommand{}, "Abandon a quest: abandon [name]", "abandon")
+	commandProcessor.RegisterCommand(&CompleteQuestCommand{}, "Turn in a quest from the log: complete [name]", "complete", "turnin")
 
 	// Respawn commands
 	commandProcessor.RegisterCommand(&BindCommand{}, "Bind respawn point: bind", "bind")

@@ -1,6 +1,7 @@
 package quests
 
 import (
+	"strings"
 	"time"
 
 	"github.com/talesmud/talesmud/pkg/entities"
@@ -73,6 +74,10 @@ type Quest struct {
 	// Source - how player gets this quest
 	Source QuestSource `json:"source"`
 
+	// TurnIn is "anywhere" or "npc:<id>". Empty uses defaults:
+	// NPC-source or deliver objectives bind to that NPC; auto/script quests turn in anywhere.
+	TurnIn string `json:"turnIn,omitempty"`
+
 	// Objectives
 	Objectives []Objective `json:"objectives"`
 
@@ -92,4 +97,47 @@ type Quest struct {
 
 	Created time.Time `json:"created,omitempty"`
 	Updated time.Time `json:"updated,omitempty"`
+}
+
+// ResolveTurnIn returns whether the quest can be turned in from the log (anywhere)
+// and the NPC id for NPC-bound turn-in.
+func (q *Quest) ResolveTurnIn() (anywhere bool, npcID string) {
+	if q == nil {
+		return false, ""
+	}
+	raw := strings.TrimSpace(q.TurnIn)
+	lower := strings.ToLower(raw)
+	if lower == "anywhere" {
+		return true, ""
+	}
+	if strings.HasPrefix(lower, "npc:") {
+		return false, strings.TrimSpace(raw[len("npc:"):])
+	}
+	if lower == "npc" && strings.TrimSpace(q.Source.NPCID) != "" {
+		return false, strings.TrimSpace(q.Source.NPCID)
+	}
+	if strings.EqualFold(q.Source.Type, "npc") && strings.TrimSpace(q.Source.NPCID) != "" {
+		return false, strings.TrimSpace(q.Source.NPCID)
+	}
+	for _, obj := range q.Objectives {
+		if obj.Type == ObjectiveDeliver && strings.TrimSpace(obj.DeliverToNPCID) != "" {
+			return false, strings.TrimSpace(obj.DeliverToNPCID)
+		}
+	}
+	if strings.EqualFold(q.Source.Type, "auto") || strings.EqualFold(q.Source.Type, "script") {
+		return true, ""
+	}
+	return false, ""
+}
+
+// AllowsAnywhereTurnIn is true when the quest log may complete the quest.
+func (q *Quest) AllowsAnywhereTurnIn() bool {
+	anywhere, _ := q.ResolveTurnIn()
+	return anywhere
+}
+
+// TurnInNPCID is the NPC template that must handle turn-in, or empty.
+func (q *Quest) TurnInNPCID() string {
+	_, npcID := q.ResolveTurnIn()
+	return npcID
 }

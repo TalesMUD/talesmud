@@ -185,35 +185,66 @@ func getQuestDialogOptions(game def.GameCtrl, characterID, npcTemplateID, npcIns
 				action:    "accept",
 			})
 		} else if progress.Status == quests.QuestStatusActive {
-			// Check if all objectives are complete
-			allComplete := true
-			for _, obj := range progress.Objectives {
-				if !obj.Completed {
-					allComplete = false
-					break
-				}
+			options = append(options, activeQuestDialogOption(quest, progress)...)
+		}
+	}
+
+	seen := map[string]bool{}
+	for _, option := range options {
+		seen[option.questID] = true
+	}
+	progressList, err := game.GetFacade().QuestsService().GetQuestLog(characterID)
+	if err == nil {
+		for _, progress := range progressList {
+			if progress == nil || progress.Status != quests.QuestStatusActive || seen[progress.QuestID] {
+				continue
 			}
-			if allComplete {
-				options = append(options, questDialogOption{
-					text:      fmt.Sprintf("[Turn In] %s", quest.Name),
-					npcText:   quest.CompleteDialogText,
-					questID:   quest.ID,
-					questName: quest.Name,
-					action:    "complete",
-				})
-			} else {
-				options = append(options, questDialogOption{
-					text:      fmt.Sprintf("[In Progress] %s", quest.Name),
-					npcText:   quest.ProgressDialogText,
-					questID:   quest.ID,
-					questName: quest.Name,
-					action:    "progress",
-				})
+			quest, qerr := game.GetFacade().QuestsService().FindByID(progress.QuestID)
+			if qerr != nil || quest == nil || quest.AllowsAnywhereTurnIn() {
+				continue
 			}
+			turnInNPC := quest.TurnInNPCID()
+			if turnInNPC == "" || (turnInNPC != npcTemplateID && turnInNPC != npcInstanceID) {
+				continue
+			}
+			options = append(options, activeQuestDialogOption(quest, progress)...)
+			seen[progress.QuestID] = true
 		}
 	}
 
 	return options
+}
+
+func activeQuestDialogOption(quest *quests.Quest, progress *quests.QuestProgress) []questDialogOption {
+	if quest == nil || progress == nil {
+		return nil
+	}
+	allComplete := true
+	for _, obj := range progress.Objectives {
+		if !obj.Completed {
+			allComplete = false
+			break
+		}
+	}
+	if allComplete && quest.AllowsAnywhereTurnIn() {
+		return nil
+	}
+	if allComplete {
+		return []questDialogOption{{
+			text:      fmt.Sprintf("[Turn In] %s", quest.Name),
+			npcText:   quest.CompleteDialogText,
+			questID:   quest.ID,
+			questName: quest.Name,
+			action:    "complete",
+		}}
+	}
+	return []questDialogOption{{
+		text:      fmt.Sprintf("[In Progress] %s", quest.Name),
+		npcText:   quest.ProgressDialogText,
+		questID:   quest.ID,
+		questName: quest.Name,
+		action:    "progress",
+	}}
 }
 
 // questPrereqsMet checks if a character meets the prerequisites for a quest

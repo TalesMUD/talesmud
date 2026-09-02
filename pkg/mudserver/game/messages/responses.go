@@ -462,17 +462,20 @@ type QuestReward struct {
 
 // QuestLogEntry represents a quest in the quest log
 type QuestLogEntry struct {
-	QuestID       string                   `json:"questId"`
-	QuestName     string                   `json:"questName"`
-	Description   string                   `json:"description,omitempty"`
-	Category      string                   `json:"category,omitempty"`
-	Level         int32                    `json:"level,omitempty"`
-	Status        string                   `json:"status"`
-	ReadyToTurnIn bool                     `json:"readyToTurnIn,omitempty"`
-	Objectives    []QuestObjectiveProgress `json:"objectives"`
-	Rewards       *QuestReward             `json:"rewards,omitempty"`
-	AcceptedAt    string                   `json:"acceptedAt,omitempty"`
-	CompletedAt   string                   `json:"completedAt,omitempty"`
+	QuestID        string                   `json:"questId"`
+	QuestName      string                   `json:"questName"`
+	Description    string                   `json:"description,omitempty"`
+	Category       string                   `json:"category,omitempty"`
+	Level          int32                    `json:"level,omitempty"`
+	Status         string                   `json:"status"`
+	ReadyToTurnIn  bool                     `json:"readyToTurnIn,omitempty"`
+	TurnInAnywhere bool                     `json:"turnInAnywhere,omitempty"`
+	TurnInNpcID    string                   `json:"turnInNpcId,omitempty"`
+	TurnInNpcName  string                   `json:"turnInNpcName,omitempty"`
+	Objectives     []QuestObjectiveProgress `json:"objectives"`
+	Rewards        *QuestReward             `json:"rewards,omitempty"`
+	AcceptedAt     string                   `json:"acceptedAt,omitempty"`
+	CompletedAt    string                   `json:"completedAt,omitempty"`
 }
 
 // QuestLogMessage sends the full quest log to the client
