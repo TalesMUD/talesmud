@@ -3,6 +3,7 @@
   import DialogOverlay from '../ui/DialogOverlay.svelte';
   import ShopOverlay from '../ui/ShopOverlay.svelte';
   import RoomTextOverlay from '../ui/RoomTextOverlay.svelte';
+  import HotbarWidget from '../widgets/HotbarWidget.svelte';
   import MobileActionBar from './MobileActionBar.svelte';
   import { findNpcByName } from '../MUDXPlusStore';
   import { settingsStore } from '../SettingsStore.js';
@@ -274,6 +275,9 @@
       {/if}
     </div>
   {/if}
+
+  <!-- Spell / consumable hotbar above dirs + LOOK/INV/MAP -->
+  <HotbarWidget {store} {sendMessage} compact={true} />
 
   <!-- Action bar -->
   <div class="action-section">

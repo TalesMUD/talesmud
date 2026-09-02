@@ -5,6 +5,7 @@ import RoomWidget from '../widgets/RoomWidget.svelte';
 import TerminalWidget from '../widgets/TerminalWidget.svelte';
 import TerminalXWidget from '../widgets/TerminalXWidget.svelte';
 import ActionBarWidget from '../widgets/ActionBarWidget.svelte';
+import HotbarWidget from '../widgets/HotbarWidget.svelte';
 import CharacterWidget from '../widgets/CharacterWidget.svelte';
 import InventoryWidget from '../widgets/InventoryWidget.svelte';
 import EquipmentWidget from '../widgets/EquipmentWidget.svelte';
@@ -17,6 +18,7 @@ export const childWidgetComponents = {
   terminal: TerminalWidget,
   terminalx: TerminalXWidget,
   actionbar: ActionBarWidget,
+  hotbar: HotbarWidget,
   character: CharacterWidget,
   inventory: InventoryWidget,
   equipment: EquipmentWidget,
@@ -38,6 +40,8 @@ export function getChildWidgetProps(widgetType, deps) {
       return { onTerminalReady, onInput: onTerminalInput };
     case 'actionbar':
       return { store, sendMessage, term: null };
+    case 'hotbar':
+      return { store, sendMessage };
     case 'inventory':
       return { store, sendMessage };
     case 'equipment':

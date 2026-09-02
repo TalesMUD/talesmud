@@ -1074,7 +1074,12 @@ Enhanced notification system with interactions:
 - Smooth transitions
 - Accepting a quest refreshes the open Talk dialog so `[Quest]` becomes `[In Progress]` without closing Talk
 - Quest log: READY + turnInAnywhere shows **Turn In** (`complete <name>`); otherwise a **Turn in: &lt;NPC&gt;** hint
-- Top-right positioning
+
+### Spell Bar / Hotbar
+- 8 square slots between room description and the action bar (desktop grid widget + mobile strip)
+- Bind equipped combat skills (`cast` / combat-only) or inventory consumables (`use`)
+- Binds persist in `talesmud_settings_v1` (`interface.hotbarBinds`); empty equipped list shows "spellbook empty"
+- Does not use or overload the respawn `bind` command
 
 ### Quest API Endpoints
 
