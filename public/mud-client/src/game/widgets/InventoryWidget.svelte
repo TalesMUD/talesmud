@@ -355,7 +355,7 @@
 
   .inventory-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
     gap: 0.5em;
   }
 
@@ -404,11 +404,12 @@
   }
 
   .item-art {
-    width: 40px;
-    height: 40px;
+    width: 64px;
+    height: 64px;
     object-fit: contain;
     margin-bottom: 0.2em;
     image-rendering: pixelated;
+    image-rendering: crisp-edges;
     flex-shrink: 0;
   }
 
@@ -432,10 +433,11 @@
   }
 
   .list-item-art {
-    width: 36px;
-    height: 36px;
+    width: 64px;
+    height: 64px;
     object-fit: contain;
     image-rendering: pixelated;
+    image-rendering: crisp-edges;
     flex-shrink: 0;
   }
 

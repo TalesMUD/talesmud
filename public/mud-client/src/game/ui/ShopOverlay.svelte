@@ -202,7 +202,7 @@
     background: rgba(255, 255, 255, 0.03);
     color: #e2e8f0;
     cursor: pointer;
-    min-height: 48px;
+    min-height: 72px;
   }
   .shop-row:hover {
     border-color: rgba(96, 165, 250, 0.5);
@@ -214,19 +214,20 @@
   }
   .shop-icon {
     position: relative;
-    flex: 0 0 40px;
-    width: 40px;
-    height: 40px;
+    flex: 0 0 64px;
+    width: 64px;
+    height: 64px;
     border-radius: 4px;
     background: #0b1119;
     border: 1px solid rgba(148, 163, 184, 0.25);
     overflow: hidden;
   }
   .shop-icon img {
-    width: 100%;
-    height: 100%;
+    width: 64px;
+    height: 64px;
     object-fit: contain;
     image-rendering: pixelated;
+    image-rendering: crisp-edges;
     display: block;
   }
   .shop-stack {
