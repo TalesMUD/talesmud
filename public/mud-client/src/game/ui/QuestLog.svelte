@@ -15,6 +15,17 @@
   let sortBy = 'status';
   let searchQuery = '';
   let showHistory = false;
+  let showToolsMenu = false;
+
+  $: toolsActive = !!(searchQuery || filterCategory !== 'all' || sortBy !== 'status' || !showCompleted || showAbandoned);
+
+  function toggleToolsMenu() {
+    showToolsMenu = !showToolsMenu;
+  }
+
+  function closeToolsMenu() {
+    showToolsMenu = false;
+  }
 
   // Load pinned quests
   $: if (visible && typeof localStorage !== 'undefined') {
@@ -168,49 +179,66 @@
           <div class="header-actions">
             <button
               class="history-btn"
-              on:click={() => showHistory = !showHistory}
+              on:click={() => { showHistory = !showHistory; showToolsMenu = false; }}
               title="View Quest History"
             >
               📊
             </button>
+            <button
+              class="tools-btn"
+              class:active={showToolsMenu || toolsActive}
+              on:click={toggleToolsMenu}
+              title="Search and filters"
+              aria-label="Search and filters"
+              aria-expanded={showToolsMenu}
+            >
+              <i class="material-icons">more_horiz</i>
+            </button>
             <button class="close-btn" on:click={close}>&times;</button>
           </div>
         </div>
-        <div class="search-bar">
-          <input
-            type="text"
-            bind:value={searchQuery}
-            placeholder="Search quests..."
-            class="search-input"
-          />
-          {#if searchQuery}
-            <button class="clear-search-btn" on:click={() => searchQuery = ''}>×</button>
-          {/if}
-        </div>
-        <div class="filter-controls">
-          <select bind:value={filterCategory} class="filter-select">
-            <option value="all">All Types</option>
-            <option value="main">Main</option>
-            <option value="side">Side</option>
-            <option value="daily">Daily</option>
-          </select>
-          <select bind:value={sortBy} class="filter-select">
-            <option value="status">Sort: Status</option>
-            <option value="name">Sort: Name</option>
-            <option value="level">Sort: Level</option>
-            <option value="category">Sort: Type</option>
-          </select>
-        </div>
-        <div class="toggle-controls">
-          <label class="toggle-label">
-            <input type="checkbox" bind:checked={showCompleted} />
-            <span>Completed</span>
-          </label>
-          <label class="toggle-label">
-            <input type="checkbox" bind:checked={showAbandoned} />
-            <span>Abandoned</span>
-          </label>
-        </div>
+        {#if showToolsMenu}
+          <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+          <div class="tools-backdrop" on:click={closeToolsMenu}></div>
+          <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+          <div class="tools-menu" on:click|stopPropagation>
+            <div class="search-bar">
+              <input
+                type="text"
+                bind:value={searchQuery}
+                placeholder="Search quests..."
+                class="search-input"
+              />
+              {#if searchQuery}
+                <button class="clear-search-btn" on:click={() => searchQuery = ''}>×</button>
+              {/if}
+            </div>
+            <div class="filter-controls">
+              <select bind:value={filterCategory} class="filter-select">
+                <option value="all">All Types</option>
+                <option value="main">Main</option>
+                <option value="side">Side</option>
+                <option value="daily">Daily</option>
+              </select>
+              <select bind:value={sortBy} class="filter-select">
+                <option value="status">Sort: Status</option>
+                <option value="name">Sort: Name</option>
+                <option value="level">Sort: Level</option>
+                <option value="category">Sort: Type</option>
+              </select>
+            </div>
+            <div class="toggle-controls">
+              <label class="toggle-label">
+                <input type="checkbox" bind:checked={showCompleted} />
+                <span>Completed</span>
+              </label>
+              <label class="toggle-label">
+                <input type="checkbox" bind:checked={showAbandoned} />
+                <span>Abandoned</span>
+              </label>
+            </div>
+          </div>
+        {/if}
       </div>
 
       <div class="quest-log-content">
@@ -642,48 +670,87 @@
   }
 
   .quest-log-header {
-    padding: 16px;
+    position: relative;
+    padding: 8px 12px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 0;
   }
 
   .header-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 0.5em;
+    min-height: 28px;
   }
 
   .header-actions {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
   }
 
   .quest-log-header h2 {
     margin: 0;
-    font-size: 14px;
+    font-size: 0.95rem;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.08em;
     color: #f59e0b;
+    line-height: 1.2;
   }
 
-  .history-btn {
+  .history-btn,
+  .tools-btn {
     background: rgba(245, 158, 11, 0.1);
     border: 1px solid rgba(245, 158, 11, 0.3);
     color: #f59e0b;
-    padding: 6px 10px;
+    padding: 4px 8px;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 14px;
     transition: all 0.2s;
     line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    min-height: 28px;
   }
 
-  .history-btn:hover {
+  .tools-btn i {
+    font-size: 18px;
+  }
+
+  .history-btn:hover,
+  .tools-btn:hover,
+  .tools-btn.active {
     background: rgba(245, 158, 11, 0.2);
     border-color: rgba(245, 158, 11, 0.5);
+  }
+
+  .tools-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: transparent;
+  }
+
+  .tools-menu {
+    position: absolute;
+    top: calc(100% - 1px);
+    right: 8px;
+    left: 8px;
+    z-index: 45;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    background: rgba(12, 18, 28, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
   }
 
   .search-bar {
