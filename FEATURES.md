@@ -2070,6 +2070,7 @@ Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "unc
 - Layer tabs, pan, wheel zoom, click-to-travel along discovered paths
 - Desktop/mobile action bars always show cardinal dirs (dimmed when unavailable), room actions adjacent to dirs, and player-customizable command pins (defaults: look, inv, map) persisted in `talesmud_settings_v1`
 - Inventory pin opens a popup overlay by default; preference can switch to on-screen widget / mobile sheet
+- Room action/system reaction toasts render large and centered on the room hero art (not the command log)
 - Same JSON is the contract for a future mobile renderer
 
 ### Key Files

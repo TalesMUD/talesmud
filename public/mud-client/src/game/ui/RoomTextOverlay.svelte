@@ -1,15 +1,10 @@
 <script>
   import { onDestroy } from 'svelte';
   import { overlayStore } from './overlayStore.js';
-  import { settingsStore } from '../SettingsStore.js';
-  import { mobileStore } from '../mobile/mobileStore.js';
 
-  const { isMobile } = mobileStore;
+  // Always show action/system reaction toasts on the room hero art (desktop + mobile).
+  // This is the room reaction overlay — not the command log.
 
-  // Mobile: always show. Desktop: respect setting.
-  $: overlayEnabled = $isMobile || $settingsStore.interface?.roomTextOverlay;
-
-  // Track timers per message so we can clean up
   let timers = new Map();
 
   $: scheduleTimers($overlayStore);
@@ -35,7 +30,6 @@
   }
 
   function formatText(text) {
-    // Escape HTML first, then convert **bold** markers to <strong> tags
     const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     return escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   }
@@ -50,39 +44,50 @@
 </script>
 
 <style>
+  /* Centered on the room hero art — not parked on the description text. */
   .room-text-overlay {
     position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 50;
+    inset: 0;
+    z-index: 55;
     display: flex;
     flex-direction: column;
-    gap: 0.25em;
-    padding: 0.5em 0.75em;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65em;
+    padding: 1.25em 1.5em;
     pointer-events: none;
-    max-height: 60%;
     overflow: hidden;
   }
 
   .overlay-message {
-    background: rgba(0, 0, 0, 0.75);
-    color: #e5e7eb;
-    padding: 0.5em 0.75em;
-    border-radius: 6px;
-    font-size: 0.9em;
-    line-height: 1.4;
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    border-left: 2px solid rgba(245, 158, 11, 0.5);
+    background: rgba(8, 10, 14, 0.88);
+    color: #f3f4f6;
+    padding: 1.15em 1.6em;
+    border-radius: 12px;
+    font-size: clamp(1.05rem, 2.2vw, 1.35rem);
+    font-weight: 500;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1.5px solid rgba(249, 115, 22, 0.65);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
     opacity: 1;
     transition: opacity var(--fade-duration) ease-out;
-    animation: overlaySlideIn 0.2s ease-out;
+    animation: overlayPopIn 0.22s ease-out;
     white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    text-align: center;
+    max-width: min(92%, 34rem);
+    width: max-content;
+    /* Never clip reaction copy to a tiny ellipsis block */
+    max-height: min(70%, 22rem);
+    overflow-y: auto;
   }
 
   .overlay-message :global(strong) {
-    color: #f0e6d3;
+    color: #fde68a;
     font-weight: 700;
   }
 
@@ -90,27 +95,32 @@
     opacity: 0;
   }
 
-  @keyframes overlaySlideIn {
+  @keyframes overlayPopIn {
     from {
       opacity: 0;
-      transform: translateY(8px);
+      transform: scale(0.96) translateY(6px);
     }
     to {
       opacity: 1;
-      transform: translateY(0);
+      transform: scale(1) translateY(0);
     }
   }
 
   @media screen and (max-width: 768px) {
+    .room-text-overlay {
+      padding: 1em 0.85em;
+    }
     .overlay-message {
-      font-size: 0.85em;
-      padding: 0.4em 0.6em;
+      font-size: clamp(0.98rem, 3.6vw, 1.2rem);
+      padding: 1em 1.2em;
+      max-width: 94%;
+      max-height: min(65%, 18rem);
     }
   }
 </style>
 
-{#if overlayEnabled && $overlayStore.length > 0}
-  <div class="room-text-overlay">
+{#if $overlayStore.length > 0}
+  <div class="room-text-overlay" aria-live="polite">
     {#each $overlayStore as msg (msg.id)}
       <div
         class="overlay-message"
