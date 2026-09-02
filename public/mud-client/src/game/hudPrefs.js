@@ -137,6 +137,88 @@ export function skillMaterialIcon(idOrName) {
   return 'auto_awesome';
 }
 
+/** Equipped skill id/name → generic item-art stem (no .png). */
+export const SKILL_GENERIC_ART = {
+  warrior_power_strike: 'generic-action-melee',
+  warrior_shield_bash: 'generic-spell-stun',
+  warrior_battle_cry: 'generic-spell-strength',
+  warrior_cleave: 'generic-action-melee',
+  warrior_berserker_rage: 'generic-spell-strength',
+  rogue_backstab: 'generic-action-melee',
+  rogue_poison_strike: 'generic-spell-poison',
+  rogue_evasion: 'generic-spell-shield',
+  rogue_shadow_strike: 'generic-spell-curse',
+  rogue_flurry: 'generic-action-melee',
+  mage_fireball: 'generic-spell-fire',
+  mage_frost_shield: 'generic-spell-ice',
+  mage_lightning_bolt: 'generic-spell-lightning',
+  mage_arcane_burst: 'generic-spell-arcane',
+  mage_mana_shield: 'generic-spell-shield',
+  cleric_heal: 'generic-spell-heal',
+  cleric_holy_strike: 'generic-spell-holy',
+  cleric_shield_of_faith: 'generic-spell-shield',
+  cleric_smite: 'generic-spell-holy',
+  cleric_divine_light: 'generic-spell-heal',
+  ranger_aimed_shot: 'generic-action-ranged',
+  ranger_volley: 'generic-action-ranged',
+  ranger_natures_gift: 'generic-spell-heal',
+  ranger_pin_down: 'generic-spell-stun',
+  druid_wrath: 'generic-spell-nature',
+  druid_rejuvenation: 'generic-spell-heal',
+  druid_entangle: 'generic-spell-nature',
+  druid_starfire: 'generic-spell-holy',
+  druid_barkskin: 'generic-spell-shield',
+};
+
+export const HOTBAR_ACTIONS = [
+  { id: 'melee', label: 'Attack', command: 'attack', art: 'generic-action-melee' },
+  { id: 'look', label: 'Look', command: 'look', art: 'generic-action-look' },
+  { id: 'rest', label: 'Rest', command: 'rest', art: 'generic-action-rest' },
+  { id: 'flee', label: 'Flee', command: 'flee', art: 'generic-action-flee' },
+  { id: 'search', label: 'Search', command: 'look', art: 'generic-action-search' },
+  { id: 'talk', label: 'Talk', command: 'talk', art: 'generic-action-talk' },
+];
+
+export function skillGenericArtStem(idOrName) {
+  const raw = String(idOrName || '').trim();
+  const lower = raw.toLowerCase();
+  if (SKILL_GENERIC_ART[raw] || SKILL_GENERIC_ART[lower]) {
+    return SKILL_GENERIC_ART[raw] || SKILL_GENERIC_ART[lower];
+  }
+  for (const [id, stem] of Object.entries(SKILL_GENERIC_ART)) {
+    if (SKILL_LABELS[id] && SKILL_LABELS[id].toLowerCase() === lower) return stem;
+  }
+  if (/fire|flame/.test(lower)) return 'generic-spell-fire';
+  if (/frost|ice|cold/.test(lower)) return 'generic-spell-ice';
+  if (/lightning|bolt/.test(lower)) return 'generic-spell-lightning';
+  if (/heal|rejuven|divine/.test(lower)) return 'generic-spell-heal';
+  if (/shield|bark|evasion/.test(lower)) return 'generic-spell-shield';
+  if (/poison/.test(lower)) return 'generic-spell-poison';
+  if (/holy|smite|starfire/.test(lower)) return 'generic-spell-holy';
+  if (/curse|shadow|dark/.test(lower)) return 'generic-spell-curse';
+  if (/rage|cry|strength/.test(lower)) return 'generic-spell-strength';
+  if (/stun|sleep|bash|pin/.test(lower)) return 'generic-spell-stun';
+  if (/arcane/.test(lower)) return 'generic-spell-arcane';
+  if (/wrath|entangle|nature/.test(lower)) return 'generic-spell-nature';
+  if (/shot|volley|bow/.test(lower)) return 'generic-action-ranged';
+  if (/strike|cleave|slash|flurry|backstab/.test(lower)) return 'generic-action-melee';
+  return 'generic-spell-arcane';
+}
+
+export function skillGenericArtFile(idOrName) {
+  return `${skillGenericArtStem(idOrName)}.png`;
+}
+
+export function skillGenericArtUrl(idOrName) {
+  return `/api/item-art/${skillGenericArtFile(idOrName)}`;
+}
+
+export function actionGenericArtUrl(actionId) {
+  const found = HOTBAR_ACTIONS.find((a) => a.id === actionId);
+  const stem = found ? found.art : 'generic-default';
+  return `/api/item-art/${stem}.png`;
+}
+
 export function normalizeHotbarBind(raw) {
   if (raw == null || raw === false) return null;
   if (typeof raw !== 'object') return null;
@@ -158,6 +240,12 @@ export function normalizeHotbarBind(raw) {
     if (id) bind.id = id;
     if (name) bind.name = name;
     return bind;
+  }
+  if (kind === 'action') {
+    const id = String(raw.id || '').trim().toLowerCase();
+    const found = HOTBAR_ACTIONS.find((a) => a.id === id);
+    if (!found) return null;
+    return { kind: 'action', id: found.id, name: found.label, command: found.command };
   }
   return null;
 }
@@ -228,6 +316,11 @@ export function resolveHotbarActivation(bind, { inCombat = false, inventory = []
     }
     return { ok: true, reason: null, command: `use ${item.name}`, gated: false };
   }
+  if (normalized.kind === 'action') {
+    const found = HOTBAR_ACTIONS.find((a) => a.id === normalized.id);
+    if (!found) return { ok: false, reason: 'empty', command: null };
+    return { ok: true, reason: null, command: found.command, gated: false };
+  }
   return { ok: false, reason: 'empty', command: null };
 }
 
@@ -244,4 +337,8 @@ export function makeItemBind(item) {
     name: item.name,
     id: item.templateId || item.id,
   });
+}
+
+export function makeActionBind(actionId) {
+  return normalizeHotbarBind({ kind: 'action', id: actionId });
 }

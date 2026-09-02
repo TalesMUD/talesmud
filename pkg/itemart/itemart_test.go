@@ -20,3 +20,27 @@ func TestGenericKeyWeapon(t *testing.T) {
 		t.Fatal("expected weapon")
 	}
 }
+
+func TestSkillGenericKeyFireball(t *testing.T) {
+	if SkillGenericKey("mage_fireball", "Fireball") != "generic-spell-fire" {
+		t.Fatal("fireball")
+	}
+}
+
+func TestSkillGenericKeyHeal(t *testing.T) {
+	if SkillGenericKey("cleric_heal", "") != "generic-spell-heal" {
+		t.Fatal("heal")
+	}
+}
+
+func TestSkillGenericURL(t *testing.T) {
+	if SkillGenericURL("mage_fireball", "") != "/api/item-art/generic-spell-fire.png" {
+		t.Fatalf("got %q", SkillGenericURL("mage_fireball", ""))
+	}
+}
+
+func TestActionGenericKeyLook(t *testing.T) {
+	if ActionGenericKey("look") != "generic-action-look" {
+		t.Fatal("look")
+	}
+}

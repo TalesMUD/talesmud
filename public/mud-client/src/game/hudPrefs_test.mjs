@@ -15,7 +15,9 @@ import {
   normalizeInventoryOpenMode,
   resolveHotbarActivation,
   resolvePinnedCommands,
+  makeActionBind,
   skillDisplayName,
+  skillGenericArtUrl,
   togglePin,
 } from './hudPrefs.js';
 
@@ -138,3 +140,16 @@ assert.strictEqual(missing.missing, true);
 assert.strictEqual(missing.command, null);
 
 console.log('hudPrefs: pins + Say + hotbar binds/combat gate OK');
+
+assert.strictEqual(skillGenericArtUrl('mage_fireball'), '/api/item-art/generic-spell-fire.png');
+assert.strictEqual(skillGenericArtUrl('Fireball'), '/api/item-art/generic-spell-fire.png');
+assert.strictEqual(skillGenericArtUrl('cleric_heal'), '/api/item-art/generic-spell-heal.png');
+assert.strictEqual(skillGenericArtUrl('ranger_aimed_shot'), '/api/item-art/generic-action-ranged.png');
+
+const lookBind = makeActionBind('look');
+assert.deepStrictEqual(lookBind, { kind: 'action', id: 'look', name: 'Look', command: 'look' });
+const lookAct = resolveHotbarActivation(lookBind, { inCombat: false, inventory: [] });
+assert.strictEqual(lookAct.ok, true);
+assert.strictEqual(lookAct.command, 'look');
+
+console.log('hudPrefs: skill generic art + action binds OK');
