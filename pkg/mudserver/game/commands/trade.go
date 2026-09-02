@@ -6,6 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
+	"github.com/talesmud/talesmud/pkg/itemart"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 )
@@ -47,56 +48,10 @@ func (command *ListCommand) Execute(game def.GameCtrl, message *messages.Message
 		return true
 	}
 
-	// Build shop display
-	var sb strings.Builder
-	sb.WriteString("=== ")
-	sb.WriteString(merchant.Name)
-	sb.WriteString("'s Shop ===\n")
-	sb.WriteString("Your gold: ")
-	sb.WriteString(itoa64(message.Character.Gold))
-	sb.WriteString("\n\n")
-
-	for i, invItem := range merchant.MerchantTrait.Inventory {
-		// Fetch item template for name and base price
-		itemTemplate, err := game.GetFacade().ItemsService().FindByID(invItem.ItemTemplateID)
-		if err != nil || itemTemplate == nil {
-			continue
-		}
-
-		// Calculate price
-		price := merchant.MerchantTrait.GetBuyPrice(&invItem, itemTemplate.BasePrice)
-
-		sb.WriteString(itoa(i + 1))
-		sb.WriteString(". ")
-		sb.WriteString(itemTemplate.Name)
-
-		// Stock indicator
-		if invItem.Quantity >= 0 {
-			sb.WriteString(" [")
-			sb.WriteString(itoa(int(invItem.Quantity)))
-			sb.WriteString(" in stock]")
-		} else {
-			sb.WriteString(" [unlimited]")
-		}
-
-		// Price
-		sb.WriteString(" - ")
-		sb.WriteString(itoa64(price))
-		sb.WriteString(" gold")
-
-		// Level requirement
-		if invItem.RequiredLevel > 0 {
-			sb.WriteString(" (Lv.")
-			sb.WriteString(itoa(int(invItem.RequiredLevel)))
-			sb.WriteString("+)")
-		}
-
-		sb.WriteString("\n")
+	shop := buildShopMessage(game, message, merchant)
+	if shop != nil {
+		game.SendMessage() <- shop
 	}
-
-	sb.WriteString("\nUse 'buy <item>' to purchase.")
-
-	game.SendMessage() <- message.Reply(sb.String())
 	return true
 }
 
@@ -308,6 +263,9 @@ func (command *BuyCommand) Execute(game def.GameCtrl, message *messages.Message)
 	if inv := messages.NewInventoryUpdateMessage(message); inv != nil {
 		game.SendMessage() <- inv
 	}
+	if shop := buildShopMessage(game, message, merchant); shop != nil {
+		game.SendMessage() <- shop
+	}
 
 	return true
 }
@@ -447,6 +405,9 @@ func (command *SellCommand) Execute(game def.GameCtrl, message *messages.Message
 	if inv := messages.NewInventoryUpdateMessage(message); inv != nil {
 		game.SendMessage() <- inv
 	}
+	if shop := buildShopMessage(game, message, merchant); shop != nil {
+		game.SendMessage() <- shop
+	}
 
 	return true
 }
@@ -547,4 +508,48 @@ func findMerchantInRoom(game def.GameCtrl, roomID string) *npc.NPC {
 		}
 	}
 	return nil
+}
+
+func buildShopMessage(game def.GameCtrl, message *messages.Message, merchant *npc.NPC) *messages.ShopMessage {
+	if message == nil || message.FromUser == nil || message.Character == nil || merchant == nil || merchant.MerchantTrait == nil {
+		return nil
+	}
+	stock := make([]messages.ShopStockItem, 0, len(merchant.MerchantTrait.Inventory))
+	for _, invItem := range merchant.MerchantTrait.Inventory {
+		itemTemplate, err := game.GetFacade().ItemsService().FindByID(invItem.ItemTemplateID)
+		if err != nil || itemTemplate == nil {
+			continue
+		}
+		price := merchant.MerchantTrait.GetBuyPrice(&invItem, itemTemplate.BasePrice)
+		image := ""
+		if itemTemplate.Meta != nil {
+			image = itemTemplate.Meta.Img
+		}
+		if image == "" {
+			image = itemart.URL(itemTemplate.ID, invItem.ItemTemplateID)
+		}
+		stock = append(stock, messages.ShopStockItem{
+			TemplateID:    invItem.ItemTemplateID,
+			Name:          itemTemplate.Name,
+			Price:         price,
+			Quantity:      invItem.Quantity,
+			RequiredLevel: invItem.RequiredLevel,
+			Type:          string(itemTemplate.Type),
+			Image:         image,
+		})
+	}
+	merchantID := ""
+	if merchant.Entity != nil {
+		merchantID = merchant.Entity.ID
+	}
+	return messages.NewShopMessage(
+		message.FromUser.ID,
+		merchant.Name,
+		merchantID,
+		message.Character.Gold,
+		stock,
+		merchant.MerchantTrait.AcceptedTypes,
+		merchant.MerchantTrait.RejectedTags,
+		merchant.MerchantTrait.SellMultiplier,
+	)
 }

@@ -186,8 +186,12 @@ func TestListRestocksMerchantInventory(t *testing.T) {
 
 	var sawStock bool
 	for _, out := range drainTradeMessages(g.SendMessage()) {
-		if rsp, ok := out.(messages.MessageResponse); ok && strings.Contains(rsp.Message, "4 in stock") {
-			sawStock = true
+		if shop, ok := out.(*messages.ShopMessage); ok {
+			for _, row := range shop.Stock {
+				if row.Name == "Torch" && row.Quantity == 4 {
+					sawStock = true
+				}
+			}
 		}
 	}
 	if !sawStock {

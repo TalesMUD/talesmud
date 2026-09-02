@@ -569,3 +569,48 @@ func NewDialogEndMessage(userID, npcName, message string) MessageResponse {
 		Username:   npcName,
 	}
 }
+
+// ShopStockItem is one row in a merchant shop overlay.
+type ShopStockItem struct {
+	TemplateID    string `json:"templateId"`
+	Name          string `json:"name"`
+	Price         int64  `json:"price"`
+	Quantity      int32  `json:"quantity"` // -1 = unlimited
+	RequiredLevel int32  `json:"requiredLevel,omitempty"`
+	Type          string `json:"type,omitempty"`
+	Image         string `json:"image,omitempty"`
+}
+
+// ShopMessage opens/refreshes the merchant shop overlay.
+type ShopMessage struct {
+	MessageResponse
+	MerchantName  string          `json:"merchantName"`
+	MerchantID    string          `json:"merchantId,omitempty"`
+	Gold          int64           `json:"gold"`
+	Stock         []ShopStockItem `json:"stock"`
+	AcceptedTypes []string        `json:"acceptedTypes,omitempty"`
+	RejectedTags  []string        `json:"rejectedTags,omitempty"`
+	SellMultiplier float64        `json:"sellMultiplier,omitempty"`
+}
+
+// NewShopMessage creates a structured shop payload for the client overlay.
+func NewShopMessage(userID, merchantName, merchantID string, gold int64, stock []ShopStockItem, acceptedTypes, rejectedTags []string, sellMultiplier float64) *ShopMessage {
+	if stock == nil {
+		stock = []ShopStockItem{}
+	}
+	return &ShopMessage{
+		MessageResponse: MessageResponse{
+			Audience:   MessageAudienceOrigin,
+			AudienceID: userID,
+			Type:       MessageTypeShop,
+			Message:    merchantName + "'s shop",
+		},
+		MerchantName:   merchantName,
+		MerchantID:     merchantID,
+		Gold:           gold,
+		Stock:          stock,
+		AcceptedTypes:  acceptedTypes,
+		RejectedTags:   rejectedTags,
+		SellMultiplier: sellMultiplier,
+	}
+}

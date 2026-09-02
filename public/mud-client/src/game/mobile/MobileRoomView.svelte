@@ -1,6 +1,7 @@
 <script>
   import EntityPanel from '../ui/EntityPanel.svelte';
   import DialogOverlay from '../ui/DialogOverlay.svelte';
+  import ShopOverlay from '../ui/ShopOverlay.svelte';
   import RoomTextOverlay from '../ui/RoomTextOverlay.svelte';
   import MobileActionBar from './MobileActionBar.svelte';
   import { findNpcByName } from '../MUDXPlusStore';
@@ -246,6 +247,10 @@
         npc={dialogNpc}
         sendMessage={sendMessage}
       />
+    {/if}
+
+    {#if $store.shop}
+      <ShopOverlay {store} {sendMessage} />
     {/if}
 
     <div class="entity-section">

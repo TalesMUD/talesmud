@@ -44,6 +44,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Dynamic item and NPC spawning
   - Unique NPCs auto-spawn into their assigned room on server start via `CurrentRoomID`
   - Guest-public NPC/enemy portraits (`/api/portraits/:filename`, hashed avatar fallback)
+  - Merchant shop overlay in the room widget (structured `shop` WS message; dialog Trade inject; buy/sell)
   - WoW-style private cellar instances: `type: instance` exits, or a shared-room exit into a room tagged `instance`, clone a small room graph per character; town hub stays shared; empty copies are destroyed
 
 - **Character System**

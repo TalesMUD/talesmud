@@ -71,6 +71,7 @@ function createClient(renderer, characterCreator, muxStore) {
 
       // Clear any active dialog when entering a new room
       mux.clearDialog();
+      if (mux.clearShop) mux.clearShop();
 
       // Track room visit for minimap fallback and refresh the atlas
       mux.trackRoomVisit(activeRoom);
@@ -188,6 +189,24 @@ function createClient(renderer, characterCreator, muxStore) {
     // Update store for UI overlay
     if (mux) {
       mux.setDialog(msg.npcName, msg.npcText, msg.options || [], msg.conversationID || "");
+    }
+  };
+
+  messageHandlers["shop"] = (msg) => {
+    if (mux) {
+      mux.setShop({
+        merchantName: msg.merchantName || "",
+        merchantId: msg.merchantId || "",
+        gold: msg.gold || 0,
+        stock: msg.stock || [],
+        acceptedTypes: msg.acceptedTypes || [],
+        rejectedTags: msg.rejectedTags || [],
+        sellMultiplier: msg.sellMultiplier || 0.5,
+      });
+      if (mux.clearDialog) mux.clearDialog();
+    }
+    if (msg.message) {
+      renderer(msg.message);
     }
   };
 
@@ -426,6 +445,22 @@ function createClient(renderer, characterCreator, muxStore) {
         } else {
           renderer(message);
           overlayStore.pushMessage(message);
+          if (mux && get(mux)?.shop && mux.setShopError) {
+            const lower = String(message || "").toLowerCase();
+            if (
+              lower.includes("gold") ||
+              lower.includes("stock") ||
+              lower.includes("doesn't") ||
+              lower.includes("cannot") ||
+              lower.includes("can't") ||
+              lower.includes("enough") ||
+              lower.includes("full") ||
+              lower.includes("don't have") ||
+              lower.includes("level")
+            ) {
+              mux.setShopError(message);
+            }
+          }
         }
       }
     });

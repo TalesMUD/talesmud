@@ -30,6 +30,7 @@ export function itemArtGenericKey(item) {
 
 export function itemArtSrc(item) {
   if (!item) return "sprites/items/generic-default.svg";
+  if (item.image) return item.image;
   const metaImg = item.meta && item.meta.img;
   if (metaImg) return metaImg;
   const tid = stripInstance(item.templateId || item.id);
