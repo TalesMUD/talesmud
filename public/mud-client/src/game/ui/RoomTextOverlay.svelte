@@ -64,9 +64,9 @@
     color: #f3f4f6;
     padding: 0.4em 0.75em;
     border-radius: 8px;
-    font-size: clamp(0.72rem, 1.15vw, 0.88rem);
+    font-size: clamp(0.88rem, 1.68vw, 1.10rem);
     font-weight: 500;
-    line-height: 1.25;
+    line-height: 1.3;
     letter-spacing: 0;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
@@ -110,8 +110,8 @@
       padding: 0.55em 0.65em;
     }
     .overlay-message {
-      font-size: clamp(0.7rem, 2.6vw, 0.84rem);
-      line-height: 1.22;
+      font-size: clamp(0.84rem, 3.1vw, 1.02rem);
+      line-height: 1.3;
       padding: 0.35em 0.65em;
       max-width: 86%;
       max-height: min(36%, 9rem);

@@ -154,11 +154,11 @@
   }
 
   .accept-title {
-    font-size: clamp(0.92rem, 1.6vw, 1.08rem);
+    font-size: clamp(1.04rem, 2.0vw, 1.26rem);
     font-weight: 700;
     color: #fde68a;
     margin-bottom: 0.45rem;
-    line-height: 1.22;
+    line-height: 1.3;
   }
 
   .accept-body {
@@ -166,8 +166,8 @@
     white-space: pre-wrap;
     word-break: break-word;
     color: #e5e7eb;
-    font-size: 0.72rem;
-    line-height: 1.28;
+    font-size: 0.88rem;
+    line-height: 1.3;
     max-height: 10rem;
     overflow-y: auto;
   }
