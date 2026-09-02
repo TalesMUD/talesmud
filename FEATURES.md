@@ -584,10 +584,12 @@ type MerchantItem struct {
 ```
 
 Merchant commands are available in rooms with merchant NPCs:
-- `list`, `shop`, or `trade` shows current stock and prices
+- `list`, `shop`, or `trade` (exact key — no NPC name) opens a structured `shop` WS payload for the client overlay and refreshes after buy/sell
 - `buy <item> [quantity]` purchases stock; stackable quantities can fit in one inventory stack
 - `sell <item> [quantity]` sells accepted, unbound inventory items
 - `value <item>` / `price <item>` checks the merchant's sell price
+
+Web/Flutter clients inject a **Trade / Shop** dialog option when talking to a merchant (`isMerchant`), open a room-widget shop overlay (buy grid + sell bag), and send bare `list` (not `trade <name>`).
 
 Trading is blocked while the character is in combat. Merchant stock can restock lazily when a player interacts after the configured interval.
 

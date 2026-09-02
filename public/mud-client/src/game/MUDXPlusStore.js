@@ -136,6 +136,10 @@ function createStore() {
     dialogOptions: [],
     dialogConversationID: "",
 
+    // Merchant shop overlay
+    shop: null,
+    shopError: "",
+
     // Game context flags
     inCombat: false,
     combatEnemies: [],
@@ -256,6 +260,36 @@ function createStore() {
         state.dialogNpcText = "";
         state.dialogOptions = [];
         state.dialogConversationID = "";
+        return state;
+      });
+    },
+
+    setShop: (shop) => {
+      update((state) => {
+        state.shop = shop || null;
+        state.shopError = "";
+        if (shop && typeof shop.gold === "number") {
+          state.gold = shop.gold;
+        }
+        return state;
+      });
+    },
+    clearShop: () => {
+      update((state) => {
+        state.shop = null;
+        state.shopError = "";
+        return state;
+      });
+    },
+    setShopError: (message) => {
+      update((state) => {
+        state.shopError = message || "";
+        return state;
+      });
+    },
+    clearShopError: () => {
+      update((state) => {
+        state.shopError = "";
         return state;
       });
     },

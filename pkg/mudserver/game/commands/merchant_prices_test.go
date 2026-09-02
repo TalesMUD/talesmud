@@ -1,7 +1,6 @@
 package commands_test
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/talesmud/talesmud/pkg/entities"
@@ -94,14 +93,18 @@ func TestTwoMerchantsUndercutSameItemTemplate(t *testing.T) {
 	if !(&commands.ListCommand{}).Execute(g, listCheap) {
 		t.Fatal("list at cheap merchant failed")
 	}
-	var cheapPrice string
+	var cheapPrice int64
 	for _, out := range drainTradeMessages(g.SendMessage()) {
-		if rsp, ok := out.(messages.MessageResponse); ok && strings.Contains(rsp.Message, "Weak Health Potion") {
-			cheapPrice = rsp.Message
+		if shop, ok := out.(*messages.ShopMessage); ok {
+			for _, row := range shop.Stock {
+				if row.Name == "Weak Health Potion" {
+					cheapPrice = row.Price
+				}
+			}
 		}
 	}
-	if !strings.Contains(cheapPrice, "7 gold") {
-		t.Fatalf("expected Elda buy price 7 gold (0.9x8), got:\n%s", cheapPrice)
+	if cheapPrice != 7 {
+		t.Fatalf("expected Elda buy price 7 gold (0.9x8), got %d", cheapPrice)
 	}
 
 	character.CurrentRoomID = "R0217"
@@ -113,13 +116,17 @@ func TestTwoMerchantsUndercutSameItemTemplate(t *testing.T) {
 	if !(&commands.ListCommand{}).Execute(g, listPricey) {
 		t.Fatal("list at pricey merchant failed")
 	}
-	var priceyPrice string
+	var priceyPrice int64
 	for _, out := range drainTradeMessages(g.SendMessage()) {
-		if rsp, ok := out.(messages.MessageResponse); ok && strings.Contains(rsp.Message, "Weak Health Potion") {
-			priceyPrice = rsp.Message
+		if shop, ok := out.(*messages.ShopMessage); ok {
+			for _, row := range shop.Stock {
+				if row.Name == "Weak Health Potion" {
+					priceyPrice = row.Price
+				}
+			}
 		}
 	}
-	if !strings.Contains(priceyPrice, "12 gold") {
-		t.Fatalf("expected Darius buy price 12 gold (1.6x8), got:\n%s", priceyPrice)
+	if priceyPrice != 12 {
+		t.Fatalf("expected Darius buy price 12 gold (1.6x8), got %d", priceyPrice)
 	}
 }

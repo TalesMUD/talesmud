@@ -8,12 +8,34 @@
   export let npc = null;
   export let sendMessage;
 
-  function handleOption(index) {
-    sendMessage(String(index));
+  const TRADE_TOKEN = "__trade__";
+
+  $: displayOptions = (() => {
+    const opts = Array.isArray(options) ? options.slice() : [];
+    if (npc?.isMerchant) {
+      const hasTrade = opts.some((o) => /^(trade|shop)\b/i.test(String(o?.text || "").trim()));
+      if (!hasTrade) {
+        opts.push({ index: TRADE_TOKEN, text: "Trade / Shop" });
+      }
+    }
+    return opts;
+  })();
+
+  function handleOption(option) {
+    if (option?.index === TRADE_TOKEN || /^(trade|shop)\b/i.test(String(option?.text || "").trim())) {
+      // ExactCommandKey: must be bare "list" / "trade" (no NPC name)
+      sendMessage("list");
+      return;
+    }
+    sendMessage(String(option.index));
   }
 
   function isQuestOption(option) {
     return option?.text?.startsWith("[Quest]") || option?.text?.startsWith("[Turn In]");
+  }
+
+  function isTradeOption(option) {
+    return option?.index === TRADE_TOKEN || /^(trade|shop)\b/i.test(String(option?.text || "").trim());
   }
 </script>
 
@@ -152,6 +174,22 @@
     border-color: rgba(245, 158, 11, 0.55);
   }
 
+  .dialog-option-btn.trade {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: rgba(34, 197, 94, 0.35);
+    color: #86efac;
+  }
+
+  .dialog-option-btn.trade:hover,
+  .dialog-option-btn.trade:focus {
+    background: rgba(34, 197, 94, 0.25);
+    border-color: rgba(34, 197, 94, 0.55);
+  }
+
+  .dialog-option-btn.trade .option-index {
+    background: rgba(34, 197, 94, 0.28);
+  }
+
   .dialog-option-btn:active {
     transform: translateX(2px);
   }
@@ -220,15 +258,16 @@
     </div>
   </div>
 
-  {#if options && options.length > 0}
+  {#if displayOptions && displayOptions.length > 0}
     <div class="dialog-options">
-      {#each options as option}
+      {#each displayOptions as option}
         <button
           class="dialog-option-btn"
           class:quest={isQuestOption(option)}
-          on:click={() => handleOption(option.index)}
+          class:trade={isTradeOption(option)}
+          on:click={() => handleOption(option)}
         >
-          <span class="option-index">{option.index}</span>
+          <span class="option-index">{isTradeOption(option) ? '★' : option.index}</span>
           <span class="option-text">{option.text}</span>
         </button>
       {/each}

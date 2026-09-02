@@ -45,4 +45,7 @@ const (
 
 	// Discovered-world atlas for web/mobile map widgets
 	MessageTypeAtlas = "atlas"
+
+	// Merchant shop overlay (structured stock for web/mobile)
+	MessageTypeShop = "shop"
 )
