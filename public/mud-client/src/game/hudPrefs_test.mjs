@@ -4,11 +4,26 @@ import {
   DEFAULT_INVENTORY_OPEN_MODE,
   INVENTORY_OPEN_OVERLAY,
   INVENTORY_OPEN_WIDGET,
+  PINNABLE_COMMANDS,
+  commandForPin,
   normalizeActionBarPins,
   normalizeInventoryOpenMode,
   resolvePinnedCommands,
   togglePin,
 } from './hudPrefs.js';
+
+const sayPin = PINNABLE_COMMANDS.find((c) => c.id === 'say');
+assert.ok(sayPin, 'Say is in PINNABLE_COMMANDS catalog');
+assert.strictEqual(sayPin.kind, 'say', 'Say uses kind say');
+assert.ok(
+  !DEFAULT_ACTION_BAR_PINS.includes('say'),
+  'Say is default OFF the action bar'
+);
+assert.strictEqual(
+  commandForPin(sayPin),
+  null,
+  'commandForPin must not emit bare say'
+);
 
 assert.deepStrictEqual(
   normalizeActionBarPins(null),
@@ -35,6 +50,13 @@ const toggledOff = togglePin(['look', 'inv', 'map'], 'map');
 assert.deepStrictEqual(toggledOff, ['look', 'inv'], 'unpin map');
 const toggledOn = togglePin(['look', 'inv'], 'who');
 assert.deepStrictEqual(toggledOn, ['look', 'inv', 'who'], 'pin who');
+const sayPinned = togglePin(['look', 'inv', 'map'], 'say');
+assert.deepStrictEqual(sayPinned, ['look', 'inv', 'map', 'say'], 'can pin Say');
+assert.strictEqual(
+  resolvePinnedCommands(sayPinned).find((c) => c.id === 'say')?.kind,
+  'say',
+  'pinned Say resolves with kind say'
+);
 assert.deepStrictEqual(
   togglePin(['look'], 'look'),
   DEFAULT_ACTION_BAR_PINS,
