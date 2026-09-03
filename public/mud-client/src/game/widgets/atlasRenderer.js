@@ -71,6 +71,94 @@ const COMPASS_DIRS = new Set([
 
 const CARDINAL_ONLY = new Set(['north', 'south', 'east', 'west']);
 
+/** Exit names that must never be painted as canvas text (ticks only). */
+const DIR_LABEL_BLOCKLIST = new Set([
+  ...COMPASS_DIRS,
+  'up', 'down', 'u', 'd', 'n', 's', 'e', 'w',
+  'entrance', 'exit', 'outside', 'inside', 'in', 'out',
+  'upward', 'upwards', 'downward', 'downwards',
+  'ascend', 'descend',
+]);
+
+export function isBlockedDirLabel(dir) {
+  const d = String(dir || '').toLowerCase().trim();
+  return !d || DIR_LABEL_BLOCKLIST.has(d);
+}
+
+/** Match atlas place id to live room id (incl. R0215~instance clones). */
+export function isCurrentPlace(placeId, currentRoomId) {
+  if (!placeId || !currentRoomId) return false;
+  if (placeId === currentRoomId) return true;
+  const i = String(currentRoomId).indexOf('~');
+  if (i > 0 && placeId === currentRoomId.slice(0, i)) return true;
+  return false;
+}
+
+/** Label LOD from zoom: area | near | all */
+export function labelLodForScale(userScale) {
+  const s = Number(userScale) || 1;
+  if (s < 0.85) return 'area';
+  if (s < 1.2) return 'near';
+  return 'all';
+}
+
+export function adjacentPlaceIds(paths, currentRoomId, places) {
+  const ids = new Set();
+  if (!currentRoomId) return ids;
+  const hereKeys = new Set([currentRoomId]);
+  const tilde = String(currentRoomId).indexOf('~');
+  if (tilde > 0) hereKeys.add(currentRoomId.slice(0, tilde));
+  for (const p of places || []) {
+    if (isCurrentPlace(p.id, currentRoomId)) hereKeys.add(p.id);
+  }
+  for (const path of paths || []) {
+    if (hereKeys.has(path.from)) ids.add(path.to);
+    if (hereKeys.has(path.to)) ids.add(path.from);
+  }
+  return ids;
+}
+
+function boxesOverlap(a, b) {
+  return !(a.x + a.w < b.x || b.x + b.w < a.x || a.y + a.h < b.y || b.y + b.h < a.y);
+}
+
+/**
+ * Place room labels with AABB collision avoidance.
+ * Higher-priority candidates (earlier) win; force=true always keeps a slot.
+ */
+export function layoutRoomLabels(candidates, measure) {
+  const placed = [];
+  const boxes = [];
+  for (const c of candidates) {
+    const m = measure(c.text, c.font);
+    const w = Math.max(8, m.w);
+    const h = Math.max(8, m.h);
+    const attempts = [
+      { x: c.px - w / 2, y: c.py },
+      { x: c.px - w / 2, y: c.py + h + 2 },
+      { x: c.px - w / 2, y: c.py - h - 6 },
+      { x: c.px + 8, y: c.py },
+      { x: c.px - w - 8, y: c.py },
+    ];
+    let chosen = null;
+    for (const a of attempts) {
+      const box = { x: a.x - 2, y: a.y - 2, w: w + 4, h: h + 4 };
+      if (!boxes.some((b) => boxesOverlap(b, box))) {
+        chosen = { ...c, x: a.x, y: a.y, w, h };
+        boxes.push(box);
+        break;
+      }
+    }
+    if (!chosen && c.force) {
+      const a = attempts[0];
+      chosen = { ...c, x: a.x, y: a.y, w, h };
+      boxes.push({ x: a.x - 2, y: a.y - 2, w: w + 4, h: h + 4 });
+    }
+    if (chosen) placed.push(chosen);
+  }
+  return placed;
+}
+
 function biomeOf(key) {
   return BIOME[key] || BIOME.wild;
 }
@@ -358,15 +446,16 @@ function drawPortalLink(ctx, fromPx, fromPy, toPx, toPy, label, color, discovere
   ctx.setLineDash([]);
   ctx.globalAlpha = 1;
 
+  // Exit tick on the portal end — never paint compass/vertical dir words.
   ctx.beginPath();
-  roundRect(ctx, portalX - 7, portalY - 5, 14, 10, 2);
+  roundRect(ctx, portalX - 5, portalY - 4, 10, 8, 2);
   ctx.fillStyle = discovered ? 'rgba(36, 28, 20, 0.9)' : 'rgba(24, 20, 16, 0.65)';
   ctx.fill();
   ctx.strokeStyle = cross ? 'rgba(200, 110, 70, 0.85)' : color;
   ctx.lineWidth = 1.2;
   ctx.stroke();
 
-  if (label) {
+  if (label && !isBlockedDirLabel(label)) {
     const text = label.length > 9 ? label.slice(0, 8) + '…' : label;
     ctx.font = '600 7px sans-serif';
     ctx.fillStyle = discovered ? 'rgba(232, 220, 190, 0.9)' : 'rgba(148, 140, 128, 0.6)';
@@ -398,12 +487,41 @@ function drawKindGlyph(ctx, place, px, py, size) {
   }
 }
 
+function drawYouMarker(ctx, px, py, half) {
+  const size = half * 1.55;
+  const x = px - size / 2;
+  const y = py - size / 2;
+  ctx.save();
+  ctx.shadowColor = 'rgba(212, 160, 48, 0.55)';
+  ctx.shadowBlur = 12;
+  ctx.fillStyle = '#d4a030';
+  roundRect(ctx, x, y, size, size, 6);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = 'rgba(255, 236, 180, 0.85)';
+  ctx.lineWidth = 1.5;
+  roundRect(ctx, x, y, size, size, 6);
+  ctx.stroke();
+  // Simple pawn glyph
+  ctx.fillStyle = 'rgba(40, 28, 12, 0.85)';
+  ctx.beginPath();
+  ctx.arc(px, py - size * 0.18, size * 0.14, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(px, py - size * 0.05);
+  ctx.quadraticCurveTo(px + size * 0.22, py + size * 0.28, px, py + size * 0.32);
+  ctx.quadraticCurveTo(px - size * 0.22, py + size * 0.28, px, py - size * 0.05);
+  ctx.fill();
+  ctx.restore();
+}
+
 function drawTile(ctx, place, px, py, tileStep, opts) {
   const half = tileHalf(tileStep);
   const x = px - half;
   const y = py - half;
   const size = half * 2;
   const biome = biomeOf(place.biome);
+  const isHere = !!opts.isHere;
 
   if (!place.discovered || place.kind === 'uncharted') {
     ctx.strokeStyle = 'rgba(148, 130, 100, 0.22)';
@@ -431,23 +549,15 @@ function drawTile(ctx, place, px, py, tileStep, opts) {
   roundRect(ctx, x + 2, y + 2, size - 4, size - 4, 4);
   ctx.stroke();
 
-  ctx.strokeStyle = biome.tileEdge;
-  ctx.lineWidth = place.current ? 2.8 : 1.4;
-  if (place.current) {
-    ctx.strokeStyle = '#d4a030';
+  ctx.strokeStyle = isHere ? '#d4a030' : biome.tileEdge;
+  ctx.lineWidth = isHere ? 2.8 : 1.4;
+  if (isHere) {
     ctx.shadowColor = 'rgba(212, 160, 48, 0.5)';
     ctx.shadowBlur = 10;
   }
   roundRect(ctx, x, y, size, size, 5);
   ctx.stroke();
   ctx.shadowBlur = 0;
-
-  if (place.current) {
-    ctx.beginPath();
-    ctx.arc(px, py - half + 6, 3, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(212, 160, 48, 0.85)';
-    ctx.fill();
-  }
 
   drawKindGlyph(ctx, place, px, py, size);
 
@@ -491,9 +601,19 @@ export function paintAtlas(ctx, params) {
   }
 
   const cam = computeCamera(visiblePlaces, w, h, panX, panY, userScale);
-  const showRoomLabels = userScale > 1.08;
+  const lod = labelLodForScale(userScale);
   const byId = {};
   for (const p of atlas.places || []) byId[p.id] = p;
+
+  // Exactly one you-are-here place: prefer exact id, else template match.
+  let herePlace = visiblePlaces.find((p) => p.id === currentRoomId) || null;
+  if (!herePlace) {
+    herePlace = visiblePlaces.find((p) => isCurrentPlace(p.id, currentRoomId)) || null;
+  }
+  const hereId = herePlace ? herePlace.id : null;
+  const nearIds = lod === 'near'
+    ? adjacentPlaceIds(atlas.paths || [], currentRoomId, visiblePlaces)
+    : new Set();
 
   drawGrid(ctx, cam, w, h, visiblePlaces);
 
@@ -501,7 +621,7 @@ export function paintAtlas(ctx, params) {
     drawRegionWash(ctx, region, cam, w, h);
   }
 
-  drawAreaCells(ctx, visiblePlaces, cam, w, h, showRoomLabels);
+  drawAreaCells(ctx, visiblePlaces, cam, w, h, lod === 'area' || lod === 'all');
 
   const layerPaths = (atlas.paths || []).filter((path) => {
     const a = byId[path.from];
@@ -529,7 +649,9 @@ export function paintAtlas(ctx, params) {
     const pa = projectPlace(a, cam, w, h);
     const pb = projectPlace(b, cam, w, h);
     const biome = biomeOf(a.biome);
-    drawPortalLink(ctx, pa.px, pa.py, pb.px, pb.py, path.dir, biome.ink, b.discovered, isCrossArea(a, b));
+    // Never paint compass/vertical dir strings — ticks only.
+    const label = isBlockedDirLabel(path.dir) ? '' : path.dir;
+    drawPortalLink(ctx, pa.px, pa.py, pb.px, pb.py, label, biome.ink, b.discovered, isCrossArea(a, b));
   }
 
   const hits = [];
@@ -538,27 +660,80 @@ export function paintAtlas(ctx, params) {
     return a.discovered ? 1 : -1;
   });
 
+  let herePx = null;
+  let herePy = null;
+  let hereHalf = 0;
+
   for (const place of sorted) {
     const { px, py } = projectPlace(place, cam, w, h);
-    const r = drawTile(ctx, place, px, py, cam.tileStep, { travelTargetId });
-    hits.push({ px, py, r: r + 4, place });
+    const isHere = place.id === hereId;
+    const r = drawTile(ctx, place, px, py, cam.tileStep, { travelTargetId, isHere });
+    hits.push({ px, py, r: r + 4, place: { ...place, current: isHere } });
+    if (isHere) {
+      herePx = px;
+      herePy = py;
+      hereHalf = r;
+    }
   }
 
-  for (const place of visiblePlaces) {
-    if (!showRoomLabels || !place.discovered || !place.name) continue;
-    const { px, py } = projectPlace(place, cam, w, h);
-    const half = tileHalf(cam.tileStep);
-    ctx.font = place.current ? '700 10px Georgia, serif' : '600 9px Georgia, serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = 'rgba(20, 14, 8, 0.8)';
-    ctx.strokeText(place.name, px, py + half + 4);
-    ctx.fillStyle = place.current ? '#e8c060' : '#e8dcc8';
-    ctx.fillText(place.name, px, py + half + 4);
+  // Soft trail: dim gold ring on the previous step along travel path (optional).
+  if (travelPathRoomIds.size && hereId) {
+    for (const id of travelPathRoomIds) {
+      if (id === hereId) continue;
+      const p = byId[id];
+      if (!p || p.layer !== activeLayer) continue;
+      const { px, py } = projectPlace(p, cam, w, h);
+      const half = tileHalf(cam.tileStep);
+      ctx.beginPath();
+      ctx.arc(px, py, half * 0.35, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(212, 160, 48, 0.18)';
+      ctx.fill();
+    }
+  }
+
+  if (herePx != null) {
+    drawYouMarker(ctx, herePx, herePy, hereHalf);
+  }
+
+  if (lod === 'near' || lod === 'all') {
+    const candidates = [];
+    for (const place of visiblePlaces) {
+      if (!place.discovered || !place.name) continue;
+      const isHere = place.id === hereId;
+      if (lod === 'near' && !isHere && !nearIds.has(place.id)) continue;
+      const { px, py } = projectPlace(place, cam, w, h);
+      const half = tileHalf(cam.tileStep);
+      candidates.push({
+        id: place.id,
+        text: place.name,
+        px,
+        py: py + half + 4,
+        font: isHere ? '700 10px Georgia, serif' : '600 9px Georgia, serif',
+        fill: isHere ? '#e8c060' : '#e8dcc8',
+        force: isHere,
+        priority: isHere ? 0 : nearIds.has(place.id) ? 1 : 2,
+      });
+    }
+    candidates.sort((a, b) => a.priority - b.priority);
+    const measure = (text, font) => {
+      ctx.font = font;
+      const metrics = ctx.measureText(text);
+      return { w: metrics.width, h: 12 };
+    };
+    const placed = layoutRoomLabels(candidates, measure);
+    for (const lab of placed) {
+      ctx.font = lab.font;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(20, 14, 8, 0.8)';
+      ctx.strokeText(lab.text, lab.x, lab.y);
+      ctx.fillStyle = lab.fill;
+      ctx.fillText(lab.text, lab.x, lab.y);
+    }
   }
 
   return { hits };
 }
 
-export { BIOME, projectPlace, computeCamera };
+export { BIOME, projectPlace, computeCamera, COMPASS_DIRS, DIR_LABEL_BLOCKLIST };

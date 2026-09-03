@@ -207,3 +207,34 @@ func TestDisplayAreaStripsZonePrefix(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
+
+func TestRevealMarksInstanceCloneAsTemplateCurrent(t *testing.T) {
+	w := Compile([]*rooms.Room{
+		testRoom("R0215", "The Weary Wanderer - Cellar", "Z02_oldtown", []string{"underground", "instance"},
+			exit("up", "R0203", false)),
+		testRoom("R0203", "The Weary Wanderer", "Z02_oldtown", []string{"indoor"},
+			exit("down", "R0215", false)),
+	})
+	ch := &characters.Character{
+		Entity:          &entities.Entity{ID: "c1"},
+		CurrentRoom:     traits.CurrentRoom{CurrentRoomID: "R0215~guest-a"},
+		DiscoveredRooms: map[string]bool{"R0215": true, "R0203": true},
+	}
+	atlas := Reveal(w, ch)
+	var currentCount int
+	for _, p := range atlas.Places {
+		if p.Current {
+			currentCount++
+			if p.ID != "R0215" {
+				t.Fatalf("expected template R0215 current, got %s", p.ID)
+			}
+		}
+	}
+	if currentCount != 1 {
+		t.Fatalf("expected exactly one current place, got %d", currentCount)
+	}
+	if atlas.CurrentLayer != "lower" && atlas.CurrentLayer != "overworld" {
+		// cellar underground should be lower when z maps that way
+		t.Logf("current layer %q (ok if biome z mapping differs)", atlas.CurrentLayer)
+	}
+}
