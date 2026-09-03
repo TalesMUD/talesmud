@@ -4,6 +4,7 @@ import { onMount } from "svelte";
 import { writable, get } from "svelte/store";
 import { overlayStore } from "./ui/overlayStore.js";
 import { getPlayerColor } from "./playerColors.js";
+import { markPlayersYou, parseRoomChatLine } from "./roomChat.js";
 
 const GAME_CLIENT = writable(null);
 
@@ -64,7 +65,8 @@ function createClient(renderer, characterCreator, muxStore) {
       }
 
       // Set player characters in the room for UI rendering
-      mux.setPlayers(msg.players || []);
+      mux.setPlayers(markPlayersYou(msg.players || [], currentCharacter));
+      if (mux.clearRoomChat) mux.clearRoomChat();
 
       // Set ground items from server-resolved item details
       mux.setGroundItems(msg.items || []);
@@ -104,11 +106,16 @@ function createClient(renderer, characterCreator, muxStore) {
       }
 
       // Set player characters in the room
-      mux.setPlayers(msg.players || []);
+      mux.setPlayers(markPlayersYou(msg.players || [], currentCharacter));
 
       mux.setGroundItems(msg.items || []);
       requestAtlas();
     }
+  };
+
+  messageHandlers["roomPresence"] = (msg) => {
+    if (!mux) return;
+    mux.setPlayers(markPlayersYou(msg.players || [], currentCharacter));
   };
 
   messageHandlers["createCharacter"] = (msg) => {
@@ -125,6 +132,7 @@ function createClient(renderer, characterCreator, muxStore) {
     if (mux && msg.character) {
       mux.setCharacter(msg.character);
       mux.updateCharacterStats({ xpForNextLevel: msg.xpForNextLevel });
+      mux.setPlayers(markPlayersYou(get(mux)?.players || [], currentCharacter));
     }
   };
 
@@ -448,6 +456,14 @@ function createClient(renderer, characterCreator, muxStore) {
         } else {
           renderer(message);
           overlayStore.pushMessage(message);
+        }
+
+        if (mux && mux.appendRoomChat) {
+          const line = parseRoomChatLine(msg, currentCharacter);
+          if (line) mux.appendRoomChat(line);
+        }
+
+        if (!msg.username) {
           if (mux && get(mux)?.shop && mux.setShopError) {
             const lower = String(message || "").toLowerCase();
             if (
