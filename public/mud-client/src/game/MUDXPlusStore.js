@@ -120,6 +120,7 @@ function createStore() {
     actions: [],
     npcs: [],
     players: [],
+    roomChat: [],
     background: "oldtown-griphon",
     roomName: "",
     roomDescription: "",
@@ -225,6 +226,25 @@ function createStore() {
     setPlayers: (players) => {
       update((state) => {
         state.players = players || [];
+        return state;
+      });
+    },
+    appendRoomChat: (line) => {
+      if (!line || !line.text) return;
+      update((state) => {
+        const next = {
+          id: line.id || `chat-${Date.now()}-${(state.roomChat || []).length}`,
+          name: line.name || "",
+          text: line.text,
+          isYou: !!line.isYou,
+        };
+        state.roomChat = [...(state.roomChat || []), next].slice(-40);
+        return state;
+      });
+    },
+    clearRoomChat: () => {
+      update((state) => {
+        state.roomChat = [];
         return state;
       });
     },

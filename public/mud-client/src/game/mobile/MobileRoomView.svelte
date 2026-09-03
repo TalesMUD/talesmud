@@ -3,6 +3,7 @@
   import DialogOverlay from '../ui/DialogOverlay.svelte';
   import ShopOverlay from '../ui/ShopOverlay.svelte';
   import RoomTextOverlay from '../ui/RoomTextOverlay.svelte';
+  import PlayersOverlay from '../ui/PlayersOverlay.svelte';
   import HotbarWidget from '../widgets/HotbarWidget.svelte';
   import MobileActionBar from './MobileActionBar.svelte';
   import { findNpcByName } from '../MUDXPlusStore';
@@ -342,6 +343,7 @@
     <!-- Room name is already shown in MobileHeader -->
 
     <RoomTextOverlay />
+    <PlayersOverlay {store} {sendMessage} />
 
     {#if $store.dialogActive}
       <DialogOverlay
