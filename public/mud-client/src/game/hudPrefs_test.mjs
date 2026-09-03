@@ -1,5 +1,7 @@
 import assert from 'assert';
 import {
+  ACTION_BAR_CHROME,
+  ACTION_BAR_LAYOUT_REVISION,
   DEFAULT_ACTION_BAR_PINS,
   DEFAULT_HOTBAR_BINDS,
   DEFAULT_INVENTORY_OPEN_MODE,
@@ -10,54 +12,56 @@ import {
   commandForPin,
   makeItemBind,
   makeSkillBind,
+  migrateActionBarPins,
   normalizeActionBarPins,
   normalizeHotbarBinds,
   normalizeInventoryOpenMode,
+  resolveActionBarChrome,
   resolveHotbarActivation,
   resolvePinnedCommands,
   makeActionBind,
   HOTBAR_ACTIONS,
+  scrubLegacySearchBinds,
   skillDisplayName,
   skillGenericArtUrl,
   togglePin,
 } from './hudPrefs.js';
 
-const sayPin = PINNABLE_COMMANDS.find((c) => c.id === 'say');
-assert.ok(sayPin, 'Say is in PINNABLE_COMMANDS catalog');
-assert.strictEqual(sayPin.kind, 'say', 'Say uses kind say');
-assert.ok(
-  !DEFAULT_ACTION_BAR_PINS.includes('say'),
-  'Say is default OFF the action bar'
+assert.deepStrictEqual(DEFAULT_ACTION_BAR_PINS, [], 'Option C: no default action-bar pins');
+assert.ok(ACTION_BAR_LAYOUT_REVISION >= 2, 'layout revision bumped for Option C');
+
+assert.deepStrictEqual(
+  ACTION_BAR_CHROME.map((c) => c.id),
+  ['inv', 'map', 'say'],
+  'INV/MAP/SAY are fixed chrome'
 );
-assert.strictEqual(
-  commandForPin(sayPin),
-  null,
-  'commandForPin must not emit bare say'
+assert.ok(
+  !PINNABLE_COMMANDS.some((c) => ['inv', 'map', 'say'].includes(c.id)),
+  'chrome ids are not pinnable'
+);
+assert.ok(
+  !DEFAULT_ACTION_BAR_PINS.includes('look'),
+  'Look is default OFF the action bar'
+);
+assert.ok(
+  PINNABLE_COMMANDS.some((c) => c.id === 'look'),
+  'Look remains pinnable via ⋯'
 );
 
 assert.deepStrictEqual(
   normalizeActionBarPins(null),
-  DEFAULT_ACTION_BAR_PINS,
-  'null pins → defaults'
+  [],
+  'null pins → empty Option C default'
 );
 assert.deepStrictEqual(
   normalizeActionBarPins([]),
-  DEFAULT_ACTION_BAR_PINS,
-  'empty pins → defaults'
+  [],
+  'empty pins stay empty'
 );
 assert.deepStrictEqual(
-  normalizeActionBarPins(['look', 'inv', 'map', 'look', 'nope']),
-  ['look', 'inv', 'map'],
-  'dedupe + drop unknown'
-);
-assert.ok(
-  !DEFAULT_ACTION_BAR_PINS.includes('look'),
-  'Look is default OFF the action bar (pinnable via ⋯)'
-);
-assert.deepStrictEqual(
-  DEFAULT_ACTION_BAR_PINS,
-  ['inv', 'map'],
-  'default chrome pins are INV + MAP only'
+  normalizeActionBarPins(['look', 'inv', 'map', 'look', 'nope', 'say']),
+  ['look'],
+  'chrome ids stripped; look kept if explicitly stored'
 );
 assert.deepStrictEqual(
   normalizeActionBarPins(['WHO', ' Help ']),
@@ -65,29 +69,39 @@ assert.deepStrictEqual(
   'normalize case/whitespace'
 );
 
-const toggledOff = togglePin(['inv', 'map'], 'map');
-assert.deepStrictEqual(toggledOff, ['inv'], 'unpin map');
-const toggledOn = togglePin(['inv'], 'who');
-assert.deepStrictEqual(toggledOn, ['inv', 'who'], 'pin who');
-const sayPinned = togglePin(['inv', 'map'], 'say');
-assert.deepStrictEqual(sayPinned, ['inv', 'map', 'say'], 'can pin Say');
-assert.strictEqual(
-  resolvePinnedCommands(sayPinned).find((c) => c.id === 'say')?.kind,
-  'say',
-  'pinned Say resolves with kind say'
-);
-const lookPinned = togglePin(['inv', 'map'], 'look');
-assert.deepStrictEqual(lookPinned, ['inv', 'map', 'look'], 'Look remains pinnable via ⋯');
 assert.deepStrictEqual(
-  togglePin(['inv'], 'inv'),
-  DEFAULT_ACTION_BAR_PINS,
-  'cannot clear last pin — reset to defaults'
+  migrateActionBarPins(['look', 'inv', 'map'], 1),
+  [],
+  'legacy look+inv+map defaults migrate to empty pins'
+);
+assert.deepStrictEqual(
+  migrateActionBarPins(['look', 'inv', 'map', 'rest', 'help', 'say'], 1),
+  [],
+  'cluttered legacy pins migrate to empty on revision bump'
+);
+assert.deepStrictEqual(
+  migrateActionBarPins(['look', 'who'], 2),
+  ['look', 'who'],
+  'revision 2+ preserves optional pins'
 );
 
-const resolved = resolvePinnedCommands(['inv', 'map']);
+const toggledOn = togglePin([], 'who');
+assert.deepStrictEqual(toggledOn, ['who'], 'pin who onto empty bar');
+const toggledOff = togglePin(['who', 'help'], 'help');
+assert.deepStrictEqual(toggledOff, ['who'], 'unpin help (empty allowed)');
+assert.deepStrictEqual(togglePin(['who'], 'inv'), ['who'], 'cannot pin chrome inv');
+assert.deepStrictEqual(togglePin([], 'look'), ['look'], 'Look remains pinnable via ⋯');
+
+const chrome = resolveActionBarChrome();
+assert.strictEqual(chrome.length, 3);
+assert.strictEqual(chrome[0].kind, 'inventory');
+assert.strictEqual(chrome[1].kind, 'map');
+assert.strictEqual(chrome[2].kind, 'say');
+assert.strictEqual(commandForPin(chrome[2]), null, 'Say chrome must not emit bare say');
+
+const resolved = resolvePinnedCommands(['look', 'help']);
 assert.strictEqual(resolved.length, 2);
-assert.strictEqual(resolved[0].kind, 'inventory');
-assert.strictEqual(resolved[1].kind, 'map');
+assert.strictEqual(resolved[0].id, 'look');
 
 assert.strictEqual(normalizeInventoryOpenMode(undefined), DEFAULT_INVENTORY_OPEN_MODE);
 assert.strictEqual(normalizeInventoryOpenMode('overlay'), INVENTORY_OPEN_OVERLAY);
@@ -150,7 +164,7 @@ assert.strictEqual(missing.ok, false);
 assert.strictEqual(missing.missing, true);
 assert.strictEqual(missing.command, null);
 
-console.log('hudPrefs: pins + Say + hotbar binds/combat gate OK');
+console.log('hudPrefs: pins + chrome + hotbar binds/combat gate OK');
 
 assert.strictEqual(skillGenericArtUrl('mage_fireball'), '/api/item-art/generic-spell-fire.png');
 assert.strictEqual(skillGenericArtUrl('Fireball'), '/api/item-art/generic-spell-fire.png');
@@ -163,12 +177,18 @@ const lookAct = resolveHotbarActivation(lookBind, { inCombat: false, inventory: 
 assert.strictEqual(lookAct.ok, true);
 assert.strictEqual(lookAct.command, 'look');
 
-console.log('hudPrefs: skill generic art + action binds OK');
-
 assert.ok(
   !HOTBAR_ACTIONS.some((a) => a.id === 'search'),
   'Search hotbar action that only sent look is removed'
 );
+assert.strictEqual(makeActionBind('search'), null, 'Search cannot be bound');
+const scrubbed = scrubLegacySearchBinds([
+  { kind: 'action', id: 'search', command: 'look' },
+  { kind: 'action', id: 'look', command: 'look' },
+]);
+assert.strictEqual(scrubbed[0], null, 'legacy Search=look bind scrubbed');
+assert.strictEqual(scrubbed[1]?.id, 'look', 'Look bind preserved');
+
 assert.ok(HOTBAR_ACTIONS.some((a) => a.id === 'look'), 'Look remains bindable');
 assert.ok(HOTBAR_ACTIONS.some((a) => a.id === 'rest'), 'Rest remains bindable');
 assert.ok(HOTBAR_ACTIONS.some((a) => a.id === 'talk'), 'Talk remains bindable');
@@ -177,4 +197,4 @@ assert.ok(
   DEFAULT_HOTBAR_BINDS.every((b) => b === null),
   'hotbar default empty'
 );
-console.log('hudPrefs: option C defaults (room chrome INV+MAP, no Search) OK');
+console.log('hudPrefs: Option C (room + chrome INV/MAP/SAY, no Search=look) OK');

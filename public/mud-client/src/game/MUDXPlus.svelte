@@ -497,6 +497,7 @@
   import {
     PINNABLE_COMMANDS,
     resolvePinnedCommands,
+    resolveActionBarChrome,
     togglePin,
     INVENTORY_OPEN_OVERLAY,
     INVENTORY_OPEN_WIDGET,
@@ -533,6 +534,7 @@
 
   $: pins = $settingsStore.interface?.actionBarPins;
   $: inventoryOpenMode = $settingsStore.interface?.inventoryOpenMode || INVENTORY_OPEN_OVERLAY;
+  $: chromeCommands = $store.inCombat ? [] : resolveActionBarChrome();
   $: pinnedCommands = $store.inCombat ? combatCommands : resolvePinnedCommands(pins);
   $: contextCommands = $store.inCombat ? [] : [
     ...($store.hasMerchant ? [{ name: "list", icon: "store", label: "Shop" }] : []),
@@ -644,7 +646,7 @@
           </button>
         </div>
         <div class="dialog-grid">
-          <div class="dialog-section-label">Tap to pin / unpin on the action bar</div>
+          <div class="dialog-section-label">Optional pins (INV / MAP / SAY are always shown)</div>
           {#each PINNABLE_COMMANDS as cmd}
             <button
               class="pin-toggle"
@@ -795,9 +797,20 @@
     <div class="separator"></div>
 
     <div class="commands-section">
-      {#each pinnedCommands as cmd}
+      {#each contextCommands as cmd}
         <button
-          class="btn {$store.inCombat ? 'combat-btn' : 'cmd-btn'}"
+          class="btn context-btn"
+          on:click={() => executeCommand(cmd.name)}
+          title={cmd.label}
+        >
+          <i class="material-icons">{cmd.icon}</i>
+          {cmd.label}
+        </button>
+      {/each}
+
+      {#each chromeCommands as cmd}
+        <button
+          class="btn cmd-btn chrome-btn"
           on:click={() => activatePin(cmd)}
           title={cmd.label}
         >
@@ -806,10 +819,10 @@
         </button>
       {/each}
 
-      {#each contextCommands as cmd}
+      {#each pinnedCommands as cmd}
         <button
-          class="btn context-btn"
-          on:click={() => executeCommand(cmd.name)}
+          class="btn {$store.inCombat ? 'combat-btn' : 'cmd-btn'}"
+          on:click={() => activatePin(cmd)}
           title={cmd.label}
         >
           <i class="material-icons">{cmd.icon}</i>
