@@ -2074,7 +2074,11 @@ Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "unc
 
 ### Client
 - Map widget (player-facing name; same `minimap` widget slot / atlas protocol) receives the atlas over WebSocket on enter, and can also fetch `GET /api/characters/:id/map`
-- The widget auto-fits discovered places into its panel and keeps that fit (canvas is out of flow so it cannot resize the widget); expand or the action-bar **Map** chrome opens a fullscreen Map overview overlay
+- Action-bar **Map** chrome / Expand always opens a real fullscreen Map overlay (dimmed play surface, Esc/X close) via the `overlayHost` instance in `Game.svelte` — not a side tab next to Inventory
+- Label LOD: zoomed out = area names; mid = current + adjacent rooms; zoomed in = full names with collision avoidance. Compass/vertical exit words are never painted (exit ticks only)
+- Exactly one gold you-are-here marker, keyed by `currentRoomId` (incl. `R0215~instance` → template). Soft travel-trail dots optional
+- Title stays **Map**. Layer tabs (Overworld/Lower/Upper) only when present in `atlas.layers`
+- The widget auto-fits discovered places into its panel and keeps that fit (canvas is out of flow so it cannot resize the widget)
 - Layer tabs, pan, wheel zoom, click-to-travel along discovered paths
 - Desktop/mobile action bars (Option C): room-only dirs + room actions + Shop when a merchant is present; fixed INV / MAP / SAY chrome; optional Look/Rest/… pins via ⋯ (empty by default); layout revision migrates legacy Look/pin clutter
 - Inventory chrome opens a popup overlay by default; preference can switch to on-screen widget / mobile sheet
@@ -2084,7 +2088,8 @@ Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "unc
 ### Key Files
 - `pkg/worldmap/` — layout, biomes, hulls, discovery, reveal
 - `pkg/server/handler/charactermap.go` — REST endpoint
-- `public/mud-client/src/game/widgets/MinimapWidget.svelte` — parchment Map renderer + overview host
+- `public/mud-client/src/game/widgets/MinimapWidget.svelte` — parchment Map renderer + fullscreen overlay host
+- `public/mud-client/src/game/widgets/atlasRenderer.js` — label LOD, collision, single you-marker
 - `public/mud-client/src/game/hudPrefs.js` — Option C action-bar chrome/pins + hotbar helpers
 
 ---

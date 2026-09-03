@@ -1,7 +1,7 @@
 <script>
-  import { onDestroy, tick } from 'svelte';
+  import { onDestroy, onMount, tick } from 'svelte';
   import { readStageSize, shouldRepaintSize, applyCanvasBitmap } from './atlasLayout.js';
-  import { paintAtlas } from './atlasRenderer.js';
+  import { paintAtlas, isCurrentPlace } from './atlasRenderer.js';
 
   export let store = null;
   export let sendMessage = null;
@@ -33,6 +33,7 @@
   let lastWidgetSize = null;
   let lastModalSize = null;
   let drawRaf = 0;
+  let escHandler = null;
 
   // External Map pin / host opens overview via store.mapOverviewOpen
   $: if (store && $store) {
@@ -253,7 +254,7 @@
     if (found) {
       let text = found.discovered ? (found.name || found.id) : 'Uncharted';
       if (found.areaName && found.discovered) text += ' · ' + found.areaName;
-      if (found.current) text += ' (you are here)';
+      if (found.current || isCurrentPlace(found.id, currentRoomId)) text += ' (you are here)';
       else if (found.discovered) text += ' (click to travel)';
       tooltip = { visible: true, text, x: e.clientX - rect.left, y: e.clientY - rect.top };
     } else {
@@ -294,6 +295,7 @@
 
   async function toggleMaximize() {
     const next = !maximized;
+    // Always route through store so Game.svelte overlayHost owns the fullscreen modal.
     if (store && store.setMapOverviewOpen) {
       store.setMapOverviewOpen(next);
       return;
@@ -307,6 +309,12 @@
     }
     lastModalSize = null;
     scheduleDraw();
+  }
+
+  function closeOverview() {
+    if (store && store.closeMapOverview) store.closeMapOverview();
+    else if (store && store.setMapOverviewOpen) store.setMapOverviewOpen(false);
+    else maximized = false;
   }
 
   function selectLayer(id) {
@@ -355,7 +363,18 @@
     }
   }
 
+  onMount(() => {
+    escHandler = (e) => {
+      if (e.key === 'Escape' && maximized && overlayHost) {
+        e.preventDefault();
+        closeOverview();
+      }
+    };
+    window.addEventListener('keydown', escHandler);
+  });
+
   onDestroy(() => {
+    if (escHandler) window.removeEventListener('keydown', escHandler);
     if (drawRaf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(drawRaf);
     if (widgetObserver) widgetObserver.disconnect();
     if (modalObserver) modalObserver.disconnect();
@@ -451,12 +470,33 @@
     border-radius: 12px;
     overflow: hidden;
   }
+  .open-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+  }
+  .open-map-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid rgba(245, 158, 11, 0.45);
+    color: #fbbf24;
+    border-radius: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .open-map-btn:hover { background: rgba(245, 158, 11, 0.25); }
+  .open-map-btn i { font-size: 18px; }
 </style>
 
 {#if !overlayHost}
 <div class="atlas">
   <div class="toolbar">
-    <button class="icon-btn" title="Expand map" on:click={toggleMaximize}>
+    <button class="icon-btn" title="Open Map" on:click={toggleMaximize}>
       <i class="material-icons">open_in_full</i>
     </button>
     <i class="material-icons">map</i>
@@ -479,6 +519,14 @@
       </button>
     {/if}
   </div>
+  {#if maximized}
+    <div class="stage open-hint">
+      <button class="open-map-btn" type="button" on:click={toggleMaximize}>
+        <i class="material-icons">map</i>
+        Map open fullscreen — click to focus
+      </button>
+    </div>
+  {:else}
   <div class="stage" bind:this={widgetWrap}>
     <canvas
       bind:this={widgetCanvas}
@@ -488,15 +536,23 @@
       on:pointerleave={() => tooltip = { ...tooltip, visible: false }}
       on:wheel={onWheel}
     ></canvas>
-    {#if tooltip.visible && !maximized}
+    {#if tooltip.visible}
       <div class="tooltip" style="left: {tooltip.x}px; top: {tooltip.y}px;">{tooltip.text}</div>
     {/if}
   </div>
+  {/if}
 </div>
 {/if}
 
 {#if maximized && overlayHost}
-  <div class="backdrop" use:portal on:click={(e) => { if (e.target === e.currentTarget) toggleMaximize(); }} on:keydown={(e) => { if (e.key === 'Escape') toggleMaximize(); }}>
+  <div
+    class="backdrop"
+    use:portal
+    role="dialog"
+    aria-modal="true"
+    aria-label="Map"
+    on:click={(e) => { if (e.target === e.currentTarget) closeOverview(); }}
+  >
     <div class="modal">
       <div class="toolbar">
         <i class="material-icons">map</i>
@@ -509,7 +565,7 @@
         </div>
         <span class="spacer"></span>
         {#if panX !== 0 || panY !== 0 || userScale !== 1}
-          <button class="icon-btn" title="Fit map" on:click={recenter}>
+          <button class="icon-btn" title="Fit map / recenter on you" on:click={recenter}>
             <i class="material-icons">my_location</i>
           </button>
         {/if}
@@ -518,7 +574,7 @@
             <i class="material-icons">close</i>
           </button>
         {/if}
-        <button class="icon-btn" title="Close" on:click={toggleMaximize}>
+        <button class="icon-btn" title="Close (Esc)" on:click={closeOverview}>
           <i class="material-icons">close</i>
         </button>
       </div>

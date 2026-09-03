@@ -45,7 +45,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Unique NPCs auto-spawn into their assigned room on server start via `CurrentRoomID`
   - Guest-public NPC/enemy portraits (`/api/portraits/:filename`, hashed avatar fallback)
   - Merchant shop overlay in the room widget (structured `shop` WS message; dialog Trade inject; buy/sell)
-  - Player chrome Map (not Atlas): minimap widget + full Map overview overlay; Map chrome on action bar
+  - Player chrome Map (not Atlas): fullscreen Map overlay (Esc/X); label LOD + one you-are-here; Map chrome on action bar
   - Action bar Option C: room dirs + room actions + Shop; fixed INV/MAP/SAY chrome; optional pins via ⋯ (Look off by default)
   - Spell Bar / Hotbar: skills + consumables; Look/Rest/Talk/Flee bindable but not seeded; no Search=look
   - Say chrome opens a message popup, then sends `say <text>`

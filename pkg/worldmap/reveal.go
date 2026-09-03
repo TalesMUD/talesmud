@@ -2,6 +2,7 @@ package worldmap
 
 import (
 	"sort"
+	"strings"
 
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 )
@@ -29,6 +30,9 @@ func Reveal(w *World, ch *characters.Character) PlayerMap {
 		}
 		if ch.CurrentRoomID != "" {
 			discovered[ch.CurrentRoomID] = true
+			if i := strings.Index(ch.CurrentRoomID, "~"); i > 0 {
+				discovered[ch.CurrentRoomID[:i]] = true
+			}
 		}
 	}
 
@@ -101,7 +105,7 @@ func Reveal(w *World, ch *characters.Character) PlayerMap {
 			Kind:       pr.kind,
 			Landmark:   pr.landmark && !isFog,
 			Discovered: !isFog,
-			Current:    ch != nil && id == ch.CurrentRoomID,
+			Current:    ch != nil && placeIsCurrent(id, ch.CurrentRoomID),
 			Tags:       pr.tags,
 		}
 		if isFog {
@@ -110,7 +114,7 @@ func Reveal(w *World, ch *characters.Character) PlayerMap {
 			p.CanTravel = false
 		} else {
 			p.Name = pr.name
-			p.CanTravel = ch != nil && id != ch.CurrentRoomID
+			p.CanTravel = ch != nil && !placeIsCurrent(id, ch.CurrentRoomID)
 			rk := pr.area + "|" + lid
 			regionRooms[rk] = append(regionRooms[rk], id)
 		}
@@ -163,6 +167,21 @@ func Reveal(w *World, ch *characters.Character) PlayerMap {
 	}
 
 	return out
+}
+
+// placeIsCurrent matches template room ids to private instance clones
+// (e.g. R0215~charId → R0215) so exactly one atlas place is marked current.
+func placeIsCurrent(placeID, currentRoomID string) bool {
+	if currentRoomID == "" {
+		return false
+	}
+	if placeID == currentRoomID {
+		return true
+	}
+	if i := strings.Index(currentRoomID, "~"); i > 0 {
+		return placeID == currentRoomID[:i]
+	}
+	return false
 }
 
 func majorityBiome(w *World, ids []string) string {

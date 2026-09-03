@@ -87,15 +87,44 @@ function mergeAtlas(existing, incoming) {
   const currentRoomId = incoming.currentRoomId || base.currentRoomId;
   const currentLayer = incoming.currentLayer || base.currentLayer;
 
+  // Recompute current flags from currentRoomId — JSON omitempty leaves stale
+  // current:true on previously visited rooms after merge.
+  const places = Array.from(placeMap.values()).map((place) => ({
+    ...place,
+    current: isAtlasCurrentPlace(place.id, currentRoomId),
+  }));
+  // Exactly one current marker (exact id wins over template match).
+  const exact = places.find((p) => p.id === currentRoomId);
+  if (exact) {
+    for (const p of places) p.current = p.id === currentRoomId;
+  } else {
+    let marked = false;
+    for (const p of places) {
+      if (p.current && !marked) {
+        marked = true;
+      } else {
+        p.current = false;
+      }
+    }
+  }
+
   return {
     characterId,
     currentRoomId,
     currentLayer,
     layers: Array.from(layerMap.values()),
-    places: Array.from(placeMap.values()),
+    places,
     paths,
     regions: Array.from(regionMap.values()),
   };
+}
+
+function isAtlasCurrentPlace(placeId, currentRoomId) {
+  if (!placeId || !currentRoomId) return false;
+  if (placeId === currentRoomId) return true;
+  const i = String(currentRoomId).indexOf('~');
+  if (i > 0 && placeId === currentRoomId.slice(0, i)) return true;
+  return false;
 }
 
 function loadVisitedRooms() {
