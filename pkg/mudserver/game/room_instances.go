@@ -3,6 +3,7 @@ package game
 import (
 	"github.com/talesmud/talesmud/pkg/entities"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
+	"github.com/talesmud/talesmud/pkg/entities/quests"
 	"github.com/talesmud/talesmud/pkg/entities/traits"
 	"github.com/talesmud/talesmud/pkg/instances"
 )
@@ -52,10 +53,9 @@ func (a *roomInstanceAdapter) cloneNPCs(characterID string) {
 			dup.Entity = &entities.Entity{ID: n.ID + "~" + cloneRoom}
 			dup.CurrentRoom = traits.CurrentRoom{CurrentRoomID: cloneRoom}
 			dup.SpawnRoomID = cloneRoom
-			if dup.TemplateID == "" {
-				dup.TemplateID = n.ID
-			}
-			a.game.NPCManager.RegisterExistingNPC(&dup, cloneRoom)
+			dup.TemplateID = quests.NPCTemplateID(n.TemplateID, n.ID)
+			cloned := dup
+			a.game.NPCManager.RegisterExistingNPC(&cloned, cloneRoom)
 		}
 	}
 }

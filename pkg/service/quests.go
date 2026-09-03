@@ -110,6 +110,8 @@ type QuestEvent struct {
 	Type           QuestEventType
 	CharacterID    string
 	NPCID          string
+	NPCTemplateID  string
+	NPCName        string
 	RoomID         string
 	DialogID       string
 	DialogNodeID   string
@@ -756,11 +758,11 @@ func (s *questsService) applyQuestEventObjective(event QuestEvent, progress *que
 func questEventMatchesObjective(event QuestEvent, objective quests.Objective) bool {
 	switch event.Type {
 	case QuestEventNPCKilled:
-		return objective.Type == quests.ObjectiveKill && objective.TargetID == event.NPCID
+		return quests.KillTargetMatches(objective, event.NPCTemplateID, event.NPCID, event.NPCName)
 	case QuestEventItemPickup:
 		return objective.Type == quests.ObjectiveCollect && objective.TargetID == questEventItemTemplateID(event)
 	case QuestEventRoomEnter:
-		return objective.Type == quests.ObjectiveVisit && objective.TargetID == event.RoomID
+		return objective.Type == quests.ObjectiveVisit && quests.RoomIDMatches(objective.TargetID, event.RoomID)
 	case QuestEventDialogNode:
 		return objective.Type == quests.ObjectiveTalk &&
 			(objective.TargetID == "" || objective.TargetID == event.NPCID) &&
