@@ -16,6 +16,15 @@
   let img1El;
   let img2El;
   let descriptionExpanded = false;
+  let showPickupMenu = false;
+
+  $: groundItems = ($store.groundItems || []).filter(item => !item.noPickup);
+
+  function pickupItem(item) {
+    sendMessage('pickup ' + item.name);
+    store.removeGroundItem(item.id);
+    showPickupMenu = false;
+  }
 
   // Derive NPC type for dialog overlay
   $: dialogNpc = $store.dialogActive
@@ -226,6 +235,101 @@
     flex-shrink: 0;
     margin-top: auto;
   }
+
+  .room-pickup-fab {
+    position: absolute;
+    right: 8px;
+    bottom: 10px;
+    z-index: 12;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    padding: 0;
+    border-radius: 10px;
+    border: 1px solid rgba(34, 197, 94, 0.5);
+    background: rgba(20, 83, 45, 0.88);
+    color: #86efac;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .room-pickup-fab i {
+    font-size: 20px;
+  }
+
+  .room-pickup-count {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: #22c55e;
+    color: #052e16;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 16px;
+    text-align: center;
+  }
+
+  .pickup-dialog-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pickup-dialog {
+    background: rgba(15, 15, 25, 0.95);
+    border: 1px solid rgba(34, 197, 94, 0.4);
+    border-radius: 14px;
+    padding: 16px;
+    width: 90vw;
+    max-width: 400px;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  .pickup-dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .pickup-dialog-title {
+    color: #86efac;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .pickup-dialog-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .pickup-dialog-grid button {
+    background: rgba(34, 197, 94, 0.2);
+    border: 1px solid rgba(34, 197, 94, 0.4);
+    border-radius: 8px;
+    padding: 10px 8px;
+    color: #86efac;
+    min-height: 44px;
+    text-transform: uppercase;
+    font-size: 12px;
+  }
 </style>
 
 <div class="mobile-room">
@@ -257,7 +361,42 @@
     <div class="entity-section">
       <EntityPanel {store} {sendMessage} />
     </div>
+
+    {#if groundItems.length > 0}
+      <button
+        class="room-pickup-fab"
+        type="button"
+        aria-label="Pick up {groundItems.length} items"
+        on:click={() => showPickupMenu = true}
+      >
+        <i class="material-icons">back_hand</i>
+        <span class="room-pickup-count">{groundItems.length}</span>
+      </button>
+    {/if}
   </div>
+
+  {#if showPickupMenu && groundItems.length > 0}
+    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+    <div class="pickup-dialog-overlay" on:click={() => showPickupMenu = false}>
+      <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+      <div class="pickup-dialog" on:click|stopPropagation>
+        <div class="pickup-dialog-header">
+          <span class="pickup-dialog-title">
+            <i class="material-icons">back_hand</i>
+            Pick Up
+          </span>
+          <button type="button" on:click={() => showPickupMenu = false} aria-label="Close">
+            <i class="material-icons">close</i>
+          </button>
+        </div>
+        <div class="pickup-dialog-grid">
+          {#each groundItems as item}
+            <button type="button" on:click={() => pickupItem(item)}>{item.name}</button>
+          {/each}
+        </div>
+      </div>
+    </div>
+  {/if}
 
   <!-- Room description (tap to expand) -->
   {#if $store.roomDescription}

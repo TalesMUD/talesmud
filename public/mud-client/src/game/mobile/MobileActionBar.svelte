@@ -114,6 +114,31 @@
     border-color: rgba(255, 255, 255, 0.2);
   }
 
+  .pickup-icon-btn {
+    position: relative;
+    flex: 0 0 44px;
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    padding: 8px;
+  }
+
+  .pickup-count {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: #22c55e;
+    color: #052e16;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 16px;
+    text-align: center;
+  }
+
   .dialog-overlay {
     position: fixed;
     inset: 0;
@@ -607,12 +632,6 @@
       </button>
     {/each}
 
-    {#if groundItems.length > 0}
-      <button class="btn context-btn" on:click={togglePickupMenu}>
-        <i class="material-icons">back_hand</i>
-        Pickup
-      </button>
-    {/if}
 
     <button class="btn more-btn" on:click={toggleMoreMenu}>
       <i class="material-icons">more_horiz</i>

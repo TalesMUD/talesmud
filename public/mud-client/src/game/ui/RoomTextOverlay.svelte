@@ -121,17 +121,19 @@
 
   @media screen and (max-width: 768px) {
     .room-text-overlay {
-      padding: 0.75em 0.85em 4.25em;
-      gap: 0.45em;
+      padding: 0.4em 0.55em 5.5em;
+      gap: 0.3em;
+      justify-content: flex-start;
     }
     .overlay-message {
-      font-size: clamp(0.84rem, 3.1vw, 1.02rem);
-      line-height: 1.45;
-      max-width: 94%;
-      max-height: min(52%, 18rem);
+      font-size: clamp(0.72rem, 2.6vw, 0.88rem);
+      line-height: 1.3;
+      max-width: 96%;
+      max-height: min(28%, 7.5rem);
+      border-radius: 8px;
     }
     .overlay-message-inner {
-      padding: 0.85em 1.05em 1.05em;
+      padding: 0.45em 0.7em 0.55em;
     }
   }
 </style>
