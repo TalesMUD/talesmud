@@ -45,11 +45,11 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Unique NPCs auto-spawn into their assigned room on server start via `CurrentRoomID`
   - Guest-public NPC/enemy portraits (`/api/portraits/:filename`, hashed avatar fallback)
   - Merchant shop overlay in the room widget (structured `shop` WS message; dialog Trade inject; buy/sell)
-  - Player chrome Map (not Atlas): minimap widget + full Map overview overlay; action-bar Map pin
-  - Action bar: always-on compass dirs, room actions beside exits, customizable pinned commands (localStorage)
-  - Spell Bar / Hotbar widget (8 square slots) between room and action bar: bind equipped skills + consumables; skills combat-gated
-  - Pinnable Say (default off): opens a message popup, then sends `say <text>`
-  - Inventory pin opens overlay by default (preference: overlay | on-screen widget)
+  - Player chrome Map (not Atlas): minimap widget + full Map overview overlay; Map chrome on action bar
+  - Action bar Option C: room dirs + room actions + Shop; fixed INV/MAP/SAY chrome; optional pins via ⋯ (Look off by default)
+  - Spell Bar / Hotbar: skills + consumables; Look/Rest/Talk/Flee bindable but not seeded; no Search=look
+  - Say chrome opens a message popup, then sends `say <text>`
+  - Inventory chrome opens overlay by default (preference: overlay | on-screen widget)
   - Equipment paper-doll: square slots around portrait (head/neck/chest/hands | legs/boots/ring1/ring2; main_hand + off_hand under); compact ATK/DEF strip
   - Room action/system reaction toast: centered on room hero art; LOOK-sized padding (no half-cut last line)
   - Quest Accepted / Complete: Veilspan moment cards (centered); open Talk dialog refreshes `[Quest]` → `[In Progress]`

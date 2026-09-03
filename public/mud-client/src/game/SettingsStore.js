@@ -1,11 +1,14 @@
 import { writable, get } from 'svelte/store';
 import {
+  ACTION_BAR_LAYOUT_REVISION,
   DEFAULT_ACTION_BAR_PINS,
   DEFAULT_HOTBAR_BINDS,
   DEFAULT_INVENTORY_OPEN_MODE,
+  migrateActionBarPins,
   normalizeActionBarPins,
   normalizeHotbarBinds,
   normalizeInventoryOpenMode,
+  scrubLegacySearchBinds,
 } from './hudPrefs.js';
 
 const STORAGE_KEY = 'talesmud_settings_v1';
@@ -24,6 +27,7 @@ const DEFAULT_SETTINGS = {
     compactMode: false,
     roomTextOverlay: false,      // Show game text overlay on room image (always on for mobile)
     actionBarPins: [...DEFAULT_ACTION_BAR_PINS],
+    actionBarLayoutRevision: ACTION_BAR_LAYOUT_REVISION,
     inventoryOpenMode: DEFAULT_INVENTORY_OPEN_MODE, // 'overlay' | 'widget'
     hotbarBinds: [...DEFAULT_HOTBAR_BINDS],
   }
@@ -55,16 +59,24 @@ function createSettingsStore() {
         if (stored) {
           const data = JSON.parse(stored);
           if (data.version === 1) {
+            const prevRev = Number(data.interface?.actionBarLayoutRevision) || 0;
             const iface = { ...DEFAULT_SETTINGS.interface, ...data.interface };
-            iface.actionBarPins = normalizeActionBarPins(iface.actionBarPins);
+            iface.actionBarPins = migrateActionBarPins(iface.actionBarPins, prevRev);
+            iface.actionBarLayoutRevision = ACTION_BAR_LAYOUT_REVISION;
             iface.inventoryOpenMode = normalizeInventoryOpenMode(iface.inventoryOpenMode);
-            iface.hotbarBinds = normalizeHotbarBinds(iface.hotbarBinds);
+            iface.hotbarBinds = scrubLegacySearchBinds(
+              normalizeHotbarBinds(iface.hotbarBinds)
+            );
             update(state => ({
               ...state,
               general: { ...DEFAULT_SETTINGS.general, ...data.general },
               interface: iface
             }));
             this.applyTheme(iface.theme);
+            // Persist migration so pins stay clean on next load
+            if (prevRev < ACTION_BAR_LAYOUT_REVISION) {
+              this.saveToStorage();
+            }
             return true;
           }
         }
@@ -84,8 +96,11 @@ function createSettingsStore() {
         interface: {
           ...state.interface,
           actionBarPins: normalizeActionBarPins(state.interface.actionBarPins),
+          actionBarLayoutRevision: ACTION_BAR_LAYOUT_REVISION,
           inventoryOpenMode: normalizeInventoryOpenMode(state.interface.inventoryOpenMode),
-          hotbarBinds: normalizeHotbarBinds(state.interface.hotbarBinds),
+          hotbarBinds: scrubLegacySearchBinds(
+            normalizeHotbarBinds(state.interface.hotbarBinds)
+          ),
         }
       };
       try {
@@ -115,7 +130,7 @@ function createSettingsStore() {
           nextValue = normalizeInventoryOpenMode(value);
         }
         if (category === 'interface' && key === 'hotbarBinds') {
-          nextValue = normalizeHotbarBinds(value);
+          nextValue = scrubLegacySearchBinds(normalizeHotbarBinds(value));
         }
         return {
           ...state,
@@ -146,6 +161,7 @@ function createSettingsStore() {
         interface: {
           ...DEFAULT_SETTINGS.interface,
           actionBarPins: [...DEFAULT_ACTION_BAR_PINS],
+          actionBarLayoutRevision: ACTION_BAR_LAYOUT_REVISION,
           inventoryOpenMode: DEFAULT_INVENTORY_OPEN_MODE,
           hotbarBinds: [...DEFAULT_HOTBAR_BINDS],
         }

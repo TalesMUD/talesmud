@@ -1,9 +1,18 @@
 /**
  * Player HUD preferences: action-bar pins + inventory open mode + hotbar binds.
  * Pure helpers (testable) + SettingsStore-backed persistence.
+ *
+ * Option C layout:
+ * - Action bar = room only (dirs, room actions, Shop) + fixed INV/MAP/SAY chrome
+ * - Hotbar = skills + consumables; Look/Rest/Talk/Flee bindable but not seeded
+ * - Search must never alias look
  */
 
-export const DEFAULT_ACTION_BAR_PINS = ['inv', 'map'];
+/** Bump when default pin/chrome layout changes; migrates saved settings once. */
+export const ACTION_BAR_LAYOUT_REVISION = 2;
+
+/** Option C: no default command pins — Look/Rest/etc. are optional via ⋯ */
+export const DEFAULT_ACTION_BAR_PINS = [];
 
 export const INVENTORY_OPEN_OVERLAY = 'overlay';
 export const INVENTORY_OPEN_WIDGET = 'widget';
@@ -47,12 +56,21 @@ export const SKILL_LABELS = {
   druid_barkskin: 'Barkskin',
 };
 
-/** Catalog of pinnable action-bar commands (id used in pins array). */
-export const PINNABLE_COMMANDS = [
-  { id: 'look', name: 'look', icon: 'visibility', label: 'Look', kind: 'command' },
-  { id: 'say', name: 'say', icon: 'chat', label: 'Say', kind: 'say' },
+/**
+ * Fixed action-bar chrome (always shown out of combat). Not pins — cannot be
+ * removed via Customize; INV/MAP/SAY live here under Option C.
+ */
+export const ACTION_BAR_CHROME = [
   { id: 'inv', name: 'inv', icon: 'inventory_2', label: 'Inv', kind: 'inventory' },
   { id: 'map', name: 'map', icon: 'map', label: 'Map', kind: 'map' },
+  { id: 'say', name: 'say', icon: 'chat', label: 'Say', kind: 'say' },
+];
+
+const CHROME_IDS = new Set(ACTION_BAR_CHROME.map((c) => c.id));
+
+/** Optional pins via ⋯ (Look/Rest/Help/…). Chrome ids are rejected. */
+export const PINNABLE_COMMANDS = [
+  { id: 'look', name: 'look', icon: 'visibility', label: 'Look', kind: 'command' },
   { id: 'rest', name: 'rest', icon: 'hotel', label: 'Rest', kind: 'command' },
   { id: 'who', name: 'who', icon: 'people', label: 'Who', kind: 'command' },
   { id: 'help', name: 'help', icon: 'help', label: 'Help', kind: 'command' },
@@ -67,16 +85,30 @@ export const PINNABLE_COMMANDS = [
 const PIN_IDS = new Set(PINNABLE_COMMANDS.map((c) => c.id));
 
 export function normalizeActionBarPins(pins) {
+  // Empty array is valid Option C default (room + chrome only).
   const src = Array.isArray(pins) ? pins : DEFAULT_ACTION_BAR_PINS;
   const out = [];
   const seen = new Set();
   for (const raw of src) {
     const id = String(raw || '').trim().toLowerCase();
-    if (!PIN_IDS.has(id) || seen.has(id)) continue;
+    if (!PIN_IDS.has(id) || CHROME_IDS.has(id) || seen.has(id)) continue;
     seen.add(id);
     out.push(id);
   }
-  return out.length > 0 ? out : [...DEFAULT_ACTION_BAR_PINS];
+  return out;
+}
+
+/**
+ * One-shot migration to Option C: reset legacy pin layouts so room bar is
+ * clean. INV/MAP/SAY become fixed chrome (not pins). Custom pins from
+ * revision 2+ are preserved.
+ */
+export function migrateActionBarPins(pins, revision) {
+  const rev = Number(revision) || 0;
+  if (rev >= ACTION_BAR_LAYOUT_REVISION) {
+    return normalizeActionBarPins(pins);
+  }
+  return [...DEFAULT_ACTION_BAR_PINS];
 }
 
 export function normalizeInventoryOpenMode(mode) {
@@ -95,10 +127,9 @@ export function resolvePinnedCommands(pins) {
 export function togglePin(pins, id) {
   const list = normalizeActionBarPins(pins);
   const key = String(id || '').trim().toLowerCase();
-  if (!PIN_IDS.has(key)) return list;
+  if (!PIN_IDS.has(key) || CHROME_IDS.has(key)) return list;
   if (list.includes(key)) {
-    const next = list.filter((p) => p !== key);
-    return next.length > 0 ? next : [...DEFAULT_ACTION_BAR_PINS];
+    return list.filter((p) => p !== key);
   }
   return [...list, key];
 }
@@ -108,6 +139,11 @@ export function commandForPin(pin) {
   // Special kinds (inventory / map / say) need UI handlers — never bare commands.
   if (pin.kind === 'command') return pin.name;
   return null;
+}
+
+/** Resolve chrome + optional pins for out-of-combat action bar. */
+export function resolveActionBarChrome() {
+  return ACTION_BAR_CHROME.slice();
 }
 
 export function skillDisplayName(idOrName) {
@@ -170,6 +206,7 @@ export const SKILL_GENERIC_ART = {
   druid_barkskin: 'generic-spell-shield',
 };
 
+/** Bindable hotbar actions. Look/Rest/Talk/Flee are optional — never seeded. */
 export const HOTBAR_ACTIONS = [
   { id: 'melee', label: 'Attack', command: 'attack', art: 'generic-action-melee' },
   { id: 'look', label: 'Look', command: 'look', art: 'generic-action-look' },
@@ -177,6 +214,18 @@ export const HOTBAR_ACTIONS = [
   { id: 'flee', label: 'Flee', command: 'flee', art: 'generic-action-flee' },
   { id: 'talk', label: 'Talk', command: 'talk', art: 'generic-action-talk' },
 ];
+
+/** Drop legacy Search=look binds if present in saved hotbar slots. */
+export function scrubLegacySearchBinds(binds) {
+  const normalized = normalizeHotbarBinds(binds);
+  return normalized.map((b) => {
+    if (!b || b.kind !== 'action') return b;
+    if (b.id === 'search' || String(b.command || '').toLowerCase() === 'search') {
+      return null;
+    }
+    return b;
+  });
+}
 
 export function skillGenericArtStem(idOrName) {
   const raw = String(idOrName || '').trim();
