@@ -3,7 +3,7 @@
  * Pure helpers (testable) + SettingsStore-backed persistence.
  */
 
-export const DEFAULT_ACTION_BAR_PINS = ['look', 'inv', 'map'];
+export const DEFAULT_ACTION_BAR_PINS = ['inv', 'map'];
 
 export const INVENTORY_OPEN_OVERLAY = 'overlay';
 export const INVENTORY_OPEN_WIDGET = 'widget';
@@ -175,7 +175,6 @@ export const HOTBAR_ACTIONS = [
   { id: 'look', label: 'Look', command: 'look', art: 'generic-action-look' },
   { id: 'rest', label: 'Rest', command: 'rest', art: 'generic-action-rest' },
   { id: 'flee', label: 'Flee', command: 'flee', art: 'generic-action-flee' },
-  { id: 'search', label: 'Search', command: 'look', art: 'generic-action-search' },
   { id: 'talk', label: 'Talk', command: 'talk', art: 'generic-action-talk' },
 ];
 

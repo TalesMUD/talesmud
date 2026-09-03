@@ -16,6 +16,7 @@ import {
   resolveHotbarActivation,
   resolvePinnedCommands,
   makeActionBind,
+  HOTBAR_ACTIONS,
   skillDisplayName,
   skillGenericArtUrl,
   togglePin,
@@ -49,34 +50,44 @@ assert.deepStrictEqual(
   ['look', 'inv', 'map'],
   'dedupe + drop unknown'
 );
+assert.ok(
+  !DEFAULT_ACTION_BAR_PINS.includes('look'),
+  'Look is default OFF the action bar (pinnable via ⋯)'
+);
+assert.deepStrictEqual(
+  DEFAULT_ACTION_BAR_PINS,
+  ['inv', 'map'],
+  'default chrome pins are INV + MAP only'
+);
 assert.deepStrictEqual(
   normalizeActionBarPins(['WHO', ' Help ']),
   ['who', 'help'],
   'normalize case/whitespace'
 );
 
-const toggledOff = togglePin(['look', 'inv', 'map'], 'map');
-assert.deepStrictEqual(toggledOff, ['look', 'inv'], 'unpin map');
-const toggledOn = togglePin(['look', 'inv'], 'who');
-assert.deepStrictEqual(toggledOn, ['look', 'inv', 'who'], 'pin who');
-const sayPinned = togglePin(['look', 'inv', 'map'], 'say');
-assert.deepStrictEqual(sayPinned, ['look', 'inv', 'map', 'say'], 'can pin Say');
+const toggledOff = togglePin(['inv', 'map'], 'map');
+assert.deepStrictEqual(toggledOff, ['inv'], 'unpin map');
+const toggledOn = togglePin(['inv'], 'who');
+assert.deepStrictEqual(toggledOn, ['inv', 'who'], 'pin who');
+const sayPinned = togglePin(['inv', 'map'], 'say');
+assert.deepStrictEqual(sayPinned, ['inv', 'map', 'say'], 'can pin Say');
 assert.strictEqual(
   resolvePinnedCommands(sayPinned).find((c) => c.id === 'say')?.kind,
   'say',
   'pinned Say resolves with kind say'
 );
+const lookPinned = togglePin(['inv', 'map'], 'look');
+assert.deepStrictEqual(lookPinned, ['inv', 'map', 'look'], 'Look remains pinnable via ⋯');
 assert.deepStrictEqual(
-  togglePin(['look'], 'look'),
+  togglePin(['inv'], 'inv'),
   DEFAULT_ACTION_BAR_PINS,
   'cannot clear last pin — reset to defaults'
 );
 
-const resolved = resolvePinnedCommands(['look', 'inv', 'map']);
-assert.strictEqual(resolved.length, 3);
-assert.strictEqual(resolved[0].id, 'look');
-assert.strictEqual(resolved[1].kind, 'inventory');
-assert.strictEqual(resolved[2].kind, 'map');
+const resolved = resolvePinnedCommands(['inv', 'map']);
+assert.strictEqual(resolved.length, 2);
+assert.strictEqual(resolved[0].kind, 'inventory');
+assert.strictEqual(resolved[1].kind, 'map');
 
 assert.strictEqual(normalizeInventoryOpenMode(undefined), DEFAULT_INVENTORY_OPEN_MODE);
 assert.strictEqual(normalizeInventoryOpenMode('overlay'), INVENTORY_OPEN_OVERLAY);
@@ -153,3 +164,17 @@ assert.strictEqual(lookAct.ok, true);
 assert.strictEqual(lookAct.command, 'look');
 
 console.log('hudPrefs: skill generic art + action binds OK');
+
+assert.ok(
+  !HOTBAR_ACTIONS.some((a) => a.id === 'search'),
+  'Search hotbar action that only sent look is removed'
+);
+assert.ok(HOTBAR_ACTIONS.some((a) => a.id === 'look'), 'Look remains bindable');
+assert.ok(HOTBAR_ACTIONS.some((a) => a.id === 'rest'), 'Rest remains bindable');
+assert.ok(HOTBAR_ACTIONS.some((a) => a.id === 'talk'), 'Talk remains bindable');
+assert.ok(HOTBAR_ACTIONS.some((a) => a.id === 'flee'), 'Flee remains bindable');
+assert.ok(
+  DEFAULT_HOTBAR_BINDS.every((b) => b === null),
+  'hotbar default empty'
+);
+console.log('hudPrefs: option C defaults (room chrome INV+MAP, no Search) OK');
