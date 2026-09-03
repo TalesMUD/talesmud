@@ -246,6 +246,54 @@ func TestApplyQuestEventKillUpdatesMatchingActiveObjective(t *testing.T) {
 	}
 }
 
+func TestApplyQuestEventKillMatchesSpawnedTemplateInstance(t *testing.T) {
+	quest := validTestQuest()
+	quest.Objectives[0].TargetID = "ENM0008"
+	quest.Objectives[0].TargetName = "Sewer Rat"
+	fixture := newQuestRuleTestFixture(quest)
+
+	results, err := fixture.svc.ApplyQuestEvent(QuestEvent{
+		Type:          QuestEventNPCKilled,
+		CharacterID:   "char1",
+		NPCID:         "uuid-rat~R0215~abcd",
+		NPCTemplateID: "ENM0008",
+		NPCName:       "Sewer Rat",
+	})
+	if err != nil {
+		t.Fatalf("ApplyQuestEvent returned error: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected spawned sewer rat kill to match ENM0008, got %d results", len(results))
+	}
+	if got := fixture.progressRepo.progress[0].Objectives[0].Current; got != 1 {
+		t.Fatalf("expected kill current 1, got %d", got)
+	}
+}
+
+func TestApplyQuestEventVisitMatchesPrivateRoomClone(t *testing.T) {
+	quest := validTestQuest()
+	quest.Objectives = []quests.Objective{{
+		ID:          "obj1",
+		Type:        quests.ObjectiveVisit,
+		Description: "Enter the cellar",
+		TargetID:    "R0215",
+		Amount:      1,
+	}}
+	fixture := newQuestRuleTestFixture(quest)
+
+	results, err := fixture.svc.ApplyQuestEvent(QuestEvent{
+		Type:        QuestEventRoomEnter,
+		CharacterID: "char1",
+		RoomID:      "R0215~deadbeef",
+	})
+	if err != nil {
+		t.Fatalf("ApplyQuestEvent returned error: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected clone cellar visit to match R0215, got %d results", len(results))
+	}
+}
+
 func TestApplyQuestEventVisitDoesNotIncrementCompletedObjective(t *testing.T) {
 	quest := validTestQuest()
 	quest.Objectives = []quests.Objective{{

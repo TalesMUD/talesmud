@@ -27,14 +27,12 @@ func NewQuestTracker(facade service.Facade, game def.GameCtrl) *QuestTracker {
 
 // OnNPCKilled is called when an NPC dies in combat
 func (qt *QuestTracker) OnNPCKilled(characterID, userID string, deadNPC *npc.NPC) {
+	if deadNPC == nil {
+		return
+	}
 	progressList, err := qt.facade.QuestsService().GetQuestLog(characterID)
 	if err != nil {
 		return
-	}
-
-	templateID := deadNPC.TemplateID
-	if templateID == "" {
-		templateID = deadNPC.ID
 	}
 
 	for _, progress := range progressList {
@@ -51,7 +49,7 @@ func (qt *QuestTracker) OnNPCKilled(characterID, userID string, deadNPC *npc.NPC
 			if obj.Type != quests.ObjectiveKill {
 				continue
 			}
-			if obj.TargetID != templateID {
+			if !quests.KillTargetMatches(obj, deadNPC.TemplateID, deadNPC.ID, deadNPC.Name) {
 				continue
 			}
 
@@ -132,7 +130,7 @@ func (qt *QuestTracker) OnRoomEnter(characterID, userID string, room *rooms.Room
 			if obj.Type != quests.ObjectiveVisit {
 				continue
 			}
-			if obj.TargetID != room.ID {
+			if !quests.RoomIDMatches(obj.TargetID, room.ID) {
 				continue
 			}
 

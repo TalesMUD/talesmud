@@ -7,6 +7,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/combat"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
@@ -750,7 +751,9 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 		}
 		npcData := c.game.NPCManager.GetInstance(enemy.ID)
 		if npcData == nil {
-			continue
+			// Spawned/clone rats are deleted as soon as they die. Credit the
+			// kill from the combatant snapshot so private cellars still count.
+			npcData = npcFromCombatant(enemy)
 		}
 		for _, player := range livingPlayers {
 			char, err := c.game.Facade.CharactersService().FindByID(player.ID)
@@ -1098,3 +1101,11 @@ func (c *CombatController) doAutoAttack(instance *combat.CombatInstance, player 
 
 // Ensure CombatController implements CombatEngineCtrl
 var _ def.CombatEngineCtrl = (*CombatController)(nil)
+
+func npcFromCombatant(enemy combat.CombatantRef) *npc.NPC {
+	return &npc.NPC{
+		Entity:     &entities.Entity{ID: enemy.ID},
+		Name:       enemy.Name,
+		TemplateID: enemy.TemplateID,
+	}
+}
