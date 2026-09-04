@@ -181,15 +181,16 @@
     min-width: 22px;
   }
 
-  /* Description section */
+  /* Description section ? size to content; do not grow into a black void.
+     Android Chrome collapses -webkit-box to 0 height inside flex:1 + min-height:0. */
   .room-description-section {
     padding: 10px 14px;
     background: #000;
-    flex: 1;
+    flex: 0 0 auto;
     min-height: 0;
     display: flex;
     flex-direction: column;
-    justify-content: flex-end;
+    justify-content: flex-start;
   }
 
   .room-description {
@@ -206,10 +207,15 @@
   }
 
   .room-description.clamped {
+    /* Prefer max-height clamp; keep -webkit-line-clamp as progressive enhancement */
+    display: block;
+    max-height: calc(1.6em * 3 + 16px);
+    overflow: hidden;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
-    overflow: hidden;
+    /* Floor so a flex parent cannot squash the box to 0 on mobile WebKit */
+    min-height: calc(1.6em * 3 + 16px);
   }
 
   .room-description.parchment {
