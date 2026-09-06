@@ -1,5 +1,5 @@
 <script>
-  import { onDestroy, tick } from 'svelte';
+  import { afterUpdate, onDestroy, tick } from 'svelte';
   import { hashedAvatar } from '../portraitSrc.js';
   import {
     skillDisplayName,
@@ -27,6 +27,7 @@
   let bannerTimer = null;
   let lastBannerKey = '';
   let logEl = null;
+  let logScrollPending = false;
 
   $: phase = $store.combatPhase || ($store.inCombat ? 'active' : 'idle');
   $: visible = phase === 'active' || phase === 'ending';
@@ -138,15 +139,31 @@
     }
   }
 
-  // Keep combat log pinned to latest lines.
-  $: if (log) {
+  // Keep combat log pinned to latest lines (after DOM paint).
+  $: logLen = log.length;
+  $: logTailId = logLen ? log[logLen - 1]?.id : null;
+  $: if (visible && (logLen || logTailId != null)) {
+    logLen;
+    logTailId;
+    logScrollPending = true;
     void scrollCombatLog();
   }
 
   async function scrollCombatLog() {
     await tick();
-    if (logEl) logEl.scrollTop = logEl.scrollHeight;
+    // Second tick + rAF: sync scroll can run before lines paint.
+    await tick();
+    requestAnimationFrame(() => {
+      if (logEl) logEl.scrollTop = logEl.scrollHeight;
+      logScrollPending = false;
+    });
   }
+
+  afterUpdate(() => {
+    if (!logScrollPending || !logEl) return;
+    logEl.scrollTop = logEl.scrollHeight;
+    logScrollPending = false;
+  });
 
   function startTick() {
     if (tickTimer) return;
@@ -594,10 +611,10 @@
   {/if}
   </div><!-- /.battle-arena -->
 
-  <!-- Dock: queue chip + unified hotbar/rail strip (in-flow grid row) -->
+  <!-- Dock: status (queue) above; rail left of centered hotbar (separate chrome) -->
   {#if phase === 'active'}
     <div class="battle-controls">
-      <div class="dock-status" aria-live="polite">
+      <div class="dock-status" class:has-chip={!!(queuedAction && queuedLabel)} aria-live="polite">
         {#if queuedAction && queuedLabel}
           <div class="queued-chip" title="Queued action">
             <i class="material-icons">hourglass_top</i>
@@ -611,7 +628,22 @@
         {/if}
       </div>
 
-      <div class="dock-row dock-strip">
+      <div class="dock-main">
+        <nav class="battle-rail" aria-label="Combat actions">
+          <button type="button" class="rail-btn primary" title="Attack" aria-label="Attack" on:click={doAttack}>
+            <i class="material-icons">flash_on</i>
+          </button>
+          <button type="button" class="rail-btn" title="Defend" aria-label="Defend" on:click={doDefend}>
+            <i class="material-icons">security</i>
+          </button>
+          <button type="button" class="rail-btn" class:active={panel === 'items'} title="Items" aria-label="Items" on:click={() => togglePanel('items')}>
+            <i class="material-icons">shopping_bag</i>
+          </button>
+          <button type="button" class="rail-btn flee" title="Flee" aria-label="Flee" on:click={doFlee}>
+            <i class="material-icons">directions_run</i>
+          </button>
+        </nav>
+
         <div class="combat-hotbar" aria-label="Combat hotbar">
           {#each hotbarBinds as bind, index}
             {@const item = bind?.kind === 'item' ? findInventoryItem(inventory, bind) : null}
@@ -657,21 +689,6 @@
             </button>
           {/each}
         </div>
-
-        <nav class="battle-rail" aria-label="Combat actions">
-          <button type="button" class="rail-btn primary" title="Attack" aria-label="Attack" on:click={doAttack}>
-            <i class="material-icons">flash_on</i>
-          </button>
-          <button type="button" class="rail-btn" title="Defend" aria-label="Defend" on:click={doDefend}>
-            <i class="material-icons">security</i>
-          </button>
-          <button type="button" class="rail-btn" class:active={panel === 'items'} title="Items" aria-label="Items" on:click={() => togglePanel('items')}>
-            <i class="material-icons">shopping_bag</i>
-          </button>
-          <button type="button" class="rail-btn flee" title="Flee" aria-label="Flee" on:click={doFlee}>
-            <i class="material-icons">directions_run</i>
-          </button>
-        </nav>
       </div>
     </div>
 
@@ -862,6 +879,7 @@
   .battle-controls,
   .battle-dock,
   .battle-rail,
+  .dock-main,
   .dock-row,
   .queued-chip,
   .dock-panel,
@@ -1436,26 +1454,31 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.3rem;
+    gap: 0.35rem;
     width: auto;
     max-width: none;
     margin: 0.35rem 0.75rem 0.25rem;
     min-height: 72px;
-    max-height: 88px;
+    /* no max-height — dock row must grow for queue chip (never clip onto hotbar) */
     z-index: 20;
     pointer-events: auto;
     box-sizing: border-box;
   }
 
   .dock-status {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 0.3rem;
     width: 100%;
     min-height: 0;
     pointer-events: none;
     z-index: 21;
+  }
+  .dock-status.has-chip {
+    min-height: 28px;
   }
 
   .action-banner {
@@ -1498,13 +1521,17 @@
   .combat-hotbar {
     display: flex;
     align-items: center;
-    justify-content: flex-start;
-    gap: 0.35rem;
-    padding: 0;
-    border: none;
-    background: transparent;
-    box-shadow: none;
-    flex: 1 1 auto;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.55rem;
+    border-radius: 10px;
+    border: 1.5px solid rgba(212, 164, 74, 0.55);
+    background: rgba(8, 8, 10, 0.92);
+    box-shadow:
+      0 6px 16px rgba(0, 0, 0, 0.4),
+      inset 0 0 0 1px rgba(255, 220, 150, 0.08),
+      0 0 18px rgba(212, 164, 74, 0.12);
+    flex: 0 1 auto;
     min-width: 0;
   }
 
@@ -1512,10 +1539,10 @@
     appearance: none;
     position: relative;
     flex: 0 0 auto;
-    width: 46px;
-    height: 46px;
-    min-width: 44px;
-    min-height: 44px;
+    width: 52px;
+    height: 52px;
+    min-width: 52px;
+    min-height: 52px;
     box-sizing: border-box;
     border-radius: 7px;
     border: 1.5px dashed rgba(148, 163, 184, 0.28);
@@ -1567,6 +1594,7 @@
   }
 
   .queued-chip {
+    position: relative;
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
@@ -1580,6 +1608,7 @@
     font-weight: 700;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), 0 0 12px rgba(167, 139, 250, 0.2);
     animation: bannerIn 0.18s ease-out;
+    pointer-events: none;
   }
   .queued-chip i { font-size: 1rem; color: #c4b5fd; }
   .queued-name { letter-spacing: 0.02em; }
@@ -1593,28 +1622,21 @@
     font-size: 0.75rem;
   }
 
-  .dock-row,
-  .dock-strip {
+  .dock-main {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.55rem;
+    justify-content: center;
+    gap: 0.75rem;
     width: 100%;
     box-sizing: border-box;
+    max-width: min(100%, 820px);
+    margin: 0 auto;
   }
 
-  /* One shared chrome strip: hotbar left/center, rail flush right */
+  /* Legacy aliases (unused) — keep harmless for any residual refs */
+  .dock-row,
   .dock-strip {
-    padding: 0.35rem 0.4rem;
-    border-radius: 10px;
-    border: 1.5px solid rgba(212, 164, 74, 0.45);
-    background: rgba(8, 8, 10, 0.88);
-    box-shadow:
-      0 6px 16px rgba(0, 0, 0, 0.4),
-      inset 0 0 0 1px rgba(255, 220, 150, 0.06);
-    min-height: 58px;
-    max-width: min(100%, 720px);
-    margin: 0 auto;
+    display: contents;
   }
 
   .hb-cd-overlay {
@@ -1636,32 +1658,36 @@
   .battle-rail {
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.3rem;
-    padding: 0;
-    border: none;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
+    justify-content: center;
+    gap: 0.28rem;
+    padding: 0.28rem;
+    border-radius: 9px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    background: rgba(8, 8, 10, 0.72);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
     flex-shrink: 0;
     align-self: center;
+    max-width: 108px;
   }
   .rail-btn {
     appearance: none;
-    width: 46px;
-    height: 46px;
-    min-width: 44px;
-    min-height: 44px;
+    width: 42px;
+    height: 42px;
+    min-width: 40px;
+    min-height: 40px;
     box-sizing: border-box;
     border-radius: 7px;
-    border: 1.5px solid rgba(212, 164, 74, 0.45);
-    background: linear-gradient(180deg, rgba(22, 18, 12, 0.94), rgba(8, 7, 6, 0.94));
-    color: #f5e6c0;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: linear-gradient(180deg, rgba(18, 16, 14, 0.9), rgba(8, 7, 6, 0.9));
+    color: #d1d5db;
     cursor: pointer;
     display: grid;
     place-items: center;
     padding: 0;
-    box-shadow: inset 0 0 0 1px rgba(255, 220, 150, 0.06);
+    box-shadow: none;
+    opacity: 0.92;
   }
   .rail-btn i { font-size: 1.25rem; color: #d4a44a; }
   .rail-btn:hover,
@@ -1670,12 +1696,10 @@
     background: linear-gradient(180deg, rgba(36, 28, 14, 0.96), rgba(14, 12, 8, 0.96));
   }
   .rail-btn.primary {
-    border: 1.5px solid #e8c878;
-    box-shadow:
-      inset 0 0 0 1px rgba(255, 230, 170, 0.18),
-      0 0 12px rgba(232, 200, 120, 0.28);
+    border: 1px solid rgba(212, 164, 74, 0.55);
+    box-shadow: inset 0 0 0 1px rgba(255, 220, 150, 0.08);
   }
-  .rail-btn.primary i { color: #f5d78c; }
+  .rail-btn.primary i { color: #e8c878; }
   .rail-btn.flee { border-color: rgba(239, 68, 68, 0.5); }
   .rail-btn.flee i { color: #f87171; }
 
@@ -2161,48 +2185,39 @@
       margin: 0.15rem 0.4rem 0.2rem;
       gap: 0.3rem;
       min-height: 0;
-      max-height: none;
       z-index: 20;
     }
-    .dock-row,
-    .dock-strip {
+    .dock-main {
       width: 100%;
-      gap: 0.3rem;
-    }
-    .dock-strip {
-      padding: 0.3rem;
-      min-height: 56px;
+      gap: 0.45rem;
+      max-width: none;
+      justify-content: center;
     }
     .combat-hotbar {
       width: auto;
-      flex: 1;
+      flex: 1 1 auto;
       box-sizing: border-box;
       gap: 0.25rem;
-      padding: 0;
+      padding: 0.3rem 0.35rem;
       overflow-x: auto;
       justify-content: flex-start;
-      border: none;
-      background: transparent;
-      box-shadow: none;
     }
     .battle-rail {
-      padding: 0;
-      gap: 0.2rem;
-      border: none;
-      background: transparent;
-      box-shadow: none;
+      max-width: 96px;
+      padding: 0.22rem;
+      gap: 0.18rem;
     }
     .rail-btn {
-      width: 44px;
-      height: 44px;
-      min-width: 44px;
-      min-height: 44px;
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
+      min-height: 40px;
     }
     .hb-slot {
-      width: 44px;
-      height: 44px;
-      min-width: 44px;
-      min-height: 44px;
+      width: 48px;
+      height: 48px;
+      min-width: 48px;
+      min-height: 48px;
       flex-shrink: 0;
     }
     .battle-dock {
