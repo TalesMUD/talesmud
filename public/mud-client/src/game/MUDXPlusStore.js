@@ -298,6 +298,9 @@ function createStore() {
     // Room data methods
     setBackground: (background) => {
       update((state) => {
+        // Skip identical backgrounds — roomUpdate fires on NPC moves and would
+        // otherwise retrigger the room-art crossfade (visible flicker).
+        if (state.background === background) return state;
         state.background = background;
         return state;
       });
@@ -316,9 +319,25 @@ function createStore() {
     },
     setNPCs: (npcs) => {
       update((state) => {
-        state.npcs = npcs || [];
-        // Derive hasMerchant from NPCs
-        state.hasMerchant = (npcs || []).some(n => n.isMerchant);
+        const next = npcs || [];
+        const prev = state.npcs || [];
+        // Avoid store churn when roomUpdate repeats the same occupants.
+        if (prev.length === next.length && prev.every((p, i) => {
+          const n = next[i];
+          return p && n && p.id === n.id
+            && p.currentHp === n.currentHp
+            && p.maxHp === n.maxHp
+            && p.displayName === n.displayName
+            && !!p.isEnemy === !!n.isEnemy
+            && !!p.isMerchant === !!n.isMerchant
+            && !!p.isQuestGiver === !!n.isQuestGiver
+            && !!p.hasDialog === !!n.hasDialog
+            && (p.portrait || '') === (n.portrait || '');
+        })) {
+          return state;
+        }
+        state.npcs = next;
+        state.hasMerchant = next.some(n => n.isMerchant);
         return state;
       });
     },
