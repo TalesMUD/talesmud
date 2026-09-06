@@ -1,6 +1,7 @@
 # Combat Battle Stage
 
-**Status:** C0 locked · **C1 done** · **C2 done** · **C3 done** (mobile thumb dock, 2026-09-06) — on engine-june  
+**Status:** C0 locked · **C1 done** · **C2 done** · **C3 done** · **C5 done** (combat FX pack, 2026-09-06) — on engine-june  
+**Follow-up:** Flutter FX (C4 parity) — not in this slice; C6 balance numbers still open.
 **Milestone:** [Combat Battle Stage](https://github.com/TalesMUD/talesmud/milestone/4)  
 **Branch:** `engine-june` (do not merge to public `master` without Marcus okay)
 
@@ -79,8 +80,8 @@ Clients **animate from events**; they do not invent outcomes.
 | C1 | Engine turn beats + structured WS events — **done on engine-june** |
 | C2 | Svelte full-screen battle stage — **done on engine-june** |
 | C3 | Mobile web thumb dock — **done on engine-june** |
-| C4 | Flutter parity |
-| C5 | FX pack |
+| C4 | Flutter parity (incl. FX follow-up) |
+| C5 | FX pack — **done on engine-june** (hit flash/shake, cast glow, miss puff, death dissolve, float dmg/heal; desktop+mobile) |
 | C6 | Balance duration pass |
 
 ## Mocks

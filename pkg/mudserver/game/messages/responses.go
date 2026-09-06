@@ -604,6 +604,7 @@ type CombatActionMessage struct {
 	Action      string          `json:"action"`
 	Result      string          `json:"result"` // hit | miss | crit | block | fled | defended | dodged | cast
 	Damage      int32           `json:"damage,omitempty"`
+	Heal        int32           `json:"heal,omitempty"`
 	RemainingHP int32           `json:"remainingHp,omitempty"`
 	MaxHP       int32           `json:"maxHp,omitempty"`
 	FxID        string          `json:"fxId,omitempty"` // slash | cast | miss | death | defend | flee

@@ -1175,6 +1175,9 @@ func (c *CombatController) processPlayerAutoAttack(instance *combat.CombatInstan
 		case combat.CombatActionSkill:
 			skillResult := c.engine.ProcessSkill(instance, player.ID, player.QueuedSkillID, player.QueuedTargetID)
 			targetID := player.QueuedTargetID
+			if skillResult.TotalHeal > 0 && targetID == "" {
+				targetID = player.ID // self-heal floats on caster
+			}
 			remaining, maxHP := int32(0), int32(0)
 			if targetID != "" {
 				if t := instance.GetCombatantByID(targetID); t != nil {
@@ -1189,7 +1192,8 @@ func (c *CombatController) processPlayerAutoAttack(instance *combat.CombatInstan
 			c.notifyCombatAction(instance, messages.CombatActionMessage{
 				ActorID: player.ID, ActorName: player.Name,
 				TargetID: targetID, Action: string(combat.CombatActionSkill),
-				Result: "cast", RemainingHP: remaining, MaxHP: maxHP, FxID: fx,
+				Result: "cast", Damage: skillResult.TotalDamage, Heal: skillResult.TotalHeal,
+				RemainingHP: remaining, MaxHP: maxHP, FxID: fx,
 			}, prose)
 			for _, diedID := range skillResult.TargetsDied {
 				target := instance.GetCombatantByID(diedID)

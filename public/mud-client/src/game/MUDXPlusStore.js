@@ -242,7 +242,7 @@ function createStore() {
     combatTurn: null, // { actorId, actorName, round, deadlineMs }
     combatLog: [], // thin optional log [{id,text}]
     combatOutcome: null, // victory | defeat | fled | timeout
-    combatFx: null, // { fxId, at, targetId }
+    combatFx: null, // { fxId, at, targetId, actorId, damage, heal, result, action }
     combatEndMessage: "",
     hasItems: false,
     hasMerchant: false,
@@ -625,14 +625,17 @@ function createStore() {
           }
         }
 
-        if (msg?.fxId) {
+        // Always pulse FX when structured action arrives (fxId preferred; result fallback).
+        if (msg?.fxId || msg?.result || msg?.damage || msg?.heal) {
           state.combatFx = {
-            fxId: msg.fxId,
+            fxId: msg.fxId || "",
             at: Date.now(),
             targetId: msg.targetId || "",
             actorId: msg.actorId || "",
             damage: msg.damage || 0,
+            heal: msg.heal || 0,
             result: msg.result || "",
+            action: msg.action || "",
           };
         }
 
