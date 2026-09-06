@@ -28,9 +28,11 @@
   let lastBannerKey = '';
   let logEl = null;
   let logScrollPending = false;
+  let logExpanded = false;
 
   $: phase = $store.combatPhase || ($store.inCombat ? 'active' : 'idle');
   $: visible = phase === 'active' || phase === 'ending';
+  $: if (!visible) logExpanded = false;
   $: enemies = $store.combatEnemies || [];
   $: players = $store.combatPlayers || [];
   $: targetId = $store.combatTargetId;
@@ -393,6 +395,12 @@
     panel = panel === name ? null : name;
   }
 
+  function toggleLogExpanded() {
+    logExpanded = !logExpanded;
+    logScrollPending = true;
+    void scrollCombatLog();
+  }
+
   function outcomeLabel(o) {
     switch (o) {
       case 'victory': return 'Victory';
@@ -632,15 +640,19 @@
         <nav class="battle-rail" aria-label="Combat actions">
           <button type="button" class="rail-btn primary" title="Attack" aria-label="Attack" on:click={doAttack}>
             <i class="material-icons">flash_on</i>
+            <span class="rail-label">Attack</span>
           </button>
           <button type="button" class="rail-btn" title="Defend" aria-label="Defend" on:click={doDefend}>
             <i class="material-icons">security</i>
+            <span class="rail-label">Defend</span>
           </button>
           <button type="button" class="rail-btn" class:active={panel === 'items'} title="Items" aria-label="Items" on:click={() => togglePanel('items')}>
             <i class="material-icons">shopping_bag</i>
+            <span class="rail-label">Items</span>
           </button>
           <button type="button" class="rail-btn flee" title="Flee" aria-label="Flee" on:click={doFlee}>
             <i class="material-icons">directions_run</i>
+            <span class="rail-label">Flee</span>
           </button>
         </nav>
 
@@ -719,16 +731,33 @@
     {/if}
   {/if}
 
-  <!-- Combat log — full-width framed panel (mock) -->
-  <aside class="combat-log" bind:this={logEl} aria-label="Combat log">
-    <div class="combat-log-title">♦ COMBAT LOG</div>
-    {#if log.length}
-      {#each log.slice(-10) as line (line.id)}
-        <div class="combat-log-line">&gt; {line.text}</div>
-      {/each}
-    {:else}
-      <div class="combat-log-line muted">&gt; Waiting for the clash…</div>
-    {/if}
+  <!-- Combat log — full-width framed panel; mobile peek/expand -->
+  <aside
+    class="combat-log"
+    class:log-expanded={logExpanded}
+    class:log-peek={!logExpanded}
+    bind:this={logEl}
+    aria-label="Combat log"
+  >
+    <button
+      type="button"
+      class="combat-log-title"
+      aria-expanded={logExpanded}
+      aria-controls="combat-log-body"
+      on:click={toggleLogExpanded}
+    >
+      <span>♦ COMBAT LOG</span>
+      <i class="material-icons log-expand-icon" aria-hidden="true">{logExpanded ? 'expand_more' : 'unfold_more'}</i>
+    </button>
+    <div id="combat-log-body" class="combat-log-body">
+      {#if log.length}
+        {#each log.slice(-10) as line (line.id)}
+          <div class="combat-log-line">&gt; {line.text}</div>
+        {/each}
+      {:else}
+        <div class="combat-log-line muted">&gt; Waiting for the clash…</div>
+      {/if}
+    </div>
   </aside>
 
   {#if phase === 'ending'}
@@ -1689,6 +1718,7 @@
     box-shadow: none;
     opacity: 0.92;
   }
+  .rail-label { display: none; }
   .rail-btn i { font-size: 1.25rem; color: #d4a44a; }
   .rail-btn:hover,
   .rail-btn.active {
@@ -1819,11 +1849,32 @@
   }
 
   .combat-log-title {
+    appearance: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.35rem;
+    width: 100%;
+    margin: 0 0 0.25rem;
+    padding: 0;
+    border: none;
+    background: transparent;
     color: #d4a44a;
+    font-family: inherit;
     font-size: 0.7rem;
     font-weight: 700;
     letter-spacing: 0.1em;
-    margin-bottom: 0.25rem;
+    text-align: left;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .log-expand-icon {
+    display: none;
+    font-size: 1rem;
+    color: rgba(212, 164, 74, 0.75);
+  }
+  .combat-log-body {
+    min-height: 0;
   }
 
   .combat-log-line {
@@ -1992,7 +2043,7 @@
     display: none;
   }
 
-  /* C3: mobile stacked stage — enemies ~35%, FX mid, player bar, thumb dock */
+  /* C7-mobile: thumb-first stack ≤768px — header / arena / dock / log-peek */
   @media (max-width: 768px) {
     .battle-stage {
       display: flex;
@@ -2032,7 +2083,7 @@
     .battle-arena {
       grid-area: arena;
       display: grid;
-      grid-template-rows: minmax(0, 0.55fr) minmax(36px, 0.12fr) auto;
+      grid-template-rows: minmax(0, 1fr) auto auto;
       grid-template-areas:
         "enemies"
         "fx"
@@ -2044,23 +2095,24 @@
 
     .battle-header {
       grid-area: header;
-      padding: 0.55rem 0.75rem 0.2rem;
-      gap: 0.4rem;
+      padding: 0.45rem 0.65rem 0.15rem;
+      gap: 0.35rem;
+      flex-wrap: wrap;
     }
-    .header-label { font-size: 0.92rem; }
-    .header-icon { font-size: 1.15rem; }
+    .header-label { font-size: 0.85rem; }
+    .header-icon { font-size: 1.05rem; }
     .round-chip,
     .turn-chip {
-      font-size: 0.65rem;
-      padding: 0.12rem 0.45rem;
+      font-size: 0.62rem;
+      padding: 0.1rem 0.4rem;
     }
     .header-rule { display: none; }
 
     .decision-timer {
       grid-area: timer;
-      margin: 0.2rem 0.75rem 0.15rem;
-      height: 10px;
-      border-radius: 5px;
+      margin: 0.15rem 0.65rem 0.1rem;
+      height: 8px;
+      border-radius: 4px;
       border-width: 1.5px;
     }
     .decision-timer.idle {
@@ -2071,11 +2123,11 @@
     .decision-timer-label {
       display: block;
       position: absolute;
-      right: 0.45rem;
+      right: 0.4rem;
       top: 50%;
       transform: translateY(-50%);
       font-family: system-ui, sans-serif;
-      font-size: 0.7rem;
+      font-size: 0.65rem;
       font-weight: 700;
       color: #f8fafc;
       text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
@@ -2095,12 +2147,12 @@
       align-content: center;
       max-width: none;
       width: 100%;
-      padding: 0.25rem 0.6rem 0;
-      gap: 0.55rem;
+      padding: 0.2rem 0.5rem 0;
+      gap: 0.45rem;
       overflow: hidden;
     }
     .enemy-card {
-      width: clamp(120px, 42vw, 180px);
+      width: clamp(110px, 40vw, 168px);
       touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
     }
@@ -2109,17 +2161,17 @@
     }
     .enemy-sprite-wrap {
       aspect-ratio: 1;
-      max-height: min(28vh, 200px);
+      max-height: min(32vh, 220px);
     }
-    .nameplate { font-size: 0.78rem; }
-    .hp-track { height: 10px; }
-    .hp-nums { font-size: 0.72rem; }
+    .nameplate { font-size: 0.74rem; }
+    .hp-track { height: 9px; }
+    .hp-nums { font-size: 0.68rem; }
 
     .fx-layer {
       grid-area: fx;
       position: relative;
       inset: auto;
-      min-height: 40px;
+      min-height: 28px;
       z-index: 2;
     }
 
@@ -2128,16 +2180,17 @@
       left: auto;
       bottom: auto;
       transform: none;
-      margin: 0.15rem auto 0;
-      max-width: calc(100% - 1.2rem);
-      font-size: 0.88rem;
-      padding: 0.3rem 0.55rem;
-      width: calc(100% - 1.2rem);
+      margin: 0.1rem auto 0;
+      max-width: calc(100% - 1rem);
+      font-size: 0.82rem;
+      padding: 0.25rem 0.5rem;
+      width: calc(100% - 1rem);
       box-sizing: border-box;
       grid-column: 1 / -1;
       justify-self: center;
     }
 
+    /* Compact horizontal Self strip — free vertical space for arena */
     .player-panel {
       grid-area: player;
       position: relative;
@@ -2145,81 +2198,155 @@
       right: auto;
       bottom: auto;
       max-width: none;
-      width: calc(100% - 1.2rem);
-      margin: 0.15rem 0.6rem 0.25rem;
-      padding: 0.45rem 0.55rem;
-      border: 1.5px solid rgba(212, 164, 74, 0.55);
-      border-radius: 8px;
-      background: rgba(8, 8, 10, 0.88);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+      width: calc(100% - 1rem);
+      margin: 0.1rem 0.5rem 0.2rem;
+      padding: 0.28rem 0.45rem;
+      border: 1px solid rgba(212, 164, 74, 0.5);
+      border-radius: 7px;
+      background: rgba(8, 8, 10, 0.9);
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3);
       backdrop-filter: none;
-      gap: 0.65rem;
+      gap: 0.5rem;
       align-items: center;
       z-index: 3;
     }
     .player-bust {
-      width: clamp(36px, 9vw, 48px);
-      border-radius: 50%;
+      width: clamp(40px, 11vw, 48px);
+      border-radius: 6px;
       box-shadow:
         0 0 0 2px rgba(8, 8, 10, 0.95),
         0 0 0 3px rgba(212, 164, 74, 0.45),
-        0 4px 12px rgba(0, 0, 0, 0.4);
+        0 3px 10px rgba(0, 0, 0, 0.35);
+    }
+    .player-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.25rem 0.55rem;
+      padding-right: 0;
+    }
+    .player-name {
+      font-size: 0.88rem;
+      margin-bottom: 0;
+      flex: 0 1 auto;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 42%;
     }
     .player-hp,
     .player-mp {
       min-width: 0;
+      flex: 1 1 5.5rem;
+      margin-bottom: 0;
+      max-width: 9rem;
     }
-    .player-name {
-      font-size: 0.95rem;
-      margin-bottom: 0.2rem;
-    }
+    .player-panel .hp-track { height: 8px; }
+    .player-panel .hp-label { font-size: 0.6rem; }
+    .player-panel .hp-nums { font-size: 0.6rem; }
+    .status-chips { display: none; }
 
+    /* Dock: queue chip → full-width hotbar → utility row (never beside log) */
     .battle-controls {
       grid-area: dock;
       position: relative;
       left: auto;
       bottom: auto;
       transform: none;
-      width: calc(100% - 0.8rem);
+      width: calc(100% - 0.6rem);
       max-width: none;
-      margin: 0.15rem 0.4rem 0.2rem;
-      gap: 0.3rem;
+      margin: 0.1rem 0.3rem 0.15rem;
+      gap: 0.25rem;
       min-height: 0;
       z-index: 20;
+      align-items: stretch;
+    }
+    .dock-status {
+      align-items: stretch;
+    }
+    .dock-status.has-chip {
+      min-height: 26px;
+    }
+    .queued-chip {
+      align-self: center;
+      font-size: 0.75rem;
+      padding: 0.22rem 0.65rem;
     }
     .dock-main {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: flex-start;
+      gap: 0.35rem;
       width: 100%;
-      gap: 0.45rem;
       max-width: none;
-      justify-content: center;
+      margin: 0;
     }
     .combat-hotbar {
-      width: auto;
-      flex: 1 1 auto;
+      order: 1;
+      width: 100%;
+      flex: 0 0 auto;
       box-sizing: border-box;
-      gap: 0.25rem;
-      padding: 0.3rem 0.35rem;
+      gap: 0.28rem;
+      padding: 0.32rem 0.35rem;
       overflow-x: auto;
-      justify-content: flex-start;
-    }
-    .battle-rail {
-      max-width: 96px;
-      padding: 0.22rem;
-      gap: 0.18rem;
-    }
-    .rail-btn {
-      width: 40px;
-      height: 40px;
-      min-width: 40px;
-      min-height: 40px;
+      -webkit-overflow-scrolling: touch;
+      justify-content: space-between;
     }
     .hb-slot {
-      width: 48px;
-      height: 48px;
-      min-width: 48px;
-      min-height: 48px;
-      flex-shrink: 0;
+      width: clamp(44px, 11.5vw, 52px);
+      height: clamp(44px, 11.5vw, 52px);
+      min-width: 44px;
+      min-height: 44px;
+      flex: 1 1 0;
+      max-width: 52px;
     }
+    .battle-rail {
+      order: 2;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      align-items: stretch;
+      justify-content: stretch;
+      width: 100%;
+      max-width: none;
+      align-self: stretch;
+      gap: 0.3rem;
+      padding: 0.2rem;
+      box-sizing: border-box;
+    }
+    .rail-btn {
+      flex: 1 1 0;
+      width: auto;
+      height: auto;
+      min-width: 0;
+      min-height: 48px;
+      padding: 0.35rem 0.15rem 0.3rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.1rem;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .rail-btn i { font-size: 1.3rem; }
+    .rail-label {
+      display: block;
+      font-family: system-ui, sans-serif;
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      color: #e5e7eb;
+      line-height: 1.1;
+    }
+    .rail-btn.primary .rail-label { color: #f5e6c0; }
+    .rail-btn.flee .rail-label { color: #fca5a5; }
+    .rail-btn:active {
+      transform: scale(0.97);
+    }
+
     .battle-dock {
       position: relative;
       left: auto;
@@ -2350,18 +2477,46 @@
       touch-action: manipulation;
     }
 
+    /* Log peek (~3.5–4.5rem) → expand ~40% of frame; never under absolute dock */
     .combat-log {
       grid-area: log;
       position: relative;
       left: auto;
       right: auto;
       bottom: auto;
-      width: calc(100% - 1.2rem);
-      margin: 0 0.6rem 0.35rem;
-      height: 7rem;
-      min-height: 6.5rem;
-      max-height: 7.5rem;
-      font-size: 0.72rem;
+      width: calc(100% - 1rem);
+      margin: 0 0.5rem 0.3rem;
+      height: 4rem;
+      min-height: 3.5rem;
+      max-height: 4.5rem;
+      font-size: 0.7rem;
+      padding: 0.3rem 0.55rem 0.35rem;
+      transition: height 0.2s ease, max-height 0.2s ease, min-height 0.2s ease;
+      overflow-x: hidden;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      z-index: 2;
+    }
+    .combat-log.log-peek {
+      height: 4rem;
+      min-height: 3.5rem;
+      max-height: 4.5rem;
+    }
+    .combat-log.log-expanded {
+      height: 40%;
+      min-height: 12rem;
+      max-height: 45%;
+    }
+    .combat-log-title {
+      margin-bottom: 0.15rem;
+      padding: 0.1rem 0;
+      min-height: 1.25rem;
+    }
+    .log-expand-icon {
+      display: inline-flex;
+    }
+    .combat-log-body {
+      overflow: visible;
     }
 
     .arena-art {
@@ -2372,4 +2527,5 @@
       padding: 1rem;
     }
   }
+
 </style>
