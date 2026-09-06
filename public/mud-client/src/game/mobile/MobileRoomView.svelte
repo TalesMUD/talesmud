@@ -40,8 +40,11 @@
     return 'npc';
   })();
 
-  // Handle background changes
-  $: if ($store.background) {
+  // Handle background changes — only when the asset id actually changes
+  // (roomUpdate also refreshes NPCs and used to retrigger the crossfade).
+  let appliedBackground = null;
+  $: if ($store.background && $store.background !== appliedBackground) {
+    appliedBackground = $store.background;
     updateRoomImage($store.background);
   }
 
