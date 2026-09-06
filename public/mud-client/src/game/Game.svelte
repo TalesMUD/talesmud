@@ -130,20 +130,26 @@
 
   $: editMode = $layoutStore.editMode;
 
-  $: {
-    // set document background (blurred)
-    if ($muxStore.background) {
-      const bgUrl = backend + "/backgrounds/" + $muxStore.background + ".png";
-      const placeholderUrl = "img/placeholder.png";
-      const testImg = new Image();
-      testImg.onload = () => {
+  // Gate on the asset id — any muxStore notify used to re-run this and
+  // rewrite document.body.style (visible full-screen flicker ~every ambient tick).
+  let appliedBodyBackground = null;
+  $: if ($muxStore.background && $muxStore.background !== appliedBodyBackground) {
+    const bgId = $muxStore.background;
+    appliedBodyBackground = bgId;
+    const bgUrl = backend + "/backgrounds/" + bgId + ".png";
+    const placeholderUrl = "img/placeholder.png";
+    const testImg = new Image();
+    testImg.onload = () => {
+      if (appliedBodyBackground === bgId) {
         document.body.style.backgroundImage = "url('" + bgUrl + "')";
-      };
-      testImg.onerror = () => {
+      }
+    };
+    testImg.onerror = () => {
+      if (appliedBodyBackground === bgId) {
         document.body.style.backgroundImage = "url('" + placeholderUrl + "')";
-      };
-      testImg.src = bgUrl;
-    }
+      }
+    };
+    testImg.src = bgUrl;
   }
 
   $: if (client && $authToken) {

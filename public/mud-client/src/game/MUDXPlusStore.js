@@ -205,6 +205,103 @@ function mergeCombatantSnapshots(enemies, players, snapshots) {
   };
 }
 
+
+function sameExitList(a, b) {
+  const aa = a || [];
+  const bb = b || [];
+  if (aa.length !== bb.length) return false;
+  return aa.every((e, i) => {
+    const o = bb[i];
+    if (!e || !o) return e === o;
+    return (e.name || e.Name || "") === (o.name || o.Name || "")
+      && (e.target || e.Target || "") === (o.target || o.Target || "")
+      && !!e.hidden === !!o.hidden;
+  });
+}
+
+function sameActionList(a, b) {
+  const aa = a || [];
+  const bb = b || [];
+  if (aa.length !== bb.length) return false;
+  return aa.every((e, i) => {
+    const o = bb[i];
+    if (!e || !o) return e === o;
+    return (e.name || "") === (o.name || "")
+      && (e.command || e.Command || "") === (o.command || o.Command || "")
+      && (e.label || "") === (o.label || "");
+  });
+}
+
+function samePlayerList(a, b) {
+  const aa = a || [];
+  const bb = b || [];
+  if (aa.length !== bb.length) return false;
+  return aa.every((e, i) => {
+    const o = bb[i];
+    if (!e || !o) return e === o;
+    return e.id === o.id && e.name === o.name && !!e.isYou === !!o.isYou;
+  });
+}
+
+function sameGroundItems(a, b) {
+  const aa = a || [];
+  const bb = b || [];
+  if (aa.length !== bb.length) return false;
+  return aa.every((e, i) => {
+    const o = bb[i];
+    if (!e || !o) return e === o;
+    return e.id === o.id
+      && (e.name || "") === (o.name || "")
+      && !!e.noPickup === !!o.noPickup
+      && (e.quantity || e.count || 1) === (o.quantity || o.count || 1);
+  });
+}
+
+function sameAttrList(a, b) {
+  const aa = a || [];
+  const bb = b || [];
+  if (aa.length !== bb.length) return false;
+  return aa.every((e, i) => {
+    const o = bb[i];
+    if (!e || !o) return e === o;
+    return (e.name || e.Name || e.id || "") === (o.name || o.Name || o.id || "")
+      && (e.value ?? e.Value ?? e.current ?? null) === (o.value ?? o.Value ?? o.current ?? null);
+  });
+}
+
+function sameSkillList(a, b) {
+  const aa = a || [];
+  const bb = b || [];
+  if (aa.length !== bb.length) return false;
+  return aa.every((e, i) => {
+    const o = bb[i];
+    if (!e || !o) return e === o;
+    if (typeof e === "string" || typeof o === "string") return e === o;
+    return (e.id || e.ID || e.name || "") === (o.id || o.ID || o.name || "")
+      && (e.slot ?? o.slot) === (o.slot ?? e.slot);
+  });
+}
+
+function sameAtlasSnapshot(a, b) {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  if ((a.characterId || "") !== (b.characterId || "")) return false;
+  if ((a.currentRoomId || "") !== (b.currentRoomId || "")) return false;
+  if ((a.currentLayer || "") !== (b.currentLayer || "")) return false;
+  if ((a.places || []).length !== (b.places || []).length) return false;
+  if ((a.paths || []).length !== (b.paths || []).length) return false;
+  if ((a.layers || []).length !== (b.layers || []).length) return false;
+  // Cheap place fingerprint — id/current/discovered/layer/name
+  for (let i = 0; i < (a.places || []).length; i++) {
+    const p = a.places[i];
+    const q = b.places[i];
+    if (!p || !q) return false;
+    if (p.id !== q.id || !!p.current !== !!q.current || !!p.discovered !== !!q.discovered) return false;
+    if ((p.layer || "") !== (q.layer || "") || (p.name || "") !== (q.name || "")) return false;
+  }
+  return true;
+}
+
 function createStore() {
   const { subscribe, set, update } = writable({
     // Room data
@@ -307,13 +404,17 @@ function createStore() {
     },
     setExits: (exits) => {
       update((state) => {
-        state.exits = exits || [];
+        const next = exits || [];
+        if (sameExitList(state.exits, next)) return state;
+        state.exits = next;
         return state;
       });
     },
     setActions: (actions) => {
       update((state) => {
-        state.actions = actions || [];
+        const next = actions || [];
+        if (sameActionList(state.actions, next)) return state;
+        state.actions = next;
         return state;
       });
     },
@@ -343,7 +444,9 @@ function createStore() {
     },
     setPlayers: (players) => {
       update((state) => {
-        state.players = players || [];
+        const next = players || [];
+        if (samePlayerList(state.players, next)) return state;
+        state.players = next;
         return state;
       });
     },
@@ -368,8 +471,11 @@ function createStore() {
     },
     setRoomInfo: (name, description) => {
       update((state) => {
-        state.roomName = name || "";
-        state.roomDescription = description || "";
+        const nextName = name || "";
+        const nextDesc = description || "";
+        if (state.roomName === nextName && state.roomDescription === nextDesc) return state;
+        state.roomName = nextName;
+        state.roomDescription = nextDesc;
         return state;
       });
     },
@@ -406,6 +512,13 @@ function createStore() {
     },
     clearDialog: () => {
       update((state) => {
+        if (!state.dialogActive
+          && !state.dialogNpcName
+          && !state.dialogNpcText
+          && !(state.dialogOptions || []).length
+          && !state.dialogConversationID) {
+          return state;
+        }
         state.dialogActive = false;
         state.dialogNpcName = "";
         state.dialogNpcText = "";
@@ -556,10 +669,10 @@ function createStore() {
           next.level === prev.level &&
           next.gold === prev.gold &&
           next.inCombat === prev.inCombat &&
-          next.attributes === prev.attributes &&
-          next.equippedSkills === prev.equippedSkills &&
+          sameAttrList(next.attributes, prev.attributes) &&
+          sameSkillList(next.equippedSkills, prev.equippedSkills) &&
           next.unspentAttributePoints === prev.unspentAttributePoints &&
-          next.spentAttributePoints === prev.spentAttributePoints &&
+          JSON.stringify(next.spentAttributePoints || {}) === JSON.stringify(prev.spentAttributePoints || {}) &&
           next.attackPower === prev.attackPower &&
           next.attackAttr === prev.attackAttr &&
           next.weaponDamage === prev.weaponDamage &&
@@ -568,6 +681,9 @@ function createStore() {
           next.manaRegen === prev.manaRegen &&
           goldNext === state.gold;
         if (sameStats) return state;
+        // Reuse prior array refs when contents match to cut downstream churn.
+        if (sameAttrList(next.attributes, prev.attributes)) next.attributes = prev.attributes;
+        if (sameSkillList(next.equippedSkills, prev.equippedSkills)) next.equippedSkills = prev.equippedSkills;
         state.characterStats = next;
         if (stats.gold !== undefined) {
           state.gold = stats.gold;
@@ -579,8 +695,12 @@ function createStore() {
     // Ground items methods
     setGroundItems: (items) => {
       update((state) => {
-        state.groundItems = items || [];
-        state.hasItems = (items || []).length > 0;
+        const next = items || [];
+        if (sameGroundItems(state.groundItems, next) && state.hasItems === (next.length > 0)) {
+          return state;
+        }
+        state.groundItems = next;
+        state.hasItems = next.length > 0;
         return state;
       });
     },
@@ -898,7 +1018,12 @@ function createStore() {
           !state.atlas?.characterId ||
           !incoming.characterId ||
           state.atlas.characterId === incoming.characterId;
-        state.atlas = sameCharacter ? mergeAtlas(state.atlas, incoming) : incoming;
+        const merged = sameCharacter ? mergeAtlas(state.atlas, incoming) : incoming;
+        if (sameAtlasSnapshot(state.atlas, merged)
+          && state.currentRoomId === (merged.currentRoomId || state.currentRoomId)) {
+          return state;
+        }
+        state.atlas = merged;
         if (state.atlas.currentRoomId) {
           state.currentRoomId = state.atlas.currentRoomId;
         }

@@ -33,7 +33,9 @@ function createClient(renderer, characterCreator, muxStore) {
 
 
   messageHandlers["enterRoom"] = (msg) => {
+    const prevRoomId = activeRoom && activeRoom.id;
     activeRoom = msg.room;
+    const roomChanged = !prevRoomId || !activeRoom || prevRoomId !== activeRoom.id;
     renderer(msg.message);
     overlayStore.clearAll();
 
@@ -66,14 +68,17 @@ function createClient(renderer, characterCreator, muxStore) {
 
       // Set player characters in the room for UI rendering
       mux.setPlayers(markPlayersYou(msg.players || [], currentCharacter));
-      if (mux.clearRoomChat) mux.clearRoomChat();
+      if (roomChanged && mux.clearRoomChat) mux.clearRoomChat();
 
       // Set ground items from server-resolved item details
       mux.setGroundItems(msg.items || []);
 
-      // Clear any active dialog when entering a new room
-      mux.clearDialog();
-      if (mux.clearShop) mux.clearShop();
+      // Reconnect / re-select re-sends enterRoom for the SAME room — do not
+      // tear down Talk/Shop overlays on that ambient refresh (~1s flap).
+      if (roomChanged) {
+        mux.clearDialog();
+        if (mux.clearShop) mux.clearShop();
+      }
 
       // Track room visit for minimap fallback and refresh the atlas
       mux.trackRoomVisit(activeRoom);
@@ -86,6 +91,8 @@ function createClient(renderer, characterCreator, muxStore) {
   messageHandlers["roomUpdate"] = (msg) => {
     activeRoom = msg.room;
 
+    // Ambient NPC/room ticks — never clear dialog/shop; never refetch atlas
+    // (atlas only changes on enterRoom / real exit-graph moves).
     if (mux) {
       mux.setExits(activeRoom.exits);
 
@@ -109,7 +116,6 @@ function createClient(renderer, characterCreator, muxStore) {
       mux.setPlayers(markPlayersYou(msg.players || [], currentCharacter));
 
       mux.setGroundItems(msg.items || []);
-      requestAtlas();
     }
   };
 
