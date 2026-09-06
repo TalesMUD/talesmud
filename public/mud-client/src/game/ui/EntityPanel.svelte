@@ -14,7 +14,8 @@
     border-radius: 8px;
     overflow: hidden;
     border: 1px solid rgba(255, 255, 255, 0.18);
-    animation: slideUp 0.3s ease-out;
+    /* No slideUp — roomUpdate refresh was replaying entrance animation (flicker). */
+    animation: none;
     flex-shrink: 0;
     background: #111;
   }
@@ -283,16 +284,6 @@
     font-style: italic;
   }
 
-  @keyframes slideUp {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
 </style>
 
 <script>
@@ -452,6 +443,16 @@
   function applyCardFit(ev) {
     const img = ev && ev.currentTarget;
     if (!img) return;
+    const nw = img.naturalWidth || 0;
+    const nh = img.naturalHeight || 0;
+    // Idempotent: skip if this natural size already has a fit class applied.
+    if (
+      img.dataset.fitNw === String(nw) &&
+      img.dataset.fitNh === String(nh) &&
+      (img.classList.contains('fit-wide') || img.classList.contains('fit-tall'))
+    ) {
+      return;
+    }
     const src = img.currentSrc || img.src;
     let cached = fitCache.get(src);
     if (!cached) {
@@ -467,6 +468,8 @@
     } else {
       img.style.objectViewBox = '';
     }
+    img.dataset.fitNw = String(nw);
+    img.dataset.fitNh = String(nh);
   }
 
   function handlePortraitError(ev, npc) {
@@ -475,8 +478,12 @@
     if (!img) return;
     img.classList.remove('fit-wide', 'fit-tall');
     img.style.objectViewBox = '';
+    delete img.dataset.fitNw;
+    delete img.dataset.fitNh;
     // Avatar fallbacks are square faces — contain looks fine
     img.classList.add('fit-wide');
+    img.dataset.fitNw = String(img.naturalWidth || 0);
+    img.dataset.fitNh = String(img.naturalHeight || 0);
   }
 </script>
 
