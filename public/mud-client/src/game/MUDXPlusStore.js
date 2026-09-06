@@ -142,6 +142,69 @@ function saveVisitedRooms(rooms) {
   } catch { /* storage full or unavailable */ }
 }
 
+
+let combatLogSeq = 0;
+function nextCombatLogId() {
+  combatLogSeq += 1;
+  return `clog-${Date.now()}-${combatLogSeq}`;
+}
+
+function normalizeCombatant(raw) {
+  if (!raw) return null;
+  return {
+    id: raw.id || raw.ID || "",
+    name: raw.name || raw.Name || "?",
+    portrait: raw.portrait || raw.Portrait || "",
+    hp: raw.hp ?? raw.HP ?? raw.currentHp ?? 0,
+    maxHp: raw.maxHp ?? raw.MaxHP ?? raw.maxHP ?? 1,
+  };
+}
+
+function normalizeCombatantList(list) {
+  return (list || []).map(normalizeCombatant).filter((c) => c && c.id);
+}
+
+function appendCombatLog(log, text) {
+  const clean = String(text || "").trim();
+  if (!clean) return log || [];
+  const next = [...(log || []), { id: nextCombatLogId(), text: clean }];
+  return next.slice(-8);
+}
+
+function patchCombatantHp(list, msg) {
+  const tid = msg?.targetId;
+  if (!tid) return list || [];
+  return (list || []).map((c) => {
+    if (c.id !== tid) return c;
+    return {
+      ...c,
+      hp: msg.remainingHp ?? c.hp,
+      maxHp: msg.maxHp || c.maxHp,
+    };
+  });
+}
+
+function mergeCombatantSnapshots(enemies, players, snapshots) {
+  const enemyMap = new Map((enemies || []).map((e) => [e.id, e]));
+  const playerMap = new Map((players || []).map((p) => [p.id, p]));
+  for (const snap of snapshots) {
+    if (enemyMap.has(snap.id)) {
+      enemyMap.set(snap.id, { ...enemyMap.get(snap.id), ...snap });
+    } else if (playerMap.has(snap.id)) {
+      playerMap.set(snap.id, { ...playerMap.get(snap.id), ...snap });
+    } else if ((enemies || []).length && !(players || []).some((p) => p.id === snap.id)) {
+      // Unknown id after start — treat as enemy refresh
+      enemyMap.set(snap.id, snap);
+    } else {
+      playerMap.set(snap.id, snap);
+    }
+  }
+  return {
+    enemies: Array.from(enemyMap.values()),
+    players: Array.from(playerMap.values()),
+  };
+}
+
 function createStore() {
   const { subscribe, set, update } = writable({
     // Room data
@@ -172,8 +235,15 @@ function createStore() {
 
     // Game context flags
     inCombat: false,
+    combatPhase: "idle", // idle | active | ending
     combatEnemies: [],
     combatPlayers: [],
+    combatTargetId: null,
+    combatTurn: null, // { actorId, actorName, round, deadlineMs }
+    combatLog: [], // thin optional log [{id,text}]
+    combatOutcome: null, // victory | defeat | fled | timeout
+    combatFx: null, // { fxId, at, targetId }
+    combatEndMessage: "",
     hasItems: false,
     hasMerchant: false,
     groundItems: [],
@@ -466,13 +536,170 @@ function createStore() {
       update((state) => {
         state.combatEnemies = enemies || [];
         state.combatPlayers = players || [];
+        if (!state.combatTargetId && (enemies || []).length) {
+          state.combatTargetId = enemies[0].id;
+        }
+        return state;
+      });
+    },
+
+    setCombatTarget: (targetId) => {
+      update((state) => {
+        state.combatTargetId = targetId || null;
+        return state;
+      });
+    },
+
+    beginCombat: (enemies, players, message) => {
+      update((state) => {
+        const nextEnemies = normalizeCombatantList(enemies);
+        const nextPlayers = normalizeCombatantList(players);
+        state.inCombat = true;
+        state.combatPhase = "active";
+        state.combatOutcome = null;
+        state.combatEndMessage = "";
+        state.combatEnemies = nextEnemies;
+        state.combatPlayers = nextPlayers;
+        state.combatTargetId = nextEnemies[0]?.id || null;
+        state.combatTurn = null;
+        state.combatFx = null;
+        state.combatLog = message ? [{ id: nextCombatLogId(), text: String(message).trim() }] : [];
+        return state;
+      });
+    },
+
+    setCombatTurn: (turn) => {
+      update((state) => {
+        state.inCombat = true;
+        if (state.combatPhase === "idle") state.combatPhase = "active";
+        state.combatTurn = turn
+          ? {
+              actorId: turn.actorId || "",
+              actorName: turn.actorName || "",
+              round: turn.round || 0,
+              deadlineMs: turn.deadlineMs || 0,
+            }
+          : null;
+        if (turn?.message) {
+          state.combatLog = appendCombatLog(state.combatLog, turn.message);
+        }
+        return state;
+      });
+    },
+
+    applyCombatAction: (msg) => {
+      update((state) => {
+        state.inCombat = true;
+        if (state.combatPhase === "idle") state.combatPhase = "active";
+
+        const snapshots = normalizeCombatantList(msg?.combatants);
+        if (snapshots.length) {
+          const { enemies, players } = mergeCombatantSnapshots(
+            state.combatEnemies,
+            state.combatPlayers,
+            snapshots
+          );
+          state.combatEnemies = enemies;
+          state.combatPlayers = players;
+        } else if (msg?.targetId) {
+          state.combatEnemies = patchCombatantHp(state.combatEnemies, msg);
+          state.combatPlayers = patchCombatantHp(state.combatPlayers, msg);
+        }
+
+        // Drop dead enemies from target if needed
+        const living = state.combatEnemies.filter((e) => (e.hp ?? 0) > 0);
+        if (state.combatTargetId && !living.some((e) => e.id === state.combatTargetId)) {
+          state.combatTargetId = living[0]?.id || null;
+        }
+
+        // Sync local character HP from player snapshot when present
+        const selfId = state.character?.id;
+        if (selfId) {
+          const self = state.combatPlayers.find((p) => p.id === selfId);
+          if (self && typeof self.hp === "number") {
+            state.characterStats = {
+              ...state.characterStats,
+              currentHitPoints: self.hp,
+              maxHitPoints: self.maxHp || state.characterStats.maxHitPoints,
+            };
+          }
+        }
+
+        if (msg?.fxId) {
+          state.combatFx = {
+            fxId: msg.fxId,
+            at: Date.now(),
+            targetId: msg.targetId || "",
+            actorId: msg.actorId || "",
+            damage: msg.damage || 0,
+            result: msg.result || "",
+          };
+        }
+
+        if (msg?.message) {
+          state.combatLog = appendCombatLog(state.combatLog, msg.message);
+        }
+        return state;
+      });
+    },
+
+    endCombat: (outcome, message) => {
+      update((state) => {
+        state.inCombat = false;
+        state.combatPhase = "ending";
+        state.combatOutcome = outcome || "victory";
+        state.combatEndMessage = message || "";
+        state.combatTurn = null;
+        if (message) {
+          state.combatLog = appendCombatLog(state.combatLog, message);
+        }
+        state.characterStats = { ...state.characterStats, inCombat: false };
+        return state;
+      });
+
+      // Brief outcome panel, then return to room UI
+      setTimeout(() => {
+        update((state) => {
+          if (state.combatPhase !== "ending") return state;
+          state.combatPhase = "idle";
+          state.combatOutcome = null;
+          state.combatEndMessage = "";
+          state.combatEnemies = [];
+          state.combatPlayers = [];
+          state.combatTargetId = null;
+          state.combatTurn = null;
+          state.combatFx = null;
+          state.combatLog = [];
+          return state;
+        });
+      }, 2800);
+    },
+
+    clearCombat: () => {
+      update((state) => {
+        state.inCombat = false;
+        state.combatPhase = "idle";
+        state.combatOutcome = null;
+        state.combatEndMessage = "";
+        state.combatEnemies = [];
+        state.combatPlayers = [];
+        state.combatTargetId = null;
+        state.combatTurn = null;
+        state.combatFx = null;
+        state.combatLog = [];
+        state.characterStats = { ...state.characterStats, inCombat: false };
         return state;
       });
     },
 
     setGameContext: ({ inCombat, hasItems, hasMerchant } = {}) => {
       update((state) => {
-        if (inCombat !== undefined) state.inCombat = inCombat;
+        if (inCombat !== undefined) {
+          state.inCombat = inCombat;
+          // Battle stage lifecycle is owned by beginCombat/endCombat/clearCombat.
+          // Only promote idle→active here; never tear down on a stray false flag.
+          if (inCombat && state.combatPhase === "idle") state.combatPhase = "active";
+        }
         if (hasItems !== undefined) state.hasItems = hasItems;
         if (hasMerchant !== undefined) state.hasMerchant = hasMerchant;
         return state;

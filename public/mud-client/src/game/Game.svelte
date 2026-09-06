@@ -52,6 +52,17 @@
     height: 100dvh;
   }
 
+  .gameContainer.combat-dimmed {
+    filter: brightness(0.35) saturate(0.7);
+    pointer-events: none;
+  }
+
+  .gameContainer.combat-dimmed :global(.quest-notifications),
+  .gameContainer.combat-dimmed :global(.character-switcher) {
+    /* keep dimmed with parent; BattleStage is outside pointer-events:none sibling */
+  }
+
+
   /* Fixed overlay for darkening/blurring the background image */
   .bg-overlay {
     position: fixed;
@@ -75,6 +86,7 @@
   import QuestNotifications from "./ui/QuestNotifications.svelte";
   import CharacterSwitcher from "./ui/CharacterSwitcher.svelte";
   import InventoryOverlay from "./ui/InventoryOverlay.svelte";
+  import BattleStage from "./ui/BattleStage.svelte";
   import MinimapWidget from "./widgets/MinimapWidget.svelte";
 
   import { onMount, onDestroy } from "svelte";
@@ -251,7 +263,7 @@
 
 <div class="bg-overlay"></div>
 
-<div class="gameContainer" class:mobile={$isMobile}>
+<div class="gameContainer" class:mobile={$isMobile} class:combat-dimmed={($muxStore.combatPhase === "active" || $muxStore.combatPhase === "ending" || $muxStore.inCombat)}>
   <CharacterSwitcher
     store={muxStore}
     authToken={$authToken}
@@ -292,4 +304,8 @@
 
   <!-- Inventory popup overlay (default inv open mode) -->
   <InventoryOverlay store={muxStore} {sendMessage} />
+
 </div>
+
+<!-- C2: full-screen battle stage over dimmed room chrome -->
+<BattleStage store={muxStore} {sendMessage} />
