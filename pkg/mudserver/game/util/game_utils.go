@@ -305,6 +305,27 @@ func BuildNPCDisplayNames(npcs []*npc.NPC) map[string]string {
 	return result
 }
 
+// StripHiddenExits returns a shallow room copy whose Exits list omits hidden
+// exits. Revealed exits should already have Hidden=false via RoomWithCharacterReveals.
+func StripHiddenExits(room *rooms.Room) *rooms.Room {
+	if room == nil || room.Exits == nil {
+		return room
+	}
+	visible := make(rooms.Exits, 0, len(*room.Exits))
+	for _, exit := range *room.Exits {
+		if exit.Hidden {
+			continue
+		}
+		visible = append(visible, exit)
+	}
+	if len(visible) == len(*room.Exits) {
+		return room
+	}
+	roomCopy := *room
+	roomCopy.Exits = &visible
+	return &roomCopy
+}
+
 // RoomWithCharacterReveals returns a room view with character-specific hidden exits revealed.
 // If the character has no reveals for this room, the original room pointer is returned (no copy).
 // Otherwise a shallow copy with modified exits is returned.

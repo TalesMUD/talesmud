@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/talesmud/talesmud/pkg/entities/characters"
+	"github.com/talesmud/talesmud/pkg/entities/items"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
@@ -184,7 +185,14 @@ func (command *PickupCommand) Execute(game def.GameCtrl, message *messages.Messa
 		NotifyQuestItemPickup(game, message.Character.ID, message.FromUser.ID, instance)
 
 		// Send pickup message
-		game.SendMessage() <- message.Reply("You pick up " + item.Name + ".")
+		pickupMsg := "You pick up " + item.Name + "."
+		// Prefer hint on the personal instance (same name/type/slot as blueprint)
+		hintItem := instance
+		if hintItem == nil {
+			hintItem = item
+		}
+		pickupMsg += weaponPickupHint(message.Character, hintItem)
+		game.SendMessage() <- message.Reply(pickupMsg)
 		if inv := messages.NewInventoryUpdateMessage(message); inv != nil {
 			game.SendMessage() <- inv
 		}
@@ -241,10 +249,26 @@ func (command *PickupCommand) Execute(game def.GameCtrl, message *messages.Messa
 	if item.Stackable && item.Quantity > 1 {
 		quantityStr = " (x" + itoa(int(item.Quantity)) + ")"
 	}
-	game.SendMessage() <- message.Reply("You pick up " + item.Name + quantityStr + ".")
+	pickupMsg := "You pick up " + item.Name + quantityStr + "."
+	pickupMsg += weaponPickupHint(message.Character, item)
+	game.SendMessage() <- message.Reply(pickupMsg)
 	if inv := messages.NewInventoryUpdateMessage(message); inv != nil {
 		game.SendMessage() <- inv
 	}
 
 	return true
+}
+
+// weaponPickupHint appends an equip hint when a weapon is picked up into an empty main hand.
+func weaponPickupHint(char *characters.Character, item *items.Item) string {
+	if char == nil || item == nil || item.Type != items.ItemTypeWeapon {
+		return ""
+	}
+	if item.Slot != items.ItemSlotMainHand && item.SubType != items.ItemSubTypeTwoHandSword {
+		return ""
+	}
+	if char.EquippedItems != nil && char.EquippedItems[items.ItemSlotMainHand] != nil {
+		return ""
+	}
+	return " (equip it with: equip " + item.Name + ")"
 }

@@ -18,11 +18,14 @@ import (
 	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
 )
 
+const combatBreathGrace = 3 * time.Second
+
 // CombatController wraps the combat engine and implements CombatEngineCtrl interface
 type CombatController struct {
-	manager *combatpkg.Manager
-	engine  *combatpkg.Engine
-	game    *Game
+	manager    *combatpkg.Manager
+	engine     *combatpkg.Engine
+	game       *Game
+	graceUntil map[string]time.Time // characterID -> grace expiry
 }
 
 // NewCombatController creates a new combat controller
@@ -31,10 +34,37 @@ func NewCombatController(game *Game) *CombatController {
 	engine := combatpkg.NewEngine(manager, nil) // Uses default config
 
 	return &CombatController{
-		manager: manager,
-		engine:  engine,
-		game:    game,
+		manager:    manager,
+		engine:     engine,
+		game:       game,
+		graceUntil: make(map[string]time.Time),
 	}
+}
+
+// CombatGraceActive reports whether the character is in the post-combat breath window.
+func (c *CombatController) CombatGraceActive(characterID string) bool {
+	if c == nil || characterID == "" || c.graceUntil == nil {
+		return false
+	}
+	until, ok := c.graceUntil[characterID]
+	if !ok {
+		return false
+	}
+	if time.Now().Before(until) {
+		return true
+	}
+	delete(c.graceUntil, characterID)
+	return false
+}
+
+func (c *CombatController) markCombatGrace(characterID string) {
+	if c == nil || characterID == "" {
+		return
+	}
+	if c.graceUntil == nil {
+		c.graceUntil = make(map[string]time.Time)
+	}
+	c.graceUntil[characterID] = time.Now().Add(combatBreathGrace)
 }
 
 // IsPlayerInCombat checks if a player is currently in combat
@@ -388,19 +418,14 @@ func (c *CombatController) notifyPlayersInCombat(instance *combat.CombatInstance
 	}
 }
 
-// notifyAllPlayersInInstance sends a message to all players regardless of alive/fled status
-func (c *CombatController) notifyAllPlayersInInstance(instance *combat.CombatInstance, message string) {
+// notifyAllPlayersInInstance sends a combatEnd to all players regardless of alive/fled status
+func (c *CombatController) notifyAllPlayersInInstance(instance *combat.CombatInstance, message, outcome string) {
 	for _, player := range instance.Players {
 		char, err := c.game.Facade.CharactersService().FindByID(player.ID)
 		if err != nil {
 			continue
 		}
-		c.game.sendMessage <- messages.MessageResponse{
-			Audience:   messages.MessageAudienceUser,
-			AudienceID: char.BelongsUserID,
-			Type:       messages.MessageTypeCombatEnd,
-			Message:    message,
-		}
+		c.game.sendMessage <- messages.NewCombatEndMessage(char.BelongsUserID, message, outcome)
 	}
 }
 
@@ -496,7 +521,6 @@ func (c *CombatController) Update() {
 		// Check for global combat timeout
 		if time.Since(instance.CreatedAt).Minutes() >= float64(c.engine.Config.CombatTimeoutMinutes) {
 			c.engine.EndCombat(instance, combat.CombatStateTimeout)
-			c.notifyPlayersInCombat(instance, "Combat has timed out due to inactivity.")
 			c.cleanupCombatInstance(instance, combat.CombatStateTimeout)
 		}
 	}
@@ -616,9 +640,9 @@ func (c *CombatController) cleanupCombatInstance(instance *combat.CombatInstance
 	case combat.CombatStateDefeat:
 		c.processCombatDefeat(instance)
 	case combat.CombatStateFled:
-		c.notifyAllPlayersInInstance(instance, "\n═══════════════════════════════════════════════════\n              ESCAPED\n═══════════════════════════════════════════════════\n\nYou have fled from combat!\n═══════════════════════════════════════════════════")
+		c.notifyAllPlayersInInstance(instance, "\n═══════════════════════════════════════════════════\n              ESCAPED\n═══════════════════════════════════════════════════\n\nYou have fled from combat!\n═══════════════════════════════════════════════════", string(combat.CombatStateFled))
 	case combat.CombatStateTimeout:
-		// Timeout message already sent in Update()
+		c.notifyAllPlayersInInstance(instance, "Combat has timed out due to inactivity.", string(combat.CombatStateTimeout))
 	}
 
 	// Clear combat state from players
@@ -635,6 +659,7 @@ func (c *CombatController) cleanupCombatInstance(instance *combat.CombatInstance
 		char.CurrentMana = player.CurrentMana
 
 		c.game.Facade.CharactersService().Update(player.ID, char)
+		c.markCombatGrace(player.ID)
 
 		// Send updated stats to client (combat ended, final HP/XP/Gold)
 		update := messages.NewCharacterUpdateMessage(char.BelongsUserID, char)
@@ -822,12 +847,7 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 			c.game.Facade.CharactersService().Update(player.ID, char)
 
 			// Send victory message first
-			c.game.sendMessage <- messages.MessageResponse{
-				Audience:   messages.MessageAudienceUser,
-				AudienceID: char.BelongsUserID,
-				Type:       messages.MessageTypeCombatEnd,
-				Message:    sb.String(),
-			}
+			c.game.sendMessage <- messages.NewCombatEndMessage(char.BelongsUserID, sb.String(), string(combat.CombatStateVictory))
 
 			// Send level-up notification
 			c.game.sendMessage <- messages.MessageResponse{
@@ -845,12 +865,7 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 			c.game.Facade.CharactersService().Update(player.ID, char)
 
 			// Send victory message
-			c.game.sendMessage <- messages.MessageResponse{
-				Audience:   messages.MessageAudienceUser,
-				AudienceID: char.BelongsUserID,
-				Type:       messages.MessageTypeCombatEnd,
-				Message:    sb.String(),
-			}
+			c.game.sendMessage <- messages.NewCombatEndMessage(char.BelongsUserID, sb.String(), string(combat.CombatStateVictory))
 		}
 
 		// Send inventory update so UI reflects new gold
@@ -932,12 +947,7 @@ func (c *CombatController) processCombatDefeat(instance *combat.CombatInstance) 
 
 		c.game.Facade.CharactersService().Update(player.ID, char)
 
-		c.game.sendMessage <- messages.MessageResponse{
-			Audience:   messages.MessageAudienceUser,
-			AudienceID: char.BelongsUserID,
-			Type:       messages.MessageTypeCombatEnd,
-			Message:    sb.String(),
-		}
+		c.game.sendMessage <- messages.NewCombatEndMessage(char.BelongsUserID, sb.String(), string(combat.CombatStateDefeat))
 	}
 }
 

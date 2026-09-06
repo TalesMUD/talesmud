@@ -196,7 +196,7 @@ func NewEnterRoomMessage(room *rooms.Room, user *entities.User, game def.GameCtr
 			Type:     MessageTypeEnterRoom,
 			Message:  util.CreateRoomDescription(room, user, game),
 		},
-		Room:    *room,
+		Room:    *util.StripHiddenExits(room),
 		NPCs:    npcs,
 		Items:   roomItems,
 		Players: players,
@@ -245,7 +245,7 @@ func NewRoomUpdateMessage(room *rooms.Room, user *entities.User, game def.GameCt
 			Audience: MessageAudienceOrigin,
 			Type:     MessageTypeRoomUpdate,
 		},
-		Room:    *room,
+		Room:    *util.StripHiddenExits(room),
 		NPCs:    npcs,
 		Items:   roomItems,
 		Players: players,
@@ -549,6 +549,25 @@ func NewCombatStartMessage(userID, text string, enemies, players []CombatantView
 	}
 }
 
+// CombatEndMessage is a machine-readable combat end payload.
+type CombatEndMessage struct {
+	MessageResponse
+	Outcome string `json:"outcome"` // victory | defeat | fled | timeout
+}
+
+// NewCombatEndMessage builds a combatEnd with human text + machine outcome.
+func NewCombatEndMessage(userID, text, outcome string) *CombatEndMessage {
+	return &CombatEndMessage{
+		MessageResponse: MessageResponse{
+			Audience:   MessageAudienceUser,
+			AudienceID: userID,
+			Type:       MessageTypeCombatEnd,
+			Message:    text,
+		},
+		Outcome: outcome,
+	}
+}
+
 // NewAtlasMessage sends a compiled atlas to one player.
 func NewAtlasMessage(userID string, atlas worldmap.PlayerMap) *AtlasMessage {
 	return &AtlasMessage{
@@ -556,7 +575,7 @@ func NewAtlasMessage(userID string, atlas worldmap.PlayerMap) *AtlasMessage {
 			Audience:   MessageAudienceOrigin,
 			AudienceID: userID,
 			Type:       MessageTypeAtlas,
-			Message:    "Atlas",
+			Message:    "",
 		},
 		Atlas: atlas,
 	}
@@ -588,13 +607,13 @@ type ShopStockItem struct {
 // ShopMessage opens/refreshes the merchant shop overlay.
 type ShopMessage struct {
 	MessageResponse
-	MerchantName  string          `json:"merchantName"`
-	MerchantID    string          `json:"merchantId,omitempty"`
-	Gold          int64           `json:"gold"`
-	Stock         []ShopStockItem `json:"stock"`
-	AcceptedTypes []string        `json:"acceptedTypes,omitempty"`
-	RejectedTags  []string        `json:"rejectedTags,omitempty"`
-	SellMultiplier float64        `json:"sellMultiplier,omitempty"`
+	MerchantName   string          `json:"merchantName"`
+	MerchantID     string          `json:"merchantId,omitempty"`
+	Gold           int64           `json:"gold"`
+	Stock          []ShopStockItem `json:"stock"`
+	AcceptedTypes  []string        `json:"acceptedTypes,omitempty"`
+	RejectedTags   []string        `json:"rejectedTags,omitempty"`
+	SellMultiplier float64         `json:"sellMultiplier,omitempty"`
 }
 
 // NewShopMessage creates a structured shop payload for the client overlay.

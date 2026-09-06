@@ -72,16 +72,31 @@ func TestDefeatRespawnsAtBoundRoomAndDamagesArmor(t *testing.T) {
 		t.Fatalf("expected 50%% HP after defeat, got %d", stored.CurrentHitPoints)
 	}
 
-	var sawDefeat, sawBoundRoom bool
+	var sawDefeat, sawBoundRoom, sawOutcome bool
 	for _, out := range drainGameMessages(g.SendMessage()) {
-		if rsp, ok := out.(messages.MessageResponse); ok {
-			if strings.Contains(rsp.Message, "Your armor is battered") {
+		switch msg := out.(type) {
+		case *messages.CombatEndMessage:
+			if msg.Outcome != "defeat" {
+				t.Fatalf("expected outcome defeat, got %q", msg.Outcome)
+			}
+			sawOutcome = true
+			if strings.Contains(msg.Message, "Your armor is battered") {
 				sawDefeat = true
 			}
-			if strings.Contains(rsp.Message, "back at") {
+			if strings.Contains(msg.Message, "back at") {
+				sawBoundRoom = true
+			}
+		case messages.MessageResponse:
+			if strings.Contains(msg.Message, "Your armor is battered") {
+				sawDefeat = true
+			}
+			if strings.Contains(msg.Message, "back at") {
 				sawBoundRoom = true
 			}
 		}
+	}
+	if !sawOutcome {
+		t.Fatal("expected machine-readable combatEnd with outcome:defeat")
 	}
 	if !sawDefeat {
 		t.Fatal("expected defeat message mentioning battered armor")
