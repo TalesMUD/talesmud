@@ -178,6 +178,7 @@
 {#if visible}
 <div class="battle-stage" class:ending={phase === 'ending'} role="dialog" aria-label="Combat">
   <div class="battle-backdrop" aria-hidden="true"></div>
+  <div class="battle-frame">
 
   <header class="battle-header">
     <i class="material-icons header-icon">explore</i>
@@ -435,6 +436,7 @@
       {/if}
     </div>
   {/if}
+  </div><!-- /.battle-frame -->
 </div>
 {/if}
 
@@ -443,12 +445,39 @@
     position: fixed;
     inset: 0;
     z-index: 9000;
-    display: grid;
-    grid-template-rows: auto auto 1fr auto auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem;
     color: #f3f4f6;
     font-family: 'Cinzel', Georgia, serif;
     pointer-events: auto;
     animation: stageIn 0.28s ease-out;
+  }
+
+  /* Desktop: fight stage ~half viewport with a solid floor size */
+  .battle-frame {
+    position: relative;
+    z-index: 1;
+    width: min(920px, 52vw);
+    height: min(640px, 58vh);
+    min-width: 640px;
+    min-height: 440px;
+    max-width: calc(100vw - 2.5rem);
+    max-height: calc(100vh - 2.5rem);
+    display: grid;
+    grid-template-rows: auto auto 1fr auto auto;
+    border: 1.5px solid rgba(212, 164, 74, 0.55);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow:
+      0 24px 64px rgba(0, 0, 0, 0.65),
+      0 0 0 1px rgba(0, 0, 0, 0.4),
+      inset 0 0 0 1px rgba(255, 220, 150, 0.08);
+    background:
+      radial-gradient(ellipse at 72% 28%, rgba(80, 40, 20, 0.4), transparent 55%),
+      radial-gradient(ellipse at 18% 82%, rgba(30, 50, 80, 0.28), transparent 50%),
+      rgba(8, 9, 12, 0.96);
   }
 
   @keyframes stageIn {
@@ -550,7 +579,7 @@
     justify-content: flex-end;
     gap: 0.85rem;
     padding: 0.75rem 1.25rem 0;
-    max-width: min(72vw, 640px);
+    max-width: min(88%, 520px);
   }
 
   .enemy-card {
@@ -559,7 +588,7 @@
     border: none;
     color: inherit;
     padding: 0;
-    width: clamp(140px, 18vw, 200px);
+    width: clamp(120px, 28%, 180px);
     cursor: pointer;
     text-align: center;
     font: inherit;
@@ -909,11 +938,11 @@
   .player-panel {
     position: absolute;
     left: 1.1rem;
-    bottom: clamp(7.5rem, 16vh, 10rem);
+    bottom: 7.25rem;
     display: flex;
     align-items: flex-end;
     gap: 0.85rem;
-    max-width: min(420px, 92vw);
+    max-width: min(420px, 88%);
   }
 
   .player-bust {
@@ -980,7 +1009,7 @@
   .battle-dock {
     position: absolute;
     left: 50%;
-    bottom: clamp(3.6rem, 9vh, 5rem);
+    bottom: 3.85rem;
     transform: translateX(-50%);
     display: flex;
     gap: 0.45rem;
@@ -1019,13 +1048,13 @@
   .dock-panel {
     position: absolute;
     left: 50%;
-    bottom: clamp(7.2rem, 15vh, 9rem);
+    bottom: 7rem;
     transform: translateX(-50%);
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     gap: 0.4rem;
-    max-width: min(90vw, 520px);
+    max-width: min(92%, 520px);
     padding: 0.55rem;
     border: 1.5px solid rgba(212, 164, 74, 0.45);
     border-radius: 8px;
@@ -1061,7 +1090,7 @@
     left: 50%;
     bottom: 0.55rem;
     transform: translateX(-50%);
-    width: min(92vw, 720px);
+    width: min(92%, 720px);
     max-height: 3.6rem;
     overflow: hidden;
     padding: 0.35rem 0.65rem 0.45rem;
@@ -1145,6 +1174,23 @@
   /* C3: mobile stacked stage — enemies ~35%, FX mid, player bar, thumb dock */
   @media (max-width: 768px) {
     .battle-stage {
+      display: flex;
+      align-items: stretch;
+      justify-content: stretch;
+      padding: 0;
+      height: 100dvh;
+      max-height: 100dvh;
+    }
+
+    .battle-frame {
+      width: 100%;
+      height: 100%;
+      min-width: 0;
+      min-height: 0;
+      max-width: none;
+      max-height: none;
+      border-radius: 0;
+      border: none;
       display: grid;
       grid-template-rows:
         auto
@@ -1163,8 +1209,6 @@
         "dock"
         "log";
       padding-bottom: env(safe-area-inset-bottom, 0px);
-      height: 100dvh;
-      max-height: 100dvh;
       overflow: hidden;
     }
 
