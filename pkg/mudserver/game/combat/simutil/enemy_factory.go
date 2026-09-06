@@ -6,7 +6,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/mudserver/game/balance"
 )
 
-// EnemyConfig holds the definition for an enemy type
+// EnemyConfig holds the definition for an enemy type (base stats from content YAML)
 type EnemyConfig struct {
 	Name        string
 	Level       int32
@@ -16,7 +16,9 @@ type EnemyConfig struct {
 	Difficulty  string
 }
 
-// AllEnemyConfigs returns all known enemy definitions from the game data
+// AllEnemyConfigs returns known enemy definitions aligned with talesmud-rpg-1 content.
+// Difficulties for Sewer Rat / Tunnel Mole use "easy" (intended trash tier) — content
+// currently tags them "normal"; see docs/combat-battle-stage.md C6 content notes.
 func AllEnemyConfigs() []EnemyConfig {
 	return []EnemyConfig{
 		{"Catacomb Rat", 1, 8, 1, 0, "trivial"},
@@ -29,7 +31,7 @@ func AllEnemyConfigs() []EnemyConfig {
 		{"Night Whisper", 4, 30, 7, 0, "normal"},
 		{"Burrow Brute", 4, 55, 8, 3, "boss"},
 		{"Thornback Bear", 5, 80, 11, 4, "hard"},
-		{"Hollow Knight", 6, 140, 12, 4, "boss"},
+		{"Hollow Knight", 6, 150, 13, 6, "boss"}, // content name: The Hollow Knight
 	}
 }
 
@@ -66,14 +68,14 @@ func EnemyConfigsByLevel(maxLevel int32) []EnemyConfig {
 }
 
 // CreateEnemy creates an NPC enemy from an EnemyConfig
-// Applies difficulty-based multipliers to base stats
+// Applies difficulty-based (and named) multipliers to base stats
 func CreateEnemy(config EnemyConfig) *npc.NPC {
-	// Apply difficulty multipliers to base stats
-	finalHP, finalAttack, finalDefense := balance.ApplyMultipliers(
+	finalHP, finalAttack, finalDefense := balance.ApplyEnemyMultipliers(
 		config.HP,
 		config.AttackPower,
 		config.Defense,
 		config.Difficulty,
+		config.Name,
 	)
 
 	return &npc.NPC{
@@ -93,7 +95,6 @@ func CreateEnemy(config EnemyConfig) *npc.NPC {
 // CreateScaledEnemy creates an enemy with stats scaled to a specific level.
 // Useful for testing arbitrary level matchups beyond the predefined enemies.
 func CreateScaledEnemy(name string, level int32, difficulty string) *npc.NPC {
-	// Scale stats based on level and difficulty
 	var hpMult, atkMult, defMult float64
 	switch difficulty {
 	case "trivial":

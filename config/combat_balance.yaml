@@ -1,35 +1,55 @@
-# Combat Balance Configuration
+# Combat Balance Configuration (C6 — duration pass)
 # Multipliers applied to base enemy stats based on difficulty tier
 # Formula: final_stat = base_stat * multiplier
+#
+# Duration targets (player turns, level-appropriate Warrior with attrs spent):
+#   Trash (trivial/easy): ~3–6
+#   Elites (normal/hard): ~8–15
+#   Bosses:               ~15–30
+#
+# named_overrides replace difficulty multipliers for a specific enemy name
+# (exact match on NPC name as authored in content).
 
 difficulty_multipliers:
   trivial:
-    hp: 3.75        # Catacomb Rat: 8 * 3.75 = 30 HP
-    attack: 4.0     # Catacomb Rat: 1 * 4.0 = 4 ATK
-    defense: 1.0    # No change for trivial enemies
+    hp: 2.5         # Catacomb Rat: 8 * 2.5 = 20 HP  (~4 turns)
+    attack: 3.0     # Catacomb Rat: 1 * 3.0 = 3 ATK
+    defense: 1.0
 
   easy:
-    hp: 2.9         # Sewer Rat: 12 * 2.9 = ~35 HP
-    attack: 1.67    # Sewer Rat: 3 * 1.67 = ~5 ATK
-    defense: 1.0    # Tunnel Mole: 2 * 1.0 = 2 DEF
+    hp: 1.9         # Sewer Rat: 12 * 1.9 ≈ 23 HP; Tunnel Mole: 15 * 1.9 ≈ 28
+    attack: 1.4     # Sewer Rat: 3 * 1.4 ≈ 4 ATK
+    defense: 0.5    # Tunnel Mole: 2 * 0.5 = 1 DEF (less sponge)
 
   normal:
-    hp: 2.67        # Meadow Wolf: 18 * 2.67 = ~48 HP
-    attack: 1.5     # Meadow Wolf: 4 * 1.5 = 6 ATK
-    defense: 2.0    # Meadow Wolf: 1 * 2.0 = 2 DEF
+    hp: 2.7         # Meadow Wolf: 18 * 2.7 ≈ 49; Bandit: 22 * 2.7 ≈ 59
+    attack: 1.35    # Meadow Wolf: 4 * 1.35 ≈ 5 ATK
+    defense: 1.5    # Meadow Wolf: 1 * 1.5 ≈ 1–2 DEF
 
   hard:
-    hp: 1.25        # Thornback Bear: 80 * 1.25 = 100 HP
-    attack: 1.18    # Thornback Bear: 11 * 1.18 = ~13 ATK
-    defense: 1.25   # Thornback Bear: 4 * 1.25 = 5 DEF
+    hp: 0.9         # Thornback Bear: 80 * 0.9 = 72 HP (~13 turns at L5)
+    attack: 1.0     # 11 ATK
+    defense: 1.0    # 4 DEF
 
   boss:
-    hp: 2.0         # Burrow Brute: 55 * 2.0 = 110 HP
-    attack: 1.5     # Burrow Brute: 8 * 1.5 = 12 ATK
-    defense: 1.67   # Burrow Brute: 3 * 1.67 = ~5 DEF
+    hp: 1.85        # Burrow Brute: 55 * 1.85 ≈ 102 HP (~22 turns at L4)
+    attack: 1.15    # Burrow Brute: 8 * 1.15 ≈ 9 ATK (survivable)
+    defense: 1.5    # Burrow Brute: 3 * 1.5 ≈ 4–5 DEF
+
+# Per-enemy overrides (applied instead of the difficulty tier multipliers)
+named_overrides:
+  "The Hollow Knight":
+    hp: 1.0         # 150 HP (~22 turns with skills at L6)
+    attack: 0.85    # 13 * 0.85 ≈ 11 ATK — threatening but killable
+    defense: 0.9    # 6 * 0.9 ≈ 5 DEF
+  "Hollow Knight":
+    hp: 1.0
+    attack: 0.85
+    defense: 0.9
 
 # Notes:
-# - These multipliers were tuned to make L1 players take ~5-6 rounds against L1 enemies
-# - Higher difficulty tiers provide more challenging encounters
-# - Boss enemies have boosted stats to make them memorable fights
-# - Adjust these values to fine-tune combat difficulty globally
+# - Tuned so strength difference drives duration (trash fast, bosses long but killable).
+# - Sims auto-spend distributable attribute points on primary attr (competent player).
+# - Content: prefer difficulty "easy" for Sewer Rat / Tunnel Mole (currently "normal"
+#   in talesmud-rpg-1); until retagged, named play still uses normal multipliers.
+# - Re-import NPCs after changing this file so live DB picks up new finals.

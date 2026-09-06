@@ -111,6 +111,10 @@ func CreateCharacter(config ClassConfig, level int32) *characters.Character {
 	char.MaxMana = char.CalculateMaxMana()
 	char.CurrentMana = char.MaxMana
 
+	// Auto-spend distributable points on primary (then secondary) so sims
+	// represent a competent level-appropriate player (C6 duration harness).
+	autoSpendPrimaryAttributes(char)
+
 	// Equip all available skills for the character's class and level
 	classID := char.Class.ID
 	available := skills.AvailableSkills(classID, char.Level)
@@ -125,6 +129,32 @@ func CreateCharacter(config ClassConfig, level int32) *characters.Character {
 	char.EquippedSkills = equipped
 
 	return char
+}
+
+// autoSpendPrimaryAttributes spends UnspentAttributePoints on the class primary
+// attribute, spilling to secondary when the primary cap is hit.
+func autoSpendPrimaryAttributes(char *characters.Character) {
+	if char.UnspentAttributePoints <= 0 {
+		return
+	}
+	order := []string{
+		leveling.GetPrimaryAttribute(char.Class),
+		leveling.GetSecondaryAttribute(char.Class),
+		"STA", "STR", "DEX", "INT", "WIS",
+	}
+	seen := map[string]bool{}
+	for _, attr := range order {
+		if attr == "" || seen[attr] {
+			continue
+		}
+		seen[attr] = true
+		for char.UnspentAttributePoints > 0 {
+			if msg := leveling.ValidateAttributeSpend(char, attr, 1); msg != "" {
+				break
+			}
+			leveling.ApplyAttributeSpend(char, attr, 1)
+		}
+	}
 }
 
 // CreateCharacterWithGear creates a character with custom weapon and armor stats.

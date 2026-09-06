@@ -1,7 +1,7 @@
 # Combat Battle Stage
 
-**Status:** C0 locked · **C1 done** · **C2 done** · **C3 done** · **C5 done** (combat FX pack, 2026-09-06) — on engine-june  
-**Follow-up:** Flutter FX (C4 parity) — not in this slice; C6 balance numbers still open.
+**Status:** C0 locked · **C1 done** · **C2 done** · **C3 done** · **C5 done** · **C6 done** (duration balance, 2026-09-06) — on engine-june  
+**Follow-up:** Flutter FX (C4 parity) — not in this slice.
 **Milestone:** [Combat Battle Stage](https://github.com/TalesMUD/talesmud/milestone/4)  
 **Branch:** `engine-june` (do not merge to public `master` without Marcus okay)
 
@@ -82,7 +82,68 @@ Clients **animate from events**; they do not invent outcomes.
 | C3 | Mobile web thumb dock — **done on engine-june** |
 | C4 | Flutter parity (incl. FX follow-up) |
 | C5 | FX pack — **done on engine-june** (hit flash/shake, cast glow, miss puff, death dissolve, float dmg/heal; desktop+mobile) |
-| C6 | Balance duration pass |
+| C6 | Balance duration pass — **done on engine-june** |
+
+
+## C6 — Balance duration pass
+
+**Goal:** Fights last based on strength difference (not instant deletes, not endless sponges).
+
+### Duration targets (player turns ≈ combat rounds in 1v1)
+
+| Band | Examples | Player turns |
+|------|----------|--------------|
+| Trash | Catacomb Rat, Sewer Rat, Tunnel Mole | 3–6 |
+| Elite | Meadow Wolf, Bandit, Thornback Bear | 8–15 |
+| Boss | Burrow Brute, Hollow Knight | 15–30 |
+
+Reference harness: **Warrior** with distributable attribute points auto-spent on primary, skills AI enabled.
+
+### Measured (Warrior, after C6)
+
+| Matchup | Before (approx) | After | Notes |
+|---------|-----------------|-------|-------|
+| L1 vs Catacomb Rat | ~7.2 rnds, 100% | **~4.3**, 100% | trash |
+| L2 vs Sewer Rat | ~7.0 | **~4.1**, 100% | trash |
+| L2 vs Meadow Wolf | ~13.1 | **~8.8**, 100% | elite |
+| L3 vs Bandit | ~24.3 | **~12.3**, 100% | elite |
+| L5 vs Thornback Bear | ~42, 40% win | **~11.6**, 100% | elite |
+| L4 vs Burrow Brute | ~39, 18% win | **~20**, ~100% | boss |
+| L6 vs Hollow Knight | ~34, **0%** win | **~21**, ~100% | boss (was unkillable) |
+
+Before numbers: no attr spend, old `config/combat_balance.yaml` (boss ATK/HP too high → wipe or sponge).
+
+### How to re-run sims
+
+```bash
+# From repo root (so config/combat_balance.yaml is found):
+go test ./pkg/mudserver/game/combat/ -run TestCombatDurationTargets -v
+
+# Broader balance matrix + CLI simulator:
+go test ./pkg/mudserver/game/combat/ -run 'TestFullBalanceMatrix|TestBosses' -v
+go run ./cmd/combat_simulator -class Warrior -level 6 -enemy 'Hollow Knight' -n 200
+```
+
+Tuning knobs (prefer these over rewriting `ProcessAttack`):
+
+1. `config/combat_balance.yaml` — `difficulty_multipliers` + `named_overrides`
+2. Defaults mirrored in `pkg/mudserver/game/balance/difficulty.go`
+3. Content base stats in `talesmud-rpg-1` only if engine multipliers cannot separate two bosses on the same tier
+
+`ApplyEnemyMultipliers` runs at **import** (`pkg/importer`) and in **sims** (`simutil.CreateEnemy`). Re-import NPCs after changing the YAML so the live DB picks up new finals.
+
+### Content notes (talesmud-rpg-1)
+
+Engine-only is enough for C6 duration bands. Optional content cleanups (not required to ship C6):
+
+| NPC | Current | Suggested |
+|-----|---------|-----------|
+| Sewer Rat (`ENM0008`) | `difficulty: normal` | `easy` (trash tier) |
+| Tunnel Mole (`ENM0010`) | `difficulty: normal` | `easy` (trash tier) |
+
+Sims already treat those two as `easy`. Until content is retagged + re-imported, live DB keeps `normal` multipliers for them.
+
+No Hollow Knight base-stat content patch needed — `named_overrides` for `"The Hollow Knight"` / `"Hollow Knight"` handle boss duration/survivability.
 
 ## Mocks
 
