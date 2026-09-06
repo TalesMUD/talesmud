@@ -527,10 +527,9 @@ function createClient(renderer, characterCreator, muxStore) {
 
   const sendMessage = (msg) => {
     if (!ws || ws.readyState !== WebSocket.OPEN) {
-      renderer("Connection is reconnecting. Try again in a moment.");
-      if (mux) {
-        mux.setConnectionState("reconnecting", "Reconnecting to the game server...");
-      }
+      // Status ownership stays in Game.svelte open/close handlers — do not
+      // flap connectionStatus yellow on every failed send.
+      renderer("Connection is down. Wait for reconnect, then try again.");
       return;
     }
 

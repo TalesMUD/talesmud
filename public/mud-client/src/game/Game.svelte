@@ -108,6 +108,7 @@
   let ws;
   let renderers = [];
   let reconnectTimer;
+  let reconnectPending = false;
   let reconnectAttempt = 0;
   let destroyed = false;
 
@@ -149,12 +150,19 @@
     client.setAuthToken($authToken);
   }
 
-  $: if (client && !ws && !$isLoading && $isAuthenticated && $authToken && !destroyed) {
+  // Skip while a reconnect timer is pending — otherwise close→ws=null races
+  // scheduleReconnect and this reactive block both opens a socket.
+  $: if (client && !ws && !$isLoading && $isAuthenticated && $authToken && !destroyed && !reconnectPending) {
     connectWebSocket(false);
   }
 
   function connectWebSocket(isReconnect = false) {
     if (!client || ws || !$authToken) return;
+
+    // Intentional connect: drop any pending reconnect timer.
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+    reconnectPending = false;
 
     muxStore.setConnectionState(
       isReconnect ? "reconnecting" : "connecting",
@@ -178,13 +186,23 @@
       scheduleReconnect();
     });
 
+    // Do not flap status on error while the socket is still OPEN — browsers
+    // often fire error before close (or spuriously). Status ownership: open/close.
     nextWs.addEventListener("error", () => {
-      muxStore.setConnectionState("reconnecting", "Connection interrupted. Reconnecting...", reconnectAttempt);
+      if (destroyed || ws !== nextWs) return;
+      if (nextWs.readyState === WebSocket.CLOSING || nextWs.readyState === WebSocket.CLOSED) {
+        muxStore.setConnectionState(
+          "reconnecting",
+          "Connection interrupted. Reconnecting...",
+          reconnectAttempt
+        );
+      }
     });
   }
 
   function scheduleReconnect() {
     if (destroyed || !$isAuthenticated || !$authToken) {
+      reconnectPending = false;
       muxStore.setConnectionState("disconnected", "Disconnected");
       return;
     }
@@ -196,7 +214,12 @@
       reconnectAttempt
     );
     clearTimeout(reconnectTimer);
-    reconnectTimer = setTimeout(() => connectWebSocket(true), delay);
+    reconnectPending = true;
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      reconnectPending = false;
+      connectWebSocket(true);
+    }, delay);
   }
 
   const characterCreator = () => {
@@ -254,6 +277,8 @@
   onDestroy(async () => {
     destroyed = true;
     clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+    reconnectPending = false;
     if (ws) {
       ws.close();
       ws = null;
