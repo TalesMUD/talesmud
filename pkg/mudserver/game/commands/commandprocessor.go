@@ -91,7 +91,7 @@ func (commandProcessor *CommandProcessor) registerCommands() {
 	commandProcessor.RegisterCommand(&DropCommand{}, "Drop an item: drop [item] [quantity]", "drop")
 	commandProcessor.RegisterCommand(&DestroyCommand{}, "Destroy an item: destroy [item]", "destroy", "discard")
 	commandProcessor.RegisterCommand(&ExamineCommand{}, "Examine an item: examine [item]", "examine", "inspect")
-	commandProcessor.RegisterCommand(&UseCommand{}, "Use a consumable item: use [item]", "use", "eat", "drink", "consume")
+	commandProcessor.RegisterCommand(&UseCommand{}, "Use an item: use <item> [on <target>]", "use", "eat", "drink", "consume")
 
 	// Trade commands
 	commandProcessor.RegisterCommand(&ListCommand{}, "List merchant inventory: list", "list", "shop", "trade")

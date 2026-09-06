@@ -46,6 +46,8 @@ type CombatEngineCtrl interface {
 	GetCombatInstance(characterID string) *combat.CombatInstance
 	// InitiateCombat starts combat between players and enemies
 	InitiateCombat(roomID string, players []*characters.Character, enemies []*npc.NPC) *combat.CombatInstance
+	// CombatGraceActive is true during the brief post-combat breath window
+	CombatGraceActive(characterID string) bool
 	// ProcessPlayerAttack handles a player attacking a target in combat
 	ProcessPlayerAttack(characterID, targetID string) (message string, combatEnded bool, endState combat.CombatState)
 	// ProcessPlayerDefend handles a player defending

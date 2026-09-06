@@ -3,11 +3,13 @@ package commands
 import (
 	"strings"
 
+	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/items"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
 )
 
 // Look executes the look command, allowing players to observe their surroundings or specific objects
@@ -35,32 +37,26 @@ func lookAtRoom(room *rooms.Room, game def.GameCtrl, message *messages.Message) 
 		sb.WriteString("You look around... nothing else to see here.")
 	}
 
-	// Show items in the room
-	itemIDs := room.GetItemIDs()
-	if len(itemIDs) > 0 {
-		// Group items by template for stacking display
+	// Same filter as enter: hide already-taken copyOnPickup / room blueprints
+	roomItems := util.GetRoomItems(room, game, message.Character)
+	if len(roomItems) > 0 {
 		itemCounts := make(map[string]int)
 		itemNames := make(map[string]string)
 		itemOrder := make([]string, 0)
 
-		for _, itemID := range itemIDs {
-			item, err := game.GetFacade().ItemsService().FindByID(itemID)
+		for _, ri := range roomItems {
+			item, err := game.GetFacade().ItemsService().FindByID(ri.ID)
 			if err != nil || item == nil {
 				continue
 			}
-
-			// Use template ID for grouping if available, otherwise use item ID
 			groupKey := item.TemplateID
 			if groupKey == "" {
 				groupKey = item.ID
 			}
-
 			if _, exists := itemCounts[groupKey]; !exists {
 				itemOrder = append(itemOrder, groupKey)
 				itemNames[groupKey] = item.Name
 			}
-
-			// For stackable items, add quantity; otherwise count instances
 			if item.Stackable && item.Quantity > 0 {
 				itemCounts[groupKey] += int(item.Quantity)
 			} else {
@@ -102,7 +98,7 @@ func lookAtTarget(room *rooms.Room, game def.GameCtrl, message *messages.Message
 	}
 
 	// Check for items in the room
-	item := findItemInRoom(room, game, target)
+	item := findItemInRoom(room, game, target, message.Character)
 	if item != nil {
 		result := lookAtItem(item)
 		game.SendMessage() <- message.Reply(result)
@@ -128,14 +124,15 @@ func lookAtTarget(room *rooms.Room, game def.GameCtrl, message *messages.Message
 	return true
 }
 
-// findItemInRoom finds an item in the room by name
-func findItemInRoom(room *rooms.Room, game def.GameCtrl, target string) *items.Item {
-	itemIDs := room.GetItemIDs()
+// findItemInRoom finds an item in the room by name, using the same visibility
+// filter as enter/look (hides already-taken copyOnPickup blueprints).
+func findItemInRoom(room *rooms.Room, game def.GameCtrl, target string, char *characters.Character) *items.Item {
+	visible := util.GetRoomItems(room, game, char)
 	targetLower := strings.ToLower(target)
 
 	// First pass: exact match
-	for _, itemID := range itemIDs {
-		item, err := game.GetFacade().ItemsService().FindByID(itemID)
+	for _, ri := range visible {
+		item, err := game.GetFacade().ItemsService().FindByID(ri.ID)
 		if err != nil || item == nil {
 			continue
 		}
@@ -148,8 +145,8 @@ func findItemInRoom(room *rooms.Room, game def.GameCtrl, target string) *items.I
 	}
 
 	// Second pass: prefix match
-	for _, itemID := range itemIDs {
-		item, err := game.GetFacade().ItemsService().FindByID(itemID)
+	for _, ri := range visible {
+		item, err := game.GetFacade().ItemsService().FindByID(ri.ID)
 		if err != nil || item == nil {
 			continue
 		}
@@ -159,8 +156,8 @@ func findItemInRoom(room *rooms.Room, game def.GameCtrl, target string) *items.I
 	}
 
 	// Third pass: contains match
-	for _, itemID := range itemIDs {
-		item, err := game.GetFacade().ItemsService().FindByID(itemID)
+	for _, ri := range visible {
+		item, err := game.GetFacade().ItemsService().FindByID(ri.ID)
 		if err != nil || item == nil {
 			continue
 		}

@@ -41,7 +41,7 @@ func (command *ExamineCommand) Execute(game def.GameCtrl, message *messages.Mess
 	if item == nil && message.Character.CurrentRoomID != "" {
 		room, err := game.GetFacade().RoomsService().FindByID(message.Character.CurrentRoomID)
 		if err == nil && room != nil {
-			item = findItemInRoom(room, game, itemName)
+			item = findItemInRoom(room, game, itemName, message.Character)
 		}
 	}
 
@@ -61,6 +61,10 @@ func (command *ExamineCommand) Execute(game def.GameCtrl, message *messages.Mess
 	}
 
 	if item == nil {
+		// Fall through to a matching room action (case-insensitive).
+		if roomActionMatches(game, message) {
+			return false
+		}
 		game.SendMessage() <- message.Reply("You don't see a '" + itemName + "' here.")
 		return true
 	}

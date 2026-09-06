@@ -95,21 +95,33 @@ func (command *AttackCommand) handleInitiateCombat(game def.GameCtrl, message *m
 		return true
 	}
 
+	// Post-combat grace: stop blender of sequential 1v1s
+	if combatEngine.CombatGraceActive(message.Character.ID) {
+		game.SendMessage() <- message.Reply("You catch your breath... (too soon to fight again)")
+		return true
+	}
+
 	// Gather all enemies to pull into combat
 	enemies := []*npc.NPC{target}
 
-	// If the target has CallForHelp, pull nearby enemies
-	if target.EnemyTrait != nil && target.EnemyTrait.CallForHelp {
+	// Swarm style pulls every remaining hostile; CallForHelp honors ally flags.
+	pullSwarm := target.EnemyTrait != nil && target.EnemyTrait.CombatStyle == npc.CombatStyleSwarm
+	pullHelp := target.EnemyTrait != nil && target.EnemyTrait.CallForHelp
+	if pullSwarm || pullHelp {
 		nearbyNPCs := npcManager.GetInstancesInRoom(message.Character.CurrentRoomID)
 		for _, nearby := range nearbyNPCs {
 			if nearby.Entity.ID == target.Entity.ID {
-				continue // Skip the original target
+				continue
 			}
-			if nearby.IsEnemy() && !nearby.IsDead && !combatEngine.IsNPCInCombat(nearby.Entity.ID) {
-				// Check if this enemy also has CallForHelp or AggroOnSight
-				if nearby.EnemyTrait != nil && (nearby.EnemyTrait.CallForHelp || nearby.EnemyTrait.AggroOnSight) {
-					enemies = append(enemies, nearby)
-				}
+			if !nearby.IsEnemy() || nearby.IsDead || combatEngine.IsNPCInCombat(nearby.Entity.ID) {
+				continue
+			}
+			if pullSwarm {
+				enemies = append(enemies, nearby)
+				continue
+			}
+			if nearby.EnemyTrait != nil && (nearby.EnemyTrait.CallForHelp || nearby.EnemyTrait.AggroOnSight) {
+				enemies = append(enemies, nearby)
 			}
 		}
 	}

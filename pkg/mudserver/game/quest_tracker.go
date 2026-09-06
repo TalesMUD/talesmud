@@ -255,6 +255,84 @@ func (qt *QuestTracker) sendProgressUpdate(userID string, quest *quests.Quest, p
 	}
 
 	qt.game.SendMessage() <- msg
+	qt.pushQuestLogSnapshot(userID, progress.CharacterID)
+}
+
+// pushQuestLogSnapshot sends a full questLog so clients do not go stale after toasts.
+func (qt *QuestTracker) pushQuestLogSnapshot(userID, characterID string) {
+	if qt == nil || qt.facade == nil || userID == "" || characterID == "" {
+		return
+	}
+	progressList, err := qt.facade.QuestsService().GetQuestLog(characterID)
+	if err != nil {
+		return
+	}
+	entries := make([]messages.QuestLogEntry, 0, len(progressList))
+	for _, progress := range progressList {
+		if progress == nil {
+			continue
+		}
+		quest, _ := qt.facade.QuestsService().FindByID(progress.QuestID)
+		entry := messages.QuestLogEntry{
+			QuestID:    progress.QuestID,
+			Status:     string(progress.Status),
+			Objectives: qt.snapshotObjectives(quest, progress),
+		}
+		if quest != nil {
+			entry.QuestName = quest.Name
+			entry.Description = quest.Description
+			entry.Category = quest.Category
+			entry.Level = quest.Level
+			entry.Rewards = &messages.QuestReward{
+				XP:              quest.Rewards.XP,
+				Gold:            quest.Rewards.Gold,
+				ItemTemplateIDs: quest.Rewards.ItemTemplateIDs,
+			}
+			anywhere, npcID := quest.ResolveTurnIn()
+			entry.TurnInAnywhere = anywhere
+			entry.TurnInNpcID = npcID
+		}
+		allDone := len(progress.Objectives) > 0
+		for _, op := range progress.Objectives {
+			if !op.Completed {
+				allDone = false
+				break
+			}
+		}
+		entry.ReadyToTurnIn = progress.Status == quests.QuestStatusActive && allDone
+		entries = append(entries, entry)
+	}
+	qt.game.SendMessage() <- messages.NewQuestLogMessage(userID, entries)
+}
+
+func (qt *QuestTracker) snapshotObjectives(quest *quests.Quest, progress *quests.QuestProgress) []messages.QuestObjectiveProgress {
+	if progress == nil {
+		return nil
+	}
+	out := make([]messages.QuestObjectiveProgress, 0, len(progress.Objectives))
+	for _, op := range progress.Objectives {
+		desc := ""
+		required := op.Required
+		if quest != nil {
+			for _, qo := range quest.Objectives {
+				if qo.ID == op.ObjectiveID {
+					desc = qo.Description
+					if qo.Amount > 0 {
+						required = qo.Amount
+					}
+					break
+				}
+			}
+		}
+		out = append(out, messages.QuestObjectiveProgress{
+			ObjectiveID: op.ObjectiveID,
+			Description: desc,
+			Current:     op.Current,
+			Required:    required,
+			Completed:   op.Completed,
+		})
+	}
+	return out
 }
 
 func questProgressMessageType(progress *quests.QuestProgress) messages.MessageType {
