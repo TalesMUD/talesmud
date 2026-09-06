@@ -375,9 +375,20 @@ function createStore() {
     },
     setConnectionState: (status, message = "", reconnectAttempt = 0) => {
       update((state) => {
-        state.connectionStatus = status || "disconnected";
-        state.connectionMessage = message || "";
-        state.reconnectAttempt = reconnectAttempt || 0;
+        const nextStatus = status || "disconnected";
+        const nextMessage = message || "";
+        const nextAttempt = reconnectAttempt || 0;
+        // No-op when unchanged — avoids Svelte churn that flaps the status light.
+        if (
+          state.connectionStatus === nextStatus &&
+          state.connectionMessage === nextMessage &&
+          state.reconnectAttempt === nextAttempt
+        ) {
+          return state;
+        }
+        state.connectionStatus = nextStatus;
+        state.connectionMessage = nextMessage;
+        state.reconnectAttempt = nextAttempt;
         return state;
       });
     },
@@ -476,13 +487,19 @@ function createStore() {
           saveVisitedRooms({});
         }
         if (character) {
+          const prev = state.characterStats || {};
+          // CharacterSelected JSON omits derived combat fields (attackPower,
+          // defense, etc.) — those arrive only via characterUpdate. Keep prior
+          // values instead of forcing 0 (HUD ATK/DEF flicker on reconnect).
+          const keepDerived = (key, fallback) =>
+            character[key] != null ? character[key] : (prev[key] ?? fallback);
           state.characterStats = {
             currentHitPoints: character.currentHitPoints || 0,
             maxHitPoints: character.maxHitPoints || 0,
             currentMana: character.currentMana || 0,
             maxMana: character.maxMana || 0,
             xp: character.xp || 0,
-            xpForNextLevel: state.characterStats.xpForNextLevel || 0,
+            xpForNextLevel: prev.xpForNextLevel || 0,
             level: character.level || 0,
             gold: character.gold || 0,
             inCombat: character.inCombat || false,
@@ -490,12 +507,12 @@ function createStore() {
             equippedSkills: character.equippedSkills || [],
             unspentAttributePoints: character.unspentAttributePoints || 0,
             spentAttributePoints: character.spentAttributePoints || {},
-            attackPower: character.attackPower || 0,
-            attackAttr: character.attackAttr || "STR",
-            weaponDamage: character.weaponDamage || 0,
-            attackMod: character.attackMod || 0,
-            defense: character.defense || 0,
-            manaRegen: character.manaRegen || 0,
+            attackPower: keepDerived("attackPower", 0),
+            attackAttr: keepDerived("attackAttr", "STR"),
+            weaponDamage: keepDerived("weaponDamage", 0),
+            attackMod: keepDerived("attackMod", 0),
+            defense: keepDerived("defense", 0),
+            manaRegen: keepDerived("manaRegen", 0),
           };
           state.gold = character.gold || 0;
         }
@@ -504,29 +521,54 @@ function createStore() {
     },
     updateCharacterStats: (stats) => {
       update((state) => {
-        state.characterStats = {
-          ...state.characterStats,
-          currentHitPoints: stats.currentHitPoints ?? state.characterStats.currentHitPoints,
-          maxHitPoints: stats.maxHitPoints ?? state.characterStats.maxHitPoints,
-          currentMana: stats.currentMana ?? state.characterStats.currentMana,
-          maxMana: stats.maxMana ?? state.characterStats.maxMana,
-          xp: stats.xp ?? state.characterStats.xp,
-          xpForNextLevel: stats.xpForNextLevel ?? state.characterStats.xpForNextLevel,
-          level: stats.level ?? state.characterStats.level,
-          gold: stats.gold ?? state.characterStats.gold,
-          inCombat: stats.inCombat ?? state.characterStats.inCombat,
-          attributes: stats.attributes || state.characterStats.attributes,
-          equippedSkills: stats.equippedSkills || state.characterStats.equippedSkills,
-          unspentAttributePoints: stats.unspentAttributePoints ?? state.characterStats.unspentAttributePoints,
-          spentAttributePoints: stats.spentAttributePoints || state.characterStats.spentAttributePoints,
-          attackPower: stats.attackPower ?? state.characterStats.attackPower,
-          attackAttr: stats.attackAttr || state.characterStats.attackAttr,
-          weaponDamage: stats.weaponDamage ?? state.characterStats.weaponDamage,
-          attackMod: stats.attackMod ?? state.characterStats.attackMod,
-          defense: stats.defense ?? state.characterStats.defense,
-          manaRegen: stats.manaRegen ?? state.characterStats.manaRegen,
+        const prev = state.characterStats;
+        const next = {
+          ...prev,
+          currentHitPoints: stats.currentHitPoints ?? prev.currentHitPoints,
+          maxHitPoints: stats.maxHitPoints ?? prev.maxHitPoints,
+          currentMana: stats.currentMana ?? prev.currentMana,
+          maxMana: stats.maxMana ?? prev.maxMana,
+          xp: stats.xp ?? prev.xp,
+          xpForNextLevel: stats.xpForNextLevel ?? prev.xpForNextLevel,
+          level: stats.level ?? prev.level,
+          gold: stats.gold ?? prev.gold,
+          inCombat: stats.inCombat ?? prev.inCombat,
+          attributes: stats.attributes || prev.attributes,
+          equippedSkills: stats.equippedSkills || prev.equippedSkills,
+          unspentAttributePoints: stats.unspentAttributePoints ?? prev.unspentAttributePoints,
+          spentAttributePoints: stats.spentAttributePoints || prev.spentAttributePoints,
+          attackPower: stats.attackPower ?? prev.attackPower,
+          attackAttr: stats.attackAttr || prev.attackAttr,
+          weaponDamage: stats.weaponDamage ?? prev.weaponDamage,
+          attackMod: stats.attackMod ?? prev.attackMod,
+          defense: stats.defense ?? prev.defense,
+          manaRegen: stats.manaRegen ?? prev.manaRegen,
         };
-        // Keep gold in sync
+        const goldNext = stats.gold !== undefined ? stats.gold : state.gold;
+        // No-op when nothing changed — cuts needless Svelte churn / HUD flicker.
+        const sameStats =
+          next.currentHitPoints === prev.currentHitPoints &&
+          next.maxHitPoints === prev.maxHitPoints &&
+          next.currentMana === prev.currentMana &&
+          next.maxMana === prev.maxMana &&
+          next.xp === prev.xp &&
+          next.xpForNextLevel === prev.xpForNextLevel &&
+          next.level === prev.level &&
+          next.gold === prev.gold &&
+          next.inCombat === prev.inCombat &&
+          next.attributes === prev.attributes &&
+          next.equippedSkills === prev.equippedSkills &&
+          next.unspentAttributePoints === prev.unspentAttributePoints &&
+          next.spentAttributePoints === prev.spentAttributePoints &&
+          next.attackPower === prev.attackPower &&
+          next.attackAttr === prev.attackAttr &&
+          next.weaponDamage === prev.weaponDamage &&
+          next.attackMod === prev.attackMod &&
+          next.defense === prev.defense &&
+          next.manaRegen === prev.manaRegen &&
+          goldNext === state.gold;
+        if (sameStats) return state;
+        state.characterStats = next;
         if (stats.gold !== undefined) {
           state.gold = stats.gold;
         }
