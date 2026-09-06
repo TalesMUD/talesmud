@@ -1,6 +1,6 @@
 # Combat Battle Stage
 
-**Status:** C0 locked · **C1 done** · **C2 done** · **C3 done** · **C5 done** · **C6 done** (duration balance, 2026-09-06) — on engine-june  
+**Status:** C0 locked · **C1–C3 done** · **C5–C6 done** · **C7 polish** (dock unify, larger stage, log scroll, FX vs dock, 2026-09-07) — on engine-june  
 **Follow-up:** Flutter FX (C4 parity) — not in this slice.
 **Milestone:** [Combat Battle Stage](https://github.com/TalesMUD/talesmud/milestone/4)  
 **Branch:** `engine-june` (do not merge to public `master` without Marcus okay)
