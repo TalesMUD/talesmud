@@ -60,9 +60,14 @@
   /* Old pink combat action-bar / hotbars must not bleed through the stage */
   .gameContainer.combat-dimmed :global(.action-bar),
   .gameContainer.combat-dimmed :global(.hotbar-widget),
-  .gameContainer.combat-dimmed :global(.mobile-action-bar) {
+  .gameContainer.combat-dimmed :global(.mobile-action-bar),
+  .gameContainer.combat-dimmed :global(.actionbar),
+  .gameContainer.combat-dimmed :global([data-widget-type="actionbar"]),
+  .gameContainer.combat-dimmed :global([data-widget-type="hotbar"]) {
     visibility: hidden !important;
     opacity: 0 !important;
+    pointer-events: none !important;
+    display: none !important;
   }
 
   .gameContainer.combat-dimmed :global(.quest-notifications),

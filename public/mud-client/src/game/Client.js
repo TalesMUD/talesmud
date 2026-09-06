@@ -265,6 +265,12 @@ function createClient(renderer, characterCreator, muxStore) {
           actorName: msg.actorName || "",
           round: msg.round || 0,
           deadlineMs: msg.deadlineMs || 0,
+          queuedAction: msg.queuedAction || "",
+          queuedSkillId: msg.queuedSkillId || "",
+          queuedTargetId: msg.queuedTargetId || "",
+          skillCooldowns: msg.skillCooldowns || {},
+          nextActionAtMs: msg.nextActionAtMs || 0,
+          decisionDeadlineMs: msg.decisionDeadlineMs || msg.deadlineMs || 0,
           message: msg.message,
         });
       } else {
@@ -288,17 +294,33 @@ function createClient(renderer, characterCreator, muxStore) {
         maxHp: msg.maxHp,
         fxId: msg.fxId || "",
         combatants: msg.combatants || [],
+        queuedAction: msg.queuedAction,
+        queuedSkillId: msg.queuedSkillId,
+        queuedTargetId: msg.queuedTargetId,
+        skillCooldowns: msg.skillCooldowns,
+        nextActionAtMs: msg.nextActionAtMs,
+        decisionDeadlineMs: msg.decisionDeadlineMs,
         message: msg.message,
       });
     }
   };
 
   messageHandlers["combatStatus"] = (msg) => {
-    renderer(msg.message);
-    // Status stays in terminal / battle log only — not room toast overlay.
-    if (mux) {
+    // Queue/CD snapshot for BattleStage — keep out of room toasts.
+    if (mux && mux.applyCombatStatus) {
+      mux.applyCombatStatus({
+        queuedAction: msg.queuedAction || "",
+        queuedSkillId: msg.queuedSkillId || "",
+        queuedTargetId: msg.queuedTargetId || "",
+        skillCooldowns: msg.skillCooldowns || {},
+        nextActionAtMs: msg.nextActionAtMs || 0,
+        decisionDeadlineMs: msg.decisionDeadlineMs || 0,
+        round: msg.round || 0,
+      });
+    } else if (mux) {
       mux.setGameContext({ inCombat: true });
     }
+    if (msg.message) renderer(msg.message);
   };
 
   messageHandlers["combatEnd"] = (msg) => {

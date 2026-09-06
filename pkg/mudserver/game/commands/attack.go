@@ -101,13 +101,12 @@ func (command *AttackCommand) handleInitiateCombat(game def.GameCtrl, message *m
 		return true
 	}
 
-	// Gather all enemies to pull into combat
+	// Gather enemies to pull into combat.
+	// Only CombatStyleSwarm packs the room. CallForHelp alone must NOT multi-pull.
 	enemies := []*npc.NPC{target}
 
-	// Swarm style pulls every remaining hostile; CallForHelp honors ally flags.
 	pullSwarm := target.EnemyTrait != nil && target.EnemyTrait.CombatStyle == npc.CombatStyleSwarm
-	pullHelp := target.EnemyTrait != nil && target.EnemyTrait.CallForHelp
-	if pullSwarm || pullHelp {
+	if pullSwarm {
 		nearbyNPCs := npcManager.GetInstancesInRoom(message.Character.CurrentRoomID)
 		for _, nearby := range nearbyNPCs {
 			if nearby.Entity.ID == target.Entity.ID {
@@ -116,13 +115,7 @@ func (command *AttackCommand) handleInitiateCombat(game def.GameCtrl, message *m
 			if !nearby.IsEnemy() || nearby.IsDead || combatEngine.IsNPCInCombat(nearby.Entity.ID) {
 				continue
 			}
-			if pullSwarm {
-				enemies = append(enemies, nearby)
-				continue
-			}
-			if nearby.EnemyTrait != nil && (nearby.EnemyTrait.CallForHelp || nearby.EnemyTrait.AggroOnSight) {
-				enemies = append(enemies, nearby)
-			}
+			enemies = append(enemies, nearby)
 		}
 	}
 
@@ -162,7 +155,11 @@ func (command *AttackCommand) handleInitiateCombat(game def.GameCtrl, message *m
 	startMsg += fmt.Sprintf("You attack %s!\n\n", target.Name)
 
 	if len(enemies) > 1 {
-		startMsg += fmt.Sprintf("Enemies join the fight: %s\n\n", strings.Join(enemyNames[1:], ", "))
+		if pullSwarm {
+			startMsg += fmt.Sprintf("A swarm joins the fight: %s\n\n", strings.Join(enemyNames[1:], ", "))
+		} else {
+			startMsg += fmt.Sprintf("Enemies join the fight: %s\n\n", strings.Join(enemyNames[1:], ", "))
+		}
 	}
 
 	// Show turn order

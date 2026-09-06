@@ -18,7 +18,7 @@
   export let store;
   export let sendMessage;
 
-  let panel = null; // null | 'skills' | 'items'
+  let panel = null; // null | 'items'
   let nowMs = Date.now();
   let tickTimer = null;
   let fxKey = 0;
@@ -82,7 +82,7 @@
   );
   $: fxIsCrit = fxActive && fxResult === 'crit';
 
-  $: if (visible && deadlineMs > 0) startTick();
+  $: if (visible && (deadlineMs > 0 || resolveAtMs > 0 || !!queuedAction)) startTick();
   else stopTick();
 
   $: consumables = inventory.filter(isConsumableItem);
@@ -94,6 +94,19 @@
   }).filter((s) => s.name);
 
   $: hotbarBinds = normalizeHotbarBinds($settingsStore.interface?.hotbarBinds);
+
+  $: queuedAction = $store.combatQueuedAction || '';
+  $: queuedSkillId = $store.combatQueuedSkillId || '';
+  $: skillCooldowns = $store.combatSkillCooldowns || {};
+  $: nextActionAtMs = Number($store.combatNextActionAtMs) || 0;
+  $: decisionDeadlineMs = Number($store.combatDecisionDeadlineMs) || deadlineMs || 0;
+  $: resolveAtMs = nextActionAtMs > 0
+    ? nextActionAtMs
+    : (queuedAction && decisionDeadlineMs > 0 ? decisionDeadlineMs : 0);
+  $: queueLeftMs = resolveAtMs > 0 ? Math.max(0, resolveAtMs - nowMs) : 0;
+  $: queueLeftSec = Math.ceil(queueLeftMs / 1000);
+  $: queuedLabel = queuedChipLabel(queuedAction, queuedSkillId);
+
 
   // Last-action banner from combatLog (preferred) or combatFx summary.
   $: {
@@ -179,6 +192,51 @@
   function doDefend() { cmd('defend'); }
   function doFlee() { cmd('flee'); }
 
+
+  function queuedChipLabel(action, skillId) {
+    if (!action) return '';
+    if (action === 'skill') return skillDisplayName(skillId) || 'Skill';
+    if (action === 'attack') return 'Attack';
+    if (action === 'defend') return 'Defend';
+    if (action === 'flee') return 'Flee';
+    if (action === 'item') return 'Item';
+    return String(action);
+  }
+
+  function skillCooldownRounds(bind) {
+    if (!bind || bind.kind !== 'skill') return 0;
+    const id = bind.id || '';
+    if (!id) return 0;
+    const cd = skillCooldowns[id];
+    if (cd > 0) return cd;
+    // Also try name-keyed maps just in case
+    const byName = skillCooldowns[bind.name] || skillCooldowns[skillDisplayName(id)];
+    return byName > 0 ? byName : 0;
+  }
+
+  function parseOutcomeRewards(msg) {
+    const text = String(msg || '');
+    const xp = text.match(/\+\s*(\d+)\s*XP/i);
+    const gold = text.match(/\+\s*(\d+)\s*Gold/i);
+    const defeated = [...text.matchAll(/Defeated:\s*(.+)/gi)].map((m) => m[1].trim()).filter(Boolean);
+    // Short summary: first non-banner line
+    const lines = text.split(/\n+/).map((l) => l.trim()).filter((l) => l && !/^[=═]+$/.test(l) && !/^(VICTORY|DEFEAT|ESCAPED|REWARDS|LOOT|COMBAT)/i.test(l));
+    const summary = lines.slice(0, 3).join(' · ');
+    return {
+      xp: xp ? Number(xp[1]) : 0,
+      gold: gold ? Number(gold[1]) : 0,
+      defeated,
+      summary: summary || text.slice(0, 160),
+    };
+  }
+
+  function dismissOutcome() {
+    if (store.dismissCombat) store.dismissCombat();
+    else if (store.clearCombat) store.clearCombat();
+  }
+
+  $: outcomeRewards = parseOutcomeRewards(endMessage);
+
   function castSkill(skill) {
     if (!skill?.name) return;
     cmd(`cast ${skill.name}`);
@@ -236,6 +294,7 @@
   function hotbarSlotDisabled(bind) {
     if (!bind) return true;
     if (bind.kind === 'item' && !findInventoryItem(inventory, bind)) return true;
+    if (bind.kind === 'skill' && skillCooldownRounds(bind) > 0) return true;
     return false;
   }
 
@@ -466,88 +525,96 @@
     </div>
   </section>
 
-  <!-- Bottom controls: last-action banner · hotbar · fixed command dock -->
+  <!-- Bottom controls: banner · queued chip · hotbar-first + compact side rail -->
   {#if phase === 'active'}
     <div class="battle-controls">
       {#if bannerVisible && bannerText}
         <div class="action-banner" aria-live="polite">{bannerText}</div>
       {/if}
 
-      <div class="combat-hotbar" aria-label="Combat hotbar">
-        {#each hotbarBinds as bind, index}
-          {@const item = bind?.kind === 'item' ? findInventoryItem(inventory, bind) : null}
-          <button
-            type="button"
-            class="hb-slot"
-            class:filled={!!bind}
-            class:skill={bind?.kind === 'skill'}
-            class:item={bind?.kind === 'item'}
-            class:action={bind?.kind === 'action'}
-            class:empty={!bind}
-            class:disabled={hotbarSlotDisabled(bind)}
-            title={hotbarSlotTitle(bind)}
-            aria-label={hotbarSlotTitle(bind)}
-            disabled={hotbarSlotDisabled(bind)}
-            on:click={() => activateHotbarSlot(bind)}
-          >
-            <span class="hb-index">{index + 1}</span>
-            {#if bind?.kind === 'item'}
-              <img
-                src={itemArtSrc(item || { name: bind.name, templateId: bind.id, type: 'consumable' })}
-                alt=""
-                on:error={(e) => onItemArtError(e, item || { type: 'consumable' })}
-              />
-            {:else if bind?.kind === 'skill'}
-              <img
-                src={skillGenericArtUrl(bind.id || bind.name)}
-                alt=""
-                on:error={(e) => onItemArtError(e, { type: 'default' })}
-              />
-            {:else if bind?.kind === 'action'}
-              <img
-                src={actionGenericArtUrl(bind.id)}
-                alt=""
-                on:error={(e) => onItemArtError(e, { type: 'default' })}
-              />
-            {/if}
-          </button>
-        {/each}
-      </div>
+      {#if queuedAction && queuedLabel}
+        <div class="queued-chip" aria-live="polite" title="Queued action">
+          <i class="material-icons">hourglass_top</i>
+          <span class="queued-name">{queuedLabel}</span>
+          {#if queueLeftSec > 0}
+            <span class="queued-cd">{queueLeftSec}s</span>
+          {:else}
+            <span class="queued-cd">resolving…</span>
+          {/if}
+        </div>
+      {/if}
 
-      <nav class="battle-dock" aria-label="Combat actions">
-        <button type="button" class="dock-btn primary" class:active={!panel} on:click={doAttack}>
-          <i class="material-icons">flash_on</i>
-          <span>Attack</span>
-        </button>
-        <button type="button" class="dock-btn secondary" on:click={doDefend}>
-          <i class="material-icons">security</i>
-          <span>Defend</span>
-        </button>
-        <button type="button" class="dock-btn items-btn" class:active={panel === 'items'} on:click={() => togglePanel('items')}>
-          <i class="material-icons">shopping_bag</i>
-          <span>Items</span>
-        </button>
-        <button type="button" class="dock-btn flee secondary" on:click={doFlee}>
-          <i class="material-icons">directions_run</i>
-          <span>Flee</span>
-        </button>
-        <button type="button" class="dock-btn skills-overflow" class:active={panel === 'skills'} on:click={() => togglePanel('skills')}>
-          <i class="material-icons">auto_awesome</i>
-          <span>Skills</span>
-        </button>
-      </nav>
+      <div class="dock-row">
+        <div class="combat-hotbar" aria-label="Combat hotbar">
+          {#each hotbarBinds as bind, index}
+            {@const item = bind?.kind === 'item' ? findInventoryItem(inventory, bind) : null}
+            {@const cdRounds = skillCooldownRounds(bind)}
+            <button
+              type="button"
+              class="hb-slot"
+              class:filled={!!bind}
+              class:skill={bind?.kind === 'skill'}
+              class:item={bind?.kind === 'item'}
+              class:action={bind?.kind === 'action'}
+              class:empty={!bind}
+              class:disabled={hotbarSlotDisabled(bind)}
+              class:on-cd={cdRounds > 0}
+              title={cdRounds > 0 ? `${hotbarSlotTitle(bind)} (${cdRounds} rd)` : hotbarSlotTitle(bind)}
+              aria-label={hotbarSlotTitle(bind)}
+              disabled={hotbarSlotDisabled(bind)}
+              on:click={() => activateHotbarSlot(bind)}
+            >
+              <span class="hb-index">{index + 1}</span>
+              {#if bind?.kind === 'item'}
+                <img
+                  src={itemArtSrc(item || { name: bind.name, templateId: bind.id, type: 'consumable' })}
+                  alt=""
+                  on:error={(e) => onItemArtError(e, item || { type: 'consumable' })}
+                />
+              {:else if bind?.kind === 'skill'}
+                <img
+                  src={skillGenericArtUrl(bind.id || bind.name)}
+                  alt=""
+                  on:error={(e) => onItemArtError(e, { type: 'default' })}
+                />
+              {:else if bind?.kind === 'action'}
+                <img
+                  src={actionGenericArtUrl(bind.id)}
+                  alt=""
+                  on:error={(e) => onItemArtError(e, { type: 'default' })}
+                />
+              {/if}
+              {#if cdRounds > 0}
+                <span class="hb-cd-overlay" aria-hidden="true">{cdRounds}</span>
+              {/if}
+            </button>
+          {/each}
+        </div>
+
+        <nav class="battle-rail" aria-label="Combat actions">
+          <button type="button" class="rail-btn primary" title="Attack" aria-label="Attack" on:click={doAttack}>
+            <i class="material-icons">flash_on</i>
+          </button>
+          <button type="button" class="rail-btn" title="Defend" aria-label="Defend" on:click={doDefend}>
+            <i class="material-icons">security</i>
+          </button>
+          <button type="button" class="rail-btn" class:active={panel === 'items'} title="Items" aria-label="Items" on:click={() => togglePanel('items')}>
+            <i class="material-icons">shopping_bag</i>
+          </button>
+          <button type="button" class="rail-btn flee" title="Flee" aria-label="Flee" on:click={doFlee}>
+            <i class="material-icons">directions_run</i>
+          </button>
+        </nav>
+      </div>
     </div>
 
-    {#if panel === 'skills' || panel === 'items'}
+    {#if panel === 'items'}
       <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
       <div class="dock-sheet-backdrop" on:click={() => panel = null}></div>
-      <div class="dock-panel" class:sheet={true} role="menu" aria-label={panel === 'skills' ? 'Skills' : 'Items'}>
+      <div class="dock-panel sheet" role="menu" aria-label="Items">
         <div class="dock-sheet-head">
           <div class="dock-sheet-tabs">
-            <button type="button" class="dock-tab" class:active={panel === 'skills'} on:click={() => panel = 'skills'}>
-              <i class="material-icons">auto_awesome</i> Skills
-            </button>
-            <button type="button" class="dock-tab" class:active={panel === 'items'} on:click={() => panel = 'items'}>
+            <button type="button" class="dock-tab active">
               <i class="material-icons">shopping_bag</i> Items
             </button>
           </div>
@@ -555,26 +622,14 @@
             <i class="material-icons">close</i>
           </button>
         </div>
-        {#if panel === 'skills'}
-          {#if skillEntries.length === 0}
-            <div class="dock-empty">No skills equipped</div>
-          {:else}
-            {#each skillEntries as skill (skill.id || skill.name)}
-              <button type="button" class="dock-panel-btn" on:click={() => castSkill(skill)}>
-                <i class="material-icons">auto_awesome</i> {skill.name}
-              </button>
-            {/each}
-          {/if}
+        {#if consumables.length === 0}
+          <div class="dock-empty">No consumables — bind potions on the hotbar</div>
         {:else}
-          {#if consumables.length === 0}
-            <div class="dock-empty">No consumables</div>
-          {:else}
-            {#each consumables as item (item.id || item.name)}
-              <button type="button" class="dock-panel-btn" on:click={() => useItem(item)}>
-                <i class="material-icons">science</i> {item.name}
-              </button>
-            {/each}
-          {/if}
+          {#each consumables as item (item.id || item.name)}
+            <button type="button" class="dock-panel-btn" on:click={() => useItem(item)}>
+              <i class="material-icons">science</i> {item.name}
+            </button>
+          {/each}
         {/if}
       </div>
     {/if}
@@ -594,10 +649,28 @@
 
   {#if phase === 'ending'}
     <div class="outcome-panel" class:victory={outcome === 'victory'} class:defeat={outcome === 'defeat'} class:fled={outcome === 'fled'}>
-      <div class="outcome-title">{outcomeLabel(outcome)}</div>
-      {#if endMessage}
-        <div class="outcome-msg">{endMessage}</div>
-      {/if}
+      <div class="outcome-card">
+        <div class="outcome-ornament" aria-hidden="true">♦</div>
+        <div class="outcome-title">{outcomeLabel(outcome)}</div>
+        {#if outcomeRewards?.summary}
+          <div class="outcome-summary">{outcomeRewards.summary}</div>
+        {:else if endMessage}
+          <div class="outcome-summary">{endMessage}</div>
+        {/if}
+        {#if outcomeRewards?.xp || outcomeRewards?.gold}
+          <div class="outcome-rewards">
+            {#if outcomeRewards.xp}
+              <span class="reward-chip xp"><i class="material-icons">star</i> +{outcomeRewards.xp} XP</span>
+            {/if}
+            {#if outcomeRewards.gold}
+              <span class="reward-chip gold"><i class="material-icons">monetization_on</i> +{outcomeRewards.gold} Gold</span>
+            {/if}
+          </div>
+        {/if}
+        <button type="button" class="outcome-continue" on:click={dismissOutcome}>
+          Continue
+        </button>
+      </div>
     </div>
   {/if}
   </div><!-- /.battle-frame -->
@@ -695,6 +768,9 @@
   .player-panel,
   .battle-controls,
   .battle-dock,
+  .battle-rail,
+  .dock-row,
+  .queued-chip,
   .dock-panel,
   .dock-sheet-backdrop,
   .combat-log,
@@ -1178,7 +1254,7 @@
   }
 
   .player-bust {
-    width: clamp(88px, 12vw, 124px);
+    width: clamp(44px, 6vw, 62px);
     aspect-ratio: 1;
     border: 2px solid #d4a44a;
     border-radius: 5px;
@@ -1363,6 +1439,100 @@
     font-family: system-ui, sans-serif;
   }
 
+  .queued-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.28rem 0.75rem;
+    border-radius: 999px;
+    border: 1.5px solid rgba(167, 139, 250, 0.65);
+    background: linear-gradient(180deg, rgba(36, 24, 56, 0.95), rgba(12, 10, 20, 0.95));
+    color: #ede9fe;
+    font-family: system-ui, sans-serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), 0 0 12px rgba(167, 139, 250, 0.2);
+    animation: bannerIn 0.18s ease-out;
+  }
+  .queued-chip i { font-size: 1rem; color: #c4b5fd; }
+  .queued-name { letter-spacing: 0.02em; }
+  .queued-cd {
+    font-variant-numeric: tabular-nums;
+    color: #f5d78c;
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(232, 200, 120, 0.35);
+    font-size: 0.75rem;
+  }
+
+  .dock-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    width: 100%;
+  }
+
+  .hb-cd-overlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    border-radius: inherit;
+    background: rgba(0, 0, 0, 0.62);
+    color: #f8fafc;
+    font-family: system-ui, sans-serif;
+    font-weight: 800;
+    font-size: 0.95rem;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
+  }
+  .hb-slot.on-cd img { filter: grayscale(0.7) brightness(0.7); }
+
+  .battle-rail {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem;
+    border-radius: 10px;
+    border: 1.5px solid rgba(212, 164, 74, 0.4);
+    background: rgba(8, 8, 10, 0.82);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    flex-shrink: 0;
+  }
+  .rail-btn {
+    appearance: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    border: 1.5px solid rgba(212, 164, 74, 0.45);
+    background: linear-gradient(180deg, rgba(22, 18, 12, 0.94), rgba(8, 7, 6, 0.94));
+    color: #f5e6c0;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    box-shadow: inset 0 0 0 1px rgba(255, 220, 150, 0.06);
+  }
+  .rail-btn i { font-size: 1.2rem; color: #d4a44a; }
+  .rail-btn:hover,
+  .rail-btn.active {
+    border-color: #e8c878;
+    background: linear-gradient(180deg, rgba(36, 28, 14, 0.96), rgba(14, 12, 8, 0.96));
+  }
+  .rail-btn.primary {
+    border: 2px solid #e8c878;
+    box-shadow:
+      0 0 0 2px rgba(8, 7, 6, 0.95),
+      0 0 0 3px rgba(232, 200, 120, 0.55),
+      0 0 14px rgba(232, 200, 120, 0.28);
+  }
+  .rail-btn.primary i { color: #f5d78c; }
+  .rail-btn.flee { border-color: rgba(239, 68, 68, 0.5); }
+  .rail-btn.flee i { color: #f87171; }
+
   .battle-dock {
     position: relative;
     left: auto;
@@ -1374,11 +1544,6 @@
     z-index: 3;
   }
 
-  .dock-btn.skills-overflow {
-    opacity: 0.88;
-    border-color: rgba(167, 139, 250, 0.45);
-  }
-  .dock-btn.skills-overflow i { color: #c4b5fd; }
 
 
   .dock-btn {
@@ -1502,29 +1667,115 @@
     display: grid;
     place-content: center;
     gap: 0.6rem;
-    background: rgba(0, 0, 0, 0.55);
+    background: rgba(0, 0, 0, 0.62);
     z-index: 5;
     text-align: center;
     padding: 1.5rem;
     animation: stageIn 0.25s ease-out;
   }
 
+  .outcome-card {
+    min-width: min(92%, 360px);
+    max-width: 28rem;
+    padding: 1.4rem 1.6rem 1.25rem;
+    border-radius: 12px;
+    border: 2px solid rgba(212, 164, 74, 0.75);
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(80, 55, 18, 0.55), transparent 60%),
+      linear-gradient(180deg, rgba(28, 20, 10, 0.97), rgba(8, 6, 4, 0.97));
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.55),
+      0 0 0 4px rgba(212, 164, 74, 0.22),
+      0 18px 48px rgba(0, 0, 0, 0.55),
+      inset 0 0 0 1px rgba(255, 220, 150, 0.12);
+  }
+
+  .outcome-ornament {
+    color: #d4a44a;
+    font-size: 0.85rem;
+    letter-spacing: 0.4em;
+    margin-bottom: 0.35rem;
+    opacity: 0.85;
+  }
+
   .outcome-title {
-    font-size: clamp(1.8rem, 5vw, 2.8rem);
+    font-size: clamp(1.8rem, 5vw, 2.6rem);
     letter-spacing: 0.14em;
     color: #e8c878;
     text-transform: uppercase;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.65);
+    margin-bottom: 0.55rem;
   }
 
   .outcome-panel.victory .outcome-title { color: #fbbf24; }
   .outcome-panel.defeat .outcome-title { color: #f87171; }
   .outcome-panel.fled .outcome-title { color: #93c5fd; }
 
+  .outcome-summary {
+    font-family: system-ui, sans-serif;
+    color: #e5e7eb;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    margin: 0 auto 0.85rem;
+    max-width: 24rem;
+    opacity: 0.92;
+  }
+
   .outcome-msg {
     font-family: system-ui, sans-serif;
     max-width: 28rem;
     color: #e5e7eb;
     font-size: 0.95rem;
+  }
+
+  .outcome-rewards {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.45rem;
+    margin-bottom: 1rem;
+  }
+  .reward-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-family: system-ui, sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid rgba(212, 164, 74, 0.55);
+    background: rgba(12, 10, 8, 0.85);
+    color: #f5e6c0;
+  }
+  .reward-chip i { font-size: 1rem; }
+  .reward-chip.xp i { color: #fbbf24; }
+  .reward-chip.gold i { color: #e8c878; }
+
+  .outcome-continue {
+    appearance: none;
+    min-width: 10rem;
+    padding: 0.7rem 1.4rem;
+    border-radius: 8px;
+    border: 2px solid #e8c878;
+    background: linear-gradient(180deg, rgba(48, 34, 14, 0.98), rgba(22, 16, 8, 0.98));
+    color: #f5e6c0;
+    font-family: 'Cinzel', Georgia, serif;
+    font-size: 0.95rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow:
+      0 0 0 3px rgba(8, 7, 6, 0.95),
+      0 0 0 5px rgba(232, 200, 120, 0.55),
+      0 8px 18px rgba(0, 0, 0, 0.45);
+  }
+  .outcome-continue:hover {
+    border-color: #f5d78c;
+    box-shadow:
+      0 0 0 3px rgba(8, 7, 6, 0.95),
+      0 0 0 5px rgba(245, 215, 140, 0.8),
+      0 0 22px rgba(232, 200, 120, 0.35);
   }
 
   /* Primary Attack — double gold border glow (C0 mock) */
@@ -1705,7 +1956,7 @@
       align-items: center;
     }
     .player-bust {
-      width: clamp(64px, 16vw, 84px);
+      width: clamp(36px, 9vw, 48px);
       border-radius: 50%;
       box-shadow:
         0 0 0 2px rgba(8, 8, 10, 0.95),
@@ -1739,13 +1990,26 @@
       width: 100%;
       box-sizing: border-box;
     }
-    .combat-hotbar {
+    .dock-row {
       width: 100%;
+      gap: 0.35rem;
+    }
+    .combat-hotbar {
+      width: auto;
+      flex: 1;
       box-sizing: border-box;
       gap: 0.25rem;
       padding: 0.25rem;
       overflow-x: auto;
       justify-content: flex-start;
+    }
+    .battle-rail {
+      padding: 0.2rem;
+      gap: 0.2rem;
+    }
+    .rail-btn {
+      width: 44px;
+      height: 44px;
     }
     .hb-slot {
       width: clamp(36px, 10vw, 44px);
@@ -1788,11 +2052,6 @@
     .dock-btn.primary i { font-size: 1.55rem; }
     .dock-btn.secondary {
       opacity: 0.95;
-    }
-    /* Skills is overflow for unequipped; hotbar is primary cast UI */
-    .dock-btn.skills-overflow {
-      flex: 0.85;
-      opacity: 0.9;
     }
     .dock-btn:active {
       transform: scale(0.97);

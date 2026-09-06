@@ -70,6 +70,63 @@ func TestSwarmCombatStylePullsRoomHostiles(t *testing.T) {
 	}
 }
 
+func TestMeleeAttackPullsOnlyTargetDespiteCallForHelp(t *testing.T) {
+	g, facade := newNPCTestGame(t)
+	storeTestRoom(t, facade, "R-melee", nil)
+
+	if _, err := facade.NPCsService().Import(&npc.NPC{
+		Entity:           &entities.Entity{ID: "ENM-melee"},
+		Name:             "Cave Bandit",
+		IsTemplate:       true,
+		MaxHitPoints:     20,
+		CurrentHitPoints: 20,
+		Level:            2,
+		EnemyTrait: &npc.EnemyTrait{
+			CombatStyle: npc.CombatStyleMelee,
+			CallForHelp: true,
+			AttackPower: 2,
+		},
+	}); err != nil {
+		t.Fatalf("import template: %v", err)
+	}
+
+	if _, err := g.NPCManager.SpawnInstanceDirect("ENM-melee", "R-melee"); err != nil {
+		t.Fatalf("spawn 1: %v", err)
+	}
+	if _, err := g.NPCManager.SpawnInstanceDirect("ENM-melee", "R-melee"); err != nil {
+		t.Fatalf("spawn 2: %v", err)
+	}
+
+	user := &entities.User{Entity: &entities.Entity{ID: "user-melee"}}
+	character, err := facade.CharactersService().Store(&characters.Character{
+		Entity:           &entities.Entity{ID: "char-melee"},
+		Name:             "Wanderer",
+		BelongsUser:      *traits.BelongsToUser("user-melee"),
+		CurrentRoom:      traits.CurrentRoom{CurrentRoomID: "R-melee"},
+		MaxHitPoints:     50,
+		CurrentHitPoints: 50,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	msg := &messages.Message{
+		FromUser:  user,
+		Character: character,
+		Data:      "attack Cave Bandit",
+	}
+	if !(&commands.AttackCommand{}).Execute(g, msg) {
+		t.Fatal("attack failed")
+	}
+	combatInst := g.CombatController.GetCombatInstance(character.ID)
+	if combatInst == nil {
+		t.Fatal("expected combat instance")
+	}
+	if len(combatInst.Enemies) != 1 {
+		t.Fatalf("melee/CallForHelp must not pack the room, got %d enemies", len(combatInst.Enemies))
+	}
+}
+
 func TestCombatGraceBlocksImmediateReengage(t *testing.T) {
 	g, _ := newNPCTestGame(t)
 	g.CombatController.markCombatGrace("char-grace")

@@ -568,6 +568,16 @@ func NewCombatEndMessage(userID, text, outcome string) *CombatEndMessage {
 	}
 }
 
+// CombatQueueState is the player's pending action + skill cooldowns for BattleStage.
+type CombatQueueState struct {
+	QueuedAction       string         `json:"queuedAction,omitempty"`
+	QueuedSkillID      string         `json:"queuedSkillId,omitempty"`
+	QueuedTargetID     string         `json:"queuedTargetId,omitempty"`
+	SkillCooldowns     map[string]int `json:"skillCooldowns"` // always present so client can clear overlays
+	NextActionAtMs     int64          `json:"nextActionAtMs,omitempty"`     // unix ms resolve gate
+	DecisionDeadlineMs int64          `json:"decisionDeadlineMs,omitempty"` // unix ms decision window end
+}
+
 // CombatTurnMessage notifies clients whose turn it is (player decision window).
 type CombatTurnMessage struct {
 	MessageResponse
@@ -575,6 +585,7 @@ type CombatTurnMessage struct {
 	ActorName  string `json:"actorName"`
 	Round      int    `json:"round"`
 	DeadlineMs int64  `json:"deadlineMs,omitempty"` // unix ms; set for player turns
+	CombatQueueState
 }
 
 // NewCombatTurnMessage builds a combatTurn / turnStart payload.
@@ -609,6 +620,28 @@ type CombatActionMessage struct {
 	MaxHP       int32           `json:"maxHp,omitempty"`
 	FxID        string          `json:"fxId,omitempty"` // slash | cast | miss | death | defend | flee
 	Combatants  []CombatantView `json:"combatants,omitempty"`
+	CombatQueueState
+}
+
+// CombatStatusMessage carries queue/cooldown snapshots without resolving an action.
+type CombatStatusMessage struct {
+	MessageResponse
+	Round int `json:"round,omitempty"`
+	CombatQueueState
+}
+
+// NewCombatStatusMessage builds a combatStatus queue/CD snapshot for one player.
+func NewCombatStatusMessage(userID, text string, round int, queue CombatQueueState) *CombatStatusMessage {
+	return &CombatStatusMessage{
+		MessageResponse: MessageResponse{
+			Audience:   MessageAudienceUser,
+			AudienceID: userID,
+			Type:       MessageTypeCombatStatus,
+			Message:    text,
+		},
+		Round:            round,
+		CombatQueueState: queue,
+	}
 }
 
 // NewCombatActionMessage builds a combatAction with structured fields + prose Message.
