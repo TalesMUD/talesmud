@@ -57,6 +57,14 @@
     pointer-events: none;
   }
 
+  /* Old pink combat action-bar / hotbars must not bleed through the stage */
+  .gameContainer.combat-dimmed :global(.action-bar),
+  .gameContainer.combat-dimmed :global(.hotbar-widget),
+  .gameContainer.combat-dimmed :global(.mobile-action-bar) {
+    visibility: hidden !important;
+    opacity: 0 !important;
+  }
+
   .gameContainer.combat-dimmed :global(.quest-notifications),
   .gameContainer.combat-dimmed :global(.character-switcher) {
     /* keep dimmed with parent; BattleStage is outside pointer-events:none sibling */

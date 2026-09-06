@@ -2,6 +2,7 @@
   import { onDestroy } from 'svelte';
   import { hashedAvatar } from '../portraitSrc.js';
   import { skillDisplayName, isConsumableItem } from '../hudPrefs.js';
+  import { backend } from '../../api/base.js';
 
   export let store;
   export let sendMessage;
@@ -23,6 +24,10 @@
   $: fx = $store.combatFx;
   $: character = $store.character;
   $: stats = $store.characterStats || {};
+  $: roomBackground = $store.background || '';
+  $: arenaBgUrl = roomBackground
+    ? `${backend}/backgrounds/${roomBackground}.png`
+    : '';
   $: inventory = $store.inventory || [];
   $: equippedSkills = stats.equippedSkills || character?.equippedSkills || [];
   $: selfId = character?.id || '';
@@ -179,9 +184,16 @@
 <div class="battle-stage" class:ending={phase === 'ending'} role="dialog" aria-label="Combat">
   <div class="battle-backdrop" aria-hidden="true"></div>
   <div class="battle-frame">
+  <div
+    class="arena-art"
+    class:has-art={!!arenaBgUrl}
+    style={arenaBgUrl ? `background-image: url('${arenaBgUrl}')` : ''}
+    aria-hidden="true"
+  ></div>
+  <div class="arena-vignette" aria-hidden="true"></div>
 
   <header class="battle-header">
-    <i class="material-icons header-icon">explore</i>
+    <i class="material-icons header-icon" aria-hidden="true">explore</i>
     <span class="header-label">COMBAT</span>
     {#if turn?.round}
       <span class="round-chip">Round {turn.round}</span>
@@ -342,7 +354,7 @@
       {/if}
       <div class="status-chips">
         {#if selfClass}
-          <span class="chip class-chip"><i class="material-icons">swords</i> {selfClass}</span>
+          <span class="chip class-chip"><i class="material-icons">military_tech</i> {selfClass}</span>
         {/if}
         {#if isMyTurn}
           <span class="chip focus-chip"><i class="material-icons">flare</i> Focused</span>
@@ -355,7 +367,7 @@
   {#if phase === 'active'}
     <nav class="battle-dock" aria-label="Combat actions">
       <button type="button" class="dock-btn primary" class:active={!panel} on:click={doAttack}>
-        <i class="material-icons">swords</i>
+        <i class="material-icons">flash_on</i>
         <span>Attack</span>
       </button>
       <button type="button" class="dock-btn" class:active={panel === 'skills'} on:click={() => togglePanel('skills')}>
@@ -418,15 +430,17 @@
     {/if}
   {/if}
 
-  <!-- Thin combat log -->
-  {#if log.length}
-    <aside class="combat-log" aria-label="Combat log">
-      <div class="combat-log-title">♦ COMBAT LOG</div>
+  <!-- Combat log — full-width framed panel (mock) -->
+  <aside class="combat-log" aria-label="Combat log">
+    <div class="combat-log-title">♦ COMBAT LOG</div>
+    {#if log.length}
       {#each log.slice(-4) as line (line.id)}
         <div class="combat-log-line">&gt; {line.text}</div>
       {/each}
-    </aside>
-  {/if}
+    {:else}
+      <div class="combat-log-line muted">&gt; Waiting for the clash…</div>
+    {/if}
+  </aside>
 
   {#if phase === 'ending'}
     <div class="outcome-panel" class:victory={outcome === 'victory'} class:defeat={outcome === 'defeat'} class:fled={outcome === 'fled'}>
@@ -467,17 +481,44 @@
     max-height: calc(100vh - 2.5rem);
     display: grid;
     grid-template-rows: auto auto 1fr auto auto;
-    border: 1.5px solid rgba(212, 164, 74, 0.55);
+    border: 1.5px solid rgba(212, 164, 74, 0.65);
     border-radius: 14px;
     overflow: hidden;
     box-shadow:
       0 24px 64px rgba(0, 0, 0, 0.65),
       0 0 0 1px rgba(0, 0, 0, 0.4),
-      inset 0 0 0 1px rgba(255, 220, 150, 0.08);
+      inset 0 0 0 1px rgba(255, 220, 150, 0.1);
+    background: #0a0b0e;
+  }
+
+  /* Room arena art — dimmed cover like C0 mock alley/corridor */
+  .arena-art {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-color: #0a0b0e;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: brightness(0.42) saturate(0.75) contrast(1.05);
+    transform: scale(1.02);
+  }
+  .arena-art:not(.has-art) {
+    background-image:
+      radial-gradient(ellipse at 70% 35%, rgba(60, 35, 22, 0.55), transparent 55%),
+      radial-gradient(ellipse at 25% 75%, rgba(25, 35, 55, 0.4), transparent 50%);
+  }
+  .arena-vignette {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
     background:
-      radial-gradient(ellipse at 72% 28%, rgba(80, 40, 20, 0.4), transparent 55%),
-      radial-gradient(ellipse at 18% 82%, rgba(30, 50, 80, 0.28), transparent 50%),
-      rgba(8, 9, 12, 0.96);
+      radial-gradient(ellipse at 50% 42%, transparent 22%, rgba(0, 0, 0, 0.45) 62%, rgba(0, 0, 0, 0.82) 100%),
+      linear-gradient(to top, rgba(0, 0, 0, 0.78) 0%, rgba(0, 0, 0, 0.25) 28%, transparent 48%),
+      linear-gradient(to bottom, rgba(0, 0, 0, 0.4) 0%, transparent 22%),
+      linear-gradient(to right, rgba(0, 0, 0, 0.35) 0%, transparent 18%, transparent 82%, rgba(0, 0, 0, 0.35) 100%);
   }
 
   @keyframes stageIn {
@@ -504,6 +545,7 @@
   .player-panel,
   .battle-dock,
   .dock-panel,
+  .dock-sheet-backdrop,
   .combat-log,
   .outcome-panel {
     position: relative;
@@ -514,19 +556,21 @@
     display: flex;
     align-items: center;
     gap: 0.55rem;
-    padding: 1rem 1.25rem 0.35rem;
-    letter-spacing: 0.12em;
+    padding: 0.9rem 1.25rem 0.45rem;
+    letter-spacing: 0.14em;
   }
 
   .header-icon {
     color: #d4a44a;
-    font-size: 1.35rem;
+    font-size: 1.4rem;
+    text-shadow: 0 0 10px rgba(212, 164, 74, 0.35);
   }
 
   .header-label {
     color: #e8c878;
-    font-size: 1.05rem;
-    font-weight: 600;
+    font-size: 1.08rem;
+    font-weight: 700;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.65);
   }
 
   .round-chip,
@@ -534,19 +578,33 @@
     font-family: system-ui, sans-serif;
     font-size: 0.72rem;
     letter-spacing: 0.04em;
-    padding: 0.15rem 0.55rem;
+    padding: 0.18rem 0.6rem;
     border-radius: 999px;
-    border: 1px solid rgba(212, 164, 74, 0.45);
+    border: 1px solid rgba(212, 164, 74, 0.55);
     color: #f5e6c0;
-    background: rgba(20, 14, 8, 0.65);
+    background: rgba(12, 10, 8, 0.78);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
   }
 
   .header-rule {
     flex: 1;
     height: 1px;
-    margin-left: 0.5rem;
-    background: linear-gradient(90deg, rgba(212, 164, 74, 0.55), transparent);
+    margin-left: 0.55rem;
+    position: relative;
+    background: linear-gradient(90deg, rgba(212, 164, 74, 0.75), rgba(212, 164, 74, 0.2), transparent);
   }
+  .header-rule::before,
+  .header-rule::after {
+    content: '♦';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(212, 164, 74, 0.75);
+    font-size: 0.55rem;
+    line-height: 1;
+  }
+  .header-rule::before { left: 0; }
+  .header-rule::after { left: 28%; opacity: 0.55; }
 
   .decision-timer {
     margin: 0.25rem 1.25rem 0;
@@ -602,14 +660,18 @@
 
   .nameplate {
     display: inline-block;
-    padding: 0.2rem 0.7rem;
+    padding: 0.22rem 0.75rem;
     margin-bottom: 0.3rem;
-    border: 1.5px solid rgba(212, 164, 74, 0.65);
-    border-radius: 4px;
-    background: rgba(10, 8, 6, 0.85);
+    border: 1.5px solid rgba(212, 164, 74, 0.8);
+    border-radius: 3px;
+    background: linear-gradient(180deg, rgba(28, 20, 10, 0.92), rgba(8, 6, 4, 0.92));
     color: #f5e6c0;
-    font-size: 0.85rem;
-    letter-spacing: 0.03em;
+    font-size: 0.88rem;
+    letter-spacing: 0.04em;
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.55),
+      inset 0 0 0 1px rgba(255, 220, 150, 0.12),
+      0 4px 12px rgba(0, 0, 0, 0.35);
   }
 
   .hp-row {
@@ -670,19 +732,29 @@
 
   .target-ring {
     position: absolute;
-    bottom: 6%;
+    bottom: 4%;
     left: 50%;
-    width: 70%;
-    height: 18%;
+    width: 78%;
+    height: 20%;
     transform: translateX(-50%);
-    border: 2px dashed rgba(250, 204, 21, 0.9);
+    border: 2px dashed rgba(250, 204, 21, 0.95);
     border-radius: 50%;
-    box-shadow: 0 0 12px rgba(250, 204, 21, 0.35);
+    box-shadow:
+      0 0 14px rgba(250, 204, 21, 0.45),
+      0 0 28px rgba(212, 164, 74, 0.2),
+      inset 0 0 10px rgba(250, 204, 21, 0.12);
     pointer-events: none;
   }
 
   .enemy-card.targeted .nameplate {
-    box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.5);
+    border-color: #facc15;
+    box-shadow:
+      0 0 0 1px rgba(250, 204, 21, 0.55),
+      inset 0 0 0 1px rgba(255, 220, 150, 0.15),
+      0 4px 14px rgba(0, 0, 0, 0.4);
+  }
+  .enemy-card.targeted .enemy-sprite {
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 10px rgba(250, 204, 21, 0.25));
   }
 
   /* ===== C5 Combat FX pack (CSS/transform only) ===== */
@@ -938,21 +1010,33 @@
   .player-panel {
     position: absolute;
     left: 1.1rem;
-    bottom: 7.25rem;
+    bottom: 7.6rem;
     display: flex;
     align-items: flex-end;
-    gap: 0.85rem;
-    max-width: min(420px, 88%);
+    gap: 0.9rem;
+    max-width: min(440px, 90%);
+    padding: 0.45rem 0.55rem 0.45rem 0.45rem;
+    border: 1.5px solid rgba(212, 164, 74, 0.45);
+    border-radius: 8px;
+    background: linear-gradient(135deg, rgba(14, 12, 10, 0.72), rgba(6, 6, 8, 0.55));
+    box-shadow:
+      0 10px 28px rgba(0, 0, 0, 0.45),
+      inset 0 0 0 1px rgba(255, 220, 150, 0.08);
+    backdrop-filter: blur(2px);
   }
 
   .player-bust {
-    width: clamp(84px, 12vw, 120px);
+    width: clamp(88px, 12vw, 124px);
     aspect-ratio: 1;
-    border: 2px solid rgba(212, 164, 74, 0.75);
-    border-radius: 6px;
+    border: 2px solid #d4a44a;
+    border-radius: 5px;
     overflow: visible; /* C5: allow float numbers / puff outside bust */
-    background: rgba(8, 8, 10, 0.9);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 220, 150, 0.12);
+    background: rgba(8, 8, 10, 0.95);
+    box-shadow:
+      0 0 0 3px rgba(8, 8, 10, 0.95),
+      0 0 0 5px rgba(212, 164, 74, 0.55),
+      0 8px 24px rgba(0, 0, 0, 0.5),
+      inset 0 0 0 1px rgba(255, 220, 150, 0.2);
     flex-shrink: 0;
   }
 
@@ -961,88 +1045,108 @@
     height: 100%;
     object-fit: cover;
     object-position: top center;
-    border-radius: 4px;
+    border-radius: 3px;
     display: block;
   }
 
   .player-meta {
     min-width: 0;
     flex: 1;
+    padding-right: 0.25rem;
   }
 
   .player-name {
-    font-size: clamp(1rem, 2vw, 1.25rem);
-    color: #f8fafc;
-    margin-bottom: 0.35rem;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
+    font-size: clamp(1.05rem, 2vw, 1.3rem);
+    color: #e8c878;
+    margin-bottom: 0.4rem;
+    letter-spacing: 0.03em;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.75);
   }
 
   .player-hp,
   .player-mp {
-    margin-bottom: 0.3rem;
-    min-width: 180px;
+    margin-bottom: 0.35rem;
+    min-width: 190px;
+  }
+
+  .player-panel .hp-track {
+    height: 10px;
+    border-radius: 3px;
+    border-color: rgba(212, 164, 74, 0.45);
   }
 
   .status-chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.35rem;
-    margin-top: 0.35rem;
+    gap: 0.4rem;
+    margin-top: 0.4rem;
   }
 
   .chip {
     display: inline-flex;
     align-items: center;
-    gap: 0.2rem;
+    gap: 0.25rem;
     font-family: system-ui, sans-serif;
-    font-size: 0.68rem;
-    padding: 0.15rem 0.45rem;
+    font-size: 0.7rem;
+    padding: 0.18rem 0.5rem;
     border-radius: 4px;
-    border: 1px solid rgba(212, 164, 74, 0.5);
-    background: rgba(12, 10, 8, 0.75);
+    border: 1px solid rgba(212, 164, 74, 0.6);
+    background: rgba(12, 10, 8, 0.82);
     color: #f5e6c0;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
   }
 
-  .chip i { font-size: 0.85rem; }
-  .focus-chip { border-color: rgba(168, 85, 247, 0.55); color: #e9d5ff; }
+  .chip i { font-size: 0.9rem; color: #d4a44a; }
+  .focus-chip {
+    border-color: rgba(168, 85, 247, 0.65);
+    color: #e9d5ff;
+  }
+  .focus-chip i { color: #c084fc; }
 
   .battle-dock {
     position: absolute;
     left: 50%;
-    bottom: 3.85rem;
+    bottom: 4.15rem;
     transform: translateX(-50%);
     display: flex;
-    gap: 0.45rem;
-    padding: 0.35rem;
+    gap: 0.55rem;
+    padding: 0.2rem;
     z-index: 3;
   }
 
   .dock-btn {
-    min-width: clamp(72px, 10vw, 96px);
-    padding: 0.55rem 0.65rem 0.45rem;
+    min-width: clamp(84px, 11vw, 108px);
+    min-height: 74px;
+    padding: 0.65rem 0.7rem 0.5rem;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.15rem;
-    border-radius: 6px;
-    border: 1.5px solid rgba(212, 164, 74, 0.55);
-    background: rgba(12, 10, 8, 0.88);
+    justify-content: center;
+    gap: 0.2rem;
+    border-radius: 7px;
+    border: 1.5px solid rgba(212, 164, 74, 0.7);
+    background: linear-gradient(180deg, rgba(22, 18, 12, 0.94), rgba(8, 7, 6, 0.94));
     color: #f5e6c0;
     cursor: pointer;
     font-family: 'Cinzel', Georgia, serif;
-    font-size: 0.72rem;
-    letter-spacing: 0.04em;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+    box-shadow:
+      0 8px 18px rgba(0, 0, 0, 0.4),
+      inset 0 0 0 1px rgba(255, 220, 150, 0.08);
   }
 
-  .dock-btn i { font-size: 1.25rem; color: #d4a44a; }
+  .dock-btn i { font-size: 1.45rem; color: #d4a44a; }
   .dock-btn:hover,
   .dock-btn.active {
     border-color: #e8c878;
-    box-shadow: 0 0 0 1px rgba(232, 200, 120, 0.35), 0 6px 16px rgba(0, 0, 0, 0.35);
-    background: rgba(30, 22, 12, 0.95);
+    box-shadow:
+      0 0 0 1px rgba(232, 200, 120, 0.35),
+      0 8px 18px rgba(0, 0, 0, 0.4),
+      inset 0 0 0 1px rgba(255, 220, 150, 0.12);
+    background: linear-gradient(180deg, rgba(36, 28, 14, 0.96), rgba(14, 12, 8, 0.96));
   }
-  .dock-btn.flee { border-color: rgba(239, 68, 68, 0.45); }
+  .dock-btn.flee { border-color: rgba(239, 68, 68, 0.5); }
   .dock-btn.flee i { color: #f87171; }
 
   .dock-panel {
@@ -1087,33 +1191,41 @@
 
   .combat-log {
     position: absolute;
-    left: 50%;
+    left: 0.75rem;
+    right: 0.75rem;
     bottom: 0.55rem;
-    transform: translateX(-50%);
-    width: min(92%, 720px);
-    max-height: 3.6rem;
+    width: auto;
+    max-height: 3.75rem;
     overflow: hidden;
-    padding: 0.35rem 0.65rem 0.45rem;
-    border: 1px solid rgba(212, 164, 74, 0.4);
+    padding: 0.4rem 0.75rem 0.5rem;
+    border: 1.5px solid rgba(212, 164, 74, 0.55);
     border-radius: 6px;
-    background: rgba(6, 6, 8, 0.88);
+    background: linear-gradient(180deg, rgba(12, 10, 8, 0.92), rgba(4, 4, 6, 0.92));
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 220, 150, 0.06),
+      0 4px 14px rgba(0, 0, 0, 0.35);
     font-family: system-ui, sans-serif;
-    font-size: 0.7rem;
-    line-height: 1.25;
+    font-size: 0.72rem;
+    line-height: 1.3;
     color: #d1d5db;
   }
 
   .combat-log-title {
     color: #d4a44a;
-    font-size: 0.62rem;
-    letter-spacing: 0.08em;
-    margin-bottom: 0.15rem;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.2rem;
   }
 
   .combat-log-line {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .combat-log-line.muted {
+    color: #9ca3af;
+    opacity: 0.85;
   }
 
   .outcome-panel {
@@ -1147,13 +1259,28 @@
     font-size: 0.95rem;
   }
 
+  /* Primary Attack — double gold border glow (C0 mock) */
   .dock-btn.primary {
-    border-color: #e8c878;
-    border-width: 2px;
-    background: rgba(36, 26, 12, 0.95);
-    box-shadow: 0 0 0 1px rgba(232, 200, 120, 0.25), 0 6px 16px rgba(0, 0, 0, 0.35);
+    border: 2px solid #e8c878;
+    background: linear-gradient(180deg, rgba(48, 34, 14, 0.98), rgba(22, 16, 8, 0.98));
+    box-shadow:
+      0 0 0 3px rgba(8, 7, 6, 0.95),
+      0 0 0 5px rgba(232, 200, 120, 0.75),
+      0 0 22px rgba(232, 200, 120, 0.35),
+      0 8px 18px rgba(0, 0, 0, 0.45),
+      inset 0 0 0 1px rgba(255, 230, 170, 0.18);
   }
-  .dock-btn.primary i { color: #f5d78c; }
+  .dock-btn.primary i { color: #f5d78c; text-shadow: 0 0 10px rgba(232, 200, 120, 0.45); }
+  .dock-btn.primary:hover,
+  .dock-btn.primary.active {
+    border-color: #f5d78c;
+    box-shadow:
+      0 0 0 3px rgba(8, 7, 6, 0.95),
+      0 0 0 5px rgba(245, 215, 140, 0.9),
+      0 0 28px rgba(232, 200, 120, 0.45),
+      0 8px 18px rgba(0, 0, 0, 0.45),
+      inset 0 0 0 1px rgba(255, 230, 170, 0.22);
+  }
 
   .decision-timer-label {
     display: none;
@@ -1305,12 +1432,17 @@
       border-radius: 8px;
       background: rgba(8, 8, 10, 0.88);
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+      backdrop-filter: none;
       gap: 0.65rem;
       align-items: center;
     }
     .player-bust {
       width: clamp(64px, 16vw, 84px);
       border-radius: 50%;
+      box-shadow:
+        0 0 0 2px rgba(8, 8, 10, 0.95),
+        0 0 0 3px rgba(212, 164, 74, 0.45),
+        0 4px 12px rgba(0, 0, 0, 0.4);
     }
     .player-hp,
     .player-mp {
@@ -1459,12 +1591,16 @@
       grid-area: log;
       position: relative;
       left: auto;
+      right: auto;
       bottom: auto;
-      transform: none;
       width: calc(100% - 1.2rem);
       margin: 0 0.6rem 0.35rem;
       max-height: 2.4rem;
       font-size: 0.62rem;
+    }
+
+    .arena-art {
+      filter: brightness(0.38) saturate(0.7);
     }
 
     .outcome-panel {
