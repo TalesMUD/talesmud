@@ -177,11 +177,12 @@ func (y *YAMLNPC) ToEntity() *npc.NPC {
 	// Convert enemy trait if present
 	if y.EnemyTrait != nil {
 		// Apply difficulty-based multipliers to base stats
-		finalHP, finalAttack, finalDefense := balance.ApplyMultipliers(
+		finalHP, finalAttack, finalDefense := balance.ApplyEnemyMultipliers(
 			y.MaxHitPoints,
 			y.EnemyTrait.AttackPower,
 			y.EnemyTrait.Defense,
 			y.EnemyTrait.Difficulty,
+			y.Name,
 		)
 
 		// Update NPC HP with multiplied value
