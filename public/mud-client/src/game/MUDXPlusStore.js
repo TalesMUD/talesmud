@@ -144,6 +144,45 @@ function saveVisitedRooms(rooms) {
 
 
 let combatLogSeq = 0;
+
+function applyCombatQueueFields(state, msg) {
+  if (!msg || typeof msg !== "object") return state;
+  if (msg.queuedAction !== undefined) {
+    state.combatQueuedAction = msg.queuedAction || "";
+  }
+  if (msg.queuedSkillId !== undefined) {
+    state.combatQueuedSkillId = msg.queuedSkillId || "";
+  }
+  if (msg.queuedTargetId !== undefined) {
+    state.combatQueuedTargetId = msg.queuedTargetId || "";
+  }
+  if (msg.skillCooldowns !== undefined) {
+    state.combatSkillCooldowns =
+      msg.skillCooldowns && typeof msg.skillCooldowns === "object"
+        ? { ...msg.skillCooldowns }
+        : {};
+  }
+  if (msg.nextActionAtMs !== undefined) {
+    state.combatNextActionAtMs = Number(msg.nextActionAtMs) || 0;
+  }
+  if (msg.decisionDeadlineMs !== undefined) {
+    state.combatDecisionDeadlineMs = Number(msg.decisionDeadlineMs) || 0;
+  } else if (msg.deadlineMs !== undefined && Number(msg.deadlineMs) > 0) {
+    state.combatDecisionDeadlineMs = Number(msg.deadlineMs) || 0;
+  }
+  return state;
+}
+
+function clearCombatQueueFields(state) {
+  state.combatQueuedAction = "";
+  state.combatQueuedSkillId = "";
+  state.combatQueuedTargetId = "";
+  state.combatSkillCooldowns = {};
+  state.combatNextActionAtMs = 0;
+  state.combatDecisionDeadlineMs = 0;
+  return state;
+}
+
 function nextCombatLogId() {
   combatLogSeq += 1;
   return `clog-${Date.now()}-${combatLogSeq}`;
@@ -337,6 +376,12 @@ function createStore() {
     combatPlayers: [],
     combatTargetId: null,
     combatTurn: null, // { actorId, actorName, round, deadlineMs }
+    combatQueuedAction: "", // attack|defend|flee|skill|item
+    combatQueuedSkillId: "",
+    combatQueuedTargetId: "",
+    combatSkillCooldowns: {}, // { skillId: roundsRemaining }
+    combatNextActionAtMs: 0,
+    combatDecisionDeadlineMs: 0,
     combatLog: [], // thin optional log [{id,text}]
     combatOutcome: null, // victory | defeat | fled | timeout
     combatFx: null, // { fxId, at, targetId, actorId, damage, heal, result, action }
@@ -744,6 +789,7 @@ function createStore() {
         state.combatTargetId = nextEnemies[0]?.id || null;
         state.combatTurn = null;
         state.combatFx = null;
+        clearCombatQueueFields(state);
         state.combatLog = message ? [{ id: nextCombatLogId(), text: String(message).trim() }] : [];
         return state;
       });
@@ -761,9 +807,19 @@ function createStore() {
               deadlineMs: turn.deadlineMs || 0,
             }
           : null;
+        applyCombatQueueFields(state, turn);
         if (turn?.message) {
           state.combatLog = appendCombatLog(state.combatLog, turn.message);
         }
+        return state;
+      });
+    },
+
+    applyCombatStatus: (msg) => {
+      update((state) => {
+        state.inCombat = true;
+        if (state.combatPhase === "idle") state.combatPhase = "active";
+        applyCombatQueueFields(state, msg);
         return state;
       });
     },
@@ -823,6 +879,13 @@ function createStore() {
         if (msg?.message) {
           state.combatLog = appendCombatLog(state.combatLog, msg.message);
         }
+        applyCombatQueueFields(state, msg);
+        // Action resolve clears the chip when server omits queuedAction
+        if (msg && msg.queuedAction === undefined && msg.action) {
+          state.combatQueuedAction = "";
+          state.combatQueuedSkillId = "";
+          state.combatQueuedTargetId = "";
+        }
         return state;
       });
     },
@@ -834,6 +897,7 @@ function createStore() {
         state.combatOutcome = outcome || "victory";
         state.combatEndMessage = message || "";
         state.combatTurn = null;
+        clearCombatQueueFields(state);
         if (message) {
           state.combatLog = appendCombatLog(state.combatLog, message);
         }
@@ -841,7 +905,7 @@ function createStore() {
         return state;
       });
 
-      // Brief outcome panel, then return to room UI
+      // Longer outcome panel — Continue / dismissCombat also clears early
       setTimeout(() => {
         update((state) => {
           if (state.combatPhase !== "ending") return state;
@@ -854,9 +918,28 @@ function createStore() {
           state.combatTurn = null;
           state.combatFx = null;
           state.combatLog = [];
+          clearCombatQueueFields(state);
           return state;
         });
-      }, 2800);
+      }, 12000);
+    },
+
+    dismissCombat: () => {
+      update((state) => {
+        state.inCombat = false;
+        state.combatPhase = "idle";
+        state.combatOutcome = null;
+        state.combatEndMessage = "";
+        state.combatEnemies = [];
+        state.combatPlayers = [];
+        state.combatTargetId = null;
+        state.combatTurn = null;
+        state.combatFx = null;
+        state.combatLog = [];
+        clearCombatQueueFields(state);
+        state.characterStats = { ...state.characterStats, inCombat: false };
+        return state;
+      });
     },
 
     clearCombat: () => {
@@ -871,6 +954,7 @@ function createStore() {
         state.combatTurn = null;
         state.combatFx = null;
         state.combatLog = [];
+        clearCombatQueueFields(state);
         state.characterStats = { ...state.characterStats, inCombat: false };
         return state;
       });

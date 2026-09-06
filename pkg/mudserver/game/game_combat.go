@@ -399,6 +399,51 @@ func (c *CombatController) processNPCTurns(instance *combat.CombatInstance) {
 	}
 }
 
+
+// playerCombatQueueState snapshots queue + cooldowns + pacing clocks for one player.
+func (c *CombatController) playerCombatQueueState(instance *combat.CombatInstance, playerID string) messages.CombatQueueState {
+	state := messages.CombatQueueState{}
+	if instance == nil {
+		return state
+	}
+	if !instance.NextActionAt.IsZero() {
+		state.NextActionAtMs = instance.NextActionAt.UnixMilli()
+	}
+	if !instance.DecisionDeadline.IsZero() {
+		state.DecisionDeadlineMs = instance.DecisionDeadline.UnixMilli()
+	}
+	player := instance.GetPlayerByID(playerID)
+	if player == nil {
+		return state
+	}
+	if player.QueuedAction != "" {
+		state.QueuedAction = string(player.QueuedAction)
+		state.QueuedSkillID = player.QueuedSkillID
+		state.QueuedTargetID = player.QueuedTargetID
+	}
+	cds := make(map[string]int)
+	for k, v := range player.SkillCooldowns {
+		if v > 0 {
+			cds[k] = v
+		}
+	}
+	state.SkillCooldowns = cds
+	return state
+}
+
+// emitPlayerQueueUpdate pushes combatStatus so BattleStage can show queued chips / CD overlays immediately.
+func (c *CombatController) emitPlayerQueueUpdate(instance *combat.CombatInstance, characterID, prose string) {
+	if instance == nil {
+		return
+	}
+	char, err := c.game.Facade.CharactersService().FindByID(characterID)
+	if err != nil || char == nil {
+		return
+	}
+	queue := c.playerCombatQueueState(instance, characterID)
+	c.game.sendMessage <- messages.NewCombatStatusMessage(char.BelongsUserID, prose, instance.Round, queue)
+}
+
 // notifyPlayersInCombat sends a prose combat line to all living players (terminal/console path).
 func (c *CombatController) notifyPlayersInCombat(instance *combat.CombatInstance, message string) {
 	c.notifyCombatAction(instance, messages.CombatActionMessage{}, message)
@@ -419,6 +464,7 @@ func (c *CombatController) notifyCombatAction(instance *combat.CombatInstance, a
 				continue
 			}
 			payload := action
+			payload.CombatQueueState = c.playerCombatQueueState(instance, player.ID)
 			c.game.sendMessage <- messages.NewCombatActionMessage(char.BelongsUserID, prose, payload)
 		}
 	}
@@ -444,9 +490,18 @@ func (c *CombatController) emitCombatTurn(instance *combat.CombatInstance, actor
 		if err != nil {
 			continue
 		}
-		c.game.sendMessage <- messages.NewCombatTurnMessage(
+		msg := messages.NewCombatTurnMessage(
 			char.BelongsUserID, prose, actor.ID, actor.Name, instance.Round, deadlineMs,
 		)
+		msg.CombatQueueState = c.playerCombatQueueState(instance, player.ID)
+		// Prefer the live decision deadline on the turn payload when present.
+		if msg.DecisionDeadlineMs == 0 && deadlineMs > 0 {
+			msg.DecisionDeadlineMs = deadlineMs
+		}
+		if deadlineMs > 0 {
+			msg.DeadlineMs = deadlineMs
+		}
+		c.game.sendMessage <- msg
 	}
 }
 
@@ -1108,7 +1163,13 @@ func (c *CombatController) QueuePlayerAction(characterID string, action combat.C
 
 	player.QueuedAction = action
 	player.QueuedTargetID = targetID
+	player.QueuedSkillID = ""
 	c.engine.UpdateCombatant(instance, player)
+	label := string(action)
+	if label == "" {
+		label = "action"
+	}
+	c.emitPlayerQueueUpdate(instance, characterID, fmt.Sprintf("Queued: %s", label))
 }
 
 // QueuePlayerSkill queues a skill for a player's next turn
@@ -1127,6 +1188,7 @@ func (c *CombatController) QueuePlayerSkill(characterID, skillID, targetID strin
 	player.QueuedSkillID = skillID
 	player.QueuedTargetID = targetID
 	c.engine.UpdateCombatant(instance, player)
+	c.emitPlayerQueueUpdate(instance, characterID, fmt.Sprintf("Queued skill: %s", skillID))
 }
 
 // SetAutoAttackTarget sets the persistent auto-attack target for a player
