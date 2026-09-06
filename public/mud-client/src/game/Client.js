@@ -235,34 +235,60 @@ function createClient(renderer, characterCreator, muxStore) {
     }
   };
 
-  // Combat message handlers
+  // Combat message handlers — BattleStage is primary UX (C2); skip room toasts.
   messageHandlers["combatStart"] = (msg) => {
     renderer(msg.message);
-    overlayStore.pushMessage(msg.message);
+    if (overlayStore.clearAll) overlayStore.clearAll();
     if (mux) {
-      mux.setGameContext({ inCombat: true });
       mux.updateCharacterStats({ inCombat: true });
-      mux.setCombatants(msg.enemies || [], msg.players || []);
+      if (mux.beginCombat) {
+        mux.beginCombat(msg.enemies || [], msg.players || [], msg.message);
+      } else {
+        mux.setGameContext({ inCombat: true });
+        mux.setCombatants(msg.enemies || [], msg.players || []);
+      }
     }
   };
 
   messageHandlers["combatTurn"] = (msg) => {
     renderer(msg.message);
-    overlayStore.pushMessage(msg.message);
-    // Keep combat mode active
     if (mux) {
-      mux.setGameContext({ inCombat: true });
+      if (mux.setCombatTurn) {
+        mux.setCombatTurn({
+          actorId: msg.actorId || "",
+          actorName: msg.actorName || "",
+          round: msg.round || 0,
+          deadlineMs: msg.deadlineMs || 0,
+          message: msg.message,
+        });
+      } else {
+        mux.setGameContext({ inCombat: true });
+      }
     }
   };
 
   messageHandlers["combatAction"] = (msg) => {
     renderer(msg.message);
-    overlayStore.pushMessage(msg.message);
+    if (mux && mux.applyCombatAction) {
+      mux.applyCombatAction({
+        actorId: msg.actorId || "",
+        actorName: msg.actorName || "",
+        targetId: msg.targetId || "",
+        action: msg.action || "",
+        result: msg.result || "",
+        damage: msg.damage || 0,
+        remainingHp: msg.remainingHp,
+        maxHp: msg.maxHp,
+        fxId: msg.fxId || "",
+        combatants: msg.combatants || [],
+        message: msg.message,
+      });
+    }
   };
 
   messageHandlers["combatStatus"] = (msg) => {
     renderer(msg.message);
-    overlayStore.pushMessage(msg.message);
+    // Status stays in terminal / battle log only — not room toast overlay.
     if (mux) {
       mux.setGameContext({ inCombat: true });
     }
@@ -270,11 +296,14 @@ function createClient(renderer, characterCreator, muxStore) {
 
   messageHandlers["combatEnd"] = (msg) => {
     renderer(msg.message);
-    overlayStore.pushMessage(msg.message);
     if (mux) {
-      mux.setGameContext({ inCombat: false });
-      mux.updateCharacterStats({ inCombat: false });
-      mux.setCombatants([], []);
+      if (mux.endCombat) {
+        mux.endCombat(msg.outcome || "victory", msg.message);
+      } else {
+        mux.setGameContext({ inCombat: false });
+        mux.updateCharacterStats({ inCombat: false });
+        mux.setCombatants([], []);
+      }
     }
   };
 
