@@ -43,6 +43,7 @@
   $: timerPct = deadlineMs > 0
     ? Math.max(0, Math.min(100, (timerLeftMs / 10000) * 100))
     : 0;
+  $: timerSec = Math.ceil(timerLeftMs / 1000);
 
   $: if (fx?.at) fxKey = fx.at;
 
@@ -97,10 +98,10 @@
   }
 
   function selectEnemy(enemy) {
+    // C3: tap portrait/sprite retargets only; Attack dock queues the hit
     if (!enemy || phase !== 'active') return;
+    if ((enemy.hp ?? 0) <= 0) return;
     if (store.setCombatTarget) store.setCombatTarget(enemy.id);
-    const name = enemy.name || '';
-    if (name && sendMessage) sendMessage(`attack ${name}`);
   }
 
   function cmd(text) {
@@ -165,11 +166,18 @@
     <div class="header-rule"></div>
   </header>
 
-  {#if isMyTurn && deadlineMs > 0}
-    <div class="decision-timer" title="Decision window">
+  <div
+    class="decision-timer"
+    class:idle={!isMyTurn || deadlineMs <= 0}
+    title="Decision window"
+    aria-live="polite"
+    aria-hidden={!(isMyTurn && deadlineMs > 0)}
+  >
+    {#if isMyTurn && deadlineMs > 0}
       <div class="decision-timer-fill" style="width: {timerPct}%"></div>
-    </div>
-  {/if}
+      <span class="decision-timer-label">{timerSec}s</span>
+    {/if}
+  </div>
 
   <!-- Enemies upper-right -->
   <section class="enemy-strip" aria-label="Enemies">
@@ -183,6 +191,8 @@
         class:dead
         class:hit={fx && fx.targetId === enemy.id && fxKey}
         disabled={dead || phase !== 'active'}
+        aria-pressed={enemy.id === targetId}
+        aria-label={`Target ${enemy.name || 'enemy'}`}
         on:click={() => selectEnemy(enemy)}
       >
         <div class="nameplate">{enemy.name}</div>
@@ -264,10 +274,10 @@
     </div>
   </section>
 
-  <!-- Bottom dock -->
+  <!-- Bottom dock (desktop Classic + mobile thumb dock) -->
   {#if phase === 'active'}
     <nav class="battle-dock" aria-label="Combat actions">
-      <button type="button" class="dock-btn" class:active={!panel} on:click={doAttack}>
+      <button type="button" class="dock-btn primary" class:active={!panel} on:click={doAttack}>
         <i class="material-icons">swords</i>
         <span>Attack</span>
       </button>
@@ -275,44 +285,57 @@
         <i class="material-icons">auto_awesome</i>
         <span>Skills</span>
       </button>
-      <button type="button" class="dock-btn" on:click={doDefend}>
+      <button type="button" class="dock-btn secondary" on:click={doDefend}>
         <i class="material-icons">security</i>
         <span>Defend</span>
       </button>
-      <button type="button" class="dock-btn" class:active={panel === 'items'} on:click={() => togglePanel('items')}>
+      <button type="button" class="dock-btn items-btn" class:active={panel === 'items'} on:click={() => togglePanel('items')}>
         <i class="material-icons">shopping_bag</i>
         <span>Items</span>
       </button>
-      <button type="button" class="dock-btn flee" on:click={doFlee}>
+      <button type="button" class="dock-btn flee secondary" on:click={doFlee}>
         <i class="material-icons">directions_run</i>
         <span>Flee</span>
       </button>
     </nav>
 
-    {#if panel === 'skills'}
-      <div class="dock-panel" role="menu">
-        {#if skillEntries.length === 0}
-          <div class="dock-empty">No skills equipped</div>
-        {:else}
-          {#each skillEntries as skill (skill.id || skill.name)}
-            <button type="button" class="dock-panel-btn" on:click={() => castSkill(skill)}>
-              <i class="material-icons">auto_awesome</i> {skill.name}
+    {#if panel === 'skills' || panel === 'items'}
+      <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+      <div class="dock-sheet-backdrop" on:click={() => panel = null}></div>
+      <div class="dock-panel" class:sheet={true} role="menu" aria-label={panel === 'skills' ? 'Skills' : 'Items'}>
+        <div class="dock-sheet-head">
+          <div class="dock-sheet-tabs">
+            <button type="button" class="dock-tab" class:active={panel === 'skills'} on:click={() => panel = 'skills'}>
+              <i class="material-icons">auto_awesome</i> Skills
             </button>
-          {/each}
-        {/if}
-      </div>
-    {/if}
-
-    {#if panel === 'items'}
-      <div class="dock-panel" role="menu">
-        {#if consumables.length === 0}
-          <div class="dock-empty">No consumables</div>
-        {:else}
-          {#each consumables as item (item.id || item.name)}
-            <button type="button" class="dock-panel-btn" on:click={() => useItem(item)}>
-              <i class="material-icons">science</i> {item.name}
+            <button type="button" class="dock-tab" class:active={panel === 'items'} on:click={() => panel = 'items'}>
+              <i class="material-icons">shopping_bag</i> Items
             </button>
-          {/each}
+          </div>
+          <button type="button" class="dock-sheet-close" aria-label="Close" on:click={() => panel = null}>
+            <i class="material-icons">close</i>
+          </button>
+        </div>
+        {#if panel === 'skills'}
+          {#if skillEntries.length === 0}
+            <div class="dock-empty">No skills equipped</div>
+          {:else}
+            {#each skillEntries as skill (skill.id || skill.name)}
+              <button type="button" class="dock-panel-btn" on:click={() => castSkill(skill)}>
+                <i class="material-icons">auto_awesome</i> {skill.name}
+              </button>
+            {/each}
+          {/if}
+        {:else}
+          {#if consumables.length === 0}
+            <div class="dock-empty">No consumables</div>
+          {:else}
+            {#each consumables as item (item.id || item.name)}
+              <button type="button" class="dock-panel-btn" on:click={() => useItem(item)}>
+                <i class="material-icons">science</i> {item.name}
+              </button>
+            {/each}
+          {/if}
         {/if}
       </div>
     {/if}
@@ -427,6 +450,14 @@
     background: rgba(255, 255, 255, 0.08);
     overflow: hidden;
     border: 1px solid rgba(212, 164, 74, 0.25);
+    position: relative;
+  }
+  .decision-timer.idle {
+    height: 0;
+    margin: 0;
+    border: none;
+    background: transparent;
+    overflow: hidden;
   }
 
   .decision-timer-fill {
@@ -794,33 +825,313 @@
     font-size: 0.95rem;
   }
 
-  /* Mobile stack (graceful — full polish is C3) */
-  @media (max-width: 720px) {
+  .dock-btn.primary {
+    border-color: #e8c878;
+    border-width: 2px;
+    background: rgba(36, 26, 12, 0.95);
+    box-shadow: 0 0 0 1px rgba(232, 200, 120, 0.25), 0 6px 16px rgba(0, 0, 0, 0.35);
+  }
+  .dock-btn.primary i { color: #f5d78c; }
+
+  .decision-timer-label {
+    display: none;
+  }
+
+  .dock-sheet-backdrop {
+    display: none;
+  }
+  .dock-sheet-head {
+    display: none;
+  }
+  .dock-sheet-tabs,
+  .dock-tab,
+  .dock-sheet-close {
+    display: none;
+  }
+
+  /* C3: mobile stacked stage — enemies ~35%, FX mid, player bar, thumb dock */
+  @media (max-width: 768px) {
+    .battle-stage {
+      display: grid;
+      grid-template-rows:
+        auto
+        auto
+        minmax(0, 0.35fr)
+        minmax(48px, 0.14fr)
+        auto
+        auto
+        auto;
+      grid-template-areas:
+        "header"
+        "timer"
+        "enemies"
+        "fx"
+        "player"
+        "dock"
+        "log";
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      height: 100dvh;
+      max-height: 100dvh;
+      overflow: hidden;
+    }
+
+    .battle-header {
+      grid-area: header;
+      padding: 0.55rem 0.75rem 0.2rem;
+      gap: 0.4rem;
+    }
+    .header-label { font-size: 0.92rem; }
+    .header-icon { font-size: 1.15rem; }
+    .round-chip,
+    .turn-chip {
+      font-size: 0.65rem;
+      padding: 0.12rem 0.45rem;
+    }
+    .header-rule { display: none; }
+
+    .decision-timer {
+      grid-area: timer;
+      margin: 0.2rem 0.75rem 0.15rem;
+      height: 10px;
+      border-radius: 5px;
+      border-width: 1.5px;
+    }
+    .decision-timer.idle {
+      height: 0;
+      margin: 0;
+      border: none;
+    }
+    .decision-timer-label {
+      display: block;
+      position: absolute;
+      right: 0.45rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-family: system-ui, sans-serif;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #f8fafc;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+      letter-spacing: 0.02em;
+      pointer-events: none;
+      z-index: 1;
+    }
+
     .enemy-strip {
-      justify-self: center;
-      max-width: 100%;
-      padding-top: 0.35rem;
-    }
-    .enemy-card { width: clamp(110px, 40vw, 160px); }
-    .player-panel {
-      left: 0.6rem;
-      right: 0.6rem;
-      bottom: clamp(8.5rem, 22vh, 11rem);
+      grid-area: enemies;
+      position: relative;
+      justify-self: stretch;
+      align-self: stretch;
+      justify-content: center;
+      align-content: center;
       max-width: none;
+      width: 100%;
+      padding: 0.25rem 0.6rem 0;
+      gap: 0.55rem;
+      overflow: hidden;
     }
+    .enemy-card {
+      width: clamp(120px, 42vw, 180px);
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .enemy-card:active:not(:disabled) {
+      transform: scale(0.97);
+    }
+    .enemy-sprite-wrap {
+      aspect-ratio: 1;
+      max-height: min(28vh, 200px);
+    }
+    .nameplate { font-size: 0.78rem; }
+    .hp-track { height: 10px; }
+    .hp-nums { font-size: 0.72rem; }
+
+    .fx-layer {
+      grid-area: fx;
+      position: relative;
+      inset: auto;
+      min-height: 48px;
+      z-index: 2;
+    }
+
+    .player-panel {
+      grid-area: player;
+      position: relative;
+      left: auto;
+      right: auto;
+      bottom: auto;
+      max-width: none;
+      width: calc(100% - 1.2rem);
+      margin: 0.15rem 0.6rem 0.25rem;
+      padding: 0.45rem 0.55rem;
+      border: 1.5px solid rgba(212, 164, 74, 0.55);
+      border-radius: 8px;
+      background: rgba(8, 8, 10, 0.88);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+      gap: 0.65rem;
+      align-items: center;
+    }
+    .player-bust {
+      width: clamp(64px, 16vw, 84px);
+      border-radius: 50%;
+    }
+    .player-hp,
+    .player-mp {
+      min-width: 0;
+    }
+    .player-name {
+      font-size: 0.95rem;
+      margin-bottom: 0.2rem;
+    }
+
     .battle-dock {
-      bottom: clamp(4.2rem, 12vh, 5.5rem);
-      gap: 0.3rem;
-      width: min(96vw, 420px);
-      justify-content: space-between;
+      grid-area: dock;
+      position: relative;
+      left: auto;
+      bottom: auto;
+      transform: none;
+      width: calc(100% - 0.8rem);
+      max-width: none;
+      margin: 0.15rem 0.4rem 0.2rem;
+      padding: 0.4rem;
+      gap: 0.35rem;
+      justify-content: stretch;
+      border: 1.5px solid rgba(212, 164, 74, 0.5);
+      border-radius: 10px;
+      background: rgba(8, 8, 10, 0.92);
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.35);
+      z-index: 3;
     }
     .dock-btn {
       min-width: 0;
       flex: 1;
-      padding: 0.45rem 0.2rem 0.35rem;
+      min-height: 56px;
+      padding: 0.55rem 0.2rem 0.4rem;
+      font-size: 0.68rem;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .dock-btn i { font-size: 1.35rem; }
+    .dock-btn.primary {
+      flex: 1.55;
+      min-height: 64px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+    .dock-btn.primary i { font-size: 1.55rem; }
+    .dock-btn.secondary {
+      opacity: 0.95;
+    }
+    /* Items moves into Skills/Items sheet on narrow; keep reachable via sheet tabs */
+    .dock-btn.items-btn {
+      display: none;
+    }
+    .dock-btn:active {
+      transform: scale(0.97);
+    }
+
+    .dock-sheet-backdrop {
+      display: block;
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      z-index: 4;
+    }
+    .dock-panel.sheet {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      transform: none;
+      max-width: none;
+      width: 100%;
+      max-height: min(52vh, 420px);
+      padding: 0.55rem 0.65rem calc(0.65rem + env(safe-area-inset-bottom, 0px));
+      border-radius: 14px 14px 0 0;
+      border: 1.5px solid rgba(212, 164, 74, 0.5);
+      border-bottom: none;
+      background: rgba(8, 8, 10, 0.97);
+      z-index: 5;
+      flex-direction: column;
+      flex-wrap: nowrap;
+      align-items: stretch;
+      gap: 0.35rem;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      animation: sheetUp 0.22s ease-out;
+    }
+    @keyframes sheetUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .dock-sheet-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.25rem;
+      padding-bottom: 0.35rem;
+      border-bottom: 1px solid rgba(212, 164, 74, 0.25);
+    }
+    .dock-sheet-tabs {
+      display: flex;
+      gap: 0.35rem;
+    }
+    .dock-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      appearance: none;
+      border: 1px solid rgba(212, 164, 74, 0.35);
+      background: rgba(20, 16, 10, 0.85);
+      color: #c4b5a0;
+      border-radius: 999px;
+      padding: 0.35rem 0.7rem;
+      font-family: system-ui, sans-serif;
+      font-size: 0.75rem;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .dock-tab i { font-size: 0.95rem; color: #d4a44a; }
+    .dock-tab.active {
+      border-color: #e8c878;
+      color: #f5e6c0;
+      background: rgba(40, 28, 12, 0.95);
+    }
+    .dock-sheet-close {
+      display: inline-flex;
+      appearance: none;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.06);
+      color: #9ca3af;
+      border-radius: 8px;
+      padding: 0.35rem;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .dock-sheet-close i { font-size: 1.15rem; }
+    .dock-panel-btn {
+      min-height: 48px;
+      justify-content: flex-start;
+      font-size: 0.9rem;
+      padding: 0.55rem 0.75rem;
+      touch-action: manipulation;
+    }
+
+    .combat-log {
+      grid-area: log;
+      position: relative;
+      left: auto;
+      bottom: auto;
+      transform: none;
+      width: calc(100% - 1.2rem);
+      margin: 0 0.6rem 0.35rem;
+      max-height: 2.4rem;
       font-size: 0.62rem;
     }
-    .dock-btn i { font-size: 1.1rem; }
-    .combat-log { max-height: 2.8rem; font-size: 0.64rem; }
+
+    .outcome-panel {
+      padding: 1rem;
+    }
   }
 </style>
