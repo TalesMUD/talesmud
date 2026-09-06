@@ -568,6 +568,59 @@ func NewCombatEndMessage(userID, text, outcome string) *CombatEndMessage {
 	}
 }
 
+// CombatTurnMessage notifies clients whose turn it is (player decision window).
+type CombatTurnMessage struct {
+	MessageResponse
+	ActorID    string `json:"actorId"`
+	ActorName  string `json:"actorName"`
+	Round      int    `json:"round"`
+	DeadlineMs int64  `json:"deadlineMs,omitempty"` // unix ms; set for player turns
+}
+
+// NewCombatTurnMessage builds a combatTurn / turnStart payload.
+func NewCombatTurnMessage(userID, text, actorID, actorName string, round int, deadlineMs int64) *CombatTurnMessage {
+	return &CombatTurnMessage{
+		MessageResponse: MessageResponse{
+			Audience:   MessageAudienceUser,
+			AudienceID: userID,
+			Type:       MessageTypeCombatTurn,
+			Message:    text,
+		},
+		ActorID:    actorID,
+		ActorName:  actorName,
+		Round:      round,
+		DeadlineMs: deadlineMs,
+	}
+}
+
+// CombatActionMessage is a structured actionResolved payload for battle-stage clients.
+// Message (embedded) remains the human-readable terminal/console line.
+type CombatActionMessage struct {
+	MessageResponse
+	ActorID     string          `json:"actorId"`
+	ActorName   string          `json:"actorName,omitempty"`
+	TargetID    string          `json:"targetId,omitempty"`
+	TargetIDs   []string        `json:"targetIds,omitempty"`
+	Action      string          `json:"action"`
+	Result      string          `json:"result"` // hit | miss | crit | block | fled | defended | dodged | cast
+	Damage      int32           `json:"damage,omitempty"`
+	RemainingHP int32           `json:"remainingHp,omitempty"`
+	MaxHP       int32           `json:"maxHp,omitempty"`
+	FxID        string          `json:"fxId,omitempty"` // slash | cast | miss | death | defend | flee
+	Combatants  []CombatantView `json:"combatants,omitempty"`
+}
+
+// NewCombatActionMessage builds a combatAction with structured fields + prose Message.
+func NewCombatActionMessage(userID, text string, action CombatActionMessage) *CombatActionMessage {
+	action.MessageResponse = MessageResponse{
+		Audience:   MessageAudienceUser,
+		AudienceID: userID,
+		Type:       MessageTypeCombatAction,
+		Message:    text,
+	}
+	return &action
+}
+
 // NewAtlasMessage sends a compiled atlas to one player.
 func NewAtlasMessage(userID string, atlas worldmap.PlayerMap) *AtlasMessage {
 	return &AtlasMessage{

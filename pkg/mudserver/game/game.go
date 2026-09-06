@@ -158,7 +158,7 @@ func (g *Game) GetQuestTracker() def.QuestTrackerCtrl {
 const roomUpdateInterval = 10
 const npcUpdateInterval = 10
 const spawnerUpdateInterval = 5
-const combatUpdateInterval = 2 // Combat checks every 2 seconds
+const combatUpdateInterval = 1 // Combat pacing tick (C1 authored beats + 10s player window)
 const regenUpdateInterval = 10 // HP regeneration every 10 seconds
 
 func (g *Game) handleGameUpdates() {

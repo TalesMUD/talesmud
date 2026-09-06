@@ -15,7 +15,10 @@ import (
 
 // CombatConfig holds global combat configuration
 type CombatConfig struct {
-	TurnTimeoutSeconds    int     // Default: 60
+	TurnTimeoutSeconds    int     // Legacy absolute turn timeout (Default: 60); prefer DecisionWindowSeconds for player action wait
+	DecisionWindowSeconds int     // Player decision window before auto-attack (Default: 10)
+	TurnBeatMs            int     // Authored windup/beat before next turn may resolve (Default: 1000)
+	ReactionMs            int     // Post-resolve reaction pause (Default: 400)
 	AFKAutoFleeAfterTurns int     // Default: 3
 	DeathGoldLossPercent  float64 // Default: 0.10 (10%)
 	DeathRespawnHPPercent float64 // Default: 0.50 (50%)
@@ -31,6 +34,9 @@ type CombatConfig struct {
 func DefaultConfig() *CombatConfig {
 	return &CombatConfig{
 		TurnTimeoutSeconds:    60,
+		DecisionWindowSeconds: 10,
+		TurnBeatMs:            1000,
+		ReactionMs:            400,
 		AFKAutoFleeAfterTurns: 3,
 		DeathGoldLossPercent:  0.10,
 		DeathRespawnHPPercent: 0.50,
@@ -41,6 +47,26 @@ func DefaultConfig() *CombatConfig {
 		CriticalHitMultiplier: 2.0,
 		CombatTimeoutMinutes:  30,
 	}
+}
+
+// BeatBudget returns the authored pause after a resolved action before the next turn may start.
+func (c *CombatConfig) BeatBudget() time.Duration {
+	if c == nil {
+		return 1400 * time.Millisecond
+	}
+	ms := c.TurnBeatMs + c.ReactionMs
+	if ms <= 0 {
+		ms = 1400
+	}
+	return time.Duration(ms) * time.Millisecond
+}
+
+// DecisionWindow returns the player decision window duration.
+func (c *CombatConfig) DecisionWindow() time.Duration {
+	if c == nil || c.DecisionWindowSeconds <= 0 {
+		return 10 * time.Second
+	}
+	return time.Duration(c.DecisionWindowSeconds) * time.Second
 }
 
 // Engine handles combat logic and calculations

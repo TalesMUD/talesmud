@@ -399,23 +399,95 @@ func (c *CombatController) processNPCTurns(instance *combat.CombatInstance) {
 	}
 }
 
-// notifyPlayersInCombat sends a message to all players in the combat instance
+// notifyPlayersInCombat sends a prose combat line to all living players (terminal/console path).
 func (c *CombatController) notifyPlayersInCombat(instance *combat.CombatInstance, message string) {
+	c.notifyCombatAction(instance, messages.CombatActionMessage{}, message)
+}
+
+// notifyCombatAction sends a structured combatAction (plus human Message) to living players.
+func (c *CombatController) notifyCombatAction(instance *combat.CombatInstance, action messages.CombatActionMessage, prose string) {
+	if prose == "" && action.MessageResponse.Message != "" {
+		prose = action.MessageResponse.Message
+	}
+	if len(action.Combatants) == 0 {
+		action.Combatants = combatantViewsFromInstance(instance)
+	}
 	for _, player := range instance.Players {
 		if player.IsAlive && !player.HasFled {
-			// Find the user for this character
 			char, err := c.game.Facade.CharactersService().FindByID(player.ID)
 			if err != nil {
 				continue
 			}
-			c.game.sendMessage <- messages.MessageResponse{
-				Audience:   messages.MessageAudienceUser,
-				AudienceID: char.BelongsUserID,
-				Type:       messages.MessageTypeCombatAction,
-				Message:    message,
-			}
+			payload := action
+			c.game.sendMessage <- messages.NewCombatActionMessage(char.BelongsUserID, prose, payload)
 		}
 	}
+}
+
+// emitCombatTurn notifies players that a combatant's turn (decision window) has started.
+func (c *CombatController) emitCombatTurn(instance *combat.CombatInstance, actor *combat.CombatantRef, deadline time.Time) {
+	if actor == nil {
+		return
+	}
+	deadlineMs := int64(0)
+	prose := fmt.Sprintf("Round %d — %s's turn.", instance.Round, actor.Name)
+	if actor.Type == combat.CombatantTypePlayer {
+		deadlineMs = deadline.UnixMilli()
+		prose = fmt.Sprintf("Round %d — Your turn, %s! Choose an action (auto-attack in %ds).",
+			instance.Round, actor.Name, c.engine.Config.DecisionWindowSeconds)
+	}
+	for _, player := range instance.Players {
+		if !player.IsAlive || player.HasFled {
+			continue
+		}
+		char, err := c.game.Facade.CharactersService().FindByID(player.ID)
+		if err != nil {
+			continue
+		}
+		c.game.sendMessage <- messages.NewCombatTurnMessage(
+			char.BelongsUserID, prose, actor.ID, actor.Name, instance.Round, deadlineMs,
+		)
+	}
+}
+
+func combatantViewsFromInstance(instance *combat.CombatInstance) []messages.CombatantView {
+	out := make([]messages.CombatantView, 0, len(instance.Players)+len(instance.Enemies))
+	for _, p := range instance.Players {
+		out = append(out, messages.CombatantView{ID: p.ID, Name: p.Name, Portrait: p.Portrait, HP: p.CurrentHP, MaxHP: p.MaxHP})
+	}
+	for _, e := range instance.Enemies {
+		out = append(out, messages.CombatantView{ID: e.ID, Name: e.Name, Portrait: e.Portrait, HP: e.CurrentHP, MaxHP: e.MaxHP})
+	}
+	return out
+}
+
+func fxIDForAttack(result combatpkg.AttackResult, targetDied bool) string {
+	if targetDied {
+		return "death"
+	}
+	if result.Miss {
+		return "miss"
+	}
+	if result.Critical {
+		return "slash"
+	}
+	if result.Hit {
+		return "slash"
+	}
+	return "miss"
+}
+
+func resultStringForAttack(result combatpkg.AttackResult) string {
+	if result.Critical {
+		return "crit"
+	}
+	if result.Miss {
+		return "miss"
+	}
+	if result.Hit {
+		return "hit"
+	}
+	return "miss"
 }
 
 // notifyAllPlayersInInstance sends a combatEnd to all players regardless of alive/fled status
@@ -526,88 +598,159 @@ func (c *CombatController) Update() {
 	}
 }
 
-// processAllTurns processes all combatant turns (NPC and player) in sequence
+// processAllTurns advances at most one combatant action per call, gated by authored beat budget.
+// Player turns open a DecisionWindowSeconds window (combatTurn); timeout → auto-attack.
 func (c *CombatController) processAllTurns(instance *combat.CombatInstance) {
-	maxTurns := len(instance.TurnOrder) + 2 // Safety limit per tick
+	now := time.Now()
 
-	for i := 0; i < maxTurns; i++ {
-		current := instance.GetCurrentTurnCombatant()
-		if current == nil {
-			break
-		}
+	// Pacing gate: wait out previous turn's beat/reaction budget
+	if !instance.NextActionAt.IsZero() && now.Before(instance.NextActionAt) {
+		return
+	}
 
-		// Process status effects at start of turn (DoTs, HoTs, stun check)
-		logLenBefore := len(instance.Log)
-		stunned := c.engine.ProcessStatusEffects(instance, current)
+	current := instance.GetCurrentTurnCombatant()
+	if current == nil {
+		return
+	}
 
-		// Notify players of status effect messages
-		for j := logLenBefore; j < len(instance.Log); j++ {
-			if instance.Log[j].Message != "" {
-				c.notifyPlayersInCombat(instance, instance.Log[j].Message)
+	// Player decision window: announce once, then wait for queue or deadline
+	if current.Type == combat.CombatantTypePlayer && current.IsAlive && !current.HasFled {
+		player := instance.GetPlayerByID(current.ID)
+		hasQueue := player != nil && player.QueuedAction != ""
+
+		if instance.Phase != combat.CombatPhaseWaitingPlayer {
+			instance.Phase = combat.CombatPhaseWaitingPlayer
+			instance.TurnStartTime = now
+			instance.DecisionDeadline = now.Add(c.engine.Config.DecisionWindow())
+			c.emitCombatTurn(instance, current, instance.DecisionDeadline)
+			// If already queued, resolve on the next eligible tick (small windup via NextActionAt)
+			if hasQueue {
+				instance.NextActionAt = now.Add(time.Duration(c.engine.Config.TurnBeatMs) * time.Millisecond)
 			}
+			return
 		}
 
-		// Re-fetch current (may have been modified by status effects)
-		current = instance.GetCurrentTurnCombatant()
-		if current == nil || !current.IsAlive {
-			endState := c.engine.CheckCombatEnd(instance)
-			if endState != combat.CombatStateActive {
-				c.engine.EndCombat(instance, endState)
-				c.cleanupCombatInstance(instance, endState)
-				return
-			}
-			c.engine.NextTurn(instance)
-			continue
+		if !hasQueue && now.Before(instance.DecisionDeadline) {
+			return
 		}
+	}
 
-		if stunned {
-			c.sendPlayerCharacterUpdate(instance)
-			c.engine.NextTurn(instance)
-			continue
+	// Resolve exactly one turn this Update
+	instance.Phase = combat.CombatPhaseResolving
+
+	// Process status effects at start of turn (DoTs, HoTs, stun check)
+	logLenBefore := len(instance.Log)
+	stunned := c.engine.ProcessStatusEffects(instance, current)
+	for j := logLenBefore; j < len(instance.Log); j++ {
+		if instance.Log[j].Message != "" {
+			c.notifyPlayersInCombat(instance, instance.Log[j].Message)
 		}
+	}
 
-		if current.Type == combat.CombatantTypeNPC {
-			// Process NPC turn
-			npcEntity := c.game.NPCManager.GetInstance(current.ID)
-			action, targetID := c.engine.GetNPCAIAction(instance, current, npcEntity)
-
-			switch action {
-			case combat.CombatActionAttack:
-				if targetID != "" {
-					result := c.engine.ProcessAttack(instance, current.ID, targetID)
-					c.notifyPlayersInCombat(instance, result.Message)
-					if result.TargetDied {
-						target := instance.GetCombatantByID(targetID)
-						if target != nil && target.Type == combat.CombatantTypePlayer {
-							c.syncPlayerHP(targetID, 0)
-						}
-					}
-				}
-			case combat.CombatActionDefend:
-				result := c.engine.ProcessDefend(instance, current.ID)
-				c.notifyPlayersInCombat(instance, result.Message)
-			case combat.CombatActionFlee:
-				result := c.engine.ProcessFlee(instance, current.ID)
-				c.notifyPlayersInCombat(instance, result.Message)
-			}
-		} else {
-			// Process player turn via auto-attack
-			c.processPlayerAutoAttack(instance, current)
-		}
-
-		// Send updated character stats to all players after each action
-		c.sendPlayerCharacterUpdate(instance)
-
-		// Advance turn
-		c.engine.NextTurn(instance)
-
-		// Check if combat ended
+	current = instance.GetCurrentTurnCombatant()
+	if current == nil || !current.IsAlive {
 		endState := c.engine.CheckCombatEnd(instance)
 		if endState != combat.CombatStateActive {
 			c.engine.EndCombat(instance, endState)
 			c.cleanupCombatInstance(instance, endState)
 			return
 		}
+		c.finishTurnBeat(instance)
+		return
+	}
+
+	if stunned {
+		c.sendPlayerCharacterUpdate(instance)
+		c.finishTurnBeat(instance)
+		return
+	}
+
+	if current.Type == combat.CombatantTypeNPC {
+		c.resolveNPCTurn(instance, current)
+	} else {
+		c.processPlayerAutoAttack(instance, current)
+	}
+
+	c.sendPlayerCharacterUpdate(instance)
+
+	endState := c.engine.CheckCombatEnd(instance)
+	if endState != combat.CombatStateActive {
+		c.engine.EndCombat(instance, endState)
+		c.cleanupCombatInstance(instance, endState)
+		return
+	}
+
+	c.finishTurnBeat(instance)
+}
+
+// finishTurnBeat advances to the next combatant and applies the authored beat budget gate.
+func (c *CombatController) finishTurnBeat(instance *combat.CombatInstance) {
+	c.engine.NextTurn(instance)
+	instance.Phase = combat.CombatPhasePlayingBeat
+	instance.NextActionAt = time.Now().Add(c.engine.Config.BeatBudget())
+	instance.DecisionDeadline = time.Time{}
+
+	endState := c.engine.CheckCombatEnd(instance)
+	if endState != combat.CombatStateActive {
+		c.engine.EndCombat(instance, endState)
+		c.cleanupCombatInstance(instance, endState)
+	}
+}
+
+// resolveNPCTurn executes one NPC action and emits structured combatAction events.
+func (c *CombatController) resolveNPCTurn(instance *combat.CombatInstance, current *combat.CombatantRef) {
+	npcEntity := c.game.NPCManager.GetInstance(current.ID)
+	action, targetID := c.engine.GetNPCAIAction(instance, current, npcEntity)
+
+	switch action {
+	case combat.CombatActionAttack:
+		if targetID != "" {
+			result := c.engine.ProcessAttack(instance, current.ID, targetID)
+			target := instance.GetCombatantByID(targetID)
+			remaining, maxHP := int32(0), int32(0)
+			if target != nil {
+				remaining, maxHP = target.CurrentHP, target.MaxHP
+			}
+			c.notifyCombatAction(instance, messages.CombatActionMessage{
+				ActorID:     current.ID,
+				ActorName:   current.Name,
+				TargetID:    targetID,
+				Action:      string(combat.CombatActionAttack),
+				Result:      resultStringForAttack(result),
+				Damage:      result.Damage,
+				RemainingHP: remaining,
+				MaxHP:       maxHP,
+				FxID:        fxIDForAttack(result, result.TargetDied),
+			}, result.Message)
+			if result.TargetDied {
+				if target != nil && target.Type == combat.CombatantTypePlayer {
+					c.syncPlayerHP(targetID, 0)
+				}
+			}
+		}
+	case combat.CombatActionDefend:
+		result := c.engine.ProcessDefend(instance, current.ID)
+		c.notifyCombatAction(instance, messages.CombatActionMessage{
+			ActorID:   current.ID,
+			ActorName: current.Name,
+			Action:    string(combat.CombatActionDefend),
+			Result:    "defended",
+			FxID:      "defend",
+		}, result.Message)
+	case combat.CombatActionFlee:
+		result := c.engine.ProcessFlee(instance, current.ID)
+		res := "blocked"
+		fx := "flee"
+		if result.Success {
+			res = "fled"
+		}
+		c.notifyCombatAction(instance, messages.CombatActionMessage{
+			ActorID:   current.ID,
+			ActorName: current.Name,
+			Action:    string(combat.CombatActionFlee),
+			Result:    res,
+			FxID:      fx,
+		}, result.Message)
 	}
 }
 
@@ -1013,17 +1156,41 @@ func (c *CombatController) processPlayerAutoAttack(instance *combat.CombatInstan
 		switch player.QueuedAction {
 		case combat.CombatActionFlee:
 			result := c.engine.ProcessFlee(instance, player.ID)
-			c.notifyPlayersInCombat(instance, result.Message)
+			res := "blocked"
+			if result.Success {
+				res = "fled"
+			}
+			c.notifyCombatAction(instance, messages.CombatActionMessage{
+				ActorID: player.ID, ActorName: player.Name,
+				Action: string(combat.CombatActionFlee), Result: res, FxID: "flee",
+			}, result.Message)
 
 		case combat.CombatActionDefend:
 			result := c.engine.ProcessDefend(instance, player.ID)
-			c.notifyPlayersInCombat(instance, result.Message)
+			c.notifyCombatAction(instance, messages.CombatActionMessage{
+				ActorID: player.ID, ActorName: player.Name,
+				Action: string(combat.CombatActionDefend), Result: "defended", FxID: "defend",
+			}, result.Message)
 
 		case combat.CombatActionSkill:
 			skillResult := c.engine.ProcessSkill(instance, player.ID, player.QueuedSkillID, player.QueuedTargetID)
-			for _, msg := range skillResult.Messages {
-				c.notifyPlayersInCombat(instance, msg)
+			targetID := player.QueuedTargetID
+			remaining, maxHP := int32(0), int32(0)
+			if targetID != "" {
+				if t := instance.GetCombatantByID(targetID); t != nil {
+					remaining, maxHP = t.CurrentHP, t.MaxHP
+				}
 			}
+			fx := "cast"
+			if len(skillResult.TargetsDied) > 0 {
+				fx = "death"
+			}
+			prose := strings.Join(skillResult.Messages, "\n")
+			c.notifyCombatAction(instance, messages.CombatActionMessage{
+				ActorID: player.ID, ActorName: player.Name,
+				TargetID: targetID, Action: string(combat.CombatActionSkill),
+				Result: "cast", RemainingHP: remaining, MaxHP: maxHP, FxID: fx,
+			}, prose)
 			for _, diedID := range skillResult.TargetsDied {
 				target := instance.GetCombatantByID(diedID)
 				if target != nil && target.Type == combat.CombatantTypePlayer {
@@ -1038,7 +1205,12 @@ func (c *CombatController) processPlayerAutoAttack(instance *combat.CombatInstan
 				target := instance.GetCombatantByID(targetID)
 				if target != nil && target.IsAlive {
 					result := c.engine.ProcessAttack(instance, player.ID, targetID)
-					c.notifyPlayersInCombat(instance, result.Message)
+					c.notifyCombatAction(instance, messages.CombatActionMessage{
+						ActorID: player.ID, ActorName: player.Name, TargetID: targetID,
+						Action: string(combat.CombatActionAttack), Result: resultStringForAttack(result),
+						Damage: result.Damage, RemainingHP: target.CurrentHP, MaxHP: target.MaxHP,
+						FxID: fxIDForAttack(result, result.TargetDied),
+					}, result.Message)
 					// Update persistent auto-attack target
 					player.AutoAttackTargetID = targetID
 					c.engine.UpdateCombatant(instance, player)
@@ -1099,10 +1271,19 @@ func (c *CombatController) doAutoAttack(instance *combat.CombatInstance, player 
 	}
 
 	result := c.engine.ProcessAttack(instance, player.ID, targetID)
-	c.notifyPlayersInCombat(instance, result.Message)
+	target := instance.GetCombatantByID(targetID)
+	remaining, maxHP := int32(0), int32(0)
+	if target != nil {
+		remaining, maxHP = target.CurrentHP, target.MaxHP
+	}
+	c.notifyCombatAction(instance, messages.CombatActionMessage{
+		ActorID: player.ID, ActorName: player.Name, TargetID: targetID,
+		Action: string(combat.CombatActionAttack), Result: resultStringForAttack(result),
+		Damage: result.Damage, RemainingHP: remaining, MaxHP: maxHP,
+		FxID: fxIDForAttack(result, result.TargetDied),
+	}, result.Message)
 
 	if result.TargetDied {
-		target := instance.GetCombatantByID(targetID)
 		if target != nil && target.Type == combat.CombatantTypePlayer {
 			c.syncPlayerHP(targetID, 0)
 		}
