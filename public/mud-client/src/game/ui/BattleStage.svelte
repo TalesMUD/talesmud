@@ -47,6 +47,21 @@
 
   $: if (fx?.at) fxKey = fx.at;
 
+  $: fxActive = !!(fx && fxKey);
+  $: fxId = (fx && fx.fxId) || '';
+  $: fxResult = (fx && fx.result) || '';
+  $: fxDamage = Number(fx && fx.damage) || 0;
+  $: fxHeal = Number(fx && fx.heal) || 0;
+  $: fxIsMiss = fxActive && (fxId === 'miss' || fxResult === 'miss' || fxResult === 'dodged');
+  $: fxIsDeath = fxActive && fxId === 'death';
+  $: fxIsCast = fxActive && (fxId === 'cast' || fxResult === 'cast');
+  $: fxIsDefend = fxActive && (fxId === 'defend' || fxResult === 'defended' || fxResult === 'block');
+  $: fxIsFlee = fxActive && (fxId === 'flee' || fxResult === 'fled');
+  $: fxIsHit = fxActive && !fxIsMiss && !fxIsDefend && !fxIsFlee && (
+    fxId === 'slash' || fxIsDeath || fxResult === 'hit' || fxResult === 'crit' || fxDamage > 0
+  );
+  $: fxIsCrit = fxActive && fxResult === 'crit';
+
   $: if (visible && deadlineMs > 0) startTick();
   else stopTick();
 
@@ -142,6 +157,16 @@
     }
   }
 
+  function isFxTarget(id) {
+    return fxActive && id && fx && fx.targetId === id;
+  }
+  function isFxActor(id) {
+    return fxActive && id && fx && fx.actorId === id;
+  }
+  function showFloatOn(id) {
+    return isFxTarget(id) && (fxDamage > 0 || fxHeal > 0 || fxIsMiss);
+  }
+
   function onImgError(ev, key) {
     const img = ev && ev.currentTarget;
     if (!img || img.dataset.fallback === '1') return;
@@ -184,12 +209,18 @@
     {#each enemies as enemy (enemy.id)}
       {@const pct = hpPct(enemy.hp, enemy.maxHp)}
       {@const dead = (enemy.hp ?? 0) <= 0}
+      {@const tgt = isFxTarget(enemy.id)}
+      {@const act = isFxActor(enemy.id)}
       <button
         type="button"
         class="enemy-card"
         class:targeted={enemy.id === targetId}
         class:dead
-        class:hit={fx && fx.targetId === enemy.id && fxKey}
+        class:fx-hit={tgt && fxIsHit}
+        class:fx-crit={tgt && fxIsCrit}
+        class:fx-miss={tgt && fxIsMiss}
+        class:fx-death={tgt && fxIsDeath}
+        class:fx-cast={act && fxIsCast}
         disabled={dead || phase !== 'active'}
         aria-pressed={enemy.id === targetId}
         aria-label={`Target ${enemy.name || 'enemy'}`}
@@ -203,7 +234,7 @@
           </div>
           <span class="hp-nums">{enemy.hp ?? 0} / {enemy.maxHp ?? 0}</span>
         </div>
-        <div class="enemy-sprite-wrap">
+        <div class="enemy-sprite-wrap" class:shake={tgt && fxIsHit}>
           <img
             class="enemy-sprite"
             src={combatantPortrait(enemy, enemy.id || enemy.name)}
@@ -213,34 +244,79 @@
           {#if enemy.id === targetId && !dead}
             <div class="target-ring" aria-hidden="true"></div>
           {/if}
+          {#if tgt && fxIsMiss}
+            <div class="fx-puff" data-key={fxKey} aria-hidden="true"></div>
+          {/if}
+          {#if tgt && fxIsHit && !fxIsMiss}
+            <div class="fx-slash" class:crit={fxIsCrit} data-key={fxKey} aria-hidden="true"></div>
+          {/if}
+          {#if showFloatOn(enemy.id)}
+            <div class="fx-float" data-key={fxKey}>
+              {#if fxDamage > 0}
+                <span class="fx-dmg" class:crit={fxIsCrit}>-{fxDamage}</span>
+              {:else if fxHeal > 0}
+                <span class="fx-heal">+{fxHeal}</span>
+              {:else if fxIsMiss}
+                <span class="fx-miss-label">Miss</span>
+              {/if}
+            </div>
+          {/if}
         </div>
       </button>
     {/each}
   </section>
 
-  <!-- Center FX -->
+  <!-- Center FX burst (cast / stage-level accent) -->
   <div class="fx-layer" aria-hidden="true">
-    {#if fx && fxKey}
-      <div class="fx-flash fx-{fx.fxId || 'slash'}" data-key={fxKey}>
-        {#if fx.damage > 0}
-          <span class="fx-dmg">-{fx.damage}</span>
-        {:else if fx.result === 'miss'}
-          <span class="fx-miss">Miss</span>
-        {:else if fx.fxId === 'defend'}
-          <span class="fx-miss">Defend</span>
+    {#if fxActive && (fxIsCast || fxIsDefend || fxIsFlee)}
+      <div class="fx-burst fx-{fxId || 'cast'}" data-key={fxKey}>
+        {#if fxIsDefend}
+          <span class="fx-burst-label">Defend</span>
+        {:else if fxIsFlee}
+          <span class="fx-burst-label">Flee</span>
+        {:else if fxIsCast && fxHeal <= 0 && fxDamage <= 0}
+          <span class="fx-burst-label">Cast</span>
         {/if}
       </div>
     {/if}
   </div>
 
   <!-- Player lower-left -->
-  <section class="player-panel" aria-label="Player">
-    <div class="player-bust">
+  <section
+    class="player-panel"
+    class:fx-hit={isFxTarget(selfId) && fxIsHit}
+    class:fx-miss={isFxTarget(selfId) && fxIsMiss}
+    class:fx-death={isFxTarget(selfId) && fxIsDeath}
+    class:fx-cast={isFxActor(selfId) && (fxIsCast || fxIsDefend)}
+    class:fx-defend={isFxActor(selfId) && fxIsDefend}
+    aria-label="Player"
+  >
+    <div class="player-bust" class:shake={isFxTarget(selfId) && fxIsHit}>
       <img
         src={combatantPortrait(selfCombatant, selfId || selfName)}
         alt=""
         on:error={(e) => onImgError(e, selfName)}
       />
+      {#if isFxTarget(selfId) && fxIsMiss}
+        <div class="fx-puff" data-key={fxKey} aria-hidden="true"></div>
+      {/if}
+      {#if isFxActor(selfId) && fxIsCast}
+        <div class="fx-cast-glow" data-key={fxKey} aria-hidden="true"></div>
+      {/if}
+      {#if isFxActor(selfId) && fxIsDefend}
+        <div class="fx-shield" data-key={fxKey} aria-hidden="true"></div>
+      {/if}
+      {#if showFloatOn(selfId)}
+        <div class="fx-float" data-key={fxKey}>
+          {#if fxDamage > 0}
+            <span class="fx-dmg" class:crit={fxIsCrit}>-{fxDamage}</span>
+          {:else if fxHeal > 0}
+            <span class="fx-heal">+{fxHeal}</span>
+          {:else if fxIsMiss}
+            <span class="fx-miss-label">Miss</span>
+          {/if}
+        </div>
+      {/if}
     </div>
     <div class="player-meta">
       <div class="player-name">{selfName}</div>
@@ -580,13 +656,212 @@
     box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.5);
   }
 
-  .enemy-card.hit .enemy-sprite {
-    animation: hitFlash 0.35s ease-out;
+  /* ===== C5 Combat FX pack (CSS/transform only) ===== */
+
+  .enemy-card.fx-hit .enemy-sprite,
+  .player-panel.fx-hit .player-bust img {
+    animation: hitFlash 0.4s ease-out;
+  }
+
+  .enemy-card.fx-crit .enemy-sprite {
+    animation: hitFlashCrit 0.45s ease-out;
+  }
+
+  .enemy-sprite-wrap.shake,
+  .player-bust.shake {
+    animation: hitShake 0.4s ease-out;
+  }
+
+  .enemy-card.fx-death .enemy-sprite {
+    animation: deathDissolve 0.9s ease-out forwards;
+  }
+
+  .player-panel.fx-death .player-bust img {
+    animation: deathDissolve 0.9s ease-out forwards;
+  }
+
+  .enemy-card.fx-cast .enemy-sprite,
+  .player-panel.fx-cast .player-bust {
+    animation: castGlow 0.7s ease-out;
+  }
+
+  .enemy-card.fx-miss .enemy-sprite {
+    animation: missDim 0.45s ease-out;
   }
 
   @keyframes hitFlash {
-    0% { filter: brightness(2.2) drop-shadow(0 0 8px #ef4444); }
+    0% { filter: brightness(2.4) saturate(1.4) drop-shadow(0 0 10px #ef4444); }
+    40% { filter: brightness(1.6) drop-shadow(0 0 6px #f87171); }
     100% { filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.55)); }
+  }
+
+  @keyframes hitFlashCrit {
+    0% { filter: brightness(2.8) saturate(1.6) drop-shadow(0 0 14px #fbbf24); }
+    50% { filter: brightness(1.8) drop-shadow(0 0 10px #f59e0b); }
+    100% { filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.55)); }
+  }
+
+  @keyframes hitShake {
+    0%, 100% { transform: translate3d(0, 0, 0); }
+    15% { transform: translate3d(-7px, 1px, 0) rotate(-1.5deg); }
+    30% { transform: translate3d(7px, -1px, 0) rotate(1.5deg); }
+    45% { transform: translate3d(-5px, 0, 0); }
+    60% { transform: translate3d(5px, 1px, 0); }
+    75% { transform: translate3d(-2px, 0, 0); }
+  }
+
+  @keyframes deathDissolve {
+    0% { opacity: 1; filter: brightness(1.8) drop-shadow(0 0 12px #f87171); transform: scale(1); }
+    35% { opacity: 0.85; filter: brightness(1.2) grayscale(0.3); }
+    100% {
+      opacity: 0.2;
+      filter: grayscale(1) brightness(0.55);
+      transform: scale(0.92) translateY(6px);
+    }
+  }
+
+  @keyframes castGlow {
+    0% { box-shadow: 0 0 0 0 rgba(167, 139, 250, 0); filter: brightness(1); }
+    30% {
+      box-shadow: 0 0 22px 6px rgba(167, 139, 250, 0.55), 0 0 40px 2px rgba(232, 200, 120, 0.25);
+      filter: brightness(1.35) saturate(1.25);
+    }
+    100% { box-shadow: 0 0 0 0 rgba(167, 139, 250, 0); filter: brightness(1); }
+  }
+
+  @keyframes missDim {
+    0% { filter: brightness(1.15) drop-shadow(0 0 6px #94a3b8); opacity: 1; }
+    40% { filter: brightness(0.85); opacity: 0.85; }
+    100% { filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.55)); opacity: 1; }
+  }
+
+  .fx-float {
+    position: absolute;
+    left: 50%;
+    top: 28%;
+    transform: translateX(-50%);
+    z-index: 5;
+    pointer-events: none;
+    animation: floatNum 0.85s ease-out forwards;
+    font-family: system-ui, sans-serif;
+    font-weight: 800;
+    font-size: clamp(1.15rem, 2.6vw, 1.85rem);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9), 0 0 4px rgba(0, 0, 0, 0.6);
+    white-space: nowrap;
+  }
+
+  .fx-dmg { color: #fca5a5; }
+  .fx-dmg.crit { color: #fde68a; font-size: 1.15em; }
+  .fx-heal { color: #86efac; }
+  .fx-miss-label {
+    color: #e5e7eb;
+    letter-spacing: 0.08em;
+    font-size: 0.95em;
+    font-weight: 700;
+  }
+
+  @keyframes floatNum {
+    0% { opacity: 0; transform: translate(-50%, 10px) scale(0.8); }
+    18% { opacity: 1; transform: translate(-50%, 0) scale(1.08); }
+    100% { opacity: 0; transform: translate(-50%, -36px) scale(1); }
+  }
+
+  .fx-puff {
+    position: absolute;
+    left: 50%;
+    top: 42%;
+    width: 28%;
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 4;
+    background: radial-gradient(circle, rgba(226, 232, 240, 0.85) 0%, rgba(148, 163, 184, 0.35) 45%, transparent 70%);
+    box-shadow: 0 0 0 0 rgba(226, 232, 240, 0.4);
+    animation: missPuff 0.55s ease-out forwards;
+  }
+
+  .fx-puff::after {
+    content: '';
+    position: absolute;
+    inset: -35%;
+    border-radius: 50%;
+    border: 2px solid rgba(226, 232, 240, 0.45);
+    animation: missPuffRing 0.55s ease-out forwards;
+  }
+
+  @keyframes missPuff {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.35); }
+    25% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -58%) scale(1.55); }
+  }
+
+  @keyframes missPuffRing {
+    0% { opacity: 0.8; transform: scale(0.6); }
+    100% { opacity: 0; transform: scale(1.4); }
+  }
+
+  .fx-slash {
+    position: absolute;
+    left: 18%;
+    top: 22%;
+    width: 64%;
+    height: 10%;
+    pointer-events: none;
+    z-index: 4;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.95), #fca5a5, transparent);
+    border-radius: 2px;
+    transform: rotate(-28deg);
+    box-shadow: 0 0 12px rgba(248, 113, 113, 0.7);
+    animation: slashStreak 0.35s ease-out forwards;
+  }
+
+  .fx-slash.crit {
+    background: linear-gradient(90deg, transparent, #fef3c7, #fbbf24, transparent);
+    box-shadow: 0 0 16px rgba(251, 191, 36, 0.85);
+    height: 12%;
+  }
+
+  @keyframes slashStreak {
+    0% { opacity: 0; transform: rotate(-28deg) scaleX(0.2); }
+    30% { opacity: 1; transform: rotate(-28deg) scaleX(1); }
+    100% { opacity: 0; transform: rotate(-28deg) translateX(12%) scaleX(1.05); }
+  }
+
+  .fx-cast-glow,
+  .fx-shield {
+    position: absolute;
+    inset: -6%;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 3;
+  }
+
+  .fx-cast-glow {
+    background: radial-gradient(circle at 50% 40%, rgba(167, 139, 250, 0.45), transparent 65%);
+    animation: castPulse 0.7s ease-out forwards;
+  }
+
+  .fx-shield {
+    border: 2px solid rgba(96, 165, 250, 0.85);
+    box-shadow: inset 0 0 18px rgba(59, 130, 246, 0.35), 0 0 16px rgba(59, 130, 246, 0.45);
+    animation: shieldPulse 0.65s ease-out forwards;
+  }
+
+  @keyframes castPulse {
+    0% { opacity: 0; transform: scale(0.85); }
+    35% { opacity: 1; transform: scale(1.05); }
+    100% { opacity: 0; transform: scale(1.15); }
+  }
+
+  @keyframes shieldPulse {
+    0% { opacity: 0; transform: scale(0.9); }
+    40% { opacity: 1; transform: scale(1.02); }
+    100% { opacity: 0; transform: scale(1.08); }
+  }
+
+  .player-bust {
+    position: relative;
   }
 
   .fx-layer {
@@ -598,21 +873,37 @@
     z-index: 2;
   }
 
-  .fx-flash {
-    animation: fxPop 0.55s ease-out;
+  .fx-burst {
+    animation: fxBurstPop 0.65s ease-out forwards;
     font-family: system-ui, sans-serif;
     font-weight: 800;
-    font-size: clamp(1.4rem, 3vw, 2.2rem);
+    font-size: clamp(1.1rem, 2.4vw, 1.7rem);
     text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+    letter-spacing: 0.06em;
   }
 
-  .fx-dmg { color: #fca5a5; }
-  .fx-miss { color: #e5e7eb; letter-spacing: 0.08em; }
+  .fx-burst.fx-cast {
+    color: #ddd6fe;
+    text-shadow: 0 0 16px rgba(167, 139, 250, 0.8), 0 2px 8px rgba(0, 0, 0, 0.85);
+  }
+  .fx-burst.fx-defend { color: #93c5fd; }
+  .fx-burst.fx-flee { color: #fdba74; }
 
-  @keyframes fxPop {
-    0% { opacity: 0; transform: translateY(8px) scale(0.85); }
-    30% { opacity: 1; transform: translateY(0) scale(1.05); }
-    100% { opacity: 0; transform: translateY(-18px) scale(1); }
+  .fx-burst-label { display: inline-block; }
+
+  @keyframes fxBurstPop {
+    0% { opacity: 0; transform: scale(0.75); }
+    30% { opacity: 1; transform: scale(1.08); }
+    100% { opacity: 0; transform: scale(1.2) translateY(-8px); }
+  }
+
+  /* Prefer GPU compositing for FX transforms */
+  .enemy-sprite-wrap,
+  .player-bust,
+  .fx-float,
+  .fx-puff,
+  .fx-slash {
+    will-change: transform, opacity;
   }
 
   .player-panel {
@@ -630,7 +921,7 @@
     aspect-ratio: 1;
     border: 2px solid rgba(212, 164, 74, 0.75);
     border-radius: 6px;
-    overflow: hidden;
+    overflow: visible; /* C5: allow float numbers / puff outside bust */
     background: rgba(8, 8, 10, 0.9);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 220, 150, 0.12);
     flex-shrink: 0;
@@ -641,6 +932,8 @@
     height: 100%;
     object-fit: cover;
     object-position: top center;
+    border-radius: 4px;
+    display: block;
   }
 
   .player-meta {

@@ -277,6 +277,7 @@ function createClient(renderer, characterCreator, muxStore) {
         action: msg.action || "",
         result: msg.result || "",
         damage: msg.damage || 0,
+        heal: msg.heal || 0,
         remainingHp: msg.remainingHp,
         maxHp: msg.maxHp,
         fxId: msg.fxId || "",
