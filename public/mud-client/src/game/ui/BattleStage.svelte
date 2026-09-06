@@ -1,7 +1,18 @@
 <script>
   import { onDestroy } from 'svelte';
   import { hashedAvatar } from '../portraitSrc.js';
-  import { skillDisplayName, isConsumableItem } from '../hudPrefs.js';
+  import {
+    skillDisplayName,
+    isConsumableItem,
+    normalizeHotbarBinds,
+    resolveHotbarActivation,
+    findInventoryItem,
+    skillGenericArtUrl,
+    actionGenericArtUrl,
+  } from '../hudPrefs.js';
+  import { settingsStore } from '../SettingsStore.js';
+  import { overlayStore } from './overlayStore.js';
+  import { itemArtSrc, onItemArtError } from '../itemArtSrc.js';
   import { backend } from '../../api/base.js';
 
   export let store;
@@ -11,6 +22,10 @@
   let nowMs = Date.now();
   let tickTimer = null;
   let fxKey = 0;
+  let bannerText = '';
+  let bannerVisible = false;
+  let bannerTimer = null;
+  let lastBannerKey = '';
 
   $: phase = $store.combatPhase || ($store.inCombat ? 'active' : 'idle');
   $: visible = phase === 'active' || phase === 'ending';
@@ -78,6 +93,29 @@
     return { id, name };
   }).filter((s) => s.name);
 
+  $: hotbarBinds = normalizeHotbarBinds($settingsStore.interface?.hotbarBinds);
+
+  // Last-action banner from combatLog (preferred) or combatFx summary.
+  $: {
+    const latest = log.length ? log[log.length - 1] : null;
+    let nextText = latest?.text ? String(latest.text).trim() : '';
+    let nextKey = latest?.id ? String(latest.id) : '';
+    if (!nextText && fx && fx.at) {
+      nextKey = `fx-${fx.at}`;
+      nextText = formatFxBanner(fx);
+    }
+    if (nextText && nextKey && nextKey !== lastBannerKey) {
+      lastBannerKey = nextKey;
+      bannerText = nextText;
+      bannerVisible = true;
+      if (bannerTimer) clearTimeout(bannerTimer);
+      bannerTimer = setTimeout(() => {
+        bannerVisible = false;
+        bannerTimer = null;
+      }, 2500);
+    }
+  }
+
   function startTick() {
     if (tickTimer) return;
     tickTimer = setInterval(() => { nowMs = Date.now(); }, 200);
@@ -89,7 +127,10 @@
     }
   }
 
-  onDestroy(stopTick);
+  onDestroy(() => {
+    stopTick();
+    if (bannerTimer) clearTimeout(bannerTimer);
+  });
 
   function combatantPortrait(c, fallbackKey) {
     const p = (c && c.portrait) || '';
@@ -146,6 +187,68 @@
   function useItem(item) {
     if (!item?.name) return;
     cmd(`use ${item.name}`);
+  }
+
+  function formatFxBanner(fxEvt) {
+    if (!fxEvt) return '';
+    const all = [...(players || []), ...(enemies || [])];
+    const actor = all.find((c) => c.id === fxEvt.actorId);
+    const target = all.find((c) => c.id === fxEvt.targetId);
+    const actorName = actor?.name || 'Someone';
+    const targetName = target?.name || 'target';
+    const dmg = Number(fxEvt.damage) || 0;
+    const heal = Number(fxEvt.heal) || 0;
+    const result = String(fxEvt.result || '').toLowerCase();
+    const fxId = String(fxEvt.fxId || '').toLowerCase();
+    const action = String(fxEvt.action || '').trim();
+    if (dmg > 0) {
+      const verb = result === 'crit' ? 'crits' : 'hits';
+      return `${actorName} ${verb} ${targetName} for ${dmg}`;
+    }
+    if (heal > 0) return `${actorName} heals ${targetName} for ${heal}`;
+    if (fxId === 'miss' || result === 'miss' || result === 'dodged') {
+      return `${actorName} misses ${targetName}`;
+    }
+    if (fxId === 'defend' || result === 'defended' || result === 'block') {
+      return `${actorName} defends`;
+    }
+    if (fxId === 'flee' || result === 'fled') return `${actorName} flees`;
+    if (fxId === 'cast' || result === 'cast') {
+      return action ? `${actorName} casts ${action}` : `${actorName} casts a spell`;
+    }
+    if (action) return `${actorName} ${action}`;
+    return '';
+  }
+
+  function hotbarSlotTitle(bind) {
+    if (!bind) return 'Empty';
+    if (bind.kind === 'skill') {
+      return `Cast ${bind.name || skillDisplayName(bind.id)}`;
+    }
+    if (bind.kind === 'item') {
+      const item = findInventoryItem(inventory, bind);
+      return item ? `Use ${item.name}` : `${bind.name || 'Item'} (missing)`;
+    }
+    if (bind.kind === 'action') return bind.name || bind.id || 'Action';
+    return 'Empty';
+  }
+
+  function hotbarSlotDisabled(bind) {
+    if (!bind) return true;
+    if (bind.kind === 'item' && !findInventoryItem(inventory, bind)) return true;
+    return false;
+  }
+
+  function activateHotbarSlot(bind) {
+    if (!bind) return;
+    const result = resolveHotbarActivation(bind, { inCombat: true, inventory });
+    if (!result.ok) {
+      if (result.reason && result.reason !== 'empty' && overlayStore?.pushMessage) {
+        overlayStore.pushMessage(result.reason);
+      }
+      return;
+    }
+    if (result.command) cmd(result.command);
   }
 
   function togglePanel(name) {
@@ -363,30 +466,77 @@
     </div>
   </section>
 
-  <!-- Bottom dock (desktop Classic + mobile thumb dock) -->
+  <!-- Bottom controls: last-action banner · hotbar · fixed command dock -->
   {#if phase === 'active'}
-    <nav class="battle-dock" aria-label="Combat actions">
-      <button type="button" class="dock-btn primary" class:active={!panel} on:click={doAttack}>
-        <i class="material-icons">flash_on</i>
-        <span>Attack</span>
-      </button>
-      <button type="button" class="dock-btn" class:active={panel === 'skills'} on:click={() => togglePanel('skills')}>
-        <i class="material-icons">auto_awesome</i>
-        <span>Skills</span>
-      </button>
-      <button type="button" class="dock-btn secondary" on:click={doDefend}>
-        <i class="material-icons">security</i>
-        <span>Defend</span>
-      </button>
-      <button type="button" class="dock-btn items-btn" class:active={panel === 'items'} on:click={() => togglePanel('items')}>
-        <i class="material-icons">shopping_bag</i>
-        <span>Items</span>
-      </button>
-      <button type="button" class="dock-btn flee secondary" on:click={doFlee}>
-        <i class="material-icons">directions_run</i>
-        <span>Flee</span>
-      </button>
-    </nav>
+    <div class="battle-controls">
+      {#if bannerVisible && bannerText}
+        <div class="action-banner" aria-live="polite">{bannerText}</div>
+      {/if}
+
+      <div class="combat-hotbar" aria-label="Combat hotbar">
+        {#each hotbarBinds as bind, index}
+          {@const item = bind?.kind === 'item' ? findInventoryItem(inventory, bind) : null}
+          <button
+            type="button"
+            class="hb-slot"
+            class:filled={!!bind}
+            class:skill={bind?.kind === 'skill'}
+            class:item={bind?.kind === 'item'}
+            class:action={bind?.kind === 'action'}
+            class:empty={!bind}
+            class:disabled={hotbarSlotDisabled(bind)}
+            title={hotbarSlotTitle(bind)}
+            aria-label={hotbarSlotTitle(bind)}
+            disabled={hotbarSlotDisabled(bind)}
+            on:click={() => activateHotbarSlot(bind)}
+          >
+            <span class="hb-index">{index + 1}</span>
+            {#if bind?.kind === 'item'}
+              <img
+                src={itemArtSrc(item || { name: bind.name, templateId: bind.id, type: 'consumable' })}
+                alt=""
+                on:error={(e) => onItemArtError(e, item || { type: 'consumable' })}
+              />
+            {:else if bind?.kind === 'skill'}
+              <img
+                src={skillGenericArtUrl(bind.id || bind.name)}
+                alt=""
+                on:error={(e) => onItemArtError(e, { type: 'default' })}
+              />
+            {:else if bind?.kind === 'action'}
+              <img
+                src={actionGenericArtUrl(bind.id)}
+                alt=""
+                on:error={(e) => onItemArtError(e, { type: 'default' })}
+              />
+            {/if}
+          </button>
+        {/each}
+      </div>
+
+      <nav class="battle-dock" aria-label="Combat actions">
+        <button type="button" class="dock-btn primary" class:active={!panel} on:click={doAttack}>
+          <i class="material-icons">flash_on</i>
+          <span>Attack</span>
+        </button>
+        <button type="button" class="dock-btn secondary" on:click={doDefend}>
+          <i class="material-icons">security</i>
+          <span>Defend</span>
+        </button>
+        <button type="button" class="dock-btn items-btn" class:active={panel === 'items'} on:click={() => togglePanel('items')}>
+          <i class="material-icons">shopping_bag</i>
+          <span>Items</span>
+        </button>
+        <button type="button" class="dock-btn flee secondary" on:click={doFlee}>
+          <i class="material-icons">directions_run</i>
+          <span>Flee</span>
+        </button>
+        <button type="button" class="dock-btn skills-overflow" class:active={panel === 'skills'} on:click={() => togglePanel('skills')}>
+          <i class="material-icons">auto_awesome</i>
+          <span>Skills</span>
+        </button>
+      </nav>
+    </div>
 
     {#if panel === 'skills' || panel === 'items'}
       <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
@@ -434,7 +584,7 @@
   <aside class="combat-log" aria-label="Combat log">
     <div class="combat-log-title">♦ COMBAT LOG</div>
     {#if log.length}
-      {#each log.slice(-4) as line (line.id)}
+      {#each log.slice(-10) as line (line.id)}
         <div class="combat-log-line">&gt; {line.text}</div>
       {/each}
     {:else}
@@ -543,6 +693,7 @@
   .enemy-strip,
   .fx-layer,
   .player-panel,
+  .battle-controls,
   .battle-dock,
   .dock-panel,
   .dock-sheet-backdrop,
@@ -737,12 +888,13 @@
     width: 78%;
     height: 20%;
     transform: translateX(-50%);
-    border: 2px dashed rgba(250, 204, 21, 0.95);
+    /* Solid soft glow — dashed borders flickered on some GPUs; no CSS animation. */
+    border: 2px solid rgba(250, 204, 21, 0.72);
     border-radius: 50%;
     box-shadow:
-      0 0 14px rgba(250, 204, 21, 0.45),
-      0 0 28px rgba(212, 164, 74, 0.2),
-      inset 0 0 10px rgba(250, 204, 21, 0.12);
+      0 0 12px rgba(250, 204, 21, 0.55),
+      0 0 24px rgba(212, 164, 74, 0.3),
+      inset 0 0 8px rgba(250, 204, 21, 0.14);
     pointer-events: none;
   }
 
@@ -1010,7 +1162,7 @@
   .player-panel {
     position: absolute;
     left: 1.1rem;
-    bottom: 7.6rem;
+    bottom: 19.5rem;
     display: flex;
     align-items: flex-end;
     gap: 0.9rem;
@@ -1103,16 +1255,131 @@
   }
   .focus-chip i { color: #c084fc; }
 
-  .battle-dock {
+  .battle-controls {
     position: absolute;
     left: 50%;
-    bottom: 4.15rem;
+    bottom: 11.1rem;
     transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    width: min(96%, 640px);
+    z-index: 3;
+  }
+
+  .action-banner {
+    max-width: 100%;
+    padding: 0.35rem 0.9rem;
+    border-radius: 6px;
+    border: 1.5px solid rgba(232, 200, 120, 0.65);
+    background: linear-gradient(180deg, rgba(28, 22, 12, 0.94), rgba(10, 8, 6, 0.94));
+    color: #f8fafc;
+    font-family: system-ui, sans-serif;
+    font-size: clamp(0.95rem, 1.7vw, 1.15rem);
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    text-align: center;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.75);
+    box-shadow:
+      0 6px 18px rgba(0, 0, 0, 0.4),
+      inset 0 0 0 1px rgba(255, 220, 150, 0.1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    animation: bannerIn 0.2s ease-out;
+    pointer-events: none;
+  }
+
+  @keyframes bannerIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .combat-hotbar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.35rem;
+    border-radius: 8px;
+    border: 1.5px solid rgba(212, 164, 74, 0.4);
+    background: rgba(8, 8, 10, 0.78);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  }
+
+  .hb-slot {
+    appearance: none;
+    position: relative;
+    flex: 0 0 auto;
+    width: clamp(38px, 5.2vw, 48px);
+    aspect-ratio: 1;
+    border-radius: 7px;
+    border: 1.5px dashed rgba(148, 163, 184, 0.28);
+    background: rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+    color: #94a3b8;
+  }
+
+  .hb-slot.filled {
+    border-style: solid;
+    border-color: rgba(148, 163, 184, 0.45);
+    background: rgba(15, 23, 42, 0.8);
+  }
+  .hb-slot.skill.filled { border-color: rgba(167, 139, 250, 0.55); }
+  .hb-slot.item.filled { border-color: rgba(96, 165, 250, 0.5); }
+  .hb-slot.action.filled { border-color: rgba(212, 164, 74, 0.55); }
+  .hb-slot.empty {
+    opacity: 0.4;
+    cursor: default;
+  }
+  .hb-slot.disabled:not(.empty) {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .hb-slot:hover:not(.disabled):not(.empty) {
+    border-color: rgba(251, 191, 36, 0.7);
+    background: rgba(30, 41, 59, 0.92);
+  }
+  .hb-slot img {
+    width: 70%;
+    height: 70%;
+    object-fit: contain;
+    image-rendering: pixelated;
+    pointer-events: none;
+  }
+  .hb-index {
+    position: absolute;
+    left: 3px;
+    top: 2px;
+    font-size: 0.52rem;
+    color: rgba(148, 163, 184, 0.7);
+    line-height: 1;
+    pointer-events: none;
+    font-family: system-ui, sans-serif;
+  }
+
+  .battle-dock {
+    position: relative;
+    left: auto;
+    bottom: auto;
+    transform: none;
     display: flex;
     gap: 0.55rem;
     padding: 0.2rem;
     z-index: 3;
   }
+
+  .dock-btn.skills-overflow {
+    opacity: 0.88;
+    border-color: rgba(167, 139, 250, 0.45);
+  }
+  .dock-btn.skills-overflow i { color: #c4b5fd; }
+
 
   .dock-btn {
     min-width: clamp(84px, 11vw, 108px);
@@ -1152,7 +1419,7 @@
   .dock-panel {
     position: absolute;
     left: 50%;
-    bottom: 7rem;
+    bottom: 18.5rem;
     transform: translateX(-50%);
     display: flex;
     flex-wrap: wrap;
@@ -1195,9 +1462,10 @@
     right: 0.75rem;
     bottom: 0.55rem;
     width: auto;
-    max-height: 3.75rem;
-    overflow: hidden;
-    padding: 0.4rem 0.75rem 0.5rem;
+    max-height: 10rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 0.45rem 0.75rem 0.55rem;
     border: 1.5px solid rgba(212, 164, 74, 0.55);
     border-radius: 6px;
     background: linear-gradient(180deg, rgba(12, 10, 8, 0.92), rgba(4, 4, 6, 0.92));
@@ -1205,23 +1473,23 @@
       inset 0 0 0 1px rgba(255, 220, 150, 0.06),
       0 4px 14px rgba(0, 0, 0, 0.35);
     font-family: system-ui, sans-serif;
-    font-size: 0.72rem;
-    line-height: 1.3;
+    font-size: 0.82rem;
+    line-height: 1.35;
     color: #d1d5db;
   }
 
   .combat-log-title {
     color: #d4a44a;
-    font-size: 0.66rem;
+    font-size: 0.7rem;
     font-weight: 700;
     letter-spacing: 0.1em;
-    margin-bottom: 0.2rem;
+    margin-bottom: 0.25rem;
   }
 
   .combat-log-line {
-    white-space: nowrap;
+    white-space: normal;
     overflow: hidden;
-    text-overflow: ellipsis;
+    word-break: break-word;
   }
   .combat-log-line.muted {
     color: #9ca3af;
@@ -1322,8 +1590,8 @@
       grid-template-rows:
         auto
         auto
-        minmax(0, 0.35fr)
-        minmax(48px, 0.14fr)
+        minmax(0, 0.32fr)
+        minmax(40px, 0.1fr)
         auto
         auto
         auto;
@@ -1453,7 +1721,7 @@
       margin-bottom: 0.2rem;
     }
 
-    .battle-dock {
+    .battle-controls {
       grid-area: dock;
       position: relative;
       left: auto;
@@ -1462,14 +1730,44 @@
       width: calc(100% - 0.8rem);
       max-width: none;
       margin: 0.15rem 0.4rem 0.2rem;
-      padding: 0.4rem;
-      gap: 0.35rem;
+      gap: 0.3rem;
+      z-index: 3;
+    }
+    .action-banner {
+      font-size: 0.88rem;
+      padding: 0.3rem 0.55rem;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .combat-hotbar {
+      width: 100%;
+      box-sizing: border-box;
+      gap: 0.25rem;
+      padding: 0.25rem;
+      overflow-x: auto;
+      justify-content: flex-start;
+    }
+    .hb-slot {
+      width: clamp(36px, 10vw, 44px);
+      flex-shrink: 0;
+    }
+    .battle-dock {
+      position: relative;
+      left: auto;
+      bottom: auto;
+      transform: none;
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      padding: 0.35rem;
+      gap: 0.3rem;
       justify-content: stretch;
       border: 1.5px solid rgba(212, 164, 74, 0.5);
       border-radius: 10px;
       background: rgba(8, 8, 10, 0.92);
       box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.35);
       z-index: 3;
+      box-sizing: border-box;
     }
     .dock-btn {
       min-width: 0;
@@ -1491,9 +1789,10 @@
     .dock-btn.secondary {
       opacity: 0.95;
     }
-    /* Items moves into Skills/Items sheet on narrow; keep reachable via sheet tabs */
-    .dock-btn.items-btn {
-      display: none;
+    /* Skills is overflow for unequipped; hotbar is primary cast UI */
+    .dock-btn.skills-overflow {
+      flex: 0.85;
+      opacity: 0.9;
     }
     .dock-btn:active {
       transform: scale(0.97);
@@ -1595,8 +1894,8 @@
       bottom: auto;
       width: calc(100% - 1.2rem);
       margin: 0 0.6rem 0.35rem;
-      max-height: 2.4rem;
-      font-size: 0.62rem;
+      max-height: 6.5rem;
+      font-size: 0.72rem;
     }
 
     .arena-art {
