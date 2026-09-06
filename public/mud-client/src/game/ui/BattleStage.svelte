@@ -34,7 +34,8 @@
   $: players = $store.combatPlayers || [];
   $: targetId = $store.combatTargetId;
   $: turn = $store.combatTurn;
-  $: log = $store.combatLog || [];
+  $: logRaw = $store.combatLog || [];
+  $: log = (logRaw || []).filter((line) => line && !isCombatLogNoise(line.text));
   $: outcome = $store.combatOutcome;
   $: endMessage = $store.combatEndMessage || '';
   $: fx = $store.combatFx;
@@ -109,14 +110,21 @@
   $: queuedLabel = queuedChipLabel(queuedAction, queuedSkillId);
 
 
-  // Last-action banner from combatLog (preferred) or combatFx summary.
+  // Short hit banner: prefer combatFx summary; log only if short prose (no rolls/ASCII dumps).
   $: {
-    const latest = log.length ? log[log.length - 1] : null;
-    let nextText = latest?.text ? String(latest.text).trim() : '';
-    let nextKey = latest?.id ? String(latest.id) : '';
-    if (!nextText && fx && fx.at) {
+    let nextText = '';
+    let nextKey = '';
+    if (fx && fx.at) {
       nextKey = `fx-${fx.at}`;
       nextText = formatFxBanner(fx);
+    }
+    if (!nextText) {
+      const latest = log.length ? log[log.length - 1] : null;
+      const candidate = latest?.text ? String(latest.text).trim() : '';
+      if (latest && isBannerWorthy(candidate)) {
+        nextKey = String(latest.id);
+        nextText = shortenBannerText(candidate);
+      }
     }
     if (nextText && nextKey && nextKey !== lastBannerKey) {
       lastBannerKey = nextKey;
@@ -258,6 +266,49 @@
     cmd(`use ${item.name}`);
   }
 
+
+  function isCombatLogNoise(text) {
+    const t = String(text || '').trim();
+    if (!t) return true;
+    if (/COMBAT STATUS/i.test(t)) return true;
+    if (/^TURN ORDER:?\s*$/i.test(t)) return true;
+    if (/TURN ORDER/i.test(t) && (/[═=]{6,}/.test(t) || t.split(/\n/).length > 2)) return true;
+    if (/Commands:\s*attack/i.test(t) && t.length > 60) return true;
+    const bars = (t.match(/[█▓▒░■□▬▭▆▅▃▂▁]/g) || []).length;
+    if (bars >= 6) return true;
+    const rules = (t.match(/[═]/g) || []).length;
+    if (rules >= 8) return true;
+    // Multi-line ASCII status / help dumps
+    if (t.includes('\n') && t.length > 140 && /\bHP\b|TURN ORDER|COMBAT STATUS|Commands:/i.test(t)) {
+      return true;
+    }
+    // Mostly box-drawing / separator lines
+    const lines = t.split(/\n/).map((l) => l.trim()).filter(Boolean);
+    if (lines.length >= 3) {
+      const noisy = lines.filter((l) => /^[═=\-_|\s♦]+$/.test(l) || /█|▓|░|\[={0,1}-{2,}={0,1}\]/.test(l)).length;
+      if (noisy >= Math.ceil(lines.length * 0.5)) return true;
+    }
+    return false;
+  }
+
+  function isBannerWorthy(text) {
+    const t = String(text || '').trim();
+    if (!t || isCombatLogNoise(t)) return false;
+    if (t.includes('\n')) return false;
+    if (t.length > 96) return false;
+    // Roll math stays in log, not the giant banner
+    if (/\bd20\b|\broll(ed|s)?\b|\+\s*\d+\s*=|\(\s*\d+\s*[+\-]\s*\d+/i.test(t)) return false;
+    return true;
+  }
+
+  function shortenBannerText(text) {
+    const t = String(text || '').trim();
+    // Prefer "X hits Y for N" style clauses
+    const hit = t.match(/([^.]{0,40}?\b(?:hits|crits|misses|heals)\b[^.!]{0,50}(?:for\s+\d+)?)/i);
+    if (hit) return hit[1].trim();
+    return t.length > 72 ? `${t.slice(0, 69)}…` : t;
+  }
+
   function formatFxBanner(fxEvt) {
     if (!fxEvt) return '';
     const all = [...(players || []), ...(enemies || [])];
@@ -390,6 +441,8 @@
     {/if}
   </div>
 
+  <!-- Arena band: fighters + FX + short action banner (floats clip here) -->
+  <div class="battle-arena">
   <!-- Enemies upper-right -->
   <section class="enemy-strip" aria-label="Enemies">
     {#each enemies as enemy (enemy.id)}
@@ -536,13 +589,15 @@
     </div>
   </section>
 
-  <!-- Bottom controls: banner/queued above unified dock strip (hotbar + rail) -->
+  {#if bannerVisible && bannerText}
+    <div class="action-banner" aria-live="polite">{bannerText}</div>
+  {/if}
+  </div><!-- /.battle-arena -->
+
+  <!-- Dock: queue chip + unified hotbar/rail strip (in-flow grid row) -->
   {#if phase === 'active'}
     <div class="battle-controls">
       <div class="dock-status" aria-live="polite">
-        {#if bannerVisible && bannerText}
-          <div class="action-banner">{bannerText}</div>
-        {/if}
         {#if queuedAction && queuedLabel}
           <div class="queued-chip" title="Queued action">
             <i class="material-icons">hourglass_top</i>
@@ -704,7 +759,7 @@
     animation: stageIn 0.28s ease-out;
   }
 
-  /* Desktop: larger fight stage (C7 polish) — keep gold frame; mobile full-bleed below */
+  /* Desktop: named grid rows — header / arena / dock / log (no absolute dock/log) */
   .battle-frame {
     position: relative;
     z-index: 1;
@@ -715,7 +770,13 @@
     max-width: calc(100vw - 2.5rem);
     max-height: calc(100vh - 2.5rem);
     display: grid;
-    grid-template-rows: auto auto 1fr auto auto;
+    grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "header"
+      "timer"
+      "arena"
+      "dock"
+      "log";
     border: 1.5px solid rgba(212, 164, 74, 0.65);
     border-radius: 14px;
     overflow: hidden;
@@ -724,6 +785,22 @@
       0 0 0 1px rgba(0, 0, 0, 0.4),
       inset 0 0 0 1px rgba(255, 220, 150, 0.1);
     background: #0a0b0e;
+  }
+
+  .battle-header { grid-area: header; }
+  .decision-timer { grid-area: timer; }
+  .battle-arena {
+    grid-area: arena;
+    position: relative;
+    min-height: 0;
+    overflow: hidden;
+    z-index: 1;
+  }
+  .battle-controls {
+    grid-area: dock;
+  }
+  .combat-log {
+    grid-area: log;
   }
 
   /* Room arena art — dimmed cover like C0 mock alley/corridor */
@@ -775,9 +852,6 @@
 
   .battle-header,
   .decision-timer,
-  .enemy-strip,
-  .fx-layer,
-  .player-panel,
   .combat-log,
   .outcome-panel {
     position: relative;
@@ -874,14 +948,18 @@
   }
 
   .enemy-strip {
-    justify-self: end;
-    align-self: start;
+    position: absolute;
+    top: 0.35rem;
+    right: 0.85rem;
+    left: auto;
+    z-index: 3;
     display: flex;
     flex-wrap: wrap;
     justify-content: flex-end;
     gap: 0.85rem;
-    padding: 0.75rem 1.25rem 0;
+    padding: 0.4rem 0.4rem 0;
     max-width: min(88%, 520px);
+    pointer-events: auto;
   }
 
   .enemy-card {
@@ -1212,8 +1290,7 @@
 
   .fx-layer {
     position: absolute;
-    /* Arena / fighters band only — leave bottom clear for dock */
-    inset: 22% 18% 42% 18%;
+    inset: 0;
     display: grid;
     place-items: center;
     pointer-events: none;
@@ -1256,7 +1333,8 @@
   .player-panel {
     position: absolute;
     left: 1.1rem;
-    bottom: 15.25rem;
+    bottom: 0.75rem;
+    z-index: 3;
     display: flex;
     align-items: flex-end;
     gap: 0.9rem;
@@ -1350,17 +1428,23 @@
   .focus-chip i { color: #c084fc; }
 
   .battle-controls {
-    position: absolute;
-    left: 50%;
-    bottom: 8.6rem;
-    transform: translateX(-50%);
+    position: relative;
+    left: auto;
+    bottom: auto;
+    transform: none;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.35rem;
-    width: min(96%, 720px);
+    justify-content: center;
+    gap: 0.3rem;
+    width: auto;
+    max-width: none;
+    margin: 0.35rem 0.75rem 0.25rem;
+    min-height: 72px;
+    max-height: 88px;
     z-index: 20;
     pointer-events: auto;
+    box-sizing: border-box;
   }
 
   .dock-status {
@@ -1375,14 +1459,19 @@
   }
 
   .action-banner {
-    max-width: 100%;
-    padding: 0.35rem 0.9rem;
+    position: absolute;
+    left: 50%;
+    bottom: 18%;
+    transform: translateX(-50%);
+    z-index: 5;
+    max-width: min(92%, 520px);
+    padding: 0.3rem 0.85rem;
     border-radius: 6px;
     border: 1.5px solid rgba(232, 200, 120, 0.65);
     background: linear-gradient(180deg, rgba(28, 22, 12, 0.94), rgba(10, 8, 6, 0.94));
     color: #f8fafc;
     font-family: system-ui, sans-serif;
-    font-size: clamp(0.95rem, 1.7vw, 1.15rem);
+    font-size: clamp(0.88rem, 1.5vw, 1.05rem);
     font-weight: 700;
     letter-spacing: 0.01em;
     text-align: center;
@@ -1393,13 +1482,17 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    animation: bannerIn 0.2s ease-out;
+    animation: bannerInArena 0.2s ease-out;
     pointer-events: none;
   }
 
   @keyframes bannerIn {
     from { opacity: 0; transform: translateY(6px); }
     to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes bannerInArena {
+    from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
   }
 
   .combat-hotbar {
@@ -1520,6 +1613,8 @@
       0 6px 16px rgba(0, 0, 0, 0.4),
       inset 0 0 0 1px rgba(255, 220, 150, 0.06);
     min-height: 58px;
+    max-width: min(100%, 720px);
+    margin: 0 auto;
   }
 
   .hb-cd-overlay {
@@ -1635,7 +1730,7 @@
   .dock-panel {
     position: absolute;
     left: 50%;
-    bottom: 15.5rem;
+    bottom: 10.5rem;
     transform: translateX(-50%);
     display: flex;
     flex-wrap: wrap;
@@ -1673,12 +1768,15 @@
   }
 
   .combat-log {
-    position: absolute;
-    left: 0.75rem;
-    right: 0.75rem;
-    bottom: 0.45rem;
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
     width: auto;
-    max-height: 7.6rem;
+    height: 8rem;
+    max-height: 8rem;
+    min-height: 7rem;
+    margin: 0 0.75rem 0.55rem;
     overflow-x: hidden;
     overflow-y: auto;
     padding: 0.4rem 0.75rem 0.45rem;
@@ -1692,6 +1790,8 @@
     font-size: 0.82rem;
     line-height: 1.35;
     color: #d1d5db;
+    box-sizing: border-box;
+    z-index: 2;
   }
 
   .combat-log-title {
@@ -1892,21 +1992,30 @@
       grid-template-rows:
         auto
         auto
-        minmax(0, 0.32fr)
-        minmax(40px, 0.1fr)
-        auto
+        minmax(0, 1fr)
         auto
         auto;
       grid-template-areas:
         "header"
         "timer"
-        "enemies"
-        "fx"
-        "player"
+        "arena"
         "dock"
         "log";
       padding-bottom: env(safe-area-inset-bottom, 0px);
       overflow: hidden;
+    }
+
+    .battle-arena {
+      grid-area: arena;
+      display: grid;
+      grid-template-rows: minmax(0, 0.55fr) minmax(36px, 0.12fr) auto;
+      grid-template-areas:
+        "enemies"
+        "fx"
+        "player";
+      min-height: 0;
+      overflow: hidden;
+      position: relative;
     }
 
     .battle-header {
@@ -1954,6 +2063,8 @@
     .enemy-strip {
       grid-area: enemies;
       position: relative;
+      top: auto;
+      right: auto;
       justify-self: stretch;
       align-self: stretch;
       justify-content: center;
@@ -1984,8 +2095,23 @@
       grid-area: fx;
       position: relative;
       inset: auto;
-      min-height: 48px;
+      min-height: 40px;
       z-index: 2;
+    }
+
+    .action-banner {
+      position: relative;
+      left: auto;
+      bottom: auto;
+      transform: none;
+      margin: 0.15rem auto 0;
+      max-width: calc(100% - 1.2rem);
+      font-size: 0.88rem;
+      padding: 0.3rem 0.55rem;
+      width: calc(100% - 1.2rem);
+      box-sizing: border-box;
+      grid-column: 1 / -1;
+      justify-self: center;
     }
 
     .player-panel {
@@ -2005,6 +2131,7 @@
       backdrop-filter: none;
       gap: 0.65rem;
       align-items: center;
+      z-index: 3;
     }
     .player-bust {
       width: clamp(36px, 9vw, 48px);
@@ -2033,13 +2160,9 @@
       max-width: none;
       margin: 0.15rem 0.4rem 0.2rem;
       gap: 0.3rem;
+      min-height: 0;
+      max-height: none;
       z-index: 20;
-    }
-    .action-banner {
-      font-size: 0.88rem;
-      padding: 0.3rem 0.55rem;
-      width: 100%;
-      box-sizing: border-box;
     }
     .dock-row,
     .dock-strip {
@@ -2220,7 +2343,9 @@
       bottom: auto;
       width: calc(100% - 1.2rem);
       margin: 0 0.6rem 0.35rem;
-      max-height: 6.5rem;
+      height: 7rem;
+      min-height: 6.5rem;
+      max-height: 7.5rem;
       font-size: 0.72rem;
     }
 

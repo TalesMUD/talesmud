@@ -203,11 +203,57 @@ function normalizeCombatantList(list) {
   return (list || []).map(normalizeCombatant).filter((c) => c && c.id);
 }
 
-function appendCombatLog(log, text) {
+function isCombatLogNoise(text) {
+  const t = String(text || "").trim();
+  if (!t) return true;
+  if (/COMBAT STATUS/i.test(t)) return true;
+  if (/^TURN ORDER:?\s*$/i.test(t)) return true;
+  if (/TURN ORDER/i.test(t) && (/[═=]{6,}/.test(t) || t.split(/\n/).length > 2)) return true;
+  if (/Commands:\s*attack/i.test(t) && t.length > 60) return true;
+  const bars = (t.match(/[█▓▒░■□▬▭▆▅▃▂▁]/g) || []).length;
+  if (bars >= 6) return true;
+  const rules = (t.match(/[═]/g) || []).length;
+  if (rules >= 8) return true;
+  if (t.includes("\n") && t.length > 140 && /\bHP\b|TURN ORDER|COMBAT STATUS|Commands:/i.test(t)) {
+    return true;
+  }
+  const lines = t.split(/\n/).map((l) => l.trim()).filter(Boolean);
+  if (lines.length >= 3) {
+    const noisy = lines.filter(
+      (l) => /^[═=\-_|\s♦]+$/.test(l) || /█|▓|░|\[={0,1}-{2,}={0,1}\]/.test(l)
+    ).length;
+    if (noisy >= Math.ceil(lines.length * 0.5)) return true;
+  }
+  return false;
+}
+
+/** Keep short prose action lines; drop ASCII status / help dumps. */
+function proseCombatLogLines(text) {
   const clean = String(text || "").trim();
-  if (!clean) return log || [];
-  const next = [...(log || []), { id: nextCombatLogId(), text: clean }];
-  return next.slice(-8);
+  if (!clean) return [];
+  if (!clean.includes("\n")) {
+    return isCombatLogNoise(clean) ? [] : [clean];
+  }
+  if (isCombatLogNoise(clean)) {
+    // Collapse: keep only short non-noise lines from the dump
+    return clean
+      .split(/\n+/)
+      .map((l) => l.trim())
+      .filter((l) => l && !isCombatLogNoise(l) && l.length <= 120 && !/^[═=\-_|♦\s]+$/.test(l))
+      .filter((l) => !/^Commands:/i.test(l) && !/^TURN ORDER/i.test(l))
+      .slice(0, 3);
+  }
+  return [clean];
+}
+
+function appendCombatLog(log, text) {
+  const lines = proseCombatLogLines(text);
+  if (!lines.length) return log || [];
+  let next = [...(log || [])];
+  for (const line of lines) {
+    next.push({ id: nextCombatLogId(), text: line });
+  }
+  return next.slice(-12);
 }
 
 function patchCombatantHp(list, msg) {
@@ -790,7 +836,10 @@ function createStore() {
         state.combatTurn = null;
         state.combatFx = null;
         clearCombatQueueFields(state);
-        state.combatLog = message ? [{ id: nextCombatLogId(), text: String(message).trim() }] : [];
+        {
+          const lines = proseCombatLogLines(message);
+          state.combatLog = lines.map((line) => ({ id: nextCombatLogId(), text: line }));
+        }
         return state;
       });
     },
