@@ -38,6 +38,16 @@ const (
 	CombatActionTimeout CombatAction = "timeout" // Forced defend due to timeout
 )
 
+// CombatPhase tracks authored turn pacing for a combat instance (C1).
+type CombatPhase string
+
+const (
+	CombatPhaseIdle          CombatPhase = ""             // Ready to start/advance a turn
+	CombatPhaseWaitingPlayer CombatPhase = "waitingPlayer" // Player decision window open
+	CombatPhasePlayingBeat   CombatPhase = "playingBeat"   // Post-action beat budget running
+	CombatPhaseResolving     CombatPhase = "resolving"     // Action being resolved this tick
+)
+
 // StatusEffect represents an active buff, debuff, DoT, or HoT on a combatant
 type StatusEffect struct {
 	ID       string  `json:"id"`
@@ -126,13 +136,18 @@ type CombatInstance struct {
 	TurnStartTime  time.Time      `json:"turnStartTime"`
 	Round          int            `json:"round"`
 
+	// Authored pacing (C1) — gate processAllTurns so fights are readable
+	Phase            CombatPhase `json:"phase"`
+	NextActionAt     time.Time   `json:"nextActionAt"`               // Do not resolve next turn before this
+	DecisionDeadline time.Time   `json:"decisionDeadline,omitempty"` // Player decision window end
+
 	// State
 	State        CombatState `json:"state"`
 	CreatedAt    time.Time   `json:"createdAt"`
 	LastActionAt time.Time   `json:"lastActionAt"`
 
 	// Configuration
-	TurnTimeoutSec int `json:"turnTimeoutSec"` // Default: 60
+	TurnTimeoutSec int `json:"turnTimeoutSec"` // Legacy absolute turn timeout (default 60); DecisionWindowSeconds is the player action window
 
 	// Combat Log
 	Log []CombatLogEntry `json:"log"`

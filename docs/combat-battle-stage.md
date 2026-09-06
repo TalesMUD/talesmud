@@ -1,6 +1,6 @@
 # Combat Battle Stage
 
-**Status:** C0 locked (Marcus 2026-09-06)  
+**Status:** C0 locked · **C1 done** (engine pacing + structured WS, 2026-09-06)  
 **Milestone:** [Combat Battle Stage](https://github.com/TalesMUD/talesmud/milestone/4)  
 **Branch:** `engine-june` (do not merge to public `master` without Marcus okay)
 
@@ -9,7 +9,7 @@
 Combat is a logical `CombatInstance` with `OriginRoomID` — **not** a separate world room.
 Players stay in the origin room; `InCombat` + WS combat messages drive the client.
 Auto-attack + queued `attack` / `defend` / `flee` / `skill` already exist.
-Today `CombatController.Update()` runs `processAllTurns` every tick → fights end in ~5s.
+C1: `processAllTurns` resolves at most one combatant per tick, gated by authored `NextActionAt` / player `DecisionWindowSeconds`.
 
 ## Locked pillars
 
@@ -46,17 +46,37 @@ Later optional: **Party** mode (FF side-by-side) for large multi-combat.
 
 ## WS event protocol (C1)
 
-`combatStart` · `turnStart` · `actionResolved` · `hpDelta` · `statusApplied` · `skillFx` · `combatEnd`
+Wire types (extend existing; terminal `message` prose kept):
+
+| Event | Type string | Notes |
+|-------|-------------|-------|
+| Start | `combatStart` | enemies/players HP portraits |
+| Turn | `combatTurn` | actorId, actorName, round, deadlineMs (player window) |
+| Action | `combatAction` | actorId, targetId, action, result, damage, remainingHp, maxHp, fxId, combatants[] |
+| End | `combatEnd` | outcome |
+
+Conceptual aliases from the mock (`turnStart` / `actionResolved`) map to `combatTurn` / `combatAction`.
+`hpDelta` / `statusApplied` / `skillFx` remain optional follow-ons; HP snapshots ride on `combatAction.combatants`.
 
 Clients **animate from events**; they do not invent outcomes.
-`actionResolved` carries actorId, targetId(s), result, damage, remaining HP, fxId, optional roll text for terminal.
+
+### C1 engine timings (`combat.CombatConfig`)
+
+| Constant | Default | Role |
+|----------|---------|------|
+| `DecisionWindowSeconds` | 10 | Player turn wait; no `QueuedAction` → auto Attack |
+| `TurnBeatMs` | 1000 | Authored windup / inter-turn beat |
+| `ReactionMs` | 400 | Post-resolve reaction pause |
+| `TurnTimeoutSeconds` | 60 | Legacy absolute turn timeout (kept; decision window is the player UX timer) |
+
+`CombatController.processAllTurns` resolves **at most one** combatant per Update, gated by `NextActionAt` / `Phase` (`waitingPlayer` | `playingBeat` | `resolving`) on `CombatInstance`. Combat game-loop tick is **1s**.
 
 ## Ship order (one Now at a time)
 
 | ID | Slice |
 |----|-------|
 | C0 | Spec + mocks (this doc) |
-| C1 | Engine turn beats + structured WS events |
+| C1 | Engine turn beats + structured WS events — **done on engine-june** |
 | C2 | Svelte full-screen battle stage |
 | C3 | Mobile web thumb dock |
 | C4 | Flutter parity |
