@@ -85,6 +85,7 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
 
 ```
 /                          # Static files (frontend)
+/play                      # MUD client SPA (JS/CSS/HTML Cache-Control: no-cache)
 /health                    # Health check
 /ws                        # WebSocket (game connection)
 /api/
@@ -1336,7 +1337,10 @@ class GameClient {
 ```
 
 `Game.svelte` owns reconnect scheduling because it has access to auth state and
-the active token. `Client.js` only sends over an open socket and reports
+the active token. A process-wide `websocketGate.js` allows only one CONNECTING,
+OPEN, or CLOSING socket (survives Game remounts). Close code 4001 means another
+connection took the session — the client shows that and does not auto-reconnect.
+`Client.js` only sends over an open socket and reports
 reconnecting state to the UI store when a player tries to send while offline.
 It also handles `roomPresence` messages by updating `MUDXPlusStore.players`
 without re-rendering the full room.

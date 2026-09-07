@@ -142,7 +142,7 @@ DiscoveredAreas map[string]bool  // Area names
 ### NPC / enemy portraits
 Room presence sends `portrait` URLs (`/api/portraits/{templateOrId}.png`). Import copies `assets/images/sprites/{npcs,enemies}/` into `uploads/portraits/`. Sprites are 512px full-figure art; the original NPC/enemy cards clip a 48px square around the body (`object-fit: cover` + zoom). Missing files fall back to hashed `img/avatars/{1-14}p.png`. Component CSS lives in `public/mud-client/public/extra.css` and must be deployed with `bundle.js`.
 
-WebSocket connects go through a process-wide gate (`websocketGate.js`): one CONNECTING/OPEN socket, no reactive `ws=null` reconnect, and close code 4001 (session replaced) does not auto-reconnect. The Map overview is an Inventory-style `position:fixed` modal with an explicit pixel panel size so the canvas fills the stage.
+WebSocket connects go through a process-wide gate (`websocketGate.js`): one CONNECTING/OPEN/CLOSING socket, no reactive `ws=null` reconnect, and close code 4001 (session replaced) does not auto-reconnect. The Map overview is an Inventory-style body-portal panel (`map-panel`, never Materialize's `.modal`) with explicit pixel size so the canvas fills the stage. `/play` JS/CSS/HTML is served `Cache-Control: no-cache` plus `?v=` on asset URLs so deploys are not stuck behind a cached `bundle.js`.
 
 ### Instanced cellars
 Exits with `type: instance` or `instance: true`, or a normal directional exit from a shared/hub room into a room tagged `instance`/`instanced`, create a private copy of the destination plus rooms reachable without walking back into the hub. Two guests share the town room (e.g. The Weary Wanderer `R0203`) and get different cellar IDs (`R0215~aabbccdd`). Hidden cellar wings (R0230+) are cloned with the entrance. When the last occupant leaves, clones and copied NPCs are destroyed.
@@ -2076,7 +2076,7 @@ Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "unc
 
 ### Client
 - Map widget (player-facing name; same `minimap` widget slot / atlas protocol) receives the atlas over WebSocket on enter, and can also fetch `GET /api/characters/:id/map`
-- Action-bar **Map** chrome / Expand always opens a real fullscreen Map overlay (dimmed play surface, Esc/X close) via the `overlayHost` instance in `Game.svelte` — not a side tab next to Inventory
+- Action-bar **Map** chrome / Expand always opens a real fullscreen Map overlay (dimmed play surface, Esc/X close) via `MapOverviewOverlay` portaled to `document.body` — Inventory-style centered panel (`#map-overview-overlay` / `.map-panel`), not clipped to the Map widget and not Materialize `.modal`
 - Label LOD: zoomed out = area names only (collision-aware; or none); mid = current + adjacent rooms; zoomed in = room names with collision avoidance (no stacked area+room labels). Compass/vertical exit words are never painted (exit ticks only)
 - Exactly one gold you-are-here marker, keyed by `currentRoomId` (incl. `R0215~instance` → template). Soft travel-trail dots optional. Recenter (my_location) pans to you
 - Title stays **Map**. Layer tabs (Overworld/Lower/Upper) only when `atlas.layers` has more than one entry. Compact optional widget opens fullscreen; Map chrome pin is primary

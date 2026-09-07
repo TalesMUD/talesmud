@@ -35,20 +35,26 @@
   $: open = !!(store && $store && $store.mapOverviewOpen);
 
   function portalToBody(node) {
-    node.style.position = 'fixed';
-    node.style.top = '0';
-    node.style.left = '0';
-    node.style.right = '0';
-    node.style.bottom = '0';
-    node.style.width = '100vw';
-    node.style.height = '100vh';
-    node.style.zIndex = '200000';
-    node.style.display = 'flex';
-    node.style.alignItems = 'center';
-    node.style.justifyContent = 'center';
-    node.style.padding = '12px';
-    node.style.boxSizing = 'border-box';
-    node.style.background = 'rgba(0,0,0,0.82)';
+    // Inline every critical property — Materialize + scoped CSS must not win.
+    node.style.cssText = [
+      'position:fixed',
+      'top:0',
+      'left:0',
+      'right:0',
+      'bottom:0',
+      'width:100vw',
+      'height:100vh',
+      'z-index:200000',
+      'display:flex',
+      'align-items:center',
+      'justify-content:center',
+      'padding:12px',
+      'box-sizing:border-box',
+      'background:rgba(0,0,0,0.82)',
+      'opacity:1',
+      'visibility:visible',
+      'pointer-events:auto',
+    ].join(';');
     if (node.parentNode !== document.body) {
       document.body.appendChild(node);
     }
@@ -64,6 +70,15 @@
     const w = Math.max(320, Math.min(Math.floor(window.innerWidth * 0.96), 1100));
     const h = Math.max(280, Math.min(Math.floor(window.innerHeight * 0.92), 800));
     modalEl.style.boxSizing = 'border-box';
+    modalEl.style.position = 'relative';
+    modalEl.style.left = 'auto';
+    modalEl.style.right = 'auto';
+    modalEl.style.top = 'auto';
+    modalEl.style.bottom = 'auto';
+    modalEl.style.opacity = '1';
+    modalEl.style.visibility = 'visible';
+    modalEl.style.display = 'flex';
+    modalEl.style.flexDirection = 'column';
     modalEl.style.width = w + 'px';
     modalEl.style.height = h + 'px';
     modalEl.style.minWidth = w + 'px';
@@ -71,6 +86,7 @@
     modalEl.style.maxWidth = w + 'px';
     modalEl.style.maxHeight = h + 'px';
     modalEl.style.flex = 'none';
+    modalEl.style.transform = 'none';
     return { w, h };
   }
 
@@ -413,19 +429,22 @@
 
 <style>
   /* Scoped fallbacks — critical layout also inlined so body portal cannot lose them. */
-  .backdrop {
+  .map-overlay {
     position: fixed;
     inset: 0;
     z-index: 200000;
     background: rgba(0, 0, 0, 0.82);
-    backdrop-filter: blur(6px);
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 1em;
     overflow: hidden;
+    opacity: 1;
+    visibility: visible;
   }
-  .modal {
+  /* Never class="modal" — Materialize global .modal is opacity:0 / display:none. */
+  .map-panel {
+    position: relative;
     width: min(96vw, 1100px);
     height: min(92vh, 800px);
     max-width: 1100px;
@@ -437,6 +456,9 @@
     border-radius: 10px;
     overflow: hidden;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+    opacity: 1;
+    visibility: visible;
+    transform: none;
   }
   .toolbar {
     flex: 0 0 auto;
@@ -514,8 +536,8 @@
   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
   <div
     id="map-overview-overlay"
-    class="backdrop"
-    style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:200000;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;background:rgba(0,0,0,0.82);"
+    class="map-overlay"
+    style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:200000;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;background:rgba(0,0,0,0.82);opacity:1;visibility:visible;"
     use:portalToBody
     role="dialog"
     aria-modal="true"
@@ -523,9 +545,9 @@
     on:click={(e) => { if (e.target === e.currentTarget) closeOverview(); }}
   >
     <div
-      class="modal"
+      class="map-panel"
       bind:this={modalEl}
-      style="width:min(96vw,1100px);height:min(92vh,800px);max-width:1100px;max-height:800px;display:flex;flex-direction:column;overflow:hidden;background:rgba(12,16,24,0.97);border:1px solid rgba(212,175,55,0.28);border-radius:10px;flex:none;"
+      style="position:relative;left:auto;right:auto;top:auto;bottom:auto;width:min(96vw,1100px);height:min(92vh,800px);max-width:1100px;max-height:800px;display:flex;flex-direction:column;overflow:hidden;background:rgba(12,16,24,0.97);border:1px solid rgba(212,175,55,0.28);border-radius:10px;flex:none;opacity:1;visibility:visible;transform:none;"
       on:click|stopPropagation
     >
       <div class="toolbar">

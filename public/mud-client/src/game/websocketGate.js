@@ -21,7 +21,8 @@ export function wsBusy() {
   if (takenOver) return true;
   if (inflight) return true;
   if (!live) return false;
-  return live.readyState === WebSocket.CONNECTING || live.readyState === WebSocket.OPEN;
+  const rs = live.readyState;
+  return rs === WebSocket.CONNECTING || rs === WebSocket.OPEN || rs === WebSocket.CLOSING;
 }
 
 /** Claim the right to call `new WebSocket`. Must run before any store writes. */

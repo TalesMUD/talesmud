@@ -77,6 +77,13 @@ func SPAMiddleware(urlPrefix string, spaFS fs.FS, indexFile string) gin.HandlerF
 			reqPath = indexFile
 		}
 
+		// Play/creator JS+CSS+HTML must not stick in the browser across deploys.
+		// Zero ModTime on ServeContent otherwise lets heuristic caching keep stale bundle.js.
+		ext := strings.ToLower(path.Ext(reqPath))
+		if ext == ".js" || ext == ".css" || ext == ".html" || reqPath == indexFile {
+			c.Header("Cache-Control", "no-cache, must-revalidate")
+		}
+
 		http.ServeContent(c.Writer, c.Request, reqPath, time.Time{}, bytes.NewReader(payload))
 		c.Abort()
 	}
