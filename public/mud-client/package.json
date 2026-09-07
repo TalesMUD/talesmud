@@ -18,7 +18,7 @@
     "rollup-plugin-terser": "^7.0.2"
   },
   "dependencies": {
-    "@auth0/auth0-spa-js": "^1.22.6",
+    "@auth0/auth0-spa-js": "^2.24.1",
     "svelte-grid": "^5.1.2",
     "axios": "^0.33.0",
     "materialize-css": "^1.0.0-rc.2",
