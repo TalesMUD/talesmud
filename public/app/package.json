@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@auth0/auth0-spa-js": "^1.22.6",
-    "@xyflow/svelte": "^0.1.19",
+    "@xyflow/svelte": "^1.6.6",
     "axios": "^1.15.2",
     "codejar": "^3.0.0",
     "highlight.js": "^10.1.1",
