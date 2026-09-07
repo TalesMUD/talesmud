@@ -118,9 +118,11 @@ type Character struct {
 	// Game flags for scripting (puzzles, quests, state tracking)
 	Flags map[string]interface{} `bson:"flags,omitempty" json:"flags,omitempty"`
 
-	// Discovered rooms and areas for exploration XP tracking
-	DiscoveredRooms map[string]bool `bson:"discoveredRooms,omitempty" json:"-"`
-	DiscoveredAreas map[string]bool `bson:"discoveredAreas,omitempty" json:"-"`
+	// Discovered rooms and areas for map fog + exploration XP.
+	// Must use json tags: SQLite repo persists via encoding/json (not bson).
+	// json:"-" previously stripped these on every Update/Modify.
+	DiscoveredRooms map[string]bool `bson:"discoveredRooms,omitempty" json:"discoveredRooms,omitempty"`
+	DiscoveredAreas map[string]bool `bson:"discoveredAreas,omitempty" json:"discoveredAreas,omitempty"`
 
 	// Per-character revealed exits (hidden exits unlocked via scripts)
 	// Maps roomID → list of exit names the character has revealed
