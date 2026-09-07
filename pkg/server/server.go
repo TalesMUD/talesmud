@@ -61,7 +61,7 @@ func adminAuthMiddleware() gin.HandlerFunc {
 			})
 		}
 	}
-	if strings.EqualFold(os.Getenv("GIN_MODE"), "release") && user == "admin" && pass == "admin" {
+	if adminCredentialsInsecure(user, pass) {
 		return func(c *gin.Context) {
 			c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{
 				"error": "admin import/export credentials are insecure",
@@ -69,6 +69,15 @@ func adminAuthMiddleware() gin.HandlerFunc {
 		}
 	}
 	return gin.BasicAuth(gin.Accounts{user: pass})
+}
+
+func adminCredentialsInsecure(user, pass string) bool {
+	if len(pass) < 12 {
+		return true
+	}
+	weak := map[string]bool{"admin": true, "password": true, "changeme": true}
+	return weak[strings.ToLower(strings.TrimSpace(user))] ||
+		weak[strings.ToLower(strings.TrimSpace(pass))]
 }
 
 func allowedCORSOrigins() []string {
