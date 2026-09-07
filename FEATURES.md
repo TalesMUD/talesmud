@@ -2075,9 +2075,9 @@ Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "unc
 ### Client
 - Map widget (player-facing name; same `minimap` widget slot / atlas protocol) receives the atlas over WebSocket on enter, and can also fetch `GET /api/characters/:id/map`
 - Action-bar **Map** chrome / Expand always opens a real fullscreen Map overlay (dimmed play surface, Esc/X close) via the `overlayHost` instance in `Game.svelte` — not a side tab next to Inventory
-- Label LOD: zoomed out = area names; mid = current + adjacent rooms; zoomed in = full names with collision avoidance. Compass/vertical exit words are never painted (exit ticks only)
-- Exactly one gold you-are-here marker, keyed by `currentRoomId` (incl. `R0215~instance` → template). Soft travel-trail dots optional
-- Title stays **Map**. Layer tabs (Overworld/Lower/Upper) only when present in `atlas.layers`
+- Label LOD: zoomed out = area names only (collision-aware; or none); mid = current + adjacent rooms; zoomed in = room names with collision avoidance (no stacked area+room labels). Compass/vertical exit words are never painted (exit ticks only)
+- Exactly one gold you-are-here marker, keyed by `currentRoomId` (incl. `R0215~instance` → template). Soft travel-trail dots optional. Recenter (my_location) pans to you
+- Title stays **Map**. Layer tabs (Overworld/Lower/Upper) only when `atlas.layers` has more than one entry. Compact optional widget opens fullscreen; Map chrome pin is primary
 - The widget auto-fits discovered places into its panel and keeps that fit (canvas is out of flow so it cannot resize the widget)
 - Layer tabs, pan, wheel zoom, click-to-travel along discovered paths
 - Desktop/mobile action bars (Option C): room-only dirs + room actions + Shop when a merchant is present; fixed INV / MAP / SAY chrome; optional Look/Rest/… pins via ⋯ (empty by default); layout revision migrates legacy Look/pin clutter
