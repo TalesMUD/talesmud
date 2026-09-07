@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/importer"
 	"github.com/talesmud/talesmud/pkg/repository"
 	"github.com/talesmud/talesmud/pkg/server"
+	"github.com/talesmud/talesmud/pkg/util"
 )
 
 func main() {
@@ -29,17 +29,8 @@ func main() {
 		log.Warn("Error loading .env file")
 	}
 
-	// Configure logging
-	logLevel := strings.ToLower(strings.TrimSpace(os.Getenv("LOG_LEVEL")))
-	if logLevel == "" {
-		logLevel = "info"
-	}
-	level, err := log.ParseLevel(logLevel)
-	if err != nil {
-		log.WithField("LOG_LEVEL", logLevel).Warn("Invalid LOG_LEVEL, defaulting to info")
-		level = log.InfoLevel
-	}
-	log.SetLevel(level)
+	// Configure logging (stderr + rotating file, 7-day retention)
+	util.ConfigureLogging()
 
 	// Get SQLite path
 	sqlitePath := os.Getenv("SQLITE_PATH")

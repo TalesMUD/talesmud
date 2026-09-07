@@ -17,6 +17,17 @@ func (r *clientRegistry) Set(id string, con *Connection) {
 	r.clients[id] = con
 }
 
+// Replace atomically swaps the connection for id and returns the previous one (if any).
+// Callers should close the returned connection AFTER Replace so DeleteIf on the old
+// read-loop misses the new session and skips UserQuit (session takeover).
+func (r *clientRegistry) Replace(id string, con *Connection) *Connection {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	old := r.clients[id]
+	r.clients[id] = con
+	return old
+}
+
 func (r *clientRegistry) Get(id string) (*Connection, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

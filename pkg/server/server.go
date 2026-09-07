@@ -18,6 +18,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/service"
 	"github.com/talesmud/talesmud/pkg/service/groq"
 	"github.com/talesmud/talesmud/pkg/webui"
+	"github.com/talesmud/talesmud/pkg/util"
 	"github.com/talesmud/talesmud/pkg/webuiplay"
 )
 
@@ -90,7 +91,17 @@ func NewApp() App {
 	repos := repository.NewSQLiteFactory(client)
 
 	r := gin.New()
-	r.Use(gin.Logger())
+	r.Use(gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
+		path := util.RedactAccessToken(param.Path)
+		return fmt.Sprintf("[GIN] %s | %3d | %13v | %15s | %-7s %s\n",
+			param.TimeStamp.Format("2006/01/02 - 15:04:05"),
+			param.StatusCode,
+			param.Latency,
+			param.ClientIP,
+			param.Method,
+			path,
+		)
+	}))
 	r.Use(gin.Recovery())
 
 	scriptRunner := runner.NewMultiRunner()

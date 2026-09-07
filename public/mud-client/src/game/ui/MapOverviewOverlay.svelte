@@ -35,10 +35,14 @@
 
   /** Always mount fullscreen Map on document.body above inventory / HUD / BattleStage / WidgetGrid. */
   function portal(node) {
-    // Inline styles beat any ancestor transform/filter stacking (e.g. gameContainer).
+    // Inline styles beat any ancestor transform/filter stacking (e.g. gameContainer)
+    // and survive body-portal even if scoped CSS is stripped.
     node.style.position = 'fixed';
     node.style.inset = '0';
     node.style.zIndex = '200000';
+    node.style.display = 'flex';
+    node.style.alignItems = 'center';
+    node.style.justifyContent = 'center';
     if (node.parentNode !== document.body) {
       document.body.appendChild(node);
     }
@@ -93,9 +97,13 @@
     wasOpen = true;
     userScale = 1;
     lastStageSize = null;
+    // Wait for portal + flex layout before reading stage size (avoids widget-sized first paint).
     tick().then(() => {
-      applyRecenterToYou(true);
-      scheduleDraw();
+      requestAnimationFrame(() => {
+        lastStageSize = readStageSize(stageWrap);
+        applyRecenterToYou(true);
+        scheduleDraw();
+      });
     });
   } else if (!open && wasOpen) {
     wasOpen = false;
@@ -371,31 +379,40 @@
 </script>
 
 <style>
+  /* Scoped fallbacks — critical layout also inlined so body portal cannot lose them. */
   .backdrop {
     position: fixed;
     inset: 0;
     z-index: 200000;
-    background: rgba(0, 0, 0, 0.72);
+    background: rgba(0, 0, 0, 0.82);
+    backdrop-filter: blur(6px);
     display: flex;
-    padding: 3vh 3vw;
+    align-items: center;
+    justify-content: center;
+    padding: 1em;
+    overflow: hidden;
   }
   .modal {
-    flex: 1;
-    min-height: 0;
+    width: min(96vw, 1100px);
+    height: min(92vh, 800px);
+    max-width: 1100px;
+    max-height: 800px;
     display: flex;
     flex-direction: column;
-    background: #0b1220;
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 12px;
+    background: rgba(12, 16, 24, 0.97);
+    border: 1px solid rgba(212, 175, 55, 0.28);
+    border-radius: 10px;
     overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
   }
   .toolbar {
     flex: 0 0 auto;
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 8px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0.75em 1em;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    background: rgba(20, 26, 36, 0.9);
     color: #cbd5e1;
     font-size: 11px;
     font-weight: 600;
@@ -430,8 +447,21 @@
   }
   .layer-tab.active { background: #f59e0b; border-color: #f59e0b; color: #111827; }
   .travel { font-size: 10px; color: #22d3ee; text-transform: none; letter-spacing: 0; }
-  .stage { flex: 1 1 0; min-height: 0; position: relative; overflow: hidden; }
-  canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+  .stage {
+    flex: 1 1 0;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  canvas {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+    touch-action: none;
+  }
   canvas:active { cursor: grabbing; }
   .tooltip {
     position: absolute;
@@ -451,14 +481,18 @@
   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
   <div
     class="backdrop"
-    style="position:fixed;inset:0;z-index:200000;"
+    style="position:fixed;inset:0;z-index:200000;display:flex;align-items:center;justify-content:center;padding:1em;overflow:hidden;background:rgba(0,0,0,0.82);"
     use:portal
     role="dialog"
     aria-modal="true"
     aria-label="Map"
     on:click={(e) => { if (e.target === e.currentTarget) closeOverview(); }}
   >
-    <div class="modal">
+    <div
+      class="modal"
+      style="width:min(96vw,1100px);height:min(92vh,800px);max-width:1100px;max-height:800px;display:flex;flex-direction:column;overflow:hidden;background:rgba(12,16,24,0.97);border:1px solid rgba(212,175,55,0.28);border-radius:10px;"
+      on:click|stopPropagation
+    >
       <div class="toolbar">
         <i class="material-icons">map</i>
         Map
@@ -483,8 +517,9 @@
           <i class="material-icons">close</i>
         </button>
       </div>
-      <div class="stage" bind:this={stageWrap}>
+      <div class="stage" style="flex:1 1 0;min-height:0;position:relative;overflow:hidden;" bind:this={stageWrap}>
         <canvas
+          style="position:absolute;inset:0;display:block;width:100%;height:100%;"
           bind:this={stageCanvas}
           on:pointerdown={pointerDown}
           on:pointermove={(e) => pointerMove(e, stageCanvas)}

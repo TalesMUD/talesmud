@@ -1,8 +1,9 @@
 package commands
 
 import (
-	"log"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
@@ -60,7 +61,12 @@ func (commandProcessor *CommandProcessor) Process(game def.GameCtrl, message *me
 				return false
 			}
 
-			log.Println("Found command " + key + " executing...")
+			fields := log.Fields{"command": key}
+			if message.FromUser != nil {
+				fields["userId"] = message.FromUser.ID
+				fields["nickname"] = message.FromUser.Nickname
+			}
+			log.WithFields(fields).Debug("command execute")
 			return val.Execute(game, message)
 		}
 	}

@@ -54,3 +54,23 @@ func TestClientRegistryDeleteIfDoesNotRemoveReplacement(t *testing.T) {
 		t.Fatal("expected current connection to be deleted")
 	}
 }
+
+
+func TestClientRegistryReplaceReturnsOld(t *testing.T) {
+	registry := newClientRegistry()
+	oldConnection := &Connection{User: &entities.User{Entity: &entities.Entity{ID: "user-1"}}}
+	newConnection := &Connection{User: &entities.User{Entity: &entities.Entity{ID: "user-1"}}}
+
+	registry.Set("user-1", oldConnection)
+	gotOld := registry.Replace("user-1", newConnection)
+	if gotOld != oldConnection {
+		t.Fatal("expected Replace to return previous connection")
+	}
+	got, ok := registry.Get("user-1")
+	if !ok || got != newConnection {
+		t.Fatal("expected Replace to install new connection")
+	}
+	if registry.DeleteIf("user-1", oldConnection) {
+		t.Fatal("stale connection must not delete replacement")
+	}
+}
