@@ -179,7 +179,7 @@
     connectWebSocket(false);
   }
 
-  function connectWebSocket(isReconnect = false) {
+  async function connectWebSocket(isReconnect = false) {
     if (!client || !$authToken || destroyed || wsTakenOver()) return;
     if (wsBusy()) return;
     if (!beginWsConnect()) return;
@@ -188,10 +188,30 @@
     reconnectTimer = null;
     reconnectPending = false;
 
-    const url = wsbackend + "?access_token=";
+    muxStore.setConnectionState(
+      isReconnect ? "reconnecting" : "connecting",
+      isReconnect ? "Reconnecting to the game server..." : "Connecting to the game server...",
+      reconnectAttempt
+    );
+
     let nextWs;
     try {
-      nextWs = new WebSocket(url + $authToken);
+      const ticketRes = await fetch(`${backend}/ws-ticket`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${$authToken}` },
+      });
+      if (!ticketRes.ok) {
+        throw new Error("ws-ticket " + ticketRes.status);
+      }
+      const ticketBody = await ticketRes.json();
+      if (!ticketBody || !ticketBody.ticket) {
+        throw new Error("ws-ticket empty");
+      }
+      if (destroyed || wsTakenOver()) {
+        clearWs(null);
+        return;
+      }
+      nextWs = new WebSocket(wsbackend + "?ticket=" + encodeURIComponent(ticketBody.ticket));
     } catch (e) {
       clearWs(null);
       console.info("[ws] construct failed", e);
@@ -203,12 +223,6 @@
     const gen = wsGeneration();
     client.setWSClient(nextWs);
     console.info("[ws] construct", { gen, isReconnect });
-
-    muxStore.setConnectionState(
-      isReconnect ? "reconnecting" : "connecting",
-      isReconnect ? "Reconnecting to the game server..." : "Connecting to the game server...",
-      reconnectAttempt
-    );
 
     nextWs.addEventListener("open", () => {
       if (destroyed || liveSocket() !== nextWs) return;

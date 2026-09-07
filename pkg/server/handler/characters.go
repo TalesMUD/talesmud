@@ -129,7 +129,7 @@ func (csh *CharactersHandler) DeleteCharacterByID(c *gin.Context) {
 	}
 }
 
-// UpdateCharacterByID creates a new charactersheet
+// UpdateCharacterByID applies allowlisted profile fields only.
 func (csh *CharactersHandler) UpdateCharacterByID(c *gin.Context) {
 
 	id := c.Param("id")
@@ -143,20 +143,28 @@ func (csh *CharactersHandler) UpdateCharacterByID(c *gin.Context) {
 		return
 	}
 
-	var character characters.Character
-	if err := c.ShouldBindJSON(&character); err != nil {
+	var patch dto.UpdateCharacterDTO
+	if err := c.ShouldBindJSON(&patch); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	character.BelongsUserID = existing.BelongsUserID
 
-	log.WithField("character", character.Name).Info("Updating character")
-
-	if err := csh.Service.Update(id, &character); err == nil {
-		c.JSON(http.StatusOK, gin.H{"status": "updated character"})
-	} else {
+	err = csh.Service.Modify(id, func(character *characters.Character) error {
+		if patch.Name != nil {
+			character.Name = *patch.Name
+		}
+		if patch.Description != nil {
+			character.Description = *patch.Description
+		}
+		return nil
+	})
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
+
+	log.WithField("character", id).Info("Updated character profile fields")
+	c.JSON(http.StatusOK, gin.H{"status": "updated character"})
 }
 
 // PostCharacter ... creates a new charactersheet

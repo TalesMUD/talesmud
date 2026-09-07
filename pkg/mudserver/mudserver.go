@@ -64,16 +64,32 @@ func (server *server) GameCtrl() def.GameCtrl {
 	return server.Game
 }
 
-// New creates a new mud server
-func New(facade service.Facade) MUDServer {
+// OriginAllowed reports whether a browser Origin may open a WebSocket.
+// An empty Origin is allowed (non-browser clients).
+func OriginAllowed(origin string, allowed []string) bool {
+	if origin == "" {
+		return true
+	}
+	for _, candidate := range allowed {
+		if candidate == origin {
+			return true
+		}
+	}
+	return false
+}
+
+// New creates a new mud server. allowedOrigins is the CORS/WebSocket allowlist.
+func New(facade service.Facade, allowedOrigins []string) MUDServer {
 
 	game := game.New(facade)
+
+	origins := append([]string(nil), allowedOrigins...)
 
 	srv := &server{
 		Facade: facade,
 		Upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
-				return true
+				return OriginAllowed(r.Header.Get("Origin"), origins)
 			},
 		},
 		Clients:   newClientRegistry(),
@@ -165,12 +181,12 @@ func (server *server) HandleConnections(c *gin.Context) {
 	old := server.Clients.Replace(user.ID, connection)
 	if old != nil && old.ws != nil {
 		log.WithFields(log.Fields{
-			"userId":     user.ID,
-			"nickname":   user.Nickname,
-			"ip":         remoteIP,
-			"oldIP":      old.remoteIP,
+			"userId":      user.ID,
+			"nickname":    user.Nickname,
+			"ip":          remoteIP,
+			"oldIP":       old.remoteIP,
 			"characterId": user.LastCharacter,
-			"reason":     "session replaced",
+			"reason":      "session replaced",
 		}).Info("WS replace-existing")
 		deadline := time.Now().Add(time.Second)
 		_ = old.ws.WriteControl(

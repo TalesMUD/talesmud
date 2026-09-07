@@ -9,7 +9,21 @@ func TestRedactAccessToken(t *testing.T) {
 	if got != want {
 		t.Fatalf("got %q want %q", got, want)
 	}
+	ticketIn := "/ws?ticket=abc123&x=1"
+	ticketGot := RedactAccessToken(ticketIn)
+	if ticketGot != "/ws?ticket=[REDACTED]&x=1" {
+		t.Fatalf("ticket redact got %q", ticketGot)
+	}
 	if RedactAccessToken("/api/rooms") != "/api/rooms" {
 		t.Fatal("expected untouched path")
+	}
+}
+
+func TestRequestPathWithoutQuery(t *testing.T) {
+	if got := RequestPathWithoutQuery("/ws?ticket=secret"); got != "/ws" {
+		t.Fatalf("got %q", got)
+	}
+	if got := RequestPathWithoutQuery("/api/rooms"); got != "/api/rooms" {
+		t.Fatalf("got %q", got)
 	}
 }
