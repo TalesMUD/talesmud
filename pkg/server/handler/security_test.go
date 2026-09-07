@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/talesmud/talesmud/pkg/db/sqlite"
@@ -313,5 +315,104 @@ func TestQuestProgressHandlersRejectCrossUserCharacterAccess(t *testing.T) {
 				t.Fatalf("expected 403, got %d body=%s", rec.Code, rec.Body.String())
 			}
 		})
+	}
+}
+
+func TestUpdateCharacterIgnoresCombatStatFields(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	facade := testFacade(t)
+	owner := testUser("owner-user", "owner-ref", entities.RolePlayer)
+	if _, err := facade.UsersService().Create(owner); err != nil {
+		t.Fatalf("create user: %v", err)
+	}
+
+	character := &characters.Character{
+		Entity:           &entities.Entity{ID: "char-stats"},
+		Name:             "Hero",
+		Description:      "A wanderer",
+		BelongsUser:      *traits.BelongsToUser(owner.ID),
+		MaxHitPoints:     10,
+		CurrentHitPoints: 10,
+		Gold:             5,
+		XP:               20,
+		Level:            2,
+	}
+	if _, err := facade.CharactersService().Store(character); err != nil {
+		t.Fatalf("store character: %v", err)
+	}
+
+	h := &CharactersHandler{Service: facade.CharactersService()}
+	rec := performHandlerRequest(
+		http.MethodPut,
+		"/api/characters/"+character.ID,
+		gin.H{
+			"name":          "Hero II",
+			"description":   "Still a wanderer",
+			"gold":          999999,
+			"xp":            999999,
+			"level":         99,
+			"maxLevelCap":   0,
+			"currentRoomId": "R9999",
+		},
+		owner,
+		gin.Params{{Key: "id", Value: character.ID}},
+		h.UpdateCharacterByID,
+	)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	stored, err := facade.CharactersService().FindByID(character.ID)
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	if stored.Name != "Hero II" || stored.Description != "Still a wanderer" {
+		t.Fatalf("profile fields not updated: name=%q desc=%q", stored.Name, stored.Description)
+	}
+	if stored.Gold != 5 || stored.XP != 20 || stored.Level != 2 {
+		t.Fatalf("combat stats mutated: gold=%d xp=%d level=%d", stored.Gold, stored.XP, stored.Level)
+	}
+	if stored.CurrentRoomID == "R9999" {
+		t.Fatal("current room was client-writable")
+	}
+}
+
+func TestGenerateCharacterRejectsGuestsAndOversizeInput(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	h := &GenerateHandler{}
+
+	guest := testUser("guest-1", "guest-ref", entities.RolePlayer)
+	guest.IsGuest = true
+	rec := performHandlerRequest(http.MethodPost, "/api/generate/character", gin.H{"generate": "name"}, guest, nil, h.GenerateCharacter)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected guest 403, got %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	player := testUser("player-1", "player-ref", entities.RolePlayer)
+	longBackstory := strings.Repeat("x", 501)
+	rec = performHandlerRequest(http.MethodPost, "/api/generate/character", gin.H{
+		"generate":  "name",
+		"backstory": longBackstory,
+	}, player, nil, h.GenerateCharacter)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected oversize 400, got %d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestGenerateCharacterRateLimit(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	h := &GenerateHandler{limiter: newWindowLimiter(2, time.Hour)}
+	player := testUser("player-rl", "player-rl-ref", entities.RolePlayer)
+	body := gin.H{"generate": "name"}
+
+	for i := 0; i < 2; i++ {
+		rec := performHandlerRequest(http.MethodPost, "/api/generate/character", body, player, nil, h.GenerateCharacter)
+		if rec.Code != http.StatusServiceUnavailable {
+			t.Fatalf("call %d: expected 503 (no groq), got %d body=%s", i+1, rec.Code, rec.Body.String())
+		}
+	}
+	rec := performHandlerRequest(http.MethodPost, "/api/generate/character", body, player, nil, h.GenerateCharacter)
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected 429, got %d body=%s", rec.Code, rec.Body.String())
 	}
 }

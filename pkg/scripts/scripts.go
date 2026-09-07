@@ -2,10 +2,10 @@ package scripts
 
 import "github.com/talesmud/talesmud/pkg/entities"
 
-//ScriptType type
+// ScriptType type
 type ScriptType string
 
-//ScriptTypes ...
+// ScriptTypes ...
 type ScriptTypes []ScriptType
 
 const (
@@ -37,10 +37,10 @@ type Script struct {
 	Language    ScriptLanguage `bson:"language,omitempty" json:"language"`
 }
 
-// GetLanguage returns the script language, defaulting to JavaScript for backward compatibility
+// GetLanguage returns the script language, defaulting to Lua.
 func (s *Script) GetLanguage() ScriptLanguage {
 	if s.Language == "" {
-		return ScriptLanguageJavaScript
+		return ScriptLanguageLua
 	}
 	return s.Language
 }

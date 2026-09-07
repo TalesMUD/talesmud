@@ -178,11 +178,11 @@ PORT=8010
 GIN_MODE=debug
 SQLITE_PATH=./talesmud.db
 
-# Auth0 (optional, for authentication)
-AUTH_ENABLED=false
+# Auth0 (optional, for registered-user authentication)
 AUTH0_DOMAIN=https://your-domain.auth0.com/
 AUTH0_AUDIENCE=your-api-audience
 AUTH0_WK_JWKS=https://your-domain.auth0.com/.well-known/jwks.json
+TRUSTED_PROXIES=127.0.0.1,::1
 
 # Admin (for export/import endpoints)
 ADMIN_USER=admin

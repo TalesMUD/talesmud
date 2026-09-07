@@ -412,7 +412,8 @@ SQLITE_PATH=./talesmud.db
 AUTH0_AUDIENCE=http://talesofapirate.com/dnd/api
 AUTH0_DOMAIN=https://owndnd.eu.auth0.com/
 AUTH0_WK_JWKS=https://owndnd.eu.auth0.com/.well-known/jwks.json
-AUTH_ENABLED=false
+TRUSTED_PROXIES=127.0.0.1,::1
+TALESMUD_ALLOW_JS_SCRIPTS=
 
 # Admin (basic auth for legacy export/import)
 # Leave either value blank to disable these endpoints.

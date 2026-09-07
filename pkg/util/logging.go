@@ -46,24 +46,41 @@ func ConfigureLogging() string {
 	}
 	log.SetOutput(io.MultiWriter(os.Stderr, rotator))
 	log.WithFields(log.Fields{
-		"logFile":  logFile,
+		"logFile":    logFile,
 		"maxAgeDays": 7,
-		"level":    level.String(),
+		"level":      level.String(),
 	}).Info("Logging configured (stderr + rotating file, 7-day retention)")
 	return logFile
 }
 
-// RedactAccessToken strips access_token query values from URLs for safe logging.
+// RequestPathWithoutQuery returns the URL path with any query string removed.
+func RequestPathWithoutQuery(path string) string {
+	if i := strings.Index(path, "?"); i >= 0 {
+		return path[:i]
+	}
+	return path
+}
+
+// RedactAccessToken strips access_token and ticket query values from URLs for safe logging.
 func RedactAccessToken(path string) string {
 	if path == "" {
 		return path
 	}
+	out := path
+	for _, key := range []string{"access_token=", "ticket="} {
+		out = redactQueryValue(out, key)
+	}
+	return out
+}
+
+func redactQueryValue(path, key string) string {
 	lower := strings.ToLower(path)
-	idx := strings.Index(lower, "access_token=")
+	keyLower := strings.ToLower(key)
+	idx := strings.Index(lower, keyLower)
 	if idx < 0 {
 		return path
 	}
-	start := idx + len("access_token=")
+	start := idx + len(key)
 	end := start
 	for end < len(path) && path[end] != '&' && path[end] != ' ' {
 		end++
