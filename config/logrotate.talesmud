@@ -1,0 +1,17 @@
+# Optional OS-level safety net for TalesMUD logs.
+# Primary rotation is lumberjack inside the process (MaxAge=7 days).
+# Install on VPS: sudo cp config/logrotate.talesmud /etc/logrotate.d/talesmud
+#
+# Log path (working directory of systemd service):
+#   /home/atla/dev/talesmud/logs/talesmud.log
+
+/home/atla/dev/talesmud/logs/talesmud.log {
+    daily
+    rotate 7
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+    dateext
+}

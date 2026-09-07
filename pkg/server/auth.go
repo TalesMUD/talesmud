@@ -134,7 +134,11 @@ func getKeyFunc() jwt.Keyfunc {
 // handleTokenError handles the case where the JWT token is invalid.
 // It logs the error and aborts the gin context with a 401 status.
 func handleTokenError(c *gin.Context, err error, token *jwt.Token) {
-	log.WithError(err).Warn("Token is not valid")
+	log.WithError(err).WithFields(log.Fields{
+		"ip":     c.ClientIP(),
+		"path":   c.FullPath(),
+		"method": c.Request.Method,
+	}).Warn("Auth failure")
 
 	c.AbortWithStatus(401)
 }
@@ -202,8 +206,6 @@ func setUser(c *gin.Context, facade service.Facade) {
 // Supports both Auth0 JWTs and guest HMAC tokens (tried first for fast validation).
 func AuthMiddleware(facade service.Facade) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		log.Info("GIN JWT MIDDLEWARE")
-
 		// Extract token string from query param or Authorization header
 		var tokenStr string
 		if fromQuery, ok := c.GetQuery("access_token"); ok {
@@ -216,6 +218,12 @@ func AuthMiddleware(facade service.Facade) gin.HandlerFunc {
 		}
 
 		if tokenStr == "" {
+			log.WithFields(log.Fields{
+				"ip":     c.ClientIP(),
+				"path":   c.Request.URL.Path,
+				"method": c.Request.Method,
+				"reason": "missing token",
+			}).Warn("Auth failure")
 			c.AbortWithStatus(401)
 			return
 		}

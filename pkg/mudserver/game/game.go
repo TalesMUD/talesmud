@@ -206,11 +206,14 @@ func (g *Game) Run() {
 		for {
 			select {
 			case userJoined := <-g.OnUserJoined:
-				log.Info("Received UserJoinged message")
+				log.Debug("UserJoined channel received")
 				g.handleUserJoined(userJoined.User)
 
 			case userQuit := <-g.OnUserQuit:
-				log.WithField("user", userQuit.User).Info("Received UserQuit message")
+				log.WithFields(log.Fields{
+					"userId":   userQuit.User.ID,
+					"nickname": userQuit.User.Nickname,
+				}).Debug("UserQuit channel received")
 				g.handleUserQuit(userQuit.User)
 
 			case msg := <-g.onMessageReceived:

@@ -486,14 +486,24 @@ function createClient(renderer, characterCreator, muxStore) {
     });
   };
 
-  const setWSClient = async (wscl) => {
-    ws = wscl;
+  let boundSocket = null;
+  let onMessageHandler = null;
+  let onCloseHandler = null;
 
-    updateClient(ws);
+  const setWSClient = async (wscl) => {
+    // Avoid stacking duplicate message/close listeners across reconnects.
+    if (boundSocket && boundSocket !== wscl && onMessageHandler) {
+      try { boundSocket.removeEventListener("message", onMessageHandler); } catch (e) { /* ignore */ }
+      try { boundSocket.removeEventListener("close", onCloseHandler); } catch (e) { /* ignore */ }
+    }
+    ws = wscl;
+    if (!wscl || boundSocket === wscl) return;
+    boundSocket = wscl;
+    updateClient(wscl);
   };
 
-  const updateClient = (ws) => {
-    ws.addEventListener("message", function (e) {
+  const updateClient = (socket) => {
+    onMessageHandler = function (e) {
       var msg = JSON.parse(e.data);
 
       if (messageHandlers[msg.type]) {
@@ -540,11 +550,20 @@ function createClient(renderer, characterCreator, muxStore) {
           }
         }
       }
-    });
+    };
 
-    ws.addEventListener("close", function (e) {
-      renderer("Connection Closed.");
-    });
+    onCloseHandler = function (e) {
+      const code = e && typeof e.code === "number" ? e.code : 0;
+      const reason = (e && e.reason) || "";
+      console.info("[ws-client] close", { code, reason });
+      // Game.svelte owns reconnect; only surface a terminal note for real drops.
+      if (code !== 4001) {
+        renderer("Connection Closed.");
+      }
+    };
+
+    socket.addEventListener("message", onMessageHandler);
+    socket.addEventListener("close", onCloseHandler);
   };
 
   const onInput = async (data) => {

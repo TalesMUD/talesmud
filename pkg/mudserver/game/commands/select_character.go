@@ -46,6 +46,13 @@ func (command *SelectCharacterCommand) Execute(game def.GameCtrl, message *messa
 }
 
 func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *characters.Character) {
+	log.WithFields(log.Fields{
+		"userId":      user.ID,
+		"nickname":    user.Nickname,
+		"characterId": character.ID,
+		"character":   character.Name,
+		"roomId":      character.CurrentRoomID,
+	}).Info("selectcharacter")
 
 	// Normalize attribute short names to uppercase (migration for pre-fix characters)
 	character.NormalizeAttributeShorts()

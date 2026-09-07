@@ -41,6 +41,7 @@ func (m *Manager) CreateInstance(originRoomID string) *combat.CombatInstance {
 	log.WithFields(log.Fields{
 		"instanceID": instance.ID,
 		"roomID":     originRoomID,
+		"event":      "combat_start",
 	}).Info("Created combat instance")
 
 	return instance
@@ -127,7 +128,7 @@ func (m *Manager) RemoveInstance(id string) {
 
 	delete(m.instances, id)
 
-	log.WithField("instanceID", id).Info("Removed combat instance")
+	log.WithFields(log.Fields{"instanceID": id, "event": "combat_end"}).Info("Removed combat instance")
 }
 
 // GetAllInstances returns all active combat instances

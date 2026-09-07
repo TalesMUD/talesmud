@@ -24,13 +24,21 @@ type MUDServer interface {
 	HandleConnections(*gin.Context)
 }
 
+// WS close codes (application-specific, RFC6455 4000-4999).
+const (
+	// closeSessionReplaced is sent when a newer socket for the same user takes over.
+	// Clients must NOT auto-reconnect on this code (stops desktop↔mobile flap).
+	closeSessionReplaced = 4001
+)
+
 // Connection ...
 type Connection struct {
 	User *entities.User
 	ws   *websocket.Conn
 	mu   sync.Mutex
 
-	active bool
+	active   bool
+	remoteIP string
 }
 
 func (p *Connection) send(v interface{}) error {
@@ -116,36 +124,70 @@ func (server *server) HandleConnections(c *gin.Context) {
 	var user *entities.User
 
 	if usr, exists := c.Get("user"); exists {
-		log.WithField("User", usr.(*entities.User).Nickname).Info("User logged in")
 		user = usr.(*entities.User)
 	}
 	if user == nil {
+		log.WithField("ip", c.ClientIP()).Warn("WS auth missing user")
 		c.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
 
+	remoteIP := c.ClientIP()
+	log.WithFields(log.Fields{
+		"userId":   user.ID,
+		"nickname": user.Nickname,
+		"ip":       remoteIP,
+	}).Info("WS connect")
+
 	// Upgrade initial GET request to a websocket
 	ws, err := server.Upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		log.WithError(err).Warn("Failed to upgrade websocket connection")
+		log.WithError(err).WithFields(log.Fields{
+			"userId":   user.ID,
+			"nickname": user.Nickname,
+			"ip":       remoteIP,
+		}).Warn("WS upgrade failed")
 		return
 	}
 	// Make sure we close the connection when the function returns
 	defer ws.Close()
 
-	log.Info("Upgraded client connection")
-
-	if existing, ok := server.Clients.Get(user.ID); ok {
-		_ = existing.ws.Close()
-	}
-
-	// Register our new client
+	// Register first, then close any previous socket with an explicit replace
+	// reason. Ordering matters: if we Close before Replace, the old read-loop
+	// can DeleteIf+UserQuit before the new session is installed — that feeds
+	// the Upgrade→Quit→Joined→selectcharacter flap when two clients fight.
 	connection := &Connection{
-		User:   user,
-		ws:     ws,
-		active: true,
+		User:     user,
+		ws:       ws,
+		active:   true,
+		remoteIP: remoteIP,
 	}
-	server.Clients.Set(user.ID, connection)
+	old := server.Clients.Replace(user.ID, connection)
+	if old != nil && old.ws != nil {
+		log.WithFields(log.Fields{
+			"userId":     user.ID,
+			"nickname":   user.Nickname,
+			"ip":         remoteIP,
+			"oldIP":      old.remoteIP,
+			"characterId": user.LastCharacter,
+			"reason":     "session replaced",
+		}).Info("WS replace-existing")
+		deadline := time.Now().Add(time.Second)
+		_ = old.ws.WriteControl(
+			websocket.CloseMessage,
+			websocket.FormatCloseMessage(closeSessionReplaced, "session replaced"),
+			deadline,
+		)
+		_ = old.ws.Close()
+	}
+
+	log.WithFields(log.Fields{
+		"userId":      user.ID,
+		"nickname":    user.Nickname,
+		"ip":          remoteIP,
+		"characterId": user.LastCharacter,
+		"replaced":    old != nil,
+	}).Info("WS upgrade")
 
 	user.LastSeen = time.Now()
 	user.IsOnline = true
@@ -197,7 +239,12 @@ func (server *server) HandleConnections(c *gin.Context) {
 		var msg messages.IncomingMessage
 		err := ws.ReadJSON(&msg)
 		if err != nil {
-			log.Printf("error: %v", err)
+			log.WithError(err).WithFields(log.Fields{
+				"userId":      user.ID,
+				"nickname":    user.Nickname,
+				"ip":          remoteIP,
+				"characterId": user.LastCharacter,
+			}).Info("WS read error")
 			if server.handleConnectionClosed(user, connection) {
 				// Guest disconnect cleanup with 5-minute grace period for reconnection
 				if user.IsGuest {
@@ -239,11 +286,26 @@ func (server *server) handleConnectionClosed(user *entities.User, connection *Co
 	if user == nil || connection == nil {
 		return false
 	}
+	// Stale/replaced socket: a newer session already owns this user id.
 	if !server.Clients.DeleteIf(user.ID, connection) {
+		log.WithFields(log.Fields{
+			"userId":   user.ID,
+			"nickname": user.Nickname,
+			"ip":       connection.remoteIP,
+			"reason":   "stale socket after replace",
+		}).Info("WS close ignored")
 		return false
 	}
 
 	connection.active = false
+
+	log.WithFields(log.Fields{
+		"userId":      user.ID,
+		"nickname":    user.Nickname,
+		"ip":          connection.remoteIP,
+		"characterId": user.LastCharacter,
+		"reason":      "connection closed",
+	}).Info("WS close")
 
 	server.Game.OnUserQuit <- &messages.UserQuit{
 		User: user,
@@ -262,9 +324,11 @@ func (server *server) sendMessage(id string, msg interface{}) {
 		//dont directly write to websocket, use this mutex protected method
 		err := client.send(msg)
 		if err != nil {
-
-			// tell the game that the user quit as the websocket closes/closed...
-			log.Printf("error: %v", err)
+			log.WithError(err).WithFields(log.Fields{
+				"userId":   client.User.ID,
+				"nickname": client.User.Nickname,
+				"ip":       client.remoteIP,
+			}).Warn("WS send error")
 			client.ws.Close()
 			server.handleConnectionClosed(client.User, client)
 		}
@@ -312,11 +376,13 @@ func (server *server) handleBroadcastMessages() {
 		server.Clients.ForEach(func(_ string, client *Connection) {
 			err := client.send(msg)
 			if err != nil {
-				log.Printf("error: %v", err)
-
+				log.WithError(err).WithFields(log.Fields{
+					"userId":   client.User.ID,
+					"nickname": client.User.Nickname,
+					"ip":       client.remoteIP,
+				}).Warn("WS broadcast send error")
 				client.ws.Close()
 				server.handleConnectionClosed(client.User, client)
-
 			}
 		})
 	}

@@ -33,7 +33,11 @@ func (game *Game) handleDefaultMessage(message *messages.Message) {
 
 func (game *Game) handleUserQuit(user *entities.User) {
 
-	log.Info("Handle User Quit " + user.Nickname)
+	log.WithFields(log.Fields{
+		"userId":      user.ID,
+		"nickname":    user.Nickname,
+		"characterId": user.LastCharacter,
+	}).Info("UserQuit")
 
 	game.DisconnectUserSession(user.ID)
 
@@ -87,6 +91,11 @@ func (game *Game) attachCharacterToMessage(msg *messages.Message) {
 }
 
 func (game *Game) handleUserJoined(user *entities.User) {
+	log.WithFields(log.Fields{
+		"userId":      user.ID,
+		"nickname":    user.Nickname,
+		"characterId": user.LastCharacter,
+	}).Info("UserJoined")
 	game.ConnectUserSession(user)
 
 	// get active character for user

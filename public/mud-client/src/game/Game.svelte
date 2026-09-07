@@ -116,6 +116,8 @@
   let reconnectPending = false;
   let reconnectAttempt = 0;
   let destroyed = false;
+  /** Application close code: server replaced this socket with a newer session. */
+  const WS_CLOSE_SESSION_REPLACED = 4001;
 
   // Multi-renderer dispatches output to all registered terminal widgets
   function multiRenderer(data) {
@@ -167,13 +169,21 @@
     connectWebSocket(false);
   }
 
+  function socketBusy(socket) {
+    return (
+      socket &&
+      (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN)
+    );
+  }
+
   function connectWebSocket(isReconnect = false) {
-    if (!client || ws || !$authToken) return;
+    if (!client || !$authToken || destroyed) return;
+    // Single-flight: never open a second socket while one is OPEN/CONNECTING.
+    if (socketBusy(ws)) return;
 
     // Intentional connect: drop any pending reconnect timer.
     clearTimeout(reconnectTimer);
     reconnectTimer = null;
-    reconnectPending = false;
 
     muxStore.setConnectionState(
       isReconnect ? "reconnecting" : "connecting",
@@ -183,17 +193,36 @@
 
     const url = wsbackend + "?access_token=";
     const nextWs = new WebSocket(url + $authToken);
+    // Claim the slot BEFORE releasing reconnectPending so the reactive
+    // `!ws && !reconnectPending` path cannot open a twin socket.
     ws = nextWs;
+    reconnectPending = false;
     client.setWSClient(nextWs);
 
     nextWs.addEventListener("open", () => {
+      if (destroyed || ws !== nextWs) return;
       reconnectAttempt = 0;
       muxStore.setConnectionState("connected", "Connected");
+      console.info("[ws] open");
     });
 
-    nextWs.addEventListener("close", () => {
+    nextWs.addEventListener("close", (ev) => {
       if (destroyed || ws !== nextWs) return;
+      const code = ev && typeof ev.code === "number" ? ev.code : 0;
+      const reason = (ev && ev.reason) || "";
+      console.info("[ws] close", { code, reason, wasClean: !!(ev && ev.wasClean) });
       ws = null;
+
+      // Server took over this user with a newer socket (other tab/device).
+      // Do NOT auto-reconnect — that is the desktop↔mobile Upgrade/Quit loop.
+      if (code === WS_CLOSE_SESSION_REPLACED) {
+        reconnectPending = false;
+        muxStore.setConnectionState(
+          "disconnected",
+          "Session taken over by another connection. Refresh to reclaim."
+        );
+        return;
+      }
       scheduleReconnect();
     });
 
@@ -201,6 +230,7 @@
     // often fire error before close (or spuriously). Status ownership: open/close.
     nextWs.addEventListener("error", () => {
       if (destroyed || ws !== nextWs) return;
+      console.info("[ws] error", { readyState: nextWs.readyState });
       if (nextWs.readyState === WebSocket.CLOSING || nextWs.readyState === WebSocket.CLOSED) {
         muxStore.setConnectionState(
           "reconnecting",
@@ -217,6 +247,7 @@
       muxStore.setConnectionState("disconnected", "Disconnected");
       return;
     }
+    if (socketBusy(ws) || reconnectPending) return;
     reconnectAttempt += 1;
     const delay = Math.min(1000 * reconnectAttempt, 5000);
     muxStore.setConnectionState(
@@ -228,7 +259,7 @@
     reconnectPending = true;
     reconnectTimer = setTimeout(() => {
       reconnectTimer = null;
-      reconnectPending = false;
+      // Keep reconnectPending true until connectWebSocket claims `ws`.
       connectWebSocket(true);
     }, delay);
   }
