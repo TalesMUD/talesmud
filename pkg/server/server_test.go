@@ -36,6 +36,23 @@ func TestAllowedCORSOriginsIncludesConfiguredOrigins(t *testing.T) {
 	}
 }
 
+func TestAdminCredentialsInsecure(t *testing.T) {
+	tests := []struct {
+		user, pass string
+		want       bool
+	}{
+		{"admin", "admin", true},
+		{"ops", "changeme", true},
+		{"ops", "short", true},
+		{"ops", "a-reasonably-long-secret", false},
+	}
+	for _, tt := range tests {
+		if got := adminCredentialsInsecure(tt.user, tt.pass); got != tt.want {
+			t.Errorf("adminCredentialsInsecure(%q,%q)=%v want %v", tt.user, tt.pass, got, tt.want)
+		}
+	}
+}
+
 func containsString(values []string, want string) bool {
 	for _, value := range values {
 		if value == want {

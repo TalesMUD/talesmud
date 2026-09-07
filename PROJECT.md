@@ -408,20 +408,20 @@ CORS_ALLOWED_ORIGINS=
 # SQLite database path
 SQLITE_PATH=./talesmud.db
 
-# Auth0
-AUTH0_AUDIENCE=http://talesofapirate.com/dnd/api
-AUTH0_DOMAIN=https://owndnd.eu.auth0.com/
-AUTH0_WK_JWKS=https://owndnd.eu.auth0.com/.well-known/jwks.json
+# Auth0 (do not commit production tenant values)
+AUTH0_AUDIENCE=http://localhost:8010/api
+AUTH0_DOMAIN=https://your-tenant.auth0.com/
+AUTH0_WK_JWKS=https://your-tenant.auth0.com/.well-known/jwks.json
 TRUSTED_PROXIES=127.0.0.1,::1
 TALESMUD_ALLOW_JS_SCRIPTS=
 
 # Admin (basic auth for legacy export/import)
 # Leave either value blank to disable these endpoints.
-# admin/admin is rejected in release mode.
-ADMIN_USER=admin
-ADMIN_PASSWORD=changeme
+# Weak values (admin/password/changeme, or password shorter than 12 chars) are rejected.
+ADMIN_USER=
+ADMIN_PASSWORD=
 
-# MUD Admin OAuth ID (Auth0 sub claim, e.g. "twitter|16651340")
+# MUD Admin OAuth ID (Auth0 sub claim, e.g. "auth0|YOUR_USER_SUB")
 # The user with this OAuth ID gets full admin access
 MUD_ADMIN_OAUTHID=
 
