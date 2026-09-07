@@ -88,15 +88,14 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
 /health                    # Health check
 /ws                        # WebSocket (game connection)
 /api/
-    ├── characters/        # Character CRUD (owner/admin for direct object access)
-    ├── rooms/ (GET)       # Room read (player level)
-    ├── rooms/ (POST/PUT/DELETE) # Room write (creator level)
-    ├── items/ (GET)       # Item read (player level)
-    ├── items/ (POST/PUT/DELETE) # Item write (creator level)
-    ├── scripts/           # Script CRUD (creator level)
-    ├── npcs/              # NPC CRUD (creator level for writes)
-    ├── dialogs/           # Dialog CRUD (creator level for writes)
-    ├── quests/            # Quest CRUD (creator for writes)
+    ├── characters/        # Player: list/get/delete/profile-update/newcharacter; raw POST is creator-only
+    ├── ws-ticket          # POST single-use 60s WebSocket ticket (Bearer auth)
+    ├── rooms/             # Room CRUD (creator level, including GET)
+    ├── items/             # Item CRUD (creator level, including GET)
+    ├── scripts/           # Script CRUD (creator level, including GET)
+    ├── npcs/              # NPC CRUD (creator level, including GET)
+    ├── dialogs/           # Dialog CRUD (creator level, including GET)
+    ├── quests/            # Quest definition CRUD (creator level, including GET)
     ├── quest-progress/    # Quest log per character (owner/admin)
     ├── characters/:id/map # Per-character discovered-world atlas (owner/admin)
     ├── portraits/:filename # Public NPC/enemy portrait images (no auth, guest-ok)
@@ -138,14 +137,16 @@ Optional middleware that serves a static landing page from the OS filesystem whe
 **File:** `pkg/server/auth.go`
 
 ```
-Request → Extract Token → Try Guest HMAC → (if fail) Validate Auth0 JWT → Find/Create User → Check Ban → Set Context
+REST: Authorization Bearer → Try Guest HMAC → (if fail) Validate Auth0 RS256 JWT (aud+iss required) → Find/Create User → Check Ban → Set Context
+WebSocket: POST /api/ws-ticket (Bearer) → GET /ws?ticket=… (single use, 60s) or Authorization Bearer
 ```
 
-- Supports both query parameter (`?access_token=`) and Authorization header
-- **Dual token validation**: Tries guest HMAC-SHA256 token first (fast), falls back to Auth0 JWT
+- REST rejects `?access_token=` so session JWTs are not written to access logs
+- WebSocket origin is allowlisted (same list as CORS); empty Origin allowed for non-browser clients
+- **Dual token validation**: Tries guest HMAC-SHA256 token first (fast), falls back to Auth0 JWT (`github.com/golang-jwt/jwt/v5`)
 - Guest tokens signed with `GUEST_SECRET` env var, validated via `GuestService.ValidateGuestToken()`
 - Guest session expiry checked at auth layer (returns 401 if expired)
-- Auth0 tokens validated against JWKS endpoint (with in-memory cache, 1-hour TTL)
+- Auth0 tokens validated against JWKS endpoint (with in-memory cache, 1-hour TTL); algorithm pinned to RS256
 - Creates new user on first login
 - Syncs admin role from `MUD_ADMIN_OAUTHID` env var on every login
 - Rejects banned users with 403 at the auth layer
@@ -153,7 +154,7 @@ Request → Extract Token → Try Guest HMAC → (if fail) Validate Auth0 JWT �
 
 **Role-Based Middleware:**
 
-- `CreatorMiddleware()` — Requires creator or admin role for game content modification endpoints
+- `CreatorMiddleware()` — Requires creator or admin role for world-definition reads (rooms, scripts, NPCs, dialogs, quests, items, loot, skills, settings) and all content writes
 - `AdminMiddleware()` — Requires admin role for user management endpoints
 
 **Access Level Hierarchy:**

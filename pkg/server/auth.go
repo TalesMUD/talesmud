@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/buger/jsonparser"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	log "github.com/sirupsen/logrus"
 	e "github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/service"
@@ -105,20 +105,10 @@ func getPemCert(token *jwt.Token) (string, error) {
 }
 
 // getKeyFunc returns a function to be used as the jwt.Keyfunc for JWT token validation.
-// It verifies the 'aud' and 'iss' claims and extracts the PEM certificate.
 func getKeyFunc() jwt.Keyfunc {
 	return func(token *jwt.Token) (interface{}, error) {
-		// Verify 'aud' claim
-		aud := os.Getenv("AUTH0_AUDIENCE")
-		checkAud := token.Claims.(jwt.MapClaims).VerifyAudience(aud, false)
-		if !checkAud {
-			return token, errors.New("Invalid audience")
-		}
-		// Verify 'iss' claim
-		iss := os.Getenv("AUTH0_DOMAIN")
-		checkIss := token.Claims.(jwt.MapClaims).VerifyIssuer(iss, false)
-		if !checkIss {
-			return token, errors.New("Invalid issuer")
+		if token.Method == nil || token.Method.Alg() != jwt.SigningMethodRS256.Alg() {
+			return nil, errors.New("unexpected signing method")
 		}
 
 		cert, err := getPemCert(token)
@@ -126,7 +116,10 @@ func getKeyFunc() jwt.Keyfunc {
 			return nil, err
 		}
 
-		result, _ := jwt.ParseRSAPublicKeyFromPEM([]byte(cert))
+		result, err := jwt.ParseRSAPublicKeyFromPEM([]byte(cert))
+		if err != nil {
+			return nil, err
+		}
 		return result, nil
 	}
 }
@@ -201,65 +194,123 @@ func setUser(c *gin.Context, facade service.Facade) {
 	}
 }
 
-// AuthMiddleware is a gin middleware function for authentication.
-// It verifies the JWT token from the query parameter or the authorization header.
-// Supports both Auth0 JWTs and guest HMAC tokens (tried first for fast validation).
-func AuthMiddleware(facade service.Facade) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// Extract token string from query param or Authorization header
-		var tokenStr string
-		if fromQuery, ok := c.GetQuery("access_token"); ok {
-			tokenStr = fromQuery
-		} else {
-			authHeader := c.GetHeader("Authorization")
-			if strings.HasPrefix(authHeader, "Bearer ") {
-				tokenStr = strings.TrimPrefix(authHeader, "Bearer ")
-			}
-		}
+func abortMissingToken(c *gin.Context, reason string) {
+	log.WithFields(log.Fields{
+		"ip":     c.ClientIP(),
+		"path":   c.Request.URL.Path,
+		"method": c.Request.Method,
+		"reason": reason,
+	}).Warn("Auth failure")
+	c.AbortWithStatus(401)
+}
 
-		if tokenStr == "" {
-			log.WithFields(log.Fields{
-				"ip":     c.ClientIP(),
-				"path":   c.Request.URL.Path,
-				"method": c.Request.Method,
-				"reason": "missing token",
-			}).Warn("Auth failure")
-			c.AbortWithStatus(401)
-			return
-		}
+func bearerToken(c *gin.Context) string {
+	authHeader := c.GetHeader("Authorization")
+	if strings.HasPrefix(authHeader, "Bearer ") {
+		return strings.TrimPrefix(authHeader, "Bearer ")
+	}
+	return ""
+}
 
-		// Try guest token validation first (fast HMAC check)
-		if guestSvc := facade.GuestService(); guestSvc != nil {
-			if userID, err := guestSvc.ValidateGuestToken(tokenStr); err == nil {
-				if user, err := facade.UsersService().FindByID(userID); err == nil {
-					// Check if guest session has expired
-					if user.IsGuest && !user.GuestExpiresAt.IsZero() && time.Now().After(user.GuestExpiresAt) {
-						c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-							"error": "Guest session expired",
-						})
-						return
-					}
-					c.Set("userid", user.RefID)
-					c.Set("user", user)
-					c.Next()
+func authenticateToken(c *gin.Context, facade service.Facade, tokenStr string) {
+	if guestSvc := facade.GuestService(); guestSvc != nil {
+		if userID, err := guestSvc.ValidateGuestToken(tokenStr); err == nil {
+			if user, err := facade.UsersService().FindByID(userID); err == nil {
+				if user.IsGuest && !user.GuestExpiresAt.IsZero() && time.Now().After(user.GuestExpiresAt) {
+					c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+						"error": "Guest session expired",
+					})
 					return
 				}
+				c.Set("userid", user.RefID)
+				c.Set("user", user)
+				c.Next()
+				return
 			}
 		}
+	}
 
-		// Fall back to Auth0 JWT validation
-		keyFunc := getKeyFunc()
+	aud := strings.TrimSpace(os.Getenv("AUTH0_AUDIENCE"))
+	iss := strings.TrimSpace(os.Getenv("AUTH0_DOMAIN"))
+	opts := []jwt.ParserOption{jwt.WithValidMethods([]string{jwt.SigningMethodRS256.Alg()})}
+	if aud != "" {
+		opts = append(opts, jwt.WithAudience(aud))
+	}
+	if iss != "" {
+		opts = append(opts, jwt.WithIssuer(iss))
+	}
 
-		var token *jwt.Token
-		var err error
+	token, err := jwt.Parse(tokenStr, getKeyFunc(), opts...)
+	if err != nil {
+		handleTokenError(c, err, token)
+		return
+	}
+	handleTokenSuccess(c, token, facade)
+}
 
-		token, err = jwt.Parse(tokenStr, keyFunc)
-
-		if err != nil {
-			handleTokenError(c, err, token)
-		} else {
-			handleTokenSuccess(c, token, facade)
+// AuthMiddleware authenticates REST requests from the Authorization header only.
+// Query-string access_token values are rejected so session JWTs are not logged.
+func AuthMiddleware(facade service.Facade) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if _, ok := c.GetQuery("access_token"); ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "access_token query parameter is not allowed",
+			})
+			return
 		}
+		tokenStr := bearerToken(c)
+		if tokenStr == "" {
+			abortMissingToken(c, "missing token")
+			return
+		}
+		authenticateToken(c, facade, tokenStr)
+	}
+}
+
+// WSAuthMiddleware authenticates WebSocket upgrades with a single-use ticket
+// or an Authorization Bearer token. Session JWTs in the query string are rejected.
+func WSAuthMiddleware(facade service.Facade, tickets *TicketStore) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if _, ok := c.GetQuery("access_token"); ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "access_token query parameter is not allowed",
+			})
+			return
+		}
+		if ticket := strings.TrimSpace(c.Query("ticket")); ticket != "" {
+			userID, ok := tickets.Consume(ticket)
+			if !ok {
+				abortMissingToken(c, "invalid websocket ticket")
+				return
+			}
+			user, err := facade.UsersService().FindByID(userID)
+			if err != nil {
+				abortMissingToken(c, "ticket user not found")
+				return
+			}
+			if user.IsGuest && !user.GuestExpiresAt.IsZero() && time.Now().After(user.GuestExpiresAt) {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+					"error": "Guest session expired",
+				})
+				return
+			}
+			if user.IsBanned {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+					"error": "Your account has been banned",
+				})
+				return
+			}
+			c.Set("userid", user.RefID)
+			c.Set("user", user)
+			c.Next()
+			return
+		}
+		tokenStr := bearerToken(c)
+		if tokenStr == "" {
+			abortMissingToken(c, "missing token")
+			return
+		}
+		authenticateToken(c, facade, tokenStr)
 	}
 }
 

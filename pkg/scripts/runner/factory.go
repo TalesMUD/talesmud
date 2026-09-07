@@ -1,6 +1,8 @@
 package runner
 
 import (
+	"os"
+
 	"github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/scripts"
@@ -8,6 +10,18 @@ import (
 	"github.com/talesmud/talesmud/pkg/scripts/runner/lua/modules"
 	"github.com/talesmud/talesmud/pkg/service"
 )
+
+func jsScriptsAllowed() bool {
+	return os.Getenv("TALESMUD_ALLOW_JS_SCRIPTS") == "1"
+}
+
+func jsDisabledResult(script scripts.Script) *scripts.ScriptResult {
+	logrus.WithField("script", script.Name).Warn("JavaScript scripts are disabled; set TALESMUD_ALLOW_JS_SCRIPTS=1 to enable")
+	return &scripts.ScriptResult{
+		Success: false,
+		Error:   "javascript scripts are disabled",
+	}
+}
 
 // MultiRunner is a ScriptRunner that delegates to the appropriate runner
 // based on the script's language
@@ -46,12 +60,13 @@ func (r *MultiRunner) Run(script scripts.Script, ctx interface{}) interface{} {
 	case scripts.ScriptLanguageLua:
 		return r.luaRunner.Run(script, ctx)
 	case scripts.ScriptLanguageJavaScript:
+		if !jsScriptsAllowed() {
+			return jsDisabledResult(script).Error
+		}
 		logrus.WithField("script", script.Name).Warn("JavaScript scripts are deprecated, please migrate to Lua")
 		return r.jsRunner.Run(script, ctx)
 	default:
-		// Default to JavaScript for backward compatibility
-		logrus.WithField("script", script.Name).Warn("Unknown script language, defaulting to JavaScript")
-		return r.jsRunner.Run(script, ctx)
+		return r.luaRunner.Run(script, ctx)
 	}
 }
 
@@ -61,11 +76,13 @@ func (r *MultiRunner) RunWithResult(script scripts.Script, ctx *scripts.ScriptCo
 	case scripts.ScriptLanguageLua:
 		return r.luaRunner.RunWithResult(script, ctx)
 	case scripts.ScriptLanguageJavaScript:
+		if !jsScriptsAllowed() {
+			return jsDisabledResult(script)
+		}
 		logrus.WithField("script", script.Name).Warn("JavaScript scripts are deprecated, please migrate to Lua")
 		return r.jsRunner.RunWithResult(script, ctx)
 	default:
-		// Default to JavaScript for backward compatibility
-		return r.jsRunner.RunWithResult(script, ctx)
+		return r.luaRunner.RunWithResult(script, ctx)
 	}
 }
 
