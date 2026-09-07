@@ -1,6 +1,8 @@
 package worldmap
 
 import (
+	"bytes"
+	"encoding/json"
 	"testing"
 
 	"github.com/talesmud/talesmud/pkg/entities"
@@ -236,5 +238,30 @@ func TestRevealMarksInstanceCloneAsTemplateCurrent(t *testing.T) {
 	if atlas.CurrentLayer != "lower" && atlas.CurrentLayer != "overworld" {
 		// cellar underground should be lower when z maps that way
 		t.Logf("current layer %q (ok if biome z mapping differs)", atlas.CurrentLayer)
+	}
+}
+
+func TestDiscoveredRoomsJSONRoundTrip(t *testing.T) {
+	ch := &characters.Character{
+		DiscoveredRooms: map[string]bool{"R0101": true, "R0102": true},
+		DiscoveredAreas: map[string]bool{"Z01_meadows_forest_path": true},
+	}
+	ch.AllTimeStats.RoomsDiscovered = 2
+	raw, err := json.Marshal(ch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(raw, []byte(`"discoveredRooms"`)) {
+		t.Fatalf("discoveredRooms missing from JSON (storage uses encoding/json): %s", raw)
+	}
+	var back characters.Character
+	if err := json.Unmarshal(raw, &back); err != nil {
+		t.Fatal(err)
+	}
+	if !back.DiscoveredRooms["R0101"] || !back.DiscoveredRooms["R0102"] {
+		t.Fatalf("rooms not restored: %#v", back.DiscoveredRooms)
+	}
+	if !back.DiscoveredAreas["Z01_meadows_forest_path"] {
+		t.Fatalf("areas not restored: %#v", back.DiscoveredAreas)
 	}
 }
