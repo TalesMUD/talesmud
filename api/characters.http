@@ -2,7 +2,7 @@
 @prod=https://talesofapirate.com/dnd
 @local=http://localhost:8010
 @host={{local}}
-@token=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Imh5bTJwZnRFZ0ZsVXk4THU0M1FwdiJ9.eyJpc3MiOiJodHRwczovL293bmRuZC5ldS5hdXRoMC5jb20vIiwic3ViIjoidHdpdHRlcnwxNjY1MTM0MCIsImF1ZCI6WyJodHRwOi8vdGFsZXNvZmFwaXJhdGUuY29tL2RuZC9hcGkiLCJodHRwczovL293bmRuZC5ldS5hdXRoMC5jb20vdXNlcmluZm8iXSwiaWF0IjoxNTkxMTc4ODMyLCJleHAiOjE1OTEyNjUyMzIsImF6cCI6Im14Y0VxVHVBVU96ckw3OThtYlZUcHFGeHBHR1ZwM2dJIiwic2NvcGUiOiJvcGVuaWQgcHJvZmlsZSBlbWFpbCJ9.m5YaRga0NC5h66VKnCf0ouBsi-qsDlz1yiDih35bJ79WtrlOT6T-Rp5oFM9JFE5cE8dEWVyNdq_Wds39BOWAvePp9HDR2WCu-IUU2s1L8C2UwB3P6q3-Cp4l6XdJDAkddW9_jfzHJibkAAK70N6l84jmnJiiaxjuI61P0WKvcGk7gO8faEnNNqBHnTsgXyVgLKmtaMRTtbPa1Q562d1Yrys26fck5-kDjrj-X3PrbTGtwYdRCD95qir8KOlE7exWnGbovAv5-eHt_ekWO5FCi8DotQfNTZCyDIIviQ9Ql2tuwp82HaHKQ-PBD_-TLkgt1ueXFDf68rC9UYxLTcXQkw
+@token=REPLACE_ME
 
 ###
 GET {{host}}/health
@@ -14,7 +14,6 @@ authorization: Bearer {{token}}
 GET {{host}}/api/characters/5eb9009e2a00469b59fa60e3
 ###
 DELETE {{host}}/api/characters/5eb9009e2a00469b59fa60e3
-### Client ID    gOkg8ZUdwKp1MmVE0EXh97Nlg0m5zgw1
 POST {{host}}/api/characters  HTTP/1.1
 content-type: application/json
 authorization: Bearer {{token}}

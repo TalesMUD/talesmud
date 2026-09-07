@@ -1,17 +1,26 @@
 services:
   talesmud:
-    build: .
+    build:
+      context: .
+      args:
+        VITE_AUTH0_DOMAIN: ${VITE_AUTH0_DOMAIN:-}
+        VITE_AUTH0_CLIENT_ID: ${VITE_AUTH0_CLIENT_ID:-}
+        VITE_AUTH0_AUDIENCE: ${VITE_AUTH0_AUDIENCE:-}
     image: ghcr.io/talesmud/talesmud:latest
     ports:
       - "8010:8010"
     environment:
       - GIN_MODE=release
       - SQLITE_PATH=/app/data/talesmud.db
-      - AUTH0_AUDIENCE=http://talesofapirate.com/dnd/api
-      - AUTH0_DOMAIN=https://owndnd.eu.auth0.com/
-      - AUTH0_WK_JWKS=https://owndnd.eu.auth0.com/.well-known/jwks.json
-      - ADMIN_USER=${ADMIN_USER:?set ADMIN_USER for admin import/export}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:?set ADMIN_PASSWORD for admin import/export}
+      - AUTH0_AUDIENCE=${AUTH0_AUDIENCE:?set AUTH0_AUDIENCE}
+      - AUTH0_DOMAIN=${AUTH0_DOMAIN:?set AUTH0_DOMAIN}
+      - AUTH0_WK_JWKS=${AUTH0_WK_JWKS:?set AUTH0_WK_JWKS}
+      - ADMIN_USER=${ADMIN_USER:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - GUEST_SECRET=${GUEST_SECRET:-}
+      - TRUSTED_PROXIES=${TRUSTED_PROXIES:-127.0.0.1}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-}
+      - MUD_ADMIN_OAUTHID=${MUD_ADMIN_OAUTHID:-}
     volumes:
       - talesmud-data:/app/data
       - talesmud-uploads:/app/uploads

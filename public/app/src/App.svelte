@@ -8,13 +8,9 @@
   import { onDestroy, onMount } from "svelte";
 
   const config = {
-    domain: import.meta.env.VITE_AUTH0_DOMAIN || "owndnd.eu.auth0.com",
-    client_id:
-      import.meta.env.VITE_AUTH0_CLIENT_ID ||
-      "mxcEqTuAUOzrL798mbVTpqFxpGGVp3gI",
-    audience:
-      import.meta.env.VITE_AUTH0_AUDIENCE ||
-      "http://talesofapirate.com/dnd/api",
+    domain: import.meta.env.VITE_AUTH0_DOMAIN || "",
+    client_id: import.meta.env.VITE_AUTH0_CLIENT_ID || "",
+    audience: import.meta.env.VITE_AUTH0_AUDIENCE || "",
   };
 
   const { isAuthenticated, isLoading, authToken } = createAuth(config);

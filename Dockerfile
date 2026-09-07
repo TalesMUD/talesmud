@@ -3,6 +3,13 @@
 # ============================================================
 FROM node:20-alpine AS build-frontend
 
+ARG VITE_AUTH0_DOMAIN
+ARG VITE_AUTH0_CLIENT_ID
+ARG VITE_AUTH0_AUDIENCE
+ENV VITE_AUTH0_DOMAIN=$VITE_AUTH0_DOMAIN \
+    VITE_AUTH0_CLIENT_ID=$VITE_AUTH0_CLIENT_ID \
+    VITE_AUTH0_AUDIENCE=$VITE_AUTH0_AUDIENCE
+
 WORKDIR /src/public/app
 COPY public/app/package.json public/app/package-lock.json* ./
 RUN npm ci --legacy-peer-deps
@@ -13,6 +20,13 @@ RUN npm run build
 # Stage 2: Build the Game Client (Rollup + Svelte)
 # ============================================================
 FROM node:20-alpine AS build-mud-client
+
+ARG VITE_AUTH0_DOMAIN
+ARG VITE_AUTH0_CLIENT_ID
+ARG VITE_AUTH0_AUDIENCE
+ENV VITE_AUTH0_DOMAIN=$VITE_AUTH0_DOMAIN \
+    VITE_AUTH0_CLIENT_ID=$VITE_AUTH0_CLIENT_ID \
+    VITE_AUTH0_AUDIENCE=$VITE_AUTH0_AUDIENCE
 
 WORKDIR /src/public/mud-client
 COPY public/mud-client/package.json public/mud-client/package-lock.json* ./
