@@ -18,6 +18,10 @@ func NewSQLitePartiesRepository(client *dbsqlite.Client) PartiesRepository {
 	}
 }
 
+func (repo *sqlitePartiesRepository) Drop() error {
+	return repo.sqliteGenericRepo.DropCollection()
+}
+
 func (repo *sqlitePartiesRepository) FindAll() ([]*e.Party, error) {
 	results := make([]*e.Party, 0)
 	if err := repo.sqliteGenericRepo.FindAll(func(elem interface{}) {

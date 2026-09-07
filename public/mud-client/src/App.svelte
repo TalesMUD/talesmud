@@ -77,6 +77,7 @@
   import UserMenu from "./UserMenu.svelte";
   import SettingsModal from "./game/ui/SettingsModal.svelte";
   import { createAuth } from "./auth.js";
+  import { auth0Config, isAuth0Configured } from "./authConfig.js";
   import { createGuestSession } from "./api/guest.js";
   import { getServerInfo } from "./api/server-info.js";
   import { getUser } from "./api/user.js";
@@ -89,12 +90,7 @@
   import CharacterCreationWizard from "./onboarding/CharacterCreationWizard.svelte";
   import { showCharacterWizard } from "./onboarding/onboardingStore.js";
 
-  // Auth0 config
-  const config = {
-    domain: "owndnd.eu.auth0.com",
-    client_id: "mxcEqTuAUOzrL798mbVTpqFxpGGVp3gI",
-    audience: "http://talesofapirate.com/dnd/api",
-  };
+  const config = isAuth0Configured() ? auth0Config : { domain: "", client_id: "", audience: "" };
 
   const { isLoading, isAuthenticated, authToken, authError, login, logout, userInfo } = createAuth(config);
 

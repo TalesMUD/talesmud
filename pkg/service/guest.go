@@ -233,7 +233,7 @@ func (gs *guestService) CreateGuestSession(remoteIP string) (string, error) {
 // ValidateGuestToken validates a guest JWT and returns the user entity ID.
 func (gs *guestService) ValidateGuestToken(tokenStr string) (string, error) {
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+		if token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return gs.secret, nil

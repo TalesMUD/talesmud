@@ -62,6 +62,7 @@ type CharactersRepository interface {
 
 // PartiesRepository provides access to party data.
 type PartiesRepository interface {
+	Drop() error
 	FindAll() ([]*entities.Party, error)
 	Store(party *entities.Party) (*entities.Party, error)
 	FindByID(id string) (*entities.Party, error)

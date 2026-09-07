@@ -28,7 +28,9 @@ func (handler *ExportHandler) Export(c *gin.Context) {
 
 	d.Rooms, _ = handler.RoomsService.FindAll()
 	d.Characters, _ = handler.CharactersService.FindAll()
-	d.Users, _ = handler.UserService.FindAll()
+	if c.Query("includeUsers") == "1" {
+		d.Users, _ = handler.UserService.FindAll()
+	}
 	d.Items, _ = handler.ItemsService.FindAll(repository.ItemsQuery{}) // Gets all items (templates + instances)
 	d.Scripts, _ = handler.ScriptService.FindAll()
 	d.NPCs, _ = handler.NPCsService.FindAll()
@@ -55,6 +57,7 @@ func (handler *ExportHandler) Import(c *gin.Context) {
 	handler.ScriptService.Drop()
 	handler.NPCsService.Drop()
 	handler.DialogsService.Drop()
+	handler.PartiesService.Drop()
 
 	for _, room := range data.Rooms {
 		handler.RoomsService.Import(room)

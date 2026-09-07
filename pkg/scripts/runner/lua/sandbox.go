@@ -42,6 +42,8 @@ func DefaultSandboxConfig() *SandboxConfig {
 			"load",
 			"loadstring",
 			"package",
+			"getmetatable",
+			"setmetatable",
 		},
 	}
 }

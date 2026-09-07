@@ -1,15 +1,15 @@
 
-@prod=https://talesofapirate.com/
-@local=http://0.0.0.0:8010
+@prod=https://veilspan.com/
+@local=http://127.0.0.1:8010
 @host={{local}}
 
-### this credentials are only for local testing
+### Local-only. Production must not use admin:admin (rejected as insecure).
 GET {{host}}/admin/export
-Authorization: Basic admin:admin
+Authorization: Basic {{ADMIN_USER}}:{{ADMIN_PASSWORD}}
 
 ###
 POST {{host}}/admin/import  HTTP/1.1
 content-type: application/json
-Authorization: Basic admin:admin
+Authorization: Basic {{ADMIN_USER}}:{{ADMIN_PASSWORD}}
 
 < export-new.json

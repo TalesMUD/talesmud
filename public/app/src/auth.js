@@ -24,6 +24,10 @@ async function initAuth0(config) {
 
   initPromise = (async () => {
     try {
+      if (!config || !config.domain || !config.client_id) {
+        isLoading.set(false);
+        return null;
+      }
       auth0 = await createAuth0Client({
         domain: config.domain,
         client_id: config.client_id,

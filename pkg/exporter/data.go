@@ -17,7 +17,7 @@ type Data struct {
 	Items      []*items.Item           `json:"items"`
 	Characters []*characters.Character `json:"characters"`
 	Scripts    []*scripts.Script       `json:"scripts"`
-	Users      []*e.User               `json:"users"`
+	Users      []*e.User               `json:"users,omitempty"`
 	NPCs       []*npc.NPC              `json:"npcs"`
 	Dialogs    []*dialogs.Dialog       `json:"dialogs"`
 	Parties    []*e.Party              `json:"parties"`

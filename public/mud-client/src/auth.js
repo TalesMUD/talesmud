@@ -20,6 +20,10 @@ function createAuth(config) {
   let intervalId = undefined;
 
   onMount(async () => {
+    if (!config || !config.domain || !config.client_id) {
+      isLoading.set(false);
+      return;
+    }
     try {
       auth0 = await createAuth0Client({
         domain: config.domain,
