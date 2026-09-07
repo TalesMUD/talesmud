@@ -18,7 +18,7 @@ Prefer `logrus.WithField` / `WithFields`. WebSocket lifecycle logs include:
 - `UserJoined` / `UserQuit` / `selectcharacter`
 - Auth failures: `Auth failure` with `ip`, `reason` (never log raw `access_token`)
 
-Gin access logs redact `access_token=` query values as `[REDACTED]`.
+Gin access logs record the URL path only (query string omitted). `util.RedactAccessToken` also redacts `access_token=` and `ticket=` if a full URL is logged elsewhere. nginx `log_format talesmud` uses `$uri` rather than `$request`.
 
 ## VPS wiring
 

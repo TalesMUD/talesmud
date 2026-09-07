@@ -118,7 +118,7 @@
   import LocalEchoController from "./echo/LocalEchoController";
   import fit from "xterm-addon-fit";
   import { createClient, getClient } from "./Client";
-  import { wsbackend } from "../api/base.js";
+  import { backend, wsbackend } from "../api/base.js";
   import UserMenu from "../UserMenu.svelte";
   import { getMyCharacters } from "../api/characters.js";
 
@@ -140,6 +140,26 @@
   let muxplus = true;
 
   const { isAuthenticated, authToken } = getAuth();
+
+  async function connectCreatorWebSocket(token) {
+    if (ws || !token) return;
+    try {
+      const ticketRes = await fetch(`${backend}/ws-ticket`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!ticketRes.ok) {
+        console.log("Failed to issue websocket ticket", ticketRes.status);
+        return;
+      }
+      const ticketBody = await ticketRes.json();
+      if (!ticketBody || !ticketBody.ticket || ws) return;
+      ws = new WebSocket(wsbackend + "?ticket=" + encodeURIComponent(ticketBody.ticket));
+      client.setWSClient(ws);
+    } catch (err) {
+      console.log("Failed to open websocket", err);
+    }
+  }
   $: state = {
     isAuthenticated: $isAuthenticated,
     background: $muxStore.background,
@@ -147,10 +167,7 @@
 
   $: {
     if (client && !ws && $authToken) {
-      // connect to websocket server only when auth token is available
-      const url = wsbackend + "?access_token=";
-      ws = new WebSocket(url + $authToken);
-      client.setWSClient(ws);
+      connectCreatorWebSocket($authToken);
 
       // Load user's characters for autocomplete
       getMyCharacters(

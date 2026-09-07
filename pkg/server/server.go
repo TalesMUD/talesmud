@@ -18,7 +18,6 @@ import (
 	"github.com/talesmud/talesmud/pkg/service"
 	"github.com/talesmud/talesmud/pkg/service/groq"
 	"github.com/talesmud/talesmud/pkg/webui"
-	"github.com/talesmud/talesmud/pkg/util"
 	"github.com/talesmud/talesmud/pkg/webuiplay"
 )
 
@@ -28,9 +27,28 @@ type App interface {
 }
 
 type app struct {
-	Router *gin.Engine
-	Facade service.Facade
-	mud    mud.MUDServer
+	Router  *gin.Engine
+	Facade  service.Facade
+	mud     mud.MUDServer
+	tickets *TicketStore
+}
+
+func trustedProxies() []string {
+	raw := strings.TrimSpace(os.Getenv("TRUSTED_PROXIES"))
+	if raw == "" {
+		return []string{"127.0.0.1", "::1"}
+	}
+	var out []string
+	for _, p := range strings.Split(raw, ",") {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	if len(out) == 0 {
+		return []string{"127.0.0.1", "::1"}
+	}
+	return out
 }
 
 func adminAuthMiddleware() gin.HandlerFunc {
@@ -91,8 +109,14 @@ func NewApp() App {
 	repos := repository.NewSQLiteFactory(client)
 
 	r := gin.New()
+	if err := r.SetTrustedProxies(trustedProxies()); err != nil {
+		log.WithError(err).Warn("Failed to set trusted proxies; using Gin defaults")
+	}
 	r.Use(gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
-		path := util.RedactAccessToken(param.Path)
+		path := param.Path
+		if i := strings.Index(path, "?"); i >= 0 {
+			path = path[:i]
+		}
 		return fmt.Sprintf("[GIN] %s | %3d | %13v | %15s | %-7s %s\n",
 			param.TimeStamp.Format("2006/01/02 - 15:04:05"),
 			param.StatusCode,
@@ -106,13 +130,14 @@ func NewApp() App {
 
 	scriptRunner := runner.NewMultiRunner()
 	facade := service.NewFacade(repos, scriptRunner)
-	mud := mud.New(facade)
-	scriptRunner.SetServices(facade, mud.GameCtrl())
+	mudSrv := mud.New(facade, allowedCORSOrigins())
+	scriptRunner.SetServices(facade, mudSrv.GameCtrl())
 
 	return &app{
-		Router: r,
-		Facade: facade,
-		mud:    mud,
+		Router:  r,
+		Facade:  facade,
+		mud:     mudSrv,
+		tickets: NewTicketStore(),
 	}
 }
 
@@ -251,44 +276,19 @@ func (app *app) setupRoutes() {
 		// Characters
 		protected.GET("characters", csh.GetCharacters)
 		protected.GET("my-characters", csh.GetMyCharacters)
-		protected.POST("characters", csh.PostCharacter)
 		protected.GET("characters/:id", csh.GetCharacterByID)
 		protected.GET("characters/:id/map", characterMap.GetCharacterMap)
 		protected.DELETE("characters/:id", csh.DeleteCharacterByID)
 		protected.PUT("characters/:id", csh.UpdateCharacterByID)
 		protected.POST("newcharacter", csh.CreateNewCharacter)
+		protected.POST("ws-ticket", app.tickets.IssueWSTicket)
 
 		// AI-powered generation
 		protected.POST("generate/character", generate.GenerateCharacter)
 
-		// Read-only game data (accessible to all authenticated users)
-		protected.GET("rooms", rooms.GetRooms)
-		protected.GET("rooms-vh", rooms.GetRoomValueHelp)
-		protected.GET("rooms/:id", rooms.GetRoomByID)
-		protected.GET("items", items.GetItems)
-		protected.GET("items/:id", items.GetItemByID)
-		protected.GET("scripts", scripts.GetScripts)
-		protected.GET("script-types", scripts.GetScriptTypes)
-		protected.GET("world/graph", worldRenderer.RenderGraphData)
-		protected.GET("world/rooms-minimal", worldRenderer.GetMinimalRooms)
-		protected.GET("npcs", npcs.GetNPCs)
-		protected.GET("npcs/templates", npcs.GetNPCTemplates)
-		protected.GET("npcs/:id", npcs.GetNPCByID)
-		protected.GET("spawners", npcSpawners.GetSpawners)
-		protected.GET("spawners/:id", npcSpawners.GetSpawnerByID)
-		protected.GET("dialogs", dialogs.GetDialogs)
-		protected.GET("dialogs/:id", dialogs.GetDialogByID)
 		protected.GET("character-templates", charTemplates.GetCharacterTemplates)
 		protected.GET("character-templates/:id", charTemplates.GetCharacterTemplateByID)
 		protected.GET("character-templates/presets", charTemplates.GetCharacterTemplatePresets)
-		protected.GET("loottables", lootTables.GetLootTables)
-		protected.GET("loottables/:id", lootTables.GetLootTableByID)
-		protected.GET("backgrounds", backgrounds.ListBackgrounds)
-		protected.GET("settings", serverSettings.GetServerSettings)
-		protected.GET("quests", questsHandler.GetQuests)
-		protected.GET("quests/:id", questsHandler.GetQuestByID)
-		protected.GET("skills", skillsHandler.GetSkills)
-		protected.GET("skills/:id", skillsHandler.GetSkillByID)
 		protected.GET("quest-progress/:characterId", questsHandler.GetQuestLog)
 		protected.POST("quest-progress/:characterId/accept/:questId", questsHandler.AcceptQuest)
 		protected.POST("quest-progress/:characterId/abandon/:questId", questsHandler.AbandonQuest)
@@ -302,6 +302,33 @@ func (app *app) setupRoutes() {
 		creator := protected.Group("")
 		creator.Use(CreatorMiddleware())
 		{
+			creator.POST("characters", csh.PostCharacter)
+
+			creator.GET("rooms", rooms.GetRooms)
+			creator.GET("rooms-vh", rooms.GetRoomValueHelp)
+			creator.GET("rooms/:id", rooms.GetRoomByID)
+			creator.GET("items", items.GetItems)
+			creator.GET("items/:id", items.GetItemByID)
+			creator.GET("scripts", scripts.GetScripts)
+			creator.GET("script-types", scripts.GetScriptTypes)
+			creator.GET("world/graph", worldRenderer.RenderGraphData)
+			creator.GET("world/rooms-minimal", worldRenderer.GetMinimalRooms)
+			creator.GET("npcs", npcs.GetNPCs)
+			creator.GET("npcs/templates", npcs.GetNPCTemplates)
+			creator.GET("npcs/:id", npcs.GetNPCByID)
+			creator.GET("spawners", npcSpawners.GetSpawners)
+			creator.GET("spawners/:id", npcSpawners.GetSpawnerByID)
+			creator.GET("dialogs", dialogs.GetDialogs)
+			creator.GET("dialogs/:id", dialogs.GetDialogByID)
+			creator.GET("loottables", lootTables.GetLootTables)
+			creator.GET("loottables/:id", lootTables.GetLootTableByID)
+			creator.GET("backgrounds", backgrounds.ListBackgrounds)
+			creator.GET("settings", serverSettings.GetServerSettings)
+			creator.GET("quests", questsHandler.GetQuests)
+			creator.GET("quests/:id", questsHandler.GetQuestByID)
+			creator.GET("skills", skillsHandler.GetSkills)
+			creator.GET("skills/:id", skillsHandler.GetSkillByID)
+
 			// Rooms
 			creator.POST("rooms", rooms.PostRoom)
 			creator.PUT("rooms/:id", rooms.PutRoom)
@@ -437,7 +464,7 @@ func (app *app) setupRoutes() {
 	app.Facade.GuestService().StartCleanupLoop()
 
 	ws := r.Group("/ws")
-	ws.Use(AuthMiddleware(app.Facade))
+	ws.Use(WSAuthMiddleware(app.Facade, app.tickets))
 	ws.GET("", app.mud.HandleConnections)
 
 	// Serve mud-client (game client) at /play
