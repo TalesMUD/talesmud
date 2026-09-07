@@ -1179,39 +1179,34 @@ function createStore() {
 
     openMapOverview: () => {
       update((state) => {
-        state.mapOverviewOpen = true;
-        return state;
+        // Immutable update — Svelte writable uses reference equality.
+        return { ...state, mapOverviewOpen: true };
       });
     },
     closeMapOverview: () => {
       update((state) => {
-        state.mapOverviewOpen = false;
-        return state;
+        return { ...state, mapOverviewOpen: false };
       });
     },
     setMapOverviewOpen: (open) => {
       update((state) => {
-        state.mapOverviewOpen = !!open;
-        return state;
+        return { ...state, mapOverviewOpen: !!open };
       });
     },
 
     openInventoryOverlay: () => {
       update((state) => {
-        state.inventoryOverlayOpen = true;
-        return state;
+        return { ...state, inventoryOverlayOpen: true };
       });
     },
     closeInventoryOverlay: () => {
       update((state) => {
-        state.inventoryOverlayOpen = false;
-        return state;
+        return { ...state, inventoryOverlayOpen: false };
       });
     },
     setInventoryOverlayOpen: (open) => {
       update((state) => {
-        state.inventoryOverlayOpen = !!open;
-        return state;
+        return { ...state, inventoryOverlayOpen: !!open };
       });
     },
   };

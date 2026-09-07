@@ -1,7 +1,7 @@
 <script>
-  import { onDestroy, tick } from 'svelte';
-  import { readStageSize, shouldRepaintSize, applyCanvasBitmap } from './atlasLayout.js';
-  import { paintAtlas, isCurrentPlace, panToCenterPlace } from './atlasRenderer.js';
+  import { onDestroy, onMount, tick } from 'svelte';
+  import { readStageSize, shouldRepaintSize, applyCanvasBitmap } from '../widgets/atlasLayout.js';
+  import { paintAtlas, isCurrentPlace, panToCenterPlace } from '../widgets/atlasRenderer.js';
 
   export let store = null;
   export let sendMessage = null;
@@ -23,14 +23,31 @@
   let panStart = { x: 0, y: 0, panX: 0, panY: 0 };
   let tooltip = { visible: false, text: '', x: 0, y: 0 };
 
-  let widgetWrap, widgetCanvas;
-  let widgetObserver;
+  let stageWrap, stageCanvas;
+  let stageObserver;
   const hitState = { items: [] };
-  let lastWidgetSize = null;
+  let lastStageSize = null;
   let drawRaf = 0;
+  let escHandler = null;
+  let wasOpen = false;
 
-  // Badge / chrome only — fullscreen lives in MapOverviewOverlay (body portal).
-  $: mapOpen = !!(store && $store && $store.mapOverviewOpen);
+  $: open = !!(store && $store && $store.mapOverviewOpen);
+
+  /** Always mount fullscreen Map on document.body above inventory / HUD / BattleStage / WidgetGrid. */
+  function portal(node) {
+    // Inline styles beat any ancestor transform/filter stacking (e.g. gameContainer).
+    node.style.position = 'fixed';
+    node.style.inset = '0';
+    node.style.zIndex = '200000';
+    if (node.parentNode !== document.body) {
+      document.body.appendChild(node);
+    }
+    return {
+      destroy() {
+        if (node.parentNode) node.parentNode.removeChild(node);
+      }
+    };
+  }
 
   function emptyAtlas() {
     return { characterId: '', currentRoomId: '', currentLayer: '', layers: [], places: [], paths: [], regions: [] };
@@ -61,18 +78,37 @@
     const nextLayer = resolveLayer(atlas, currentRoomId, $store.atlasLayer || activeLayer);
     const layerChanged = nextLayer !== activeLayer;
     if (layerChanged) activeLayer = nextLayer;
-    if (roomChanged || layerChanged || (atlasChanged && currentRoomId)) {
+    // Follow / recenter when you move or atlas/layer catches up (meadow clusters).
+    if (open && (roomChanged || layerChanged || (atlasChanged && currentRoomId))) {
       tick().then(() => {
         applyRecenterToYou(true);
         scheduleDraw();
       });
-    } else if (atlasChanged) {
+    } else if (open && atlasChanged) {
       scheduleDraw();
     }
   }
 
+  $: if (open && !wasOpen) {
+    wasOpen = true;
+    userScale = 1;
+    lastStageSize = null;
+    tick().then(() => {
+      applyRecenterToYou(true);
+      scheduleDraw();
+    });
+  } else if (!open && wasOpen) {
+    wasOpen = false;
+    scheduleDraw();
+  }
+
   $: visiblePlaces = (atlas.places || []).filter(p => p.layer === activeLayer);
   $: visibleRegions = (atlas.regions || []).filter(r => r.layer === activeLayer);
+  $: layers = atlas.layers || [];
+
+  function placeById(id) {
+    return (atlas.places || []).find(p => p.id === id);
+  }
 
   function findPath(startId, targetId) {
     if (!startId || !targetId || startId === targetId) return null;
@@ -165,7 +201,7 @@
       visiblePlaces,
       visibleRegions,
       currentRoomId,
-      maximized: false,
+      maximized: true,
       panX,
       panY,
       userScale,
@@ -180,7 +216,7 @@
     const raf = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : (fn) => setTimeout(fn, 16);
     drawRaf = raf(() => {
       drawRaf = 0;
-      paint(widgetCanvas, widgetWrap);
+      if (open) paint(stageCanvas, stageWrap);
     });
   }
 
@@ -261,7 +297,7 @@
 
   function applyRecenterToYou(keepScale = true) {
     if (!keepScale) userScale = 1;
-    const size = readStageSize(widgetWrap);
+    const size = readStageSize(stageWrap);
     const here = resolveHerePlace();
     if (here && size.w >= 4 && size.h >= 4) {
       const pan = panToCenterPlace(visiblePlaces, here, size.w, size.h, userScale, atlas.paths || []);
@@ -273,9 +309,9 @@
     }
   }
 
-  function openOverview() {
-    if (store && store.openMapOverview) store.openMapOverview();
-    else if (store && store.setMapOverviewOpen) store.setMapOverviewOpen(true);
+  function recenter() {
+    applyRecenterToYou(false);
+    scheduleDraw();
   }
 
   function closeOverview() {
@@ -283,9 +319,15 @@
     else if (store && store.setMapOverviewOpen) store.setMapOverviewOpen(false);
   }
 
-  function toggleMaximize() {
-    if (mapOpen) closeOverview();
-    else openOverview();
+  function selectLayer(id) {
+    if (id === activeLayer) return;
+    activeLayer = id;
+    if (store && store.setAtlasLayer) store.setAtlasLayer(id);
+    userScale = 1;
+    tick().then(() => {
+      applyRecenterToYou(true);
+      scheduleDraw();
+    });
   }
 
   function onStageResize(wrap, lastRef, setLast) {
@@ -295,39 +337,56 @@
     scheduleDraw();
   }
 
-  let observedWidget = null;
-  $: if (widgetWrap !== observedWidget) {
-    if (widgetObserver) widgetObserver.disconnect();
-    observedWidget = widgetWrap;
-    lastWidgetSize = null;
-    if (widgetWrap) {
-      widgetObserver = new ResizeObserver(() => {
-        onStageResize(widgetWrap, lastWidgetSize, (s) => { lastWidgetSize = s; });
+  let observedStage = null;
+  $: if (stageWrap !== observedStage) {
+    if (stageObserver) stageObserver.disconnect();
+    observedStage = stageWrap;
+    lastStageSize = null;
+    if (stageWrap) {
+      stageObserver = new ResizeObserver(() => {
+        onStageResize(stageWrap, lastStageSize, (s) => { lastStageSize = s; });
       });
-      widgetObserver.observe(widgetWrap);
-      lastWidgetSize = readStageSize(widgetWrap);
+      stageObserver.observe(stageWrap);
+      lastStageSize = readStageSize(stageWrap);
       scheduleDraw();
     }
   }
 
+  onMount(() => {
+    escHandler = (e) => {
+      if (e.key === 'Escape' && open) {
+        e.preventDefault();
+        closeOverview();
+      }
+    };
+    window.addEventListener('keydown', escHandler);
+  });
+
   onDestroy(() => {
+    if (escHandler) window.removeEventListener('keydown', escHandler);
     if (drawRaf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(drawRaf);
-    if (widgetObserver) widgetObserver.disconnect();
+    if (stageObserver) stageObserver.disconnect();
     cancelTravel();
-    // Tab remounts must NOT close the fullscreen overlay (MapOverviewOverlay owns it).
   });
 </script>
 
 <style>
-  .atlas {
-    width: 100%;
-    height: 100%;
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 200000;
+    background: rgba(0, 0, 0, 0.72);
+    display: flex;
+    padding: 3vh 3vw;
+  }
+  .modal {
+    flex: 1;
     min-height: 0;
     display: flex;
     flex-direction: column;
-    background: var(--panel-bg, #0d1117);
-    border-radius: var(--panel-radius, 8px);
-    border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.1));
+    background: #0b1220;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
     overflow: hidden;
   }
   .toolbar {
@@ -356,6 +415,20 @@
     align-items: center;
   }
   .icon-btn:hover { color: #e2e8f0; background: rgba(255,255,255,0.08); }
+  .icon-btn.cancel { color: #f87171; }
+  .layer-tabs { display: flex; gap: 4px; }
+  .layer-tab {
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: transparent;
+    color: #94a3b8;
+    font-size: 10px;
+    text-transform: none;
+    letter-spacing: 0;
+    padding: 2px 7px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .layer-tab.active { background: #f59e0b; border-color: #f59e0b; color: #111827; }
   .travel { font-size: 10px; color: #22d3ee; text-transform: none; letter-spacing: 0; }
   .stage { flex: 1 1 0; min-height: 0; position: relative; overflow: hidden; }
   canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
@@ -372,71 +445,57 @@
     transform: translate(-50%, -110%);
     border: 1px solid rgba(148,163,184,0.25);
   }
-  .atlas-compact {
-    min-height: 0;
-  }
-  .stage-compact {
-    min-height: 96px;
-  }
-  .compact-open {
-    position: absolute;
-    right: 8px;
-    bottom: 8px;
-    z-index: 2;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    background: rgba(2, 6, 23, 0.82);
-    border: 1px solid rgba(245, 158, 11, 0.45);
-    color: #fbbf24;
-    border-radius: 6px;
-    padding: 4px 8px;
-    font-size: 10px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  .compact-open:hover { background: rgba(245, 158, 11, 0.2); }
-  .compact-open i { font-size: 14px; }
-  .compact-open-live {
-    border-color: rgba(34, 211, 238, 0.55);
-    color: #67e8f9;
-  }
 </style>
 
-<div class="atlas atlas-compact">
-  <div class="toolbar">
-    <i class="material-icons">map</i>
-    Map
-    {#if isTraveling}<span class="travel">Traveling…</span>{/if}
-    {#if mapOpen}<span class="travel">Fullscreen</span>{/if}
-    <span class="spacer"></span>
-    <button class="icon-btn" title={mapOpen ? 'Close Map' : 'Open Map'} on:click={toggleMaximize}>
-      <i class="material-icons">{mapOpen ? 'close_fullscreen' : 'open_in_full'}</i>
-    </button>
-  </div>
-  <div class="stage stage-compact" bind:this={widgetWrap}>
-    <canvas
-      bind:this={widgetCanvas}
-      on:pointerdown={pointerDown}
-      on:pointermove={(e) => pointerMove(e, widgetCanvas)}
-      on:pointerup={(e) => pointerUp(e, widgetCanvas)}
-      on:pointerleave={() => tooltip = { ...tooltip, visible: false }}
-      on:wheel={onWheel}
-      on:dblclick={toggleMaximize}
-    ></canvas>
-    {#if mapOpen}
-      <button class="compact-open compact-open-live" type="button" title="Map is open — click to close" on:click={toggleMaximize}>
+{#if open}
+  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+  <div
+    class="backdrop"
+    style="position:fixed;inset:0;z-index:200000;"
+    use:portal
+    role="dialog"
+    aria-modal="true"
+    aria-label="Map"
+    on:click={(e) => { if (e.target === e.currentTarget) closeOverview(); }}
+  >
+    <div class="modal">
+      <div class="toolbar">
         <i class="material-icons">map</i>
-        Map open
-      </button>
-    {:else}
-      <button class="compact-open" type="button" title="Open fullscreen Map" on:click={toggleMaximize}>
-        <i class="material-icons">open_in_full</i>
-        Open Map
-      </button>
-    {/if}
-    {#if tooltip.visible}
-      <div class="tooltip" style="left: {tooltip.x}px; top: {tooltip.y}px;">{tooltip.text}</div>
-    {/if}
+        Map
+        {#if isTraveling}<span class="travel">Traveling…</span>{/if}
+        {#if layers.length > 1}
+          <div class="layer-tabs">
+            {#each layers as layer}
+              <button class="layer-tab" class:active={activeLayer === layer.id} on:click={() => selectLayer(layer.id)}>{layer.name}</button>
+            {/each}
+          </div>
+        {/if}
+        <span class="spacer"></span>
+        <button class="icon-btn" title="Recenter on you" on:click={recenter}>
+          <i class="material-icons">my_location</i>
+        </button>
+        {#if isTraveling}
+          <button class="icon-btn cancel" title="Cancel travel" on:click={cancelTravel}>
+            <i class="material-icons">close</i>
+          </button>
+        {/if}
+        <button class="icon-btn" title="Close (Esc)" on:click={closeOverview}>
+          <i class="material-icons">close</i>
+        </button>
+      </div>
+      <div class="stage" bind:this={stageWrap}>
+        <canvas
+          bind:this={stageCanvas}
+          on:pointerdown={pointerDown}
+          on:pointermove={(e) => pointerMove(e, stageCanvas)}
+          on:pointerup={(e) => pointerUp(e, stageCanvas)}
+          on:pointerleave={() => tooltip = { ...tooltip, visible: false }}
+          on:wheel={onWheel}
+        ></canvas>
+        {#if tooltip.visible}
+          <div class="tooltip" style="left: {tooltip.x}px; top: {tooltip.y}px;">{tooltip.text}</div>
+        {/if}
+      </div>
+    </div>
   </div>
-</div>
+{/if}

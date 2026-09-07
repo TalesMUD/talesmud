@@ -100,7 +100,7 @@
   import CharacterSwitcher from "./ui/CharacterSwitcher.svelte";
   import InventoryOverlay from "./ui/InventoryOverlay.svelte";
   import BattleStage from "./ui/BattleStage.svelte";
-  import MinimapWidget from "./widgets/MinimapWidget.svelte";
+  import MapOverviewOverlay from "./ui/MapOverviewOverlay.svelte";
 
   import { onMount, onDestroy } from "svelte";
   import { getAuth } from "../auth.js";
@@ -343,13 +343,13 @@
   <!-- Quest notifications - shown on all layouts -->
   <QuestNotifications store={muxStore} />
 
-  <!-- Map overview host (pin "Map" + widget expand) -->
-  <MinimapWidget store={muxStore} {sendMessage} overlayHost={true} />
-
   <!-- Inventory popup overlay (default inv open mode) -->
   <InventoryOverlay store={muxStore} {sendMessage} />
 
 </div>
+
+<!-- Map overview: sibling of BattleStage, outside .gameContainer (body portal) -->
+<MapOverviewOverlay store={muxStore} {sendMessage} />
 
 <!-- C2: full-screen battle stage over dimmed room chrome -->
 <BattleStage store={muxStore} {sendMessage} />
