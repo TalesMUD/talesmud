@@ -266,6 +266,8 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
 | CI/CD | GitHub Actions |
 | Database | SQLite |
 
+Dependabot opens weekly grouped patch/minor PRs for npm (`public/app`, `public/mud-client`), Go modules, and GitHub Actions. `.github/workflows/dependabot-auto-merge.yml` waits for CI and squash-merges those PRs. Major bumps (Svelte, uuid) are ignored and must be migrated separately.
+
 ## Project Structure
 
 ```
