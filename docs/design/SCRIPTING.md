@@ -4,7 +4,7 @@ This document describes the scripting system in TalesMUD, including the Lua scri
 
 ## Overview
 
-TalesMUD uses **Lua** (via [gopher-lua](https://github.com/yuin/gopher-lua)) as the primary scripting language for dynamic game content. JavaScript support is deprecated but maintained for backward compatibility.
+TalesMUD uses **Lua** (via [gopher-lua](https://github.com/yuin/gopher-lua)) as the primary scripting language for dynamic game content. JavaScript (Otto) is disabled unless `ENABLE_JS_SCRIPTS=true`. Unknown languages are rejected. Each Lua run uses a fresh VM (no pooled state).
 
 ## Scripting Languages
 
@@ -478,17 +478,18 @@ Lua scripts run in a sandboxed environment with:
 
 Scripts can be managed via REST API:
 
-- `GET /api/scripts` - List all scripts
-- `GET /api/scripts/:id` - Get script by ID
-- `POST /api/scripts` - Create new script
-- `PUT /api/scripts/:id` - Update script
-- `DELETE /api/scripts/:id` - Delete script
+- `GET /api/scripts` - List all scripts (creator or admin)
+- `GET /api/script-types` - List script types (creator or admin)
+- `POST /api/scripts` - Create new script (creator or admin)
+- `PUT /api/scripts/:id` - Update script (creator or admin)
+- `DELETE /api/scripts/:id` - Delete script (creator or admin)
+- `POST /api/run-script/:id` - Execute a script (creator or admin)
 - `POST /api/run-script/:id` - Execute script with context
 - `GET /api/script-types` - Get available script types
 
 ## Migration from JavaScript
 
-Existing JavaScript scripts continue to work but will show deprecation warnings. To migrate:
+Existing JavaScript scripts do not run unless `ENABLE_JS_SCRIPTS=true`. To migrate:
 
 1. Set the script's `Language` field to `"lua"`
 2. Convert JavaScript syntax to Lua:

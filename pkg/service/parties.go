@@ -18,6 +18,7 @@ type PartiesService interface {
 	DeletePartyByID(id string) error
 	FindAll() ([]*entities.Party, error)
 	Store(party *entities.Party) (*entities.Party, error)
+	Drop() error
 
 	FindByCharacterID(characterID string) (*entities.Party, error)
 	FindPartyForCharacter(characterID string) (*entities.Party, error)
@@ -63,6 +64,10 @@ func (s *partiesService) CreateParty(createParty *CreatePartyDTO) (*entities.Par
 
 func (s *partiesService) GetParties() ([]*entities.Party, error) {
 	return s.repo.FindAll()
+}
+
+func (s *partiesService) Drop() error {
+	return s.repo.Drop()
 }
 
 func (s *partiesService) FindAll() ([]*entities.Party, error) {

@@ -184,9 +184,10 @@ AUTH0_AUDIENCE=your-api-audience
 AUTH0_WK_JWKS=https://your-domain.auth0.com/.well-known/jwks.json
 TRUSTED_PROXIES=127.0.0.1,::1
 
-# Admin (for export/import endpoints)
-ADMIN_USER=admin
-ADMIN_PASSWORD=admin
+# Admin (for export/import endpoints). Leave blank to disable.
+# Password must be at least 12 characters and not admin/password/changeme.
+ADMIN_USER=
+ADMIN_PASSWORD=
 
 # Optional: AI character generation via Groq
 GROQ_API_KEY=your-groq-api-key

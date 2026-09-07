@@ -40,11 +40,6 @@ func NewLuaRunner() *LuaRunner {
 		moduleLoaders: make(map[string]func(*lua.LState, *LuaRunner) int),
 	}
 
-	// Create VM pool with factory
-	runner.pool = NewVMPool(10, func() *lua.LState {
-		return runner.createState()
-	})
-
 	return runner
 }
 
@@ -90,6 +85,7 @@ func (r *LuaRunner) Shutdown() {
 
 	if r.pool != nil {
 		r.pool.Close()
+		r.pool = nil
 	}
 }
 
@@ -112,16 +108,8 @@ func (r *LuaRunner) RunWithResult(script scripts.Script, ctx *scripts.ScriptCont
 
 	logrus.WithField("Script", script.Name).WithField("Language", "lua").Info("Executing script...")
 
-	// Get a Lua state from the pool
-	L := r.pool.Get()
-	if L == nil {
-		return &scripts.ScriptResult{
-			Success:  false,
-			Error:    "failed to get Lua state from pool",
-			Duration: time.Since(start),
-		}
-	}
-	defer r.pool.Put(L)
+	L := r.createState()
+	defer L.Close()
 
 	// Set up timeout context
 	execCtx, cancel := r.sandbox.CreateContext()

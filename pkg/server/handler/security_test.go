@@ -416,3 +416,44 @@ func TestGenerateCharacterRateLimit(t *testing.T) {
 		t.Fatalf("expected 429, got %d body=%s", rec.Code, rec.Body.String())
 	}
 }
+
+func TestDefaultExportOmitsUsers(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	facade := testFacade(t)
+	user := testUser("user-1", "auth0|user-1", entities.RolePlayer)
+	user.Email = "player@example.com"
+	if _, err := facade.UsersService().Create(user); err != nil {
+		t.Fatalf("create user: %v", err)
+	}
+
+	h := &ExportHandler{
+		RoomsService:      facade.RoomsService(),
+		CharactersService: facade.CharactersService(),
+		UserService:       facade.UsersService(),
+		ItemsService:      facade.ItemsService(),
+		ScriptService:     facade.ScriptsService(),
+		NPCsService:       facade.NPCsService(),
+		DialogsService:    facade.DialogsService(),
+		PartiesService:    facade.PartiesService(),
+	}
+
+	rec := performHandlerRequest(http.MethodGet, "/admin/export", nil, nil, nil, h.Export)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if bytes.Contains(rec.Body.Bytes(), []byte("player@example.com")) {
+		t.Fatal("default export must not include user emails")
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/export?includeUsers=1", nil)
+	rec2 := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(rec2)
+	ctx.Request = req
+	h.Export(ctx)
+	if rec2.Code != http.StatusOK {
+		t.Fatalf("expected 200 for includeUsers, got %d", rec2.Code)
+	}
+	if !bytes.Contains(rec2.Body.Bytes(), []byte("player@example.com")) {
+		t.Fatal("includeUsers=1 should include user emails")
+	}
+}

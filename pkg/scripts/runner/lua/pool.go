@@ -125,8 +125,6 @@ func resetState(L *lua.LState) {
 		"rawget":   true,
 		"rawset":   true,
 		"select":   true,
-		"setmetatable": true,
-		"getmetatable": true,
 		"tonumber": true,
 		"tostring": true,
 		"type":     true,
