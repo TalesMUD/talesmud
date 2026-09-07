@@ -57,8 +57,12 @@
     return { characterId: '', currentRoomId: '', currentLayer: '', layers: [], places: [], paths: [], regions: [] };
   }
 
+  /** Always mount fullscreen Map on document.body above inventory / HUD / BattleStage. */
   function portal(node) {
-    document.body.appendChild(node);
+    if (node.parentNode !== document.body) {
+      document.body.appendChild(node);
+    }
+    node.style.zIndex = '200000';
     return {
       destroy() {
         if (node.parentNode) node.parentNode.removeChild(node);
@@ -87,8 +91,6 @@
     }
     if (roomChanged) {
       currentRoomId = newRoomId;
-      panX = 0;
-      panY = 0;
       userScale = 1;
       if (isTraveling && newRoomId) advanceTravel(newRoomId);
     }
@@ -97,7 +99,13 @@
     if (layerChanged) {
       activeLayer = nextLayer;
     }
-    if (atlasChanged || roomChanged || layerChanged) {
+    // Recenter when you move or atlas/layer catches up (separateAreas clusters).
+    if (roomChanged || layerChanged || (atlasChanged && currentRoomId)) {
+      tick().then(() => {
+        applyRecenterToYou(true);
+        scheduleDraw();
+      });
+    } else if (atlasChanged) {
       scheduleDraw();
     }
   }
@@ -299,11 +307,12 @@
   /** Pan so you-are-here is centered. keepScale=false also resets zoom. */
   function applyRecenterToYou(keepScale = true) {
     if (!keepScale) userScale = 1;
-    const wrap = maximized ? modalWrap : widgetWrap;
+    // Prefer modal stage when overview is open (overlayHost owns it).
+    const wrap = (maximized && modalWrap) ? modalWrap : widgetWrap;
     const size = readStageSize(wrap);
     const here = resolveHerePlace();
     if (here && size.w >= 4 && size.h >= 4) {
-      const pan = panToCenterPlace(visiblePlaces, here, size.w, size.h, userScale);
+      const pan = panToCenterPlace(visiblePlaces, here, size.w, size.h, userScale, atlas.paths || []);
       panX = pan.panX;
       panY = pan.panY;
     } else {
@@ -344,10 +353,11 @@
     if (id === activeLayer) return;
     activeLayer = id;
     if (store && store.setAtlasLayer) store.setAtlasLayer(id);
-    panX = 0;
-    panY = 0;
     userScale = 1;
-    scheduleDraw();
+    tick().then(() => {
+      applyRecenterToYou(true);
+      scheduleDraw();
+    });
   }
 
   function onStageResize(wrap, lastRef, setLast) {
@@ -402,8 +412,12 @@
     if (widgetObserver) widgetObserver.disconnect();
     if (modalObserver) modalObserver.disconnect();
     cancelTravel();
-    maximized = false;
-    if (store && store.closeMapOverview) store.closeMapOverview();
+    // Layout remounts / tab switches must NOT close the fullscreen overlay.
+    // Only the Game.svelte overlayHost owns close-on-destroy (and even that is
+    // optional — prefer Esc/X). Never auto-close from the compact widget.
+    if (overlayHost) {
+      maximized = false;
+    }
   });
 </script>
 
@@ -478,7 +492,8 @@
   .backdrop {
     position: fixed;
     inset: 0;
-    z-index: 10000;
+    /* Above BattleStage (9000) and any HUD / inventory popup */
+    z-index: 200000;
     background: rgba(0, 0, 0, 0.72);
     display: flex;
     padding: 3vh 3vw;
@@ -539,6 +554,10 @@
   }
   .compact-open:hover { background: rgba(245, 158, 11, 0.2); }
   .compact-open i { font-size: 14px; }
+  .compact-open-live {
+    border-color: rgba(34, 211, 238, 0.55);
+    color: #67e8f9;
+  }
 </style>
 
 {#if !overlayHost}
@@ -547,19 +566,13 @@
     <i class="material-icons">map</i>
     Map
     {#if isTraveling}<span class="travel">Traveling…</span>{/if}
+    {#if maximized}<span class="travel">Fullscreen</span>{/if}
     <span class="spacer"></span>
-    <button class="icon-btn" title="Open Map" on:click={toggleMaximize}>
-      <i class="material-icons">open_in_full</i>
+    <button class="icon-btn" title={maximized ? 'Close Map' : 'Open Map'} on:click={toggleMaximize}>
+      <i class="material-icons">{maximized ? 'close_fullscreen' : 'open_in_full'}</i>
     </button>
   </div>
-  {#if maximized}
-    <div class="stage open-hint">
-      <button class="open-map-btn" type="button" on:click={toggleMaximize}>
-        <i class="material-icons">map</i>
-        Map open fullscreen
-      </button>
-    </div>
-  {:else}
+  <!-- Always keep the mini canvas; fullscreen lives on Game overlayHost only. -->
   <div class="stage stage-compact" bind:this={widgetWrap}>
     <canvas
       bind:this={widgetCanvas}
@@ -570,15 +583,21 @@
       on:wheel={onWheel}
       on:dblclick={toggleMaximize}
     ></canvas>
-    <button class="compact-open" type="button" title="Open fullscreen Map" on:click={toggleMaximize}>
-      <i class="material-icons">open_in_full</i>
-      Open Map
-    </button>
+    {#if maximized}
+      <button class="compact-open compact-open-live" type="button" title="Map is open — click to close" on:click={toggleMaximize}>
+        <i class="material-icons">map</i>
+        Map open
+      </button>
+    {:else}
+      <button class="compact-open" type="button" title="Open fullscreen Map" on:click={toggleMaximize}>
+        <i class="material-icons">open_in_full</i>
+        Open Map
+      </button>
+    {/if}
     {#if tooltip.visible}
       <div class="tooltip" style="left: {tooltip.x}px; top: {tooltip.y}px;">{tooltip.text}</div>
     {/if}
   </div>
-  {/if}
 </div>
 {/if}
 

@@ -177,9 +177,86 @@ function areaTint(area) {
   return AREA_TINTS[hashString(area) % AREA_TINTS.length];
 }
 
-function computeCamera(places, w, h, panX, panY, userScale) {
+/** Chebyshev distance in layout units between two places. */
+export function layoutDistance(a, b) {
+  if (!a || !b) return Infinity;
+  return Math.max(Math.abs(Math.round(a.x) - Math.round(b.x)), Math.abs(Math.round(a.y) - Math.round(b.y)));
+}
+
+/**
+ * Prefer framing you + nearby rooms so distant separateAreas (Oldtown vs Meadow)
+ * do not shrink the camera to a world-fit. Falls back to all places when sparse.
+ * @param {object[]} places
+ * @param {object|null} focus
+ * @param {{ maxDist?: number, minCount?: number }} [opts]
+ */
+export function selectFramingPlaces(places, focus, opts = {}) {
+  const list = places || [];
+  if (!list.length) return [];
+  if (!focus) return list;
+  const maxDist = opts.maxDist != null ? opts.maxDist : 10;
+  const minCount = opts.minCount != null ? opts.minCount : 3;
+  const near = list.filter((p) => layoutDistance(p, focus) <= maxDist);
+  // Always include focus; expand radius once if too few neighbors.
+  if (near.length >= minCount) return near;
+  const wider = list.filter((p) => layoutDistance(p, focus) <= maxDist * 1.6);
+  if (wider.length >= 2) return wider;
+  return list;
+}
+
+/**
+ * BFS neighborhood by atlas path edges (depth ≤ maxDepth).
+ * Useful when layout coords are sparse but graph connectivity is dense.
+ */
+export function placesWithinBfsDepth(places, paths, focusId, maxDepth = 4) {
+  const list = places || [];
+  if (!focusId || !list.length) return list;
+  const byId = new Map(list.map((p) => [p.id, p]));
+  if (!byId.has(focusId)) {
+    // template match for instanced rooms
+    for (const p of list) {
+      if (isCurrentPlace(p.id, focusId)) {
+        focusId = p.id;
+        break;
+      }
+    }
+  }
+  if (!byId.has(focusId)) return list;
+  const adj = new Map();
+  for (const path of paths || []) {
+    if (!byId.has(path.from) || !byId.has(path.to)) continue;
+    if (!adj.has(path.from)) adj.set(path.from, []);
+    if (!adj.has(path.to)) adj.set(path.to, []);
+    adj.get(path.from).push(path.to);
+    adj.get(path.to).push(path.from);
+  }
+  const out = new Map();
+  const queue = [{ id: focusId, depth: 0 }];
+  out.set(focusId, byId.get(focusId));
+  while (queue.length) {
+    const { id, depth } = queue.shift();
+    if (depth >= maxDepth) continue;
+    for (const next of adj.get(id) || []) {
+      if (out.has(next)) continue;
+      out.set(next, byId.get(next));
+      queue.push({ id: next, depth: depth + 1 });
+    }
+  }
+  return out.size >= 2 ? [...out.values()] : list;
+}
+
+function computeCamera(places, w, h, panX, panY, userScale, focus = null, paths = null) {
+  const frame = focus
+    ? (() => {
+        const byDist = selectFramingPlaces(places, focus, { maxDist: 10, minCount: 3 });
+        if (byDist.length >= 3 || !paths) return byDist;
+        const byBfs = placesWithinBfsDepth(places, paths, focus.id, 4);
+        return byBfs.length >= byDist.length ? byBfs : byDist;
+      })()
+    : places;
+  const use = frame && frame.length ? frame : places;
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-  for (const p of places) {
+  for (const p of use) {
     const gx = Math.round(p.x);
     const gy = Math.round(p.y);
     if (gx < minX) minX = gx;
@@ -205,11 +282,11 @@ function computeCamera(places, w, h, panX, panY, userScale) {
 }
 
 /** Pan offsets so `place` sits at the viewport center (keep userScale). */
-export function panToCenterPlace(places, place, w, h, userScale) {
+export function panToCenterPlace(places, place, w, h, userScale, paths = null) {
   if (!place || !places || !places.length || w < 1 || h < 1) {
     return { panX: 0, panY: 0 };
   }
-  const cam = computeCamera(places, w, h, 0, 0, userScale);
+  const cam = computeCamera(places, w, h, 0, 0, userScale, place, paths);
   const gx = Math.round(place.x);
   const gy = Math.round(place.y);
   return {
@@ -634,8 +711,6 @@ export function paintAtlas(ctx, params) {
     return { hits: [] };
   }
 
-  const cam = computeCamera(visiblePlaces, w, h, panX, panY, userScale);
-  const lod = labelLodForScale(userScale);
   const byId = {};
   for (const p of atlas.places || []) byId[p.id] = p;
 
@@ -645,6 +720,10 @@ export function paintAtlas(ctx, params) {
     herePlace = visiblePlaces.find((p) => isCurrentPlace(p.id, currentRoomId)) || null;
   }
   const hereId = herePlace ? herePlace.id : null;
+
+  // Frame you + nearby so separateAreas (Oldtown vs Meadow) follow the player.
+  const cam = computeCamera(visiblePlaces, w, h, panX, panY, userScale, herePlace, atlas.paths || []);
+  const lod = labelLodForScale(userScale);
   const nearIds = lod === 'near'
     ? adjacentPlaceIds(atlas.paths || [], currentRoomId, visiblePlaces)
     : new Set();

@@ -1,11 +1,15 @@
 import assert from 'assert';
 import {
   adjacentPlaceIds,
+  computeCamera,
   isBlockedDirLabel,
   isCurrentPlace,
   labelLodForScale,
+  layoutDistance,
   layoutRoomLabels,
   panToCenterPlace,
+  placesWithinBfsDepth,
+  selectFramingPlaces,
 } from './atlasRenderer.js';
 
 assert.strictEqual(labelLodForScale(0.5), 'area');
@@ -72,4 +76,48 @@ assert.ok(typeof pan.panX === 'number' && typeof pan.panY === 'number');
 // Here is at map min corner vs centroid → pan should push it toward center (positive for x/y in this layout)
 assert.ok(pan.panX > 0 || pan.panY > 0, 'recenter offset should move corner place toward center');
 
-console.log('atlasRenderer: LOD + dir labels + you-marker helpers OK');
+// Framing: distant separateAreas must not dominate the camera when you are local.
+const oldtown = [
+  { id: 'O1', x: 0, y: 0 },
+  { id: 'O2', x: 1, y: 0 },
+  { id: 'O3', x: 0, y: 1 },
+];
+const meadow = [
+  { id: 'M1', x: 80, y: 0 },
+  { id: 'M2', x: 81, y: 0 },
+  { id: 'M3', x: 80, y: 1 },
+];
+const world = [...oldtown, ...meadow];
+const hereMeadow = meadow[0];
+assert.strictEqual(layoutDistance(hereMeadow, meadow[1]), 1);
+assert.ok(layoutDistance(hereMeadow, oldtown[0]) > 10);
+
+const framed = selectFramingPlaces(world, hereMeadow, { maxDist: 10, minCount: 3 });
+assert.ok(framed.every((p) => p.id.startsWith('M')), 'frame meadow cluster only');
+assert.ok(framed.length >= 3);
+
+const camAll = computeCamera(world, 800, 600, 0, 0, 1, null);
+const camFocus = computeCamera(world, 800, 600, 0, 0, 1, hereMeadow);
+assert.ok(camFocus.tileStep > camAll.tileStep, 'nearby frame yields larger tiles than world-fit');
+assert.ok(Math.abs(camFocus.ox - 80.5) < 2, 'camera origin near meadow');
+
+const panMeadow = panToCenterPlace(world, hereMeadow, 800, 600, 1);
+// With framing, ox≈meadow → pan to center M1 should be small
+assert.ok(Math.abs(panMeadow.panX) < 200, 'recenter on meadow stays local, not Oldtown offset');
+
+const bfs = placesWithinBfsDepth(
+  world,
+  [
+    { from: 'M1', to: 'M2', dir: 'east' },
+    { from: 'M2', to: 'M3', dir: 'south' },
+    { from: 'O1', to: 'O2', dir: 'east' },
+  ],
+  'M1',
+  2
+);
+assert.ok(bfs.some((p) => p.id === 'M1'));
+assert.ok(bfs.some((p) => p.id === 'M2'));
+assert.ok(!bfs.some((p) => p.id === 'O1'), 'BFS neighborhood excludes far Oldtown');
+
+console.log('atlasRenderer: LOD + dir labels + you-marker + framing helpers OK');
+
