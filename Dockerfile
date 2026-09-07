@@ -37,7 +37,7 @@ RUN npm run build
 # ============================================================
 # Stage 3: Build the Go binary
 # ============================================================
-FROM golang:1.24-alpine AS build-backend
+FROM golang:1.25-alpine AS build-backend
 
 WORKDIR /src
 
