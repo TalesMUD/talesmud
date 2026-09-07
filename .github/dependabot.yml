@@ -1,0 +1,68 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /public/app
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    groups:
+      app-production:
+        dependency-type: production
+        update-types:
+          - minor
+          - patch
+      app-development:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+    ignore:
+      - dependency-name: svelte
+        update-types: ["version-update:semver-major"]
+      - dependency-name: uuid
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: npm
+    directory: /public/mud-client
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    groups:
+      mud-client-production:
+        dependency-type: production
+        update-types:
+          - minor
+          - patch
+      mud-client-development:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+    ignore:
+      - dependency-name: svelte
+        update-types: ["version-update:semver-major"]
+      - dependency-name: svelte-feather-icons
+        update-types: ["version-update:semver-major"]
+      - dependency-name: uuid
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    groups:
+      go-modules:
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
