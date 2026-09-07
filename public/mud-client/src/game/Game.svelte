@@ -107,6 +107,18 @@
   import { showCharacterWizard } from "../onboarding/onboardingStore.js";
   import { createClient } from "./Client";
   import { backend, wsbackend } from "../api/base.js";
+  import {
+    WS_CLOSE_SESSION_REPLACED,
+    beginWsConnect,
+    registerWs,
+    clearWs,
+    closeLive,
+    wsBusy,
+    wsTakenOver,
+    markWsTakenOver,
+    liveSocket,
+    wsGeneration,
+  } from "./websocketGate.js";
 
   let client;
   let term;
@@ -116,8 +128,6 @@
   let reconnectPending = false;
   let reconnectAttempt = 0;
   let destroyed = false;
-  /** Application close code: server replaced this socket with a newer session. */
-  const WS_CLOSE_SESSION_REPLACED = 4001;
 
   // Multi-renderer dispatches output to all registered terminal widgets
   function multiRenderer(data) {
@@ -163,27 +173,36 @@
     client.setAuthToken($authToken);
   }
 
-  // Skip while a reconnect timer is pending — otherwise close→ws=null races
-  // scheduleReconnect and this reactive block both opens a socket.
-  $: if (client && !ws && !$isLoading && $isAuthenticated && $authToken && !destroyed && !reconnectPending) {
+  // Token/auth becoming ready: connect once. Must NOT depend on `ws` —
+  // assigning ws=null on close used to re-enter this and dual-open.
+  $: if (client && !$isLoading && $isAuthenticated && $authToken && !destroyed && !wsTakenOver()) {
     connectWebSocket(false);
   }
 
-  function socketBusy(socket) {
-    return (
-      socket &&
-      (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN)
-    );
-  }
-
   function connectWebSocket(isReconnect = false) {
-    if (!client || !$authToken || destroyed) return;
-    // Single-flight: never open a second socket while one is OPEN/CONNECTING.
-    if (socketBusy(ws)) return;
+    if (!client || !$authToken || destroyed || wsTakenOver()) return;
+    if (wsBusy()) return;
+    if (!beginWsConnect()) return;
 
-    // Intentional connect: drop any pending reconnect timer.
     clearTimeout(reconnectTimer);
     reconnectTimer = null;
+    reconnectPending = false;
+
+    const url = wsbackend + "?access_token=";
+    let nextWs;
+    try {
+      nextWs = new WebSocket(url + $authToken);
+    } catch (e) {
+      clearWs(null);
+      console.info("[ws] construct failed", e);
+      scheduleReconnect();
+      return;
+    }
+    registerWs(nextWs);
+    ws = nextWs;
+    const gen = wsGeneration();
+    client.setWSClient(nextWs);
+    console.info("[ws] construct", { gen, isReconnect });
 
     muxStore.setConnectionState(
       isReconnect ? "reconnecting" : "connecting",
@@ -191,31 +210,23 @@
       reconnectAttempt
     );
 
-    const url = wsbackend + "?access_token=";
-    const nextWs = new WebSocket(url + $authToken);
-    // Claim the slot BEFORE releasing reconnectPending so the reactive
-    // `!ws && !reconnectPending` path cannot open a twin socket.
-    ws = nextWs;
-    reconnectPending = false;
-    client.setWSClient(nextWs);
-
     nextWs.addEventListener("open", () => {
-      if (destroyed || ws !== nextWs) return;
+      if (destroyed || liveSocket() !== nextWs) return;
       reconnectAttempt = 0;
       muxStore.setConnectionState("connected", "Connected");
-      console.info("[ws] open");
+      console.info("[ws] open", { gen });
     });
 
     nextWs.addEventListener("close", (ev) => {
-      if (destroyed || ws !== nextWs) return;
       const code = ev && typeof ev.code === "number" ? ev.code : 0;
       const reason = (ev && ev.reason) || "";
-      console.info("[ws] close", { code, reason, wasClean: !!(ev && ev.wasClean) });
-      ws = null;
+      console.info("[ws] close", { gen, code, reason, wasClean: !!(ev && ev.wasClean) });
+      clearWs(nextWs);
+      if (ws === nextWs) ws = null;
+      if (destroyed) return;
 
-      // Server took over this user with a newer socket (other tab/device).
-      // Do NOT auto-reconnect — that is the desktop↔mobile Upgrade/Quit loop.
       if (code === WS_CLOSE_SESSION_REPLACED) {
+        markWsTakenOver();
         reconnectPending = false;
         muxStore.setConnectionState(
           "disconnected",
@@ -226,28 +237,19 @@
       scheduleReconnect();
     });
 
-    // Do not flap status on error while the socket is still OPEN — browsers
-    // often fire error before close (or spuriously). Status ownership: open/close.
     nextWs.addEventListener("error", () => {
-      if (destroyed || ws !== nextWs) return;
-      console.info("[ws] error", { readyState: nextWs.readyState });
-      if (nextWs.readyState === WebSocket.CLOSING || nextWs.readyState === WebSocket.CLOSED) {
-        muxStore.setConnectionState(
-          "reconnecting",
-          "Connection interrupted. Reconnecting...",
-          reconnectAttempt
-        );
-      }
+      if (destroyed || liveSocket() !== nextWs) return;
+      console.info("[ws] error", { gen, readyState: nextWs.readyState });
     });
   }
 
   function scheduleReconnect() {
-    if (destroyed || !$isAuthenticated || !$authToken) {
+    if (destroyed || wsTakenOver() || !$isAuthenticated || !$authToken) {
       reconnectPending = false;
-      muxStore.setConnectionState("disconnected", "Disconnected");
+      if (!wsTakenOver()) muxStore.setConnectionState("disconnected", "Disconnected");
       return;
     }
-    if (socketBusy(ws) || reconnectPending) return;
+    if (wsBusy() || reconnectPending) return;
     reconnectAttempt += 1;
     const delay = Math.min(1000 * reconnectAttempt, 5000);
     muxStore.setConnectionState(
@@ -259,7 +261,6 @@
     reconnectPending = true;
     reconnectTimer = setTimeout(() => {
       reconnectTimer = null;
-      // Keep reconnectPending true until connectWebSocket claims `ws`.
       connectWebSocket(true);
     }, delay);
   }
@@ -321,10 +322,8 @@
     clearTimeout(reconnectTimer);
     reconnectTimer = null;
     reconnectPending = false;
-    if (ws) {
-      ws.close();
-      ws = null;
-    }
+    closeLive();
+    ws = null;
 
     document.body.style.backgroundImage = "";
     document.body.style.backgroundAttachment = "";

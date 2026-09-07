@@ -23,34 +23,69 @@
   let panStart = { x: 0, y: 0, panX: 0, panY: 0 };
   let tooltip = { visible: false, text: '', x: 0, y: 0 };
 
-  let stageWrap, stageCanvas;
+  let stageWrap, stageCanvas, modalEl;
   let stageObserver;
   const hitState = { items: [] };
   let lastStageSize = null;
   let drawRaf = 0;
   let escHandler = null;
   let wasOpen = false;
+  let resizeHandler = null;
 
   $: open = !!(store && $store && $store.mapOverviewOpen);
 
-  /** Always mount fullscreen Map on document.body above inventory / HUD / BattleStage / WidgetGrid. */
-  function portal(node) {
-    // Inline styles beat any ancestor transform/filter stacking (e.g. gameContainer)
-    // and survive body-portal even if scoped CSS is stripped.
+  function portalToBody(node) {
     node.style.position = 'fixed';
-    node.style.inset = '0';
+    node.style.top = '0';
+    node.style.left = '0';
+    node.style.right = '0';
+    node.style.bottom = '0';
+    node.style.width = '100vw';
+    node.style.height = '100vh';
     node.style.zIndex = '200000';
     node.style.display = 'flex';
     node.style.alignItems = 'center';
     node.style.justifyContent = 'center';
+    node.style.padding = '12px';
+    node.style.boxSizing = 'border-box';
+    node.style.background = 'rgba(0,0,0,0.82)';
     if (node.parentNode !== document.body) {
       document.body.appendChild(node);
     }
     return {
       destroy() {
         if (node.parentNode) node.parentNode.removeChild(node);
-      }
+      },
     };
+  }
+
+  function sizeModal() {
+    if (!modalEl || typeof window === 'undefined') return { w: 0, h: 0 };
+    const w = Math.max(320, Math.min(Math.floor(window.innerWidth * 0.96), 1100));
+    const h = Math.max(280, Math.min(Math.floor(window.innerHeight * 0.92), 800));
+    modalEl.style.boxSizing = 'border-box';
+    modalEl.style.width = w + 'px';
+    modalEl.style.height = h + 'px';
+    modalEl.style.minWidth = w + 'px';
+    modalEl.style.minHeight = h + 'px';
+    modalEl.style.maxWidth = w + 'px';
+    modalEl.style.maxHeight = h + 'px';
+    modalEl.style.flex = 'none';
+    return { w, h };
+  }
+
+  function paintAfterLayout() {
+    tick().then(() => {
+      sizeModal();
+      requestAnimationFrame(() => {
+        sizeModal();
+        requestAnimationFrame(() => {
+          lastStageSize = readStageSize(stageWrap);
+          applyRecenterToYou(true);
+          scheduleDraw();
+        });
+      });
+    });
   }
 
   function emptyAtlas() {
@@ -97,14 +132,7 @@
     wasOpen = true;
     userScale = 1;
     lastStageSize = null;
-    // Wait for portal + flex layout before reading stage size (avoids widget-sized first paint).
-    tick().then(() => {
-      requestAnimationFrame(() => {
-        lastStageSize = readStageSize(stageWrap);
-        applyRecenterToYou(true);
-        scheduleDraw();
-      });
-    });
+    paintAfterLayout();
   } else if (!open && wasOpen) {
     wasOpen = false;
     scheduleDraw();
@@ -368,10 +396,15 @@
       }
     };
     window.addEventListener('keydown', escHandler);
+    resizeHandler = () => {
+      if (open) paintAfterLayout();
+    };
+    window.addEventListener('resize', resizeHandler);
   });
 
   onDestroy(() => {
     if (escHandler) window.removeEventListener('keydown', escHandler);
+    if (resizeHandler) window.removeEventListener('resize', resizeHandler);
     if (drawRaf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(drawRaf);
     if (stageObserver) stageObserver.disconnect();
     cancelTravel();
@@ -480,17 +513,19 @@
 {#if open}
   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
   <div
+    id="map-overview-overlay"
     class="backdrop"
-    style="position:fixed;inset:0;z-index:200000;display:flex;align-items:center;justify-content:center;padding:1em;overflow:hidden;background:rgba(0,0,0,0.82);"
-    use:portal
+    style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:200000;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;background:rgba(0,0,0,0.82);"
+    use:portalToBody
     role="dialog"
     aria-modal="true"
-    aria-label="Map"
+    aria-label="World map"
     on:click={(e) => { if (e.target === e.currentTarget) closeOverview(); }}
   >
     <div
       class="modal"
-      style="width:min(96vw,1100px);height:min(92vh,800px);max-width:1100px;max-height:800px;display:flex;flex-direction:column;overflow:hidden;background:rgba(12,16,24,0.97);border:1px solid rgba(212,175,55,0.28);border-radius:10px;"
+      bind:this={modalEl}
+      style="width:min(96vw,1100px);height:min(92vh,800px);max-width:1100px;max-height:800px;display:flex;flex-direction:column;overflow:hidden;background:rgba(12,16,24,0.97);border:1px solid rgba(212,175,55,0.28);border-radius:10px;flex:none;"
       on:click|stopPropagation
     >
       <div class="toolbar">
