@@ -76,8 +76,8 @@ export const WIDGET_TYPES = {
   },
   minimap: {
     name: 'Map',
-    description: 'Discovered world map with layers and click-to-travel',
-    defaultSize: { w: 6, h: 8 },
+    description: 'Compact map preview — opens fullscreen Map overlay',
+    defaultSize: { w: 4, h: 5 },
     maxInstances: 1,
     icon: 'map',
     category: 'core'

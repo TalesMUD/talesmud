@@ -1,7 +1,7 @@
 <script>
   import { onDestroy, onMount, tick } from 'svelte';
   import { readStageSize, shouldRepaintSize, applyCanvasBitmap } from './atlasLayout.js';
-  import { paintAtlas, isCurrentPlace } from './atlasRenderer.js';
+  import { paintAtlas, isCurrentPlace, panToCenterPlace } from './atlasRenderer.js';
 
   export let store = null;
   export let sendMessage = null;
@@ -41,11 +41,12 @@
     if (want !== maximized) {
       maximized = want;
       if (maximized) {
-        panX = 0;
-        panY = 0;
         userScale = 1;
         lastModalSize = null;
-        tick().then(() => scheduleDraw());
+        tick().then(() => {
+          applyRecenterToYou(true);
+          scheduleDraw();
+        });
       } else {
         scheduleDraw();
       }
@@ -286,10 +287,33 @@
     scheduleDraw();
   }
 
+  function resolveHerePlace() {
+    const places = visiblePlaces || [];
+    return (
+      places.find((p) => p.id === currentRoomId) ||
+      places.find((p) => isCurrentPlace(p.id, currentRoomId)) ||
+      null
+    );
+  }
+
+  /** Pan so you-are-here is centered. keepScale=false also resets zoom. */
+  function applyRecenterToYou(keepScale = true) {
+    if (!keepScale) userScale = 1;
+    const wrap = maximized ? modalWrap : widgetWrap;
+    const size = readStageSize(wrap);
+    const here = resolveHerePlace();
+    if (here && size.w >= 4 && size.h >= 4) {
+      const pan = panToCenterPlace(visiblePlaces, here, size.w, size.h, userScale);
+      panX = pan.panX;
+      panY = pan.panY;
+    } else {
+      panX = 0;
+      panY = 0;
+    }
+  }
+
   function recenter() {
-    panX = 0;
-    panY = 0;
-    userScale = 1;
+    applyRecenterToYou(false);
     scheduleDraw();
   }
 
@@ -302,10 +326,9 @@
     }
     maximized = next;
     if (maximized) {
-      panX = 0;
-      panY = 0;
       userScale = 1;
       await tick();
+      applyRecenterToYou(true);
     }
     lastModalSize = null;
     scheduleDraw();
@@ -491,43 +514,53 @@
   }
   .open-map-btn:hover { background: rgba(245, 158, 11, 0.25); }
   .open-map-btn i { font-size: 18px; }
+  .atlas-compact {
+    min-height: 0;
+  }
+  .stage-compact {
+    min-height: 96px;
+  }
+  .compact-open {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(2, 6, 23, 0.82);
+    border: 1px solid rgba(245, 158, 11, 0.45);
+    color: #fbbf24;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .compact-open:hover { background: rgba(245, 158, 11, 0.2); }
+  .compact-open i { font-size: 14px; }
 </style>
 
 {#if !overlayHost}
-<div class="atlas">
+<div class="atlas atlas-compact">
   <div class="toolbar">
-    <button class="icon-btn" title="Open Map" on:click={toggleMaximize}>
-      <i class="material-icons">open_in_full</i>
-    </button>
     <i class="material-icons">map</i>
     Map
     {#if isTraveling}<span class="travel">Traveling…</span>{/if}
-    <div class="layer-tabs">
-      {#each layers as layer}
-        <button class="layer-tab" class:active={activeLayer === layer.id} on:click={() => selectLayer(layer.id)}>{layer.name}</button>
-      {/each}
-    </div>
     <span class="spacer"></span>
-    {#if panX !== 0 || panY !== 0 || userScale !== 1}
-      <button class="icon-btn" title="Fit map" on:click={recenter}>
-        <i class="material-icons">my_location</i>
-      </button>
-    {/if}
-    {#if isTraveling}
-      <button class="icon-btn cancel" title="Cancel travel" on:click={cancelTravel}>
-        <i class="material-icons">close</i>
-      </button>
-    {/if}
+    <button class="icon-btn" title="Open Map" on:click={toggleMaximize}>
+      <i class="material-icons">open_in_full</i>
+    </button>
   </div>
   {#if maximized}
     <div class="stage open-hint">
       <button class="open-map-btn" type="button" on:click={toggleMaximize}>
         <i class="material-icons">map</i>
-        Map open fullscreen — click to focus
+        Map open fullscreen
       </button>
     </div>
   {:else}
-  <div class="stage" bind:this={widgetWrap}>
+  <div class="stage stage-compact" bind:this={widgetWrap}>
     <canvas
       bind:this={widgetCanvas}
       on:pointerdown={pointerDown}
@@ -535,7 +568,12 @@
       on:pointerup={(e) => pointerUp(e, widgetCanvas)}
       on:pointerleave={() => tooltip = { ...tooltip, visible: false }}
       on:wheel={onWheel}
+      on:dblclick={toggleMaximize}
     ></canvas>
+    <button class="compact-open" type="button" title="Open fullscreen Map" on:click={toggleMaximize}>
+      <i class="material-icons">open_in_full</i>
+      Open Map
+    </button>
     {#if tooltip.visible}
       <div class="tooltip" style="left: {tooltip.x}px; top: {tooltip.y}px;">{tooltip.text}</div>
     {/if}
@@ -558,17 +596,17 @@
         <i class="material-icons">map</i>
         Map
         {#if isTraveling}<span class="travel">Traveling…</span>{/if}
-        <div class="layer-tabs">
-          {#each layers as layer}
-            <button class="layer-tab" class:active={activeLayer === layer.id} on:click={() => selectLayer(layer.id)}>{layer.name}</button>
-          {/each}
-        </div>
-        <span class="spacer"></span>
-        {#if panX !== 0 || panY !== 0 || userScale !== 1}
-          <button class="icon-btn" title="Fit map / recenter on you" on:click={recenter}>
-            <i class="material-icons">my_location</i>
-          </button>
+        {#if layers.length > 1}
+          <div class="layer-tabs">
+            {#each layers as layer}
+              <button class="layer-tab" class:active={activeLayer === layer.id} on:click={() => selectLayer(layer.id)}>{layer.name}</button>
+            {/each}
+          </div>
         {/if}
+        <span class="spacer"></span>
+        <button class="icon-btn" title="Recenter on you" on:click={recenter}>
+          <i class="material-icons">my_location</i>
+        </button>
         {#if isTraveling}
           <button class="icon-btn cancel" title="Cancel travel" on:click={cancelTravel}>
             <i class="material-icons">close</i>

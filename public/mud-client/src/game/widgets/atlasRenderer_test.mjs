@@ -5,6 +5,7 @@ import {
   isCurrentPlace,
   labelLodForScale,
   layoutRoomLabels,
+  panToCenterPlace,
 } from './atlasRenderer.js';
 
 assert.strictEqual(labelLodForScale(0.5), 'area');
@@ -58,5 +59,17 @@ assert.ok(
   ),
   'placed labels do not overlap'
 );
+
+
+const places = [
+  { id: 'A', x: 0, y: 0 },
+  { id: 'B', x: 4, y: 0 },
+  { id: 'C', x: 0, y: 4 },
+];
+const here = places[0];
+const pan = panToCenterPlace(places, here, 800, 600, 1);
+assert.ok(typeof pan.panX === 'number' && typeof pan.panY === 'number');
+// Here is at map min corner vs centroid → pan should push it toward center (positive for x/y in this layout)
+assert.ok(pan.panX > 0 || pan.panY > 0, 'recenter offset should move corner place toward center');
 
 console.log('atlasRenderer: LOD + dir labels + you-marker helpers OK');

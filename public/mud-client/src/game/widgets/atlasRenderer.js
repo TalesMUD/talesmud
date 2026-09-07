@@ -204,6 +204,20 @@ function computeCamera(places, w, h, panX, panY, userScale) {
   };
 }
 
+/** Pan offsets so `place` sits at the viewport center (keep userScale). */
+export function panToCenterPlace(places, place, w, h, userScale) {
+  if (!place || !places || !places.length || w < 1 || h < 1) {
+    return { panX: 0, panY: 0 };
+  }
+  const cam = computeCamera(places, w, h, 0, 0, userScale);
+  const gx = Math.round(place.x);
+  const gy = Math.round(place.y);
+  return {
+    panX: -(gx - cam.ox) * cam.tileStep,
+    panY: -(gy - cam.oy) * cam.tileStep,
+  };
+}
+
 /** World coords: north decreases Y. Screen: north at top (canvas Y down). */
 function projectGrid(gx, gy, cam, w, h) {
   return {
@@ -363,25 +377,45 @@ function drawAreaCells(ctx, places, cam, w, h, showLabels) {
     if (!byArea.has(p.area)) byArea.set(p.area, []);
     byArea.get(p.area).push(p);
   }
-  const half = tileHalf(cam.tileStep);
   const cell = cam.tileStep * 0.92;
+  const labelCandidates = [];
   for (const [area, rooms] of byArea) {
     const tint = areaTint(area);
-    let labelPos = null;
+    let cx = 0;
+    let cy = 0;
     for (const p of rooms) {
       const { px, py } = projectPlace(p, cam, w, h);
       ctx.fillStyle = tint;
       roundRect(ctx, px - cell / 2, py - cell / 2, cell, cell, 5);
       ctx.fill();
-      if (!labelPos) labelPos = { px: px - cell / 2 + 6, py: py - cell / 2 + 10 };
+      cx += px;
+      cy += py;
     }
-    if (showLabels && labelPos && rooms.length > 1) {
-      const name = rooms[0].areaName || area;
-      ctx.font = 'italic 600 9px Georgia, serif';
-      ctx.fillStyle = 'rgba(220, 200, 160, 0.45)';
+    if (showLabels && rooms.length > 1) {
+      labelCandidates.push({
+        text: rooms[0].areaName || area,
+        px: cx / rooms.length,
+        py: cy / rooms.length - cell * 0.15,
+        font: 'italic 600 9px Georgia, serif',
+        force: false,
+        priority: -rooms.length,
+      });
+    }
+  }
+  if (showLabels && labelCandidates.length) {
+    labelCandidates.sort((a, b) => a.priority - b.priority);
+    const measure = (text, font) => {
+      ctx.font = font;
+      const metrics = ctx.measureText(text);
+      return { w: metrics.width, h: 11 };
+    };
+    const placed = layoutRoomLabels(labelCandidates, measure);
+    for (const lab of placed) {
+      ctx.font = lab.font;
+      ctx.fillStyle = 'rgba(220, 200, 160, 0.5)';
       ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(name, labelPos.px, labelPos.py);
+      ctx.textBaseline = 'top';
+      ctx.fillText(lab.text, lab.x, lab.y);
     }
   }
 }
@@ -621,7 +655,7 @@ export function paintAtlas(ctx, params) {
     drawRegionWash(ctx, region, cam, w, h);
   }
 
-  drawAreaCells(ctx, visiblePlaces, cam, w, h, lod === 'area' || lod === 'all');
+  drawAreaCells(ctx, visiblePlaces, cam, w, h, lod === 'area');
 
   const layerPaths = (atlas.paths || []).filter((path) => {
     const a = byId[path.from];
