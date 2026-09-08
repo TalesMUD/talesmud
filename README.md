@@ -7,7 +7,7 @@
 *Build immersive text-based multiplayer adventures in any genre — fantasy, sci-fi, horror, and beyond*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://golang.org/)
+[![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go)](https://golang.org/)
 [![Svelte](https://img.shields.io/badge/Svelte-4.2-FF3E00?logo=svelte)](https://svelte.dev/)
 [![Live Demo](https://img.shields.io/badge/Demo-veilspan.com-success)](https://veilspan.com)
 
@@ -127,7 +127,7 @@ TalesMUD's **generic, reusable architecture** makes it perfect for any setting:
 
 ### 🚀 Modern Architecture
 
-- **Go 1.24** backend with Gin HTTP framework
+- **Go 1.25** backend with Gin HTTP framework
 - **Svelte 4** frontend with TailwindCSS
 - **SQLite** for persistence (simple deployment, no database server needed)
 - **WebSocket** real-time communication
@@ -141,7 +141,7 @@ TalesMUD's **generic, reusable architecture** makes it perfect for any setting:
 
 ### Prerequisites
 
-- **Go 1.24+** ([Download](https://golang.org/dl/))
+- **Go 1.25+** ([Download](https://golang.org/dl/))
 - **Node.js 18+** ([Download](https://nodejs.org/))
 - **Make** (optional, for convenience commands)
 
@@ -202,7 +202,7 @@ See [Configuration](#configuration-reference) for full details.
 ### Backend
 | Component | Technology |
 |-----------|------------|
-| Language | Go 1.24 |
+| Language | Go 1.25 |
 | HTTP Framework | Gin |
 | WebSocket | Gorilla WebSocket |
 | Database | SQLite (JSON document storage) |
