@@ -175,13 +175,14 @@ const TILE_FILES = {
 
 const tileImages = Object.create(null);
 let landmarkImage = null;
+let youPortraitImage = null;
+let youPortraitSrc = '';
 let tilesReady = false;
 const tileWaiters = [];
 
 function notifyTilesReady() {
   tilesReady = true;
-  const fns = tileWaiters.splice(0, tileWaiters.length);
-  for (const fn of fns) {
+  for (const fn of tileWaiters) {
     try { fn(); } catch (e) { /* ignore */ }
   }
 }
@@ -213,6 +214,17 @@ function startTileLoad() {
 
 startTileLoad();
 
+export function setYouPortrait(url) {
+  const next = String(url || '');
+  if (next === youPortraitSrc) return;
+  youPortraitSrc = next;
+  youPortraitImage = null;
+  if (!next || typeof Image === 'undefined') return;
+  const img = new Image();
+  img.onload = () => { youPortraitImage = img; notifyTilesReady(); };
+  img.src = next;
+}
+
 export function onMapTilesReady(fn) {
   if (typeof fn !== 'function') return;
   if (tilesReady) fn();
@@ -225,6 +237,10 @@ function tileImageReady(img) {
 
 function tileKeyFor(place) {
   if (!place || !place.discovered || place.kind === 'uncharted') return 'fog';
+  const k = String(place.kind || '').toLowerCase();
+  if (k === 'settlement') return 'settlement';
+  if (k === 'dungeon') return 'dungeon';
+  if (k === 'water') return 'water';
   const b = String(place.biome || '').toLowerCase();
   if (b === 'town') return 'settlement';
   if (TILE_FILES[b]) return b;
@@ -339,7 +355,7 @@ function computeCamera(places, w, h, panX, panY, userScale, focus = null, paths 
   const spanY = Math.max(1, maxY - minY + 1);
   const pad = Math.max(40, Math.min(w, h) * 0.14);
   const fit = Math.min((w - pad * 2) / spanX, (h - pad * 2) / spanY);
-  const tileStep = Math.max(38, Math.min(fit * userScale, 92));
+  const tileStep = Math.max(28, Math.min(fit * userScale, MAP_TILE_STEP_MAX));
   return {
     tileStep,
     ox: (minX + maxX) / 2,
@@ -375,8 +391,18 @@ function projectPlace(place, cam, w, h) {
   return projectGrid(Math.round(place.x), Math.round(place.y), cam, w, h);
 }
 
+export const MAP_SCALE_MIN = 0.5;
+export const MAP_SCALE_MAX = 5;
+export const MAP_TILE_STEP_MAX = 110;
+
+export function clampMapScale(s) {
+  const n = Number(s);
+  if (!isFinite(n) || n <= 0) return 1;
+  return Math.min(MAP_SCALE_MAX, Math.max(MAP_SCALE_MIN, n));
+}
+
 function tileHalf(tileStep) {
-  return tileStep * 0.4;
+  return tileStep * 0.42;
 }
 
 function worldDelta(a, b) {
@@ -662,31 +688,46 @@ function drawKindGlyph(ctx, place, px, py, size) {
   }
 }
 
-function drawYouMarker(ctx, px, py, half) {
-  const size = half * 1.55;
+function drawSilhouette(ctx, px, py, size) {
+  ctx.fillStyle = '#e8d5a8';
+  ctx.beginPath();
+  ctx.arc(px, py - size * 0.18, size * 0.16, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(px, py - size * 0.04);
+  ctx.quadraticCurveTo(px + size * 0.22, py + size * 0.32, px, py + size * 0.34);
+  ctx.quadraticCurveTo(px - size * 0.22, py + size * 0.32, px, py - size * 0.04);
+  ctx.fill();
+}
+
+function drawYouMarker(ctx, px, py, half, portraitImg) {
+  const size = Math.max(18, Math.min(26, half * 0.72));
   const x = px - size / 2;
   const y = py - size / 2;
   ctx.save();
-  ctx.shadowColor = 'rgba(212, 160, 48, 0.55)';
-  ctx.shadowBlur = 12;
-  ctx.fillStyle = '#d4a030';
-  roundRect(ctx, x, y, size, size, 6);
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+  ctx.shadowBlur = 6;
+  ctx.shadowOffsetY = 2;
+  ctx.fillStyle = 'rgba(18, 14, 10, 0.88)';
+  roundRect(ctx, x, y, size, size, 4);
   ctx.fill();
   ctx.shadowBlur = 0;
-  ctx.strokeStyle = 'rgba(255, 236, 180, 0.85)';
-  ctx.lineWidth = 1.5;
-  roundRect(ctx, x, y, size, size, 6);
+  ctx.shadowOffsetY = 0;
+  ctx.strokeStyle = '#e0b84a';
+  ctx.lineWidth = 1.6;
+  roundRect(ctx, x, y, size, size, 4);
   ctx.stroke();
-  // Simple pawn glyph
-  ctx.fillStyle = 'rgba(40, 28, 12, 0.85)';
-  ctx.beginPath();
-  ctx.arc(px, py - size * 0.18, size * 0.14, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(px, py - size * 0.05);
-  ctx.quadraticCurveTo(px + size * 0.22, py + size * 0.28, px, py + size * 0.32);
-  ctx.quadraticCurveTo(px - size * 0.22, py + size * 0.28, px, py - size * 0.05);
-  ctx.fill();
+  const inset = 2.5;
+  if (tileImageReady(portraitImg)) {
+    ctx.save();
+    roundRect(ctx, x + inset, y + inset, size - inset * 2, size - inset * 2, 3);
+    ctx.clip();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(portraitImg, x + inset, y + inset, size - inset * 2, size - inset * 2);
+    ctx.restore();
+  } else {
+    drawSilhouette(ctx, px, py + 1, size);
+  }
   ctx.restore();
 }
 
@@ -736,10 +777,15 @@ function drawTile(ctx, place, px, py, tileStep, opts) {
     drawFallbackTile(ctx, place, x, y, size, fog);
   }
 
-  ctx.globalAlpha = fog ? 0.5 : 1;
-  ctx.strokeStyle = fog ? 'rgba(148, 130, 100, 0.35)' : 'rgba(18, 12, 8, 0.7)';
-  ctx.lineWidth = 1;
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = fog ? 'rgba(80, 70, 55, 0.7)' : 'rgba(8, 6, 4, 0.92)';
+  ctx.lineWidth = Math.max(1.5, size * 0.045);
   ctx.strokeRect(x + 0.5, y + 0.5, size - 1, size - 1);
+  if (!fog) {
+    ctx.strokeStyle = 'rgba(255, 236, 200, 0.18)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 1.5, y + 1.5, size - 3, size - 3);
+  }
   ctx.restore();
 
   if (!fog && (place.landmark || place.kind === 'landmark')) {
@@ -887,7 +933,7 @@ export function paintAtlas(ctx, params) {
   }
 
   if (herePx != null) {
-    drawYouMarker(ctx, herePx, herePy, hereHalf);
+    drawYouMarker(ctx, herePx, herePy, hereHalf, youPortraitImage);
   }
 
   if (lod === 'near' || lod === 'all') {

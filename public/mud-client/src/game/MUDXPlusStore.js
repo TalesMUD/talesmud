@@ -1157,14 +1157,18 @@ function createStore() {
           return state;
         }
         state.atlas = merged;
+        const prevRoom = state.currentRoomId;
         if (state.atlas.currentRoomId) {
           state.currentRoomId = state.atlas.currentRoomId;
         }
-        const here = (state.atlas.places || []).find(p => p.id === state.currentRoomId);
-        if (here && here.layer) {
-          state.atlasLayer = here.layer;
-        } else if (state.atlas.currentLayer) {
-          state.atlasLayer = state.atlas.currentLayer;
+        // Follow the player's layer on room change; tab clicks own atlasLayer otherwise.
+        if (state.currentRoomId !== prevRoom) {
+          const here = (state.atlas.places || []).find(p => p.id === state.currentRoomId);
+          if (here && here.layer) {
+            state.atlasLayer = here.layer;
+          } else if (state.atlas.currentLayer) {
+            state.atlasLayer = state.atlas.currentLayer;
+          }
         }
         return state;
       });

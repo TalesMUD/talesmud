@@ -1,7 +1,7 @@
 <script>
   import { onDestroy, onMount, tick } from 'svelte';
   import { readStageSize, shouldRepaintSize, applyCanvasBitmap } from './atlasLayout.js';
-  import { paintAtlas, isCurrentPlace, panToCenterPlace, onMapTilesReady } from './atlasRenderer.js';
+  import { paintAtlas, isCurrentPlace, panToCenterPlace, onMapTilesReady, clampMapScale, setYouPortrait } from './atlasRenderer.js';
 
   export let store = null;
   export let sendMessage = null;
@@ -38,9 +38,9 @@
 
   function resolveLayer(data, roomId, preferred) {
     const places = data.places || [];
-    const here = places.find(p => p.id === roomId);
-    if (here && here.layer) return here.layer;
     if (preferred && places.some(p => p.layer === preferred)) return preferred;
+    const here = places.find(p => p.id === roomId) || places.find(p => isCurrentPlace(p.id, roomId));
+    if (here && here.layer) return here.layer;
     if (data.currentLayer && places.some(p => p.layer === data.currentLayer)) return data.currentLayer;
     if (data.layers && data.layers[0]) return data.layers[0].id;
     const first = places[0];
@@ -55,7 +55,6 @@
     if (atlasChanged) atlas = nextAtlas;
     if (roomChanged) {
       currentRoomId = newRoomId;
-      userScale = 1;
       if (isTraveling && newRoomId) advanceTravel(newRoomId);
     }
     const nextLayer = resolveLayer(atlas, currentRoomId, $store.atlasLayer || activeLayer);
@@ -70,6 +69,8 @@
       scheduleDraw();
     }
   }
+
+  $: if (store && $store.character) setYouPortrait($store.character.portrait || '');
 
   $: visiblePlaces = (atlas.places || []).filter(p => p.layer === activeLayer);
   $: visibleRegions = (atlas.regions || []).filter(r => r.layer === activeLayer);
@@ -246,7 +247,7 @@
 
   function onWheel(e) {
     e.preventDefault();
-    userScale = Math.min(2.6, Math.max(0.55, userScale * (e.deltaY < 0 ? 1.12 : 0.89)));
+    userScale = clampMapScale(userScale * (e.deltaY < 0 ? 1.12 : 0.89));
     scheduleDraw();
   }
 

@@ -75,20 +75,15 @@ func assignZ(w *World, src map[string]*rooms.Room, ids []string) {
 			known[id] = true
 		}
 	}
-	if len(known) == 0 {
-		for _, id := range ids {
-			r := src[id]
-			if hasTag(r.Tags, "outdoor") && !hasTag(r.Tags, "underground") {
-				w.rooms[id].z = 0
-				known[id] = true
-			}
+	for _, id := range ids {
+		if known[id] {
+			continue
 		}
-	}
-	if len(known) == 0 {
-		seed := pickSeed(src, ids)
-		if seed != "" {
-			w.rooms[seed].z = 0
-			known[seed] = true
+		r := src[id]
+		ug := hasTag(r.Tags, "underground")
+		if hasTag(r.Tags, "outdoor") && !ug {
+			w.rooms[id].z = 0
+			known[id] = true
 		}
 	}
 
@@ -386,48 +381,79 @@ func separateAreas(w *World) {
 	for id, pr := range w.rooms {
 		groups[pr.area] = append(groups[pr.area], id)
 	}
-	areas := make([]string, 0, len(groups))
 	for area := range groups {
-		areas = append(areas, area)
 		sort.Strings(groups[area])
 	}
-	sort.Strings(areas)
 
-	var anchored, free []string
-	for _, area := range areas {
-		if groupAnchored(w, groups[area]) {
-			anchored = append(anchored, area)
-		} else {
-			free = append(free, area)
+	placedArea := map[string]bool{}
+	for area, ids := range groups {
+		if groupAnchored(w, ids) {
+			placedArea[area] = true
 		}
 	}
-	settled := make([]bbox, 0, len(areas))
-	for _, area := range anchored {
-		ids := groups[area]
-		b := boundsOf(w, ids)
-		dx := 0
-		for {
-			hit := false
-			cur := b.shifted(dx, 0)
-			for _, prev := range settled {
-				if cur.overlaps(prev, areaGap) {
-					dx = prev.maxX + areaGap + 1 - b.minX
-					hit = true
-					break
-				}
-			}
-			if !hit {
-				break
-			}
+
+	type link struct {
+		fromArea, toArea, fromID, toID string
+		off                            vec
+	}
+	var links []link
+	for _, e := range w.edges {
+		off, ok := offsetFor(e.dir)
+		if !ok || off.z != 0 {
+			continue
 		}
-		translateGroup(w, ids, dx, 0)
-		settled = append(settled, boundsOf(w, ids))
+		from, to := w.rooms[e.from], w.rooms[e.to]
+		if from == nil || to == nil || from.area == to.area {
+			continue
+		}
+		links = append(links, link{from.area, to.area, e.from, e.to, off})
 	}
 
+	seed := pickAreaSeed(w, groups)
+	if seed != "" {
+		placedArea[seed] = true
+	}
+	queue := make([]string, 0, len(placedArea))
+	for area := range placedArea {
+		queue = append(queue, area)
+	}
+	sort.Strings(queue)
+
+	for len(queue) > 0 {
+		area := queue[0]
+		queue = queue[1:]
+		for _, ln := range links {
+			var destArea string
+			var fromID, toID string
+			var off vec
+			if ln.fromArea == area && !placedArea[ln.toArea] {
+				destArea, fromID, toID, off = ln.toArea, ln.fromID, ln.toID, ln.off
+			} else if ln.toArea == area && !placedArea[ln.fromArea] {
+				destArea, fromID, toID, off = ln.fromArea, ln.toID, ln.fromID, vec{-ln.off.x, -ln.off.y, 0}
+			} else {
+				continue
+			}
+			alignAreaByExit(w, groups, fromID, toID, off)
+			pushAreaOut(w, groups, destArea, placedArea, off)
+			placedArea[destArea] = true
+			queue = append(queue, destArea)
+		}
+	}
+
+	leftover := make([]string, 0)
+	for area := range groups {
+		if !placedArea[area] {
+			leftover = append(leftover, area)
+		}
+	}
+	sort.Strings(leftover)
+	settled := make([]bbox, 0, len(groups))
+	for area := range placedArea {
+		settled = append(settled, boundsOf(w, groups[area]))
+	}
 	cursorX, cursorY, rowH := 0, 0, 0
 	if len(settled) > 0 {
-		maxX := settled[0].maxX
-		minY := settled[0].minY
+		maxX, minY := settled[0].maxX, settled[0].minY
 		for _, b := range settled[1:] {
 			if b.maxX > maxX {
 				maxX = b.maxX
@@ -439,12 +465,11 @@ func separateAreas(w *World) {
 		cursorX = maxX + areaGap + 1
 		cursorY = minY
 	}
-	const maxRow = 18
-	for _, area := range free {
+	for _, area := range leftover {
 		ids := groups[area]
 		b := boundsOf(w, ids)
 		wdt, hgt := b.width(), b.height()
-		if cursorX > 0 && cursorX+wdt > maxRow && rowH > 0 {
+		if cursorX > 0 && cursorX+wdt > 18 && rowH > 0 {
 			cursorY += rowH + areaGap
 			cursorX = 0
 			rowH = 0
@@ -461,9 +486,74 @@ func separateAreas(w *World) {
 		translateGroup(w, ids, dx, dy)
 		nb := boundsOf(w, ids)
 		settled = append(settled, nb)
+		placedArea[area] = true
 		cursorX = nb.maxX + areaGap + 1
 		if hgt > rowH {
 			rowH = hgt
+		}
+	}
+}
+
+func pickAreaSeed(w *World, groups map[string][]string) string {
+	for _, pr := range w.rooms {
+		if hasTag(pr.tags, "starting_room") && !hasTag(pr.tags, "underground") {
+			return pr.area
+		}
+	}
+	for _, pr := range w.rooms {
+		if hasTag(pr.tags, "entry_point") && hasTag(pr.tags, "outdoor") {
+			return pr.area
+		}
+	}
+	if _, ok := groups["Z01_meadows_forest_path"]; ok {
+		return "Z01_meadows_forest_path"
+	}
+	areas := make([]string, 0, len(groups))
+	for a := range groups {
+		areas = append(areas, a)
+	}
+	sort.Strings(areas)
+	if len(areas) == 0 {
+		return ""
+	}
+	return areas[0]
+}
+
+func alignAreaByExit(w *World, groups map[string][]string, fromID, toID string, off vec) {
+	from, to := w.rooms[fromID], w.rooms[toID]
+	if from == nil || to == nil {
+		return
+	}
+	step := areaGap + 1
+	tx := from.x + off.x*step
+	ty := from.y + off.y*step
+	translateGroup(w, groups[to.area], tx-to.x, ty-to.y)
+}
+
+func pushAreaOut(w *World, groups map[string][]string, area string, placed map[string]bool, off vec) {
+	ids := groups[area]
+	if len(ids) == 0 {
+		return
+	}
+	if off.x == 0 && off.y == 0 {
+		off = vec{0, -1, 0}
+	}
+	for guard := 0; guard < 48; guard++ {
+		b := boundsOf(w, ids)
+		hit := false
+		for other := range placed {
+			if other == area {
+				continue
+			}
+			ob := boundsOf(w, groups[other])
+			if b.overlaps(ob, areaGap) {
+				translateGroup(w, ids, off.x*(areaGap+1), off.y*(areaGap+1))
+				hit = true
+				break
+			}
+		}
+		if !hit {
+			return
 		}
 	}
 }

@@ -283,6 +283,63 @@ func TestCompileSeparatesAreas(t *testing.T) {
 	}
 }
 
+func TestUndergroundStartIsLowerLayer(t *testing.T) {
+	w := Compile([]*rooms.Room{
+		testRoom("R0001", "Awakening", "Z00_catacombs_intro", []string{"starting_room", "underground"},
+			exit("up", "R0101", false)),
+		testRoom("R0101", "Meadow", "Z01_meadows_forest_path", []string{"outdoor", "entry_point"},
+			exit("down", "R0001", false)),
+	})
+	if layerID(w.rooms["R0001"].z) != "lower" {
+		t.Fatalf("catacomb start layer=%s z=%d want lower", layerID(w.rooms["R0001"].z), w.rooms["R0001"].z)
+	}
+	if layerID(w.rooms["R0101"].z) != "overworld" {
+		t.Fatalf("meadow layer=%s z=%d want overworld", layerID(w.rooms["R0101"].z), w.rooms["R0101"].z)
+	}
+}
+
+func TestRevealOverworldOmitsNonZeroZ(t *testing.T) {
+	w := Compile([]*rooms.Room{
+		testRoom("R0001", "Awakening", "Z00_catacombs_intro", []string{"starting_room", "underground"},
+			exit("up", "R0101", false), exit("east", "R0005", false)),
+		testRoom("R0005", "Nest", "Z00_catacombs_intro", []string{"underground"},
+			exit("west", "R0001", false)),
+		testRoom("R0101", "Meadow", "Z01_meadows_forest_path", []string{"outdoor", "entry_point"},
+			exit("down", "R0001", false)),
+	})
+	ch := &characters.Character{
+		Entity:          &entities.Entity{ID: "c1"},
+		CurrentRoom:     traits.CurrentRoom{CurrentRoomID: "R0101"},
+		DiscoveredRooms: map[string]bool{"R0001": true, "R0005": true, "R0101": true},
+	}
+	atlas := Reveal(w, ch)
+	for _, p := range atlas.Places {
+		if p.Layer == "overworld" && p.Z != 0 {
+			t.Fatalf("overworld leaked z=%d room %s", p.Z, p.ID)
+		}
+		if p.ID == "R0001" && p.Layer == "overworld" {
+			t.Fatal("catacomb start must not appear on overworld")
+		}
+	}
+}
+
+func TestCompileOldtownNorthOfMeadows(t *testing.T) {
+	w := Compile([]*rooms.Room{
+		testRoom("R0108", "Sign", "Z01_meadows_forest_path", []string{"outdoor", "starting_room"},
+			exit("north", "R0201", false)),
+		testRoom("R0201", "Gate", "Z02_oldtown", []string{"outdoor", "entry_point"},
+			exit("south", "R0108", false), exit("northwest", "R0401", false)),
+		testRoom("R0401", "Timber", "Z04_ashenvale_woods", []string{"outdoor", "entry_point"},
+			exit("southeast", "R0201", false)),
+	})
+	if w.rooms["R0201"].y >= w.rooms["R0108"].y {
+		t.Fatalf("oldtown y=%d should be north (smaller y) of meadows y=%d", w.rooms["R0201"].y, w.rooms["R0108"].y)
+	}
+	if w.rooms["R0401"].y >= w.rooms["R0201"].y {
+		t.Fatalf("ashenveil y=%d should be north of oldtown y=%d", w.rooms["R0401"].y, w.rooms["R0201"].y)
+	}
+}
+
 func TestDisplayAreaStripsZonePrefix(t *testing.T) {
 	if got := displayArea("Z01_meadows_forest_path"); got != "Meadows Forest Path" {
 		t.Fatalf("got %q", got)
