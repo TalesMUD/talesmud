@@ -204,6 +204,85 @@ func TestCompileDoesNotCollapseTwoRoomsOnOneCell(t *testing.T) {
 	}
 }
 
+func withCoords(r *rooms.Room, x, y, z int32) *rooms.Room {
+	r.Coords = &struct {
+		X int32 `bson:"x" json:"x"`
+		Y int32 `bson:"y" json:"y"`
+		Z int32 `bson:"z" json:"z"`
+	}{X: x, Y: y, Z: z}
+	return r
+}
+
+func minAreaChebyshev(w *World, a, b string) int {
+	min := 1 << 20
+	for _, pa := range w.rooms {
+		if pa.area != a {
+			continue
+		}
+		for _, pb := range w.rooms {
+			if pb.area != b || pa.z != pb.z {
+				continue
+			}
+			d := abs(pa.x - pb.x)
+			if dy := abs(pa.y - pb.y); dy > d {
+				d = dy
+			}
+			if d < min {
+				min = d
+			}
+		}
+	}
+	return min
+}
+
+func TestCompilePrefersAuthoredCoords(t *testing.T) {
+	meadow := withCoords(testRoom("R0101", "Meadow", "Z01_meadows_forest_path", []string{"outdoor", "starting_room"},
+		exit("north", "R0102", false)), 12, -4, 0)
+	field := testRoom("R0102", "Field", "Z01_meadows_forest_path", []string{"outdoor"},
+		exit("south", "R0101", false))
+	w := Compile([]*rooms.Room{meadow, field})
+	if w.rooms["R0101"].x != 12 || w.rooms["R0101"].y != -4 {
+		t.Fatalf("authored coords dropped: (%d,%d)", w.rooms["R0101"].x, w.rooms["R0101"].y)
+	}
+	if w.rooms["R0102"].x != 12 || w.rooms["R0102"].y != -5 {
+		t.Fatalf("north of authored meadow: got (%d,%d) want (12,-5)", w.rooms["R0102"].x, w.rooms["R0102"].y)
+	}
+}
+
+func TestCompileSeparatesAreas(t *testing.T) {
+	w := Compile([]*rooms.Room{
+		testRoom("R0101", "Meadow", "Z01_meadows_forest_path", []string{"starting_room", "outdoor"},
+			exit("north", "R0102", false), exit("west", "R0201", false)),
+		testRoom("R0102", "Field", "Z01_meadows_forest_path", []string{"outdoor"},
+			exit("south", "R0101", false)),
+		testRoom("R0201", "Gate", "Z02_oldtown", []string{"outdoor", "entry_point"},
+			exit("east", "R0101", false), exit("west", "R0202", false)),
+		testRoom("R0202", "Street", "Z02_oldtown", []string{"outdoor"},
+			exit("east", "R0201", false)),
+		testRoom("R0301", "Ashen", "Z03_ashenveil", []string{"outdoor", "entry_point"},
+			exit("south", "R0302", false)),
+		testRoom("R0302", "Cinder", "Z03_ashenveil", []string{"outdoor"},
+			exit("north", "R0301", false)),
+	})
+	if w.rooms["R0102"].x != w.rooms["R0101"].x || w.rooms["R0102"].y != w.rooms["R0101"].y-1 {
+		t.Fatalf("intra-meadow north broken: meadow (%d,%d) field (%d,%d)",
+			w.rooms["R0101"].x, w.rooms["R0101"].y, w.rooms["R0102"].x, w.rooms["R0102"].y)
+	}
+	if w.rooms["R0202"].x != w.rooms["R0201"].x-1 || w.rooms["R0202"].y != w.rooms["R0201"].y {
+		t.Fatalf("intra-oldtown west broken: gate (%d,%d) street (%d,%d)",
+			w.rooms["R0201"].x, w.rooms["R0201"].y, w.rooms["R0202"].x, w.rooms["R0202"].y)
+	}
+	if g := minAreaChebyshev(w, "Z01_meadows_forest_path", "Z02_oldtown"); g < 4 {
+		t.Fatalf("meadow/oldtown gap %d want >= 4", g)
+	}
+	if g := minAreaChebyshev(w, "Z02_oldtown", "Z03_ashenveil"); g < 4 {
+		t.Fatalf("oldtown/ashenveil gap %d want >= 4", g)
+	}
+	if g := minAreaChebyshev(w, "Z01_meadows_forest_path", "Z03_ashenveil"); g < 4 {
+		t.Fatalf("meadow/ashenveil gap %d want >= 4", g)
+	}
+}
+
 func TestDisplayAreaStripsZonePrefix(t *testing.T) {
 	if got := displayArea("Z01_meadows_forest_path"); got != "Meadows Forest Path" {
 		t.Fatalf("got %q", got)

@@ -137,7 +137,7 @@ DiscoveredAreas map[string]bool  // Area names
 - **5 XP** per new room discovered (grant path is currently gated; discovery itself still records)
 - **15 XP** for first room in a new area/zone
 
-**Atlas API**: `GET /api/characters/:id/map` returns the character's fog-of-war atlas (places, paths, area hulls, overworld/lower/upper layers). Layout is compiled from existing directional exits plus optional `coords`; authors do not need a new coordinate pass. Hidden exits stay off the map until `revealExit`.
+**Atlas API**: `GET /api/characters/:id/map` returns the character's fog-of-war atlas (places, paths, area hulls, overworld/lower/upper layers). Layout pins authored `coords` when present, clusters remaining rooms by area using compass exits, then packs zones with a gap so Oldtown / Meadows / Ashenveil read as separate clusters. Hidden exits stay off the map until `revealExit`.
 
 ### NPC / enemy portraits
 Room presence sends `portrait` URLs (`/api/portraits/{templateOrId}.png`). Import copies `assets/images/sprites/{npcs,enemies}/` into `uploads/portraits/`. Sprites are 512px full-figure art; the original NPC/enemy cards clip a 48px square around the body (`object-fit: cover` + zoom). Missing files fall back to hashed `img/avatars/{1-14}p.png`. Component CSS lives in `public/mud-client/public/extra.css` and must be deployed with `bundle.js`.

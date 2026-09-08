@@ -40,7 +40,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Response actions send the narrative `response` text, not the help `description`
   - Action descriptions shown in room text ("You can:" section)
   - Visual backgrounds and mood settings
-  - Coordinate-based world mapping (X, Y, Z grid) plus a compiled atlas: compass exits become geography, areas become organic hulls, per-character fog of war is served at `GET /api/characters/:id/map`
+  - Coordinate-based world mapping (X, Y, Z grid) plus a compiled atlas: authored coords pin rooms, remaining rooms cluster by area from compass exits, zones pack with a gap (Oldtown / Meadows / Ashenveil read apart); per-character fog of war at `GET /api/characters/:id/map`
   - Dynamic item and NPC spawning
   - Unique NPCs auto-spawn into their assigned room on server start via `CurrentRoomID`
   - Guest-public NPC/enemy portraits (`/api/portraits/:filename`, hashed avatar fallback)

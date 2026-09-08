@@ -69,4 +69,5 @@ type placedRoom struct {
 	kind     string
 	landmark bool
 	canBind  bool
+	locked   bool // authored Coords — do not spiral away from intent
 }
