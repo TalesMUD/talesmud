@@ -2080,6 +2080,7 @@ Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "unc
 - Label LOD: zoomed out = area names only (collision-aware; or none); mid = current + adjacent rooms; zoomed in = room names with collision avoidance (no stacked area+room labels). Compass/vertical exit words are never painted (exit ticks only)
 - Exactly one gold you-are-here marker, keyed by `currentRoomId` (incl. `R0215~instance` → template). Soft travel-trail dots optional. Recenter (my_location) pans to you
 - Title stays **Map**. Layer tabs (Overworld/Lower/Upper) only when `atlas.layers` has more than one entry. Compact optional widget opens fullscreen; Map chrome pin is primary
+- Each room paints as a 48px biome pixel tile (`public/img/map-tiles/`: meadow, forest, settlement, dungeon, water, wild, fog). Landmark/bind rooms overlay a bind-stone icon. Compact minimap and fullscreen MapOverviewOverlay share `atlasRenderer.paintAtlas`. Fog tiles are muted; one gold you-are-here pawn; paths/exits and label LOD unchanged.
 - The widget auto-fits discovered places into its panel and keeps that fit (canvas is out of flow so it cannot resize the widget)
 - Layer tabs, pan, wheel zoom, click-to-travel along discovered paths
 - Desktop/mobile action bars (Option C): room-only dirs + room actions + Shop when a merchant is present; fixed INV / MAP / SAY chrome; optional Look/Rest/… pins via ⋯ (empty by default); layout revision migrates legacy Look/pin clutter
@@ -2091,7 +2092,8 @@ Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "unc
 - `pkg/worldmap/` — layout, biomes, hulls, discovery, reveal
 - `pkg/server/handler/charactermap.go` — REST endpoint
 - `public/mud-client/src/game/widgets/MinimapWidget.svelte` — parchment Map renderer + fullscreen overlay host
-- `public/mud-client/src/game/widgets/atlasRenderer.js` — label LOD, collision, single you-marker
+- `public/mud-client/src/game/widgets/atlasRenderer.js` — biome tiles, label LOD, collision, single you-marker
+- `public/mud-client/public/img/map-tiles/` — 48px biome PNGs + landmark overlay
 - `public/mud-client/src/game/hudPrefs.js` — Option C action-bar chrome/pins + hotbar helpers
 
 ---

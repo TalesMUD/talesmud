@@ -1,7 +1,7 @@
 <script>
   import { onDestroy, onMount, tick } from 'svelte';
   import { readStageSize, shouldRepaintSize, applyCanvasBitmap } from '../widgets/atlasLayout.js';
-  import { paintAtlas, isCurrentPlace, panToCenterPlace } from '../widgets/atlasRenderer.js';
+  import { paintAtlas, isCurrentPlace, panToCenterPlace, onMapTilesReady } from '../widgets/atlasRenderer.js';
 
   export let store = null;
   export let sendMessage = null;
@@ -405,6 +405,7 @@
   }
 
   onMount(() => {
+    onMapTilesReady(() => scheduleDraw());
     escHandler = (e) => {
       if (e.key === 'Escape' && open) {
         e.preventDefault();

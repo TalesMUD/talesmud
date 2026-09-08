@@ -1,7 +1,7 @@
 <script>
-  import { onDestroy, tick } from 'svelte';
+  import { onDestroy, onMount, tick } from 'svelte';
   import { readStageSize, shouldRepaintSize, applyCanvasBitmap } from './atlasLayout.js';
-  import { paintAtlas, isCurrentPlace, panToCenterPlace } from './atlasRenderer.js';
+  import { paintAtlas, isCurrentPlace, panToCenterPlace, onMapTilesReady } from './atlasRenderer.js';
 
   export let store = null;
   export let sendMessage = null;
@@ -309,6 +309,10 @@
       scheduleDraw();
     }
   }
+
+  onMount(() => {
+    onMapTilesReady(() => scheduleDraw());
+  });
 
   onDestroy(() => {
     if (drawRaf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(drawRaf);

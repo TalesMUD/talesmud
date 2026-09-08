@@ -163,6 +163,74 @@ function biomeOf(key) {
   return BIOME[key] || BIOME.wild;
 }
 
+const TILE_FILES = {
+  meadow: 'img/map-tiles/meadow.png',
+  forest: 'img/map-tiles/forest.png',
+  settlement: 'img/map-tiles/settlement.png',
+  dungeon: 'img/map-tiles/dungeon.png',
+  water: 'img/map-tiles/water.png',
+  wild: 'img/map-tiles/wild.png',
+  fog: 'img/map-tiles/fog.png',
+};
+
+const tileImages = Object.create(null);
+let landmarkImage = null;
+let tilesReady = false;
+const tileWaiters = [];
+
+function notifyTilesReady() {
+  tilesReady = true;
+  const fns = tileWaiters.splice(0, tileWaiters.length);
+  for (const fn of fns) {
+    try { fn(); } catch (e) { /* ignore */ }
+  }
+}
+
+function startTileLoad() {
+  if (typeof Image === 'undefined') {
+    tilesReady = true;
+    return;
+  }
+  const keys = Object.keys(TILE_FILES);
+  let pending = keys.length + 1;
+  const done = () => {
+    pending -= 1;
+    if (pending <= 0) notifyTilesReady();
+  };
+  for (const key of keys) {
+    const img = new Image();
+    img.onload = done;
+    img.onerror = done;
+    img.src = TILE_FILES[key];
+    tileImages[key] = img;
+  }
+  const lm = new Image();
+  lm.onload = done;
+  lm.onerror = done;
+  lm.src = 'img/map-tiles/landmark.png';
+  landmarkImage = lm;
+}
+
+startTileLoad();
+
+export function onMapTilesReady(fn) {
+  if (typeof fn !== 'function') return;
+  if (tilesReady) fn();
+  else tileWaiters.push(fn);
+}
+
+function tileImageReady(img) {
+  return !!(img && img.complete && img.naturalWidth > 0);
+}
+
+function tileKeyFor(place) {
+  if (!place || !place.discovered || place.kind === 'uncharted') return 'fog';
+  const b = String(place.biome || '').toLowerCase();
+  if (b === 'town') return 'settlement';
+  if (TILE_FILES[b]) return b;
+  return 'wild';
+}
+
 function hashString(str) {
   let h = 0;
   for (let i = 0; i < str.length; i++) {
@@ -457,14 +525,10 @@ function drawAreaCells(ctx, places, cam, w, h, showLabels) {
   const cell = cam.tileStep * 0.92;
   const labelCandidates = [];
   for (const [area, rooms] of byArea) {
-    const tint = areaTint(area);
     let cx = 0;
     let cy = 0;
     for (const p of rooms) {
       const { px, py } = projectPlace(p, cam, w, h);
-      ctx.fillStyle = tint;
-      roundRect(ctx, px - cell / 2, py - cell / 2, cell, cell, 5);
-      ctx.fill();
       cx += px;
       cy += py;
     }
@@ -626,15 +690,9 @@ function drawYouMarker(ctx, px, py, half) {
   ctx.restore();
 }
 
-function drawTile(ctx, place, px, py, tileStep, opts) {
-  const half = tileHalf(tileStep);
-  const x = px - half;
-  const y = py - half;
-  const size = half * 2;
+function drawFallbackTile(ctx, place, x, y, size, fog) {
   const biome = biomeOf(place.biome);
-  const isHere = !!opts.isHere;
-
-  if (!place.discovered || place.kind === 'uncharted') {
+  if (fog) {
     ctx.strokeStyle = 'rgba(148, 130, 100, 0.22)';
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 4]);
@@ -644,38 +702,62 @@ function drawTile(ctx, place, px, py, tileStep, opts) {
     ctx.fillStyle = 'rgba(24, 20, 16, 0.45)';
     roundRect(ctx, x + 2, y + 2, size - 4, size - 4, 2);
     ctx.fill();
-    return half;
+    return;
   }
-
   const grad = ctx.createLinearGradient(x, y, x + size, y + size);
   grad.addColorStop(0, shadeColor(biome.tile, 8));
   grad.addColorStop(0.45, biome.tile);
   grad.addColorStop(1, shadeColor(biome.tile, -22));
   ctx.fillStyle = grad;
-  roundRect(ctx, x, y, size, size, 5);
+  roundRect(ctx, x, y, size, size, 3);
   ctx.fill();
-
-  ctx.strokeStyle = 'rgba(255, 248, 230, 0.08)';
-  ctx.lineWidth = 1;
-  roundRect(ctx, x + 2, y + 2, size - 4, size - 4, 4);
+  ctx.strokeStyle = biome.tileEdge;
+  ctx.lineWidth = 1.4;
+  roundRect(ctx, x, y, size, size, 3);
   ctx.stroke();
+  drawKindGlyph(ctx, place, x + size / 2, y + size / 2, size);
+}
 
-  ctx.strokeStyle = isHere ? '#d4a030' : biome.tileEdge;
-  ctx.lineWidth = isHere ? 2.8 : 1.4;
-  if (isHere) {
-    ctx.shadowColor = 'rgba(212, 160, 48, 0.5)';
-    ctx.shadowBlur = 10;
+function drawTile(ctx, place, px, py, tileStep, opts) {
+  const half = tileHalf(tileStep);
+  const x = px - half;
+  const y = py - half;
+  const size = half * 2;
+  const key = tileKeyFor(place);
+  const img = tileImages[key];
+  const fog = key === 'fog';
+
+  ctx.save();
+  if (fog) ctx.globalAlpha = 0.62;
+  if (tileImageReady(img)) {
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(img, x, y, size, size);
+  } else {
+    drawFallbackTile(ctx, place, x, y, size, fog);
   }
-  roundRect(ctx, x, y, size, size, 5);
-  ctx.stroke();
-  ctx.shadowBlur = 0;
 
-  drawKindGlyph(ctx, place, px, py, size);
+  ctx.globalAlpha = fog ? 0.5 : 1;
+  ctx.strokeStyle = fog ? 'rgba(148, 130, 100, 0.35)' : 'rgba(18, 12, 8, 0.7)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 0.5, y + 0.5, size - 1, size - 1);
+  ctx.restore();
+
+  if (!fog && (place.landmark || place.kind === 'landmark')) {
+    if (tileImageReady(landmarkImage)) {
+      const s = Math.max(11, size * 0.44);
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(landmarkImage, px - s / 2, py - s / 2, s, s);
+      ctx.restore();
+    } else {
+      drawKindGlyph(ctx, place, px, py, size);
+    }
+  }
 
   if (place.id === opts.travelTargetId) {
     ctx.strokeStyle = '#22d3ee';
     ctx.lineWidth = 2;
-    roundRect(ctx, x - 2, y - 2, size + 4, size + 4, 6);
+    roundRect(ctx, x - 2, y - 2, size + 4, size + 4, 4);
     ctx.stroke();
   }
 
