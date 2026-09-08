@@ -340,6 +340,54 @@ func TestCompileOldtownNorthOfMeadows(t *testing.T) {
 	}
 }
 
+func TestRevealIncludesExitsAndDanger(t *testing.T) {
+	w := Compile([]*rooms.Room{
+		testRoom("R0101", "Meadow", "Z01_meadows_forest_path", []string{"outdoor", "starting_room", "safe"},
+			exit("north", "R0102", false)),
+		testRoom("R0102", "Field", "Z01_meadows_forest_path", []string{"outdoor"},
+			exit("south", "R0101", false)),
+	})
+	ch := &characters.Character{
+		Entity:          &entities.Entity{ID: "c1"},
+		CurrentRoom:     traits.CurrentRoom{CurrentRoomID: "R0101"},
+		DiscoveredRooms: map[string]bool{"R0101": true},
+	}
+	atlas := Reveal(w, ch)
+	var meadow, field Place
+	for _, p := range atlas.Places {
+		if p.ID == "R0101" {
+			meadow = p
+		}
+		if p.ID == "R0102" {
+			field = p
+		}
+	}
+	if meadow.Danger != "safe" || meadow.Summary == "" {
+		t.Fatalf("meadow intel: danger=%q summary=%q", meadow.Danger, meadow.Summary)
+	}
+	if len(meadow.Exits) != 1 || meadow.Exits[0].Dir != "north" || meadow.Exits[0].To != "R0102" {
+		t.Fatalf("meadow exits: %+v", meadow.Exits)
+	}
+	if meadow.Exits[0].ToName != "" {
+		t.Fatalf("fog dest should not leak name: %+v", meadow.Exits[0])
+	}
+	if field.Discovered || field.Danger != "uncharted" || len(field.Exits) != 0 {
+		t.Fatalf("fog field should be lean: %+v", field)
+	}
+	AttachResidents(&atlas, map[string][]PlaceResident{
+		"R0101": {{Name: "Wren", Kind: "npc"}},
+		"R0102": {{Name: "Wolf", Kind: "enemy"}},
+	})
+	for _, p := range atlas.Places {
+		if p.ID == "R0101" && (len(p.Residents) != 1 || p.Residents[0].Name != "Wren") {
+			t.Fatalf("meadow residents %+v", p.Residents)
+		}
+		if p.ID == "R0102" && len(p.Residents) != 0 {
+			t.Fatalf("fog should not get residents: %+v", p.Residents)
+		}
+	}
+}
+
 func TestDisplayAreaStripsZonePrefix(t *testing.T) {
 	if got := displayArea("Z01_meadows_forest_path"); got != "Meadows Forest Path" {
 		t.Fatalf("got %q", got)

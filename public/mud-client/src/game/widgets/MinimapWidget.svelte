@@ -27,6 +27,7 @@
   let widgetObserver;
   const hitState = { items: [] };
   let lastWidgetSize = null;
+  let selectedId = null;
   let drawRaf = 0;
 
   // Badge / chrome only — fullscreen lives in MapOverviewOverlay (body portal).
@@ -74,6 +75,8 @@
 
   $: visiblePlaces = (atlas.places || []).filter(p => p.layer === activeLayer);
   $: visibleRegions = (atlas.regions || []).filter(r => r.layer === activeLayer);
+  $: if (store && $store.mapSelectedId) selectedId = $store.mapSelectedId;
+  $: selectedPlace = (atlas.places || []).find(p => p.id === selectedId) || null;
 
   function findPath(startId, targetId) {
     if (!startId || !targetId || startId === targetId) return null;
@@ -172,6 +175,7 @@
       userScale,
       travelPathRoomIds,
       travelTargetId,
+      selectedId,
     });
     hitState.items = result.hits;
   }
@@ -220,7 +224,7 @@
       let text = found.discovered ? (found.name || found.id) : 'Uncharted';
       if (found.areaName && found.discovered) text += ' · ' + found.areaName;
       if (found.current || isCurrentPlace(found.id, currentRoomId)) text += ' (you are here)';
-      else if (found.discovered) text += ' (click to travel)';
+      else if (found.discovered) text += ' · inspect';
       tooltip = { visible: true, text, x: e.clientX - rect.left, y: e.clientY - rect.top };
     } else {
       tooltip = { ...tooltip, visible: false };
@@ -232,12 +236,9 @@
     if (isPanning && !didDrag) {
       const rect = canvas.getBoundingClientRect();
       const found = hitTest(canvas, e.clientX - rect.left, e.clientY - rect.top);
-      if (found && found.discovered && found.id !== currentRoomId) {
-        if (found.id === travelTargetId) cancelTravel();
-        else {
-          cancelTravel();
-          startTravel(found.id);
-        }
+      if (found) {
+        selectedId = found.id;
+        if (store && store.selectMapPlace) store.selectMapPlace(found.id);
         scheduleDraw();
       }
     }
@@ -275,8 +276,12 @@
   }
 
   function openOverview() {
-    if (store && store.openMapOverview) store.openMapOverview();
+    if (store && store.openMapOverview) store.openMapOverview(selectedId);
     else if (store && store.setMapOverviewOpen) store.setMapOverviewOpen(true);
+  }
+
+  function inspectSelected() {
+    if (store && store.openMapOverview) store.openMapOverview(selectedId || currentRoomId);
   }
 
   function closeOverview() {
@@ -406,6 +411,30 @@
     border-color: rgba(34, 211, 238, 0.55);
     color: #67e8f9;
   }
+  .intel-strip {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    background: rgba(8, 10, 16, 0.9);
+    font-size: 10px;
+    color: #c9c0b0;
+  }
+  .intel-strip-name { font-weight: 700; color: #f3ead4; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .intel-strip-meta { color: #8a8070; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .intel-strip-btn {
+    border: 1px solid rgba(212,175,55,0.45);
+    background: transparent;
+    color: #e0b84a;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 2px 6px;
+    border-radius: 3px;
+    cursor: pointer;
+  }
 </style>
 
 <div class="atlas atlas-compact">
@@ -444,4 +473,11 @@
       <div class="tooltip" style="left: {tooltip.x}px; top: {tooltip.y}px;">{tooltip.text}</div>
     {/if}
   </div>
+  {#if selectedPlace}
+    <div class="intel-strip">
+      <span class="intel-strip-name">{selectedPlace.discovered ? (selectedPlace.name || selectedPlace.id) : 'Uncharted'}</span>
+      <span class="intel-strip-meta">{selectedPlace.discovered ? (selectedPlace.areaName || selectedPlace.biome || '') : 'Fog'}</span>
+      <button type="button" class="intel-strip-btn" on:click={inspectSelected}>Inspect</button>
+    </div>
+  {/if}
 </div>

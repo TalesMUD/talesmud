@@ -112,9 +112,14 @@ func Reveal(w *World, ch *characters.Character) PlayerMap {
 			p.Name = ""
 			p.Kind = "uncharted"
 			p.CanTravel = false
+			p.Danger = "uncharted"
+			p.Summary = "Fog of war. Walk closer to chart this ground."
 		} else {
 			p.Name = pr.name
 			p.CanTravel = ch != nil && !placeIsCurrent(id, ch.CurrentRoomID)
+			p.Danger = inferDanger(pr.tags, pr.kind)
+			p.Summary = inferSummary(pr.kind, p.Danger)
+			p.Exits = collectPlaceExits(w, ch, id, discovered)
 			rk := pr.area + "|" + lid
 			regionRooms[rk] = append(regionRooms[rk], id)
 		}
@@ -182,6 +187,82 @@ func placeIsCurrent(placeID, currentRoomID string) bool {
 		return placeID == currentRoomID[:i]
 	}
 	return false
+}
+
+func collectPlaceExits(w *World, ch *characters.Character, fromID string, discovered map[string]bool) []PlaceExit {
+	out := make([]PlaceExit, 0, 4)
+	for _, e := range w.edges {
+		if e.from != fromID {
+			continue
+		}
+		if e.hidden && (ch == nil || !ch.HasRevealedExit(e.from, e.dir)) {
+			continue
+		}
+		dest := w.rooms[e.to]
+		if dest == nil {
+			continue
+		}
+		px := PlaceExit{
+			Dir:      e.dir,
+			To:       e.to,
+			Hidden:   e.hidden,
+			Vertical: isVertical(e.dir),
+		}
+		if discovered[e.to] {
+			px.ToName = dest.name
+		}
+		out = append(out, px)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Dir == out[j].Dir {
+			return out[i].To < out[j].To
+		}
+		return out[i].Dir < out[j].Dir
+	})
+	return out
+}
+
+func inferDanger(tags []string, kind string) string {
+	if hasTag(tags, "safe") || hasTag(tags, "inn") || hasTag(tags, "shrine") || hasTag(tags, "starting_room") {
+		return "safe"
+	}
+	if kind == "water" || hasTag(tags, "water") {
+		return "hazard"
+	}
+	if kind == "dungeon" || hasTag(tags, "underground") || hasTag(tags, "dungeon") || hasTag(tags, "cave") {
+		return "hostile"
+	}
+	return "low"
+}
+
+func inferSummary(kind, danger string) string {
+	switch danger {
+	case "safe":
+		return "A haven. Bind, rest, and resupply."
+	case "hostile":
+		return "Dangerous ground. Watch the dark."
+	case "hazard":
+		return "Treacherous footing."
+	}
+	if kind == "settlement" {
+		return "Town streets and hearths."
+	}
+	return "Open country. Chart as you walk."
+}
+
+// AttachResidents fills discovered places with best-effort NPC/enemy lists.
+func AttachResidents(atlas *PlayerMap, byRoom map[string][]PlaceResident) {
+	if atlas == nil || len(byRoom) == 0 {
+		return
+	}
+	for i := range atlas.Places {
+		if !atlas.Places[i].Discovered {
+			continue
+		}
+		if rs := byRoom[atlas.Places[i].ID]; len(rs) > 0 {
+			atlas.Places[i].Residents = rs
+		}
+	}
 }
 
 func majorityBiome(w *World, ids []string) string {

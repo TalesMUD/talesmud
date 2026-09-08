@@ -121,7 +121,7 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
 
 Private cellars: an exit with `type: instance` or `instance: true`, or a normal exit from a non-instance room into a room tagged `instance`/`instanced`, clones the dest room plus rooms reachable without returning to the hub. Each character gets their own copy; the hub stays shared. Empty instances are deleted.
 
-`GET /api/characters/:id/map` returns that character's fog-of-war atlas. `pkg/worldmap` pins authored `coords`, layouts each area from compass exits, then packs zones with a gap so they read as separate clusters. Reveal then applies discovered rooms, uncharted neighbors through visible exits, area hulls, and overworld/lower/upper layers. Hidden exits stay off the map until revealed. The JSON is the contract for both the web atlas widget and a future mobile renderer.
+`GET /api/characters/:id/map` returns that character's fog-of-war atlas. `pkg/worldmap` pins authored `coords`, layouts each area from compass exits, then packs zones with a gap so they read as separate clusters. Reveal then applies discovered rooms, uncharted neighbors through visible exits, area hulls, and overworld/lower/upper layers. Discovered places include exits, danger, a short summary, and optional NPC/enemy residents. Hidden exits stay off the map until revealed. The JSON is the contract for both the web atlas widget and a future mobile renderer.
 
 #### Landing Page Middleware
 

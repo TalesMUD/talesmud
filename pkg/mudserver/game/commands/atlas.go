@@ -21,5 +21,8 @@ func PushAtlas(game def.GameCtrl, userID string, character *characters.Character
 		return
 	}
 	atlas := worldmap.Reveal(worldmap.Compile(rooms), character)
+	if npcs, nerr := game.GetFacade().NPCsService().FindAll(); nerr == nil {
+		worldmap.AttachResidents(&atlas, worldmap.ResidentsFromNPCs(npcs))
+	}
 	game.SendMessage() <- messages.NewAtlasMessage(userID, atlas)
 }

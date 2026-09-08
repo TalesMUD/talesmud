@@ -23,7 +23,9 @@
   let panStart = { x: 0, y: 0, panX: 0, panY: 0 };
   let tooltip = { visible: false, text: '', x: 0, y: 0 };
 
-  let stageWrap, stageCanvas, modalEl;
+  let stageWrap, stageCanvas, modalEl, mapBodyEl, intelEl;
+  let selectedId = null;
+  let lastTap = { id: null, at: 0 };
   let stageObserver;
   const hitState = { items: [] };
   let lastStageSize = null;
@@ -67,8 +69,8 @@
 
   function sizeModal() {
     if (!modalEl || typeof window === 'undefined') return { w: 0, h: 0 };
-    const w = Math.max(320, Math.min(Math.floor(window.innerWidth * 0.96), 1100));
-    const h = Math.max(280, Math.min(Math.floor(window.innerHeight * 0.92), 800));
+    const w = Math.max(640, Math.round(window.innerWidth * 0.8));
+    const h = Math.max(460, Math.round(window.innerHeight * 0.8));
     modalEl.style.boxSizing = 'border-box';
     modalEl.style.position = 'relative';
     modalEl.style.left = 'auto';
@@ -87,6 +89,15 @@
     modalEl.style.maxHeight = h + 'px';
     modalEl.style.flex = 'none';
     modalEl.style.transform = 'none';
+    const narrow = window.innerWidth < 900;
+    if (mapBodyEl) {
+      mapBodyEl.style.flexDirection = narrow ? 'column' : 'row';
+    }
+    if (intelEl) {
+      intelEl.style.width = narrow ? '100%' : '300px';
+      intelEl.style.flex = narrow ? '0 0 38%' : '0 0 300px';
+      intelEl.style.maxHeight = narrow ? '38%' : 'none';
+    }
     return { w, h };
   }
 
@@ -157,6 +168,14 @@
 
   $: visiblePlaces = (atlas.places || []).filter(p => p.layer === activeLayer);
   $: visibleRegions = (atlas.regions || []).filter(r => r.layer === activeLayer);
+  $: if (store && $store.mapSelectedId && $store.mapSelectedId !== selectedId) {
+    selectedId = $store.mapSelectedId;
+  }
+  $: selectedPlace = (atlas.places || []).find(p => p.id === selectedId) || null;
+  $: if (open && !selectedId && currentRoomId) {
+    selectedId = currentRoomId;
+    if (store && store.selectMapPlace) store.selectMapPlace(currentRoomId);
+  }
   $: layers = atlas.layers || [];
 
   function placeById(id) {
@@ -199,6 +218,22 @@
       }
     }
     return null;
+  }
+
+  function requestTravel() {
+    if (selectedPlace && selectedPlace.discovered && selectedPlace.id !== currentRoomId) {
+      startTravel(selectedPlace.id);
+    }
+  }
+
+  function dirBadge(d) {
+    const k = String(d || '').toLowerCase();
+    const m = { north: 'N', south: 'S', east: 'E', west: 'W', up: 'UP', down: 'DWN', northeast: 'NE', northwest: 'NW', southeast: 'SE', southwest: 'SW' };
+    return m[k] || String(d || '?').slice(0, 3).toUpperCase();
+  }
+
+  function dangerLabel(d) {
+    return ({ safe: 'Safe', low: 'Low', hazard: 'Hazard', hostile: 'Hostile', uncharted: 'Unknown' })[d] || d || '—';
   }
 
   function startTravel(targetId) {
@@ -260,6 +295,7 @@
       userScale,
       travelPathRoomIds,
       travelTargetId,
+      selectedId,
     });
     hitState.items = result.hits;
   }
@@ -308,7 +344,8 @@
       let text = found.discovered ? (found.name || found.id) : 'Uncharted';
       if (found.areaName && found.discovered) text += ' · ' + found.areaName;
       if (found.current || isCurrentPlace(found.id, currentRoomId)) text += ' (you are here)';
-      else if (found.discovered) text += ' (click to travel)';
+      else if (found.discovered) text += ' · inspect';
+      else text += ' · uncharted';
       tooltip = { visible: true, text, x: e.clientX - rect.left, y: e.clientY - rect.top };
     } else {
       tooltip = { ...tooltip, visible: false };
@@ -320,11 +357,15 @@
     if (isPanning && !didDrag) {
       const rect = canvas.getBoundingClientRect();
       const found = hitTest(canvas, e.clientX - rect.left, e.clientY - rect.top);
-      if (found && found.discovered && found.id !== currentRoomId) {
-        if (found.id === travelTargetId) cancelTravel();
-        else {
-          cancelTravel();
+      if (found) {
+        const now = Date.now();
+        const dbl = lastTap.id === found.id && now - lastTap.at < 420;
+        lastTap = { id: found.id, at: now };
+        if (dbl && found.discovered && found.id !== currentRoomId) {
           startTravel(found.id);
+        } else {
+          selectedId = found.id;
+          if (store && store.selectMapPlace) store.selectMapPlace(found.id);
         }
         scheduleDraw();
       }
@@ -447,21 +488,120 @@
   /* Never class="modal" — Materialize global .modal is opacity:0 / display:none. */
   .map-panel {
     position: relative;
-    width: min(96vw, 1100px);
-    height: min(92vh, 800px);
-    max-width: 1100px;
-    max-height: 800px;
+    width: 80vw;
+    height: 80vh;
+    max-width: none;
+    max-height: none;
     display: flex;
     flex-direction: column;
-    background: rgba(12, 16, 24, 0.97);
+    background: #0b0e14;
     border: 1px solid rgba(212, 175, 55, 0.28);
-    border-radius: 10px;
+    border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
     opacity: 1;
     visibility: visible;
     transform: none;
   }
+  .map-body {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: row;
+  }
+  .intel {
+    flex: 0 0 300px;
+    width: 300px;
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    padding: 12px 14px 16px;
+    background: #10141c;
+    border-left: 1px solid rgba(212, 175, 55, 0.18);
+    color: #d7d0c4;
+    font-size: 12px;
+  }
+  .intel-kicker {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #8a8070;
+    margin-bottom: 4px;
+  }
+  .intel-title {
+    margin: 0 0 8px;
+    font-family: Georgia, serif;
+    font-size: 1.15rem;
+    color: #f3ead4;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+  .intel-summary { margin: 0 0 10px; color: #b7ae9e; line-height: 1.45; }
+  .intel-meta, .intel-tags, .intel-muted, .intel-hint, .intel-empty { color: #8a8070; font-size: 11px; }
+  .intel-empty { padding: 1.5em 0; }
+  .intel-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+  .chip {
+    border: 1px solid rgba(148,163,184,0.28);
+    border-radius: 999px;
+    padding: 1px 7px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #c5bba8;
+  }
+  .chip.you { border-color: #e0b84a; color: #e0b84a; }
+  .chip.danger-safe { border-color: #5ee0a0; color: #5ee0a0; }
+  .chip.danger-low { border-color: #c4b07a; color: #c4b07a; }
+  .chip.danger-hazard { border-color: #f0b44a; color: #f0b44a; }
+  .chip.danger-hostile { border-color: #f07171; color: #f07171; }
+  .chip.danger-uncharted { border-color: #6b7280; color: #9ca3af; }
+  .intel-section {
+    margin: 12px 0 6px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #9a8f78;
+    border-bottom: 1px solid rgba(148,163,184,0.12);
+    padding-bottom: 3px;
+  }
+  .exit-row, .res-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .exit-dir {
+    flex: 0 0 32px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 10px;
+    color: #f3ead4;
+    background: rgba(255,255,255,0.05);
+    border-radius: 3px;
+    padding: 3px 0;
+  }
+  .exit-body { display: flex; flex-direction: column; min-width: 0; }
+  .exit-body strong { color: #eee6d6; font-size: 12px; }
+  .exit-body em { font-style: normal; color: #8a8070; font-size: 10px; }
+  .res-dot { width: 7px; height: 7px; border-radius: 50%; background: #5b9fd6; flex-shrink: 0; }
+  .res-dot.enemy { background: #e07a7a; }
+  .res-kind { margin-left: auto; font-size: 10px; color: #8a8070; text-transform: uppercase; }
+  .travel-btn {
+    margin-top: 14px;
+    width: 100%;
+    border: 1px solid #d4af37;
+    background: #c9a227;
+    color: #1a1408;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 8px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .travel-btn:disabled { opacity: 0.5; cursor: default; }
+  .intel-hint { margin-top: 6px; }
   .toolbar {
     flex: 0 0 auto;
     display: flex;
@@ -549,12 +689,12 @@
     <div
       class="map-panel"
       bind:this={modalEl}
-      style="position:relative;left:auto;right:auto;top:auto;bottom:auto;width:min(96vw,1100px);height:min(92vh,800px);max-width:1100px;max-height:800px;display:flex;flex-direction:column;overflow:hidden;background:rgba(12,16,24,0.97);border:1px solid rgba(212,175,55,0.28);border-radius:10px;flex:none;opacity:1;visibility:visible;transform:none;"
+      style="position:relative;left:auto;right:auto;top:auto;bottom:auto;width:80vw;height:80vh;max-width:none;max-height:none;display:flex;flex-direction:column;overflow:hidden;background:#0b0e14;border:1px solid rgba(212,175,55,0.28);border-radius:8px;flex:none;opacity:1;visibility:visible;transform:none;"
       on:click|stopPropagation
     >
       <div class="toolbar">
-        <i class="material-icons">map</i>
-        Map
+        <i class="material-icons">explore</i>
+        Cartographer
         {#if isTraveling}<span class="travel">Traveling…</span>{/if}
         {#if layers.length > 1}
           <div class="layer-tabs">
@@ -576,19 +716,77 @@
           <i class="material-icons">close</i>
         </button>
       </div>
-      <div class="stage" style="flex:1 1 0;min-height:0;position:relative;overflow:hidden;" bind:this={stageWrap}>
-        <canvas
-          style="position:absolute;inset:0;display:block;width:100%;height:100%;"
-          bind:this={stageCanvas}
-          on:pointerdown={pointerDown}
-          on:pointermove={(e) => pointerMove(e, stageCanvas)}
-          on:pointerup={(e) => pointerUp(e, stageCanvas)}
-          on:pointerleave={() => tooltip = { ...tooltip, visible: false }}
-          on:wheel={onWheel}
-        ></canvas>
-        {#if tooltip.visible}
-          <div class="tooltip" style="left: {tooltip.x}px; top: {tooltip.y}px;">{tooltip.text}</div>
-        {/if}
+      <div class="map-body" bind:this={mapBodyEl}>
+        <div class="stage" style="flex:1 1 0;min-height:0;min-width:0;position:relative;overflow:hidden;" bind:this={stageWrap}>
+          <canvas
+            style="position:absolute;inset:0;display:block;width:100%;height:100%;"
+            bind:this={stageCanvas}
+            on:pointerdown={pointerDown}
+            on:pointermove={(e) => pointerMove(e, stageCanvas)}
+            on:pointerup={(e) => pointerUp(e, stageCanvas)}
+            on:pointerleave={() => tooltip = { ...tooltip, visible: false }}
+            on:wheel={onWheel}
+          ></canvas>
+          {#if tooltip.visible}
+            <div class="tooltip" style="left: {tooltip.x}px; top: {tooltip.y}px;">{tooltip.text}</div>
+          {/if}
+        </div>
+        <aside class="intel" bind:this={intelEl}>
+          {#if !selectedPlace}
+            <div class="intel-empty">Select a room on the chart.</div>
+          {:else if !selectedPlace.discovered}
+            <div class="intel-kicker">Uncharted</div>
+            <h2 class="intel-title">Fog of war</h2>
+            <p class="intel-summary">{selectedPlace.summary || 'Walk closer to chart this ground.'}</p>
+            <div class="intel-meta">Z {selectedPlace.z} · {selectedPlace.layer}</div>
+          {:else}
+            <div class="intel-kicker">{selectedPlace.areaName || selectedPlace.area || 'Unknown sector'}</div>
+            <h2 class="intel-title">{selectedPlace.name || selectedPlace.id}</h2>
+            <div class="intel-chips">
+              <span class="chip danger-{selectedPlace.danger || 'low'}">{dangerLabel(selectedPlace.danger)}</span>
+              <span class="chip">Z:{selectedPlace.z} {selectedPlace.layer}</span>
+              <span class="chip">{selectedPlace.biome || 'wild'}</span>
+              <span class="chip">{selectedPlace.kind || 'place'}</span>
+              {#if selectedPlace.current}<span class="chip you">You are here</span>{/if}
+            </div>
+            <p class="intel-summary">{selectedPlace.summary || ''}</p>
+            {#if selectedPlace.tags && selectedPlace.tags.length}
+              <div class="intel-tags">{selectedPlace.tags.join(' · ')}</div>
+            {/if}
+            <div class="intel-section">Vectors &amp; exits</div>
+            {#if selectedPlace.exits && selectedPlace.exits.length}
+              {#each selectedPlace.exits as ex}
+                <div class="exit-row">
+                  <span class="exit-dir">{dirBadge(ex.dir)}</span>
+                  <span class="exit-body">
+                    <strong>{ex.toName || (ex.to ? 'Uncharted' : '—')}</strong>
+                    <em>{ex.hidden ? 'hidden' : ex.dir}{#if ex.vertical} · stair{/if}</em>
+                  </span>
+                </div>
+              {/each}
+            {:else}
+              <div class="intel-muted">No charted exits.</div>
+            {/if}
+            <div class="intel-section">Usually here</div>
+            {#if selectedPlace.residents && selectedPlace.residents.length}
+              {#each selectedPlace.residents as r}
+                <div class="res-row">
+                  <span class="res-dot {r.kind}"></span>
+                  {r.name}
+                  <span class="res-kind">{r.kind}</span>
+                </div>
+              {/each}
+            {:else}
+              <div class="intel-muted">None recorded.</div>
+            {/if}
+            {#if selectedPlace.id !== currentRoomId && selectedPlace.discovered}
+              <button class="travel-btn" type="button" on:click={requestTravel} disabled={isTraveling}>
+                {isTraveling ? 'Traveling…' : 'Travel'}
+              </button>
+              <div class="intel-hint">Double-click a room to travel.</div>
+            {/if}
+          {/if}
+        </aside>
       </div>
     </div>
   </div>

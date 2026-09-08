@@ -475,6 +475,7 @@ function createStore() {
     atlas: emptyAtlas(),
     atlasLayer: null,
     mapOverviewOpen: false,
+    mapSelectedId: null,
     inventoryOverlayOpen: false,
   });
 
@@ -1181,10 +1182,13 @@ function createStore() {
       });
     },
 
-    openMapOverview: () => {
+    openMapOverview: (focusId) => {
       update((state) => {
-        // Immutable update — Svelte writable uses reference equality.
-        return { ...state, mapOverviewOpen: true };
+        return {
+          ...state,
+          mapOverviewOpen: true,
+          mapSelectedId: focusId || state.mapSelectedId || state.currentRoomId || null,
+        };
       });
     },
     closeMapOverview: () => {
@@ -1195,6 +1199,11 @@ function createStore() {
     setMapOverviewOpen: (open) => {
       update((state) => {
         return { ...state, mapOverviewOpen: !!open };
+      });
+    },
+    selectMapPlace: (id) => {
+      update((state) => {
+        return { ...state, mapSelectedId: id || null };
       });
     },
 

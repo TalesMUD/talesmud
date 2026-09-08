@@ -521,8 +521,9 @@ function drawGrid(ctx, cam, w, h, places) {
   minY -= 1;
   maxY += 1;
   const half = tileHalf(cam.tileStep);
-  ctx.strokeStyle = 'rgba(160, 140, 100, 0.06)';
+  ctx.strokeStyle = 'rgba(180, 160, 110, 0.09)';
   ctx.lineWidth = 1;
+  ctx.setLineDash([1, 7]);
   for (let gx = minX; gx <= maxX; gx++) {
     const top = projectGrid(gx, minY, cam, w, h);
     const bottom = projectGrid(gx, maxY, cam, w, h);
@@ -539,6 +540,7 @@ function drawGrid(ctx, cam, w, h, places) {
     ctx.lineTo(right.px + half, right.py + half);
     ctx.stroke();
   }
+  ctx.setLineDash([]);
 }
 
 function drawAreaCells(ctx, places, cam, w, h, showLabels) {
@@ -609,18 +611,17 @@ function drawCorridor(ctx, a, b, pa, pb, path, cam, onTravel) {
   const { dx, dy } = worldDelta(a, b);
   const from = tileEdgePoint(pa.px, pa.py, half, dx, dy);
   const to = tileEdgePoint(pb.px, pb.py, half, -dx, -dy);
-  const biome = biomeOf(a.biome);
   const cross = isCrossArea(a, b);
   const bothKnown = a.discovered && b.discovered;
 
   ctx.beginPath();
   ctx.moveTo(from.px, from.py);
   ctx.lineTo(to.px, to.py);
-  ctx.strokeStyle = onTravel ? '#38bdf8' : cross ? 'rgba(200, 110, 70, 0.75)' : biome.path;
-  ctx.lineWidth = onTravel ? 3.5 : cross ? 2 : path.kind === 'road' ? 2.8 : 2.2;
-  ctx.globalAlpha = bothKnown ? 0.9 : 0.38;
-  ctx.setLineDash(cross ? [7, 5] : []);
-  ctx.lineCap = 'round';
+  ctx.strokeStyle = onTravel ? '#5ee7ff' : cross ? 'rgba(210, 120, 70, 0.8)' : 'rgba(196, 168, 110, 0.72)';
+  ctx.lineWidth = onTravel ? 2.4 : path.kind === 'road' ? 1.8 : 1.45;
+  ctx.globalAlpha = bothKnown ? 0.95 : 0.4;
+  ctx.setLineDash(onTravel ? [7, 4] : [4, 5]);
+  ctx.lineCap = 'butt';
   ctx.stroke();
   ctx.setLineDash([]);
   ctx.globalAlpha = 1;
@@ -806,8 +807,28 @@ function drawTile(ctx, place, px, py, tileStep, opts) {
     roundRect(ctx, x - 2, y - 2, size + 4, size + 4, 4);
     ctx.stroke();
   }
+  if (opts.selected) {
+    drawCornerBrackets(ctx, x - 3, y - 3, size + 6, '#e8c060');
+  } else if (!fog) {
+    drawCornerBrackets(ctx, x - 1, y - 1, size + 2, 'rgba(200, 180, 130, 0.35)');
+  }
 
   return half;
+}
+
+function drawCornerBrackets(ctx, x, y, size, color) {
+  const L = Math.max(5, size * 0.16);
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = Math.max(1.4, size * 0.035);
+  ctx.lineCap = 'square';
+  ctx.beginPath();
+  ctx.moveTo(x, y + L); ctx.lineTo(x, y); ctx.lineTo(x + L, y);
+  ctx.moveTo(x + size - L, y); ctx.lineTo(x + size, y); ctx.lineTo(x + size, y + L);
+  ctx.moveTo(x, y + size - L); ctx.lineTo(x, y + size); ctx.lineTo(x + L, y + size);
+  ctx.moveTo(x + size - L, y + size); ctx.lineTo(x + size, y + size); ctx.lineTo(x + size, y + size - L);
+  ctx.stroke();
+  ctx.restore();
 }
 
 export function paintAtlas(ctx, params) {
@@ -825,6 +846,7 @@ export function paintAtlas(ctx, params) {
     userScale,
     travelPathRoomIds = new Set(),
     travelTargetId = null,
+    selectedId = null,
   } = params;
 
   ctx.clearRect(0, 0, w, h);
@@ -908,7 +930,11 @@ export function paintAtlas(ctx, params) {
   for (const place of sorted) {
     const { px, py } = projectPlace(place, cam, w, h);
     const isHere = place.id === hereId;
-    const r = drawTile(ctx, place, px, py, cam.tileStep, { travelTargetId, isHere });
+    const r = drawTile(ctx, place, px, py, cam.tileStep, {
+      travelTargetId,
+      isHere,
+      selected: selectedId && place.id === selectedId,
+    });
     hits.push({ px, py, r: r + 4, place: { ...place, current: isHere } });
     if (isHere) {
       herePx = px;
