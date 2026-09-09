@@ -435,6 +435,30 @@
     border-radius: 3px;
     cursor: pointer;
   }
+  @media (max-width: 768px) {
+    .icon-btn {
+      min-width: 40px;
+      min-height: 40px;
+      justify-content: center;
+    }
+    .intel-strip {
+      padding: 8px;
+      gap: 8px;
+    }
+    .intel-strip-btn {
+      min-height: 40px;
+      min-width: 72px;
+      font-size: 11px;
+      padding: 6px 10px;
+      touch-action: manipulation;
+    }
+    .compact-open {
+      min-height: 40px;
+      padding: 8px 10px;
+      font-size: 12px;
+      touch-action: manipulation;
+    }
+  }
 </style>
 
 <div class="atlas atlas-compact">

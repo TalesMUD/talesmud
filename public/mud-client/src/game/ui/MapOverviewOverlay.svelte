@@ -2,6 +2,9 @@
   import { onDestroy, onMount, tick } from 'svelte';
   import { readStageSize, shouldRepaintSize, applyCanvasBitmap } from '../widgets/atlasLayout.js';
   import { paintAtlas, isCurrentPlace, panToCenterPlace, onMapTilesReady, clampMapScale, setYouPortrait } from '../widgets/atlasRenderer.js';
+  import { mobileStore } from '../mobile/mobileStore.js';
+
+  const { isMobile } = mobileStore;
 
   export let store = null;
   export let sendMessage = null;
@@ -26,6 +29,9 @@
   let stageWrap, stageCanvas, modalEl, mapBodyEl, intelEl;
   let selectedId = null;
   let lastTap = { id: null, at: 0 };
+  let intelExpanded = false;
+  const pointers = new Map();
+  let pinchStart = null;
   let stageObserver;
   const hitState = { items: [] };
   let lastStageSize = null;
@@ -36,27 +42,21 @@
 
   $: open = !!(store && $store && $store.mapOverviewOpen);
 
+  function isNarrow() {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth <= 768;
+  }
+
+  function viewportSize() {
+    const vv = typeof window !== 'undefined' && window.visualViewport;
+    return {
+      w: vv ? Math.round(vv.width) : window.innerWidth,
+      h: vv ? Math.round(vv.height) : window.innerHeight,
+    };
+  }
+
   function portalToBody(node) {
-    // Inline every critical property — Materialize + scoped CSS must not win.
-    node.style.cssText = [
-      'position:fixed',
-      'top:0',
-      'left:0',
-      'right:0',
-      'bottom:0',
-      'width:100vw',
-      'height:100vh',
-      'z-index:200000',
-      'display:flex',
-      'align-items:center',
-      'justify-content:center',
-      'padding:12px',
-      'box-sizing:border-box',
-      'background:rgba(0,0,0,0.82)',
-      'opacity:1',
-      'visibility:visible',
-      'pointer-events:auto',
-    ].join(';');
+    applyOverlayChrome(node);
     if (node.parentNode !== document.body) {
       document.body.appendChild(node);
     }
@@ -67,10 +67,38 @@
     };
   }
 
+  function applyOverlayChrome(node) {
+    if (!node) return;
+    const narrow = isNarrow();
+    const vp = viewportSize();
+    node.style.cssText = [
+      'position:fixed',
+      'top:0',
+      'left:0',
+      'right:0',
+      'bottom:0',
+      narrow ? `width:${vp.w}px` : 'width:100vw',
+      narrow ? `height:${vp.h}px` : 'height:100vh',
+      'z-index:200000',
+      'display:flex',
+      narrow ? 'align-items:stretch' : 'align-items:center',
+      narrow ? 'justify-content:stretch' : 'justify-content:center',
+      narrow ? 'padding:0' : 'padding:12px',
+      'box-sizing:border-box',
+      'background:rgba(0,0,0,0.82)',
+      'opacity:1',
+      'visibility:visible',
+      'pointer-events:auto',
+    ].join(';');
+  }
+
   function sizeModal() {
     if (!modalEl || typeof window === 'undefined') return { w: 0, h: 0 };
-    const w = Math.max(640, Math.round(window.innerWidth * 0.8));
-    const h = Math.max(460, Math.round(window.innerHeight * 0.8));
+    const narrow = isNarrow();
+    const vp = viewportSize();
+    const w = narrow ? vp.w : Math.max(640, Math.round(vp.w * 0.8));
+    const h = narrow ? vp.h : Math.max(460, Math.round(vp.h * 0.8));
+    applyOverlayChrome(document.getElementById('map-overview-overlay'));
     modalEl.style.boxSizing = 'border-box';
     modalEl.style.position = 'relative';
     modalEl.style.left = 'auto';
@@ -89,14 +117,25 @@
     modalEl.style.maxHeight = h + 'px';
     modalEl.style.flex = 'none';
     modalEl.style.transform = 'none';
-    const narrow = window.innerWidth < 900;
+    modalEl.style.borderRadius = narrow ? '0' : '8px';
     if (mapBodyEl) {
-      mapBodyEl.style.flexDirection = narrow ? 'column' : 'row';
+      mapBodyEl.style.flexDirection = 'row';
+      mapBodyEl.style.position = 'relative';
     }
     if (intelEl) {
-      intelEl.style.width = narrow ? '100%' : '300px';
-      intelEl.style.flex = narrow ? '0 0 38%' : '0 0 300px';
-      intelEl.style.maxHeight = narrow ? '38%' : 'none';
+      if (narrow) {
+        intelEl.style.width = '100%';
+        intelEl.style.flex = 'none';
+        intelEl.style.maxHeight = '';
+      } else {
+        intelEl.style.width = '300px';
+        intelEl.style.flex = '0 0 300px';
+        intelEl.style.maxHeight = 'none';
+        intelEl.style.position = '';
+        intelEl.style.left = '';
+        intelEl.style.right = '';
+        intelEl.style.bottom = '';
+      }
     }
     return { w, h };
   }
@@ -157,10 +196,12 @@
   $: if (open && !wasOpen) {
     wasOpen = true;
     userScale = 1;
+    intelExpanded = false;
     lastStageSize = null;
     paintAfterLayout();
   } else if (!open && wasOpen) {
     wasOpen = false;
+    intelExpanded = false;
     scheduleDraw();
   }
 
@@ -170,8 +211,15 @@
   $: visibleRegions = (atlas.regions || []).filter(r => r.layer === activeLayer);
   $: if (store && $store.mapSelectedId && $store.mapSelectedId !== selectedId) {
     selectedId = $store.mapSelectedId;
+    if ($isMobile) intelExpanded = false;
   }
   $: selectedPlace = (atlas.places || []).find(p => p.id === selectedId) || null;
+  $: canTravel = !!(selectedPlace && selectedPlace.discovered && selectedPlace.id !== currentRoomId);
+  let lastNarrow = null;
+  $: if (open && $isMobile !== lastNarrow) {
+    lastNarrow = $isMobile;
+    if (typeof window !== 'undefined' && modalEl) tick().then(() => paintAfterLayout());
+  }
   $: if (open && !selectedId && currentRoomId) {
     selectedId = currentRoomId;
     if (store && store.selectMapPlace) store.selectMapPlace(currentRoomId);
@@ -321,14 +369,36 @@
     return null;
   }
 
+  function pointerDist() {
+    const pts = [...pointers.values()];
+    if (pts.length < 2) return 0;
+    return Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+  }
+
   function pointerDown(e) {
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+    if (pointers.size >= 2) {
+      isPanning = false;
+      didDrag = true;
+      pinchStart = { dist: pointerDist() || 1, scale: userScale };
+      return;
+    }
     isPanning = true;
     didDrag = false;
     panStart = { x: e.clientX, y: e.clientY, panX, panY };
-    e.currentTarget.setPointerCapture(e.pointerId);
   }
 
   function pointerMove(e, canvas) {
+    if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinchStart && pointers.size >= 2) {
+      const d = pointerDist();
+      if (pinchStart.dist > 8 && d > 8) {
+        userScale = clampMapScale(pinchStart.scale * (d / pinchStart.dist));
+        scheduleDraw();
+      }
+      return;
+    }
     if (isPanning) {
       const dx = e.clientX - panStart.x;
       const dy = e.clientY - panStart.y;
@@ -338,6 +408,7 @@
       scheduleDraw();
       return;
     }
+    if ($isMobile) return;
     const rect = canvas.getBoundingClientRect();
     const found = hitTest(canvas, e.clientX - rect.left, e.clientY - rect.top);
     if (found) {
@@ -353,18 +424,21 @@
   }
 
   function pointerUp(e, canvas) {
-    e.currentTarget.releasePointerCapture(e.pointerId);
+    pointers.delete(e.pointerId);
+    if (pointers.size < 2) pinchStart = null;
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (err) { /* ignore */ }
     if (isPanning && !didDrag) {
       const rect = canvas.getBoundingClientRect();
       const found = hitTest(canvas, e.clientX - rect.left, e.clientY - rect.top);
       if (found) {
         const now = Date.now();
-        const dbl = lastTap.id === found.id && now - lastTap.at < 420;
+        const dbl = !$isMobile && lastTap.id === found.id && now - lastTap.at < 420;
         lastTap = { id: found.id, at: now };
         if (dbl && found.discovered && found.id !== currentRoomId) {
           startTravel(found.id);
         } else {
           selectedId = found.id;
+          intelExpanded = false;
           if (store && store.selectMapPlace) store.selectMapPlace(found.id);
         }
         scheduleDraw();
@@ -372,6 +446,10 @@
     }
     isPanning = false;
     didDrag = false;
+  }
+
+  function toggleIntel() {
+    intelExpanded = !intelExpanded;
   }
 
   function onWheel(e) {
@@ -459,11 +537,13 @@
       if (open) paintAfterLayout();
     };
     window.addEventListener('resize', resizeHandler);
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', resizeHandler);
   });
 
   onDestroy(() => {
     if (escHandler) window.removeEventListener('keydown', escHandler);
     if (resizeHandler) window.removeEventListener('resize', resizeHandler);
+    if (resizeHandler && window.visualViewport) window.visualViewport.removeEventListener('resize', resizeHandler);
     if (drawRaf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(drawRaf);
     if (stageObserver) stageObserver.disconnect();
     cancelTravel();
@@ -602,6 +682,8 @@
   }
   .travel-btn:disabled { opacity: 0.5; cursor: default; }
   .intel-hint { margin-top: 6px; }
+  .sheet-handle { display: none; }
+  .peek-head { display: contents; }
   .toolbar {
     flex: 0 0 auto;
     display: flex;
@@ -672,6 +754,118 @@
     transform: translate(-50%, -110%);
     border: 1px solid rgba(148,163,184,0.25);
   }
+  .toolbar-title { white-space: nowrap; }
+
+  @media (max-width: 768px) {
+    .map-overlay.narrow {
+      padding: 0 !important;
+      align-items: stretch !important;
+      justify-content: stretch !important;
+      height: 100dvh !important;
+    }
+    .map-panel.narrow {
+      width: 100% !important;
+      height: 100% !important;
+      min-width: 0 !important;
+      min-height: 0 !important;
+      max-width: none !important;
+      max-height: none !important;
+      border-radius: 0 !important;
+      border: none !important;
+      padding-top: env(safe-area-inset-top, 0px);
+    }
+    .map-body {
+      position: relative;
+      padding-bottom: calc(176px + env(safe-area-inset-bottom, 0px));
+    }
+    .toolbar {
+      padding: 4px 6px;
+      gap: 4px;
+      min-height: 48px;
+    }
+    .toolbar-title { display: none; }
+    .layer-tabs {
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      -webkit-overflow-scrolling: touch;
+    }
+    .icon-btn {
+      min-width: 44px;
+      min-height: 44px;
+      justify-content: center;
+      flex: 0 0 auto;
+    }
+    .layer-tab {
+      min-height: 36px;
+      padding: 6px 10px;
+      font-size: 11px;
+      flex: 0 0 auto;
+    }
+    .intel.sheet {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100% !important;
+      flex: none !important;
+      min-height: calc(176px + env(safe-area-inset-bottom, 0px));
+      max-height: calc(176px + env(safe-area-inset-bottom, 0px));
+      overflow: hidden;
+      border-left: none;
+      border-top: 1px solid rgba(212, 175, 55, 0.28);
+      border-radius: 16px 16px 0 0;
+      padding: 2px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+      z-index: 4;
+      box-shadow: 0 -10px 28px rgba(0,0,0,0.45);
+      overscroll-behavior: contain;
+    }
+    .intel.sheet.expanded {
+      max-height: min(62dvh, 560px);
+      overflow: auto;
+    }
+    .intel.sheet .intel-more {
+      display: none;
+    }
+    .intel.sheet.expanded .intel-more {
+      display: block;
+    }
+    .intel.sheet:not(.expanded) .intel-chips {
+      max-height: 22px;
+      overflow: hidden;
+    }
+    .peek-head {
+      display: block;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .sheet-handle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      border: none;
+      background: transparent;
+      padding: 6px 0 4px;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .sheet-grip {
+      width: 42px;
+      height: 4px;
+      border-radius: 999px;
+      background: rgba(212, 175, 55, 0.55);
+    }
+    .intel-title { font-size: 1.05rem; margin-bottom: 4px; }
+    .travel-btn {
+      margin-top: 8px;
+      min-height: 48px;
+      font-size: 15px;
+      touch-action: manipulation;
+    }
+    .intel-empty { padding: 0.4em 0 0.8em; }
+  }
 </style>
 
 {#if open}
@@ -679,6 +873,7 @@
   <div
     id="map-overview-overlay"
     class="map-overlay"
+    class:narrow={$isMobile}
     style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:200000;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;background:rgba(0,0,0,0.82);opacity:1;visibility:visible;"
     use:portalToBody
     role="dialog"
@@ -688,13 +883,14 @@
   >
     <div
       class="map-panel"
+      class:narrow={$isMobile}
       bind:this={modalEl}
       style="position:relative;left:auto;right:auto;top:auto;bottom:auto;width:80vw;height:80vh;max-width:none;max-height:none;display:flex;flex-direction:column;overflow:hidden;background:#0b0e14;border:1px solid rgba(212,175,55,0.28);border-radius:8px;flex:none;opacity:1;visibility:visible;transform:none;"
       on:click|stopPropagation
     >
       <div class="toolbar">
         <i class="material-icons">explore</i>
-        Cartographer
+        <span class="toolbar-title">Cartographer</span>
         {#if isTraveling}<span class="travel">Traveling…</span>{/if}
         {#if layers.length > 1}
           <div class="layer-tabs">
@@ -724,6 +920,7 @@
             on:pointerdown={pointerDown}
             on:pointermove={(e) => pointerMove(e, stageCanvas)}
             on:pointerup={(e) => pointerUp(e, stageCanvas)}
+            on:pointercancel={(e) => pointerUp(e, stageCanvas)}
             on:pointerleave={() => tooltip = { ...tooltip, visible: false }}
             on:wheel={onWheel}
           ></canvas>
@@ -731,60 +928,76 @@
             <div class="tooltip" style="left: {tooltip.x}px; top: {tooltip.y}px;">{tooltip.text}</div>
           {/if}
         </div>
-        <aside class="intel" bind:this={intelEl}>
+        <aside class="intel" class:sheet={$isMobile} class:expanded={intelExpanded} bind:this={intelEl}>
+          {#if $isMobile}
+            <button class="sheet-handle" type="button" on:click={toggleIntel} aria-label={intelExpanded ? 'Collapse intel' : 'Expand intel'}>
+              <span class="sheet-grip"></span>
+            </button>
+          {/if}
           {#if !selectedPlace}
             <div class="intel-empty">Select a room on the chart.</div>
           {:else if !selectedPlace.discovered}
-            <div class="intel-kicker">Uncharted</div>
-            <h2 class="intel-title">Fog of war</h2>
+            <div class="peek-head" role="button" tabindex="0" on:click={$isMobile ? toggleIntel : undefined} on:keydown={(e) => { if ($isMobile && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggleIntel(); } }}>
+              <div class="intel-kicker">Uncharted</div>
+              <h2 class="intel-title">Fog of war</h2>
+            </div>
             <p class="intel-summary">{selectedPlace.summary || 'Walk closer to chart this ground.'}</p>
             <div class="intel-meta">Z {selectedPlace.z} · {selectedPlace.layer}</div>
           {:else}
-            <div class="intel-kicker">{selectedPlace.areaName || selectedPlace.area || 'Unknown sector'}</div>
-            <h2 class="intel-title">{selectedPlace.name || selectedPlace.id}</h2>
-            <div class="intel-chips">
-              <span class="chip danger-{selectedPlace.danger || 'low'}">{dangerLabel(selectedPlace.danger)}</span>
-              <span class="chip">Z:{selectedPlace.z} {selectedPlace.layer}</span>
-              <span class="chip">{selectedPlace.biome || 'wild'}</span>
-              <span class="chip">{selectedPlace.kind || 'place'}</span>
-              {#if selectedPlace.current}<span class="chip you">You are here</span>{/if}
+            <div class="peek-head" role="button" tabindex="0" on:click={$isMobile ? toggleIntel : undefined} on:keydown={(e) => { if ($isMobile && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggleIntel(); } }}>
+              <div class="intel-kicker">{selectedPlace.areaName || selectedPlace.area || 'Unknown sector'}</div>
+              <h2 class="intel-title">{selectedPlace.name || selectedPlace.id}</h2>
+              <div class="intel-chips">
+                <span class="chip danger-{selectedPlace.danger || 'low'}">{dangerLabel(selectedPlace.danger)}</span>
+                <span class="chip">Z:{selectedPlace.z} {selectedPlace.layer}</span>
+                <span class="chip">{selectedPlace.biome || 'wild'}</span>
+                <span class="chip">{selectedPlace.kind || 'place'}</span>
+                {#if selectedPlace.current}<span class="chip you">You are here</span>{/if}
+              </div>
             </div>
-            <p class="intel-summary">{selectedPlace.summary || ''}</p>
-            {#if selectedPlace.tags && selectedPlace.tags.length}
-              <div class="intel-tags">{selectedPlace.tags.join(' · ')}</div>
-            {/if}
-            <div class="intel-section">Vectors &amp; exits</div>
-            {#if selectedPlace.exits && selectedPlace.exits.length}
-              {#each selectedPlace.exits as ex}
-                <div class="exit-row">
-                  <span class="exit-dir">{dirBadge(ex.dir)}</span>
-                  <span class="exit-body">
-                    <strong>{ex.toName || (ex.to ? 'Uncharted' : '—')}</strong>
-                    <em>{ex.hidden ? 'hidden' : ex.dir}{#if ex.vertical} · stair{/if}</em>
-                  </span>
-                </div>
-              {/each}
-            {:else}
-              <div class="intel-muted">No charted exits.</div>
-            {/if}
-            <div class="intel-section">Usually here</div>
-            {#if selectedPlace.residents && selectedPlace.residents.length}
-              {#each selectedPlace.residents as r}
-                <div class="res-row">
-                  <span class="res-dot {r.kind}"></span>
-                  {r.name}
-                  <span class="res-kind">{r.kind}</span>
-                </div>
-              {/each}
-            {:else}
-              <div class="intel-muted">None recorded.</div>
-            {/if}
-            {#if selectedPlace.id !== currentRoomId && selectedPlace.discovered}
-              <button class="travel-btn" type="button" on:click={requestTravel} disabled={isTraveling}>
-                {isTraveling ? 'Traveling…' : 'Travel'}
+            {#if $isMobile}
+              <button class="travel-btn" type="button" on:click|stopPropagation={requestTravel} disabled={!canTravel || isTraveling}>
+                {isTraveling ? 'Traveling…' : (canTravel ? 'Travel' : 'You are here')}
               </button>
-              <div class="intel-hint">Double-click a room to travel.</div>
             {/if}
+            <div class="intel-more">
+              <p class="intel-summary">{selectedPlace.summary || ''}</p>
+              {#if selectedPlace.tags && selectedPlace.tags.length}
+                <div class="intel-tags">{selectedPlace.tags.join(' · ')}</div>
+              {/if}
+              <div class="intel-section">Vectors &amp; exits</div>
+              {#if selectedPlace.exits && selectedPlace.exits.length}
+                {#each selectedPlace.exits as ex}
+                  <div class="exit-row">
+                    <span class="exit-dir">{dirBadge(ex.dir)}</span>
+                    <span class="exit-body">
+                      <strong>{ex.toName || (ex.to ? 'Uncharted' : '—')}</strong>
+                      <em>{ex.hidden ? 'hidden' : ex.dir}{#if ex.vertical} · stair{/if}</em>
+                    </span>
+                  </div>
+                {/each}
+              {:else}
+                <div class="intel-muted">No charted exits.</div>
+              {/if}
+              <div class="intel-section">Usually here</div>
+              {#if selectedPlace.residents && selectedPlace.residents.length}
+                {#each selectedPlace.residents as r}
+                  <div class="res-row">
+                    <span class="res-dot {r.kind}"></span>
+                    {r.name}
+                    <span class="res-kind">{r.kind}</span>
+                  </div>
+                {/each}
+              {:else}
+                <div class="intel-muted">None recorded.</div>
+              {/if}
+              {#if !$isMobile && canTravel}
+                <button class="travel-btn" type="button" on:click={requestTravel} disabled={isTraveling}>
+                  {isTraveling ? 'Traveling…' : 'Travel'}
+                </button>
+                <div class="intel-hint">Double-click a room to travel.</div>
+              {/if}
+            </div>
           {/if}
         </aside>
       </div>

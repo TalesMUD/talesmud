@@ -45,7 +45,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Unique NPCs auto-spawn into their assigned room on server start via `CurrentRoomID`
   - Guest-public NPC/enemy portraits (`/api/portraits/:filename`, hashed avatar fallback)
   - Merchant shop overlay in the room widget (structured `shop` WS message; dialog Trade inject; buy/sell)
-  - Player chrome Map: Inventory-style overlay; biome tiles; small gold-framed you-icon; click-to-travel keeps zoom; Overworld is z==0; Oldtown packs north of Meadows
+  - Player chrome Map: Cartographer overlay (desktop ~80% + intel rail; phone full-bleed + bottom intel sheet); tap inspect, Travel button; biome tiles; gold you-icon; Overworld z==0; Oldtown north of Meadows
   - Play client WS: single-flight socket gate; close 4001 (session replaced) does not auto-reconnect; `/play` JS/CSS served no-cache
   - Action bar Option C: room dirs + room actions + Shop; fixed INV/MAP/SAY chrome; optional pins via ⋯ (Look off by default)
   - Spell Bar / Hotbar: skills + consumables; Look/Rest/Talk/Flee bindable but not seeded; no Search=look
