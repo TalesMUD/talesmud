@@ -573,7 +573,7 @@ type CombatQueueState struct {
 	QueuedAction       string         `json:"queuedAction,omitempty"`
 	QueuedSkillID      string         `json:"queuedSkillId,omitempty"`
 	QueuedTargetID     string         `json:"queuedTargetId,omitempty"`
-	SkillCooldowns     map[string]int `json:"skillCooldowns"` // always present so client can clear overlays
+	SkillCooldowns     map[string]int `json:"skillCooldowns"`               // always present so client can clear overlays
 	NextActionAtMs     int64          `json:"nextActionAtMs,omitempty"`     // unix ms resolve gate
 	DecisionDeadlineMs int64          `json:"decisionDeadlineMs,omitempty"` // unix ms decision window end
 }
@@ -701,6 +701,35 @@ type ShopMessage struct {
 	AcceptedTypes  []string        `json:"acceptedTypes,omitempty"`
 	RejectedTags   []string        `json:"rejectedTags,omitempty"`
 	SellMultiplier float64         `json:"sellMultiplier,omitempty"`
+}
+
+// FriendEntry is one row in the friends overlay.
+type FriendEntry struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Online bool   `json:"online"`
+}
+
+// FriendsMessage refreshes the friends overlay roster.
+type FriendsMessage struct {
+	MessageResponse
+	Friends []FriendEntry `json:"friends"`
+}
+
+// NewFriendsMessage creates a structured friends payload for the client overlay.
+func NewFriendsMessage(userID string, friends []FriendEntry) *FriendsMessage {
+	if friends == nil {
+		friends = []FriendEntry{}
+	}
+	return &FriendsMessage{
+		MessageResponse: MessageResponse{
+			Audience:   MessageAudienceOrigin,
+			AudienceID: userID,
+			Type:       MessageTypeFriends,
+			Message:    "",
+		},
+		Friends: friends,
+	}
 }
 
 // NewShopMessage creates a structured shop payload for the client overlay.

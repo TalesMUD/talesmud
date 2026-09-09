@@ -319,6 +319,7 @@ type Character struct {
     RevealedExits map[string][]string  // roomID → exit names
     DiscoveredRooms map[string]bool
     DiscoveredAreas map[string]bool
+    FriendIDs []string  // Other character IDs on this character's friends list
 
     // All-Time Statistics
     AllTimeStats struct {
@@ -459,6 +460,25 @@ p <message>            # Alias for party chat/commands
 
 Party membership is persisted in the existing `Party` entity. Pending invites
 are live-session state and must be accepted while both players are online.
+
+### Friends (v1)
+Per-character friends list stored as `Character.FriendIDs` (character UUIDs) in
+the SQLite character JSON blob. Names are resolved at display time.
+
+```bash
+friend add <name>       # Add by live session name, or exact offline character name
+friend remove <name>    # Remove from your list
+friend list / friends   # Show Online/Offline from the live session registry
+```
+
+Rules: no self-add; idempotent add; guests are refused politely (and cannot be
+added). Open add-by-name (not a mutual request flow). Presence: friends who
+are watching you get a short "came online / went offline" line. The `friends`
+WebSocket message carries `{id,name,online}` for the play client overlay.
+
+Client: HUD group button (next to the character switcher) opens a Friends
+panel — list, Tell (whisper), Remove, add-by-name. Room players overlay can
+add the other player. Guests hide the HUD entry.
 
 ### Client Session UX
 The MUD client exposes connection state in `MUDXPlusStore`:

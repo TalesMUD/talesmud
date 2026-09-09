@@ -33,6 +33,25 @@
     sendMessage(`inspect ${player.name}`);
     showPlayersOverlay = false;
   }
+
+  function isGuestClient() {
+    try {
+      return typeof sessionStorage !== 'undefined' && !!sessionStorage.getItem('talesmud_guest_token');
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function addFriend(player) {
+    if (!player || !player.name || isGuestClient()) return;
+    sendMessage(`friend add ${player.name}`);
+  }
+
+  function openFriends() {
+    if (isGuestClient()) return;
+    if (store && store.openFriendsOverlay) store.openFriendsOverlay();
+    showPlayersOverlay = false;
+  }
 </script>
 
 <style>
@@ -111,6 +130,10 @@
     padding: 0.3em 0.5em;
     margin-bottom: 0.3em;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
   }
 
   .roster {
@@ -206,6 +229,13 @@
   .player-action-btn.inspect:hover {
     background: rgba(251, 191, 36, 0.2);
   }
+  .player-action-btn.friends-link {
+    width: auto;
+    padding: 0 8px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
 
   .chat-divider {
     height: 1px;
@@ -273,7 +303,12 @@
 
   {#if showPlayersOverlay}
     <div class="players-overlay expanded">
-      <div class="players-overlay-title">In this room</div>
+      <div class="players-overlay-title">
+        In this room
+        {#if !isGuestClient()}
+          <button class="player-action-btn friends-link whisper" type="button" on:click={openFriends} title="Open friends">Friends</button>
+        {/if}
+      </div>
       <div class="roster">
         {#each $store.players as player (player.id)}
           <div class="player-row">
@@ -295,6 +330,13 @@
                   on:click={() => inspectPlayer(player)}
                   title="Inspect {player.name}"
                 >&#x1F50D;</button>
+                {#if !isGuestClient()}
+                  <button
+                    class="player-action-btn whisper"
+                    on:click={() => addFriend(player)}
+                    title="Add {player.name} as friend"
+                  >+</button>
+                {/if}
               </div>
             {/if}
           </div>

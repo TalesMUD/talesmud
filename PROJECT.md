@@ -43,6 +43,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Coordinate-based world mapping (X, Y, Z grid) plus a compiled atlas: authored coords pin rooms, remaining rooms cluster by area from compass exits, zones pack with a gap (Oldtown / Meadows / Ashenveil read apart); per-character fog of war at `GET /api/characters/:id/map`
   - Dynamic item and NPC spawning
   - Unique NPCs auto-spawn into their assigned room on server start via `CurrentRoomID`
+  - Per-character friends list (`friend add/remove/list`); HUD overlay with online flags + whisper; guests refused
   - Guest-public NPC/enemy portraits (`/api/portraits/:filename`, hashed avatar fallback)
   - Merchant shop overlay in the room widget (structured `shop` WS message; dialog Trade inject; buy/sell)
   - Player chrome Map: Cartographer overlay (desktop ~80% + intel rail; phone full-bleed + bottom intel sheet); tap inspect, Travel button; biome tiles; gold you-icon; Overworld z==0; Oldtown north of Meadows

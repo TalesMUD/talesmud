@@ -206,6 +206,12 @@ function createClient(renderer, characterCreator, muxStore) {
     }
   };
 
+  messageHandlers["friends"] = (msg) => {
+    if (mux && mux.setFriends) {
+      mux.setFriends(msg.friends || []);
+    }
+  };
+
   messageHandlers["shop"] = (msg) => {
     if (mux) {
       mux.setShop({

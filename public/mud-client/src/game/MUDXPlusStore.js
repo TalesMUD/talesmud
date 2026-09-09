@@ -477,6 +477,8 @@ function createStore() {
     mapOverviewOpen: false,
     mapSelectedId: null,
     inventoryOverlayOpen: false,
+    friendsOverlayOpen: false,
+    friends: [],
   });
 
   const store = {
@@ -1220,6 +1222,28 @@ function createStore() {
     setInventoryOverlayOpen: (open) => {
       update((state) => {
         return { ...state, inventoryOverlayOpen: !!open };
+      });
+    },
+
+    setFriends: (friends) => {
+      update((state) => {
+        state.friends = Array.isArray(friends) ? friends : [];
+        return state;
+      });
+    },
+    openFriendsOverlay: () => {
+      update((state) => {
+        return { ...state, friendsOverlayOpen: true };
+      });
+    },
+    closeFriendsOverlay: () => {
+      update((state) => {
+        return { ...state, friendsOverlayOpen: false };
+      });
+    },
+    setFriendsOverlayOpen: (open) => {
+      update((state) => {
+        return { ...state, friendsOverlayOpen: !!open };
       });
     },
   };

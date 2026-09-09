@@ -201,11 +201,13 @@ registry maps connected user IDs to their currently selected character, room,
 and last-seen timestamp. WebSocket connect/read/disconnect paths update this
 registry and persist `User.IsOnline` as a secondary status field.
 
-Room message fan-out, `who`, private tells, regeneration ticks, and room player
+Room message fan-out, `who`, private tells, friends online flags, regeneration ticks, and room player
 payloads use the live session registry instead of scanning all users with
 stale `IsOnline` flags. Persisted `Room.Characters` still records character
 location and is periodically cleaned, but it is no longer the source of truth
-for whether a player is reachable.
+for whether a player is reachable. `Character.FriendIDs` persists a per-character
+friends list in the character JSON blob; `friend`/`friends` commands and a
+`friends` WebSocket payload drive the play-client overlay.
 
 #### Concurrent Goroutines
 
@@ -756,6 +758,7 @@ type Character struct {
 
     // Scripting flags (puzzle state, quest progress, etc.)
     Flags map[string]interface{}
+    FriendIDs []string  // other character IDs
 
     AllTimeStats
 }
