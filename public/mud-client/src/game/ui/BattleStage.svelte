@@ -433,14 +433,6 @@
 <div class="battle-stage" class:ending={phase === 'ending'} role="dialog" aria-label="Combat">
   <div class="battle-backdrop" aria-hidden="true"></div>
   <div class="battle-frame">
-  <div
-    class="arena-art"
-    class:has-art={!!arenaBgUrl}
-    style={arenaBgUrl ? `background-image: url('${arenaBgUrl}')` : ''}
-    aria-hidden="true"
-  ></div>
-  <div class="arena-vignette" aria-hidden="true"></div>
-
   <header class="battle-header">
     <i class="material-icons header-icon" aria-hidden="true">explore</i>
     <span class="header-label">COMBAT</span>
@@ -468,6 +460,13 @@
 
   <!-- Arena band: fighters + FX + short action banner (floats clip here) -->
   <div class="battle-arena">
+  <div
+    class="arena-art"
+    class:has-art={!!arenaBgUrl}
+    style={arenaBgUrl ? `background-image: url('${arenaBgUrl}')` : ''}
+    aria-hidden="true"
+  ></div>
+  <div class="arena-vignette" aria-hidden="true"></div>
   <!-- Enemies upper-right -->
   <section class="enemy-strip" aria-label="Enemies">
     {#each enemies as enemy (enemy.id)}
@@ -490,13 +489,15 @@
         aria-label={`Target ${enemy.name || 'enemy'}`}
         on:click={() => selectEnemy(enemy)}
       >
-        <div class="nameplate">{enemy.name}</div>
-        <div class="hp-row">
-          <span class="hp-label">HP</span>
-          <div class="hp-track">
-            <div class="hp-fill" style="width: {pct}%; background: {hpColor(pct)}"></div>
+        <div class="foe-plate">
+          <div class="nameplate">{enemy.name}</div>
+          <div class="hp-row">
+            <span class="hp-label">HP</span>
+            <div class="hp-track">
+              <div class="hp-fill" style="width: {pct}%; background: {hpColor(pct)}"></div>
+            </div>
+            <span class="hp-nums">{enemy.hp ?? 0} / {enemy.maxHp ?? 0}</span>
           </div>
-          <span class="hp-nums">{enemy.hp ?? 0} / {enemy.maxHp ?? 0}</span>
         </div>
         <div class="enemy-sprite-wrap" class:shake={tgt && fxIsHit}>
           <img
@@ -619,7 +620,7 @@
   {/if}
   </div><!-- /.battle-arena -->
 
-  <!-- Dock: status (queue) above; rail left of centered hotbar (separate chrome) -->
+  <!-- Dock: one chrome strip — status chip, then rail + hotbar on one baseline -->
   {#if phase === 'active'}
     <div class="battle-controls">
       <div class="dock-status" class:has-chip={!!(queuedAction && queuedLabel)} aria-live="polite">
@@ -638,23 +639,25 @@
 
       <div class="dock-main">
         <nav class="battle-rail" aria-label="Combat actions">
-          <button type="button" class="rail-btn primary" title="Attack" aria-label="Attack" on:click={doAttack}>
+          <button type="button" class="rail-btn primary" title="Attack" aria-label="Attack" on:click|stopPropagation={doAttack}>
             <i class="material-icons">flash_on</i>
             <span class="rail-label">Attack</span>
           </button>
-          <button type="button" class="rail-btn" title="Defend" aria-label="Defend" on:click={doDefend}>
+          <button type="button" class="rail-btn" title="Defend" aria-label="Defend" on:click|stopPropagation={doDefend}>
             <i class="material-icons">security</i>
             <span class="rail-label">Defend</span>
           </button>
-          <button type="button" class="rail-btn" class:active={panel === 'items'} title="Items" aria-label="Items" on:click={() => togglePanel('items')}>
+          <button type="button" class="rail-btn" class:active={panel === 'items'} title="Items" aria-label="Items" on:click|stopPropagation={() => togglePanel('items')}>
             <i class="material-icons">shopping_bag</i>
             <span class="rail-label">Items</span>
           </button>
-          <button type="button" class="rail-btn flee" title="Flee" aria-label="Flee" on:click={doFlee}>
+          <button type="button" class="rail-btn flee" title="Flee" aria-label="Flee" on:click|stopPropagation={doFlee}>
             <i class="material-icons">directions_run</i>
             <span class="rail-label">Flee</span>
           </button>
         </nav>
+
+        <div class="dock-divider" aria-hidden="true"></div>
 
         <div class="combat-hotbar" aria-label="Combat hotbar">
           {#each hotbarBinds as bind, index}
@@ -673,7 +676,7 @@
               title={cdRounds > 0 ? `${hotbarSlotTitle(bind)} (${cdRounds} rd)` : hotbarSlotTitle(bind)}
               aria-label={hotbarSlotTitle(bind)}
               disabled={hotbarSlotDisabled(bind)}
-              on:click={() => activateHotbarSlot(bind)}
+              on:click|stopPropagation={() => activateHotbarSlot(bind)}
             >
               <span class="hb-index">{index + 1}</span>
               {#if bind?.kind === 'item'}
@@ -702,7 +705,6 @@
           {/each}
         </div>
       </div>
-    </div>
 
     {#if panel === 'items'}
       <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
@@ -729,6 +731,7 @@
         {/if}
       </div>
     {/if}
+    </div>
   {/if}
 
   <!-- Combat log — full-width framed panel; mobile peek/expand -->
@@ -1027,10 +1030,26 @@
     filter: grayscale(0.6);
   }
 
+  .foe-plate {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    padding: 0.35rem 0.4rem 0.3rem;
+    margin-bottom: 0.2rem;
+    border: 1.5px solid rgba(212, 164, 74, 0.5);
+    border-radius: 8px;
+    background: linear-gradient(135deg, rgba(14, 12, 10, 0.82), rgba(6, 6, 8, 0.7));
+    box-shadow:
+      0 8px 20px rgba(0, 0, 0, 0.4),
+      inset 0 0 0 1px rgba(255, 220, 150, 0.08);
+    box-sizing: border-box;
+  }
+
   .nameplate {
     display: inline-block;
-    padding: 0.22rem 0.75rem;
-    margin-bottom: 0.3rem;
+    padding: 0.18rem 0.7rem;
+    margin-bottom: 0.28rem;
     border: 1.5px solid rgba(212, 164, 74, 0.8);
     border-radius: 3px;
     background: linear-gradient(180deg, rgba(28, 20, 10, 0.92), rgba(8, 6, 4, 0.92));
@@ -1048,8 +1067,9 @@
     grid-template-columns: auto 1fr auto;
     align-items: center;
     gap: 0.35rem;
-    margin: 0 auto 0.45rem;
+    margin: 0 auto;
     max-width: 100%;
+    width: 100%;
     font-family: system-ui, sans-serif;
   }
 
@@ -1092,30 +1112,34 @@
   }
 
   .enemy-sprite {
-    width: 78%;
-    height: 78%;
+    width: 86%;
+    height: 86%;
     object-fit: contain;
     image-rendering: pixelated;
     filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.55));
+    z-index: 1;
   }
 
   .target-ring {
     position: absolute;
-    bottom: 4%;
+    bottom: 6%;
     left: 50%;
-    width: 78%;
-    height: 20%;
+    width: 92%;
+    height: 34%;
     transform: translateX(-50%);
-    /* Solid soft glow — dashed borders flickered on some GPUs; no CSS animation. */
-    border: 2px solid rgba(250, 204, 21, 0.72);
+    border: 2.5px solid rgba(250, 204, 21, 0.9);
     border-radius: 50%;
     box-shadow:
-      0 0 12px rgba(250, 204, 21, 0.55),
-      0 0 24px rgba(212, 164, 74, 0.3),
-      inset 0 0 8px rgba(250, 204, 21, 0.14);
+      0 0 14px rgba(250, 204, 21, 0.7),
+      0 0 28px rgba(212, 164, 74, 0.4),
+      inset 0 0 10px rgba(250, 204, 21, 0.2);
     pointer-events: none;
+    z-index: 2;
   }
 
+  .enemy-card.targeted .foe-plate {
+    border-color: rgba(250, 204, 21, 0.75);
+  }
   .enemy-card.targeted .nameplate {
     border-color: #facc15;
     box-shadow:
@@ -1124,7 +1148,7 @@
       0 4px 14px rgba(0, 0, 0, 0.4);
   }
   .enemy-card.targeted .enemy-sprite {
-    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 10px rgba(250, 204, 21, 0.25));
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 12px rgba(250, 204, 21, 0.45));
   }
 
   /* ===== C5 Combat FX pack (CSS/transform only) ===== */
@@ -1380,16 +1404,16 @@
   .player-panel {
     position: absolute;
     left: 1.1rem;
-    bottom: 0.75rem;
+    bottom: 0.85rem;
     z-index: 3;
     display: flex;
     align-items: flex-end;
     gap: 0.9rem;
     max-width: min(440px, 90%);
     padding: 0.45rem 0.55rem 0.45rem 0.45rem;
-    border: 1.5px solid rgba(212, 164, 74, 0.45);
+    border: 1.5px solid rgba(212, 164, 74, 0.5);
     border-radius: 8px;
-    background: linear-gradient(135deg, rgba(14, 12, 10, 0.72), rgba(6, 6, 8, 0.55));
+    background: linear-gradient(135deg, rgba(14, 12, 10, 0.82), rgba(6, 6, 8, 0.7));
     box-shadow:
       0 10px 28px rgba(0, 0, 0, 0.45),
       inset 0 0 0 1px rgba(255, 220, 150, 0.08);
@@ -1481,14 +1505,13 @@
     transform: none;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
+    align-items: stretch;
+    justify-content: flex-end;
+    gap: 0.3rem;
     width: auto;
     max-width: none;
-    margin: 0.35rem 0.75rem 0.25rem;
-    min-height: 72px;
-    /* no max-height — dock row must grow for queue chip (never clip onto hotbar) */
+    margin: 0.3rem 0.75rem 0.2rem;
+    min-height: 0;
     z-index: 20;
     pointer-events: auto;
     box-sizing: border-box;
@@ -1497,7 +1520,7 @@
   .dock-status {
     position: relative;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
     gap: 0.3rem;
@@ -1507,7 +1530,7 @@
     z-index: 21;
   }
   .dock-status.has-chip {
-    min-height: 28px;
+    min-height: 32px;
   }
 
   .action-banner {
@@ -1551,23 +1574,19 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
-    padding: 0.4rem 0.55rem;
-    border-radius: 10px;
-    border: 1.5px solid rgba(212, 164, 74, 0.55);
-    background: rgba(8, 8, 10, 0.92);
-    box-shadow:
-      0 6px 16px rgba(0, 0, 0, 0.4),
-      inset 0 0 0 1px rgba(255, 220, 150, 0.08),
-      0 0 18px rgba(212, 164, 74, 0.12);
-    flex: 0 1 auto;
+    gap: 0.35rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    flex: 1 1 auto;
     min-width: 0;
   }
 
   .hb-slot {
     appearance: none;
     position: relative;
-    flex: 0 0 auto;
+    flex: 0 0 52px;
     width: 52px;
     height: 52px;
     min-width: 52px;
@@ -1653,13 +1672,31 @@
 
   .dock-main {
     display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
     align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
+    justify-content: flex-start;
+    gap: 0.65rem;
     width: 100%;
     box-sizing: border-box;
-    max-width: min(100%, 820px);
-    margin: 0 auto;
+    max-width: none;
+    margin: 0;
+    padding: 0.4rem 0.7rem;
+    border-radius: 10px;
+    border: 1.5px solid rgba(212, 164, 74, 0.55);
+    background: rgba(8, 8, 10, 0.94);
+    box-shadow:
+      0 6px 16px rgba(0, 0, 0, 0.4),
+      inset 0 0 0 1px rgba(255, 220, 150, 0.08),
+      0 0 18px rgba(212, 164, 74, 0.12);
+  }
+
+  .dock-divider {
+    flex: 0 0 1px;
+    align-self: stretch;
+    width: 1px;
+    margin: 0.15rem 0;
+    background: linear-gradient(180deg, transparent, rgba(212, 164, 74, 0.45), transparent);
   }
 
   /* Legacy aliases (unused) — keep harmless for any residual refs */
@@ -1687,25 +1724,26 @@
   .battle-rail {
     display: flex;
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: center;
     gap: 0.28rem;
-    padding: 0.28rem;
-    border-radius: 9px;
-    border: 1px solid rgba(148, 163, 184, 0.22);
-    background: rgba(8, 8, 10, 0.72);
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
-    flex-shrink: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    flex: 0 0 auto;
+    width: max-content;
     align-self: center;
-    max-width: 108px;
+    max-width: none;
   }
   .rail-btn {
     appearance: none;
-    width: 42px;
-    height: 42px;
-    min-width: 40px;
-    min-height: 40px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
     box-sizing: border-box;
     border-radius: 7px;
     border: 1px solid rgba(148, 163, 184, 0.35);
@@ -1717,6 +1755,8 @@
     padding: 0;
     box-shadow: none;
     opacity: 0.92;
+    pointer-events: auto;
+    flex: 0 0 auto;
   }
   .rail-label { display: none; }
   .rail-btn i { font-size: 1.25rem; color: #d4a44a; }
@@ -1784,7 +1824,7 @@
   .dock-panel {
     position: absolute;
     left: 50%;
-    bottom: 10.5rem;
+    bottom: calc(100% + 0.35rem);
     transform: translateX(-50%);
     display: flex;
     flex-wrap: wrap;
@@ -1795,7 +1835,8 @@
     border: 1.5px solid rgba(212, 164, 74, 0.45);
     border-radius: 8px;
     background: rgba(8, 8, 10, 0.92);
-    z-index: 4;
+    z-index: 30;
+    pointer-events: auto;
   }
 
   .dock-panel-btn {
@@ -1827,16 +1868,16 @@
     right: auto;
     bottom: auto;
     width: auto;
-    height: 8rem;
-    max-height: 8rem;
-    min-height: 7rem;
-    margin: 0 0.75rem 0.55rem;
+    height: 7.25rem;
+    max-height: 7.25rem;
+    min-height: 6.5rem;
+    margin: 0.15rem 0.75rem 0.55rem;
     overflow-x: hidden;
     overflow-y: auto;
     padding: 0.4rem 0.75rem 0.45rem;
     border: 1.5px solid rgba(212, 164, 74, 0.55);
     border-radius: 6px;
-    background: linear-gradient(180deg, rgba(12, 10, 8, 0.92), rgba(4, 4, 6, 0.92));
+    background: linear-gradient(180deg, rgba(12, 10, 8, 0.96), rgba(4, 4, 6, 0.96));
     box-shadow:
       inset 0 0 0 1px rgba(255, 220, 150, 0.06),
       0 4px 14px rgba(0, 0, 0, 0.35);
@@ -2282,6 +2323,15 @@
       width: 100%;
       max-width: none;
       margin: 0;
+      padding: 0.35rem;
+    }
+    .dock-divider {
+      order: 2;
+      width: 100%;
+      height: 1px;
+      margin: 0;
+      align-self: stretch;
+      background: linear-gradient(90deg, transparent, rgba(212, 164, 74, 0.4), transparent);
     }
     .combat-hotbar {
       order: 1;
@@ -2289,7 +2339,7 @@
       flex: 0 0 auto;
       box-sizing: border-box;
       gap: 0.28rem;
-      padding: 0.32rem 0.35rem;
+      padding: 0;
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
       justify-content: space-between;
@@ -2303,7 +2353,7 @@
       max-width: 52px;
     }
     .battle-rail {
-      order: 2;
+      order: 3;
       display: flex;
       flex-direction: row;
       flex-wrap: nowrap;
