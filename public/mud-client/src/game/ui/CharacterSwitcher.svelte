@@ -66,6 +66,7 @@
   }
 
   $: showFriends = !isGuestClient();
+  $: resting = !!(!$store.inCombat && $store.characterStats?.resting);
 
   function openFriends() {
     if (!showFriends) return;
@@ -111,6 +112,24 @@
   }
   .friends-launch i { font-size: 20px; }
   .friends-launch:hover { border-color: rgba(196, 181, 253, 0.7); }
+
+  .rest-launch {
+    pointer-events: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 38px;
+    padding: 0 0.7rem;
+    border: 1px solid rgba(34, 197, 94, 0.45);
+    border-radius: 8px;
+    background: rgba(8, 20, 12, 0.92);
+    color: #86efac;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .rest-launch i { font-size: 16px; }
 
   .switcher-button {
     pointer-events: auto;
@@ -268,11 +287,15 @@
       min-width: 44px;
       min-height: 44px;
     }
+    .rest-launch { min-height: 44px; }
   }
 </style>
 
 <div class="switcher">
   <div class="switcher-row">
+    {#if resting}
+      <span class="rest-launch" title="Resting"><i class="material-icons">hotel</i> Resting</span>
+    {/if}
     {#if showFriends}
       <button class="friends-launch" type="button" title="Friends" on:click={openFriends}>
         <i class="material-icons">group</i>

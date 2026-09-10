@@ -453,6 +453,7 @@ function createStore() {
       level: 0,
       gold: 0,
       inCombat: false,
+      resting: false,
       attributes: [],
       equippedSkills: [],
       unspentAttributePoints: 0,
@@ -710,6 +711,7 @@ function createStore() {
             level: character.level || 0,
             gold: character.gold || 0,
             inCombat: character.inCombat || false,
+            resting: !!(character.flags && character.flags.resting),
             attributes: character.attributes || [],
             equippedSkills: character.equippedSkills || [],
             unspentAttributePoints: character.unspentAttributePoints || 0,
@@ -740,6 +742,7 @@ function createStore() {
           level: stats.level ?? prev.level,
           gold: stats.gold ?? prev.gold,
           inCombat: stats.inCombat ?? prev.inCombat,
+          resting: stats.resting !== undefined ? !!stats.resting : prev.resting,
           attributes: stats.attributes || prev.attributes,
           equippedSkills: stats.equippedSkills || prev.equippedSkills,
           unspentAttributePoints: stats.unspentAttributePoints ?? prev.unspentAttributePoints,
@@ -763,6 +766,7 @@ function createStore() {
           next.level === prev.level &&
           next.gold === prev.gold &&
           next.inCombat === prev.inCombat &&
+          next.resting === prev.resting &&
           sameAttrList(next.attributes, prev.attributes) &&
           sameSkillList(next.equippedSkills, prev.equippedSkills) &&
           next.unspentAttributePoints === prev.unspentAttributePoints &&
@@ -831,6 +835,9 @@ function createStore() {
         const nextPlayers = normalizeCombatantList(players);
         state.inCombat = true;
         state.combatPhase = "active";
+        if (state.characterStats) {
+          state.characterStats = { ...state.characterStats, inCombat: true, resting: false };
+        }
         state.combatOutcome = null;
         state.combatEndMessage = "";
         state.combatEnemies = nextEnemies;
@@ -851,6 +858,9 @@ function createStore() {
       update((state) => {
         state.inCombat = true;
         if (state.combatPhase === "idle") state.combatPhase = "active";
+        if (state.characterStats?.resting) {
+          state.characterStats = { ...state.characterStats, inCombat: true, resting: false };
+        }
         state.combatTurn = turn
           ? {
               actorId: turn.actorId || "",
@@ -871,6 +881,9 @@ function createStore() {
       update((state) => {
         state.inCombat = true;
         if (state.combatPhase === "idle") state.combatPhase = "active";
+        if (state.characterStats?.resting) {
+          state.characterStats = { ...state.characterStats, inCombat: true, resting: false };
+        }
         applyCombatQueueFields(state, msg);
         return state;
       });
@@ -880,6 +893,9 @@ function createStore() {
       update((state) => {
         state.inCombat = true;
         if (state.combatPhase === "idle") state.combatPhase = "active";
+        if (state.characterStats?.resting) {
+          state.characterStats = { ...state.characterStats, inCombat: true, resting: false };
+        }
 
         const snapshots = normalizeCombatantList(msg?.combatants);
         if (snapshots.length) {

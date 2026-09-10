@@ -4,7 +4,8 @@
  *
  * Option C layout:
  * - Action bar = room only (dirs, room actions, Shop) + fixed INV/MAP/SAY chrome
- * - Hotbar = skills + consumables; Look/Rest/Talk/Flee bindable but not seeded
+ * - Hotbar = skills + consumables; Rest seeded on empty/default bar (slot 7);
+ *   Look/Talk/Flee bindable but not seeded
  * - Search must never alias look
  */
 
@@ -19,9 +20,8 @@ export const INVENTORY_OPEN_WIDGET = 'widget';
 export const DEFAULT_INVENTORY_OPEN_MODE = INVENTORY_OPEN_OVERLAY;
 
 export const HOTBAR_SLOT_COUNT = 8;
-export const DEFAULT_HOTBAR_BINDS = Object.freeze(
-  Array.from({ length: HOTBAR_SLOT_COUNT }, () => null)
-);
+/** 0-based index for the default Rest seed (slot 7). */
+export const DEFAULT_REST_SLOT = 6;
 
 /** Seed skill id → display name (cast matches Name, not id). */
 export const SKILL_LABELS = {
@@ -206,7 +206,7 @@ export const SKILL_GENERIC_ART = {
   druid_barkskin: 'generic-spell-shield',
 };
 
-/** Bindable hotbar actions. Look/Rest/Talk/Flee are optional — never seeded. */
+/** Bindable hotbar actions. Rest is seeded on empty/default bars; Look/Talk/Flee are optional. */
 export const HOTBAR_ACTIONS = [
   { id: 'melee', label: 'Attack', command: 'attack', art: 'generic-action-melee' },
   { id: 'look', label: 'Look', command: 'look', art: 'generic-action-look' },
@@ -389,4 +389,29 @@ export function makeItemBind(item) {
 
 export function makeActionBind(actionId) {
   return normalizeHotbarBind({ kind: 'action', id: actionId });
+}
+
+function emptyHotbarSlots() {
+  return Array.from({ length: HOTBAR_SLOT_COUNT }, () => null);
+}
+
+/**
+ * Default hotbar for fresh prefs: Rest in slot 7, remaining slots empty.
+ * Customized bars are never built from this array.
+ */
+export const DEFAULT_HOTBAR_BINDS = Object.freeze((() => {
+  const binds = emptyHotbarSlots();
+  binds[DEFAULT_REST_SLOT] = makeActionBind('rest');
+  return binds;
+})());
+
+/**
+ * Seed Rest onto an all-empty hotbar (fresh guest / never customized).
+ * If any slot is already bound, the bar is left unchanged.
+ */
+export function seedRestOnEmptyHotbar(binds) {
+  const out = normalizeHotbarBinds(binds);
+  if (out.some((b) => b != null)) return out;
+  out[DEFAULT_REST_SLOT] = makeActionBind('rest');
+  return out;
 }

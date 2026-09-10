@@ -168,6 +168,7 @@ function createClient(renderer, characterCreator, muxStore) {
         level: msg.level,
         gold: msg.gold,
         inCombat: msg.inCombat,
+        resting: !!msg.resting,
         attributes: msg.attributes,
         equippedSkills: msg.equippedSkills,
         unspentAttributePoints: msg.unspentAttributePoints,

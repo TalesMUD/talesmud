@@ -29,6 +29,7 @@
   $: xp = stats.xp || 0;
   $: gold = stats.gold || 0;
   $: inCombat = stats.inCombat || false;
+  $: resting = !!(stats.resting && !inCombat);
   $: attributes = stats.attributes || character?.attributes || [];
   $: currentMana = stats.currentMana || 0;
   $: maxMana = stats.maxMana || 0;
@@ -138,6 +139,31 @@
     border-radius: 4px;
     border: 1px solid rgba(239, 68, 68, 0.3);
     animation: combatBadgePulse 1.5s ease-in-out infinite;
+  }
+
+  .rest-badge {
+    font-size: var(--text-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #86efac;
+    background: rgba(34, 197, 94, 0.15);
+    padding: 0.2em 0.6em;
+    border-radius: 4px;
+    border: 1px solid rgba(34, 197, 94, 0.35);
+  }
+
+  .rest-chip {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #86efac;
+    background: rgba(34, 197, 94, 0.16);
+    border: 1px solid rgba(34, 197, 94, 0.4);
+    border-radius: 999px;
+    padding: 0.08em 0.5em;
+    margin-right: 0.35em;
   }
 
   @keyframes combatBadgePulse {
@@ -607,6 +633,8 @@
     <span class="widget-title">Character</span>
     {#if inCombat}
       <span class="combat-badge">In Combat</span>
+    {:else if resting}
+      <span class="rest-badge">Resting</span>
     {/if}
   </div>
 
@@ -624,7 +652,7 @@
       <div class="bar-container">
         <div class="bar-header">
           <span class="bar-label hp" class:danger={hpPercent <= 60 && hpPercent > 30} class:critical={hpPercent <= 30}>HP</span>
-          <span class="bar-value">{currentHp} / {maxHp}</span>
+          <span class="bar-value">{#if resting}<span class="rest-chip">Resting</span>{/if}{currentHp} / {maxHp}</span>
         </div>
         <div class="bar-track">
           <div

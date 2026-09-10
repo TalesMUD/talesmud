@@ -378,6 +378,7 @@ type CharacterUpdateMessage struct {
 	Level                  int32                 `json:"level"`
 	Gold                   int64                 `json:"gold"`
 	InCombat               bool                  `json:"inCombat"`
+	Resting                bool                  `json:"resting"`
 	Attributes             characters.Attributes `json:"attributes,omitempty"`
 	EquippedSkills         []string              `json:"equippedSkills,omitempty"`
 	UnspentAttributePoints int32                 `json:"unspentAttributePoints"`
@@ -421,6 +422,7 @@ func NewCharacterUpdateMessage(userID string, ch *characters.Character) *Charact
 		Level:                  ch.Level,
 		Gold:                   ch.Gold,
 		InCombat:               ch.InCombat,
+		Resting:                characterFlagBool(ch, "resting"),
 		Attributes:             ch.Attributes,
 		EquippedSkills:         ch.EquippedSkills,
 		UnspentAttributePoints: ch.UnspentAttributePoints,
@@ -432,6 +434,18 @@ func NewCharacterUpdateMessage(userID string, ch *characters.Character) *Charact
 		Defense:                ch.GetArmorDefense(),
 		ManaRegen:              ch.CalculateManaRegen(),
 	}
+}
+
+func characterFlagBool(ch *characters.Character, key string) bool {
+	if ch == nil || ch.Flags == nil {
+		return false
+	}
+	raw, ok := ch.Flags[key]
+	if !ok {
+		return false
+	}
+	b, ok := raw.(bool)
+	return ok && b
 }
 
 // QuestObjectiveProgress represents objective progress sent to the client

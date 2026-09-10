@@ -5,6 +5,7 @@ import {
   DEFAULT_ACTION_BAR_PINS,
   DEFAULT_HOTBAR_BINDS,
   DEFAULT_INVENTORY_OPEN_MODE,
+  DEFAULT_REST_SLOT,
   HOTBAR_SLOT_COUNT,
   INVENTORY_OPEN_OVERLAY,
   INVENTORY_OPEN_WIDGET,
@@ -22,6 +23,7 @@ import {
   makeActionBind,
   HOTBAR_ACTIONS,
   scrubLegacySearchBinds,
+  seedRestOnEmptyHotbar,
   skillDisplayName,
   skillGenericArtUrl,
   togglePin,
@@ -110,7 +112,17 @@ assert.strictEqual(normalizeInventoryOpenMode('bogus'), INVENTORY_OPEN_OVERLAY);
 
 // --- Hotbar binds ---
 assert.strictEqual(DEFAULT_HOTBAR_BINDS.length, HOTBAR_SLOT_COUNT);
-assert.ok(DEFAULT_HOTBAR_BINDS.every((b) => b === null), 'default hotbar empty');
+assert.strictEqual(DEFAULT_REST_SLOT, 6, 'Rest seeds into slot 7');
+assert.deepStrictEqual(DEFAULT_HOTBAR_BINDS[DEFAULT_REST_SLOT], {
+  kind: 'action',
+  id: 'rest',
+  name: 'Rest',
+  command: 'rest',
+});
+assert.ok(
+  DEFAULT_HOTBAR_BINDS.every((b, i) => i === DEFAULT_REST_SLOT || b === null),
+  'default hotbar only seeds Rest'
+);
 
 const normalized = normalizeHotbarBinds([
   { kind: 'skill', id: 'mage_fireball' },
@@ -193,8 +205,15 @@ assert.ok(HOTBAR_ACTIONS.some((a) => a.id === 'look'), 'Look remains bindable');
 assert.ok(HOTBAR_ACTIONS.some((a) => a.id === 'rest'), 'Rest remains bindable');
 assert.ok(HOTBAR_ACTIONS.some((a) => a.id === 'talk'), 'Talk remains bindable');
 assert.ok(HOTBAR_ACTIONS.some((a) => a.id === 'flee'), 'Flee remains bindable');
-assert.ok(
-  DEFAULT_HOTBAR_BINDS.every((b) => b === null),
-  'hotbar default empty'
-);
-console.log('hudPrefs: Option C (room + chrome INV/MAP/SAY, no Search=look) OK');
+
+const seeded = seedRestOnEmptyHotbar([null, null, null, null, null, null, null, null]);
+assert.strictEqual(seeded[DEFAULT_REST_SLOT]?.id, 'rest', 'empty bar seeds Rest');
+const custom = seedRestOnEmptyHotbar([
+  { kind: 'skill', id: 'mage_fireball' },
+  null, null, null, null, null, null, null,
+]);
+assert.strictEqual(custom[0]?.kind, 'skill', 'custom bar kept');
+assert.strictEqual(custom[DEFAULT_REST_SLOT], null, 'custom bar is not injected with Rest');
+const already = seedRestOnEmptyHotbar(DEFAULT_HOTBAR_BINDS);
+assert.strictEqual(already[DEFAULT_REST_SLOT]?.id, 'rest');
+console.log('hudPrefs: Option C (room + chrome INV/MAP/SAY, Rest seeded on empty bar) OK');

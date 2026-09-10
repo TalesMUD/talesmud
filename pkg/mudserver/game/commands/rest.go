@@ -50,6 +50,8 @@ func (command *RestCommand) Execute(game def.GameCtrl, message *messages.Message
 		return true
 	}
 
+	game.SendMessage() <- messages.NewCharacterUpdateMessage(message.FromUser.ID, char)
+
 	// Send confirmation to player
 	game.SendMessage() <- messages.Reply(message.FromUser.ID, "You sit down and begin to rest. You will recover health faster while resting.")
 

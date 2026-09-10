@@ -49,7 +49,8 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Player chrome Map: Cartographer overlay (desktop ~80% + intel rail; phone full-bleed + bottom intel sheet); tap inspect, Travel button; biome tiles; gold you-icon; Overworld z==0; Oldtown north of Meadows
   - Play client WS: single-flight socket gate; close 4001 (session replaced) does not auto-reconnect; `/play` JS/CSS served no-cache
   - Action bar Option C: room dirs + room actions + Shop; fixed INV/MAP/SAY chrome; optional pins via ⋯ (Look off by default)
-  - Spell Bar / Hotbar: skills + consumables; Look/Rest/Talk/Flee bindable but not seeded; no Search=look
+  - Spell Bar / Hotbar: skills + consumables; Rest seeded on empty/default bar (slot 7); Look/Talk/Flee bindable; no Search=look
+  - OOC Resting chip on character HP / mobile header while `Flags.resting`; clears on combat or rest end
   - BattleStage: arena art clipped to the fight band; Attack/Defend/Items/Flee + hotbar share one dock strip; FF-style plates; queue chip centered in the dock
   - Say chrome opens a message popup, then sends `say <text>`
   - Inventory chrome opens overlay by default (preference: overlay | on-screen widget)

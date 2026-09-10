@@ -1099,7 +1099,9 @@ Enhanced notification system with interactions:
 ### Spell Bar / Hotbar
 - 8 square slots between room description and the action bar (desktop grid widget + mobile strip)
 - Bind equipped combat skills (`cast` / combat-only) or inventory consumables (`use`)
-- Look / Rest / Talk / Flee are bindable actions but **not** seeded by default
+- Look / Talk / Flee are bindable actions but **not** seeded by default
+- Rest is seeded on an empty/default hotbar (slot 7). Customized binds are never overwritten
+- Out of combat, a **Resting** chip shows near HP while `Flags.resting` is true; combat or movement clears it
 - Search is not a look alias and is not offered as a hotbar action
 - Binds persist in `talesmud_settings_v1` (`interface.hotbarBinds`); empty equipped list shows "spellbook empty"
 - Does not use or overload the respawn `bind` command
