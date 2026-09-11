@@ -227,10 +227,18 @@
       strength: 'Strength',
       agility: 'Agility',
       intelligence: 'Intelligence',
+      wisdom: 'Wisdom',
+      vitality: 'Vitality',
       health: 'Health',
       mana: 'Mana',
       speed: 'Speed',
       critical: 'Critical',
+      power: 'Power',
+      magic_power: 'Magic Power',
+      spirit_damage: 'Spirit Damage',
+      spirit_resist: 'Spirit Resist',
+      carry_capacity: 'Carry Capacity',
+      healthRestore: 'Health Restore',
     };
     return labels[key] || key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
   }
@@ -251,6 +259,90 @@
     }
     return String(value);
   }
+
+
+  const COMPARE_ATTR_ORDER = [
+    'damage', 'speed', 'armor', 'defense',
+    'strength', 'agility', 'intelligence', 'wisdom', 'vitality',
+    'health', 'mana', 'critical', 'power', 'magic_power',
+    'spirit_damage', 'spirit_resist', 'carry_capacity', 'healthRestore',
+  ];
+
+  function isGearSlot(slot) {
+    if (!slot) return false;
+    const s = String(slot).toLowerCase();
+    return s !== 'inventory' && s !== 'container' && s !== 'purse';
+  }
+
+  function resolveEquippedForSlot(item, equippedMap) {
+    if (!item || !isGearSlot(item.slot)) return null;
+    const slot = String(item.slot);
+    const map = equippedMap || {};
+    let eq = map[slot] || null;
+    // Two-hand blades occupy main_hand + off_hand with the same item.
+    if (!eq && slot === 'main_hand' && map.off_hand) {
+      const off = map.off_hand;
+      if (off && String(off.subType || '').toLowerCase() === 'twohandsword') eq = off;
+    }
+    return eq || null;
+  }
+
+  function attrNumeric(attrs, key) {
+    if (!attrs || attrs[key] == null) return null;
+    const n = Number(attrs[key]);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function collectCompareKeys(shopAttrs, eqAttrs) {
+    const keys = new Set();
+    for (const src of [shopAttrs || {}, eqAttrs || {}]) {
+      for (const [k, v] of Object.entries(src)) {
+        if (typeof v === 'number' || (typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v)))) {
+          keys.add(k);
+        }
+      }
+    }
+    const ordered = COMPARE_ATTR_ORDER.filter((k) => keys.has(k));
+    const rest = [...keys].filter((k) => !COMPARE_ATTR_ORDER.includes(k)).sort();
+    return ordered.concat(rest);
+  }
+
+  function buildCompareRows(shopItem, equippedItem) {
+    if (!shopItem || !isGearSlot(shopItem.slot)) return [];
+    const shopAttrs = shopItem.attributes || {};
+    const eqAttrs = (equippedItem && equippedItem.attributes) || {};
+    const keys = collectCompareKeys(shopAttrs, eqAttrs);
+    return keys.map((key) => {
+      const shopVal = attrNumeric(shopAttrs, key);
+      const eqVal = attrNumeric(eqAttrs, key);
+      const a = shopVal == null ? 0 : shopVal;
+      const b = eqVal == null ? 0 : eqVal;
+      const delta = a - b;
+      // Round float noise (e.g. speed 1.0)
+      const rounded = Math.abs(delta - Math.round(delta)) < 1e-9 ? Math.round(delta) : Math.round(delta * 100) / 100;
+      return { key, delta: rounded, shopVal, eqVal };
+    });
+  }
+
+  function formatDelta(delta) {
+    if (delta > 0) return `+${delta}`;
+    return String(delta);
+  }
+
+  function deltaTone(delta) {
+    if (delta > 0) return 'up';
+    if (delta < 0) return 'down';
+    return 'same';
+  }
+
+  $: compareEquipped = selected && tab === 'buy' ? resolveEquippedForSlot(selected, equipped) : null;
+  $: showCompare = !!(selected && tab === 'buy' && isGearSlot(selected.slot));
+  $: compareRows = showCompare ? buildCompareRows(selected, compareEquipped) : [];
+  $: compareLabel = showCompare
+    ? (compareEquipped && compareEquipped.name
+        ? `Compared to: ${compareEquipped.name}`
+        : 'Compared to: (empty)')
+    : '';
 
   function canShowQty(item) {
     if (!item) return false;
@@ -722,6 +814,42 @@
     margin-bottom: 0.35em;
   }
 
+
+  .detail-compare {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 6px;
+    padding: 0.5em 0.6em;
+    margin-bottom: 0.6em;
+  }
+  .compare-heading {
+    font-size: 0.75em;
+    font-weight: 700;
+    color: #cbd5e1;
+    letter-spacing: 0.02em;
+    margin-bottom: 0.35em;
+  }
+  .compare-empty-hint {
+    font-size: 0.8em;
+    color: #64748b;
+    font-style: italic;
+  }
+  .compare-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.22em 0;
+    font-size: 0.85em;
+  }
+  .compare-row + .compare-row {
+    border-top: 1px solid rgba(148, 163, 184, 0.12);
+  }
+  .compare-label { color: #94a3b8; }
+  .compare-delta { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .compare-delta.up { color: #4ade80; }
+  .compare-delta.down { color: #f87171; }
+  .compare-delta.same { color: #64748b; }
+
   @media screen and (max-width: 520px) {
     .shop-list {
       grid-template-columns: 1fr;
@@ -845,6 +973,22 @@
                   </span>
                 </div>
               {/each}
+            </div>
+          {/if}
+
+          {#if showCompare}
+            <div class="detail-compare" aria-label="Compare to equipped">
+              <div class="compare-heading">{compareLabel}</div>
+              {#if compareRows.length === 0}
+                <div class="compare-empty-hint">No comparable stats</div>
+              {:else}
+                {#each compareRows as row (row.key)}
+                  <div class="compare-row">
+                    <span class="compare-label">{formatAttributeLabel(row.key)}</span>
+                    <span class="compare-delta {deltaTone(row.delta)}">{formatDelta(row.delta)}</span>
+                  </div>
+                {/each}
+              {/if}
             </div>
           {/if}
 
