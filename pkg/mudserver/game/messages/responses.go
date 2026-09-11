@@ -695,14 +695,22 @@ func NewDialogEndMessage(userID, npcName, message string) MessageResponse {
 
 // ShopStockItem is one row in a merchant shop overlay.
 type ShopStockItem struct {
-	TemplateID    string `json:"templateId"`
-	Name          string `json:"name"`
-	Price         int64  `json:"price"`
-	Quantity      int32  `json:"quantity"` // -1 = unlimited
-	RequiredLevel int32  `json:"requiredLevel,omitempty"`
-	Type          string `json:"type,omitempty"`
-	SubType       string `json:"subType,omitempty"`
-	Image         string `json:"image,omitempty"`
+	TemplateID    string                 `json:"templateId"`
+	Name          string                 `json:"name"`
+	Price         int64                  `json:"price"`
+	Quantity      int32                  `json:"quantity"` // -1 = unlimited
+	RequiredLevel int32                  `json:"requiredLevel,omitempty"`
+	Type          string                 `json:"type,omitempty"`
+	SubType       string                 `json:"subType,omitempty"`
+	Image         string                 `json:"image,omitempty"`
+	Description   string                 `json:"description,omitempty"`
+	Slot          string                 `json:"slot,omitempty"`
+	Quality       string                 `json:"quality,omitempty"`
+	Level         int32                  `json:"level,omitempty"`
+	Stackable     bool                   `json:"stackable,omitempty"`
+	MaxStack      int32                  `json:"maxStack,omitempty"`
+	BasePrice     int64                  `json:"basePrice,omitempty"`
+	Attributes    map[string]interface{} `json:"attributes,omitempty"`
 }
 
 // ShopMessage opens/refreshes the merchant shop overlay.

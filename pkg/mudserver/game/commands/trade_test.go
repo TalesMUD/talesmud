@@ -203,13 +203,17 @@ func TestListShopImageUsesItemArtURLNeverMetaPrompt(t *testing.T) {
 	g, facade := newTradeTestGame(t)
 
 	template := &items.Item{
-		Entity:     &entities.Entity{ID: "ITM0001"},
-		IsTemplate: true,
-		Name:       "Dusty Torch",
-		Type:       items.ItemTypeCollectible,
-		SubType:    "light_source",
-		Slot:       items.ItemSlotInventory,
-		BasePrice:  2,
+		Entity:      &entities.Entity{ID: "ITM0001"},
+		IsTemplate:  true,
+		Name:        "Dusty Torch",
+		Description: "An old wooden torch.",
+		Type:        items.ItemTypeCollectible,
+		SubType:     "light_source",
+		Slot:        items.ItemSlotInventory,
+		Quality:     items.ItemQualityNormal,
+		Level:       1,
+		BasePrice:   2,
+		Attributes:  map[string]interface{}{"light": 3},
 		Meta: &struct {
 			Img string `bson:"img,omitempty" json:"img,omitempty"`
 		}{Img: "An old wooden torch with cloth wrapping, dusty but functional, fantasy item"},
@@ -264,5 +268,35 @@ func TestListShopImageUsesItemArtURLNeverMetaPrompt(t *testing.T) {
 	}
 	if strings.Contains(shop.Stock[0].Image, " ") {
 		t.Fatal("shop image must never contain prose prompt whitespace")
+	}
+	if shop.Stock[0].Description != "An old wooden torch." {
+		t.Fatalf("description = %q", shop.Stock[0].Description)
+	}
+	if got, ok := shop.Stock[0].Attributes["light"]; !ok {
+		t.Fatalf("attributes missing light: %#v", shop.Stock[0].Attributes)
+	} else {
+		switch v := got.(type) {
+		case int:
+			if v != 3 {
+				t.Fatalf("light=%v", got)
+			}
+		case int32:
+			if v != 3 {
+				t.Fatalf("light=%v", got)
+			}
+		case int64:
+			if v != 3 {
+				t.Fatalf("light=%v", got)
+			}
+		case float64:
+			if v != 3 {
+				t.Fatalf("light=%v", got)
+			}
+		default:
+			t.Fatalf("light type %T = %v", got, got)
+		}
+	}
+	if shop.Stock[0].BasePrice != 2 || shop.Stock[0].Level != 1 {
+		t.Fatalf("basePrice/level = %d/%d", shop.Stock[0].BasePrice, shop.Stock[0].Level)
 	}
 }

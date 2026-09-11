@@ -523,6 +523,15 @@ func buildShopMessage(game def.GameCtrl, message *messages.Message, merchant *np
 		price := merchant.MerchantTrait.GetBuyPrice(&invItem, itemTemplate.BasePrice)
 		// Meta.Img is an art-generation prompt, never a URL — always serve itemart paths.
 		image := itemart.URL(itemTemplate.ID, invItem.ItemTemplateID)
+		attrs := itemTemplate.Attributes
+		if attrs != nil {
+			// Shallow copy so callers cannot mutate the template map via the message.
+			copied := make(map[string]interface{}, len(attrs))
+			for k, v := range attrs {
+				copied[k] = v
+			}
+			attrs = copied
+		}
 		stock = append(stock, messages.ShopStockItem{
 			TemplateID:    invItem.ItemTemplateID,
 			Name:          itemTemplate.Name,
@@ -532,6 +541,14 @@ func buildShopMessage(game def.GameCtrl, message *messages.Message, merchant *np
 			Type:          string(itemTemplate.Type),
 			SubType:       string(itemTemplate.SubType),
 			Image:         image,
+			Description:   itemTemplate.Description,
+			Slot:          string(itemTemplate.Slot),
+			Quality:       string(itemTemplate.Quality),
+			Level:         itemTemplate.Level,
+			Stackable:     itemTemplate.Stackable,
+			MaxStack:      itemTemplate.MaxStack,
+			BasePrice:     itemTemplate.BasePrice,
+			Attributes:    attrs,
 		})
 	}
 	merchantID := ""
