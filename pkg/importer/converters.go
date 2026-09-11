@@ -214,6 +214,7 @@ func (y *YAMLNPC) ToEntity() *npc.NPC {
 			MerchantType:   y.MerchantTrait.MerchantType,
 			BuyMultiplier:  y.MerchantTrait.BuyMultiplier,
 			SellMultiplier: y.MerchantTrait.SellMultiplier,
+			RestockMinutes: y.MerchantTrait.RestockMinutes,
 			AcceptedTypes:  append([]string{}, y.MerchantTrait.AcceptedTypes...),
 			Inventory:      make([]npc.MerchantItem, 0),
 		}

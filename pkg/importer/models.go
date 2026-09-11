@@ -195,6 +195,7 @@ type YAMLMerchantTrait struct {
 	MerchantType   string                      `yaml:"merchantType"`
 	BuyMultiplier  float64                     `yaml:"buyMultiplier"`
 	SellMultiplier float64                     `yaml:"sellMultiplier"`
+	RestockMinutes int32                       `yaml:"restockMinutes"`
 	AcceptedTypes  []string                    `yaml:"acceptedTypes"`
 	Inventory      []YAMLMerchantInventoryItem `yaml:"inventory"`
 }
@@ -207,6 +208,51 @@ type YAMLMerchantInventoryItem struct {
 	PriceOverride  int64  `yaml:"priceOverride"`
 	Quantity       int32  `yaml:"quantity"`
 	MaxQuantity    int32  `yaml:"maxQuantity"`
+}
+
+// UnmarshalYAML accepts both itemTemplateId (canonical) and itemTemplateID (legacy typo).
+func (m *YAMLMerchantInventoryItem) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var raw map[string]interface{}
+	if err := unmarshal(&raw); err != nil {
+		return err
+	}
+	if v, ok := raw["itemTemplateId"].(string); ok {
+		m.ItemTemplateID = v
+	} else if v, ok := raw["itemTemplateID"].(string); ok {
+		m.ItemTemplateID = v
+	} else if v, ok := raw["item"].(string); ok {
+		m.ItemTemplateID = v
+	}
+	if v, ok := raw["stock"].(int); ok {
+		m.Stock = int32(v)
+	} else if v, ok := raw["stock"].(int64); ok {
+		m.Stock = int32(v)
+	}
+	if v, ok := raw["basePrice"].(int); ok {
+		m.BasePrice = int64(v)
+	} else if v, ok := raw["basePrice"].(int64); ok {
+		m.BasePrice = v
+	}
+	if v, ok := raw["priceOverride"].(int); ok {
+		m.PriceOverride = int64(v)
+	} else if v, ok := raw["priceOverride"].(int64); ok {
+		m.PriceOverride = v
+	} else if v, ok := raw["price_override"].(int); ok {
+		m.PriceOverride = int64(v)
+	} else if v, ok := raw["price_override"].(int64); ok {
+		m.PriceOverride = v
+	}
+	if v, ok := raw["quantity"].(int); ok {
+		m.Quantity = int32(v)
+	} else if v, ok := raw["quantity"].(int64); ok {
+		m.Quantity = int32(v)
+	}
+	if v, ok := raw["maxQuantity"].(int); ok {
+		m.MaxQuantity = int32(v)
+	} else if v, ok := raw["maxQuantity"].(int64); ok {
+		m.MaxQuantity = int32(v)
+	}
+	return nil
 }
 
 // YAMLNPCMeta contains NPC metadata
