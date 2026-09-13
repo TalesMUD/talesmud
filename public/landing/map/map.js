@@ -295,7 +295,7 @@
 
   function poiIconHref(kind) {
     const key = poiIconMap[kind];
-    return key ? `/map/assets/icons/${key}.png?v=map2` : null;
+    return key ? `/map/assets/icons/${key}.png?v=map3` : null;
   }
 
   function renderPois() {
@@ -369,8 +369,8 @@
         'data-importance': imp,
       }, g);
       const href = fog
-        ? `/map/assets/icons/town.png?v=map2`
-        : `/map/assets/icons/town.png?v=map2`;
+        ? `/map/assets/icons/town.png?v=map3`
+        : `/map/assets/icons/town.png?v=map3`;
       const img = el('image', {
         class: 'poi-icon',
         href,
@@ -405,10 +405,10 @@
   function tryWorldPlate() {
     const layers = state.data.world?.layers || {};
     const candidates = [
-      absMapAsset(layers.worldPlate) + (layers.worldPlate ? '?v=map2' : ''),
-      '/map/assets/world/world-plate.jpg?v=map2',
-      absMapAsset(layers.worldPlateAlt) + (layers.worldPlateAlt ? '?v=map2' : ''),
-      '/map/assets/world/world-plate-16x9.jpg?v=map2',
+      absMapAsset(layers.worldPlate) + (layers.worldPlate ? '?v=map3' : ''),
+      '/map/assets/world/world-plate.jpg?v=map3',
+      absMapAsset(layers.worldPlateAlt) + (layers.worldPlateAlt ? '?v=map3' : ''),
+      '/map/assets/world/world-plate-16x9.jpg?v=map3',
     ].filter((u, i, a) => u && a.indexOf(u) === i);
     const node = document.getElementById('world-plate');
     const parchment = document.getElementById('parchment');
@@ -527,7 +527,7 @@
   }
 
   async function boot() {
-    const res = await fetch('/map/map-data.json?v=map2', { cache: 'no-cache' });
+    const res = await fetch('/map/map-data.json?v=map3', { cache: 'no-cache' });
     if (!res.ok) throw new Error('Failed to load map-data.json');
     state.data = await res.json();
     // Defense in depth: strip internal if someone ever ships raw lore by mistake
