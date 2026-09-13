@@ -4,7 +4,7 @@
  */
 (() => {
   const NS = 'http://www.w3.org/2000/svg';
-  const ASSET_V = 'map11';
+  const ASSET_V = 'map12';
   const viewport = document.getElementById('map-viewport');
   const svg = document.getElementById('map-svg');
   const camera = document.getElementById('camera');
@@ -41,6 +41,7 @@
     pinchStartScale: 1,
     selectedId: null,
     hoverZoneId: null,
+    hoverCityId: null,
   };
 
   const poiColors = {
@@ -108,6 +109,12 @@
       const y = Number(n.getAttribute('data-y'));
       n.setAttribute('transform', `translate(${x} ${y}) scale(${k})`);
     });
+    const ck = Math.max(1.15, Math.min(2.05, 0.92 / state.scale));
+    document.querySelectorAll('#layer-chips .map-chip').forEach((n) => {
+      const x = Number(n.getAttribute('data-x'));
+      const y = Number(n.getAttribute('data-y'));
+      n.setAttribute('transform', `translate(${x} ${y}) scale(${ck})`);
+    });
     if (state.view === 'zone') {
       const zk = Math.max(0.7, Math.min(1.6, 0.9 / state.scale));
       document.querySelectorAll('#zone-pois .poi-marker').forEach((n) => {
@@ -122,6 +129,160 @@
     camera.setAttribute('transform', `translate(${state.tx} ${state.ty}) scale(${state.scale})`);
     updateLodClass();
     updateMarkerScales();
+  }
+
+  function screenToWorld(clientX, clientY) {
+    const rect = viewport.getBoundingClientRect();
+    return {
+      x: (clientX - rect.left - state.tx) / state.scale,
+      y: (clientY - rect.top - state.ty) / state.scale,
+    };
+  }
+
+  function pointInEllipse(px, py, cx, cy, rx, ry) {
+    if (!rx || !ry) return false;
+    const dx = (px - cx) / rx;
+    const dy = (py - cy) / ry;
+    return dx * dx + dy * dy <= 1;
+  }
+
+  function zoneAtWorld(wx, wy) {
+    const zones = state.data?.zones || [];
+    let best = null;
+    let bestArea = Infinity;
+    for (const z of zones) {
+      const { cx, cy, rx, ry } = z.shape || {};
+      if (pointInEllipse(wx, wy, cx, cy, rx, ry)) {
+        const area = rx * ry;
+        if (area < bestArea) {
+          best = z;
+          bestArea = area;
+        }
+      }
+    }
+    return best;
+  }
+
+  function cityAtWorld(wx, wy) {
+    const cities = state.data?.cities || [];
+    const hit = 28 / Math.max(state.scale, 0.25);
+    let best = null;
+    let bestD = hit * hit;
+    for (const c of cities) {
+      if (c.x == null || c.y == null) continue;
+      const d = (c.x - wx) ** 2 + (c.y - wy) ** 2;
+      if (d < bestD) {
+        best = c;
+        bestD = d;
+      }
+    }
+    return best;
+  }
+
+  function layoutChip(g) {
+    const bg = g.querySelector('.map-chip-bg');
+    const copy = g.querySelector('.map-chip-copy');
+    if (!bg || !copy) return;
+    let bb;
+    try { bb = copy.getBBox(); } catch (_) { return; }
+    if (!bb.width) return;
+    bg.setAttribute('x', bb.x - 10);
+    bg.setAttribute('y', bb.y - 5);
+    bg.setAttribute('width', bb.width + 20);
+    bg.setAttribute('height', bb.height + 10);
+  }
+
+  function makeChip(parent, x, y, title, meta, extraClass) {
+    const g = el('g', {
+      class: `map-chip${extraClass ? ` ${extraClass}` : ''}`,
+      'data-x': x,
+      'data-y': y,
+      transform: `translate(${x} ${y})`,
+    }, parent);
+    el('rect', { class: 'map-chip-bg', x: -40, y: -14, width: 80, height: 28, rx: 5, ry: 5 }, g);
+    const copy = el('g', { class: 'map-chip-copy' }, g);
+    const t = el('text', { class: 'map-chip-title', x: 0, y: meta ? -2 : 4 }, copy);
+    t.textContent = title;
+    if (meta) {
+      const m = el('text', { class: 'map-chip-meta', x: 0, y: 12 }, copy);
+      m.textContent = meta;
+    }
+    requestAnimationFrame(() => layoutChip(g));
+    return g;
+  }
+
+  function setHoverVisual(kind, payload, wx, wy) {
+    const clip = document.getElementById('hoverClipEllipse');
+    const light = document.getElementById('hover-light');
+    const sat = document.getElementById('layer-sat');
+    const hi = document.getElementById('layer-highlight');
+    const chips = document.getElementById('layer-chips');
+    if (!clip || !light) return;
+
+    document.querySelectorAll('.map-chip.is-hover').forEach((n) => n.classList.remove('is-hover'));
+
+    if (!kind || state.view !== 'continent') {
+      state.hoverZoneId = null;
+      state.hoverCityId = null;
+      hi.classList.remove('is-on');
+      sat.classList.remove('is-on');
+      light.setAttribute('opacity', '0');
+      return;
+    }
+
+    let cx, cy, rx, ry;
+    if (kind === 'city') {
+      state.hoverCityId = payload.id;
+      state.hoverZoneId = payload.zoneId || null;
+      const zone = payload.zoneId ? zoneById(payload.zoneId) : null;
+      if (zone?.shape) {
+        ({ cx, cy, rx, ry } = zone.shape);
+      } else {
+        cx = payload.x;
+        cy = payload.y;
+        rx = ry = 90;
+      }
+      const chip = chips?.querySelector(`.map-chip[data-city="${payload.id}"]`);
+      if (chip) chip.classList.add('is-hover');
+    } else {
+      state.hoverZoneId = payload.id;
+      state.hoverCityId = null;
+      ({ cx, cy, rx, ry } = payload.shape);
+      const chip = chips?.querySelector(`.map-chip[data-zone="${payload.id}"]`);
+      if (chip) chip.classList.add('is-hover');
+    }
+
+    clip.setAttribute('cx', cx);
+    clip.setAttribute('cy', cy);
+    clip.setAttribute('rx', rx);
+    clip.setAttribute('ry', ry);
+    const radius = Math.max(rx, ry) * 1.35;
+    light.setAttribute('cx', wx);
+    light.setAttribute('cy', wy);
+    light.setAttribute('rx', radius);
+    light.setAttribute('ry', radius);
+    light.setAttribute('opacity', '1');
+    hi.classList.add('is-on');
+    sat.classList.add('is-on');
+  }
+
+  function updateHoverHighlight(clientX, clientY) {
+    if (state.view !== 'continent' || state.dragging) {
+      setHoverVisual(null);
+      return;
+    }
+    const { x: wx, y: wy } = screenToWorld(clientX, clientY);
+    const city = cityAtWorld(wx, wy);
+    if (city) {
+      setHoverVisual('city', city, wx, wy);
+      return;
+    }
+    const zone = zoneAtWorld(wx, wy);
+    if (zone) {
+      setHoverVisual('zone', zone, wx, wy);
+      return;
+    }
+    setHoverVisual(null);
   }
 
   function currentLod() {
@@ -229,6 +390,9 @@
     if (kind === 'city') {
       const c = payload;
       state.selectedId = c.id;
+      document.querySelectorAll('.map-chip.is-selected').forEach((n) => n.classList.remove('is-selected'));
+      const cityChip = document.querySelector(`.map-chip[data-city="${c.id}"]`);
+      if (cityChip) cityChip.classList.add('is-selected');
       const imp = c.importance || 'town';
       panelEyebrow.textContent = (c.visibility === 'fog' ? 'Uncharted · ' : '') +
         (imp === 'capital' ? 'Capital' : imp === 'hub' ? 'Hub' : 'Town');
@@ -251,8 +415,11 @@
       const z = payload;
       state.selectedId = z.id;
       document.querySelectorAll('.zone-shape.selected').forEach((n) => n.classList.remove('selected'));
+      document.querySelectorAll('.map-chip.is-selected').forEach((n) => n.classList.remove('is-selected'));
       const shape = document.getElementById(`zone-${z.id}`);
       if (shape) shape.classList.add('selected');
+      const chip = document.querySelector(`.map-chip[data-zone="${z.id}"]`);
+      if (chip) chip.classList.add('is-selected');
 
       panelEyebrow.textContent = z.fog ? `Uncharted · ${z.id}` : `Zone · ${z.id}`;
       panelTitle.textContent = z.title || z.id;
@@ -390,6 +557,7 @@
     panel.classList.remove('open');
     panel.setAttribute('aria-hidden', 'true');
     document.querySelectorAll('.zone-shape.selected').forEach((n) => n.classList.remove('selected'));
+    document.querySelectorAll('.map-chip.is-selected').forEach((n) => n.classList.remove('is-selected'));
     state.selectedId = null;
   }
 
@@ -463,14 +631,7 @@
         transform: `translate(${p.x} ${p.y})`,
       }, g);
       if (iconHref) {
-        const size = 52;
-        el('circle', {
-          class: 'poi-badge',
-          r: size / 2 + 4,
-          fill: 'rgba(6,8,12,0.7)',
-          stroke: 'rgba(232,168,73,0.4)',
-          'stroke-width': 2,
-        }, wrap);
+        const size = 44;
         el('image', {
           class: 'poi-icon',
           href: iconHref,
@@ -486,13 +647,8 @@
           fill: color,
         }, wrap);
       }
-      const t = el('text', {
-        class: 'poi-label',
-        x: 0,
-        y: 36,
-        'text-anchor': 'middle',
-      }, wrap);
-      t.textContent = p.name;
+      const chip = makeChip(wrap, 0, 32, p.name, null, 'poi-chip');
+      chip.classList.add('is-hover');
       wrap.addEventListener('click', (ev) => {
         ev.stopPropagation();
         ev.preventDefault();
@@ -502,13 +658,21 @@
 
   function renderZones() {
     const g = document.getElementById('layer-zones');
-    const labels = document.getElementById('layer-labels');
+    const fogG = document.getElementById('layer-fog');
+    const chips = document.getElementById('layer-chips');
     g.innerHTML = '';
-    labels.innerHTML = '';
+    if (fogG) fogG.innerHTML = '';
+    if (chips) chips.innerHTML = '';
 
     for (const z of state.data.zones) {
       const { cx, cy, rx, ry } = z.shape;
       const vis = z.visibility || (z.fog ? 'fog' : 'live');
+      if (z.fog && fogG) {
+        el('ellipse', {
+          class: 'fog-wash',
+          cx, cy, rx: rx * 1.05, ry: ry * 1.05,
+        }, fogG);
+      }
       const shape = el('ellipse', {
         id: `zone-${z.id}`,
         class: `zone-shape ${vis}`,
@@ -519,28 +683,23 @@
         ev.stopPropagation();
         ev.preventDefault();
       });
-      shape.addEventListener('mouseenter', () => {
-        state.hoverZoneId = z.id;
-      });
-      shape.addEventListener('mouseleave', () => {
-        if (state.hoverZoneId === z.id) state.hoverZoneId = null;
-      });
 
-      const label = el('text', {
-        x: cx, y: cy + 6,
-        class: `zone-label${z.fog ? ' fog-label' : ''}`,
-        'text-anchor': 'middle',
-      }, labels);
-      label.textContent = z.title || z.id;
-
-      if (!z.fog && z.levelRange) {
-        const lvl = el('text', {
-          x: cx, y: cy + 24,
-          class: 'zone-level',
-          'text-anchor': 'middle',
-        }, labels);
-        lvl.textContent = z.levelRange;
-      }
+      const short = {
+        Z00: 'Catacombs', Z01: 'Meadows', Z02: 'Oldtown', Z03: 'Gloomfen',
+        Z04: 'Ashenveil', Z05: 'Silverbrook', Z06: 'Ironspine', Z07: 'Verdant Reach',
+        Z08: 'Gearwind', Z09: 'Thornfield', Z10: 'Kazgrath', Z11: 'Aelindor',
+        Z12: 'Veridane', Z19: 'Depths',
+      };
+      const meta = z.fog ? 'Uncharted' : (z.levelRange ? `Lv ${z.levelRange}` : '');
+      const chip = makeChip(
+        chips,
+        cx,
+        cy + Math.min(ry * 0.22, 22),
+        short[z.id] || z.title || z.id,
+        meta,
+        z.fog ? 'fog-chip' : ''
+      );
+      chip.setAttribute('data-zone', z.id);
     }
   }
 
@@ -551,10 +710,11 @@
       g = el('g', { id: 'layer-cities' }, continentRoot);
     }
     g.innerHTML = '';
+    const chips = document.getElementById('layer-chips');
     const sizeFor = (imp) => {
-      if (imp === 'capital') return 56;
-      if (imp === 'hub') return 46;
-      return 34;
+      if (imp === 'capital') return 36;
+      if (imp === 'hub') return 30;
+      return 24;
     };
     for (const c of cities) {
       if (c.x == null || c.y == null) continue;
@@ -570,35 +730,24 @@
         transform: `translate(${c.x} ${c.y})`,
       }, g);
       el('circle', {
-        class: 'city-badge',
-        r: size / 2 + 3,
-        fill: 'rgba(6,8,12,0.72)',
-        stroke: fog ? 'rgba(232,168,73,0.35)' : 'rgba(61,220,132,0.45)',
-        'stroke-width': 2,
+        class: 'city-hit',
+        r: size,
       }, wrap);
-      el('image', {
-        class: 'poi-icon',
-        href: withV('/map/assets/icons/town.png'),
-        x: -size / 2,
-        y: -size / 2,
-        width: size,
-        height: size,
-        opacity: fog ? '0.7' : '1',
-      }, wrap);
-      const showLabel = c.id === 'anvil-rest' || c.id === 'fenwatch';
-      if (showLabel) {
-        const label = el('text', {
-          class: `city-label city-label-${imp}${fog ? ' fog-label' : ''}`,
-          x: 0,
-          y: size / 2 + 14,
-          'text-anchor': 'middle',
-        }, wrap);
-        label.textContent = c.name || c.id;
-      }
       wrap.addEventListener('click', (ev) => {
         ev.stopPropagation();
         ev.preventDefault();
       });
+      if (chips) {
+        const chip = makeChip(
+          chips,
+          c.x,
+          c.y + 26,
+          c.name || c.id,
+          c.faction || (imp === 'capital' ? 'Capital' : ''),
+          'city-chip'
+        );
+        chip.setAttribute('data-city', c.id);
+      }
     }
   }
 
@@ -657,6 +806,7 @@
     });
 
     viewport.addEventListener('pointermove', (e) => {
+      if (!state.dragging) updateHoverHighlight(e.clientX, e.clientY);
       if (!state.pointers.has(e.pointerId)) return;
       state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       const dist = Math.hypot(e.clientX - state.downX, e.clientY - state.downY);
@@ -702,6 +852,9 @@
     };
     viewport.addEventListener('pointerup', endPointer);
     viewport.addEventListener('pointercancel', endPointer);
+    viewport.addEventListener('pointerleave', () => {
+      if (!state.dragging) updateHoverHighlight(-1, -1);
+    });
     viewport.addEventListener('dblclick', (e) => {
       e.preventDefault();
       handleMapDblClick(e.clientX, e.clientY);
@@ -784,6 +937,9 @@
     tryWorldPlate();
     bindInput();
     fitView();
+    const relayout = () => document.querySelectorAll('.map-chip').forEach(layoutChip);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
+    setTimeout(relayout, 250);
     if (location.hash) applyHash();
   }
 

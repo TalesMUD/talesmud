@@ -250,54 +250,62 @@ html, body {
 }
 
 .zone-shape {
-  stroke-width: 2;
-  stroke: transparent;
-  fill: rgba(61, 220, 132, 0.001);
+  stroke: none;
+  fill: #000;
+  fill-opacity: 0;
   pointer-events: all;
-  transition: fill 0.18s ease, stroke 0.18s ease, filter 0.18s ease;
   cursor: pointer;
 }
-.zone-shape.live { opacity: 1; }
-.zone-shape.fog,
-.zone-shape.stub {
-  fill: rgba(10, 12, 16, 0.42);
-  stroke: rgba(106, 102, 96, 0.45);
-  stroke-dasharray: 7 5;
-  filter: url(#fogHatch);
-}
-.zone-shape:hover,
-.zone-shape.selected {
-  filter: drop-shadow(0 0 10px rgba(61, 220, 132, 0.7));
-  stroke: var(--green-glow);
-  stroke-width: 2.5;
-  stroke-dasharray: none;
-  fill: rgba(61, 220, 132, 0.14);
+.zone-shape.live { fill-opacity: 0; }
+.fog-wash {
+  fill: #cbb99a;
+  opacity: 0.22;
+  mix-blend-mode: multiply;
+  pointer-events: none;
 }
 
-.zone-label {
+#layer-highlight { mix-blend-mode: hard-light; }
+#hover-light { opacity: 0; }
+#layer-highlight.is-on #hover-light { opacity: 1; }
+#layer-sat { opacity: 0; transition: opacity 0.16s ease; }
+#layer-sat.is-on { opacity: 0.65; }
+
+.map-chip { pointer-events: none; }
+.map-chip-bg {
+  fill: #efe0bc;
+  stroke: rgba(90, 70, 40, 0.4);
+  stroke-width: 1.1;
+  opacity: 0.82;
+  filter: drop-shadow(0 1px 3px rgba(20, 14, 6, 0.4));
+}
+.map-chip.is-hover .map-chip-bg,
+.map-chip.is-selected .map-chip-bg {
+  opacity: 0.97;
+  fill: #f7ead0;
+  stroke: rgba(90, 70, 40, 0.55);
+}
+.map-chip-title {
   font-family: var(--font-heading);
-  fill: var(--text-bright);
-  font-size: 18px;
+  fill: #2a2418;
+  font-size: 13px;
   font-weight: 600;
-  pointer-events: none;
-  paint-order: stroke;
-  stroke: rgba(6, 8, 12, 0.85);
-  stroke-width: 4px;
+  text-anchor: middle;
 }
-.zone-label.fog-label {
-  fill: var(--text-dim);
-  font-style: italic;
-  font-size: 15px;
-}
-.zone-level {
+.map-chip-meta {
   font-family: var(--font-mono);
-  fill: var(--amber-text);
-  font-size: 11px;
-  pointer-events: none;
-  paint-order: stroke;
-  stroke: rgba(6, 8, 12, 0.75);
-  stroke-width: 3px;
+  fill: #6a5428;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-anchor: middle;
 }
+.map-chip.fog-chip { opacity: 0; }
+.map-chip.fog-chip.is-hover,
+.map-chip.fog-chip.is-selected { opacity: 1; }
+.map-chip.fog-chip .map-chip-title { fill: #4a453c; font-style: italic; }
+.map-chip.city-chip { opacity: 0; }
+.map-chip.city-chip.is-hover,
+.map-chip.city-chip.is-selected { opacity: 1; }
+.map-chip.city-chip .map-chip-bg { opacity: 0.94; }
 
 .connection {
   fill: none;
@@ -321,43 +329,24 @@ html, body {
   cursor: pointer;
   pointer-events: auto;
 }
+.poi-icon { mix-blend-mode: lighten; }
 .poi-icon:hover,
-.poi-dot:hover { filter: drop-shadow(0 0 6px rgba(232, 168, 73, 0.85)); }
+.poi-dot:hover { filter: drop-shadow(0 0 6px rgba(232, 168, 73, 0.55)); }
 .poi-label {
   font-family: var(--font-heading);
-  font-size: 18px;
-  fill: var(--text-bright);
+  font-size: 14px;
+  fill: #2a2418;
   pointer-events: none;
-  paint-order: stroke;
-  stroke: rgba(6, 8, 12, 0.85);
-  stroke-width: 4px;
 }
 
-
-/* City LOD: capitals always; hub from zones+; towns at POI zoom */
-.city-label {
-  font-family: var(--font-heading);
-  fill: var(--text-bright);
-  pointer-events: none;
-  paint-order: stroke;
-  stroke: rgba(6, 8, 12, 0.85);
-  stroke-width: 4px;
-}
-.city-label-capital { font-size: 20px; fill: var(--amber-text); }
-.city-label-hub { font-size: 16px; fill: var(--green-text); }
-.city-label-town { font-size: 13px; }
-.city-fog { opacity: 0.7; }
-.city-fog .city-label { fill: var(--text-dim); font-style: italic; }
-
-.lod-continent .layer-zones-detail { display: none; }
-.lod-continent .zone-label,
-.lod-continent .zone-level { display: none; }
+.lod-continent .map-chip:not(.is-hover):not(.is-selected) .map-chip-bg { opacity: 0.7; }
 
 .has-world-plate #parchment { opacity: 0.08; }
-.has-world-plate .zone-shape.live { fill: transparent; }
 
 .city-marker { cursor: pointer; }
+.city-hit { fill: transparent; pointer-events: all; }
 .poi-marker { cursor: pointer; }
+.poi-badge { display: none; }
 #zone-root.hidden,
 #continent-root.hidden { display: none; }
 
