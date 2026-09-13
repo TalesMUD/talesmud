@@ -4,7 +4,7 @@
  */
 (() => {
   const NS = 'http://www.w3.org/2000/svg';
-  const ASSET_V = 'map10';
+  const ASSET_V = 'map11';
   const viewport = document.getElementById('map-viewport');
   const svg = document.getElementById('map-svg');
   const camera = document.getElementById('camera');
@@ -282,17 +282,19 @@
       if (!z.fog && (z.pois || []).length) {
         html += `<h3>Points of interest</h3><ul class="poi-list">`;
         for (const p of z.pois) {
-          html += `<li><strong>${escapeHtml(p.name)}</strong> <span class="state">(${escapeHtml(p.kind)})</span>`;
+          html += `<li data-poi="${escapeHtml(p.id)}"><strong>${escapeHtml(p.name)}</strong> <span class="state">(${escapeHtml(p.kind)})</span>`;
           if (p.blurb) html += `<div>${escapeHtml(p.blurb)}</div>`;
           html += `</li>`;
         }
         html += `</ul>`;
       }
-      if (z.zoneMap && state.view === 'continent') {
-        html += `<p><button type="button" class="chip" id="btn-enter-zone" data-zone="${escapeHtml(z.id)}">Enter zone map</button></p>`;
+      if (z.zoneMap) {
+        const label = state.view === 'zone' && state.zoneId === z.id ? 'Zoom zone map' : 'Enter zone map';
+        html += `<p><button type="button" class="chip" id="btn-enter-zone" data-zone="${escapeHtml(z.id)}">${label}</button></p>`;
       }
       panelBody.innerHTML = html;
       bindEnterBtn();
+      bindPanelPois(z);
     } else if (kind === 'poi') {
       const p = payload;
       state.selectedId = p.id;
@@ -307,10 +309,81 @@
     const btn = document.getElementById('btn-enter-zone');
     if (!btn) return;
     btn.addEventListener('click', (ev) => {
+      ev.preventDefault();
       ev.stopPropagation();
       const z = zoneById(btn.getAttribute('data-zone'));
       if (z) enterZone(z);
     });
+  }
+
+  function bindPanelPois(z) {
+    panelBody.querySelectorAll('[data-poi]').forEach((row) => {
+      row.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const p = (z.pois || []).find((x) => x.id === row.getAttribute('data-poi'));
+        if (!p) return;
+        if (state.view !== 'zone' || state.zoneId !== z.id) enterZone(z);
+        openPanel('poi', { ...p, zoneTitle: z.title });
+      });
+    });
+  }
+
+  function closestFromPoint(clientX, clientY, selector) {
+    const nodes = document.elementsFromPoint(clientX, clientY);
+    for (const n of nodes) {
+      if (!n || typeof n.closest !== 'function') continue;
+      if (n.closest('#detail-panel, .nav, .map-chrome')) return null;
+      const hit = n.closest(selector);
+      if (hit) return hit;
+    }
+    return null;
+  }
+
+  function handleMapTap(clientX, clientY) {
+    if (state.view === 'zone') {
+      const poiEl = closestFromPoint(clientX, clientY, '.poi-marker');
+      if (poiEl) {
+        const z = zoneById(state.zoneId);
+        const p = (z?.pois || []).find((x) => x.id === poiEl.getAttribute('data-id'));
+        if (p) {
+          openPanel('poi', { ...p, zoneTitle: z.title });
+          return;
+        }
+      }
+      const z = zoneById(state.zoneId);
+      if (z) openPanel('zone', z);
+      return;
+    }
+    const cityEl = closestFromPoint(clientX, clientY, '.city-marker');
+    if (cityEl) {
+      const c = cityById(cityEl.getAttribute('data-id'));
+      if (c) {
+        openPanel('city', c);
+        return;
+      }
+    }
+    const zoneEl = closestFromPoint(clientX, clientY, '.zone-shape');
+    if (zoneEl) {
+      const z = zoneById(zoneEl.getAttribute('data-id'));
+      if (z) openPanel('zone', z);
+    }
+  }
+
+  function handleMapDblClick(clientX, clientY) {
+    if (state.view === 'zone') return;
+    const cityEl = closestFromPoint(clientX, clientY, '.city-marker');
+    if (cityEl) {
+      const c = cityById(cityEl.getAttribute('data-id'));
+      const z = c ? zoneById(c.zoneId) : null;
+      if (z) enterZone(z);
+      return;
+    }
+    const zoneEl = closestFromPoint(clientX, clientY, '.zone-shape');
+    if (zoneEl) {
+      const z = zoneById(zoneEl.getAttribute('data-id'));
+      if (z) enterZone(z);
+    }
   }
 
   function closePanel() {
@@ -422,7 +495,7 @@
       t.textContent = p.name;
       wrap.addEventListener('click', (ev) => {
         ev.stopPropagation();
-        openPanel('poi', { ...p, zoneTitle: z.title });
+        ev.preventDefault();
       });
     }
   }
@@ -444,10 +517,7 @@
       }, g);
       shape.addEventListener('click', (ev) => {
         ev.stopPropagation();
-        if (state.moved) return;
-        openPanel('zone', z);
-        if (z.zoneMap) enterZone(z);
-        else focusZone(z);
+        ev.preventDefault();
       });
       shape.addEventListener('mouseenter', () => {
         state.hoverZoneId = z.id;
@@ -527,10 +597,7 @@
       }
       wrap.addEventListener('click', (ev) => {
         ev.stopPropagation();
-        if (state.moved) return;
-        openPanel('city', c);
-        const z = zoneById(c.zoneId);
-        if (z && z.zoneMap) enterZone(z);
+        ev.preventDefault();
       });
     }
   }
@@ -575,17 +642,14 @@
     }, { passive: false });
 
     viewport.addEventListener('pointerdown', (e) => {
-      viewport.setPointerCapture(e.pointerId);
+      if (e.button != null && e.button !== 0) return;
       state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       state.moved = false;
       state.downX = e.clientX;
       state.downY = e.clientY;
-      if (state.pointers.size === 1) {
-        state.dragging = true;
-        state.lastX = e.clientX;
-        state.lastY = e.clientY;
-        viewport.classList.add('dragging');
-      } else if (state.pointers.size === 2) {
+      state.lastX = e.clientX;
+      state.lastY = e.clientY;
+      if (state.pointers.size === 2) {
         const pts = [...state.pointers.values()];
         state.pinchStartDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
         state.pinchStartScale = state.scale;
@@ -595,16 +659,20 @@
     viewport.addEventListener('pointermove', (e) => {
       if (!state.pointers.has(e.pointerId)) return;
       state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (Math.hypot(e.clientX - state.downX, e.clientY - state.downY) > 8) {
+      const dist = Math.hypot(e.clientX - state.downX, e.clientY - state.downY);
+      if (dist > 8 && !state.dragging) {
         state.moved = true;
+        state.dragging = true;
+        viewport.classList.add('dragging');
+        try { viewport.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
       }
       if (state.pointers.size === 2) {
         const pts = [...state.pointers.values()];
-        const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+        const distPinch = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
         if (state.pinchStartDist > 0) {
           const midX = (pts[0].x + pts[1].x) / 2;
           const midY = (pts[0].y + pts[1].y) / 2;
-          const target = state.pinchStartScale * (dist / state.pinchStartDist);
+          const target = state.pinchStartScale * (distPinch / state.pinchStartDist);
           const factor = target / state.scale;
           zoomAt(midX, midY, factor);
         }
@@ -621,15 +689,23 @@
     });
 
     const endPointer = (e) => {
+      const wasDrag = state.moved;
+      const x = e.clientX;
+      const y = e.clientY;
       state.pointers.delete(e.pointerId);
       if (state.pointers.size < 2) state.pinchStartDist = 0;
       if (state.pointers.size === 0) {
         state.dragging = false;
         viewport.classList.remove('dragging');
+        if (!wasDrag) handleMapTap(x, y);
       }
     };
     viewport.addEventListener('pointerup', endPointer);
     viewport.addEventListener('pointercancel', endPointer);
+    viewport.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      handleMapDblClick(e.clientX, e.clientY);
+    });
 
     document.getElementById('panel-close').addEventListener('click', closePanel);
     document.addEventListener('keydown', (e) => {
@@ -660,7 +736,19 @@
       else fitView();
     });
     btnBack.addEventListener('click', () => exitZone());
-    window.addEventListener('resize', fitView);
+    let lastVW = 0;
+    let lastVH = 0;
+    const onViewportResize = () => {
+      const { w, h } = viewportSize();
+      if (Math.abs(w - lastVW) < 2 && Math.abs(h - lastVH) < 2) return;
+      lastVW = w;
+      lastVH = h;
+      fitView();
+    };
+    window.addEventListener('resize', onViewportResize);
+    if (window.ResizeObserver) {
+      new ResizeObserver(onViewportResize).observe(viewport);
+    }
     window.addEventListener('hashchange', () => applyHash());
   }
 

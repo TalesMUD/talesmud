@@ -76,6 +76,14 @@ html, body {
   grid-template-rows: var(--nav-h) var(--chrome-h) 1fr;
 }
 
+.map-stage {
+  position: relative;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  height: 100%;
+}
+
 /* ── Nav (matches landing) ── */
 .nav {
   z-index: 40;
@@ -221,7 +229,8 @@ html, body {
 
 /* ── Map viewport ── */
 #map-viewport {
-  position: relative;
+  position: absolute;
+  inset: 0;
   overflow: hidden;
   min-height: 0;
   background:
@@ -243,7 +252,8 @@ html, body {
 .zone-shape {
   stroke-width: 2;
   stroke: transparent;
-  fill: transparent;
+  fill: rgba(61, 220, 132, 0.001);
+  pointer-events: all;
   transition: fill 0.18s ease, stroke 0.18s ease, filter 0.18s ease;
   cursor: pointer;
 }
@@ -354,17 +364,18 @@ html, body {
 /* ── Detail panel ── */
 #detail-panel {
   position: absolute;
-  top: calc(var(--nav-h) + var(--chrome-h));
+  top: 0;
   right: 0;
   bottom: 0;
   width: min(380px, 92vw);
   background: var(--bg-panel);
   border-left: 1px solid var(--border-glow);
-  transform: translateX(105%);
+  transform: translateX(110%);
   transition: transform 0.28s var(--ease-out);
-  z-index: 35;
+  z-index: 60;
   display: flex;
   flex-direction: column;
+  pointer-events: auto;
   backdrop-filter: blur(14px);
   box-shadow: -12px 0 40px rgba(0,0,0,0.35);
 }
@@ -448,6 +459,16 @@ html, body {
   padding: 0.45rem 0;
   border-bottom: 1px solid rgba(255,255,255,0.05);
   font-size: 0.95rem;
+}
+.poi-list li[data-poi] {
+  cursor: pointer;
+  padding: 0.5rem 0.35rem;
+  margin: 0 -0.35rem;
+  border-radius: 4px;
+}
+.poi-list li[data-poi]:hover {
+  background: rgba(61, 220, 132, 0.08);
+  color: var(--text-bright);
 }
 .conn-list .state {
   font-family: var(--font-mono);

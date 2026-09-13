@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;500;600;700&family=Fira+Code:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/map/map.css?v=map10" />
+  <link rel="stylesheet" href="/map/map.css?v=map11" />
 </head>
 <body>
   <div class="scanlines" aria-hidden="true"></div>
@@ -21,7 +21,7 @@
       <ul class="nav-links">
         <li><a href="/#lore">Lore</a></li>
         <li><a href="/play">Play</a></li>
-        <li><a href="/map/?v=map10" class="active" aria-current="page">Map</a></li>
+        <li><a href="/map/?v=map11" class="active" aria-current="page">Map</a></li>
         <li><a href="/docs/">Docs</a></li>
       </ul>
     </nav>
@@ -44,45 +44,47 @@
       </div>
     </header>
 
-    <div id="map-viewport" aria-label="Interactive world map">
-      <svg id="map-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Veilspan world map">
-        <defs>
-          <filter id="fogHatch">
-            <feColorMatrix type="saturate" values="0.35"/>
-          </filter>
-        </defs>
-        <g id="camera">
-          <g id="continent-root">
-            <rect id="parchment" x="0" y="0" width="2048" height="2048" fill="#0a0e14" rx="4"/>
-            <image id="world-plate" href="/map/assets/world/world-plate.jpg?v=map10" width="2048" height="2048" opacity="1" preserveAspectRatio="xMidYMid meet" />
-            <g id="layer-zones"></g>
-            <g id="layer-labels" class="layer-zones-detail"></g>
-            <g id="layer-cities"></g>
+    <div class="map-stage">
+      <div id="map-viewport" aria-label="Interactive world map">
+        <svg id="map-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Veilspan world map">
+          <defs>
+            <filter id="fogHatch">
+              <feColorMatrix type="saturate" values="0.35"/>
+            </filter>
+          </defs>
+          <g id="camera">
+            <g id="continent-root">
+              <rect id="parchment" x="0" y="0" width="2048" height="2048" fill="#0a0e14" rx="4"/>
+              <image id="world-plate" href="/map/assets/world/world-plate.jpg?v=map11" width="2048" height="2048" opacity="1" preserveAspectRatio="xMidYMid meet" />
+              <g id="layer-zones"></g>
+              <g id="layer-labels" class="layer-zones-detail"></g>
+              <g id="layer-cities"></g>
+            </g>
+            <g id="zone-root" class="hidden">
+              <image id="zone-plate" href="" width="1024" height="1024" preserveAspectRatio="xMidYMid meet" />
+              <g id="zone-pois"></g>
+            </g>
           </g>
-          <g id="zone-root" class="hidden">
-            <image id="zone-plate" href="" width="1024" height="1024" preserveAspectRatio="xMidYMid meet" />
-            <g id="zone-pois"></g>
-          </g>
-        </g>
-      </svg>
+        </svg>
 
-      <div class="legend">
-        <span><i class="swatch live"></i> Charted</span>
-        <span><i class="swatch fog"></i> Uncharted</span>
+        <div class="legend">
+          <span><i class="swatch live"></i> Charted</span>
+          <span><i class="swatch fog"></i> Uncharted</span>
+        </div>
+        <div class="hint">Click a town or zone for lore · Double-click to enter · Drag to pan</div>
       </div>
-      <div class="hint">Click a zone or town to enter · Scroll to zoom · Drag to pan</div>
+
+      <aside id="detail-panel" aria-live="polite" aria-hidden="true">
+        <button type="button" class="panel-close" id="panel-close" aria-label="Close">×</button>
+        <div class="panel-header">
+          <div class="eyebrow" id="panel-eyebrow">Zone</div>
+          <h2 id="panel-title">—</h2>
+          <div class="meta" id="panel-meta"></div>
+        </div>
+        <div class="panel-body" id="panel-body"></div>
+      </aside>
     </div>
-
-    <aside id="detail-panel" aria-live="polite" aria-hidden="true">
-      <button type="button" class="panel-close" id="panel-close" aria-label="Close">×</button>
-      <div class="panel-header">
-        <div class="eyebrow" id="panel-eyebrow">Zone</div>
-        <h2 id="panel-title">—</h2>
-        <div class="meta" id="panel-meta"></div>
-      </div>
-      <div class="panel-body" id="panel-body"></div>
-    </aside>
   </div>
-  <script src="/map/map.js?v=map10"></script>
+  <script src="/map/map.js?v=map11"></script>
 </body>
 </html>
