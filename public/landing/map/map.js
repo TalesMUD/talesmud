@@ -289,17 +289,29 @@
   }
 
   function tryWorldPlate() {
-    const href = state.data.world?.layers?.worldPlate;
-    if (!href) return;
+    const layers = state.data.world?.layers || {};
+    const candidates = [layers.worldPlate, layers.worldPlateAlt].filter(Boolean);
+    // Also try common extensions if primary missing
+    if (layers.worldPlate && layers.worldPlate.endsWith('.webp')) {
+      candidates.push(layers.worldPlate.replace(/\.webp$/, '.jpg'));
+    }
     const node = document.getElementById('world-plate');
-    const probe = new Image();
-    probe.onload = () => {
-      node.setAttribute('href', href);
-      node.setAttribute('opacity', '0.85');
-      document.getElementById('parchment').setAttribute('opacity', '0.25');
+    const parchment = document.getElementById('parchment');
+    const tryNext = (i) => {
+      if (i >= candidates.length) return;
+      const href = candidates[i];
+      const probe = new Image();
+      probe.onload = () => {
+        node.setAttribute('href', href);
+        node.setAttribute('opacity', '0.92');
+        parchment.setAttribute('opacity', '0.12');
+        parchment.setAttribute('fill', '#1a1810');
+        svg.classList.add('has-world-plate');
+      };
+      probe.onerror = () => tryNext(i + 1);
+      probe.src = href;
     };
-    probe.onerror = () => { /* placeholder parchment remains */ };
-    probe.src = href;
+    tryNext(0);
   }
 
   function bindInput() {

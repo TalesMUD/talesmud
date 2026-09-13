@@ -13,8 +13,10 @@
       1580
     ],
     "layers": {
-      "worldPlate": "assets/world/world-plate.webp",
-      "fog": true
+      "worldPlate": "assets/world/world-plate.jpg",
+      "fog": true,
+      "worldPlateAlt": "assets/world/world-plate-16x9.jpg",
+      "worldPlateNote": "Imagine draft LOD0; relabel pass pending"
     }
   },
   "lod": {

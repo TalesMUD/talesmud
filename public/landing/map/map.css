@@ -365,3 +365,18 @@ html, body {
   .legend { bottom: 0.5rem; left: 0.5rem; max-width: 55vw; }
   .hint { display: none; }
 }
+
+/* When Imagine world plate is loaded, dial back flat parchment fills */
+.has-world-plate #parchment { opacity: 0.12; }
+.has-world-plate #layer-terrain { opacity: 0.2; }
+.has-world-plate .zone-shape.live { fill-opacity: 0.42; }
+.has-world-plate .zone-label {
+  fill: #f0e6d0;
+  stroke: rgba(20, 16, 10, 0.75);
+}
+.has-world-plate .zone-level { fill: #d8c8a0; }
+.has-world-plate .poi-label {
+  fill: #f5edd8;
+  stroke: rgba(20, 16, 10, 0.8);
+}
+.has-world-plate .connection { stroke: #c8b898; }

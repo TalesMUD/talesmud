@@ -18,7 +18,7 @@ python3 tools/build_public_map_data.py
 
 | Slot | Path | Notes |
 |------|------|-------|
-| World plate | `assets/world/world-plate.webp` | Full 1800×1580 parchment art; optional |
+| World plate | `assets/world/world-plate.jpg` | Full 1800×1580 parchment art; optional |
 | Zone plates | `assets/zones/z00-plate.webp` … | Shown inside zone ellipse when present |
 | Icons | `assets/icons/*.svg` | Future POI icon set |
 
