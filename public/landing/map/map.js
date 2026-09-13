@@ -248,7 +248,7 @@
 
       // Try zone plate image (Imagine hook) — mid-zoom+ (layer-zones-detail)
       if (!z.fog && z.imagePlate) {
-        const plateHref = absMapAsset(z.imagePlate) + '?v=map4';
+        const plateHref = absMapAsset(z.imagePlate) + '?v=map5';
         const img = el('image', {
           class: 'zone-plate layer-zones-detail',
           href: plateHref,
@@ -297,7 +297,7 @@
 
   function poiIconHref(kind) {
     const key = poiIconMap[kind];
-    return key ? `/map/assets/icons/${key}.png?v=map4` : null;
+    return key ? `/map/assets/icons/${key}.png?v=map5` : null;
   }
 
   function renderPois() {
@@ -371,8 +371,8 @@
         'data-importance': imp,
       }, g);
       const href = fog
-        ? `/map/assets/icons/town.png?v=map4`
-        : `/map/assets/icons/town.png?v=map4`;
+        ? `/map/assets/icons/town.png?v=map5`
+        : `/map/assets/icons/town.png?v=map5`;
       const img = el('image', {
         class: 'poi-icon',
         href,
@@ -407,10 +407,10 @@
   function tryWorldPlate() {
     const layers = state.data.world?.layers || {};
     const candidates = [
-      absMapAsset(layers.worldPlate) + (layers.worldPlate ? '?v=map4' : ''),
-      '/map/assets/world/world-plate.jpg?v=map4',
-      absMapAsset(layers.worldPlateAlt) + (layers.worldPlateAlt ? '?v=map4' : ''),
-      '/map/assets/world/world-plate-16x9.jpg?v=map4',
+      absMapAsset(layers.worldPlate) + (layers.worldPlate ? '?v=map5' : ''),
+      '/map/assets/world/world-plate.jpg?v=map5',
+      absMapAsset(layers.worldPlateAlt) + (layers.worldPlateAlt ? '?v=map5' : ''),
+      '/map/assets/world/world-plate-16x9.jpg?v=map5',
     ].filter((u, i, a) => u && a.indexOf(u) === i);
     const node = document.getElementById('world-plate');
     const parchment = document.getElementById('parchment');
@@ -529,7 +529,7 @@
   }
 
   async function boot() {
-    const res = await fetch('/map/map-data.json?v=map4', { cache: 'no-cache' });
+    const res = await fetch('/map/map-data.json?v=map5', { cache: 'no-cache' });
     if (!res.ok) throw new Error('Failed to load map-data.json');
     state.data = await res.json();
     // Defense in depth: strip internal if someone ever ships raw lore by mistake
