@@ -5,12 +5,12 @@
   "chapter": "Chapter I: Gloomfen Depths",
   "world": {
     "id": "aethermoor",
-    "name": "Aethermoor",
+    "name": "Veilspan",
     "viewBox": [
       0,
       0,
-      1800,
-      1580
+      2048,
+      2048
     ],
     "layers": {
       "worldPlate": "assets/world/world-plate.jpg",
@@ -24,10 +24,10 @@
     },
     "zones": {
       "minScale": 0.55,
-      "maxScale": 1.35
+      "maxScale": 1.8
     },
     "pois": {
-      "minScale": 1.35
+      "minScale": 1.8
     }
   },
   "zones": [
@@ -61,52 +61,61 @@
           "name": "Awakening Chamber",
           "kind": "landmark",
           "blurb": "Where new souls first stand.",
-          "x": 720,
-          "y": 912
+          "x": 700,
+          "y": 1180
         },
         {
           "id": "r0003",
           "name": "Torch Alcove",
           "kind": "npc",
           "blurb": "Spectral Warden and the first supplies.",
-          "x": 738,
-          "y": 926
+          "x": 380,
+          "y": 700
         },
         {
           "id": "r0004",
           "name": "Rune Chamber",
           "kind": "landmark",
           "blurb": "Light reveals older writing.",
-          "x": 702,
-          "y": 926
+          "x": 1050,
+          "y": 400
         },
         {
           "id": "r0005",
           "name": "Rat Nest",
           "kind": "dungeon",
           "blurb": "Small vermin; thorough scavengers rewarded.",
-          "x": 732,
-          "y": 902
+          "x": 420,
+          "y": 1080
         },
         {
           "id": "r0006",
           "name": "Exit Stairwell",
           "kind": "gate",
           "blurb": "Daylight, once the fragments are gathered.",
-          "x": 708,
-          "y": 902
+          "x": 450,
+          "y": 360
         }
       ],
       "shape": {
         "type": "ellipse",
-        "cx": 720,
-        "cy": 920,
-        "rx": 36,
-        "ry": 28
+        "cx": 640,
+        "cy": 1860,
+        "rx": 120,
+        "ry": 90
       },
       "fill": "#5a5060",
       "fog": false,
-      "imagePlate": "assets/zones/z00-plate.webp"
+      "imagePlate": "assets/zones/z00-plate.jpg",
+      "zoneMap": {
+        "href": "assets/zones/z00-plate.jpg",
+        "viewBox": [
+          0,
+          0,
+          1408,
+          1408
+        ]
+      }
     },
     {
       "id": "Z01",
@@ -144,60 +153,69 @@
           "name": "Meadow Emergence",
           "kind": "landmark",
           "blurb": "First daylight; the catacomb mouth seals behind you.",
-          "x": 720,
-          "y": 782
+          "x": 512,
+          "y": 880
         },
         {
           "id": "r0102",
           "name": "Wildflower Field",
           "kind": "merchant",
           "blurb": "Fynn the Peddler’s cart.",
-          "x": 738,
-          "y": 796
+          "x": 740,
+          "y": 800
         },
         {
           "id": "r0104",
           "name": "Bandit Lookout",
           "kind": "landmark",
           "blurb": "Abandoned tower with fresh tracks.",
-          "x": 702,
-          "y": 796
+          "x": 850,
+          "y": 500
         },
         {
           "id": "r0105",
           "name": "Forest Edge",
           "kind": "npc",
           "blurb": "Ranger Wren on Oldtown’s patrol.",
-          "x": 732,
-          "y": 772
+          "x": 180,
+          "y": 600
         },
         {
           "id": "r0106",
           "name": "Deep Grove",
           "kind": "boss",
           "blurb": "Thornback Bear’s clearing (optional).",
-          "x": 708,
-          "y": 772
+          "x": 150,
+          "y": 460
         },
         {
           "id": "r0109",
           "name": "Burrow Entrance",
           "kind": "dungeon",
           "blurb": "Chute under the creek bank.",
-          "x": 742,
-          "y": 786
+          "x": 500,
+          "y": 700
         }
       ],
       "shape": {
         "type": "ellipse",
-        "cx": 720,
-        "cy": 790,
-        "rx": 55,
-        "ry": 42
+        "cx": 1040,
+        "cy": 600,
+        "rx": 170,
+        "ry": 100
       },
       "fill": "#7a9a50",
       "fog": false,
-      "imagePlate": "assets/zones/z01-plate.webp"
+      "imagePlate": "assets/zones/z01-plate.jpg",
+      "zoneMap": {
+        "href": "assets/zones/z01-plate.jpg",
+        "viewBox": [
+          0,
+          0,
+          1024,
+          1024
+        ]
+      }
     },
     {
       "id": "Z02",
@@ -247,76 +265,85 @@
           "name": "Town Gate",
           "kind": "gate",
           "blurb": "Road in from the meadows.",
-          "x": 850,
-          "y": 632
+          "x": 704,
+          "y": 1240
         },
         {
           "id": "r0202",
           "name": "Market Square",
           "kind": "hub",
           "blurb": "Commerce and rumor.",
-          "x": 868,
-          "y": 646
+          "x": 704,
+          "y": 780
         },
         {
           "id": "r0203",
           "name": "The Weary Wanderer",
           "kind": "inn",
           "blurb": "Inn, rooms, quiet deals.",
-          "x": 832,
-          "y": 646
+          "x": 540,
+          "y": 980
         },
         {
           "id": "r0209",
           "name": "Ironhand’s Forge",
           "kind": "merchant",
           "blurb": "Kara’s steel and repairs.",
-          "x": 862,
-          "y": 622
+          "x": 920,
+          "y": 860
         },
         {
           "id": "r0208",
           "name": "Bramwick’s General Store",
           "kind": "merchant",
           "blurb": "Sundries for the road.",
-          "x": 838,
-          "y": 622
+          "x": 520,
+          "y": 820
         },
         {
           "id": "r0206",
           "name": "Shrine of the Twelve",
           "kind": "landmark",
           "blurb": "Small temple to older gods.",
-          "x": 872,
-          "y": 636
+          "x": 400,
+          "y": 680
         },
         {
           "id": "r0211",
           "name": "Sewer Grate",
           "kind": "dungeon",
           "blurb": "Urban danger below.",
-          "x": 828,
-          "y": 636
+          "x": 700,
+          "y": 940
         },
         {
           "id": "r0212",
           "name": "River Docks",
           "kind": "gate",
           "blurb": "East toward Silverbrook Vale.",
-          "x": 850,
-          "y": 656
+          "x": 1100,
+          "y": 720
         }
       ],
       "shape": {
         "type": "ellipse",
-        "cx": 850,
-        "cy": 640,
-        "rx": 62,
-        "ry": 50
+        "cx": 980,
+        "cy": 760,
+        "rx": 140,
+        "ry": 115
       },
       "fill": "#c4a060",
       "fog": false,
-      "imagePlate": "assets/zones/z02-plate.webp"
+      "imagePlate": "assets/zones/z02-plate.jpg",
+      "zoneMap": {
+        "href": "assets/zones/z02-plate.jpg",
+        "viewBox": [
+          0,
+          0,
+          1408,
+          1408
+        ]
+      }
     },
     {
       "id": "Z03",
@@ -360,76 +387,85 @@
           "name": "Marsh Gate Trail",
           "kind": "gate",
           "blurb": "Descent from Oldtown.",
-          "x": 580,
-          "y": 782
+          "x": 1080,
+          "y": 1120
         },
         {
           "id": "r0304",
           "name": "Fenwatch Camp",
           "kind": "bind",
           "blurb": "Wardens, safe fire, bindstone.",
-          "x": 598,
-          "y": 796
+          "x": 720,
+          "y": 420
         },
         {
           "id": "r0306",
           "name": "Herbalist’s Hut",
           "kind": "merchant",
           "blurb": "Old Moss and marsh remedies.",
-          "x": 562,
-          "y": 796
+          "x": 500,
+          "y": 480
         },
         {
           "id": "r0309",
           "name": "Dead Man’s Oak",
           "kind": "landmark",
           "blurb": "Landmark over the ruins.",
-          "x": 592,
-          "y": 772
+          "x": 320,
+          "y": 500
         },
         {
           "id": "r0311",
           "name": "Ruin Entrance",
           "kind": "dungeon",
           "blurb": "Arch into the flooded halls.",
-          "x": 568,
-          "y": 772
+          "x": 700,
+          "y": 880
         },
         {
           "id": "r0315",
           "name": "Hag’s Sanctum",
           "kind": "boss",
           "blurb": "Lair of the Mire Hag.",
-          "x": 602,
-          "y": 786
+          "x": 280,
+          "y": 780
         },
         {
           "id": "r0319",
           "name": "Will-o’-Wisp Grove",
           "kind": "landmark",
           "blurb": "Lights that lie.",
-          "x": 558,
-          "y": 786
+          "x": 1100,
+          "y": 400
         },
         {
           "id": "r0317",
           "name": "Windswept Rise",
           "kind": "gate",
           "blurb": "Blocked southern road.",
-          "x": 580,
-          "y": 806
+          "x": 700,
+          "y": 280
         }
       ],
       "shape": {
         "type": "ellipse",
-        "cx": 580,
-        "cy": 790,
-        "rx": 68,
-        "ry": 55
+        "cx": 700,
+        "cy": 1080,
+        "rx": 170,
+        "ry": 130
       },
       "fill": "#4a7a5a",
       "fog": false,
-      "imagePlate": "assets/zones/z03-plate.webp"
+      "imagePlate": "assets/zones/z03-plate.jpg",
+      "zoneMap": {
+        "href": "assets/zones/z03-plate.jpg",
+        "viewBox": [
+          0,
+          0,
+          1408,
+          1408
+        ]
+      }
     },
     {
       "id": "Z04",
@@ -473,76 +509,85 @@
           "name": "Western Gate Road",
           "kind": "gate",
           "blurb": "Canopy road from Oldtown.",
-          "x": 530,
-          "y": 502
+          "x": 620,
+          "y": 1180
         },
         {
           "id": "r0405",
           "name": "Timberhold Square",
           "kind": "hub",
           "blurb": "Hub fire and rumor.",
-          "x": 548,
-          "y": 516
+          "x": 900,
+          "y": 420
         },
         {
           "id": "r0406",
           "name": "Hearthwood Inn",
           "kind": "bind",
           "blurb": "Bind; Iron Pact colors.",
-          "x": 512,
-          "y": 516
+          "x": 860,
+          "y": 380
         },
         {
           "id": "r0407",
           "name": "Ashenveil Smithy",
           "kind": "merchant",
           "blurb": "Torvald’s forge.",
-          "x": 542,
-          "y": 492
+          "x": 940,
+          "y": 450
         },
         {
           "id": "r0416",
           "name": "Keep Outer Curtain",
           "kind": "dungeon",
           "blurb": "Breach into bandit ruins.",
-          "x": 518,
-          "y": 492
+          "x": 920,
+          "y": 360
         },
         {
           "id": "r0420",
           "name": "Captain Rask’s Chamber",
           "kind": "boss",
           "blurb": "Bandit Captain Rask.",
-          "x": 552,
-          "y": 506
+          "x": 930,
+          "y": 340
         },
         {
           "id": "r0421",
           "name": "First Milestone",
           "kind": "landmark",
           "blurb": "Dwarven road-marker toward the peaks.",
-          "x": 508,
-          "y": 506
+          "x": 600,
+          "y": 800
         },
         {
           "id": "r0424",
           "name": "Ironspine Overlook",
           "kind": "gate",
           "blurb": "Mountain road continues northwest.",
-          "x": 530,
-          "y": 526
+          "x": 700,
+          "y": 250
         }
       ],
       "shape": {
         "type": "ellipse",
-        "cx": 530,
-        "cy": 510,
-        "rx": 72,
-        "ry": 55
+        "cx": 350,
+        "cy": 1000,
+        "rx": 170,
+        "ry": 140
       },
       "fill": "#3a6a3a",
       "fog": false,
-      "imagePlate": "assets/zones/z04-plate.webp"
+      "imagePlate": "assets/zones/z04-plate.jpg",
+      "zoneMap": {
+        "href": "assets/zones/z04-plate.jpg",
+        "viewBox": [
+          0,
+          0,
+          1408,
+          1408
+        ]
+      }
     },
     {
       "id": "Z05",
@@ -585,76 +630,85 @@
           "name": "Silverbrook Bridge",
           "kind": "gate",
           "blurb": "Stone crossing into the vale.",
-          "x": 1170,
-          "y": 502
+          "x": 180,
+          "y": 520
         },
         {
           "id": "r0504",
           "name": "Blighted Fields",
           "kind": "landmark",
           "blurb": "Crops that will not stay dead.",
-          "x": 1188,
-          "y": 516
+          "x": 350,
+          "y": 640
         },
         {
           "id": "r0505",
           "name": "Village of Silverbrook",
           "kind": "bind",
           "blurb": "Bind; Brother Calum’s stubborn light.",
-          "x": 1152,
-          "y": 516
+          "x": 480,
+          "y": 430
         },
         {
           "id": "r0508",
           "name": "Harrow’s End",
           "kind": "landmark",
           "blurb": "Disturbed graves at the lane’s edge.",
-          "x": 1182,
-          "y": 492
+          "x": 700,
+          "y": 220
         },
         {
           "id": "r0510",
           "name": "Estate Gate",
           "kind": "landmark",
           "blurb": "Iron teeth of House Vayne.",
-          "x": 1158,
-          "y": 492
+          "x": 640,
+          "y": 780
         },
         {
           "id": "r0516",
           "name": "Mine Entrance",
           "kind": "dungeon",
           "blurb": "Shaft beneath the cellar.",
-          "x": 1192,
-          "y": 506
+          "x": 850,
+          "y": 480
         },
         {
           "id": "r0520",
           "name": "Impression Chamber",
           "kind": "boss",
           "blurb": "Sealed vault at the mine’s end — Lord Edric Vayne.",
-          "x": 1148,
-          "y": 506
+          "x": 860,
+          "y": 430
         },
         {
           "id": "r0505-ne",
           "name": "Highland Path",
           "kind": "gate",
           "blurb": "Northeast toward elven border woods.",
-          "x": 1170,
-          "y": 526
+          "x": 820,
+          "y": 160
         }
       ],
       "shape": {
         "type": "ellipse",
-        "cx": 1170,
-        "cy": 510,
-        "rx": 72,
-        "ry": 55
+        "cx": 1720,
+        "cy": 1100,
+        "rx": 170,
+        "ry": 140
       },
       "fill": "#50907a",
       "fog": false,
-      "imagePlate": "assets/zones/z05-plate.webp"
+      "imagePlate": "assets/zones/z05-plate.jpg",
+      "zoneMap": {
+        "href": "assets/zones/z05-plate.jpg",
+        "viewBox": [
+          0,
+          0,
+          1024,
+          1024
+        ]
+      }
     },
     {
       "id": "Z06",
@@ -698,76 +752,85 @@
           "name": "Switchback Ascent",
           "kind": "gate",
           "blurb": "Climb from Ashenveil.",
-          "x": 320,
-          "y": 342
+          "x": 220,
+          "y": 900
         },
         {
           "id": "r0605",
           "name": "Anvil Rest Square",
           "kind": "bind",
           "blurb": "Hub bind and Pact banners.",
-          "x": 338,
-          "y": 356
+          "x": 520,
+          "y": 680
         },
         {
           "id": "r0606",
           "name": "Anvil Forge",
           "kind": "merchant",
           "blurb": "Steel and trade.",
-          "x": 302,
-          "y": 356
+          "x": 500,
+          "y": 640
         },
         {
           "id": "r0608",
           "name": "Oath Hall",
           "kind": "landmark",
           "blurb": "Pact law under mountain stone.",
-          "x": 332,
-          "y": 332
+          "x": 560,
+          "y": 700
         },
         {
           "id": "r0610",
           "name": "Mine Adit",
           "kind": "dungeon",
           "blurb": "Mouth of the Ironvein.",
-          "x": 308,
-          "y": 332
+          "x": 430,
+          "y": 280
         },
         {
           "id": "r0614",
           "name": "Mythril Seam",
           "kind": "landmark",
           "blurb": "Deep prize of the drifts.",
-          "x": 342,
-          "y": 346
+          "x": 450,
+          "y": 250
         },
         {
           "id": "r0620",
           "name": "Ironjaw’s Cave",
           "kind": "boss",
           "blurb": "Ironjaw the Troll King.",
-          "x": 298,
-          "y": 346
+          "x": 680,
+          "y": 420
         },
         {
           "id": "r0621",
           "name": "Kazgrath Gate Road",
           "kind": "gate",
           "blurb": "Road toward the fortress capital.",
-          "x": 320,
-          "y": 366
+          "x": 800,
+          "y": 180
         }
       ],
       "shape": {
         "type": "ellipse",
-        "cx": 320,
-        "cy": 350,
-        "rx": 72,
-        "ry": 55
+        "cx": 450,
+        "cy": 260,
+        "rx": 220,
+        "ry": 160
       },
       "fill": "#8a7d6b",
       "fog": false,
-      "imagePlate": "assets/zones/z06-plate.webp"
+      "imagePlate": "assets/zones/z06-plate.jpg",
+      "zoneMap": {
+        "href": "assets/zones/z06-plate.jpg",
+        "viewBox": [
+          0,
+          0,
+          1024,
+          1024
+        ]
+      }
     },
     {
       "id": "Z07",
@@ -811,76 +874,85 @@
           "name": "Highland Descent",
           "kind": "gate",
           "blurb": "Climb from Silverbrook.",
-          "x": 1370,
-          "y": 342
+          "x": 512,
+          "y": 880
         },
         {
           "id": "r0705",
           "name": "Willowmere Green",
           "kind": "bind",
           "blurb": "Hub bind under silver canopy.",
-          "x": 1388,
-          "y": 356
+          "x": 420,
+          "y": 740
         },
         {
           "id": "r0706",
           "name": "Treehouse Inn",
           "kind": "inn",
           "blurb": "Rest and a wounded Pact courier.",
-          "x": 1352,
-          "y": 356
+          "x": 280,
+          "y": 800
         },
         {
           "id": "r0707",
           "name": "Warden Hall",
           "kind": "npc",
           "blurb": "Warden Caelith’s command.",
-          "x": 1382,
-          "y": 332
+          "x": 250,
+          "y": 430
         },
         {
           "id": "r0708",
           "name": "Moonwell Glade",
           "kind": "merchant",
           "blurb": "Moonkeeper Lirien’s basin and wares.",
-          "x": 1358,
-          "y": 332
+          "x": 280,
+          "y": 680
         },
         {
           "id": "r0714",
           "name": "Blight Margin",
           "kind": "landmark",
           "blurb": "Where bark blackens and vines watch.",
-          "x": 1392,
-          "y": 346
+          "x": 780,
+          "y": 500
         },
         {
           "id": "r0719",
           "name": "Grove Heart",
           "kind": "boss",
           "blurb": "The Blighted Hart.",
-          "x": 1348,
-          "y": 346
+          "x": 850,
+          "y": 520
         },
         {
           "id": "r0720",
           "name": "Processional Road",
           "kind": "gate",
           "blurb": "Sealed path toward Aelindor.",
-          "x": 1370,
-          "y": 366
+          "x": 512,
+          "y": 180
         }
       ],
       "shape": {
         "type": "ellipse",
-        "cx": 1370,
-        "cy": 350,
-        "rx": 72,
-        "ry": 55
+        "cx": 1300,
+        "cy": 300,
+        "rx": 200,
+        "ry": 150
       },
       "fill": "#4a8a5a",
       "fog": false,
-      "imagePlate": "assets/zones/z07-plate.webp"
+      "imagePlate": "assets/zones/z07-plate.jpg",
+      "zoneMap": {
+        "href": "assets/zones/z07-plate.jpg",
+        "viewBox": [
+          0,
+          0,
+          1024,
+          1024
+        ]
+      }
     },
     {
       "id": "Z08",
@@ -910,13 +982,14 @@
       "shape": {
         "type": "ellipse",
         "cx": 780,
-        "cy": 990,
-        "rx": 70,
-        "ry": 52
+        "cy": 1240,
+        "rx": 140,
+        "ry": 100
       },
       "fill": "#a09060",
       "fog": true,
-      "imagePlate": "assets/zones/z08-plate.webp"
+      "imagePlate": "assets/zones/z08-plate.jpg",
+      "zoneMap": null
     },
     {
       "id": "Z09",
@@ -951,14 +1024,15 @@
       "pois": [],
       "shape": {
         "type": "ellipse",
-        "cx": 850,
-        "cy": 380,
-        "rx": 60,
-        "ry": 48
+        "cx": 1024,
+        "cy": 430,
+        "rx": 150,
+        "ry": 90
       },
       "fill": "#908050",
       "fog": true,
-      "imagePlate": "assets/zones/z09-plate.webp"
+      "imagePlate": "assets/zones/z09-plate.jpg",
+      "zoneMap": null
     },
     {
       "id": "Z10",
@@ -983,14 +1057,23 @@
       "pois": [],
       "shape": {
         "type": "ellipse",
-        "cx": 200,
-        "cy": 210,
-        "rx": 85,
-        "ry": 68
+        "cx": 650,
+        "cy": 390,
+        "rx": 190,
+        "ry": 170
       },
       "fill": "#a07040",
       "fog": true,
-      "imagePlate": "assets/zones/z10-plate.webp"
+      "imagePlate": "assets/zones/z10-plate.jpg",
+      "zoneMap": {
+        "href": "assets/zones/z10-plate.jpg",
+        "viewBox": [
+          0,
+          0,
+          1024,
+          1024
+        ]
+      }
     },
     {
       "id": "Z11",
@@ -1015,14 +1098,23 @@
       "pois": [],
       "shape": {
         "type": "ellipse",
-        "cx": 1500,
-        "cy": 210,
-        "rx": 85,
-        "ry": 68
+        "cx": 1460,
+        "cy": 360,
+        "rx": 190,
+        "ry": 170
       },
       "fill": "#70a0b0",
       "fog": true,
-      "imagePlate": "assets/zones/z11-plate.webp"
+      "imagePlate": "assets/zones/z11-plate.jpg",
+      "zoneMap": {
+        "href": "assets/zones/z11-plate.jpg",
+        "viewBox": [
+          0,
+          0,
+          1024,
+          1024
+        ]
+      }
     },
     {
       "id": "Z12",
@@ -1047,14 +1139,23 @@
       "pois": [],
       "shape": {
         "type": "ellipse",
-        "cx": 1000,
-        "cy": 1170,
-        "rx": 85,
-        "ry": 68
+        "cx": 1024,
+        "cy": 1300,
+        "rx": 250,
+        "ry": 180
       },
       "fill": "#b09040",
       "fog": true,
-      "imagePlate": "assets/zones/z12-plate.webp"
+      "imagePlate": "assets/zones/z12-plate.jpg",
+      "zoneMap": {
+        "href": "assets/zones/z12-plate.jpg",
+        "viewBox": [
+          0,
+          0,
+          1024,
+          1024
+        ]
+      }
     },
     {
       "id": "Z19",
@@ -1077,14 +1178,23 @@
       "pois": [],
       "shape": {
         "type": "ellipse",
-        "cx": 490,
-        "cy": 930,
-        "rx": 58,
-        "ry": 40
+        "cx": 1024,
+        "cy": 1880,
+        "rx": 150,
+        "ry": 100
       },
       "fill": "#a03030",
       "fog": true,
-      "imagePlate": "assets/zones/z19-plate.webp"
+      "imagePlate": "assets/zones/z19-plate.jpg",
+      "zoneMap": {
+        "href": "assets/zones/z19-plate.jpg",
+        "viewBox": [
+          0,
+          0,
+          1024,
+          1024
+        ]
+      }
     }
   ],
   "connections": [
@@ -1194,8 +1304,8 @@
       "zoneId": "Z11",
       "faction": "Silver Dawn",
       "blurb": "Circular elven city around the Starspire; living wood and crystalline bridges.",
-      "x": 1500,
-      "y": 210,
+      "x": 1460,
+      "y": 360,
       "optionalLabel": false
     },
     {
@@ -1206,8 +1316,8 @@
       "zoneId": "Z10",
       "faction": "Iron Pact",
       "blurb": "Mountain fortress of dark stone and iron; the Great Forge burns day and night.",
-      "x": 200,
-      "y": 210,
+      "x": 650,
+      "y": 390,
       "optionalLabel": false
     },
     {
@@ -1218,8 +1328,8 @@
       "zoneId": "Z12",
       "faction": "Cogwright Collective",
       "blurb": "U-shaped industrial capital of steam, brass, and walking constructs.",
-      "x": 1000,
-      "y": 1170,
+      "x": 1024,
+      "y": 1280,
       "optionalLabel": false
     },
     {
@@ -1230,8 +1340,8 @@
       "zoneId": "Z02",
       "faction": "Neutral",
       "blurb": "Neutral Hearthlands city; merchant council; no faction owns it.",
-      "x": 850,
-      "y": 640,
+      "x": 980,
+      "y": 760,
       "optionalLabel": false
     },
     {
@@ -1242,8 +1352,8 @@
       "zoneId": "Z06",
       "faction": "Iron Pact",
       "blurb": "Iron Pact foothold on the Ironspine climb.",
-      "x": 320,
-      "y": 350,
+      "x": 400,
+      "y": 500,
       "optionalLabel": false
     },
     {
@@ -1254,8 +1364,8 @@
       "zoneId": "Z03",
       "faction": null,
       "blurb": "Marsh warden camp on the Gloomfen lantern line.",
-      "x": 580,
-      "y": 790,
+      "x": 720,
+      "y": 1020,
       "optionalLabel": true
     },
     {
@@ -1266,8 +1376,8 @@
       "zoneId": "Z05",
       "faction": null,
       "blurb": "Quiet blighted village east of the docks.",
-      "x": 1170,
-      "y": 510,
+      "x": 1740,
+      "y": 1100,
       "optionalLabel": false
     },
     {
@@ -1278,8 +1388,8 @@
       "zoneId": "Z04",
       "faction": null,
       "blurb": "Logging outpost on the Ashenveil road west.",
-      "x": 530,
-      "y": 510,
+      "x": 340,
+      "y": 1000,
       "optionalLabel": false
     },
     {
@@ -1290,8 +1400,8 @@
       "zoneId": "Z07",
       "faction": "Silver Dawn",
       "blurb": "Silver Dawn border hold under silver-bark canopy.",
-      "x": 1370,
-      "y": 350,
+      "x": 400,
+      "y": 1360,
       "optionalLabel": false
     }
   ]

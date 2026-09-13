@@ -1,34 +1,46 @@
 /**
- * Veilspan public world map — data-driven SVG pan/zoom/LOD.
+ * Veilspan public world map — WoW-style continent → zone drill-down.
  * PUBLIC fields only (map-data.json is built with internal lore stripped).
- * Imagine hooks: world plate + zone plates under assets/.
  */
 (() => {
   const NS = 'http://www.w3.org/2000/svg';
+  const ASSET_V = 'map10';
   const viewport = document.getElementById('map-viewport');
   const svg = document.getElementById('map-svg');
   const camera = document.getElementById('camera');
+  const continentRoot = document.getElementById('continent-root');
+  const zoneRoot = document.getElementById('zone-root');
+  const zonePlate = document.getElementById('zone-plate');
   const panel = document.getElementById('detail-panel');
   const panelBody = document.getElementById('panel-body');
   const panelTitle = document.getElementById('panel-title');
   const panelMeta = document.getElementById('panel-meta');
   const panelEyebrow = document.getElementById('panel-eyebrow');
+  const chapterLabel = document.getElementById('chapter-label');
+  const btnBack = document.getElementById('btn-back');
+  const appEl = document.getElementById('app');
 
   const state = {
     data: null,
-    scale: 0.7,
+    view: 'continent', // continent | zone
+    zoneId: null,
+    scale: 0.5,
     tx: 0,
     ty: 0,
-    minScale: 0.28,
-    maxScale: 3.6,
-    lodMode: 'auto', // auto | continent | zones | pois
+    minScale: 0.22,
+    maxScale: 4.0,
+    lodMode: 'auto',
     dragging: false,
+    moved: false,
+    downX: 0,
+    downY: 0,
     lastX: 0,
     lastY: 0,
     pointers: new Map(),
     pinchStartDist: 0,
     pinchStartScale: 1,
     selectedId: null,
+    hoverZoneId: null,
   };
 
   const poiColors = {
@@ -41,6 +53,22 @@
     boss: '#ff5555',
     landmark: '#a8c8e8',
     gate: '#7ae8a4',
+    town: '#f0c674',
+  };
+
+  const poiIconMap = {
+    inn: 'inn',
+    bind: 'bindstone',
+    bindstone: 'bindstone',
+    dungeon: 'dungeon',
+    boss: 'boss',
+    hub: 'town',
+    town: 'town',
+    gate: 'town',
+    landmark: 'road',
+    road: 'road',
+    merchant: 'town',
+    npc: 'town',
   };
 
   function el(name, attrs = {}, parent) {
@@ -52,16 +80,56 @@
     return node;
   }
 
+  function absMapAsset(href) {
+    if (!href) return href;
+    if (href.startsWith('http') || href.startsWith('/')) return href;
+    return `/map/${href.replace(/^\.\//, '')}`;
+  }
+
+  function withV(href) {
+    if (!href) return href;
+    return href.includes('?') ? href : `${href}?v=${ASSET_V}`;
+  }
+
+  function poiIconHref(kind) {
+    const key = poiIconMap[kind];
+    return key ? withV(`/map/assets/icons/${key}.png`) : null;
+  }
+
+  function markerScale() {
+    // Keep settlement icons readable at continent zoom; cap so they don't explode when close.
+    return Math.max(0.5, Math.min(2.4, 0.9 / state.scale));
+  }
+
+  function updateMarkerScales() {
+    const k = markerScale();
+    document.querySelectorAll('.city-marker').forEach((n) => {
+      const x = Number(n.getAttribute('data-x'));
+      const y = Number(n.getAttribute('data-y'));
+      n.setAttribute('transform', `translate(${x} ${y}) scale(${k})`);
+    });
+    if (state.view === 'zone') {
+      const zk = Math.max(0.7, Math.min(1.6, 0.9 / state.scale));
+      document.querySelectorAll('#zone-pois .poi-marker').forEach((n) => {
+        const x = Number(n.getAttribute('data-x'));
+        const y = Number(n.getAttribute('data-y'));
+        n.setAttribute('transform', `translate(${x} ${y}) scale(${zk})`);
+      });
+    }
+  }
+
   function applyCamera() {
     camera.setAttribute('transform', `translate(${state.tx} ${state.ty}) scale(${state.scale})`);
     updateLodClass();
+    updateMarkerScales();
   }
 
   function currentLod() {
+    if (state.view === 'zone') return 'pois';
     if (state.lodMode !== 'auto') return state.lodMode;
     const lod = state.data?.lod || {};
-    if (state.scale < (lod.continent?.maxScale ?? 0.55)) return 'continent';
-    if (state.scale < (lod.pois?.minScale ?? 1.35)) return 'zones';
+    if (state.scale < (lod.continent?.maxScale ?? 0.45)) return 'continent';
+    if (state.scale < (lod.pois?.minScale ?? 1.8)) return 'zones';
     return 'pois';
   }
 
@@ -71,33 +139,88 @@
     svg.classList.add(`lod-${lod}`);
   }
 
-  function fitView() {
+  function worldSize() {
+    if (state.view === 'zone') {
+      const z = zoneById(state.zoneId);
+      const vb = z?.zoneMap?.viewBox || [0, 0, 1024, 1024];
+      return { w: vb[2], h: vb[3] };
+    }
     const vb = state.data.world.viewBox;
-    const [, , w, h] = vb;
-    const rect = viewport.getBoundingClientRect();
-    const sx = rect.width / w;
-    const sy = rect.height / h;
-    state.scale = Math.min(sx, sy) * 0.92;
-    state.tx = (rect.width - w * state.scale) / 2;
-    state.ty = (rect.height - h * state.scale) / 2;
+    return { w: vb[2], h: vb[3] };
+  }
+
+  function viewportSize() {
+    const r = viewport.getBoundingClientRect();
+    return { w: Math.max(1, r.width), h: Math.max(1, r.height) };
+  }
+
+  function syncSvgViewBox() {
+    const { w, h } = viewportSize();
+    svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  }
+
+  function fitView() {
+    syncSvgViewBox();
+    const { w, h } = worldSize();
+    const { w: vw, h: vh } = viewportSize();
+    const pad = state.view === 'zone' ? 0.97 : 0.98;
+    state.scale = Math.min(vw / w, vh / h) * pad;
+    state.tx = (vw - w * state.scale) / 2;
+    state.ty = (vh - h * state.scale) / 2;
     applyCamera();
   }
 
   function zoomAt(clientX, clientY, factor) {
+    const { w: vw, h: vh } = viewportSize();
     const rect = viewport.getBoundingClientRect();
     const x = clientX - rect.left;
     const y = clientY - rect.top;
     const worldX = (x - state.tx) / state.scale;
     const worldY = (y - state.ty) / state.scale;
-    const next = Math.min(state.maxScale, Math.max(state.minScale, state.scale * factor));
+    const { w, h } = worldSize();
+    const fit = Math.min(vw / w, vh / h);
+    let minS = state.view === 'zone' ? fit * 0.82 : Math.min(fit * 0.55, state.minScale);
+    let maxS = state.view === 'zone' ? fit * 3.4 : state.maxScale;
+    const next = Math.min(maxS, Math.max(minS, state.scale * factor));
     state.scale = next;
     state.tx = x - worldX * state.scale;
     state.ty = y - worldY * state.scale;
     applyCamera();
+
+    if (state.view === 'zone' && state.scale <= fit * 0.84) {
+      const zid = state.zoneId;
+      exitZone();
+      const z = zoneById(zid);
+      if (z) focusZone(z);
+    }
   }
 
   function zoneById(id) {
     return state.data.zones.find((z) => z.id === id);
+  }
+
+  function cityById(id) {
+    return (state.data.cities || []).find((c) => c.id === id);
+  }
+
+  function focusZone(z) {
+    syncSvgViewBox();
+    const { w: vw, h: vh } = viewportSize();
+    const { cx, cy, rx, ry } = z.shape;
+    const targetW = Math.max(rx * 3.4, 420);
+    const targetH = Math.max(ry * 3.4, 420);
+    state.scale = Math.min(vw / targetW, vh / targetH, state.maxScale);
+    state.tx = vw / 2 - cx * state.scale;
+    state.ty = vh / 2 - cy * state.scale;
+    applyCamera();
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
   function openPanel(kind, payload) {
@@ -106,17 +229,22 @@
     if (kind === 'city') {
       const c = payload;
       state.selectedId = c.id;
-      document.querySelectorAll('.zone-shape.selected').forEach((n) => n.classList.remove('selected'));
       const imp = c.importance || 'town';
-      panelEyebrow.textContent = (c.visibility === 'fog' ? 'Uncharted · ' : '') + (imp === 'capital' ? 'Capital' : imp === 'hub' ? 'Hub' : 'Town');
+      panelEyebrow.textContent = (c.visibility === 'fog' ? 'Uncharted · ' : '') +
+        (imp === 'capital' ? 'Capital' : imp === 'hub' ? 'Hub' : 'Town');
       panelTitle.textContent = c.name || c.id;
       panelMeta.textContent = [c.faction, c.zoneId].filter(Boolean).join(' · ');
       let html = '';
       if (c.visibility === 'fog') {
         html += `<div class="fog-banner">Fog of war — charts incomplete. Rumors only.</div>`;
       }
-      if (c.blurb) html += `<p>${c.blurb}</p>`;
+      if (c.blurb) html += `<p>${escapeHtml(c.blurb)}</p>`;
+      const z = zoneById(c.zoneId);
+      if (z && z.zoneMap && state.view === 'continent') {
+        html += `<p><button type="button" class="chip" id="btn-enter-zone" data-zone="${escapeHtml(z.id)}">Enter zone map</button></p>`;
+      }
       panelBody.innerHTML = html || '<p>No public charts yet.</p>';
+      bindEnterBtn();
       return;
     }
     if (kind === 'zone') {
@@ -160,11 +288,11 @@
         }
         html += `</ul>`;
       }
-      // Imagine hook note (dev-facing, subtle)
-      if (z.imagePlate) {
-        html += `<p style="margin-top:1.2rem;font-size:0.8rem;color:var(--text-dim)">Art slot: <code>${escapeHtml(z.imagePlate)}</code></p>`;
+      if (z.zoneMap && state.view === 'continent') {
+        html += `<p><button type="button" class="chip" id="btn-enter-zone" data-zone="${escapeHtml(z.id)}">Enter zone map</button></p>`;
       }
       panelBody.innerHTML = html;
+      bindEnterBtn();
     } else if (kind === 'poi') {
       const p = payload;
       state.selectedId = p.id;
@@ -175,6 +303,16 @@
     }
   }
 
+  function bindEnterBtn() {
+    const btn = document.getElementById('btn-enter-zone');
+    if (!btn) return;
+    btn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      const z = zoneById(btn.getAttribute('data-zone'));
+      if (z) enterZone(z);
+    });
+  }
+
   function closePanel() {
     panel.classList.remove('open');
     panel.setAttribute('aria-hidden', 'true');
@@ -182,40 +320,110 @@
     state.selectedId = null;
   }
 
-  function escapeHtml(s) {
-    return String(s)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  }
+  function enterZone(z, opts = {}) {
+    if (!z) return;
+    const href = z.zoneMap?.href || z.imagePlate;
+    if (!href) {
+      focusZone(z);
+      openPanel('zone', z);
+      return;
+    }
+    state.view = 'zone';
+    state.zoneId = z.id;
+    appEl.classList.add('view-zone');
+    continentRoot.classList.add('hidden');
+    zoneRoot.classList.remove('hidden');
+    btnBack.classList.remove('hidden');
+    btnBack.setAttribute('aria-hidden', 'false');
+    chapterLabel.textContent = z.title || z.id;
 
-  function renderTerrain() {
-    const g = document.getElementById('layer-terrain');
-    g.innerHTML = '';
-    // Soft region washes behind live zones
-    for (const z of state.data.zones) {
-      if (z.fog) continue;
-      const { cx, cy, rx, ry } = z.shape;
-      el('ellipse', {
-        cx, cy, rx: rx * 1.8, ry: ry * 1.8,
-        fill: z.fill, opacity: 0.18,
-      }, g);
+    const vb = z.zoneMap?.viewBox || [0, 0, 1024, 1024];
+    svg.setAttribute('aria-label', `${z.title || z.id} zone map`);
+    zonePlate.setAttribute('href', withV(absMapAsset(href)));
+    zonePlate.setAttribute('width', vb[2]);
+    zonePlate.setAttribute('height', vb[3]);
+
+    renderZonePois(z);
+    fitView();
+    openPanel('zone', z);
+    if (!opts.skipHash) {
+      const hash = `#${z.id}`;
+      if (location.hash !== hash) history.replaceState(null, '', hash);
     }
   }
 
-  function renderConnections() {
-    const g = document.getElementById('layer-connections');
+  function exitZone(opts = {}) {
+    const prev = state.zoneId;
+    state.view = 'continent';
+    state.zoneId = null;
+    appEl.classList.remove('view-zone');
+    continentRoot.classList.remove('hidden');
+    zoneRoot.classList.add('hidden');
+    btnBack.classList.add('hidden');
+    btnBack.setAttribute('aria-hidden', 'true');
+    chapterLabel.textContent = state.data.chapter || 'World Map';
+    svg.setAttribute('aria-label', 'Veilspan world map');
+    document.getElementById('zone-pois').innerHTML = '';
+    fitView();
+    if (prev) {
+      const z = zoneById(prev);
+      if (z) focusZone(z);
+    }
+    if (!opts.skipHash && location.hash) {
+      history.replaceState(null, '', location.pathname + location.search);
+    }
+  }
+
+  function renderZonePois(z) {
+    const g = document.getElementById('zone-pois');
     g.innerHTML = '';
-    for (const e of state.data.connections || []) {
-      const a = zoneById(e.from);
-      const b = zoneById(e.to);
-      if (!a || !b) continue;
-      el('line', {
-        x1: a.shape.cx, y1: a.shape.cy,
-        x2: b.shape.cx, y2: b.shape.cy,
-        class: `connection ${e.state || 'open'}`,
+    if (z.fog) return;
+    for (const p of z.pois || []) {
+      if (p.x == null || p.y == null) continue;
+      const color = poiColors[p.kind] || '#f0c674';
+      const iconHref = poiIconHref(p.kind);
+      const wrap = el('g', {
+        class: 'poi-marker',
+        'data-id': p.id,
+        'data-x': p.x,
+        'data-y': p.y,
+        transform: `translate(${p.x} ${p.y})`,
       }, g);
+      if (iconHref) {
+        const size = 52;
+        el('circle', {
+          class: 'poi-badge',
+          r: size / 2 + 4,
+          fill: 'rgba(6,8,12,0.7)',
+          stroke: 'rgba(232,168,73,0.4)',
+          'stroke-width': 2,
+        }, wrap);
+        el('image', {
+          class: 'poi-icon',
+          href: iconHref,
+          x: -size / 2,
+          y: -size / 2,
+          width: size,
+          height: size,
+        }, wrap);
+      } else {
+        el('circle', {
+          class: 'poi-dot',
+          cx: 0, cy: 0, r: 10,
+          fill: color,
+        }, wrap);
+      }
+      const t = el('text', {
+        class: 'poi-label',
+        x: 0,
+        y: 36,
+        'text-anchor': 'middle',
+      }, wrap);
+      t.textContent = p.name;
+      wrap.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        openPanel('poi', { ...p, zoneTitle: z.title });
+      });
     }
   }
 
@@ -232,46 +440,32 @@
         id: `zone-${z.id}`,
         class: `zone-shape ${vis}`,
         cx, cy, rx, ry,
-        fill: z.fog ? 'url(#fogPattern)' : z.fill,
         'data-id': z.id,
       }, g);
-      if (z.fog) shape.setAttribute('fill', '#6a6055');
       shape.addEventListener('click', (ev) => {
         ev.stopPropagation();
+        if (state.moved) return;
         openPanel('zone', z);
+        if (z.zoneMap) enterZone(z);
+        else focusZone(z);
       });
       shape.addEventListener('mouseenter', () => {
-        if (window.matchMedia('(hover:hover)').matches && !panel.classList.contains('open')) {
-          // lightweight hover: title in eyebrow via title attr
-        }
+        state.hoverZoneId = z.id;
+      });
+      shape.addEventListener('mouseleave', () => {
+        if (state.hoverZoneId === z.id) state.hoverZoneId = null;
       });
 
-      // Try zone plate image (Imagine hook) — mid-zoom+ (layer-zones-detail)
-      if (!z.fog && z.imagePlate) {
-        const plateHref = absMapAsset(z.imagePlate) + '?v=map9';
-        const img = el('image', {
-          class: 'zone-plate layer-zones-detail',
-          href: plateHref,
-          x: cx - rx, y: cy - ry, width: rx * 2, height: ry * 2,
-          opacity: 0, preserveAspectRatio: 'xMidYMid slice',
-          style: 'pointer-events:none',
-        }, g);
-        const probe = new Image();
-        probe.onload = () => { img.setAttribute('opacity', '0.55'); };
-        probe.onerror = () => { img.remove(); };
-        probe.src = plateHref;
-      }
-
       const label = el('text', {
-        x: cx, y: cy + 5,
+        x: cx, y: cy + 6,
         class: `zone-label${z.fog ? ' fog-label' : ''}`,
         'text-anchor': 'middle',
       }, labels);
-      label.textContent = z.fog ? (z.title || '???') : (z.title || z.id);
+      label.textContent = z.title || z.id;
 
       if (!z.fog && z.levelRange) {
         const lvl = el('text', {
-          x: cx, y: cy + 22,
+          x: cx, y: cy + 24,
           class: 'zone-level',
           'text-anchor': 'middle',
         }, labels);
@@ -280,85 +474,17 @@
     }
   }
 
-  const poiIconMap = {
-    inn: 'inn',
-    bind: 'bindstone',
-    bindstone: 'bindstone',
-    dungeon: 'dungeon',
-    boss: 'boss',
-    hub: 'town',
-    town: 'town',
-    gate: 'town',
-    landmark: 'road',
-    road: 'road',
-    merchant: 'town',
-    npc: 'town',
-  };
-
-  function poiIconHref(kind) {
-    const key = poiIconMap[kind];
-    return key ? `/map/assets/icons/${key}.png?v=map9` : null;
-  }
-
-  function renderPois() {
-    const g = document.getElementById('layer-pois');
-    g.innerHTML = '';
-    for (const z of state.data.zones) {
-      if (z.fog) continue;
-      for (const p of z.pois || []) {
-        const color = poiColors[p.kind] || '#f0c674';
-        const iconHref = poiIconHref(p.kind);
-        let marker;
-        if (iconHref) {
-          const size = 28;
-          marker = el('image', {
-            class: 'poi-icon',
-            href: iconHref,
-            x: p.x - size / 2,
-            y: p.y - size / 2,
-            width: size,
-            height: size,
-            'data-id': p.id,
-          }, g);
-        } else {
-          marker = el('circle', {
-            class: 'poi-dot',
-            cx: p.x, cy: p.y, r: 5.5,
-            fill: color,
-            'data-id': p.id,
-          }, g);
-        }
-        marker.addEventListener('click', (ev) => {
-          ev.stopPropagation();
-          openPanel('poi', { ...p, zoneTitle: z.title });
-        });
-        const t = el('text', {
-          class: 'poi-label',
-          x: p.x + 14, y: p.y + 4,
-        }, g);
-        t.textContent = p.name;
-      }
-    }
-  }
-
-  /** Capitals ≫ hub (Oldtown) ≫ towns. LOD: capitals always; hub mid+; towns in close. */
   function renderCities() {
     const cities = state.data.cities || [];
-    if (!Array.isArray(cities) || !cities.length) return;
     let g = document.getElementById('layer-cities');
     if (!g) {
-      const root = document.getElementById('world-root');
-      // Insert above zones so markers read clearly, before POIs
-      g = el('g', { id: 'layer-cities' }, null);
-      const pois = document.getElementById('layer-pois');
-      if (pois && pois.parentNode) pois.parentNode.insertBefore(g, pois);
-      else root.appendChild(g);
+      g = el('g', { id: 'layer-cities' }, continentRoot);
     }
     g.innerHTML = '';
     const sizeFor = (imp) => {
-      if (imp === 'capital') return 42;
-      if (imp === 'hub') return 34;
-      return 24;
+      if (imp === 'capital') return 56;
+      if (imp === 'hub') return 46;
+      return 34;
     };
     for (const c of cities) {
       if (c.x == null || c.y == null) continue;
@@ -369,58 +495,60 @@
         class: `city-marker city-${imp}${fog ? ' city-fog' : ''}`,
         'data-id': c.id,
         'data-importance': imp,
+        'data-x': c.x,
+        'data-y': c.y,
+        transform: `translate(${c.x} ${c.y})`,
       }, g);
-      const href = fog
-        ? `/map/assets/icons/town.png?v=map9`
-        : `/map/assets/icons/town.png?v=map9`;
-      const img = el('image', {
+      el('circle', {
+        class: 'city-badge',
+        r: size / 2 + 3,
+        fill: 'rgba(6,8,12,0.72)',
+        stroke: fog ? 'rgba(232,168,73,0.35)' : 'rgba(61,220,132,0.45)',
+        'stroke-width': 2,
+      }, wrap);
+      el('image', {
         class: 'poi-icon',
-        href,
-        x: c.x - size / 2,
-        y: c.y - size / 2,
+        href: withV('/map/assets/icons/town.png'),
+        x: -size / 2,
+        y: -size / 2,
         width: size,
         height: size,
-        opacity: fog ? '0.55' : '0.95',
+        opacity: fog ? '0.7' : '1',
       }, wrap);
-      img.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        openPanel('city', c);
-      });
-      if (!c.optionalLabel || imp !== 'town') {
+      const showLabel = c.id === 'anvil-rest' || c.id === 'fenwatch';
+      if (showLabel) {
         const label = el('text', {
           class: `city-label city-label-${imp}${fog ? ' fog-label' : ''}`,
-          x: c.x,
-          y: c.y + size / 2 + (imp === 'capital' ? 16 : 12),
+          x: 0,
+          y: size / 2 + 14,
           'text-anchor': 'middle',
         }, wrap);
-        label.textContent = fog && imp === 'capital' ? c.name : (c.name || c.id || '');
+        label.textContent = c.name || c.id;
       }
+      wrap.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        if (state.moved) return;
+        openPanel('city', c);
+        const z = zoneById(c.zoneId);
+        if (z && z.zoneMap) enterZone(z);
+      });
     }
-  }
-
-  function absMapAsset(href) {
-    if (!href) return href;
-    if (href.startsWith('http') || href.startsWith('/')) return href;
-    return `/map/${href.replace(/^\.\//, '')}`;
   }
 
   function tryWorldPlate() {
     const layers = state.data.world?.layers || {};
     const candidates = [
-      absMapAsset(layers.worldPlate) + (layers.worldPlate ? '?v=map9' : ''),
-      '/map/assets/world/world-plate.jpg?v=map9',
-      absMapAsset(layers.worldPlateAlt) + (layers.worldPlateAlt ? '?v=map9' : ''),
-      '/map/assets/world/world-plate-16x9.jpg?v=map9',
+      withV(absMapAsset(layers.worldPlate)),
+      withV('/map/assets/world/world-plate.jpg'),
+      withV(absMapAsset(layers.worldPlateAlt)),
     ].filter((u, i, a) => u && a.indexOf(u) === i);
     const node = document.getElementById('world-plate');
     const parchment = document.getElementById('parchment');
-    // Plate is already in HTML; mark styled until proven broken
     svg.classList.add('has-world-plate');
     const tryNext = (i) => {
       if (i >= candidates.length) {
         node.setAttribute('opacity', '0');
         parchment.setAttribute('opacity', '1');
-        parchment.setAttribute('fill', '#0a0e14');
         svg.classList.remove('has-world-plate');
         return;
       }
@@ -428,8 +556,8 @@
       const probe = new Image();
       probe.onload = () => {
         node.setAttribute('href', href);
-        node.setAttribute('opacity', '0.92');
-        parchment.setAttribute('opacity', '0.35');
+        node.setAttribute('opacity', '1');
+        parchment.setAttribute('opacity', '0.08');
         parchment.setAttribute('fill', '#0a0e14');
         svg.classList.add('has-world-plate');
       };
@@ -449,6 +577,9 @@
     viewport.addEventListener('pointerdown', (e) => {
       viewport.setPointerCapture(e.pointerId);
       state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      state.moved = false;
+      state.downX = e.clientX;
+      state.downY = e.clientY;
       if (state.pointers.size === 1) {
         state.dragging = true;
         state.lastX = e.clientX;
@@ -464,6 +595,9 @@
     viewport.addEventListener('pointermove', (e) => {
       if (!state.pointers.has(e.pointerId)) return;
       state.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (Math.hypot(e.clientX - state.downX, e.clientY - state.downY) > 8) {
+        state.moved = true;
+      }
       if (state.pointers.size === 2) {
         const pts = [...state.pointers.values()];
         const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
@@ -488,9 +622,7 @@
 
     const endPointer = (e) => {
       state.pointers.delete(e.pointerId);
-      if (state.pointers.size < 2) {
-        state.pinchStartDist = 0;
-      }
+      if (state.pointers.size < 2) state.pinchStartDist = 0;
       if (state.pointers.size === 0) {
         state.dragging = false;
         viewport.classList.remove('dragging');
@@ -499,13 +631,12 @@
     viewport.addEventListener('pointerup', endPointer);
     viewport.addEventListener('pointercancel', endPointer);
 
-    viewport.addEventListener('click', () => {
-      // click empty parchment closes on desktop when not dragging far
-    });
-
     document.getElementById('panel-close').addEventListener('click', closePanel);
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closePanel();
+      if (e.key === 'Escape') {
+        if (panel.classList.contains('open')) closePanel();
+        else if (state.view === 'zone') exitZone();
+      }
     });
 
     document.querySelectorAll('[data-lod]').forEach((btn) => {
@@ -524,43 +655,48 @@
       const r = viewport.getBoundingClientRect();
       zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1 / 1.2);
     });
-    document.getElementById('btn-reset').addEventListener('click', fitView);
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      if (state.view === 'zone') fitView();
+      else fitView();
+    });
+    btnBack.addEventListener('click', () => exitZone());
     window.addEventListener('resize', fitView);
+    window.addEventListener('hashchange', () => applyHash());
+  }
+
+  function applyHash() {
+    const raw = (location.hash || '').replace('#', '').trim();
+    if (!raw) {
+      if (state.view === 'zone') exitZone({ skipHash: true });
+      return;
+    }
+    const id = raw.toUpperCase();
+    const z = zoneById(id) || (state.data.zones || []).find((x) => x.slug === raw.toLowerCase());
+    if (z) enterZone(z, { skipHash: true });
   }
 
   async function boot() {
-    const res = await fetch('/map/map-data.json?v=map9', { cache: 'no-cache' });
+    const res = await fetch(`/map/map-data.json?v=${ASSET_V}`, { cache: 'no-cache' });
     if (!res.ok) throw new Error('Failed to load map-data.json');
     state.data = await res.json();
-    // Defense in depth: strip internal if someone ever ships raw lore by mistake
     for (const z of state.data.zones || []) {
       if (z && 'internal' in z) delete z.internal;
     }
-    document.getElementById('chapter-label').textContent = state.data.chapter || 'World Map';
+    chapterLabel.textContent = state.data.chapter || 'World Map';
     const vb = state.data.world.viewBox;
-    svg.setAttribute('viewBox', `0 0 ${vb[2]} ${vb[3]}`);
-    document.getElementById('parchment').setAttribute('width', vb[2]);
-    document.getElementById('parchment').setAttribute('height', vb[3]);
-    document.getElementById('world-plate').setAttribute('width', vb[2]);
-    document.getElementById('world-plate').setAttribute('height', vb[3]);
+    const parchment = document.getElementById('parchment');
+    parchment.setAttribute('width', vb[2]);
+    parchment.setAttribute('height', vb[3]);
+    const plate = document.getElementById('world-plate');
+    plate.setAttribute('width', vb[2]);
+    plate.setAttribute('height', vb[3]);
 
-    renderTerrain();
-    renderConnections();
     renderZones();
-    renderPois();
     renderCities();
     tryWorldPlate();
     bindInput();
     fitView();
-    // Start slightly zoomed into the Hearthlands (Z02)
-    const hub = zoneById('Z02');
-    if (hub) {
-      const rect = viewport.getBoundingClientRect();
-      state.scale = Math.max(state.scale, 0.85);
-      state.tx = rect.width / 2 - hub.shape.cx * state.scale;
-      state.ty = rect.height / 2 - hub.shape.cy * state.scale;
-      applyCamera();
-    }
+    if (location.hash) applyHash();
   }
 
   boot().catch((err) => {

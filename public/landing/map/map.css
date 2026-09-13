@@ -215,6 +215,9 @@ html, body {
   background: var(--border-subtle);
   margin: 0 0.15rem;
 }
+.hidden { display: none !important; }
+#app.view-zone .lod-only { display: none; }
+#btn-enter-zone { margin-top: 0.4rem; }
 
 /* ── Map viewport ── */
 #map-viewport {
@@ -239,19 +242,18 @@ html, body {
 
 .zone-shape {
   stroke-width: 2;
-  stroke: rgba(61, 220, 132, 0.28);
-  fill: rgba(61, 220, 132, 0.08);
-  transition: filter 0.15s ease, opacity 0.2s ease, stroke 0.15s ease;
+  stroke: transparent;
+  fill: transparent;
+  transition: fill 0.18s ease, stroke 0.18s ease, filter 0.18s ease;
   cursor: pointer;
 }
-.zone-shape.live { opacity: 0.95; }
+.zone-shape.live { opacity: 1; }
 .zone-shape.fog,
 .zone-shape.stub {
-  opacity: 0.4;
+  fill: rgba(10, 12, 16, 0.42);
+  stroke: rgba(106, 102, 96, 0.45);
+  stroke-dasharray: 7 5;
   filter: url(#fogHatch);
-  stroke-dasharray: 6 4;
-  stroke: rgba(106, 102, 96, 0.7);
-  fill: rgba(40, 36, 30, 0.35);
 }
 .zone-shape:hover,
 .zone-shape.selected {
@@ -259,7 +261,7 @@ html, body {
   stroke: var(--green-glow);
   stroke-width: 2.5;
   stroke-dasharray: none;
-  fill: rgba(61, 220, 132, 0.16);
+  fill: rgba(61, 220, 132, 0.14);
 }
 
 .zone-label {
@@ -312,13 +314,13 @@ html, body {
 .poi-icon:hover,
 .poi-dot:hover { filter: drop-shadow(0 0 6px rgba(232, 168, 73, 0.85)); }
 .poi-label {
-  font-family: var(--font-body);
-  font-size: 12px;
+  font-family: var(--font-heading);
+  font-size: 18px;
   fill: var(--text-bright);
   pointer-events: none;
   paint-order: stroke;
   stroke: rgba(6, 8, 12, 0.85);
-  stroke-width: 3px;
+  stroke-width: 4px;
 }
 
 
@@ -337,22 +339,17 @@ html, body {
 .city-fog { opacity: 0.7; }
 .city-fog .city-label { fill: var(--text-dim); font-style: italic; }
 
-.lod-continent .city-hub,
-.lod-continent .city-town,
-.lod-continent .layer-zones-detail,
-.lod-continent .layer-pois { display: none; }
-.lod-zones .city-town,
-.lod-zones .layer-pois { display: none; }
-.lod-pois .city-town,
-.lod-pois .layer-zones-detail,
-.lod-pois .layer-pois { display: initial; }
+.lod-continent .layer-zones-detail { display: none; }
+.lod-continent .zone-label,
+.lod-continent .zone-level { display: none; }
 
-/* When plate present, soften fills */
-.has-world-plate #parchment { opacity: 0.35; }
-.has-world-plate #layer-terrain { opacity: 0.15; }
-.has-world-plate .zone-shape.live { fill-opacity: 0.35; }
-.has-world-plate .zone-shape.fog,
-.has-world-plate .zone-shape.stub { fill-opacity: 0.45; }
+.has-world-plate #parchment { opacity: 0.08; }
+.has-world-plate .zone-shape.live { fill: transparent; }
+
+.city-marker { cursor: pointer; }
+.poi-marker { cursor: pointer; }
+#zone-root.hidden,
+#continent-root.hidden { display: none; }
 
 /* ── Detail panel ── */
 #detail-panel {
@@ -505,17 +502,19 @@ html, body {
 }
 
 @media (max-width: 720px) {
-  :root { --nav-h: 48px; --chrome-h: auto; }
-  .nav-links { gap: 0.9rem; }
-  .nav-links a { font-size: 0.62rem; }
+  :root { --nav-h: 44px; --chrome-h: 48px; }
+  .nav { padding: 0 0.75rem; }
+  .nav-links { gap: 0.7rem; }
+  .nav-links a { font-size: 0.58rem; }
   .map-chrome {
-    flex-wrap: wrap;
-    padding: 0.45rem 0.75rem;
-    gap: 0.5rem;
+    padding: 0 0.6rem;
+    gap: 0.4rem;
   }
-  .map-titles h1 { font-size: 1rem; }
+  .map-titles h1 { font-size: 0.95rem; }
   .map-titles .chapter { display: none; }
-  .hud-controls { margin-left: 0; width: 100%; }
+  .hud-controls { margin-left: auto; }
+  .lod-only { display: none !important; }
+  .chip { padding: 0.32rem 0.5rem; font-size: 0.6rem; }
   #detail-panel {
     top: auto;
     right: 0;
