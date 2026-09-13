@@ -246,10 +246,12 @@
         }
       });
 
-      // Try zone plate image (Imagine hook) — non-blocking
+      // Try zone plate image (Imagine hook) — mid-zoom+ (layer-zones-detail)
       if (!z.fog && z.imagePlate) {
+        const plateHref = absMapAsset(z.imagePlate) + '?v=map4';
         const img = el('image', {
-          href: z.imagePlate,
+          class: 'zone-plate layer-zones-detail',
+          href: plateHref,
           x: cx - rx, y: cy - ry, width: rx * 2, height: ry * 2,
           opacity: 0, preserveAspectRatio: 'xMidYMid slice',
           style: 'pointer-events:none',
@@ -257,7 +259,7 @@
         const probe = new Image();
         probe.onload = () => { img.setAttribute('opacity', '0.55'); };
         probe.onerror = () => { img.remove(); };
-        probe.src = z.imagePlate;
+        probe.src = plateHref;
       }
 
       const label = el('text', {
@@ -295,7 +297,7 @@
 
   function poiIconHref(kind) {
     const key = poiIconMap[kind];
-    return key ? `/map/assets/icons/${key}.png?v=map3` : null;
+    return key ? `/map/assets/icons/${key}.png?v=map4` : null;
   }
 
   function renderPois() {
@@ -369,8 +371,8 @@
         'data-importance': imp,
       }, g);
       const href = fog
-        ? `/map/assets/icons/town.png?v=map3`
-        : `/map/assets/icons/town.png?v=map3`;
+        ? `/map/assets/icons/town.png?v=map4`
+        : `/map/assets/icons/town.png?v=map4`;
       const img = el('image', {
         class: 'poi-icon',
         href,
@@ -405,10 +407,10 @@
   function tryWorldPlate() {
     const layers = state.data.world?.layers || {};
     const candidates = [
-      absMapAsset(layers.worldPlate) + (layers.worldPlate ? '?v=map3' : ''),
-      '/map/assets/world/world-plate.jpg?v=map3',
-      absMapAsset(layers.worldPlateAlt) + (layers.worldPlateAlt ? '?v=map3' : ''),
-      '/map/assets/world/world-plate-16x9.jpg?v=map3',
+      absMapAsset(layers.worldPlate) + (layers.worldPlate ? '?v=map4' : ''),
+      '/map/assets/world/world-plate.jpg?v=map4',
+      absMapAsset(layers.worldPlateAlt) + (layers.worldPlateAlt ? '?v=map4' : ''),
+      '/map/assets/world/world-plate-16x9.jpg?v=map4',
     ].filter((u, i, a) => u && a.indexOf(u) === i);
     const node = document.getElementById('world-plate');
     const parchment = document.getElementById('parchment');
@@ -527,7 +529,7 @@
   }
 
   async function boot() {
-    const res = await fetch('/map/map-data.json?v=map3', { cache: 'no-cache' });
+    const res = await fetch('/map/map-data.json?v=map4', { cache: 'no-cache' });
     if (!res.ok) throw new Error('Failed to load map-data.json');
     state.data = await res.json();
     // Defense in depth: strip internal if someone ever ships raw lore by mistake
