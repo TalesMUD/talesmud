@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Aethermoor World Map — Veilspan</title>
+  <meta name="description" content="Explore the public world map of Aethermoor — zones, roads, and discoveries in Veilspan Chapter I." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cinzel:wght@400;600;700&family=Fira+Code:wght@400;500&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="map.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div>
+        <h1>Aethermoor</h1>
+        <div class="chapter" id="chapter-label">World Map</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="hud-controls" role="toolbar" aria-label="Map controls">
+        <button type="button" data-lod="auto" class="active" title="Auto LOD by zoom">LOD Auto</button>
+        <button type="button" data-lod="continent" title="Continent overview">A Lands</button>
+        <button type="button" data-lod="zones" title="Zones &amp; roads">B Zones</button>
+        <button type="button" data-lod="pois" title="Points of interest">C POIs</button>
+        <button type="button" id="btn-zoom-in" title="Zoom in">+</button>
+        <button type="button" id="btn-zoom-out" title="Zoom out">−</button>
+        <button type="button" id="btn-reset" title="Reset view">Reset</button>
+      </div>
+      <a class="back" href="/">← Veilspan</a>
+    </header>
+
+    <div id="map-viewport" aria-label="Interactive world map">
+      <svg id="map-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Aethermoor map">
+        <defs>
+          <filter id="paper">
+            <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" seed="2" result="n"/>
+            <feDiffuseLighting in="n" lighting-color="#e8d8b4" surfaceScale="1.2" result="lit">
+              <feDistantLight azimuth="45" elevation="55"/>
+            </feDiffuseLighting>
+            <feComposite in="SourceGraphic" in2="lit" operator="arithmetic" k1="1" k2="0.25" k3="0.1" k4="0"/>
+          </filter>
+          <pattern id="fogPattern" patternUnits="userSpaceOnUse" width="12" height="12">
+            <path d="M0,12 L12,0" stroke="#4a4030" stroke-width="1" opacity="0.35"/>
+          </pattern>
+          <filter id="fogHatch">
+            <feColorMatrix type="saturate" values="0.35"/>
+          </filter>
+        </defs>
+        <g id="camera">
+          <g id="world-root">
+            <!-- Imagine: world plate image layer -->
+            <image id="world-plate" href="" width="1800" height="1580" opacity="0" preserveAspectRatio="xMidYMid slice" />
+            <rect id="parchment" x="0" y="0" width="1800" height="1580" fill="#ddd0b4" rx="8"/>
+            <rect x="15" y="15" width="1770" height="1550" fill="none" stroke="#8a7a60" stroke-width="3" rx="5"/>
+            <g id="layer-terrain" opacity="0.35"></g>
+            <g id="layer-connections" class="layer-zones-detail"></g>
+            <g id="layer-zones"></g>
+            <g id="layer-labels" class="layer-zones-detail"></g>
+            <g id="layer-pois" class="layer-pois"></g>
+          </g>
+        </g>
+      </svg>
+
+      <div class="legend">
+        <span><i class="swatch live"></i> Charted</span>
+        <span><i class="swatch fog"></i> Uncharted / fog</span>
+      </div>
+      <div class="hint">Scroll to zoom · Drag to pan · Tap a zone</div>
+    </div>
+
+    <aside id="detail-panel" aria-live="polite" aria-hidden="true">
+      <button type="button" class="panel-close" id="panel-close" aria-label="Close">×</button>
+      <div class="panel-header">
+        <div class="eyebrow" id="panel-eyebrow">Zone</div>
+        <h2 id="panel-title">—</h2>
+        <div class="meta" id="panel-meta"></div>
+      </div>
+      <div class="panel-body" id="panel-body"></div>
+    </aside>
+  </div>
+  <script src="map.js"></script>
+</body>
+</html>

@@ -1,0 +1,1187 @@
+{
+  "schemaVersion": 1,
+  "sourceLore": "zones/map/world-map-lore.v1.json",
+  "purpose": "PUBLIC only — internal lore stripped at build time",
+  "chapter": "Chapter I: Gloomfen Depths",
+  "world": {
+    "id": "aethermoor",
+    "name": "Aethermoor",
+    "viewBox": [
+      0,
+      0,
+      1800,
+      1580
+    ],
+    "layers": {
+      "worldPlate": "assets/world/world-plate.webp",
+      "fog": true
+    }
+  },
+  "lod": {
+    "continent": {
+      "maxScale": 0.55
+    },
+    "zones": {
+      "minScale": 0.55,
+      "maxScale": 1.35
+    },
+    "pois": {
+      "minScale": 1.35
+    }
+  },
+  "zones": [
+    {
+      "id": "Z00",
+      "slug": "catacombs",
+      "title": "The Awakening Catacombs",
+      "visibility": "live",
+      "levelRange": "1–5",
+      "overview": [
+        "Every traveler in Aethermoor opens their eyes on cold stone beneath the Hearthlands.",
+        "These forgotten catacombs teach the first steps — light, look, fight, listen — before the stairwell to daylight.",
+        "A ghostly warden still walks the supply cache."
+      ],
+      "discoverable": [
+        "Tutorial dungeon",
+        "Spectral Warden",
+        "Fragment gate to the surface"
+      ],
+      "connections": [
+        {
+          "to": "Z01",
+          "label": "Meadows",
+          "tease": "One-way stair into daylight. You do not return.",
+          "state": "open"
+        }
+      ],
+      "pois": [
+        {
+          "id": "r0001",
+          "name": "Awakening Chamber",
+          "kind": "landmark",
+          "blurb": "Where new souls first stand.",
+          "x": 720,
+          "y": 912
+        },
+        {
+          "id": "r0003",
+          "name": "Torch Alcove",
+          "kind": "npc",
+          "blurb": "Spectral Warden and the first supplies.",
+          "x": 738,
+          "y": 926
+        },
+        {
+          "id": "r0004",
+          "name": "Rune Chamber",
+          "kind": "landmark",
+          "blurb": "Light reveals older writing.",
+          "x": 702,
+          "y": 926
+        },
+        {
+          "id": "r0005",
+          "name": "Rat Nest",
+          "kind": "dungeon",
+          "blurb": "Small vermin; thorough scavengers rewarded.",
+          "x": 732,
+          "y": 902
+        },
+        {
+          "id": "r0006",
+          "name": "Exit Stairwell",
+          "kind": "gate",
+          "blurb": "Daylight, once the fragments are gathered.",
+          "x": 708,
+          "y": 902
+        }
+      ],
+      "shape": {
+        "type": "ellipse",
+        "cx": 720,
+        "cy": 920,
+        "rx": 36,
+        "ry": 28
+      },
+      "fill": "#5a5060",
+      "fog": false,
+      "imagePlate": "assets/zones/z00-plate.webp"
+    },
+    {
+      "id": "Z01",
+      "slug": "meadows",
+      "title": "Meadows & Forest Path",
+      "visibility": "live",
+      "levelRange": "5–12",
+      "overview": [
+        "Sun after stone. Wildflower fields give way to birch and oak, a peddler’s trail, and the road to Oldtown.",
+        "Wolves and bandits test soft legs; optional dens under the creek bank hide harder fights."
+      ],
+      "discoverable": [
+        "Open beginner wilds",
+        "Fynn the Peddler",
+        "Ranger Wren",
+        "Optional burrow / Thornback"
+      ],
+      "connections": [
+        {
+          "to": "Z00",
+          "label": "Catacombs",
+          "tease": "Entrance sealed behind you.",
+          "state": "blocked"
+        },
+        {
+          "to": "Z02",
+          "label": "Oldtown",
+          "tease": "Well-worn road toward civilization.",
+          "state": "open"
+        }
+      ],
+      "pois": [
+        {
+          "id": "r0101",
+          "name": "Meadow Emergence",
+          "kind": "landmark",
+          "blurb": "First daylight; the catacomb mouth seals behind you.",
+          "x": 720,
+          "y": 782
+        },
+        {
+          "id": "r0102",
+          "name": "Wildflower Field",
+          "kind": "merchant",
+          "blurb": "Fynn the Peddler’s cart.",
+          "x": 738,
+          "y": 796
+        },
+        {
+          "id": "r0104",
+          "name": "Bandit Lookout",
+          "kind": "landmark",
+          "blurb": "Abandoned tower with fresh tracks.",
+          "x": 702,
+          "y": 796
+        },
+        {
+          "id": "r0105",
+          "name": "Forest Edge",
+          "kind": "npc",
+          "blurb": "Ranger Wren on Oldtown’s patrol.",
+          "x": 732,
+          "y": 772
+        },
+        {
+          "id": "r0106",
+          "name": "Deep Grove",
+          "kind": "boss",
+          "blurb": "Thornback Bear’s clearing (optional).",
+          "x": 708,
+          "y": 772
+        },
+        {
+          "id": "r0109",
+          "name": "Burrow Entrance",
+          "kind": "dungeon",
+          "blurb": "Chute under the creek bank.",
+          "x": 742,
+          "y": 786
+        }
+      ],
+      "shape": {
+        "type": "ellipse",
+        "cx": 720,
+        "cy": 790,
+        "rx": 55,
+        "ry": 42
+      },
+      "fill": "#7a9a50",
+      "fog": false,
+      "imagePlate": "assets/zones/z01-plate.webp"
+    },
+    {
+      "id": "Z02",
+      "slug": "oldtown",
+      "title": "Oldtown",
+      "visibility": "live",
+      "levelRange": "10–18",
+      "overview": [
+        "Neutral heart of the Hearthlands — old stone, market smoke, and a merchant council that answers to no faction.",
+        "All three great powers send agents; open steel is punished. Cellars and sewers keep their own rules."
+      ],
+      "discoverable": [
+        "City hub",
+        "Inns & shops",
+        "Private cellars",
+        "Sewers"
+      ],
+      "connections": [
+        {
+          "to": "Z01",
+          "label": "Meadows",
+          "tease": "South road from the gate.",
+          "state": "open"
+        },
+        {
+          "to": "Z03",
+          "label": "Gloomfen",
+          "tease": "Southwest marsh gate into fog.",
+          "state": "open"
+        },
+        {
+          "to": "Z04",
+          "label": "Ashenveil",
+          "tease": "Northwest woods under dark oaks.",
+          "state": "open"
+        },
+        {
+          "to": "Z05",
+          "label": "Silverbrook",
+          "tease": "East from the river docks.",
+          "state": "open"
+        }
+      ],
+      "pois": [
+        {
+          "id": "r0201",
+          "name": "Town Gate",
+          "kind": "gate",
+          "blurb": "Road in from the meadows.",
+          "x": 850,
+          "y": 632
+        },
+        {
+          "id": "r0202",
+          "name": "Market Square",
+          "kind": "hub",
+          "blurb": "Commerce and rumor.",
+          "x": 868,
+          "y": 646
+        },
+        {
+          "id": "r0203",
+          "name": "The Weary Wanderer",
+          "kind": "inn",
+          "blurb": "Inn, rooms, quiet deals.",
+          "x": 832,
+          "y": 646
+        },
+        {
+          "id": "r0209",
+          "name": "Ironhand’s Forge",
+          "kind": "merchant",
+          "blurb": "Kara’s steel and repairs.",
+          "x": 862,
+          "y": 622
+        },
+        {
+          "id": "r0208",
+          "name": "Bramwick’s General Store",
+          "kind": "merchant",
+          "blurb": "Sundries for the road.",
+          "x": 838,
+          "y": 622
+        },
+        {
+          "id": "r0206",
+          "name": "Shrine of the Twelve",
+          "kind": "landmark",
+          "blurb": "Small temple to older gods.",
+          "x": 872,
+          "y": 636
+        },
+        {
+          "id": "r0211",
+          "name": "Sewer Grate",
+          "kind": "dungeon",
+          "blurb": "Urban danger below.",
+          "x": 828,
+          "y": 636
+        },
+        {
+          "id": "r0212",
+          "name": "River Docks",
+          "kind": "gate",
+          "blurb": "East toward Silverbrook Vale.",
+          "x": 850,
+          "y": 656
+        }
+      ],
+      "shape": {
+        "type": "ellipse",
+        "cx": 850,
+        "cy": 640,
+        "rx": 62,
+        "ry": 50
+      },
+      "fill": "#c4a060",
+      "fog": false,
+      "imagePlate": "assets/zones/z02-plate.webp"
+    },
+    {
+      "id": "Z03",
+      "slug": "gloomfen",
+      "title": "Gloomfen Marsh",
+      "visibility": "live",
+      "levelRange": "7–15",
+      "overview": [
+        "Fog, black water, and dead trees southwest of Oldtown.",
+        "Fenwatch Camp holds a lantern line into the mire.",
+        "Sunken ruins drown the restless — and a hag who claims the deepest sanctum."
+      ],
+      "discoverable": [
+        "Fenwatch hub",
+        "Sunken Ruins",
+        "Campaign boss: Mire Hag"
+      ],
+      "connections": [
+        {
+          "to": "Z02",
+          "label": "Oldtown",
+          "tease": "Northeast marsh gate.",
+          "state": "open"
+        },
+        {
+          "to": "Z08",
+          "label": "Gearwind",
+          "tease": "Southern rise blocked by landslide.",
+          "state": "fog"
+        },
+        {
+          "to": "Z19",
+          "label": "Depths",
+          "tease": "An ancient floodgate into deeper dark.",
+          "state": "fog"
+        }
+      ],
+      "pois": [
+        {
+          "id": "r0301",
+          "name": "Marsh Gate Trail",
+          "kind": "gate",
+          "blurb": "Descent from Oldtown.",
+          "x": 580,
+          "y": 782
+        },
+        {
+          "id": "r0304",
+          "name": "Fenwatch Camp",
+          "kind": "bind",
+          "blurb": "Wardens, safe fire, bindstone.",
+          "x": 598,
+          "y": 796
+        },
+        {
+          "id": "r0306",
+          "name": "Herbalist’s Hut",
+          "kind": "merchant",
+          "blurb": "Old Moss and marsh remedies.",
+          "x": 562,
+          "y": 796
+        },
+        {
+          "id": "r0309",
+          "name": "Dead Man’s Oak",
+          "kind": "landmark",
+          "blurb": "Landmark over the ruins.",
+          "x": 592,
+          "y": 772
+        },
+        {
+          "id": "r0311",
+          "name": "Ruin Entrance",
+          "kind": "dungeon",
+          "blurb": "Arch into the flooded halls.",
+          "x": 568,
+          "y": 772
+        },
+        {
+          "id": "r0315",
+          "name": "Hag’s Sanctum",
+          "kind": "boss",
+          "blurb": "Lair of the Mire Hag.",
+          "x": 602,
+          "y": 786
+        },
+        {
+          "id": "r0319",
+          "name": "Will-o’-Wisp Grove",
+          "kind": "landmark",
+          "blurb": "Lights that lie.",
+          "x": 558,
+          "y": 786
+        },
+        {
+          "id": "r0317",
+          "name": "Windswept Rise",
+          "kind": "gate",
+          "blurb": "Blocked southern road.",
+          "x": 580,
+          "y": 806
+        }
+      ],
+      "shape": {
+        "type": "ellipse",
+        "cx": 580,
+        "cy": 790,
+        "rx": 68,
+        "ry": 55
+      },
+      "fill": "#4a7a5a",
+      "fog": false,
+      "imagePlate": "assets/zones/z03-plate.webp"
+    },
+    {
+      "id": "Z04",
+      "slug": "ashenveil",
+      "title": "Ashenveil Woods",
+      "visibility": "live",
+      "levelRange": "10–20",
+      "overview": [
+        "Dark oaks west of Oldtown. Timberhold logs and watches while bandits squat in a ruined keep.",
+        "Old dwarven milestones climb northwest toward the mountains — and Iron Pact banners hang in the inn."
+      ],
+      "discoverable": [
+        "Timberhold hub",
+        "Ashenveil Keep",
+        "Campaign boss: Bandit Captain Rask",
+        "Dwarven roadway"
+      ],
+      "connections": [
+        {
+          "to": "Z02",
+          "label": "Oldtown",
+          "tease": "Southeast under thinning canopy.",
+          "state": "open"
+        },
+        {
+          "to": "Z06",
+          "label": "Ironspine",
+          "tease": "Northwest dwarven roadway into the foothills.",
+          "state": "open"
+        },
+        {
+          "to": "Z05",
+          "label": "Silverbrook",
+          "tease": "Northeast side trail into the vale.",
+          "state": "open"
+        }
+      ],
+      "pois": [
+        {
+          "id": "r0401",
+          "name": "Western Gate Road",
+          "kind": "gate",
+          "blurb": "Canopy road from Oldtown.",
+          "x": 530,
+          "y": 502
+        },
+        {
+          "id": "r0405",
+          "name": "Timberhold Square",
+          "kind": "hub",
+          "blurb": "Hub fire and rumor.",
+          "x": 548,
+          "y": 516
+        },
+        {
+          "id": "r0406",
+          "name": "Hearthwood Inn",
+          "kind": "bind",
+          "blurb": "Bind; Iron Pact colors.",
+          "x": 512,
+          "y": 516
+        },
+        {
+          "id": "r0407",
+          "name": "Ashenveil Smithy",
+          "kind": "merchant",
+          "blurb": "Torvald’s forge.",
+          "x": 542,
+          "y": 492
+        },
+        {
+          "id": "r0416",
+          "name": "Keep Outer Curtain",
+          "kind": "dungeon",
+          "blurb": "Breach into bandit ruins.",
+          "x": 518,
+          "y": 492
+        },
+        {
+          "id": "r0420",
+          "name": "Captain Rask’s Chamber",
+          "kind": "boss",
+          "blurb": "Bandit Captain Rask.",
+          "x": 552,
+          "y": 506
+        },
+        {
+          "id": "r0421",
+          "name": "First Milestone",
+          "kind": "landmark",
+          "blurb": "Dwarven road-marker toward the peaks.",
+          "x": 508,
+          "y": 506
+        },
+        {
+          "id": "r0424",
+          "name": "Ironspine Overlook",
+          "kind": "gate",
+          "blurb": "Mountain road continues northwest.",
+          "x": 530,
+          "y": 526
+        }
+      ],
+      "shape": {
+        "type": "ellipse",
+        "cx": 530,
+        "cy": 510,
+        "rx": 72,
+        "ry": 55
+      },
+      "fill": "#3a6a3a",
+      "fog": false,
+      "imagePlate": "assets/zones/z04-plate.webp"
+    },
+    {
+      "id": "Z05",
+      "slug": "silverbrook",
+      "title": "Silverbrook Vale",
+      "visibility": "live",
+      "levelRange": "12–20",
+      "overview": [
+        "East of the docks, a once-rich farming vale gone quiet — grey fields, empty lanes, and an estate that no longer answers Oldtown.",
+        "Survivors cling to the village square. The mine under the manor still breathes cold air."
+      ],
+      "discoverable": [
+        "Village hub",
+        "Vayne estate & mine",
+        "Campaign boss: Lord Edric Vayne"
+      ],
+      "connections": [
+        {
+          "to": "Z02",
+          "label": "Oldtown",
+          "tease": "West across the bridge to the docks.",
+          "state": "open"
+        },
+        {
+          "to": "Z04",
+          "label": "Ashenveil",
+          "tease": "Southwest trail through the boundary markers.",
+          "state": "open"
+        },
+        {
+          "to": "Z07",
+          "label": "Verdant Reach",
+          "tease": "Northeast highland path into silver woods.",
+          "state": "open"
+        }
+      ],
+      "pois": [
+        {
+          "id": "r0501",
+          "name": "Silverbrook Bridge",
+          "kind": "gate",
+          "blurb": "Stone crossing into the vale.",
+          "x": 1170,
+          "y": 502
+        },
+        {
+          "id": "r0504",
+          "name": "Blighted Fields",
+          "kind": "landmark",
+          "blurb": "Crops that will not stay dead.",
+          "x": 1188,
+          "y": 516
+        },
+        {
+          "id": "r0505",
+          "name": "Village of Silverbrook",
+          "kind": "bind",
+          "blurb": "Bind; Brother Calum’s stubborn light.",
+          "x": 1152,
+          "y": 516
+        },
+        {
+          "id": "r0508",
+          "name": "Harrow’s End",
+          "kind": "landmark",
+          "blurb": "Disturbed graves at the lane’s edge.",
+          "x": 1182,
+          "y": 492
+        },
+        {
+          "id": "r0510",
+          "name": "Estate Gate",
+          "kind": "landmark",
+          "blurb": "Iron teeth of House Vayne.",
+          "x": 1158,
+          "y": 492
+        },
+        {
+          "id": "r0516",
+          "name": "Mine Entrance",
+          "kind": "dungeon",
+          "blurb": "Shaft beneath the cellar.",
+          "x": 1192,
+          "y": 506
+        },
+        {
+          "id": "r0520",
+          "name": "Impression Chamber",
+          "kind": "boss",
+          "blurb": "Sealed vault at the mine’s end — Lord Edric Vayne.",
+          "x": 1148,
+          "y": 506
+        },
+        {
+          "id": "r0505-ne",
+          "name": "Highland Path",
+          "kind": "gate",
+          "blurb": "Northeast toward elven border woods.",
+          "x": 1170,
+          "y": 526
+        }
+      ],
+      "shape": {
+        "type": "ellipse",
+        "cx": 1170,
+        "cy": 510,
+        "rx": 72,
+        "ry": 55
+      },
+      "fill": "#50907a",
+      "fog": false,
+      "imagePlate": "assets/zones/z05-plate.webp"
+    },
+    {
+      "id": "Z06",
+      "slug": "ironspine",
+      "title": "Ironspine Foothills",
+      "visibility": "live",
+      "levelRange": "20–30",
+      "overview": [
+        "Switchbacks and thin air on the western mountains.",
+        "Anvil Rest is the Iron Pact’s foothold — forge, oaths, and warg-haunted ridges.",
+        "The Ironvein Mine digs for mythril; something older than orcs claims the high cave."
+      ],
+      "discoverable": [
+        "Anvil Rest hub",
+        "Ironvein Mine",
+        "Campaign boss: Ironjaw the Troll King"
+      ],
+      "connections": [
+        {
+          "to": "Z04",
+          "label": "Ashenveil",
+          "tease": "Southeast down the dwarven roadway.",
+          "state": "open"
+        },
+        {
+          "to": "Z10",
+          "label": "Kazgrath",
+          "tease": "North gate road toward the fortress capital.",
+          "state": "fog"
+        },
+        {
+          "to": "Z09",
+          "label": "Thornfield",
+          "tease": "Eastern ridge markers into contested highlands.",
+          "state": "fog"
+        }
+      ],
+      "pois": [
+        {
+          "id": "r0601",
+          "name": "Switchback Ascent",
+          "kind": "gate",
+          "blurb": "Climb from Ashenveil.",
+          "x": 320,
+          "y": 342
+        },
+        {
+          "id": "r0605",
+          "name": "Anvil Rest Square",
+          "kind": "bind",
+          "blurb": "Hub bind and Pact banners.",
+          "x": 338,
+          "y": 356
+        },
+        {
+          "id": "r0606",
+          "name": "Anvil Forge",
+          "kind": "merchant",
+          "blurb": "Steel and trade.",
+          "x": 302,
+          "y": 356
+        },
+        {
+          "id": "r0608",
+          "name": "Oath Hall",
+          "kind": "landmark",
+          "blurb": "Pact law under mountain stone.",
+          "x": 332,
+          "y": 332
+        },
+        {
+          "id": "r0610",
+          "name": "Mine Adit",
+          "kind": "dungeon",
+          "blurb": "Mouth of the Ironvein.",
+          "x": 308,
+          "y": 332
+        },
+        {
+          "id": "r0614",
+          "name": "Mythril Seam",
+          "kind": "landmark",
+          "blurb": "Deep prize of the drifts.",
+          "x": 342,
+          "y": 346
+        },
+        {
+          "id": "r0620",
+          "name": "Ironjaw’s Cave",
+          "kind": "boss",
+          "blurb": "Ironjaw the Troll King.",
+          "x": 298,
+          "y": 346
+        },
+        {
+          "id": "r0621",
+          "name": "Kazgrath Gate Road",
+          "kind": "gate",
+          "blurb": "Road toward the fortress capital.",
+          "x": 320,
+          "y": 366
+        }
+      ],
+      "shape": {
+        "type": "ellipse",
+        "cx": 320,
+        "cy": 350,
+        "rx": 72,
+        "ry": 55
+      },
+      "fill": "#8a7d6b",
+      "fog": false,
+      "imagePlate": "assets/zones/z06-plate.webp"
+    },
+    {
+      "id": "Z07",
+      "slug": "verdant-reach",
+      "title": "Verdant Reach",
+      "visibility": "live",
+      "levelRange": "20–30",
+      "overview": [
+        "Silver-barked border forest of the Silver Dawn.",
+        "Willowmere’s moonwell and wardens hold the line while grey blight — the same spiritual rot scarring Silverbrook — eats the eastern grove.",
+        "A stag-spirit wears that wound."
+      ],
+      "discoverable": [
+        "Willowmere hub",
+        "Blighted Grove",
+        "Campaign boss: The Blighted Hart"
+      ],
+      "connections": [
+        {
+          "to": "Z05",
+          "label": "Silverbrook",
+          "tease": "Southwest highland descent to the village.",
+          "state": "open"
+        },
+        {
+          "to": "Z11",
+          "label": "Aelindor",
+          "tease": "North processional road — sealed.",
+          "state": "fog"
+        },
+        {
+          "to": "Z09",
+          "label": "Thornfield",
+          "tease": "West trail into contested highlands.",
+          "state": "fog"
+        }
+      ],
+      "pois": [
+        {
+          "id": "r0701",
+          "name": "Highland Descent",
+          "kind": "gate",
+          "blurb": "Climb from Silverbrook.",
+          "x": 1370,
+          "y": 342
+        },
+        {
+          "id": "r0705",
+          "name": "Willowmere Green",
+          "kind": "bind",
+          "blurb": "Hub bind under silver canopy.",
+          "x": 1388,
+          "y": 356
+        },
+        {
+          "id": "r0706",
+          "name": "Treehouse Inn",
+          "kind": "inn",
+          "blurb": "Rest and a wounded Pact courier.",
+          "x": 1352,
+          "y": 356
+        },
+        {
+          "id": "r0707",
+          "name": "Warden Hall",
+          "kind": "npc",
+          "blurb": "Warden Caelith’s command.",
+          "x": 1382,
+          "y": 332
+        },
+        {
+          "id": "r0708",
+          "name": "Moonwell Glade",
+          "kind": "merchant",
+          "blurb": "Moonkeeper Lirien’s basin and wares.",
+          "x": 1358,
+          "y": 332
+        },
+        {
+          "id": "r0714",
+          "name": "Blight Margin",
+          "kind": "landmark",
+          "blurb": "Where bark blackens and vines watch.",
+          "x": 1392,
+          "y": 346
+        },
+        {
+          "id": "r0719",
+          "name": "Grove Heart",
+          "kind": "boss",
+          "blurb": "The Blighted Hart.",
+          "x": 1348,
+          "y": 346
+        },
+        {
+          "id": "r0720",
+          "name": "Processional Road",
+          "kind": "gate",
+          "blurb": "Sealed path toward Aelindor.",
+          "x": 1370,
+          "y": 366
+        }
+      ],
+      "shape": {
+        "type": "ellipse",
+        "cx": 1370,
+        "cy": 350,
+        "rx": 72,
+        "ry": 55
+      },
+      "fill": "#4a8a5a",
+      "fog": false,
+      "imagePlate": "assets/zones/z07-plate.webp"
+    },
+    {
+      "id": "Z08",
+      "slug": "gearwind",
+      "title": "Gearwind Plateau",
+      "visibility": "fog",
+      "levelRange": "20–30",
+      "overview": [
+        "Windswept ruins south of Gloomfen — Cogwright road toward Veridane."
+      ],
+      "discoverable": [],
+      "connections": [
+        {
+          "to": "Z03",
+          "label": "Gloomfen",
+          "tease": "North through landslide rubble.",
+          "state": "fog"
+        },
+        {
+          "to": "Z12",
+          "label": "Veridane",
+          "tease": "South toward brass and steam.",
+          "state": "fog"
+        }
+      ],
+      "pois": [],
+      "shape": {
+        "type": "ellipse",
+        "cx": 780,
+        "cy": 990,
+        "rx": 70,
+        "ry": 52
+      },
+      "fill": "#a09060",
+      "fog": true,
+      "imagePlate": "assets/zones/z08-plate.webp"
+    },
+    {
+      "id": "Z09",
+      "slug": "thornfield",
+      "title": "Thornfield Highlands",
+      "visibility": "fog",
+      "levelRange": "20–30",
+      "overview": [
+        "Contested heights between the three roads — banners change with the weather."
+      ],
+      "discoverable": [],
+      "connections": [
+        {
+          "to": "Z06",
+          "label": "Ironspine",
+          "tease": "West ridge.",
+          "state": "fog"
+        },
+        {
+          "to": "Z07",
+          "label": "Verdant",
+          "tease": "East from Willowmere stub.",
+          "state": "fog"
+        },
+        {
+          "to": "Z08",
+          "label": "Gearwind",
+          "tease": "South wind road.",
+          "state": "fog"
+        }
+      ],
+      "pois": [],
+      "shape": {
+        "type": "ellipse",
+        "cx": 850,
+        "cy": 380,
+        "rx": 60,
+        "ry": 48
+      },
+      "fill": "#908050",
+      "fog": true,
+      "imagePlate": "assets/zones/z09-plate.webp"
+    },
+    {
+      "id": "Z10",
+      "slug": "kazgrath",
+      "title": "Kazgrath",
+      "visibility": "stub",
+      "levelRange": "20+",
+      "overview": [
+        "Iron Pact mountain fortress; rumors of a Great Forge that never sleeps."
+      ],
+      "discoverable": [
+        "Faction capital (unopened)"
+      ],
+      "connections": [
+        {
+          "to": "Z06",
+          "label": "Ironspine",
+          "tease": "South gate road from Anvil Rest.",
+          "state": "fog"
+        }
+      ],
+      "pois": [],
+      "shape": {
+        "type": "ellipse",
+        "cx": 200,
+        "cy": 210,
+        "rx": 85,
+        "ry": 68
+      },
+      "fill": "#a07040",
+      "fog": true,
+      "imagePlate": "assets/zones/z10-plate.webp"
+    },
+    {
+      "id": "Z11",
+      "slug": "aelindor",
+      "title": "Aelindor",
+      "visibility": "stub",
+      "levelRange": "20+",
+      "overview": [
+        "Circular elven city around the Starspire — sealed beyond Willowmere’s processional."
+      ],
+      "discoverable": [
+        "Faction capital (unopened)"
+      ],
+      "connections": [
+        {
+          "to": "Z07",
+          "label": "Verdant Reach",
+          "tease": "South processional from the border.",
+          "state": "fog"
+        }
+      ],
+      "pois": [],
+      "shape": {
+        "type": "ellipse",
+        "cx": 1500,
+        "cy": 210,
+        "rx": 85,
+        "ry": 68
+      },
+      "fill": "#70a0b0",
+      "fog": true,
+      "imagePlate": "assets/zones/z11-plate.webp"
+    },
+    {
+      "id": "Z12",
+      "slug": "veridane",
+      "title": "Veridane",
+      "visibility": "stub",
+      "levelRange": "20+",
+      "overview": [
+        "Brass and steam on the southern plateau — constructs walk as citizens."
+      ],
+      "discoverable": [
+        "Faction capital (unopened)"
+      ],
+      "connections": [
+        {
+          "to": "Z08",
+          "label": "Gearwind",
+          "tease": "North across the plateau.",
+          "state": "fog"
+        }
+      ],
+      "pois": [],
+      "shape": {
+        "type": "ellipse",
+        "cx": 1000,
+        "cy": 1170,
+        "rx": 85,
+        "ry": 68
+      },
+      "fill": "#b09040",
+      "fog": true,
+      "imagePlate": "assets/zones/z12-plate.webp"
+    },
+    {
+      "id": "Z19",
+      "slug": "gloomfen-depths",
+      "title": "Gloomfen Depths",
+      "visibility": "fog",
+      "levelRange": "50",
+      "overview": [
+        "Something waits beneath the marsh floodgate."
+      ],
+      "discoverable": [],
+      "connections": [
+        {
+          "to": "Z03",
+          "label": "Gloomfen",
+          "tease": "Up through the Ancient Floodgate.",
+          "state": "fog"
+        }
+      ],
+      "pois": [],
+      "shape": {
+        "type": "ellipse",
+        "cx": 490,
+        "cy": 930,
+        "rx": 58,
+        "ry": 40
+      },
+      "fill": "#a03030",
+      "fog": true,
+      "imagePlate": "assets/zones/z19-plate.webp"
+    }
+  ],
+  "connections": [
+    {
+      "from": "Z00",
+      "to": "Z01",
+      "state": "open",
+      "label": "Meadows"
+    },
+    {
+      "from": "Z01",
+      "to": "Z02",
+      "state": "open",
+      "label": "Oldtown"
+    },
+    {
+      "from": "Z02",
+      "to": "Z03",
+      "state": "open",
+      "label": "Gloomfen"
+    },
+    {
+      "from": "Z02",
+      "to": "Z04",
+      "state": "open",
+      "label": "Ashenveil"
+    },
+    {
+      "from": "Z02",
+      "to": "Z05",
+      "state": "open",
+      "label": "Silverbrook"
+    },
+    {
+      "from": "Z03",
+      "to": "Z08",
+      "state": "fog",
+      "label": "Gearwind"
+    },
+    {
+      "from": "Z03",
+      "to": "Z19",
+      "state": "fog",
+      "label": "Depths"
+    },
+    {
+      "from": "Z04",
+      "to": "Z06",
+      "state": "open",
+      "label": "Ironspine"
+    },
+    {
+      "from": "Z04",
+      "to": "Z05",
+      "state": "open",
+      "label": "Silverbrook"
+    },
+    {
+      "from": "Z05",
+      "to": "Z07",
+      "state": "open",
+      "label": "Verdant Reach"
+    },
+    {
+      "from": "Z06",
+      "to": "Z10",
+      "state": "fog",
+      "label": "Kazgrath"
+    },
+    {
+      "from": "Z06",
+      "to": "Z09",
+      "state": "fog",
+      "label": "Thornfield"
+    },
+    {
+      "from": "Z07",
+      "to": "Z11",
+      "state": "fog",
+      "label": "Aelindor"
+    },
+    {
+      "from": "Z07",
+      "to": "Z09",
+      "state": "fog",
+      "label": "Thornfield"
+    },
+    {
+      "from": "Z08",
+      "to": "Z12",
+      "state": "fog",
+      "label": "Veridane"
+    },
+    {
+      "from": "Z09",
+      "to": "Z08",
+      "state": "fog",
+      "label": "Gearwind"
+    }
+  ]
+}
