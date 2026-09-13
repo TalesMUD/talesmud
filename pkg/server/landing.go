@@ -69,6 +69,13 @@ func LandingMiddleware(landingPath string) gin.HandlerFunc {
 			return
 		}
 
+		// Canonicalize /map → /map/ so relative (and base-relative) assets resolve.
+		if pth == "/map" {
+			c.Redirect(302, "/map/")
+			c.Abort()
+			return
+		}
+
 		// Serve static assets from the landing directory (e.g. images, CSS).
 		clean := filepath.Clean(pth[1:]) // strip leading "/"
 		assetPath := filepath.Join(landingPath, clean)

@@ -19,8 +19,8 @@
     scale: 0.7,
     tx: 0,
     ty: 0,
-    minScale: 0.35,
-    maxScale: 2.8,
+    minScale: 0.28,
+    maxScale: 3.6,
     lodMode: 'auto', // auto | continent | zones | pois
     dragging: false,
     lastX: 0,
@@ -103,6 +103,22 @@
   function openPanel(kind, payload) {
     panel.classList.add('open');
     panel.setAttribute('aria-hidden', 'false');
+    if (kind === 'city') {
+      const c = payload;
+      state.selectedId = c.id;
+      document.querySelectorAll('.zone-shape.selected').forEach((n) => n.classList.remove('selected'));
+      const imp = c.importance || 'town';
+      panelEyebrow.textContent = (c.visibility === 'fog' ? 'Uncharted · ' : '') + (imp === 'capital' ? 'Capital' : imp === 'hub' ? 'Hub' : 'Town');
+      panelTitle.textContent = c.name || c.id;
+      panelMeta.textContent = [c.faction, c.zoneId].filter(Boolean).join(' · ');
+      let html = '';
+      if (c.visibility === 'fog') {
+        html += `<div class="fog-banner">Fog of war — charts incomplete. Rumors only.</div>`;
+      }
+      if (c.blurb) html += `<p>${c.blurb}</p>`;
+      panelBody.innerHTML = html || '<p>No public charts yet.</p>';
+      return;
+    }
     if (kind === 'zone') {
       const z = payload;
       state.selectedId = z.id;
@@ -262,6 +278,26 @@
     }
   }
 
+  const poiIconMap = {
+    inn: 'inn',
+    bind: 'bindstone',
+    bindstone: 'bindstone',
+    dungeon: 'dungeon',
+    boss: 'boss',
+    hub: 'town',
+    town: 'town',
+    gate: 'town',
+    landmark: 'road',
+    road: 'road',
+    merchant: 'town',
+    npc: 'town',
+  };
+
+  function poiIconHref(kind) {
+    const key = poiIconMap[kind];
+    return key ? `/map/assets/icons/${key}.png?v=map2` : null;
+  }
+
   function renderPois() {
     const g = document.getElementById('layer-pois');
     g.innerHTML = '';
@@ -269,43 +305,130 @@
       if (z.fog) continue;
       for (const p of z.pois || []) {
         const color = poiColors[p.kind] || '#f0c674';
-        const dot = el('circle', {
-          class: 'poi-dot',
-          cx: p.x, cy: p.y, r: 5.5,
-          fill: color,
-          'data-id': p.id,
-        }, g);
-        dot.addEventListener('click', (ev) => {
+        const iconHref = poiIconHref(p.kind);
+        let marker;
+        if (iconHref) {
+          const size = 28;
+          marker = el('image', {
+            class: 'poi-icon',
+            href: iconHref,
+            x: p.x - size / 2,
+            y: p.y - size / 2,
+            width: size,
+            height: size,
+            'data-id': p.id,
+          }, g);
+        } else {
+          marker = el('circle', {
+            class: 'poi-dot',
+            cx: p.x, cy: p.y, r: 5.5,
+            fill: color,
+            'data-id': p.id,
+          }, g);
+        }
+        marker.addEventListener('click', (ev) => {
           ev.stopPropagation();
           openPanel('poi', { ...p, zoneTitle: z.title });
         });
         const t = el('text', {
           class: 'poi-label',
-          x: p.x + 8, y: p.y + 3,
+          x: p.x + 14, y: p.y + 4,
         }, g);
         t.textContent = p.name;
       }
     }
   }
 
+  /** Capitals ≫ hub (Oldtown) ≫ towns. LOD: capitals always; hub mid+; towns in close. */
+  function renderCities() {
+    const cities = state.data.cities || [];
+    if (!Array.isArray(cities) || !cities.length) return;
+    let g = document.getElementById('layer-cities');
+    if (!g) {
+      const root = document.getElementById('world-root');
+      // Insert above zones so markers read clearly, before POIs
+      g = el('g', { id: 'layer-cities' }, null);
+      const pois = document.getElementById('layer-pois');
+      if (pois && pois.parentNode) pois.parentNode.insertBefore(g, pois);
+      else root.appendChild(g);
+    }
+    g.innerHTML = '';
+    const sizeFor = (imp) => {
+      if (imp === 'capital') return 42;
+      if (imp === 'hub') return 34;
+      return 24;
+    };
+    for (const c of cities) {
+      if (c.x == null || c.y == null) continue;
+      const imp = c.importance || 'town';
+      const size = sizeFor(imp);
+      const fog = c.visibility === 'fog' || c.visibility === 'stub';
+      const wrap = el('g', {
+        class: `city-marker city-${imp}${fog ? ' city-fog' : ''}`,
+        'data-id': c.id,
+        'data-importance': imp,
+      }, g);
+      const href = fog
+        ? `/map/assets/icons/town.png?v=map2`
+        : `/map/assets/icons/town.png?v=map2`;
+      const img = el('image', {
+        class: 'poi-icon',
+        href,
+        x: c.x - size / 2,
+        y: c.y - size / 2,
+        width: size,
+        height: size,
+        opacity: fog ? '0.55' : '0.95',
+      }, wrap);
+      img.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        openPanel('city', c);
+      });
+      if (!c.optionalLabel || imp !== 'town') {
+        const label = el('text', {
+          class: `city-label city-label-${imp}${fog ? ' fog-label' : ''}`,
+          x: c.x,
+          y: c.y + size / 2 + (imp === 'capital' ? 16 : 12),
+          'text-anchor': 'middle',
+        }, wrap);
+        label.textContent = fog && imp === 'capital' ? c.name : (c.name || c.id || '');
+      }
+    }
+  }
+
+  function absMapAsset(href) {
+    if (!href) return href;
+    if (href.startsWith('http') || href.startsWith('/')) return href;
+    return `/map/${href.replace(/^\.\//, '')}`;
+  }
+
   function tryWorldPlate() {
     const layers = state.data.world?.layers || {};
-    const candidates = [layers.worldPlate, layers.worldPlateAlt].filter(Boolean);
-    // Also try common extensions if primary missing
-    if (layers.worldPlate && layers.worldPlate.endsWith('.webp')) {
-      candidates.push(layers.worldPlate.replace(/\.webp$/, '.jpg'));
-    }
+    const candidates = [
+      absMapAsset(layers.worldPlate) + (layers.worldPlate ? '?v=map2' : ''),
+      '/map/assets/world/world-plate.jpg?v=map2',
+      absMapAsset(layers.worldPlateAlt) + (layers.worldPlateAlt ? '?v=map2' : ''),
+      '/map/assets/world/world-plate-16x9.jpg?v=map2',
+    ].filter((u, i, a) => u && a.indexOf(u) === i);
     const node = document.getElementById('world-plate');
     const parchment = document.getElementById('parchment');
+    // Plate is already in HTML; mark styled until proven broken
+    svg.classList.add('has-world-plate');
     const tryNext = (i) => {
-      if (i >= candidates.length) return;
+      if (i >= candidates.length) {
+        node.setAttribute('opacity', '0');
+        parchment.setAttribute('opacity', '1');
+        parchment.setAttribute('fill', '#0a0e14');
+        svg.classList.remove('has-world-plate');
+        return;
+      }
       const href = candidates[i];
       const probe = new Image();
       probe.onload = () => {
         node.setAttribute('href', href);
         node.setAttribute('opacity', '0.92');
-        parchment.setAttribute('opacity', '0.12');
-        parchment.setAttribute('fill', '#1a1810');
+        parchment.setAttribute('opacity', '0.35');
+        parchment.setAttribute('fill', '#0a0e14');
         svg.classList.add('has-world-plate');
       };
       probe.onerror = () => tryNext(i + 1);
@@ -404,7 +527,7 @@
   }
 
   async function boot() {
-    const res = await fetch('map-data.json', { cache: 'no-cache' });
+    const res = await fetch('/map/map-data.json?v=map2', { cache: 'no-cache' });
     if (!res.ok) throw new Error('Failed to load map-data.json');
     state.data = await res.json();
     // Defense in depth: strip internal if someone ever ships raw lore by mistake
@@ -423,6 +546,7 @@
     renderConnections();
     renderZones();
     renderPois();
+    renderCities();
     tryWorldPlate();
     bindInput();
     fitView();

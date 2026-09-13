@@ -3,57 +3,61 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Aethermoor World Map — Veilspan</title>
-  <meta name="description" content="Explore the public world map of Aethermoor — zones, roads, and discoveries in Veilspan Chapter I." />
+  <title>Veilspan World Map</title>
+  <meta name="description" content="Explore the public world map of Veilspan — charted zones, roads, and discoveries in Chapter I." />
+  <base href="/map/" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cinzel:wght@400;600;700&family=Fira+Code:wght@400;500&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="map.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;500;600;700&family=Fira+Code:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/map/map.css?v=map2" />
 </head>
 <body>
+  <div class="scanlines" aria-hidden="true"></div>
+  <div class="vignette" aria-hidden="true"></div>
+
   <div id="app">
-    <header class="topbar">
-      <div>
-        <h1>Aethermoor</h1>
+    <nav class="nav" id="nav">
+      <a class="nav-brand" href="/"><span>&gt;</span> talesmud.veilspan</a>
+      <ul class="nav-links">
+        <li><a href="/#lore">Lore</a></li>
+        <li><a href="/play">Play</a></li>
+        <li><a href="/map/?v=map2" class="active" aria-current="page">Map</a></li>
+        <li><a href="/docs/">Docs</a></li>
+      </ul>
+    </nav>
+
+    <header class="map-chrome">
+      <div class="map-titles">
+        <h1>Veilspan</h1>
         <div class="chapter" id="chapter-label">World Map</div>
       </div>
-      <div class="spacer"></div>
       <div class="hud-controls" role="toolbar" aria-label="Map controls">
-        <button type="button" data-lod="auto" class="active" title="Auto LOD by zoom">LOD Auto</button>
-        <button type="button" data-lod="continent" title="Continent overview">A Lands</button>
-        <button type="button" data-lod="zones" title="Zones &amp; roads">B Zones</button>
-        <button type="button" data-lod="pois" title="Points of interest">C POIs</button>
-        <button type="button" id="btn-zoom-in" title="Zoom in">+</button>
-        <button type="button" id="btn-zoom-out" title="Zoom out">−</button>
-        <button type="button" id="btn-reset" title="Reset view">Reset</button>
+        <button type="button" class="chip active" data-lod="auto" title="Auto LOD by zoom">Auto</button>
+        <button type="button" class="chip" data-lod="continent" title="Continent overview">Lands</button>
+        <button type="button" class="chip" data-lod="zones" title="Zones &amp; roads">Zones</button>
+        <button type="button" class="chip" data-lod="pois" title="Points of interest">POIs</button>
+        <span class="chip-sep" aria-hidden="true"></span>
+        <button type="button" class="chip" id="btn-zoom-in" title="Zoom in">+</button>
+        <button type="button" class="chip" id="btn-zoom-out" title="Zoom out">−</button>
+        <button type="button" class="chip" id="btn-reset" title="Reset view">Reset</button>
       </div>
-      <a class="back" href="/">← Veilspan</a>
     </header>
 
     <div id="map-viewport" aria-label="Interactive world map">
-      <svg id="map-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Aethermoor map">
+      <svg id="map-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Veilspan world map">
         <defs>
-          <filter id="paper">
-            <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" seed="2" result="n"/>
-            <feDiffuseLighting in="n" lighting-color="#e8d8b4" surfaceScale="1.2" result="lit">
-              <feDistantLight azimuth="45" elevation="55"/>
-            </feDiffuseLighting>
-            <feComposite in="SourceGraphic" in2="lit" operator="arithmetic" k1="1" k2="0.25" k3="0.1" k4="0"/>
+          <filter id="fogHatch">
+            <feColorMatrix type="saturate" values="0.35"/>
           </filter>
           <pattern id="fogPattern" patternUnits="userSpaceOnUse" width="12" height="12">
             <path d="M0,12 L12,0" stroke="#4a4030" stroke-width="1" opacity="0.35"/>
           </pattern>
-          <filter id="fogHatch">
-            <feColorMatrix type="saturate" values="0.35"/>
-          </filter>
         </defs>
         <g id="camera">
           <g id="world-root">
-            <!-- Imagine: world plate image layer -->
-            <image id="world-plate" href="" width="1800" height="1580" opacity="0" preserveAspectRatio="xMidYMid slice" />
-            <rect id="parchment" x="0" y="0" width="1800" height="1580" fill="#ddd0b4" rx="8"/>
-            <rect x="15" y="15" width="1770" height="1550" fill="none" stroke="#8a7a60" stroke-width="3" rx="5"/>
-            <g id="layer-terrain" opacity="0.35"></g>
+            <rect id="parchment" x="0" y="0" width="1800" height="1580" fill="#0a0e14" rx="4"/>
+            <image id="world-plate" href="/map/assets/world/world-plate.jpg?v=map2" width="1800" height="1580" opacity="0.92" preserveAspectRatio="xMidYMid slice" />
+            <g id="layer-terrain" opacity="0.25"></g>
             <g id="layer-connections" class="layer-zones-detail"></g>
             <g id="layer-zones"></g>
             <g id="layer-labels" class="layer-zones-detail"></g>
@@ -64,7 +68,7 @@
 
       <div class="legend">
         <span><i class="swatch live"></i> Charted</span>
-        <span><i class="swatch fog"></i> Uncharted / fog</span>
+        <span><i class="swatch fog"></i> Uncharted</span>
       </div>
       <div class="hint">Scroll to zoom · Drag to pan · Tap a zone</div>
     </div>
@@ -79,6 +83,6 @@
       <div class="panel-body" id="panel-body"></div>
     </aside>
   </div>
-  <script src="map.js"></script>
+  <script src="/map/map.js?v=map2"></script>
 </body>
 </html>

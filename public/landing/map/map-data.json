@@ -14,9 +14,8 @@
     ],
     "layers": {
       "worldPlate": "assets/world/world-plate.jpg",
-      "fog": true,
       "worldPlateAlt": "assets/world/world-plate-16x9.jpg",
-      "worldPlateNote": "Imagine draft LOD0; relabel pass pending"
+      "fog": true
     }
   },
   "lod": {
@@ -1184,6 +1183,116 @@
       "to": "Z08",
       "state": "fog",
       "label": "Gearwind"
+    }
+  ],
+  "cities": [
+    {
+      "id": "aelindor",
+      "name": "Aelindor",
+      "importance": "capital",
+      "visibility": "fog",
+      "zoneId": "Z11",
+      "faction": "Silver Dawn",
+      "blurb": "Circular elven city around the Starspire; living wood and crystalline bridges.",
+      "x": 1500,
+      "y": 210,
+      "optionalLabel": false
+    },
+    {
+      "id": "kazgrath",
+      "name": "Kazgrath",
+      "importance": "capital",
+      "visibility": "fog",
+      "zoneId": "Z10",
+      "faction": "Iron Pact",
+      "blurb": "Mountain fortress of dark stone and iron; the Great Forge burns day and night.",
+      "x": 200,
+      "y": 210,
+      "optionalLabel": false
+    },
+    {
+      "id": "veridane",
+      "name": "Veridane",
+      "importance": "capital",
+      "visibility": "fog",
+      "zoneId": "Z12",
+      "faction": "Cogwright Collective",
+      "blurb": "U-shaped industrial capital of steam, brass, and walking constructs.",
+      "x": 1000,
+      "y": 1170,
+      "optionalLabel": false
+    },
+    {
+      "id": "oldtown",
+      "name": "Oldtown",
+      "importance": "hub",
+      "visibility": "live",
+      "zoneId": "Z02",
+      "faction": "Neutral",
+      "blurb": "Neutral Hearthlands city; merchant council; no faction owns it.",
+      "x": 850,
+      "y": 640,
+      "optionalLabel": false
+    },
+    {
+      "id": "anvil-rest",
+      "name": "Anvil Rest",
+      "importance": "town",
+      "visibility": "live",
+      "zoneId": "Z06",
+      "faction": "Iron Pact",
+      "blurb": "Iron Pact foothold on the Ironspine climb.",
+      "x": 320,
+      "y": 350,
+      "optionalLabel": false
+    },
+    {
+      "id": "fenwatch",
+      "name": "Fenwatch Camp",
+      "importance": "town",
+      "visibility": "live",
+      "zoneId": "Z03",
+      "faction": null,
+      "blurb": "Marsh warden camp on the Gloomfen lantern line.",
+      "x": 580,
+      "y": 790,
+      "optionalLabel": true
+    },
+    {
+      "id": "silverbrook",
+      "name": "Silverbrook",
+      "importance": "town",
+      "visibility": "live",
+      "zoneId": "Z05",
+      "faction": null,
+      "blurb": "Quiet blighted village east of the docks.",
+      "x": 1170,
+      "y": 510,
+      "optionalLabel": false
+    },
+    {
+      "id": "timberhold",
+      "name": "Timberhold",
+      "importance": "town",
+      "visibility": "live",
+      "zoneId": "Z04",
+      "faction": null,
+      "blurb": "Logging outpost on the Ashenveil road west.",
+      "x": 530,
+      "y": 510,
+      "optionalLabel": false
+    },
+    {
+      "id": "willowmere",
+      "name": "Willowmere",
+      "importance": "town",
+      "visibility": "live",
+      "zoneId": "Z07",
+      "faction": "Silver Dawn",
+      "blurb": "Silver Dawn border hold under silver-bark canopy.",
+      "x": 1370,
+      "y": 350,
+      "optionalLabel": false
     }
   ]
 }
