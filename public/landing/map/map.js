@@ -4,7 +4,7 @@
  */
 (() => {
   const NS = 'http://www.w3.org/2000/svg';
-  const ASSET_V = 'map14';
+  const ASSET_V = 'map15';
   const viewport = document.getElementById('map-viewport');
   const svg = document.getElementById('map-svg');
   const camera = document.getElementById('camera');
