@@ -4,7 +4,7 @@
  */
 (() => {
   const NS = 'http://www.w3.org/2000/svg';
-  const ASSET_V = 'map16';
+  const ASSET_V = 'map17';
   const viewport = document.getElementById('map-viewport');
   const svg = document.getElementById('map-svg');
   const camera = document.getElementById('camera');
@@ -256,7 +256,7 @@
     clip.setAttribute('cy', cy);
     clip.setAttribute('rx', rx);
     clip.setAttribute('ry', ry);
-    const radius = Math.max(rx, ry) * 1.35;
+    const radius = Math.max(rx, ry) * 1.75;
     light.setAttribute('cx', wx);
     light.setAttribute('cy', wy);
     light.setAttribute('rx', radius);
