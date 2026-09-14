@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;500;600;700&family=Fira+Code:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/map/map.css?v=map17" />
+  <link rel="stylesheet" href="/map/map.css?v=map18" />
 </head>
 <body>
   <div class="scanlines" aria-hidden="true"></div>
@@ -21,7 +21,7 @@
       <ul class="nav-links">
         <li><a href="/#lore">Lore</a></li>
         <li><a href="/play">Play</a></li>
-        <li><a href="/map/?v=map17" class="active" aria-current="page">Map</a></li>
+        <li><a href="/map/?v=map18" class="active" aria-current="page">Map</a></li>
         <li><a href="/docs/">Docs</a></li>
       </ul>
     </nav>
@@ -60,17 +60,23 @@
               <stop offset="65%" stop-color="#e8c878" stop-opacity="0.05"/>
               <stop offset="100%" stop-color="#e8c878" stop-opacity="0"/>
             </radialGradient>
-            <clipPath id="hoverClip">
-              <ellipse id="hoverClipEllipse" cx="0" cy="0" rx="1" ry="1"/>
-            </clipPath>
+            <radialGradient id="hoverMaskGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#fff" stop-opacity="1"/>
+              <stop offset="45%" stop-color="#fff" stop-opacity="0.7"/>
+              <stop offset="75%" stop-color="#fff" stop-opacity="0.22"/>
+              <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+            </radialGradient>
+            <mask id="hoverMask" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" x="0" y="0" width="2048" height="2048">
+              <ellipse id="hoverMaskEllipse" cx="0" cy="0" rx="1" ry="1" fill="url(#hoverMaskGrad)"/>
+            </mask>
           </defs>
           <g id="camera">
             <g id="continent-root">
               <rect id="parchment" x="0" y="0" width="2048" height="2048" fill="#0a0e14" rx="4"/>
-              <image id="world-plate" href="/map/assets/world/world-plate.jpg?v=map17" width="2048" height="2048" opacity="1" preserveAspectRatio="xMidYMid meet" />
+              <image id="world-plate" href="/map/assets/world/world-plate.jpg?v=map18" width="2048" height="2048" opacity="1" preserveAspectRatio="xMidYMid meet" />
               <g id="layer-fog"></g>
-              <g id="layer-sat" clip-path="url(#hoverClip)" filter="url(#zonePop)" opacity="0" pointer-events="none">
-                <image href="/map/assets/world/world-plate.jpg?v=map17" width="2048" height="2048" preserveAspectRatio="xMidYMid meet"/>
+              <g id="layer-sat" mask="url(#hoverMask)" filter="url(#zonePop)" opacity="0" pointer-events="none">
+                <image href="/map/assets/world/world-plate.jpg?v=map18" width="2048" height="2048" preserveAspectRatio="xMidYMid meet"/>
               </g>
               <g id="layer-highlight" pointer-events="none">
                 <ellipse id="hover-light" fill="url(#cursorGlow)" rx="180" ry="180" cx="0" cy="0"/>
@@ -104,6 +110,6 @@
       </aside>
     </div>
   </div>
-  <script src="/map/map.js?v=map17"></script>
+  <script src="/map/map.js?v=map18"></script>
 </body>
 </html>

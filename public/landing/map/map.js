@@ -4,7 +4,7 @@
  */
 (() => {
   const NS = 'http://www.w3.org/2000/svg';
-  const ASSET_V = 'map17';
+  const ASSET_V = 'map18';
   const viewport = document.getElementById('map-viewport');
   const svg = document.getElementById('map-svg');
   const camera = document.getElementById('camera');
@@ -212,12 +212,12 @@
   }
 
   function setHoverVisual(kind, payload, wx, wy) {
-    const clip = document.getElementById('hoverClipEllipse');
+    const maskEl = document.getElementById('hoverMaskEllipse');
     const light = document.getElementById('hover-light');
     const sat = document.getElementById('layer-sat');
     const hi = document.getElementById('layer-highlight');
     const chips = document.getElementById('layer-chips');
-    if (!clip || !light) return;
+    if (!maskEl || !light) return;
 
     document.querySelectorAll('.map-chip.is-hover').forEach((n) => n.classList.remove('is-hover'));
 
@@ -252,10 +252,11 @@
       if (chip) chip.classList.add('is-hover');
     }
 
-    clip.setAttribute('cx', cx);
-    clip.setAttribute('cy', cy);
-    clip.setAttribute('rx', rx);
-    clip.setAttribute('ry', ry);
+    const maskScale = 1.25;
+    maskEl.setAttribute('cx', cx);
+    maskEl.setAttribute('cy', cy);
+    maskEl.setAttribute('rx', rx * maskScale);
+    maskEl.setAttribute('ry', ry * maskScale);
     const radius = Math.max(rx, ry) * 1.75;
     light.setAttribute('cx', wx);
     light.setAttribute('cy', wy);

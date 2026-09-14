@@ -268,7 +268,7 @@ html, body {
 #hover-light { opacity: 0; }
 #layer-highlight.is-on #hover-light { opacity: 1; }
 #layer-sat { opacity: 0; transition: opacity 0.16s ease; }
-#layer-sat.is-on { opacity: 0.65; }
+#layer-sat.is-on { opacity: 0.52; }
 
 .map-chip { pointer-events: none; }
 .map-chip-bg {
