@@ -958,27 +958,104 @@
       "id": "Z08",
       "slug": "gearwind",
       "title": "Gearwind Plateau",
-      "visibility": "fog",
+      "visibility": "live",
       "levelRange": "20–30",
       "overview": [
-        "Windswept ruins south of Gloomfen — Cogwright road toward Veridane."
+        "Wind-blasted plateau of rust-orange rock and ancient clockwork ruins south of Gloomfen.",
+        "Sprocket Station is a Cogwright outpost scavenged into an old facility; malfunctioning constructs wander the ruin fields.",
+        "Under the turbines, the Windmill Vault holds a haywire Dynamo Core that threatens the whole plateau."
       ],
-      "discoverable": [],
+      "discoverable": [
+        "Sprocket Station hub",
+        "Windmill Vault",
+        "Campaign boss: The Dynamo Core"
+      ],
       "connections": [
         {
           "to": "Z03",
           "label": "Gloomfen",
-          "tease": "North through landslide rubble.",
+          "tease": "North through the cleared landslide cut.",
+          "state": "open"
+        },
+        {
+          "to": "Z09",
+          "label": "Thornfield",
+          "tease": "Northern cliffs — blocked path into contested highlands.",
           "state": "fog"
         },
         {
           "to": "Z12",
           "label": "Veridane",
-          "tease": "South toward brass and steam.",
+          "tease": "South Veridane Highway — fog toward the brass capital.",
           "state": "fog"
         }
       ],
-      "pois": [],
+      "pois": [
+        {
+          "id": "r0801",
+          "name": "Landslide Cut",
+          "kind": "gate",
+          "blurb": "Cleared path up from Gloomfen.",
+          "x": null,
+          "y": null
+        },
+        {
+          "id": "r0805",
+          "name": "Sprocket Station Yard",
+          "kind": "hub",
+          "blurb": "Cogwright outpost yard and rumor.",
+          "x": null,
+          "y": null
+        },
+        {
+          "id": "r0806",
+          "name": "Workshop Hall",
+          "kind": "npc",
+          "blurb": "Forgewright Penna’s command floor.",
+          "x": null,
+          "y": null
+        },
+        {
+          "id": "r0807",
+          "name": "Merchant Pod",
+          "kind": "merchant",
+          "blurb": "Tinker Brix and spare parts.",
+          "x": null,
+          "y": null
+        },
+        {
+          "id": "r0809",
+          "name": "Control Tower",
+          "kind": "bind",
+          "blurb": "Archivist Mote; station bind and schematics.",
+          "x": null,
+          "y": null
+        },
+        {
+          "id": "r0810",
+          "name": "Gearscatter Flats",
+          "kind": "landmark",
+          "blurb": "Ruin fields of rogue servitors.",
+          "x": null,
+          "y": null
+        },
+        {
+          "id": "r0815",
+          "name": "Vault Vestibule",
+          "kind": "dungeon",
+          "blurb": "Mouth of the Windmill Vault.",
+          "x": null,
+          "y": null
+        },
+        {
+          "id": "r0820",
+          "name": "Dynamo Core Chamber",
+          "kind": "boss",
+          "blurb": "The Dynamo Core — shut it down or burn.",
+          "x": null,
+          "y": null
+        }
+      ],
       "shape": {
         "type": "ellipse",
         "cx": 780,
@@ -987,7 +1064,7 @@
         "ry": 100
       },
       "fill": "#a09060",
-      "fog": true,
+      "fog": false,
       "imagePlate": "assets/zones/z08-plate.jpg",
       "zoneMap": null
     },
@@ -1284,15 +1361,15 @@
     },
     {
       "from": "Z08",
+      "to": "Z09",
+      "state": "fog",
+      "label": "Thornfield"
+    },
+    {
+      "from": "Z08",
       "to": "Z12",
       "state": "fog",
       "label": "Veridane"
-    },
-    {
-      "from": "Z09",
-      "to": "Z08",
-      "state": "fog",
-      "label": "Gearwind"
     }
   ],
   "cities": [
@@ -1378,6 +1455,18 @@
       "blurb": "Quiet blighted village east of the docks.",
       "x": 1740,
       "y": 1100,
+      "optionalLabel": false
+    },
+    {
+      "id": "sprocket-station",
+      "name": "Sprocket Station",
+      "importance": "town",
+      "visibility": "live",
+      "zoneId": "Z08",
+      "faction": "Cogwright Collective",
+      "blurb": "Cogwright outpost on the Gearwind plateau — workshops, scrap, and screaming turbines.",
+      "x": 800,
+      "y": 1200,
       "optionalLabel": false
     },
     {
