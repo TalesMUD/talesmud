@@ -16,7 +16,7 @@ import (
 // CombatConfig holds global combat configuration
 type CombatConfig struct {
 	TurnTimeoutSeconds    int     // Legacy absolute turn timeout (Default: 60); prefer DecisionWindowSeconds for player action wait
-	DecisionWindowSeconds int     // Player decision window before auto-attack (Default: 10)
+	DecisionWindowSeconds int     // Player decision window before auto-attack (Default: 5)
 	TurnBeatMs            int     // Authored windup/beat before next turn may resolve (Default: 1000)
 	ReactionMs            int     // Post-resolve reaction pause (Default: 400)
 	AFKAutoFleeAfterTurns int     // Default: 3
@@ -34,7 +34,7 @@ type CombatConfig struct {
 func DefaultConfig() *CombatConfig {
 	return &CombatConfig{
 		TurnTimeoutSeconds:    60,
-		DecisionWindowSeconds: 10,
+		DecisionWindowSeconds: 5,
 		TurnBeatMs:            1000,
 		ReactionMs:            400,
 		AFKAutoFleeAfterTurns: 3,
@@ -64,7 +64,7 @@ func (c *CombatConfig) BeatBudget() time.Duration {
 // DecisionWindow returns the player decision window duration.
 func (c *CombatConfig) DecisionWindow() time.Duration {
 	if c == nil || c.DecisionWindowSeconds <= 0 {
-		return 10 * time.Second
+		return 5 * time.Second
 	}
 	return time.Duration(c.DecisionWindowSeconds) * time.Second
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -26,6 +27,7 @@ type CombatController struct {
 	engine     *combatpkg.Engine
 	game       *Game
 	graceUntil map[string]time.Time // characterID -> grace expiry
+	mu         sync.Mutex           // serializes turn resolve vs mid-window queue kick
 }
 
 // NewCombatController creates a new combat controller
@@ -408,7 +410,6 @@ func (c *CombatController) processNPCTurns(instance *combat.CombatInstance) {
 	}
 }
 
-
 // playerCombatQueueState snapshots queue + cooldowns + pacing clocks for one player.
 func (c *CombatController) playerCombatQueueState(instance *combat.CombatInstance, playerID string) messages.CombatQueueState {
 	state := messages.CombatQueueState{}
@@ -665,6 +666,12 @@ func (c *CombatController) Update() {
 // processAllTurns advances at most one combatant action per call, gated by authored beat budget.
 // Player turns open a DecisionWindowSeconds window (combatTurn); timeout → auto-attack.
 func (c *CombatController) processAllTurns(instance *combat.CombatInstance) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.processAllTurnsLocked(instance)
+}
+
+func (c *CombatController) processAllTurnsLocked(instance *combat.CombatInstance) {
 	now := time.Now()
 
 	// Pacing gate: wait out previous turn's beat/reaction budget
@@ -1170,15 +1177,24 @@ func (c *CombatController) QueuePlayerAction(characterID string, action combat.C
 		return
 	}
 
+	c.mu.Lock()
 	player.QueuedAction = action
 	player.QueuedTargetID = targetID
 	player.QueuedSkillID = ""
 	c.engine.UpdateCombatant(instance, player)
-	label := string(action)
-	if label == "" {
-		label = "action"
+	c.kickWaitingPlayerTurnLocked(instance, characterID)
+	stillQueued := false
+	if p := instance.GetPlayerByID(characterID); p != nil && p.QueuedAction != "" {
+		stillQueued = true
 	}
-	c.emitPlayerQueueUpdate(instance, characterID, fmt.Sprintf("Queued: %s", label))
+	c.mu.Unlock()
+	if stillQueued {
+		label := string(action)
+		if label == "" {
+			label = "action"
+		}
+		c.emitPlayerQueueUpdate(instance, characterID, fmt.Sprintf("Queued: %s", label))
+	}
 }
 
 // QueuePlayerSkill queues a skill for a player's next turn
@@ -1193,11 +1209,42 @@ func (c *CombatController) QueuePlayerSkill(characterID, skillID, targetID strin
 		return
 	}
 
+	c.mu.Lock()
 	player.QueuedAction = combat.CombatActionSkill
 	player.QueuedSkillID = skillID
 	player.QueuedTargetID = targetID
 	c.engine.UpdateCombatant(instance, player)
-	c.emitPlayerQueueUpdate(instance, characterID, fmt.Sprintf("Queued skill: %s", skillID))
+	c.kickWaitingPlayerTurnLocked(instance, characterID)
+	stillQueued := false
+	if p := instance.GetPlayerByID(characterID); p != nil && p.QueuedAction != "" {
+		stillQueued = true
+	}
+	c.mu.Unlock()
+	if stillQueued {
+		c.emitPlayerQueueUpdate(instance, characterID, fmt.Sprintf("Queued skill: %s", skillID))
+	}
+}
+
+// kickWaitingPlayerTurnLocked resolves the current player's turn immediately after they queue.
+// Autotimer is AFK-only; a mid-window choice must not wait the remaining DecisionWindow
+// or the 1s combat ticker. Caller must hold c.mu.
+// Pre-queued actions at window open still use the existing TurnBeatMs windup path.
+func (c *CombatController) kickWaitingPlayerTurnLocked(instance *combat.CombatInstance, characterID string) {
+	if instance == nil || characterID == "" {
+		return
+	}
+	if instance.Phase != combat.CombatPhaseWaitingPlayer {
+		return
+	}
+	current := instance.GetCurrentTurnCombatant()
+	if current == nil || current.ID != characterID {
+		return
+	}
+	if current.Type != combat.CombatantTypePlayer || !current.IsAlive || current.HasFled {
+		return
+	}
+	instance.NextActionAt = time.Now()
+	c.processAllTurnsLocked(instance)
 }
 
 // SetAutoAttackTarget sets the persistent auto-attack target for a player

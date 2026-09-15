@@ -14,9 +14,16 @@
   import { overlayStore } from './overlayStore.js';
   import { itemArtSrc, onItemArtError } from '../itemArtSrc.js';
   import { backend } from '../../api/base.js';
+  import {
+    DEFAULT_DECISION_WINDOW_MS,
+    DEFAULT_BEAT_BUDGET_MS,
+    createSkillCooldownClock,
+  } from '../combatCooldown.js';
 
   export let store;
   export let sendMessage;
+
+  const cdClock = createSkillCooldownClock();
 
   let panel = null; // null | 'items'
   let nowMs = Date.now();
@@ -63,12 +70,30 @@
     : (character?.class || '');
 
   $: isMyTurn = !!(turn && selfId && turn.actorId === selfId);
-  $: deadlineMs = isMyTurn ? (turn?.deadlineMs || 0) : 0;
+  $: nextActionAtMs = Number($store.combatNextActionAtMs) || 0;
+  $: waitingOnBeat = phase === 'active' && nextActionAtMs > nowMs;
+  $: decisionActive = isMyTurn && !waitingOnBeat && Number(turn?.deadlineMs) > nowMs;
+  $: deadlineMs = decisionActive ? (turn?.deadlineMs || 0) : 0;
   $: timerLeftMs = deadlineMs > 0 ? Math.max(0, deadlineMs - nowMs) : 0;
-  $: timerPct = deadlineMs > 0
-    ? Math.max(0, Math.min(100, (timerLeftMs / 10000) * 100))
+  let decisionWindowMs = DEFAULT_DECISION_WINDOW_MS;
+  let lastDeadlineMs = 0;
+  $: if (deadlineMs > 0 && deadlineMs !== lastDeadlineMs) {
+    lastDeadlineMs = deadlineMs;
+    const remaining = deadlineMs - Date.now();
+    decisionWindowMs = remaining > 250 ? remaining : DEFAULT_DECISION_WINDOW_MS;
+  }
+  $: timerPct = deadlineMs > 0 && decisionWindowMs > 0
+    ? Math.max(0, Math.min(100, (timerLeftMs / decisionWindowMs) * 100))
     : 0;
   $: timerSec = Math.ceil(timerLeftMs / 1000);
+  $: showWaitingTimer = phase === 'active' && !decisionActive;
+  $: beatLeftMs = waitingOnBeat ? Math.max(0, nextActionAtMs - nowMs) : 0;
+  $: beatLeftSec = Math.ceil(beatLeftMs / 1000);
+  $: waitingLabel = waitingOnBeat
+    ? (beatLeftSec > 0 ? `Next ${beatLeftSec}s` : 'Resolving…')
+    : (isMyTurn ? 'Resolving…' : ((turn?.actorName ? `${turn.actorName}` : 'Waiting') + '…'));
+  $: enemyCount = (enemies || []).length;
+  $: enemyPack = enemyCount <= 0 ? '' : (enemyCount === 1 ? 'solo' : (enemyCount <= 3 ? 'duo' : 'swarm'));
 
   $: if (fx?.at) fxKey = fx.at;
 
@@ -87,7 +112,7 @@
   );
   $: fxIsCrit = fxActive && fxResult === 'crit';
 
-  $: if (visible && (deadlineMs > 0 || resolveAtMs > 0 || !!queuedAction)) startTick();
+  $: if (visible && (phase === 'active' || phase === 'ending')) startTick();
   else stopTick();
 
   $: consumables = inventory.filter(isConsumableItem);
@@ -103,8 +128,15 @@
   $: queuedAction = $store.combatQueuedAction || '';
   $: queuedSkillId = $store.combatQueuedSkillId || '';
   $: skillCooldowns = $store.combatSkillCooldowns || {};
-  $: nextActionAtMs = Number($store.combatNextActionAtMs) || 0;
   $: decisionDeadlineMs = Number($store.combatDecisionDeadlineMs) || deadlineMs || 0;
+  $: if (isMyTurn && turn) {
+    cdClock.noteSelfTurn(`${turn.round}-${turn.actorId}-${turn.deadlineMs || 0}`, nowMs);
+  }
+  $: {
+    skillCooldowns;
+    cdClock.sync(skillCooldowns, nowMs);
+  }
+  $: if (!visible) cdClock.reset();
   $: resolveAtMs = nextActionAtMs > 0
     ? nextActionAtMs
     : (queuedAction && decisionDeadlineMs > 0 ? decisionDeadlineMs : 0);
@@ -242,14 +274,11 @@
   }
 
   function skillCooldownRounds(bind) {
-    if (!bind || bind.kind !== 'skill') return 0;
-    const id = bind.id || '';
-    if (!id) return 0;
-    const cd = skillCooldowns[id];
-    if (cd > 0) return cd;
-    // Also try name-keyed maps just in case
-    const byName = skillCooldowns[bind.name] || skillCooldowns[skillDisplayName(id)];
-    return byName > 0 ? byName : 0;
+    return cdClock.roundsFor(bind);
+  }
+
+  function skillCooldownSec(bind) {
+    return cdClock.secondsFor(bind, nowMs);
   }
 
   function parseOutcomeRewards(msg) {
@@ -362,7 +391,14 @@
   function hotbarSlotTitle(bind) {
     if (!bind) return 'Empty';
     if (bind.kind === 'skill') {
-      return `Cast ${bind.name || skillDisplayName(bind.id)}`;
+      const name = bind.name || skillDisplayName(bind.id);
+      const sec = skillCooldownSec(bind);
+      const rounds = skillCooldownRounds(bind);
+      if (sec > 0) {
+        const turns = rounds > 0 ? ` (~${rounds} turn${rounds === 1 ? '' : 's'})` : '';
+        return `${name} — ${sec}s CD${turns}`;
+      }
+      return `Cast ${name}`;
     }
     if (bind.kind === 'item') {
       const item = findInventoryItem(inventory, bind);
@@ -375,7 +411,7 @@
   function hotbarSlotDisabled(bind) {
     if (!bind) return true;
     if (bind.kind === 'item' && !findInventoryItem(inventory, bind)) return true;
-    if (bind.kind === 'skill' && skillCooldownRounds(bind) > 0) return true;
+    if (bind.kind === 'skill' && skillCooldownSec(bind) > 0) return true;
     return false;
   }
 
@@ -439,27 +475,47 @@
     {#if turn?.round}
       <span class="round-chip">Round {turn.round}</span>
     {/if}
-    {#if turn?.actorName}
-      <span class="turn-chip">{isMyTurn ? 'Your turn' : `${turn.actorName}'s turn`}</span>
+    {#if turn?.actorName || showWaitingTimer}
+      <span class="turn-chip" class:waiting={showWaitingTimer}>
+        {#if decisionActive}
+          Your turn
+        {:else if waitingOnBeat}
+          Waiting…
+        {:else if isMyTurn}
+          Resolving…
+        {:else}
+          {turn?.actorName ? `${turn.actorName}'s turn` : 'Waiting…'}
+        {/if}
+      </span>
     {/if}
     <div class="header-rule"></div>
   </header>
 
   <div
     class="decision-timer"
-    class:idle={!isMyTurn || deadlineMs <= 0}
-    title="Decision window"
+    class:idle={!decisionActive && !showWaitingTimer}
+    class:waiting={showWaitingTimer}
+    class:my-turn={decisionActive}
+    title={decisionActive ? `Decision window — ${timerSec}s` : (showWaitingTimer ? waitingLabel : 'Decision window')}
     aria-live="polite"
-    aria-hidden={!(isMyTurn && deadlineMs > 0)}
+    aria-hidden={!decisionActive && !showWaitingTimer}
   >
-    {#if isMyTurn && deadlineMs > 0}
+    {#if decisionActive}
       <div class="decision-timer-fill" style="width: {timerPct}%"></div>
       <span class="decision-timer-label">{timerSec}s</span>
+    {:else if showWaitingTimer}
+      <div class="decision-timer-fill wait-pulse" style={waitingOnBeat ? `width: ${Math.max(8, Math.min(100, (beatLeftMs / DEFAULT_BEAT_BUDGET_MS) * 100))}%` : ''}></div>
+      <span class="decision-timer-label">{waitingLabel}</span>
     {/if}
   </div>
 
   <!-- Arena band: fighters + FX + short action banner (floats clip here) -->
-  <div class="battle-arena">
+  <div
+    class="battle-arena"
+    class:foes-solo={enemyPack === 'solo'}
+    class:foes-duo={enemyPack === 'duo'}
+    class:foes-swarm={enemyPack === 'swarm'}
+  >
   <div
     class="arena-art"
     class:has-art={!!arenaBgUrl}
@@ -468,7 +524,14 @@
   ></div>
   <div class="arena-vignette" aria-hidden="true"></div>
   <!-- Enemies upper-right -->
-  <section class="enemy-strip" aria-label="Enemies">
+  <section
+    class="enemy-strip"
+    class:pack-solo={enemyPack === 'solo'}
+    class:pack-duo={enemyPack === 'duo'}
+    class:pack-swarm={enemyPack === 'swarm'}
+    data-count={enemyCount}
+    aria-label="Enemies"
+  >
     {#each enemies as enemy (enemy.id)}
       {@const pct = hpPct(enemy.hp, enemy.maxHp)}
       {@const dead = (enemy.hp ?? 0) <= 0}
@@ -608,8 +671,10 @@
         {#if selfClass}
           <span class="chip class-chip"><i class="material-icons">military_tech</i> {selfClass}</span>
         {/if}
-        {#if isMyTurn}
+        {#if decisionActive}
           <span class="chip focus-chip"><i class="material-icons">flare</i> Focused</span>
+        {:else if showWaitingTimer}
+          <span class="chip wait-chip"><i class="material-icons">hourglass_empty</i> Waiting</span>
         {/if}
       </div>
     </div>
@@ -623,7 +688,7 @@
   <!-- Dock: one chrome strip — status chip, then rail + hotbar on one baseline -->
   {#if phase === 'active'}
     <div class="battle-controls">
-      <div class="dock-status" class:has-chip={!!(queuedAction && queuedLabel)} aria-live="polite">
+      <div class="dock-status" class:has-chip={!!((queuedAction && queuedLabel) || (showWaitingTimer && !queuedAction))} aria-live="polite">
         {#if queuedAction && queuedLabel}
           <div class="queued-chip" title="Queued action">
             <i class="material-icons">hourglass_top</i>
@@ -633,6 +698,11 @@
             {:else}
               <span class="queued-cd">resolving…</span>
             {/if}
+          </div>
+        {:else if showWaitingTimer}
+          <div class="queued-chip wait" title={waitingLabel}>
+            <i class="material-icons">hourglass_empty</i>
+            <span class="queued-name">{waitingLabel}</span>
           </div>
         {/if}
       </div>
@@ -662,7 +732,7 @@
         <div class="combat-hotbar" aria-label="Combat hotbar">
           {#each hotbarBinds as bind, index}
             {@const item = bind?.kind === 'item' ? findInventoryItem(inventory, bind) : null}
-            {@const cdRounds = skillCooldownRounds(bind)}
+            {@const cdSec = skillCooldownSec(bind)}
             <button
               type="button"
               class="hb-slot"
@@ -672,8 +742,8 @@
               class:action={bind?.kind === 'action'}
               class:empty={!bind}
               class:disabled={hotbarSlotDisabled(bind)}
-              class:on-cd={cdRounds > 0}
-              title={cdRounds > 0 ? `${hotbarSlotTitle(bind)} (${cdRounds} rd)` : hotbarSlotTitle(bind)}
+              class:on-cd={cdSec > 0}
+              title={hotbarSlotTitle(bind)}
               aria-label={hotbarSlotTitle(bind)}
               disabled={hotbarSlotDisabled(bind)}
               on:click|stopPropagation={() => activateHotbarSlot(bind)}
@@ -698,8 +768,8 @@
                   on:error={(e) => onItemArtError(e, { type: 'default' })}
                 />
               {/if}
-              {#if cdRounds > 0}
-                <span class="hb-cd-overlay" aria-hidden="true">{cdRounds}</span>
+              {#if cdSec > 0}
+                <span class="hb-cd-overlay" aria-hidden="true">{cdSec}s</span>
               {/if}
             </button>
           {/each}
@@ -801,7 +871,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1.25rem;
+    padding: 0.6rem;
     color: #f3f4f6;
     font-family: 'Cinzel', Georgia, serif;
     pointer-events: auto;
@@ -812,12 +882,12 @@
   .battle-frame {
     position: relative;
     z-index: 1;
-    width: min(1180px, 88vw);
-    height: min(780px, 86vh);
-    min-width: 720px;
-    min-height: 520px;
-    max-width: calc(100vw - 2.5rem);
-    max-height: calc(100vh - 2.5rem);
+    width: calc(100vw - 1.2rem);
+    height: calc(100vh - 1.2rem);
+    min-width: 0;
+    min-height: 0;
+    max-width: calc(100vw - 1.2rem);
+    max-height: calc(100vh - 1.2rem);
     display: grid;
     grid-template-rows: auto auto minmax(0, 1fr) auto auto;
     grid-template-areas:
@@ -953,6 +1023,10 @@
     background: rgba(12, 10, 8, 0.78);
     box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
   }
+  .turn-chip.waiting {
+    border-color: rgba(148, 163, 184, 0.55);
+    color: #e5e7eb;
+  }
 
   .header-rule {
     flex: 1;
@@ -996,6 +1070,17 @@
     background: linear-gradient(90deg, #d4a44a, #f59e0b);
     transition: width 0.2s linear;
   }
+  .decision-timer.waiting .decision-timer-fill {
+    background: linear-gradient(90deg, rgba(148, 163, 184, 0.55), rgba(212, 164, 74, 0.45));
+  }
+  .decision-timer-fill.wait-pulse {
+    width: 100%;
+    animation: waitPulse 1.4s ease-in-out infinite;
+  }
+  @keyframes waitPulse {
+    0%, 100% { opacity: 0.45; }
+    50% { opacity: 1; }
+  }
 
   .enemy-strip {
     position: absolute;
@@ -1011,6 +1096,24 @@
     max-width: min(88%, 520px);
     pointer-events: auto;
   }
+  .enemy-strip.pack-solo {
+    top: 4%;
+    right: 5%;
+    max-width: min(62%, 580px);
+    max-height: 74%;
+  }
+  .enemy-strip.pack-duo {
+    top: 2%;
+    right: 3%;
+    gap: 1.15rem;
+    max-width: min(82%, 780px);
+  }
+  .enemy-strip.pack-swarm {
+    top: 1%;
+    right: 1.5%;
+    gap: 0.45rem;
+    max-width: min(94%, 920px);
+  }
 
   .enemy-card {
     appearance: none;
@@ -1018,10 +1121,19 @@
     border: none;
     color: inherit;
     padding: 0;
-    width: clamp(120px, 28%, 180px);
+    width: clamp(150px, 22vmin, 260px);
     cursor: pointer;
     text-align: center;
     font: inherit;
+  }
+  .enemy-strip.pack-solo .enemy-card {
+    width: clamp(260px, 42vmin, 560px);
+  }
+  .enemy-strip.pack-duo .enemy-card {
+    width: clamp(150px, 22vmin, 280px);
+  }
+  .enemy-strip.pack-swarm .enemy-card {
+    width: clamp(88px, 14vmin, 150px);
   }
 
   .enemy-card:disabled {
@@ -1409,7 +1521,7 @@
     display: flex;
     align-items: flex-end;
     gap: 0.9rem;
-    max-width: min(440px, 90%);
+    max-width: min(440px, 42%);
     padding: 0.45rem 0.55rem 0.45rem 0.45rem;
     border: 1.5px solid rgba(212, 164, 74, 0.5);
     border-radius: 8px;
@@ -1421,7 +1533,7 @@
   }
 
   .player-bust {
-    width: clamp(44px, 6vw, 62px);
+    width: clamp(56px, 7.5vw, 92px);
     aspect-ratio: 1;
     border: 2px solid #d4a44a;
     border-radius: 5px;
@@ -1433,6 +1545,12 @@
       0 8px 24px rgba(0, 0, 0, 0.5),
       inset 0 0 0 1px rgba(255, 220, 150, 0.2);
     flex-shrink: 0;
+  }
+  .foes-solo .player-bust {
+    width: clamp(64px, 8.5vw, 108px);
+  }
+  .foes-swarm .player-bust {
+    width: clamp(48px, 6vw, 72px);
   }
 
   .player-bust img {
@@ -1497,6 +1615,11 @@
     color: #e9d5ff;
   }
   .focus-chip i { color: #c084fc; }
+  .wait-chip {
+    border-color: rgba(148, 163, 184, 0.55);
+    color: #e5e7eb;
+  }
+  .wait-chip i { color: #94a3b8; }
 
   .battle-controls {
     position: relative;
@@ -1659,6 +1782,12 @@
     pointer-events: none;
   }
   .queued-chip i { font-size: 1rem; color: #c4b5fd; }
+  .queued-chip.wait {
+    border-color: rgba(148, 163, 184, 0.5);
+    background: linear-gradient(180deg, rgba(24, 28, 36, 0.95), rgba(10, 12, 16, 0.95));
+    color: #e5e7eb;
+  }
+  .queued-chip.wait i { color: #94a3b8; }
   .queued-name { letter-spacing: 0.02em; }
   .queued-cd {
     font-variant-numeric: tabular-nums;
@@ -1868,9 +1997,9 @@
     right: auto;
     bottom: auto;
     width: auto;
-    height: 7.25rem;
-    max-height: 7.25rem;
-    min-height: 6.5rem;
+    height: 4.5rem;
+    max-height: 4.5rem;
+    min-height: 3.75rem;
     margin: 0.15rem 0.75rem 0.55rem;
     overflow-x: hidden;
     overflow-y: auto;
@@ -1910,9 +2039,14 @@
     touch-action: manipulation;
   }
   .log-expand-icon {
-    display: none;
+    display: inline-flex;
     font-size: 1rem;
     color: rgba(212, 164, 74, 0.75);
+  }
+  .combat-log.log-expanded {
+    height: 10.5rem;
+    max-height: 10.5rem;
+    min-height: 8rem;
   }
   .combat-log-body {
     min-height: 0;
@@ -2069,7 +2203,24 @@
   }
 
   .decision-timer-label {
-    display: none;
+    display: block;
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: system-ui, sans-serif;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #f8fafc;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+    letter-spacing: 0.02em;
+    pointer-events: none;
+    z-index: 1;
+    white-space: nowrap;
+  }
+  .decision-timer {
+    height: 10px;
+    border-radius: 4px;
   }
 
   .dock-sheet-backdrop {
@@ -2197,12 +2348,24 @@
       touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
     }
+    .enemy-strip.pack-solo .enemy-card {
+      width: clamp(180px, 64vw, 320px);
+    }
+    .enemy-strip.pack-duo .enemy-card {
+      width: clamp(120px, 38vw, 180px);
+    }
+    .enemy-strip.pack-swarm .enemy-card {
+      width: clamp(86px, 26vw, 132px);
+    }
     .enemy-card:active:not(:disabled) {
       transform: scale(0.97);
     }
     .enemy-sprite-wrap {
       aspect-ratio: 1;
       max-height: min(32vh, 220px);
+    }
+    .enemy-strip.pack-solo .enemy-sprite-wrap {
+      max-height: min(46vh, 340px);
     }
     .nameplate { font-size: 0.74rem; }
     .hp-track { height: 9px; }
