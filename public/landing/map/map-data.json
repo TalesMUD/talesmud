@@ -1066,47 +1066,128 @@
       "fill": "#a09060",
       "fog": false,
       "imagePlate": "assets/zones/z08-plate.jpg",
-      "zoneMap": {
-        "href": "assets/zones/z08-plate.jpg",
-        "viewBox": [
-          0,
-          0,
-          1408,
-          1408
-        ]
-      }
+      "zoneMap": null
     },
     {
       "id": "Z09",
       "slug": "thornfield",
       "title": "Thornfield Highlands",
-      "visibility": "fog",
+      "visibility": "live",
       "levelRange": "20–30",
       "overview": [
-        "Contested heights between the three roads — banners change with the weather."
+        "Windswept highland where the three faction roads meet — west from Ironspine, east from Verdant Reach, south from Gearwind.",
+        "Ruined Crosswind Keep is the neutral bind hub; Iron Pact, Silver Dawn, and Cogwright camps rim the keep.",
+        "Red thorny wildflowers carpet the ridges. The battlefield is contested in spirit — banners and tension, not a capital city.",
+        "A rare construct, the Thornfield Colossus, waits in a ruined vault."
       ],
-      "discoverable": [],
+      "discoverable": [
+        "Crosswind Keep hub (neutral)",
+        "Three faction camps",
+        "Contested battlefield (flavor)",
+        "Campaign boss: The Thornfield Colossus"
+      ],
       "connections": [
         {
           "to": "Z06",
           "label": "Ironspine",
-          "tease": "West ridge.",
-          "state": "fog"
+          "tease": "West ridge from Anvil Rest's eastern marker.",
+          "state": "open"
         },
         {
           "to": "Z07",
-          "label": "Verdant",
-          "tease": "East from Willowmere stub.",
-          "state": "fog"
+          "label": "Verdant Reach",
+          "tease": "East bloom trail from Willowmere's stub.",
+          "state": "open"
         },
         {
           "to": "Z08",
           "label": "Gearwind",
-          "tease": "South wind road.",
-          "state": "fog"
+          "tease": "South cliff path from Sprocket Station's stub.",
+          "state": "open"
         }
       ],
-      "pois": [],
+      "pois": [
+        {
+          "id": "r0901",
+          "name": "Western Ridge Approach",
+          "kind": "gate",
+          "blurb": "Trail in from Ironspine.",
+          "x": null,
+          "y": null
+        },
+        {
+          "id": "r0903",
+          "name": "Eastern Bloom Approach",
+          "kind": "gate",
+          "blurb": "Trail in from Verdant Reach.",
+          "x": null,
+          "y": null
+        },
+        {
+          "id": "r0905",
+          "name": "Southern Cliff Approach",
+          "kind": "gate",
+          "blurb": "Trail in from Gearwind.",
+          "x": null,
+          "y": null
+        },
+        {
+          "id": "r0907",
+          "name": "Crosswind Courtyard",
+          "kind": "bind",
+          "blurb": "Neutral keep courtyard — bind and banners.",
+          "x": null,
+          "y": null
+        },
+        {
+          "id": "r0908",
+          "name": "Ruined Hall",
+          "kind": "merchant",
+          "blurb": "Darius Coinsworth’s neutral trade.",
+          "x": null,
+          "y": null
+        },
+        {
+          "id": "r0911",
+          "name": "Iron Pact War Tent",
+          "kind": "npc",
+          "blurb": "Commander Brannok’s camp.",
+          "x": null,
+          "y": null
+        },
+        {
+          "id": "r0913",
+          "name": "Silver Dawn Pavilion",
+          "kind": "npc",
+          "blurb": "Captain Lyra Vale’s camp.",
+          "x": null,
+          "y": null
+        },
+        {
+          "id": "r0915",
+          "name": "Cogwright Field Workshop",
+          "kind": "npc",
+          "blurb": "Overseer Quill’s camp.",
+          "x": null,
+          "y": null
+        },
+        {
+          "id": "r0917",
+          "name": "Contested Flats",
+          "kind": "landmark",
+          "blurb": "Battlefield tension — red thorns and old steel.",
+          "x": null,
+          "y": null
+        },
+        {
+          "id": "r0922",
+          "name": "Colossus Chamber",
+          "kind": "boss",
+          "blurb": "The Thornfield Colossus.",
+          "x": null,
+          "y": null
+        }
+      ],
       "shape": {
         "type": "ellipse",
         "cx": 1024,
@@ -1115,7 +1196,7 @@
         "ry": 90
       },
       "fill": "#908050",
-      "fog": true,
+      "fog": false,
       "imagePlate": "assets/zones/z09-plate.jpg",
       "zoneMap": null
     },
@@ -1439,6 +1520,18 @@
       "blurb": "Iron Pact foothold on the Ironspine climb.",
       "x": 400,
       "y": 500,
+      "optionalLabel": false
+    },
+    {
+      "id": "crosswind-keep",
+      "name": "Crosswind Keep",
+      "importance": "town",
+      "visibility": "live",
+      "zoneId": "Z09",
+      "faction": "Neutral",
+      "blurb": "Ruined neutral keep where three faction roads meet — hub of the Thornfield Highlands, not a capital.",
+      "x": 1024,
+      "y": 430,
       "optionalLabel": false
     },
     {
