@@ -563,15 +563,15 @@
           </div>
         </div>
         <div class="enemy-sprite-wrap" class:shake={tgt && fxIsHit}>
+          {#if enemy.id === targetId && !dead}
+            <div class="target-ring" aria-hidden="true"></div>
+          {/if}
           <img
             class="enemy-sprite"
             src={combatantPortrait(enemy, enemy.id || enemy.name)}
             alt=""
             on:error={(e) => onImgError(e, enemy.name)}
           />
-          {#if enemy.id === targetId && !dead}
-            <div class="target-ring" aria-hidden="true"></div>
-          {/if}
           {#if tgt && fxIsMiss}
             <div class="fx-puff" data-key={fxKey} aria-hidden="true"></div>
           {/if}
@@ -1224,6 +1224,7 @@
   }
 
   .enemy-sprite {
+    position: relative;
     width: 86%;
     height: 86%;
     object-fit: contain;
@@ -1232,21 +1233,27 @@
     z-index: 1;
   }
 
+  /* Soft ground puddle under feet — behind sprite, fades to 0 alpha at rim */
   .target-ring {
     position: absolute;
-    bottom: 6%;
+    bottom: 2%;
     left: 50%;
-    width: 92%;
-    height: 34%;
+    width: 78%;
+    height: 22%;
     transform: translateX(-50%);
-    border: 2.5px solid rgba(250, 204, 21, 0.9);
+    border: none;
     border-radius: 50%;
-    box-shadow:
-      0 0 14px rgba(250, 204, 21, 0.7),
-      0 0 28px rgba(212, 164, 74, 0.4),
-      inset 0 0 10px rgba(250, 204, 21, 0.2);
+    background: radial-gradient(
+      ellipse at center,
+      rgba(250, 204, 21, 0.5) 0%,
+      rgba(234, 179, 8, 0.32) 28%,
+      rgba(212, 164, 74, 0.14) 55%,
+      rgba(250, 204, 21, 0.04) 75%,
+      transparent 100%
+    );
+    box-shadow: none;
     pointer-events: none;
-    z-index: 2;
+    z-index: 0;
   }
 
   .enemy-card.targeted .foe-plate {
