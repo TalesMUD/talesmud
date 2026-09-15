@@ -1198,7 +1198,15 @@
       "fill": "#908050",
       "fog": false,
       "imagePlate": "assets/zones/z09-plate.jpg",
-      "zoneMap": null
+      "zoneMap": {
+        "href": "assets/zones/z09-plate.jpg",
+        "viewBox": [
+          0,
+          0,
+          1408,
+          1408
+        ]
+      }
     },
     {
       "id": "Z10",
