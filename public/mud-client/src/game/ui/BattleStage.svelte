@@ -30,9 +30,14 @@
   let tickTimer = null;
   let fxKey = 0;
   let bannerText = '';
+  let bannerParts = null; // { kind, actor, verb, target, amount, icon, raw }
   let bannerVisible = false;
   let bannerTimer = null;
   let lastBannerKey = '';
+  let bannerFlashKey = 0;
+  let arenaFlash = false;
+  let arenaFlashTimer = null;
+  let bannerStack = []; // recent faded lines [{id, parts, raw}]
   let logEl = null;
   let logScrollPending = false;
   let logExpanded = false;
@@ -147,29 +152,48 @@
 
   // Short hit banner: prefer combatFx summary; log only if short prose (no rolls/ASCII dumps).
   $: {
-    let nextText = '';
+    let nextParts = null;
     let nextKey = '';
     if (fx && fx.at) {
       nextKey = `fx-${fx.at}`;
-      nextText = formatFxBanner(fx);
+      nextParts = formatFxBannerParts(fx);
     }
-    if (!nextText) {
+    if (!nextParts) {
       const latest = log.length ? log[log.length - 1] : null;
       const candidate = latest?.text ? String(latest.text).trim() : '';
       if (latest && isBannerWorthy(candidate)) {
         nextKey = String(latest.id);
-        nextText = shortenBannerText(candidate);
+        nextParts = parseBannerParts(shortenBannerText(candidate));
       }
     }
-    if (nextText && nextKey && nextKey !== lastBannerKey) {
+    if (nextParts && nextKey && nextKey !== lastBannerKey) {
+      const prevRaw = bannerText;
+      const prevParts = bannerParts;
+      if (prevRaw && lastBannerKey) {
+        bannerStack = [
+          { id: lastBannerKey, parts: prevParts, raw: prevRaw },
+          ...bannerStack,
+        ].slice(0, 2);
+      }
       lastBannerKey = nextKey;
-      bannerText = nextText;
+      bannerParts = nextParts;
+      bannerText = nextParts.raw || '';
       bannerVisible = true;
+      bannerFlashKey += 1;
       if (bannerTimer) clearTimeout(bannerTimer);
       bannerTimer = setTimeout(() => {
         bannerVisible = false;
         bannerTimer = null;
-      }, 2500);
+      }, 2800);
+      const kind = nextParts.kind;
+      if (kind === 'hit' || kind === 'crit' || kind === 'heal') {
+        arenaFlash = true;
+        if (arenaFlashTimer) clearTimeout(arenaFlashTimer);
+        arenaFlashTimer = setTimeout(() => {
+          arenaFlash = false;
+          arenaFlashTimer = null;
+        }, kind === 'crit' ? 520 : 380);
+      }
     }
   }
 
@@ -213,6 +237,7 @@
   onDestroy(() => {
     stopTick();
     if (bannerTimer) clearTimeout(bannerTimer);
+    if (arenaFlashTimer) clearTimeout(arenaFlashTimer);
   });
 
   function combatantPortrait(c, fallbackKey) {
@@ -357,8 +382,78 @@
     return t.length > 72 ? `${t.slice(0, 69)}…` : t;
   }
 
-  function formatFxBanner(fxEvt) {
-    if (!fxEvt) return '';
+  function bannerIconFor(kind) {
+    switch (kind) {
+      case 'crit': return 'whatshot';
+      case 'hit': return 'flash_on';
+      case 'heal': return 'favorite';
+      case 'miss': return 'blur_on';
+      case 'defend': return 'security';
+      case 'flee': return 'directions_run';
+      case 'cast': return 'auto_fix';
+      default: return 'campaign';
+    }
+  }
+
+  function makeBannerParts({ kind = 'other', actor = '', verb = '', target = '', amount = 0, raw = '' } = {}) {
+    const k = kind || 'other';
+    return {
+      kind: k,
+      actor: actor || '',
+      verb: verb || '',
+      target: target || '',
+      amount: Number(amount) || 0,
+      icon: bannerIconFor(k),
+      raw: raw || '',
+    };
+  }
+
+  function parseBannerParts(text) {
+    const t = String(text || '').trim();
+    if (!t) return null;
+    let m = t.match(/^(.+?)\s+(crits)\s+(.+?)(?:\s+for\s+(\d+))?\.?$/i);
+    if (m) {
+      return makeBannerParts({
+        kind: 'crit', actor: m[1], verb: 'crits', target: m[3], amount: m[4] || 0, raw: t,
+      });
+    }
+    m = t.match(/^(.+?)\s+(hits)\s+(.+?)(?:\s+for\s+(\d+))?\.?$/i);
+    if (m) {
+      return makeBannerParts({
+        kind: 'hit', actor: m[1], verb: 'hits', target: m[3], amount: m[4] || 0, raw: t,
+      });
+    }
+    m = t.match(/^(.+?)\s+(heals)\s+(.+?)(?:\s+for\s+(\d+))?\.?$/i);
+    if (m) {
+      return makeBannerParts({
+        kind: 'heal', actor: m[1], verb: 'heals', target: m[3], amount: m[4] || 0, raw: t,
+      });
+    }
+    m = t.match(/^(.+?)\s+(misses)\s+(.+?)\.?$/i);
+    if (m) {
+      return makeBannerParts({
+        kind: 'miss', actor: m[1], verb: 'misses', target: m[3], raw: t,
+      });
+    }
+    m = t.match(/^(.+?)\s+(defends)\.?$/i);
+    if (m) {
+      return makeBannerParts({ kind: 'defend', actor: m[1], verb: 'defends', raw: t });
+    }
+    m = t.match(/^(.+?)\s+(flees)\.?$/i);
+    if (m) {
+      return makeBannerParts({ kind: 'flee', actor: m[1], verb: 'flees', raw: t });
+    }
+    m = t.match(/^(.+?)\s+(casts)\s+(.+)$/i);
+    if (m) {
+      return makeBannerParts({
+        kind: 'cast', actor: m[1], verb: 'casts', target: m[3], raw: t,
+      });
+    }
+    return makeBannerParts({ kind: 'other', raw: t });
+  }
+
+  function formatFxBannerParts(fxEvt) {
+    if (!fxEvt) return null;
     const all = [...(players || []), ...(enemies || [])];
     const actor = all.find((c) => c.id === fxEvt.actorId);
     const target = all.find((c) => c.id === fxEvt.targetId);
@@ -370,22 +465,54 @@
     const fxId = String(fxEvt.fxId || '').toLowerCase();
     const action = String(fxEvt.action || '').trim();
     if (dmg > 0) {
-      const verb = result === 'crit' ? 'crits' : 'hits';
-      return `${actorName} ${verb} ${targetName} for ${dmg}`;
+      const crit = result === 'crit';
+      const verb = crit ? 'crits' : 'hits';
+      const raw = `${actorName} ${verb} ${targetName} for ${dmg}`;
+      return makeBannerParts({
+        kind: crit ? 'crit' : 'hit',
+        actor: actorName,
+        verb,
+        target: targetName,
+        amount: dmg,
+        raw,
+      });
     }
-    if (heal > 0) return `${actorName} heals ${targetName} for ${heal}`;
+    if (heal > 0) {
+      const raw = `${actorName} heals ${targetName} for ${heal}`;
+      return makeBannerParts({
+        kind: 'heal', actor: actorName, verb: 'heals', target: targetName, amount: heal, raw,
+      });
+    }
     if (fxId === 'miss' || result === 'miss' || result === 'dodged') {
-      return `${actorName} misses ${targetName}`;
+      const raw = `${actorName} misses ${targetName}`;
+      return makeBannerParts({
+        kind: 'miss', actor: actorName, verb: 'misses', target: targetName, raw,
+      });
     }
     if (fxId === 'defend' || result === 'defended' || result === 'block') {
-      return `${actorName} defends`;
+      const raw = `${actorName} defends`;
+      return makeBannerParts({ kind: 'defend', actor: actorName, verb: 'defends', raw });
     }
-    if (fxId === 'flee' || result === 'fled') return `${actorName} flees`;
+    if (fxId === 'flee' || result === 'fled') {
+      const raw = `${actorName} flees`;
+      return makeBannerParts({ kind: 'flee', actor: actorName, verb: 'flees', raw });
+    }
     if (fxId === 'cast' || result === 'cast') {
-      return action ? `${actorName} casts ${action}` : `${actorName} casts a spell`;
+      const raw = action ? `${actorName} casts ${action}` : `${actorName} casts a spell`;
+      return makeBannerParts({
+        kind: 'cast', actor: actorName, verb: 'casts', target: action || 'a spell', raw,
+      });
     }
-    if (action) return `${actorName} ${action}`;
-    return '';
+    if (action) {
+      const raw = `${actorName} ${action}`;
+      return makeBannerParts({ kind: 'other', actor: actorName, verb: action, raw });
+    }
+    return null;
+  }
+
+  function formatFxBanner(fxEvt) {
+    const parts = formatFxBannerParts(fxEvt);
+    return parts?.raw || '';
   }
 
   function hotbarSlotTitle(bind) {
@@ -674,15 +801,59 @@
         {#if decisionActive}
           <span class="chip focus-chip"><i class="material-icons">flare</i> Focused</span>
         {:else if showWaitingTimer}
-          <span class="chip wait-chip"><i class="material-icons">hourglass_empty</i> Waiting</span>
+          <span class="chip wait-chip status-pill"><i class="material-icons spin-slow">hourglass_top</i> {waitingLabel}</span>
         {/if}
       </div>
     </div>
   </section>
 
-  {#if bannerVisible && bannerText}
-    <div class="action-banner" aria-live="polite">{bannerText}</div>
+  {#if arenaFlash}
+    <div
+      class="arena-hit-flash"
+      class:crit={bannerParts?.kind === 'crit'}
+      class:heal={bannerParts?.kind === 'heal'}
+      aria-hidden="true"
+    ></div>
   {/if}
+
+  <div class="action-banner-stack" aria-live="polite">
+    {#if bannerVisible && bannerParts}
+      <div
+        class="action-banner kind-{bannerParts.kind}"
+        class:flash={bannerFlashKey > 0}
+        data-flash={bannerFlashKey}
+      >
+        <i class="material-icons banner-icon">{bannerParts.icon}</i>
+        <div class="banner-copy">
+          {#if bannerParts.actor || bannerParts.verb}
+            <span class="banner-actor">{bannerParts.actor}</span>
+            {#if bannerParts.verb}
+              <span class="banner-verb">{bannerParts.verb}</span>
+            {/if}
+            {#if bannerParts.target}
+              <span class="banner-target">{bannerParts.target}</span>
+            {/if}
+            {#if bannerParts.amount > 0}
+              <span class="banner-for">for</span>
+              <span class="banner-amount">{bannerParts.amount}</span>
+            {/if}
+          {:else}
+            <span class="banner-raw">{bannerParts.raw || bannerText}</span>
+          {/if}
+        </div>
+      </div>
+    {/if}
+    {#each bannerStack as stale (stale.id)}
+      {#if !(bannerVisible && stale.id === lastBannerKey)}
+        <div class="action-banner stale kind-{(stale.parts && stale.parts.kind) || 'other'}" aria-hidden="true">
+          <i class="material-icons banner-icon">{(stale.parts && stale.parts.icon) || 'campaign'}</i>
+          <div class="banner-copy">
+            <span class="banner-raw">{stale.raw}</span>
+          </div>
+        </div>
+      {/if}
+    {/each}
+  </div>
   </div><!-- /.battle-arena -->
 
   <!-- Dock: one chrome strip — status chip, then rail + hotbar on one baseline -->
@@ -690,8 +861,8 @@
     <div class="battle-controls">
       <div class="dock-status" class:has-chip={!!((queuedAction && queuedLabel) || (showWaitingTimer && !queuedAction))} aria-live="polite">
         {#if queuedAction && queuedLabel}
-          <div class="queued-chip" title="Queued action">
-            <i class="material-icons">hourglass_top</i>
+          <div class="queued-chip status-pill" title="Queued action">
+            <i class="material-icons spin-slow">hourglass_top</i>
             <span class="queued-name">{queuedLabel}</span>
             {#if queueLeftSec > 0}
               <span class="queued-cd">{queueLeftSec}s</span>
@@ -700,8 +871,8 @@
             {/if}
           </div>
         {:else if showWaitingTimer}
-          <div class="queued-chip wait" title={waitingLabel}>
-            <i class="material-icons">hourglass_empty</i>
+          <div class="queued-chip wait status-pill" title={waitingLabel}>
+            <i class="material-icons spin-slow">hourglass_top</i>
             <span class="queued-name">{waitingLabel}</span>
           </div>
         {/if}
@@ -1623,10 +1794,15 @@
   }
   .focus-chip i { color: #c084fc; }
   .wait-chip {
-    border-color: rgba(148, 163, 184, 0.55);
-    color: #e5e7eb;
+    border-color: rgba(212, 164, 74, 0.55);
+    color: #f5e6c0;
+    font-size: 0.82rem;
+    padding: 0.28rem 0.7rem;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(28, 24, 16, 0.95), rgba(10, 10, 12, 0.95));
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), 0 0 10px rgba(212, 164, 74, 0.12);
   }
-  .wait-chip i { color: #94a3b8; }
+  .wait-chip i { color: #e8c878; font-size: 1.05rem; }
 
   .battle-controls {
     position: relative;
@@ -1660,36 +1836,164 @@
     z-index: 21;
   }
   .dock-status.has-chip {
-    min-height: 32px;
+    min-height: 40px;
+  }
+
+  .arena-hit-flash {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+    border-radius: inherit;
+    background: radial-gradient(ellipse at 55% 40%, rgba(239, 68, 68, 0.28) 0%, rgba(239, 68, 68, 0.08) 42%, transparent 70%);
+    animation: arenaFlashPulse 0.42s ease-out forwards;
+  }
+  .arena-hit-flash.crit {
+    background: radial-gradient(ellipse at 55% 40%, rgba(251, 191, 36, 0.34) 0%, rgba(239, 68, 68, 0.12) 45%, transparent 72%);
+    animation-duration: 0.52s;
+  }
+  .arena-hit-flash.heal {
+    background: radial-gradient(ellipse at 40% 70%, rgba(34, 197, 94, 0.28) 0%, rgba(34, 197, 94, 0.08) 45%, transparent 72%);
+  }
+  @keyframes arenaFlashPulse {
+    0% { opacity: 0; }
+    18% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  .action-banner-stack {
+    position: absolute;
+    left: 50%;
+    bottom: 16%;
+    transform: translateX(-50%);
+    z-index: 6;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    gap: 0.35rem;
+    width: min(94%, 640px);
+    pointer-events: none;
   }
 
   .action-banner {
-    position: absolute;
-    left: 50%;
-    bottom: 18%;
-    transform: translateX(-50%);
-    z-index: 5;
-    max-width: min(92%, 520px);
-    padding: 0.3rem 0.85rem;
-    border-radius: 6px;
-    border: 1.5px solid rgba(232, 200, 120, 0.65);
-    background: linear-gradient(180deg, rgba(28, 22, 12, 0.94), rgba(10, 8, 6, 0.94));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    max-width: 100%;
+    padding: 0.55rem 1.1rem;
+    border-radius: 10px;
+    border: 2px solid rgba(232, 200, 120, 0.78);
+    background: linear-gradient(180deg, rgba(36, 28, 14, 0.96), rgba(10, 8, 6, 0.96));
     color: #f8fafc;
     font-family: system-ui, sans-serif;
-    font-size: clamp(0.88rem, 1.5vw, 1.05rem);
+    font-size: clamp(1.05rem, 2.1vw, 1.35rem);
     font-weight: 700;
     letter-spacing: 0.01em;
     text-align: center;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.75);
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
     box-shadow:
-      0 6px 18px rgba(0, 0, 0, 0.4),
-      inset 0 0 0 1px rgba(255, 220, 150, 0.1);
+      0 10px 28px rgba(0, 0, 0, 0.5),
+      0 0 18px rgba(232, 200, 120, 0.18),
+      inset 0 0 0 1px rgba(255, 220, 150, 0.12);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    animation: bannerInArena 0.2s ease-out;
+    animation: bannerPop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.15);
     pointer-events: none;
   }
+  .action-banner.flash {
+    animation: bannerPop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.15), bannerShake 0.42s ease-out;
+  }
+  .action-banner.stale {
+    opacity: 0.42;
+    transform: scale(0.92);
+    filter: saturate(0.75);
+    animation: bannerFadeStale 0.35s ease-out;
+    font-size: clamp(0.82rem, 1.5vw, 1rem);
+    padding: 0.32rem 0.75rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+  .action-banner.kind-hit {
+    border-color: rgba(248, 113, 113, 0.75);
+    box-shadow:
+      0 10px 28px rgba(0, 0, 0, 0.5),
+      0 0 20px rgba(239, 68, 68, 0.22),
+      inset 0 0 0 1px rgba(255, 180, 150, 0.1);
+  }
+  .action-banner.kind-crit {
+    border-color: rgba(251, 191, 36, 0.9);
+    box-shadow:
+      0 10px 28px rgba(0, 0, 0, 0.5),
+      0 0 24px rgba(251, 191, 36, 0.35),
+      inset 0 0 0 1px rgba(255, 230, 150, 0.18);
+  }
+  .action-banner.kind-heal {
+    border-color: rgba(74, 222, 128, 0.8);
+    box-shadow:
+      0 10px 28px rgba(0, 0, 0, 0.5),
+      0 0 20px rgba(34, 197, 94, 0.25),
+      inset 0 0 0 1px rgba(180, 255, 200, 0.12);
+  }
+  .action-banner.kind-miss {
+    border-color: rgba(148, 163, 184, 0.7);
+  }
+
+  .banner-icon {
+    flex: 0 0 auto;
+    font-size: 1.45em !important;
+    line-height: 1;
+    color: #e8c878;
+    filter: drop-shadow(0 0 6px rgba(232, 200, 120, 0.45));
+  }
+  .kind-hit .banner-icon { color: #f87171; filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.5)); }
+  .kind-crit .banner-icon { color: #fbbf24; filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.65)); }
+  .kind-heal .banner-icon { color: #4ade80; filter: drop-shadow(0 0 6px rgba(34, 197, 94, 0.5)); }
+  .kind-miss .banner-icon { color: #cbd5e1; }
+
+  .banner-copy {
+    display: inline-flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.28rem 0.4rem;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .banner-actor { color: #f5e6c0; font-weight: 800; }
+  .banner-verb {
+    color: #e2e8f0;
+    font-weight: 650;
+    font-size: 0.92em;
+    text-transform: lowercase;
+  }
+  .banner-target { color: #f8fafc; font-weight: 750; }
+  .banner-for {
+    color: #94a3b8;
+    font-weight: 600;
+    font-size: 0.88em;
+  }
+  .banner-amount {
+    color: #fbbf24;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.18em;
+    text-shadow: 0 0 10px rgba(251, 191, 36, 0.45), 0 2px 6px rgba(0, 0, 0, 0.7);
+  }
+  .kind-hit .banner-amount,
+  .kind-crit .banner-amount {
+    color: #f87171;
+    text-shadow: 0 0 10px rgba(239, 68, 68, 0.5), 0 2px 6px rgba(0, 0, 0, 0.7);
+  }
+  .kind-crit .banner-amount {
+    color: #fde68a;
+    text-shadow: 0 0 12px rgba(251, 191, 36, 0.65), 0 2px 6px rgba(0, 0, 0, 0.7);
+  }
+  .kind-heal .banner-amount {
+    color: #86efac;
+    text-shadow: 0 0 10px rgba(34, 197, 94, 0.5), 0 2px 6px rgba(0, 0, 0, 0.7);
+  }
+  .banner-raw { color: #f8fafc; }
 
   @keyframes bannerIn {
     from { opacity: 0; transform: translateY(6px); }
@@ -1698,6 +2002,30 @@
   @keyframes bannerInArena {
     from { opacity: 0; transform: translateX(-50%) translateY(6px); }
     to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+  @keyframes bannerPop {
+    0% { opacity: 0; transform: translateY(10px) scale(0.88); }
+    55% { opacity: 1; transform: translateY(-2px) scale(1.06); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes bannerShake {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    20% { transform: translateY(-1px) rotate(-0.8deg) scale(1.03); }
+    40% { transform: translateY(1px) rotate(0.8deg) scale(1.04); }
+    60% { transform: translateY(-1px) rotate(-0.5deg) scale(1.02); }
+    80% { transform: translateY(0) rotate(0.35deg) scale(1.01); }
+  }
+  @keyframes bannerFadeStale {
+    from { opacity: 0.75; transform: scale(0.98); }
+    to { opacity: 0.42; transform: scale(0.92); }
+  }
+  @keyframes spinSlow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .spin-slow {
+    animation: spinSlow 2.4s linear infinite;
+    display: inline-block;
   }
 
   .combat-hotbar {
@@ -1775,35 +2103,39 @@
     position: relative;
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.28rem 0.75rem;
+    gap: 0.5rem;
+    padding: 0.45rem 1.05rem;
     border-radius: 999px;
-    border: 1.5px solid rgba(167, 139, 250, 0.65);
-    background: linear-gradient(180deg, rgba(36, 24, 56, 0.95), rgba(12, 10, 20, 0.95));
+    border: 2px solid rgba(167, 139, 250, 0.75);
+    background: linear-gradient(180deg, rgba(42, 28, 64, 0.96), rgba(12, 10, 20, 0.96));
     color: #ede9fe;
     font-family: system-ui, sans-serif;
-    font-size: 0.82rem;
-    font-weight: 700;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), 0 0 12px rgba(167, 139, 250, 0.2);
+    font-size: clamp(0.95rem, 1.6vw, 1.12rem);
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4), 0 0 16px rgba(167, 139, 250, 0.28);
     animation: bannerIn 0.18s ease-out;
     pointer-events: none;
   }
-  .queued-chip i { font-size: 1rem; color: #c4b5fd; }
-  .queued-chip.wait {
-    border-color: rgba(148, 163, 184, 0.5);
-    background: linear-gradient(180deg, rgba(24, 28, 36, 0.95), rgba(10, 12, 16, 0.95));
-    color: #e5e7eb;
+  .queued-chip i { font-size: 1.35rem; color: #c4b5fd; }
+  .queued-chip.wait,
+  .queued-chip.status-pill.wait {
+    border-color: rgba(232, 200, 120, 0.72);
+    background: linear-gradient(180deg, rgba(36, 28, 14, 0.96), rgba(12, 10, 8, 0.96));
+    color: #f5e6c0;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4), 0 0 16px rgba(232, 200, 120, 0.22);
   }
-  .queued-chip.wait i { color: #94a3b8; }
-  .queued-name { letter-spacing: 0.02em; }
+  .queued-chip.wait i { color: #e8c878; }
+  .queued-name { letter-spacing: 0.03em; }
   .queued-cd {
     font-variant-numeric: tabular-nums;
     color: #f5d78c;
-    padding: 0.05rem 0.4rem;
+    padding: 0.12rem 0.5rem;
     border-radius: 999px;
-    background: rgba(0, 0, 0, 0.35);
-    border: 1px solid rgba(232, 200, 120, 0.35);
-    font-size: 0.75rem;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(232, 200, 120, 0.4);
+    font-size: 0.85rem;
+    font-weight: 800;
   }
 
   .dock-main {
@@ -2386,20 +2718,33 @@
       z-index: 2;
     }
 
+    .action-banner-stack {
+      position: relative;
+      left: auto;
+      bottom: auto;
+      transform: none;
+      margin: 0.15rem auto 0;
+      width: calc(100% - 1rem);
+      max-width: calc(100% - 1rem);
+      grid-column: 1 / -1;
+      justify-self: center;
+      z-index: 6;
+    }
     .action-banner {
       position: relative;
       left: auto;
       bottom: auto;
       transform: none;
-      margin: 0.1rem auto 0;
-      max-width: calc(100% - 1rem);
-      font-size: 0.82rem;
-      padding: 0.25rem 0.5rem;
-      width: calc(100% - 1rem);
+      margin: 0;
+      max-width: 100%;
+      font-size: clamp(0.95rem, 3.6vw, 1.12rem);
+      padding: 0.42rem 0.75rem;
+      width: 100%;
       box-sizing: border-box;
-      grid-column: 1 / -1;
-      justify-self: center;
+      white-space: normal;
     }
+    .banner-icon { font-size: 1.25em !important; }
+    .banner-amount { font-size: 1.12em; }
 
     /* Compact horizontal Self strip — free vertical space for arena */
     .player-panel {
@@ -2477,13 +2822,14 @@
       align-items: stretch;
     }
     .dock-status.has-chip {
-      min-height: 26px;
+      min-height: 36px;
     }
     .queued-chip {
       align-self: center;
-      font-size: 0.75rem;
-      padding: 0.22rem 0.65rem;
+      font-size: 0.92rem;
+      padding: 0.38rem 0.9rem;
     }
+    .queued-chip i { font-size: 1.2rem; }
     .dock-main {
       display: flex;
       flex-direction: column;
