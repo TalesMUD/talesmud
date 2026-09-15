@@ -5,6 +5,7 @@ import (
 	e "github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
+	"github.com/talesmud/talesmud/pkg/entities/skills"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
@@ -380,7 +381,8 @@ type CharacterUpdateMessage struct {
 	InCombat               bool                  `json:"inCombat"`
 	Resting                bool                  `json:"resting"`
 	Attributes             characters.Attributes `json:"attributes,omitempty"`
-	EquippedSkills         []string              `json:"equippedSkills,omitempty"`
+	EquippedSkills         []string              `json:"equippedSkills"`
+	MaxSkillSlots          int                   `json:"maxSkillSlots,omitempty"`
 	UnspentAttributePoints int32                 `json:"unspentAttributePoints"`
 	SpentAttributePoints   map[string]int32      `json:"spentAttributePoints,omitempty"`
 
@@ -407,6 +409,11 @@ func NewCharacterUpdateMessage(userID string, ch *characters.Character) *Charact
 		attackPower = 1
 	}
 
+	equipped := ch.EquippedSkills
+	if equipped == nil {
+		equipped = []string{}
+	}
+
 	return &CharacterUpdateMessage{
 		MessageResponse: MessageResponse{
 			Audience:   MessageAudienceOrigin,
@@ -424,7 +431,8 @@ func NewCharacterUpdateMessage(userID string, ch *characters.Character) *Charact
 		InCombat:               ch.InCombat,
 		Resting:                characterFlagBool(ch, "resting"),
 		Attributes:             ch.Attributes,
-		EquippedSkills:         ch.EquippedSkills,
+		EquippedSkills:         equipped,
+		MaxSkillSlots:          skills.MaxSkillSlots(ch.Class.ID, ch.Level),
 		UnspentAttributePoints: ch.UnspentAttributePoints,
 		SpentAttributePoints:   ch.SpentAttributePoints,
 		AttackPower:            attackPower,

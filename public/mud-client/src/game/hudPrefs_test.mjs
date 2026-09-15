@@ -27,6 +27,17 @@ import {
   skillDisplayName,
   skillGenericArtUrl,
   togglePin,
+  SKILL_CATALOG,
+  bindSkillToFirstEmptyHotbar,
+  classifySkills,
+  firstEmptyHotbarIndex,
+  formatSkillCost,
+  formatSkillEffects,
+  isSkillOnHotbar,
+  maxSkillSlots,
+  normalizeClassId,
+  skillById,
+  skillsForClass,
 } from './hudPrefs.js';
 
 assert.deepStrictEqual(DEFAULT_ACTION_BAR_PINS, [], 'Option C: no default action-bar pins');
@@ -217,3 +228,59 @@ assert.strictEqual(custom[DEFAULT_REST_SLOT], null, 'custom bar is not injected 
 const already = seedRestOnEmptyHotbar(DEFAULT_HOTBAR_BINDS);
 assert.strictEqual(already[DEFAULT_REST_SLOT]?.id, 'rest');
 console.log('hudPrefs: Option C (room + chrome INV/MAP/SAY, Rest seeded on empty bar) OK');
+
+// --- Skill catalog / slots (Character → Skills) ---
+assert.ok(SKILL_CATALOG.length >= 24, 'catalog covers seeded class skills');
+assert.strictEqual(normalizeClassId('wizard'), 'mage');
+assert.strictEqual(normalizeClassId('Warrior'), 'warrior');
+
+const warriorSkills = skillsForClass('warrior');
+assert.strictEqual(warriorSkills.length, 5, 'warrior has 5 skills');
+assert.ok(warriorSkills.some((s) => s.id === 'warrior_power_strike'));
+assert.ok(warriorSkills.some((s) => s.id === 'warrior_cleave'));
+assert.ok(warriorSkills.some((s) => s.id === 'warrior_berserker_rage'));
+assert.strictEqual(skillsForClass('wizard').length, 5, 'wizard aliases to mage skills');
+
+assert.strictEqual(maxSkillSlots('warrior', 1), 1);
+assert.strictEqual(maxSkillSlots('warrior', 13), 2, 'warrior L13 → 2 slots');
+assert.strictEqual(maxSkillSlots('warrior', 20), 3);
+assert.strictEqual(maxSkillSlots('mage', 1), 2);
+assert.strictEqual(maxSkillSlots('wizard', 15), 3);
+
+const power = skillById('warrior_power_strike');
+assert.strictEqual(power.name, 'Power Strike');
+assert.strictEqual(formatSkillCost(power), '3 round CD');
+assert.ok(formatSkillEffects(power).some((c) => /150% STR dmg/.test(c)));
+
+const bash = skillById('Shield Bash');
+assert.strictEqual(formatSkillCost(bash), '4 round CD');
+assert.ok(formatSkillEffects(bash).some((c) => /stun/.test(c)));
+
+const cry = skillById('warrior_battle_cry');
+assert.ok(formatSkillEffects(cry).some((c) => /\+30% attack/.test(c)));
+
+const fireball = skillById('mage_fireball');
+assert.strictEqual(formatSkillCost(fireball), '8 mana');
+
+const classified = classifySkills('warrior', 13, ['warrior_power_strike']);
+assert.strictEqual(classified.equipped.length, 1);
+assert.ok(classified.available.some((s) => s.name === 'Shield Bash'));
+assert.ok(classified.available.some((s) => s.name === 'Battle Cry'));
+assert.ok(!classified.available.some((s) => s.id === 'warrior_power_strike'));
+assert.ok(classified.locked.some((s) => s.name === 'Cleave'));
+assert.ok(classified.locked.some((s) => s.name === 'Berserker Rage'));
+assert.ok(classified.locked.every((s) => s.levelRequired > 13));
+
+const emptyIdx = firstEmptyHotbarIndex(DEFAULT_HOTBAR_BINDS);
+assert.strictEqual(emptyIdx, 0, 'default bar first empty is slot 1');
+const boundOnce = bindSkillToFirstEmptyHotbar(DEFAULT_HOTBAR_BINDS, 'warrior_power_strike');
+assert.strictEqual(boundOnce.status, 'bound');
+assert.strictEqual(boundOnce.index, 0);
+assert.strictEqual(boundOnce.binds[0].id, 'warrior_power_strike');
+assert.ok(isSkillOnHotbar(boundOnce.binds, 'warrior_power_strike'));
+const boundAgain = bindSkillToFirstEmptyHotbar(boundOnce.binds, 'warrior_power_strike');
+assert.strictEqual(boundAgain.status, 'already');
+const boundSecond = bindSkillToFirstEmptyHotbar(boundOnce.binds, 'warrior_shield_bash');
+assert.strictEqual(boundSecond.status, 'bound');
+assert.strictEqual(boundSecond.index, 1);
+console.log('hudPrefs: skill catalog + slot helpers OK');

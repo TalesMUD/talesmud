@@ -402,7 +402,7 @@
 
       <div class="section-label">Skills (equipped)</div>
       {#if equippedSkills.length === 0}
-        <div class="empty-hint">spellbook empty — equip skills with `skills equip &lt;name&gt;`</div>
+        <div class="empty-hint">No skills equipped — open Character → Skills to bind them</div>
       {:else}
         <div class="pick-list">
           {#each equippedSkills as skillId}

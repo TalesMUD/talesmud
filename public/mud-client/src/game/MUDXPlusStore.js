@@ -456,6 +456,7 @@ function createStore() {
       resting: false,
       attributes: [],
       equippedSkills: [],
+      maxSkillSlots: 0,
       unspentAttributePoints: 0,
       spentAttributePoints: {},
       attackPower: 0,
@@ -714,6 +715,7 @@ function createStore() {
             resting: !!(character.flags && character.flags.resting),
             attributes: character.attributes || [],
             equippedSkills: character.equippedSkills || [],
+            maxSkillSlots: character.maxSkillSlots || prev.maxSkillSlots || 0,
             unspentAttributePoints: character.unspentAttributePoints || 0,
             spentAttributePoints: character.spentAttributePoints || {},
             attackPower: keepDerived("attackPower", 0),
@@ -744,7 +746,8 @@ function createStore() {
           inCombat: stats.inCombat ?? prev.inCombat,
           resting: stats.resting !== undefined ? !!stats.resting : prev.resting,
           attributes: stats.attributes || prev.attributes,
-          equippedSkills: stats.equippedSkills || prev.equippedSkills,
+          equippedSkills: Array.isArray(stats.equippedSkills) ? stats.equippedSkills : (prev.equippedSkills || []),
+          maxSkillSlots: stats.maxSkillSlots ?? prev.maxSkillSlots,
           unspentAttributePoints: stats.unspentAttributePoints ?? prev.unspentAttributePoints,
           spentAttributePoints: stats.spentAttributePoints || prev.spentAttributePoints,
           attackPower: stats.attackPower ?? prev.attackPower,
@@ -769,6 +772,7 @@ function createStore() {
           next.resting === prev.resting &&
           sameAttrList(next.attributes, prev.attributes) &&
           sameSkillList(next.equippedSkills, prev.equippedSkills) &&
+          next.maxSkillSlots === prev.maxSkillSlots &&
           next.unspentAttributePoints === prev.unspentAttributePoints &&
           JSON.stringify(next.spentAttributePoints || {}) === JSON.stringify(prev.spentAttributePoints || {}) &&
           next.attackPower === prev.attackPower &&
