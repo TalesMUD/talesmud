@@ -48,8 +48,21 @@ func (command *AttackCommand) Execute(game def.GameCtrl, message *messages.Messa
 
 	// Check if player is already in combat
 	if isInActiveCombat(game, message.Character, combatEngine) {
-		// Player is in combat - this is an in-combat attack
-		return command.handleInCombatAttack(game, message, combatEngine, targetName)
+		// If the fight's origin room no longer matches the player's room,
+		// the combat is orphaned (player walked away before the leave-guard).
+		// Drop it so attack can target enemies actually present here.
+		instance := combatEngine.GetCombatInstance(message.Character.ID)
+		if instance != nil && instance.OriginRoomID != "" &&
+			instance.OriginRoomID != message.Character.CurrentRoomID {
+			combatEngine.EndCombatForPlayer(message.Character.ID)
+			clearStaleCombatState(game, message.Character)
+			combatEngine.ClearCombatGrace(message.Character.ID)
+			game.SendMessage() <- message.Reply("Your previous fight is too far away — you break off.")
+			// Fall through to initiate combat against the room target below.
+		} else {
+			// Player is in combat - this is an in-combat attack
+			return command.handleInCombatAttack(game, message, combatEngine, targetName)
+		}
 	}
 
 	// Not in combat - need a target name to initiate

@@ -48,6 +48,8 @@ type CombatEngineCtrl interface {
 	InitiateCombat(roomID string, players []*characters.Character, enemies []*npc.NPC) *combat.CombatInstance
 	// CombatGraceActive is true during the brief post-combat breath window
 	CombatGraceActive(characterID string) bool
+	// ClearCombatGrace removes the post-combat breath window (orphaned-fight recovery)
+	ClearCombatGrace(characterID string)
 	// ProcessPlayerAttack handles a player attacking a target in combat
 	ProcessPlayerAttack(characterID, targetID string) (message string, combatEnded bool, endState combat.CombatState)
 	// ProcessPlayerDefend handles a player defending

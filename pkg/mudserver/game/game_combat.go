@@ -67,6 +67,14 @@ func (c *CombatController) markCombatGrace(characterID string) {
 	c.graceUntil[characterID] = time.Now().Add(combatBreathGrace)
 }
 
+// ClearCombatGrace removes any post-combat breath window for the character.
+func (c *CombatController) ClearCombatGrace(characterID string) {
+	if c == nil || characterID == "" || c.graceUntil == nil {
+		return
+	}
+	delete(c.graceUntil, characterID)
+}
+
 // IsPlayerInCombat checks if a player is currently in combat
 func (c *CombatController) IsPlayerInCombat(characterID string) bool {
 	return c.manager.IsPlayerInCombat(characterID)
@@ -326,15 +334,16 @@ func (c *CombatController) GetCombatStatus(characterID string) string {
 	return sb.String()
 }
 
-// EndCombatForPlayer removes a player from combat (cleanup on disconnect, etc.)
+// EndCombatForPlayer removes a player from combat (cleanup on disconnect, orphaned
+// cross-room fights, etc.). Treats the exit as a flee so NPC combat flags clear.
 func (c *CombatController) EndCombatForPlayer(characterID string) {
 	instance := c.manager.GetInstanceByPlayerID(characterID)
 	if instance == nil {
 		return
 	}
 
-	// Remove the instance
-	c.manager.RemoveInstance(instance.ID)
+	c.engine.EndCombat(instance, combat.CombatStateFled)
+	c.cleanupCombatInstance(instance, combat.CombatStateFled)
 }
 
 // processNPCTurns handles NPC turns in combat until it's a player's turn
