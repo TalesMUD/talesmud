@@ -31,6 +31,7 @@
     { key: 'head', label: 'Head' },
     { key: 'neck', label: 'Neck' },
     { key: 'chest', label: 'Chest' },
+    { key: 'waist', label: 'Waist' },
     { key: 'hands', label: 'Hands' },
   ];
   const rightSlots = [
@@ -59,6 +60,7 @@
       case 'head': return 'face';
       case 'neck': return 'more_horiz';
       case 'chest': return 'checkroom';
+      case 'waist': return 'horizontal_rule';
       case 'hands': return 'front_hand';
       case 'legs': return 'straighten';
       case 'boots': return 'do_not_step';

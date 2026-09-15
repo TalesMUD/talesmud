@@ -116,6 +116,8 @@ func parseSlotName(name string) items.ItemSlot {
 		return items.ItemSlotHead
 	case "chest", "body", "torso", "armor":
 		return items.ItemSlotChest
+	case "waist", "belt", "sash":
+		return items.ItemSlotWaist
 	case "legs", "pants", "leggings":
 		return items.ItemSlotLegs
 	case "boots", "feet", "shoes":

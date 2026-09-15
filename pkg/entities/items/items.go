@@ -59,6 +59,7 @@ const (
 	ItemSlotRing1              = "ring1"
 	ItemSlotRing2              = "ring2"
 	ItemSlotHands              = "hands"
+	ItemSlotWaist              = "waist"
 	ItemSlotMainHand           = "main_hand"
 	ItemSlotOffHand            = "off_hand"
 )
