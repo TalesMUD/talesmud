@@ -27,6 +27,15 @@
     showPickupMenu = false;
   }
 
+  function pickupAll() {
+    const items = [...groundItems];
+    for (const item of items) {
+      sendMessage('pickup ' + item.name);
+      store.removeGroundItem(item.id);
+    }
+    showPickupMenu = false;
+  }
+
   // Derive NPC type for dialog overlay
   $: dialogNpc = $store.dialogActive
     ? findNpcByName($store.npcs, $store.dialogNpcName)
@@ -401,6 +410,9 @@
           </button>
         </div>
         <div class="pickup-dialog-grid">
+          {#if groundItems.length > 1}
+            <button type="button" on:click={pickupAll}>Pick up all ({groundItems.length})</button>
+          {/if}
           {#each groundItems as item}
             <button type="button" on:click={() => pickupItem(item)}>{item.name}</button>
           {/each}

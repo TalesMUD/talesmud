@@ -1094,6 +1094,12 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 			Gold:          char.Gold,
 		}
 	}
+
+	// Loot is placed after the pre-victory room refresh, so push a second
+	// roomUpdate now that ground items exist (Pickup UI / groundItems store).
+	if len(allLootItems) > 0 {
+		c.refreshOriginRoomAfterCombat(instance)
+	}
 }
 
 // processCombatDefeat handles death penalties and sends the defeat message

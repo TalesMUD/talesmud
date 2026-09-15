@@ -121,6 +121,25 @@
     min-width: 44px;
     max-width: 44px;
     padding: 8px;
+    background: rgba(34, 197, 94, 0.22);
+    border-color: rgba(34, 197, 94, 0.5);
+    color: #86efac;
+  }
+
+  .pickup-icon-btn.active {
+    background: rgba(34, 197, 94, 0.4);
+  }
+
+  .pickup-bar-btn {
+    position: relative;
+    background: rgba(34, 197, 94, 0.22);
+    border-color: rgba(34, 197, 94, 0.5);
+    color: #86efac;
+    padding-right: 18px;
+  }
+
+  .pickup-bar-btn.active {
+    background: rgba(34, 197, 94, 0.4);
   }
 
   .pickup-count {
@@ -443,6 +462,15 @@
     store.removeGroundItem(item.id);
   }
 
+  function pickupAll() {
+    const items = [...groundItems];
+    for (const item of items) {
+      sendMessage('pickup ' + item.name);
+      store.removeGroundItem(item.id);
+    }
+    showPickupMenu = false;
+  }
+
   function toggleMoreMenu() {
     showMoreMenu = !showMoreMenu;
     showPickupMenu = false;
@@ -546,6 +574,11 @@
         </button>
       </div>
       <div class="dialog-grid">
+        {#if groundItems.length > 1}
+          <button class="popup-btn pickup-popup-btn" on:click={pickupAll}>
+            Pick up all ({groundItems.length})
+          </button>
+        {/if}
         {#each groundItems as item}
           <button class="popup-btn pickup-popup-btn" on:click={() => pickupItem(item)}>
             {item.name}
@@ -641,6 +674,19 @@
       </button>
     {/each}
 
+    {#if groundItems.length > 0}
+      <button
+        class="btn context-btn pickup-bar-btn"
+        class:active={showPickupMenu}
+        type="button"
+        aria-label="Pick up {groundItems.length} items"
+        on:click={togglePickupMenu}
+      >
+        <i class="material-icons">back_hand</i>
+        Pickup
+        <span class="pickup-count">{groundItems.length}</span>
+      </button>
+    {/if}
 
     <button class="btn more-btn" on:click={toggleMoreMenu}>
       <i class="material-icons">more_horiz</i>
