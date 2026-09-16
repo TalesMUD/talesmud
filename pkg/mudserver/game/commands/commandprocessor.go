@@ -136,4 +136,9 @@ func (commandProcessor *CommandProcessor) registerCommands() {
 	// Character progression commands
 	commandProcessor.RegisterCommand(&SpendCommand{}, "Spend attribute points: spend <attr> [amount]", "spend")
 
+	// Gathering & crafting (no profession gate — everyone can gather/craft)
+	commandProcessor.RegisterCommand(&GatherCommand{}, "Gather from world nodes: gather|forage|harvest [target]", "gather", "forage", "harvest")
+	commandProcessor.RegisterCommand(&RecipesCommand{}, "List all crafting recipes: recipes", "recipes", "recipe")
+	commandProcessor.RegisterCommand(&CraftCommand{}, "Craft an item: craft <recipe>", "craft")
+
 }

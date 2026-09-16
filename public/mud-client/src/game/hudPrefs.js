@@ -80,6 +80,9 @@ export const PINNABLE_COMMANDS = [
   { id: 'drop', name: 'drop', icon: 'delete', label: 'Drop', kind: 'command' },
   { id: 'use', name: 'use', icon: 'touch_app', label: 'Use', kind: 'command' },
   { id: 'examine', name: 'examine', icon: 'search', label: 'Examine', kind: 'command' },
+  { id: 'recipes', name: 'recipes', icon: 'menu_book', label: 'Recipes', kind: 'command' },
+  { id: 'craft', name: 'craft', icon: 'construction', label: 'Craft', kind: 'command' },
+  { id: 'gather', name: 'gather', icon: 'grass', label: 'Gather', kind: 'command' },
 ];
 
 const PIN_IDS = new Set(PINNABLE_COMMANDS.map((c) => c.id));

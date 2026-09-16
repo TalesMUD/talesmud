@@ -219,7 +219,14 @@ Stackable item quantities are kept consistent when consumed or partially dropped
 - `weapon` - Swords, axes, staves
 - `collectible` - Quest items, trophies
 - `quest` - Quest-specific items
-- `crafting_material` - Future crafting system
+- `crafting_material` - Components for gathering/crafting recipes
+
+### Gathering & Crafting (v1 — no professions)
+- **Everyone** can gather and craft. No skill ranks, no profession unlocks.
+- **Gathering**: room actions `GATHER …` / `FORAGE …` / `HARVEST …` (scripted nodes with deplete flags) plus commands `gather` / `forage` / `harvest [target]`.
+- **Crafting**: `recipes` lists all recipes; `craft <recipe>` consumes mats and grants output.
+- Optional **stations**: recipe `station: forge` requires room tag `forge` or `crafting`; `campfire` requires `campfire`/`kitchen`/`hearth`. Food/leather recipes craft anywhere.
+- Recipe YAML lives in content `data/recipes/` (loaded from `import/mvp-rpg-1/data/recipes` at runtime; seed fallback in engine).
 
 **Equipment Slots**:
 - `head`, `chest`, `legs`, `boots`, `hands`, `neck`, `ring1`, `ring2`
