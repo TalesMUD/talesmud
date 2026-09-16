@@ -171,23 +171,30 @@ type YAMLNPC struct {
 	Meta          YAMLNPCMeta        `yaml:"meta"`
 }
 
+// YAMLRange is a min/max pair (e.g. enemy goldDrop).
+type YAMLRange struct {
+	Min int32 `yaml:"min"`
+	Max int32 `yaml:"max"`
+}
+
 // YAMLEnemyTrait contains enemy-specific configuration
 type YAMLEnemyTrait struct {
-	CreatureType  string  `yaml:"creatureType"`
-	CombatStyle   string  `yaml:"combatStyle"`
-	Difficulty    string  `yaml:"difficulty"`
-	AttackPower   int32   `yaml:"attackPower"`
-	Defense       int32   `yaml:"defense"`
-	AttackSpeed   float64 `yaml:"attackSpeed"`
-	AggroRadius   int     `yaml:"aggroRadius"`
-	AggroOnSight  bool    `yaml:"aggroOnSight"`
-	CallForHelp   bool    `yaml:"callForHelp"`
-	FleeThreshold float64 `yaml:"fleeThreshold"`
-	XPReward      int64   `yaml:"xpReward"`
-	LootTableID   string  `yaml:"lootTableId"`
-	OnAggroScript string  `yaml:"onAggroScript"`
-	OnDeathScript string  `yaml:"onDeathScript"`
-	OnFleeScript  string  `yaml:"onFleeScript"`
+	CreatureType  string    `yaml:"creatureType"`
+	CombatStyle   string    `yaml:"combatStyle"`
+	Difficulty    string    `yaml:"difficulty"`
+	AttackPower   int32     `yaml:"attackPower"`
+	Defense       int32     `yaml:"defense"`
+	AttackSpeed   float64   `yaml:"attackSpeed"`
+	AggroRadius   int       `yaml:"aggroRadius"`
+	AggroOnSight  bool      `yaml:"aggroOnSight"`
+	CallForHelp   bool      `yaml:"callForHelp"`
+	FleeThreshold float64   `yaml:"fleeThreshold"`
+	XPReward      int64     `yaml:"xpReward"`
+	GoldDrop      YAMLRange `yaml:"goldDrop"`
+	LootTableID   string    `yaml:"lootTableId"`
+	OnAggroScript string    `yaml:"onAggroScript"`
+	OnDeathScript string    `yaml:"onDeathScript"`
+	OnFleeScript  string    `yaml:"onFleeScript"`
 }
 
 // YAMLMerchantTrait contains merchant-specific configuration

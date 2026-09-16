@@ -201,6 +201,10 @@ func (y *YAMLNPC) ToEntity() *npc.NPC {
 			CallForHelp:   y.EnemyTrait.CallForHelp,
 			FleeThreshold: y.EnemyTrait.FleeThreshold,
 			XPReward:      y.EnemyTrait.XPReward,
+			GoldDrop: npc.Range{
+				Min: y.EnemyTrait.GoldDrop.Min,
+				Max: y.EnemyTrait.GoldDrop.Max,
+			},
 			LootTableID:   y.EnemyTrait.LootTableID,
 			OnAggroScript: y.EnemyTrait.OnAggroScript,
 			OnDeathScript: y.EnemyTrait.OnDeathScript,
