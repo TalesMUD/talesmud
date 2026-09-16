@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/talesmud/talesmud/pkg/entities/recipes"
+	"github.com/talesmud/talesmud/pkg/itemart"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 )
@@ -28,27 +29,71 @@ func (command *RecipesCommand) Execute(game def.GameCtrl, message *messages.Mess
 		return true
 	}
 
-	var b strings.Builder
-	b.WriteString("Crafting recipes (everyone can craft — no profession required):\n")
-	b.WriteString("Use: craft <recipe>\n\n")
-	for _, r := range list {
-		station := "anywhere"
-		if r.Station != "" {
-			station = r.Station
-		}
-		b.WriteString(fmt.Sprintf("• %s (%s) [%s] — %s\n", r.Name, r.Key, r.Category, station))
-		b.WriteString(fmt.Sprintf("    %s\n", r.Description))
-		ings := make([]string, 0, len(r.Ingredients))
-		for _, ing := range r.Ingredients {
-			name := itemDisplayName(game, ing.Item)
-			ings = append(ings, fmt.Sprintf("%dx %s", ing.Qty, name))
-		}
-		b.WriteString(fmt.Sprintf("    Needs: %s → %s\n", strings.Join(ings, ", "), itemDisplayName(game, r.Output.Item)))
-		if hint := recipes.StationHint(r.Station); hint != "" {
-			b.WriteString(fmt.Sprintf("    %s\n", hint))
-		}
+	var roomTags []string
+	if room, err := game.GetFacade().RoomsService().FindByID(message.Character.CurrentRoomID); err == nil && room != nil {
+		roomTags = room.Tags
 	}
-	game.SendMessage() <- message.Reply(b.String())
+
+	rows := make([]messages.RecipeRow, 0, len(list))
+	for _, r := range list {
+		stationLabel := "anywhere"
+		if r.Station != "" {
+			stationLabel = r.Station
+		}
+		stationOK := recipes.StationOK(r, roomTags)
+		ings := make([]messages.RecipeIngredientRow, 0, len(r.Ingredients))
+		haveAll := true
+		for _, ing := range r.Ingredients {
+			have := message.Character.Inventory.CountMatchingTemplate(ing.Item)
+			if have < ing.Qty {
+				haveAll = false
+			}
+			ings = append(ings, messages.RecipeIngredientRow{
+				Item:       ing.Item,
+				Name:       itemDisplayName(game, ing.Item),
+				Qty:        ing.Qty,
+				Have:       have,
+				Image:      itemart.URL(ing.Item, ing.Item),
+				HaveEnough: have >= ing.Qty,
+			})
+		}
+		outQty := r.Output.Qty
+		if outQty < 1 {
+			outQty = 1
+		}
+		rows = append(rows, messages.RecipeRow{
+			ID:           r.ID,
+			Key:          r.Key,
+			Name:         r.Name,
+			Description:  r.Description,
+			Category:     r.Category,
+			Station:      r.Station,
+			StationLabel: stationLabel,
+			StationHint:  recipes.StationHint(r.Station),
+			StationOK:    stationOK,
+			CanCraft:     stationOK && haveAll,
+			Ingredients:  ings,
+			Output: messages.RecipeOutputRow{
+				Item:  r.Output.Item,
+				Name:  itemDisplayName(game, r.Output.Item),
+				Qty:   outQty,
+				Image: itemart.URL(r.Output.Item, r.Output.Item),
+			},
+		})
+	}
+
+	if message.FromUser != nil {
+		game.SendMessage() <- messages.NewRecipesMessage(message.FromUser.ID, rows, roomTags)
+	} else {
+		// Fallback text for non-user contexts
+		var b strings.Builder
+		b.WriteString("Crafting recipes (everyone can craft — no profession required):\n")
+		b.WriteString("Use: craft <recipe>\n\n")
+		for _, row := range rows {
+			b.WriteString(fmt.Sprintf("• %s (%s) [%s] — %s\n", row.Name, row.Key, row.Category, row.StationLabel))
+		}
+		game.SendMessage() <- message.Reply(b.String())
+	}
 	return true
 }
 
@@ -77,8 +122,8 @@ func (command *CraftCommand) Execute(game def.GameCtrl, message *messages.Messag
 
 	parts := strings.Fields(message.Data)
 	if len(parts) < 2 {
-		game.SendMessage() <- message.Reply("Craft what? Use 'recipes' to list them, then 'craft <name>'.")
-		return true
+		// Bare "craft" opens the recipes overlay (same as recipes).
+		return (&RecipesCommand{}).Execute(game, message)
 	}
 	query := strings.Join(parts[1:], " ")
 	recipe := recipes.Find(query)

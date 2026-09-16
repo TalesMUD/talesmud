@@ -590,6 +590,10 @@
       openSayPrompt();
       return;
     }
+    if (pin.id === 'recipes' || pin.id === 'craft' || pin.name === 'recipes' || pin.name === 'craft') {
+      executeCommand('recipes');
+      return;
+    }
     executeCommand(pin.name);
   }
 

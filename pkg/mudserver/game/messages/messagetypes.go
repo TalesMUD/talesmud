@@ -49,6 +49,9 @@ const (
 	// Merchant shop overlay (structured stock for web/mobile)
 	MessageTypeShop = "shop"
 
+	// Crafting recipes overlay (structured list for web/mobile)
+	MessageTypeRecipes = "recipes"
+
 	// Friends list overlay (structured roster for web/mobile)
 	MessageTypeFriends = "friends"
 )

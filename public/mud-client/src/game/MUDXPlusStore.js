@@ -414,6 +414,9 @@ function createStore() {
     // Merchant shop overlay
     shop: null,
     shopError: "",
+    // Crafting recipes overlay
+    recipes: null,
+    craftError: "",
 
     // Game context flags
     inCombat: false,
@@ -668,6 +671,33 @@ function createStore() {
     clearShopError: () => {
       update((state) => {
         state.shopError = "";
+        return state;
+      });
+    },
+
+    setRecipes: (recipes) => {
+      update((state) => {
+        state.recipes = recipes || null;
+        state.craftError = "";
+        return state;
+      });
+    },
+    clearRecipes: () => {
+      update((state) => {
+        state.recipes = null;
+        state.craftError = "";
+        return state;
+      });
+    },
+    setCraftError: (message) => {
+      update((state) => {
+        state.craftError = message || "";
+        return state;
+      });
+    },
+    clearCraftError: () => {
+      update((state) => {
+        state.craftError = "";
         return state;
       });
     },

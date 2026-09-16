@@ -783,3 +783,65 @@ func NewShopMessage(userID, merchantName, merchantID string, gold int64, stock [
 		SellMultiplier: sellMultiplier,
 	}
 }
+
+// RecipeIngredientRow is one ingredient in a recipes overlay row.
+type RecipeIngredientRow struct {
+	Item     string `json:"item"`
+	Name     string `json:"name"`
+	Qty      int32  `json:"qty"`
+	Have     int32  `json:"have"`
+	Image    string `json:"image,omitempty"`
+	HaveEnough bool `json:"haveEnough"`
+}
+
+// RecipeOutputRow is the crafted result preview.
+type RecipeOutputRow struct {
+	Item  string `json:"item"`
+	Name  string `json:"name"`
+	Qty   int32  `json:"qty"`
+	Image string `json:"image,omitempty"`
+}
+
+// RecipeRow is one craftable recipe for the overlay.
+type RecipeRow struct {
+	ID          string                `json:"id"`
+	Key         string                `json:"key"`
+	Name        string                `json:"name"`
+	Description string                `json:"description,omitempty"`
+	Category    string                `json:"category,omitempty"`
+	Station     string                `json:"station,omitempty"`
+	StationLabel string               `json:"stationLabel"`
+	StationHint string                `json:"stationHint,omitempty"`
+	StationOK   bool                  `json:"stationOk"`
+	CanCraft    bool                  `json:"canCraft"`
+	Ingredients []RecipeIngredientRow `json:"ingredients"`
+	Output      RecipeOutputRow       `json:"output"`
+}
+
+// RecipesMessage opens/refreshes the crafting recipes overlay.
+type RecipesMessage struct {
+	MessageResponse
+	Recipes  []RecipeRow `json:"recipes"`
+	RoomTags []string    `json:"roomTags,omitempty"`
+}
+
+// NewRecipesMessage creates a structured recipes payload for the client overlay.
+func NewRecipesMessage(userID string, list []RecipeRow, roomTags []string) *RecipesMessage {
+	if list == nil {
+		list = []RecipeRow{}
+	}
+	if roomTags == nil {
+		roomTags = []string{}
+	}
+	return &RecipesMessage{
+		MessageResponse: MessageResponse{
+			Audience:   MessageAudienceOrigin,
+			AudienceID: userID,
+			Type:       MessageTypeRecipes,
+			Message:    "Crafting recipes",
+		},
+		Recipes:  list,
+		RoomTags: roomTags,
+	}
+}
+

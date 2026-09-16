@@ -78,6 +78,7 @@ function createClient(renderer, characterCreator, muxStore) {
       if (roomChanged) {
         mux.clearDialog();
         if (mux.clearShop) mux.clearShop();
+        if (mux.clearRecipes) mux.clearRecipes();
       }
 
       // Track room visit for minimap fallback and refresh the atlas
@@ -226,6 +227,18 @@ function createClient(renderer, characterCreator, muxStore) {
         sellMultiplier: msg.sellMultiplier || 0.5,
       });
       if (mux.clearDialog) mux.clearDialog();
+    }
+    if (msg.message) {
+      renderer(msg.message);
+    }
+  };
+
+  messageHandlers["recipes"] = (msg) => {
+    if (mux && mux.setRecipes) {
+      mux.setRecipes({
+        recipes: msg.recipes || [],
+        roomTags: msg.roomTags || [],
+      });
     }
     if (msg.message) {
       renderer(msg.message);
@@ -554,6 +567,23 @@ function createClient(renderer, characterCreator, muxStore) {
               lower.includes("level")
             ) {
               mux.setShopError(message);
+            }
+          }
+          if (mux && get(mux)?.recipes && mux.setCraftError) {
+            const lower = String(message || "").toLowerCase();
+            if (lower.includes("you craft")) {
+              // Success — clear prior craft errors; counts refresh via inventoryUpdate.
+              if (mux.clearCraftError) mux.clearCraftError();
+            } else if (
+              lower.includes("missing materials") ||
+              lower.includes("can't craft") ||
+              lower.includes("cannot craft") ||
+              lower.includes("unknown recipe") ||
+              lower.includes("inventory is full") ||
+              lower.includes("requires a") ||
+              lower.includes("something went wrong")
+            ) {
+              mux.setCraftError(message);
             }
           }
         }

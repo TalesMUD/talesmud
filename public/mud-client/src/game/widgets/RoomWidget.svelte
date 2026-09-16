@@ -2,6 +2,7 @@
   import EntityPanel from '../ui/EntityPanel.svelte';
   import DialogOverlay from '../ui/DialogOverlay.svelte';
   import ShopOverlay from '../ui/ShopOverlay.svelte';
+  import RecipesOverlay from '../ui/RecipesOverlay.svelte';
   import RoomTextOverlay from '../ui/RoomTextOverlay.svelte';
   import PlayersOverlay from '../ui/PlayersOverlay.svelte';
   import { findNpcByName } from '../MUDXPlusStore';
@@ -252,6 +253,10 @@
 
     {#if $store.shop}
       <ShopOverlay {store} {sendMessage} />
+    {/if}
+
+    {#if $store.recipes}
+      <RecipesOverlay {store} {sendMessage} />
     {/if}
 
     <div class="entitySection">
