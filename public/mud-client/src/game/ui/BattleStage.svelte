@@ -2578,6 +2578,19 @@
     display: none;
   }
 
+  /* Wide desktop: gutters beside combat chrome (viewport > 1280px) */
+  @media (min-width: 1281px) {
+    .battle-stage {
+      padding: 2rem 2.5rem;
+    }
+    .battle-frame {
+      width: min(1280px, calc(100vw - 5rem));
+      height: min(calc(100vh - 4rem), 960px);
+      max-width: min(1280px, calc(100vw - 5rem));
+      max-height: min(calc(100vh - 4rem), 960px);
+    }
+  }
+
   /* C7-mobile: thumb-first stack ≤768px — header / arena / dock / log-peek */
   @media (max-width: 768px) {
     .battle-stage {

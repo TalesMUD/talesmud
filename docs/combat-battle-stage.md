@@ -34,7 +34,7 @@ Later optional: **Party** mode (FF side-by-side) for large multi-combat.
 ### Surfaces
 | Surface | Notes |
 |---------|-------|
-| Desktop web | Near-full viewport gold-chrome frame (`calc(100vw/vh − ~1.2rem)`); no 720px min-width postcard |
+| Desktop web | Gold-chrome frame; ≤1280 near-full (`calc(100vw/vh − ~1.2rem)`); >1280 centered max ~1280 with gutters; no 720px min-width postcard |
 | Mobile web | Stacked full-bleed ≤768px: enemies top · FX · player bar · thumb dock |
 | Enemy scale | 1 foe: large (dominates arena); 2–3: medium spaced; 4+: pack |
 | Flutter | Mirror mobile web; same WS event state machine — **not updated in A+B+C** |
