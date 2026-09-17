@@ -543,50 +543,104 @@ function drawGrid(ctx, cam, w, h, places) {
   ctx.setLineDash([]);
 }
 
-function drawAreaCells(ctx, places, cam, w, h, showLabels) {
+/** Readable area-name size that tracks map zoom (tileStep). */
+function areaLabelFontSize(cam) {
+  const step = cam && cam.tileStep ? cam.tileStep : 40;
+  return Math.max(11, Math.min(18, Math.round(step * 0.3)));
+}
+
+/**
+ * Clear area labels for tinted region/area groups.
+ * Prefer atlas regions (same hulls as the wash rects); fall back to place.area clusters.
+ * Always drawn (not LOD-gated) so overworld clusters stay named at default zoom.
+ */
+function drawAreaLabels(ctx, places, regions, cam, w, h) {
+  const fontSize = areaLabelFontSize(cam);
+  const font = `700 ${fontSize}px Georgia, serif`;
+  const labelH = fontSize + 4;
+  const candidates = [];
+  const labeled = new Set();
+
+  for (const region of regions || []) {
+    const text = String(region.name || '').trim();
+    if (!text) continue;
+    const pts = (region.hull || []).map(([x, y]) => projectGrid(Math.round(x), Math.round(y), cam, w, h));
+    if (!pts.length) continue;
+    let minPx = Infinity, maxPx = -Infinity, minPy = Infinity, maxPy = -Infinity;
+    for (const p of pts) {
+      if (p.px < minPx) minPx = p.px;
+      if (p.px > maxPx) maxPx = p.px;
+      if (p.py < minPy) minPy = p.py;
+      if (p.py > maxPy) maxPy = p.py;
+    }
+    const pad = cam.tileStep * 0.5;
+    candidates.push({
+      text,
+      px: (minPx + maxPx) / 2,
+      py: minPy - pad - labelH - 2,
+      font,
+      force: true,
+      priority: -(region.places ? region.places.length : pts.length),
+    });
+    labeled.add(text.toLowerCase());
+  }
+
+  // Fallback for discovered place clusters that somehow lack a region hull.
   const byArea = new Map();
-  for (const p of places) {
+  for (const p of places || []) {
     if (!p.discovered || !p.area) continue;
     if (!byArea.has(p.area)) byArea.set(p.area, []);
     byArea.get(p.area).push(p);
   }
   const cell = cam.tileStep * 0.92;
-  const labelCandidates = [];
   for (const [area, rooms] of byArea) {
-    let cx = 0;
-    let cy = 0;
+    if (rooms.length < 1) continue;
+    const text = String(rooms[0].areaName || '').trim();
+    if (!text || labeled.has(text.toLowerCase())) continue;
+    let minPx = Infinity, maxPx = -Infinity, minPy = Infinity, maxPy = -Infinity;
     for (const p of rooms) {
       const { px, py } = projectPlace(p, cam, w, h);
-      cx += px;
-      cy += py;
+      if (px < minPx) minPx = px;
+      if (px > maxPx) maxPx = px;
+      if (py < minPy) minPy = py;
+      if (py > maxPy) maxPy = py;
     }
-    if (showLabels && rooms.length > 1) {
-      labelCandidates.push({
-        text: rooms[0].areaName || area,
-        px: cx / rooms.length,
-        py: cy / rooms.length - cell * 0.15,
-        font: 'italic 600 9px Georgia, serif',
-        force: false,
-        priority: -rooms.length,
-      });
-    }
+    const pad = cell * 0.55;
+    candidates.push({
+      text,
+      px: (minPx + maxPx) / 2,
+      py: minPy - pad - labelH - 2,
+      font,
+      force: true,
+      priority: -rooms.length,
+    });
+    labeled.add(text.toLowerCase());
   }
-  if (showLabels && labelCandidates.length) {
-    labelCandidates.sort((a, b) => a.priority - b.priority);
-    const measure = (text, font) => {
-      ctx.font = font;
-      const metrics = ctx.measureText(text);
-      return { w: metrics.width, h: 11 };
-    };
-    const placed = layoutRoomLabels(labelCandidates, measure);
-    for (const lab of placed) {
-      ctx.font = lab.font;
-      ctx.fillStyle = 'rgba(220, 200, 160, 0.5)';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillText(lab.text, lab.x, lab.y);
-    }
+
+  if (!candidates.length) return;
+  candidates.sort((a, b) => a.priority - b.priority);
+  const measure = (text, f) => {
+    ctx.font = f;
+    const metrics = ctx.measureText(text);
+    return { w: metrics.width, h: labelH };
+  };
+  const placed = layoutRoomLabels(candidates, measure);
+  for (const lab of placed) {
+    ctx.font = lab.font;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.lineWidth = Math.max(3, Math.round(fontSize * 0.28));
+    ctx.strokeStyle = 'rgba(16, 12, 6, 0.88)';
+    ctx.strokeText(lab.text, lab.x, lab.y);
+    ctx.fillStyle = '#f0d78c';
+    ctx.fillText(lab.text, lab.x, lab.y);
   }
+}
+
+/** @deprecated name kept for callers; tint washes come from regions. */
+function drawAreaCells(ctx, places, cam, w, h, showLabels) {
+  if (!showLabels) return;
+  drawAreaLabels(ctx, places, [], cam, w, h);
 }
 
 function drawRegionWash(ctx, region, cam, w, h) {
@@ -884,7 +938,8 @@ export function paintAtlas(ctx, params) {
     drawRegionWash(ctx, region, cam, w, h);
   }
 
-  drawAreaCells(ctx, visiblePlaces, cam, w, h, lod === 'area');
+  // Area names always on (tinted region/area groups); room names stay LOD-gated below.
+  drawAreaLabels(ctx, visiblePlaces, visibleRegions, cam, w, h);
 
   const layerPaths = (atlas.paths || []).filter((path) => {
     const a = byId[path.from];
