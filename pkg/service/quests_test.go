@@ -13,6 +13,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/quests"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/entities/traits"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
 	"github.com/talesmud/talesmud/pkg/repository"
 )
 
@@ -359,5 +360,151 @@ func TestCompleteDeliveryObjectiveRejectsMissingItems(t *testing.T) {
 	}
 	if _, err := facade.QuestsService().CompleteDeliveryObjective(character.ID, quest.ID, "deliver"); err == nil {
 		t.Fatal("expected missing delivery item error")
+	}
+}
+
+func TestGrantQuestRewardsLevelsUpWhenXPCrossesThreshold(t *testing.T) {
+	facade := newTestFacade(t)
+
+	exits := rooms.Exits{}
+	chars := rooms.Characters{}
+	if _, err := facade.RoomsService().Import(&rooms.Room{
+		Entity: &entities.Entity{ID: "R0001"}, Name: "Test Room", Area: "Z00_test",
+		Exits: &exits, Characters: &chars,
+	}); err != nil {
+		t.Fatalf("import room: %v", err)
+	}
+
+	character := &characters.Character{
+		Entity:           &entities.Entity{ID: "char-quest-xp"},
+		Name:             "Gimli",
+		BelongsUser:      *traits.BelongsToUser("user-1"),
+		Level:            1,
+		XP:               0,
+		MaxHitPoints:     25,
+		CurrentHitPoints: 25,
+		Class:            characters.ClassWarrior,
+		Attributes: []characters.Attribute{
+			{Short: "STR", Value: 10},
+			{Short: "DEX", Value: 10},
+			{Short: "INT", Value: 10},
+			{Short: "WIS", Value: 10},
+			{Short: "STA", Value: 10},
+		},
+		Inventory: items.Inventory{Size: 10},
+	}
+	if _, err := facade.CharactersService().Store(character); err != nil {
+		t.Fatalf("store character: %v", err)
+	}
+
+	// Exactly enough XP for level 2 when quest awards GetXPRequired(2)
+	questXP := leveling.GetXPRequired(2)
+	quest := &quests.Quest{
+		Entity:      &entities.Entity{ID: "quest-xp-level"},
+		Name:        "First Blood",
+		Description: "Earn enough XP to level.",
+		Source:      quests.QuestSource{Type: "auto"},
+		Objectives: []quests.Objective{{
+			ID: "obj", Type: quests.ObjectiveVisit, Description: "go", TargetID: "R0001", Amount: 1,
+		}},
+		Rewards: quests.Reward{XP: questXP, Gold: 5},
+	}
+	if _, err := facade.QuestsService().Store(quest); err != nil {
+		t.Fatalf("store quest: %v", err)
+	}
+
+	itemsGranted, levelUp, err := facade.QuestsService().GrantQuestRewards(character.ID, quest.ID)
+	if err != nil {
+		t.Fatalf("GrantQuestRewards: %v", err)
+	}
+	if len(itemsGranted) != 0 {
+		t.Fatalf("expected no items, got %v", itemsGranted)
+	}
+	if levelUp == nil {
+		t.Fatal("expected level-up result from quest XP")
+	}
+	if levelUp.OldLevel != 1 || levelUp.NewLevel != 2 || levelUp.LevelsGained != 1 {
+		t.Fatalf("unexpected level-up %#v", levelUp)
+	}
+	if levelUp.Message == "" {
+		t.Fatal("expected non-empty level-up message")
+	}
+
+	stored, err := facade.CharactersService().FindByID(character.ID)
+	if err != nil {
+		t.Fatalf("reload character: %v", err)
+	}
+	if stored.Level != 2 {
+		t.Fatalf("expected persisted level 2, got %d", stored.Level)
+	}
+	if stored.XP != questXP {
+		t.Fatalf("expected XP %d, got %d", questXP, stored.XP)
+	}
+	if stored.Gold != 5 {
+		t.Fatalf("expected gold 5, got %d", stored.Gold)
+	}
+	if stored.MaxHitPoints <= 25 {
+		t.Fatalf("expected HP gain on level-up, MaxHP=%d", stored.MaxHitPoints)
+	}
+}
+
+func TestGrantQuestRewardsNoLevelUpBelowThreshold(t *testing.T) {
+	facade := newTestFacade(t)
+
+	exits := rooms.Exits{}
+	chars := rooms.Characters{}
+	if _, err := facade.RoomsService().Import(&rooms.Room{
+		Entity: &entities.Entity{ID: "R0001"}, Name: "Test Room", Area: "Z00_test",
+		Exits: &exits, Characters: &chars,
+	}); err != nil {
+		t.Fatalf("import room: %v", err)
+	}
+
+	character := &characters.Character{
+		Entity:           &entities.Entity{ID: "char-quest-xp-low"},
+		Name:             "Novice",
+		BelongsUser:      *traits.BelongsToUser("user-1"),
+		Level:            1,
+		XP:               0,
+		MaxHitPoints:     25,
+		CurrentHitPoints: 25,
+		Class:            characters.ClassWarrior,
+		Attributes: []characters.Attribute{
+			{Short: "STR", Value: 10},
+			{Short: "DEX", Value: 10},
+			{Short: "INT", Value: 10},
+			{Short: "WIS", Value: 10},
+			{Short: "STA", Value: 10},
+		},
+		Inventory: items.Inventory{Size: 10},
+	}
+	if _, err := facade.CharactersService().Store(character); err != nil {
+		t.Fatalf("store character: %v", err)
+	}
+
+	quest := &quests.Quest{
+		Entity:      &entities.Entity{ID: "quest-xp-low"},
+		Name:        "Tiny Favor",
+		Description: "Small XP reward.",
+		Source:      quests.QuestSource{Type: "auto"},
+		Objectives: []quests.Objective{{
+			ID: "obj", Type: quests.ObjectiveVisit, Description: "go", TargetID: "R0001", Amount: 1,
+		}},
+		Rewards: quests.Reward{XP: 1},
+	}
+	if _, err := facade.QuestsService().Store(quest); err != nil {
+		t.Fatalf("store quest: %v", err)
+	}
+
+	_, levelUp, err := facade.QuestsService().GrantQuestRewards(character.ID, quest.ID)
+	if err != nil {
+		t.Fatalf("GrantQuestRewards: %v", err)
+	}
+	if levelUp != nil {
+		t.Fatalf("expected no level-up, got %#v", levelUp)
+	}
+	stored, _ := facade.CharactersService().FindByID(character.ID)
+	if stored.Level != 1 || stored.XP != 1 {
+		t.Fatalf("expected L1 XP1, got L%d XP%d", stored.Level, stored.XP)
 	}
 }

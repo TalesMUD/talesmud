@@ -9,6 +9,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/items"
 	"github.com/talesmud/talesmud/pkg/entities/quests"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
 	r "github.com/talesmud/talesmud/pkg/repository"
 )
 
@@ -43,7 +44,7 @@ type QuestsService interface {
 	// Reward granting
 	TurnInQuest(characterID, questID, npcID string) (*QuestTurnInResult, error)
 	TurnInQuestAnywhere(characterID, questID string) (*QuestTurnInResult, error)
-	GrantQuestRewards(characterID, questID string) ([]string, error)
+	GrantQuestRewards(characterID, questID string) ([]string, *leveling.LevelUpResult, error)
 
 	// Definition validation
 	ValidateQuest(quest *quests.Quest) []QuestValidationIssue
@@ -146,6 +147,7 @@ type QuestTurnInResult struct {
 	Gold          int64
 	CompletedAt   time.Time
 	QuestProgress *quests.QuestProgress
+	LevelUp       *leveling.LevelUpResult // set when quest XP caused one or more level-ups
 }
 
 type questsService struct {
@@ -909,7 +911,7 @@ func (s *questsService) TurnInQuest(characterID, questID, npcID string) (*QuestT
 		return nil, err
 	}
 
-	grantedItems, err := s.GrantQuestRewards(characterID, questID)
+	grantedItems, levelUp, err := s.GrantQuestRewards(characterID, questID)
 	if err != nil {
 		return nil, err
 	}
@@ -922,6 +924,7 @@ func (s *questsService) TurnInQuest(characterID, questID, npcID string) (*QuestT
 		Gold:          quest.Rewards.Gold,
 		CompletedAt:   progress.CompletedAt,
 		QuestProgress: progress,
+		LevelUp:       levelUp,
 	}, nil
 }
 
@@ -947,7 +950,7 @@ func (s *questsService) TurnInQuestAnywhere(characterID, questID string) (*Quest
 		return nil, err
 	}
 
-	grantedItems, err := s.GrantQuestRewards(characterID, questID)
+	grantedItems, levelUp, err := s.GrantQuestRewards(characterID, questID)
 	if err != nil {
 		return nil, err
 	}
@@ -960,6 +963,7 @@ func (s *questsService) TurnInQuestAnywhere(characterID, questID string) (*Quest
 		Gold:          quest.Rewards.Gold,
 		CompletedAt:   progress.CompletedAt,
 		QuestProgress: progress,
+		LevelUp:       levelUp,
 	}, nil
 }
 
@@ -998,23 +1002,24 @@ func (s *questsService) npcName(id string) string {
 	return npc.Name
 }
 
-// GrantQuestRewards awards XP, gold, and items to character upon quest completion
-// Returns list of granted item names
-func (s *questsService) GrantQuestRewards(characterID, questID string) ([]string, error) {
+// GrantQuestRewards awards XP, gold, and items to character upon quest completion.
+// Applies CheckLevelUp/ApplyLevelUp when quest XP crosses thresholds (same as combat/exploration).
+// Returns granted item names and an optional level-up result for the game layer to notify the player.
+func (s *questsService) GrantQuestRewards(characterID, questID string) ([]string, *leveling.LevelUpResult, error) {
 	if s.facade == nil {
-		return nil, errors.New("facade not initialized")
+		return nil, nil, errors.New("facade not initialized")
 	}
 
 	// 1. Get quest definition to retrieve rewards
 	quest, err := s.FindByID(questID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// 2. Get character
 	char, err := s.facade.CharactersService().FindByID(characterID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// 3. Award XP
@@ -1025,6 +1030,19 @@ func (s *questsService) GrantQuestRewards(characterID, questID string) ([]string
 			"questID":     questID,
 			"xpAwarded":   quest.Rewards.XP,
 		}).Info("Awarded quest XP")
+	}
+
+	// 3b. Level-up from quest XP (combat/exploration already do this; quests previously banked past thresholds)
+	var levelUp *leveling.LevelUpResult
+	if levelsGained, _ := leveling.CheckLevelUp(char); levelsGained > 0 {
+		levelUp = leveling.ApplyLevelUp(char, levelsGained)
+		log.WithFields(log.Fields{
+			"characterID":  characterID,
+			"questID":      questID,
+			"oldLevel":     levelUp.OldLevel,
+			"newLevel":     levelUp.NewLevel,
+			"levelsGained": levelUp.LevelsGained,
+		}).Info("Quest XP caused level-up")
 	}
 
 	// 4. Award Gold
@@ -1057,10 +1075,10 @@ func (s *questsService) GrantQuestRewards(characterID, questID string) ([]string
 	// 6. Increment quests completed stat
 	char.AllTimeStats.QuestsCompleted++
 
-	// 7. Save updated character
+	// 7. Save updated character (includes any level-up)
 	err = s.facade.CharactersService().Update(characterID, char)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// 8. Execute OnCompleteScriptID if defined
@@ -1074,5 +1092,5 @@ func (s *questsService) GrantQuestRewards(characterID, questID string) ([]string
 		}).Info("Quest completion script needs execution (handled by game layer)")
 	}
 
-	return grantedItems, nil
+	return grantedItems, levelUp, nil
 }

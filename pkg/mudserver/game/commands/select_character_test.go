@@ -11,6 +11,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/traits"
 	"github.com/talesmud/talesmud/pkg/mudserver/game"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/commands"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	"github.com/talesmud/talesmud/pkg/repository"
 	"github.com/talesmud/talesmud/pkg/service"
@@ -214,5 +215,87 @@ func TestSelectCharacterSwitchRemovesPreviousCharacterFromRoom(t *testing.T) {
 	}
 	if !newRoom.IsCharacterInRoom("char-new") {
 		t.Fatal("expected selected character to be added to new room")
+	}
+}
+
+func TestSelectCharacterAppliesBankedXPLevelCatchUp(t *testing.T) {
+	g, facade := newSelectionTestGame(t)
+	roomExits := rooms.Exits{}
+	roomCharacters := rooms.Characters{}
+	if _, err := facade.RoomsService().Import(&rooms.Room{
+		Entity:      &entities.Entity{ID: "room-1"},
+		Name:        "Commons",
+		Description: "A shared room.",
+		Exits:       &roomExits,
+		Characters:  &roomCharacters,
+	}); err != nil {
+		t.Fatalf("import room: %v", err)
+	}
+	user := &entities.User{Entity: &entities.Entity{ID: "user-1"}, RefID: "auth|1", IsOnline: true}
+	if _, err := facade.UsersService().Import(user); err != nil {
+		t.Fatalf("import user: %v", err)
+	}
+
+	// Marcus-style banked XP: L15 with XP past L16 threshold (GetXPRequired(16)=2922)
+	xpFor16 := leveling.GetXPRequired(16)
+	if _, err := facade.CharactersService().Import(&characters.Character{
+		Entity:           &entities.Entity{ID: "char-gimli"},
+		Name:             "Gimli",
+		BelongsUser:      *traits.BelongsToUser("user-1"),
+		CurrentRoom:      traits.CurrentRoom{CurrentRoomID: "room-1"},
+		Level:            15,
+		XP:               xpFor16 + 108, // 3030-style overshoot
+		MaxHitPoints:     100,
+		CurrentHitPoints: 100,
+		Class:            characters.ClassWarrior,
+		Attributes: []characters.Attribute{
+			{Short: "STR", Value: 14},
+			{Short: "DEX", Value: 10},
+			{Short: "INT", Value: 8},
+			{Short: "WIS", Value: 8},
+			{Short: "STA", Value: 12},
+		},
+	}); err != nil {
+		t.Fatalf("import character: %v", err)
+	}
+
+	msg := &messages.Message{FromUser: user, Data: "sc Gimli"}
+	if !(&commands.SelectCharacterCommand{}).Execute(g, msg) {
+		t.Fatal("select character did not handle command")
+	}
+
+	outs := drainSelectionMessages(g.SendMessage())
+	var sawLevelUp bool
+	var selected *messages.CharacterSelected
+	for _, out := range outs {
+		if resp, ok := out.(messages.MessageResponse); ok && resp.Type == messages.MessageTypeLevelUp {
+			sawLevelUp = true
+			if resp.Message == "" {
+				t.Fatal("level-up message empty")
+			}
+		}
+		if cs, ok := out.(*messages.CharacterSelected); ok {
+			selected = cs
+		}
+	}
+	if !sawLevelUp {
+		t.Fatal("expected levelUp message on select with banked XP")
+	}
+
+	stored, err := facade.CharactersService().FindByID("char-gimli")
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	if stored.Level != 16 {
+		t.Fatalf("expected catch-up to level 16, got %d", stored.Level)
+	}
+	if selected == nil {
+		t.Fatal("expected CharacterSelected message")
+	}
+	if selected.Character.Level != 16 {
+		t.Fatalf("CharacterSelected still shows level %d", selected.Character.Level)
+	}
+	if selected.XPForNextLevel != leveling.GetXPRequired(17) {
+		t.Fatalf("XPForNextLevel=%d want %d", selected.XPForNextLevel, leveling.GetXPRequired(17))
 	}
 }
