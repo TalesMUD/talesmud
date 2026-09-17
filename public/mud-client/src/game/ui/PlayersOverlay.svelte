@@ -178,7 +178,7 @@
 
   .player-name {
     font-weight: 600;
-    font-size: 13px;
+    font-size: 15px;
     color: var(--text-primary, #e8dcc8);
     white-space: nowrap;
     overflow: hidden;
@@ -187,7 +187,7 @@
 
   .player-tag {
     font-family: var(--font-display, 'Cinzel', serif);
-    font-size: 9px;
+    font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.08em;
   }
@@ -289,7 +289,7 @@
   }
 
   .chat-empty {
-    font-size: 11px;
+    font-size: 12.5px;
     color: var(--text-dim, #6d5f48);
     padding: 0.45em 0.25em;
     font-style: italic;
@@ -319,7 +319,7 @@
 
   .chat-who {
     font-family: var(--font-display, 'Cinzel', serif);
-    font-size: 10px;
+    font-size: 11.5px;
     font-weight: 600;
     letter-spacing: 0.06em;
     color: var(--accent-primary, #d4a44a);
@@ -330,7 +330,7 @@
   }
 
   .chat-text {
-    font-size: 12px;
+    font-size: 13.5px;
     color: var(--text-primary, #e8dcc8);
     line-height: 1.4;
     word-break: break-word;
