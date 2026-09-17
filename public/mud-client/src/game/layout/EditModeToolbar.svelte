@@ -1,5 +1,5 @@
 <script>
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onDestroy, tick } from 'svelte';
   import { layoutStore } from './LayoutStore.js';
   import { widgetsEqual } from './layoutTemplates.js';
 
@@ -30,6 +30,53 @@
   let renameId = null;
   let renameValue = '';
 
+  /** @type {null | { kind: 'save' } | { kind: 'confirm', title: string, message: string, confirmLabel: string, danger?: boolean, onConfirm: () => void }} */
+  let dialog = null;
+  let dialogName = '';
+  let dialogError = '';
+  let dialogInputEl = null;
+  let escHandler = null;
+
+  function bindEsc(active) {
+    if (active && !escHandler) {
+      escHandler = (e) => {
+        if (e.key !== 'Escape') return;
+        if (!dialog) return;
+        e.preventDefault();
+        e.stopPropagation();
+        closeDialog();
+      };
+      if (typeof window !== 'undefined') window.addEventListener('keydown', escHandler, true);
+    } else if (!active && escHandler) {
+      if (typeof window !== 'undefined') window.removeEventListener('keydown', escHandler, true);
+      escHandler = null;
+    }
+  }
+
+  $: bindEsc(!!dialog);
+
+  onDestroy(() => {
+    if (escHandler && typeof window !== 'undefined') {
+      window.removeEventListener('keydown', escHandler, true);
+    }
+    escHandler = null;
+  });
+
+  async function focusDialogInput() {
+    await tick();
+    if (dialogInputEl && typeof dialogInputEl.focus === 'function') {
+      dialogInputEl.focus();
+      if (typeof dialogInputEl.select === 'function') dialogInputEl.select();
+    }
+  }
+
+  function closeDialog() {
+    dialog = null;
+    dialogName = '';
+    dialogError = '';
+    dialogInputEl = null;
+  }
+
   function save() {
     layoutStore.exitEditMode(true);
   }
@@ -39,9 +86,17 @@
   }
 
   function reset() {
-    if (confirm('Reset layout to default? This will discard your custom layout.')) {
-      layoutStore.resetToDefault();
-    }
+    dialog = {
+      kind: 'confirm',
+      title: 'Reset layout',
+      message: 'Reset layout to default? This will discard your custom layout.',
+      confirmLabel: 'Reset',
+      danger: true,
+      onConfirm: () => {
+        layoutStore.resetToDefault();
+        closeDialog();
+      },
+    };
   }
 
   function openAddPanel() {
@@ -49,15 +104,21 @@
   }
 
   function saveAsTemplate() {
-    const suggested = activeTpl?.name || '';
-    const name = prompt('Save current layout as template named:', suggested);
-    if (name == null) return;
-    const result = layoutStore.saveAsTemplate(name);
+    dialogName = activeTpl?.name || '';
+    dialogError = '';
+    dialog = { kind: 'save' };
+    focusDialogInput();
+  }
+
+  function submitSaveTemplate() {
+    const result = layoutStore.saveAsTemplate(dialogName);
     if (!result) {
-      alert('Please enter a template name.');
+      dialogError = 'Please enter a template name.';
+      focusDialogInput();
       return;
     }
     showTemplatesMenu = false;
+    closeDialog();
   }
 
   function onSelectTemplate(e) {
@@ -88,13 +149,26 @@
   }
 
   function deleteTpl(tpl) {
-    if (!confirm(`Delete template "${tpl.name}"?`)) return;
-    layoutStore.deleteTemplate(tpl.id);
+    dialog = {
+      kind: 'confirm',
+      title: 'Delete template',
+      message: `Delete template "${tpl.name}"?`,
+      confirmLabel: 'Delete',
+      danger: true,
+      onConfirm: () => {
+        layoutStore.deleteTemplate(tpl.id);
+        closeDialog();
+      },
+    };
   }
 
   function toggleMenu() {
     showTemplatesMenu = !showTemplatesMenu;
     renameId = null;
+  }
+
+  function onDialogBackdrop(e) {
+    if (e.target === e.currentTarget) closeDialog();
   }
 </script>
 
@@ -399,6 +473,184 @@
     font-size: 0.8em;
     padding: 0.5em 0.6em;
   }
+
+  .tpl-dialog-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 11000;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1em;
+    animation: tplOverlayIn 0.15s ease-out;
+  }
+
+  @keyframes tplOverlayIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .tpl-dialog {
+    width: min(400px, calc(100vw - 32px));
+    background: rgba(12, 16, 24, 0.97);
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    border-radius: 12px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(212, 175, 55, 0.12);
+    overflow: hidden;
+    animation: tplDialogIn 0.2s ease-out;
+  }
+
+  @keyframes tplDialogIn {
+    from { opacity: 0; transform: scale(0.96) translateY(8px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .tpl-dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75em;
+    padding: 0.85em 1em;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    background: rgba(20, 26, 36, 0.92);
+  }
+
+  .tpl-dialog-title {
+    display: flex;
+    align-items: center;
+    gap: 0.45em;
+    color: #f8fafc;
+    font-size: 0.95em;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  .tpl-dialog-title i {
+    color: #fbbf24;
+    font-size: 1.15em;
+  }
+
+  .tpl-dialog-close {
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 0.25em;
+    border-radius: 6px;
+    display: inline-flex;
+    line-height: 1;
+  }
+
+  .tpl-dialog-close:hover {
+    color: #e2e8f0;
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .tpl-dialog-body {
+    padding: 1em;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75em;
+  }
+
+  .tpl-dialog-message {
+    margin: 0;
+    color: #cbd5e1;
+    font-size: 0.9em;
+    line-height: 1.45;
+  }
+
+  .tpl-dialog-label {
+    margin: 0;
+    color: #94a3b8;
+    font-size: 0.8em;
+  }
+
+  .tpl-dialog-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.65em 0.75em;
+    border-radius: 8px;
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    background: rgba(0, 0, 0, 0.4);
+    color: #f3f4f6;
+    font: inherit;
+    font-size: 0.95em;
+  }
+
+  .tpl-dialog-input:focus {
+    outline: none;
+    border-color: rgba(251, 191, 36, 0.75);
+    box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.15);
+  }
+
+  .tpl-dialog-error {
+    margin: 0;
+    padding: 0.45em 0.6em;
+    border-radius: 6px;
+    background: rgba(127, 29, 29, 0.45);
+    border: 1px solid rgba(248, 113, 113, 0.4);
+    color: #fecaca;
+    font-size: 0.82em;
+  }
+
+  .tpl-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5em;
+    padding: 0 1em 1em;
+  }
+
+  .tpl-dialog-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35em;
+    padding: 0.55em 1em;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    background: rgba(255, 255, 255, 0.05);
+    color: #e2e8f0;
+    font-size: 0.88em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .tpl-dialog-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .tpl-dialog-btn.primary {
+    border-color: rgba(212, 175, 55, 0.55);
+    background: rgba(212, 175, 55, 0.18);
+    color: #fde68a;
+  }
+
+  .tpl-dialog-btn.primary:hover {
+    background: rgba(212, 175, 55, 0.28);
+    border-color: rgba(251, 191, 36, 0.7);
+  }
+
+  .tpl-dialog-btn.danger {
+    border-color: rgba(239, 68, 68, 0.45);
+    background: rgba(239, 68, 68, 0.18);
+    color: #fca5a5;
+  }
+
+  .tpl-dialog-btn.danger:hover {
+    background: rgba(239, 68, 68, 0.28);
+    border-color: rgba(248, 113, 113, 0.65);
+  }
+
+  .tpl-dialog-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
 </style>
 
 <div class="edit-toolbar">
@@ -505,3 +757,67 @@
     Save
   </button>
 </div>
+
+{#if dialog}
+  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+  <div class="tpl-dialog-overlay" on:click={onDialogBackdrop} role="presentation">
+    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+    <div
+      class="tpl-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-label={dialog.kind === 'save' ? 'Save as template' : dialog.title}
+      on:click|stopPropagation
+    >
+      <div class="tpl-dialog-header">
+        <span class="tpl-dialog-title">
+          <i class="material-icons">{dialog.kind === 'save' ? 'bookmark_add' : 'warning'}</i>
+          {dialog.kind === 'save' ? 'Save as template' : dialog.title}
+        </span>
+        <button class="tpl-dialog-close" type="button" on:click={closeDialog} aria-label="Close">
+          <i class="material-icons">close</i>
+        </button>
+      </div>
+
+      {#if dialog.kind === 'save'}
+        <form class="tpl-dialog-body" on:submit|preventDefault={submitSaveTemplate}>
+          <p class="tpl-dialog-label">Name for this layout template</p>
+          <input
+            class="tpl-dialog-input"
+            type="text"
+            bind:this={dialogInputEl}
+            bind:value={dialogName}
+            placeholder="e.g. Combat focus"
+            maxlength="48"
+            aria-label="Template name"
+            autocomplete="off"
+          />
+          {#if dialogError}
+            <p class="tpl-dialog-error">{dialogError}</p>
+          {/if}
+          <div class="tpl-dialog-actions" style="padding: 0;">
+            <button class="tpl-dialog-btn" type="button" on:click={closeDialog}>Cancel</button>
+            <button class="tpl-dialog-btn primary" type="submit">Save</button>
+          </div>
+        </form>
+      {:else}
+        <div class="tpl-dialog-body">
+          <p class="tpl-dialog-message">{dialog.message}</p>
+        </div>
+        <div class="tpl-dialog-actions">
+          <button class="tpl-dialog-btn" type="button" on:click={closeDialog}>Cancel</button>
+          <button
+            class="tpl-dialog-btn"
+            class:danger={dialog.danger}
+            class:primary={!dialog.danger}
+            type="button"
+            on:click={() => dialog.onConfirm && dialog.onConfirm()}
+          >
+            {dialog.confirmLabel}
+          </button>
+        </div>
+      {/if}
+    </div>
+  </div>
+{/if}
+
