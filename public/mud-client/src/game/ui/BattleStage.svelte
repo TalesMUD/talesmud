@@ -1270,7 +1270,7 @@
   .enemy-strip.pack-solo {
     top: 4%;
     right: 5%;
-    max-width: min(62%, 580px);
+    max-width: min(55%, 387px);
     max-height: 74%;
   }
   .enemy-strip.pack-duo {
@@ -1292,19 +1292,20 @@
     border: none;
     color: inherit;
     padding: 0;
-    width: clamp(150px, 22vmin, 260px);
+    /* ~2/3 prior display size — keeps pack-vs-solo ratios, less stretchy upscale */
+    width: clamp(100px, 15vmin, 173px);
     cursor: pointer;
     text-align: center;
     font: inherit;
   }
   .enemy-strip.pack-solo .enemy-card {
-    width: clamp(260px, 42vmin, 560px);
+    width: clamp(173px, 28vmin, 373px);
   }
   .enemy-strip.pack-duo .enemy-card {
-    width: clamp(150px, 22vmin, 280px);
+    width: clamp(100px, 15vmin, 187px);
   }
   .enemy-strip.pack-swarm .enemy-card {
-    width: clamp(88px, 14vmin, 150px);
+    width: clamp(59px, 9vmin, 100px);
   }
 
   .enemy-card:disabled {
@@ -1399,7 +1400,10 @@
     width: 86%;
     height: 86%;
     object-fit: contain;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
     image-rendering: pixelated;
+    -ms-interpolation-mode: nearest-neighbor;
     filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.55));
     z-index: 1;
   }
@@ -2683,28 +2687,28 @@
       overflow: hidden;
     }
     .enemy-card {
-      width: clamp(110px, 40vw, 168px);
+      width: clamp(73px, 27vw, 112px);
       touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
     }
     .enemy-strip.pack-solo .enemy-card {
-      width: clamp(180px, 64vw, 320px);
+      width: clamp(120px, 43vw, 213px);
     }
     .enemy-strip.pack-duo .enemy-card {
-      width: clamp(120px, 38vw, 180px);
+      width: clamp(80px, 25vw, 120px);
     }
     .enemy-strip.pack-swarm .enemy-card {
-      width: clamp(86px, 26vw, 132px);
+      width: clamp(57px, 17vw, 88px);
     }
     .enemy-card:active:not(:disabled) {
       transform: scale(0.97);
     }
     .enemy-sprite-wrap {
       aspect-ratio: 1;
-      max-height: min(32vh, 220px);
+      max-height: min(21vh, 147px);
     }
     .enemy-strip.pack-solo .enemy-sprite-wrap {
-      max-height: min(46vh, 340px);
+      max-height: min(31vh, 227px);
     }
     .nameplate { font-size: 0.74rem; }
     .hp-track { height: 9px; }
