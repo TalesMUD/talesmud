@@ -541,7 +541,13 @@ function createClient(renderer, characterCreator, muxStore) {
           // Pass structured data so terminals can color the player name
           const color = getPlayerColor(msg.username);
           renderer({ username: msg.username, message: msg.message, color });
-          overlayStore.pushMessage(msg.username + ":  " + msg.message);
+          // Room mood / system ambiance: body only on overlay (no SYSTEM: prefix).
+          // Terminal still gets the username via renderer above.
+          if (/^system$/i.test(String(msg.username))) {
+            overlayStore.pushMessage({ text: msg.message, kind: 'ambiance' });
+          } else {
+            overlayStore.pushMessage(msg.username + ":  " + msg.message);
+          }
         } else {
           renderer(message);
           overlayStore.pushMessage(message);

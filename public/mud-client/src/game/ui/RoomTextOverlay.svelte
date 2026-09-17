@@ -91,6 +91,25 @@
     padding: 0;
   }
 
+  /* Soft mood / ambiance toasts — not orange alert chrome. */
+  .overlay-message.ambiance {
+    background: rgba(12, 14, 18, 0.72);
+    color: #f5e6c8;
+    font-style: italic;
+    font-weight: 400;
+    border: 1px solid rgba(212, 175, 110, 0.42);
+    box-shadow:
+      0 6px 20px rgba(0, 0, 0, 0.35),
+      0 0 18px rgba(212, 175, 110, 0.08);
+    animation: overlayMoodIn 0.45s ease-out;
+  }
+
+  .overlay-message.ambiance :global(strong) {
+    color: #f0d9a0;
+    font-weight: 600;
+    font-style: italic;
+  }
+
   .overlay-message-inner {
     box-sizing: border-box;
     padding: 0.95em 1.25em 1.15em;
@@ -112,6 +131,17 @@
     from {
       opacity: 0;
       transform: scale(0.96) translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  @keyframes overlayMoodIn {
+    from {
+      opacity: 0;
+      transform: scale(0.98) translateY(4px);
     }
     to {
       opacity: 1;
@@ -143,6 +173,7 @@
     {#each $overlayStore as msg (msg.id)}
       <div
         class="overlay-message"
+        class:ambiance={msg.kind === 'ambiance'}
         class:fading={msg.fading}
         style="--fade-duration: {msg.fadeOutDuration}ms"
       >

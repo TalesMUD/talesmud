@@ -10,15 +10,35 @@ function createOverlayStore() {
   return {
     subscribe,
 
-    pushMessage(text) {
-      if (!text || text.trim() === '') return;
+    /**
+     * Push a room-hero toast.
+     * @param {string|{text:string, kind?:'ambiance'|'chat'}} payload
+     *   string → kind 'chat' (default alert chrome)
+     *   { text, kind: 'ambiance' } → mood toast (no System: prefix; soft style)
+     */
+    pushMessage(payload) {
+      let text;
+      let kind = 'chat';
+
+      if (payload && typeof payload === 'object') {
+        text = payload.text;
+        if (payload.kind === 'ambiance' || payload.kind === 'chat') {
+          kind = payload.kind;
+        }
+      } else {
+        text = payload;
+      }
+
+      if (!text || String(text).trim() === '') return;
 
       const id = ++messageId;
-      const cleanText = text.trim();
+      const cleanText = String(text).trim();
 
       // Give longer reactions enough on-screen time to be read (not a blink).
+      // Ambiance mood lines get a touch more dwell so flavor sinks in.
+      const base = kind === 'ambiance' ? 3200 : 2800;
       const displayDuration = Math.min(
-        2800 + Math.floor(cleanText.length / 40) * 700,
+        base + Math.floor(cleanText.length / 40) * 700,
         9000
       );
       const fadeOutDuration = Math.min(
@@ -30,6 +50,7 @@ function createOverlayStore() {
         const updated = [...messages, {
           id,
           text: cleanText,
+          kind,
           displayDuration,
           fadeOutDuration,
           fading: false
