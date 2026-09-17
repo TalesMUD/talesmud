@@ -10,10 +10,13 @@
  */
 
 /** Bump when default pin/chrome layout changes; migrates saved settings once. */
-export const ACTION_BAR_LAYOUT_REVISION = 2;
+export const ACTION_BAR_LAYOUT_REVISION = 3;
 
-/** Option C: no default command pins — Look/Rest/etc. are optional via ⋯ */
-export const DEFAULT_ACTION_BAR_PINS = [];
+/**
+ * Option C: room bar stays lean. Seed Recipes so fresh guests find crafting
+ * without typing; Look/Rest/etc. stay optional via ⋯. INV Craft remains.
+ */
+export const DEFAULT_ACTION_BAR_PINS = ['recipes'];
 
 export const INVENTORY_OPEN_OVERLAY = 'overlay';
 export const INVENTORY_OPEN_WIDGET = 'widget';
@@ -102,14 +105,22 @@ export function normalizeActionBarPins(pins) {
 }
 
 /**
- * One-shot migration to Option C: reset legacy pin layouts so room bar is
- * clean. INV/MAP/SAY become fixed chrome (not pins). Custom pins from
- * revision 2+ are preserved.
+ * One-shot migrations:
+ * - rev < 2: Option C wipe of legacy Look/INV/MAP clutter → current defaults
+ * - rev 2: seed Recipes into existing bars without wiping custom pins
+ * - rev >= 3: preserve stored pins
  */
 export function migrateActionBarPins(pins, revision) {
   const rev = Number(revision) || 0;
   if (rev >= ACTION_BAR_LAYOUT_REVISION) {
     return normalizeActionBarPins(pins);
+  }
+  if (rev >= 2) {
+    const list = normalizeActionBarPins(pins);
+    if (!list.includes('recipes')) {
+      return ['recipes', ...list];
+    }
+    return list;
   }
   return [...DEFAULT_ACTION_BAR_PINS];
 }

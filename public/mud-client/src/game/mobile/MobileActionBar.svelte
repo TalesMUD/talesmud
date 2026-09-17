@@ -405,6 +405,14 @@
   $: groundItems = ($store.groundItems || []).filter(item => !item.noPickup);
 
   function executeCommand(cmd) {
+    const raw = String(cmd || '').trim();
+    const lower = raw.toLowerCase();
+    // Room chips CRAFT/RECIPES (and typed aliases) always open the recipes overlay.
+    if (lower === 'craft' || lower === 'recipes' || lower === 'recipe') {
+      sendMessage('recipes');
+      closeMenus();
+      return;
+    }
     sendMessage(cmd);
     closeMenus();
   }

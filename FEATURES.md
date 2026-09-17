@@ -224,7 +224,7 @@ Stackable item quantities are kept consistent when consumed or partially dropped
 ### Gathering & Crafting (v1 — no professions)
 - **Everyone** can gather and craft. No skill ranks, no profession unlocks.
 - **Gathering**: room actions `GATHER …` / `FORAGE …` / `HARVEST …` (scripted nodes with deplete flags) plus commands `gather` / `forage` / `harvest [target]`.
-- **Crafting**: `recipes` lists all recipes; `craft <recipe>` consumes mats and grants output.
+- **Crafting**: `recipes` lists all recipes; bare `craft` opens the same list; `craft <recipe>` consumes mats and grants output. Client seeds a **Recipes** action-bar pin; R0209 also exposes **CRAFT** / **RECIPES** room chips.
 - Optional **stations**: recipe `station: forge` requires room tag `forge` or `crafting`; `campfire` requires `campfire`/`kitchen`/`hearth`. Food/leather recipes craft anywhere.
 - Recipe YAML lives in content `data/recipes/` (loaded from `import/mvp-rpg-1/data/recipes` at runtime; seed fallback in engine).
 
@@ -2113,7 +2113,7 @@ Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "unc
 - Each room paints as a 48px biome pixel tile (`public/img/map-tiles/`: meadow, forest, settlement, dungeon, water, wild, fog). Landmark/bind rooms overlay a bind-stone icon. Compact minimap and fullscreen MapOverviewOverlay share `atlasRenderer.paintAtlas`. Fog tiles are muted; one gold you-are-here pawn; paths/exits and label LOD unchanged.
 - The widget auto-fits discovered places into its panel and keeps that fit (canvas is out of flow so it cannot resize the widget)
 - Layer tabs, pan, wheel zoom, click-to-travel along discovered paths
-- Desktop/mobile action bars (Option C): room-only dirs + room actions + Shop when a merchant is present; fixed INV / MAP / SAY chrome; optional Look/Rest/… pins via ⋯ (empty by default); layout revision migrates legacy Look/pin clutter
+- Desktop/mobile action bars (Option C): room-only dirs + room actions + Shop when a merchant is present; fixed INV / MAP / SAY chrome; **Recipes** seeded by default for crafting discoverability; optional Look/Rest/… pins via ⋯; layout revision migrates legacy Look/pin clutter and seeds Recipes onto rev-2 bars
 - Inventory chrome opens a popup overlay by default; preference can switch to on-screen widget / mobile sheet
 - Room action/system reaction toasts render large and centered on the room hero art (not the command log)
 - Same JSON is the contract for a future mobile renderer

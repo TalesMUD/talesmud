@@ -40,8 +40,8 @@ import {
   skillsForClass,
 } from './hudPrefs.js';
 
-assert.deepStrictEqual(DEFAULT_ACTION_BAR_PINS, [], 'Option C: no default action-bar pins');
-assert.ok(ACTION_BAR_LAYOUT_REVISION >= 2, 'layout revision bumped for Option C');
+assert.deepStrictEqual(DEFAULT_ACTION_BAR_PINS, ['recipes'], 'Recipes seeded for crafting discoverability');
+assert.ok(ACTION_BAR_LAYOUT_REVISION >= 3, 'layout revision bumped for Recipes seed');
 
 assert.deepStrictEqual(
   ACTION_BAR_CHROME.map((c) => c.id),
@@ -57,19 +57,27 @@ assert.ok(
   'Look is default OFF the action bar'
 );
 assert.ok(
+  DEFAULT_ACTION_BAR_PINS.includes('recipes'),
+  'Recipes is default ON the action bar'
+);
+assert.ok(
   PINNABLE_COMMANDS.some((c) => c.id === 'look'),
   'Look remains pinnable via ⋯'
+);
+assert.ok(
+  PINNABLE_COMMANDS.some((c) => c.id === 'recipes'),
+  'Recipes remains pinnable via ⋯'
 );
 
 assert.deepStrictEqual(
   normalizeActionBarPins(null),
-  [],
-  'null pins → empty Option C default'
+  ['recipes'],
+  'null pins → Recipes default'
 );
 assert.deepStrictEqual(
   normalizeActionBarPins([]),
   [],
-  'empty pins stay empty'
+  'empty pins stay empty (explicit clear)'
 );
 assert.deepStrictEqual(
   normalizeActionBarPins(['look', 'inv', 'map', 'look', 'nope', 'say']),
@@ -84,18 +92,28 @@ assert.deepStrictEqual(
 
 assert.deepStrictEqual(
   migrateActionBarPins(['look', 'inv', 'map'], 1),
-  [],
-  'legacy look+inv+map defaults migrate to empty pins'
+  ['recipes'],
+  'legacy look+inv+map defaults migrate to Recipes seed'
 );
 assert.deepStrictEqual(
   migrateActionBarPins(['look', 'inv', 'map', 'rest', 'help', 'say'], 1),
-  [],
-  'cluttered legacy pins migrate to empty on revision bump'
+  ['recipes'],
+  'cluttered legacy pins migrate to Recipes seed on revision bump'
 );
 assert.deepStrictEqual(
   migrateActionBarPins(['look', 'who'], 2),
+  ['recipes', 'look', 'who'],
+  'revision 2 → 3 seeds Recipes without wiping optional pins'
+);
+assert.deepStrictEqual(
+  migrateActionBarPins(['recipes', 'look'], 2),
+  ['recipes', 'look'],
+  'revision 2 → 3 does not duplicate Recipes'
+);
+assert.deepStrictEqual(
+  migrateActionBarPins(['look', 'who'], 3),
   ['look', 'who'],
-  'revision 2+ preserves optional pins'
+  'revision 3+ preserves optional pins as-is'
 );
 
 const toggledOn = togglePin([], 'who');
