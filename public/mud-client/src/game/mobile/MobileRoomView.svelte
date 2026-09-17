@@ -108,11 +108,26 @@
   .room-image-section {
     position: relative;
     width: 100%;
-    height: 40vh;
+    /* Prefer more art when the viewport is tall (portrait phones) */
+    height: clamp(180px, 42vh, 420px);
     min-height: 180px;
-    max-height: 360px;
+    max-height: 420px;
     overflow: hidden;
     flex-shrink: 0;
+  }
+
+  @media (orientation: portrait) and (min-height: 700px) {
+    .room-image-section {
+      height: clamp(220px, 48vh, 480px);
+      max-height: 480px;
+    }
+  }
+
+  @media (orientation: landscape) {
+    .room-image-section {
+      height: clamp(140px, 36vh, 280px);
+      max-height: 280px;
+    }
   }
 
   .room-image-inner {
@@ -138,12 +153,13 @@
     bottom: 0;
     left: 0;
     right: 0;
-    height: 50%;
+    /* Keep fade as a thin band above the description, not mid-hero */
+    height: clamp(48px, 22%, 96px);
     background-image: linear-gradient(
       to bottom,
       rgba(0, 0, 0, 0) 0%,
-      rgba(0, 0, 0, 0.4) 40%,
-      rgba(0, 0, 0, 0.8) 70%,
+      rgba(0, 0, 0, 0.35) 45%,
+      rgba(0, 0, 0, 0.85) 78%,
       rgba(0, 0, 0, 1) 100%
     );
     pointer-events: none;
