@@ -171,3 +171,60 @@ func TestPartySaySendsOnlyToOnlinePartyMembers(t *testing.T) {
 		t.Fatalf("did not expect party chat for offline member, got %#v", responses)
 	}
 }
+
+func TestPartyInviteSendsStructuredInviteMessage(t *testing.T) {
+	g, facade := newPartyCommandTestGame(t)
+	leaderUser := &entities.User{Entity: &entities.Entity{ID: "user-1"}, RefID: "auth|1", LastCharacter: "char-1", IsOnline: true}
+	targetUser := &entities.User{Entity: &entities.Entity{ID: "user-2"}, RefID: "auth|2", LastCharacter: "char-2", IsOnline: true}
+	for _, user := range []*entities.User{leaderUser, targetUser} {
+		if _, err := facade.UsersService().Import(user); err != nil {
+			t.Fatalf("import user: %v", err)
+		}
+	}
+	leader := &characters.Character{
+		Entity:      &entities.Entity{ID: "char-1"},
+		Name:        "Aster",
+		BelongsUser: *traits.BelongsToUser("user-1"),
+	}
+	target := &characters.Character{
+		Entity:      &entities.Entity{ID: "char-2"},
+		Name:        "Bryn",
+		BelongsUser: *traits.BelongsToUser("user-2"),
+	}
+	if _, err := facade.CharactersService().Import(leader); err != nil {
+		t.Fatalf("import leader: %v", err)
+	}
+	if _, err := facade.CharactersService().Import(target); err != nil {
+		t.Fatalf("import target: %v", err)
+	}
+
+	g.ConnectUserSession(leaderUser)
+	g.SetUserSessionCharacter(leaderUser, leader)
+	g.ConnectUserSession(targetUser)
+	g.SetUserSessionCharacter(targetUser, target)
+
+	if !(&commands.PartyCommand{}).Execute(g, &messages.Message{FromUser: leaderUser, Character: leader, Data: "party invite Bryn"}) {
+		t.Fatal("party invite not handled")
+	}
+
+	var sawInvite bool
+	var sawParty *messages.PartyMessage
+	for _, out := range drainPartyMessages(g.SendMessage()) {
+		switch msg := out.(type) {
+		case *messages.PartyInviteMessage:
+			if msg.AudienceID == targetUser.ID && msg.Pending && msg.InviterName == "Aster" {
+				sawInvite = true
+			}
+		case *messages.PartyMessage:
+			if msg.AudienceID == leaderUser.ID {
+				sawParty = msg
+			}
+		}
+	}
+	if !sawInvite {
+		t.Fatal("expected structured party_invite for target")
+	}
+	if sawParty == nil || !sawParty.InParty || len(sawParty.Members) != 1 {
+		t.Fatalf("expected structured party roster for leader after auto-create invite, got %#v", sawParty)
+	}
+}

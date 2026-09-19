@@ -762,6 +762,64 @@ func NewFriendsMessage(userID string, friends []FriendEntry) *FriendsMessage {
 	}
 }
 
+// PartyMemberEntry is one row in the party overlay.
+type PartyMemberEntry struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Online bool   `json:"online"`
+}
+
+// PartyMessage refreshes the party overlay roster.
+type PartyMessage struct {
+	MessageResponse
+	InParty   bool               `json:"inParty"`
+	PartyID   string             `json:"partyId,omitempty"`
+	PartyName string             `json:"partyName,omitempty"`
+	Members   []PartyMemberEntry `json:"members"`
+}
+
+// NewPartyMessage creates a structured party payload for the client overlay.
+func NewPartyMessage(userID string, inParty bool, partyID, partyName string, members []PartyMemberEntry) *PartyMessage {
+	if members == nil {
+		members = []PartyMemberEntry{}
+	}
+	return &PartyMessage{
+		MessageResponse: MessageResponse{
+			Audience:   MessageAudienceOrigin,
+			AudienceID: userID,
+			Type:       MessageTypeParty,
+			Message:    "",
+		},
+		InParty:   inParty,
+		PartyID:   partyID,
+		PartyName: partyName,
+		Members:   members,
+	}
+}
+
+// PartyInviteMessage drives the Accept/Decline invite banner.
+type PartyInviteMessage struct {
+	MessageResponse
+	Pending     bool   `json:"pending"`
+	InviterName string `json:"inviterName,omitempty"`
+	PartyID     string `json:"partyId,omitempty"`
+}
+
+// NewPartyInviteMessage creates a pending (or cleared) party invite payload.
+func NewPartyInviteMessage(userID string, pending bool, inviterName, partyID string) *PartyInviteMessage {
+	return &PartyInviteMessage{
+		MessageResponse: MessageResponse{
+			Audience:   MessageAudienceOrigin,
+			AudienceID: userID,
+			Type:       MessageTypePartyInvite,
+			Message:    "",
+		},
+		Pending:     pending,
+		InviterName: inviterName,
+		PartyID:     partyID,
+	}
+}
+
 // NewShopMessage creates a structured shop payload for the client overlay.
 func NewShopMessage(userID, merchantName, merchantID string, gold int64, stock []ShopStockItem, acceptedTypes, rejectedTags []string, sellMultiplier float64) *ShopMessage {
 	if stock == nil {

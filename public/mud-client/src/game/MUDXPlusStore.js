@@ -484,6 +484,9 @@ function createStore() {
     inventoryOverlayOpen: false,
     friendsOverlayOpen: false,
     friends: [],
+    partyOverlayOpen: false,
+    party: { inParty: false, partyId: '', partyName: '', members: [] },
+    partyInvite: null,
   });
 
   const store = {
@@ -1294,6 +1297,49 @@ function createStore() {
     setFriendsOverlayOpen: (open) => {
       update((state) => {
         return { ...state, friendsOverlayOpen: !!open };
+      });
+    },
+
+    setParty: (party) => {
+      update((state) => {
+        // Keep shape aligned with partyState.normalizePartyState
+        const next = party && typeof party === 'object' ? party : {};
+        state.party = {
+          inParty: !!next.inParty,
+          partyId: String(next.partyId || next.partyID || ''),
+          partyName: String(next.partyName || ''),
+          members: Array.isArray(next.members) ? next.members : [],
+        };
+        return state;
+      });
+    },
+    setPartyInvite: (invite) => {
+      update((state) => {
+        if (!invite || !invite.pending) {
+          state.partyInvite = null;
+          return state;
+        }
+        state.partyInvite = {
+          pending: true,
+          inviterName: String(invite.inviterName || ''),
+          partyId: String(invite.partyId || invite.partyID || ''),
+        };
+        return state;
+      });
+    },
+    openPartyOverlay: () => {
+      update((state) => {
+        return { ...state, partyOverlayOpen: true };
+      });
+    },
+    closePartyOverlay: () => {
+      update((state) => {
+        return { ...state, partyOverlayOpen: false };
+      });
+    },
+    setPartyOverlayOpen: (open) => {
+      update((state) => {
+        return { ...state, partyOverlayOpen: !!open };
       });
     },
   };

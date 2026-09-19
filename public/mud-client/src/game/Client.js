@@ -215,6 +215,27 @@ function createClient(renderer, characterCreator, muxStore) {
     }
   };
 
+  messageHandlers["party"] = (msg) => {
+    if (mux && mux.setParty) {
+      mux.setParty({
+        inParty: !!msg.inParty,
+        partyId: msg.partyId || msg.partyID || '',
+        partyName: msg.partyName || '',
+        members: msg.members || [],
+      });
+    }
+  };
+
+  messageHandlers["party_invite"] = (msg) => {
+    if (mux && mux.setPartyInvite) {
+      mux.setPartyInvite({
+        pending: !!msg.pending,
+        inviterName: msg.inviterName || '',
+        partyId: msg.partyId || msg.partyID || '',
+      });
+    }
+  };
+
   messageHandlers["shop"] = (msg) => {
     if (mux) {
       mux.setShop({

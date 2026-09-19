@@ -66,11 +66,17 @@
   }
 
   $: showFriends = !isGuestClient();
+  $: showParty = !isGuestClient();
   $: resting = !!(!$store.inCombat && $store.characterStats?.resting);
 
   function openFriends() {
     if (!showFriends) return;
     if (store && store.openFriendsOverlay) store.openFriendsOverlay();
+  }
+
+  function openParty() {
+    if (!showParty) return;
+    if (store && store.openPartyOverlay) store.openPartyOverlay();
   }
 </script>
 
@@ -112,6 +118,24 @@
   }
   .friends-launch i { font-size: 20px; }
   .friends-launch:hover { border-color: rgba(196, 181, 253, 0.7); }
+
+  .party-launch {
+    pointer-events: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 38px;
+    min-height: 38px;
+    padding: 0;
+    border: 1px solid rgba(194, 162, 99, 0.38);
+    border-radius: 8px;
+    background:
+      linear-gradient(180deg, rgba(28, 23, 18, 0.92), rgba(9, 10, 12, 0.86));
+    color: #fbbf24;
+    cursor: pointer;
+  }
+  .party-launch i { font-size: 20px; }
+  .party-launch:hover { border-color: rgba(251, 191, 36, 0.7); }
 
   .rest-launch {
     pointer-events: none;
@@ -287,6 +311,10 @@
       min-width: 44px;
       min-height: 44px;
     }
+    .party-launch {
+      min-width: 44px;
+      min-height: 44px;
+    }
     .rest-launch { min-height: 44px; }
   }
 </style>
@@ -295,6 +323,11 @@
   <div class="switcher-row">
     {#if resting}
       <span class="rest-launch" title="Resting"><i class="material-icons">hotel</i> Resting</span>
+    {/if}
+    {#if showParty}
+      <button class="party-launch" type="button" title="Party" on:click={openParty}>
+        <i class="material-icons">groups</i>
+      </button>
     {/if}
     {#if showFriends}
       <button class="friends-launch" type="button" title="Friends" on:click={openFriends}>

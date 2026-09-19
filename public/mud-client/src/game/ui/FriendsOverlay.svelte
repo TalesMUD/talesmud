@@ -76,6 +76,11 @@
     whisperFor = '';
   }
 
+  function inviteFriend(friend) {
+    if (!friend || !friend.name || !friend.online || !sendMessage) return;
+    sendMessage(`party invite ${friend.name}`);
+  }
+
   onDestroy(() => {
     if (escHandler && typeof window !== 'undefined') window.removeEventListener('keydown', escHandler);
   });
@@ -190,6 +195,7 @@
     font-size: 12px;
   }
   .act.whisper { border-color: rgba(59, 130, 246, 0.45); color: #93c5fd; }
+  .act.party { border-color: rgba(251, 191, 36, 0.45); color: #fbbf24; }
   .act.remove { border-color: rgba(248, 113, 113, 0.4); color: #fca5a5; }
   .compose, .adder {
     display: flex;
@@ -258,6 +264,7 @@
                   <span class="who-status" class:online={friend.online}>{friend.online ? 'Online' : 'Offline'}</span>
                 </div>
                 <div class="actions">
+                  <button class="act party" type="button" disabled={!friend.online} on:click={() => inviteFriend(friend)} title="Invite to party">Party</button>
                   <button class="act whisper" type="button" disabled={!friend.online} on:click={() => startWhisper(friend)} title="Whisper">Tell</button>
                   <button class="act remove" type="button" on:click={() => removeFriend(friend)} title="Remove">Remove</button>
                 </div>

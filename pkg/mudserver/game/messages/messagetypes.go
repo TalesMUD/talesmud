@@ -54,4 +54,10 @@ const (
 
 	// Friends list overlay (structured roster for web/mobile)
 	MessageTypeFriends = "friends"
+
+	// Party roster overlay (structured members for web/mobile)
+	MessageTypeParty = "party"
+
+	// Pending party invite toast/banner (Accept / Decline without typing)
+	MessageTypePartyInvite = "party_invite"
 )

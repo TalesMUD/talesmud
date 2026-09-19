@@ -467,6 +467,15 @@ p <message>            # Alias for party chat/commands
 
 Party membership is persisted in the existing `Party` entity. Pending invites
 are live-session state and must be accepted while both players are online.
+Guests are refused (same as Friends). Structured WebSocket payloads:
+`party` `{inParty,partyId,partyName,members[{id,name,online}]}` and
+`party_invite` `{pending,inviterName,partyId}` for the Accept/Decline banner.
+
+Client: HUD Party button (next to Friends on the character switcher) opens a
+Party panel — Create / Invite by name, member Online/Offline list, Party Say,
+Leave. Pending invites show a bottom Accept/Decline banner (no typing required).
+Room players overlay and Friends rows can invite online players. Guests hide
+the HUD entry and see a short sign-in note.
 
 ### Friends (v1)
 Per-character friends list stored as `Character.FriendIDs` (character UUIDs) in
