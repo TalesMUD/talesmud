@@ -452,30 +452,30 @@ client marks `isYou` locally based on the currently selected character because a
 single broadcast is shared by multiple users.
 
 ### Party Commands
-```bash
-party create           # Create a party with the current character
-party invite <player>  # Invite an online player to your party
-party accept           # Accept a pending party invite
-party decline          # Decline a pending party invite
-party list             # Show party members
-party leave            # Leave the current party
-party say <message>    # Send party chat
-party <message>        # Send party chat
 
-p <message>            # Alias for party chat/commands
-```
+`party create`, `party invite <player>`, `party accept`, `party decline`,
+`party leave`, `party kick <player>` (leader), `party promote <player>` (leader),
+`party list`, `party say <message>` (or `party <message>`).
 
-Party membership is persisted in the existing `Party` entity. Pending invites
-are live-session state and must be accepted while both players are online.
-Guests are refused (same as Friends). Structured WebSocket payloads:
-`party` `{inParty,partyId,partyName,members[{id,name,online}]}` and
-`party_invite` `{pending,inviterName,partyId}` for the Accept/Decline banner.
+Party membership is persisted in the existing `Party` entity (SQLite JSON),
+including `leaderCharacterId`. Creator is leader. Soft/hard cap: **5** members
+(`entities.MaxPartySize`) enforced on invite and accept. Pending invites
+remain in-memory on the game server. Guests are refused (same as Friends).
 
-Client: HUD Party button (next to Friends on the character switcher) opens a
-Party panel — Create / Invite by name, member Online/Offline list, Party Say,
-Leave. Pending invites show a bottom Accept/Decline banner (no typing required).
+Structured WebSocket payloads:
+`party` `{inParty,partyId,partyName,leaderId,maxMembers,members[{id,name,online,level,class,portrait,isLeader}]}`
+and `party_invite` `{pending,inviterName,partyId}` (clear with `pending:false`).
+
+Client (Party UI v2, cache-bust `?v=party2`): HUD Party button opens a gold-bordered
+panel — party name title + `N/M members · K online` subtitle; member rows with
+avatar/initial, You/Leader badges, class · level, online pill; sticky action bar
+(Say primary, Invite secondary, Leave danger+confirm); party-say strip (~8 lines);
+Create/Invite empty state; mobile bottom-sheet. Friends rows use matching **Invite**
+outline. Leader sees Kick on other members.
+
 Room players overlay and Friends rows can invite online players. Guests hide
-the HUD entry and see a short sign-in note.
+the Party button and see a sign-in note in the overlay.
+
 
 ### Friends (v1)
 Per-character friends list stored as `Character.FriendIDs` (character UUIDs) in
