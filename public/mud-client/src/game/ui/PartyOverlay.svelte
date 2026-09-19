@@ -1,5 +1,7 @@
 <script>
-  import { onDestroy } from 'svelte';
+  import { onDestroy, tick } from 'svelte';
+  import { hashedAvatar } from '../portraitSrc.js';
+  import { parsePartyChatLine } from '../partyState.js';
 
   export let store = null;
   export let sendMessage = null;
@@ -7,13 +9,30 @@
   let inviteName = '';
   let sayText = '';
   let escHandler = null;
+  let closeBtn;
+  let localPartyChat = [];
+  let wasOpen = false;
 
   $: open = !!(store && $store && $store.partyOverlayOpen);
-  $: party = (store && $store && $store.party) || { inParty: false, partyId: '', partyName: '', members: [] };
+  $: party = (store && $store && $store.party) || {
+    inParty: false, partyId: '', partyName: '', leaderId: '', maxMembers: 5, members: [],
+  };
   $: members = Array.isArray(party.members) ? party.members : [];
   $: invite = (store && $store && $store.partyInvite) || null;
   $: guest = isGuestClient();
-  let wasOpen = false;
+  $: me = (store && $store && $store.character) || null;
+  $: myId = me && me.id ? String(me.id) : '';
+  $: myName = me && me.name ? String(me.name) : '';
+  $: storeChat = (store && $store && $store.partyChat) || [];
+  $: partyChat = mergeChat(storeChat, localPartyChat);
+  $: onlineCount = members.filter((m) => m.online).length;
+  $: maxMembers = party.maxMembers || 5;
+  $: memberCount = members.length;
+  $: iAmLeader = !!(myId && (party.leaderId === myId || members.some((m) => m.id === myId && m.isLeader)));
+  $: title = party.inParty && party.partyName ? party.partyName : 'Party';
+  $: subtitle = party.inParty
+    ? `${memberCount}/${maxMembers} members · ${onlineCount} online`
+    : '';
 
   function isGuestClient() {
     try {
@@ -23,9 +42,47 @@
     }
   }
 
+  function mergeChat(a, b) {
+    const seen = new Set();
+    const out = [];
+    for (const line of [...(a || []), ...(b || [])]) {
+      if (!line || !line.id || seen.has(line.id)) continue;
+      seen.add(line.id);
+      out.push(line);
+    }
+    return out.slice(-8);
+  }
+
+  function isYou(member) {
+    if (!member) return false;
+    if (myId && member.id && String(member.id) === myId) return true;
+    if (myName && member.name && String(member.name).toLowerCase() === myName.toLowerCase()) return true;
+    return false;
+  }
+
+  function avatarSrc(member) {
+    if (member && member.portrait) return member.portrait;
+    return hashedAvatar((member && (member.id || member.name)) || 'party');
+  }
+
+  function initialOf(member) {
+    const n = (member && member.name) || '?';
+    return n.charAt(0).toUpperCase();
+  }
+
+  function classLevelLine(member) {
+    const cls = member && member.class ? member.class : '';
+    const lvl = member && member.level ? `Lv ${member.level}` : '';
+    if (cls && lvl) return `${cls} · ${lvl}`;
+    return cls || lvl || '';
+  }
+
   $: if (open && !wasOpen) {
     wasOpen = true;
     if (!guest && sendMessage) sendMessage('party list');
+    tick().then(() => {
+      if (closeBtn && typeof closeBtn.focus === 'function') closeBtn.focus();
+    });
   } else if (!open && wasOpen) {
     wasOpen = false;
   }
@@ -65,13 +122,24 @@
 
   function leaveParty() {
     if (!sendMessage) return;
+    if (typeof window !== 'undefined' && !window.confirm('Leave this party?')) return;
     sendMessage('party leave');
+  }
+
+  function kickMember(member) {
+    if (!member || !member.name || !sendMessage || !iAmLeader || isYou(member)) return;
+    if (typeof window !== 'undefined' && !window.confirm(`Kick ${member.name} from the party?`)) return;
+    sendMessage(`party kick ${member.name}`);
   }
 
   function sendSay() {
     const text = String(sayText || '').trim();
     if (!text || !sendMessage) return;
     sendMessage(`party say ${text}`);
+    const line = parsePartyChatLine(`[Party] ${myName || 'You'}: ${text}`, myName);
+    if (line) {
+      localPartyChat = [...localPartyChat, line].slice(-8);
+    }
     sayText = '';
   }
 
@@ -83,6 +151,16 @@
   function declineInvite() {
     if (!sendMessage) return;
     sendMessage('party decline');
+  }
+
+  function onAvatarError(ev, member) {
+    const img = ev && ev.currentTarget;
+    if (!img || img.dataset.fallback === '1') {
+      if (img) img.style.display = 'none';
+      return;
+    }
+    img.dataset.fallback = '1';
+    img.src = hashedAvatar((member && (member.id || member.name)) || 'party');
   }
 
   onDestroy(() => {
@@ -110,23 +188,23 @@
     max-height: min(80vh, 640px);
     display: flex;
     flex-direction: column;
-    background: rgba(12, 16, 24, 0.97);
-    border: 1px solid rgba(212, 175, 55, 0.28);
+    background: var(--social-panel-bg, rgba(12, 16, 24, 0.97));
+    border: 1px solid var(--social-border, rgba(212, 175, 55, 0.28));
     border-radius: 10px;
     overflow: hidden;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
   }
   .party-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.75em;
     padding: 0.75em 1em;
     border-bottom: 1px solid rgba(148, 163, 184, 0.2);
-    background: rgba(20, 26, 36, 0.9);
+    background: var(--social-header-bg, rgba(20, 26, 36, 0.9));
     flex-shrink: 0;
   }
+  .party-heading { flex: 1; min-width: 0; }
   .party-title {
-    flex: 1;
     font-weight: 700;
     color: #f8fafc;
     display: flex;
@@ -137,6 +215,12 @@
     font-size: 13px;
   }
   .party-title i { color: #fbbf24; font-size: 1.2em; }
+  .party-subtitle {
+    margin-top: 4px;
+    color: var(--social-muted, #8a8070);
+    font-size: 11px;
+    letter-spacing: 0.03em;
+  }
   .party-close {
     border: none;
     background: transparent;
@@ -151,53 +235,142 @@
     flex: 1;
     min-height: 0;
     overflow: auto;
-    padding: 0.5em 0.75em 0.75em;
+    padding: 0.35em 0.75em 0.5em;
   }
   .empty {
-    color: #8a8070;
+    color: var(--social-muted, #8a8070);
     font-size: 13px;
-    padding: 1.2em 0.4em;
+    padding: 1.2em 0.4em 0.6em;
     text-align: center;
+    line-height: 1.45;
   }
-  .party-name {
-    color: #fbbf24;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    padding: 4px 6px 10px;
+  .empty-hint {
+    display: block;
+    margin-top: 0.55em;
+    font-size: 11px;
+    color: #6b7280;
   }
   .row {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 6px;
+    gap: 10px;
+    padding: 10px 6px;
     border-bottom: 1px solid rgba(255,255,255,0.05);
   }
-  .dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #6b7280;
+  .avatar-wrap {
+    position: relative;
+    width: 40px;
+    height: 40px;
     flex-shrink: 0;
   }
-  .dot.online {
-    background: #4ade80;
-    box-shadow: 0 0 8px rgba(74, 222, 128, 0.7);
+  .avatar, .avatar-fallback {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    background: rgba(0,0,0,0.35);
+  }
+  .avatar-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fbbf24;
+    font-weight: 700;
+    font-size: 16px;
   }
   .who {
     flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
+    gap: 2px;
   }
-  .who-name { color: #f3ead4; font-weight: 700; font-size: 14px; }
-  .who-status { color: #8a8070; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
-  .who-status.online { color: #86efac; }
+  .who-top {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .who-name { color: var(--social-text, #f3ead4); font-weight: 700; font-size: 14px; }
+  .you-tag {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #1a1408;
+    background: #fbbf24;
+    border-radius: 999px;
+    padding: 1px 6px;
+    font-weight: 700;
+  }
+  .leader-badge {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #fbbf24;
+    border: 1px solid rgba(251, 191, 36, 0.45);
+    border-radius: 999px;
+    padding: 1px 6px;
+    font-weight: 700;
+  }
+  .who-meta { color: #9ca3af; font-size: 11px; }
+  .pill {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-radius: 999px;
+    padding: 3px 8px;
+    font-weight: 700;
+    flex-shrink: 0;
+    background: rgba(107, 114, 128, 0.25);
+    color: #9ca3af;
+  }
+  .pill.online {
+    background: rgba(74, 222, 128, 0.15);
+    color: #86efac;
+  }
+  .kick-btn {
+    border: 1px solid var(--social-danger-border, rgba(248, 113, 113, 0.4));
+    background: transparent;
+    color: var(--social-danger, #fca5a5);
+    border-radius: 6px;
+    min-height: 32px;
+    padding: 0 8px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+  }
+  .action-bar {
+    flex-shrink: 0;
+    border-top: 1px solid rgba(148,163,184,0.15);
+    background: rgba(10, 12, 18, 0.92);
+    padding: 10px 12px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .party-chat {
+    max-height: 7.5em;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 4px 2px 6px;
+    border-bottom: 1px solid rgba(148,163,184,0.12);
+  }
+  .chat-line {
+    font-size: 11px;
+    color: #c4b5a0;
+    line-height: 1.35;
+  }
+  .chat-line.system { color: #8a8070; font-style: italic; }
+  .chat-line .who { color: #fbbf24; font-weight: 700; display: inline; }
   .compose, .adder, .footer-actions {
     display: flex;
     gap: 6px;
-    padding: 8px 6px 4px;
+    align-items: center;
   }
   .compose input, .adder input {
     flex: 1;
@@ -209,10 +382,6 @@
     padding: 8px 10px;
     font: inherit;
     font-size: 14px;
-  }
-  .adder, .footer-actions, .compose.say {
-    border-top: 1px solid rgba(148,163,184,0.15);
-    padding: 10px 12px 12px;
   }
   .act {
     border: 1px solid rgba(148, 163, 184, 0.3);
@@ -229,13 +398,19 @@
     letter-spacing: 0.04em;
   }
   .act.gold {
-    background: #c9a227;
-    border-color: #d4af37;
-    color: #1a1408;
+    background: var(--social-gold-fill, #c9a227);
+    border-color: var(--social-gold, #d4af37);
+    color: var(--social-ink, #1a1408);
+  }
+  .act.secondary {
+    background: transparent;
+    border-color: rgba(212, 175, 55, 0.55);
+    color: #fbbf24;
   }
   .act.leave {
-    border-color: rgba(248, 113, 113, 0.4);
-    color: #fca5a5;
+    border-color: var(--social-danger-border, rgba(248, 113, 113, 0.4));
+    color: var(--social-danger, #fca5a5);
+    background: transparent;
   }
   .act.accept {
     background: rgba(34, 197, 94, 0.18);
@@ -279,11 +454,26 @@
   .invite-text strong { color: #fbbf24; }
   .invite-actions { display: flex; gap: 6px; flex-shrink: 0; }
   @media (max-width: 768px) {
-    .party-panel {
-      max-height: 90dvh;
-      border-radius: 12px;
+    .party-overlay {
+      align-items: flex-end;
+      padding: 0;
+      padding-bottom: env(safe-area-inset-bottom, 0px);
     }
-    .act { min-height: 44px; }
+    .party-panel {
+      width: 100%;
+      max-height: min(92dvh, 720px);
+      border-radius: 14px 14px 0 0;
+    }
+    .action-bar .compose,
+    .action-bar .adder,
+    .action-bar .footer-actions {
+      flex-wrap: wrap;
+    }
+    .action-bar .act {
+      min-height: 44px;
+      flex: 1 1 auto;
+    }
+    .compose input, .adder input { min-height: 44px; }
   }
 </style>
 
@@ -304,51 +494,111 @@
   <div class="party-overlay" role="dialog" aria-modal="true" aria-label="Party" on:click={(e) => { if (e.target === e.currentTarget) close(); }}>
     <div class="party-panel" on:click|stopPropagation>
       <div class="party-header">
-        <div class="party-title"><i class="material-icons">groups</i> Party</div>
-        <button class="party-close" type="button" on:click={close} aria-label="Close party">×</button>
+        <div class="party-heading">
+          <div class="party-title"><i class="material-icons" aria-hidden="true">groups</i> {title}</div>
+          {#if subtitle}
+            <div class="party-subtitle">{subtitle}</div>
+          {/if}
+        </div>
+        <button class="party-close" type="button" bind:this={closeBtn} on:click={close} aria-label="Close party">×</button>
       </div>
       {#if guest}
         <div class="guest-note">Parties are for lasting adventurers. Sign in to form a party.</div>
       {:else if !party.inParty}
         <div class="party-body">
-          <div class="empty">You are not in a party yet.</div>
+          <div class="empty">
+            No party yet — gather up to {maxMembers} adventurers.
+            <span class="empty-hint">Invite requires the target online with a lasting (non-guest) account.</span>
+          </div>
         </div>
-        <div class="footer-actions">
-          <button class="act gold" type="button" on:click={createParty}>Create Party</button>
+        <div class="action-bar">
+          <div class="footer-actions">
+            <button class="act gold" type="button" on:click={createParty}>Create</button>
+          </div>
+          <form class="adder" on:submit|preventDefault={invitePlayer}>
+            <input
+              bind:value={inviteName}
+              placeholder="Invite by name"
+              maxlength="40"
+              aria-label="Invite player by name"
+            />
+            <button class="act secondary" type="submit">Invite</button>
+          </form>
         </div>
-        <form class="adder" on:submit|preventDefault={invitePlayer}>
-          <input bind:value={inviteName} placeholder="Invite by name (creates party)" maxlength="40" />
-          <button class="act gold" type="submit">Invite</button>
-        </form>
       {:else}
         <div class="party-body">
-          {#if party.partyName}
-            <div class="party-name">{party.partyName}</div>
-          {/if}
           {#if members.length === 0}
             <div class="empty">No members listed yet.</div>
           {:else}
             {#each members as member (member.id || member.name)}
               <div class="row">
-                <span class="dot" class:online={member.online}></span>
-                <div class="who">
-                  <span class="who-name">{member.name}</span>
-                  <span class="who-status" class:online={member.online}>{member.online ? 'Online' : 'Offline'}</span>
+                <div class="avatar-wrap">
+                  {#if member.portrait}
+                    <img
+                      class="avatar"
+                      src={avatarSrc(member)}
+                      alt=""
+                      on:error={(e) => onAvatarError(e, member)}
+                    />
+                  {:else}
+                    <div class="avatar-fallback" aria-hidden="true">{initialOf(member)}</div>
+                  {/if}
                 </div>
+                <div class="who">
+                  <div class="who-top">
+                    <span class="who-name">{member.name}</span>
+                    {#if isYou(member)}<span class="you-tag">You</span>{/if}
+                    {#if member.isLeader || (party.leaderId && member.id === party.leaderId)}
+                      <span class="leader-badge">Leader</span>
+                    {/if}
+                  </div>
+                  {#if classLevelLine(member)}
+                    <span class="who-meta">{classLevelLine(member)}</span>
+                  {/if}
+                </div>
+                <span class="pill" class:online={member.online}>{member.online ? 'Online' : 'Offline'}</span>
+                {#if iAmLeader && !isYou(member)}
+                  <button class="kick-btn" type="button" on:click={() => kickMember(member)} aria-label={`Kick ${member.name}`}>Kick</button>
+                {/if}
               </div>
             {/each}
           {/if}
         </div>
-        <form class="compose say" on:submit|preventDefault={sendSay}>
-          <input bind:value={sayText} placeholder="Party say…" maxlength="240" />
-          <button class="act gold" type="submit">Say</button>
-        </form>
-        <form class="adder" on:submit|preventDefault={invitePlayer}>
-          <input bind:value={inviteName} placeholder="Invite player by name" maxlength="40" />
-          <button class="act gold" type="submit">Invite</button>
-        </form>
-        <div class="footer-actions">
-          <button class="act leave" type="button" on:click={leaveParty}>Leave Party</button>
+        <div class="action-bar">
+          {#if partyChat.length}
+            <div class="party-chat" aria-live="polite" aria-label="Party chat">
+              {#each partyChat as line (line.id)}
+                <div class="chat-line" class:system={line.system}>
+                  {#if line.system}
+                    {line.text}
+                  {:else}
+                    <span class="who">{line.name}{line.isYou ? ' (You)' : ''}:</span> {line.text}
+                  {/if}
+                </div>
+              {/each}
+            </div>
+          {/if}
+          <form class="compose say" on:submit|preventDefault={sendSay}>
+            <input
+              bind:value={sayText}
+              placeholder="Party say…"
+              maxlength="240"
+              aria-label="Party say message"
+            />
+            <button class="act gold" type="submit">Say</button>
+          </form>
+          <form class="adder" on:submit|preventDefault={invitePlayer}>
+            <input
+              bind:value={inviteName}
+              placeholder="Invite player by name"
+              maxlength="40"
+              aria-label="Invite player by name"
+            />
+            <button class="act secondary" type="submit">Invite</button>
+          </form>
+          <div class="footer-actions">
+            <button class="act leave" type="button" on:click={leaveParty}>Leave</button>
+          </div>
         </div>
       {/if}
     </div>

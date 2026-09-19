@@ -1,7 +1,8 @@
 package service
 
-//CreatePartyDTO data
+// CreatePartyDTO data
 type CreatePartyDTO struct {
-	Name       string   `json:"name,omitempty"`
-	Characters []string `json:"characters,omitempty"`
+	Name              string   `json:"name,omitempty"`
+	Characters        []string `json:"characters,omitempty"`
+	LeaderCharacterID string   `json:"leaderCharacterId,omitempty"`
 }

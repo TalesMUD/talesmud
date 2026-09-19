@@ -107,7 +107,7 @@
     display: flex;
     flex-direction: column;
     background: rgba(12, 16, 24, 0.97);
-    border: 1px solid rgba(212, 175, 55, 0.28);
+    border: 1px solid var(--social-border, rgba(212, 175, 55, 0.28));
     border-radius: 10px;
     overflow: hidden;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
@@ -233,9 +233,15 @@
     line-height: 1.45;
   }
   @media (max-width: 768px) {
+    .friends-overlay {
+      align-items: flex-end;
+      padding: 0;
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
     .friends-panel {
-      max-height: 90dvh;
-      border-radius: 12px;
+      width: 100%;
+      max-height: min(92dvh, 720px);
+      border-radius: 14px 14px 0 0;
     }
     .act { min-height: 44px; min-width: 44px; }
   }
@@ -264,7 +270,7 @@
                   <span class="who-status" class:online={friend.online}>{friend.online ? 'Online' : 'Offline'}</span>
                 </div>
                 <div class="actions">
-                  <button class="act party" type="button" disabled={!friend.online} on:click={() => inviteFriend(friend)} title="Invite to party">Party</button>
+                  <button class="act party" type="button" disabled={!friend.online} on:click={() => inviteFriend(friend)} title="Invite to party" aria-label="Invite to party">Invite</button>
                   <button class="act whisper" type="button" disabled={!friend.online} on:click={() => startWhisper(friend)} title="Whisper">Tell</button>
                   <button class="act remove" type="button" on:click={() => removeFriend(friend)} title="Remove">Remove</button>
                 </div>

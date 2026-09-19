@@ -5,6 +5,7 @@ import { writable, get } from "svelte/store";
 import { overlayStore } from "./ui/overlayStore.js";
 import { getPlayerColor } from "./playerColors.js";
 import { markPlayersYou, parseRoomChatLine } from "./roomChat.js";
+import { parsePartyChatLine } from "./partyState.js";
 
 const GAME_CLIENT = writable(null);
 
@@ -221,6 +222,8 @@ function createClient(renderer, characterCreator, muxStore) {
         inParty: !!msg.inParty,
         partyId: msg.partyId || msg.partyID || '',
         partyName: msg.partyName || '',
+        leaderId: msg.leaderId || msg.leaderCharacterId || '',
+        maxMembers: msg.maxMembers || 5,
         members: msg.members || [],
       });
     }
@@ -572,6 +575,14 @@ function createClient(renderer, characterCreator, muxStore) {
         } else {
           renderer(message);
           overlayStore.pushMessage(message);
+        }
+
+        if (mux && mux.appendPartyChat) {
+          const raw = msg && (msg.message || '');
+          if (typeof raw === 'string' && raw.indexOf('[Party]') === 0) {
+            const pline = parsePartyChatLine(raw, currentCharacter && currentCharacter.name);
+            if (pline) mux.appendPartyChat(pline);
+          }
         }
 
         if (mux && mux.appendRoomChat) {

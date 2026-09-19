@@ -43,6 +43,10 @@ func (command *PartyCommand) Execute(game def.GameCtrl, message *messages.Messag
 		command.decline(game, message)
 	case "leave":
 		command.leave(game, message)
+	case "kick":
+		command.kick(game, message, strings.Join(args[2:], " "))
+	case "promote":
+		command.promote(game, message, strings.Join(args[2:], " "))
 	case "list":
 		command.listParty(game, message)
 	case "say":
@@ -54,7 +58,7 @@ func (command *PartyCommand) Execute(game def.GameCtrl, message *messages.Messag
 }
 
 func partyUsage() string {
-	return "Party commands: party create, party invite <player>, party accept, party decline, party leave, party list, party say <message>"
+	return "Party commands: party create, party invite <player>, party accept, party decline, party leave, party kick <player>, party promote <player>, party list, party say <message>"
 }
 
 func (command *PartyCommand) createParty(game def.GameCtrl, message *messages.Message) {
@@ -107,6 +111,10 @@ func (command *PartyCommand) invite(game def.GameCtrl, message *messages.Message
 			return
 		}
 	}
+	if len(party.Characters) >= entities.MaxPartySize {
+		game.SendMessage() <- messages.Reply(message.FromUser.ID, fmt.Sprintf("Your party is full (%d/%d).", len(party.Characters), entities.MaxPartySize))
+		return
+	}
 
 	game.SetPartyInvite(def.PartyInvite{
 		PartyID:              party.ID,
@@ -141,6 +149,12 @@ func (command *PartyCommand) accept(game def.GameCtrl, message *messages.Message
 
 	if existing, err := game.GetFacade().PartiesService().FindByCharacterID(message.Character.ID); err == nil && existing != nil && existing.ID != party.ID {
 		_ = game.GetFacade().PartiesService().RemoveCharacterFromParty(existing, message.Character.ID)
+	}
+	if len(party.Characters) >= entities.MaxPartySize {
+		game.ClearPartyInvite(message.Character.ID)
+		game.SendMessage() <- messages.Reply(message.FromUser.ID, fmt.Sprintf("That party is full (%d/%d).", len(party.Characters), entities.MaxPartySize))
+		game.SendMessage() <- messages.NewPartyInviteMessage(message.FromUser.ID, false, "", "")
+		return
 	}
 	if err := game.GetFacade().PartiesService().AddCharacterToParty(party, message.Character); err != nil {
 		game.SendMessage() <- messages.Reply(message.FromUser.ID, "Could not join the party.")
@@ -243,9 +257,105 @@ func (command *PartyCommand) ensureParty(game def.GameCtrl, message *messages.Me
 
 func (command *PartyCommand) createPartyForCharacter(game def.GameCtrl, message *messages.Message) (*entities.Party, error) {
 	return game.GetFacade().PartiesService().CreateParty(&service.CreatePartyDTO{
-		Name:       message.Character.Name + "'s Party",
-		Characters: []string{message.Character.ID},
+		Name:              message.Character.Name + "'s Party",
+		Characters:        []string{message.Character.ID},
+		LeaderCharacterID: message.Character.ID,
 	})
+}
+
+func (command *PartyCommand) kick(game def.GameCtrl, message *messages.Message, targetName string) {
+	targetName = strings.TrimSpace(targetName)
+	if targetName == "" {
+		game.SendMessage() <- messages.Reply(message.FromUser.ID, "Usage: party kick <player>")
+		return
+	}
+	party, err := game.GetFacade().PartiesService().FindByCharacterID(message.Character.ID)
+	if err != nil || party == nil {
+		game.SendMessage() <- messages.Reply(message.FromUser.ID, "You are not in a party.")
+		return
+	}
+	party.EnsureLeader()
+	if !party.IsLeader(message.Character.ID) {
+		game.SendMessage() <- messages.Reply(message.FromUser.ID, "Only the party leader can kick members.")
+		return
+	}
+	var targetID string
+	var targetDisplay string
+	for _, memberID := range party.Characters {
+		ch, err := game.GetFacade().CharactersService().FindByID(memberID)
+		if err != nil || ch == nil {
+			continue
+		}
+		if strings.EqualFold(ch.Name, targetName) {
+			targetID = ch.ID
+			targetDisplay = ch.Name
+			break
+		}
+	}
+	if targetID == "" {
+		game.SendMessage() <- messages.Reply(message.FromUser.ID, "No party member named '"+targetName+"'.")
+		return
+	}
+	if targetID == message.Character.ID {
+		game.SendMessage() <- messages.Reply(message.FromUser.ID, "You can't kick yourself. Use 'party leave' instead.")
+		return
+	}
+	membersBefore := append([]string{}, party.Characters...)
+	if err := game.GetFacade().PartiesService().RemoveCharacterFromParty(party, targetID); err != nil {
+		game.SendMessage() <- messages.Reply(message.FromUser.ID, "Could not kick "+targetDisplay+".")
+		return
+	}
+	command.sendToParty(game, membersBefore, fmt.Sprintf("[Party] %s was kicked from the party.", targetDisplay))
+	command.pushPartyForCharacterID(game, targetID)
+	if refreshed, err := game.GetFacade().PartiesService().GetPartyByID(party.ID); err == nil && refreshed != nil {
+		command.pushPartyToMembers(game, refreshed)
+	}
+}
+
+func (command *PartyCommand) promote(game def.GameCtrl, message *messages.Message, targetName string) {
+	targetName = strings.TrimSpace(targetName)
+	if targetName == "" {
+		game.SendMessage() <- messages.Reply(message.FromUser.ID, "Usage: party promote <player>")
+		return
+	}
+	party, err := game.GetFacade().PartiesService().FindByCharacterID(message.Character.ID)
+	if err != nil || party == nil {
+		game.SendMessage() <- messages.Reply(message.FromUser.ID, "You are not in a party.")
+		return
+	}
+	party.EnsureLeader()
+	if !party.IsLeader(message.Character.ID) {
+		game.SendMessage() <- messages.Reply(message.FromUser.ID, "Only the party leader can promote members.")
+		return
+	}
+	var targetID string
+	var targetDisplay string
+	for _, memberID := range party.Characters {
+		ch, err := game.GetFacade().CharactersService().FindByID(memberID)
+		if err != nil || ch == nil {
+			continue
+		}
+		if strings.EqualFold(ch.Name, targetName) {
+			targetID = ch.ID
+			targetDisplay = ch.Name
+			break
+		}
+	}
+	if targetID == "" {
+		game.SendMessage() <- messages.Reply(message.FromUser.ID, "No party member named '"+targetName+"'.")
+		return
+	}
+	if targetID == message.Character.ID {
+		game.SendMessage() <- messages.Reply(message.FromUser.ID, "You are already the party leader.")
+		return
+	}
+	party.LeaderCharacterID = targetID
+	if err := game.GetFacade().PartiesService().UpdateParty(party.ID, party); err != nil {
+		game.SendMessage() <- messages.Reply(message.FromUser.ID, "Could not promote "+targetDisplay+".")
+		return
+	}
+	command.sendToParty(game, party.Characters, fmt.Sprintf("[Party] %s is now the party leader.", targetDisplay))
+	command.pushPartyToMembers(game, party)
 }
 
 func (command *PartyCommand) findInviteTarget(game def.GameCtrl, targetName string) (def.OnlinePlayer, bool) {
@@ -315,7 +425,7 @@ func (command *PartyCommand) pushParty(game def.GameCtrl, message *messages.Mess
 		party.ID,
 		party.Name,
 		collectPartyMembers(game, party),
-	)
+	).AttachPartyMeta(party)
 }
 
 func (command *PartyCommand) pushEmptyParty(game def.GameCtrl, userID string) {
@@ -344,7 +454,7 @@ func (command *PartyCommand) pushPartyToMembers(game def.GameCtrl, party *entiti
 			continue
 		}
 		sent[userID] = true
-		game.SendMessage() <- messages.NewPartyMessage(userID, true, party.ID, party.Name, members)
+		game.SendMessage() <- messages.NewPartyMessage(userID, true, party.ID, party.Name, members).AttachPartyMeta(party)
 	}
 }
 
@@ -364,13 +474,14 @@ func (command *PartyCommand) pushPartyForCharacterID(game def.GameCtrl, characte
 		command.pushEmptyParty(game, userID)
 		return
 	}
-	game.SendMessage() <- messages.NewPartyMessage(userID, true, party.ID, party.Name, collectPartyMembers(game, party))
+	game.SendMessage() <- messages.NewPartyMessage(userID, true, party.ID, party.Name, collectPartyMembers(game, party)).AttachPartyMeta(party)
 }
 
 func collectPartyMembers(game def.GameCtrl, party *entities.Party) []messages.PartyMemberEntry {
 	if party == nil || len(party.Characters) == 0 {
 		return []messages.PartyMemberEntry{}
 	}
+	party.EnsureLeader()
 	online := map[string]bool{}
 	for _, player := range game.GetOnlinePlayers() {
 		if player.CharacterID != "" {
@@ -383,13 +494,30 @@ func collectPartyMembers(game def.GameCtrl, party *entities.Party) []messages.Pa
 		if err != nil || ch == nil {
 			continue
 		}
+		className := ch.Class.Name
+		if className == "" {
+			className = ch.Class.ID
+		}
+		portrait := ""
+		if ch.BelongsUserID != "" {
+			if user, err := game.GetFacade().UsersService().FindByID(ch.BelongsUserID); err == nil && user != nil {
+				portrait = strings.TrimSpace(user.Picture)
+			}
+		}
 		entries = append(entries, messages.PartyMemberEntry{
-			ID:     ch.ID,
-			Name:   ch.Name,
-			Online: online[ch.ID],
+			ID:       ch.ID,
+			Name:     ch.Name,
+			Online:   online[ch.ID],
+			Level:    ch.Level,
+			Class:    className,
+			Portrait: portrait,
+			IsLeader: party.LeaderCharacterID == ch.ID,
 		})
 	}
 	sort.Slice(entries, func(i, j int) bool {
+		if entries[i].IsLeader != entries[j].IsLeader {
+			return entries[i].IsLeader
+		}
 		if entries[i].Online != entries[j].Online {
 			return entries[i].Online
 		}

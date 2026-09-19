@@ -764,9 +764,13 @@ func NewFriendsMessage(userID string, friends []FriendEntry) *FriendsMessage {
 
 // PartyMemberEntry is one row in the party overlay.
 type PartyMemberEntry struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Online bool   `json:"online"`
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Online   bool   `json:"online"`
+	Level    int32  `json:"level,omitempty"`
+	Class    string `json:"class,omitempty"`
+	Portrait string `json:"portrait,omitempty"`
+	IsLeader bool   `json:"isLeader,omitempty"`
 }
 
 // PartyMessage refreshes the party overlay roster.
@@ -775,6 +779,8 @@ type PartyMessage struct {
 	InParty   bool               `json:"inParty"`
 	PartyID   string             `json:"partyId,omitempty"`
 	PartyName string             `json:"partyName,omitempty"`
+	LeaderID  string             `json:"leaderId,omitempty"`
+	MaxMembers int               `json:"maxMembers,omitempty"`
 	Members   []PartyMemberEntry `json:"members"`
 }
 
@@ -790,11 +796,31 @@ func NewPartyMessage(userID string, inParty bool, partyID, partyName string, mem
 			Type:       MessageTypeParty,
 			Message:    "",
 		},
-		InParty:   inParty,
-		PartyID:   partyID,
-		PartyName: partyName,
-		Members:   members,
+		InParty:    inParty,
+		PartyID:    partyID,
+		PartyName:  partyName,
+		MaxMembers: e.MaxPartySize,
+		Members:    members,
 	}
+}
+
+// AttachPartyMeta fills leader/max from a Party entity (nil-safe).
+func (m *PartyMessage) AttachPartyMeta(party *e.Party) *PartyMessage {
+	if m == nil {
+		return m
+	}
+	m.MaxMembers = e.MaxPartySize
+	if party != nil {
+		party.EnsureLeader()
+		m.LeaderID = party.LeaderCharacterID
+		if party.Name != "" {
+			m.PartyName = party.Name
+		}
+		if party.ID != "" {
+			m.PartyID = party.ID
+		}
+	}
+	return m
 }
 
 // PartyInviteMessage drives the Accept/Decline invite banner.

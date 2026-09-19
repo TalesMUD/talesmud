@@ -54,10 +54,15 @@ func (s *partiesService) CreateParty(createParty *CreatePartyDTO) (*entities.Par
 	}
 
 	party := &entities.Party{
-		Name:       createParty.Name,
-		Created:    time.Now(),
-		Characters: createParty.Characters,
+		Name:              createParty.Name,
+		Created:           time.Now(),
+		Characters:        createParty.Characters,
+		LeaderCharacterID: createParty.LeaderCharacterID,
 	}
+	if party.LeaderCharacterID == "" && len(party.Characters) > 0 {
+		party.LeaderCharacterID = party.Characters[0]
+	}
+	party.EnsureLeader()
 	return s.repo.Store(party)
 }
 
@@ -116,11 +121,17 @@ func (s *partiesService) AddCharacterToParty(party *entities.Party, character *c
 
 	for _, memberID := range party.Characters {
 		if memberID == character.ID {
+			party.EnsureLeader()
 			return s.repo.Update(party.ID, party)
 		}
 	}
 
+	if len(party.Characters) >= entities.MaxPartySize {
+		return errors.New("party is full")
+	}
+
 	party.Characters = append(party.Characters, character.ID)
+	party.EnsureLeader()
 	return s.repo.Update(party.ID, party)
 }
 
@@ -143,5 +154,9 @@ func (s *partiesService) RemoveCharacterFromParty(party *entities.Party, charact
 	if len(party.Characters) == 0 {
 		return s.repo.Delete(party.ID)
 	}
+	if party.LeaderCharacterID == characterID {
+		party.LeaderCharacterID = ""
+	}
+	party.EnsureLeader()
 	return s.repo.Update(party.ID, party)
 }

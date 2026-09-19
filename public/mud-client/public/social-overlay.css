@@ -1,0 +1,13 @@
+/* Shared Party/Friends overlay tokens — keep chrome aligned (Party UI v2). */
+:root {
+  --social-gold: #d4af37;
+  --social-gold-fill: #c9a227;
+  --social-ink: #1a1408;
+  --social-panel-bg: rgba(12, 16, 24, 0.97);
+  --social-header-bg: rgba(20, 26, 36, 0.9);
+  --social-border: rgba(212, 175, 55, 0.28);
+  --social-text: #f3ead4;
+  --social-muted: #8a8070;
+  --social-danger: #fca5a5;
+  --social-danger-border: rgba(248, 113, 113, 0.4);
+}

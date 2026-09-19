@@ -485,7 +485,8 @@ function createStore() {
     friendsOverlayOpen: false,
     friends: [],
     partyOverlayOpen: false,
-    party: { inParty: false, partyId: '', partyName: '', members: [] },
+    party: { inParty: false, partyId: '', partyName: '', leaderId: '', maxMembers: 5, members: [] },
+    partyChat: [],
     partyInvite: null,
   });
 
@@ -1304,12 +1305,34 @@ function createStore() {
       update((state) => {
         // Keep shape aligned with partyState.normalizePartyState
         const next = party && typeof party === 'object' ? party : {};
+        const members = Array.isArray(next.members) ? next.members : [];
+        const wasIn = !!state.party?.inParty;
+        const nowIn = !!next.inParty;
         state.party = {
-          inParty: !!next.inParty,
+          inParty: nowIn,
           partyId: String(next.partyId || next.partyID || ''),
           partyName: String(next.partyName || ''),
-          members: Array.isArray(next.members) ? next.members : [],
+          leaderId: String(next.leaderId || next.leaderCharacterId || ''),
+          maxMembers: Number(next.maxMembers) > 0 ? Number(next.maxMembers) : 5,
+          members,
         };
+        if (wasIn && !nowIn) {
+          state.partyChat = [];
+        }
+        return state;
+      });
+    },
+    appendPartyChat: (line) => {
+      if (!line) return;
+      update((state) => {
+        const next = [...(state.partyChat || []), line].slice(-8);
+        state.partyChat = next;
+        return state;
+      });
+    },
+    clearPartyChat: () => {
+      update((state) => {
+        state.partyChat = [];
         return state;
       });
     },
