@@ -76,7 +76,7 @@ func (h *Hub) composeArt(sess *session, ch *characters.Character, scr *Screen) v
 		grid[16] = fmt.Sprintf("  On hand: %d    Vault: %d", hand, vault)
 	case "healer":
 		grid[16] = fmt.Sprintf("  Full mending costs %d coin.", h.pack.HealCost)
-	case "shop", "armory":
+	case "shop", "armory", "weapons", "armor":
 		row := 14
 		for _, g := range h.shopGoods() {
 			if row >= 20 {

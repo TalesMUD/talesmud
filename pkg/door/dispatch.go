@@ -52,6 +52,8 @@ func (h *Hub) dispatchPack(user *entities.User, sess *session, key string) bool 
 		sess.notice = "Close the window to leave. Coin in the vault stays put."
 	case "drink", "inn_draught":
 		h.innKey(user, sess, "d")
+	case "train":
+		sess.notice = "The master nods. Duels for level come next — for now, return when you are ready."
 	case "go_back", "return":
 		h.goBack(sess)
 	case "help":
