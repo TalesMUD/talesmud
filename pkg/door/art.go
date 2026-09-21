@@ -77,16 +77,16 @@ func (h *Hub) composeArt(sess *session, ch *characters.Character, scr *Screen) v
 	case "healer":
 		grid[16] = fmt.Sprintf("  Full mending costs %d coin.", h.pack.HealCost)
 	case "shop", "armory", "weapons", "armor":
-		row := 14
+		row := 4
 		for _, g := range h.shopGoods() {
-			if row >= 20 {
+			if row >= 18 {
 				break
 			}
-			grid[row] = fmt.Sprintf("  %d  %s  %d coin  %s", g.n, g.name, g.price, g.stat)
+			grid[row] = fmt.Sprintf("  %2d. %-28s %12d", g.n, g.name, g.price)
 			row++
 		}
 	case "news":
-		row := 12
+		row := 3
 		for _, line := range h.pack.News {
 			if row >= 19 {
 				break
@@ -95,8 +95,8 @@ func (h *Hub) composeArt(sess *session, ch *characters.Character, scr *Screen) v
 			row++
 		}
 	case "board":
-		grid[10] = "  #  NAME                 LVL"
-		row := 11
+		grid[3] = "  #  NAME                 LVL"
+		row := 4
 		for i, ln := range h.leaderLines() {
 			if row >= 19 {
 				break
