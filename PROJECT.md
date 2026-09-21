@@ -162,6 +162,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Global and room-based chat
   - Private tells/whispers and minimal party chat
   - Party flow: create parties, invite online players, accept/decline invites, list members, leave party, and send party chat
+  - Party Combat Assist v1: same-room players join in-progress fights via `attack <npc>`; party members get a join nudge; XP/gold split among living joiners
   - Party UI: HUD launch next to Friends, PartyOverlay (create/invite/list/say/leave), Accept/Decline invite banner; guests see sign-in note
   - Emote system
   - Live session-based player presence tracking for room UI, chat routing, `who`, and silent room presence refreshes

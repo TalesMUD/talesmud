@@ -102,10 +102,9 @@ func (command *AttackCommand) handleInitiateCombat(game def.GameCtrl, message *m
 		return true
 	}
 
-	// Check if NPC is already in combat with someone else
+	// Check if NPC is already in combat — same-room allies can join that fight
 	if combatEngine.IsNPCInCombat(target.Entity.ID) {
-		game.SendMessage() <- message.Reply(fmt.Sprintf("%s is already in combat with someone else!", target.Name))
-		return true
+		return command.handleJoinCombat(game, message, combatEngine, target)
 	}
 
 	// Post-combat grace: stop blender of sequential 1v1s
@@ -132,7 +131,7 @@ func (command *AttackCommand) handleInitiateCombat(game def.GameCtrl, message *m
 		}
 	}
 
-	// Gather players (just the attacker for now, others can join)
+	// Gather players (initiator only — others join via attack on the same NPC)
 	players := []*characters.Character{message.Character}
 
 	// Initiate combat
@@ -211,7 +210,126 @@ func (command *AttackCommand) handleInitiateCombat(game def.GameCtrl, message *m
 	}
 	game.SendMessage() <- roomMsg
 
+	// Party assist nudge: same-room online party members can attack to join
+	nudgePartyAssist(game, message, combatEngine, target.Name, enemyNames)
+
 	return true
+}
+
+// handleJoinCombat adds a same-room player to an existing fight against this NPC.
+func (command *AttackCommand) handleJoinCombat(game def.GameCtrl, message *messages.Message, combatEngine def.CombatEngineCtrl, target *npc.NPC) bool {
+	instance := combatEngine.GetCombatInstanceByNPC(target.Entity.ID)
+	if instance == nil || instance.State != combat.CombatStateActive {
+		game.SendMessage() <- message.Reply(fmt.Sprintf("%s is already in combat with someone else!", target.Name))
+		return true
+	}
+
+	// Must be in the fight's origin room
+	if instance.OriginRoomID == "" || instance.OriginRoomID != message.Character.CurrentRoomID {
+		game.SendMessage() <- message.Reply(fmt.Sprintf("%s is already in combat with someone else!", target.Name))
+		return true
+	}
+
+	// Already in a different combat
+	if combatEngine.IsPlayerInCombat(message.Character.ID) {
+		game.SendMessage() <- message.Reply("You are already in a different fight.")
+		return true
+	}
+
+	// Already in this instance (shouldn't happen — isInActiveCombat would have caught it)
+	if instance.GetPlayerByID(message.Character.ID) != nil {
+		game.SendMessage() <- message.Reply("You are already in this fight.")
+		return true
+	}
+
+	if !combatEngine.JoinCombat(instance, message.Character) {
+		game.SendMessage() <- message.Reply(fmt.Sprintf("Could not join the fight against %s.", target.Name))
+		return true
+	}
+
+	message.Character.InCombat = true
+	message.Character.CombatInstanceID = instance.ID
+	_ = game.GetFacade().CharactersService().Update(message.Character.ID, message.Character)
+
+	startMsg := fmt.Sprintf("\n%s\n%s\n\n",
+		"═══════════════════════════════════════════════════",
+		"              YOU JOIN THE FIGHT!")
+	startMsg += fmt.Sprintf("You leap into the fray against %s!\n\n", target.Name)
+	startMsg += "Turn Order:\n"
+	for i, combatant := range instance.TurnOrder {
+		marker := "  "
+		if i == instance.CurrentTurnIdx {
+			marker = "► "
+		}
+		startMsg += fmt.Sprintf("%s%d. %s (Initiative: %d)\n", marker, i+1, combatant.Name, combatant.Initiative)
+	}
+	startMsg += "\n" + combatEngine.GetCombatStatus(message.Character.Entity.ID)
+	startMsg += "\n═══════════════════════════════════════════════════"
+
+	game.SendMessage() <- messages.NewCombatStartMessage(
+		message.FromUser.ID,
+		startMsg,
+		combatViews(instance.Enemies),
+		combatViews(instance.Players),
+	)
+
+	combatEngine.SetAutoAttackTarget(message.Character.Entity.ID, target.Entity.ID)
+	game.SendMessage() <- message.Reply("\nCombat is automatic. Commands: attack <target> (switch target) | defend | flee | status")
+
+	roomMsg := messages.MessageResponse{
+		Audience:   messages.MessageAudienceRoomWithoutOrigin,
+		AudienceID: message.Character.CurrentRoomID,
+		OriginID:   message.FromUser.ID,
+		Type:       messages.MessageTypeDefault,
+		Message:    fmt.Sprintf("%s joins the fight against %s!", message.Character.Name, target.Name),
+	}
+	game.SendMessage() <- roomMsg
+
+	return true
+}
+
+// nudgePartyAssist tells same-room online party members they can attack to join.
+func nudgePartyAssist(game def.GameCtrl, message *messages.Message, combatEngine def.CombatEngineCtrl, primaryTarget string, enemyNames []string) {
+	if game == nil || message == nil || message.Character == nil || combatEngine == nil {
+		return
+	}
+	party, err := game.GetFacade().PartiesService().FindByCharacterID(message.Character.ID)
+	if err != nil || party == nil || len(party.Characters) == 0 {
+		return
+	}
+
+	fightLabel := strings.Join(enemyNames, ", ")
+	if fightLabel == "" {
+		fightLabel = primaryTarget
+	}
+	attackHint := primaryTarget
+	if attackHint == "" && len(enemyNames) > 0 {
+		attackHint = enemyNames[0]
+	}
+
+	roomID := message.Character.CurrentRoomID
+	for _, memberID := range party.Characters {
+		if memberID == message.Character.ID {
+			continue
+		}
+		if combatEngine.IsPlayerInCombat(memberID) {
+			continue
+		}
+		for _, online := range game.GetOnlinePlayers() {
+			if online.CharacterID != memberID {
+				continue
+			}
+			if online.RoomID != roomID {
+				continue
+			}
+			if online.UserID == "" {
+				continue
+			}
+			game.SendMessage() <- messages.Reply(online.UserID,
+				fmt.Sprintf("[Party] %s engaged %s nearby! Type 'attack %s' to join the fight.",
+					message.Character.Name, fightLabel, attackHint))
+		}
+	}
 }
 
 func combatViews(refs []combat.CombatantRef) []messages.CombatantView {

@@ -476,6 +476,15 @@ outline. Leader sees Kick on other members.
 Room players overlay and Friends rows can invite online players. Guests hide
 the Party button and see a sign-in note in the overlay.
 
+### Party Combat Assist (v1)
+Same-room players can join an in-progress fight by `attack <npc>` on an enemy
+already in combat. Joiners receive `combatStart` (BattleStage), initiative is
+rolled, and turn order is rebuilt (current actor preserved). Cross-room join
+is refused. Party membership is **not** required to join; when combat starts,
+same-room online party members get a `[Party] … Type 'attack <enemy>' to join`
+nudge. Victory XP/gold already splits across `GetLivingPlayers()` (loot stays
+room drops). Out of scope: follow, need/greed loot, auto-pull without attack,
+Flutter.
 
 ### Friends (v1)
 Per-character friends list stored as `Character.FriendIDs` (character UUIDs) in
@@ -662,6 +671,11 @@ Two methods for placing NPCs:
 ---
 
 ## Combat System
+
+### Joining in-progress fights (Party Combat Assist v1)
+Same-room players may `attack <npc>` to join an active combat instance that
+NPC is already in (`JoinCombat`). Cross-room joins are refused. Living joiners
+share existing victory XP/gold split; loot remains room drops.
 
 ### Combat Instance Model
 ```go

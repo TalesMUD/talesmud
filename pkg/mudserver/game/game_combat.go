@@ -97,6 +97,16 @@ func (c *CombatController) InitiateCombat(roomID string, players []*characters.C
 	return c.engine.InitiateCombat(roomID, players, enemies)
 }
 
+// GetCombatInstanceByNPC returns the combat instance an NPC is currently in
+func (c *CombatController) GetCombatInstanceByNPC(npcID string) *combat.CombatInstance {
+	return c.manager.GetInstanceByNPCID(npcID)
+}
+
+// JoinCombat adds a character to an existing active combat instance
+func (c *CombatController) JoinCombat(instance *combat.CombatInstance, character *characters.Character) bool {
+	return c.engine.JoinCombat(instance, character)
+}
+
 // ProcessPlayerAttack handles a player attacking a target in combat
 func (c *CombatController) ProcessPlayerAttack(characterID, targetID string) (message string, combatEnded bool, endState combat.CombatState) {
 	instance := c.manager.GetInstanceByPlayerID(characterID)
@@ -114,6 +124,7 @@ func (c *CombatController) ProcessPlayerAttack(characterID, targetID string) (me
 	endState = c.engine.CheckCombatEnd(instance)
 	if endState != combat.CombatStateActive {
 		c.engine.EndCombat(instance, endState)
+		c.cleanupCombatInstance(instance, endState)
 		combatEnded = true
 		return message, combatEnded, endState
 	}
@@ -125,6 +136,7 @@ func (c *CombatController) ProcessPlayerAttack(characterID, targetID string) (me
 	endState = c.engine.CheckCombatEnd(instance)
 	if endState != combat.CombatStateActive {
 		c.engine.EndCombat(instance, endState)
+		c.cleanupCombatInstance(instance, endState)
 		combatEnded = true
 	}
 
@@ -148,6 +160,7 @@ func (c *CombatController) ProcessPlayerDefend(characterID string) (message stri
 	endState = c.engine.CheckCombatEnd(instance)
 	if endState != combat.CombatStateActive {
 		c.engine.EndCombat(instance, endState)
+		c.cleanupCombatInstance(instance, endState)
 		combatEnded = true
 		return message, combatEnded, endState
 	}
@@ -159,6 +172,7 @@ func (c *CombatController) ProcessPlayerDefend(characterID string) (message stri
 	endState = c.engine.CheckCombatEnd(instance)
 	if endState != combat.CombatStateActive {
 		c.engine.EndCombat(instance, endState)
+		c.cleanupCombatInstance(instance, endState)
 		combatEnded = true
 	}
 
@@ -183,6 +197,7 @@ func (c *CombatController) ProcessPlayerFlee(characterID string) (success bool, 
 	endState = c.engine.CheckCombatEnd(instance)
 	if endState != combat.CombatStateActive {
 		c.engine.EndCombat(instance, endState)
+		c.cleanupCombatInstance(instance, endState)
 		combatEnded = true
 		return success, message, combatEnded, endState
 	}
@@ -195,6 +210,7 @@ func (c *CombatController) ProcessPlayerFlee(characterID string) (success bool, 
 		endState = c.engine.CheckCombatEnd(instance)
 		if endState != combat.CombatStateActive {
 			c.engine.EndCombat(instance, endState)
+			c.cleanupCombatInstance(instance, endState)
 			combatEnded = true
 		}
 	}
