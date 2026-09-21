@@ -79,12 +79,21 @@ func (h *Hub) composeArt(sess *session, ch *characters.Character, scr *Screen) v
 	case "shop", "armory", "weapons", "armor":
 		row := 4
 		for _, g := range h.shopGoods() {
-			if row >= 18 {
+			if row >= 17 {
 				break
 			}
-			grid[row] = fmt.Sprintf("  %2d. %-28s %12d", g.n, g.name, g.price)
+			name := g.name
+			if len(name) > 28 {
+				name = name[:28]
+			}
+			dots := 30 - len(name)
+			if dots < 2 {
+				dots = 2
+			}
+			grid[row] = fmt.Sprintf(" │ %2d. %s%s%12s", g.n, name, strings.Repeat(".", dots), comma(g.price))
 			row++
 		}
+		grid[17] = " │ (B)uy   (S)ell   (T)own   (?)"
 	case "news":
 		row := 3
 		for _, line := range h.pack.News {
@@ -95,13 +104,13 @@ func (h *Hub) composeArt(sess *session, ch *characters.Character, scr *Screen) v
 			row++
 		}
 	case "board":
-		grid[3] = "  #  NAME                 LVL"
+		grid[3] = "  #   NAME               LEVEL   EXPERIENCE"
 		row := 4
-		for i, ln := range h.leaderLines() {
-			if row >= 19 {
+		for _, ln := range h.leaderLines() {
+			if row >= 18 {
 				break
 			}
-			grid[row] = fmt.Sprintf("  %d  %s", i+1, ln)
+			grid[row] = "  " + ln
 			row++
 		}
 	case "inn":
@@ -140,4 +149,19 @@ func splitArt(art string) []string {
 		lines = lines[:len(lines)-1]
 	}
 	return lines
+}
+
+func comma(n int) string {
+	s := fmt.Sprintf("%d", n)
+	if n < 1000 {
+		return s
+	}
+	var b strings.Builder
+	for i, c := range s {
+		if i > 0 && (len(s)-i)%3 == 0 {
+			b.WriteByte(',')
+		}
+		b.WriteRune(c)
+	}
+	return b.String()
 }
