@@ -14,6 +14,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	"github.com/talesmud/talesmud/pkg/authlocal"
 	e "github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/service"
 )
@@ -26,6 +27,15 @@ var jwksCache struct {
 }
 
 const jwksCacheTTL = 1 * time.Hour
+
+// localSessions is set only when this process runs auth=local.
+// Classic Auth0 servers leave it nil.
+var localSessions *authlocal.Service
+
+// UseLocalAuth installs the door-mode session verifier. Nil disables it.
+func UseLocalAuth(svc *authlocal.Service) {
+	localSessions = svc
+}
 
 type jwks struct {
 	Keys []webKeys `json:"keys"`
@@ -245,6 +255,26 @@ func AuthMiddleware(facade service.Facade) gin.HandlerFunc {
 					return
 				}
 			}
+		}
+
+		// Local username/password sessions (door mode). Tokens minted by this
+		// process fail closed here and are not forwarded to Auth0.
+		if localSessions != nil && authlocal.IsLocalIssuer(tokenStr) {
+			user, err := localSessions.UserFromToken(tokenStr)
+			if err != nil || user == nil {
+				handleTokenError(c, err, nil)
+				return
+			}
+			if user.IsBanned {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+					"error": "Your account has been banned",
+				})
+				return
+			}
+			c.Set("userid", user.RefID)
+			c.Set("user", user)
+			c.Next()
+			return
 		}
 
 		// Fall back to Auth0 JWT validation

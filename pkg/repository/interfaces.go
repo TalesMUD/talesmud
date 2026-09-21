@@ -79,6 +79,8 @@ type UsersRepository interface {
 	Update(refID string, user *entities.User) error
 	FindByID(id string) (*entities.User, error)
 	FindByRefID(refID string) (*entities.User, error)
+	FindByUsername(username string) (*entities.User, error)
+	FindByEmail(email string) (*entities.User, error)
 	Delete(id string) error
 }
 

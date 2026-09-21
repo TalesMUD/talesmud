@@ -91,3 +91,25 @@ func (repo *sqliteUsersRepository) FindByRefID(refID string) (*e.User, error) {
 func (repo *sqliteUsersRepository) Delete(id string) error {
 	return repo.sqliteGenericRepo.Delete(id)
 }
+
+func (repo *sqliteUsersRepository) FindByUsername(username string) (*e.User, error) {
+	if username == "" {
+		return nil, errors.New("empty username")
+	}
+	result, err := repo.sqliteGenericRepo.FindByField("username", username)
+	if user, ok := result.(*e.User); ok {
+		return user, nil
+	}
+	return nil, err
+}
+
+func (repo *sqliteUsersRepository) FindByEmail(email string) (*e.User, error) {
+	if email == "" {
+		return nil, errors.New("empty email")
+	}
+	result, err := repo.sqliteGenericRepo.FindByField("email", email)
+	if user, ok := result.(*e.User); ok {
+		return user, nil
+	}
+	return nil, err
+}

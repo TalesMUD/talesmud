@@ -86,6 +86,10 @@ func (c *Client) InitSchema() error {
 		`CREATE TABLE IF NOT EXISTS quest_progress (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
 		`CREATE TABLE IF NOT EXISTS skills (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
 		`CREATE TABLE IF NOT EXISTS guest_statistics (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
+		// Local-auth password reset tokens. Payload stores a hash, never the raw token.
+		`CREATE TABLE IF NOT EXISTS auth_tokens (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
+		// First-class daily budgets (forest fights and similar). Not quest tags.
+		`CREATE TABLE IF NOT EXISTS daily_resources (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
 	}
 	for _, stmt := range stmts {
 		if _, err := c.db.Exec(stmt); err != nil {
@@ -119,6 +123,7 @@ func (c *Client) createIndexes() error {
 
 		// Users: queried by email and online status
 		`CREATE INDEX IF NOT EXISTS idx_users_email ON users(json_extract(data, '$.email'));`,
+		`CREATE INDEX IF NOT EXISTS idx_users_username ON users(json_extract(data, '$.username'));`,
 
 		// Quest progress: queried by character
 		`CREATE INDEX IF NOT EXISTS idx_quest_progress_char ON quest_progress(json_extract(data, '$.characterID'));`,

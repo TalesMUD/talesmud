@@ -19,6 +19,11 @@ func (h *UserManagementHandler) GetAllUsers(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load users"})
 		return
 	}
+	for _, user := range users {
+		if user != nil {
+			user.PasswordHash = ""
+		}
+	}
 	c.JSON(http.StatusOK, users)
 }
 

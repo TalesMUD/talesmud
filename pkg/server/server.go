@@ -10,15 +10,17 @@ import (
 	"github.com/gorilla/handlers"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/talesmud/talesmud/pkg/authlocal"
 	dbsqlite "github.com/talesmud/talesmud/pkg/db/sqlite"
+	"github.com/talesmud/talesmud/pkg/gamemode"
 	mud "github.com/talesmud/talesmud/pkg/mudserver"
 	"github.com/talesmud/talesmud/pkg/repository"
 	"github.com/talesmud/talesmud/pkg/scripts/runner"
 	"github.com/talesmud/talesmud/pkg/server/handler"
 	"github.com/talesmud/talesmud/pkg/service"
 	"github.com/talesmud/talesmud/pkg/service/groq"
-	"github.com/talesmud/talesmud/pkg/webui"
 	"github.com/talesmud/talesmud/pkg/util"
+	"github.com/talesmud/talesmud/pkg/webui"
 	"github.com/talesmud/talesmud/pkg/webuiplay"
 )
 
@@ -28,9 +30,10 @@ type App interface {
 }
 
 type app struct {
-	Router *gin.Engine
-	Facade service.Facade
-	mud    mud.MUDServer
+	Router    *gin.Engine
+	Facade    service.Facade
+	mud       mud.MUDServer
+	localAuth *authlocal.Service
 }
 
 func adminAuthMiddleware() gin.HandlerFunc {
@@ -109,11 +112,23 @@ func NewApp() App {
 	mud := mud.New(facade)
 	scriptRunner.SetServices(facade, mud.GameCtrl())
 
-	return &app{
+	application := &app{
 		Router: r,
 		Facade: facade,
 		mud:    mud,
 	}
+	if gamemode.LocalAuth() {
+		secret, err := authlocal.ResolveSecret(gamemode.Current())
+		if err != nil {
+			log.WithError(err).Fatal("Failed to load local session secret")
+		}
+		application.localAuth = authlocal.New(client.DB(), facade.UsersService(), secret, authlocal.OutboxMailer{
+			Path: gamemode.Current().OutboxPath,
+		})
+		UseLocalAuth(application.localAuth)
+		log.WithField("outbox", gamemode.Current().OutboxPath).Info("Local auth enabled (Argon2id)")
+	}
+	return application
 }
 
 // SetupRoutes ... Configures the routes
@@ -429,6 +444,15 @@ func (app *app) setupRoutes() {
 			GuestService: app.Facade.GuestService(),
 		}
 		public.POST("guest", guest.CreateGuestSession)
+
+		if app.localAuth != nil {
+			localAuth := &handler.LocalAuthHandler{Auth: app.localAuth}
+			public.POST("auth/register", localAuth.Register)
+			public.POST("auth/login", localAuth.Login)
+			public.POST("auth/forgot", localAuth.Forgot)
+			public.POST("auth/reset", localAuth.Reset)
+			protected.GET("auth/me", localAuth.Me)
+		}
 	}
 
 	// Start MUD Server

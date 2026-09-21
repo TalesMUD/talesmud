@@ -21,6 +21,13 @@ type User struct {
 	Name  string `json:"name"`
 	Email string `json:"email"`
 
+	// Username is the local-auth login name (lowercase). Empty for Auth0 users.
+	Username string `json:"username,omitempty"`
+	// PasswordHash is an Argon2id PHC string. Never a plaintext password.
+	PasswordHash string `json:"passwordHash,omitempty"`
+	// SessionVersion invalidates outstanding local session tokens when incremented.
+	SessionVersion int `json:"sessionVersion,omitempty"`
+
 	// nickname can be used to display a player/user in the case where character name is not applicable
 	Nickname string `json:"nickname"`
 
@@ -75,4 +82,15 @@ func (u *User) IsAdmin() bool {
 func (u *User) IsCreator() bool {
 	role := u.GetRole()
 	return role == RoleCreator || role == RoleAdmin
+}
+
+// RedactedCopy returns a shallow copy with the password hash removed.
+// The stored user is left unchanged so a later Update does not wipe the hash.
+func (u *User) RedactedCopy() *User {
+	if u == nil {
+		return nil
+	}
+	cp := *u
+	cp.PasswordHash = ""
+	return &cp
 }
