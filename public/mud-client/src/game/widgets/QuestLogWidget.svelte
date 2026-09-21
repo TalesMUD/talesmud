@@ -15,6 +15,58 @@
   let showHistory = false;
   let showToolsMenu = false;
 
+
+  // Quick type filters (empty = show all). Multi-select chips.
+  const QUEST_TYPE_OPTIONS = [
+    { id: 'daily', label: 'DAILY', color: '#8b5cf6' },
+    { id: 'side', label: 'SIDE', color: '#3b82f6' },
+    { id: 'main', label: 'MAIN', color: '#f59e0b' },
+  ];
+  const TYPE_FILTER_KEY = 'questLogTypeFilters';
+  let selectedTypes = [];
+
+  if (typeof localStorage !== 'undefined') {
+    try {
+      const saved = JSON.parse(localStorage.getItem(TYPE_FILTER_KEY) || '[]');
+      if (Array.isArray(saved)) {
+        const allowed = new Set(QUEST_TYPE_OPTIONS.map((t) => t.id));
+        selectedTypes = saved.filter((t) => allowed.has(t));
+        filterCategory = selectedTypes.length === 1 ? selectedTypes[0] : 'all';
+      }
+    } catch (_) {
+      selectedTypes = [];
+    }
+  }
+
+  function persistTypeFilters() {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(TYPE_FILTER_KEY, JSON.stringify(selectedTypes));
+    }
+  }
+
+  function syncFilterCategoryFromChips() {
+    filterCategory = selectedTypes.length === 1 ? selectedTypes[0] : 'all';
+  }
+
+  function toggleTypeFilter(type) {
+    if (selectedTypes.includes(type)) {
+      selectedTypes = selectedTypes.filter((t) => t !== type);
+    } else {
+      selectedTypes = [...selectedTypes, type];
+    }
+    syncFilterCategoryFromChips();
+    persistTypeFilters();
+  }
+
+  function onFilterCategoryChange() {
+    if (filterCategory === 'all') {
+      selectedTypes = [];
+    } else {
+      selectedTypes = [filterCategory];
+    }
+    persistTypeFilters();
+  }
+
   // Subscribe to store for reactive updates
   $: if (store) {
     quests = $store.quests || [];
@@ -25,7 +77,7 @@
     }
   }
 
-  $: toolsActive = !!(searchQuery || filterCategory !== 'all' || sortBy !== 'status' || !showCompleted || showAbandoned);
+  $: toolsActive = !!(searchQuery || selectedTypes.length > 0 || filterCategory !== 'all' || sortBy !== 'status' || !showCompleted || showAbandoned);
 
   function toggleToolsMenu() {
     showToolsMenu = !showToolsMenu;
@@ -41,8 +93,11 @@
     if (!showCompleted && q.status === 'completed') return false;
     if (!showAbandoned && q.status === 'abandoned') return false;
 
-    // Category filter
-    if (filterCategory !== 'all' && q.category?.toLowerCase() !== filterCategory) return false;
+    // Type filter chips (empty = show all)
+    if (selectedTypes.length > 0) {
+      const cat = (q.category || '').toLowerCase();
+      if (!selectedTypes.includes(cat)) return false;
+    }
 
     // Search filter
     if (searchQuery.trim()) {
@@ -219,7 +274,7 @@
           {/if}
         </div>
         <div class="filter-controls">
-          <select bind:value={filterCategory} class="filter-select">
+          <select bind:value={filterCategory} class="filter-select" on:change={onFilterCategoryChange}>
             <option value="all">All Types</option>
             <option value="main">Main</option>
             <option value="side">Side</option>
@@ -244,6 +299,18 @@
         </div>
       </div>
     {/if}
+    <div class="type-filter-chips" role="group" aria-label="Filter by quest type">
+      {#each QUEST_TYPE_OPTIONS as chip}
+        <button
+          type="button"
+          class="type-chip"
+          class:active={selectedTypes.includes(chip.id)}
+          style="--chip-color: {chip.color}"
+          on:click={() => toggleTypeFilter(chip.id)}
+          aria-pressed={selectedTypes.includes(chip.id)}
+        >{chip.label}</button>
+      {/each}
+    </div>
   </div>
 
   <div class="questlog-content">
@@ -1468,5 +1535,42 @@
   .back-to-quests-btn:hover {
     background: var(--btn-hover-bg);
     border-color: var(--btn-hover-border);
+  }
+
+  .type-filter-chips {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 0.4em 0 0.1em;
+  }
+
+  .type-chip {
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: var(--text-xs);
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    font-family: inherit;
+    border: 1px solid var(--chip-color);
+    color: var(--chip-color);
+    background: transparent;
+    opacity: 0.5;
+    transition: all 0.15s ease;
+    line-height: 1.3;
+  }
+
+  .type-chip:hover {
+    opacity: 0.85;
+    background: color-mix(in srgb, var(--chip-color) 18%, transparent);
+  }
+
+  .type-chip.active {
+    opacity: 1;
+    color: #ffffff;
+    background: var(--chip-color);
+    border-color: var(--chip-color);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--chip-color) 45%, transparent);
   }
 </style>

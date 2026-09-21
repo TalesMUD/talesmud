@@ -40,14 +40,19 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Response actions send the narrative `response` text, not the help `description`
   - Action descriptions shown in room text ("You can:" section)
   - Visual backgrounds and mood settings
-  - Coordinate-based world mapping (X, Y, Z grid) plus a compiled atlas: compass exits become geography, areas become organic hulls, per-character fog of war is served at `GET /api/characters/:id/map`
+  - Coordinate-based world mapping (X, Y, Z grid) plus a compiled atlas: authored coords pin rooms, remaining rooms cluster by area from compass exits, zones pack with a gap so adjacent demo areas read apart; per-character fog of war at `GET /api/characters/:id/map`
   - Dynamic item and NPC spawning
   - Unique NPCs auto-spawn into their assigned room on server start via `CurrentRoomID`
+  - Per-character friends list (`friend add/remove/list`); HUD overlay with online flags + whisper; guests refused
   - Guest-public NPC/enemy portraits (`/api/portraits/:filename`, hashed avatar fallback)
-  - Merchant shop overlay in the room widget (structured `shop` WS message; dialog Trade inject; buy/sell)
-  - Player chrome Map (not Atlas): fullscreen Map overlay (Esc/X); label LOD + one you-are-here; Map chrome on action bar
-  - Action bar Option C: room dirs + room actions + Shop; fixed INV/MAP/SAY chrome; optional pins via ⋯ (Look off by default)
-  - Spell Bar / Hotbar: skills + consumables; Look/Rest/Talk/Flee bindable but not seeded; no Search=look
+  - Merchant shop overlay in the room widget (structured `shop` WS message with item stats/description; click inspects, explicit Buy/Sell confirm; WoW-style compare-to-equipped deltas on buy inspect; dialog Trade inject)
+  - Player chrome Map: Cartographer overlay (desktop ~80% + intel rail; phone full-bleed + bottom intel sheet); tap inspect, Travel button; biome tiles; gold you-icon; Overworld z==0; inter-area exits pack connected demo zones
+  - Play client WS: single-flight socket gate; close 4001 (session replaced) does not auto-reconnect; `/play` JS/CSS served no-cache
+  - Action bar Option C: room dirs + room actions + Shop; fixed INV/MAP/SAY chrome; **Recipes** pin seeded by default; optional Look/Rest/… via ⋯
+  - Gathering & crafting v1 (no professions): room GATHER chips + recipes/craft; R0209 CRAFT/RECIPES chips; R0102 first-gather hint
+  - Spell Bar / Hotbar: skills + consumables; Rest seeded on empty/default bar (slot 7); Look/Talk/Flee bindable; no Search=look
+  - OOC Resting chip on character HP / mobile header while `Flags.resting`; clears on combat or rest end
+  - BattleStage: arena art clipped to the fight band; Attack/Defend/Items/Flee + hotbar share one dock strip; FF-style plates; queue chip centered in the dock
   - Say chrome opens a message popup, then sends `say <text>`
   - Inventory chrome opens overlay by default (preference: overlay | on-screen widget)
   - Equipment paper-doll: square slots around portrait (head/neck/chest/hands | legs/boots/ring1/ring2; main_hand + off_hand under); compact ATK/DEF strip
@@ -157,6 +162,8 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Global and room-based chat
   - Private tells/whispers and minimal party chat
   - Party flow: create parties, invite online players, accept/decline invites, list members, leave party, and send party chat
+  - Party Combat Assist v1: same-room players join in-progress fights via `attack <npc>`; party members get a join nudge; XP/gold split among living joiners
+  - Party UI: HUD launch next to Friends, PartyOverlay (create/invite/list/say/leave), Accept/Decline invite banner; guests see sign-in note
   - Emote system
   - Live session-based player presence tracking for room UI, chat routing, `who`, and silent room presence refreshes
   - Reconnect-aware client state with visible connecting/reconnecting status and automatic reconnect attempts

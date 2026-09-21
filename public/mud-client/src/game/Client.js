@@ -5,6 +5,7 @@ import { writable, get } from "svelte/store";
 import { overlayStore } from "./ui/overlayStore.js";
 import { getPlayerColor } from "./playerColors.js";
 import { markPlayersYou, parseRoomChatLine } from "./roomChat.js";
+import { parsePartyChatLine } from "./partyState.js";
 
 const GAME_CLIENT = writable(null);
 
@@ -78,6 +79,7 @@ function createClient(renderer, characterCreator, muxStore) {
       if (roomChanged) {
         mux.clearDialog();
         if (mux.clearShop) mux.clearShop();
+        if (mux.clearRecipes) mux.clearRecipes();
       }
 
       // Track room visit for minimap fallback and refresh the atlas
@@ -168,8 +170,10 @@ function createClient(renderer, characterCreator, muxStore) {
         level: msg.level,
         gold: msg.gold,
         inCombat: msg.inCombat,
+        resting: !!msg.resting,
         attributes: msg.attributes,
-        equippedSkills: msg.equippedSkills,
+        equippedSkills: Array.isArray(msg.equippedSkills) ? msg.equippedSkills : undefined,
+        maxSkillSlots: msg.maxSkillSlots,
         unspentAttributePoints: msg.unspentAttributePoints,
         spentAttributePoints: msg.spentAttributePoints,
         attackPower: msg.attackPower,
@@ -206,6 +210,35 @@ function createClient(renderer, characterCreator, muxStore) {
     }
   };
 
+  messageHandlers["friends"] = (msg) => {
+    if (mux && mux.setFriends) {
+      mux.setFriends(msg.friends || []);
+    }
+  };
+
+  messageHandlers["party"] = (msg) => {
+    if (mux && mux.setParty) {
+      mux.setParty({
+        inParty: !!msg.inParty,
+        partyId: msg.partyId || msg.partyID || '',
+        partyName: msg.partyName || '',
+        leaderId: msg.leaderId || msg.leaderCharacterId || '',
+        maxMembers: msg.maxMembers || 5,
+        members: msg.members || [],
+      });
+    }
+  };
+
+  messageHandlers["party_invite"] = (msg) => {
+    if (mux && mux.setPartyInvite) {
+      mux.setPartyInvite({
+        pending: !!msg.pending,
+        inviterName: msg.inviterName || '',
+        partyId: msg.partyId || msg.partyID || '',
+      });
+    }
+  };
+
   messageHandlers["shop"] = (msg) => {
     if (mux) {
       mux.setShop({
@@ -218,6 +251,18 @@ function createClient(renderer, characterCreator, muxStore) {
         sellMultiplier: msg.sellMultiplier || 0.5,
       });
       if (mux.clearDialog) mux.clearDialog();
+    }
+    if (msg.message) {
+      renderer(msg.message);
+    }
+  };
+
+  messageHandlers["recipes"] = (msg) => {
+    if (mux && mux.setRecipes) {
+      mux.setRecipes({
+        recipes: msg.recipes || [],
+        roomTags: msg.roomTags || [],
+      });
     }
     if (msg.message) {
       renderer(msg.message);
@@ -520,10 +565,24 @@ function createClient(renderer, characterCreator, muxStore) {
           // Pass structured data so terminals can color the player name
           const color = getPlayerColor(msg.username);
           renderer({ username: msg.username, message: msg.message, color });
-          overlayStore.pushMessage(msg.username + ":  " + msg.message);
+          // Room mood / system ambiance: body only on overlay (no SYSTEM: prefix).
+          // Terminal still gets the username via renderer above.
+          if (/^system$/i.test(String(msg.username))) {
+            overlayStore.pushMessage({ text: msg.message, kind: 'ambiance' });
+          } else {
+            overlayStore.pushMessage(msg.username + ":  " + msg.message);
+          }
         } else {
           renderer(message);
           overlayStore.pushMessage(message);
+        }
+
+        if (mux && mux.appendPartyChat) {
+          const raw = msg && (msg.message || '');
+          if (typeof raw === 'string' && raw.indexOf('[Party]') === 0) {
+            const pline = parsePartyChatLine(raw, currentCharacter && currentCharacter.name);
+            if (pline) mux.appendPartyChat(pline);
+          }
         }
 
         if (mux && mux.appendRoomChat) {
@@ -546,6 +605,23 @@ function createClient(renderer, characterCreator, muxStore) {
               lower.includes("level")
             ) {
               mux.setShopError(message);
+            }
+          }
+          if (mux && get(mux)?.recipes && mux.setCraftError) {
+            const lower = String(message || "").toLowerCase();
+            if (lower.includes("you craft")) {
+              // Success — clear prior craft errors; counts refresh via inventoryUpdate.
+              if (mux.clearCraftError) mux.clearCraftError();
+            } else if (
+              lower.includes("missing materials") ||
+              lower.includes("can't craft") ||
+              lower.includes("cannot craft") ||
+              lower.includes("unknown recipe") ||
+              lower.includes("inventory is full") ||
+              lower.includes("requires a") ||
+              lower.includes("something went wrong")
+            ) {
+              mux.setCraftError(message);
             }
           }
         }

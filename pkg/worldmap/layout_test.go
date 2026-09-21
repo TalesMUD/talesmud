@@ -204,6 +204,190 @@ func TestCompileDoesNotCollapseTwoRoomsOnOneCell(t *testing.T) {
 	}
 }
 
+func withCoords(r *rooms.Room, x, y, z int32) *rooms.Room {
+	r.Coords = &struct {
+		X int32 `bson:"x" json:"x"`
+		Y int32 `bson:"y" json:"y"`
+		Z int32 `bson:"z" json:"z"`
+	}{X: x, Y: y, Z: z}
+	return r
+}
+
+func minAreaChebyshev(w *World, a, b string) int {
+	min := 1 << 20
+	for _, pa := range w.rooms {
+		if pa.area != a {
+			continue
+		}
+		for _, pb := range w.rooms {
+			if pb.area != b || pa.z != pb.z {
+				continue
+			}
+			d := abs(pa.x - pb.x)
+			if dy := abs(pa.y - pb.y); dy > d {
+				d = dy
+			}
+			if d < min {
+				min = d
+			}
+		}
+	}
+	return min
+}
+
+func TestCompilePrefersAuthoredCoords(t *testing.T) {
+	meadow := withCoords(testRoom("R0101", "Meadow", "Z01_meadows_forest_path", []string{"outdoor", "starting_room"},
+		exit("north", "R0102", false)), 12, -4, 0)
+	field := testRoom("R0102", "Field", "Z01_meadows_forest_path", []string{"outdoor"},
+		exit("south", "R0101", false))
+	w := Compile([]*rooms.Room{meadow, field})
+	if w.rooms["R0101"].x != 12 || w.rooms["R0101"].y != -4 {
+		t.Fatalf("authored coords dropped: (%d,%d)", w.rooms["R0101"].x, w.rooms["R0101"].y)
+	}
+	if w.rooms["R0102"].x != 12 || w.rooms["R0102"].y != -5 {
+		t.Fatalf("north of authored meadow: got (%d,%d) want (12,-5)", w.rooms["R0102"].x, w.rooms["R0102"].y)
+	}
+}
+
+func TestCompileSeparatesAreas(t *testing.T) {
+	w := Compile([]*rooms.Room{
+		testRoom("R0101", "Meadow", "Z01_meadows_forest_path", []string{"starting_room", "outdoor"},
+			exit("north", "R0102", false), exit("west", "R0201", false)),
+		testRoom("R0102", "Field", "Z01_meadows_forest_path", []string{"outdoor"},
+			exit("south", "R0101", false)),
+		testRoom("R0201", "Gate", "Z02_oldtown", []string{"outdoor", "entry_point"},
+			exit("east", "R0101", false), exit("west", "R0202", false)),
+		testRoom("R0202", "Street", "Z02_oldtown", []string{"outdoor"},
+			exit("east", "R0201", false)),
+		testRoom("R0301", "Ashen", "Z03_ashenveil", []string{"outdoor", "entry_point"},
+			exit("south", "R0302", false)),
+		testRoom("R0302", "Cinder", "Z03_ashenveil", []string{"outdoor"},
+			exit("north", "R0301", false)),
+	})
+	if w.rooms["R0102"].x != w.rooms["R0101"].x || w.rooms["R0102"].y != w.rooms["R0101"].y-1 {
+		t.Fatalf("intra-meadow north broken: meadow (%d,%d) field (%d,%d)",
+			w.rooms["R0101"].x, w.rooms["R0101"].y, w.rooms["R0102"].x, w.rooms["R0102"].y)
+	}
+	if w.rooms["R0202"].x != w.rooms["R0201"].x-1 || w.rooms["R0202"].y != w.rooms["R0201"].y {
+		t.Fatalf("intra-oldtown west broken: gate (%d,%d) street (%d,%d)",
+			w.rooms["R0201"].x, w.rooms["R0201"].y, w.rooms["R0202"].x, w.rooms["R0202"].y)
+	}
+	if g := minAreaChebyshev(w, "Z01_meadows_forest_path", "Z02_oldtown"); g < 4 {
+		t.Fatalf("meadow/oldtown gap %d want >= 4", g)
+	}
+	if g := minAreaChebyshev(w, "Z02_oldtown", "Z03_ashenveil"); g < 4 {
+		t.Fatalf("oldtown/ashenveil gap %d want >= 4", g)
+	}
+	if g := minAreaChebyshev(w, "Z01_meadows_forest_path", "Z03_ashenveil"); g < 4 {
+		t.Fatalf("meadow/ashenveil gap %d want >= 4", g)
+	}
+}
+
+func TestUndergroundStartIsLowerLayer(t *testing.T) {
+	w := Compile([]*rooms.Room{
+		testRoom("R0001", "Awakening", "Z00_catacombs_intro", []string{"starting_room", "underground"},
+			exit("up", "R0101", false)),
+		testRoom("R0101", "Meadow", "Z01_meadows_forest_path", []string{"outdoor", "entry_point"},
+			exit("down", "R0001", false)),
+	})
+	if layerID(w.rooms["R0001"].z) != "lower" {
+		t.Fatalf("catacomb start layer=%s z=%d want lower", layerID(w.rooms["R0001"].z), w.rooms["R0001"].z)
+	}
+	if layerID(w.rooms["R0101"].z) != "overworld" {
+		t.Fatalf("meadow layer=%s z=%d want overworld", layerID(w.rooms["R0101"].z), w.rooms["R0101"].z)
+	}
+}
+
+func TestRevealOverworldOmitsNonZeroZ(t *testing.T) {
+	w := Compile([]*rooms.Room{
+		testRoom("R0001", "Awakening", "Z00_catacombs_intro", []string{"starting_room", "underground"},
+			exit("up", "R0101", false), exit("east", "R0005", false)),
+		testRoom("R0005", "Nest", "Z00_catacombs_intro", []string{"underground"},
+			exit("west", "R0001", false)),
+		testRoom("R0101", "Meadow", "Z01_meadows_forest_path", []string{"outdoor", "entry_point"},
+			exit("down", "R0001", false)),
+	})
+	ch := &characters.Character{
+		Entity:          &entities.Entity{ID: "c1"},
+		CurrentRoom:     traits.CurrentRoom{CurrentRoomID: "R0101"},
+		DiscoveredRooms: map[string]bool{"R0001": true, "R0005": true, "R0101": true},
+	}
+	atlas := Reveal(w, ch)
+	for _, p := range atlas.Places {
+		if p.Layer == "overworld" && p.Z != 0 {
+			t.Fatalf("overworld leaked z=%d room %s", p.Z, p.ID)
+		}
+		if p.ID == "R0001" && p.Layer == "overworld" {
+			t.Fatal("catacomb start must not appear on overworld")
+		}
+	}
+}
+
+func TestCompileOldtownNorthOfMeadows(t *testing.T) {
+	w := Compile([]*rooms.Room{
+		testRoom("R0108", "Sign", "Z01_meadows_forest_path", []string{"outdoor", "starting_room"},
+			exit("north", "R0201", false)),
+		testRoom("R0201", "Gate", "Z02_oldtown", []string{"outdoor", "entry_point"},
+			exit("south", "R0108", false), exit("northwest", "R0401", false)),
+		testRoom("R0401", "Timber", "Z04_ashenvale_woods", []string{"outdoor", "entry_point"},
+			exit("southeast", "R0201", false)),
+	})
+	if w.rooms["R0201"].y >= w.rooms["R0108"].y {
+		t.Fatalf("oldtown y=%d should be north (smaller y) of meadows y=%d", w.rooms["R0201"].y, w.rooms["R0108"].y)
+	}
+	if w.rooms["R0401"].y >= w.rooms["R0201"].y {
+		t.Fatalf("ashenveil y=%d should be north of oldtown y=%d", w.rooms["R0401"].y, w.rooms["R0201"].y)
+	}
+}
+
+func TestRevealIncludesExitsAndDanger(t *testing.T) {
+	w := Compile([]*rooms.Room{
+		testRoom("R0101", "Meadow", "Z01_meadows_forest_path", []string{"outdoor", "starting_room", "safe"},
+			exit("north", "R0102", false)),
+		testRoom("R0102", "Field", "Z01_meadows_forest_path", []string{"outdoor"},
+			exit("south", "R0101", false)),
+	})
+	ch := &characters.Character{
+		Entity:          &entities.Entity{ID: "c1"},
+		CurrentRoom:     traits.CurrentRoom{CurrentRoomID: "R0101"},
+		DiscoveredRooms: map[string]bool{"R0101": true},
+	}
+	atlas := Reveal(w, ch)
+	var meadow, field Place
+	for _, p := range atlas.Places {
+		if p.ID == "R0101" {
+			meadow = p
+		}
+		if p.ID == "R0102" {
+			field = p
+		}
+	}
+	if meadow.Danger != "safe" || meadow.Summary == "" {
+		t.Fatalf("meadow intel: danger=%q summary=%q", meadow.Danger, meadow.Summary)
+	}
+	if len(meadow.Exits) != 1 || meadow.Exits[0].Dir != "north" || meadow.Exits[0].To != "R0102" {
+		t.Fatalf("meadow exits: %+v", meadow.Exits)
+	}
+	if meadow.Exits[0].ToName != "" {
+		t.Fatalf("fog dest should not leak name: %+v", meadow.Exits[0])
+	}
+	if field.Discovered || field.Danger != "uncharted" || len(field.Exits) != 0 {
+		t.Fatalf("fog field should be lean: %+v", field)
+	}
+	AttachResidents(&atlas, map[string][]PlaceResident{
+		"R0101": {{Name: "Wren", Kind: "npc"}},
+		"R0102": {{Name: "Wolf", Kind: "enemy"}},
+	})
+	for _, p := range atlas.Places {
+		if p.ID == "R0101" && (len(p.Residents) != 1 || p.Residents[0].Name != "Wren") {
+			t.Fatalf("meadow residents %+v", p.Residents)
+		}
+		if p.ID == "R0102" && len(p.Residents) != 0 {
+			t.Fatalf("fog should not get residents: %+v", p.Residents)
+		}
+	}
+}
+
 func TestDisplayAreaStripsZonePrefix(t *testing.T) {
 	if got := displayArea("Z01_meadows_forest_path"); got != "Meadows Forest Path" {
 		t.Fatalf("got %q", got)

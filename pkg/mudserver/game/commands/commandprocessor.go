@@ -87,6 +87,7 @@ func (commandProcessor *CommandProcessor) registerCommands() {
 	commandProcessor.RegisterCommand(&ListCharactersCommand{}, "List all your characters", "lc", "listcharacters")
 	commandProcessor.RegisterCommand(&HelpCommand{processor: commandProcessor}, "Are you really asking?", "h", "help")
 	commandProcessor.RegisterCommand(&WhoCommand{}, "List all online players", "who")
+	commandProcessor.RegisterCommand(&FriendCommand{}, "Friends: friend add <name>, friend remove <name>, friend list", "friend", "friends")
 	commandProcessor.RegisterCommand(&InventoryCommand{}, "Display your inventory", "inventory", "i")
 	commandProcessor.RegisterCommand(&CharacterCommand{}, "Display character stats", "character", "char", "stats")
 	commandProcessor.RegisterCommand(&NewCharacterCommand{}, "Create a new character", "newcharacter", "nc")
@@ -134,5 +135,10 @@ func (commandProcessor *CommandProcessor) registerCommands() {
 
 	// Character progression commands
 	commandProcessor.RegisterCommand(&SpendCommand{}, "Spend attribute points: spend <attr> [amount]", "spend")
+
+	// Gathering & crafting (no profession gate — everyone can gather/craft)
+	commandProcessor.RegisterCommand(&GatherCommand{}, "Gather from world nodes: gather|forage|harvest [target]", "gather", "forage", "harvest")
+	commandProcessor.RegisterCommand(&RecipesCommand{}, "List all crafting recipes: recipes", "recipes", "recipe")
+	commandProcessor.RegisterCommand(&CraftCommand{}, "Craft an item: craft <recipe>", "craft")
 
 }

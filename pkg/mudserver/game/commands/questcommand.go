@@ -264,7 +264,12 @@ func (cmd *CompleteQuestCommand) Execute(game def.GameCtrl, message *messages.Me
 
 		updatedChar, _ := game.GetFacade().CharactersService().FindByID(message.Character.ID)
 		if updatedChar != nil {
+			notifyLevelUp(game, message.Character.BelongsUserID, result.LevelUp)
 			game.SendMessage() <- messages.NewCharacterUpdateMessage(message.Character.BelongsUserID, updatedChar)
+			message.Character = updatedChar
+			if message.FromUser != nil {
+				game.SetUserSessionCharacter(message.FromUser, updatedChar)
+			}
 			if len(result.GrantedItems) > 0 {
 				inventoryMsg := &messages.Message{
 					FromUser:  message.FromUser,

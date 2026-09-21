@@ -85,6 +85,22 @@
     font-size: 13px;
   }
 
+  .rest-pill {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: rgba(34, 197, 94, 0.2);
+    border: 1px solid rgba(34, 197, 94, 0.45);
+    color: #86efac;
+  }
+  .rest-pill i { font-size: 13px; }
+
   .combat-indicator {
     animation: combatPulse 2s ease-in-out infinite;
     border-bottom: 2px solid rgba(239, 68, 68, 0.8);
@@ -106,6 +122,7 @@
   $: hpPercent = Math.round((currentHP / maxHP) * 100);
   $: hpClass = hpPercent > 60 ? 'hp-high' : hpPercent > 30 ? 'hp-mid' : 'hp-low';
   $: inCombat = $store.inCombat;
+  $: resting = !!(stats.resting && !inCombat);
 </script>
 
 <div class="mobile-header" class:combat-indicator={inCombat}>
@@ -115,6 +132,9 @@
   </div>
 
   <div class="header-right">
+    {#if resting}
+      <span class="rest-pill"><i class="material-icons">hotel</i> Resting</span>
+    {/if}
     <div class="hp-pill {hpClass}">
       <i class="material-icons">favorite</i>
       {currentHP}/{maxHP}

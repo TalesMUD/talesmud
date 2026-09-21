@@ -414,6 +414,9 @@ function createStore() {
     // Merchant shop overlay
     shop: null,
     shopError: "",
+    // Crafting recipes overlay
+    recipes: null,
+    craftError: "",
 
     // Game context flags
     inCombat: false,
@@ -453,8 +456,10 @@ function createStore() {
       level: 0,
       gold: 0,
       inCombat: false,
+      resting: false,
       attributes: [],
       equippedSkills: [],
+      maxSkillSlots: 0,
       unspentAttributePoints: 0,
       spentAttributePoints: {},
       attackPower: 0,
@@ -475,7 +480,14 @@ function createStore() {
     atlas: emptyAtlas(),
     atlasLayer: null,
     mapOverviewOpen: false,
+    mapSelectedId: null,
     inventoryOverlayOpen: false,
+    friendsOverlayOpen: false,
+    friends: [],
+    partyOverlayOpen: false,
+    party: { inParty: false, partyId: '', partyName: '', leaderId: '', maxMembers: 5, members: [] },
+    partyChat: [],
+    partyInvite: null,
   });
 
   const store = {
@@ -667,6 +679,33 @@ function createStore() {
       });
     },
 
+    setRecipes: (recipes) => {
+      update((state) => {
+        state.recipes = recipes || null;
+        state.craftError = "";
+        return state;
+      });
+    },
+    clearRecipes: () => {
+      update((state) => {
+        state.recipes = null;
+        state.craftError = "";
+        return state;
+      });
+    },
+    setCraftError: (message) => {
+      update((state) => {
+        state.craftError = message || "";
+        return state;
+      });
+    },
+    clearCraftError: () => {
+      update((state) => {
+        state.craftError = "";
+        return state;
+      });
+    },
+
     // Inventory methods
     setInventory: (inventory, equippedItems, gold) => {
       update((state) => {
@@ -707,8 +746,10 @@ function createStore() {
             level: character.level || 0,
             gold: character.gold || 0,
             inCombat: character.inCombat || false,
+            resting: !!(character.flags && character.flags.resting),
             attributes: character.attributes || [],
             equippedSkills: character.equippedSkills || [],
+            maxSkillSlots: character.maxSkillSlots || prev.maxSkillSlots || 0,
             unspentAttributePoints: character.unspentAttributePoints || 0,
             spentAttributePoints: character.spentAttributePoints || {},
             attackPower: keepDerived("attackPower", 0),
@@ -737,8 +778,10 @@ function createStore() {
           level: stats.level ?? prev.level,
           gold: stats.gold ?? prev.gold,
           inCombat: stats.inCombat ?? prev.inCombat,
+          resting: stats.resting !== undefined ? !!stats.resting : prev.resting,
           attributes: stats.attributes || prev.attributes,
-          equippedSkills: stats.equippedSkills || prev.equippedSkills,
+          equippedSkills: Array.isArray(stats.equippedSkills) ? stats.equippedSkills : (prev.equippedSkills || []),
+          maxSkillSlots: stats.maxSkillSlots ?? prev.maxSkillSlots,
           unspentAttributePoints: stats.unspentAttributePoints ?? prev.unspentAttributePoints,
           spentAttributePoints: stats.spentAttributePoints || prev.spentAttributePoints,
           attackPower: stats.attackPower ?? prev.attackPower,
@@ -760,8 +803,10 @@ function createStore() {
           next.level === prev.level &&
           next.gold === prev.gold &&
           next.inCombat === prev.inCombat &&
+          next.resting === prev.resting &&
           sameAttrList(next.attributes, prev.attributes) &&
           sameSkillList(next.equippedSkills, prev.equippedSkills) &&
+          next.maxSkillSlots === prev.maxSkillSlots &&
           next.unspentAttributePoints === prev.unspentAttributePoints &&
           JSON.stringify(next.spentAttributePoints || {}) === JSON.stringify(prev.spentAttributePoints || {}) &&
           next.attackPower === prev.attackPower &&
@@ -828,6 +873,9 @@ function createStore() {
         const nextPlayers = normalizeCombatantList(players);
         state.inCombat = true;
         state.combatPhase = "active";
+        if (state.characterStats) {
+          state.characterStats = { ...state.characterStats, inCombat: true, resting: false };
+        }
         state.combatOutcome = null;
         state.combatEndMessage = "";
         state.combatEnemies = nextEnemies;
@@ -848,6 +896,9 @@ function createStore() {
       update((state) => {
         state.inCombat = true;
         if (state.combatPhase === "idle") state.combatPhase = "active";
+        if (state.characterStats?.resting) {
+          state.characterStats = { ...state.characterStats, inCombat: true, resting: false };
+        }
         state.combatTurn = turn
           ? {
               actorId: turn.actorId || "",
@@ -868,6 +919,9 @@ function createStore() {
       update((state) => {
         state.inCombat = true;
         if (state.combatPhase === "idle") state.combatPhase = "active";
+        if (state.characterStats?.resting) {
+          state.characterStats = { ...state.characterStats, inCombat: true, resting: false };
+        }
         applyCombatQueueFields(state, msg);
         return state;
       });
@@ -877,6 +931,9 @@ function createStore() {
       update((state) => {
         state.inCombat = true;
         if (state.combatPhase === "idle") state.combatPhase = "active";
+        if (state.characterStats?.resting) {
+          state.characterStats = { ...state.characterStats, inCombat: true, resting: false };
+        }
 
         const snapshots = normalizeCombatantList(msg?.combatants);
         if (snapshots.length) {
@@ -1157,14 +1214,18 @@ function createStore() {
           return state;
         }
         state.atlas = merged;
+        const prevRoom = state.currentRoomId;
         if (state.atlas.currentRoomId) {
           state.currentRoomId = state.atlas.currentRoomId;
         }
-        const here = (state.atlas.places || []).find(p => p.id === state.currentRoomId);
-        if (here && here.layer) {
-          state.atlasLayer = here.layer;
-        } else if (state.atlas.currentLayer) {
-          state.atlasLayer = state.atlas.currentLayer;
+        // Follow the player's layer on room change; tab clicks own atlasLayer otherwise.
+        if (state.currentRoomId !== prevRoom) {
+          const here = (state.atlas.places || []).find(p => p.id === state.currentRoomId);
+          if (here && here.layer) {
+            state.atlasLayer = here.layer;
+          } else if (state.atlas.currentLayer) {
+            state.atlasLayer = state.atlas.currentLayer;
+          }
         }
         return state;
       });
@@ -1177,10 +1238,13 @@ function createStore() {
       });
     },
 
-    openMapOverview: () => {
+    openMapOverview: (focusId) => {
       update((state) => {
-        // Immutable update — Svelte writable uses reference equality.
-        return { ...state, mapOverviewOpen: true };
+        return {
+          ...state,
+          mapOverviewOpen: true,
+          mapSelectedId: focusId || state.mapSelectedId || state.currentRoomId || null,
+        };
       });
     },
     closeMapOverview: () => {
@@ -1191,6 +1255,11 @@ function createStore() {
     setMapOverviewOpen: (open) => {
       update((state) => {
         return { ...state, mapOverviewOpen: !!open };
+      });
+    },
+    selectMapPlace: (id) => {
+      update((state) => {
+        return { ...state, mapSelectedId: id || null };
       });
     },
 
@@ -1207,6 +1276,93 @@ function createStore() {
     setInventoryOverlayOpen: (open) => {
       update((state) => {
         return { ...state, inventoryOverlayOpen: !!open };
+      });
+    },
+
+    setFriends: (friends) => {
+      update((state) => {
+        state.friends = Array.isArray(friends) ? friends : [];
+        return state;
+      });
+    },
+    openFriendsOverlay: () => {
+      update((state) => {
+        return { ...state, friendsOverlayOpen: true };
+      });
+    },
+    closeFriendsOverlay: () => {
+      update((state) => {
+        return { ...state, friendsOverlayOpen: false };
+      });
+    },
+    setFriendsOverlayOpen: (open) => {
+      update((state) => {
+        return { ...state, friendsOverlayOpen: !!open };
+      });
+    },
+
+    setParty: (party) => {
+      update((state) => {
+        // Keep shape aligned with partyState.normalizePartyState
+        const next = party && typeof party === 'object' ? party : {};
+        const members = Array.isArray(next.members) ? next.members : [];
+        const wasIn = !!state.party?.inParty;
+        const nowIn = !!next.inParty;
+        state.party = {
+          inParty: nowIn,
+          partyId: String(next.partyId || next.partyID || ''),
+          partyName: String(next.partyName || ''),
+          leaderId: String(next.leaderId || next.leaderCharacterId || ''),
+          maxMembers: Number(next.maxMembers) > 0 ? Number(next.maxMembers) : 5,
+          members,
+        };
+        if (wasIn && !nowIn) {
+          state.partyChat = [];
+        }
+        return state;
+      });
+    },
+    appendPartyChat: (line) => {
+      if (!line) return;
+      update((state) => {
+        const next = [...(state.partyChat || []), line].slice(-8);
+        state.partyChat = next;
+        return state;
+      });
+    },
+    clearPartyChat: () => {
+      update((state) => {
+        state.partyChat = [];
+        return state;
+      });
+    },
+    setPartyInvite: (invite) => {
+      update((state) => {
+        if (!invite || !invite.pending) {
+          state.partyInvite = null;
+          return state;
+        }
+        state.partyInvite = {
+          pending: true,
+          inviterName: String(invite.inviterName || ''),
+          partyId: String(invite.partyId || invite.partyID || ''),
+        };
+        return state;
+      });
+    },
+    openPartyOverlay: () => {
+      update((state) => {
+        return { ...state, partyOverlayOpen: true };
+      });
+    },
+    closePartyOverlay: () => {
+      update((state) => {
+        return { ...state, partyOverlayOpen: false };
+      });
+    },
+    setPartyOverlayOpen: (open) => {
+      update((state) => {
+        return { ...state, partyOverlayOpen: !!open };
       });
     },
   };

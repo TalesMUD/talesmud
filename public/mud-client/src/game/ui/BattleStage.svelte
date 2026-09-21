@@ -14,18 +14,30 @@
   import { overlayStore } from './overlayStore.js';
   import { itemArtSrc, onItemArtError } from '../itemArtSrc.js';
   import { backend } from '../../api/base.js';
+  import {
+    DEFAULT_DECISION_WINDOW_MS,
+    DEFAULT_BEAT_BUDGET_MS,
+    createSkillCooldownClock,
+  } from '../combatCooldown.js';
 
   export let store;
   export let sendMessage;
+
+  const cdClock = createSkillCooldownClock();
 
   let panel = null; // null | 'items'
   let nowMs = Date.now();
   let tickTimer = null;
   let fxKey = 0;
   let bannerText = '';
+  let bannerParts = null; // { kind, actor, verb, target, amount, icon, raw }
   let bannerVisible = false;
   let bannerTimer = null;
   let lastBannerKey = '';
+  let bannerFlashKey = 0;
+  let arenaFlash = false;
+  let arenaFlashTimer = null;
+  let bannerStack = []; // recent faded lines [{id, parts, raw}]
   let logEl = null;
   let logScrollPending = false;
   let logExpanded = false;
@@ -63,12 +75,30 @@
     : (character?.class || '');
 
   $: isMyTurn = !!(turn && selfId && turn.actorId === selfId);
-  $: deadlineMs = isMyTurn ? (turn?.deadlineMs || 0) : 0;
+  $: nextActionAtMs = Number($store.combatNextActionAtMs) || 0;
+  $: waitingOnBeat = phase === 'active' && nextActionAtMs > nowMs;
+  $: decisionActive = isMyTurn && !waitingOnBeat && Number(turn?.deadlineMs) > nowMs;
+  $: deadlineMs = decisionActive ? (turn?.deadlineMs || 0) : 0;
   $: timerLeftMs = deadlineMs > 0 ? Math.max(0, deadlineMs - nowMs) : 0;
-  $: timerPct = deadlineMs > 0
-    ? Math.max(0, Math.min(100, (timerLeftMs / 10000) * 100))
+  let decisionWindowMs = DEFAULT_DECISION_WINDOW_MS;
+  let lastDeadlineMs = 0;
+  $: if (deadlineMs > 0 && deadlineMs !== lastDeadlineMs) {
+    lastDeadlineMs = deadlineMs;
+    const remaining = deadlineMs - Date.now();
+    decisionWindowMs = remaining > 250 ? remaining : DEFAULT_DECISION_WINDOW_MS;
+  }
+  $: timerPct = deadlineMs > 0 && decisionWindowMs > 0
+    ? Math.max(0, Math.min(100, (timerLeftMs / decisionWindowMs) * 100))
     : 0;
   $: timerSec = Math.ceil(timerLeftMs / 1000);
+  $: showWaitingTimer = phase === 'active' && !decisionActive;
+  $: beatLeftMs = waitingOnBeat ? Math.max(0, nextActionAtMs - nowMs) : 0;
+  $: beatLeftSec = Math.ceil(beatLeftMs / 1000);
+  $: waitingLabel = waitingOnBeat
+    ? (beatLeftSec > 0 ? `Next ${beatLeftSec}s` : 'Resolving…')
+    : (isMyTurn ? 'Resolving…' : ((turn?.actorName ? `${turn.actorName}` : 'Waiting') + '…'));
+  $: enemyCount = (enemies || []).length;
+  $: enemyPack = enemyCount <= 0 ? '' : (enemyCount === 1 ? 'solo' : (enemyCount <= 3 ? 'duo' : 'swarm'));
 
   $: if (fx?.at) fxKey = fx.at;
 
@@ -87,7 +117,7 @@
   );
   $: fxIsCrit = fxActive && fxResult === 'crit';
 
-  $: if (visible && (deadlineMs > 0 || resolveAtMs > 0 || !!queuedAction)) startTick();
+  $: if (visible && (phase === 'active' || phase === 'ending')) startTick();
   else stopTick();
 
   $: consumables = inventory.filter(isConsumableItem);
@@ -103,8 +133,15 @@
   $: queuedAction = $store.combatQueuedAction || '';
   $: queuedSkillId = $store.combatQueuedSkillId || '';
   $: skillCooldowns = $store.combatSkillCooldowns || {};
-  $: nextActionAtMs = Number($store.combatNextActionAtMs) || 0;
   $: decisionDeadlineMs = Number($store.combatDecisionDeadlineMs) || deadlineMs || 0;
+  $: if (isMyTurn && turn) {
+    cdClock.noteSelfTurn(`${turn.round}-${turn.actorId}-${turn.deadlineMs || 0}`, nowMs);
+  }
+  $: {
+    skillCooldowns;
+    cdClock.sync(skillCooldowns, nowMs);
+  }
+  $: if (!visible) cdClock.reset();
   $: resolveAtMs = nextActionAtMs > 0
     ? nextActionAtMs
     : (queuedAction && decisionDeadlineMs > 0 ? decisionDeadlineMs : 0);
@@ -115,29 +152,48 @@
 
   // Short hit banner: prefer combatFx summary; log only if short prose (no rolls/ASCII dumps).
   $: {
-    let nextText = '';
+    let nextParts = null;
     let nextKey = '';
     if (fx && fx.at) {
       nextKey = `fx-${fx.at}`;
-      nextText = formatFxBanner(fx);
+      nextParts = formatFxBannerParts(fx);
     }
-    if (!nextText) {
+    if (!nextParts) {
       const latest = log.length ? log[log.length - 1] : null;
       const candidate = latest?.text ? String(latest.text).trim() : '';
       if (latest && isBannerWorthy(candidate)) {
         nextKey = String(latest.id);
-        nextText = shortenBannerText(candidate);
+        nextParts = parseBannerParts(shortenBannerText(candidate));
       }
     }
-    if (nextText && nextKey && nextKey !== lastBannerKey) {
+    if (nextParts && nextKey && nextKey !== lastBannerKey) {
+      const prevRaw = bannerText;
+      const prevParts = bannerParts;
+      if (prevRaw && lastBannerKey) {
+        bannerStack = [
+          { id: lastBannerKey, parts: prevParts, raw: prevRaw },
+          ...bannerStack,
+        ].slice(0, 2);
+      }
       lastBannerKey = nextKey;
-      bannerText = nextText;
+      bannerParts = nextParts;
+      bannerText = nextParts.raw || '';
       bannerVisible = true;
+      bannerFlashKey += 1;
       if (bannerTimer) clearTimeout(bannerTimer);
       bannerTimer = setTimeout(() => {
         bannerVisible = false;
         bannerTimer = null;
-      }, 2500);
+      }, 2800);
+      const kind = nextParts.kind;
+      if (kind === 'hit' || kind === 'crit' || kind === 'heal') {
+        arenaFlash = true;
+        if (arenaFlashTimer) clearTimeout(arenaFlashTimer);
+        arenaFlashTimer = setTimeout(() => {
+          arenaFlash = false;
+          arenaFlashTimer = null;
+        }, kind === 'crit' ? 520 : 380);
+      }
     }
   }
 
@@ -181,6 +237,7 @@
   onDestroy(() => {
     stopTick();
     if (bannerTimer) clearTimeout(bannerTimer);
+    if (arenaFlashTimer) clearTimeout(arenaFlashTimer);
   });
 
   function combatantPortrait(c, fallbackKey) {
@@ -242,14 +299,11 @@
   }
 
   function skillCooldownRounds(bind) {
-    if (!bind || bind.kind !== 'skill') return 0;
-    const id = bind.id || '';
-    if (!id) return 0;
-    const cd = skillCooldowns[id];
-    if (cd > 0) return cd;
-    // Also try name-keyed maps just in case
-    const byName = skillCooldowns[bind.name] || skillCooldowns[skillDisplayName(id)];
-    return byName > 0 ? byName : 0;
+    return cdClock.roundsFor(bind);
+  }
+
+  function skillCooldownSec(bind) {
+    return cdClock.secondsFor(bind, nowMs);
   }
 
   function parseOutcomeRewards(msg) {
@@ -328,8 +382,78 @@
     return t.length > 72 ? `${t.slice(0, 69)}…` : t;
   }
 
-  function formatFxBanner(fxEvt) {
-    if (!fxEvt) return '';
+  function bannerIconFor(kind) {
+    switch (kind) {
+      case 'crit': return 'whatshot';
+      case 'hit': return 'flash_on';
+      case 'heal': return 'favorite';
+      case 'miss': return 'blur_on';
+      case 'defend': return 'security';
+      case 'flee': return 'directions_run';
+      case 'cast': return 'auto_fix';
+      default: return 'campaign';
+    }
+  }
+
+  function makeBannerParts({ kind = 'other', actor = '', verb = '', target = '', amount = 0, raw = '' } = {}) {
+    const k = kind || 'other';
+    return {
+      kind: k,
+      actor: actor || '',
+      verb: verb || '',
+      target: target || '',
+      amount: Number(amount) || 0,
+      icon: bannerIconFor(k),
+      raw: raw || '',
+    };
+  }
+
+  function parseBannerParts(text) {
+    const t = String(text || '').trim();
+    if (!t) return null;
+    let m = t.match(/^(.+?)\s+(crits)\s+(.+?)(?:\s+for\s+(\d+))?\.?$/i);
+    if (m) {
+      return makeBannerParts({
+        kind: 'crit', actor: m[1], verb: 'crits', target: m[3], amount: m[4] || 0, raw: t,
+      });
+    }
+    m = t.match(/^(.+?)\s+(hits)\s+(.+?)(?:\s+for\s+(\d+))?\.?$/i);
+    if (m) {
+      return makeBannerParts({
+        kind: 'hit', actor: m[1], verb: 'hits', target: m[3], amount: m[4] || 0, raw: t,
+      });
+    }
+    m = t.match(/^(.+?)\s+(heals)\s+(.+?)(?:\s+for\s+(\d+))?\.?$/i);
+    if (m) {
+      return makeBannerParts({
+        kind: 'heal', actor: m[1], verb: 'heals', target: m[3], amount: m[4] || 0, raw: t,
+      });
+    }
+    m = t.match(/^(.+?)\s+(misses)\s+(.+?)\.?$/i);
+    if (m) {
+      return makeBannerParts({
+        kind: 'miss', actor: m[1], verb: 'misses', target: m[3], raw: t,
+      });
+    }
+    m = t.match(/^(.+?)\s+(defends)\.?$/i);
+    if (m) {
+      return makeBannerParts({ kind: 'defend', actor: m[1], verb: 'defends', raw: t });
+    }
+    m = t.match(/^(.+?)\s+(flees)\.?$/i);
+    if (m) {
+      return makeBannerParts({ kind: 'flee', actor: m[1], verb: 'flees', raw: t });
+    }
+    m = t.match(/^(.+?)\s+(casts)\s+(.+)$/i);
+    if (m) {
+      return makeBannerParts({
+        kind: 'cast', actor: m[1], verb: 'casts', target: m[3], raw: t,
+      });
+    }
+    return makeBannerParts({ kind: 'other', raw: t });
+  }
+
+  function formatFxBannerParts(fxEvt) {
+    if (!fxEvt) return null;
     const all = [...(players || []), ...(enemies || [])];
     const actor = all.find((c) => c.id === fxEvt.actorId);
     const target = all.find((c) => c.id === fxEvt.targetId);
@@ -341,28 +465,67 @@
     const fxId = String(fxEvt.fxId || '').toLowerCase();
     const action = String(fxEvt.action || '').trim();
     if (dmg > 0) {
-      const verb = result === 'crit' ? 'crits' : 'hits';
-      return `${actorName} ${verb} ${targetName} for ${dmg}`;
+      const crit = result === 'crit';
+      const verb = crit ? 'crits' : 'hits';
+      const raw = `${actorName} ${verb} ${targetName} for ${dmg}`;
+      return makeBannerParts({
+        kind: crit ? 'crit' : 'hit',
+        actor: actorName,
+        verb,
+        target: targetName,
+        amount: dmg,
+        raw,
+      });
     }
-    if (heal > 0) return `${actorName} heals ${targetName} for ${heal}`;
+    if (heal > 0) {
+      const raw = `${actorName} heals ${targetName} for ${heal}`;
+      return makeBannerParts({
+        kind: 'heal', actor: actorName, verb: 'heals', target: targetName, amount: heal, raw,
+      });
+    }
     if (fxId === 'miss' || result === 'miss' || result === 'dodged') {
-      return `${actorName} misses ${targetName}`;
+      const raw = `${actorName} misses ${targetName}`;
+      return makeBannerParts({
+        kind: 'miss', actor: actorName, verb: 'misses', target: targetName, raw,
+      });
     }
     if (fxId === 'defend' || result === 'defended' || result === 'block') {
-      return `${actorName} defends`;
+      const raw = `${actorName} defends`;
+      return makeBannerParts({ kind: 'defend', actor: actorName, verb: 'defends', raw });
     }
-    if (fxId === 'flee' || result === 'fled') return `${actorName} flees`;
+    if (fxId === 'flee' || result === 'fled') {
+      const raw = `${actorName} flees`;
+      return makeBannerParts({ kind: 'flee', actor: actorName, verb: 'flees', raw });
+    }
     if (fxId === 'cast' || result === 'cast') {
-      return action ? `${actorName} casts ${action}` : `${actorName} casts a spell`;
+      const raw = action ? `${actorName} casts ${action}` : `${actorName} casts a spell`;
+      return makeBannerParts({
+        kind: 'cast', actor: actorName, verb: 'casts', target: action || 'a spell', raw,
+      });
     }
-    if (action) return `${actorName} ${action}`;
-    return '';
+    if (action) {
+      const raw = `${actorName} ${action}`;
+      return makeBannerParts({ kind: 'other', actor: actorName, verb: action, raw });
+    }
+    return null;
+  }
+
+  function formatFxBanner(fxEvt) {
+    const parts = formatFxBannerParts(fxEvt);
+    return parts?.raw || '';
   }
 
   function hotbarSlotTitle(bind) {
     if (!bind) return 'Empty';
     if (bind.kind === 'skill') {
-      return `Cast ${bind.name || skillDisplayName(bind.id)}`;
+      const name = bind.name || skillDisplayName(bind.id);
+      const sec = skillCooldownSec(bind);
+      const rounds = skillCooldownRounds(bind);
+      if (sec > 0) {
+        const turns = rounds > 0 ? ` (~${rounds} turn${rounds === 1 ? '' : 's'})` : '';
+        return `${name} — ${sec}s CD${turns}`;
+      }
+      return `Cast ${name}`;
     }
     if (bind.kind === 'item') {
       const item = findInventoryItem(inventory, bind);
@@ -375,7 +538,7 @@
   function hotbarSlotDisabled(bind) {
     if (!bind) return true;
     if (bind.kind === 'item' && !findInventoryItem(inventory, bind)) return true;
-    if (bind.kind === 'skill' && skillCooldownRounds(bind) > 0) return true;
+    if (bind.kind === 'skill' && skillCooldownSec(bind) > 0) return true;
     return false;
   }
 
@@ -433,6 +596,53 @@
 <div class="battle-stage" class:ending={phase === 'ending'} role="dialog" aria-label="Combat">
   <div class="battle-backdrop" aria-hidden="true"></div>
   <div class="battle-frame">
+  <header class="battle-header">
+    <i class="material-icons header-icon" aria-hidden="true">explore</i>
+    <span class="header-label">COMBAT</span>
+    {#if turn?.round}
+      <span class="round-chip">Round {turn.round}</span>
+    {/if}
+    {#if turn?.actorName || showWaitingTimer}
+      <span class="turn-chip" class:waiting={showWaitingTimer}>
+        {#if decisionActive}
+          Your turn
+        {:else if waitingOnBeat}
+          Waiting…
+        {:else if isMyTurn}
+          Resolving…
+        {:else}
+          {turn?.actorName ? `${turn.actorName}'s turn` : 'Waiting…'}
+        {/if}
+      </span>
+    {/if}
+    <div class="header-rule"></div>
+  </header>
+
+  <div
+    class="decision-timer"
+    class:idle={!decisionActive && !showWaitingTimer}
+    class:waiting={showWaitingTimer}
+    class:my-turn={decisionActive}
+    title={decisionActive ? `Decision window — ${timerSec}s` : (showWaitingTimer ? waitingLabel : 'Decision window')}
+    aria-live="polite"
+    aria-hidden={!decisionActive && !showWaitingTimer}
+  >
+    {#if decisionActive}
+      <div class="decision-timer-fill" style="width: {timerPct}%"></div>
+      <span class="decision-timer-label">{timerSec}s</span>
+    {:else if showWaitingTimer}
+      <div class="decision-timer-fill wait-pulse" style={waitingOnBeat ? `width: ${Math.max(8, Math.min(100, (beatLeftMs / DEFAULT_BEAT_BUDGET_MS) * 100))}%` : ''}></div>
+      <span class="decision-timer-label">{waitingLabel}</span>
+    {/if}
+  </div>
+
+  <!-- Arena band: fighters + FX + short action banner (floats clip here) -->
+  <div
+    class="battle-arena"
+    class:foes-solo={enemyPack === 'solo'}
+    class:foes-duo={enemyPack === 'duo'}
+    class:foes-swarm={enemyPack === 'swarm'}
+  >
   <div
     class="arena-art"
     class:has-art={!!arenaBgUrl}
@@ -440,36 +650,15 @@
     aria-hidden="true"
   ></div>
   <div class="arena-vignette" aria-hidden="true"></div>
-
-  <header class="battle-header">
-    <i class="material-icons header-icon" aria-hidden="true">explore</i>
-    <span class="header-label">COMBAT</span>
-    {#if turn?.round}
-      <span class="round-chip">Round {turn.round}</span>
-    {/if}
-    {#if turn?.actorName}
-      <span class="turn-chip">{isMyTurn ? 'Your turn' : `${turn.actorName}'s turn`}</span>
-    {/if}
-    <div class="header-rule"></div>
-  </header>
-
-  <div
-    class="decision-timer"
-    class:idle={!isMyTurn || deadlineMs <= 0}
-    title="Decision window"
-    aria-live="polite"
-    aria-hidden={!(isMyTurn && deadlineMs > 0)}
-  >
-    {#if isMyTurn && deadlineMs > 0}
-      <div class="decision-timer-fill" style="width: {timerPct}%"></div>
-      <span class="decision-timer-label">{timerSec}s</span>
-    {/if}
-  </div>
-
-  <!-- Arena band: fighters + FX + short action banner (floats clip here) -->
-  <div class="battle-arena">
   <!-- Enemies upper-right -->
-  <section class="enemy-strip" aria-label="Enemies">
+  <section
+    class="enemy-strip"
+    class:pack-solo={enemyPack === 'solo'}
+    class:pack-duo={enemyPack === 'duo'}
+    class:pack-swarm={enemyPack === 'swarm'}
+    data-count={enemyCount}
+    aria-label="Enemies"
+  >
     {#each enemies as enemy (enemy.id)}
       {@const pct = hpPct(enemy.hp, enemy.maxHp)}
       {@const dead = (enemy.hp ?? 0) <= 0}
@@ -490,24 +679,26 @@
         aria-label={`Target ${enemy.name || 'enemy'}`}
         on:click={() => selectEnemy(enemy)}
       >
-        <div class="nameplate">{enemy.name}</div>
-        <div class="hp-row">
-          <span class="hp-label">HP</span>
-          <div class="hp-track">
-            <div class="hp-fill" style="width: {pct}%; background: {hpColor(pct)}"></div>
+        <div class="foe-plate">
+          <div class="nameplate">{enemy.name}</div>
+          <div class="hp-row">
+            <span class="hp-label">HP</span>
+            <div class="hp-track">
+              <div class="hp-fill" style="width: {pct}%; background: {hpColor(pct)}"></div>
+            </div>
+            <span class="hp-nums">{enemy.hp ?? 0} / {enemy.maxHp ?? 0}</span>
           </div>
-          <span class="hp-nums">{enemy.hp ?? 0} / {enemy.maxHp ?? 0}</span>
         </div>
         <div class="enemy-sprite-wrap" class:shake={tgt && fxIsHit}>
+          {#if enemy.id === targetId && !dead}
+            <div class="target-ring" aria-hidden="true"></div>
+          {/if}
           <img
             class="enemy-sprite"
             src={combatantPortrait(enemy, enemy.id || enemy.name)}
             alt=""
             on:error={(e) => onImgError(e, enemy.name)}
           />
-          {#if enemy.id === targetId && !dead}
-            <div class="target-ring" aria-hidden="true"></div>
-          {/if}
           {#if tgt && fxIsMiss}
             <div class="fx-puff" data-key={fxKey} aria-hidden="true"></div>
           {/if}
@@ -607,25 +798,71 @@
         {#if selfClass}
           <span class="chip class-chip"><i class="material-icons">military_tech</i> {selfClass}</span>
         {/if}
-        {#if isMyTurn}
+        {#if decisionActive}
           <span class="chip focus-chip"><i class="material-icons">flare</i> Focused</span>
+        {:else if showWaitingTimer}
+          <span class="chip wait-chip status-pill"><i class="material-icons spin-slow">hourglass_top</i> {waitingLabel}</span>
         {/if}
       </div>
     </div>
   </section>
 
-  {#if bannerVisible && bannerText}
-    <div class="action-banner" aria-live="polite">{bannerText}</div>
+  {#if arenaFlash}
+    <div
+      class="arena-hit-flash"
+      class:crit={bannerParts?.kind === 'crit'}
+      class:heal={bannerParts?.kind === 'heal'}
+      aria-hidden="true"
+    ></div>
   {/if}
+
+  <div class="action-banner-stack" aria-live="polite">
+    {#if bannerVisible && bannerParts}
+      <div
+        class="action-banner kind-{bannerParts.kind}"
+        class:flash={bannerFlashKey > 0}
+        data-flash={bannerFlashKey}
+      >
+        <i class="material-icons banner-icon">{bannerParts.icon}</i>
+        <div class="banner-copy">
+          {#if bannerParts.actor || bannerParts.verb}
+            <span class="banner-actor">{bannerParts.actor}</span>
+            {#if bannerParts.verb}
+              <span class="banner-verb">{bannerParts.verb}</span>
+            {/if}
+            {#if bannerParts.target}
+              <span class="banner-target">{bannerParts.target}</span>
+            {/if}
+            {#if bannerParts.amount > 0}
+              <span class="banner-for">for</span>
+              <span class="banner-amount">{bannerParts.amount}</span>
+            {/if}
+          {:else}
+            <span class="banner-raw">{bannerParts.raw || bannerText}</span>
+          {/if}
+        </div>
+      </div>
+    {/if}
+    {#each bannerStack as stale (stale.id)}
+      {#if !(bannerVisible && stale.id === lastBannerKey)}
+        <div class="action-banner stale kind-{(stale.parts && stale.parts.kind) || 'other'}" aria-hidden="true">
+          <i class="material-icons banner-icon">{(stale.parts && stale.parts.icon) || 'campaign'}</i>
+          <div class="banner-copy">
+            <span class="banner-raw">{stale.raw}</span>
+          </div>
+        </div>
+      {/if}
+    {/each}
+  </div>
   </div><!-- /.battle-arena -->
 
-  <!-- Dock: status (queue) above; rail left of centered hotbar (separate chrome) -->
+  <!-- Dock: one chrome strip — status chip, then rail + hotbar on one baseline -->
   {#if phase === 'active'}
     <div class="battle-controls">
-      <div class="dock-status" class:has-chip={!!(queuedAction && queuedLabel)} aria-live="polite">
+      <div class="dock-status" class:has-chip={!!((queuedAction && queuedLabel) || (showWaitingTimer && !queuedAction))} aria-live="polite">
         {#if queuedAction && queuedLabel}
-          <div class="queued-chip" title="Queued action">
-            <i class="material-icons">hourglass_top</i>
+          <div class="queued-chip status-pill" title="Queued action">
+            <i class="material-icons spin-slow">hourglass_top</i>
             <span class="queued-name">{queuedLabel}</span>
             {#if queueLeftSec > 0}
               <span class="queued-cd">{queueLeftSec}s</span>
@@ -633,33 +870,40 @@
               <span class="queued-cd">resolving…</span>
             {/if}
           </div>
+        {:else if showWaitingTimer}
+          <div class="queued-chip wait status-pill" title={waitingLabel}>
+            <i class="material-icons spin-slow">hourglass_top</i>
+            <span class="queued-name">{waitingLabel}</span>
+          </div>
         {/if}
       </div>
 
       <div class="dock-main">
         <nav class="battle-rail" aria-label="Combat actions">
-          <button type="button" class="rail-btn primary" title="Attack" aria-label="Attack" on:click={doAttack}>
+          <button type="button" class="rail-btn primary" title="Attack" aria-label="Attack" on:click|stopPropagation={doAttack}>
             <i class="material-icons">flash_on</i>
             <span class="rail-label">Attack</span>
           </button>
-          <button type="button" class="rail-btn" title="Defend" aria-label="Defend" on:click={doDefend}>
+          <button type="button" class="rail-btn" title="Defend" aria-label="Defend" on:click|stopPropagation={doDefend}>
             <i class="material-icons">security</i>
             <span class="rail-label">Defend</span>
           </button>
-          <button type="button" class="rail-btn" class:active={panel === 'items'} title="Items" aria-label="Items" on:click={() => togglePanel('items')}>
+          <button type="button" class="rail-btn" class:active={panel === 'items'} title="Items" aria-label="Items" on:click|stopPropagation={() => togglePanel('items')}>
             <i class="material-icons">shopping_bag</i>
             <span class="rail-label">Items</span>
           </button>
-          <button type="button" class="rail-btn flee" title="Flee" aria-label="Flee" on:click={doFlee}>
+          <button type="button" class="rail-btn flee" title="Flee" aria-label="Flee" on:click|stopPropagation={doFlee}>
             <i class="material-icons">directions_run</i>
             <span class="rail-label">Flee</span>
           </button>
         </nav>
 
+        <div class="dock-divider" aria-hidden="true"></div>
+
         <div class="combat-hotbar" aria-label="Combat hotbar">
           {#each hotbarBinds as bind, index}
             {@const item = bind?.kind === 'item' ? findInventoryItem(inventory, bind) : null}
-            {@const cdRounds = skillCooldownRounds(bind)}
+            {@const cdSec = skillCooldownSec(bind)}
             <button
               type="button"
               class="hb-slot"
@@ -669,11 +913,11 @@
               class:action={bind?.kind === 'action'}
               class:empty={!bind}
               class:disabled={hotbarSlotDisabled(bind)}
-              class:on-cd={cdRounds > 0}
-              title={cdRounds > 0 ? `${hotbarSlotTitle(bind)} (${cdRounds} rd)` : hotbarSlotTitle(bind)}
+              class:on-cd={cdSec > 0}
+              title={hotbarSlotTitle(bind)}
               aria-label={hotbarSlotTitle(bind)}
               disabled={hotbarSlotDisabled(bind)}
-              on:click={() => activateHotbarSlot(bind)}
+              on:click|stopPropagation={() => activateHotbarSlot(bind)}
             >
               <span class="hb-index">{index + 1}</span>
               {#if bind?.kind === 'item'}
@@ -695,14 +939,13 @@
                   on:error={(e) => onItemArtError(e, { type: 'default' })}
                 />
               {/if}
-              {#if cdRounds > 0}
-                <span class="hb-cd-overlay" aria-hidden="true">{cdRounds}</span>
+              {#if cdSec > 0}
+                <span class="hb-cd-overlay" aria-hidden="true">{cdSec}s</span>
               {/if}
             </button>
           {/each}
         </div>
       </div>
-    </div>
 
     {#if panel === 'items'}
       <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
@@ -729,6 +972,7 @@
         {/if}
       </div>
     {/if}
+    </div>
   {/if}
 
   <!-- Combat log — full-width framed panel; mobile peek/expand -->
@@ -798,7 +1042,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1.25rem;
+    padding: 0.6rem;
     color: #f3f4f6;
     font-family: 'Cinzel', Georgia, serif;
     pointer-events: auto;
@@ -809,12 +1053,12 @@
   .battle-frame {
     position: relative;
     z-index: 1;
-    width: min(1180px, 88vw);
-    height: min(780px, 86vh);
-    min-width: 720px;
-    min-height: 520px;
-    max-width: calc(100vw - 2.5rem);
-    max-height: calc(100vh - 2.5rem);
+    width: calc(100vw - 1.2rem);
+    height: calc(100vh - 1.2rem);
+    min-width: 0;
+    min-height: 0;
+    max-width: calc(100vw - 1.2rem);
+    max-height: calc(100vh - 1.2rem);
     display: grid;
     grid-template-rows: auto auto minmax(0, 1fr) auto auto;
     grid-template-areas:
@@ -950,6 +1194,10 @@
     background: rgba(12, 10, 8, 0.78);
     box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
   }
+  .turn-chip.waiting {
+    border-color: rgba(148, 163, 184, 0.55);
+    color: #e5e7eb;
+  }
 
   .header-rule {
     flex: 1;
@@ -993,6 +1241,17 @@
     background: linear-gradient(90deg, #d4a44a, #f59e0b);
     transition: width 0.2s linear;
   }
+  .decision-timer.waiting .decision-timer-fill {
+    background: linear-gradient(90deg, rgba(148, 163, 184, 0.55), rgba(212, 164, 74, 0.45));
+  }
+  .decision-timer-fill.wait-pulse {
+    width: 100%;
+    animation: waitPulse 1.4s ease-in-out infinite;
+  }
+  @keyframes waitPulse {
+    0%, 100% { opacity: 0.45; }
+    50% { opacity: 1; }
+  }
 
   .enemy-strip {
     position: absolute;
@@ -1008,6 +1267,24 @@
     max-width: min(88%, 520px);
     pointer-events: auto;
   }
+  .enemy-strip.pack-solo {
+    top: 4%;
+    right: 5%;
+    max-width: min(55%, 387px);
+    max-height: 74%;
+  }
+  .enemy-strip.pack-duo {
+    top: 2%;
+    right: 3%;
+    gap: 1.15rem;
+    max-width: min(82%, 780px);
+  }
+  .enemy-strip.pack-swarm {
+    top: 1%;
+    right: 1.5%;
+    gap: 0.45rem;
+    max-width: min(94%, 920px);
+  }
 
   .enemy-card {
     appearance: none;
@@ -1015,10 +1292,20 @@
     border: none;
     color: inherit;
     padding: 0;
-    width: clamp(120px, 28%, 180px);
+    /* ~2/3 prior display size — keeps pack-vs-solo ratios, less stretchy upscale */
+    width: clamp(100px, 15vmin, 173px);
     cursor: pointer;
     text-align: center;
     font: inherit;
+  }
+  .enemy-strip.pack-solo .enemy-card {
+    width: clamp(173px, 28vmin, 373px);
+  }
+  .enemy-strip.pack-duo .enemy-card {
+    width: clamp(100px, 15vmin, 187px);
+  }
+  .enemy-strip.pack-swarm .enemy-card {
+    width: clamp(59px, 9vmin, 100px);
   }
 
   .enemy-card:disabled {
@@ -1027,10 +1314,26 @@
     filter: grayscale(0.6);
   }
 
+  .foe-plate {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    padding: 0.35rem 0.4rem 0.3rem;
+    margin-bottom: 0.2rem;
+    border: 1.5px solid rgba(212, 164, 74, 0.5);
+    border-radius: 8px;
+    background: linear-gradient(135deg, rgba(14, 12, 10, 0.82), rgba(6, 6, 8, 0.7));
+    box-shadow:
+      0 8px 20px rgba(0, 0, 0, 0.4),
+      inset 0 0 0 1px rgba(255, 220, 150, 0.08);
+    box-sizing: border-box;
+  }
+
   .nameplate {
     display: inline-block;
-    padding: 0.22rem 0.75rem;
-    margin-bottom: 0.3rem;
+    padding: 0.18rem 0.7rem;
+    margin-bottom: 0.28rem;
     border: 1.5px solid rgba(212, 164, 74, 0.8);
     border-radius: 3px;
     background: linear-gradient(180deg, rgba(28, 20, 10, 0.92), rgba(8, 6, 4, 0.92));
@@ -1048,8 +1351,9 @@
     grid-template-columns: auto 1fr auto;
     align-items: center;
     gap: 0.35rem;
-    margin: 0 auto 0.45rem;
+    margin: 0 auto;
     max-width: 100%;
+    width: 100%;
     font-family: system-ui, sans-serif;
   }
 
@@ -1092,30 +1396,44 @@
   }
 
   .enemy-sprite {
-    width: 78%;
-    height: 78%;
+    position: relative;
+    width: 86%;
+    height: 86%;
     object-fit: contain;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
     image-rendering: pixelated;
+    -ms-interpolation-mode: nearest-neighbor;
     filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.55));
+    z-index: 1;
   }
 
+  /* Soft ground puddle under feet — behind sprite, fades to 0 alpha at rim */
   .target-ring {
     position: absolute;
-    bottom: 4%;
+    bottom: 2%;
     left: 50%;
     width: 78%;
-    height: 20%;
+    height: 22%;
     transform: translateX(-50%);
-    /* Solid soft glow — dashed borders flickered on some GPUs; no CSS animation. */
-    border: 2px solid rgba(250, 204, 21, 0.72);
+    border: none;
     border-radius: 50%;
-    box-shadow:
-      0 0 12px rgba(250, 204, 21, 0.55),
-      0 0 24px rgba(212, 164, 74, 0.3),
-      inset 0 0 8px rgba(250, 204, 21, 0.14);
+    background: radial-gradient(
+      ellipse at center,
+      rgba(250, 204, 21, 0.5) 0%,
+      rgba(234, 179, 8, 0.32) 28%,
+      rgba(212, 164, 74, 0.14) 55%,
+      rgba(250, 204, 21, 0.04) 75%,
+      transparent 100%
+    );
+    box-shadow: none;
     pointer-events: none;
+    z-index: 0;
   }
 
+  .enemy-card.targeted .foe-plate {
+    border-color: rgba(250, 204, 21, 0.75);
+  }
   .enemy-card.targeted .nameplate {
     border-color: #facc15;
     box-shadow:
@@ -1124,7 +1442,7 @@
       0 4px 14px rgba(0, 0, 0, 0.4);
   }
   .enemy-card.targeted .enemy-sprite {
-    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 10px rgba(250, 204, 21, 0.25));
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 12px rgba(250, 204, 21, 0.45));
   }
 
   /* ===== C5 Combat FX pack (CSS/transform only) ===== */
@@ -1380,16 +1698,16 @@
   .player-panel {
     position: absolute;
     left: 1.1rem;
-    bottom: 0.75rem;
+    bottom: 0.85rem;
     z-index: 3;
     display: flex;
     align-items: flex-end;
     gap: 0.9rem;
-    max-width: min(440px, 90%);
+    max-width: min(440px, 42%);
     padding: 0.45rem 0.55rem 0.45rem 0.45rem;
-    border: 1.5px solid rgba(212, 164, 74, 0.45);
+    border: 1.5px solid rgba(212, 164, 74, 0.5);
     border-radius: 8px;
-    background: linear-gradient(135deg, rgba(14, 12, 10, 0.72), rgba(6, 6, 8, 0.55));
+    background: linear-gradient(135deg, rgba(14, 12, 10, 0.82), rgba(6, 6, 8, 0.7));
     box-shadow:
       0 10px 28px rgba(0, 0, 0, 0.45),
       inset 0 0 0 1px rgba(255, 220, 150, 0.08);
@@ -1397,7 +1715,7 @@
   }
 
   .player-bust {
-    width: clamp(44px, 6vw, 62px);
+    width: clamp(56px, 7.5vw, 92px);
     aspect-ratio: 1;
     border: 2px solid #d4a44a;
     border-radius: 5px;
@@ -1409,6 +1727,12 @@
       0 8px 24px rgba(0, 0, 0, 0.5),
       inset 0 0 0 1px rgba(255, 220, 150, 0.2);
     flex-shrink: 0;
+  }
+  .foes-solo .player-bust {
+    width: clamp(64px, 8.5vw, 108px);
+  }
+  .foes-swarm .player-bust {
+    width: clamp(48px, 6vw, 72px);
   }
 
   .player-bust img {
@@ -1473,6 +1797,16 @@
     color: #e9d5ff;
   }
   .focus-chip i { color: #c084fc; }
+  .wait-chip {
+    border-color: rgba(212, 164, 74, 0.55);
+    color: #f5e6c0;
+    font-size: 0.82rem;
+    padding: 0.28rem 0.7rem;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(28, 24, 16, 0.95), rgba(10, 10, 12, 0.95));
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35), 0 0 10px rgba(212, 164, 74, 0.12);
+  }
+  .wait-chip i { color: #e8c878; font-size: 1.05rem; }
 
   .battle-controls {
     position: relative;
@@ -1481,14 +1815,13 @@
     transform: none;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
+    align-items: stretch;
+    justify-content: flex-end;
+    gap: 0.3rem;
     width: auto;
     max-width: none;
-    margin: 0.35rem 0.75rem 0.25rem;
-    min-height: 72px;
-    /* no max-height — dock row must grow for queue chip (never clip onto hotbar) */
+    margin: 0.3rem 0.75rem 0.2rem;
+    min-height: 0;
     z-index: 20;
     pointer-events: auto;
     box-sizing: border-box;
@@ -1497,7 +1830,7 @@
   .dock-status {
     position: relative;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     justify-content: center;
     gap: 0.3rem;
@@ -1507,36 +1840,164 @@
     z-index: 21;
   }
   .dock-status.has-chip {
-    min-height: 28px;
+    min-height: 40px;
+  }
+
+  .arena-hit-flash {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+    border-radius: inherit;
+    background: radial-gradient(ellipse at 55% 40%, rgba(239, 68, 68, 0.28) 0%, rgba(239, 68, 68, 0.08) 42%, transparent 70%);
+    animation: arenaFlashPulse 0.42s ease-out forwards;
+  }
+  .arena-hit-flash.crit {
+    background: radial-gradient(ellipse at 55% 40%, rgba(251, 191, 36, 0.34) 0%, rgba(239, 68, 68, 0.12) 45%, transparent 72%);
+    animation-duration: 0.52s;
+  }
+  .arena-hit-flash.heal {
+    background: radial-gradient(ellipse at 40% 70%, rgba(34, 197, 94, 0.28) 0%, rgba(34, 197, 94, 0.08) 45%, transparent 72%);
+  }
+  @keyframes arenaFlashPulse {
+    0% { opacity: 0; }
+    18% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  .action-banner-stack {
+    position: absolute;
+    left: 50%;
+    bottom: 16%;
+    transform: translateX(-50%);
+    z-index: 6;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    gap: 0.35rem;
+    width: min(94%, 640px);
+    pointer-events: none;
   }
 
   .action-banner {
-    position: absolute;
-    left: 50%;
-    bottom: 18%;
-    transform: translateX(-50%);
-    z-index: 5;
-    max-width: min(92%, 520px);
-    padding: 0.3rem 0.85rem;
-    border-radius: 6px;
-    border: 1.5px solid rgba(232, 200, 120, 0.65);
-    background: linear-gradient(180deg, rgba(28, 22, 12, 0.94), rgba(10, 8, 6, 0.94));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    max-width: 100%;
+    padding: 0.55rem 1.1rem;
+    border-radius: 10px;
+    border: 2px solid rgba(232, 200, 120, 0.78);
+    background: linear-gradient(180deg, rgba(36, 28, 14, 0.96), rgba(10, 8, 6, 0.96));
     color: #f8fafc;
     font-family: system-ui, sans-serif;
-    font-size: clamp(0.88rem, 1.5vw, 1.05rem);
+    font-size: clamp(1.05rem, 2.1vw, 1.35rem);
     font-weight: 700;
     letter-spacing: 0.01em;
     text-align: center;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.75);
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
     box-shadow:
-      0 6px 18px rgba(0, 0, 0, 0.4),
-      inset 0 0 0 1px rgba(255, 220, 150, 0.1);
+      0 10px 28px rgba(0, 0, 0, 0.5),
+      0 0 18px rgba(232, 200, 120, 0.18),
+      inset 0 0 0 1px rgba(255, 220, 150, 0.12);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    animation: bannerInArena 0.2s ease-out;
+    animation: bannerPop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.15);
     pointer-events: none;
   }
+  .action-banner.flash {
+    animation: bannerPop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.15), bannerShake 0.42s ease-out;
+  }
+  .action-banner.stale {
+    opacity: 0.42;
+    transform: scale(0.92);
+    filter: saturate(0.75);
+    animation: bannerFadeStale 0.35s ease-out;
+    font-size: clamp(0.82rem, 1.5vw, 1rem);
+    padding: 0.32rem 0.75rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+  .action-banner.kind-hit {
+    border-color: rgba(248, 113, 113, 0.75);
+    box-shadow:
+      0 10px 28px rgba(0, 0, 0, 0.5),
+      0 0 20px rgba(239, 68, 68, 0.22),
+      inset 0 0 0 1px rgba(255, 180, 150, 0.1);
+  }
+  .action-banner.kind-crit {
+    border-color: rgba(251, 191, 36, 0.9);
+    box-shadow:
+      0 10px 28px rgba(0, 0, 0, 0.5),
+      0 0 24px rgba(251, 191, 36, 0.35),
+      inset 0 0 0 1px rgba(255, 230, 150, 0.18);
+  }
+  .action-banner.kind-heal {
+    border-color: rgba(74, 222, 128, 0.8);
+    box-shadow:
+      0 10px 28px rgba(0, 0, 0, 0.5),
+      0 0 20px rgba(34, 197, 94, 0.25),
+      inset 0 0 0 1px rgba(180, 255, 200, 0.12);
+  }
+  .action-banner.kind-miss {
+    border-color: rgba(148, 163, 184, 0.7);
+  }
+
+  .banner-icon {
+    flex: 0 0 auto;
+    font-size: 1.45em !important;
+    line-height: 1;
+    color: #e8c878;
+    filter: drop-shadow(0 0 6px rgba(232, 200, 120, 0.45));
+  }
+  .kind-hit .banner-icon { color: #f87171; filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.5)); }
+  .kind-crit .banner-icon { color: #fbbf24; filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.65)); }
+  .kind-heal .banner-icon { color: #4ade80; filter: drop-shadow(0 0 6px rgba(34, 197, 94, 0.5)); }
+  .kind-miss .banner-icon { color: #cbd5e1; }
+
+  .banner-copy {
+    display: inline-flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.28rem 0.4rem;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .banner-actor { color: #f5e6c0; font-weight: 800; }
+  .banner-verb {
+    color: #e2e8f0;
+    font-weight: 650;
+    font-size: 0.92em;
+    text-transform: lowercase;
+  }
+  .banner-target { color: #f8fafc; font-weight: 750; }
+  .banner-for {
+    color: #94a3b8;
+    font-weight: 600;
+    font-size: 0.88em;
+  }
+  .banner-amount {
+    color: #fbbf24;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.18em;
+    text-shadow: 0 0 10px rgba(251, 191, 36, 0.45), 0 2px 6px rgba(0, 0, 0, 0.7);
+  }
+  .kind-hit .banner-amount,
+  .kind-crit .banner-amount {
+    color: #f87171;
+    text-shadow: 0 0 10px rgba(239, 68, 68, 0.5), 0 2px 6px rgba(0, 0, 0, 0.7);
+  }
+  .kind-crit .banner-amount {
+    color: #fde68a;
+    text-shadow: 0 0 12px rgba(251, 191, 36, 0.65), 0 2px 6px rgba(0, 0, 0, 0.7);
+  }
+  .kind-heal .banner-amount {
+    color: #86efac;
+    text-shadow: 0 0 10px rgba(34, 197, 94, 0.5), 0 2px 6px rgba(0, 0, 0, 0.7);
+  }
+  .banner-raw { color: #f8fafc; }
 
   @keyframes bannerIn {
     from { opacity: 0; transform: translateY(6px); }
@@ -1546,28 +2007,48 @@
     from { opacity: 0; transform: translateX(-50%) translateY(6px); }
     to { opacity: 1; transform: translateX(-50%) translateY(0); }
   }
+  @keyframes bannerPop {
+    0% { opacity: 0; transform: translateY(10px) scale(0.88); }
+    55% { opacity: 1; transform: translateY(-2px) scale(1.06); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes bannerShake {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    20% { transform: translateY(-1px) rotate(-0.8deg) scale(1.03); }
+    40% { transform: translateY(1px) rotate(0.8deg) scale(1.04); }
+    60% { transform: translateY(-1px) rotate(-0.5deg) scale(1.02); }
+    80% { transform: translateY(0) rotate(0.35deg) scale(1.01); }
+  }
+  @keyframes bannerFadeStale {
+    from { opacity: 0.75; transform: scale(0.98); }
+    to { opacity: 0.42; transform: scale(0.92); }
+  }
+  @keyframes spinSlow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .spin-slow {
+    animation: spinSlow 2.4s linear infinite;
+    display: inline-block;
+  }
 
   .combat-hotbar {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.4rem;
-    padding: 0.4rem 0.55rem;
-    border-radius: 10px;
-    border: 1.5px solid rgba(212, 164, 74, 0.55);
-    background: rgba(8, 8, 10, 0.92);
-    box-shadow:
-      0 6px 16px rgba(0, 0, 0, 0.4),
-      inset 0 0 0 1px rgba(255, 220, 150, 0.08),
-      0 0 18px rgba(212, 164, 74, 0.12);
-    flex: 0 1 auto;
+    gap: 0.35rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    flex: 1 1 auto;
     min-width: 0;
   }
 
   .hb-slot {
     appearance: none;
     position: relative;
-    flex: 0 0 auto;
+    flex: 0 0 52px;
     width: 52px;
     height: 52px;
     min-width: 52px;
@@ -1626,40 +2107,68 @@
     position: relative;
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.28rem 0.75rem;
+    gap: 0.5rem;
+    padding: 0.45rem 1.05rem;
     border-radius: 999px;
-    border: 1.5px solid rgba(167, 139, 250, 0.65);
-    background: linear-gradient(180deg, rgba(36, 24, 56, 0.95), rgba(12, 10, 20, 0.95));
+    border: 2px solid rgba(167, 139, 250, 0.75);
+    background: linear-gradient(180deg, rgba(42, 28, 64, 0.96), rgba(12, 10, 20, 0.96));
     color: #ede9fe;
     font-family: system-ui, sans-serif;
-    font-size: 0.82rem;
-    font-weight: 700;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), 0 0 12px rgba(167, 139, 250, 0.2);
+    font-size: clamp(0.95rem, 1.6vw, 1.12rem);
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4), 0 0 16px rgba(167, 139, 250, 0.28);
     animation: bannerIn 0.18s ease-out;
     pointer-events: none;
   }
-  .queued-chip i { font-size: 1rem; color: #c4b5fd; }
-  .queued-name { letter-spacing: 0.02em; }
+  .queued-chip i { font-size: 1.35rem; color: #c4b5fd; }
+  .queued-chip.wait,
+  .queued-chip.status-pill.wait {
+    border-color: rgba(232, 200, 120, 0.72);
+    background: linear-gradient(180deg, rgba(36, 28, 14, 0.96), rgba(12, 10, 8, 0.96));
+    color: #f5e6c0;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4), 0 0 16px rgba(232, 200, 120, 0.22);
+  }
+  .queued-chip.wait i { color: #e8c878; }
+  .queued-name { letter-spacing: 0.03em; }
   .queued-cd {
     font-variant-numeric: tabular-nums;
     color: #f5d78c;
-    padding: 0.05rem 0.4rem;
+    padding: 0.12rem 0.5rem;
     border-radius: 999px;
-    background: rgba(0, 0, 0, 0.35);
-    border: 1px solid rgba(232, 200, 120, 0.35);
-    font-size: 0.75rem;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(232, 200, 120, 0.4);
+    font-size: 0.85rem;
+    font-weight: 800;
   }
 
   .dock-main {
     display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
     align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
+    justify-content: flex-start;
+    gap: 0.65rem;
     width: 100%;
     box-sizing: border-box;
-    max-width: min(100%, 820px);
-    margin: 0 auto;
+    max-width: none;
+    margin: 0;
+    padding: 0.4rem 0.7rem;
+    border-radius: 10px;
+    border: 1.5px solid rgba(212, 164, 74, 0.55);
+    background: rgba(8, 8, 10, 0.94);
+    box-shadow:
+      0 6px 16px rgba(0, 0, 0, 0.4),
+      inset 0 0 0 1px rgba(255, 220, 150, 0.08),
+      0 0 18px rgba(212, 164, 74, 0.12);
+  }
+
+  .dock-divider {
+    flex: 0 0 1px;
+    align-self: stretch;
+    width: 1px;
+    margin: 0.15rem 0;
+    background: linear-gradient(180deg, transparent, rgba(212, 164, 74, 0.45), transparent);
   }
 
   /* Legacy aliases (unused) — keep harmless for any residual refs */
@@ -1687,25 +2196,26 @@
   .battle-rail {
     display: flex;
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: center;
     gap: 0.28rem;
-    padding: 0.28rem;
-    border-radius: 9px;
-    border: 1px solid rgba(148, 163, 184, 0.22);
-    background: rgba(8, 8, 10, 0.72);
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
-    flex-shrink: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    flex: 0 0 auto;
+    width: max-content;
     align-self: center;
-    max-width: 108px;
+    max-width: none;
   }
   .rail-btn {
     appearance: none;
-    width: 42px;
-    height: 42px;
-    min-width: 40px;
-    min-height: 40px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
     box-sizing: border-box;
     border-radius: 7px;
     border: 1px solid rgba(148, 163, 184, 0.35);
@@ -1717,6 +2227,8 @@
     padding: 0;
     box-shadow: none;
     opacity: 0.92;
+    pointer-events: auto;
+    flex: 0 0 auto;
   }
   .rail-label { display: none; }
   .rail-btn i { font-size: 1.25rem; color: #d4a44a; }
@@ -1784,7 +2296,7 @@
   .dock-panel {
     position: absolute;
     left: 50%;
-    bottom: 10.5rem;
+    bottom: calc(100% + 0.35rem);
     transform: translateX(-50%);
     display: flex;
     flex-wrap: wrap;
@@ -1795,7 +2307,8 @@
     border: 1.5px solid rgba(212, 164, 74, 0.45);
     border-radius: 8px;
     background: rgba(8, 8, 10, 0.92);
-    z-index: 4;
+    z-index: 30;
+    pointer-events: auto;
   }
 
   .dock-panel-btn {
@@ -1827,16 +2340,16 @@
     right: auto;
     bottom: auto;
     width: auto;
-    height: 8rem;
-    max-height: 8rem;
-    min-height: 7rem;
-    margin: 0 0.75rem 0.55rem;
+    height: 4.5rem;
+    max-height: 4.5rem;
+    min-height: 3.75rem;
+    margin: 0.15rem 0.75rem 0.55rem;
     overflow-x: hidden;
     overflow-y: auto;
     padding: 0.4rem 0.75rem 0.45rem;
     border: 1.5px solid rgba(212, 164, 74, 0.55);
     border-radius: 6px;
-    background: linear-gradient(180deg, rgba(12, 10, 8, 0.92), rgba(4, 4, 6, 0.92));
+    background: linear-gradient(180deg, rgba(12, 10, 8, 0.96), rgba(4, 4, 6, 0.96));
     box-shadow:
       inset 0 0 0 1px rgba(255, 220, 150, 0.06),
       0 4px 14px rgba(0, 0, 0, 0.35);
@@ -1869,9 +2382,14 @@
     touch-action: manipulation;
   }
   .log-expand-icon {
-    display: none;
+    display: inline-flex;
     font-size: 1rem;
     color: rgba(212, 164, 74, 0.75);
+  }
+  .combat-log.log-expanded {
+    height: 10.5rem;
+    max-height: 10.5rem;
+    min-height: 8rem;
   }
   .combat-log-body {
     min-height: 0;
@@ -2028,7 +2546,24 @@
   }
 
   .decision-timer-label {
-    display: none;
+    display: block;
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: system-ui, sans-serif;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #f8fafc;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+    letter-spacing: 0.02em;
+    pointer-events: none;
+    z-index: 1;
+    white-space: nowrap;
+  }
+  .decision-timer {
+    height: 10px;
+    border-radius: 4px;
   }
 
   .dock-sheet-backdrop {
@@ -2041,6 +2576,19 @@
   .dock-tab,
   .dock-sheet-close {
     display: none;
+  }
+
+  /* Wide desktop: gutters beside combat chrome (viewport > 1280px) */
+  @media (min-width: 1281px) {
+    .battle-stage {
+      padding: 2rem 2.5rem;
+    }
+    .battle-frame {
+      width: min(1280px, calc(100vw - 5rem));
+      height: min(calc(100vh - 4rem), 960px);
+      max-width: min(1280px, calc(100vw - 5rem));
+      max-height: min(calc(100vh - 4rem), 960px);
+    }
   }
 
   /* C7-mobile: thumb-first stack ≤768px — header / arena / dock / log-peek */
@@ -2152,16 +2700,28 @@
       overflow: hidden;
     }
     .enemy-card {
-      width: clamp(110px, 40vw, 168px);
+      width: clamp(73px, 27vw, 112px);
       touch-action: manipulation;
       -webkit-tap-highlight-color: transparent;
+    }
+    .enemy-strip.pack-solo .enemy-card {
+      width: clamp(120px, 43vw, 213px);
+    }
+    .enemy-strip.pack-duo .enemy-card {
+      width: clamp(80px, 25vw, 120px);
+    }
+    .enemy-strip.pack-swarm .enemy-card {
+      width: clamp(57px, 17vw, 88px);
     }
     .enemy-card:active:not(:disabled) {
       transform: scale(0.97);
     }
     .enemy-sprite-wrap {
       aspect-ratio: 1;
-      max-height: min(32vh, 220px);
+      max-height: min(21vh, 147px);
+    }
+    .enemy-strip.pack-solo .enemy-sprite-wrap {
+      max-height: min(31vh, 227px);
     }
     .nameplate { font-size: 0.74rem; }
     .hp-track { height: 9px; }
@@ -2175,20 +2735,33 @@
       z-index: 2;
     }
 
+    .action-banner-stack {
+      position: relative;
+      left: auto;
+      bottom: auto;
+      transform: none;
+      margin: 0.15rem auto 0;
+      width: calc(100% - 1rem);
+      max-width: calc(100% - 1rem);
+      grid-column: 1 / -1;
+      justify-self: center;
+      z-index: 6;
+    }
     .action-banner {
       position: relative;
       left: auto;
       bottom: auto;
       transform: none;
-      margin: 0.1rem auto 0;
-      max-width: calc(100% - 1rem);
-      font-size: 0.82rem;
-      padding: 0.25rem 0.5rem;
-      width: calc(100% - 1rem);
+      margin: 0;
+      max-width: 100%;
+      font-size: clamp(0.95rem, 3.6vw, 1.12rem);
+      padding: 0.42rem 0.75rem;
+      width: 100%;
       box-sizing: border-box;
-      grid-column: 1 / -1;
-      justify-self: center;
+      white-space: normal;
     }
+    .banner-icon { font-size: 1.25em !important; }
+    .banner-amount { font-size: 1.12em; }
 
     /* Compact horizontal Self strip — free vertical space for arena */
     .player-panel {
@@ -2266,13 +2839,14 @@
       align-items: stretch;
     }
     .dock-status.has-chip {
-      min-height: 26px;
+      min-height: 36px;
     }
     .queued-chip {
       align-self: center;
-      font-size: 0.75rem;
-      padding: 0.22rem 0.65rem;
+      font-size: 0.92rem;
+      padding: 0.38rem 0.9rem;
     }
+    .queued-chip i { font-size: 1.2rem; }
     .dock-main {
       display: flex;
       flex-direction: column;
@@ -2282,6 +2856,15 @@
       width: 100%;
       max-width: none;
       margin: 0;
+      padding: 0.35rem;
+    }
+    .dock-divider {
+      order: 2;
+      width: 100%;
+      height: 1px;
+      margin: 0;
+      align-self: stretch;
+      background: linear-gradient(90deg, transparent, rgba(212, 164, 74, 0.4), transparent);
     }
     .combat-hotbar {
       order: 1;
@@ -2289,7 +2872,7 @@
       flex: 0 0 auto;
       box-sizing: border-box;
       gap: 0.28rem;
-      padding: 0.32rem 0.35rem;
+      padding: 0;
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
       justify-content: space-between;
@@ -2303,7 +2886,7 @@
       max-width: 52px;
     }
     .battle-rail {
-      order: 2;
+      order: 3;
       display: flex;
       flex-direction: row;
       flex-wrap: nowrap;

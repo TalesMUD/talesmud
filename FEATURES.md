@@ -137,12 +137,12 @@ DiscoveredAreas map[string]bool  // Area names
 - **5 XP** per new room discovered (grant path is currently gated; discovery itself still records)
 - **15 XP** for first room in a new area/zone
 
-**Atlas API**: `GET /api/characters/:id/map` returns the character's fog-of-war atlas (places, paths, area hulls, overworld/lower/upper layers). Layout is compiled from existing directional exits plus optional `coords`; authors do not need a new coordinate pass. Hidden exits stay off the map until `revealExit`.
+**Atlas API**: `GET /api/characters/:id/map` returns the character's fog-of-war atlas (places, paths, area hulls, overworld/lower/upper layers). Layout pins authored `coords` when present, clusters remaining rooms by area using compass exits, then packs zones with a gap so adjacent demo areas read as separate clusters. Hidden exits stay off the map until `revealExit`.
 
 ### NPC / enemy portraits
 Room presence sends `portrait` URLs (`/api/portraits/{templateOrId}.png`). Import copies `assets/images/sprites/{npcs,enemies}/` into `uploads/portraits/`. Sprites are 512px full-figure art; the original NPC/enemy cards clip a 48px square around the body (`object-fit: cover` + zoom). Missing files fall back to hashed `img/avatars/{1-14}p.png`. Component CSS lives in `public/mud-client/public/extra.css` and must be deployed with `bundle.js`.
 
-WebSocket connects go through a process-wide gate (`websocketGate.js`): one CONNECTING/OPEN socket, no reactive `ws=null` reconnect, and close code 4001 (session replaced) does not auto-reconnect. The Map overview is an Inventory-style `position:fixed` modal with an explicit pixel panel size so the canvas fills the stage.
+WebSocket connects go through a process-wide gate (`websocketGate.js`): one CONNECTING/OPEN/CLOSING socket, no reactive `ws=null` reconnect, and close code 4001 (session replaced) does not auto-reconnect. The Map overview is an Inventory-style body-portal panel (`map-panel`, never Materialize's `.modal`) with explicit pixel size so the canvas fills the stage. `/play` JS/CSS/HTML is served `Cache-Control: no-cache` plus `?v=` on asset URLs so deploys are not stuck behind a cached `bundle.js`.
 
 ### Instanced cellars
 Exits with `type: instance` or `instance: true`, or a normal directional exit from a shared/hub room into a room tagged `instance`/`instanced`, create a private copy of the destination plus rooms reachable without walking back into the hub. Two guests share the town room (e.g. The Weary Wanderer `R0203`) and get different cellar IDs (`R0215~aabbccdd`). Hidden cellar wings (R0230+) are cloned with the entrance. When the last occupant leaves, clones and copied NPCs are destroyed.
@@ -219,7 +219,14 @@ Stackable item quantities are kept consistent when consumed or partially dropped
 - `weapon` - Swords, axes, staves
 - `collectible` - Quest items, trophies
 - `quest` - Quest-specific items
-- `crafting_material` - Future crafting system
+- `crafting_material` - Components for gathering/crafting recipes
+
+### Gathering & Crafting (v1 — no professions)
+- **Everyone** can gather and craft. No skill ranks, no profession unlocks.
+- **Gathering**: room actions `GATHER …` / `FORAGE …` / `HARVEST …` (scripted nodes with deplete flags) plus commands `gather` / `forage` / `harvest [target]`.
+- **Crafting**: `recipes` lists all recipes; bare `craft` opens the same list; `craft <recipe>` consumes mats and grants output. Client seeds a **Recipes** action-bar pin; R0209 also exposes **CRAFT** / **RECIPES** room chips.
+- Optional **stations**: recipe `station: forge` requires room tag `forge` or `crafting`; `campfire` requires `campfire`/`kitchen`/`hearth`. Food/leather recipes craft anywhere.
+- Recipe YAML lives in content `data/recipes/` (loaded from `import/mvp-rpg-1/data/recipes` at runtime; seed fallback in engine).
 
 **Equipment Slots**:
 - `head`, `chest`, `legs`, `boots`, `hands`, `neck`, `ring1`, `ring2`
@@ -319,6 +326,7 @@ type Character struct {
     RevealedExits map[string][]string  // roomID → exit names
     DiscoveredRooms map[string]bool
     DiscoveredAreas map[string]bool
+    FriendIDs []string  // Other character IDs on this character's friends list
 
     // All-Time Statistics
     AllTimeStats struct {
@@ -444,21 +452,58 @@ client marks `isYou` locally based on the currently selected character because a
 single broadcast is shared by multiple users.
 
 ### Party Commands
-```bash
-party create           # Create a party with the current character
-party invite <player>  # Invite an online player to your party
-party accept           # Accept a pending party invite
-party decline          # Decline a pending party invite
-party list             # Show party members
-party leave            # Leave the current party
-party say <message>    # Send party chat
-party <message>        # Send party chat
 
-p <message>            # Alias for party chat/commands
+`party create`, `party invite <player>`, `party accept`, `party decline`,
+`party leave`, `party kick <player>` (leader), `party promote <player>` (leader),
+`party list`, `party say <message>` (or `party <message>`).
+
+Party membership is persisted in the existing `Party` entity (SQLite JSON),
+including `leaderCharacterId`. Creator is leader. Soft/hard cap: **5** members
+(`entities.MaxPartySize`) enforced on invite and accept. Pending invites
+remain in-memory on the game server. Guests are refused (same as Friends).
+
+Structured WebSocket payloads:
+`party` `{inParty,partyId,partyName,leaderId,maxMembers,members[{id,name,online,level,class,portrait,isLeader}]}`
+and `party_invite` `{pending,inviterName,partyId}` (clear with `pending:false`).
+
+Client (Party UI v2, cache-bust `?v=party2`): HUD Party button opens a gold-bordered
+panel — party name title + `N/M members · K online` subtitle; member rows with
+avatar/initial, You/Leader badges, class · level, online pill; sticky action bar
+(Say primary, Invite secondary, Leave danger+confirm); party-say strip (~8 lines);
+Create/Invite empty state; mobile bottom-sheet. Friends rows use matching **Invite**
+outline. Leader sees Kick on other members.
+
+Room players overlay and Friends rows can invite online players. Guests hide
+the Party button and see a sign-in note in the overlay.
+
+### Party Combat Assist (v1)
+Same-room players can join an in-progress fight by `attack <npc>` on an enemy
+already in combat. Joiners receive `combatStart` (BattleStage), initiative is
+rolled, and turn order is rebuilt (current actor preserved). Cross-room join
+is refused. Party membership is **not** required to join; when combat starts,
+same-room online party members get a `[Party] … Type 'attack <enemy>' to join`
+nudge. Victory XP/gold already splits across `GetLivingPlayers()` (loot stays
+room drops). Out of scope: follow, need/greed loot, auto-pull without attack,
+Flutter.
+
+### Friends (v1)
+Per-character friends list stored as `Character.FriendIDs` (character UUIDs) in
+the SQLite character JSON blob. Names are resolved at display time.
+
+```bash
+friend add <name>       # Add by live session name, or exact offline character name
+friend remove <name>    # Remove from your list
+friend list / friends   # Show Online/Offline from the live session registry
 ```
 
-Party membership is persisted in the existing `Party` entity. Pending invites
-are live-session state and must be accepted while both players are online.
+Rules: no self-add; idempotent add; guests are refused politely (and cannot be
+added). Open add-by-name (not a mutual request flow). Presence: friends who
+are watching you get a short "came online / went offline" line. The `friends`
+WebSocket message carries `{id,name,online}` for the play client overlay.
+
+Client: HUD group button (next to the character switcher) opens a Friends
+panel — list, Tell (whisper), Remove, add-by-name. Room players overlay can
+add the other player. Guests hide the HUD entry.
 
 ### Client Session UX
 The MUD client exposes connection state in `MUDXPlusStore`:
@@ -626,6 +671,11 @@ Two methods for placing NPCs:
 ---
 
 ## Combat System
+
+### Joining in-progress fights (Party Combat Assist v1)
+Same-room players may `attack <npc>` to join an active combat instance that
+NPC is already in (`JoinCombat`). Cross-room joins are refused. Living joiners
+share existing victory XP/gold split; loot remains room drops.
 
 ### Combat Instance Model
 ```go
@@ -1079,7 +1129,9 @@ Enhanced notification system with interactions:
 ### Spell Bar / Hotbar
 - 8 square slots between room description and the action bar (desktop grid widget + mobile strip)
 - Bind equipped combat skills (`cast` / combat-only) or inventory consumables (`use`)
-- Look / Rest / Talk / Flee are bindable actions but **not** seeded by default
+- Look / Talk / Flee are bindable actions but **not** seeded by default
+- Rest is seeded on an empty/default hotbar (slot 7). Customized binds are never overwritten
+- Out of combat, a **Resting** chip shows near HP while `Flags.resting` is true; combat or movement clears it
 - Search is not a look alias and is not offered as a hotbar action
 - Binds persist in `talesmud_settings_v1` (`interface.hotbarBinds`); empty equipped list shows "spellbook empty"
 - Does not use or overload the respawn `bind` command
@@ -2076,13 +2128,15 @@ Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "unc
 
 ### Client
 - Map widget (player-facing name; same `minimap` widget slot / atlas protocol) receives the atlas over WebSocket on enter, and can also fetch `GET /api/characters/:id/map`
-- Action-bar **Map** chrome / Expand always opens a real fullscreen Map overlay (dimmed play surface, Esc/X close) via the `overlayHost` instance in `Game.svelte` — not a side tab next to Inventory
-- Label LOD: zoomed out = area names only (collision-aware; or none); mid = current + adjacent rooms; zoomed in = room names with collision avoidance (no stacked area+room labels). Compass/vertical exit words are never painted (exit ticks only)
-- Exactly one gold you-are-here marker, keyed by `currentRoomId` (incl. `R0215~instance` → template). Soft travel-trail dots optional. Recenter (my_location) pans to you
+- Action-bar **Map** chrome / Expand always opens a real fullscreen Map overlay (dimmed play surface, Esc/X close) via `MapOverviewOverlay` portaled to `document.body` — Inventory-style centered panel (`#map-overview-overlay` / `.map-panel`), not clipped to the Map widget and not Materialize `.modal`
+- Area names: always drawn on tinted region/area groups (gold/cream + dark stroke, font scales with zoom); uses `region.name` / `place.areaName` only — never invents labels. Room-name LOD unchanged: mid = current + adjacent; zoomed in = more room names (collision-aware). Compass/vertical exit words are never painted (exit ticks only)
+- Cartographer overlay fills ~80% of the viewport on desktop (side intel rail). On phone (≤768px) it is full-bleed / safe-area; intel is a bottom sheet (peek summary + Travel, expand for exits/residents). Tap selects; Travel is a thumb button (no double-tap). Pinch-zoom and pan keep scale. Compact map tap still inspects.
+- Atlas layers follow room Z: Overworld is z==0 only; up/down switches the map to Upper/Lower. Inter-area compass exits pack connected demo zones along that geography (no hardcoded zone layout).
 - Title stays **Map**. Layer tabs (Overworld/Lower/Upper) only when `atlas.layers` has more than one entry. Compact optional widget opens fullscreen; Map chrome pin is primary
+- Each room paints as a 48px biome pixel tile (`public/img/map-tiles/`: meadow, forest, settlement, dungeon, water, wild, fog). Landmark/bind rooms overlay a bind-stone icon. Compact minimap and fullscreen MapOverviewOverlay share `atlasRenderer.paintAtlas`. Fog tiles are muted; one gold you-are-here pawn; paths/exits and label LOD unchanged.
 - The widget auto-fits discovered places into its panel and keeps that fit (canvas is out of flow so it cannot resize the widget)
 - Layer tabs, pan, wheel zoom, click-to-travel along discovered paths
-- Desktop/mobile action bars (Option C): room-only dirs + room actions + Shop when a merchant is present; fixed INV / MAP / SAY chrome; optional Look/Rest/… pins via ⋯ (empty by default); layout revision migrates legacy Look/pin clutter
+- Desktop/mobile action bars (Option C): room-only dirs + room actions + Shop when a merchant is present; fixed INV / MAP / SAY chrome; **Recipes** seeded by default for crafting discoverability; optional Look/Rest/… pins via ⋯; layout revision migrates legacy Look/pin clutter and seeds Recipes onto rev-2 bars
 - Inventory chrome opens a popup overlay by default; preference can switch to on-screen widget / mobile sheet
 - Room action/system reaction toasts render large and centered on the room hero art (not the command log)
 - Same JSON is the contract for a future mobile renderer
@@ -2091,7 +2145,8 @@ Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "unc
 - `pkg/worldmap/` — layout, biomes, hulls, discovery, reveal
 - `pkg/server/handler/charactermap.go` — REST endpoint
 - `public/mud-client/src/game/widgets/MinimapWidget.svelte` — parchment Map renderer + fullscreen overlay host
-- `public/mud-client/src/game/widgets/atlasRenderer.js` — label LOD, collision, single you-marker
+- `public/mud-client/src/game/widgets/atlasRenderer.js` — biome tiles, label LOD, collision, single you-marker
+- `public/mud-client/public/img/map-tiles/` — 48px biome PNGs + landmark overlay
 - `public/mud-client/src/game/hudPrefs.js` — Option C action-bar chrome/pins + hotbar helpers
 
 ---

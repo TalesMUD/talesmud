@@ -413,8 +413,8 @@ func handleQuestAction(game def.GameCtrl, message *messages.Message, selectedOpt
 			return
 		}
 
-		// Grant rewards
-		grantedItems, err := game.GetFacade().QuestsService().GrantQuestRewards(char.ID, questID)
+		// Grant rewards (service applies CheckLevelUp/ApplyLevelUp when XP crosses thresholds)
+		grantedItems, levelUp, err := game.GetFacade().QuestsService().GrantQuestRewards(char.ID, questID)
 		if err != nil {
 			log.WithError(err).Error("Failed to grant quest rewards")
 			game.SendMessage() <- message.Reply("[System] Quest completed but failed to grant rewards.")
@@ -434,8 +434,15 @@ func handleQuestAction(game def.GameCtrl, message *messages.Message, selectedOpt
 		// Get updated character for stats update
 		updatedChar, _ := game.GetFacade().CharactersService().FindByID(char.ID)
 		if updatedChar != nil {
-			// Send character update (XP, gold changed)
+			notifyLevelUp(game, char.BelongsUserID, levelUp)
+			// Send character update (XP, gold, level changed)
 			game.SendMessage() <- messages.NewCharacterUpdateMessage(char.BelongsUserID, updatedChar)
+			if message.Character != nil && message.Character.ID == updatedChar.ID {
+				message.Character = updatedChar
+			}
+			if message.FromUser != nil {
+				game.SetUserSessionCharacter(message.FromUser, updatedChar)
+			}
 		}
 
 		// Send inventory update (items added)

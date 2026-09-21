@@ -1,6 +1,22 @@
 <script>
+  import { settingsStore } from '../SettingsStore.js';
+  import { overlayStore } from '../ui/overlayStore.js';
+  import { onItemArtError } from '../itemArtSrc.js';
+  import {
+    bindSkillToFirstEmptyHotbar,
+    characterClassId,
+    classifySkills,
+    formatSkillCost,
+    formatSkillEffects,
+    maxSkillSlots,
+    normalizeHotbarBinds,
+    skillGenericArtUrl,
+  } from '../hudPrefs.js';
+
   export let store = null;
   export let sendMessage = null;
+
+  let sheetTab = 'stats';
 
   let character = null;
   let stats = {
@@ -29,6 +45,7 @@
   $: xp = stats.xp || 0;
   $: gold = stats.gold || 0;
   $: inCombat = stats.inCombat || false;
+  $: resting = !!(stats.resting && !inCombat);
   $: attributes = stats.attributes || character?.attributes || [];
   $: currentMana = stats.currentMana || 0;
   $: maxMana = stats.maxMana || 0;
@@ -57,6 +74,16 @@
   $: hasUnspentPoints = unspentPoints > 0;
 
   $: hasData = character !== null;
+
+  $: classId = characterClassId(character);
+  $: equippedSkills = stats.equippedSkills || character?.equippedSkills || [];
+  $: computedMaxSlots = Number(stats.maxSkillSlots) > 0
+    ? Number(stats.maxSkillSlots)
+    : maxSkillSlots(classId, level);
+  $: classified = classifySkills(classId, level, equippedSkills);
+  $: slotPlaceholders = Array.from({ length: Math.max(computedMaxSlots, 1) }, (_, i) => classified.equipped[i] || null);
+  $: slotsFull = classified.equipped.length >= computedMaxSlots;
+  $: hotbarBinds = normalizeHotbarBinds($settingsStore.interface?.hotbarBinds);
 
   function formatGold(value) {
     if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
@@ -101,6 +128,55 @@
       sendMessage('spend ' + attrShort);
     }
   }
+
+  function toast(text) {
+    if (overlayStore?.pushMessage) overlayStore.pushMessage(text);
+  }
+
+  function skillName(skill) {
+    return skill?.name || skill?.id || 'Skill';
+  }
+
+  function equipSkill(skill) {
+    if (!sendMessage || !skill) return;
+    if (inCombat) {
+      toast('You cannot change skills during combat.');
+      return;
+    }
+    if (slotsFull) {
+      toast(`All ${computedMaxSlots} skill slots are full. Unequip a skill first.`);
+      return;
+    }
+    sendMessage('skills equip ' + skillName(skill));
+  }
+
+  function unequipSkill(skill) {
+    if (!sendMessage || !skill) return;
+    if (inCombat) {
+      toast('You cannot change skills during combat.');
+      return;
+    }
+    sendMessage('skills unequip ' + skillName(skill));
+  }
+
+  function addSkillToHotbar(skill) {
+    if (!skill) return;
+    const result = bindSkillToFirstEmptyHotbar(hotbarBinds, skill.id || skill.name);
+    if (result.status === 'already') {
+      toast(`${skillName(skill)} is already on the hotbar.`);
+      return;
+    }
+    if (result.status === 'full') {
+      toast('Hotbar is full — right-click a slot to replace it.');
+      return;
+    }
+    if (result.status !== 'bound') {
+      toast('Could not bind that skill.');
+      return;
+    }
+    settingsStore.setSetting('interface', 'hotbarBinds', result.binds);
+    toast(`${skillName(skill)} bound to hotbar slot ${result.index + 1}.`);
+  }
 </script>
 
 <style>
@@ -138,6 +214,31 @@
     border-radius: 4px;
     border: 1px solid rgba(239, 68, 68, 0.3);
     animation: combatBadgePulse 1.5s ease-in-out infinite;
+  }
+
+  .rest-badge {
+    font-size: var(--text-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #86efac;
+    background: rgba(34, 197, 94, 0.15);
+    padding: 0.2em 0.6em;
+    border-radius: 4px;
+    border: 1px solid rgba(34, 197, 94, 0.35);
+  }
+
+  .rest-chip {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #86efac;
+    background: rgba(34, 197, 94, 0.16);
+    border: 1px solid rgba(34, 197, 94, 0.4);
+    border-radius: 999px;
+    padding: 0.08em 0.5em;
+    margin-right: 0.35em;
   }
 
   @keyframes combatBadgePulse {
@@ -599,6 +700,282 @@
       grid-template-columns: repeat(3, 1fr);
     }
   }
+
+  /* Internal Stats | Skills tabs */
+  .sheet-tabs {
+    display: flex;
+    gap: 0.35em;
+    margin: 0 0 0.85em;
+    padding: 0.2em;
+    background: var(--panel-inner-bg);
+    border: 1px solid var(--panel-inner-border);
+    border-radius: 8px;
+  }
+
+  .sheet-tab {
+    flex: 1;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35em;
+    padding: 0.45em 0.6em;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-display);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .sheet-tab:hover {
+    color: var(--text-primary);
+    background: var(--tab-hover-bg);
+  }
+
+  .sheet-tab.active {
+    color: var(--tab-active-color);
+    background: var(--tab-active-bg);
+    box-shadow: inset 0 0 0 1px var(--tab-active-border);
+  }
+
+  .sheet-tab i {
+    font-size: 1.05em;
+    opacity: 0.85;
+  }
+
+  .tab-count {
+    font-family: inherit;
+    font-size: 0.75em;
+    font-weight: 700;
+    letter-spacing: 0;
+    color: var(--accent-primary);
+    background: var(--accent-subtle);
+    border: 1px solid var(--panel-inner-border);
+    border-radius: 999px;
+    padding: 0.05em 0.45em;
+  }
+
+  .skills-note {
+    font-size: var(--text-xs);
+    color: var(--text-dim);
+    margin: -0.35em 0 0.65em;
+  }
+
+  .skills-note.combat {
+    color: #fca5a5;
+  }
+
+  .skill-slots {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+    gap: 0.4em;
+    margin-bottom: 0.35em;
+  }
+
+  .skill-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.35em;
+    min-height: 88px;
+    padding: 0.5em 0.45em;
+    background: var(--panel-inner-bg);
+    border: 1px solid rgba(212, 164, 74, 0.28);
+    border-radius: 8px;
+  }
+
+  .skill-slot.empty {
+    border-style: dashed;
+    border-color: rgba(148, 163, 184, 0.28);
+    background: rgba(0, 0, 0, 0.22);
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .skill-slot-top {
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+  }
+
+  .skill-icon {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    object-fit: contain;
+    image-rendering: pixelated;
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 6px;
+    border: 1px solid var(--panel-inner-border);
+  }
+
+  .skill-slot-name {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.2;
+  }
+
+  .skill-slot-meta {
+    font-size: var(--text-xs);
+    color: var(--text-dim);
+  }
+
+  .skill-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45em;
+  }
+
+  .skill-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35em;
+    padding: 0.55em 0.6em;
+    background: var(--panel-inner-bg);
+    border: 1px solid var(--panel-inner-border);
+    border-radius: 8px;
+  }
+
+  .skill-card.locked {
+    opacity: 0.55;
+    filter: grayscale(0.55);
+  }
+
+  .skill-card-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5em;
+  }
+
+  .skill-card-copy {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .skill-card-name {
+    font-size: var(--text-sm);
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+  }
+
+  .skill-card-desc {
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+    line-height: 1.35;
+    margin-top: 0.15em;
+  }
+
+  .skill-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25em;
+  }
+
+  .skill-chip {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: #e8dcc8;
+    background: rgba(212, 164, 74, 0.12);
+    border: 1px solid rgba(212, 164, 74, 0.28);
+    border-radius: 999px;
+    padding: 0.12em 0.5em;
+  }
+
+  .skill-chip.cost {
+    color: #93c5fd;
+    background: rgba(59, 130, 246, 0.12);
+    border-color: rgba(59, 130, 246, 0.3);
+  }
+
+  .skill-chip.level {
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--panel-inner-border);
+  }
+
+  .skill-chip.lock {
+    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.1);
+    border-color: rgba(251, 191, 36, 0.28);
+  }
+
+  .skill-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35em;
+    margin-top: 0.15em;
+  }
+
+  .skill-btn {
+    flex: 1 1 auto;
+    min-height: 36px;
+    min-width: 88px;
+    padding: 0.35em 0.6em;
+    border-radius: 6px;
+    border: 1px solid rgba(212, 164, 74, 0.35);
+    background: rgba(212, 164, 74, 0.12);
+    color: var(--accent-primary);
+    font: inherit;
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  .skill-btn:hover:not(:disabled) {
+    background: rgba(212, 164, 74, 0.22);
+    border-color: rgba(212, 164, 74, 0.55);
+  }
+
+  .skill-btn.ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    border-color: var(--panel-inner-border);
+  }
+
+  .skill-btn.danger {
+    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.35);
+  }
+
+  .skill-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .skills-empty {
+    font-size: var(--text-sm);
+    color: var(--text-dim);
+    font-style: italic;
+    padding: 0.25em 0.1em;
+  }
+
+  @container character (max-width: 240px) {
+    .sheet-tab {
+      min-height: 44px;
+      font-size: var(--text-xs);
+      padding: 0.5em 0.35em;
+    }
+
+    .skill-btn {
+      min-height: 40px;
+    }
+  }
 </style>
 
 <div class="character-widget game-panel" class:in-combat={inCombat}>
@@ -607,6 +984,8 @@
     <span class="widget-title">Character</span>
     {#if inCombat}
       <span class="combat-badge">In Combat</span>
+    {:else if resting}
+      <span class="rest-badge">Resting</span>
     {/if}
   </div>
 
@@ -619,12 +998,39 @@
       </div>
     </div>
 
+    <div class="sheet-tabs" role="tablist" aria-label="Character sheet">
+      <button
+        type="button"
+        class="sheet-tab"
+        class:active={sheetTab === 'stats'}
+        role="tab"
+        aria-selected={sheetTab === 'stats'}
+        on:click={() => sheetTab = 'stats'}
+      >
+        <i class="material-icons">bar_chart</i>
+        Stats
+      </button>
+      <button
+        type="button"
+        class="sheet-tab"
+        class:active={sheetTab === 'skills'}
+        role="tab"
+        aria-selected={sheetTab === 'skills'}
+        on:click={() => sheetTab = 'skills'}
+      >
+        <i class="material-icons">auto_awesome</i>
+        Skills
+        <span class="tab-count">{classified.equipped.length}/{computedMaxSlots}</span>
+      </button>
+    </div>
+
+    {#if sheetTab === 'stats'}
     <div class="stat-bars">
       <!-- HP Bar -->
       <div class="bar-container">
         <div class="bar-header">
           <span class="bar-label hp" class:danger={hpPercent <= 60 && hpPercent > 30} class:critical={hpPercent <= 30}>HP</span>
-          <span class="bar-value">{currentHp} / {maxHp}</span>
+          <span class="bar-value">{#if resting}<span class="rest-chip">Resting</span>{/if}{currentHp} / {maxHp}</span>
         </div>
         <div class="bar-track">
           <div
@@ -727,6 +1133,134 @@
         </div>
       {/if}
     </div>
+    {:else}
+    <!-- Skills tab -->
+    <div class="game-panel-divider">
+      <span>Equipped {classified.equipped.length}/{computedMaxSlots}</span>
+    </div>
+    {#if inCombat}
+      <div class="skills-note combat">Skill slots are locked during combat.</div>
+    {:else}
+      <div class="skills-note">Bind unlocked skills into slots, then add them to the hotbar.</div>
+    {/if}
+
+    <div class="skill-slots">
+      {#each slotPlaceholders as slot, i}
+        {#if slot}
+          <div class="skill-slot">
+            <div class="skill-slot-top">
+              <img
+                class="skill-icon"
+                src={skillGenericArtUrl(slot.id || slot.name)}
+                alt=""
+                on:error={(e) => onItemArtError(e, { type: 'default' })}
+              />
+              <div>
+                <div class="skill-slot-name">{skillName(slot)}</div>
+                <div class="skill-slot-meta">Slot {i + 1} · {formatSkillCost(slot)}</div>
+              </div>
+            </div>
+            <div class="skill-actions">
+              <button
+                type="button"
+                class="skill-btn ghost"
+                on:click={() => addSkillToHotbar(slot)}
+              >Add to hotbar</button>
+              <button
+                type="button"
+                class="skill-btn danger"
+                disabled={inCombat}
+                on:click={() => unequipSkill(slot)}
+              >Unequip</button>
+            </div>
+          </div>
+        {:else}
+          <div class="skill-slot empty">Empty slot {i + 1}</div>
+        {/if}
+      {/each}
+    </div>
+
+    <div class="game-panel-divider">
+      <span>Available</span>
+    </div>
+    {#if classified.available.length === 0}
+      <div class="skills-empty">
+        {classified.equipped.length > 0 ? 'All unlocked skills are equipped.' : 'No skills unlocked yet.'}
+      </div>
+    {:else}
+      <div class="skill-list">
+        {#each classified.available as skill (skill.id)}
+          <div class="skill-card">
+            <div class="skill-card-head">
+              <img
+                class="skill-icon"
+                src={skillGenericArtUrl(skill.id)}
+                alt=""
+                on:error={(e) => onItemArtError(e, { type: 'default' })}
+              />
+              <div class="skill-card-copy">
+                <div class="skill-card-name">{skill.name}</div>
+                <div class="skill-card-desc">{skill.description}</div>
+              </div>
+            </div>
+            <div class="skill-chips">
+              <span class="skill-chip level">Lv {skill.levelRequired}</span>
+              <span class="skill-chip cost">{formatSkillCost(skill)}</span>
+              {#each formatSkillEffects(skill) as chip}
+                <span class="skill-chip">{chip}</span>
+              {/each}
+            </div>
+            <div class="skill-actions">
+              <button
+                type="button"
+                class="skill-btn"
+                disabled={inCombat || slotsFull}
+                title={slotsFull ? 'All skill slots are full' : 'Equip into an empty slot'}
+                on:click={() => equipSkill(skill)}
+              >Equip</button>
+              <button
+                type="button"
+                class="skill-btn ghost"
+                title="Equip first to cast; you can still pin it on the hotbar"
+                on:click={() => addSkillToHotbar(skill)}
+              >Add to hotbar</button>
+            </div>
+          </div>
+        {/each}
+      </div>
+    {/if}
+
+    {#if classified.locked.length > 0}
+      <div class="game-panel-divider">
+        <span>Locked</span>
+      </div>
+      <div class="skill-list">
+        {#each classified.locked as skill (skill.id)}
+          <div class="skill-card locked">
+            <div class="skill-card-head">
+              <img
+                class="skill-icon"
+                src={skillGenericArtUrl(skill.id)}
+                alt=""
+                on:error={(e) => onItemArtError(e, { type: 'default' })}
+              />
+              <div class="skill-card-copy">
+                <div class="skill-card-name">{skill.name}</div>
+                <div class="skill-card-desc">{skill.description}</div>
+              </div>
+            </div>
+            <div class="skill-chips">
+              <span class="skill-chip lock">Unlocks at L{skill.levelRequired}</span>
+              <span class="skill-chip cost">{formatSkillCost(skill)}</span>
+              {#each formatSkillEffects(skill) as chip}
+                <span class="skill-chip">{chip}</span>
+              {/each}
+            </div>
+          </div>
+        {/each}
+      </div>
+    {/if}
+    {/if}
   {:else}
     <div class="empty-state">
       <i class="material-icons">person_off</i>

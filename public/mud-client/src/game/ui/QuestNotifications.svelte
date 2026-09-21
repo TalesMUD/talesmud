@@ -181,7 +181,7 @@
       linear-gradient(165deg, rgba(33, 27, 21, 0.96) 0%, rgba(11, 16, 23, 0.96) 100%);
     border: 1.4px solid rgba(211, 173, 99, 0.55);
     border-radius: 8px;
-    padding: 1.05rem 1.1rem 0.9rem;
+    padding: 1.4rem 1.55rem 1.25rem;
     box-shadow:
       0 18px 48px rgba(0, 0, 0, 0.55),
       inset 0 0 0 1px rgba(116, 91, 51, 0.28);
@@ -200,7 +200,7 @@
     text-transform: uppercase;
     color: #f0c36a;
     text-shadow: 0 0 10px rgba(255, 215, 140, 0.28);
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.55rem;
   }
 
   .card-title {
@@ -212,7 +212,7 @@
     text-shadow:
       0 0 10px rgba(255, 215, 140, 0.25),
       0 2px 4px rgba(0, 0, 0, 0.75);
-    margin-bottom: 0.55rem;
+    margin-bottom: 0.9rem;
     line-height: 1.3;
   }
 
@@ -222,13 +222,13 @@
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: rgba(211, 173, 99, 0.9);
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.5rem;
   }
 
   .card-list {
     list-style: none;
-    margin: 0 0 0.85rem;
-    padding: 0;
+    margin: 0 0 1.2rem;
+    padding: 0 0.15rem;
     text-align: left;
     color: #e8e0d2;
     font-size: clamp(0.88rem, 1.68vw, 1.10rem);
@@ -236,7 +236,7 @@
   }
 
   .card-list li {
-    padding: 0.18rem 0 0.18rem 0.9rem;
+    padding: 0.28rem 0.1rem 0.28rem 1.35rem;
     position: relative;
   }
 
@@ -252,7 +252,7 @@
     align-items: center;
     justify-content: center;
     width: 100%;
-    padding: 0.55rem 0.75rem;
+    padding: 0.78rem 1.05rem;
     border-radius: 8px;
     border: 1px solid rgba(211, 173, 99, 0.45);
     background: rgba(211, 173, 99, 0.12);
@@ -269,8 +269,8 @@
 
   .accept-dismiss {
     position: absolute;
-    top: 8px;
-    right: 8px;
+    top: 12px;
+    right: 12px;
   }
 
   .quest-notifications {

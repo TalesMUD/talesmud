@@ -207,3 +207,143 @@ func TestTakingExitUpdatesLiveRoomPresence(t *testing.T) {
 		t.Fatalf("expected new room live presence for character, got %#v", players)
 	}
 }
+
+func friendReplyTexts(out []interface{}) []string {
+	var texts []string
+	for _, raw := range out {
+		switch msg := raw.(type) {
+		case messages.MessageResponse:
+			if msg.Message != "" {
+				texts = append(texts, msg.Message)
+			}
+		case *messages.FriendsMessage:
+			// structured payload, skip
+		case messages.FriendsMessage:
+		}
+	}
+	return texts
+}
+
+func friendRoster(out []interface{}) []messages.FriendEntry {
+	for i := len(out) - 1; i >= 0; i-- {
+		switch msg := out[i].(type) {
+		case *messages.FriendsMessage:
+			return msg.Friends
+		case messages.FriendsMessage:
+			return msg.Friends
+		}
+	}
+	return nil
+}
+
+func TestFriendAddRemoveListOnlineAndPersist(t *testing.T) {
+	g, facade := newSocialTestGame(t)
+	userA, charA := storeSocialPlayer(t, facade, "user-a", "ref-a", "char-a", "Aryn", "room-1")
+	userB, charB := storeSocialPlayer(t, facade, "user-b", "ref-b", "char-b", "Bran", "room-1")
+
+	g.ConnectUserSession(userA)
+	g.SetUserSessionCharacter(userA, charA)
+	g.ConnectUserSession(userB)
+	g.SetUserSessionCharacter(userB, charB)
+	_ = drainSocialMessages(g.SendMessage())
+
+	add := &messages.Message{FromUser: userA, Character: charA, Data: "friend add Bran"}
+	if !(&commands.FriendCommand{}).Execute(g, add) {
+		t.Fatal("friend add did not handle message")
+	}
+	out := drainSocialMessages(g.SendMessage())
+	joined := strings.Join(friendReplyTexts(out), "\n")
+	if !strings.Contains(joined, "Added Bran") {
+		t.Fatalf("expected add confirmation, got %q", joined)
+	}
+	roster := friendRoster(out)
+	if len(roster) != 1 || roster[0].ID != charB.ID || roster[0].Name != "Bran" || !roster[0].Online {
+		t.Fatalf("expected Bran online on roster, got %#v", roster)
+	}
+
+	loaded, err := facade.CharactersService().FindByID(charA.ID)
+	if err != nil || loaded == nil || !loaded.HasFriend(charB.ID) {
+		t.Fatalf("expected FriendIDs persisted, got %#v err=%v", loaded, err)
+	}
+
+	list := &messages.Message{FromUser: userA, Character: loaded, Data: "friends"}
+	if !(&commands.FriendCommand{}).Execute(g, list) {
+		t.Fatal("friends list did not handle message")
+	}
+	out = drainSocialMessages(g.SendMessage())
+	joined = strings.Join(friendReplyTexts(out), "\n")
+	if !strings.Contains(joined, "Bran") || !strings.Contains(joined, "Online") {
+		t.Fatalf("expected online Bran in list, got %q", joined)
+	}
+
+	g.DisconnectUserSession(userB.ID)
+	_ = drainSocialMessages(g.SendMessage())
+	fresh, err := facade.CharactersService().FindByID(charA.ID)
+	if err != nil {
+		t.Fatalf("reload after disconnect: %v", err)
+	}
+	list = &messages.Message{FromUser: userA, Character: fresh, Data: "friend list"}
+	if !(&commands.FriendCommand{}).Execute(g, list) {
+		t.Fatal("friend list after disconnect did not handle")
+	}
+	out = drainSocialMessages(g.SendMessage())
+	joined = strings.Join(friendReplyTexts(out), "\n")
+	if !strings.Contains(joined, "Offline") {
+		t.Fatalf("expected Bran offline after logout, got %q", joined)
+	}
+	roster = friendRoster(out)
+	if len(roster) != 1 || roster[0].Online {
+		t.Fatalf("expected persisted offline Bran, got %#v", roster)
+	}
+
+	rm := &messages.Message{FromUser: userA, Character: fresh, Data: "friend remove Bran"}
+	if !(&commands.FriendCommand{}).Execute(g, rm) {
+		t.Fatal("friend remove did not handle")
+	}
+	_ = drainSocialMessages(g.SendMessage())
+	after, err := facade.CharactersService().FindByID(charA.ID)
+	if err != nil || after == nil || after.HasFriend(charB.ID) {
+		t.Fatalf("expected friend removed from blob, got %#v err=%v", after, err)
+	}
+}
+
+func TestFriendNoSelfAddIdempotentGuestAndOfflineLookup(t *testing.T) {
+	g, facade := newSocialTestGame(t)
+	userA, charA := storeSocialPlayer(t, facade, "user-a", "ref-a", "char-a", "Aryn", "room-1")
+	_, _ = storeSocialPlayer(t, facade, "user-b", "ref-b", "char-b", "Bran", "room-1")
+	guestUser, guestChar := storeSocialPlayer(t, facade, "user-g", "ref-g", "char-g", "Vagrant_1", "room-1")
+	guestUser.IsGuest = true
+	if err := facade.UsersService().Update(guestUser.RefID, guestUser); err != nil {
+		t.Fatalf("mark guest: %v", err)
+	}
+
+	g.ConnectUserSession(userA)
+	g.SetUserSessionCharacter(userA, charA)
+	_ = drainSocialMessages(g.SendMessage())
+
+	self := &messages.Message{FromUser: userA, Character: charA, Data: "friend add Aryn"}
+	(&commands.FriendCommand{}).Execute(g, self)
+	out := drainSocialMessages(g.SendMessage())
+	if !strings.Contains(strings.Join(friendReplyTexts(out), "\n"), "can't add yourself") {
+		t.Fatalf("expected self-add refusal, got %#v", friendReplyTexts(out))
+	}
+
+	offline := &messages.Message{FromUser: userA, Character: charA, Data: "friend add Bran"}
+	(&commands.FriendCommand{}).Execute(g, offline)
+	out = drainSocialMessages(g.SendMessage())
+	if !strings.Contains(strings.Join(friendReplyTexts(out), "\n"), "Added Bran") {
+		t.Fatalf("expected offline exact-name add, got %#v", friendReplyTexts(out))
+	}
+	(&commands.FriendCommand{}).Execute(g, offline)
+	out = drainSocialMessages(g.SendMessage())
+	if !strings.Contains(strings.Join(friendReplyTexts(out), "\n"), "already on your friends list") {
+		t.Fatalf("expected idempotent add, got %#v", friendReplyTexts(out))
+	}
+
+	guest := &messages.Message{FromUser: guestUser, Character: guestChar, Data: "friend add Aryn"}
+	(&commands.FriendCommand{}).Execute(g, guest)
+	out = drainSocialMessages(g.SendMessage())
+	if !strings.Contains(strings.Join(friendReplyTexts(out), "\n"), "Sign in") {
+		t.Fatalf("expected guest refusal, got %#v", friendReplyTexts(out))
+	}
+}

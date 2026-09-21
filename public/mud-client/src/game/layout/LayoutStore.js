@@ -1,6 +1,15 @@
 import { writable, get } from 'svelte/store';
+import {
+  LAYOUT_STORAGE_KEY,
+  parseLayoutStorage,
+  buildLayoutStoragePayload,
+  normalizeTemplateName,
+  makeTemplateId,
+  widgetsEqual,
+  normalizeTemplates,
+} from './layoutTemplates.js';
 
-const STORAGE_KEY = 'talesmud_layout_v1';
+const STORAGE_KEY = LAYOUT_STORAGE_KEY;
 
 // Default layout: Room + Terminal, Spell Bar between room and Action Bar
 const DEFAULT_LAYOUT = [
@@ -124,30 +133,39 @@ function setWidgetsEditable(widgets, editable) {
   }));
 }
 
+function bumpEpoch(state) {
+  return (state.layoutEpoch || 0) + 1;
+}
+
 function createLayoutStore() {
   const { subscribe, set, update } = writable({
     widgets: toGridItems(DEFAULT_LAYOUT, false),
     editMode: false,
-    pendingWidgets: null
+    pendingWidgets: null,
+    templates: [],
+    activeTemplateId: null,
+    /** Bumps when widgets must force-sync into WidgetGrid (apply/reset/load). */
+    layoutEpoch: 0,
   });
 
-  return {
+  const api = {
     subscribe,
 
     // Load layout from localStorage
     loadFromStorage() {
       try {
         const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          const data = JSON.parse(stored);
-          if (data.version === 1 && Array.isArray(data.widgets)) {
-            const widgets = ensureHotbarInLayout(data.widgets);
-            update(state => ({
-              ...state,
-              widgets: toGridItems(widgets, state.editMode)
-            }));
-            return true;
-          }
+        const parsed = parseLayoutStorage(stored);
+        if (parsed) {
+          const widgets = ensureHotbarInLayout(parsed.widgets);
+          update(state => ({
+            ...state,
+            widgets: toGridItems(widgets, state.editMode),
+            templates: parsed.templates,
+            activeTemplateId: parsed.activeTemplateId,
+            layoutEpoch: bumpEpoch(state),
+          }));
+          return true;
         }
       } catch (e) {
         console.warn('Failed to load layout from storage:', e);
@@ -155,14 +173,14 @@ function createLayoutStore() {
       return false;
     },
 
-    // Save current layout to localStorage
+    // Save current layout (+ templates metadata) to localStorage
     saveToStorage() {
       const state = get({ subscribe });
-      const data = {
-        version: 1,
-        savedAt: new Date().toISOString(),
-        widgets: fromGridItems(state.widgets)
-      };
+      const data = buildLayoutStoragePayload({
+        widgets: fromGridItems(state.widgets),
+        templates: state.templates,
+        activeTemplateId: state.activeTemplateId,
+      });
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
         return true;
@@ -200,7 +218,8 @@ function createLayoutStore() {
             ...state,
             editMode: false,
             widgets: setWidgetsEditable(restored, false),
-            pendingWidgets: null
+            pendingWidgets: null,
+            layoutEpoch: bumpEpoch(state),
           };
         }
       });
@@ -281,7 +300,9 @@ function createLayoutStore() {
     resetToDefault() {
       update(state => ({
         ...state,
-        widgets: toGridItems(DEFAULT_LAYOUT, state.editMode)
+        widgets: toGridItems(DEFAULT_LAYOUT, state.editMode),
+        activeTemplateId: null,
+        layoutEpoch: bumpEpoch(state),
       }));
     },
 
@@ -353,8 +374,124 @@ function createLayoutStore() {
           return w;
         })
       }));
-    }
+    },
+
+    /**
+     * Snapshot current layout as a named personal template.
+     * Same name (case-insensitive) overwrites that template.
+     * @returns {{ id: string, name: string }|null}
+     */
+    saveAsTemplate(name) {
+      const trimmed = normalizeTemplateName(name);
+      if (!trimmed) return null;
+
+      const state = get({ subscribe });
+      const snapshot = fromGridItems(state.widgets);
+      const existing = state.templates.find(
+        (t) => t.name.toLowerCase() === trimmed.toLowerCase()
+      );
+      const id = existing?.id || makeTemplateId();
+      const entry = {
+        id,
+        name: trimmed,
+        savedAt: new Date().toISOString(),
+        widgets: snapshot,
+        // shareId reserved for future sharing — omit in v1
+      };
+
+      update((s) => {
+        const templates = existing
+          ? s.templates.map((t) => (t.id === id ? entry : t))
+          : [...s.templates, entry];
+        return {
+          ...s,
+          templates: normalizeTemplates(templates),
+          activeTemplateId: id,
+        };
+      });
+
+      this.saveToStorage();
+      return { id, name: trimmed };
+    },
+
+    /**
+     * Apply a named template as the active layout (persists immediately).
+     * Stays in edit mode if already editing; Cancel baseline updates to applied layout.
+     */
+    applyTemplate(templateId) {
+      const state = get({ subscribe });
+      const tpl = state.templates.find((t) => t.id === templateId);
+      if (!tpl) return false;
+
+      const widgets = ensureHotbarInLayout(
+        JSON.parse(JSON.stringify(tpl.widgets))
+      );
+      const gridItems = toGridItems(widgets, state.editMode);
+
+      update((s) => ({
+        ...s,
+        widgets: gridItems,
+        activeTemplateId: tpl.id,
+        pendingWidgets: s.editMode
+          ? JSON.parse(JSON.stringify(gridItems))
+          : s.pendingWidgets,
+        layoutEpoch: bumpEpoch(s),
+      }));
+
+      this.saveToStorage();
+      return true;
+    },
+
+    renameTemplate(templateId, newName) {
+      const trimmed = normalizeTemplateName(newName);
+      if (!trimmed) return false;
+      let ok = false;
+      update((s) => {
+        const templates = s.templates.map((t) => {
+          if (t.id !== templateId) return t;
+          ok = true;
+          return { ...t, name: trimmed };
+        });
+        return { ...s, templates };
+      });
+      if (ok) this.saveToStorage();
+      return ok;
+    },
+
+    deleteTemplate(templateId) {
+      let ok = false;
+      update((s) => {
+        const next = s.templates.filter((t) => t.id !== templateId);
+        if (next.length === s.templates.length) return s;
+        ok = true;
+        return {
+          ...s,
+          templates: next,
+          activeTemplateId:
+            s.activeTemplateId === templateId ? null : s.activeTemplateId,
+        };
+      });
+      if (ok) this.saveToStorage();
+      return ok;
+    },
+
+    /** True when current widgets differ from the active template snapshot. */
+    isActiveTemplateDirty() {
+      const state = get({ subscribe });
+      if (!state.activeTemplateId) return false;
+      const tpl = state.templates.find((t) => t.id === state.activeTemplateId);
+      if (!tpl) return false;
+      return !widgetsEqual(fromGridItems(state.widgets), tpl.widgets);
+    },
+
+    getActiveTemplate() {
+      const state = get({ subscribe });
+      if (!state.activeTemplateId) return null;
+      return state.templates.find((t) => t.id === state.activeTemplateId) || null;
+    },
   };
+
+  return api;
 }
 
 export const layoutStore = createLayoutStore();

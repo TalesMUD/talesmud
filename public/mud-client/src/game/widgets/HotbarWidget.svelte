@@ -15,6 +15,8 @@
     skillGenericArtUrl,
     actionGenericArtUrl,
   } from '../hudPrefs.js';
+  import { createSkillCooldownClock } from '../combatCooldown.js';
+  import { onDestroy } from 'svelte';
 
   export let store;
   export let sendMessage;
@@ -23,6 +25,9 @@
 
   let pickerIndex = -1;
   let longPressTimer = null;
+  const cdClock = createSkillCooldownClock();
+  let nowMs = Date.now();
+  let tickTimer = null;
 
   $: binds = normalizeHotbarBinds($settingsStore.interface?.hotbarBinds);
   $: inventory = $store.inventory || [];
@@ -30,7 +35,35 @@
   $: inCombat = !!(
     $store.inCombat || $store.characterStats?.inCombat
   );
+  $: skillCooldowns = $store.combatSkillCooldowns || {};
   $: consumables = inventory.filter(isConsumableItem);
+  $: {
+    skillCooldowns;
+    cdClock.sync(skillCooldowns, nowMs);
+  }
+  $: anyCd = Object.values(skillCooldowns || {}).some((v) => v > 0);
+  $: if (inCombat && anyCd) startCdTick();
+  else stopCdTick();
+  $: if (!inCombat) cdClock.reset();
+
+  function startCdTick() {
+    if (tickTimer) return;
+    tickTimer = setInterval(() => { nowMs = Date.now(); }, 200);
+  }
+  function stopCdTick() {
+    if (tickTimer) {
+      clearInterval(tickTimer);
+      tickTimer = null;
+    }
+  }
+  onDestroy(stopCdTick);
+
+  function skillCooldownSec(bind) {
+    return cdClock.secondsFor(bind, nowMs);
+  }
+  function skillCooldownRounds(bind) {
+    return cdClock.roundsFor(bind);
+  }
 
   function saveBinds(next) {
     settingsStore.setSetting('interface', 'hotbarBinds', normalizeHotbarBinds(next));
@@ -82,6 +115,7 @@
   function slotDisabled(bind) {
     if (!bind) return false;
     if (bind.kind === 'skill' && !inCombat) return true;
+    if (bind.kind === 'skill' && skillCooldownSec(bind) > 0) return true;
     if (bind.kind === 'item' && !findInventoryItem(inventory, bind)) return true;
     return false;
   }
@@ -122,6 +156,12 @@
     if (!bind) return 'Empty — click to bind';
     if (bind.kind === 'skill') {
       const name = bind.name || skillDisplayName(bind.id);
+      const sec = skillCooldownSec(bind);
+      const rounds = skillCooldownRounds(bind);
+      if (sec > 0) {
+        const turns = rounds > 0 ? ` (~${rounds} turn${rounds === 1 ? '' : 's'})` : '';
+        return `${name} — ${sec}s CD${turns}`;
+      }
       return inCombat ? `Cast ${name}` : `${name} (combat only)`;
     }
     if (bind.kind === 'item') {
@@ -200,6 +240,21 @@
   .slot.disabled {
     opacity: 0.45;
     cursor: not-allowed;
+  }
+  .slot.on-cd img { filter: grayscale(0.7) brightness(0.7); }
+  .cd-overlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    border-radius: inherit;
+    background: rgba(0, 0, 0, 0.62);
+    color: #f8fafc;
+    font-family: system-ui, sans-serif;
+    font-weight: 800;
+    font-size: 0.85rem;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
   }
 
   .slot img {
@@ -349,6 +404,7 @@
   <div class="slots">
     {#each binds as bind, index}
       {@const item = bind?.kind === 'item' ? findInventoryItem(inventory, bind) : null}
+      {@const cdSec = skillCooldownSec(bind)}
       <button
         type="button"
         class="slot"
@@ -356,6 +412,7 @@
         class:skill={bind?.kind === 'skill'}
         class:item={bind?.kind === 'item'}
         class:disabled={slotDisabled(bind)}
+        class:on-cd={cdSec > 0}
         title={slotTitle(bind)}
         aria-label={slotTitle(bind)}
         on:click={() => activateSlot(index)}
@@ -385,6 +442,9 @@
             on:error={(e) => onItemArtError(e, { type: 'default' })}
           />
         {/if}
+        {#if cdSec > 0}
+          <span class="cd-overlay" aria-hidden="true">{cdSec}s</span>
+        {/if}
       </button>
     {/each}
   </div>
@@ -402,7 +462,7 @@
 
       <div class="section-label">Skills (equipped)</div>
       {#if equippedSkills.length === 0}
-        <div class="empty-hint">spellbook empty — equip skills with `skills equip &lt;name&gt;`</div>
+        <div class="empty-hint">No skills equipped — open Character → Skills to bind them</div>
       {:else}
         <div class="pick-list">
           {#each equippedSkills as skillId}

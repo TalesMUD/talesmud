@@ -9,6 +9,7 @@ import {
   normalizeHotbarBinds,
   normalizeInventoryOpenMode,
   scrubLegacySearchBinds,
+  seedRestOnEmptyHotbar,
 } from './hudPrefs.js';
 
 const STORAGE_KEY = 'talesmud_settings_v1';
@@ -64,17 +65,21 @@ function createSettingsStore() {
             iface.actionBarPins = migrateActionBarPins(iface.actionBarPins, prevRev);
             iface.actionBarLayoutRevision = ACTION_BAR_LAYOUT_REVISION;
             iface.inventoryOpenMode = normalizeInventoryOpenMode(iface.inventoryOpenMode);
-            iface.hotbarBinds = scrubLegacySearchBinds(
+            const beforeSeed = scrubLegacySearchBinds(
               normalizeHotbarBinds(iface.hotbarBinds)
             );
+            iface.hotbarBinds = seedRestOnEmptyHotbar(beforeSeed);
             update(state => ({
               ...state,
               general: { ...DEFAULT_SETTINGS.general, ...data.general },
               interface: iface
             }));
             this.applyTheme(iface.theme);
-            // Persist migration so pins stay clean on next load
-            if (prevRev < ACTION_BAR_LAYOUT_REVISION) {
+            const seededEmpty =
+              beforeSeed.every((b) => b == null) &&
+              iface.hotbarBinds.some((b) => b && b.id === 'rest');
+            // Persist pin revision and empty-bar Rest seed so guests see Rest next load
+            if (prevRev < ACTION_BAR_LAYOUT_REVISION || seededEmpty) {
               this.saveToStorage();
             }
             return true;

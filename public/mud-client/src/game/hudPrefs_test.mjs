@@ -5,6 +5,7 @@ import {
   DEFAULT_ACTION_BAR_PINS,
   DEFAULT_HOTBAR_BINDS,
   DEFAULT_INVENTORY_OPEN_MODE,
+  DEFAULT_REST_SLOT,
   HOTBAR_SLOT_COUNT,
   INVENTORY_OPEN_OVERLAY,
   INVENTORY_OPEN_WIDGET,
@@ -22,13 +23,25 @@ import {
   makeActionBind,
   HOTBAR_ACTIONS,
   scrubLegacySearchBinds,
+  seedRestOnEmptyHotbar,
   skillDisplayName,
   skillGenericArtUrl,
   togglePin,
+  SKILL_CATALOG,
+  bindSkillToFirstEmptyHotbar,
+  classifySkills,
+  firstEmptyHotbarIndex,
+  formatSkillCost,
+  formatSkillEffects,
+  isSkillOnHotbar,
+  maxSkillSlots,
+  normalizeClassId,
+  skillById,
+  skillsForClass,
 } from './hudPrefs.js';
 
-assert.deepStrictEqual(DEFAULT_ACTION_BAR_PINS, [], 'Option C: no default action-bar pins');
-assert.ok(ACTION_BAR_LAYOUT_REVISION >= 2, 'layout revision bumped for Option C');
+assert.deepStrictEqual(DEFAULT_ACTION_BAR_PINS, ['recipes'], 'Recipes seeded for crafting discoverability');
+assert.ok(ACTION_BAR_LAYOUT_REVISION >= 3, 'layout revision bumped for Recipes seed');
 
 assert.deepStrictEqual(
   ACTION_BAR_CHROME.map((c) => c.id),
@@ -44,19 +57,27 @@ assert.ok(
   'Look is default OFF the action bar'
 );
 assert.ok(
+  DEFAULT_ACTION_BAR_PINS.includes('recipes'),
+  'Recipes is default ON the action bar'
+);
+assert.ok(
   PINNABLE_COMMANDS.some((c) => c.id === 'look'),
   'Look remains pinnable via ⋯'
+);
+assert.ok(
+  PINNABLE_COMMANDS.some((c) => c.id === 'recipes'),
+  'Recipes remains pinnable via ⋯'
 );
 
 assert.deepStrictEqual(
   normalizeActionBarPins(null),
-  [],
-  'null pins → empty Option C default'
+  ['recipes'],
+  'null pins → Recipes default'
 );
 assert.deepStrictEqual(
   normalizeActionBarPins([]),
   [],
-  'empty pins stay empty'
+  'empty pins stay empty (explicit clear)'
 );
 assert.deepStrictEqual(
   normalizeActionBarPins(['look', 'inv', 'map', 'look', 'nope', 'say']),
@@ -71,18 +92,28 @@ assert.deepStrictEqual(
 
 assert.deepStrictEqual(
   migrateActionBarPins(['look', 'inv', 'map'], 1),
-  [],
-  'legacy look+inv+map defaults migrate to empty pins'
+  ['recipes'],
+  'legacy look+inv+map defaults migrate to Recipes seed'
 );
 assert.deepStrictEqual(
   migrateActionBarPins(['look', 'inv', 'map', 'rest', 'help', 'say'], 1),
-  [],
-  'cluttered legacy pins migrate to empty on revision bump'
+  ['recipes'],
+  'cluttered legacy pins migrate to Recipes seed on revision bump'
 );
 assert.deepStrictEqual(
   migrateActionBarPins(['look', 'who'], 2),
+  ['recipes', 'look', 'who'],
+  'revision 2 → 3 seeds Recipes without wiping optional pins'
+);
+assert.deepStrictEqual(
+  migrateActionBarPins(['recipes', 'look'], 2),
+  ['recipes', 'look'],
+  'revision 2 → 3 does not duplicate Recipes'
+);
+assert.deepStrictEqual(
+  migrateActionBarPins(['look', 'who'], 3),
   ['look', 'who'],
-  'revision 2+ preserves optional pins'
+  'revision 3+ preserves optional pins as-is'
 );
 
 const toggledOn = togglePin([], 'who');
@@ -110,7 +141,17 @@ assert.strictEqual(normalizeInventoryOpenMode('bogus'), INVENTORY_OPEN_OVERLAY);
 
 // --- Hotbar binds ---
 assert.strictEqual(DEFAULT_HOTBAR_BINDS.length, HOTBAR_SLOT_COUNT);
-assert.ok(DEFAULT_HOTBAR_BINDS.every((b) => b === null), 'default hotbar empty');
+assert.strictEqual(DEFAULT_REST_SLOT, 6, 'Rest seeds into slot 7');
+assert.deepStrictEqual(DEFAULT_HOTBAR_BINDS[DEFAULT_REST_SLOT], {
+  kind: 'action',
+  id: 'rest',
+  name: 'Rest',
+  command: 'rest',
+});
+assert.ok(
+  DEFAULT_HOTBAR_BINDS.every((b, i) => i === DEFAULT_REST_SLOT || b === null),
+  'default hotbar only seeds Rest'
+);
 
 const normalized = normalizeHotbarBinds([
   { kind: 'skill', id: 'mage_fireball' },
@@ -193,8 +234,71 @@ assert.ok(HOTBAR_ACTIONS.some((a) => a.id === 'look'), 'Look remains bindable');
 assert.ok(HOTBAR_ACTIONS.some((a) => a.id === 'rest'), 'Rest remains bindable');
 assert.ok(HOTBAR_ACTIONS.some((a) => a.id === 'talk'), 'Talk remains bindable');
 assert.ok(HOTBAR_ACTIONS.some((a) => a.id === 'flee'), 'Flee remains bindable');
-assert.ok(
-  DEFAULT_HOTBAR_BINDS.every((b) => b === null),
-  'hotbar default empty'
-);
-console.log('hudPrefs: Option C (room + chrome INV/MAP/SAY, no Search=look) OK');
+
+const seeded = seedRestOnEmptyHotbar([null, null, null, null, null, null, null, null]);
+assert.strictEqual(seeded[DEFAULT_REST_SLOT]?.id, 'rest', 'empty bar seeds Rest');
+const custom = seedRestOnEmptyHotbar([
+  { kind: 'skill', id: 'mage_fireball' },
+  null, null, null, null, null, null, null,
+]);
+assert.strictEqual(custom[0]?.kind, 'skill', 'custom bar kept');
+assert.strictEqual(custom[DEFAULT_REST_SLOT], null, 'custom bar is not injected with Rest');
+const already = seedRestOnEmptyHotbar(DEFAULT_HOTBAR_BINDS);
+assert.strictEqual(already[DEFAULT_REST_SLOT]?.id, 'rest');
+console.log('hudPrefs: Option C (room + chrome INV/MAP/SAY, Rest seeded on empty bar) OK');
+
+// --- Skill catalog / slots (Character → Skills) ---
+assert.ok(SKILL_CATALOG.length >= 24, 'catalog covers seeded class skills');
+assert.strictEqual(normalizeClassId('wizard'), 'mage');
+assert.strictEqual(normalizeClassId('Warrior'), 'warrior');
+
+const warriorSkills = skillsForClass('warrior');
+assert.strictEqual(warriorSkills.length, 5, 'warrior has 5 skills');
+assert.ok(warriorSkills.some((s) => s.id === 'warrior_power_strike'));
+assert.ok(warriorSkills.some((s) => s.id === 'warrior_cleave'));
+assert.ok(warriorSkills.some((s) => s.id === 'warrior_berserker_rage'));
+assert.strictEqual(skillsForClass('wizard').length, 5, 'wizard aliases to mage skills');
+
+assert.strictEqual(maxSkillSlots('warrior', 1), 1);
+assert.strictEqual(maxSkillSlots('warrior', 13), 2, 'warrior L13 → 2 slots');
+assert.strictEqual(maxSkillSlots('warrior', 20), 3);
+assert.strictEqual(maxSkillSlots('mage', 1), 2);
+assert.strictEqual(maxSkillSlots('wizard', 15), 3);
+
+const power = skillById('warrior_power_strike');
+assert.strictEqual(power.name, 'Power Strike');
+assert.strictEqual(formatSkillCost(power), '3 round CD');
+assert.ok(formatSkillEffects(power).some((c) => /150% STR dmg/.test(c)));
+
+const bash = skillById('Shield Bash');
+assert.strictEqual(formatSkillCost(bash), '4 round CD');
+assert.ok(formatSkillEffects(bash).some((c) => /stun/.test(c)));
+
+const cry = skillById('warrior_battle_cry');
+assert.ok(formatSkillEffects(cry).some((c) => /\+30% attack/.test(c)));
+
+const fireball = skillById('mage_fireball');
+assert.strictEqual(formatSkillCost(fireball), '8 mana');
+
+const classified = classifySkills('warrior', 13, ['warrior_power_strike']);
+assert.strictEqual(classified.equipped.length, 1);
+assert.ok(classified.available.some((s) => s.name === 'Shield Bash'));
+assert.ok(classified.available.some((s) => s.name === 'Battle Cry'));
+assert.ok(!classified.available.some((s) => s.id === 'warrior_power_strike'));
+assert.ok(classified.locked.some((s) => s.name === 'Cleave'));
+assert.ok(classified.locked.some((s) => s.name === 'Berserker Rage'));
+assert.ok(classified.locked.every((s) => s.levelRequired > 13));
+
+const emptyIdx = firstEmptyHotbarIndex(DEFAULT_HOTBAR_BINDS);
+assert.strictEqual(emptyIdx, 0, 'default bar first empty is slot 1');
+const boundOnce = bindSkillToFirstEmptyHotbar(DEFAULT_HOTBAR_BINDS, 'warrior_power_strike');
+assert.strictEqual(boundOnce.status, 'bound');
+assert.strictEqual(boundOnce.index, 0);
+assert.strictEqual(boundOnce.binds[0].id, 'warrior_power_strike');
+assert.ok(isSkillOnHotbar(boundOnce.binds, 'warrior_power_strike'));
+const boundAgain = bindSkillToFirstEmptyHotbar(boundOnce.binds, 'warrior_power_strike');
+assert.strictEqual(boundAgain.status, 'already');
+const boundSecond = bindSkillToFirstEmptyHotbar(boundOnce.binds, 'warrior_shield_bash');
+assert.strictEqual(boundSecond.status, 'bound');
+assert.strictEqual(boundSecond.index, 1);
+console.log('hudPrefs: skill catalog + slot helpers OK');

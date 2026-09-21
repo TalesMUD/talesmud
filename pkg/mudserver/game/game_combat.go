@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -26,6 +27,7 @@ type CombatController struct {
 	engine     *combatpkg.Engine
 	game       *Game
 	graceUntil map[string]time.Time // characterID -> grace expiry
+	mu         sync.Mutex           // serializes turn resolve vs mid-window queue kick
 }
 
 // NewCombatController creates a new combat controller
@@ -67,6 +69,14 @@ func (c *CombatController) markCombatGrace(characterID string) {
 	c.graceUntil[characterID] = time.Now().Add(combatBreathGrace)
 }
 
+// ClearCombatGrace removes any post-combat breath window for the character.
+func (c *CombatController) ClearCombatGrace(characterID string) {
+	if c == nil || characterID == "" || c.graceUntil == nil {
+		return
+	}
+	delete(c.graceUntil, characterID)
+}
+
 // IsPlayerInCombat checks if a player is currently in combat
 func (c *CombatController) IsPlayerInCombat(characterID string) bool {
 	return c.manager.IsPlayerInCombat(characterID)
@@ -87,6 +97,16 @@ func (c *CombatController) InitiateCombat(roomID string, players []*characters.C
 	return c.engine.InitiateCombat(roomID, players, enemies)
 }
 
+// GetCombatInstanceByNPC returns the combat instance an NPC is currently in
+func (c *CombatController) GetCombatInstanceByNPC(npcID string) *combat.CombatInstance {
+	return c.manager.GetInstanceByNPCID(npcID)
+}
+
+// JoinCombat adds a character to an existing active combat instance
+func (c *CombatController) JoinCombat(instance *combat.CombatInstance, character *characters.Character) bool {
+	return c.engine.JoinCombat(instance, character)
+}
+
 // ProcessPlayerAttack handles a player attacking a target in combat
 func (c *CombatController) ProcessPlayerAttack(characterID, targetID string) (message string, combatEnded bool, endState combat.CombatState) {
 	instance := c.manager.GetInstanceByPlayerID(characterID)
@@ -104,6 +124,7 @@ func (c *CombatController) ProcessPlayerAttack(characterID, targetID string) (me
 	endState = c.engine.CheckCombatEnd(instance)
 	if endState != combat.CombatStateActive {
 		c.engine.EndCombat(instance, endState)
+		c.cleanupCombatInstance(instance, endState)
 		combatEnded = true
 		return message, combatEnded, endState
 	}
@@ -115,6 +136,7 @@ func (c *CombatController) ProcessPlayerAttack(characterID, targetID string) (me
 	endState = c.engine.CheckCombatEnd(instance)
 	if endState != combat.CombatStateActive {
 		c.engine.EndCombat(instance, endState)
+		c.cleanupCombatInstance(instance, endState)
 		combatEnded = true
 	}
 
@@ -138,6 +160,7 @@ func (c *CombatController) ProcessPlayerDefend(characterID string) (message stri
 	endState = c.engine.CheckCombatEnd(instance)
 	if endState != combat.CombatStateActive {
 		c.engine.EndCombat(instance, endState)
+		c.cleanupCombatInstance(instance, endState)
 		combatEnded = true
 		return message, combatEnded, endState
 	}
@@ -149,6 +172,7 @@ func (c *CombatController) ProcessPlayerDefend(characterID string) (message stri
 	endState = c.engine.CheckCombatEnd(instance)
 	if endState != combat.CombatStateActive {
 		c.engine.EndCombat(instance, endState)
+		c.cleanupCombatInstance(instance, endState)
 		combatEnded = true
 	}
 
@@ -173,6 +197,7 @@ func (c *CombatController) ProcessPlayerFlee(characterID string) (success bool, 
 	endState = c.engine.CheckCombatEnd(instance)
 	if endState != combat.CombatStateActive {
 		c.engine.EndCombat(instance, endState)
+		c.cleanupCombatInstance(instance, endState)
 		combatEnded = true
 		return success, message, combatEnded, endState
 	}
@@ -185,6 +210,7 @@ func (c *CombatController) ProcessPlayerFlee(characterID string) (success bool, 
 		endState = c.engine.CheckCombatEnd(instance)
 		if endState != combat.CombatStateActive {
 			c.engine.EndCombat(instance, endState)
+			c.cleanupCombatInstance(instance, endState)
 			combatEnded = true
 		}
 	}
@@ -326,15 +352,16 @@ func (c *CombatController) GetCombatStatus(characterID string) string {
 	return sb.String()
 }
 
-// EndCombatForPlayer removes a player from combat (cleanup on disconnect, etc.)
+// EndCombatForPlayer removes a player from combat (cleanup on disconnect, orphaned
+// cross-room fights, etc.). Treats the exit as a flee so NPC combat flags clear.
 func (c *CombatController) EndCombatForPlayer(characterID string) {
 	instance := c.manager.GetInstanceByPlayerID(characterID)
 	if instance == nil {
 		return
 	}
 
-	// Remove the instance
-	c.manager.RemoveInstance(instance.ID)
+	c.engine.EndCombat(instance, combat.CombatStateFled)
+	c.cleanupCombatInstance(instance, combat.CombatStateFled)
 }
 
 // processNPCTurns handles NPC turns in combat until it's a player's turn
@@ -398,7 +425,6 @@ func (c *CombatController) processNPCTurns(instance *combat.CombatInstance) {
 		}
 	}
 }
-
 
 // playerCombatQueueState snapshots queue + cooldowns + pacing clocks for one player.
 func (c *CombatController) playerCombatQueueState(instance *combat.CombatInstance, playerID string) messages.CombatQueueState {
@@ -656,6 +682,12 @@ func (c *CombatController) Update() {
 // processAllTurns advances at most one combatant action per call, gated by authored beat budget.
 // Player turns open a DecisionWindowSeconds window (combatTurn); timeout → auto-attack.
 func (c *CombatController) processAllTurns(instance *combat.CombatInstance) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.processAllTurnsLocked(instance)
+}
+
+func (c *CombatController) processAllTurnsLocked(instance *combat.CombatInstance) {
 	now := time.Now()
 
 	// Pacing gate: wait out previous turn's beat/reaction budget
@@ -1078,6 +1110,12 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 			Gold:          char.Gold,
 		}
 	}
+
+	// Loot is placed after the pre-victory room refresh, so push a second
+	// roomUpdate now that ground items exist (Pickup UI / groundItems store).
+	if len(allLootItems) > 0 {
+		c.refreshOriginRoomAfterCombat(instance)
+	}
 }
 
 // processCombatDefeat handles death penalties and sends the defeat message
@@ -1161,15 +1199,24 @@ func (c *CombatController) QueuePlayerAction(characterID string, action combat.C
 		return
 	}
 
+	c.mu.Lock()
 	player.QueuedAction = action
 	player.QueuedTargetID = targetID
 	player.QueuedSkillID = ""
 	c.engine.UpdateCombatant(instance, player)
-	label := string(action)
-	if label == "" {
-		label = "action"
+	c.kickWaitingPlayerTurnLocked(instance, characterID)
+	stillQueued := false
+	if p := instance.GetPlayerByID(characterID); p != nil && p.QueuedAction != "" {
+		stillQueued = true
 	}
-	c.emitPlayerQueueUpdate(instance, characterID, fmt.Sprintf("Queued: %s", label))
+	c.mu.Unlock()
+	if stillQueued {
+		label := string(action)
+		if label == "" {
+			label = "action"
+		}
+		c.emitPlayerQueueUpdate(instance, characterID, fmt.Sprintf("Queued: %s", label))
+	}
 }
 
 // QueuePlayerSkill queues a skill for a player's next turn
@@ -1184,11 +1231,42 @@ func (c *CombatController) QueuePlayerSkill(characterID, skillID, targetID strin
 		return
 	}
 
+	c.mu.Lock()
 	player.QueuedAction = combat.CombatActionSkill
 	player.QueuedSkillID = skillID
 	player.QueuedTargetID = targetID
 	c.engine.UpdateCombatant(instance, player)
-	c.emitPlayerQueueUpdate(instance, characterID, fmt.Sprintf("Queued skill: %s", skillID))
+	c.kickWaitingPlayerTurnLocked(instance, characterID)
+	stillQueued := false
+	if p := instance.GetPlayerByID(characterID); p != nil && p.QueuedAction != "" {
+		stillQueued = true
+	}
+	c.mu.Unlock()
+	if stillQueued {
+		c.emitPlayerQueueUpdate(instance, characterID, fmt.Sprintf("Queued skill: %s", skillID))
+	}
+}
+
+// kickWaitingPlayerTurnLocked resolves the current player's turn immediately after they queue.
+// Autotimer is AFK-only; a mid-window choice must not wait the remaining DecisionWindow
+// or the 1s combat ticker. Caller must hold c.mu.
+// Pre-queued actions at window open still use the existing TurnBeatMs windup path.
+func (c *CombatController) kickWaitingPlayerTurnLocked(instance *combat.CombatInstance, characterID string) {
+	if instance == nil || characterID == "" {
+		return
+	}
+	if instance.Phase != combat.CombatPhaseWaitingPlayer {
+		return
+	}
+	current := instance.GetCurrentTurnCombatant()
+	if current == nil || current.ID != characterID {
+		return
+	}
+	if current.Type != combat.CombatantTypePlayer || !current.IsAlive || current.HasFled {
+		return
+	}
+	instance.NextActionAt = time.Now()
+	c.processAllTurnsLocked(instance)
 }
 
 // SetAutoAttackTarget sets the persistent auto-attack target for a player

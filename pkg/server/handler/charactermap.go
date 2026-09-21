@@ -12,6 +12,7 @@ import (
 type CharacterMapHandler struct {
 	Characters service.CharactersService
 	Rooms      service.RoomsService
+	NPCs       service.NPCsService
 }
 
 // GetCharacterMap returns GET /api/characters/:id/map
@@ -34,5 +35,10 @@ func (h *CharacterMapHandler) GetCharacterMap(c *gin.Context) {
 	}
 
 	atlas := worldmap.Reveal(worldmap.Compile(rs), character)
+	if h.NPCs != nil {
+		if npcs, nerr := h.NPCs.FindAll(); nerr == nil {
+			worldmap.AttachResidents(&atlas, worldmap.ResidentsFromNPCs(npcs))
+		}
+	}
 	c.JSON(http.StatusOK, atlas)
 }

@@ -53,6 +53,7 @@ func (srv *itemsService) ItemSlots() items.ItemSlots {
 		items.ItemSlotRing1,
 		items.ItemSlotRing2,
 		items.ItemSlotHands,
+		items.ItemSlotWaist,
 		items.ItemSlotMainHand,
 		items.ItemSlotOffHand,
 	}
