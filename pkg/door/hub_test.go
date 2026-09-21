@@ -154,6 +154,10 @@ func TestTownFightHealBankSurviveRelog(t *testing.T) {
 	if won.Door.BankGold != 15 {
 		t.Fatalf("vault changed during the fight: %d", won.Door.BankGold)
 	}
+	hub.OnInput(created, "y", send)
+	if stats := stripANSI(frames[len(frames)-1].ANSI); !strings.Contains(stats, "Mara Quinn") || !strings.Contains(stats, "Others on the door") {
+		t.Fatalf("stats/leaderboard stub missing:\n%s", stats)
+	}
 	hub.OnDisconnect(created)
 	reloaded, err := facade.UsersService().FindByID(created.ID)
 	if err != nil {

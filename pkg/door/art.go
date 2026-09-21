@@ -38,6 +38,14 @@ func (h *Hub) composeArt(sess *session, ch *characters.Character, scr *Screen) v
 				grid[5+i] = ln
 			}
 		}
+		grid[12] = "  Others on the door"
+		leaders := h.leaderLines()
+		for i, ln := range leaders {
+			if 13+i >= 18 {
+				break
+			}
+			grid[13+i] = "  " + ln
+		}
 		grid[18] = "  (T)own       return to the square"
 		grid[19] = "  (?)          help"
 	case "forest":
