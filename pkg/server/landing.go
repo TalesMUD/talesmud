@@ -69,13 +69,6 @@ func LandingMiddleware(landingPath string) gin.HandlerFunc {
 			return
 		}
 
-		// Canonicalize /map → /map/ so relative (and base-relative) assets resolve.
-		if pth == "/map" {
-			c.Redirect(302, "/map/")
-			c.Abort()
-			return
-		}
-
 		// Serve static assets from the landing directory (e.g. images, CSS).
 		clean := filepath.Clean(pth[1:]) // strip leading "/"
 		assetPath := filepath.Join(landingPath, clean)
@@ -91,7 +84,7 @@ func LandingMiddleware(landingPath string) gin.HandlerFunc {
 			return // file doesn't exist in landing dir, fall through
 		}
 
-		// Directory index support (e.g. /map → map/index.html).
+		// Directory index support (serve subdir/index.html when present).
 		if info.IsDir() {
 			indexCandidate := filepath.Join(assetPath, "index.html")
 			if _, err := os.Stat(indexCandidate); err != nil {

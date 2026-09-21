@@ -137,7 +137,7 @@ DiscoveredAreas map[string]bool  // Area names
 - **5 XP** per new room discovered (grant path is currently gated; discovery itself still records)
 - **15 XP** for first room in a new area/zone
 
-**Atlas API**: `GET /api/characters/:id/map` returns the character's fog-of-war atlas (places, paths, area hulls, overworld/lower/upper layers). Layout pins authored `coords` when present, clusters remaining rooms by area using compass exits, then packs zones with a gap so Oldtown / Meadows / Ashenveil read as separate clusters. Hidden exits stay off the map until `revealExit`.
+**Atlas API**: `GET /api/characters/:id/map` returns the character's fog-of-war atlas (places, paths, area hulls, overworld/lower/upper layers). Layout pins authored `coords` when present, clusters remaining rooms by area using compass exits, then packs zones with a gap so adjacent demo areas read as separate clusters. Hidden exits stay off the map until `revealExit`.
 
 ### NPC / enemy portraits
 Room presence sends `portrait` URLs (`/api/portraits/{templateOrId}.png`). Import copies `assets/images/sprites/{npcs,enemies}/` into `uploads/portraits/`. Sprites are 512px full-figure art; the original NPC/enemy cards clip a 48px square around the body (`object-fit: cover` + zoom). Missing files fall back to hashed `img/avatars/{1-14}p.png`. Component CSS lives in `public/mud-client/public/extra.css` and must be deployed with `bundle.js`.
@@ -2131,7 +2131,7 @@ Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "unc
 - Action-bar **Map** chrome / Expand always opens a real fullscreen Map overlay (dimmed play surface, Esc/X close) via `MapOverviewOverlay` portaled to `document.body` — Inventory-style centered panel (`#map-overview-overlay` / `.map-panel`), not clipped to the Map widget and not Materialize `.modal`
 - Area names: always drawn on tinted region/area groups (gold/cream + dark stroke, font scales with zoom); uses `region.name` / `place.areaName` only — never invents labels. Room-name LOD unchanged: mid = current + adjacent; zoomed in = more room names (collision-aware). Compass/vertical exit words are never painted (exit ticks only)
 - Cartographer overlay fills ~80% of the viewport on desktop (side intel rail). On phone (≤768px) it is full-bleed / safe-area; intel is a bottom sheet (peek summary + Travel, expand for exits/residents). Tap selects; Travel is a thumb button (no double-tap). Pinch-zoom and pan keep scale. Compact map tap still inspects.
-- Atlas layers follow room Z: Overworld is z==0 only; up/down switches the map to Upper/Lower. Oldtown packs north of Meadows via the R0108→R0201 north exit.
+- Atlas layers follow room Z: Overworld is z==0 only; up/down switches the map to Upper/Lower. Inter-area compass exits pack connected demo zones along that geography (no hardcoded zone layout).
 - Title stays **Map**. Layer tabs (Overworld/Lower/Upper) only when `atlas.layers` has more than one entry. Compact optional widget opens fullscreen; Map chrome pin is primary
 - Each room paints as a 48px biome pixel tile (`public/img/map-tiles/`: meadow, forest, settlement, dungeon, water, wild, fog). Landmark/bind rooms overlay a bind-stone icon. Compact minimap and fullscreen MapOverviewOverlay share `atlasRenderer.paintAtlas`. Fog tiles are muted; one gold you-are-here pawn; paths/exits and label LOD unchanged.
 - The widget auto-fits discovered places into its panel and keeps that fit (canvas is out of flow so it cannot resize the widget)

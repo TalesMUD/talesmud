@@ -40,13 +40,13 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Response actions send the narrative `response` text, not the help `description`
   - Action descriptions shown in room text ("You can:" section)
   - Visual backgrounds and mood settings
-  - Coordinate-based world mapping (X, Y, Z grid) plus a compiled atlas: authored coords pin rooms, remaining rooms cluster by area from compass exits, zones pack with a gap (Oldtown / Meadows / Ashenveil read apart); per-character fog of war at `GET /api/characters/:id/map`
+  - Coordinate-based world mapping (X, Y, Z grid) plus a compiled atlas: authored coords pin rooms, remaining rooms cluster by area from compass exits, zones pack with a gap so adjacent demo areas read apart; per-character fog of war at `GET /api/characters/:id/map`
   - Dynamic item and NPC spawning
   - Unique NPCs auto-spawn into their assigned room on server start via `CurrentRoomID`
   - Per-character friends list (`friend add/remove/list`); HUD overlay with online flags + whisper; guests refused
   - Guest-public NPC/enemy portraits (`/api/portraits/:filename`, hashed avatar fallback)
   - Merchant shop overlay in the room widget (structured `shop` WS message with item stats/description; click inspects, explicit Buy/Sell confirm; WoW-style compare-to-equipped deltas on buy inspect; dialog Trade inject)
-  - Player chrome Map: Cartographer overlay (desktop ~80% + intel rail; phone full-bleed + bottom intel sheet); tap inspect, Travel button; biome tiles; gold you-icon; Overworld z==0; Oldtown north of Meadows
+  - Player chrome Map: Cartographer overlay (desktop ~80% + intel rail; phone full-bleed + bottom intel sheet); tap inspect, Travel button; biome tiles; gold you-icon; Overworld z==0; inter-area exits pack connected demo zones
   - Play client WS: single-flight socket gate; close 4001 (session replaced) does not auto-reconnect; `/play` JS/CSS served no-cache
   - Action bar Option C: room dirs + room actions + Shop; fixed INV/MAP/SAY chrome; **Recipes** pin seeded by default; optional Look/Rest/… via ⋯
   - Gathering & crafting v1 (no professions): room GATHER chips + recipes/craft; R0209 CRAFT/RECIPES chips; R0102 first-gather hint
