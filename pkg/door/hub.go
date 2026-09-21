@@ -499,10 +499,15 @@ func (h *Hub) applyAmount(user *entities.User, sess *session, text string) {
 }
 
 func (h *Hub) applyBuy(user *entities.User, sess *session, text string) {
-	sess.screen = "shop"
-	if h.pack.Screens == nil || h.pack.Screens["shop"] == nil {
-		sess.screen = screenArmory
+	back := sess.returnTo
+	if back == "" {
+		back = "shop"
+		if h.pack.Screens == nil || h.pack.Screens["shop"] == nil {
+			back = screenArmory
+		}
 	}
+	sess.screen = back
+	sess.returnTo = ""
 	sess.inputMode = "hotkey"
 	if text == "" || strings.EqualFold(text, "x") {
 		sess.notice = "Left the counter."
@@ -521,7 +526,7 @@ func (h *Hub) armoryKey(user *entities.User, sess *session, key string) {
 		sess.notice = "Press a number to buy, or (R) to return."
 		return
 	}
-	goods := h.shopGoods()
+	goods := h.shopGoodsFor(sess.screen)
 	if n < 1 || n > len(goods) {
 		sess.notice = "That peg is empty."
 		return
@@ -809,7 +814,7 @@ func (h *Hub) compose(sess *session, ch *characters.Character) view {
 		v.Location = h.pack.Armory
 		body = append(body, h.pack.Smith+" sells one weapon and one coat at a time.")
 		body = append(body, "")
-		for _, g := range h.shopGoods() {
+		for _, g := range h.shopGoodsFor(sess.screen) {
 			body = append(body, hotkey(strconv.Itoa(g.n), g.name, fmt.Sprintf("%d coin, %s", g.price, g.stat)))
 		}
 		body = append(body, "", hotkey("R", "Return", ""))
@@ -967,22 +972,43 @@ type goods struct {
 	stat  string
 }
 
+// shopKind returns "weapon", "armor", or "" (both) for a shop screen id.
+func shopKind(screen string) string {
+	switch screen {
+	case "weapons", "shop":
+		return "weapon"
+	case "armor", "armory":
+		return "armor"
+	default:
+		return ""
+	}
+}
+
 func (h *Hub) shopGoods() []goods {
+	return h.shopGoodsFor("")
+}
+
+func (h *Hub) shopGoodsFor(screen string) []goods {
+	kind := shopKind(screen)
 	var list []goods
 	n := 1
-	for _, w := range h.pack.Weapons {
-		if w.Price <= 0 {
-			continue
+	if kind == "" || kind == "weapon" {
+		for _, w := range h.pack.Weapons {
+			if w.Price <= 0 {
+				continue
+			}
+			list = append(list, goods{n: n, kind: "weapon", id: w.ID, name: w.Name, price: w.Price, stat: fmt.Sprintf("atk %d", w.Attack)})
+			n++
 		}
-		list = append(list, goods{n: n, kind: "weapon", id: w.ID, name: w.Name, price: w.Price, stat: fmt.Sprintf("atk %d", w.Attack)})
-		n++
 	}
-	for _, a := range h.pack.Armor {
-		if a.Price <= 0 {
-			continue
+	if kind == "" || kind == "armor" {
+		for _, a := range h.pack.Armor {
+			if a.Price <= 0 {
+				continue
+			}
+			list = append(list, goods{n: n, kind: "armor", id: a.ID, name: a.Name, price: a.Price, stat: fmt.Sprintf("def %d", a.Defense)})
+			n++
 		}
-		list = append(list, goods{n: n, kind: "armor", id: a.ID, name: a.Name, price: a.Price, stat: fmt.Sprintf("def %d", a.Defense)})
-		n++
 	}
 	return list
 }

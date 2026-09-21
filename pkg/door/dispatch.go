@@ -42,6 +42,7 @@ func (h *Hub) dispatchPack(user *entities.User, sess *session, key string) bool 
 		sess.screen = screenAmount
 		sess.inputMode = "line"
 	case "buy":
+		sess.returnTo = sess.screen
 		sess.purpose = "buy"
 		sess.screen = screenAmount
 		sess.inputMode = "line"
@@ -95,12 +96,13 @@ func (h *Hub) engage(user *entities.User, sess *session, key string) {
 }
 
 func (h *Hub) sellGear(user *entities.User, sess *session) {
+	kind := shopKind(sess.screen)
 	_, err := h.mutate(user, func(ch *characters.Character) error {
 		if ch.Door == nil {
 			sess.notice = "You have nothing priced to sell."
 			return nil
 		}
-		if ch.Door.WeaponID != "" {
+		if (kind == "" || kind == "weapon") && ch.Door.WeaponID != "" {
 			item := h.pack.WeaponByID(ch.Door.WeaponID)
 			refund := int64(item.Price / 2)
 			ch.Gold += refund
@@ -108,12 +110,20 @@ func (h *Hub) sellGear(user *entities.User, sess *session) {
 			sess.notice = fmt.Sprintf("Sold %s for %d coin.", item.Name, refund)
 			return nil
 		}
-		if ch.Door.ArmorID != "" {
+		if (kind == "" || kind == "armor") && ch.Door.ArmorID != "" {
 			item := h.pack.ArmorByID(ch.Door.ArmorID)
 			refund := int64(item.Price / 2)
 			ch.Gold += refund
 			ch.Door.ArmorID = ""
 			sess.notice = fmt.Sprintf("Sold %s for %d coin.", item.Name, refund)
+			return nil
+		}
+		if kind == "weapon" {
+			sess.notice = "You carry no blade this counter will buy."
+			return nil
+		}
+		if kind == "armor" {
+			sess.notice = "You wear no coat this counter will buy."
 			return nil
 		}
 		sess.notice = "You have nothing priced to sell."

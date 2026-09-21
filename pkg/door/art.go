@@ -78,7 +78,7 @@ func (h *Hub) composeArt(sess *session, ch *characters.Character, scr *Screen) v
 		grid[16] = fmt.Sprintf("  Full mending costs %d coin.", h.pack.HealCost)
 	case "shop", "armory", "weapons", "armor":
 		row := 4
-		for _, g := range h.shopGoods() {
+		for _, g := range h.shopGoodsFor(scr.ID) {
 			if row >= 17 {
 				break
 			}
