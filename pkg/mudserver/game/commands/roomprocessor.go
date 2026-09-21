@@ -111,6 +111,15 @@ func (roomProcessor *RoomProcessor) matchesDynamicCommand(key string, room *room
 				continue
 			}
 
+			// CRAFT / RECIPES room chips must open the recipes overlay (same as
+			// the global recipes/craft commands), not a static response text.
+			actionKey := normalizeCommand(action.Name)
+			if actionKey == "craft" || actionKey == "recipes" || actionKey == "recipe" {
+				return func(room *rooms.Room, game def.GameCtrl, message *messages.Message) bool {
+					return (&RecipesCommand{}).Execute(game, message)
+				}, true
+			}
+
 			replyText := action.Response
 			if replyText == "" {
 				replyText = action.Description

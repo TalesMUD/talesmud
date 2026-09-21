@@ -161,6 +161,7 @@ func (app *app) setupRoutes() {
 	characterMap := &handler.CharacterMapHandler{
 		Characters: app.Facade.CharactersService(),
 		Rooms:      app.Facade.RoomsService(),
+		NPCs:       app.Facade.NPCsService(),
 	}
 
 	usr := &handler.UsersHandler{

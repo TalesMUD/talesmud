@@ -101,6 +101,8 @@
   import InventoryOverlay from "./ui/InventoryOverlay.svelte";
   import BattleStage from "./ui/BattleStage.svelte";
   import MapOverviewOverlay from "./ui/MapOverviewOverlay.svelte";
+  import FriendsOverlay from "./ui/FriendsOverlay.svelte";
+  import PartyOverlay from "./ui/PartyOverlay.svelte";
 
   import { onMount, onDestroy } from "svelte";
   import { getAuth } from "../auth.js";
@@ -389,6 +391,8 @@
 
   <!-- Inventory popup overlay (default inv open mode) -->
   <InventoryOverlay store={muxStore} {sendMessage} />
+  <FriendsOverlay store={muxStore} {sendMessage} />
+  <PartyOverlay store={muxStore} {sendMessage} />
 
 </div>
 

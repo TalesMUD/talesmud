@@ -163,6 +163,90 @@ function biomeOf(key) {
   return BIOME[key] || BIOME.wild;
 }
 
+const TILE_FILES = {
+  meadow: 'img/map-tiles/meadow.png',
+  forest: 'img/map-tiles/forest.png',
+  settlement: 'img/map-tiles/settlement.png',
+  dungeon: 'img/map-tiles/dungeon.png',
+  water: 'img/map-tiles/water.png',
+  wild: 'img/map-tiles/wild.png',
+  fog: 'img/map-tiles/fog.png',
+};
+
+const tileImages = Object.create(null);
+let landmarkImage = null;
+let youPortraitImage = null;
+let youPortraitSrc = '';
+let tilesReady = false;
+const tileWaiters = [];
+
+function notifyTilesReady() {
+  tilesReady = true;
+  for (const fn of tileWaiters) {
+    try { fn(); } catch (e) { /* ignore */ }
+  }
+}
+
+function startTileLoad() {
+  if (typeof Image === 'undefined') {
+    tilesReady = true;
+    return;
+  }
+  const keys = Object.keys(TILE_FILES);
+  let pending = keys.length + 1;
+  const done = () => {
+    pending -= 1;
+    if (pending <= 0) notifyTilesReady();
+  };
+  for (const key of keys) {
+    const img = new Image();
+    img.onload = done;
+    img.onerror = done;
+    img.src = TILE_FILES[key];
+    tileImages[key] = img;
+  }
+  const lm = new Image();
+  lm.onload = done;
+  lm.onerror = done;
+  lm.src = 'img/map-tiles/landmark.png';
+  landmarkImage = lm;
+}
+
+startTileLoad();
+
+export function setYouPortrait(url) {
+  const next = String(url || '');
+  if (next === youPortraitSrc) return;
+  youPortraitSrc = next;
+  youPortraitImage = null;
+  if (!next || typeof Image === 'undefined') return;
+  const img = new Image();
+  img.onload = () => { youPortraitImage = img; notifyTilesReady(); };
+  img.src = next;
+}
+
+export function onMapTilesReady(fn) {
+  if (typeof fn !== 'function') return;
+  if (tilesReady) fn();
+  else tileWaiters.push(fn);
+}
+
+function tileImageReady(img) {
+  return !!(img && img.complete && img.naturalWidth > 0);
+}
+
+function tileKeyFor(place) {
+  if (!place || !place.discovered || place.kind === 'uncharted') return 'fog';
+  const k = String(place.kind || '').toLowerCase();
+  if (k === 'settlement') return 'settlement';
+  if (k === 'dungeon') return 'dungeon';
+  if (k === 'water') return 'water';
+  const b = String(place.biome || '').toLowerCase();
+  if (b === 'town') return 'settlement';
+  if (TILE_FILES[b]) return b;
+  return 'wild';
+}
+
 function hashString(str) {
   let h = 0;
   for (let i = 0; i < str.length; i++) {
@@ -271,7 +355,7 @@ function computeCamera(places, w, h, panX, panY, userScale, focus = null, paths 
   const spanY = Math.max(1, maxY - minY + 1);
   const pad = Math.max(40, Math.min(w, h) * 0.14);
   const fit = Math.min((w - pad * 2) / spanX, (h - pad * 2) / spanY);
-  const tileStep = Math.max(38, Math.min(fit * userScale, 92));
+  const tileStep = Math.max(28, Math.min(fit * userScale, MAP_TILE_STEP_MAX));
   return {
     tileStep,
     ox: (minX + maxX) / 2,
@@ -307,8 +391,18 @@ function projectPlace(place, cam, w, h) {
   return projectGrid(Math.round(place.x), Math.round(place.y), cam, w, h);
 }
 
+export const MAP_SCALE_MIN = 0.5;
+export const MAP_SCALE_MAX = 5;
+export const MAP_TILE_STEP_MAX = 110;
+
+export function clampMapScale(s) {
+  const n = Number(s);
+  if (!isFinite(n) || n <= 0) return 1;
+  return Math.min(MAP_SCALE_MAX, Math.max(MAP_SCALE_MIN, n));
+}
+
 function tileHalf(tileStep) {
-  return tileStep * 0.4;
+  return tileStep * 0.42;
 }
 
 function worldDelta(a, b) {
@@ -427,8 +521,9 @@ function drawGrid(ctx, cam, w, h, places) {
   minY -= 1;
   maxY += 1;
   const half = tileHalf(cam.tileStep);
-  ctx.strokeStyle = 'rgba(160, 140, 100, 0.06)';
+  ctx.strokeStyle = 'rgba(180, 160, 110, 0.09)';
   ctx.lineWidth = 1;
+  ctx.setLineDash([1, 7]);
   for (let gx = minX; gx <= maxX; gx++) {
     const top = projectGrid(gx, minY, cam, w, h);
     const bottom = projectGrid(gx, maxY, cam, w, h);
@@ -445,56 +540,107 @@ function drawGrid(ctx, cam, w, h, places) {
     ctx.lineTo(right.px + half, right.py + half);
     ctx.stroke();
   }
+  ctx.setLineDash([]);
 }
 
-function drawAreaCells(ctx, places, cam, w, h, showLabels) {
+/** Readable area-name size that tracks map zoom (tileStep). */
+function areaLabelFontSize(cam) {
+  const step = cam && cam.tileStep ? cam.tileStep : 40;
+  return Math.max(11, Math.min(18, Math.round(step * 0.3)));
+}
+
+/**
+ * Clear area labels for tinted region/area groups.
+ * Prefer atlas regions (same hulls as the wash rects); fall back to place.area clusters.
+ * Always drawn (not LOD-gated) so overworld clusters stay named at default zoom.
+ */
+function drawAreaLabels(ctx, places, regions, cam, w, h) {
+  const fontSize = areaLabelFontSize(cam);
+  const font = `700 ${fontSize}px Georgia, serif`;
+  const labelH = fontSize + 4;
+  const candidates = [];
+  const labeled = new Set();
+
+  for (const region of regions || []) {
+    const text = String(region.name || '').trim();
+    if (!text) continue;
+    const pts = (region.hull || []).map(([x, y]) => projectGrid(Math.round(x), Math.round(y), cam, w, h));
+    if (!pts.length) continue;
+    let minPx = Infinity, maxPx = -Infinity, minPy = Infinity, maxPy = -Infinity;
+    for (const p of pts) {
+      if (p.px < minPx) minPx = p.px;
+      if (p.px > maxPx) maxPx = p.px;
+      if (p.py < minPy) minPy = p.py;
+      if (p.py > maxPy) maxPy = p.py;
+    }
+    const pad = cam.tileStep * 0.5;
+    candidates.push({
+      text,
+      px: (minPx + maxPx) / 2,
+      py: minPy - pad - labelH - 2,
+      font,
+      force: true,
+      priority: -(region.places ? region.places.length : pts.length),
+    });
+    labeled.add(text.toLowerCase());
+  }
+
+  // Fallback for discovered place clusters that somehow lack a region hull.
   const byArea = new Map();
-  for (const p of places) {
+  for (const p of places || []) {
     if (!p.discovered || !p.area) continue;
     if (!byArea.has(p.area)) byArea.set(p.area, []);
     byArea.get(p.area).push(p);
   }
   const cell = cam.tileStep * 0.92;
-  const labelCandidates = [];
   for (const [area, rooms] of byArea) {
-    const tint = areaTint(area);
-    let cx = 0;
-    let cy = 0;
+    if (rooms.length < 1) continue;
+    const text = String(rooms[0].areaName || '').trim();
+    if (!text || labeled.has(text.toLowerCase())) continue;
+    let minPx = Infinity, maxPx = -Infinity, minPy = Infinity, maxPy = -Infinity;
     for (const p of rooms) {
       const { px, py } = projectPlace(p, cam, w, h);
-      ctx.fillStyle = tint;
-      roundRect(ctx, px - cell / 2, py - cell / 2, cell, cell, 5);
-      ctx.fill();
-      cx += px;
-      cy += py;
+      if (px < minPx) minPx = px;
+      if (px > maxPx) maxPx = px;
+      if (py < minPy) minPy = py;
+      if (py > maxPy) maxPy = py;
     }
-    if (showLabels && rooms.length > 1) {
-      labelCandidates.push({
-        text: rooms[0].areaName || area,
-        px: cx / rooms.length,
-        py: cy / rooms.length - cell * 0.15,
-        font: 'italic 600 9px Georgia, serif',
-        force: false,
-        priority: -rooms.length,
-      });
-    }
+    const pad = cell * 0.55;
+    candidates.push({
+      text,
+      px: (minPx + maxPx) / 2,
+      py: minPy - pad - labelH - 2,
+      font,
+      force: true,
+      priority: -rooms.length,
+    });
+    labeled.add(text.toLowerCase());
   }
-  if (showLabels && labelCandidates.length) {
-    labelCandidates.sort((a, b) => a.priority - b.priority);
-    const measure = (text, font) => {
-      ctx.font = font;
-      const metrics = ctx.measureText(text);
-      return { w: metrics.width, h: 11 };
-    };
-    const placed = layoutRoomLabels(labelCandidates, measure);
-    for (const lab of placed) {
-      ctx.font = lab.font;
-      ctx.fillStyle = 'rgba(220, 200, 160, 0.5)';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillText(lab.text, lab.x, lab.y);
-    }
+
+  if (!candidates.length) return;
+  candidates.sort((a, b) => a.priority - b.priority);
+  const measure = (text, f) => {
+    ctx.font = f;
+    const metrics = ctx.measureText(text);
+    return { w: metrics.width, h: labelH };
+  };
+  const placed = layoutRoomLabels(candidates, measure);
+  for (const lab of placed) {
+    ctx.font = lab.font;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.lineWidth = Math.max(3, Math.round(fontSize * 0.28));
+    ctx.strokeStyle = 'rgba(16, 12, 6, 0.88)';
+    ctx.strokeText(lab.text, lab.x, lab.y);
+    ctx.fillStyle = '#f0d78c';
+    ctx.fillText(lab.text, lab.x, lab.y);
   }
+}
+
+/** @deprecated name kept for callers; tint washes come from regions. */
+function drawAreaCells(ctx, places, cam, w, h, showLabels) {
+  if (!showLabels) return;
+  drawAreaLabels(ctx, places, [], cam, w, h);
 }
 
 function drawRegionWash(ctx, region, cam, w, h) {
@@ -519,18 +665,17 @@ function drawCorridor(ctx, a, b, pa, pb, path, cam, onTravel) {
   const { dx, dy } = worldDelta(a, b);
   const from = tileEdgePoint(pa.px, pa.py, half, dx, dy);
   const to = tileEdgePoint(pb.px, pb.py, half, -dx, -dy);
-  const biome = biomeOf(a.biome);
   const cross = isCrossArea(a, b);
   const bothKnown = a.discovered && b.discovered;
 
   ctx.beginPath();
   ctx.moveTo(from.px, from.py);
   ctx.lineTo(to.px, to.py);
-  ctx.strokeStyle = onTravel ? '#38bdf8' : cross ? 'rgba(200, 110, 70, 0.75)' : biome.path;
-  ctx.lineWidth = onTravel ? 3.5 : cross ? 2 : path.kind === 'road' ? 2.8 : 2.2;
-  ctx.globalAlpha = bothKnown ? 0.9 : 0.38;
-  ctx.setLineDash(cross ? [7, 5] : []);
-  ctx.lineCap = 'round';
+  ctx.strokeStyle = onTravel ? '#5ee7ff' : cross ? 'rgba(210, 120, 70, 0.8)' : 'rgba(196, 168, 110, 0.72)';
+  ctx.lineWidth = onTravel ? 2.4 : path.kind === 'road' ? 1.8 : 1.45;
+  ctx.globalAlpha = bothKnown ? 0.95 : 0.4;
+  ctx.setLineDash(onTravel ? [7, 4] : [4, 5]);
+  ctx.lineCap = 'butt';
   ctx.stroke();
   ctx.setLineDash([]);
   ctx.globalAlpha = 1;
@@ -598,43 +743,52 @@ function drawKindGlyph(ctx, place, px, py, size) {
   }
 }
 
-function drawYouMarker(ctx, px, py, half) {
-  const size = half * 1.55;
+function drawSilhouette(ctx, px, py, size) {
+  ctx.fillStyle = '#e8d5a8';
+  ctx.beginPath();
+  ctx.arc(px, py - size * 0.18, size * 0.16, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(px, py - size * 0.04);
+  ctx.quadraticCurveTo(px + size * 0.22, py + size * 0.32, px, py + size * 0.34);
+  ctx.quadraticCurveTo(px - size * 0.22, py + size * 0.32, px, py - size * 0.04);
+  ctx.fill();
+}
+
+function drawYouMarker(ctx, px, py, half, portraitImg) {
+  const size = Math.max(18, Math.min(26, half * 0.72));
   const x = px - size / 2;
   const y = py - size / 2;
   ctx.save();
-  ctx.shadowColor = 'rgba(212, 160, 48, 0.55)';
-  ctx.shadowBlur = 12;
-  ctx.fillStyle = '#d4a030';
-  roundRect(ctx, x, y, size, size, 6);
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+  ctx.shadowBlur = 6;
+  ctx.shadowOffsetY = 2;
+  ctx.fillStyle = 'rgba(18, 14, 10, 0.88)';
+  roundRect(ctx, x, y, size, size, 4);
   ctx.fill();
   ctx.shadowBlur = 0;
-  ctx.strokeStyle = 'rgba(255, 236, 180, 0.85)';
-  ctx.lineWidth = 1.5;
-  roundRect(ctx, x, y, size, size, 6);
+  ctx.shadowOffsetY = 0;
+  ctx.strokeStyle = '#e0b84a';
+  ctx.lineWidth = 1.6;
+  roundRect(ctx, x, y, size, size, 4);
   ctx.stroke();
-  // Simple pawn glyph
-  ctx.fillStyle = 'rgba(40, 28, 12, 0.85)';
-  ctx.beginPath();
-  ctx.arc(px, py - size * 0.18, size * 0.14, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(px, py - size * 0.05);
-  ctx.quadraticCurveTo(px + size * 0.22, py + size * 0.28, px, py + size * 0.32);
-  ctx.quadraticCurveTo(px - size * 0.22, py + size * 0.28, px, py - size * 0.05);
-  ctx.fill();
+  const inset = 2.5;
+  if (tileImageReady(portraitImg)) {
+    ctx.save();
+    roundRect(ctx, x + inset, y + inset, size - inset * 2, size - inset * 2, 3);
+    ctx.clip();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(portraitImg, x + inset, y + inset, size - inset * 2, size - inset * 2);
+    ctx.restore();
+  } else {
+    drawSilhouette(ctx, px, py + 1, size);
+  }
   ctx.restore();
 }
 
-function drawTile(ctx, place, px, py, tileStep, opts) {
-  const half = tileHalf(tileStep);
-  const x = px - half;
-  const y = py - half;
-  const size = half * 2;
+function drawFallbackTile(ctx, place, x, y, size, fog) {
   const biome = biomeOf(place.biome);
-  const isHere = !!opts.isHere;
-
-  if (!place.discovered || place.kind === 'uncharted') {
+  if (fog) {
     ctx.strokeStyle = 'rgba(148, 130, 100, 0.22)';
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 4]);
@@ -644,42 +798,91 @@ function drawTile(ctx, place, px, py, tileStep, opts) {
     ctx.fillStyle = 'rgba(24, 20, 16, 0.45)';
     roundRect(ctx, x + 2, y + 2, size - 4, size - 4, 2);
     ctx.fill();
-    return half;
+    return;
   }
-
   const grad = ctx.createLinearGradient(x, y, x + size, y + size);
   grad.addColorStop(0, shadeColor(biome.tile, 8));
   grad.addColorStop(0.45, biome.tile);
   grad.addColorStop(1, shadeColor(biome.tile, -22));
   ctx.fillStyle = grad;
-  roundRect(ctx, x, y, size, size, 5);
+  roundRect(ctx, x, y, size, size, 3);
   ctx.fill();
-
-  ctx.strokeStyle = 'rgba(255, 248, 230, 0.08)';
-  ctx.lineWidth = 1;
-  roundRect(ctx, x + 2, y + 2, size - 4, size - 4, 4);
+  ctx.strokeStyle = biome.tileEdge;
+  ctx.lineWidth = 1.4;
+  roundRect(ctx, x, y, size, size, 3);
   ctx.stroke();
+  drawKindGlyph(ctx, place, x + size / 2, y + size / 2, size);
+}
 
-  ctx.strokeStyle = isHere ? '#d4a030' : biome.tileEdge;
-  ctx.lineWidth = isHere ? 2.8 : 1.4;
-  if (isHere) {
-    ctx.shadowColor = 'rgba(212, 160, 48, 0.5)';
-    ctx.shadowBlur = 10;
+function drawTile(ctx, place, px, py, tileStep, opts) {
+  const half = tileHalf(tileStep);
+  const x = px - half;
+  const y = py - half;
+  const size = half * 2;
+  const key = tileKeyFor(place);
+  const img = tileImages[key];
+  const fog = key === 'fog';
+
+  ctx.save();
+  if (fog) ctx.globalAlpha = 0.62;
+  if (tileImageReady(img)) {
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(img, x, y, size, size);
+  } else {
+    drawFallbackTile(ctx, place, x, y, size, fog);
   }
-  roundRect(ctx, x, y, size, size, 5);
-  ctx.stroke();
-  ctx.shadowBlur = 0;
 
-  drawKindGlyph(ctx, place, px, py, size);
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = fog ? 'rgba(80, 70, 55, 0.7)' : 'rgba(8, 6, 4, 0.92)';
+  ctx.lineWidth = Math.max(1.5, size * 0.045);
+  ctx.strokeRect(x + 0.5, y + 0.5, size - 1, size - 1);
+  if (!fog) {
+    ctx.strokeStyle = 'rgba(255, 236, 200, 0.18)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 1.5, y + 1.5, size - 3, size - 3);
+  }
+  ctx.restore();
+
+  if (!fog && (place.landmark || place.kind === 'landmark')) {
+    if (tileImageReady(landmarkImage)) {
+      const s = Math.max(11, size * 0.44);
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(landmarkImage, px - s / 2, py - s / 2, s, s);
+      ctx.restore();
+    } else {
+      drawKindGlyph(ctx, place, px, py, size);
+    }
+  }
 
   if (place.id === opts.travelTargetId) {
     ctx.strokeStyle = '#22d3ee';
     ctx.lineWidth = 2;
-    roundRect(ctx, x - 2, y - 2, size + 4, size + 4, 6);
+    roundRect(ctx, x - 2, y - 2, size + 4, size + 4, 4);
     ctx.stroke();
+  }
+  if (opts.selected) {
+    drawCornerBrackets(ctx, x - 3, y - 3, size + 6, '#e8c060');
+  } else if (!fog) {
+    drawCornerBrackets(ctx, x - 1, y - 1, size + 2, 'rgba(200, 180, 130, 0.35)');
   }
 
   return half;
+}
+
+function drawCornerBrackets(ctx, x, y, size, color) {
+  const L = Math.max(5, size * 0.16);
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = Math.max(1.4, size * 0.035);
+  ctx.lineCap = 'square';
+  ctx.beginPath();
+  ctx.moveTo(x, y + L); ctx.lineTo(x, y); ctx.lineTo(x + L, y);
+  ctx.moveTo(x + size - L, y); ctx.lineTo(x + size, y); ctx.lineTo(x + size, y + L);
+  ctx.moveTo(x, y + size - L); ctx.lineTo(x, y + size); ctx.lineTo(x + L, y + size);
+  ctx.moveTo(x + size - L, y + size); ctx.lineTo(x + size, y + size); ctx.lineTo(x + size, y + size - L);
+  ctx.stroke();
+  ctx.restore();
 }
 
 export function paintAtlas(ctx, params) {
@@ -697,6 +900,7 @@ export function paintAtlas(ctx, params) {
     userScale,
     travelPathRoomIds = new Set(),
     travelTargetId = null,
+    selectedId = null,
   } = params;
 
   ctx.clearRect(0, 0, w, h);
@@ -734,7 +938,8 @@ export function paintAtlas(ctx, params) {
     drawRegionWash(ctx, region, cam, w, h);
   }
 
-  drawAreaCells(ctx, visiblePlaces, cam, w, h, lod === 'area');
+  // Area names always on (tinted region/area groups); room names stay LOD-gated below.
+  drawAreaLabels(ctx, visiblePlaces, visibleRegions, cam, w, h);
 
   const layerPaths = (atlas.paths || []).filter((path) => {
     const a = byId[path.from];
@@ -780,7 +985,11 @@ export function paintAtlas(ctx, params) {
   for (const place of sorted) {
     const { px, py } = projectPlace(place, cam, w, h);
     const isHere = place.id === hereId;
-    const r = drawTile(ctx, place, px, py, cam.tileStep, { travelTargetId, isHere });
+    const r = drawTile(ctx, place, px, py, cam.tileStep, {
+      travelTargetId,
+      isHere,
+      selected: selectedId && place.id === selectedId,
+    });
     hits.push({ px, py, r: r + 4, place: { ...place, current: isHere } });
     if (isHere) {
       herePx = px;
@@ -805,7 +1014,7 @@ export function paintAtlas(ctx, params) {
   }
 
   if (herePx != null) {
-    drawYouMarker(ctx, herePx, herePy, hereHalf);
+    drawYouMarker(ctx, herePx, herePy, hereHalf, youPortraitImage);
   }
 
   if (lod === 'near' || lod === 'all') {

@@ -85,6 +85,7 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
 
 ```
 /                          # Static files (frontend)
+/play                      # MUD client SPA (JS/CSS/HTML Cache-Control: no-cache)
 /health                    # Health check
 /ws                        # WebSocket (game connection)
 /api/
@@ -119,7 +120,7 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
 
 Private cellars: an exit with `type: instance` or `instance: true`, or a normal exit from a non-instance room into a room tagged `instance`/`instanced`, clones the dest room plus rooms reachable without returning to the hub. Each character gets their own copy; the hub stays shared. Empty instances are deleted.
 
-`GET /api/characters/:id/map` returns that character's fog-of-war atlas. `pkg/worldmap` compiles a stable layout from room exits (optional `coords` as pins), then reveals discovered rooms, uncharted neighbors through visible exits, area hulls, and overworld/lower/upper layers. Hidden exits stay off the map until revealed. The JSON is the contract for both the web atlas widget and a future mobile renderer.
+`GET /api/characters/:id/map` returns that character's fog-of-war atlas. `pkg/worldmap` pins authored `coords`, layouts each area from compass exits, then packs zones with a gap so they read as separate clusters. Reveal then applies discovered rooms, uncharted neighbors through visible exits, area hulls, and overworld/lower/upper layers. Discovered places include exits, danger, a short summary, and optional NPC/enemy residents. Hidden exits stay off the map until revealed. The JSON is the contract for both the web atlas widget and a future mobile renderer.
 
 #### Landing Page Middleware
 
@@ -201,11 +202,13 @@ registry maps connected user IDs to their currently selected character, room,
 and last-seen timestamp. WebSocket connect/read/disconnect paths update this
 registry and persist `User.IsOnline` as a secondary status field.
 
-Room message fan-out, `who`, private tells, regeneration ticks, and room player
+Room message fan-out, `who`, private tells, friends online flags, regeneration ticks, and room player
 payloads use the live session registry instead of scanning all users with
 stale `IsOnline` flags. Persisted `Room.Characters` still records character
 location and is periodically cleaned, but it is no longer the source of truth
-for whether a player is reachable.
+for whether a player is reachable. `Character.FriendIDs` persists a per-character
+friends list in the character JSON blob; `friend`/`friends` commands and a
+`friends` WebSocket payload drive the play-client overlay.
 
 #### Concurrent Goroutines
 
@@ -636,7 +639,7 @@ type Facade interface {
 | SkillsService | Skill CRUD, DB seeding on first run, in-memory cache refresh on mutations |
 | GuestService | Guest session creation, HMAC token signing/validation, expired guest cleanup, IP rate limiting |
 
-`pkg/worldmap` is a layout compiler (not a facade service). `Compile` places the whole world from directional exits; `Reveal` applies per-character discovery. `worldmap.MarkOn` records entered rooms on the character document during `TakeExit` and character select.
+`pkg/worldmap` is a layout compiler (not a facade service). `Compile` pins authored coords, clusters by area, and packs zones apart; `Reveal` applies per-character discovery. `worldmap.MarkOn` records entered rooms on the character document during `TakeExit` and character select.
 
 #### Creator Validation Service
 
@@ -756,6 +759,7 @@ type Character struct {
 
     // Scripting flags (puzzle state, quest progress, etc.)
     Flags map[string]interface{}
+    FriendIDs []string  // other character IDs
 
     AllTimeStats
 }
@@ -1337,7 +1341,10 @@ class GameClient {
 ```
 
 `Game.svelte` owns reconnect scheduling because it has access to auth state and
-the active token. `Client.js` only sends over an open socket and reports
+the active token. A process-wide `websocketGate.js` allows only one CONNECTING,
+OPEN, or CLOSING socket (survives Game remounts). Close code 4001 means another
+connection took the session — the client shows that and does not auto-reconnect.
+`Client.js` only sends over an open socket and reports
 reconnecting state to the UI store when a player tries to send while offline.
 It also handles `roomPresence` messages by updating `MUDXPlusStore.players`
 without re-rendering the full room.

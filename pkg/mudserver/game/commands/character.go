@@ -109,6 +109,7 @@ func (command *CharacterCommand) Execute(game def.GameCtrl, message *m.Message) 
 		{items.ItemSlotHead, "Head"},
 		{items.ItemSlotNeck, "Neck"},
 		{items.ItemSlotChest, "Chest"},
+		{items.ItemSlotWaist, "Waist"},
 		{items.ItemSlotHands, "Hands"},
 		{items.ItemSlotLegs, "Legs"},
 		{items.ItemSlotBoots, "Boots"},

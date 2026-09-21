@@ -302,6 +302,8 @@ func formatSlot(s items.ItemSlot) string {
 		return "Head"
 	case items.ItemSlotChest:
 		return "Chest"
+	case items.ItemSlotWaist:
+		return "Waist"
 	case items.ItemSlotLegs:
 		return "Legs"
 	case items.ItemSlotBoots:

@@ -8,6 +8,7 @@ import (
 
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
 )
 
 // DropCommand handles dropping items to the room
@@ -138,6 +139,12 @@ func (command *DropCommand) Execute(game def.GameCtrl, message *messages.Message
 		if inv := messages.NewInventoryUpdateMessage(message); inv != nil {
 			game.SendMessage() <- inv
 		}
+
+		roomView := util.RoomWithCharacterReveals(room, message.Character)
+		roomUpdate := messages.NewRoomUpdateMessage(roomView, message.FromUser, game, message.Character)
+		roomUpdate.AudienceID = message.FromUser.ID
+		game.SendMessage() <- roomUpdate
+
 		return true
 	}
 
@@ -179,6 +186,12 @@ func (command *DropCommand) Execute(game def.GameCtrl, message *messages.Message
 	if inv := messages.NewInventoryUpdateMessage(message); inv != nil {
 		game.SendMessage() <- inv
 	}
+
+	// Sync groundItems for Pickup UI
+	roomView := util.RoomWithCharacterReveals(room, message.Character)
+	roomUpdate := messages.NewRoomUpdateMessage(roomView, message.FromUser, game, message.Character)
+	roomUpdate.AudienceID = message.FromUser.ID
+	game.SendMessage() <- roomUpdate
 
 	return true
 }

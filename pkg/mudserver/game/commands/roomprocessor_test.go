@@ -119,6 +119,52 @@ func TestExamineMoonsRoomActionMatches(t *testing.T) {
 	}
 }
 
+func TestCraftRecipesRoomActionOpensRecipesOverlay(t *testing.T) {
+	g, facade := newSelectionTestGame(t)
+	actions := rooms.Actions{
+		{Name: "CRAFT", Type: rooms.RoomActionTypeResponse, Response: "should not show"},
+		{Name: "RECIPES", Type: rooms.RoomActionTypeResponse, Response: "should not show"},
+	}
+	exits := rooms.Exits{}
+	chars := rooms.Characters{}
+	roomItems := rooms.Items{}
+	if _, err := facade.RoomsService().Import(&rooms.Room{
+		Entity:     &entities.Entity{ID: "R0209"},
+		Name:       "Ironhand's Forge",
+		Tags:       []string{"forge", "crafting"},
+		Exits:      &exits,
+		Characters: &chars,
+		Items:      &roomItems,
+		Actions:    &actions,
+	}); err != nil {
+		t.Fatalf("import room: %v", err)
+	}
+	user := &entities.User{Entity: &entities.Entity{ID: "user-1"}, RefID: "auth|1"}
+	character := &characters.Character{
+		Entity:      &entities.Entity{ID: "char-1"},
+		Name:        "Wanderer",
+		BelongsUser: *traits.BelongsToUser("user-1"),
+		CurrentRoom: traits.CurrentRoom{CurrentRoomID: "R0209"},
+	}
+	if _, err := facade.CharactersService().Import(character); err != nil {
+		t.Fatalf("import character: %v", err)
+	}
+
+	for _, input := range []string{"CRAFT", "RECIPES", "recipes"} {
+		msg := &messages.Message{FromUser: user, Character: character, Data: input}
+		processPlayerInput(g, msg)
+		var gotRecipes bool
+		for _, out := range drainSelectionMessages(g.SendMessage()) {
+			if rm, ok := out.(*messages.RecipesMessage); ok && rm != nil {
+				gotRecipes = true
+			}
+		}
+		if !gotRecipes {
+			t.Fatalf("%q in forge did not open recipes overlay", input)
+		}
+	}
+}
+
 func TestGatherHerbsRoomActionMatches(t *testing.T) {
 	g, facade := newSelectionTestGame(t)
 	actions := rooms.Actions{

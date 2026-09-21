@@ -128,6 +128,10 @@ type Character struct {
 	// Maps roomID → list of exit names the character has revealed
 	RevealedExits map[string][]string `bson:"revealedExits,omitempty" json:"revealedExits,omitempty"`
 
+	// FriendIDs are other character IDs on this character's friends list.
+	// Names are resolved at display time. Empty/omitted is the safe default.
+	FriendIDs []string `bson:"friendIds,omitempty" json:"friendIds,omitempty"`
+
 	// track alltime stats in character object but dont expose as json by default
 	AllTimeStats struct {
 		PlayersKilled   int32 `bson:"playersKilled" json:"playersKilled"`
@@ -359,6 +363,53 @@ func (c *Character) RevealExit(roomID, exitName string) {
 		return
 	}
 	c.RevealedExits[roomID] = append(c.RevealedExits[roomID], exitName)
+}
+
+// HasFriend reports whether id is already on the friends list.
+func (c *Character) HasFriend(id string) bool {
+	if c == nil || id == "" {
+		return false
+	}
+	for _, existing := range c.FriendIDs {
+		if existing == id {
+			return true
+		}
+	}
+	return false
+}
+
+// AddFriendID appends id if missing. Returns true when the list changed.
+func (c *Character) AddFriendID(id string) bool {
+	if c == nil || id == "" || c.HasFriend(id) {
+		return false
+	}
+	c.FriendIDs = append(c.FriendIDs, id)
+	return true
+}
+
+// RemoveFriendID drops id if present. Returns true when the list changed.
+func (c *Character) RemoveFriendID(id string) bool {
+	if c == nil || id == "" || len(c.FriendIDs) == 0 {
+		return false
+	}
+	out := c.FriendIDs[:0]
+	removed := false
+	for _, existing := range c.FriendIDs {
+		if existing == id {
+			removed = true
+			continue
+		}
+		out = append(out, existing)
+	}
+	if !removed {
+		return false
+	}
+	if len(out) == 0 {
+		c.FriendIDs = nil
+	} else {
+		c.FriendIDs = out
+	}
+	return true
 }
 
 // GetEffectiveMaxLevel returns the effective max level for this character.

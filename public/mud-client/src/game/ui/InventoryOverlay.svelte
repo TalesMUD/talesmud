@@ -7,6 +7,11 @@
   function close() {
     if (store?.closeInventoryOverlay) store.closeInventoryOverlay();
   }
+
+  function openRecipes() {
+    close();
+    if (sendMessage) sendMessage('recipes');
+  }
 </script>
 
 <style>
@@ -61,6 +66,22 @@
     font-weight: 600;
     font-size: 0.95em;
   }
+  .inv-craft {
+    border: 1px solid rgba(34, 197, 94, 0.4);
+    background: rgba(34, 197, 94, 0.12);
+    color: #86efac;
+    border-radius: 6px;
+    padding: 0.3em 0.7em;
+    cursor: pointer;
+    font-size: 0.82em;
+    font-weight: 700;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    gap: 0.25em;
+  }
+  .inv-craft:hover { background: rgba(34, 197, 94, 0.22); }
+  .inv-craft i { font-size: 1em; }
   .inv-close {
     border: none;
     background: transparent;
@@ -83,6 +104,10 @@
       <div class="inv-header">
         <div class="inv-title"><i class="material-icons">inventory_2</i> Inventory</div>
         <div class="inv-gold">{$store.gold || 0} gold</div>
+        <button class="inv-craft" type="button" on:click={openRecipes} aria-label="Open crafting recipes">
+          <i class="material-icons">construction</i>
+          Craft
+        </button>
         <button class="inv-close" type="button" on:click={close} aria-label="Close inventory">×</button>
       </div>
       <div class="inv-body">

@@ -9,6 +9,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 )
 
 type sessionRegistry struct {
@@ -41,6 +42,16 @@ func (r *sessionRegistry) characterID(userID string) string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.players[userID].CharacterID
+}
+
+func (r *sessionRegistry) get(userID string) (def.OnlinePlayer, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	player, ok := r.players[userID]
+	if !ok || player.CharacterID == "" {
+		return def.OnlinePlayer{}, false
+	}
+	return player, true
 }
 
 func (r *sessionRegistry) disconnect(userID string) {
@@ -153,6 +164,7 @@ func (g *Game) DisconnectUserSession(userID string) {
 	if userID == "" {
 		return
 	}
+	departed, _ := g.Sessions.get(userID)
 	if user, err := g.Facade.UsersService().FindByID(userID); err == nil && user != nil {
 		user.IsOnline = false
 		user.LastSeen = time.Now()
@@ -164,6 +176,9 @@ func (g *Game) DisconnectUserSession(userID string) {
 		g.RoomInstances.DestroyCharacterInstance(charID)
 	}
 	g.Sessions.disconnect(userID)
+	if departed.CharacterID != "" {
+		g.notifyFriendsOfPresence(departed.CharacterID, departed.CharacterName, false)
+	}
 }
 
 func (g *Game) SetUserSessionCharacter(user *entities.User, char *characters.Character) {
@@ -177,6 +192,27 @@ func (g *Game) SetUserSessionCharacter(user *entities.User, char *characters.Cha
 		_ = g.Facade.UsersService().Update(user.RefID, user)
 	}
 	g.Sessions.setCharacter(user, char)
+	g.notifyFriendsOfPresence(char.ID, char.Name, true)
+}
+
+func (g *Game) notifyFriendsOfPresence(characterID, characterName string, online bool) {
+	if characterID == "" || characterName == "" {
+		return
+	}
+	status := "came online"
+	if !online {
+		status = "went offline"
+	}
+	for _, player := range g.GetOnlinePlayers() {
+		if player.CharacterID == "" || player.CharacterID == characterID {
+			continue
+		}
+		watcher, err := g.Facade.CharactersService().FindByID(player.CharacterID)
+		if err != nil || watcher == nil || !watcher.HasFriend(characterID) {
+			continue
+		}
+		g.SendMessage() <- messages.Reply(player.UserID, characterName+" "+status+".")
+	}
 }
 
 func (g *Game) GetOnlinePlayers() []def.OnlinePlayer {

@@ -9,6 +9,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/combat"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/entities/traits"
+	combatengine "github.com/talesmud/talesmud/pkg/mudserver/game/combat"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 )
 
@@ -351,5 +352,92 @@ func TestCombatTurnEmittedWithDeadline(t *testing.T) {
 	}
 	if saw.Round != 1 {
 		t.Fatalf("round=%d want 1", saw.Round)
+	}
+}
+
+func TestDefaultDecisionWindowIsFiveSeconds(t *testing.T) {
+	cfg := combatengine.DefaultConfig()
+	if cfg.DecisionWindowSeconds != 5 {
+		t.Fatalf("DefaultConfig DecisionWindowSeconds=%d want 5", cfg.DecisionWindowSeconds)
+	}
+	if d := cfg.DecisionWindow(); d != 5*time.Second {
+		t.Fatalf("DecisionWindow()=%v want 5s", d)
+	}
+
+	g, _ := newNPCTestGame(t)
+	got := g.CombatController.engine.Config.DecisionWindowSeconds
+	if got != 5 {
+		t.Fatalf("engine default DecisionWindowSeconds=%d want 5", got)
+	}
+	if d := g.CombatController.engine.Config.DecisionWindow(); d != 5*time.Second {
+		t.Fatalf("engine DecisionWindow()=%v want 5s", d)
+	}
+}
+
+func TestQueuedActionDuringWaitingPlayerResolvesImmediately(t *testing.T) {
+	g, facade := newNPCTestGame(t)
+	storeTestRoom(t, facade, "R-pace", nil)
+
+	char, err := facade.CharactersService().Store(&characters.Character{
+		Entity:           &entities.Entity{ID: "char-kick"},
+		Name:             "Hero",
+		BelongsUser:      *traits.BelongsToUser("user-kick"),
+		CurrentRoom:      traits.CurrentRoom{CurrentRoomID: "R-pace"},
+		MaxHitPoints:     50,
+		CurrentHitPoints: 50,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := g.CombatController.engine.Config
+	cfg.DecisionWindowSeconds = 5
+	cfg.TurnBeatMs = 50
+	cfg.ReactionMs = 50
+
+	enemyID := "npc-kick-rat"
+	g.NPCManager.RegisterExistingNPC(&npc.NPC{
+		Entity:           &entities.Entity{ID: enemyID},
+		Name:             "Rat",
+		CurrentRoom:      traits.CurrentRoom{CurrentRoomID: "R-pace"},
+		MaxHitPoints:     30,
+		CurrentHitPoints: 30,
+		Level:            1,
+		EnemyTrait:       &npc.EnemyTrait{AttackPower: 3, Defense: 0},
+	}, "R-pace")
+
+	inst := seedPacedCombat(t, g, char.ID, enemyID, true)
+	_ = drainGameMessages(g.SendMessage())
+	g.CombatController.processAllTurns(inst)
+	if inst.Phase != combat.CombatPhaseWaitingPlayer {
+		t.Fatalf("expected waitingPlayer, got %q", inst.Phase)
+	}
+	deadline := inst.DecisionDeadline
+	if deadline.IsZero() || !time.Now().Before(deadline) {
+		t.Fatalf("expected an open decision window, deadline=%v", deadline)
+	}
+
+	_ = drainGameMessages(g.SendMessage())
+	g.CombatController.QueuePlayerAction(char.ID, combat.CombatActionAttack, enemyID)
+
+	if inst.Phase == combat.CombatPhaseWaitingPlayer {
+		t.Fatal("queued action during waitingPlayer should resolve without waiting the remaining autotimer")
+	}
+	if time.Now().After(deadline) {
+		t.Fatal("resolve waited until the decision deadline; expected ASAP kick")
+	}
+
+	var saw *messages.CombatActionMessage
+	for _, out := range drainGameMessages(g.SendMessage()) {
+		if msg, ok := out.(*messages.CombatActionMessage); ok && msg.Action == "attack" {
+			saw = msg
+			break
+		}
+	}
+	if saw == nil {
+		t.Fatal("expected combatAction after mid-window queue")
+	}
+	if saw.ActorID != char.ID {
+		t.Fatalf("actorId=%s want %s", saw.ActorID, char.ID)
 	}
 }

@@ -33,18 +33,25 @@
   let widgets = initialState.widgets;
   let editMode = initialState.editMode;
   let widgetCount = widgets.length;
+  let layoutEpoch = initialState.layoutEpoch || 0;
 
   // Subscribe manually to react to editMode changes and widget additions/removals
   // This avoids the reactive $: block which causes issues with svelte-grid binding
   const unsubscribe = layoutStore.subscribe(state => {
     const storeWidgetCount = state.widgets.length;
+    const epoch = state.layoutEpoch || 0;
 
-    // Sync when edit mode changes (updates draggable/resizable flags)
-    // or when widgets are added/removed (count changed)
-    if (state.editMode !== editMode || storeWidgetCount !== widgetCount) {
+    // Sync when edit mode changes (updates draggable/resizable flags),
+    // widgets are added/removed, or layoutEpoch bumps (template apply / reset / cancel).
+    if (
+      state.editMode !== editMode ||
+      storeWidgetCount !== widgetCount ||
+      epoch !== layoutEpoch
+    ) {
       editMode = state.editMode;
       widgets = state.widgets;
       widgetCount = storeWidgetCount;
+      layoutEpoch = epoch;
     }
     // When widgets are updated via handleChange (move/resize), we do NOT sync back
     // because that would overwrite svelte-grid's changes

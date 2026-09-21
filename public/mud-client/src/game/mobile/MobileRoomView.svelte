@@ -2,6 +2,7 @@
   import EntityPanel from '../ui/EntityPanel.svelte';
   import DialogOverlay from '../ui/DialogOverlay.svelte';
   import ShopOverlay from '../ui/ShopOverlay.svelte';
+  import RecipesOverlay from '../ui/RecipesOverlay.svelte';
   import RoomTextOverlay from '../ui/RoomTextOverlay.svelte';
   import PlayersOverlay from '../ui/PlayersOverlay.svelte';
   import HotbarWidget from '../widgets/HotbarWidget.svelte';
@@ -24,6 +25,15 @@
   function pickupItem(item) {
     sendMessage('pickup ' + item.name);
     store.removeGroundItem(item.id);
+    showPickupMenu = false;
+  }
+
+  function pickupAll() {
+    const items = [...groundItems];
+    for (const item of items) {
+      sendMessage('pickup ' + item.name);
+      store.removeGroundItem(item.id);
+    }
     showPickupMenu = false;
   }
 
@@ -98,11 +108,26 @@
   .room-image-section {
     position: relative;
     width: 100%;
-    height: 40vh;
+    /* Prefer more art when the viewport is tall (portrait phones) */
+    height: clamp(180px, 42vh, 420px);
     min-height: 180px;
-    max-height: 360px;
+    max-height: 420px;
     overflow: hidden;
     flex-shrink: 0;
+  }
+
+  @media (orientation: portrait) and (min-height: 700px) {
+    .room-image-section {
+      height: clamp(220px, 48vh, 480px);
+      max-height: 480px;
+    }
+  }
+
+  @media (orientation: landscape) {
+    .room-image-section {
+      height: clamp(140px, 36vh, 280px);
+      max-height: 280px;
+    }
   }
 
   .room-image-inner {
@@ -128,12 +153,13 @@
     bottom: 0;
     left: 0;
     right: 0;
-    height: 50%;
+    /* Keep fade as a thin band above the description, not mid-hero */
+    height: clamp(48px, 22%, 96px);
     background-image: linear-gradient(
       to bottom,
       rgba(0, 0, 0, 0) 0%,
-      rgba(0, 0, 0, 0.4) 40%,
-      rgba(0, 0, 0, 0.8) 70%,
+      rgba(0, 0, 0, 0.35) 45%,
+      rgba(0, 0, 0, 0.85) 78%,
       rgba(0, 0, 0, 1) 100%
     );
     pointer-events: none;
@@ -369,6 +395,10 @@
       <ShopOverlay {store} {sendMessage} />
     {/if}
 
+    {#if $store.recipes}
+      <RecipesOverlay {store} {sendMessage} />
+    {/if}
+
     <div class="entity-section">
       <EntityPanel {store} {sendMessage} />
     </div>
@@ -401,6 +431,9 @@
           </button>
         </div>
         <div class="pickup-dialog-grid">
+          {#if groundItems.length > 1}
+            <button type="button" on:click={pickupAll}>Pick up all ({groundItems.length})</button>
+          {/if}
           {#each groundItems as item}
             <button type="button" on:click={() => pickupItem(item)}>{item.name}</button>
           {/each}

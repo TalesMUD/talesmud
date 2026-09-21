@@ -20,6 +20,14 @@ func TakeExit(exit string) RoomCommand {
 
 		if exit, ok := room.GetExit(exit); ok {
 
+			// Cannot leave the room while still locked in combat (prevents
+			// orphaned fights where the room UI shows new enemies but attack
+			// still targets the old combat instance).
+			if isInActiveCombat(game, message.Character, game.GetCombatEngine()) {
+				game.SendMessage() <- message.Reply("You can't leave while in combat! Use 'flee' first.")
+				return true
+			}
+
 			// Block traversal of hidden exits the character hasn't revealed
 			if exit.Hidden && !message.Character.HasRevealedExit(room.ID, exit.Name) {
 				game.SendMessage() <- message.Reply("You don't see an exit in that direction.")

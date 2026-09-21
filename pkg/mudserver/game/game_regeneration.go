@@ -152,6 +152,9 @@ func (g *Game) clearRestingState(char *characters.Character, userID string) {
 	if err := g.GetFacade().CharactersService().Update(char.ID, char); err != nil {
 		log.Printf("Error clearing resting state for character %s: %v", char.ID, err)
 	}
+	if userID != "" {
+		g.SendMessage() <- messages.NewCharacterUpdateMessage(userID, char)
+	}
 }
 
 // InterruptRest stops a character from resting (called by other commands).
@@ -165,6 +168,9 @@ func (g *Game) InterruptRest(char *characters.Character) {
 	// Save character
 	if err := g.GetFacade().CharactersService().Update(char.ID, char); err != nil {
 		log.Printf("Error interrupting rest for character %s: %v", char.ID, err)
+	}
+	if char.BelongsUserID != "" {
+		g.SendMessage() <- messages.NewCharacterUpdateMessage(char.BelongsUserID, char)
 	}
 }
 

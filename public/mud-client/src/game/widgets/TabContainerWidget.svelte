@@ -113,13 +113,31 @@
     position: relative;
   }
 
-  /* Hide child widget headers inside tabs — the tab bar already shows the name.
-     Also hide game-panel-header since we now use that class.
+  /* Hide child widget title chrome inside tabs — the tab bar already shows the name.
      !important needed because Svelte's double-hash scoping on child components
-     gives them equal specificity (0,3,0) and they load later in the bundle. */
+     gives them equal specificity (0,3,0) and they load later in the bundle.
+
+     Title-only headers (shared game-panel / widget chrome) are fully suppressed.
+     Hybrid headers that also host utility controls keep a slim toolbar: only the
+     title text is hidden (Quest Log, Terminal X, future .widget-chrome-title). */
   .tab-pane :global(.widget-header),
   .tab-pane :global(.game-panel-header) {
     display: none !important;
+  }
+
+  .tab-pane :global(.widget-chrome-title),
+  .tab-pane :global(.questlog-header h2),
+  .tab-pane :global(.tx-title) {
+    display: none !important;
+  }
+
+  .tab-pane :global(.questlog-header .header-title-row),
+  .tab-pane :global(.tx-titlebar) {
+    justify-content: flex-end;
+  }
+
+  .tab-pane :global(.questlog-header) {
+    padding: 0.25em 0.5em;
   }
 
   .tab-pane {

@@ -57,6 +57,27 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 	// Normalize attribute short names to uppercase (migration for pre-fix characters)
 	character.NormalizeAttributeShorts()
 
+	// Catch-up: banked quest XP historically skipped CheckLevelUp; apply pending levels on select
+	if levelsGained, _ := leveling.CheckLevelUp(character); levelsGained > 0 {
+		result := leveling.ApplyLevelUp(character, levelsGained)
+		if err := game.GetFacade().CharactersService().Update(character.ID, character); err != nil {
+			log.WithError(err).WithField("characterID", character.ID).Warn("level catch-up: failed to persist")
+		} else {
+			log.WithFields(log.Fields{
+				"characterID":  character.ID,
+				"oldLevel":     result.OldLevel,
+				"newLevel":     result.NewLevel,
+				"levelsGained": result.LevelsGained,
+			}).Info("Applied banked XP level catch-up on character select")
+			game.SendMessage() <- messages.MessageResponse{
+				Audience:   messages.MessageAudienceUser,
+				AudienceID: user.ID,
+				Type:       messages.MessageTypeLevelUp,
+				Message:    result.Message,
+			}
+		}
+	}
+
 	// Ensure mana is initialized for caster classes (migration for pre-mana characters)
 	expectedMaxMana := character.CalculateMaxMana()
 	if expectedMaxMana > 0 && character.MaxMana == 0 {

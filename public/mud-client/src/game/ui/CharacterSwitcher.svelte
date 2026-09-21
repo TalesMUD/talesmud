@@ -56,6 +56,28 @@
   function className(character) {
     return character?.class?.name || character?.class?.Name || "Adventurer";
   }
+
+  function isGuestClient() {
+    try {
+      return typeof sessionStorage !== 'undefined' && !!sessionStorage.getItem('talesmud_guest_token');
+    } catch (err) {
+      return false;
+    }
+  }
+
+  $: showFriends = !isGuestClient();
+  $: showParty = !isGuestClient();
+  $: resting = !!(!$store.inCombat && $store.characterStats?.resting);
+
+  function openFriends() {
+    if (!showFriends) return;
+    if (store && store.openFriendsOverlay) store.openFriendsOverlay();
+  }
+
+  function openParty() {
+    if (!showParty) return;
+    if (store && store.openPartyOverlay) store.openPartyOverlay();
+  }
 </script>
 
 <style>
@@ -71,6 +93,67 @@
     color: #f0e6d3;
     pointer-events: none;
   }
+
+  .switcher-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    pointer-events: auto;
+  }
+
+  .friends-launch {
+    pointer-events: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 38px;
+    min-height: 38px;
+    padding: 0;
+    border: 1px solid rgba(194, 162, 99, 0.38);
+    border-radius: 8px;
+    background:
+      linear-gradient(180deg, rgba(28, 23, 18, 0.92), rgba(9, 10, 12, 0.86));
+    color: #c4b5fd;
+    cursor: pointer;
+  }
+  .friends-launch i { font-size: 20px; }
+  .friends-launch:hover { border-color: rgba(196, 181, 253, 0.7); }
+
+  .party-launch {
+    pointer-events: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 38px;
+    min-height: 38px;
+    padding: 0;
+    border: 1px solid rgba(194, 162, 99, 0.38);
+    border-radius: 8px;
+    background:
+      linear-gradient(180deg, rgba(28, 23, 18, 0.92), rgba(9, 10, 12, 0.86));
+    color: #fbbf24;
+    cursor: pointer;
+  }
+  .party-launch i { font-size: 20px; }
+  .party-launch:hover { border-color: rgba(251, 191, 36, 0.7); }
+
+  .rest-launch {
+    pointer-events: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 38px;
+    padding: 0 0.7rem;
+    border: 1px solid rgba(34, 197, 94, 0.45);
+    border-radius: 8px;
+    background: rgba(8, 20, 12, 0.92);
+    color: #86efac;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .rest-launch i { font-size: 16px; }
 
   .switcher-button {
     pointer-events: auto;
@@ -224,11 +307,34 @@
       transform: none;
       align-items: flex-end;
     }
+    .friends-launch {
+      min-width: 44px;
+      min-height: 44px;
+    }
+    .party-launch {
+      min-width: 44px;
+      min-height: 44px;
+    }
+    .rest-launch { min-height: 44px; }
   }
 </style>
 
 <div class="switcher">
-  <button class="switcher-button" on:click={toggleOpen} disabled={loading && characters.length === 0}>
+  <div class="switcher-row">
+    {#if resting}
+      <span class="rest-launch" title="Resting"><i class="material-icons">hotel</i> Resting</span>
+    {/if}
+    {#if showParty}
+      <button class="party-launch" type="button" title="Party" on:click={openParty}>
+        <i class="material-icons">groups</i>
+      </button>
+    {/if}
+    {#if showFriends}
+      <button class="friends-launch" type="button" title="Friends" on:click={openFriends}>
+        <i class="material-icons">group</i>
+      </button>
+    {/if}
+    <button class="switcher-button" on:click={toggleOpen} disabled={loading && characters.length === 0}>
     <span class="status-dot" class:connected={connectionStatus === 'connected'} class:connecting={connectionStatus === 'connecting'} class:reconnecting={connectionStatus === 'reconnecting'}></span>
     <span class="identity">
       <span class="name">{activeCharacter?.name || "Selecting character"}</span>
@@ -241,7 +347,8 @@
       </span>
     </span>
     <i class="material-icons chevron">{open ? "expand_less" : "expand_more"}</i>
-  </button>
+    </button>
+  </div>
 
   {#if open}
     <div class="menu">

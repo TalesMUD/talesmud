@@ -5,6 +5,7 @@ import (
 	e "github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
+	"github.com/talesmud/talesmud/pkg/entities/skills"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
@@ -378,8 +379,10 @@ type CharacterUpdateMessage struct {
 	Level                  int32                 `json:"level"`
 	Gold                   int64                 `json:"gold"`
 	InCombat               bool                  `json:"inCombat"`
+	Resting                bool                  `json:"resting"`
 	Attributes             characters.Attributes `json:"attributes,omitempty"`
-	EquippedSkills         []string              `json:"equippedSkills,omitempty"`
+	EquippedSkills         []string              `json:"equippedSkills"`
+	MaxSkillSlots          int                   `json:"maxSkillSlots,omitempty"`
 	UnspentAttributePoints int32                 `json:"unspentAttributePoints"`
 	SpentAttributePoints   map[string]int32      `json:"spentAttributePoints,omitempty"`
 
@@ -406,6 +409,11 @@ func NewCharacterUpdateMessage(userID string, ch *characters.Character) *Charact
 		attackPower = 1
 	}
 
+	equipped := ch.EquippedSkills
+	if equipped == nil {
+		equipped = []string{}
+	}
+
 	return &CharacterUpdateMessage{
 		MessageResponse: MessageResponse{
 			Audience:   MessageAudienceOrigin,
@@ -421,8 +429,10 @@ func NewCharacterUpdateMessage(userID string, ch *characters.Character) *Charact
 		Level:                  ch.Level,
 		Gold:                   ch.Gold,
 		InCombat:               ch.InCombat,
+		Resting:                characterFlagBool(ch, "resting"),
 		Attributes:             ch.Attributes,
-		EquippedSkills:         ch.EquippedSkills,
+		EquippedSkills:         equipped,
+		MaxSkillSlots:          skills.MaxSkillSlots(ch.Class.ID, ch.Level),
 		UnspentAttributePoints: ch.UnspentAttributePoints,
 		SpentAttributePoints:   ch.SpentAttributePoints,
 		AttackPower:            attackPower,
@@ -432,6 +442,18 @@ func NewCharacterUpdateMessage(userID string, ch *characters.Character) *Charact
 		Defense:                ch.GetArmorDefense(),
 		ManaRegen:              ch.CalculateManaRegen(),
 	}
+}
+
+func characterFlagBool(ch *characters.Character, key string) bool {
+	if ch == nil || ch.Flags == nil {
+		return false
+	}
+	raw, ok := ch.Flags[key]
+	if !ok {
+		return false
+	}
+	b, ok := raw.(bool)
+	return ok && b
 }
 
 // QuestObjectiveProgress represents objective progress sent to the client
@@ -573,7 +595,7 @@ type CombatQueueState struct {
 	QueuedAction       string         `json:"queuedAction,omitempty"`
 	QueuedSkillID      string         `json:"queuedSkillId,omitempty"`
 	QueuedTargetID     string         `json:"queuedTargetId,omitempty"`
-	SkillCooldowns     map[string]int `json:"skillCooldowns"` // always present so client can clear overlays
+	SkillCooldowns     map[string]int `json:"skillCooldowns"`               // always present so client can clear overlays
 	NextActionAtMs     int64          `json:"nextActionAtMs,omitempty"`     // unix ms resolve gate
 	DecisionDeadlineMs int64          `json:"decisionDeadlineMs,omitempty"` // unix ms decision window end
 }
@@ -681,14 +703,22 @@ func NewDialogEndMessage(userID, npcName, message string) MessageResponse {
 
 // ShopStockItem is one row in a merchant shop overlay.
 type ShopStockItem struct {
-	TemplateID    string `json:"templateId"`
-	Name          string `json:"name"`
-	Price         int64  `json:"price"`
-	Quantity      int32  `json:"quantity"` // -1 = unlimited
-	RequiredLevel int32  `json:"requiredLevel,omitempty"`
-	Type          string `json:"type,omitempty"`
-	SubType       string `json:"subType,omitempty"`
-	Image         string `json:"image,omitempty"`
+	TemplateID    string                 `json:"templateId"`
+	Name          string                 `json:"name"`
+	Price         int64                  `json:"price"`
+	Quantity      int32                  `json:"quantity"` // -1 = unlimited
+	RequiredLevel int32                  `json:"requiredLevel,omitempty"`
+	Type          string                 `json:"type,omitempty"`
+	SubType       string                 `json:"subType,omitempty"`
+	Image         string                 `json:"image,omitempty"`
+	Description   string                 `json:"description,omitempty"`
+	Slot          string                 `json:"slot,omitempty"`
+	Quality       string                 `json:"quality,omitempty"`
+	Level         int32                  `json:"level,omitempty"`
+	Stackable     bool                   `json:"stackable,omitempty"`
+	MaxStack      int32                  `json:"maxStack,omitempty"`
+	BasePrice     int64                  `json:"basePrice,omitempty"`
+	Attributes    map[string]interface{} `json:"attributes,omitempty"`
 }
 
 // ShopMessage opens/refreshes the merchant shop overlay.
@@ -701,6 +731,119 @@ type ShopMessage struct {
 	AcceptedTypes  []string        `json:"acceptedTypes,omitempty"`
 	RejectedTags   []string        `json:"rejectedTags,omitempty"`
 	SellMultiplier float64         `json:"sellMultiplier,omitempty"`
+}
+
+// FriendEntry is one row in the friends overlay.
+type FriendEntry struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Online bool   `json:"online"`
+}
+
+// FriendsMessage refreshes the friends overlay roster.
+type FriendsMessage struct {
+	MessageResponse
+	Friends []FriendEntry `json:"friends"`
+}
+
+// NewFriendsMessage creates a structured friends payload for the client overlay.
+func NewFriendsMessage(userID string, friends []FriendEntry) *FriendsMessage {
+	if friends == nil {
+		friends = []FriendEntry{}
+	}
+	return &FriendsMessage{
+		MessageResponse: MessageResponse{
+			Audience:   MessageAudienceOrigin,
+			AudienceID: userID,
+			Type:       MessageTypeFriends,
+			Message:    "",
+		},
+		Friends: friends,
+	}
+}
+
+// PartyMemberEntry is one row in the party overlay.
+type PartyMemberEntry struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Online   bool   `json:"online"`
+	Level    int32  `json:"level,omitempty"`
+	Class    string `json:"class,omitempty"`
+	Portrait string `json:"portrait,omitempty"`
+	IsLeader bool   `json:"isLeader,omitempty"`
+}
+
+// PartyMessage refreshes the party overlay roster.
+type PartyMessage struct {
+	MessageResponse
+	InParty   bool               `json:"inParty"`
+	PartyID   string             `json:"partyId,omitempty"`
+	PartyName string             `json:"partyName,omitempty"`
+	LeaderID  string             `json:"leaderId,omitempty"`
+	MaxMembers int               `json:"maxMembers,omitempty"`
+	Members   []PartyMemberEntry `json:"members"`
+}
+
+// NewPartyMessage creates a structured party payload for the client overlay.
+func NewPartyMessage(userID string, inParty bool, partyID, partyName string, members []PartyMemberEntry) *PartyMessage {
+	if members == nil {
+		members = []PartyMemberEntry{}
+	}
+	return &PartyMessage{
+		MessageResponse: MessageResponse{
+			Audience:   MessageAudienceOrigin,
+			AudienceID: userID,
+			Type:       MessageTypeParty,
+			Message:    "",
+		},
+		InParty:    inParty,
+		PartyID:    partyID,
+		PartyName:  partyName,
+		MaxMembers: e.MaxPartySize,
+		Members:    members,
+	}
+}
+
+// AttachPartyMeta fills leader/max from a Party entity (nil-safe).
+func (m *PartyMessage) AttachPartyMeta(party *e.Party) *PartyMessage {
+	if m == nil {
+		return m
+	}
+	m.MaxMembers = e.MaxPartySize
+	if party != nil {
+		party.EnsureLeader()
+		m.LeaderID = party.LeaderCharacterID
+		if party.Name != "" {
+			m.PartyName = party.Name
+		}
+		if party.ID != "" {
+			m.PartyID = party.ID
+		}
+	}
+	return m
+}
+
+// PartyInviteMessage drives the Accept/Decline invite banner.
+type PartyInviteMessage struct {
+	MessageResponse
+	Pending     bool   `json:"pending"`
+	InviterName string `json:"inviterName,omitempty"`
+	PartyID     string `json:"partyId,omitempty"`
+}
+
+// NewPartyInviteMessage creates a pending (or cleared) party invite payload.
+func NewPartyInviteMessage(userID string, pending bool, inviterName, partyID string) *PartyInviteMessage {
+	return &PartyInviteMessage{
+		MessageResponse: MessageResponse{
+			Audience:   MessageAudienceOrigin,
+			AudienceID: userID,
+			Type:       MessageTypePartyInvite,
+			Message:    "",
+		},
+		Pending:     pending,
+		InviterName: inviterName,
+		PartyID:     partyID,
+	}
 }
 
 // NewShopMessage creates a structured shop payload for the client overlay.
@@ -724,3 +867,65 @@ func NewShopMessage(userID, merchantName, merchantID string, gold int64, stock [
 		SellMultiplier: sellMultiplier,
 	}
 }
+
+// RecipeIngredientRow is one ingredient in a recipes overlay row.
+type RecipeIngredientRow struct {
+	Item     string `json:"item"`
+	Name     string `json:"name"`
+	Qty      int32  `json:"qty"`
+	Have     int32  `json:"have"`
+	Image    string `json:"image,omitempty"`
+	HaveEnough bool `json:"haveEnough"`
+}
+
+// RecipeOutputRow is the crafted result preview.
+type RecipeOutputRow struct {
+	Item  string `json:"item"`
+	Name  string `json:"name"`
+	Qty   int32  `json:"qty"`
+	Image string `json:"image,omitempty"`
+}
+
+// RecipeRow is one craftable recipe for the overlay.
+type RecipeRow struct {
+	ID          string                `json:"id"`
+	Key         string                `json:"key"`
+	Name        string                `json:"name"`
+	Description string                `json:"description,omitempty"`
+	Category    string                `json:"category,omitempty"`
+	Station     string                `json:"station,omitempty"`
+	StationLabel string               `json:"stationLabel"`
+	StationHint string                `json:"stationHint,omitempty"`
+	StationOK   bool                  `json:"stationOk"`
+	CanCraft    bool                  `json:"canCraft"`
+	Ingredients []RecipeIngredientRow `json:"ingredients"`
+	Output      RecipeOutputRow       `json:"output"`
+}
+
+// RecipesMessage opens/refreshes the crafting recipes overlay.
+type RecipesMessage struct {
+	MessageResponse
+	Recipes  []RecipeRow `json:"recipes"`
+	RoomTags []string    `json:"roomTags,omitempty"`
+}
+
+// NewRecipesMessage creates a structured recipes payload for the client overlay.
+func NewRecipesMessage(userID string, list []RecipeRow, roomTags []string) *RecipesMessage {
+	if list == nil {
+		list = []RecipeRow{}
+	}
+	if roomTags == nil {
+		roomTags = []string{}
+	}
+	return &RecipesMessage{
+		MessageResponse: MessageResponse{
+			Audience:   MessageAudienceOrigin,
+			AudienceID: userID,
+			Type:       MessageTypeRecipes,
+			Message:    "Crafting recipes",
+		},
+		Recipes:  list,
+		RoomTags: roomTags,
+	}
+}
+

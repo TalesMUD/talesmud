@@ -16,7 +16,7 @@ import (
 // CombatConfig holds global combat configuration
 type CombatConfig struct {
 	TurnTimeoutSeconds    int     // Legacy absolute turn timeout (Default: 60); prefer DecisionWindowSeconds for player action wait
-	DecisionWindowSeconds int     // Player decision window before auto-attack (Default: 10)
+	DecisionWindowSeconds int     // Player decision window before auto-attack (Default: 5)
 	TurnBeatMs            int     // Authored windup/beat before next turn may resolve (Default: 1000)
 	ReactionMs            int     // Post-resolve reaction pause (Default: 400)
 	AFKAutoFleeAfterTurns int     // Default: 3
@@ -34,7 +34,7 @@ type CombatConfig struct {
 func DefaultConfig() *CombatConfig {
 	return &CombatConfig{
 		TurnTimeoutSeconds:    60,
-		DecisionWindowSeconds: 10,
+		DecisionWindowSeconds: 5,
 		TurnBeatMs:            1000,
 		ReactionMs:            400,
 		AFKAutoFleeAfterTurns: 3,
@@ -64,7 +64,7 @@ func (c *CombatConfig) BeatBudget() time.Duration {
 // DecisionWindow returns the player decision window duration.
 func (c *CombatConfig) DecisionWindow() time.Duration {
 	if c == nil || c.DecisionWindowSeconds <= 0 {
-		return 10 * time.Second
+		return 5 * time.Second
 	}
 	return time.Duration(c.DecisionWindowSeconds) * time.Second
 }
@@ -208,6 +208,60 @@ func (e *Engine) InitiateCombat(roomID string, players []*characters.Character, 
 	}).Info("Combat initiated")
 
 	return instance
+}
+
+// JoinCombat adds a character to an existing active combat instance.
+// Preserves whose turn it currently is when rebuilding initiative order.
+func (e *Engine) JoinCombat(instance *combat.CombatInstance, char *characters.Character) bool {
+	if e == nil || instance == nil || char == nil || char.Entity == nil {
+		return false
+	}
+	if instance.State != combat.CombatStateActive {
+		return false
+	}
+	if instance.GetPlayerByID(char.Entity.ID) != nil {
+		return false
+	}
+	if e.Manager != nil && e.Manager.IsPlayerInCombat(char.Entity.ID) {
+		return false
+	}
+
+	currentID := ""
+	if instance.CurrentTurnIdx >= 0 && instance.CurrentTurnIdx < len(instance.TurnOrder) {
+		currentID = instance.TurnOrder[instance.CurrentTurnIdx].ID
+	}
+
+	combatant := e.CreateCombatantFromCharacter(char)
+	e.RollInitiative(&combatant)
+	instance.Players = append(instance.Players, combatant)
+	if e.Manager != nil {
+		e.Manager.RegisterPlayer(char.Entity.ID, instance.ID)
+	}
+
+	e.BuildTurnOrder(instance)
+	if currentID != "" {
+		for i, c := range instance.TurnOrder {
+			if c.ID == currentID {
+				instance.CurrentTurnIdx = i
+				break
+			}
+		}
+	}
+
+	instance.AddLogEntry(combat.CombatLogEntry{
+		ActorID:   char.Entity.ID,
+		ActorName: char.Name,
+		Action:    combat.CombatActionAttack,
+		Message:   fmt.Sprintf("%s joins the fight!", char.Name),
+	})
+
+	log.WithFields(log.Fields{
+		"instanceID":  instance.ID,
+		"characterID": char.Entity.ID,
+		"players":     len(instance.Players),
+	}).Info("Player joined combat")
+
+	return true
 }
 
 // BuildTurnOrder creates the turn order from all living combatants sorted by initiative

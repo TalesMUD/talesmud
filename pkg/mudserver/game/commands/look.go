@@ -81,6 +81,15 @@ func lookAtRoom(room *rooms.Room, game def.GameCtrl, message *messages.Message) 
 	}
 
 	game.SendMessage() <- message.Reply(sb.String())
+
+	// Keep Pickup UI / groundItems store in sync with look text
+	if message.FromUser != nil && message.Character != nil {
+		roomView := util.RoomWithCharacterReveals(room, message.Character)
+		roomUpdate := messages.NewRoomUpdateMessage(roomView, message.FromUser, game, message.Character)
+		roomUpdate.AudienceID = message.FromUser.ID
+		game.SendMessage() <- roomUpdate
+	}
+
 	return true
 }
 

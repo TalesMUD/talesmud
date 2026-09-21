@@ -163,6 +163,9 @@ func (command *SkillsCommand) equipSkill(game def.GameCtrl, message *messages.Me
 	game.GetFacade().CharactersService().Update(char.ID, char)
 
 	game.SendMessage() <- message.Reply(fmt.Sprintf("Equipped %s! (%d/%d slots)", found.Name, len(char.EquippedSkills), maxSlots))
+	if message.FromUser != nil {
+		game.SendMessage() <- messages.NewCharacterUpdateMessage(message.FromUser.ID, char)
+	}
 	return true
 }
 
@@ -202,6 +205,9 @@ func (command *SkillsCommand) unequipSkill(game def.GameCtrl, message *messages.
 
 	maxSlots := skills.MaxSkillSlots(classID, level)
 	game.SendMessage() <- message.Reply(fmt.Sprintf("Unequipped %s. (%d/%d slots)", foundSkill.Name, len(char.EquippedSkills), maxSlots))
+	if message.FromUser != nil {
+		game.SendMessage() <- messages.NewCharacterUpdateMessage(message.FromUser.ID, char)
+	}
 	return true
 }
 

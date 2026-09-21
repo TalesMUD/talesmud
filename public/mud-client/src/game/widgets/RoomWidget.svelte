@@ -2,6 +2,7 @@
   import EntityPanel from '../ui/EntityPanel.svelte';
   import DialogOverlay from '../ui/DialogOverlay.svelte';
   import ShopOverlay from '../ui/ShopOverlay.svelte';
+  import RecipesOverlay from '../ui/RecipesOverlay.svelte';
   import RoomTextOverlay from '../ui/RoomTextOverlay.svelte';
   import PlayersOverlay from '../ui/PlayersOverlay.svelte';
   import { findNpcByName } from '../MUDXPlusStore';
@@ -68,6 +69,11 @@
 </svelte:head>
 
 <style>
+  /* Aspect-aware room chrome:
+     - Art region grows to fill leftover vertical space
+     - Description is a bottom-anchored content-sized block (no black void)
+     - Fade band sits just above the description, not mid-painting
+     Portrait / square / landscape via container size queries on .room-widget */
   .room-widget {
     display: flex;
     flex-direction: column;
@@ -76,13 +82,16 @@
     border-radius: var(--panel-radius, 12px);
     overflow: hidden;
     height: 100%;
+    min-height: 0;
     box-shadow: var(--panel-shadow, none);
+    container-type: size;
+    container-name: room-widget;
   }
 
   .roomImageSection {
     position: relative;
-    flex: 0 0 60%;
-    min-height: 120px;
+    flex: 1 1 auto;
+    min-height: 140px;
     overflow: hidden;
   }
 
@@ -104,20 +113,22 @@
     opacity: 0;
   }
 
+  /* Narrow fade band hugging the description top edge */
   .roomImageGradient {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
-    height: 50%;
+    height: clamp(56px, 18%, 110px);
     background-image: linear-gradient(
       to bottom,
       rgba(0, 0, 0, 0) 0%,
-      rgba(0, 0, 0, 0.4) 40%,
-      rgba(0, 0, 0, 0.8) 70%,
+      rgba(0, 0, 0, 0.35) 45%,
+      rgba(0, 0, 0, 0.85) 78%,
       rgba(0, 0, 0, 1) 100%
     );
     pointer-events: none;
+    z-index: 4;
   }
 
   .roomName {
@@ -173,27 +184,31 @@
     transform: scaleX(-1);
   }
 
+  /* Content-sized, flush to widget bottom — no flex-grow black void */
   .roomContentSection {
-    flex: 1;
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
-    padding: 1em 1.2em;
+    justify-content: flex-end;
+    padding: 0.55em 1em 0.75em;
     overflow-y: auto;
     background: #000;
     position: relative;
     z-index: 5;
-    margin-top: -0.5em;
+    margin-top: 0;
+    max-height: 32%;
+    min-height: 0;
   }
 
   .roomDescription {
     color: #e5e7eb;
-    font-size: 1.15em;
-    line-height: 1.7;
-    margin-bottom: 1em;
+    font-size: 1.1em;
+    line-height: 1.6;
+    margin: 0;
     flex-shrink: 0;
     font-style: italic;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-    padding: 0.8em 1em;
+    padding: 0.65em 0.9em;
     border-left: 2px solid rgba(168, 130, 90, 0.6);
     border-radius: 0 4px 4px 0;
     background: linear-gradient(90deg, rgba(168, 130, 90, 0.08) 0%, transparent 100%);
@@ -217,6 +232,71 @@
     padding: 0.5em 0.8em;
     container-type: inline-size;
     container-name: room-entities;
+  }
+
+  /* Portrait: tall widget — maximize art, keep desc compact at bottom */
+  @container room-widget (aspect-ratio < 0.85) {
+    .roomImageSection {
+      min-height: 55%;
+    }
+
+    .roomContentSection {
+      max-height: 26%;
+      padding: 0.45em 0.9em 0.65em;
+    }
+
+    .roomDescription {
+      font-size: 1.02em;
+      line-height: 1.5;
+      padding: 0.55em 0.8em;
+    }
+
+    .roomImageGradient {
+      height: clamp(48px, 14%, 96px);
+    }
+
+    .roomName {
+      font-size: 1.25em;
+      padding: 0.9em 1em;
+    }
+  }
+
+  /* Square-ish: balanced art / desc */
+  @container room-widget (aspect-ratio >= 0.85) and (aspect-ratio <= 1.25) {
+    .roomContentSection {
+      max-height: 34%;
+    }
+
+    .roomImageGradient {
+      height: clamp(56px, 16%, 100px);
+    }
+  }
+
+  /* Landscape: horizontal art priority, tighter description chrome */
+  @container room-widget (aspect-ratio > 1.25) {
+    .roomImageSection {
+      min-height: 48%;
+    }
+
+    .roomContentSection {
+      max-height: 38%;
+      padding: 0.4em 1em 0.55em;
+    }
+
+    .roomDescription {
+      font-size: 0.98em;
+      line-height: 1.45;
+      padding: 0.45em 0.75em;
+    }
+
+    .roomImageGradient {
+      height: clamp(44px, 22%, 88px);
+    }
+
+    .roomName {
+      font-size: 1.15em;
+      padding: 0.75em 1em;
+    }
   }
 
 </style>
@@ -252,6 +332,10 @@
 
     {#if $store.shop}
       <ShopOverlay {store} {sendMessage} />
+    {/if}
+
+    {#if $store.recipes}
+      <RecipesOverlay {store} {sendMessage} />
     {/if}
 
     <div class="entitySection">

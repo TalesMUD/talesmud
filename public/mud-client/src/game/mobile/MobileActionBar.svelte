@@ -121,6 +121,25 @@
     min-width: 44px;
     max-width: 44px;
     padding: 8px;
+    background: rgba(34, 197, 94, 0.22);
+    border-color: rgba(34, 197, 94, 0.5);
+    color: #86efac;
+  }
+
+  .pickup-icon-btn.active {
+    background: rgba(34, 197, 94, 0.4);
+  }
+
+  .pickup-bar-btn {
+    position: relative;
+    background: rgba(34, 197, 94, 0.22);
+    border-color: rgba(34, 197, 94, 0.5);
+    color: #86efac;
+    padding-right: 18px;
+  }
+
+  .pickup-bar-btn.active {
+    background: rgba(34, 197, 94, 0.4);
   }
 
   .pickup-count {
@@ -386,6 +405,14 @@
   $: groundItems = ($store.groundItems || []).filter(item => !item.noPickup);
 
   function executeCommand(cmd) {
+    const raw = String(cmd || '').trim();
+    const lower = raw.toLowerCase();
+    // Room chips CRAFT/RECIPES (and typed aliases) always open the recipes overlay.
+    if (lower === 'craft' || lower === 'recipes' || lower === 'recipe') {
+      sendMessage('recipes');
+      closeMenus();
+      return;
+    }
     sendMessage(cmd);
     closeMenus();
   }
@@ -403,6 +430,10 @@
     }
     if (pin.kind === "say") {
       openSayPrompt();
+      return;
+    }
+    if (pin.id === 'recipes' || pin.id === 'craft' || pin.name === 'recipes' || pin.name === 'craft') {
+      executeCommand('recipes');
       return;
     }
     executeCommand(pin.name);
@@ -441,6 +472,15 @@
   function pickupItem(item) {
     sendMessage('pickup ' + item.name);
     store.removeGroundItem(item.id);
+  }
+
+  function pickupAll() {
+    const items = [...groundItems];
+    for (const item of items) {
+      sendMessage('pickup ' + item.name);
+      store.removeGroundItem(item.id);
+    }
+    showPickupMenu = false;
   }
 
   function toggleMoreMenu() {
@@ -546,6 +586,11 @@
         </button>
       </div>
       <div class="dialog-grid">
+        {#if groundItems.length > 1}
+          <button class="popup-btn pickup-popup-btn" on:click={pickupAll}>
+            Pick up all ({groundItems.length})
+          </button>
+        {/if}
         {#each groundItems as item}
           <button class="popup-btn pickup-popup-btn" on:click={() => pickupItem(item)}>
             {item.name}
@@ -641,6 +686,19 @@
       </button>
     {/each}
 
+    {#if groundItems.length > 0}
+      <button
+        class="btn context-btn pickup-bar-btn"
+        class:active={showPickupMenu}
+        type="button"
+        aria-label="Pick up {groundItems.length} items"
+        on:click={togglePickupMenu}
+      >
+        <i class="material-icons">back_hand</i>
+        Pickup
+        <span class="pickup-count">{groundItems.length}</span>
+      </button>
+    {/if}
 
     <button class="btn more-btn" on:click={toggleMoreMenu}>
       <i class="material-icons">more_horiz</i>

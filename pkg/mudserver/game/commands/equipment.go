@@ -33,6 +33,7 @@ func (command *EquipmentCommand) Execute(game def.GameCtrl, message *messages.Me
 		{items.ItemSlotHead, "Head"},
 		{items.ItemSlotNeck, "Neck"},
 		{items.ItemSlotChest, "Chest"},
+		{items.ItemSlotWaist, "Waist"},
 		{items.ItemSlotHands, "Hands"},
 		{items.ItemSlotLegs, "Legs"},
 		{items.ItemSlotBoots, "Boots"},
@@ -98,6 +99,8 @@ func formatSlotName(slot items.ItemSlot) string {
 		return "Neck"
 	case items.ItemSlotChest:
 		return "Chest"
+	case items.ItemSlotWaist:
+		return "Waist"
 	case items.ItemSlotHands:
 		return "Hands"
 	case items.ItemSlotLegs:

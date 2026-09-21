@@ -31,9 +31,9 @@ func LandingMiddleware(landingPath string) gin.HandlerFunc {
 	if _, err := os.Stat(indexPath); err != nil {
 		absIndex, _ := filepath.Abs(indexPath)
 		log.WithFields(log.Fields{
-			"path":     landingPath,
-			"index":    absIndex,
-			"error":    err,
+			"path":  landingPath,
+			"index": absIndex,
+			"error": err,
 		}).Warn("Landing page not found, disabled")
 		return func(c *gin.Context) {}
 	}
@@ -80,8 +80,19 @@ func LandingMiddleware(landingPath string) gin.HandlerFunc {
 		}
 
 		info, err := os.Stat(assetPath)
-		if err != nil || info.IsDir() {
+		if err != nil {
 			return // file doesn't exist in landing dir, fall through
+		}
+
+		// Directory index support (serve subdir/index.html when present).
+		if info.IsDir() {
+			indexCandidate := filepath.Join(assetPath, "index.html")
+			if _, err := os.Stat(indexCandidate); err != nil {
+				return
+			}
+			c.File(indexCandidate)
+			c.Abort()
+			return
 		}
 
 		c.File(assetPath)

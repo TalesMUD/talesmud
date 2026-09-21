@@ -1,7 +1,7 @@
 # Combat Battle Stage
 
-**Status:** C0 locked · **C1–C3 done** · **C5–C6 done** · **C7 polish** (grid header/arena/dock/log, no absolute dock/log, log noise filter, short banner, 2026-09-07) — on engine-june  
-**Follow-up:** Flutter FX (C4 parity) — not in this slice.
+**Status:** C0 locked · **C1–C3 done** · **C5–C6 done** · **C7 polish** (grid header/arena/dock/log) · **A+B+C polish** (responsive arena, 5s autofire + early resolve, CD seconds) — on engine-june  
+**Follow-up:** Flutter FX / layout / pacing / CD-seconds parity (C4) — **not in this slice**; Flutter still assumes the old 10s window and postcard stage if it hardcodes them.
 **Milestone:** [Combat Battle Stage](https://github.com/TalesMUD/talesmud/milestone/4)  
 **Branch:** `engine-june` (do not merge to public `master` without Marcus okay)
 
@@ -34,15 +34,16 @@ Later optional: **Party** mode (FF side-by-side) for large multi-combat.
 ### Surfaces
 | Surface | Notes |
 |---------|-------|
-| Desktop web | Full-bleed stage over dimmed room / zone combat backdrop |
-| Mobile web | Stacked: enemies top ~35% · FX · player bar · thumb dock |
-| Flutter | Mirror mobile web; same WS event state machine |
+| Desktop web | Gold-chrome frame; ≤1280 near-full (`calc(100vw/vh − ~1.2rem)`); >1280 centered max ~1280 with gutters; no 720px min-width postcard |
+| Mobile web | Stacked full-bleed ≤768px: enemies top · FX · player bar · thumb dock |
+| Enemy scale | 1 foe: large (dominates arena); 2–3: medium spaced; 4+: pack |
+| Flutter | Mirror mobile web; same WS event state machine — **not updated in A+B+C** |
 
 ## Pacing
 
 - Actor turn beat: ~0.8–1.2s windup → resolve → ~0.4s reaction
-- Player **decision window ~10s**; if no queue → auto Attack
-- Queued actions apply on the player's next turn
+- Player **decision window ~5s**; if no queue → auto Attack
+- Queued actions issued **during** the window resolve immediately (autotimer is AFK-only). A choice already queued when the window opens still uses the small `TurnBeatMs` windup.
 - Duration targets (C6): trash 3–6 player turns, elites 8–15, bosses 15–30
 
 ## WS event protocol (C1)
@@ -65,12 +66,12 @@ Clients **animate from events**; they do not invent outcomes.
 
 | Constant | Default | Role |
 |----------|---------|------|
-| `DecisionWindowSeconds` | 10 | Player turn wait; no `QueuedAction` → auto Attack |
+| `DecisionWindowSeconds` | 5 | Player turn wait; no `QueuedAction` → auto Attack |
 | `TurnBeatMs` | 1000 | Authored windup / inter-turn beat |
 | `ReactionMs` | 400 | Post-resolve reaction pause |
 | `TurnTimeoutSeconds` | 60 | Legacy absolute turn timeout (kept; decision window is the player UX timer) |
 
-`CombatController.processAllTurns` resolves **at most one** combatant per Update, gated by `NextActionAt` / `Phase` (`waitingPlayer` | `playingBeat` | `resolving`) on `CombatInstance`. Combat game-loop tick is **1s**.
+`CombatController.processAllTurns` resolves **at most one** combatant per Update, gated by `NextActionAt` / `Phase` (`waitingPlayer` | `playingBeat` | `resolving`) on `CombatInstance`. Combat game-loop tick is **1s**. Mid-window `QueuePlayerAction` / `QueuePlayerSkill` clears that gate and resolves on the command path so players do not wait out the remaining 5s or the next 1s tick.
 
 ## Ship order (one Now at a time)
 
@@ -80,7 +81,7 @@ Clients **animate from events**; they do not invent outcomes.
 | C1 | Engine turn beats + structured WS events — **done on engine-june** |
 | C2 | Svelte full-screen battle stage — **done on engine-june** |
 | C3 | Mobile web thumb dock — **done on engine-june** |
-| C4 | Flutter parity (incl. FX follow-up) |
+| C4 | Flutter parity (incl. FX follow-up) — **gap:** 5s window, early resolve, responsive arena, CD-seconds HUD |
 | C5 | FX pack — **done on engine-june** (hit flash/shake, cast glow, miss puff, death dissolve, float dmg/heal; desktop+mobile) |
 | C6 | Balance duration pass — **done on engine-june** |
 
