@@ -46,6 +46,11 @@ img/
 talesmud.db
 talesmud.db-shm
 talesmud.db-wal
+data/*.db
+data/*.db-shm
+data/*.db-wal
+data/door-outbox.log
+data/door.session.key
 
 # OS files
 .DS_Store

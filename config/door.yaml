@@ -1,0 +1,14 @@
+# Aethermoor Door — second process on the same tales binary.
+# Classic Veilspan keeps its own PORT / SQLITE_PATH and does not load this file.
+presentation: door_tui
+ruleset: daily_menu_rpg
+auth: local
+port: "8020"
+sqlite_path: data/aethermoor-door.db
+world_pack: worlds/aethermoor-door
+timezone: Europe/Berlin
+daily_fights: 15
+# Session signing key: set DOOR_SESSION_SECRET, or leave unset and the process
+# creates data/door.session.key on first start (gitignored). Do not commit a secret.
+# Password reset links are appended to data/door-outbox.log unless SMTP is wired later.
+# The HTTP API never returns the token.

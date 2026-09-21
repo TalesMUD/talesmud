@@ -10,6 +10,7 @@ import (
 
 	"github.com/joho/godotenv"
 	dbsqlite "github.com/talesmud/talesmud/pkg/db/sqlite"
+	"github.com/talesmud/talesmud/pkg/gamemode"
 	"github.com/talesmud/talesmud/pkg/importer"
 	"github.com/talesmud/talesmud/pkg/repository"
 	"github.com/talesmud/talesmud/pkg/server"
@@ -19,6 +20,7 @@ import (
 func main() {
 	// Parse command-line flags
 	importFolder := flag.String("import", "", "Import world data from folder (e.g., mvp-rpg-1)")
+	configPath := flag.String("config", "", "Game mode YAML (presentation, ruleset, port, sqlite path)")
 	verbose := flag.Bool("verbose", false, "Enable verbose output during import")
 	dryRun := flag.Bool("dry-run", false, "Validate import data without making changes")
 	flag.Parse()
@@ -27,6 +29,16 @@ func main() {
 	err := godotenv.Load()
 	if err != nil {
 		log.Warn("Error loading .env file")
+	}
+
+	// -config wins over PORT / SQLITE_PATH from .env so a door instance can
+	// sit beside Veilspan without editing the classic environment.
+	if *configPath != "" {
+		if err := gamemode.ApplyFile(*configPath); err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		gamemode.ApplyEnv()
 	}
 
 	// Configure logging (stderr + rotating file, 7-day retention)
@@ -45,8 +57,10 @@ func main() {
 	}
 
 	// Start the server
+	mode := gamemode.Current()
 	fmt.Println("Starting tales server...")
 	fmt.Printf("SQLite database: %v\n", sqlitePath)
+	fmt.Printf("Mode: presentation=%s ruleset=%s auth=%s\n", mode.Presentation, mode.Ruleset, mode.Auth)
 
 	srv := server.NewApp()
 	srv.Run()
