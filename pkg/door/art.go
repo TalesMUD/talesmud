@@ -76,7 +76,7 @@ func (h *Hub) composeArt(sess *session, ch *characters.Character, scr *Screen) v
 		grid[16] = fmt.Sprintf("  On hand: %d    Vault: %d", hand, vault)
 	case "healer":
 		grid[16] = fmt.Sprintf("  Full mending costs %d coin.", h.pack.HealCost)
-	case "shop":
+	case "shop", "armory":
 		row := 14
 		for _, g := range h.shopGoods() {
 			if row >= 20 {
@@ -84,6 +84,29 @@ func (h *Hub) composeArt(sess *session, ch *characters.Character, scr *Screen) v
 			}
 			grid[row] = fmt.Sprintf("  %d  %s  %d coin  %s", g.n, g.name, g.price, g.stat)
 			row++
+		}
+	case "news":
+		row := 12
+		for _, line := range h.pack.News {
+			if row >= 19 {
+				break
+			}
+			grid[row] = "  - " + line
+			row++
+		}
+	case "board":
+		grid[10] = "  #  NAME                 LVL"
+		row := 11
+		for i, ln := range h.leaderLines() {
+			if row >= 19 {
+				break
+			}
+			grid[row] = fmt.Sprintf("  %d  %s", i+1, ln)
+			row++
+		}
+	case "inn":
+		if ch != nil {
+			grid[15] = fmt.Sprintf("  HP %d/%d — one ember draught softens the day.", ch.CurrentHitPoints, ch.MaxHitPoints)
 		}
 	}
 	if sess.notice != "" {

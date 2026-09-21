@@ -50,6 +50,10 @@ func (h *Hub) dispatchPack(user *entities.User, sess *session, key string) bool 
 		h.sellGear(user, sess)
 	case "quit":
 		sess.notice = "Close the window to leave. Coin in the vault stays put."
+	case "drink", "inn_draught":
+		h.innKey(user, sess, "d")
+	case "go_back", "return":
+		h.goBack(sess)
 	case "help":
 		sess.notice = helpLine(scr)
 	default:
