@@ -14,6 +14,8 @@ func TestAllowedCORSOriginsIncludesLocalDevelopmentClients(t *testing.T) {
 		"http://127.0.0.1:5173",
 		"http://localhost:8010",
 		"http://127.0.0.1:8010",
+		"http://localhost:8020",
+		"http://127.0.0.1:8020",
 	} {
 		if !containsString(origins, want) {
 			t.Fatalf("expected CORS origin %q in %v", want, origins)

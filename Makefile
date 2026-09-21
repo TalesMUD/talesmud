@@ -31,6 +31,12 @@ prepare-embedded-assets:
 		cp -r public/mud-client/public/* pkg/webuiplay/dist/; \
 	fi
 
+# Second process: Aethermoor Door on :8020 with its own SQLite file.
+# Classic Veilspan is unchanged — start it without -config.
+door:
+	mkdir -p data
+	DOOR_SESSION_SECRET=$${DOOR_SESSION_SECRET:-dev-door-secret} go run ./cmd/tales -config config/door.yaml
+
 build-backend: prepare-embedded-assets
 	echo "Building backend"
 	go build -o bin/tales cmd/tales/main.go

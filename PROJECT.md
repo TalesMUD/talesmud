@@ -215,6 +215,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - JWT-based API protection
   - Guest mode with HMAC-SHA256 tokens (no Auth0 required)
   - Dual auth middleware: tries guest token first, falls back to Auth0 JWT
+  - Optional local accounts (`auth: local`) for Door Mode: Argon2id password hashes, HMAC session tokens, hashed email reset tokens. Classic servers leave this off.
   - Frontend session state avoids logging or retaining auth token excerpts
   - Basic auth for legacy admin endpoints (export/import), with explicit credentials required and insecure release defaults rejected
   - Session management
@@ -568,6 +569,16 @@ This project is actively developed. The NPCs branch contains the latest work on 
 3. Make changes following existing patterns
 4. Test with dialog sandbox for NPC-related changes
 5. Submit pull request
+
+## Door Mode (P0)
+
+A second process of the same binary can run an ANSI daily-menu RPG beside classic Veilspan.
+
+- Config: `go run ./cmd/tales -config config/door.yaml` (`presentation: door_tui`, `ruleset: daily_menu_rpg`, port 8020, `data/aethermoor-door.db`)
+- Client: `http://127.0.0.1:8020/door/` (xterm.js, 80×25, single-key menus)
+- Content: Doorkeeper pack `talesmud-door/worlds/aethermoor-door` (original Aethermoor / Veilspan ANSI and prose)
+- Daily forest fights live in `daily_resources`, with a Europe/Berlin day rollover
+- Runbook: `docs/P0.md`
 
 ## Related Resources
 

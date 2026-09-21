@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aethermoor Door</title>
+  <link rel="stylesheet" href="vendor/xterm.css">
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; color: #d0d0d0; }
+    body { font-family: "Consolas", "Courier New", monospace; }
+    #auth {
+      min-height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    form {
+      width: min(440px, calc(100% - 32px));
+      border: 1px solid #1a6a6a;
+      padding: 24px 22px 18px;
+      background: #050505;
+    }
+    h1 { margin: 0 0 4px; color: #5ee; font-size: 20px; font-weight: normal; letter-spacing: 0.08em; }
+    p.sub { margin: 0 0 16px; color: #888; font-size: 13px; }
+    label { display: block; margin: 10px 0 4px; color: #9cf; font-size: 13px; }
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      background: #000;
+      color: #eee;
+      border: 1px solid #246;
+      padding: 8px;
+      font: inherit;
+    }
+    .row { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+    button {
+      background: #033; color: #dff; border: 1px solid #1a6a6a;
+      font: inherit; padding: 8px 12px; cursor: pointer;
+    }
+    button.ghost { background: transparent; color: #9cf; }
+    #err { min-height: 1.2em; color: #f66; font-size: 13px; margin-top: 12px; }
+    #stage {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    #term { padding: 8px; }
+    .powered { margin-top: 14px; color: #567; font-size: 12px; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <div id="auth">
+    <form id="form">
+      <h1>AETHERMOOR DOOR</h1>
+      <p class="sub">Veilspan &mdash; Ashmarket. A daily door on TalesMUD.</p>
+      <label id="userLabel" for="username">Username</label>
+      <input id="username" name="username" autocomplete="username" maxlength="20" required>
+      <div id="emailRow">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" autocomplete="email" maxlength="120">
+      </div>
+      <div id="tokenRow" hidden>
+        <label for="token">Reset token</label>
+        <input id="token" name="token" autocomplete="off">
+      </div>
+      <label id="passLabel" for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" minlength="8" maxlength="128" required>
+      <div class="row">
+        <button type="submit" id="submit">Enter</button>
+        <button type="button" class="ghost" id="toggle">Create an account</button>
+        <button type="button" class="ghost" id="forgot">Forgot password</button>
+      </div>
+      <div id="err"></div>
+      <div class="powered">Powered by TalesMUD Door Mode</div>
+    </form>
+  </div>
+  <div id="stage" hidden>
+    <div id="term"></div>
+  </div>
+  <script src="vendor/xterm.js"></script>
+  <script src="door.js"></script>
+</body>
+</html>

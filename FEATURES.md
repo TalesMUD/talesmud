@@ -2283,4 +2283,14 @@ The leveling system (`CheckLevelUp`, `ApplyLevelUp`) respects `MaxLevelCap` auto
 
 ---
 
+## Door Mode (P0)
+
+Same binary, second config. See `docs/P0.md`.
+
+- `Character.Door` (`DoorProfile`): track, bank gold, one weapon id, one armor id, wins, losses, gems. Nil on classic characters.
+- `User.Username`, `User.PasswordHash` (Argon2id PHC), `User.SessionVersion` (bumped on password reset). API responses redact `passwordHash`.
+- `daily_resources` rows: `characterId`, `key`, `day` (`YYYY-MM-DD` in the process timezone), `allowance`, `remaining`. Rollover refills on read. Not quest tags.
+- Town hotkeys on the Aethermoor Door pack: forest walk, healer, vault, armory, stats, ledger, news, inn draught (`inn_draught`, once per day).
+- WebSocket input stays `{"message":"..."}`. Door output adds `type: doorFrame`.
+
 **End of Document**

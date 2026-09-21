@@ -90,6 +90,9 @@ type Character struct {
 	Level int32 `json:"level"`
 	Gold  int64 `json:"gold"`
 
+	// Door is optional daily-menu state (bank, track, gear). Nil for classic characters.
+	Door *DoorProfile `json:"door,omitempty"`
+
 	// MaxLevelCap is the per-character level cap. 0 means use the global MaxLevel.
 	// Used to restrict guest characters (e.g., capped at level 5).
 	MaxLevelCap int32 `bson:"maxLevelCap,omitempty" json:"maxLevelCap,omitempty"`

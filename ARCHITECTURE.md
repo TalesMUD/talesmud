@@ -139,11 +139,12 @@ Optional middleware that serves a static landing page from the OS filesystem whe
 **File:** `pkg/server/auth.go`
 
 ```
-Request → Extract Token → Try Guest HMAC → (if fail) Validate Auth0 JWT → Find/Create User → Check Ban → Set Context
+Request → Extract Token → Try Guest HMAC → (if local issuer) Local HMAC session → else Auth0 JWT → Find/Create User → Check Ban → Set Context
 ```
 
 - Supports both query parameter (`?access_token=`) and Authorization header
-- **Dual token validation**: Tries guest HMAC-SHA256 token first (fast), falls back to Auth0 JWT
+- **Token validation**: Tries guest HMAC-SHA256 first, then a local session token when `auth: local` is on, then Auth0 JWT
+- Local sessions are HS256 tokens with `iss=talesmud-local`. A bad local token is rejected and is not sent to Auth0. Classic processes do not install the local verifier.
 - Guest tokens signed with `GUEST_SECRET` env var, validated via `GuestService.ValidateGuestToken()`
 - Guest session expiry checked at auth layer (returns 401 if expired)
 - Auth0 tokens validated against JWKS endpoint (with in-memory cache, 1-hour TTL)
@@ -1642,3 +1643,17 @@ Event types include:
 - Quest events: `quest.start`, `quest.complete`, `quest.progress`
 
 See [SCRIPTING.md](SCRIPTING.md) for full documentation.
+
+## Door Mode
+
+Door Mode is flags plus a content pack, not an engine fork. `cmd/tales -config` loads `pkg/gamemode`. Unset, the process stays `presentation=classic` and `ruleset=classic_mud`.
+
+When `presentation=door_tui`:
+
+- `pkg/door` owns the websocket session through `mudserver.SessionHook`. Connect and keypresses do not enter the room command processor or `OnUserJoined`.
+- Frames are JSON `{"type":"doorFrame","ansi":...,"inputMode":"hotkey"|"line","cols":80,"rows":25}` on the existing `/ws` socket.
+- `pkg/daily` stores per-character budgets in `daily_resources` (calendar day in the configured timezone). Forest walks use the key `forest_fights`.
+- `pkg/authlocal` registers `/api/auth/register|login|forgot|reset`. Password hashes are Argon2id PHC strings. Reset tokens are stored as SHA-256 only.
+- The browser client is static files under `public/door/` (xterm.js). `/` redirects to `/door/` only in door mode. `/play` remains the classic client.
+
+Forest fights are a door combat profile: one weapon, one armor, d20 + attribute versus AC, writing HP, XP, and gold on the character row. They do not start a room `CombatInstance`. The classic combat engine is untouched.

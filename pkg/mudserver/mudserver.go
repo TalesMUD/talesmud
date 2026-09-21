@@ -2,6 +2,7 @@ package mudserver
 
 import (
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -22,6 +23,7 @@ type MUDServer interface {
 	Run()
 	GameCtrl() def.GameCtrl
 	HandleConnections(*gin.Context)
+	SetSessionHook(SessionHook)
 }
 
 // WS close codes (application-specific, RFC6455 4000-4999).
@@ -58,10 +60,20 @@ type server struct {
 	Clients   *clientRegistry
 	Broadcast chan interface{}
 	Upgrader  websocket.Upgrader
+	hook      SessionHook
 }
 
 func (server *server) GameCtrl() def.GameCtrl {
 	return server.Game
+}
+
+// SetSessionHook installs a presentation-mode input owner. Nil keeps classic play.
+func (server *server) SetSessionHook(hook SessionHook) {
+	server.hook = hook
+}
+
+func (server *server) doorSession() bool {
+	return server.hook != nil && server.hook.Active()
 }
 
 // New creates a new mud server
@@ -165,12 +177,12 @@ func (server *server) HandleConnections(c *gin.Context) {
 	old := server.Clients.Replace(user.ID, connection)
 	if old != nil && old.ws != nil {
 		log.WithFields(log.Fields{
-			"userId":     user.ID,
-			"nickname":   user.Nickname,
-			"ip":         remoteIP,
-			"oldIP":      old.remoteIP,
+			"userId":      user.ID,
+			"nickname":    user.Nickname,
+			"ip":          remoteIP,
+			"oldIP":       old.remoteIP,
 			"characterId": user.LastCharacter,
-			"reason":     "session replaced",
+			"reason":      "session replaced",
 		}).Info("WS replace-existing")
 		deadline := time.Now().Add(time.Second)
 		_ = old.ws.WriteControl(
@@ -193,15 +205,22 @@ func (server *server) HandleConnections(c *gin.Context) {
 	user.IsOnline = true
 	server.Facade.UsersService().Update(user.RefID, user)
 
-	// Send Welcome message with dynamic server name
-	serverName := "TalesMUD"
-	if ss, err := server.Facade.ServerSettingsService().Get(); err == nil && ss.ServerName != "" {
-		serverName = ss.ServerName
-	}
-	server.sendMessage(user.ID, messages.NewRoomBasedMessage("", "Connected to ["+serverName+"] ..."))
+	if server.doorSession() {
+		// Door mode paints ANSI pages and must not enter the room command loop.
+		server.hook.OnConnect(user, func(v any) {
+			server.sendMessage(user.ID, v)
+		})
+	} else {
+		// Send Welcome message with dynamic server name
+		serverName := "TalesMUD"
+		if ss, err := server.Facade.ServerSettingsService().Get(); err == nil && ss.ServerName != "" {
+			serverName = ss.ServerName
+		}
+		server.sendMessage(user.ID, messages.NewRoomBasedMessage("", "Connected to ["+serverName+"] ..."))
 
-	server.Game.OnUserJoined <- &messages.UserJoined{
-		User: user,
+		server.Game.OnUserJoined <- &messages.UserJoined{
+			User: user,
+		}
 	}
 
 	// Guest session timeout: warn 5 minutes before expiry, then disconnect
@@ -270,14 +289,28 @@ func (server *server) HandleConnections(c *gin.Context) {
 			break
 		}
 
-		// update user online status
-		server.Game.ConnectUserSession(user)
-		user.LastSeen = time.Now()
-		user.IsOnline = true
-		server.Facade.UsersService().Update(user.RefID, user)
+		if server.doorSession() {
+			// Do not write the connect-time user back on every key. That copy
+			// would clobber a password hash or session version changed elsewhere.
+			text := msg.Message
+			if strings.EqualFold(msg.Type, "door_key") && msg.Key != "" {
+				text = msg.Key
+			}
+			if text != "" {
+				server.hook.OnInput(user, text, func(v any) {
+					server.sendMessage(user.ID, v)
+				})
+			}
+		} else {
+			// update user online status
+			server.Game.ConnectUserSession(user)
+			user.LastSeen = time.Now()
+			user.IsOnline = true
+			server.Facade.UsersService().Update(user.RefID, user)
 
-		if msg.Message != "" {
-			server.Game.OnMessageReceived() <- messages.NewMessage(user, msg.Message)
+			if msg.Message != "" {
+				server.Game.OnMessageReceived() <- messages.NewMessage(user, msg.Message)
+			}
 		}
 	}
 }
@@ -307,13 +340,22 @@ func (server *server) handleConnectionClosed(user *entities.User, connection *Co
 		"reason":      "connection closed",
 	}).Info("WS close")
 
-	server.Game.OnUserQuit <- &messages.UserQuit{
-		User: user,
-	}
+	if server.doorSession() {
+		server.hook.OnDisconnect(user)
+		if fresh, err := server.Facade.UsersService().FindByID(user.ID); err == nil && fresh != nil {
+			fresh.IsOnline = false
+			fresh.LastSeen = time.Now()
+			server.Facade.UsersService().Update(fresh.RefID, fresh)
+		}
+	} else {
+		server.Game.OnUserQuit <- &messages.UserQuit{
+			User: user,
+		}
 
-	user.IsOnline = false
-	user.LastSeen = time.Now()
-	server.Facade.UsersService().Update(user.RefID, user)
+		user.IsOnline = false
+		user.LastSeen = time.Now()
+		server.Facade.UsersService().Update(user.RefID, user)
+	}
 
 	return true
 }

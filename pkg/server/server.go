@@ -11,7 +11,9 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/talesmud/talesmud/pkg/authlocal"
+	"github.com/talesmud/talesmud/pkg/daily"
 	dbsqlite "github.com/talesmud/talesmud/pkg/db/sqlite"
+	"github.com/talesmud/talesmud/pkg/door"
 	"github.com/talesmud/talesmud/pkg/gamemode"
 	mud "github.com/talesmud/talesmud/pkg/mudserver"
 	"github.com/talesmud/talesmud/pkg/repository"
@@ -68,6 +70,8 @@ func allowedCORSOrigins() []string {
 		"http://127.0.0.1:5173",
 		"http://localhost:8010",
 		"http://127.0.0.1:8010",
+		"http://localhost:8020",
+		"http://127.0.0.1:8020",
 	}
 
 	for _, origin := range strings.Split(os.Getenv("CORS_ALLOWED_ORIGINS"), ",") {
@@ -127,6 +131,22 @@ func NewApp() App {
 		})
 		UseLocalAuth(application.localAuth)
 		log.WithField("outbox", gamemode.Current().OutboxPath).Info("Local auth enabled (Argon2id)")
+	}
+	if gamemode.DoorTUI() {
+		cfg := gamemode.Current()
+		pack, err := door.Load(cfg.WorldPack)
+		if err != nil {
+			log.WithError(err).Warn("Door world pack failed to load; using built-in Aethermoor defaults")
+			pack = door.DefaultPack()
+		}
+		fights := pack.DailyFights
+		hub := door.NewHub(facade, daily.New(client.DB(), cfg.Location()), pack, fights, cfg.Location())
+		mud.SetSessionHook(hub)
+		log.WithFields(log.Fields{
+			"pack":   cfg.WorldPack,
+			"title":  pack.Title,
+			"fights": fights,
+		}).Info("Door TUI session hook enabled")
 	}
 	return application
 }
@@ -438,6 +458,15 @@ func (app *app) setupRoutes() {
 
 		// Public server info (no auth, used by MUD client)
 		public.GET("server-info", serverSettings.GetServerInfo)
+		public.GET("mode", func(c *gin.Context) {
+			cfg := gamemode.Current()
+			c.JSON(http.StatusOK, gin.H{
+				"presentation": cfg.Presentation,
+				"ruleset":      cfg.Ruleset,
+				"auth":         cfg.Auth,
+				"worldPack":    cfg.WorldPack,
+			})
+		})
 
 		// Guest session creation (public, no auth required)
 		guest := &handler.GuestHandler{
@@ -465,20 +494,33 @@ func (app *app) setupRoutes() {
 	ws.Use(AuthMiddleware(app.Facade))
 	ws.GET("", app.mud.HandleConnections)
 
+	// Browser TUI for door mode. Served from disk so it does not require the
+	// classic mud-client rebuild. Classic processes still expose /play below.
+	if st, err := os.Stat("public/door"); err == nil && st.IsDir() {
+		r.Static("/door", "public/door")
+		if gamemode.DoorTUI() {
+			r.GET("/", func(c *gin.Context) {
+				c.Redirect(http.StatusFound, "/door/")
+			})
+		}
+	}
+
 	// Serve mud-client (game client) at /play
 	r.Use(SPAMiddleware("/play", webuiplay.FS(), webuiplay.IndexFile))
 
-	// Optional landing page from OS filesystem
-	landingPath := strings.TrimSpace(os.Getenv("LANDING_PATH"))
-	cwd, _ := os.Getwd()
-	log.WithFields(log.Fields{
-		"LANDING_PATH": landingPath,
-		"cwd":          cwd,
-	}).Info("Landing page configuration")
-	r.Use(LandingMiddleware(landingPath))
+	if !gamemode.DoorTUI() {
+		// Optional landing page from OS filesystem
+		landingPath := strings.TrimSpace(os.Getenv("LANDING_PATH"))
+		cwd, _ := os.Getwd()
+		log.WithFields(log.Fields{
+			"LANDING_PATH": landingPath,
+			"cwd":          cwd,
+		}).Info("Landing page configuration")
+		r.Use(LandingMiddleware(landingPath))
 
-	// Serve main app at /
-	r.Use(SPAMiddleware("/", webui.FS(), webui.IndexFile))
+		// Serve main app at /
+		r.Use(SPAMiddleware("/", webui.FS(), webui.IndexFile))
+	}
 
 }
 
