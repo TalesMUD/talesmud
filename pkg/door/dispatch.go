@@ -54,7 +54,7 @@ func (h *Hub) dispatchPack(user *entities.User, sess *session, key string) bool 
 	case "drink", "inn_draught":
 		h.innKey(user, sess, "d")
 	case "train":
-		sess.notice = "The master nods. Duels for level come next — for now, return when you are ready."
+		h.trainMaster(user, sess)
 	case "go_back", "return":
 		h.goBack(sess)
 	case "help":

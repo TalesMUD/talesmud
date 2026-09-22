@@ -578,6 +578,7 @@ A second process of the same binary can run an ANSI daily-menu RPG beside classi
 - Client: `http://127.0.0.1:8020/door/` (xterm.js, 80×25, single-key menus)
 - Content: Doorkeeper pack `talesmud-door/worlds/aethermoor-door` (original Aethermoor / Veilspan ANSI and prose)
 - Daily forest fights live in `daily_resources`, with a Europe/Berlin day rollover
+- Trainer duel (P1 slice): Ashmarket Master gates level-ups; forest awards XP only
 - Runbook: `docs/P0.md`
 
 ## Related Resources

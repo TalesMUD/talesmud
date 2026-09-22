@@ -6,11 +6,18 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 )
 
+// fight kinds
+const (
+	fightForest = "forest"
+	fightMaster = "master"
+)
+
 // fight is a lightweight 1v1. It uses the character's HP, attributes, and
 // gear, with the same d20-plus-modifier against AC shape as room combat,
 // without opening a room tactical instance.
 type fight struct {
 	Name    string
+	Kind    string // fightForest or fightMaster
 	MaxHP   int
 	HP      int
 	Attack  int
@@ -50,12 +57,40 @@ func (h *Hub) spawn(level int32) fight {
 	}
 	return fight{
 		Name:   m.Name,
+		Kind:   fightForest,
 		MaxHP:  hp,
 		HP:     hp,
 		Attack: atk,
 		AC:     ac,
 		XP:     int32(m.XP + bonus),
 		Gold:   int64(m.Gold + bonus),
+	}
+}
+
+// spawnMaster builds the Ashmarket Master duel scaled to the warrior's level.
+// Original name — no licensed LORD trainers.
+func (h *Hub) spawnMaster(level int32) fight {
+	if level < 1 {
+		level = 1
+	}
+	hp := 18 + int(level)*5
+	if hp < 16 {
+		hp = 16
+	}
+	atk := 5 + int(level)
+	ac := 12 + int(level)/2
+	if ac > 18 {
+		ac = 18
+	}
+	return fight{
+		Name:   "Ashmarket Master",
+		Kind:   fightMaster,
+		MaxHP:  hp,
+		HP:     hp,
+		Attack: atk,
+		AC:     ac,
+		XP:     0,
+		Gold:   0,
 	}
 }
 

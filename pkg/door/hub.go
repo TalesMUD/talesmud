@@ -252,8 +252,21 @@ func (h *Hub) handleKey(user *entities.User, sess *session, key string) {
 	case screenFight:
 		h.fightKey(user, sess, key)
 	case screenResult:
+		kind := ""
+		if sess.fight != nil {
+			kind = sess.fight.Kind
+		}
 		sess.fight = nil
-		sess.screen = h.homeScreen()
+		if kind == fightMaster {
+			if _, ok := h.pack.Screens["trainer"]; ok {
+				sess.screen = "trainer"
+			} else {
+				sess.screen = h.homeScreen()
+			}
+		} else {
+			sess.screen = h.homeScreen()
+		}
+		sess.inputMode = "hotkey"
 	case screenHealer:
 		h.healerKey(user, sess, key)
 	case screenBank:
@@ -388,6 +401,10 @@ func (h *Hub) finishFight(ch *characters.Character, f *fight, outcome string) {
 	}
 	switch outcome {
 	case "win":
+		if f.Kind == fightMaster {
+			h.finishMasterWin(ch, f)
+			return
+		}
 		ch.Gold += f.Gold
 		ch.XP += f.XP
 		ch.Door.Wins++
@@ -395,11 +412,11 @@ func (h *Hub) finishFight(ch *characters.Character, f *fight, outcome string) {
 			ch.Door.Gems++
 			f.Log = append(f.Log, "A dull gem catches in the moss.")
 		}
-		if levels, _ := leveling.CheckLevelUp(ch); levels > 0 {
-			leveling.ApplyLevelUp(ch, levels)
-			f.Log = append(f.Log, fmt.Sprintf("You reach level %d.", ch.Level))
-		}
+		// Forest awards XP/gold only. Level-ups are gated behind the trainer duel.
 		f.Log = append(f.Log, fmt.Sprintf("You take %d coin and %d experience.", f.Gold, f.XP))
+		if levels, _ := leveling.CheckLevelUp(ch); levels > 0 {
+			f.Log = append(f.Log, "You feel ready. Seek the Ashmarket Master to train.")
+		}
 	case "lose":
 		lost := ch.Gold * 15 / 100
 		ch.Gold -= lost
@@ -407,10 +424,64 @@ func (h *Hub) finishFight(ch *characters.Character, f *fight, outcome string) {
 			ch.CurrentHitPoints = 1
 		}
 		ch.Door.Losses++
-		f.Log = append(f.Log, fmt.Sprintf("You wake at the gate. %d coin is gone from your belt. The vault is untouched.", lost))
+		if f.Kind == fightMaster {
+			f.Log = append(f.Log, fmt.Sprintf("The master lowers the blade. %d coin is gone from your belt. Mend, then try again.", lost))
+		} else {
+			f.Log = append(f.Log, fmt.Sprintf("You wake at the gate. %d coin is gone from your belt. The vault is untouched.", lost))
+		}
 	case "fled":
-		f.Log = append(f.Log, "The walk is spent either way.")
+		if f.Kind == fightMaster {
+			f.Log = append(f.Log, "You step out of the circle. No level is granted.")
+		} else {
+			f.Log = append(f.Log, "The walk is spent either way.")
+		}
 	}
+}
+
+// finishMasterWin applies the classic door train loop: win the duel, then level
+// by one only when CheckLevelUp says the XP threshold is met.
+func (h *Hub) finishMasterWin(ch *characters.Character, f *fight) {
+	ch.Door.Wins++
+	levels, _ := leveling.CheckLevelUp(ch)
+	if levels <= 0 {
+		f.Log = append(f.Log, "The master nods. You are not ready — walk the Ashwood more, then return.")
+		return
+	}
+	if ch.Level >= doorLevelCap {
+		f.Log = append(f.Log, "The master has nothing left to teach.")
+		return
+	}
+	leveling.ApplyLevelUp(ch, 1)
+	f.Log = append(f.Log, fmt.Sprintf("The chalk circle holds. You reach level %d. Your wounds close as the lesson settles.", ch.Level))
+}
+
+// trainMaster starts (or resumes) the Ashmarket Master duel for a level-up.
+func (h *Hub) trainMaster(user *entities.User, sess *session) {
+	ch, err := h.load(user)
+	if err != nil || ch == nil {
+		sess.notice = "You have no warrior yet."
+		return
+	}
+	if ch.Level >= doorLevelCap {
+		sess.notice = "The Ashmarket Master has nothing left to teach. The road beyond is yours alone."
+		return
+	}
+	if ch.CurrentHitPoints < 1 {
+		sess.notice = "You can barely stand. Mend first, then step into the circle."
+		return
+	}
+	if sess.fight != nil && !sess.fight.Done && sess.fight.Kind == fightMaster {
+		sess.screen = screenFight
+		sess.inputMode = "hotkey"
+		return
+	}
+	spawned := h.spawnMaster(ch.Level)
+	spawned.Log = []string{fmt.Sprintf("%s steps into the chalk circle.", spawned.Name)}
+	sess.fight = &spawned
+	sess.screen = screenFight
+	sess.inputMode = "hotkey"
+	sess.returnTo = "trainer"
+	sess.notice = "Steel rings. Press (A)ttack or (R)un."
 }
 
 func (h *Hub) healerKey(user *entities.User, sess *session, key string) {

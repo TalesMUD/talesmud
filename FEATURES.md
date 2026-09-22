@@ -2291,6 +2291,7 @@ Same binary, second config. See `docs/P0.md`.
 - `User.Username`, `User.PasswordHash` (Argon2id PHC), `User.SessionVersion` (bumped on password reset). API responses redact `passwordHash`.
 - `daily_resources` rows: `characterId`, `key`, `day` (`YYYY-MM-DD` in the process timezone), `allowance`, `remaining`. Rollover refills on read. Not quest tags.
 - Town hotkeys on the Aethermoor Door pack: forest walk, healer, vault, armory, stats, ledger, news, inn draught (`inn_draught`, once per day).
+- **Trainer (P1 slice):** Town `M` → trainer; `T` starts a duel vs the **Ashmarket Master** (original name, scaled to player level). Forest walks still award XP/gold; `ApplyLevelUp` runs only on a master-duel win when `CheckLevelUp` says the XP threshold is met (one level per win). Cap `doorLevelCap` (12): at cap, `T` explains the master has nothing left to teach. Loss damages HP (death floors at 1) with no level.
 - WebSocket input stays `{"message":"..."}`. Door output adds `type: doorFrame`.
 
 **End of Document**
