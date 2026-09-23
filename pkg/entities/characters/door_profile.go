@@ -11,4 +11,7 @@ type DoorProfile struct {
 	Wins     int    `json:"wins"`
 	Losses   int    `json:"losses"`
 	Gems     int    `json:"gems"`
+	// LastDay is the Europe/Berlin calendar day (YYYY-MM-DD) of the last
+	// new-day full HP heal. Empty means never healed by ensureNewDay.
+	LastDay string `json:"lastDay,omitempty"`
 }

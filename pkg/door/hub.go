@@ -128,11 +128,61 @@ func (h *Hub) OnConnect(user *entities.User, send func(any)) {
 	if err != nil || len(chars) == 0 {
 		sess.screen = screenName
 		sess.inputMode = "line"
-	} else if user.LastCharacter == "" {
-		user.LastCharacter = chars[0].ID
-		_ = h.facade.UsersService().Update(user.RefID, user)
+	} else {
+		if user.LastCharacter == "" {
+			user.LastCharacter = chars[0].ID
+			_ = h.facade.UsersService().Update(user.RefID, user)
+		}
+		h.ensureNewDay(user, sess)
 	}
 	h.render(user, sess, send)
+}
+
+// ensureNewDay applies the LORD-style calendar rollover: full HP once per
+// Europe/Berlin day, and touches daily budgets so forest/inn refill on login.
+// Same-day reconnects do not re-heal.
+func (h *Hub) ensureNewDay(user *entities.User, sess *session) {
+	if user == nil || h.daily == nil {
+		return
+	}
+	ch, err := h.load(user)
+	if err != nil || ch == nil {
+		return
+	}
+	today := h.now().In(h.loc).Format("2006-01-02")
+	if ch.Door != nil && ch.Door.LastDay == today {
+		return
+	}
+	healed := false
+	_, err = h.mutate(user, func(loaded *characters.Character) error {
+		if loaded.Door == nil {
+			loaded.Door = &characters.DoorProfile{}
+		}
+		if loaded.Door.LastDay == today {
+			return nil
+		}
+		if h.healOnNewDay() {
+			loaded.CurrentHitPoints = loaded.MaxHitPoints
+			healed = true
+		}
+		loaded.Door.LastDay = today
+		return nil
+	})
+	if err != nil {
+		return
+	}
+	if healed && sess != nil {
+		sess.notice = "A new day dawns in Ashmarket. Your wounds close with the morning light."
+	}
+	_, _ = h.daily.Get(ch.ID, daily.ForestFightsKey, h.allowance())
+	_, _ = h.daily.Get(ch.ID, innKey, 1)
+}
+
+func (h *Hub) healOnNewDay() bool {
+	if h.pack == nil {
+		return true
+	}
+	return h.pack.HealOnNewDay
 }
 
 // OnInput handles one hotkey or one finished line. It always consumes input in door mode.

@@ -23,8 +23,9 @@ type Pack struct {
 	Innkeeper   string             `yaml:"innkeeper"`
 	Armory      string             `yaml:"armory"`
 	Smith       string             `yaml:"smith"`
-	HealCost    int                `yaml:"heal_cost"`
-	DailyFights int                `yaml:"daily_fights"`
+	HealCost     int                `yaml:"heal_cost"`
+	DailyFights  int                `yaml:"daily_fights"`
+	HealOnNewDay bool               `yaml:"-"` // from daily.heal_on_new_day; default true
 	Intro       []string           `yaml:"intro"`
 	News        []string           `yaml:"news"`
 	Tracks      []Track            `yaml:"tracks"`
@@ -217,8 +218,9 @@ func parseWorld(raw []byte) (*Pack, error) {
 	var doc struct {
 		Pack  `yaml:",inline"`
 		Daily struct {
-			Timezone  string `yaml:"timezone"`
-			Resources map[string]struct {
+			Timezone     string `yaml:"timezone"`
+			HealOnNewDay *bool  `yaml:"heal_on_new_day"`
+			Resources    map[string]struct {
 				PerDay int `yaml:"per_day"`
 			} `yaml:"resources"`
 		} `yaml:"daily"`
@@ -228,6 +230,11 @@ func parseWorld(raw []byte) (*Pack, error) {
 	}
 	pack := doc.Pack
 	pack.Timezone = doc.Daily.Timezone
+	if doc.Daily.HealOnNewDay != nil {
+		pack.HealOnNewDay = *doc.Daily.HealOnNewDay
+	} else {
+		pack.HealOnNewDay = true
+	}
 	if res, ok := doc.Daily.Resources["forest_fights"]; ok && res.PerDay > 0 {
 		pack.DailyFights = res.PerDay
 	}
@@ -283,8 +290,9 @@ func DefaultPack() *Pack {
 		Innkeeper:   "Maela Quinn",
 		Armory:      "Soot and Steel",
 		Smith:       "Harl Quill",
-		HealCost:    20,
-		DailyFights: 15,
+		HealCost:     20,
+		DailyFights:  15,
+		HealOnNewDay: true,
 		Intro: []string{
 			"Soot-warm cobbles and the Bramblewood gate standing open.",
 			"Each day allows a fixed number of walks into the trees.",
