@@ -480,8 +480,8 @@ Enemies display health bars above their entity cards:
 If the game supports multiplayer combat:
 
 **Fighting Together:**
-- Combined damage
-- Shared XP and loot
+- Combined damage when you join the same fight (`attack` the enemy)
+- Gold and XP from a kill split equally with online party members in the same room. Anyone in another room, or offline, does not get a share. Leftover gold and XP go to the character who started the fight. Items still drop on the ground for anyone to pick up.
 - Coordinated tactics (tank, healer, DPS roles)
 - Communication essential
 
