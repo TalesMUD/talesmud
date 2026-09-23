@@ -933,7 +933,9 @@ func (c *CombatController) refreshOriginRoomAfterCombat(instance *combat.CombatI
 	}
 }
 
-// processCombatVictory handles XP, gold, loot rewards and sends the victory message
+// processCombatVictory handles XP, gold, loot rewards and sends the victory message.
+// Gold and XP split across living combatants. Online party members in the killer's
+// room are added to that split (Party Loot & XP Share v1). Item drops stay in the room.
 func (c *CombatController) processCombatVictory(instance *combat.CombatInstance) {
 	var totalXP int64
 	var totalGold int64
@@ -1021,88 +1023,79 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 		}
 	}
 
-	// Split rewards among living players
-	numLiving := int64(len(livingPlayers))
-	if numLiving == 0 {
-		numLiving = 1
+	// Living combatants always share. Online party members in the killer's room
+	// are added. Solo / no shared party keeps the full (or living-joiner) award.
+	shares, partySplit := c.planVictoryShares(instance, livingPlayers, totalXP, totalGold)
+	killerName := ""
+	if len(livingPlayers) > 0 && livingPlayers[0] != nil {
+		killerName = livingPlayers[0].Name
 	}
-	xpPerPlayer := totalXP / numLiving
-	goldPerPlayer := totalGold / numLiving
-
-	// Build victory message
-	var sb strings.Builder
-	sb.WriteString("\n═══════════════════════════════════════════════════\n")
-	sb.WriteString("              VICTORY!\n")
-	sb.WriteString("═══════════════════════════════════════════════════\n\n")
-
-	for _, name := range enemyNames {
-		sb.WriteString(fmt.Sprintf("Defeated: %s\n", name))
+	if killerName == "" && len(shares) > 0 {
+		killerName = shares[0].Name
 	}
-
-	sb.WriteString(fmt.Sprintf("\nREWARDS:\n"))
-	if xpPerPlayer > 0 {
-		sb.WriteString(fmt.Sprintf("  + %d XP\n", xpPerPlayer))
-	}
-	if goldPerPlayer > 0 {
-		sb.WriteString(fmt.Sprintf("  + %d Gold\n", goldPerPlayer))
-	}
-	if len(allLootItems) > 0 {
-		sb.WriteString("\nLOOT DROPPED:\n")
-		for _, itemName := range allLootItems {
-			sb.WriteString(fmt.Sprintf("  - %s\n", itemName))
-		}
-	}
-	if xpPerPlayer == 0 && goldPerPlayer == 0 && len(allLootItems) == 0 {
-		sb.WriteString("  (none)\n")
+	var shareBlock, toast string
+	if partySplit {
+		shareBlock = partyShareSummary(shares, killerName)
+		toast = partyShareToast(shares, killerName)
+		log.WithFields(log.Fields{
+			"instanceID": instance.ID,
+			"recipients": len(shares),
+			"xp":         totalXP,
+			"gold":       totalGold,
+			"killer":     killerName,
+		}).Info("Party victory share")
 	}
 
-	sb.WriteString("\n═══════════════════════════════════════════════════")
-
-	// Award rewards and notify each living player
-	for _, player := range livingPlayers {
-		char, err := c.game.Facade.CharactersService().FindByID(player.ID)
-		if err != nil {
+	for _, share := range shares {
+		char, err := c.game.Facade.CharactersService().FindByID(share.ID)
+		if err != nil || char == nil {
 			continue
 		}
 
-		char.XP += int32(xpPerPlayer)
-		char.Gold += goldPerPlayer
+		char.XP += int32(share.XP)
+		char.Gold += share.Gold
 
-		// Check for level-up
-		if levelsGained, _ := leveling.CheckLevelUp(char); levelsGained > 0 {
-			// Apply level-up stat changes
-			result := leveling.ApplyLevelUp(char, levelsGained)
+		levelsGained, _ := leveling.CheckLevelUp(char)
+		var levelMsg string
+		if levelsGained > 0 {
+			if result := leveling.ApplyLevelUp(char, levelsGained); result != nil {
+				levelMsg = result.Message
+			}
+		}
+		_ = c.game.Facade.CharactersService().Update(share.ID, char)
 
-			// Save updated character
-			c.game.Facade.CharactersService().Update(player.ID, char)
-
-			// Send victory message first
-			c.game.sendMessage <- messages.NewCombatEndMessage(char.BelongsUserID, sb.String(), string(combat.CombatStateVictory))
-
-			// Send level-up notification
+		userID := char.BelongsUserID
+		if share.InFight {
+			victoryText := formatCombatVictoryText(enemyNames, allLootItems, share.XP, share.Gold, shareBlock)
+			c.game.sendMessage <- messages.NewCombatEndMessage(userID, victoryText, string(combat.CombatStateVictory))
+		}
+		if toast != "" {
 			c.game.sendMessage <- messages.MessageResponse{
 				Audience:   messages.MessageAudienceUser,
-				AudienceID: char.BelongsUserID,
-				Type:       messages.MessageTypeLevelUp,
-				Message:    result.Message,
+				AudienceID: userID,
+				Type:       messages.MessageTypeDefault,
+				Message:    toast,
 			}
-
-			// Send updated character stats to client
-			update := messages.NewCharacterUpdateMessage(char.BelongsUserID, char)
-			c.game.sendMessage <- update
-		} else {
-			// No level-up, just save character with updated XP and gold
-			c.game.Facade.CharactersService().Update(player.ID, char)
-
-			// Send victory message
-			c.game.sendMessage <- messages.NewCombatEndMessage(char.BelongsUserID, sb.String(), string(combat.CombatStateVictory))
+		}
+		if levelMsg != "" {
+			c.game.sendMessage <- messages.MessageResponse{
+				Audience:   messages.MessageAudienceUser,
+				AudienceID: userID,
+				Type:       messages.MessageTypeLevelUp,
+				Message:    levelMsg,
+			}
 		}
 
-		// Send inventory update so UI reflects new gold
+		// Character update carries the new XP. Inventory update carries gold.
+		// Idle party members are not in the post-combat cleanup loop, so both
+		// go out here. Fighters are updated again when combat state is cleared.
+		if update := messages.NewCharacterUpdateMessage(userID, char); update != nil {
+			c.game.sendMessage <- update
+		}
 		c.game.sendMessage <- messages.InventoryUpdateMessage{
 			MessageResponse: messages.MessageResponse{
 				Audience:   messages.MessageAudienceUser,
-				AudienceID: char.BelongsUserID,
+				AudienceID: userID,
 				Type:       messages.MessageTypeInventoryUpdate,
 			},
 			Inventory:     char.Inventory,

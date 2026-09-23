@@ -482,9 +482,23 @@ already in combat. Joiners receive `combatStart` (BattleStage), initiative is
 rolled, and turn order is rebuilt (current actor preserved). Cross-room join
 is refused. Party membership is **not** required to join; when combat starts,
 same-room online party members get a `[Party] … Type 'attack <enemy>' to join`
-nudge. Victory XP/gold already splits across `GetLivingPlayers()` (loot stays
-room drops). Out of scope: follow, need/greed loot, auto-pull without attack,
-Flutter.
+nudge. Out of scope: follow, need/greed item assignment, auto-pull without
+attack, Flutter.
+
+### Party Loot & XP Share (v1)
+On victory, gold and XP split equally among the living combatants **and**
+online party members standing in the killer's room (persisted `CurrentRoomID`).
+The killer is the first living combatant (the player who engaged). Offline
+members and members in another room get nothing. A solo victor, or a fight
+where no two recipients share a party, is unchanged: each living combatant
+gets `total/n` and any remainder is dropped.
+
+When two or more recipients are in the same party, leftover gold and XP
+(`total % n`) go to the killer so nothing is discarded. The victory combat log
+lists each recipient (`PARTY SHARE`), and every recipient gets a one-line
+`[Party] Equal split…` toast. Item drops stay on the ground (no need/greed).
+Quest kill credit stays with living combatants only. Follow is still out of
+scope.
 
 ### Friends (v1)
 Per-character friends list stored as `Character.FriendIDs` (character UUIDs) in
@@ -675,7 +689,9 @@ Two methods for placing NPCs:
 ### Joining in-progress fights (Party Combat Assist v1)
 Same-room players may `attack <npc>` to join an active combat instance that
 NPC is already in (`JoinCombat`). Cross-room joins are refused. Living joiners
-share existing victory XP/gold split; loot remains room drops.
+share victory XP/gold. Online party members in the killer's room are added to
+that equal split (Party Loot & XP Share v1); leftover goes to the engager when
+the split is a party share. Loot remains room drops.
 
 ### Combat Instance Model
 ```go
