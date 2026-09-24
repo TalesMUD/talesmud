@@ -673,6 +673,16 @@
     Add Widget
   </button>
 
+  <button class="toolbar-btn template-btn" type="button" title="Stack room and terminal" on:click={() => layoutStore.applyPreset('compact', { lock: true })}>
+    Compact
+  </button>
+  <button class="toolbar-btn template-btn" type="button" title="Room and terminal side by side" on:click={() => layoutStore.applyPreset('desktop', { lock: true })}>
+    Desktop
+  </button>
+  <button class="toolbar-btn template-btn" type="button" title="Side by side, using the full height" on:click={() => layoutStore.applyPreset('wide', { lock: true })}>
+    Wide
+  </button>
+
   <button class="toolbar-btn reset-btn" on:click={reset}>
     <i class="material-icons">refresh</i>
     Reset

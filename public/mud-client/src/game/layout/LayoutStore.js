@@ -8,6 +8,7 @@ import {
   widgetsEqual,
   normalizeTemplates,
 } from './layoutTemplates.js';
+import { clampWidgets, kindForWidth, presetWidgets } from './layoutPresets.js';
 
 const STORAGE_KEY = LAYOUT_STORAGE_KEY;
 
@@ -146,7 +147,25 @@ function createLayoutStore() {
     activeTemplateId: null,
     /** Bumps when widgets must force-sync into WidgetGrid (apply/reset/load). */
     layoutEpoch: 0,
+    /** Set when the live layout is a viewport preset. Null means a saved layout. */
+    presetKind: null,
+    /** True after the player picks a preset in edit mode, so resize keeps that shape. */
+    presetLocked: false,
   });
+
+  function applyPresetKind(kind, opts = {}) {
+    const height = (typeof window !== 'undefined' && window.innerHeight) || 800;
+    const safeKind = kind === 'compact' || kind === 'wide' ? kind : 'desktop';
+    const widgets = clampWidgets(presetWidgets(safeKind, height));
+    update(state => ({
+      ...state,
+      widgets: toGridItems(widgets, state.editMode),
+      presetKind: safeKind,
+      presetLocked: opts.lock === true ? true : (opts.lock === false ? false : state.presetLocked),
+      activeTemplateId: null,
+      layoutEpoch: bumpEpoch(state),
+    }));
+  }
 
   const api = {
     subscribe,
@@ -157,12 +176,14 @@ function createLayoutStore() {
         const stored = localStorage.getItem(STORAGE_KEY);
         const parsed = parseLayoutStorage(stored);
         if (parsed) {
-          const widgets = ensureHotbarInLayout(parsed.widgets);
+          const widgets = clampWidgets(ensureHotbarInLayout(parsed.widgets));
           update(state => ({
             ...state,
             widgets: toGridItems(widgets, state.editMode),
             templates: parsed.templates,
             activeTemplateId: parsed.activeTemplateId,
+            presetKind: null,
+            presetLocked: false,
             layoutEpoch: bumpEpoch(state),
           }));
           return true;
@@ -170,7 +191,35 @@ function createLayoutStore() {
       } catch (e) {
         console.warn('Failed to load layout from storage:', e);
       }
+      applyPresetKind(kindForWidth(window.innerWidth), { lock: false });
       return false;
+    },
+
+    /**
+     * Replace the live layout with a viewport preset.
+     * Does not write localStorage, so a saved layout is only replaced when the player saves.
+     */
+    applyPreset(kind, opts = {}) {
+      applyPresetKind(kind, opts);
+    },
+
+    /** Refill a preset on resize. Saved layouts are only clamped back onto the grid. */
+    onViewportResize() {
+      const state = get({ subscribe });
+      if (state.editMode || typeof window === 'undefined') return;
+      if (state.presetKind) {
+        const kind = state.presetLocked ? state.presetKind : kindForWidth(window.innerWidth);
+        applyPresetKind(kind, { lock: !!state.presetLocked });
+        return;
+      }
+      const current = fromGridItems(state.widgets);
+      const clamped = clampWidgets(current);
+      if (widgetsEqual(current, clamped)) return;
+      update(s => ({
+        ...s,
+        widgets: toGridItems(clamped, s.editMode),
+        layoutEpoch: bumpEpoch(s),
+      }));
     },
 
     // Save current layout (+ templates metadata) to localStorage
@@ -298,12 +347,8 @@ function createLayoutStore() {
 
     // Reset to default layout (in edit mode, so editable=true)
     resetToDefault() {
-      update(state => ({
-        ...state,
-        widgets: toGridItems(DEFAULT_LAYOUT, state.editMode),
-        activeTemplateId: null,
-        layoutEpoch: bumpEpoch(state),
-      }));
+      const kind = (typeof window !== 'undefined') ? kindForWidth(window.innerWidth) : 'desktop';
+      applyPresetKind(kind, { lock: false });
     },
 
     // Get widget by id
@@ -499,4 +544,9 @@ export const layoutStore = createLayoutStore();
 // Initialize on load
 if (typeof window !== 'undefined') {
   layoutStore.loadFromStorage();
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => layoutStore.onViewportResize(), 150);
+  });
 }
