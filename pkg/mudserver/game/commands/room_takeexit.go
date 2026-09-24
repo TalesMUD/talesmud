@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"strings"
+
 	log "github.com/sirupsen/logrus"
 
 	"github.com/talesmud/talesmud/pkg/entities/characters"
@@ -119,6 +121,10 @@ func TakeExit(exit string) RoomCommand {
 				}
 				game.SendMessage() <- messages.NewRoomPresenceMessage(next, game)
 
+				// Party Follow v1: only a normal exit walk. Teleports, portals,
+				// instance crossings, bindstones, and scripts do not pull.
+				game.PullPartyFollowers(character, next.ID, partyFollowAllowed(exit, next.ID))
+
 				return true
 			}
 			log.WithError(err).WithField("target", exit.Target).Warn("TakeExit: destination room not found")
@@ -127,4 +133,23 @@ func TakeExit(exit string) RoomCommand {
 		}
 		return false
 	}
+}
+
+// partyFollowAllowed reports whether this exit walk should pull party followers.
+// Only unmarked, normal, and direction exits that arrive at their authored
+// target qualify. Teleport/portal/instance types, and any walk that landed in
+// a private clone instead of the authored room, do not.
+func partyFollowAllowed(ex rooms.Exit, arrivedID string) bool {
+	switch strings.ToLower(strings.TrimSpace(string(ex.Type))) {
+	case "", "normal", "direction":
+	default:
+		return false
+	}
+	if ex.Instance || instances.IsInstanceEntrance(ex) {
+		return false
+	}
+	if ex.Target != "" && arrivedID != "" && arrivedID != ex.Target {
+		return false
+	}
+	return true
 }

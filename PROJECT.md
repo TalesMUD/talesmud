@@ -164,6 +164,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Party flow: create parties, invite online players, accept/decline invites, list members, leave party, and send party chat
   - Party Combat Assist v1: same-room players join in-progress fights via `attack <npc>`; party members get a join nudge; XP/gold split among living joiners
   - Party Loot & XP Share v1: victory gold and XP also split equally with online party members in the killer's room (leftover to the engager; out-of-room and offline members excluded; items stay on the ground)
+  - Party Follow v1: `party follow` / `party unfollow` trail the party leader through normal exits (`RelocateCharacter`); combat, teleports, portals, and private instances do not pull followers
   - Party UI: HUD launch next to Friends, PartyOverlay (create/invite/list/say/leave), Accept/Decline invite banner; guests see sign-in note
   - Emote system
   - Live session-based player presence tracking for room UI, chat routing, `who`, and silent room presence refreshes

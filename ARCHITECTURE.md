@@ -633,13 +633,13 @@ type Facade interface {
 | RoomsService | Room CRUD, room queries |
 | ItemsService | Item CRUD, create from template |
 | ScriptsService | Script CRUD, execution |
-| PartiesService | Party/group management |
+| PartiesService | Party/group management. Follow state is in-memory on the game session registry, not on the Party row |
 | LootTablesService | Loot table CRUD, loot rolling |
 | QuestsService | Quest definition CRUD, quest progress tracking, normalized event application, accept/abandon/complete/turn-in quests, objective progress, prerequisite checks |
 | SkillsService | Skill CRUD, DB seeding on first run, in-memory cache refresh on mutations |
 | GuestService | Guest session creation, HMAC token signing/validation, expired guest cleanup, IP rate limiting |
 
-`pkg/worldmap` is a layout compiler (not a facade service). `Compile` pins authored coords, clusters by area, and packs zones apart; `Reveal` applies per-character discovery. `worldmap.MarkOn` records entered rooms on the character document during `TakeExit` and character select.
+`pkg/worldmap` is a layout compiler (not a facade service). `Compile` pins authored coords, clusters by area, and packs zones apart; `Reveal` applies per-character discovery. `worldmap.MarkOn` records entered rooms on the character document during `TakeExit`, party-follow relocation, and character select. Party Follow v1 pulls online followers only after a normal exit walk.
 
 #### Creator Validation Service
 
