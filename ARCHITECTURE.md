@@ -444,6 +444,8 @@ type StatusEffect struct {
        │   │     Level gap (config/combat_balance.yaml level_gap) shifts hit, crit, and damage
        │   │     for attacks and skills. Gap = attacker level − defender level, clamped ±6.
        │   │     Gap 0 matches the pre-gap formulas.
+       │   │     Room NPC and combat payloads include a viewer-relative threat tier
+       │   │     (grey..skull). Orange+ blocks the first attack until attack! or a repeat.
        │   ├── cast <skill> [target] - Use skill (mana/cooldown cost)
        │   ├── defend - +50% defense until next turn
        │   ├── flee - Chance-based escape (50% + DEX bonus)

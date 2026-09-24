@@ -6,6 +6,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/entities/skills"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/balance"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
@@ -123,7 +124,8 @@ type RoomNPC struct {
 	CurrentHP     int32  `json:"currentHp,omitempty"`
 	MaxHP         int32  `json:"maxHp,omitempty"`
 	Level         int32  `json:"level,omitempty"`
-	State         string `json:"state"` // idle, patrol, combat, dead
+	Threat        string `json:"threat,omitempty"` // grey|green|yellow|orange|red|skull, enemies only
+	State         string `json:"state"`            // idle, patrol, combat, dead
 	Portrait      string `json:"portrait,omitempty"`
 	TemplateID    string `json:"templateId,omitempty"`
 }
@@ -144,6 +146,29 @@ type EnterRoomMessage struct {
 	Players []RoomPlayer    `json:"players"`
 }
 
+func roomNPCPayload(n util.RoomNPC, char *characters.Character) RoomNPC {
+	out := RoomNPC{
+		ID:            n.ID,
+		Name:          n.Name,
+		DisplayName:   n.DisplayName,
+		IsEnemy:       n.IsEnemy,
+		IsMerchant:    n.IsMerchant,
+		IsQuestGiver:  n.IsQuestGiver,
+		HasDialog:     n.HasDialog,
+		HasIdleDialog: n.HasIdleDialog,
+		CurrentHP:     n.CurrentHP,
+		MaxHP:         n.MaxHP,
+		Level:         n.Level,
+		State:         n.State,
+		Portrait:      n.Portrait,
+		TemplateID:    n.TemplateID,
+	}
+	if n.IsEnemy && char != nil {
+		out.Threat = balance.ThreatTier(char.Level, n.Level)
+	}
+	return out
+}
+
 // RoomPresenceMessage refreshes the online player list for a room without
 // re-rendering the room description or entities.
 type RoomPresenceMessage struct {
@@ -159,22 +184,7 @@ func NewEnterRoomMessage(room *rooms.Room, user *entities.User, game def.GameCtr
 	roomNPCs := util.GetRoomNPCs(room, game)
 	npcs := make([]RoomNPC, len(roomNPCs))
 	for i, n := range roomNPCs {
-		npcs[i] = RoomNPC{
-			ID:            n.ID,
-			Name:          n.Name,
-			DisplayName:   n.DisplayName,
-			IsEnemy:       n.IsEnemy,
-			IsMerchant:    n.IsMerchant,
-			IsQuestGiver:  n.IsQuestGiver,
-			HasDialog:     n.HasDialog,
-			HasIdleDialog: n.HasIdleDialog,
-			CurrentHP:     n.CurrentHP,
-			MaxHP:         n.MaxHP,
-			Level:         n.Level,
-			State:         n.State,
-			Portrait:      n.Portrait,
-			TemplateID:    n.TemplateID,
-		}
+		npcs[i] = roomNPCPayload(n, char)
 	}
 
 	// Get item data for frontend rendering (filtered by character)
@@ -210,22 +220,7 @@ func NewRoomUpdateMessage(room *rooms.Room, user *entities.User, game def.GameCt
 	roomNPCs := util.GetRoomNPCs(room, game)
 	npcs := make([]RoomNPC, len(roomNPCs))
 	for i, n := range roomNPCs {
-		npcs[i] = RoomNPC{
-			ID:            n.ID,
-			Name:          n.Name,
-			DisplayName:   n.DisplayName,
-			IsEnemy:       n.IsEnemy,
-			IsMerchant:    n.IsMerchant,
-			IsQuestGiver:  n.IsQuestGiver,
-			HasDialog:     n.HasDialog,
-			HasIdleDialog: n.HasIdleDialog,
-			CurrentHP:     n.CurrentHP,
-			MaxHP:         n.MaxHP,
-			Level:         n.Level,
-			State:         n.State,
-			Portrait:      n.Portrait,
-			TemplateID:    n.TemplateID,
-		}
+		npcs[i] = roomNPCPayload(n, char)
 	}
 
 	roomItems := util.GetRoomItems(room, game, char)
@@ -548,6 +543,8 @@ type CombatantView struct {
 	Portrait string `json:"portrait,omitempty"`
 	HP       int32  `json:"hp"`
 	MaxHP    int32  `json:"maxHp"`
+	Level    int32  `json:"level,omitempty"`
+	Threat   string `json:"threat,omitempty"` // enemy con color relative to the viewer
 }
 
 // CombatStartMessage is the structured combat UI payload (portraits, HP).
@@ -776,12 +773,12 @@ type PartyMemberEntry struct {
 // PartyMessage refreshes the party overlay roster.
 type PartyMessage struct {
 	MessageResponse
-	InParty   bool               `json:"inParty"`
-	PartyID   string             `json:"partyId,omitempty"`
-	PartyName string             `json:"partyName,omitempty"`
-	LeaderID  string             `json:"leaderId,omitempty"`
-	MaxMembers int               `json:"maxMembers,omitempty"`
-	Members   []PartyMemberEntry `json:"members"`
+	InParty    bool               `json:"inParty"`
+	PartyID    string             `json:"partyId,omitempty"`
+	PartyName  string             `json:"partyName,omitempty"`
+	LeaderID   string             `json:"leaderId,omitempty"`
+	MaxMembers int                `json:"maxMembers,omitempty"`
+	Members    []PartyMemberEntry `json:"members"`
 }
 
 // NewPartyMessage creates a structured party payload for the client overlay.
@@ -870,12 +867,12 @@ func NewShopMessage(userID, merchantName, merchantID string, gold int64, stock [
 
 // RecipeIngredientRow is one ingredient in a recipes overlay row.
 type RecipeIngredientRow struct {
-	Item     string `json:"item"`
-	Name     string `json:"name"`
-	Qty      int32  `json:"qty"`
-	Have     int32  `json:"have"`
-	Image    string `json:"image,omitempty"`
-	HaveEnough bool `json:"haveEnough"`
+	Item       string `json:"item"`
+	Name       string `json:"name"`
+	Qty        int32  `json:"qty"`
+	Have       int32  `json:"have"`
+	Image      string `json:"image,omitempty"`
+	HaveEnough bool   `json:"haveEnough"`
 }
 
 // RecipeOutputRow is the crafted result preview.
@@ -888,18 +885,18 @@ type RecipeOutputRow struct {
 
 // RecipeRow is one craftable recipe for the overlay.
 type RecipeRow struct {
-	ID          string                `json:"id"`
-	Key         string                `json:"key"`
-	Name        string                `json:"name"`
-	Description string                `json:"description,omitempty"`
-	Category    string                `json:"category,omitempty"`
-	Station     string                `json:"station,omitempty"`
-	StationLabel string               `json:"stationLabel"`
-	StationHint string                `json:"stationHint,omitempty"`
-	StationOK   bool                  `json:"stationOk"`
-	CanCraft    bool                  `json:"canCraft"`
-	Ingredients []RecipeIngredientRow `json:"ingredients"`
-	Output      RecipeOutputRow       `json:"output"`
+	ID           string                `json:"id"`
+	Key          string                `json:"key"`
+	Name         string                `json:"name"`
+	Description  string                `json:"description,omitempty"`
+	Category     string                `json:"category,omitempty"`
+	Station      string                `json:"station,omitempty"`
+	StationLabel string                `json:"stationLabel"`
+	StationHint  string                `json:"stationHint,omitempty"`
+	StationOK    bool                  `json:"stationOk"`
+	CanCraft     bool                  `json:"canCraft"`
+	Ingredients  []RecipeIngredientRow `json:"ingredients"`
+	Output       RecipeOutputRow       `json:"output"`
 }
 
 // RecipesMessage opens/refreshes the crafting recipes overlay.
@@ -928,4 +925,3 @@ func NewRecipesMessage(userID string, list []RecipeRow, roomTags []string) *Reci
 		RoomTags: roomTags,
 	}
 }
-

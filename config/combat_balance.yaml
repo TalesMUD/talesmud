@@ -68,6 +68,17 @@ level_gap:
   min_damage_multiplier: 0.40
   max_damage_multiplier: 1.80
 
+# Con colors from (enemyLevel - playerLevel). Cutoffs ascend.
+# <= grey grey, then green, yellow, orange, red; above red is skull.
+# Orange, red, and skull warn once before attack (attack! or a second attack engages).
+# -3 or lower is grey (trivial). +1 is still yellow. +5 or higher is skull.
+threat:
+  grey_at_or_below: -3
+  green_at_or_below: -1
+  yellow_at_or_below: 1
+  orange_at_or_below: 2
+  red_at_or_below: 4
+
 # Notes:
 # - Tuned so strength difference drives duration (trash fast, bosses long but killable).
 # - Sims auto-spend distributable attribute points on primary attr (competent player).

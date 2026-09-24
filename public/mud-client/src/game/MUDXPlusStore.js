@@ -196,6 +196,8 @@ function normalizeCombatant(raw) {
     portrait: raw.portrait || raw.Portrait || "",
     hp: raw.hp ?? raw.HP ?? raw.currentHp ?? 0,
     maxHp: raw.maxHp ?? raw.MaxHP ?? raw.maxHP ?? 1,
+    level: raw.level ?? raw.Level ?? 0,
+    threat: raw.threat || raw.Threat || '',
   };
 }
 
@@ -536,7 +538,9 @@ function createStore() {
             && !!p.isMerchant === !!n.isMerchant
             && !!p.isQuestGiver === !!n.isQuestGiver
             && !!p.hasDialog === !!n.hasDialog
-            && (p.portrait || '') === (n.portrait || '');
+            && (p.portrait || '') === (n.portrait || '')
+            && (p.threat || '') === (n.threat || '')
+            && (p.level || 0) === (n.level || 0);
         })) {
           return state;
         }

@@ -3,13 +3,67 @@ package commands
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/combat"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/balance"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 )
+
+// threatArmed remembers a character who was warned about a specific enemy.
+// The next attack on that enemy, or attack!, engages. In-memory only.
+var threatArmed sync.Map
+
+func attackIsForced(data string) bool {
+	parts := strings.Fields(data)
+	if len(parts) == 0 {
+		return false
+	}
+	switch strings.ToLower(parts[0]) {
+	case "attack!", "a!", "hit!":
+		return true
+	default:
+		return false
+	}
+}
+
+func threatWarnKey(charID, npcID string) string {
+	return charID + "\x00" + npcID
+}
+
+// refuseOverlevelWarning blocks the first attack on an orange-or-worse enemy.
+// attack! and a second attack on the same enemy proceed. Returns true if refused.
+func refuseOverlevelWarning(game def.GameCtrl, message *messages.Message, target *npc.NPC, force bool) bool {
+	if game == nil || message == nil || message.Character == nil || target == nil || target.Entity == nil {
+		return false
+	}
+	if !target.IsEnemy() {
+		return false
+	}
+	tier := balance.ThreatTier(message.Character.Level, target.Level)
+	if !balance.ThreatNeedsWarning(tier) {
+		return false
+	}
+	key := threatWarnKey(message.Character.ID, target.Entity.ID)
+	if force {
+		threatArmed.Delete(key)
+		return false
+	}
+	if _, armed := threatArmed.Load(key); armed {
+		threatArmed.Delete(key)
+		return false
+	}
+	threatArmed.Store(key, true)
+	name := target.GetDisplayName()
+	if name == "" {
+		name = target.Name
+	}
+	game.SendMessage() <- message.Reply(fmt.Sprintf("%s is much stronger than you. Type attack! or attack again to engage.", name))
+	return true
+}
 
 // AttackCommand handles attacking NPCs and combat actions
 type AttackCommand struct {
@@ -72,11 +126,11 @@ func (command *AttackCommand) Execute(game def.GameCtrl, message *messages.Messa
 	}
 
 	// Player is not in combat - try to initiate combat
-	return command.handleInitiateCombat(game, message, combatEngine, targetName)
+	return command.handleInitiateCombat(game, message, combatEngine, targetName, attackIsForced(message.Data))
 }
 
 // handleInitiateCombat handles attacking an NPC to start combat
-func (command *AttackCommand) handleInitiateCombat(game def.GameCtrl, message *messages.Message, combatEngine def.CombatEngineCtrl, targetName string) bool {
+func (command *AttackCommand) handleInitiateCombat(game def.GameCtrl, message *messages.Message, combatEngine def.CombatEngineCtrl, targetName string, force bool) bool {
 	npcManager := game.GetNPCInstanceManager()
 	if npcManager == nil {
 		game.SendMessage() <- message.Reply("Error: NPC system not available.")
@@ -104,12 +158,16 @@ func (command *AttackCommand) handleInitiateCombat(game def.GameCtrl, message *m
 
 	// Check if NPC is already in combat — same-room allies can join that fight
 	if combatEngine.IsNPCInCombat(target.Entity.ID) {
-		return command.handleJoinCombat(game, message, combatEngine, target)
+		return command.handleJoinCombat(game, message, combatEngine, target, force)
 	}
 
 	// Post-combat grace: stop blender of sequential 1v1s
 	if combatEngine.CombatGraceActive(message.Character.ID) {
 		game.SendMessage() <- message.Reply("You catch your breath... (too soon to fight again)")
+		return true
+	}
+
+	if refuseOverlevelWarning(game, message, target, force) {
 		return true
 	}
 
@@ -190,8 +248,8 @@ func (command *AttackCommand) handleInitiateCombat(game def.GameCtrl, message *m
 	game.SendMessage() <- messages.NewCombatStartMessage(
 		message.FromUser.ID,
 		startMsg,
-		combatViews(instance.Enemies),
-		combatViews(instance.Players),
+		combatViews(instance.Enemies, message.Character.Level),
+		combatViews(instance.Players, message.Character.Level),
 	)
 
 	// Set auto-attack target to the initial target
@@ -217,7 +275,7 @@ func (command *AttackCommand) handleInitiateCombat(game def.GameCtrl, message *m
 }
 
 // handleJoinCombat adds a same-room player to an existing fight against this NPC.
-func (command *AttackCommand) handleJoinCombat(game def.GameCtrl, message *messages.Message, combatEngine def.CombatEngineCtrl, target *npc.NPC) bool {
+func (command *AttackCommand) handleJoinCombat(game def.GameCtrl, message *messages.Message, combatEngine def.CombatEngineCtrl, target *npc.NPC, force bool) bool {
 	instance := combatEngine.GetCombatInstanceByNPC(target.Entity.ID)
 	if instance == nil || instance.State != combat.CombatStateActive {
 		game.SendMessage() <- message.Reply(fmt.Sprintf("%s is already in combat with someone else!", target.Name))
@@ -239,6 +297,10 @@ func (command *AttackCommand) handleJoinCombat(game def.GameCtrl, message *messa
 	// Already in this instance (shouldn't happen — isInActiveCombat would have caught it)
 	if instance.GetPlayerByID(message.Character.ID) != nil {
 		game.SendMessage() <- message.Reply("You are already in this fight.")
+		return true
+	}
+
+	if refuseOverlevelWarning(game, message, target, force) {
 		return true
 	}
 
@@ -269,8 +331,8 @@ func (command *AttackCommand) handleJoinCombat(game def.GameCtrl, message *messa
 	game.SendMessage() <- messages.NewCombatStartMessage(
 		message.FromUser.ID,
 		startMsg,
-		combatViews(instance.Enemies),
-		combatViews(instance.Players),
+		combatViews(instance.Enemies, message.Character.Level),
+		combatViews(instance.Players, message.Character.Level),
 	)
 
 	combatEngine.SetAutoAttackTarget(message.Character.Entity.ID, target.Entity.ID)
@@ -332,12 +394,16 @@ func nudgePartyAssist(game def.GameCtrl, message *messages.Message, combatEngine
 	}
 }
 
-func combatViews(refs []combat.CombatantRef) []messages.CombatantView {
+func combatViews(refs []combat.CombatantRef, viewerLevel int32) []messages.CombatantView {
 	out := make([]messages.CombatantView, 0, len(refs))
 	for _, r := range refs {
-		out = append(out, messages.CombatantView{
-			ID: r.ID, Name: r.Name, Portrait: r.Portrait, HP: r.CurrentHP, MaxHP: r.MaxHP,
-		})
+		view := messages.CombatantView{
+			ID: r.ID, Name: r.Name, Portrait: r.Portrait, HP: r.CurrentHP, MaxHP: r.MaxHP, Level: r.Level,
+		}
+		if r.Type == combat.CombatantTypeNPC {
+			view.Threat = balance.ThreatTier(viewerLevel, r.Level)
+		}
+		out = append(out, view)
 	}
 	return out
 }

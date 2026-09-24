@@ -383,6 +383,7 @@ The NPCs branch represents the latest development work, focusing on NPC systems 
    - Players can queue special actions between auto-attacks: target switch, defend, flee
    - Combat starts with `attack`/`kill` and proceeds automatically
    - Level-gap modifiers (`config/combat_balance.yaml` `level_gap`): hit, crit, and damage dealt/taken scale with attacker level minus defender level, clamped (default ±6). Equal levels are unchanged. Applies to basic attacks and skills for players and NPCs.
+   - Threat colors from the same gap (grey through skull) on room enemy names and battle nameplates. Orange or worse asks once before `attack`; `attack!` or a second `attack` engages.
    - No turn timeouts or AFK mechanics needed
 
 5. **NPC Behavior and Quest Interaction**

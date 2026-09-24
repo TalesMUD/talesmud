@@ -12,6 +12,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/combat"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/balance"
 	combatpkg "github.com/talesmud/talesmud/pkg/mudserver/game/combat"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
@@ -480,8 +481,9 @@ func (c *CombatController) notifyCombatAction(instance *combat.CombatInstance, a
 	if prose == "" && action.MessageResponse.Message != "" {
 		prose = action.MessageResponse.Message
 	}
-	if len(action.Combatants) == 0 {
-		action.Combatants = combatantViewsFromInstance(instance)
+	views := action.Combatants
+	if len(views) == 0 {
+		views = combatantViewsFromInstance(instance)
 	}
 	for _, player := range instance.Players {
 		if player.IsAlive && !player.HasFled {
@@ -490,6 +492,7 @@ func (c *CombatController) notifyCombatAction(instance *combat.CombatInstance, a
 				continue
 			}
 			payload := action
+			payload.Combatants = stampViewerThreat(views, player.Level, instance)
 			payload.CombatQueueState = c.playerCombatQueueState(instance, player.ID)
 			c.game.sendMessage <- messages.NewCombatActionMessage(char.BelongsUserID, prose, payload)
 		}
@@ -534,10 +537,29 @@ func (c *CombatController) emitCombatTurn(instance *combat.CombatInstance, actor
 func combatantViewsFromInstance(instance *combat.CombatInstance) []messages.CombatantView {
 	out := make([]messages.CombatantView, 0, len(instance.Players)+len(instance.Enemies))
 	for _, p := range instance.Players {
-		out = append(out, messages.CombatantView{ID: p.ID, Name: p.Name, Portrait: p.Portrait, HP: p.CurrentHP, MaxHP: p.MaxHP})
+		out = append(out, messages.CombatantView{ID: p.ID, Name: p.Name, Portrait: p.Portrait, HP: p.CurrentHP, MaxHP: p.MaxHP, Level: p.Level})
 	}
 	for _, e := range instance.Enemies {
-		out = append(out, messages.CombatantView{ID: e.ID, Name: e.Name, Portrait: e.Portrait, HP: e.CurrentHP, MaxHP: e.MaxHP})
+		out = append(out, messages.CombatantView{ID: e.ID, Name: e.Name, Portrait: e.Portrait, HP: e.CurrentHP, MaxHP: e.MaxHP, Level: e.Level})
+	}
+	return out
+}
+
+// stampViewerThreat copies combatant views and colors enemies for one player's level.
+func stampViewerThreat(views []messages.CombatantView, viewerLevel int32, instance *combat.CombatInstance) []messages.CombatantView {
+	enemyLevel := map[string]int32{}
+	if instance != nil {
+		for _, e := range instance.Enemies {
+			enemyLevel[e.ID] = e.Level
+		}
+	}
+	out := make([]messages.CombatantView, len(views))
+	for i, v := range views {
+		out[i] = v
+		if lvl, ok := enemyLevel[v.ID]; ok {
+			out[i].Level = lvl
+			out[i].Threat = balance.ThreatTier(viewerLevel, lvl)
+		}
 	}
 	return out
 }

@@ -187,6 +187,14 @@
     word-break: break-word;
   }
 
+  .entity-name.threat-grey { color: #9ca3af; }
+  .entity-name.threat-green { color: #4ade80; }
+  .entity-name.threat-yellow { color: #facc15; }
+  .entity-name.threat-orange { color: #fb923c; }
+  .entity-name.threat-red { color: #f87171; }
+  .entity-name.threat-skull { color: #fecaca; }
+  .skull-mark { margin-right: 0.12em; }
+
   .entity-meta {
     font-size: 8px;
     color: rgba(255, 255, 255, 0.75);
@@ -302,9 +310,18 @@
     return '';
   }
 
+  const THREAT_WARN = new Set(['orange', 'red', 'skull']);
+
   function attack(npc) {
     openMenuId = null;
-    sendMessage(`attack ${npc.displayName}`);
+    const name = npc.displayName || npc.name;
+    if (THREAT_WARN.has(npc.threat)) {
+      const ok = window.confirm(`${name} is much stronger than you. Attack anyway?`);
+      if (!ok) return;
+      sendMessage(`attack! ${name}`);
+      return;
+    }
+    sendMessage(`attack ${name}`);
   }
 
   function talk(npc) {
@@ -536,7 +553,9 @@
         {/if}
 
         <div class="entity-footer">
-          <span class="entity-name">{npc.displayName}</span>
+          <span class="entity-name" class:threat-grey={npc.threat === 'grey'} class:threat-green={npc.threat === 'green'} class:threat-yellow={npc.threat === 'yellow'} class:threat-orange={npc.threat === 'orange'} class:threat-red={npc.threat === 'red'} class:threat-skull={npc.threat === 'skull'}>
+            {#if npc.threat === 'skull'}<span class="skull-mark" title="Skull" aria-hidden="true">☠</span>{/if}{npc.displayName}
+          </span>
           {#if npc.level > 0}
             <span class="entity-meta">Lv {npc.level}</span>
           {/if}

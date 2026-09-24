@@ -680,7 +680,15 @@
         on:click={() => selectEnemy(enemy)}
       >
         <div class="foe-plate">
-          <div class="nameplate">{enemy.name}</div>
+          <div
+            class="nameplate"
+            class:threat-grey={enemy.threat === 'grey'}
+            class:threat-green={enemy.threat === 'green'}
+            class:threat-yellow={enemy.threat === 'yellow'}
+            class:threat-orange={enemy.threat === 'orange'}
+            class:threat-red={enemy.threat === 'red'}
+            class:threat-skull={enemy.threat === 'skull'}
+          >{#if enemy.threat === 'skull'}<span class="skull-mark" title="Skull" aria-hidden="true">☠</span>{/if}{enemy.name}</div>
           <div class="hp-row">
             <span class="hp-label">HP</span>
             <div class="hp-track">
@@ -1345,6 +1353,14 @@
       inset 0 0 0 1px rgba(255, 220, 150, 0.12),
       0 4px 12px rgba(0, 0, 0, 0.35);
   }
+
+  .nameplate.threat-grey { color: #9ca3af; }
+  .nameplate.threat-green { color: #4ade80; }
+  .nameplate.threat-yellow { color: #facc15; }
+  .nameplate.threat-orange { color: #fb923c; }
+  .nameplate.threat-red { color: #f87171; }
+  .nameplate.threat-skull { color: #fecaca; border-color: rgba(248, 113, 113, 0.85); }
+  .skull-mark { margin-right: 0.2em; }
 
   .hp-row {
     display: grid;
