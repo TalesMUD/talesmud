@@ -16,3 +16,11 @@
 - Smoke: `GET /` 200, `GET /play/` 200, page references `bundle.js?v=a2threat`, that bundle is 200 and contains "much stronger", `extra.css` contains `threat-skull`. Log listening on 8010 at 23:16:52. No browser session drove a logged-in room card or BattleStage nameplate; server warn/engage is covered by the command tests.
 - Residuals: in-combat target switches do not re-warn. Swarm warning uses the named target only.
 
+## A3 — Reward scaling
+- SHA: `b62a8a35aa4159a7d763a12b66da54f213b8d549` (`b62a8a3`)
+- What changed: `reward_scale` in `config/combat_balance.yaml`. Each enemy's base XP and rolled gold are multiplied by the threat tier of (enemy level − reference level). Reference level is the **highest** level among characters who receive the split (living fighters plus same-room online party). Defaults: grey 15%, green 60%, yellow 100%, orange 125%, red 150%, skull 200%. Boss first-kill bonus is 50% of that character's own share, once, stored on `Character.FirstBossKills` (`tpl:<id>` or `name:<lower>`). BattleStage victory lists base, level modifier, first-kill bonus, and party split (`?v=a3reward`). Terminal text includes the same lines, then the final `+ N XP`.
+- Tests: `go test ./pkg/mudserver/game/ ./pkg/mudserver/game/balance/ ./pkg/mudserver/game/commands/ ./pkg/mudserver/game/leveling/` green. New: grey trickle uses the party high level; boss first kill pays once and the combat-end payload carries the breakdown. Existing equal-level party splits stay at 100%.
+- Deploy: pushed `engine-june`. Rebuilt client, copied into `pkg/webuiplay/dist`, rebuilt `bin/tales`, restarted only Veilspan. New pid 3616684 on :8010. Door pid 3406193 on :8020 unchanged.
+- Smoke: `GET /` 200, `GET /play/` 200, page references `bundle.js?v=a3reward`, that bundle contains "First-kill bonus". Listening on 8010 at 23:24:55. No logged-in browser pass of the victory panel; the payload is covered by `TestBossFirstKillBonusOnce`.
+- Residuals: party-share toast still lists the pre-bonus split. First-kill is in the fighter's victory panel and in the awarded totals. A4 may retune the multipliers with the combat numbers.
+
