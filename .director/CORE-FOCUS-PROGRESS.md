@@ -48,3 +48,11 @@
 - Smoke: play page references `bundle.js?v=b2layout`. Guest at 1920×1080: grid bounding box height 1008px starting at y=26 in a 1080px viewport (the old 12-row grid was about 480px). Listening on 8010 at 23:43:11.
 - Residuals: terminal lines still clip on the right. Guest menu still has no Edit Layout (B3). Inventory still has two headers (B4). Breakpoint session drop not fixed yet.
 
+## B3 — Edit-mode ergonomics
+- SHA: `545dbc5c98b960951fa0e2fbf6f86508663848c2` (`545dbc5`)
+- What changed: Guest account menu includes Edit Layout. Toolbar adds Undo (up to 30 layout steps: drag, resize, add, remove, preset, reset) and Lock/Unlock. Lock keeps edit mode open and hides drag and resize. Corner and edge handles stay visible in gold while unlocked. The svelte-grid drop ghost is a gold dashed shadow. A guest token in `sessionStorage` is restored after reload, including when a mobile-emulation viewport change reloads the page. Cache-bust `?v=b3edit`.
+- Tests: mud-client `npm run build` succeeded (existing unused-CSS and a11y warnings only). No new Go tests (client-only).
+- Deploy: pushed `engine-june`. Copied client into `pkg/webuiplay/dist`, rebuilt `bin/tales`, restarted only Veilspan. New pid 3623813 on :8010. Door pid 3406193 unchanged.
+- Smoke: play page references `bundle.js?v=b3edit`. Guest menu lists Edit Layout, then Create Account, Settings, End Session. Edit mode toolbar shows Undo and Lock; 16 gold corner handles (4 widgets). Lock clears the handles and the hint reads "Layout locked". Reload and a 390×844 mobile viewport both stay on the Awakening Chamber, not the welcome screen. Listening on 8010 at 23:52:18.
+- Residuals: terminal lines still clip on the right. Inventory still has two headers. Account chip still overlaps the terminal's top-right in edit mode. Those are B4 chrome.
+
