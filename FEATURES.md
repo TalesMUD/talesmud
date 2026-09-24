@@ -857,9 +857,9 @@ Signed gap = attacker level − defender level, clamped (default ±6). Gap 0 lea
 
 | Knob | Per level of attacker advantage | Where it applies |
 | --- | --- | --- |
-| `hit_chance` | +5% (about +1 on a d20) | Basic attacks add it to the d20 roll. Natural 1 always misses, natural 20 always hits. Skills have no armor class: a negative delta is a per-hit miss chance. |
-| `crit_chance` | +1.5% | Added to the 5% natural-20 base on basic attacks. Skills have no base crit; only a positive delta can crit (2×). |
-| `damage_dealt`, `damage_taken` | +6% and +4% | Multiplied together after defense and before crit, then clamped (default 0.40–1.80). Same multiplier on basic attacks, skill hits, and DoT ticks (scaled when the DoT is applied). |
+| `hit_chance` | +3.5% (about +1 on a d20 every one or two levels) | Basic attacks add it to the d20 roll. Natural 1 always misses, natural 20 always hits. Skills have no armor class: a negative delta is a per-hit miss chance. |
+| `crit_chance` | +1% | Added to the 5% natural-20 base on basic attacks. Skills have no base crit; only a positive delta can crit (2×). |
+| `damage_dealt`, `damage_taken` | +3.5% and +2% | Multiplied together after defense and before crit, then clamped (default 0.40–1.80). Same multiplier on basic attacks, skill hits, and DoT ticks (scaled when the DoT is applied). |
 
 Players and NPCs both use `CombatantRef.Level`, copied from the character or NPC at combat start. A missed damage skill does not apply its secondary effect or Shield Bash stun. Numbers stay in config so the engine stays world-neutral. Feel targets: an enemy 3 levels up is hard in level-appropriate gear and fair in good gear; +5 is a skull fight; −3 or lower feels trivial.
 

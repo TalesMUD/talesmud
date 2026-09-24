@@ -61,10 +61,12 @@ named_overrides:
 level_gap:
   max_levels: 6
   per_level:
-    hit_chance: 0.05
-    crit_chance: 0.015
-    damage_dealt: 0.06
-    damage_taken: 0.04
+    # Gentler than the first pass so good gear can close about three levels,
+    # while +5 stays a skull fight. Gap 0 is still an exact no-op.
+    hit_chance: 0.035
+    crit_chance: 0.01
+    damage_dealt: 0.035
+    damage_taken: 0.02
   min_damage_multiplier: 0.40
   max_damage_multiplier: 1.80
 

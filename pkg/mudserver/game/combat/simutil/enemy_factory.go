@@ -95,25 +95,39 @@ func CreateEnemy(config EnemyConfig) *npc.NPC {
 // CreateScaledEnemy creates an enemy with stats scaled to a specific level.
 // Useful for testing arbitrary level matchups beyond the predefined enemies.
 func CreateScaledEnemy(name string, level int32, difficulty string) *npc.NPC {
-	var hpMult, atkMult, defMult float64
+	if level < 1 {
+		level = 1
+	}
+	// Flatter than pure level-multiples so a few levels of growth do not
+	// double the body. level_gap in combat_balance.yaml carries most of the
+	// gap feel; these numbers set the at-level tier (trash / elite / boss).
+	var hp, atk, def int32
 	switch difficulty {
 	case "trivial":
-		hpMult, atkMult, defMult = 6.0, 0.8, 0.0
+		hp = 20 + 4*level
+		atk = 2 + level/2
+		def = 0
 	case "easy":
-		hpMult, atkMult, defMult = 8.0, 1.2, 0.5
+		hp = 48 + 7*level
+		atk = 8 + (level*3)/2
+		def = level / 4
 	case "normal":
-		hpMult, atkMult, defMult = 10.0, 2.0, 0.8
+		hp = 60 + 10*level
+		atk = 8 + (level*5)/4
+		def = 1 + level/3
 	case "hard":
-		hpMult, atkMult, defMult = 16.0, 2.2, 1.0
+		hp = 100 + 15*level
+		atk = 14 + (level*3)/2
+		def = 3 + level/2
 	case "boss":
-		hpMult, atkMult, defMult = 25.0, 2.5, 1.2
+		hp = 160 + 18*level
+		atk = 18 + (level*7)/4
+		def = 4 + (level*2)/3
 	default:
-		hpMult, atkMult, defMult = 10.0, 2.0, 0.8
+		hp = 50 + 8*level
+		atk = 6 + level
+		def = 1 + level/3
 	}
-
-	hp := int32(float64(level) * hpMult)
-	atk := int32(float64(level) * atkMult)
-	def := int32(float64(level) * defMult)
 
 	if hp < 1 {
 		hp = 1

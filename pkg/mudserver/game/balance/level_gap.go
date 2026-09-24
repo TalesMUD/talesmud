@@ -38,10 +38,10 @@ func defaultLevelGap() LevelGapConfig {
 	return LevelGapConfig{
 		MaxLevels: 6,
 		PerLevel: LevelGapPerLevel{
-			HitChance:   0.05,
-			CritChance:  0.015,
-			DamageDealt: 0.06,
-			DamageTaken: 0.04,
+			HitChance:   0.035,
+			CritChance:  0.01,
+			DamageDealt: 0.035,
+			DamageTaken: 0.02,
 		},
 		MinDamageMultiplier: 0.40,
 		MaxDamageMultiplier: 1.80,
