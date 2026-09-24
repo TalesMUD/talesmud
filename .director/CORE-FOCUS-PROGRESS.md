@@ -33,3 +33,18 @@
 - Smoke: `GET /` 200, `GET /api/server-info` 200. Listening on 8010 at 23:34:56. No client asset change.
 - Residuals: warrior at-level bosses often beat the 65% ceiling. Rogue good-gear +3 bosses are under the ~50% target. Mage cloth does not meet the melee bands. Trash at +5 is not a skull fight for a level-10 warrior.
 
+## B1 — Viewport audit
+- SHA: `ffab8985969721d226b45f6668dbfc4c93a0c583` (`ffab898`)
+- What changed: screenshots in `.director/ux-audit/before/` and `.director/ux-audit/AUDIT.md`. No product code.
+- Findings: fixed 12-row grid leaves a large empty band on 1920 and 3440; terminal text clips on the right at 1366; hotbar floats in the gap; inventory stacks two headers; guest account menu has no Edit Layout; resizing a live desktop session to phone width dropped back to the welcome screen. Phone cold-start renders the mobile shell but clips the room description. No combat screenshot — the starter room has no enemy.
+- Deploy: none. :8010 stayed on the A4 process. Door pid 3406193 untouched.
+- Residuals: the list in AUDIT.md drives B2–B4.
+
+## B2 — Smart default layouts
+- SHA: `75ef38eeed76f2b17f67a433be92aeccc7e023c4` (`75ef38e`)
+- What changed: `layoutPresets.js`. No saved layout picks Compact (&lt;1100px), Desktop, or Wide and sizes rows to the viewport. Resize reflows that preset. A saved layout is clamped onto the 24-column grid (min 2×2) and is not replaced. Edit mode has Compact / Desktop / Wide buttons. Cache-bust `?v=b2layout`.
+- Tests: mud-client `npm run build` succeeded. No new Go tests (client-only).
+- Deploy: pushed `engine-june`. Copied client into `pkg/webuiplay/dist`, rebuilt `bin/tales`, restarted only Veilspan. New pid 3622162 on :8010. Door pid 3406193 unchanged.
+- Smoke: play page references `bundle.js?v=b2layout`. Guest at 1920×1080: grid bounding box height 1008px starting at y=26 in a 1080px viewport (the old 12-row grid was about 480px). Listening on 8010 at 23:43:11.
+- Residuals: terminal lines still clip on the right. Guest menu still has no Edit Layout (B3). Inventory still has two headers (B4). Breakpoint session drop not fixed yet.
+
