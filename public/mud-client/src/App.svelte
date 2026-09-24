@@ -103,6 +103,15 @@
   let serverName = "Tales";
   let currentUser = null;
   let loadingUser = false;
+  function readGuestToken() {
+    try {
+      if (typeof sessionStorage === "undefined") return "";
+      return sessionStorage.getItem("talesmud_guest_token") || "";
+    } catch (e) {
+      return "";
+    }
+  }
+
   let isGuest = false;
 
   String.prototype.capitalize = function () {
@@ -123,13 +132,17 @@
   // Phase detection: single reactive block to avoid race conditions
   // between auth state changes and onboarding data loading
   $: if (!$isLoading) {
-    if (isGuest && $authToken) {
-      // Guest users skip onboarding entirely (character already created server-side)
+    const guestToken = readGuestToken();
+    if (guestToken && $authToken === guestToken) {
+      // Guest users skip onboarding entirely (character already created server-side).
+      // Match the stored token so a stale guest token does not swallow an Auth0 session.
+      isGuest = true;
       phase = "ready";
     } else if (!$isAuthenticated) {
       phase = "welcome";
     } else if ($authToken && !loadingUser && phase === "loading") {
       // Only trigger once (when phase is still "loading")
+      isGuest = false;
       loadOnboardingData();
     }
   }

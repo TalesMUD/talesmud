@@ -32,12 +32,14 @@
   let initialState = get(layoutStore);
   let widgets = initialState.widgets;
   let editMode = initialState.editMode;
+  let layoutLocked = !!initialState.layoutLocked;
   let widgetCount = widgets.length;
   let layoutEpoch = initialState.layoutEpoch || 0;
 
   // Subscribe manually to react to editMode changes and widget additions/removals
   // This avoids the reactive $: block which causes issues with svelte-grid binding
   const unsubscribe = layoutStore.subscribe(state => {
+    layoutLocked = !!state.layoutLocked;
     const storeWidgetCount = state.widgets.length;
     const epoch = state.layoutEpoch || 0;
 
@@ -144,18 +146,19 @@
 
   /* Style the built-in resizer - make it more visible and ensure it's above overlay */
   .widget-grid-container :global(.svlt-grid-resizer) {
-    width: 24px;
-    height: 24px;
+    width: 36px;
+    height: 36px;
     z-index: 150;
   }
 
   .widget-grid-container :global(.svlt-grid-resizer::after) {
-    right: 4px;
-    bottom: 4px;
-    width: 8px;
-    height: 8px;
-    border-right: 3px solid #f59e0b;
-    border-bottom: 3px solid #f59e0b;
+    right: 6px;
+    bottom: 6px;
+    width: 14px;
+    height: 14px;
+    border-right: 4px solid #fbbf24;
+    border-bottom: 4px solid #fbbf24;
+    box-shadow: -1px -1px 0 #000;
   }
 
   /* Ensure the active resize handle has pointer events */
@@ -166,9 +169,10 @@
 
   /* Shadow/placeholder styling */
   .widget-grid-container :global(.svlt-grid-shadow) {
-    background: rgba(245, 158, 11, 0.3) !important;
-    border: 2px dashed #f59e0b;
+    background: rgba(251, 191, 36, 0.28) !important;
+    border: 2px dashed #fbbf24;
     border-radius: 12px;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.45);
   }
 
   .grid-item-content {
@@ -196,6 +200,7 @@
       <WidgetWrapper
         widget={dataItem}
         {editMode}
+        canResize={!layoutLocked}
         {resizePointerDown}
         on:remove={handleRemove}
         on:configure={handleConfigure}

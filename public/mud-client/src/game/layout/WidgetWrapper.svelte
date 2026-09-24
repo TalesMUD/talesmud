@@ -4,6 +4,8 @@
 
   export let widget;
   export let editMode = false;
+  /** False while the layout lock is on: edit chrome stays, drag and resize do not. */
+  export let canResize = true;
   export let resizePointerDown = null;
 
   const dispatch = createEventDispatcher();
@@ -146,29 +148,24 @@
     position: absolute;
     pointer-events: auto;
     z-index: 110;
-    opacity: 0;
-    transition: opacity 0.15s ease;
-  }
-
-  .widget-wrapper:hover .resize-handle,
-  .resize-handle:active {
     opacity: 1;
   }
 
-  /* Corner handles */
+  /* Corner handles — always visible in edit mode */
   .resize-handle.corner {
-    width: 20px;
-    height: 20px;
+    width: 32px;
+    height: 32px;
   }
 
   .resize-handle.corner::after {
     content: '';
     position: absolute;
-    width: 10px;
-    height: 10px;
-    border-color: #f59e0b;
+    width: 16px;
+    height: 16px;
+    border-color: #fbbf24;
     border-style: solid;
     border-width: 0;
+    filter: drop-shadow(0 0 1px #000);
   }
 
   .resize-handle.se {
@@ -179,8 +176,8 @@
   .resize-handle.se::after {
     right: 4px;
     bottom: 4px;
-    border-right-width: 3px;
-    border-bottom-width: 3px;
+    border-right-width: 4px;
+    border-bottom-width: 4px;
   }
 
   .resize-handle.sw {
@@ -191,8 +188,8 @@
   .resize-handle.sw::after {
     left: 4px;
     bottom: 4px;
-    border-left-width: 3px;
-    border-bottom-width: 3px;
+    border-left-width: 4px;
+    border-bottom-width: 4px;
   }
 
   .resize-handle.ne {
@@ -203,8 +200,8 @@
   .resize-handle.ne::after {
     right: 4px;
     top: 4px;
-    border-right-width: 3px;
-    border-top-width: 3px;
+    border-right-width: 4px;
+    border-top-width: 4px;
   }
 
   .resize-handle.nw {
@@ -215,8 +212,8 @@
   .resize-handle.nw::after {
     left: 4px;
     top: 4px;
-    border-left-width: 3px;
-    border-top-width: 3px;
+    border-left-width: 4px;
+    border-top-width: 4px;
   }
 
   /* Side handles */
@@ -307,7 +304,7 @@
         {/if}
         {config?.name || widget.widgetType}
       </span>
-      <span class="resize-hint">Drag to move, edges to resize</span>
+      <span class="resize-hint">{canResize ? 'Drag to move, corners to resize' : 'Layout locked'}</span>
     </div>
     {#if isTabContainer}
       <button class="configure-btn" on:click={handleConfigure} title="Configure tabs">
@@ -318,17 +315,19 @@
       <i class="material-icons">close</i>
     </button>
 
-    <!-- Corner resize handles -->
-    <div class="resize-handle corner se" on:pointerdown={resizePointerDown}></div>
-    <div class="resize-handle corner sw" on:pointerdown={resizePointerDown}></div>
-    <div class="resize-handle corner ne" on:pointerdown={resizePointerDown}></div>
-    <div class="resize-handle corner nw" on:pointerdown={resizePointerDown}></div>
+    {#if canResize}
+      <!-- Corner resize handles -->
+      <div class="resize-handle corner se" on:pointerdown={resizePointerDown}></div>
+      <div class="resize-handle corner sw" on:pointerdown={resizePointerDown}></div>
+      <div class="resize-handle corner ne" on:pointerdown={resizePointerDown}></div>
+      <div class="resize-handle corner nw" on:pointerdown={resizePointerDown}></div>
 
-    <!-- Side resize handles -->
-    <div class="resize-handle side n" on:pointerdown={resizePointerDown}></div>
-    <div class="resize-handle side s" on:pointerdown={resizePointerDown}></div>
-    <div class="resize-handle side e" on:pointerdown={resizePointerDown}></div>
-    <div class="resize-handle side w" on:pointerdown={resizePointerDown}></div>
+      <!-- Side resize handles -->
+      <div class="resize-handle side n" on:pointerdown={resizePointerDown}></div>
+      <div class="resize-handle side s" on:pointerdown={resizePointerDown}></div>
+      <div class="resize-handle side e" on:pointerdown={resizePointerDown}></div>
+      <div class="resize-handle side w" on:pointerdown={resizePointerDown}></div>
+    {/if}
   {/if}
 
   <div class="widget-content" class:disabled={editMode}>

@@ -129,7 +129,8 @@ function setWidgetsEditable(widgets, editable) {
     [24]: {
       ...widget[24],
       draggable: editable,
-      resizable: editable
+      resizable: editable,
+      customResizer: true,
     }
   }));
 }
@@ -151,7 +152,19 @@ function createLayoutStore() {
     presetKind: null,
     /** True after the player picks a preset in edit mode, so resize keeps that shape. */
     presetLocked: false,
+    /** While locked, edit mode stays open but widgets do not drag or resize. */
+    layoutLocked: false,
   });
+
+  const undoStack = [];
+
+  function remember(state) {
+    const snap = JSON.parse(JSON.stringify(fromGridItems(state.widgets)));
+    const last = undoStack[undoStack.length - 1];
+    if (last && JSON.stringify(last) === JSON.stringify(snap)) return;
+    undoStack.push(snap);
+    if (undoStack.length > 30) undoStack.shift();
+  }
 
   function applyPresetKind(kind, opts = {}) {
     const height = (typeof window !== 'undefined' && window.innerHeight) || 800;
@@ -200,6 +213,7 @@ function createLayoutStore() {
      * Does not write localStorage, so a saved layout is only replaced when the player saves.
      */
     applyPreset(kind, opts = {}) {
+      remember(get({ subscribe }));
       applyPresetKind(kind, opts);
     },
 
@@ -241,10 +255,11 @@ function createLayoutStore() {
 
     // Enter edit mode - enable dragging/resizing
     enterEditMode() {
+      undoStack.length = 0;
       update(state => ({
         ...state,
         editMode: true,
-        widgets: setWidgetsEditable(state.widgets, true),
+        widgets: setWidgetsEditable(state.widgets, !state.layoutLocked),
         pendingWidgets: JSON.parse(JSON.stringify(state.widgets))
       }));
     },
@@ -280,10 +295,36 @@ function createLayoutStore() {
 
     // Update widget position/size
     updateWidgets(newWidgets) {
+      update(state => {
+        remember(state);
+        return {
+          ...state,
+          widgets: newWidgets,
+        };
+      });
+    },
+
+    undo() {
+      const prev = undoStack.pop();
+      if (!prev) return false;
       update(state => ({
         ...state,
-        widgets: newWidgets
+        widgets: toGridItems(clampWidgets(prev), state.editMode && !state.layoutLocked),
+        layoutEpoch: bumpEpoch(state),
       }));
+      return true;
+    },
+
+    toggleLock() {
+      update(state => {
+        const layoutLocked = !state.layoutLocked;
+        return {
+          ...state,
+          layoutLocked,
+          widgets: setWidgetsEditable(state.widgets, state.editMode && !layoutLocked),
+          layoutEpoch: bumpEpoch(state),
+        };
+      });
     },
 
     // Update a single widget
@@ -298,6 +339,7 @@ function createLayoutStore() {
 
     // Add a new widget (only in edit mode, so editable=true)
     addWidget(widgetType, config = {}) {
+      remember(get({ subscribe }));
       const id = `${widgetType}-${Date.now()}`;
       const newWidget = {
         id,
@@ -339,6 +381,7 @@ function createLayoutStore() {
 
     // Remove a widget
     removeWidget(id) {
+      remember(get({ subscribe }));
       update(state => ({
         ...state,
         widgets: state.widgets.filter(w => w.id !== id)
@@ -347,6 +390,7 @@ function createLayoutStore() {
 
     // Reset to default layout (in edit mode, so editable=true)
     resetToDefault() {
+      remember(get({ subscribe }));
       const kind = (typeof window !== 'undefined') ? kindForWidth(window.innerWidth) : 'desktop';
       applyPresetKind(kind, { lock: false });
     },

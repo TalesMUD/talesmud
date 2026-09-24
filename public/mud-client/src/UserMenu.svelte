@@ -96,6 +96,13 @@
   {#if isGuest}
     <li>
       <!-- svelte-ignore a11y-invalid-attribute -->
+      <a href="#!" on:click="{() => layoutStore.enterEditMode()}">
+        <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">dashboard_customize</i>
+        Edit Layout
+      </a>
+    </li>
+    <li>
+      <!-- svelte-ignore a11y-invalid-attribute -->
       <a href="#!" on:click="{() => login ? login(null, { screen_hint: 'signup' }) : authLogin()}">
         <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">person_add</i>
         Create Account

@@ -683,6 +683,18 @@
     Wide
   </button>
 
+  <button class="toolbar-btn template-btn" type="button" title="Undo the last layout change" on:click={() => layoutStore.undo()}>
+    Undo
+  </button>
+  <button
+    class="toolbar-btn template-btn"
+    type="button"
+    title={$layoutStore.layoutLocked ? 'Unlock dragging and resizing' : 'Lock the layout in place'}
+    on:click={() => layoutStore.toggleLock()}
+  >
+    {$layoutStore.layoutLocked ? 'Unlock' : 'Lock'}
+  </button>
+
   <button class="toolbar-btn reset-btn" on:click={reset}>
     <i class="material-icons">refresh</i>
     Reset
