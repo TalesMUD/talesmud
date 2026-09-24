@@ -149,4 +149,15 @@ type GameCtrl interface {
 	GetPartyInvite(targetCharacterID string) (PartyInvite, bool)
 	// ClearPartyInvite removes a pending invite.
 	ClearPartyInvite(targetCharacterID string)
+	// SetPartyFollow marks followerID as following the party leader.
+	SetPartyFollow(followerID, leaderID string)
+	// ClearPartyFollow stops one character following. Reports the leader they were following.
+	ClearPartyFollow(followerID string) (leaderID string, wasFollowing bool)
+	// DropPartyFollowers stops everyone following leaderID and returns those character ids.
+	DropPartyFollowers(leaderID string) []string
+	// PartyFollowTarget returns the leader a character is following, if any.
+	PartyFollowTarget(followerID string) (leaderID string, ok bool)
+	// PullPartyFollowers relocates online followers into destRoomID after a normal exit walk.
+	// allow is false for teleports, portals, and private-instance crossings.
+	PullPartyFollowers(leader *characters.Character, destRoomID string, allow bool)
 }

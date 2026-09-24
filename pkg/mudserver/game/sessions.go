@@ -16,12 +16,14 @@ type sessionRegistry struct {
 	mu      sync.RWMutex
 	players map[string]def.OnlinePlayer
 	invites map[string]def.PartyInvite
+	follows map[string]string // follower character ID -> leader character ID
 }
 
 func newSessionRegistry() *sessionRegistry {
 	return &sessionRegistry{
 		players: make(map[string]def.OnlinePlayer),
 		invites: make(map[string]def.PartyInvite),
+		follows: make(map[string]string),
 	}
 }
 
@@ -237,4 +239,115 @@ func (g *Game) GetPartyInvite(targetCharacterID string) (def.PartyInvite, bool) 
 
 func (g *Game) ClearPartyInvite(targetCharacterID string) {
 	g.Sessions.clearInvite(targetCharacterID)
+}
+
+func (r *sessionRegistry) setFollow(followerID, leaderID string) {
+	if followerID == "" || leaderID == "" || followerID == leaderID {
+		return
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.follows == nil {
+		r.follows = make(map[string]string)
+	}
+	r.follows[followerID] = leaderID
+}
+
+func (r *sessionRegistry) clearFollow(followerID string) (string, bool) {
+	if followerID == "" {
+		return "", false
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	leaderID, ok := r.follows[followerID]
+	if ok {
+		delete(r.follows, followerID)
+	}
+	return leaderID, ok
+}
+
+func (r *sessionRegistry) dropFollowersOf(leaderID string) []string {
+	if leaderID == "" {
+		return nil
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var cleared []string
+	for followerID, followed := range r.follows {
+		if followed == leaderID {
+			delete(r.follows, followerID)
+			cleared = append(cleared, followerID)
+		}
+	}
+	sort.Strings(cleared)
+	return cleared
+}
+
+func (r *sessionRegistry) followTarget(followerID string) (string, bool) {
+	if followerID == "" {
+		return "", false
+	}
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	leaderID, ok := r.follows[followerID]
+	return leaderID, ok && leaderID != ""
+}
+
+func (r *sessionRegistry) followersOf(leaderID string) []string {
+	if leaderID == "" {
+		return nil
+	}
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var ids []string
+	for followerID, followed := range r.follows {
+		if followed == leaderID {
+			ids = append(ids, followerID)
+		}
+	}
+	sort.Strings(ids)
+	return ids
+}
+
+func (r *sessionRegistry) updateRoom(characterID, roomID string) {
+	if characterID == "" {
+		return
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for userID, player := range r.players {
+		if player.CharacterID != characterID {
+			continue
+		}
+		player.RoomID = roomID
+		r.players[userID] = player
+	}
+}
+
+func (g *Game) SetPartyFollow(followerID, leaderID string) {
+	if g == nil || g.Sessions == nil {
+		return
+	}
+	g.Sessions.setFollow(followerID, leaderID)
+}
+
+func (g *Game) ClearPartyFollow(followerID string) (string, bool) {
+	if g == nil || g.Sessions == nil {
+		return "", false
+	}
+	return g.Sessions.clearFollow(followerID)
+}
+
+func (g *Game) DropPartyFollowers(leaderID string) []string {
+	if g == nil || g.Sessions == nil {
+		return nil
+	}
+	return g.Sessions.dropFollowersOf(leaderID)
+}
+
+func (g *Game) PartyFollowTarget(followerID string) (string, bool) {
+	if g == nil || g.Sessions == nil {
+		return "", false
+	}
+	return g.Sessions.followTarget(followerID)
 }

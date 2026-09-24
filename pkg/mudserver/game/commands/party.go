@@ -51,6 +51,10 @@ func (command *PartyCommand) Execute(game def.GameCtrl, message *messages.Messag
 		command.listParty(game, message)
 	case "say":
 		command.chat(game, message, strings.Join(args[2:], " "), "party say <message>")
+	case "follow":
+		command.followLeader(game, message)
+	case "unfollow":
+		command.unfollowLeader(game, message)
 	default:
 		command.chat(game, message, strings.TrimSpace(strings.TrimPrefix(message.Data, args[0]+" ")), "party <message>")
 	}
@@ -58,7 +62,7 @@ func (command *PartyCommand) Execute(game def.GameCtrl, message *messages.Messag
 }
 
 func partyUsage() string {
-	return "Party commands: party create, party invite <player>, party accept, party decline, party leave, party kick <player>, party promote <player>, party list, party say <message>"
+	return "Party commands: party create, party invite <player>, party accept, party decline, party leave, party kick <player>, party promote <player>, party list, party follow, party unfollow, party say <message>"
 }
 
 func (command *PartyCommand) createParty(game def.GameCtrl, message *messages.Message) {
@@ -192,10 +196,17 @@ func (command *PartyCommand) leave(game def.GameCtrl, message *messages.Message)
 	}
 
 	membersBefore := append([]string{}, party.Characters...)
+	wasLeader := party.IsLeader(message.Character.ID)
+	leaderID := party.LeaderCharacterID
 	if err := game.GetFacade().PartiesService().RemoveCharacterFromParty(party, message.Character.ID); err != nil {
 		game.SendMessage() <- messages.Reply(message.FromUser.ID, "Could not leave party.")
 		return
 	}
+	if wasLeader {
+		stopped := game.DropPartyFollowers(leaderID)
+		command.sendToParty(game, stopped, "[Party] You stop following. The party leader left.")
+	}
+	game.ClearPartyFollow(message.Character.ID)
 	command.sendToParty(game, membersBefore, fmt.Sprintf("[Party] %s left the party.", message.Character.Name))
 	command.pushEmptyParty(game, message.FromUser.ID)
 	// Refresh remaining members' overlays
@@ -226,6 +237,10 @@ func (command *PartyCommand) listParty(game def.GameCtrl, message *messages.Mess
 		}
 	}
 	game.SendMessage() <- messages.Reply(message.FromUser.ID, "Party members: "+strings.Join(names, ", "))
+	if leaderID, ok := game.PartyFollowTarget(message.Character.ID); ok {
+		leaderName := leaderNameByID(game, leaderID)
+		game.SendMessage() <- messages.Reply(message.FromUser.ID, "[Party] You are following "+leaderName+".")
+	}
 	command.pushParty(game, message)
 }
 
@@ -305,6 +320,9 @@ func (command *PartyCommand) kick(game def.GameCtrl, message *messages.Message, 
 		game.SendMessage() <- messages.Reply(message.FromUser.ID, "Could not kick "+targetDisplay+".")
 		return
 	}
+	if _, wasFollowing := game.ClearPartyFollow(targetID); wasFollowing {
+		command.sendToParty(game, []string{targetID}, "[Party] You stop following.")
+	}
 	command.sendToParty(game, membersBefore, fmt.Sprintf("[Party] %s was kicked from the party.", targetDisplay))
 	command.pushPartyForCharacterID(game, targetID)
 	if refreshed, err := game.GetFacade().PartiesService().GetPartyByID(party.ID); err == nil && refreshed != nil {
@@ -328,6 +346,7 @@ func (command *PartyCommand) promote(game def.GameCtrl, message *messages.Messag
 		game.SendMessage() <- messages.Reply(message.FromUser.ID, "Only the party leader can promote members.")
 		return
 	}
+	oldLeaderID := party.LeaderCharacterID
 	var targetID string
 	var targetDisplay string
 	for _, memberID := range party.Characters {
@@ -354,8 +373,60 @@ func (command *PartyCommand) promote(game def.GameCtrl, message *messages.Messag
 		game.SendMessage() <- messages.Reply(message.FromUser.ID, "Could not promote "+targetDisplay+".")
 		return
 	}
+	if oldLeaderID != "" && oldLeaderID != targetID {
+		stopped := game.DropPartyFollowers(oldLeaderID)
+		command.sendToParty(game, stopped, "[Party] You stop following. The party leader changed.")
+	}
 	command.sendToParty(game, party.Characters, fmt.Sprintf("[Party] %s is now the party leader.", targetDisplay))
 	command.pushPartyToMembers(game, party)
+}
+
+func (command *PartyCommand) followLeader(game def.GameCtrl, message *messages.Message) {
+	if isInActiveCombat(game, message.Character, game.GetCombatEngine()) {
+		game.SendMessage() <- messages.Reply(message.FromUser.ID, "You can't follow while in combat.")
+		return
+	}
+	party, err := game.GetFacade().PartiesService().FindByCharacterID(message.Character.ID)
+	if err != nil || party == nil {
+		game.SendMessage() <- messages.Reply(message.FromUser.ID, "You are not in a party.")
+		return
+	}
+	party.EnsureLeader()
+	if party.IsLeader(message.Character.ID) {
+		game.SendMessage() <- messages.Reply(message.FromUser.ID, "You lead the party. Others follow you with 'party follow'.")
+		return
+	}
+	if party.LeaderCharacterID == "" {
+		game.SendMessage() <- messages.Reply(message.FromUser.ID, "Your party has no leader to follow.")
+		return
+	}
+	leaderName := leaderNameByID(game, party.LeaderCharacterID)
+	if current, ok := game.PartyFollowTarget(message.Character.ID); ok && current == party.LeaderCharacterID {
+		game.SendMessage() <- messages.Reply(message.FromUser.ID, "[Party] You are already following "+leaderName+".")
+		return
+	}
+	game.SetPartyFollow(message.Character.ID, party.LeaderCharacterID)
+	game.SendMessage() <- messages.Reply(message.FromUser.ID, "[Party] You are following "+leaderName+".")
+}
+
+func (command *PartyCommand) unfollowLeader(game def.GameCtrl, message *messages.Message) {
+	leaderID, ok := game.ClearPartyFollow(message.Character.ID)
+	if !ok {
+		game.SendMessage() <- messages.Reply(message.FromUser.ID, "You are not following anyone.")
+		return
+	}
+	game.SendMessage() <- messages.Reply(message.FromUser.ID, "[Party] You stop following "+leaderNameByID(game, leaderID)+".")
+}
+
+func leaderNameByID(game def.GameCtrl, characterID string) string {
+	if characterID == "" || game == nil || game.GetFacade() == nil {
+		return "your leader"
+	}
+	ch, err := game.GetFacade().CharactersService().FindByID(characterID)
+	if err != nil || ch == nil || ch.Name == "" {
+		return "your leader"
+	}
+	return ch.Name
 }
 
 func (command *PartyCommand) findInviteTarget(game def.GameCtrl, targetName string) (def.OnlinePlayer, bool) {
