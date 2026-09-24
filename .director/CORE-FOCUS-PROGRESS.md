@@ -24,3 +24,12 @@
 - Smoke: `GET /` 200, `GET /play/` 200, page references `bundle.js?v=a3reward`, that bundle contains "First-kill bonus". Listening on 8010 at 23:24:55. No logged-in browser pass of the victory panel; the payload is covered by `TestBossFirstKillBonusOnce`.
 - Residuals: party-share toast still lists the pre-bonus split. First-kill is in the fighter's victory panel and in the awarded totals. A4 may retune the multipliers with the combat numbers.
 
+## A4 — Balance harness and tuning
+- SHA: `30853d7f6d36a67b3a0153cfcad93c861eab4f74` (`30853d7`)
+- What changed: `simutil.RunGapMatrix` fights warrior/rogue/ranger/mage at level 10 across gaps −3..+5, appropriate vs good gear (about 2.2×), against level-scaled trash/elite/boss bodies. Table is `docs/COMBAT-BALANCE.md`. Tuned `level_gap` to hit +3.5%, crit +1%, damage dealt +3.5%, damage taken +2% per level (clamped ±6). Gap 0 stays a no-op, so at-level content duration tests still pass. `TestGapMatrixTargets` locks the bands with room for a 24-iteration sample.
+- Sample (24 iters): warrior/rogue/ranger trash at gap 0 is ~100%. Warrior elite ~90%+, boss ~75% (rogue/ranger bosses closer to 50%). Good-gear bosses at +3: warrior ~62%, ranger ~42%, rogue ~21%. Appropriate-gear elites and bosses at +5 are ~0%. Trash at +5 is still winnable for a warrior (~30–40%). Mages in cloth lose most elite and boss fights.
+- Tests: `go test ./pkg/mudserver/game/balance/ ./pkg/mudserver/game/combat/ -run 'TestLevelGap|TestGapMatrix|TestCombatDuration|TestLevel1|TestBosses|TestSameLevel'` green.
+- Deploy: pushed `engine-june`. Rebuilt `bin/tales` (yaml is read at process start). Restarted only Veilspan. New pid 3619758 on :8010. Door pid 3406193 on :8020 unchanged.
+- Smoke: `GET /` 200, `GET /api/server-info` 200. Listening on 8010 at 23:34:56. No client asset change.
+- Residuals: warrior at-level bosses often beat the 65% ceiling. Rogue good-gear +3 bosses are under the ~50% target. Mage cloth does not meet the melee bands. Trash at +5 is not a skull fight for a level-10 warrior.
+
