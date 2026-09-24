@@ -1,6 +1,7 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import { getWidgetConfig } from './WidgetRegistry.js';
+  import WidgetChrome from './WidgetChrome.svelte';
 
   export let widget;
   export let editMode = false;
@@ -10,8 +11,48 @@
 
   const dispatch = createEventDispatcher();
 
+  const TITLE_CHROME = new Set([
+    'terminal', 'terminalx', 'inventory', 'equipment', 'character', 'questlog', 'tabcontainer',
+  ]);
+  const BUTTON_CHROME = new Set(['room']);
+  const TERM_FONTS = ['small', 'medium', 'large'];
+  const TERM_LABEL = { small: 'S', medium: 'M', large: 'L' };
+
   $: config = getWidgetConfig(widget.widgetType);
   $: isTabContainer = widget.widgetType === 'tabcontainer';
+  $: collapsed = !!widget.collapsed;
+  $: titleChrome = TITLE_CHROME.has(widget.widgetType);
+  $: buttonChrome = BUTTON_CHROME.has(widget.widgetType);
+  $: showTitleBar = !editMode && (titleChrome || (buttonChrome && collapsed));
+  $: showFloatButtons = !editMode && buttonChrome && !collapsed;
+
+  let termFontLabel = 'M';
+
+  function readTermFontLabel() {
+    try {
+      const key = localStorage.getItem('talesmud_term_fontsize') || 'medium';
+      termFontLabel = TERM_LABEL[key] || 'M';
+    } catch (e) {
+      termFontLabel = 'M';
+    }
+  }
+
+  function cycleTermFont(event) {
+    event.stopPropagation();
+    event.preventDefault();
+    let idx = 1;
+    try {
+      const cur = localStorage.getItem('talesmud_term_fontsize');
+      const found = TERM_FONTS.indexOf(cur);
+      if (found >= 0) idx = found;
+      const next = TERM_FONTS[(idx + 1) % TERM_FONTS.length];
+      localStorage.setItem('talesmud_term_fontsize', next);
+      termFontLabel = TERM_LABEL[next];
+    } catch (e) { /* ignore */ }
+    window.dispatchEvent(new Event('talesmud-term-font'));
+  }
+
+  readTermFontLabel();
 
   function handleRemove() {
     dispatch('remove', { id: widget.id });
@@ -30,10 +71,48 @@
     overflow: hidden;
   }
 
+  .widget-wrapper.has-title-chrome {
+    display: flex;
+    flex-direction: column;
+    background: var(--panel-bg, rgba(0, 0, 0, 0.78));
+    border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.1));
+    border-radius: var(--panel-radius, 12px);
+    box-shadow: var(--panel-shadow, none);
+  }
+
+  .widget-wrapper.has-title-chrome .widget-content {
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* One header: the wrapper bar. Inner titles and the old terminal font row stay hidden. */
+  .widget-wrapper.has-title-chrome .widget-content :global(.game-panel-header),
+  .widget-wrapper.has-title-chrome .widget-content :global(.terminal-toolbar),
+  .widget-wrapper.has-title-chrome .widget-content :global(.tx-title),
+  .widget-wrapper.has-title-chrome .widget-content :global(.questlog-header h2) {
+    display: none !important;
+  }
+
+  .widget-wrapper.has-title-chrome .widget-content :global(.game-panel),
+  .widget-wrapper.has-title-chrome .widget-content :global(.terminal-widget),
+  .widget-wrapper.has-title-chrome .widget-content :global(.tx-window),
+  .widget-wrapper.has-title-chrome .widget-content :global(.tab-container),
+  .widget-wrapper.has-title-chrome .widget-content :global(.questlog-widget),
+  .widget-wrapper.has-title-chrome .widget-content :global(.room-widget) {
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    height: 100%;
+  }
+
   .widget-content {
     width: 100%;
     height: 100%;
     overflow: hidden;
+  }
+
+  .widget-content.is-collapsed {
+    display: none;
   }
 
   .widget-content.disabled {
@@ -295,7 +374,28 @@
   }
 </style>
 
-<div class="widget-wrapper">
+<div class="widget-wrapper" class:has-title-chrome={showTitleBar}>
+  {#if showTitleBar}
+    <WidgetChrome
+      title={config?.name || widget.widgetType}
+      icon={config?.icon || ''}
+      widgetId={widget.id}
+      {collapsed}
+      showTitle={true}
+    >
+      {#if widget.widgetType === 'terminal'}
+        <button type="button" class="chrome-font" title="Terminal font size" on:click={cycleTermFont}>{termFontLabel}</button>
+      {/if}
+    </WidgetChrome>
+  {/if}
+  {#if showFloatButtons}
+    <WidgetChrome
+      widgetId={widget.id}
+      {collapsed}
+      showTitle={false}
+      corner="tl"
+    />
+  {/if}
   {#if editMode}
     <div class="edit-overlay">
       <span class="widget-label">
@@ -330,7 +430,7 @@
     {/if}
   {/if}
 
-  <div class="widget-content" class:disabled={editMode}>
+  <div class="widget-content" class:disabled={editMode} class:is-collapsed={collapsed}>
     <slot />
   </div>
 </div>

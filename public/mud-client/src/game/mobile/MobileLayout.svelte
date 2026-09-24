@@ -66,19 +66,19 @@
 
   {#if $openSheet === 'character'}
     <BottomSheet title="Character" icon="person" on:close={() => mobileStore.closeBottomSheet()}>
-      <CharacterWidget {store} {sendMessage} />
+      <CharacterWidget {store} {sendMessage} embedded={true} />
     </BottomSheet>
   {/if}
 
   {#if $openSheet === 'inventory'}
     <BottomSheet title="Inventory" icon="inventory_2" on:close={() => mobileStore.closeBottomSheet()}>
-      <InventoryWidget {store} {sendMessage} />
+      <InventoryWidget {store} {sendMessage} embedded={true} />
     </BottomSheet>
   {/if}
 
   {#if $openSheet === 'equipment'}
     <BottomSheet title="Equipment" icon="shield" on:close={() => mobileStore.closeBottomSheet()}>
-      <EquipmentWidget {store} {sendMessage} />
+      <EquipmentWidget {store} {sendMessage} embedded={true} />
     </BottomSheet>
   {/if}
 </div>

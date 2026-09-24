@@ -1187,8 +1187,13 @@
     display: flex;
     align-items: center;
     gap: 0.55rem;
-    padding: 0.9rem 1.25rem 0.45rem;
-    letter-spacing: 0.14em;
+    padding: 0.55rem 0.85rem;
+    min-height: 36px;
+    letter-spacing: 0.1em;
+    font-family: var(--font-display, 'Cinzel', serif);
+    text-transform: uppercase;
+    background: var(--panel-header-bg, rgba(0, 0, 0, 0.35));
+    border-bottom: 1px solid var(--panel-header-border, rgba(180, 130, 60, 0.22));
   }
 
   .header-icon {

@@ -10,7 +10,8 @@ const ACTION_H = 3;
 /** How many rows fit in a viewport height, including gaps. */
 export function viewportRows(heightPx) {
   const height = Number(heightPx) || 800;
-  const usable = Math.max(ROW_HEIGHT * 10, height - 48);
+  /* 96px keeps the grid under the account-chip band and the bottom padding. */
+  const usable = Math.max(ROW_HEIGHT * 10, height - 96);
   const rows = Math.floor((usable + GRID_GAP) / (ROW_HEIGHT + GRID_GAP));
   return Math.max(12, Math.min(36, rows));
 }

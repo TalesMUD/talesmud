@@ -83,9 +83,9 @@
 <style>
   .switcher {
     position: fixed;
-    top: 15px;
-    right: 60px;
-    z-index: 900;
+    top: 8px;
+    right: 64px;
+    z-index: 40;
     display: flex;
     flex-direction: column;
     align-items: flex-end;

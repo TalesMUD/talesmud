@@ -44,22 +44,11 @@
     display: flex;
     align-items: center;
     gap: 0.75em;
-    padding: 0.75em 1em;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
-    background: rgba(20, 26, 36, 0.9);
     flex-shrink: 0;
+    margin: 0 !important;
   }
-  .inv-title {
+  .inv-header :global(.widget-title) {
     flex: 1;
-    font-weight: 700;
-    color: #f8fafc;
-    display: flex;
-    align-items: center;
-    gap: 0.4em;
-  }
-  .inv-title i {
-    color: #fbbf24;
-    font-size: 1.2em;
   }
   .inv-gold {
     color: #fbbf24;
@@ -101,8 +90,9 @@
   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
   <div class="inv-overlay" role="dialog" aria-label="Inventory" on:click={(e) => { if (e.target === e.currentTarget) close(); }}>
     <div class="inv-panel" on:click|stopPropagation>
-      <div class="inv-header">
-        <div class="inv-title"><i class="material-icons">inventory_2</i> Inventory</div>
+      <div class="inv-header game-panel-header">
+        <i class="material-icons">inventory_2</i>
+        <span class="widget-chrome-title widget-title">Inventory</span>
         <div class="inv-gold">{$store.gold || 0} gold</div>
         <button class="inv-craft" type="button" on:click={openRecipes} aria-label="Open crafting recipes">
           <i class="material-icons">construction</i>
@@ -110,8 +100,8 @@
         </button>
         <button class="inv-close" type="button" on:click={close} aria-label="Close inventory">×</button>
       </div>
-      <div class="inv-body">
-        <InventoryWidget {store} {sendMessage} />
+      <div class="inv-body widget-scroll">
+        <InventoryWidget {store} {sendMessage} embedded={true} />
       </div>
     </div>
   </div>

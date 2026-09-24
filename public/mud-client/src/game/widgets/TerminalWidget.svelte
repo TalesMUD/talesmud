@@ -62,10 +62,22 @@
     return Math.round(getBaseTerminalFontSize() * FONT_SCALES[fontScaleIndex].scale);
   }
 
+  function fitTerm() {
+    if (!fitAddon || !term) return;
+    fitAddon.fit();
+    const dims = fitAddon.proposeDimensions();
+    if (!dims) return;
+    // One column short of the measured width so the scrollbar and the panel
+    // edge do not clip the last glyph.
+    const cols = Math.max(2, dims.cols - 1);
+    const rows = Math.max(1, dims.rows);
+    if (term.cols !== cols || term.rows !== rows) term.resize(cols, rows);
+  }
+
   function applyFontSize() {
     if (term) {
       term.setOption('fontSize', getScaledFontSize());
-      if (fitAddon) fitAddon.fit();
+      fitTerm();
     }
   }
 
@@ -109,7 +121,7 @@
     term.setOption('convertEol', true);
 
     term.open(terminalContainer);
-    fitAddon.fit();
+    fitTerm();
 
     localEcho = new LocalEchoController(term);
     localEcho.addAutocompleteHandler(autocompleteCommonCommands);
@@ -143,15 +155,20 @@
     window.addEventListener('resize', handleResize);
 
     // ResizeObserver for container resize (widget resize)
+    const onFont = () => {
+      loadFontScale();
+      applyFontSize();
+    };
+    window.addEventListener('talesmud-term-font', onFont);
+
     resizeObserver = new ResizeObserver(debounce(() => {
-      if (fitAddon) {
-        fitAddon.fit();
-      }
+      fitTerm();
     }, 100));
     resizeObserver.observe(terminalContainer);
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      window.removeEventListener('talesmud-term-font', onFont);
     };
   });
 
@@ -179,9 +196,7 @@
   }
 
   export function fit() {
-    if (fitAddon) {
-      fitAddon.fit();
-    }
+    fitTerm();
   }
 </script>
 
@@ -247,6 +262,17 @@
 
   .terminal-inner :global(.xterm-viewport) {
     background: transparent !important;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(180, 130, 60, 0.45) transparent;
+  }
+
+  .terminal-inner :global(.xterm-viewport::-webkit-scrollbar) {
+    width: 8px;
+  }
+
+  .terminal-inner :global(.xterm-viewport::-webkit-scrollbar-thumb) {
+    background: rgba(180, 130, 60, 0.45);
+    border-radius: 4px;
   }
 
   .terminal-inner :global(.xterm-screen) {

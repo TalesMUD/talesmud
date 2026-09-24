@@ -48,9 +48,9 @@
 
   .user-menu-wrapper {
     position: absolute;
-    right: 15px;
-    top: 15px;
-    z-index: 1000;
+    right: 12px;
+    top: 8px;
+    z-index: 40;
   }
 
   .user-menu-wrapper ul {

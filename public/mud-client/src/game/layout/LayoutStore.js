@@ -111,7 +111,9 @@ function fromGridItems(items) {
       y: item[24]?.y ?? item.y,
       w: item[24]?.w ?? item.w,
       h: item[24]?.h ?? item.h,
-      visible: item.visible ?? true
+      visible: item.visible ?? true,
+      collapsed: !!item.collapsed,
+      restoreH: item.restoreH || undefined,
     };
     // Preserve tab container data
     if (item.widgetType === 'tabcontainer') {
@@ -154,6 +156,9 @@ function createLayoutStore() {
     presetLocked: false,
     /** While locked, edit mode stays open but widgets do not drag or resize. */
     layoutLocked: false,
+    /** Widget id currently expanded over the others. Null restores the snapshot. */
+    focusId: null,
+    focusSnapshot: null,
   });
 
   const undoStack = [];
@@ -310,9 +315,66 @@ function createLayoutStore() {
       update(state => ({
         ...state,
         widgets: toGridItems(clampWidgets(prev), state.editMode && !state.layoutLocked),
+        focusId: null,
+        focusSnapshot: null,
         layoutEpoch: bumpEpoch(state),
       }));
       return true;
+    },
+
+    /** Collapse a panel to a header row, or restore its previous height. */
+    toggleCollapse(id) {
+      const state = get({ subscribe });
+      remember(state);
+      update(s => ({
+        ...s,
+        widgets: s.widgets.map(w => {
+          if (w.id !== id) return w;
+          const cell = { ...(w[24] || {}) };
+          const curH = cell.h ?? w.h ?? 6;
+          if (w.collapsed) {
+            const h = w.restoreH && w.restoreH >= 2 ? w.restoreH : 6;
+            return { ...w, collapsed: false, h, [24]: { ...cell, h } };
+          }
+          return { ...w, collapsed: true, restoreH: curH, h: 2, [24]: { ...cell, h: 2 } };
+        }),
+        layoutEpoch: bumpEpoch(s),
+      }));
+    },
+
+    /**
+     * Expand one widget over the grid. The others stay mounted at 2×2 underneath
+     * so a terminal session is not destroyed. Calling it again restores positions.
+     */
+    toggleFocus(id) {
+      const state = get({ subscribe });
+      remember(state);
+      if (state.focusId === id && Array.isArray(state.focusSnapshot)) {
+        update(s => ({
+          ...s,
+          focusId: null,
+          focusSnapshot: null,
+          widgets: toGridItems(clampWidgets(s.focusSnapshot), s.editMode && !s.layoutLocked),
+          layoutEpoch: bumpEpoch(s),
+        }));
+        return;
+      }
+      const snapshot = fromGridItems(state.widgets);
+      const target = snapshot.find(w => w.id === id);
+      if (!target) return;
+      const bottom = Math.max(8, ...snapshot.map(w => (Number(w.y) || 0) + (Number(w.h) || 2)));
+      const next = snapshot.map(w => {
+        if (w.id === id) return { ...w, x: 0, y: 0, w: 24, h: bottom, collapsed: false };
+        return { ...w, x: 0, y: 0, w: 2, h: 2 };
+      });
+      next.sort((a, b) => (a.id === id) - (b.id === id));
+      update(s => ({
+        ...s,
+        focusId: id,
+        focusSnapshot: snapshot,
+        widgets: toGridItems(next, s.editMode && !s.layoutLocked),
+        layoutEpoch: bumpEpoch(s),
+      }));
     },
 
     toggleLock() {

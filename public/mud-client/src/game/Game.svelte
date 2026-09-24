@@ -17,10 +17,13 @@
   .gameContainer {
     display: flex;
     flex-direction: column;
-    padding: 1em;
+    box-sizing: border-box;
+    /* Top band holds the account chip so it does not cover a panel corner. */
+    padding: 52px 12px 12px;
     margin: 0 auto;
-    max-width: min(95vw, 2400px);
-    height: calc(100vh - 2em);
+    max-width: 100vw;
+    height: 100vh;
+    height: 100dvh;
     gap: var(--panel-gap);
   }
 
@@ -50,6 +53,10 @@
     max-width: 100vw;
     height: 100vh;
     height: 100dvh;
+  }
+
+  .gameContainer.mobile :global(.switcher) {
+    display: none;
   }
 
   .gameContainer.combat-dimmed {
