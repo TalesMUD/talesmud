@@ -455,7 +455,7 @@ single broadcast is shared by multiple users.
 
 `party create`, `party invite <player>`, `party accept`, `party decline`,
 `party leave`, `party kick <player>` (leader), `party promote <player>` (leader),
-`party list`, `party say <message>` (or `party <message>`).
+`party list`, `party follow`, `party unfollow`, `party say <message>` (or `party <message>`).
 
 Party membership is persisted in the existing `Party` entity (SQLite JSON),
 including `leaderCharacterId`. Creator is leader. Soft/hard cap: **5** members
@@ -482,8 +482,8 @@ already in combat. Joiners receive `combatStart` (BattleStage), initiative is
 rolled, and turn order is rebuilt (current actor preserved). Cross-room join
 is refused. Party membership is **not** required to join; when combat starts,
 same-room online party members get a `[Party] … Type 'attack <enemy>' to join`
-nudge. Out of scope: follow, need/greed item assignment, auto-pull without
-attack, Flutter.
+nudge. Out of scope: need/greed item assignment, auto-pull without attack,
+following anyone except the party leader, Flutter.
 
 ### Party Loot & XP Share (v1)
 On victory, gold and XP split equally among the living combatants **and**
@@ -497,8 +497,21 @@ When two or more recipients are in the same party, leftover gold and XP
 (`total % n`) go to the killer so nothing is discarded. The victory combat log
 lists each recipient (`PARTY SHARE`), and every recipient gets a one-line
 `[Party] Equal split…` toast. Item drops stay on the ground (no need/greed).
-Quest kill credit stays with living combatants only. Follow is still out of
-scope.
+Quest kill credit stays with living combatants only.
+
+### Party Follow (v1)
+`party follow` starts following the current party leader. `party unfollow` stops.
+While following, a normal exit walk by the leader (`TakeExit`, exit type empty /
+`normal` / `direction`, arriving at the authored target) relocates each online
+follower with `RelocateCharacter`, including leave/enter presence. Followers in
+combat stay behind. Offline followers are skipped until a later step. Teleports,
+portals, bindstones, script relocations, and private-instance crossings do not
+pull anyone. Guests, characters who are not in a party, the leader, and anyone
+already in combat cannot start following. Leaving the party, being kicked, the
+leader leaving, or a leadership change clears the follow flag. The flag is
+in-memory on the game server. The reply is a `[Party] You are following <leader>`
+line (party strip and room toast). Still out of scope: auto-join combat without
+`attack`, item need/greed, and following a member who is not the leader.
 
 ### Friends (v1)
 Per-character friends list stored as `Character.FriendIDs` (character UUIDs) in
