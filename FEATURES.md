@@ -866,6 +866,9 @@ Players and NPCs both use `CombatantRef.Level`, copied from the character or NPC
 ### Threat colors
 `threat` in `config/combat_balance.yaml` maps `(enemyLevel - playerLevel)` to `grey / green / yellow / orange / red / skull` (defaults: ≤ −3 grey, −2..−1 green, 0..+1 yellow, +2 orange, +3..+4 red, ≥ +5 skull). The tier is on the room NPC payload (`threat`) and on combat enemy views, computed for the viewer. Room cards and BattleStage nameplates use that color; skull enemies also show ☠. `attack` on orange, red, or skull warns once ("X is much stronger than you") and does not engage. `attack!` or a second `attack` on that enemy does. The room Attack button confirms, then sends `attack!`.
 
+### Reward scaling
+`reward_scale` in `config/combat_balance.yaml` multiplies each enemy's base XP and gold by that threat tier. The reference level is the **highest** level among characters who receive the victory split (living fighters plus same-room online party), so a high-level member greys out the whole award. Defaults: grey 15%, green 60%, yellow 100%, orange 125%, red 150%, skull 200%. A boss's first kill for a character adds `first_kill_bonus` (default 50%) of that character's own share of the boss, once, stored on `Character.FirstBossKills` (`tpl:<templateId>` or `name:<lower name>`). BattleStage victory lists base, level modifier, first-kill bonus, and party split. The terminal victory text includes the same lines, then the final `+ N XP` / `+ N Gold`.
+
 ---
 
 ## Skills & Spells System

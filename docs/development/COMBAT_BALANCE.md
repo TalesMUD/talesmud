@@ -134,6 +134,10 @@ The product is clamped to `min_damage_multiplier`..`max_damage_multiplier` and a
 
 `threat` cutoffs use `enemyLevel - playerLevel` (not the attacker's advantage). Defaults: ≤ −3 grey, −2..−1 green, 0..+1 yellow, +2 orange, +3..+4 red, ≥ +5 skull. Room NPC payloads and combat enemy views include `threat` for the viewer. Orange, red, and skull require `attack!` or a second `attack` before combat starts.
 
+## Reward scaling
+
+`reward_scale` multiplies base XP and rolled gold by the threat tier of `enemyLevel - referenceLevel`. `referenceLevel` is the highest level among characters who receive the split. Defaults: grey 0.15, green 0.60, yellow 1, orange 1.25, red 1.50, skull 2. `first_kill_bonus` (0.50) is added to each character's share of a boss they have not been paid for. The flag is `firstBossKills` on the character document.
+
 ## Testing Balance Changes
 
 Use the combat simulator to test changes:

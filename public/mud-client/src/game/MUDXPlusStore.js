@@ -437,6 +437,7 @@ function createStore() {
     combatOutcome: null, // victory | defeat | fled | timeout
     combatFx: null, // { fxId, at, targetId, actorId, damage, heal, result, action }
     combatEndMessage: "",
+    combatRewards: null,
     hasItems: false,
     hasMerchant: false,
     groundItems: [],
@@ -882,6 +883,7 @@ function createStore() {
         }
         state.combatOutcome = null;
         state.combatEndMessage = "";
+        state.combatRewards = null;
         state.combatEnemies = nextEnemies;
         state.combatPlayers = nextPlayers;
         state.combatTargetId = nextEnemies[0]?.id || null;
@@ -1000,12 +1002,13 @@ function createStore() {
       });
     },
 
-    endCombat: (outcome, message) => {
+    endCombat: (outcome, message, rewards) => {
       update((state) => {
         state.inCombat = false;
         state.combatPhase = "ending";
         state.combatOutcome = outcome || "victory";
         state.combatEndMessage = message || "";
+        state.combatRewards = rewards || null;
         state.combatTurn = null;
         clearCombatQueueFields(state);
         if (message) {
@@ -1022,6 +1025,7 @@ function createStore() {
           state.combatPhase = "idle";
           state.combatOutcome = null;
           state.combatEndMessage = "";
+          state.combatRewards = null;
           state.combatEnemies = [];
           state.combatPlayers = [];
           state.combatTargetId = null;
@@ -1040,6 +1044,7 @@ function createStore() {
         state.combatPhase = "idle";
         state.combatOutcome = null;
         state.combatEndMessage = "";
+        state.combatRewards = null;
         state.combatEnemies = [];
         state.combatPlayers = [];
         state.combatTargetId = null;
@@ -1058,6 +1063,7 @@ function createStore() {
         state.combatPhase = "idle";
         state.combatOutcome = null;
         state.combatEndMessage = "";
+        state.combatRewards = null;
         state.combatEnemies = [];
         state.combatPlayers = [];
         state.combatTargetId = null;

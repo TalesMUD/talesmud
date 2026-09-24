@@ -959,8 +959,7 @@ func (c *CombatController) refreshOriginRoomAfterCombat(instance *combat.CombatI
 // Gold and XP split across living combatants. Online party members in the killer's
 // room are added to that split (Party Loot & XP Share v1). Item drops stay in the room.
 func (c *CombatController) processCombatVictory(instance *combat.CombatInstance) {
-	var totalXP int64
-	var totalGold int64
+	var rawRewards []rawEnemyReward
 	var allLootItems []string
 	var enemyNames []string
 
@@ -983,19 +982,28 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 		if xpReward == 0 {
 			xpReward = leveling.CalculateEnemyXPReward(npcData.Level)
 		}
-		totalXP += xpReward
 
 		// Roll gold - use configured GoldDrop range or calculate from level/difficulty
+		var goldRoll int64
 		goldRange := npcData.EnemyTrait.GoldDrop
 		if goldRange.Max > 0 {
 			if goldRange.Max > goldRange.Min {
-				totalGold += int64(goldRange.Min) + int64(rand.Intn(int(goldRange.Max-goldRange.Min+1)))
+				goldRoll = int64(goldRange.Min) + int64(rand.Intn(int(goldRange.Max-goldRange.Min+1)))
 			} else {
-				totalGold += int64(goldRange.Min)
+				goldRoll = int64(goldRange.Min)
 			}
 		} else {
-			totalGold += leveling.RollEnemyGold(npcData.Level, npcData.EnemyTrait.Difficulty, rand.Intn)
+			goldRoll = leveling.RollEnemyGold(npcData.Level, npcData.EnemyTrait.Difficulty, rand.Intn)
 		}
+		key := bossIdentity(npcData)
+		rawRewards = append(rawRewards, rawEnemyReward{
+			name:     npcData.Name,
+			level:    npcData.Level,
+			boss:     isBossDifficulty(npcData.EnemyTrait.Difficulty),
+			bossKey:  key,
+			baseXP:   xpReward,
+			baseGold: goldRoll,
+		})
 
 		// Process loot drops (items placed in room)
 		if roomErr == nil && room != nil {
@@ -1045,9 +1053,23 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 		}
 	}
 
+	// Level-gap rewards use the highest level among everyone who receives the
+	// split, then scale each enemy. Party members therefore cannot farm full
+	// XP off a low-level friend.
+	refLevel := c.victoryReferenceLevel(instance, livingPlayers)
+	baseXP, baseGold, scaledXP, scaledGold := applyRewardScale(rawRewards, refLevel)
+
 	// Living combatants always share. Online party members in the killer's room
 	// are added. Solo / no shared party keeps the full (or living-joiner) award.
-	shares, partySplit := c.planVictoryShares(instance, livingPlayers, totalXP, totalGold)
+	shares, partySplit := c.planVictoryShares(instance, livingPlayers, scaledXP, scaledGold)
+	ids := make([]string, len(shares))
+	for i, share := range shares {
+		ids[i] = share.ID
+	}
+	killerID := ""
+	if len(livingPlayers) > 0 && livingPlayers[0] != nil {
+		killerID = livingPlayers[0].ID
+	}
 	killerName := ""
 	if len(livingPlayers) > 0 && livingPlayers[0] != nil {
 		killerName = livingPlayers[0].Name
@@ -1062,8 +1084,8 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 		log.WithFields(log.Fields{
 			"instanceID": instance.ID,
 			"recipients": len(shares),
-			"xp":         totalXP,
-			"gold":       totalGold,
+			"xp":         scaledXP,
+			"gold":       scaledGold,
 			"killer":     killerName,
 		}).Info("Party victory share")
 	}
@@ -1074,8 +1096,29 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 			continue
 		}
 
-		char.XP += int32(share.XP)
-		char.Gold += share.Gold
+		fkXP, fkGold, marked := firstKillBonus(char.FirstBossKills, rawRewards, ids, share.ID, killerID, partySplit)
+		if len(marked) > 0 {
+			char.FirstBossKills = append(char.FirstBossKills, marked...)
+		}
+		awardedXP := share.XP + fkXP
+		awardedGold := share.Gold + fkGold
+		breakdown := messages.RewardBreakdown{
+			BaseXP:         baseXP,
+			BaseGold:       baseGold,
+			LevelModXP:     scaledXP - baseXP,
+			LevelModGold:   scaledGold - baseGold,
+			FirstKillXP:    fkXP,
+			FirstKillGold:  fkGold,
+			ShareXP:        share.XP,
+			ShareGold:      share.Gold,
+			PartySize:      len(shares),
+			ReferenceLevel: refLevel,
+			XP:             awardedXP,
+			Gold:           awardedGold,
+		}
+
+		char.XP += int32(awardedXP)
+		char.Gold += awardedGold
 
 		levelsGained, _ := leveling.CheckLevelUp(char)
 		var levelMsg string
@@ -1088,8 +1131,10 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 
 		userID := char.BelongsUserID
 		if share.InFight {
-			victoryText := formatCombatVictoryText(enemyNames, allLootItems, share.XP, share.Gold, shareBlock)
-			c.game.sendMessage <- messages.NewCombatEndMessage(userID, victoryText, string(combat.CombatStateVictory))
+			victoryText := formatCombatVictoryText(enemyNames, allLootItems, awardedXP, awardedGold, shareBlock, formatRewardLines(breakdown))
+			end := messages.NewCombatEndMessage(userID, victoryText, string(combat.CombatStateVictory))
+			end.Rewards = &breakdown
+			c.game.sendMessage <- end
 		}
 		if toast != "" {
 			c.game.sendMessage <- messages.MessageResponse{

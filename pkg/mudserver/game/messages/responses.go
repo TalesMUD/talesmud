@@ -568,10 +568,30 @@ func NewCombatStartMessage(userID, text string, enemies, players []CombatantView
 	}
 }
 
+// RewardBreakdown is the victory-screen split for one character.
+// LevelMod is fight-wide (scaled total minus base total) and can be negative.
+// Share is this character's split of the scaled total, before their first-kill bonus.
+// XP and Gold are what was actually awarded (share + first kill).
+type RewardBreakdown struct {
+	BaseXP         int64 `json:"baseXp"`
+	BaseGold       int64 `json:"baseGold"`
+	LevelModXP     int64 `json:"levelModXp"`
+	LevelModGold   int64 `json:"levelModGold"`
+	FirstKillXP    int64 `json:"firstKillXp"`
+	FirstKillGold  int64 `json:"firstKillGold"`
+	ShareXP        int64 `json:"shareXp"`
+	ShareGold      int64 `json:"shareGold"`
+	PartySize      int   `json:"partySize"`
+	ReferenceLevel int32 `json:"referenceLevel"`
+	XP             int64 `json:"xp"`
+	Gold           int64 `json:"gold"`
+}
+
 // CombatEndMessage is a machine-readable combat end payload.
 type CombatEndMessage struct {
 	MessageResponse
-	Outcome string `json:"outcome"` // victory | defeat | fled | timeout
+	Outcome string           `json:"outcome"` // victory | defeat | fled | timeout
+	Rewards *RewardBreakdown `json:"rewards,omitempty"`
 }
 
 // NewCombatEndMessage builds a combatEnd with human text + machine outcome.

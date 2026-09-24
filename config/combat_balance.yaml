@@ -79,6 +79,20 @@ threat:
   orange_at_or_below: 2
   red_at_or_below: 4
 
+# XP and gold multipliers by the same threat tier (enemyLevel - referenceLevel).
+# referenceLevel is the highest level among characters who receive the victory split.
+# grey is a trickle (about 15%). yellow is the full base. skull is double.
+# first_kill_bonus is added to each character's own share of a boss they have
+# not received the bonus for yet (persisted on the character).
+reward_scale:
+  grey: 0.15
+  green: 0.60
+  yellow: 1.0
+  orange: 1.25
+  red: 1.50
+  skull: 2.0
+  first_kill_bonus: 0.50
+
 # Notes:
 # - Tuned so strength difference drives duration (trash fast, bosses long but killable).
 # - Sims auto-spend distributable attribute points on primary attr (competent player).

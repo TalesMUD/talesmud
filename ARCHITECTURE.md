@@ -455,7 +455,7 @@ type StatusEffect struct {
            └── Otherwise → attack weakest player
 
 3. RESOLUTION
-   ├── Victory (all enemies dead) → XP/gold rewards (equal split: living combatants + online same-room party; leftover to the engager when it is a party share), loot drops stay in the room
+   ├── Victory (all enemies dead) → XP/gold rewards scaled by threat tier against the highest level in the split (equal split: living combatants + online same-room party; leftover to the engager when it is a party share). Boss first-kill bonus is per character (`firstBossKills`). Loot drops stay in the room.
    ├── Defeat (all players dead) → 10% XP loss, 1 gold loss, respawn at bind point
    └── Fled (all players escaped) → NPCs reset to idle
 ```

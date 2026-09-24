@@ -53,6 +53,12 @@
   $: log = (logRaw || []).filter((line) => line && !isCombatLogNoise(line.text));
   $: outcome = $store.combatOutcome;
   $: endMessage = $store.combatEndMessage || '';
+  $: rewardBreakdown = $store.combatRewards;
+
+  function signedReward(n) {
+    const v = Number(n) || 0;
+    return v > 0 ? `+${v}` : String(v);
+  }
   $: fx = $store.combatFx;
   $: character = $store.character;
   $: stats = $store.characterStats || {};
@@ -1021,6 +1027,14 @@
           <div class="outcome-summary">{outcomeRewards.summary}</div>
         {:else if endMessage}
           <div class="outcome-summary">{endMessage}</div>
+        {/if}
+        {#if outcome === 'victory' && rewardBreakdown}
+          <ul class="reward-breakdown">
+            <li>Base: {rewardBreakdown.baseXp || 0} XP, {rewardBreakdown.baseGold || 0} gold</li>
+            <li>Level modifier (highest in the split, L{rewardBreakdown.referenceLevel || 1}): {signedReward(rewardBreakdown.levelModXp)} XP, {signedReward(rewardBreakdown.levelModGold)} gold</li>
+            <li>First-kill bonus: {signedReward(rewardBreakdown.firstKillXp)} XP, {signedReward(rewardBreakdown.firstKillGold)} gold</li>
+            <li>Party split: {rewardBreakdown.partySize || 1} recipients, your share {rewardBreakdown.shareXp || 0} XP, {rewardBreakdown.shareGold || 0} gold</li>
+          </ul>
         {/if}
         {#if outcomeRewards?.xp || outcomeRewards?.gold}
           <div class="outcome-rewards">
@@ -2486,6 +2500,20 @@
     max-width: 28rem;
     color: #e5e7eb;
     font-size: 0.95rem;
+  }
+
+  .reward-breakdown {
+    list-style: none;
+    margin: 0.35rem 0 0.6rem;
+    padding: 0;
+    text-align: left;
+    font-family: system-ui, sans-serif;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: #e5e7eb;
+  }
+  .reward-breakdown li {
+    padding: 0.12rem 0;
   }
 
   .outcome-rewards {
