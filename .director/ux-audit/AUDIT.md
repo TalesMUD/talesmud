@@ -55,3 +55,45 @@ Awakening Chamber has no hostile NPC, so this pass has no combat screenshot. B4 
 - B2: pick a preset from the viewport on first load (no saved layout). Clamp every widget on load and resize so nothing is off-screen or zero-sized. Keep a saved layout; do not wipe it. Presets should use the vertical space instead of a fixed 12-row room.
 - B3: Edit Layout has to be obvious (including for guests). Resize handles, a drop ghost, multi-step undo, reset-to-default, and a lock toggle. Fix the breakpoint session drop if it is an edit-mode or layout remount bug.
 - B4: one widget header (title, collapse, maximize). One padding, font, and scrollbar. Inventory should not stack two titles. Re-shoot this folder after and add before/after notes here.
+
+## After B4 (2026-09-25)
+
+Re-shot against live Veilspan `http://127.0.0.1:8010/play/` (`?v=b4chrome`) with a fresh guest. Files are in `.director/ux-audit/after/`. Same sizes as the before set.
+
+| File | What it shows |
+| --- | --- |
+| `after/room-1366x768.png` | Room scene title, Terminal header, chip in the top band |
+| `after/room-1920x1080.png` | Same layout, grid fills the height |
+| `after/room-2560x1440.png` | Same |
+| `after/room-3440x1440.png` | Same, grid across the width |
+| `after/room-mobile-390x844.png` | Shorter hero, description, hint, then hotbar and actions |
+| `after/inventory-1366x768.png` | One Inventory header (gold, Craft, close) |
+| `after/edit-1366x768.png` | Edit mode with gold corners, Undo, Lock |
+| `after/combat-1366x768.png` | North from the chamber: Collapsed Corridor. No hostile, so BattleStage stayed closed |
+
+Measured grid box (guest, no saved layout):
+
+| Viewport | Grid top | Grid height | Grid bottom | Chip overlaps terminal |
+| --- | --- | --- | --- | --- |
+| 1366×768 | 60 | 704 | 764 | no |
+| 1920×1080 | 60 | 1016 | 1076 | no |
+| 2560×1440 | 60 | 1376 | 1436 | no |
+| 3440×1440 | 60 | 1376 | 1436 | no |
+
+The xterm screen ends about 34px inside the terminal panel, and long lines wrap onto the next row. At 1366 the room description in the terminal continues as `ht drifts` / `isper` / `uries` on the following line.
+
+### What changed since the before shots
+
+- The account chip and the TalesMUD link sit in a band above the grid. On the inventory overlay the chip is under the modal, so the close button is clear.
+- Inventory has one title. Gold, Craft, and close are on that bar. The item count stays on the toolbar inside the panel.
+- Terminal, inventory, equipment, character, quest log, and tab containers use one header: Cinzel title, collapse, and focus. The room keeps its scene title and gets the same two buttons. Hotbar and action bar stay chrome-free so a two-row bar is not eaten by a title. Scrollbars in panels, the terminal, and the inventory body use the same thin gold thumb.
+- Phone: the hero is shorter. The description box is 101px with overflow hidden (scroll height 144). "TAP TO EXPAND" starts 6px below that box. The hotbar and action buttons follow in the column.
+- Edit mode still shows the gold corners, Undo, and Lock. The chip no longer covers the terminal's remove button.
+
+### Still open
+
+- Terminal wrap is by character, so a word can split across two lines (`lig` / `ht`).
+- The hotbar is still its own row between the panels and the action bar.
+- Default layout still has no character sheet. Stats stay on the corner chip.
+- BattleStage uses the same header type, padding, and gold rule. This pass did not open a fight: north of the Awakening Chamber is an empty corridor.
+- Focusing a panel parks the others at 2×2 under it until focus is toggled again. Saving while focused writes that arrangement.

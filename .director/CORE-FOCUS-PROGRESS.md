@@ -56,3 +56,11 @@
 - Smoke: play page references `bundle.js?v=b3edit`. Guest menu lists Edit Layout, then Create Account, Settings, End Session. Edit mode toolbar shows Undo and Lock; 16 gold corner handles (4 widgets). Lock clears the handles and the hint reads "Layout locked". Reload and a 390×844 mobile viewport both stay on the Awakening Chamber, not the welcome screen. Listening on 8010 at 23:52:18.
 - Residuals: terminal lines still clip on the right. Inventory still has two headers. Account chip still overlaps the terminal's top-right in edit mode. Those are B4 chrome.
 
+## B4 — Unified widget chrome
+- SHA: `703405b0c224fdc3709ca00ad1dfc6baa6a4333b` (`703405b`)
+- What changed: `WidgetChrome` is the shared header (Cinzel title, collapse, focus) on the terminal, inventory, equipment, character, quest log, and tab container. The room keeps its scene title and gets the same collapse and focus buttons. Collapse shrinks a panel to two rows. Focus expands one panel over the grid and parks the others at 2×2 so the terminal stays mounted. The inventory overlay has a single title. The account chip sits in a 52px band above the grid (`z-index` under overlays). Terminal fit leaves one column of slack so lines wrap inside the panel. Phone room copy is a clamped block with the expand hint under it. Cache-bust `?v=b4chrome`. After shots are in `.director/ux-audit/after/`.
+- Tests: mud-client `npm run build` succeeded (existing unused-CSS and a11y warnings only). No new Go tests (client-only).
+- Deploy: pushed `engine-june`. Copied client into `pkg/webuiplay/dist`, rebuilt `bin/tales`, restarted only Veilspan. New pid 3626122 on :8010. Door pid 3406193 unchanged.
+- Smoke: play page references `bundle.js?v=b4chrome`. Guest grid bottom is 764/768, 1076/1080, and 1436/1440. Chip rect does not intersect the terminal. Inventory overlay shows one Inventory title. Phone description box is 101px tall, hint 6px below it. Listening on 8010 at 2026-09-25 00:04:49.
+- Residuals: terminal wrap splits words at the column (`lig` / `ht`). Hotbar is still its own row. No BattleStage shot — north of the starter room has no hostile. Saving during focus writes the expanded arrangement.
+
