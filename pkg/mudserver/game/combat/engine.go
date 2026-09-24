@@ -2,6 +2,7 @@ package combat
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"sort"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/combat"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/balance"
 	"github.com/talesmud/talesmud/pkg/portraits"
 )
 
@@ -104,6 +106,7 @@ func (e *Engine) CreateCombatantFromCharacter(char *characters.Character) combat
 		Initiative:  0, // Will be rolled
 		IsAlive:     true,
 		HasFled:     false,
+		Level:       char.Level,
 		MaxHP:       char.MaxHitPoints,
 		CurrentHP:   char.CurrentHitPoints,
 		AttackPower: attackPower,
@@ -148,6 +151,7 @@ func (e *Engine) CreateCombatantFromNPC(n *npc.NPC) combat.CombatantRef {
 		Initiative:  0, // Will be rolled
 		IsAlive:     true,
 		HasFled:     false,
+		Level:       n.Level,
 		MaxHP:       n.MaxHitPoints,
 		CurrentHP:   n.CurrentHitPoints,
 		AttackPower: attackPower,
@@ -341,35 +345,44 @@ func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targ
 		}
 	}
 
-	// Roll to hit: 1d20 + STR modifier
+	// Roll to hit: 1d20 + STR modifier + level-gap bonus.
+	// Natural 1 always misses. Natural 20 always hits.
+	mods := balance.LevelGapModifiers(attacker.Level, target.Level)
 	roll := rand.Intn(20) + 1
-	toHit := roll + attacker.STRMod
-
-	// Target AC = 10 + Defense + DefenseBonus
+	baseCrit := 0.05
+	if e.Config != nil && e.Config.CriticalHitChance > 0 {
+		baseCrit = e.Config.CriticalHitChance
+	}
+	critChance := baseCrit + mods.CritChanceDelta
+	if critChance < 0 {
+		critChance = 0
+	}
+	if critChance > 0.95 {
+		critChance = 0.95
+	}
 	targetAC := 10 + int(target.Defense) + int(target.DefenseBonus)
+	hit, crit, toHit := ResolveAttackRoll(roll, attacker.STRMod, mods.HitBonus, targetAC, critChance, baseCrit, rand.Float64())
 
 	result := AttackResult{
 		Roll:     roll,
 		ToHit:    toHit,
 		TargetAC: targetAC,
+		Hit:      hit,
+		Critical: crit,
+		Miss:     !hit,
 	}
 
-	// Critical hit on natural 20
-	if roll == 20 {
-		result.Hit = true
-		result.Critical = true
-	} else if roll == 1 {
-		// Critical miss on natural 1
-		result.Miss = true
-		result.Message = fmt.Sprintf("%s swings wildly at %s but completely misses!",
-			attacker.Name, target.Name)
-		return result
-	} else if toHit >= targetAC {
-		result.Hit = true
-	} else {
-		result.Miss = true
-		result.Message = fmt.Sprintf("%s attacks %s but misses! (Roll: %d + %d = %d vs AC %d)",
-			attacker.Name, target.Name, roll, attacker.STRMod, toHit, targetAC)
+	if !hit {
+		if roll == 1 {
+			result.Message = fmt.Sprintf("%s swings wildly at %s but completely misses!",
+				attacker.Name, target.Name)
+		} else if mods.HitBonus != 0 {
+			result.Message = fmt.Sprintf("%s attacks %s but misses! (Roll: %d + %d %+d lvl = %d vs AC %d)",
+				attacker.Name, target.Name, roll, attacker.STRMod, mods.HitBonus, toHit, targetAC)
+		} else {
+			result.Message = fmt.Sprintf("%s attacks %s but misses! (Roll: %d + %d = %d vs AC %d)",
+				attacker.Name, target.Name, roll, attacker.STRMod, toHit, targetAC)
+		}
 		return result
 	}
 
@@ -404,6 +417,9 @@ func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targ
 	if result.Critical {
 		result.Message = fmt.Sprintf("CRITICAL HIT! %s strikes %s for %d damage!",
 			attacker.Name, target.Name, result.Damage)
+	} else if mods.HitBonus != 0 {
+		result.Message = fmt.Sprintf("%s hits %s for %d damage. (Roll: %d + %d %+d lvl = %d vs AC %d)",
+			attacker.Name, target.Name, result.Damage, roll, attacker.STRMod, mods.HitBonus, toHit, targetAC)
 	} else {
 		result.Message = fmt.Sprintf("%s hits %s for %d damage. (Roll: %d + %d = %d vs AC %d)",
 			attacker.Name, target.Name, result.Damage, roll, attacker.STRMod, toHit, targetAC)
@@ -463,12 +479,61 @@ func (e *Engine) CalculateDamage(attacker, target *combat.CombatantRef, critical
 		damage = 1
 	}
 
-	// Critical hit doubles damage
+	// Level gap scales damage after defense and before the crit multiplier.
+	// Equal levels leave the pre-gap number unchanged.
+	damage = balance.ScaleDamage(attacker.Level, target.Level, damage)
+
+	// Critical hit doubles damage (or uses CriticalHitMultiplier when it is not 2).
 	if critical {
-		damage *= 2
+		mult := 2.0
+		if e.Config != nil && e.Config.CriticalHitMultiplier > 0 {
+			mult = e.Config.CriticalHitMultiplier
+		}
+		if mult == 2 {
+			damage *= 2
+		} else {
+			damage = int32(math.Round(float64(damage) * mult))
+			if damage < 1 {
+				damage = 1
+			}
+		}
 	}
 
 	return damage
+}
+
+// ResolveAttackRoll decides hit and crit for one d20 attack.
+// extraRoll is in [0,1) and is used only for crit chances that are not a pure natural 20.
+// roll 1 always misses. roll 20 always hits. critChance is the absolute crit chance
+// (base + level-gap delta), already clamped by the caller into a sane range.
+func ResolveAttackRoll(roll, strMod, hitBonus, targetAC int, critChance, baseCrit, extraRoll float64) (hit bool, crit bool, toHit int) {
+	if baseCrit <= 0 {
+		baseCrit = 0.05
+	}
+	if critChance < 0 {
+		critChance = 0
+	}
+	if extraRoll < 0 {
+		extraRoll = 0
+	}
+	toHit = roll + strMod + hitBonus
+	if roll == 1 {
+		return false, false, toHit
+	}
+	if roll == 20 {
+		isCrit := true
+		if critChance < baseCrit {
+			isCrit = extraRoll < critChance/baseCrit
+		}
+		return true, isCrit, toHit
+	}
+	if toHit < targetAC {
+		return false, false, toHit
+	}
+	if critChance > baseCrit && extraRoll < (critChance-baseCrit) {
+		return true, true, toHit
+	}
+	return true, false, toHit
 }
 
 // UpdateCombatant updates a combatant's data in both the player/enemy list and turn order

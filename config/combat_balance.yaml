@@ -47,6 +47,27 @@ named_overrides:
     attack: 0.85
     defense: 0.9
 
+# Level gap (attacker level − defender level), clamped to ±max_levels.
+# Gap 0 is neutral: hit, crit, and damage match the formulas without a gap.
+# Positive gap: the attacker is higher level. Negative: the defender is higher.
+# Basic attacks turn hit_chance into a d20 bonus (0.05 = +1). Natural 1 always
+# misses and natural 20 always hits. crit_chance is added to the 5% natural-20
+# base. Skills always hit at gap >= 0; a negative hit_chance is a per-hit miss
+# chance, and only a positive crit_chance can crit a skill (no base crit).
+# Damage multiplier is (1 + gap*damage_dealt) * (1 + gap*damage_taken), clamped.
+# Applied after defense, before crit, on basic attacks, skill hits, and DoTs.
+# Feel targets: enemy +3 is hard in level-appropriate gear and fair in good gear;
+# +5 is a skull fight; −3 or lower feels trivial.
+level_gap:
+  max_levels: 6
+  per_level:
+    hit_chance: 0.05
+    crit_chance: 0.015
+    damage_dealt: 0.06
+    damage_taken: 0.04
+  min_damage_multiplier: 0.40
+  max_damage_multiplier: 1.80
+
 # Notes:
 # - Tuned so strength difference drives duration (trash fast, bosses long but killable).
 # - Sims auto-spend distributable attribute points on primary attr (competent player).

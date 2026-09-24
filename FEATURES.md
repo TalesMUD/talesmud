@@ -734,6 +734,7 @@ type CombatantRef struct {
     IsAlive, HasFled bool
 
     // Core Stats
+    Level           int32  // Snapshot used for level-gap modifiers
     MaxHP, CurrentHP int32
     AttackPower, Defense int32
     STRMod, DEXMod, CONMod, INTMod, WISMod int
@@ -848,6 +849,19 @@ difficulty_multipliers:
 - Enemy base stats (HP, Attack, Defense) are defined on `EnemyTrait`
 - On combat initiation, stats are multiplied by difficulty tier
 - Allows fine-tuning balance without editing all NPCs
+
+### Level-gap modifiers
+**Config**: `level_gap` in `config/combat_balance.yaml` (defaults in `pkg/mudserver/game/balance/level_gap.go`).
+
+Signed gap = attacker level − defender level, clamped (default ±6). Gap 0 leaves hit, crit, and damage unchanged.
+
+| Knob | Per level of attacker advantage | Where it applies |
+| --- | --- | --- |
+| `hit_chance` | +5% (about +1 on a d20) | Basic attacks add it to the d20 roll. Natural 1 always misses, natural 20 always hits. Skills have no armor class: a negative delta is a per-hit miss chance. |
+| `crit_chance` | +1.5% | Added to the 5% natural-20 base on basic attacks. Skills have no base crit; only a positive delta can crit (2×). |
+| `damage_dealt`, `damage_taken` | +6% and +4% | Multiplied together after defense and before crit, then clamped (default 0.40–1.80). Same multiplier on basic attacks, skill hits, and DoT ticks (scaled when the DoT is applied). |
+
+Players and NPCs both use `CombatantRef.Level`, copied from the character or NPC at combat start. A missed damage skill does not apply its secondary effect or Shield Bash stun. Numbers stay in config so the engine stays world-neutral. Feel targets: an enemy 3 levels up is hard in level-appropriate gear and fair in good gear; +5 is a skull fight; −3 or lower feels trivial.
 
 ---
 

@@ -401,6 +401,7 @@ type CombatantRef struct {
     Initiative      int             // Turn order priority
     IsAlive, HasFled bool
 
+    Level           int32           // Snapshot for level-gap modifiers
     MaxHP, CurrentHP int32
     AttackPower, Defense int32
     STRMod, DEXMod, CONMod int      // Attribute modifiers
@@ -440,6 +441,9 @@ type StatusEffect struct {
        ├── Process status effects (DoT damage, HoT healing, stun skip)
        ├── Player turn: 60-second timer, choose action
        │   ├── attack <target> - Roll to hit, deal damage
+       │   │     Level gap (config/combat_balance.yaml level_gap) shifts hit, crit, and damage
+       │   │     for attacks and skills. Gap = attacker level − defender level, clamped ±6.
+       │   │     Gap 0 matches the pre-gap formulas.
        │   ├── cast <skill> [target] - Use skill (mana/cooldown cost)
        │   ├── defend - +50% defense until next turn
        │   ├── flee - Chance-based escape (50% + DEX bonus)

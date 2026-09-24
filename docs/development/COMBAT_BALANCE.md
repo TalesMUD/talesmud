@@ -117,6 +117,19 @@ finalAttack = baseAttack * difficulty_multipliers[difficulty].attack
 finalDefense = baseDefense * difficulty_multipliers[difficulty].defense
 ```
 
+## Level gap
+
+`level_gap` in `config/combat_balance.yaml` adjusts the attack itself, separate from the difficulty multipliers on enemy stats.
+
+```
+gap = clamp(attackerLevel - defenderLevel, -max_levels, +max_levels)   # default ±6
+hit     += gap * hit_chance          # basic attacks: / 0.05 → d20 bonus
+crit    += gap * crit_chance         # added to the 5% natural-20 base
+damage  *= (1 + gap * damage_dealt) * (1 + gap * damage_taken)
+```
+
+The product is clamped to `min_damage_multiplier`..`max_damage_multiplier` and applied after defense, before a critical hit doubles it. Gap 0 is an exact no-op. Skills use the same damage multiplier. They do not roll armor class: a negative hit delta is a miss chance, and only a positive crit delta can crit a skill. DoT magnitude is scaled when the effect is applied. Both sides read `CombatantRef.Level`. Keep the numbers in this file; do not hardcode a world name into the formula.
+
 ## Testing Balance Changes
 
 Use the combat simulator to test changes:

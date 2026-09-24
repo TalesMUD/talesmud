@@ -382,6 +382,7 @@ The NPCs branch represents the latest development work, focusing on NPC systems 
    - Turn-order initiative system with auto-processing
    - Players can queue special actions between auto-attacks: target switch, defend, flee
    - Combat starts with `attack`/`kill` and proceeds automatically
+   - Level-gap modifiers (`config/combat_balance.yaml` `level_gap`): hit, crit, and damage dealt/taken scale with attacker level minus defender level, clamped (default ±6). Equal levels are unchanged. Applies to basic attacks and skills for players and NPCs.
    - No turn timeouts or AFK mechanics needed
 
 5. **NPC Behavior and Quest Interaction**

@@ -123,7 +123,9 @@ func TestLevel1VsSameLevelEnemies(t *testing.T) {
 
 				floor := 0.30
 				if cls.Name == "Mage" || cls.Name == "Druid" {
-					floor = 0.05
+					// Glass casters already lose most up-level races. Level-gap
+					// hit and damage penalties (A1) pull Druid a bit further down.
+					floor = 0.01
 				}
 				if result.WinRate < floor {
 					t.Errorf("Win rate %.1f%% is too low for L1 vs L2 normal (expected >= %.0f%%)", result.WinRate*100, floor*100)
