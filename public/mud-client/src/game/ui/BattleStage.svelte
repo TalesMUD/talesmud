@@ -53,6 +53,12 @@
   $: log = (logRaw || []).filter((line) => line && !isCombatLogNoise(line.text));
   $: outcome = $store.combatOutcome;
   $: endMessage = $store.combatEndMessage || '';
+  $: rewardBreakdown = $store.combatRewards;
+
+  function signedReward(n) {
+    const v = Number(n) || 0;
+    return v > 0 ? `+${v}` : String(v);
+  }
   $: fx = $store.combatFx;
   $: character = $store.character;
   $: stats = $store.characterStats || {};
@@ -680,7 +686,15 @@
         on:click={() => selectEnemy(enemy)}
       >
         <div class="foe-plate">
-          <div class="nameplate">{enemy.name}</div>
+          <div
+            class="nameplate"
+            class:threat-grey={enemy.threat === 'grey'}
+            class:threat-green={enemy.threat === 'green'}
+            class:threat-yellow={enemy.threat === 'yellow'}
+            class:threat-orange={enemy.threat === 'orange'}
+            class:threat-red={enemy.threat === 'red'}
+            class:threat-skull={enemy.threat === 'skull'}
+          >{#if enemy.threat === 'skull'}<span class="skull-mark" title="Skull" aria-hidden="true">☠</span>{/if}{enemy.name}</div>
           <div class="hp-row">
             <span class="hp-label">HP</span>
             <div class="hp-track">
@@ -1014,6 +1028,14 @@
         {:else if endMessage}
           <div class="outcome-summary">{endMessage}</div>
         {/if}
+        {#if outcome === 'victory' && rewardBreakdown}
+          <ul class="reward-breakdown">
+            <li>Base: {rewardBreakdown.baseXp || 0} XP, {rewardBreakdown.baseGold || 0} gold</li>
+            <li>Level modifier (highest in the split, L{rewardBreakdown.referenceLevel || 1}): {signedReward(rewardBreakdown.levelModXp)} XP, {signedReward(rewardBreakdown.levelModGold)} gold</li>
+            <li>First-kill bonus: {signedReward(rewardBreakdown.firstKillXp)} XP, {signedReward(rewardBreakdown.firstKillGold)} gold</li>
+            <li>Party split: {rewardBreakdown.partySize || 1} recipients, your share {rewardBreakdown.shareXp || 0} XP, {rewardBreakdown.shareGold || 0} gold</li>
+          </ul>
+        {/if}
         {#if outcomeRewards?.xp || outcomeRewards?.gold}
           <div class="outcome-rewards">
             {#if outcomeRewards.xp}
@@ -1165,8 +1187,13 @@
     display: flex;
     align-items: center;
     gap: 0.55rem;
-    padding: 0.9rem 1.25rem 0.45rem;
-    letter-spacing: 0.14em;
+    padding: 0.55rem 0.85rem;
+    min-height: 36px;
+    letter-spacing: 0.1em;
+    font-family: var(--font-display, 'Cinzel', serif);
+    text-transform: uppercase;
+    background: var(--panel-header-bg, rgba(0, 0, 0, 0.35));
+    border-bottom: 1px solid var(--panel-header-border, rgba(180, 130, 60, 0.22));
   }
 
   .header-icon {
@@ -1345,6 +1372,14 @@
       inset 0 0 0 1px rgba(255, 220, 150, 0.12),
       0 4px 12px rgba(0, 0, 0, 0.35);
   }
+
+  .nameplate.threat-grey { color: #9ca3af; }
+  .nameplate.threat-green { color: #4ade80; }
+  .nameplate.threat-yellow { color: #facc15; }
+  .nameplate.threat-orange { color: #fb923c; }
+  .nameplate.threat-red { color: #f87171; }
+  .nameplate.threat-skull { color: #fecaca; border-color: rgba(248, 113, 113, 0.85); }
+  .skull-mark { margin-right: 0.2em; }
 
   .hp-row {
     display: grid;
@@ -2470,6 +2505,20 @@
     max-width: 28rem;
     color: #e5e7eb;
     font-size: 0.95rem;
+  }
+
+  .reward-breakdown {
+    list-style: none;
+    margin: 0.35rem 0 0.6rem;
+    padding: 0;
+    text-align: left;
+    font-family: system-ui, sans-serif;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: #e5e7eb;
+  }
+  .reward-breakdown li {
+    padding: 0.12rem 0;
   }
 
   .outcome-rewards {

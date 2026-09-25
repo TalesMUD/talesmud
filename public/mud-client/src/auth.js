@@ -54,7 +54,23 @@ function createAuth(config) {
       }
 
       const _isAuthenticated = await auth0.isAuthenticated();
-      isAuthenticated.set(_isAuthenticated);
+      let guestToken = "";
+      try {
+        guestToken = sessionStorage.getItem("talesmud_guest_token") || "";
+      } catch (e) {
+        guestToken = "";
+      }
+
+      // A guest token lives only in this tab. Restoring it here keeps a reload
+      // (including a mobile-emulation reload) inside the game instead of the welcome screen.
+      if (_isAuthenticated) {
+        isAuthenticated.set(true);
+      } else if (guestToken) {
+        authToken.set(guestToken);
+        isAuthenticated.set(true);
+      } else {
+        isAuthenticated.set(false);
+      }
 
       if (_isAuthenticated) {
         // Fetch user profile from Auth0
@@ -100,6 +116,15 @@ function createAuth(config) {
     } catch (initError) {
       console.error("Failed to initialize Auth0:", initError);
       authError.set(initError);
+      try {
+        const guestToken = sessionStorage.getItem("talesmud_guest_token") || "";
+        if (guestToken) {
+          authToken.set(guestToken);
+          isAuthenticated.set(true);
+        }
+      } catch (e) {
+        /* sessionStorage unavailable */
+      }
     }
 
     isLoading.set(false);

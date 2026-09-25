@@ -8,6 +8,7 @@ import {
   widgetsEqual,
   normalizeTemplates,
 } from './layoutTemplates.js';
+import { clampWidgets, kindForWidth, presetWidgets } from './layoutPresets.js';
 
 const STORAGE_KEY = LAYOUT_STORAGE_KEY;
 
@@ -110,7 +111,9 @@ function fromGridItems(items) {
       y: item[24]?.y ?? item.y,
       w: item[24]?.w ?? item.w,
       h: item[24]?.h ?? item.h,
-      visible: item.visible ?? true
+      visible: item.visible ?? true,
+      collapsed: !!item.collapsed,
+      restoreH: item.restoreH || undefined,
     };
     // Preserve tab container data
     if (item.widgetType === 'tabcontainer') {
@@ -128,7 +131,8 @@ function setWidgetsEditable(widgets, editable) {
     [24]: {
       ...widget[24],
       draggable: editable,
-      resizable: editable
+      resizable: editable,
+      customResizer: true,
     }
   }));
 }
@@ -146,7 +150,40 @@ function createLayoutStore() {
     activeTemplateId: null,
     /** Bumps when widgets must force-sync into WidgetGrid (apply/reset/load). */
     layoutEpoch: 0,
+    /** Set when the live layout is a viewport preset. Null means a saved layout. */
+    presetKind: null,
+    /** True after the player picks a preset in edit mode, so resize keeps that shape. */
+    presetLocked: false,
+    /** While locked, edit mode stays open but widgets do not drag or resize. */
+    layoutLocked: false,
+    /** Widget id currently expanded over the others. Null restores the snapshot. */
+    focusId: null,
+    focusSnapshot: null,
   });
+
+  const undoStack = [];
+
+  function remember(state) {
+    const snap = JSON.parse(JSON.stringify(fromGridItems(state.widgets)));
+    const last = undoStack[undoStack.length - 1];
+    if (last && JSON.stringify(last) === JSON.stringify(snap)) return;
+    undoStack.push(snap);
+    if (undoStack.length > 30) undoStack.shift();
+  }
+
+  function applyPresetKind(kind, opts = {}) {
+    const height = (typeof window !== 'undefined' && window.innerHeight) || 800;
+    const safeKind = kind === 'compact' || kind === 'wide' ? kind : 'desktop';
+    const widgets = clampWidgets(presetWidgets(safeKind, height));
+    update(state => ({
+      ...state,
+      widgets: toGridItems(widgets, state.editMode),
+      presetKind: safeKind,
+      presetLocked: opts.lock === true ? true : (opts.lock === false ? false : state.presetLocked),
+      activeTemplateId: null,
+      layoutEpoch: bumpEpoch(state),
+    }));
+  }
 
   const api = {
     subscribe,
@@ -157,12 +194,14 @@ function createLayoutStore() {
         const stored = localStorage.getItem(STORAGE_KEY);
         const parsed = parseLayoutStorage(stored);
         if (parsed) {
-          const widgets = ensureHotbarInLayout(parsed.widgets);
+          const widgets = clampWidgets(ensureHotbarInLayout(parsed.widgets));
           update(state => ({
             ...state,
             widgets: toGridItems(widgets, state.editMode),
             templates: parsed.templates,
             activeTemplateId: parsed.activeTemplateId,
+            presetKind: null,
+            presetLocked: false,
             layoutEpoch: bumpEpoch(state),
           }));
           return true;
@@ -170,7 +209,36 @@ function createLayoutStore() {
       } catch (e) {
         console.warn('Failed to load layout from storage:', e);
       }
+      applyPresetKind(kindForWidth(window.innerWidth), { lock: false });
       return false;
+    },
+
+    /**
+     * Replace the live layout with a viewport preset.
+     * Does not write localStorage, so a saved layout is only replaced when the player saves.
+     */
+    applyPreset(kind, opts = {}) {
+      remember(get({ subscribe }));
+      applyPresetKind(kind, opts);
+    },
+
+    /** Refill a preset on resize. Saved layouts are only clamped back onto the grid. */
+    onViewportResize() {
+      const state = get({ subscribe });
+      if (state.editMode || typeof window === 'undefined') return;
+      if (state.presetKind) {
+        const kind = state.presetLocked ? state.presetKind : kindForWidth(window.innerWidth);
+        applyPresetKind(kind, { lock: !!state.presetLocked });
+        return;
+      }
+      const current = fromGridItems(state.widgets);
+      const clamped = clampWidgets(current);
+      if (widgetsEqual(current, clamped)) return;
+      update(s => ({
+        ...s,
+        widgets: toGridItems(clamped, s.editMode),
+        layoutEpoch: bumpEpoch(s),
+      }));
     },
 
     // Save current layout (+ templates metadata) to localStorage
@@ -192,10 +260,11 @@ function createLayoutStore() {
 
     // Enter edit mode - enable dragging/resizing
     enterEditMode() {
+      undoStack.length = 0;
       update(state => ({
         ...state,
         editMode: true,
-        widgets: setWidgetsEditable(state.widgets, true),
+        widgets: setWidgetsEditable(state.widgets, !state.layoutLocked),
         pendingWidgets: JSON.parse(JSON.stringify(state.widgets))
       }));
     },
@@ -231,10 +300,93 @@ function createLayoutStore() {
 
     // Update widget position/size
     updateWidgets(newWidgets) {
+      update(state => {
+        remember(state);
+        return {
+          ...state,
+          widgets: newWidgets,
+        };
+      });
+    },
+
+    undo() {
+      const prev = undoStack.pop();
+      if (!prev) return false;
       update(state => ({
         ...state,
-        widgets: newWidgets
+        widgets: toGridItems(clampWidgets(prev), state.editMode && !state.layoutLocked),
+        focusId: null,
+        focusSnapshot: null,
+        layoutEpoch: bumpEpoch(state),
       }));
+      return true;
+    },
+
+    /** Collapse a panel to a header row, or restore its previous height. */
+    toggleCollapse(id) {
+      const state = get({ subscribe });
+      remember(state);
+      update(s => ({
+        ...s,
+        widgets: s.widgets.map(w => {
+          if (w.id !== id) return w;
+          const cell = { ...(w[24] || {}) };
+          const curH = cell.h ?? w.h ?? 6;
+          if (w.collapsed) {
+            const h = w.restoreH && w.restoreH >= 2 ? w.restoreH : 6;
+            return { ...w, collapsed: false, h, [24]: { ...cell, h } };
+          }
+          return { ...w, collapsed: true, restoreH: curH, h: 2, [24]: { ...cell, h: 2 } };
+        }),
+        layoutEpoch: bumpEpoch(s),
+      }));
+    },
+
+    /**
+     * Expand one widget over the grid. The others stay mounted at 2×2 underneath
+     * so a terminal session is not destroyed. Calling it again restores positions.
+     */
+    toggleFocus(id) {
+      const state = get({ subscribe });
+      remember(state);
+      if (state.focusId === id && Array.isArray(state.focusSnapshot)) {
+        update(s => ({
+          ...s,
+          focusId: null,
+          focusSnapshot: null,
+          widgets: toGridItems(clampWidgets(s.focusSnapshot), s.editMode && !s.layoutLocked),
+          layoutEpoch: bumpEpoch(s),
+        }));
+        return;
+      }
+      const snapshot = fromGridItems(state.widgets);
+      const target = snapshot.find(w => w.id === id);
+      if (!target) return;
+      const bottom = Math.max(8, ...snapshot.map(w => (Number(w.y) || 0) + (Number(w.h) || 2)));
+      const next = snapshot.map(w => {
+        if (w.id === id) return { ...w, x: 0, y: 0, w: 24, h: bottom, collapsed: false };
+        return { ...w, x: 0, y: 0, w: 2, h: 2 };
+      });
+      next.sort((a, b) => (a.id === id) - (b.id === id));
+      update(s => ({
+        ...s,
+        focusId: id,
+        focusSnapshot: snapshot,
+        widgets: toGridItems(next, s.editMode && !s.layoutLocked),
+        layoutEpoch: bumpEpoch(s),
+      }));
+    },
+
+    toggleLock() {
+      update(state => {
+        const layoutLocked = !state.layoutLocked;
+        return {
+          ...state,
+          layoutLocked,
+          widgets: setWidgetsEditable(state.widgets, state.editMode && !layoutLocked),
+          layoutEpoch: bumpEpoch(state),
+        };
+      });
     },
 
     // Update a single widget
@@ -249,6 +401,7 @@ function createLayoutStore() {
 
     // Add a new widget (only in edit mode, so editable=true)
     addWidget(widgetType, config = {}) {
+      remember(get({ subscribe }));
       const id = `${widgetType}-${Date.now()}`;
       const newWidget = {
         id,
@@ -290,6 +443,7 @@ function createLayoutStore() {
 
     // Remove a widget
     removeWidget(id) {
+      remember(get({ subscribe }));
       update(state => ({
         ...state,
         widgets: state.widgets.filter(w => w.id !== id)
@@ -298,12 +452,9 @@ function createLayoutStore() {
 
     // Reset to default layout (in edit mode, so editable=true)
     resetToDefault() {
-      update(state => ({
-        ...state,
-        widgets: toGridItems(DEFAULT_LAYOUT, state.editMode),
-        activeTemplateId: null,
-        layoutEpoch: bumpEpoch(state),
-      }));
+      remember(get({ subscribe }));
+      const kind = (typeof window !== 'undefined') ? kindForWidth(window.innerWidth) : 'desktop';
+      applyPresetKind(kind, { lock: false });
     },
 
     // Get widget by id
@@ -499,4 +650,9 @@ export const layoutStore = createLayoutStore();
 // Initialize on load
 if (typeof window !== 'undefined') {
   layoutStore.loadFromStorage();
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => layoutStore.onViewportResize(), 150);
+  });
 }

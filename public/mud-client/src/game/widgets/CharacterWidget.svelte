@@ -15,6 +15,8 @@
 
   export let store = null;
   export let sendMessage = null;
+  /** Phone sheet already draws the title. */
+  export let embedded = false;
 
   let sheetTab = 'stats';
 
@@ -979,15 +981,17 @@
 </style>
 
 <div class="character-widget game-panel" class:in-combat={inCombat}>
-  <div class="game-panel-header">
-    <i class="material-icons">{inCombat ? 'swords' : 'person'}</i>
-    <span class="widget-title">Character</span>
-    {#if inCombat}
-      <span class="combat-badge">In Combat</span>
-    {:else if resting}
-      <span class="rest-badge">Resting</span>
-    {/if}
-  </div>
+  {#if !embedded}
+    <div class="game-panel-header">
+      <i class="material-icons">{inCombat ? 'swords' : 'person'}</i>
+      <span class="widget-title">Character</span>
+    </div>
+  {/if}
+  {#if inCombat}
+    <span class="combat-badge">In Combat</span>
+  {:else if resting}
+    <span class="rest-badge">Resting</span>
+  {/if}
 
   {#if hasData}
     <div class="char-identity">

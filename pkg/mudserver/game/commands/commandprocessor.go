@@ -113,7 +113,7 @@ func (commandProcessor *CommandProcessor) registerCommands() {
 	commandProcessor.RegisterCommand(&EquipmentCommand{}, "Show equipped items", "equipment", "eq", "gear")
 
 	// Combat commands
-	commandProcessor.RegisterCommand(&AttackCommand{}, "Attack a target: attack [target]", "attack", "a", "hit")
+	commandProcessor.RegisterCommand(&AttackCommand{}, "Attack a target: attack [target]. attack! confirms a much stronger foe", "attack", "a", "hit", "attack!", "a!", "hit!")
 	commandProcessor.RegisterCommand(&DefendCommand{}, "Take defensive stance in combat", "defend", "d", "guard")
 	commandProcessor.RegisterCommand(&FleeCommand{}, "Attempt to flee from combat", "flee", "run", "escape")
 	commandProcessor.RegisterCommand(&CombatStatusCommand{}, "Show combat status", "status", "cs", "combat")

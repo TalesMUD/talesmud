@@ -734,6 +734,7 @@ type CombatantRef struct {
     IsAlive, HasFled bool
 
     // Core Stats
+    Level           int32  // Snapshot used for level-gap modifiers
     MaxHP, CurrentHP int32
     AttackPower, Defense int32
     STRMod, DEXMod, CONMod, INTMod, WISMod int
@@ -848,6 +849,33 @@ difficulty_multipliers:
 - Enemy base stats (HP, Attack, Defense) are defined on `EnemyTrait`
 - On combat initiation, stats are multiplied by difficulty tier
 - Allows fine-tuning balance without editing all NPCs
+
+### Level-gap modifiers
+**Config**: `level_gap` in `config/combat_balance.yaml` (defaults in `pkg/mudserver/game/balance/level_gap.go`).
+
+Signed gap = attacker level − defender level, clamped (default ±6). Gap 0 leaves hit, crit, and damage unchanged.
+
+| Knob | Per level of attacker advantage | Where it applies |
+| --- | --- | --- |
+| `hit_chance` | +3.5% (about +1 on a d20 every one or two levels) | Basic attacks add it to the d20 roll. Natural 1 always misses, natural 20 always hits. Skills have no armor class: a negative delta is a per-hit miss chance. |
+| `crit_chance` | +1% | Added to the 5% natural-20 base on basic attacks. Skills have no base crit; only a positive delta can crit (2×). |
+| `damage_dealt`, `damage_taken` | +3.5% and +2% | Multiplied together after defense and before crit, then clamped (default 0.40–1.80). Same multiplier on basic attacks, skill hits, and DoT ticks (scaled when the DoT is applied). |
+
+Players and NPCs both use `CombatantRef.Level`, copied from the character or NPC at combat start. A missed damage skill does not apply its secondary effect or Shield Bash stun. Numbers stay in config so the engine stays world-neutral. Feel targets: an enemy 3 levels up is hard in level-appropriate gear and fair in good gear; +5 is a skull fight; −3 or lower feels trivial.
+
+### Class balance
+**Config**: `class_balance` in `config/combat_balance.yaml` (defaults in `pkg/mudserver/game/balance/class_balance.go`).
+
+After the level-gap multiplier and before a crit, `damage_dealt` scales hits that class lands and `damage_taken` scales hits that class receives. `behind_dealt` multiplies `damage_dealt` again when that class is the lower level. Class id `wizard` uses the `mage` row. A missing class or a multiplier of 1 leaves that side unchanged. The level-10 gap table uses this so warrior, rogue, ranger, and mage share one band: at-level bosses about 50–65%, and a good-gear boss three levels up about 50%.
+
+### Threat colors
+`threat` in `config/combat_balance.yaml` maps `(enemyLevel - playerLevel)` to `grey / green / yellow / orange / red / skull` (defaults: ≤ −3 grey, −2..−1 green, 0..+1 yellow, +2 orange, +3..+4 red, ≥ +5 skull). The tier is on the room NPC payload (`threat`) and on combat enemy views, computed for the viewer. Room cards and BattleStage nameplates use that color; skull enemies also show ☠. `attack` on orange, red, or skull warns once ("X is much stronger than you") and does not engage. `attack!` or a second `attack` on that enemy does. The room Attack button confirms, then sends `attack!`.
+
+### Viewport layout presets
+With no saved layout, the play client picks Compact (under 1100px wide, room stacked over the terminal), Desktop, or Wide from the window size, and sizes the grid so the room, terminal, hotbar, and action bar fill the viewport height. Resize reflows that preset. A saved layout is kept and only clamped back onto the 24-column grid (minimum 2×2, nothing past the right edge). Edit mode can switch Compact / Desktop / Wide without deleting a saved layout until Save. Guests open the same editor from the account menu. The toolbar has multi-step Undo, Reset, and a Lock toggle that keeps edit mode open but stops dragging and resizing. Corner handles stay visible while the layout is unlocked, and a gold ghost shows where a widget will land. A guest token in this tab is restored after a reload, so crossing into a mobile-emulation reload does not dump the session back to the welcome screen. Panels share one header (title, collapse, focus) in the same type and padding; the inventory overlay keeps a single title. The account chip sits in a top band instead of covering a panel corner. Terminal lines keep the last glyph inside the panel.
+
+### Reward scaling
+`reward_scale` in `config/combat_balance.yaml` multiplies each enemy's base XP and gold by that threat tier. The reference level is the **highest** level among characters who receive the victory split (living fighters plus same-room online party), so a high-level member greys out the whole award. Defaults: grey 15%, green 60%, yellow 100%, orange 125%, red 150%, skull 200%. A boss's first kill for a character adds `first_kill_bonus` (default 50%) of that character's own share of the boss, once, stored on `Character.FirstBossKills` (`tpl:<templateId>` or `name:<lower name>`). BattleStage victory lists base, level modifier, first-kill bonus, and party split. The terminal victory text includes the same lines, then the final `+ N XP` / `+ N Gold`.
 
 ---
 

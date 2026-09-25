@@ -206,7 +206,7 @@ func partyShareToast(shares []plannedShare, killerName string) string {
 	return fmt.Sprintf("[Party] Equal split; leftover to %s: %s.", killerName, strings.Join(parts, "; "))
 }
 
-func formatCombatVictoryText(enemyNames, lootItems []string, xp, gold int64, shareBlock string) string {
+func formatCombatVictoryText(enemyNames, lootItems []string, xp, gold int64, shareBlock, breakdown string) string {
 	var sb strings.Builder
 	sb.WriteString("\n═══════════════════════════════════════════════════\n")
 	sb.WriteString("              VICTORY!\n")
@@ -215,6 +215,12 @@ func formatCombatVictoryText(enemyNames, lootItems []string, xp, gold int64, sha
 		sb.WriteString(fmt.Sprintf("Defeated: %s\n", name))
 	}
 	sb.WriteString("\nREWARDS:\n")
+	if breakdown != "" {
+		sb.WriteString(breakdown)
+		if !strings.HasSuffix(breakdown, "\n") {
+			sb.WriteString("\n")
+		}
+	}
 	if xp > 0 {
 		sb.WriteString(fmt.Sprintf("  + %d XP\n", xp))
 	}

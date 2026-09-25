@@ -3,6 +3,8 @@
 
   export let store = null;
   export let sendMessage = null;
+  /** Overlay and the phone sheet already draw the title. */
+  export let embedded = false;
 
   let inventory = [];
   let equippedItems = {};
@@ -974,10 +976,12 @@
 </style>
 
 <div class="inventory-widget game-panel">
-  <div class="game-panel-header">
-    <i class="material-icons">inventory_2</i>
-    <span class="widget-title">Inventory</span>
-  </div>
+  {#if !embedded}
+    <div class="game-panel-header">
+      <i class="material-icons">inventory_2</i>
+      <span class="widget-title">Inventory</span>
+    </div>
+  {/if}
 
   <div class="widget-toolbar">
     <span class="gold-display">

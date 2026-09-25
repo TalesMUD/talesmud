@@ -21,6 +21,10 @@ type DifficultyMultipliers struct {
 type CombatBalanceConfig struct {
 	DifficultyMultipliers map[string]DifficultyMultipliers `yaml:"difficulty_multipliers"`
 	NamedOverrides        map[string]DifficultyMultipliers `yaml:"named_overrides"`
+	LevelGap              LevelGapConfig                   `yaml:"level_gap"`
+	Threat                ThreatConfig                     `yaml:"threat"`
+	RewardScale           RewardScaleConfig                `yaml:"reward_scale"`
+	ClassBalance          map[string]ClassBalance          `yaml:"class_balance"`
 }
 
 var (
@@ -128,6 +132,10 @@ func getDefaultConfig() *CombatBalanceConfig {
 			"The Hollow Knight": {HP: 1.0, Attack: 0.85, Defense: 0.9},
 			"Hollow Knight":     {HP: 1.0, Attack: 0.85, Defense: 0.9},
 		},
+		LevelGap:     defaultLevelGap(),
+		Threat:       defaultThreat(),
+		RewardScale:  defaultRewardScale(),
+		ClassBalance: defaultClassBalance(),
 	}
 }
 
