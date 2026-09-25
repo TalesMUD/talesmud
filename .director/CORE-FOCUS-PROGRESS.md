@@ -64,3 +64,17 @@
 - Smoke: play page references `bundle.js?v=b4chrome`. Guest grid bottom is 764/768, 1076/1080, and 1436/1440. Chip rect does not intersect the terminal. Inventory overlay shows one Inventory title. Phone description box is 101px tall, hint 6px below it. Listening on 8010 at 2026-09-25 00:04:49.
 - Residuals: terminal wrap splits words at the column (`lig` / `ht`). Hotbar is still its own row. No BattleStage shot — north of the starter room has no hostile. Saving during focus writes the expanded arrangement.
 
+## A1–B4 production promote
+- SHA on the VPS after the fast-forward: `5b7423f415e0a368294e1facc4c829174cb30520` (`5b7423f`). Was `cdd9168` (Party Follow, bundle `?v=party2`).
+- What changed: `git pull --ff-only origin engine-june` in `~/dev/talesmud`. Restored a local `extra.css` reorder so that file could fast-forward. Copied `public/mud-client/public` into `pkg/webuiplay/dist`, `go build -o bin/tales`. `sudo systemctl restart` needs a password, so the old pid 711084 was SIGTERM'd and `Restart=always` started pid 722724. Door pid 695590 on :8020 was not restarted.
+- Smoke: `https://veilspan.com/` 200, `/play/` 200 and `bundle.js?v=b4chrome`, `/api/server-info` 200, `POST /api/guest` 200. Listening on 8010 at 2026-09-25 08:07:48Z.
+
+## A5 — Class balance
+- SHA: `9013879c9c66f6161e38b0b5daad1f0ce0e5af83` (`9013879`)
+- Levers: `class_balance` in `config/combat_balance.yaml`. `damage_dealt` / `damage_taken` after the level-gap product and before crit. `behind_dealt` multiplies outgoing damage only when that class is the lower level (`wizard` uses the mage row). Scaled boss hit points in `CreateScaledEnemy` are `220 + 23*level`. Content bosses still use `CreateEnemy`, so warrior trash duration stays in the old windows. Warrior even-fight damage is 1× with `behind_dealt` 1.20. Rogue is 1.35× even and 2.35× uphill. Ranger is 1.26×. Mage is 2.65× dealt and 0.46× taken.
+- 80-iteration check, before → after: warrior appropriate boss gap 0 **75% → 59%**. Rogue good-gear boss +3 **21% → 51%**. Mage appropriate elite gap 0 **8% → 74%**, appropriate boss gap 0 **0% → 54%**, good-gear boss +3 **4% → 52%**. Rogue appropriate +5 stayed 0%.
+- Tests: `go test ./pkg/mudserver/game/balance/ ./pkg/mudserver/game/combat/ -count=1 -run 'TestScaleClass|TestLevelGap|TestGapMatrix|TestCombatDuration|TestLevel1|TestBosses|TestSameLevel'` green. `TestGapMatrixTargets` locks warrior appropriate boss gap 0 at ≤70%, rogue good-gear boss +3 at ≥35%, and mage elite / boss / good-gear +3 inside wide 24-iteration bands.
+- Deploy: pushed `engine-june`. VPS fast-forwarded to `9013879`, rebuilt `bin/tales`, SIGTERM of pid 722724, `Restart=always` started pid 723455. Door pid 695590 unchanged. No client change, so the page is still `?v=b4chrome`.
+- Smoke: `/` 200, `/play/` 200 with `bundle.js?v=b4chrome`, `/api/server-info` 200, `POST /api/guest` 200. Listening on 8010 at 2026-09-25 08:26:14Z.
+- Residuals: a 24-iteration draw still swings (rogue good-gear +3 has landed at 29% in one draw while the 80-iteration center is 51%). Ranger at-level bosses are closer but not as steady as warrior. Rogue even-fight bosses are a bit under the 50–65% ceiling because the uphill multiplier is what fixes the +3 cell. Word-split terminal wrap and the hotbar row are unchanged.
+
