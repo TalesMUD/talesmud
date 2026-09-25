@@ -95,6 +95,29 @@ reward_scale:
   skull: 2.0
   first_kill_bonus: 0.50
 
+# Per-class damage after defense and level_gap, before crit.
+# damage_dealt multiplies hits this class lands. damage_taken multiplies hits
+# this class receives. behind_dealt multiplies damage_dealt again when this
+# class is the lower level. 1 is unchanged. Class id "wizard" uses the mage row.
+# Tuned so the level-10 gap table shares one band: at-level bosses ~50–65%,
+# good-gear bosses at +3 ~50%, cloth included. Warrior trash duration stays
+# inside the existing at-level windows.
+class_balance:
+  warrior:
+    damage_dealt: 1
+    damage_taken: 1
+    behind_dealt: 1.20
+  rogue:
+    damage_dealt: 1.35
+    damage_taken: 1
+    behind_dealt: 2.35
+  ranger:
+    damage_dealt: 1.26
+    damage_taken: 1
+  mage:
+    damage_dealt: 2.65
+    damage_taken: 0.46
+
 # Notes:
 # - Tuned so strength difference drives duration (trash fast, bosses long but killable).
 # - Sims auto-spend distributable attribute points on primary attr (competent player).

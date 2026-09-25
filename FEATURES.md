@@ -863,6 +863,11 @@ Signed gap = attacker level − defender level, clamped (default ±6). Gap 0 lea
 
 Players and NPCs both use `CombatantRef.Level`, copied from the character or NPC at combat start. A missed damage skill does not apply its secondary effect or Shield Bash stun. Numbers stay in config so the engine stays world-neutral. Feel targets: an enemy 3 levels up is hard in level-appropriate gear and fair in good gear; +5 is a skull fight; −3 or lower feels trivial.
 
+### Class balance
+**Config**: `class_balance` in `config/combat_balance.yaml` (defaults in `pkg/mudserver/game/balance/class_balance.go`).
+
+After the level-gap multiplier and before a crit, `damage_dealt` scales hits that class lands and `damage_taken` scales hits that class receives. `behind_dealt` multiplies `damage_dealt` again when that class is the lower level. Class id `wizard` uses the `mage` row. A missing class or a multiplier of 1 leaves that side unchanged. The level-10 gap table uses this so warrior, rogue, ranger, and mage share one band: at-level bosses about 50–65%, and a good-gear boss three levels up about 50%.
+
 ### Threat colors
 `threat` in `config/combat_balance.yaml` maps `(enemyLevel - playerLevel)` to `grey / green / yellow / orange / red / skull` (defaults: ≤ −3 grey, −2..−1 green, 0..+1 yellow, +2 orange, +3..+4 red, ≥ +5 skull). The tier is on the room NPC payload (`threat`) and on combat enemy views, computed for the viewer. Room cards and BattleStage nameplates use that color; skull enemies also show ☠. `attack` on orange, red, or skull warns once ("X is much stronger than you") and does not engage. `attack!` or a second `attack` on that enemy does. The room Attack button confirms, then sends `attack!`.
 

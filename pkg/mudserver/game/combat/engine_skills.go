@@ -493,6 +493,7 @@ func (e *Engine) applySkillLevelGap(caster, target *combat.CombatantRef, damage 
 		}
 	}
 	scaled := balance.ScaleDamage(caster.Level, target.Level, damage)
+	scaled = balance.ScaleClassDamage(caster.ClassID, target.ClassID, caster.Level, target.Level, scaled)
 	if mods.CritChanceDelta > 0 && rand.Float64() < mods.CritChanceDelta {
 		mult := 2.0
 		if e != nil && e.Config != nil && e.Config.CriticalHitMultiplier > 0 {

@@ -1,6 +1,6 @@
 # Combat balance — level gap table
 
-Player level is 10. Gap is enemy level minus player level. Trash / elite / boss use the level-scaled bodies in `CreateScaledEnemy` (easy / hard / boss). Appropriate gear is class starter plus a small per-level bump. Good gear is about 2.2× that. Hit, crit, and damage still come from `config/combat_balance.yaml` `level_gap`.
+Player level is 10. Gap is enemy level minus player level. Trash / elite / boss use the level-scaled bodies in `CreateScaledEnemy` (easy / hard / boss). Appropriate gear is class starter plus a small per-level bump. Good gear is about 2.2× that. Hit, crit, and the level gap come from `config/combat_balance.yaml` `level_gap`. `class_balance` then scales each class's damage dealt and taken.
 
 Targets: level-appropriate trash at gap 0 wins about 95%+, elites 75–90%, bosses 50–65%. Bosses at +3 with good gear about 50%. +5 with appropriate gear stays under 15%.
 
@@ -8,123 +8,132 @@ Targets: level-appropriate trash at gap 0 wins about 95%+, elites 75–90%, boss
 
 | Tier | Stat | -3 | -2 | -1 | +0 | +1 | +2 | +3 | +4 | +5 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| trash | win% | 100% | 100% | 100% | 100% | 100% | 96% | 92% | 79% | 38% |
-| trash | rounds | 4.9 | 5.2 | 6.1 | 7.0 | 8.0 | 8.5 | 10.5 | 11.3 | 11.1 |
-| trash | HP left | 96% | 97% | 95% | 86% | 74% | 68% | 51% | 42% | 36% |
-| elite | win% | 100% | 100% | 100% | 92% | 83% | 33% | 21% | 0% | 0% |
-| elite | rounds | 10.8 | 12.8 | 13.8 | 17.1 | 20.3 | 19.9 | 19.2 | 15.0 | 9.9 |
-| elite | HP left | 90% | 90% | 88% | 59% | 47% | 51% | 30% | — | — |
-| boss | win% | 100% | 100% | 100% | 75% | 0% | 0% | 0% | 0% | 0% |
-| boss | rounds | 15.9 | 18.9 | 24.0 | 25.1 | 22.0 | 18.5 | 14.7 | 13.1 | 11.5 |
-| boss | HP left | 83% | 74% | 66% | 50% | — | — | — | — | — |
+| trash | win% | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 71% | 54% |
+| trash | rounds | 4.8 | 5.0 | 5.8 | 7.0 | 7.0 | 7.2 | 8.6 | 9.0 | 10.1 |
+| trash | HP left | 98% | 98% | 95% | 90% | 85% | 83% | 67% | 55% | 45% |
+| elite | win% | 100% | 100% | 100% | 96% | 88% | 71% | 12% | 0% | 0% |
+| elite | rounds | 11.0 | 12.4 | 14.3 | 17.4 | 18.1 | 19.8 | 17.5 | 15.4 | 9.3 |
+| elite | HP left | 94% | 90% | 85% | 70% | 44% | 37% | 38% | — | — |
+| boss | win% | 100% | 100% | 83% | 50% | 21% | 0% | 0% | 0% | 0% |
+| boss | rounds | 21.2 | 25.8 | 28.8 | 28.2 | 21.6 | 21.3 | 12.7 | 10.8 | 9.9 |
+| boss | HP left | 85% | 71% | 51% | 41% | 28% | — | — | — | — |
 
 ## Warrior — good gear
 
 | Tier | Stat | -3 | -2 | -1 | +0 | +1 | +2 | +3 | +4 | +5 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | trash | win% | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
-| trash | rounds | 3.9 | 4.9 | 5.2 | 5.2 | 7.0 | 7.0 | 8.4 | 9.1 | 10.8 |
-| trash | HP left | 99% | 98% | 96% | 97% | 93% | 90% | 88% | 89% | 89% |
-| elite | win% | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 75% | 71% |
-| elite | rounds | 9.1 | 9.8 | 11.5 | 15.0 | 17.1 | 20.0 | 24.3 | 30.3 | 36.3 |
-| elite | HP left | 98% | 94% | 91% | 84% | 84% | 76% | 71% | 67% | 52% |
-| boss | win% | 100% | 100% | 100% | 100% | 100% | 71% | 62% | 12% | 0% |
-| boss | rounds | 12.8 | 14.3 | 17.3 | 22.0 | 26.5 | 30.5 | 34.2 | 51.5 | 37.5 |
-| boss | HP left | 93% | 84% | 78% | 78% | 69% | 60% | 50% | 54% | — |
+| trash | rounds | 4.0 | 5.0 | 5.1 | 5.3 | 5.2 | 6.7 | 7.5 | 8.5 | 9.7 |
+| trash | HP left | 99% | 98% | 98% | 96% | 97% | 93% | 93% | 90% | 83% |
+| elite | win% | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 88% | 79% |
+| elite | rounds | 8.7 | 11.0 | 11.6 | 13.8 | 14.5 | 16.3 | 21.4 | 25.1 | 30.0 |
+| elite | HP left | 97% | 94% | 84% | 86% | 82% | 75% | 74% | 58% | 65% |
+| boss | win% | 100% | 100% | 100% | 96% | 88% | 71% | 58% | 4% | 0% |
+| boss | rounds | 17.2 | 19.9 | 23.2 | 28.8 | 29.9 | 32.9 | 41.1 | 55.4 | 45.2 |
+| boss | HP left | 95% | 82% | 80% | 61% | 50% | 49% | 35% | 8% | — |
 
 ## Rogue — appropriate gear
 
 | Tier | Stat | -3 | -2 | -1 | +0 | +1 | +2 | +3 | +4 | +5 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| trash | win% | 100% | 100% | 100% | 96% | 92% | 67% | 42% | 46% | 8% |
-| trash | rounds | 4.0 | 5.0 | 6.9 | 6.9 | 7.2 | 7.3 | 7.4 | 7.9 | 6.2 |
-| trash | HP left | 93% | 95% | 84% | 79% | 64% | 55% | 39% | 36% | 50% |
-| elite | win% | 100% | 92% | 96% | 62% | 54% | 21% | 4% | 0% | 0% |
-| elite | rounds | 9.8 | 11.0 | 12.9 | 12.9 | 13.5 | 12.8 | 8.6 | 5.6 | 4.9 |
-| elite | HP left | 78% | 77% | 77% | 55% | 28% | 25% | 48% | — | — |
-| boss | win% | 92% | 88% | 71% | 50% | 0% | 0% | 0% | 0% | 0% |
-| boss | rounds | 13.3 | 16.0 | 17.0 | 17.2 | 10.9 | 8.4 | 6.5 | 5.9 | 4.7 |
-| boss | HP left | 67% | 77% | 69% | 14% | — | — | — | — | — |
+| trash | win% | 100% | 100% | 100% | 96% | 100% | 100% | 100% | 100% | 62% |
+| trash | rounds | 4.0 | 4.3 | 4.1 | 5.0 | 3.0 | 3.1 | 3.1 | 4.4 | 3.5 |
+| trash | HP left | 97% | 96% | 94% | 79% | 88% | 78% | 83% | 61% | 83% |
+| elite | win% | 100% | 96% | 100% | 79% | 92% | 83% | 38% | 21% | 8% |
+| elite | rounds | 7.9 | 8.7 | 9.9 | 11.5 | 5.8 | 6.9 | 5.8 | 5.5 | 5.1 |
+| elite | HP left | 93% | 87% | 90% | 70% | 80% | 58% | 60% | 54% | 38% |
+| boss | win% | 100% | 96% | 75% | 62% | 50% | 21% | 25% | 0% | 0% |
+| boss | rounds | 14.3 | 16.0 | 16.6 | 18.5 | 9.0 | 9.2 | 8.1 | 5.4 | 5.5 |
+| boss | HP left | 73% | 56% | 64% | 28% | 78% | 64% | 79% | — | — |
 
 ## Rogue — good gear
 
 | Tier | Stat | -3 | -2 | -1 | +0 | +1 | +2 | +3 | +4 | +5 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| trash | win% | 100% | 100% | 100% | 100% | 100% | 92% | 88% | 96% | 92% |
-| trash | rounds | 4.0 | 4.8 | 5.0 | 5.0 | 7.0 | 7.0 | 8.2 | 8.5 | 10.4 |
-| trash | HP left | 98% | 97% | 93% | 90% | 100% | 93% | 84% | 77% | 71% |
-| elite | win% | 100% | 100% | 100% | 88% | 92% | 83% | 71% | 71% | 38% |
-| elite | rounds | 9.2 | 9.0 | 9.8 | 11.9 | 16.2 | 17.5 | 17.3 | 23.7 | 24.4 |
-| elite | HP left | 88% | 91% | 80% | 85% | 78% | 72% | 59% | 69% | 68% |
-| boss | win% | 100% | 88% | 79% | 92% | 58% | 54% | 21% | 8% | 4% |
-| boss | rounds | 11.5 | 12.5 | 15.0 | 18.8 | 18.5 | 23.3 | 15.2 | 15.2 | 18.8 |
-| boss | HP left | 87% | 77% | 75% | 71% | 48% | 42% | 100% | 100% | 100% |
+| trash | win% | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
+| trash | rounds | 3.0 | 3.8 | 4.0 | 3.8 | 3.0 | 3.1 | 3.1 | 3.2 | 4.8 |
+| trash | HP left | 99% | 98% | 96% | 91% | 95% | 98% | 95% | 97% | 79% |
+| elite | win% | 100% | 100% | 100% | 92% | 100% | 100% | 100% | 92% | 88% |
+| elite | rounds | 6.5 | 7.9 | 8.0 | 8.8 | 6.0 | 5.9 | 6.8 | 8.5 | 10.8 |
+| elite | HP left | 94% | 89% | 82% | 83% | 88% | 83% | 90% | 76% | 58% |
+| boss | win% | 100% | 92% | 88% | 79% | 96% | 83% | 46% | 33% | 12% |
+| boss | rounds | 11.8 | 13.0 | 15.3 | 16.4 | 9.3 | 11.7 | 9.9 | 11.7 | 10.5 |
+| boss | HP left | 84% | 73% | 73% | 66% | 79% | 53% | 100% | 100% | 100% |
 
 ## Ranger — appropriate gear
 
 | Tier | Stat | -3 | -2 | -1 | +0 | +1 | +2 | +3 | +4 | +5 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| trash | win% | 100% | 100% | 100% | 100% | 100% | 71% | 75% | 17% | 25% |
-| trash | rounds | 5.1 | 5.0 | 5.9 | 6.9 | 7.2 | 7.9 | 9.3 | 7.7 | 8.4 |
-| trash | HP left | 93% | 94% | 92% | 81% | 73% | 51% | 32% | 46% | 42% |
-| elite | win% | 100% | 100% | 83% | 75% | 54% | 21% | 0% | 0% | 0% |
-| elite | rounds | 10.1 | 11.6 | 12.6 | 15.2 | 16.3 | 11.7 | 9.9 | 9.8 | 6.8 |
-| elite | HP left | 87% | 73% | 87% | 68% | 37% | 57% | — | — | — |
-| boss | win% | 96% | 88% | 79% | 50% | 4% | 0% | 0% | 0% | 0% |
-| boss | rounds | 15.3 | 17.2 | 19.1 | 19.5 | 13.9 | 10.6 | 10.9 | 6.9 | 4.9 |
-| boss | HP left | 77% | 68% | 80% | 58% | 59% | — | — | — | — |
+| trash | win% | 100% | 100% | 100% | 100% | 100% | 88% | 79% | 42% | 12% |
+| trash | rounds | 4.0 | 4.0 | 5.0 | 5.0 | 6.0 | 6.8 | 6.9 | 6.7 | 7.0 |
+| trash | HP left | 99% | 96% | 93% | 95% | 79% | 67% | 54% | 49% | 61% |
+| elite | win% | 100% | 100% | 92% | 92% | 71% | 21% | 0% | 0% | 0% |
+| elite | rounds | 7.8 | 9.1 | 9.8 | 13.3 | 14.2 | 10.7 | 9.1 | 9.5 | 7.7 |
+| elite | HP left | 92% | 88% | 84% | 53% | 30% | 57% | — | — | — |
+| boss | win% | 92% | 92% | 67% | 25% | 12% | 4% | 0% | 0% | 0% |
+| boss | rounds | 14.5 | 19.2 | 20.5 | 16.7 | 15.4 | 14.5 | 10.5 | 5.4 | 5.0 |
+| boss | HP left | 79% | 62% | 47% | 58% | 32% | 8% | — | — | — |
 
 ## Ranger — good gear
 
 | Tier | Stat | -3 | -2 | -1 | +0 | +1 | +2 | +3 | +4 | +5 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| trash | win% | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 92% | 96% |
-| trash | rounds | 4.0 | 5.0 | 4.9 | 5.1 | 7.0 | 7.4 | 8.4 | 8.2 | 10.0 |
-| trash | HP left | 98% | 98% | 97% | 96% | 92% | 82% | 86% | 86% | 71% |
-| elite | win% | 100% | 100% | 100% | 100% | 100% | 75% | 75% | 54% | 62% |
-| elite | rounds | 8.7 | 9.2 | 10.4 | 13.1 | 15.9 | 15.8 | 19.3 | 24.5 | 27.8 |
-| elite | HP left | 94% | 93% | 90% | 80% | 60% | 65% | 77% | 84% | 45% |
-| boss | win% | 96% | 96% | 92% | 83% | 58% | 67% | 42% | 33% | 8% |
-| boss | rounds | 11.8 | 14.0 | 16.6 | 19.9 | 21.4 | 25.5 | 26.3 | 41.6 | 54.4 |
-| boss | HP left | 91% | 67% | 77% | 81% | 64% | 59% | 52% | 33% | 1% |
+| trash | win% | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 88% | 96% |
+| trash | rounds | 3.0 | 3.9 | 4.0 | 5.2 | 5.2 | 5.7 | 7.2 | 7.3 | 8.8 |
+| trash | HP left | 100% | 98% | 97% | 93% | 93% | 86% | 86% | 73% | 78% |
+| elite | win% | 100% | 100% | 100% | 100% | 100% | 88% | 79% | 75% | 67% |
+| elite | rounds | 6.5 | 8.1 | 9.1 | 10.7 | 12.7 | 14.2 | 15.4 | 19.7 | 24.8 |
+| elite | HP left | 95% | 87% | 84% | 83% | 81% | 67% | 68% | 70% | 63% |
+| boss | win% | 100% | 96% | 96% | 75% | 50% | 67% | 33% | 21% | 4% |
+| boss | rounds | 13.2 | 14.1 | 17.6 | 18.5 | 20.1 | 27.7 | 24.0 | 31.4 | 46.9 |
+| boss | HP left | 89% | 77% | 64% | 69% | 58% | 59% | 50% | 47% | 1% |
 
 ## Mage — appropriate gear
 
 | Tier | Stat | -3 | -2 | -1 | +0 | +1 | +2 | +3 | +4 | +5 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| trash | win% | 88% | 96% | 75% | 67% | 58% | 8% | 4% | 0% | 0% |
-| trash | rounds | 4.8 | 4.9 | 5.5 | 5.4 | 5.4 | 4.3 | 4.0 | 2.9 | 2.9 |
-| trash | HP left | 71% | 49% | 51% | 46% | 28% | 45% | 39% | — | — |
-| elite | win% | 79% | 33% | 8% | 8% | 0% | 0% | 0% | 0% | 0% |
-| elite | rounds | 8.1 | 6.9 | 5.3 | 6.1 | 5.9 | 4.6 | 3.7 | 3.2 | 2.9 |
-| elite | HP left | 53% | 32% | 75% | 42% | — | — | — | — | — |
-| boss | win% | 33% | 8% | 0% | 0% | 0% | 0% | 0% | 0% | 0% |
-| boss | rounds | 7.8 | 5.6 | 5.9 | 5.2 | 4.9 | 4.3 | 3.8 | 1.6 | 1.4 |
-| boss | HP left | 56% | 72% | — | — | — | — | — | — | — |
+| trash | win% | 100% | 100% | 100% | 100% | 100% | 88% | 92% | 75% | 12% |
+| trash | rounds | 3.0 | 3.0 | 3.0 | 3.0 | 3.1 | 4.1 | 4.1 | 4.2 | 3.5 |
+| trash | HP left | 91% | 86% | 86% | 75% | 72% | 65% | 48% | 32% | 39% |
+| elite | win% | 100% | 100% | 100% | 92% | 79% | 71% | 8% | 4% | 0% |
+| elite | rounds | 4.0 | 4.9 | 5.0 | 5.9 | 5.8 | 6.1 | 4.8 | 4.6 | 5.0 |
+| elite | HP left | 86% | 74% | 74% | 44% | 48% | 32% | 27% | 23% | — |
+| boss | win% | 100% | 88% | 67% | 58% | 17% | 0% | 0% | 0% | 0% |
+| boss | rounds | 6.9 | 6.8 | 7.2 | 8.6 | 6.8 | 6.5 | 6.7 | 3.3 | 2.9 |
+| boss | HP left | 75% | 57% | 35% | 34% | 36% | — | — | — | — |
 
 ## Mage — good gear
 
 | Tier | Stat | -3 | -2 | -1 | +0 | +1 | +2 | +3 | +4 | +5 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| trash | win% | 100% | 100% | 96% | 100% | 96% | 92% | 46% | 46% | 17% |
-| trash | rounds | 4.9 | 4.8 | 5.9 | 6.0 | 6.1 | 7.4 | 7.2 | 6.6 | 6.8 |
-| trash | HP left | 91% | 94% | 87% | 78% | 84% | 67% | 74% | 59% | 39% |
-| elite | win% | 96% | 96% | 96% | 83% | 58% | 25% | 21% | 0% | 0% |
-| elite | rounds | 8.6 | 9.8 | 10.8 | 11.0 | 11.2 | 9.4 | 10.9 | 7.4 | 7.2 |
-| elite | HP left | 87% | 69% | 62% | 64% | 100% | 79% | 62% | — | — |
-| boss | win% | 92% | 96% | 38% | 25% | 25% | 8% | 4% | 0% | 0% |
-| boss | rounds | 11.5 | 12.3 | 9.5 | 10.2 | 13.0 | 10.6 | 13.5 | 5.9 | 4.5 |
-| boss | HP left | 74% | 71% | 94% | 100% | 100% | 62% | 100% | — | — |
+| trash | win% | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 88% | 79% |
+| trash | rounds | 3.0 | 3.0 | 3.0 | 3.0 | 3.2 | 4.1 | 4.2 | 4.6 | 5.7 |
+| trash | HP left | 99% | 99% | 95% | 98% | 96% | 85% | 88% | 71% | 52% |
+| elite | win% | 100% | 100% | 100% | 100% | 96% | 96% | 88% | 75% | 33% |
+| elite | rounds | 4.0 | 4.9 | 5.0 | 6.0 | 6.0 | 6.3 | 7.3 | 8.1 | 7.8 |
+| elite | HP left | 96% | 95% | 98% | 79% | 90% | 70% | 73% | 64% | 72% |
+| boss | win% | 100% | 100% | 96% | 88% | 88% | 71% | 50% | 12% | 0% |
+| boss | rounds | 6.8 | 6.9 | 8.0 | 8.5 | 10.1 | 11.2 | 10.4 | 9.8 | 8.1 |
+| boss | HP left | 87% | 93% | 91% | 84% | 88% | 66% | 61% | 28% | — |
 
 ## How to read this sample
 
-One 24-iteration run per cell (player level 10). Win% moves a few points between runs.
+One 24-iteration run per cell (player level 10). Win% moves several points between runs. An 80-iteration check of the same config is the steadier read of the three cells A4 left open:
 
-- Level-appropriate trash at gap 0 is essentially a sure win for warrior, rogue, and ranger. Mages in starter cloth win about half of those races.
-- Elites at gap 0 land in or just above the 75–90% band for warrior and ranger. Rogues are a bit lower.
-- Bosses at gap 0: rogue and ranger sit near 45–70%. Warriors are stronger and often clear an at-level boss.
-- Bosses at +3 with good gear: warrior and ranger land around 40–70%. Rogues are lower (about 20% in this sample).
-- At +5, appropriate-gear elites and bosses are under 15% (usually 0). Trash at +5 is still beatable for a warrior (about 30–40% in this sample) and is not a skull fight by itself. Good gear makes +5 trash easy and +5 bosses rare.
+| Cell | A4 sample | 80-iteration check |
+| --- | --- | --- |
+| Warrior, appropriate gear, boss, gap 0 | 75% | 59% |
+| Rogue, good gear, boss, gap +3 | 21% | 51% |
+| Mage, appropriate gear, elite, gap 0 | 8% | 74% |
+| Mage, appropriate gear, boss, gap 0 | 0% | 54% |
+| Mage, good gear, boss, gap +3 | 4% | 52% |
 
-`level_gap` per level of attacker advantage: hit +3.5%, crit +1%, damage dealt +3.5%, damage taken +2%, clamped at ±6. Gap 0 does not change the old damage formula, so the at-level content duration tests are unchanged. The tier bodies live in `CreateScaledEnemy`.
+`class_balance` in `config/combat_balance.yaml` scales damage after `level_gap` and before a crit. `behind_dealt` applies only when that class is the lower level, so an even boss and a fight three levels up can be tuned apart. The scaled boss body in `CreateScaledEnemy` is `220 + 23*level` hit points. Content bosses still use `CreateEnemy` and the duration bands.
 
+- Warrior even-fight damage is unchanged, so at-level trash duration stays in the old windows. The thicker boss is what pulls an appropriate-gear at-level boss into the 50–65% band. `behind_dealt` 1.20 keeps a good-gear boss at +3 near 60%.
+- Rogue even-fight damage is 1.35×. Uphill (`behind_dealt` 2.35) is what moves the good-gear +3 boss to about 50%. Appropriate-gear +5 stays at 0%.
+- Mage damage dealt is 2.65× and damage taken is 0.46×. Cloth still ends those wins on low HP. Trash at gap 0 is a clear. Elite and boss at gap 0, and a good-gear boss at +3, land in the same bands as the melee classes.
+- Ranger damage dealt is 1.26× so an at-level boss is no longer a one-sided loss. Content boss fights still last at least 12 rounds.
+- Appropriate-gear elites and bosses at +5 stay under 15%.
+
+`level_gap` per level of attacker advantage is unchanged: hit +3.5%, crit +1%, damage dealt +3.5%, damage taken +2%, clamped at ±6. Gap 0 does not change the level-gap term.

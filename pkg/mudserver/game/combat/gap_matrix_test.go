@@ -19,8 +19,10 @@ func TestGapMatrixTargets(t *testing.T) {
 	rows := simutil.RunGapMatrix(simutil.GapMatrixConfig{Iterations: 24})
 	t.Log("\n" + simutil.FormatGapMarkdown(rows))
 
-	// Bands are wide enough for a 24-iteration sample. Mage bosses sit lower
-	// (cloth HP); the durable classes carry the at-level and +3 good-gear targets.
+	// Bands are wide enough for a 24-iteration sample. An 80-iteration check
+	// of the same config put warrior at-level bosses near 51%, rogue and
+	// ranger good-gear +3 bosses near 50–60%, and mage elite/boss near the
+	// same band. A single 24-iteration draw still swings.
 	check := func(class, gear, tier string, gap int, min, max float64) {
 		t.Helper()
 		for _, r := range rows {
@@ -37,20 +39,25 @@ func TestGapMatrixTargets(t *testing.T) {
 
 	check("Warrior", simutil.GearAppropriate, "trash", 0, 0.90, 1)
 	check("Warrior", simutil.GearAppropriate, "elite", 0, 0.70, 1)
-	check("Warrior", simutil.GearAppropriate, "boss", 0, 0.40, 0.95)
+	check("Warrior", simutil.GearAppropriate, "boss", 0, 0.35, 0.70)
 	check("Warrior", simutil.GearAppropriate, "elite", 5, 0, 0.20)
 	check("Warrior", simutil.GearAppropriate, "boss", 5, 0, 0.15)
-	check("Warrior", simutil.GearGood, "boss", 3, 0.35, 0.85)
+	check("Warrior", simutil.GearGood, "boss", 3, 0.35, 0.80)
 
 	check("Rogue", simutil.GearAppropriate, "trash", 0, 0.75, 1)
+	check("Rogue", simutil.GearAppropriate, "boss", 0, 0.15, 0.70)
 	check("Rogue", simutil.GearAppropriate, "boss", 5, 0, 0.20)
-	check("Rogue", simutil.GearGood, "boss", 3, 0.05, 0.70)
+	check("Rogue", simutil.GearGood, "boss", 3, 0.35, 0.75)
 
 	check("Ranger", simutil.GearAppropriate, "trash", 0, 0.85, 1)
 	check("Ranger", simutil.GearAppropriate, "elite", 0, 0.55, 1)
+	check("Ranger", simutil.GearAppropriate, "boss", 0, 0.25, 0.75)
 	check("Ranger", simutil.GearAppropriate, "boss", 5, 0, 0.15)
-	check("Ranger", simutil.GearGood, "boss", 3, 0.30, 0.85)
+	check("Ranger", simutil.GearGood, "boss", 3, 0.25, 0.80)
 
-	check("Mage", simutil.GearAppropriate, "trash", 0, 0.45, 1)
+	check("Mage", simutil.GearAppropriate, "trash", 0, 0.75, 1)
+	check("Mage", simutil.GearAppropriate, "elite", 0, 0.60, 1)
+	check("Mage", simutil.GearAppropriate, "boss", 0, 0.30, 0.80)
 	check("Mage", simutil.GearAppropriate, "boss", 5, 0, 0.20)
+	check("Mage", simutil.GearGood, "boss", 3, 0.35, 0.80)
 }

@@ -107,6 +107,7 @@ func (e *Engine) CreateCombatantFromCharacter(char *characters.Character) combat
 		IsAlive:     true,
 		HasFled:     false,
 		Level:       char.Level,
+		ClassID:     char.Class.ID,
 		MaxHP:       char.MaxHitPoints,
 		CurrentHP:   char.CurrentHitPoints,
 		AttackPower: attackPower,
@@ -482,6 +483,7 @@ func (e *Engine) CalculateDamage(attacker, target *combat.CombatantRef, critical
 	// Level gap scales damage after defense and before the crit multiplier.
 	// Equal levels leave the pre-gap number unchanged.
 	damage = balance.ScaleDamage(attacker.Level, target.Level, damage)
+	damage = balance.ScaleClassDamage(attacker.ClassID, target.ClassID, attacker.Level, target.Level, damage)
 
 	// Critical hit doubles damage (or uses CriticalHitMultiplier when it is not 2).
 	if critical {

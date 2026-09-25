@@ -220,7 +220,8 @@ func FormatGapMarkdown(rows []GapRow) string {
 	b.WriteString("Player level is 10. Gap is enemy level minus player level. ")
 	b.WriteString("Trash / elite / boss use the level-scaled bodies in `CreateScaledEnemy` ")
 	b.WriteString("(easy / hard / boss). Appropriate gear is class starter plus a small per-level bump. ")
-	b.WriteString("Good gear is about 2.2× that. Hit, crit, and damage still come from `config/combat_balance.yaml` `level_gap`.\n\n")
+	b.WriteString("Good gear is about 2.2× that. Hit, crit, and the level gap come from `config/combat_balance.yaml` `level_gap`. ")
+	b.WriteString("`class_balance` then scales each class's damage dealt and taken.\n\n")
 	b.WriteString("Targets: level-appropriate trash at gap 0 wins about 95%+, elites 75–90%, bosses 50–65%. ")
 	b.WriteString("Bosses at +3 with good gear about 50%. +5 with appropriate gear stays under 15%.\n\n")
 

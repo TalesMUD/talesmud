@@ -120,7 +120,11 @@ func CreateScaledEnemy(name string, level int32, difficulty string) *npc.NPC {
 		atk = 14 + (level*3)/2
 		def = 3 + level/2
 	case "boss":
-		hp = 160 + 18*level
+		// A little thicker than the first curve so an at-level warrior is not
+		// a 75% clear, while class_balance.behind_dealt keeps a good-gear
+		// fight three levels up near a coin flip. Content bosses use
+		// CreateEnemy, not this curve, so duration bands stay put.
+		hp = 220 + 23*level
 		atk = 18 + (level*7)/4
 		def = 4 + (level*2)/3
 	default:

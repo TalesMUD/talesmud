@@ -73,11 +73,12 @@ type CombatantRef struct {
 	HasFled    bool          `json:"hasFled"`
 
 	// Snapshot of combat stats at combat start
-	Level       int32 `json:"level,omitempty"`
-	MaxHP       int32 `json:"maxHp"`
-	CurrentHP   int32 `json:"currentHp"`
-	AttackPower int32 `json:"attackPower"`
-	Defense     int32 `json:"defense"`
+	Level       int32  `json:"level,omitempty"`
+	ClassID     string `json:"classId,omitempty"`
+	MaxHP       int32  `json:"maxHp"`
+	CurrentHP   int32  `json:"currentHp"`
+	AttackPower int32  `json:"attackPower"`
+	Defense     int32  `json:"defense"`
 
 	// Attribute modifiers (calculated from character attributes)
 	STRMod int `json:"strMod"`

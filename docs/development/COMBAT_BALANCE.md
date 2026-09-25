@@ -130,6 +130,20 @@ damage  *= (1 + gap * damage_dealt) * (1 + gap * damage_taken)
 
 The product is clamped to `min_damage_multiplier`..`max_damage_multiplier` and applied after defense, before a critical hit doubles it. Gap 0 is an exact no-op. Skills use the same damage multiplier. They do not roll armor class: a negative hit delta is a miss chance, and only a positive crit delta can crit a skill. DoT magnitude is scaled when the effect is applied. Both sides read `CombatantRef.Level`. Keep the numbers in this file; do not hardcode a world name into the formula.
 
+## Class balance
+
+`class_balance` runs after that product and before the crit. `CombatantRef.ClassID` is the character's class id (`wizard` is read as `mage`). NPCs have an empty id, so only the player side of a hit is scaled.
+
+```
+dealt = damage_dealt
+if attackerLevel < defenderLevel {
+    dealt *= behind_dealt
+}
+damage *= dealt * defender.damage_taken
+```
+
+A multiplier of 0 or a missing class is 1. The scaled boss body used by the gap table (`CreateScaledEnemy`, difficulty `boss`) is `220 + 23*level` hit points. Content bosses still go through `CreateEnemy` and `difficulty_multipliers`.
+
 ## Threat colors
 
 `threat` cutoffs use `enemyLevel - playerLevel` (not the attacker's advantage). Defaults: ≤ −3 grey, −2..−1 green, 0..+1 yellow, +2 orange, +3..+4 red, ≥ +5 skull. Room NPC payloads and combat enemy views include `threat` for the viewer. Orange, red, and skull require `attack!` or a second `attack` before combat starts.
