@@ -109,17 +109,17 @@
     position: relative;
     width: 100%;
     /* Prefer more art when the viewport is tall (portrait phones) */
-    height: clamp(180px, 42vh, 420px);
-    min-height: 180px;
-    max-height: 420px;
+    height: clamp(140px, 30vh, 280px);
+    min-height: 140px;
+    max-height: 280px;
     overflow: hidden;
     flex-shrink: 0;
   }
 
   @media (orientation: portrait) and (min-height: 700px) {
     .room-image-section {
-      height: clamp(220px, 48vh, 480px);
-      max-height: 480px;
+      height: clamp(160px, 32vh, 300px);
+      max-height: 300px;
     }
   }
 
@@ -213,13 +213,15 @@
   /* Description section ? size to content; do not grow into a black void.
      Android Chrome collapses -webkit-box to 0 height inside flex:1 + min-height:0. */
   .room-description-section {
-    padding: 10px 14px;
+    padding: 8px 14px 10px;
     background: #000;
     flex: 0 0 auto;
     min-height: 0;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
+    position: relative;
+    z-index: 2;
   }
 
   .room-description {
@@ -236,15 +238,12 @@
   }
 
   .room-description.clamped {
-    /* Prefer max-height clamp; keep -webkit-line-clamp as progressive enhancement */
-    display: block;
-    max-height: calc(1.6em * 3 + 16px);
-    overflow: hidden;
     display: -webkit-box;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 4;
     -webkit-box-orient: vertical;
-    /* Floor so a flex parent cannot squash the box to 0 on mobile WebKit */
-    min-height: calc(1.6em * 3 + 16px);
+    overflow: hidden;
+    max-height: calc(1.6em * 4 + 16px);
+    min-height: calc(1.6em * 2 + 8px);
   }
 
   .room-description.parchment {
@@ -257,11 +256,14 @@
 
   .expand-hint {
     text-align: center;
-    padding: 4px 0 0;
-    color: #6b7280;
+    margin-top: 6px;
+    padding: 2px 0 0;
+    color: #9ca3af;
     font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 1px;
+    flex: 0 0 auto;
+    background: #000;
   }
 
   /* Action bar area */
@@ -269,7 +271,6 @@
     background: rgba(0, 0, 0, 0.6);
     border-top: 1px solid rgba(255, 255, 255, 0.08);
     flex-shrink: 0;
-    margin-top: auto;
   }
 
   .room-pickup-fab {

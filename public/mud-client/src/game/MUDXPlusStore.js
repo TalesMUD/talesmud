@@ -196,6 +196,8 @@ function normalizeCombatant(raw) {
     portrait: raw.portrait || raw.Portrait || "",
     hp: raw.hp ?? raw.HP ?? raw.currentHp ?? 0,
     maxHp: raw.maxHp ?? raw.MaxHP ?? raw.maxHP ?? 1,
+    level: raw.level ?? raw.Level ?? 0,
+    threat: raw.threat || raw.Threat || '',
   };
 }
 
@@ -435,6 +437,7 @@ function createStore() {
     combatOutcome: null, // victory | defeat | fled | timeout
     combatFx: null, // { fxId, at, targetId, actorId, damage, heal, result, action }
     combatEndMessage: "",
+    combatRewards: null,
     hasItems: false,
     hasMerchant: false,
     groundItems: [],
@@ -536,7 +539,9 @@ function createStore() {
             && !!p.isMerchant === !!n.isMerchant
             && !!p.isQuestGiver === !!n.isQuestGiver
             && !!p.hasDialog === !!n.hasDialog
-            && (p.portrait || '') === (n.portrait || '');
+            && (p.portrait || '') === (n.portrait || '')
+            && (p.threat || '') === (n.threat || '')
+            && (p.level || 0) === (n.level || 0);
         })) {
           return state;
         }
@@ -878,6 +883,7 @@ function createStore() {
         }
         state.combatOutcome = null;
         state.combatEndMessage = "";
+        state.combatRewards = null;
         state.combatEnemies = nextEnemies;
         state.combatPlayers = nextPlayers;
         state.combatTargetId = nextEnemies[0]?.id || null;
@@ -996,12 +1002,13 @@ function createStore() {
       });
     },
 
-    endCombat: (outcome, message) => {
+    endCombat: (outcome, message, rewards) => {
       update((state) => {
         state.inCombat = false;
         state.combatPhase = "ending";
         state.combatOutcome = outcome || "victory";
         state.combatEndMessage = message || "";
+        state.combatRewards = rewards || null;
         state.combatTurn = null;
         clearCombatQueueFields(state);
         if (message) {
@@ -1018,6 +1025,7 @@ function createStore() {
           state.combatPhase = "idle";
           state.combatOutcome = null;
           state.combatEndMessage = "";
+          state.combatRewards = null;
           state.combatEnemies = [];
           state.combatPlayers = [];
           state.combatTargetId = null;
@@ -1036,6 +1044,7 @@ function createStore() {
         state.combatPhase = "idle";
         state.combatOutcome = null;
         state.combatEndMessage = "";
+        state.combatRewards = null;
         state.combatEnemies = [];
         state.combatPlayers = [];
         state.combatTargetId = null;
@@ -1054,6 +1063,7 @@ function createStore() {
         state.combatPhase = "idle";
         state.combatOutcome = null;
         state.combatEndMessage = "";
+        state.combatRewards = null;
         state.combatEnemies = [];
         state.combatPlayers = [];
         state.combatTargetId = null;

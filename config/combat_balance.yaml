@@ -47,6 +47,77 @@ named_overrides:
     attack: 0.85
     defense: 0.9
 
+# Level gap (attacker level − defender level), clamped to ±max_levels.
+# Gap 0 is neutral: hit, crit, and damage match the formulas without a gap.
+# Positive gap: the attacker is higher level. Negative: the defender is higher.
+# Basic attacks turn hit_chance into a d20 bonus (0.05 = +1). Natural 1 always
+# misses and natural 20 always hits. crit_chance is added to the 5% natural-20
+# base. Skills always hit at gap >= 0; a negative hit_chance is a per-hit miss
+# chance, and only a positive crit_chance can crit a skill (no base crit).
+# Damage multiplier is (1 + gap*damage_dealt) * (1 + gap*damage_taken), clamped.
+# Applied after defense, before crit, on basic attacks, skill hits, and DoTs.
+# Feel targets: enemy +3 is hard in level-appropriate gear and fair in good gear;
+# +5 is a skull fight; −3 or lower feels trivial.
+level_gap:
+  max_levels: 6
+  per_level:
+    # Gentler than the first pass so good gear can close about three levels,
+    # while +5 stays a skull fight. Gap 0 is still an exact no-op.
+    hit_chance: 0.035
+    crit_chance: 0.01
+    damage_dealt: 0.035
+    damage_taken: 0.02
+  min_damage_multiplier: 0.40
+  max_damage_multiplier: 1.80
+
+# Con colors from (enemyLevel - playerLevel). Cutoffs ascend.
+# <= grey grey, then green, yellow, orange, red; above red is skull.
+# Orange, red, and skull warn once before attack (attack! or a second attack engages).
+# -3 or lower is grey (trivial). +1 is still yellow. +5 or higher is skull.
+threat:
+  grey_at_or_below: -3
+  green_at_or_below: -1
+  yellow_at_or_below: 1
+  orange_at_or_below: 2
+  red_at_or_below: 4
+
+# XP and gold multipliers by the same threat tier (enemyLevel - referenceLevel).
+# referenceLevel is the highest level among characters who receive the victory split.
+# grey is a trickle (about 15%). yellow is the full base. skull is double.
+# first_kill_bonus is added to each character's own share of a boss they have
+# not received the bonus for yet (persisted on the character).
+reward_scale:
+  grey: 0.15
+  green: 0.60
+  yellow: 1.0
+  orange: 1.25
+  red: 1.50
+  skull: 2.0
+  first_kill_bonus: 0.50
+
+# Per-class damage after defense and level_gap, before crit.
+# damage_dealt multiplies hits this class lands. damage_taken multiplies hits
+# this class receives. behind_dealt multiplies damage_dealt again when this
+# class is the lower level. 1 is unchanged. Class id "wizard" uses the mage row.
+# Tuned so the level-10 gap table shares one band: at-level bosses ~50–65%,
+# good-gear bosses at +3 ~50%, cloth included. Warrior trash duration stays
+# inside the existing at-level windows.
+class_balance:
+  warrior:
+    damage_dealt: 1
+    damage_taken: 1
+    behind_dealt: 1.20
+  rogue:
+    damage_dealt: 1.35
+    damage_taken: 1
+    behind_dealt: 2.35
+  ranger:
+    damage_dealt: 1.26
+    damage_taken: 1
+  mage:
+    damage_dealt: 2.65
+    damage_taken: 0.46
+
 # Notes:
 # - Tuned so strength difference drives duration (trash fast, bosses long but killable).
 # - Sims auto-spend distributable attribute points on primary attr (competent player).

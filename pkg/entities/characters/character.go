@@ -132,6 +132,11 @@ type Character struct {
 	// Names are resolved at display time. Empty/omitted is the safe default.
 	FriendIDs []string `bson:"friendIds,omitempty" json:"friendIds,omitempty"`
 
+	// FirstBossKills are boss identities that already paid this character's
+	// first-kill bonus. Key is "tpl:<templateId>" or "name:<lower name>".
+	// Stored in the character JSON document (no extra table).
+	FirstBossKills []string `bson:"firstBossKills,omitempty" json:"firstBossKills,omitempty"`
+
 	// track alltime stats in character object but dont expose as json by default
 	AllTimeStats struct {
 		PlayersKilled   int32 `bson:"playersKilled" json:"playersKilled"`

@@ -2,11 +2,14 @@ package combat
 
 import (
 	"fmt"
+	"math"
+	"math/rand"
 	"strings"
 
 	"github.com/google/uuid"
 	"github.com/talesmud/talesmud/pkg/entities/combat"
 	"github.com/talesmud/talesmud/pkg/entities/skills"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/balance"
 )
 
 // --- Attribute and Status Effect Helpers ---
@@ -103,6 +106,7 @@ type SkillResult struct {
 	TotalDamage int32
 	TotalHeal   int32
 	TargetsDied []string
+	HitsLanded  int
 }
 
 // ProcessSkill handles a combatant using a skill in combat
@@ -199,9 +203,12 @@ func (e *Engine) ProcessSkill(instance *combat.CombatInstance, casterID, skillID
 		e.resolveSkillHot(instance, caster, skill, basePower, &result)
 	}
 
-	// Handle secondary effects (e.g. Holy Strike: damage + heal, Pin Down: damage + debuff)
+	// Secondary effects on a damage or DoT skill only land when the attack itself did.
 	if skill.SecondaryEffect != "" {
-		e.resolveSecondaryEffect(instance, caster, skill, targetID, &result)
+		offensive := skill.Effect == skills.EffectDamage || skill.Effect == skills.EffectDot
+		if !offensive || result.HitsLanded > 0 {
+			e.resolveSecondaryEffect(instance, caster, skill, targetID, &result)
+		}
 	}
 
 	// Special: Berserker Rage also debuffs self defense
@@ -219,8 +226,8 @@ func (e *Engine) ProcessSkill(instance *combat.CombatInstance, casterID, skillID
 		result.Messages = append(result.Messages, fmt.Sprintf("%s's defense drops by 25%% during the rage!", caster.Name))
 	}
 
-	// Special: Shield Bash applies stun
-	if skillID == "warrior_shield_bash" && skill.Duration > 0 {
+	// Special: Shield Bash applies stun when the hit lands
+	if skillID == "warrior_shield_bash" && skill.Duration > 0 && result.HitsLanded > 0 {
 		target := instance.GetCombatantByID(targetID)
 		if target != nil && target.IsAlive {
 			e.applyStatusEffect(instance, target, combat.StatusEffect{
@@ -267,6 +274,9 @@ func (e *Engine) resolveSkillDamage(instance *combat.CombatInstance, caster *com
 
 	for _, target := range targets {
 		totalDmg := int32(0)
+		landed := 0
+		crits := 0
+		misses := 0
 		for hit := 0; hit < hitCount; hit++ {
 			damage := basePower
 
@@ -283,6 +293,17 @@ func (e *Engine) resolveSkillDamage(instance *combat.CombatInstance, caster *com
 			}
 			if damage < 1 {
 				damage = 1
+			}
+
+			var missed, crit bool
+			damage, missed, crit = e.applySkillLevelGap(caster, target, damage)
+			if missed {
+				misses++
+				continue
+			}
+			landed++
+			if crit {
+				crits++
 			}
 
 			// Mana shield absorption
@@ -306,6 +327,7 @@ func (e *Engine) resolveSkillDamage(instance *combat.CombatInstance, caster *com
 			totalDmg += damage
 			result.TotalDamage += damage
 		}
+		result.HitsLanded += landed
 
 		if target.CurrentHP <= 0 {
 			target.CurrentHP = 0
@@ -316,9 +338,21 @@ func (e *Engine) resolveSkillDamage(instance *combat.CombatInstance, caster *com
 
 		// Build message
 		msg := ""
-		if hitCount > 1 {
-			msg = fmt.Sprintf("%s uses %s on %s for %d damage (%d hits)!",
-				caster.Name, skill.Name, target.Name, totalDmg, hitCount)
+		if landed == 0 {
+			msg = fmt.Sprintf("%s uses %s on %s but misses!", caster.Name, skill.Name, target.Name)
+		} else if hitCount > 1 {
+			prefix := ""
+			if crits > 0 {
+				prefix = "CRITICAL! "
+			}
+			msg = fmt.Sprintf("%s%s uses %s on %s for %d damage (%d hits)!",
+				prefix, caster.Name, skill.Name, target.Name, totalDmg, landed)
+			if misses > 0 {
+				msg += fmt.Sprintf(" (%d missed)", misses)
+			}
+		} else if crits > 0 {
+			msg = fmt.Sprintf("CRITICAL! %s casts %s on %s for %d damage!",
+				caster.Name, skill.Name, target.Name, totalDmg)
 		} else {
 			msg = fmt.Sprintf("%s casts %s on %s for %d damage!",
 				caster.Name, skill.Name, target.Name, totalDmg)
@@ -409,12 +443,24 @@ func (e *Engine) resolveSkillDot(instance *combat.CombatInstance, caster *combat
 		return
 	}
 
+	tick, missed, crit := e.applySkillLevelGap(caster, target, basePower)
+	if missed {
+		result.Messages = append(result.Messages, fmt.Sprintf("%s casts %s on %s but misses!",
+			caster.Name, skill.Name, target.Name))
+		return
+	}
+	result.HitsLanded++
+	if crit {
+		result.Messages = append(result.Messages, fmt.Sprintf("CRITICAL! %s casts %s on %s! (%d damage per round for %d rounds)",
+			caster.Name, skill.Name, target.Name, tick, skill.Duration))
+	}
+
 	se := combat.StatusEffect{
 		ID:       uuid.New().String(),
 		SkillID:  skill.ID,
 		Name:     skill.Name,
 		Type:     "dot",
-		Value:    basePower,
+		Value:    tick,
 		Duration: skill.Duration,
 		SourceID: caster.ID,
 	}
@@ -422,8 +468,48 @@ func (e *Engine) resolveSkillDot(instance *combat.CombatInstance, caster *combat
 	e.applyStatusEffect(instance, target, se)
 	e.UpdateCombatant(instance, target)
 
-	result.Messages = append(result.Messages, fmt.Sprintf("%s casts %s on %s! (%d damage per round for %d rounds)",
-		caster.Name, skill.Name, target.Name, basePower, skill.Duration))
+	if !crit {
+		result.Messages = append(result.Messages, fmt.Sprintf("%s casts %s on %s! (%d damage per round for %d rounds)",
+			caster.Name, skill.Name, target.Name, tick, skill.Duration))
+	}
+}
+
+// applySkillLevelGap applies level-gap hit, crit, and damage to one skill hit.
+// Gap 0 does not miss, crit, or change damage. A negative hit delta is a miss
+// chance (skills have no armor class). Only a positive crit delta can crit;
+// skills do not inherit the basic-attack natural-20 crit rate.
+func (e *Engine) applySkillLevelGap(caster, target *combat.CombatantRef, damage int32) (int32, bool, bool) {
+	if caster == nil || target == nil {
+		return damage, false, false
+	}
+	mods := balance.LevelGapModifiers(caster.Level, target.Level)
+	if mods.HitChanceDelta < 0 {
+		missChance := -mods.HitChanceDelta
+		if missChance > 0.95 {
+			missChance = 0.95
+		}
+		if rand.Float64() < missChance {
+			return 0, true, false
+		}
+	}
+	scaled := balance.ScaleDamage(caster.Level, target.Level, damage)
+	scaled = balance.ScaleClassDamage(caster.ClassID, target.ClassID, caster.Level, target.Level, scaled)
+	if mods.CritChanceDelta > 0 && rand.Float64() < mods.CritChanceDelta {
+		mult := 2.0
+		if e != nil && e.Config != nil && e.Config.CriticalHitMultiplier > 0 {
+			mult = e.Config.CriticalHitMultiplier
+		}
+		if mult == 2 {
+			scaled *= 2
+		} else {
+			scaled = int32(math.Round(float64(scaled) * mult))
+			if scaled < 1 {
+				scaled = 1
+			}
+		}
+		return scaled, false, true
+	}
+	return scaled, false, false
 }
 
 func (e *Engine) resolveSkillHot(instance *combat.CombatInstance, caster *combat.CombatantRef, skill *skills.Skill, basePower int32, result *SkillResult) {

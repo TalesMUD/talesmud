@@ -4,6 +4,8 @@
 
   export let store = null;
   export let sendMessage = null;
+  /** Phone sheet already draws the title. */
+  export let embedded = false;
 
   let equippedItems = {};
   let character = null;
@@ -277,10 +279,12 @@
 </style>
 
 <div class="equipment-widget game-panel">
-  <div class="game-panel-header">
-    <i class="material-icons">shield</i>
-    <span class="widget-title">Equipment</span>
-  </div>
+  {#if !embedded}
+    <div class="game-panel-header">
+      <i class="material-icons">shield</i>
+      <span class="widget-title">Equipment</span>
+    </div>
+  {/if}
 
   <div class="doll">
     <div class="slot-col left">

@@ -176,6 +176,8 @@
    ============================================================ */
 
 .game-panel {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
   border-radius: var(--panel-radius);
@@ -209,6 +211,31 @@
 }
 .game-panel::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover);
+}
+
+.widget-scroll,
+.roomContentSection,
+.inv-body,
+.tab-content,
+.tx-body {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+.widget-scroll::-webkit-scrollbar,
+.roomContentSection::-webkit-scrollbar,
+.inv-body::-webkit-scrollbar,
+.tab-content::-webkit-scrollbar,
+.tx-body::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.widget-scroll::-webkit-scrollbar-thumb,
+.roomContentSection::-webkit-scrollbar-thumb,
+.inv-body::-webkit-scrollbar-thumb,
+.tab-content::-webkit-scrollbar-thumb,
+.tx-body::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
 }
 
 /* Panel header — Cinzel font, themed colors */

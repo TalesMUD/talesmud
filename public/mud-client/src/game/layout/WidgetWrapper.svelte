@@ -1,15 +1,58 @@
 <script>
   import { createEventDispatcher } from 'svelte';
   import { getWidgetConfig } from './WidgetRegistry.js';
+  import WidgetChrome from './WidgetChrome.svelte';
 
   export let widget;
   export let editMode = false;
+  /** False while the layout lock is on: edit chrome stays, drag and resize do not. */
+  export let canResize = true;
   export let resizePointerDown = null;
 
   const dispatch = createEventDispatcher();
 
+  const TITLE_CHROME = new Set([
+    'terminal', 'terminalx', 'inventory', 'equipment', 'character', 'questlog', 'tabcontainer',
+  ]);
+  const BUTTON_CHROME = new Set(['room']);
+  const TERM_FONTS = ['small', 'medium', 'large'];
+  const TERM_LABEL = { small: 'S', medium: 'M', large: 'L' };
+
   $: config = getWidgetConfig(widget.widgetType);
   $: isTabContainer = widget.widgetType === 'tabcontainer';
+  $: collapsed = !!widget.collapsed;
+  $: titleChrome = TITLE_CHROME.has(widget.widgetType);
+  $: buttonChrome = BUTTON_CHROME.has(widget.widgetType);
+  $: showTitleBar = !editMode && (titleChrome || (buttonChrome && collapsed));
+  $: showFloatButtons = !editMode && buttonChrome && !collapsed;
+
+  let termFontLabel = 'M';
+
+  function readTermFontLabel() {
+    try {
+      const key = localStorage.getItem('talesmud_term_fontsize') || 'medium';
+      termFontLabel = TERM_LABEL[key] || 'M';
+    } catch (e) {
+      termFontLabel = 'M';
+    }
+  }
+
+  function cycleTermFont(event) {
+    event.stopPropagation();
+    event.preventDefault();
+    let idx = 1;
+    try {
+      const cur = localStorage.getItem('talesmud_term_fontsize');
+      const found = TERM_FONTS.indexOf(cur);
+      if (found >= 0) idx = found;
+      const next = TERM_FONTS[(idx + 1) % TERM_FONTS.length];
+      localStorage.setItem('talesmud_term_fontsize', next);
+      termFontLabel = TERM_LABEL[next];
+    } catch (e) { /* ignore */ }
+    window.dispatchEvent(new Event('talesmud-term-font'));
+  }
+
+  readTermFontLabel();
 
   function handleRemove() {
     dispatch('remove', { id: widget.id });
@@ -28,10 +71,48 @@
     overflow: hidden;
   }
 
+  .widget-wrapper.has-title-chrome {
+    display: flex;
+    flex-direction: column;
+    background: var(--panel-bg, rgba(0, 0, 0, 0.78));
+    border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.1));
+    border-radius: var(--panel-radius, 12px);
+    box-shadow: var(--panel-shadow, none);
+  }
+
+  .widget-wrapper.has-title-chrome .widget-content {
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* One header: the wrapper bar. Inner titles and the old terminal font row stay hidden. */
+  .widget-wrapper.has-title-chrome .widget-content :global(.game-panel-header),
+  .widget-wrapper.has-title-chrome .widget-content :global(.terminal-toolbar),
+  .widget-wrapper.has-title-chrome .widget-content :global(.tx-title),
+  .widget-wrapper.has-title-chrome .widget-content :global(.questlog-header h2) {
+    display: none !important;
+  }
+
+  .widget-wrapper.has-title-chrome .widget-content :global(.game-panel),
+  .widget-wrapper.has-title-chrome .widget-content :global(.terminal-widget),
+  .widget-wrapper.has-title-chrome .widget-content :global(.tx-window),
+  .widget-wrapper.has-title-chrome .widget-content :global(.tab-container),
+  .widget-wrapper.has-title-chrome .widget-content :global(.questlog-widget),
+  .widget-wrapper.has-title-chrome .widget-content :global(.room-widget) {
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    height: 100%;
+  }
+
   .widget-content {
     width: 100%;
     height: 100%;
     overflow: hidden;
+  }
+
+  .widget-content.is-collapsed {
+    display: none;
   }
 
   .widget-content.disabled {
@@ -146,29 +227,24 @@
     position: absolute;
     pointer-events: auto;
     z-index: 110;
-    opacity: 0;
-    transition: opacity 0.15s ease;
-  }
-
-  .widget-wrapper:hover .resize-handle,
-  .resize-handle:active {
     opacity: 1;
   }
 
-  /* Corner handles */
+  /* Corner handles — always visible in edit mode */
   .resize-handle.corner {
-    width: 20px;
-    height: 20px;
+    width: 32px;
+    height: 32px;
   }
 
   .resize-handle.corner::after {
     content: '';
     position: absolute;
-    width: 10px;
-    height: 10px;
-    border-color: #f59e0b;
+    width: 16px;
+    height: 16px;
+    border-color: #fbbf24;
     border-style: solid;
     border-width: 0;
+    filter: drop-shadow(0 0 1px #000);
   }
 
   .resize-handle.se {
@@ -179,8 +255,8 @@
   .resize-handle.se::after {
     right: 4px;
     bottom: 4px;
-    border-right-width: 3px;
-    border-bottom-width: 3px;
+    border-right-width: 4px;
+    border-bottom-width: 4px;
   }
 
   .resize-handle.sw {
@@ -191,8 +267,8 @@
   .resize-handle.sw::after {
     left: 4px;
     bottom: 4px;
-    border-left-width: 3px;
-    border-bottom-width: 3px;
+    border-left-width: 4px;
+    border-bottom-width: 4px;
   }
 
   .resize-handle.ne {
@@ -203,8 +279,8 @@
   .resize-handle.ne::after {
     right: 4px;
     top: 4px;
-    border-right-width: 3px;
-    border-top-width: 3px;
+    border-right-width: 4px;
+    border-top-width: 4px;
   }
 
   .resize-handle.nw {
@@ -215,8 +291,8 @@
   .resize-handle.nw::after {
     left: 4px;
     top: 4px;
-    border-left-width: 3px;
-    border-top-width: 3px;
+    border-left-width: 4px;
+    border-top-width: 4px;
   }
 
   /* Side handles */
@@ -298,7 +374,28 @@
   }
 </style>
 
-<div class="widget-wrapper">
+<div class="widget-wrapper" class:has-title-chrome={showTitleBar}>
+  {#if showTitleBar}
+    <WidgetChrome
+      title={config?.name || widget.widgetType}
+      icon={config?.icon || ''}
+      widgetId={widget.id}
+      {collapsed}
+      showTitle={true}
+    >
+      {#if widget.widgetType === 'terminal'}
+        <button type="button" class="chrome-font" title="Terminal font size" on:click={cycleTermFont}>{termFontLabel}</button>
+      {/if}
+    </WidgetChrome>
+  {/if}
+  {#if showFloatButtons}
+    <WidgetChrome
+      widgetId={widget.id}
+      {collapsed}
+      showTitle={false}
+      corner="tl"
+    />
+  {/if}
   {#if editMode}
     <div class="edit-overlay">
       <span class="widget-label">
@@ -307,7 +404,7 @@
         {/if}
         {config?.name || widget.widgetType}
       </span>
-      <span class="resize-hint">Drag to move, edges to resize</span>
+      <span class="resize-hint">{canResize ? 'Drag to move, corners to resize' : 'Layout locked'}</span>
     </div>
     {#if isTabContainer}
       <button class="configure-btn" on:click={handleConfigure} title="Configure tabs">
@@ -318,20 +415,22 @@
       <i class="material-icons">close</i>
     </button>
 
-    <!-- Corner resize handles -->
-    <div class="resize-handle corner se" on:pointerdown={resizePointerDown}></div>
-    <div class="resize-handle corner sw" on:pointerdown={resizePointerDown}></div>
-    <div class="resize-handle corner ne" on:pointerdown={resizePointerDown}></div>
-    <div class="resize-handle corner nw" on:pointerdown={resizePointerDown}></div>
+    {#if canResize}
+      <!-- Corner resize handles -->
+      <div class="resize-handle corner se" on:pointerdown={resizePointerDown}></div>
+      <div class="resize-handle corner sw" on:pointerdown={resizePointerDown}></div>
+      <div class="resize-handle corner ne" on:pointerdown={resizePointerDown}></div>
+      <div class="resize-handle corner nw" on:pointerdown={resizePointerDown}></div>
 
-    <!-- Side resize handles -->
-    <div class="resize-handle side n" on:pointerdown={resizePointerDown}></div>
-    <div class="resize-handle side s" on:pointerdown={resizePointerDown}></div>
-    <div class="resize-handle side e" on:pointerdown={resizePointerDown}></div>
-    <div class="resize-handle side w" on:pointerdown={resizePointerDown}></div>
+      <!-- Side resize handles -->
+      <div class="resize-handle side n" on:pointerdown={resizePointerDown}></div>
+      <div class="resize-handle side s" on:pointerdown={resizePointerDown}></div>
+      <div class="resize-handle side e" on:pointerdown={resizePointerDown}></div>
+      <div class="resize-handle side w" on:pointerdown={resizePointerDown}></div>
+    {/if}
   {/if}
 
-  <div class="widget-content" class:disabled={editMode}>
+  <div class="widget-content" class:disabled={editMode} class:is-collapsed={collapsed}>
     <slot />
   </div>
 </div>

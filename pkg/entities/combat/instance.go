@@ -42,7 +42,7 @@ const (
 type CombatPhase string
 
 const (
-	CombatPhaseIdle          CombatPhase = ""             // Ready to start/advance a turn
+	CombatPhaseIdle          CombatPhase = ""              // Ready to start/advance a turn
 	CombatPhaseWaitingPlayer CombatPhase = "waitingPlayer" // Player decision window open
 	CombatPhasePlayingBeat   CombatPhase = "playingBeat"   // Post-action beat budget running
 	CombatPhaseResolving     CombatPhase = "resolving"     // Action being resolved this tick
@@ -73,10 +73,12 @@ type CombatantRef struct {
 	HasFled    bool          `json:"hasFled"`
 
 	// Snapshot of combat stats at combat start
-	MaxHP       int32 `json:"maxHp"`
-	CurrentHP   int32 `json:"currentHp"`
-	AttackPower int32 `json:"attackPower"`
-	Defense     int32 `json:"defense"`
+	Level       int32  `json:"level,omitempty"`
+	ClassID     string `json:"classId,omitempty"`
+	MaxHP       int32  `json:"maxHp"`
+	CurrentHP   int32  `json:"currentHp"`
+	AttackPower int32  `json:"attackPower"`
+	Defense     int32  `json:"defense"`
 
 	// Attribute modifiers (calculated from character attributes)
 	STRMod int `json:"strMod"`

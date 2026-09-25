@@ -372,7 +372,7 @@ function createClient(renderer, characterCreator, muxStore) {
     renderer(msg.message);
     if (mux) {
       if (mux.endCombat) {
-        mux.endCombat(msg.outcome || "victory", msg.message);
+        mux.endCombat(msg.outcome || "victory", msg.message, msg.rewards || null);
       } else {
         mux.setGameContext({ inCombat: false });
         mux.updateCharacterStats({ inCombat: false });
