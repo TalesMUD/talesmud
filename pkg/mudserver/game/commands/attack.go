@@ -11,6 +11,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/mudserver/game/balance"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/ruleset"
 )
 
 // threatArmed remembers a character who was warned about a specific enemy.
@@ -119,9 +120,11 @@ func (command *AttackCommand) Execute(game def.GameCtrl, message *messages.Messa
 		}
 	}
 
-	// Not in combat. A bare attack hits the first hostile in the room.
+	// Not in combat. first_hostile picks the first hostile; ask does not.
 	if targetName == "" {
-		targetName = firstHostileName(game, message.Character.CurrentRoomID)
+		if ruleset.BareAttack() == ruleset.BareAttackFirst {
+			targetName = firstHostileName(game, message.Character.CurrentRoomID)
+		}
 		if targetName == "" {
 			game.SendMessage() <- message.Reply("Attack whom? Usage: attack <target>")
 			return true

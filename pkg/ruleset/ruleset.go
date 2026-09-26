@@ -36,6 +36,16 @@ const (
 	SafeBind  = "bind"
 	SafeStart = "start"
 
+	// DisconnectContinue leaves a dropped connection in the fight.
+	// DisconnectRelease ends that fight without a defeat and may move the character.
+	DisconnectContinue = "continue"
+	DisconnectRelease  = "release"
+
+	// BareAttackAsk replies "Attack whom?" when no target is named.
+	// BareAttackFirst starts a fight against the first hostile in the room.
+	BareAttackAsk   = "ask"
+	BareAttackFirst = "first_hostile"
+
 	defaultPath = "config/ruleset.yaml"
 )
 
@@ -75,8 +85,10 @@ type fileShape struct {
 		Interval  string `yaml:"interval"`
 	} `yaml:"resources"`
 	Combat struct {
-		Pacing   string `yaml:"pacing"`
-		SafeRoom string `yaml:"safe_room"`
+		Pacing     string `yaml:"pacing"`
+		SafeRoom   string `yaml:"safe_room"`
+		Disconnect string `yaml:"disconnect"`
+		BareAttack string `yaml:"bare_attack"`
 	} `yaml:"combat"`
 }
 
@@ -98,6 +110,8 @@ type state struct {
 	resources   map[string]resourceSpec
 	pacing      string
 	safeRoom    string
+	disconnect  string
+	bareAttack  string
 }
 
 var (
@@ -126,10 +140,12 @@ func builtin() state {
 			RespawnHPPercent: 50,
 			DamageArmor:      true,
 		},
-		fullHeal: false,
-		timezone: "UTC",
-		pacing:   PacingAuto,
-		safeRoom: SafeStay,
+		fullHeal:   false,
+		timezone:   "UTC",
+		pacing:     PacingAuto,
+		safeRoom:   SafeStay,
+		disconnect: DisconnectContinue,
+		bareAttack: BareAttackAsk,
 	}
 }
 
@@ -197,6 +213,8 @@ func decode(raw []byte) (state, error) {
 	file.NewDay.Timezone = base.timezone
 	file.Combat.Pacing = base.pacing
 	file.Combat.SafeRoom = base.safeRoom
+	file.Combat.Disconnect = base.disconnect
+	file.Combat.BareAttack = base.bareAttack
 	if err := yaml.Unmarshal(raw, &file); err != nil {
 		return state{}, fmt.Errorf("parse ruleset: %w", err)
 	}
@@ -266,6 +284,20 @@ func decode(raw []byte) (state, error) {
 	}
 	if next.safeRoom != SafeStay && next.safeRoom != SafeBind && next.safeRoom != SafeStart {
 		return state{}, fmt.Errorf("combat safe_room %q", next.safeRoom)
+	}
+	next.disconnect = strings.TrimSpace(file.Combat.Disconnect)
+	if next.disconnect == "" {
+		next.disconnect = DisconnectContinue
+	}
+	if next.disconnect != DisconnectContinue && next.disconnect != DisconnectRelease {
+		return state{}, fmt.Errorf("combat disconnect %q", next.disconnect)
+	}
+	next.bareAttack = strings.TrimSpace(file.Combat.BareAttack)
+	if next.bareAttack == "" {
+		next.bareAttack = BareAttackAsk
+	}
+	if next.bareAttack != BareAttackAsk && next.bareAttack != BareAttackFirst {
+		return state{}, fmt.Errorf("combat bare_attack %q", next.bareAttack)
 	}
 	if len(file.Resources) > 0 {
 		next.resources = map[string]resourceSpec{}
@@ -386,8 +418,31 @@ func Pacing() string {
 	return current.pacing
 }
 
+// Disconnect is continue or release. continue is the unconfigured default:
+// closing a session does not end the fight and does not move the character.
+func Disconnect() string {
+	mu.RLock()
+	defer mu.RUnlock()
+	if current.disconnect == DisconnectRelease {
+		return DisconnectRelease
+	}
+	return DisconnectContinue
+}
+
+// BareAttack is ask or first_hostile. ask is the unconfigured default.
+// It only applies outside combat. A bare attack during a fight still swings.
+func BareAttack() string {
+	mu.RLock()
+	defer mu.RUnlock()
+	if current.bareAttack == BareAttackFirst {
+		return BareAttackFirst
+	}
+	return BareAttackAsk
+}
+
 // SafeRoom is stay, bind, or start. stay is the unconfigured default.
-// A destroyed instance room still relocates; this only applies to a real room.
+// It is used only when Disconnect is release. A destroyed instance room
+// still relocates on instance teardown.
 func SafeRoom() string {
 	mu.RLock()
 	defer mu.RUnlock()
@@ -498,6 +553,28 @@ func SetBaseEnemyXP(table map[int32]int64) {
 func SetDeath(policy DeathPolicy) {
 	mu.Lock()
 	current.death = policy
+	mu.Unlock()
+}
+
+// SetDisconnect overrides combat.disconnect until Reset. Unknown values are ignored.
+func SetDisconnect(mode string) {
+	mode = strings.TrimSpace(mode)
+	if mode != DisconnectContinue && mode != DisconnectRelease {
+		return
+	}
+	mu.Lock()
+	current.disconnect = mode
+	mu.Unlock()
+}
+
+// SetBareAttack overrides combat.bare_attack until Reset. Unknown values are ignored.
+func SetBareAttack(mode string) {
+	mode = strings.TrimSpace(mode)
+	if mode != BareAttackAsk && mode != BareAttackFirst {
+		return
+	}
+	mu.Lock()
+	current.bareAttack = mode
 	mu.Unlock()
 }
 

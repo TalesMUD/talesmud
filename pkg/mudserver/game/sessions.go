@@ -10,6 +10,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/ruleset"
 )
 
 type sessionRegistry struct {
@@ -175,7 +176,9 @@ func (g *Game) DisconnectUserSession(userID string) {
 		}
 	}
 	if charID := g.Sessions.characterID(userID); charID != "" {
-		g.ReleaseToSafety(charID)
+		if ruleset.Disconnect() == ruleset.DisconnectRelease {
+			g.ReleaseToSafety(charID)
+		}
 		if g.RoomInstances != nil {
 			g.RoomInstances.DestroyCharacterInstance(charID)
 		}

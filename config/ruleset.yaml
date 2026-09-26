@@ -29,4 +29,6 @@ resources: {}
 
 combat:
   pacing: auto          # auto | turn_based
-  safe_room: stay       # stay | bind | start — mid-combat disconnect in a real room
+  safe_room: stay       # stay | bind | start — used only when disconnect is release
+  disconnect: continue  # continue | release — continue leaves the fight running
+  bare_attack: ask      # ask | first_hostile — ask is "Attack whom?" outside combat

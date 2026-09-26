@@ -2,6 +2,7 @@ package game
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -207,8 +208,117 @@ func TestSessionStartRefillsAndHeals(t *testing.T) {
 	}
 }
 
+func TestDisconnectContinueLeavesTheFight(t *testing.T) {
+	ruleset.Reset()
+	t.Cleanup(ruleset.Reset)
+	if ruleset.Disconnect() != ruleset.DisconnectContinue {
+		t.Fatalf("default disconnect = %s", ruleset.Disconnect())
+	}
+	g, facade := newNPCTestGame(t)
+	storeTestRoom(t, facade, "wild", nil)
+	storeTestRoom(t, facade, "haven", nil)
+	char, err := facade.CharactersService().Store(&characters.Character{
+		Entity:           &entities.Entity{ID: "char-cont"},
+		Name:             "Hero",
+		BelongsUser:      *traits.BelongsToUser("user-cont"),
+		CurrentRoom:      traits.CurrentRoom{CurrentRoomID: "wild"},
+		BoundRoomID:      "haven",
+		Gold:             40,
+		MaxHitPoints:     20,
+		CurrentHitPoints: 20,
+		InCombat:         true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	g.NPCManager.RegisterExistingNPC(&npc.NPC{
+		Entity:      &entities.Entity{ID: "npc-cont"},
+		Name:        "Rat",
+		CurrentRoom: traits.CurrentRoom{CurrentRoomID: "wild"},
+		EnemyTrait:  &npc.EnemyTrait{AttackPower: 1},
+	}, "wild")
+	seedPacedCombat(t, g, char.ID, "npc-cont", true)
+	user := &entities.User{Entity: &entities.Entity{ID: "user-cont"}}
+	g.SetUserSessionCharacter(user, char)
+	g.DisconnectUserSession(user.ID)
+	if g.CombatController.GetCombatInstance(char.ID) == nil {
+		t.Fatal("continue ended the fight")
+	}
+	stored, err := facade.CharactersService().FindByID(char.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stored.CurrentRoomID != "wild" || stored.Gold != 40 || stored.AwaitingReset {
+		t.Fatalf("room=%s gold=%d reset=%v", stored.CurrentRoomID, stored.Gold, stored.AwaitingReset)
+	}
+}
+
+func TestBareAttackAskDoesNotStart(t *testing.T) {
+	ruleset.Reset()
+	t.Cleanup(ruleset.Reset)
+	if ruleset.BareAttack() != ruleset.BareAttackAsk {
+		t.Fatalf("default bare attack = %s", ruleset.BareAttack())
+	}
+	g, facade := newNPCTestGame(t)
+	storeTestRoom(t, facade, "R-ask", nil)
+	if _, err := facade.NPCsService().Import(&npc.NPC{
+		Entity:           &entities.Entity{ID: "ENM-ask"},
+		Name:             "Bramble Wolf",
+		IsTemplate:       true,
+		MaxHitPoints:     12,
+		CurrentHitPoints: 12,
+		Level:            1,
+		EnemyTrait:       &npc.EnemyTrait{AttackPower: 1},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := g.NPCManager.SpawnInstanceDirect("ENM-ask", "R-ask"); err != nil {
+		t.Fatal(err)
+	}
+	user := &entities.User{Entity: &entities.Entity{ID: "user-ask"}}
+	char, err := facade.CharactersService().Store(&characters.Character{
+		Entity:           &entities.Entity{ID: "char-ask"},
+		Name:             "Hero",
+		BelongsUser:      *traits.BelongsToUser("user-ask"),
+		CurrentRoom:      traits.CurrentRoom{CurrentRoomID: "R-ask"},
+		MaxHitPoints:     20,
+		CurrentHitPoints: 20,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !(&commands.AttackCommand{}).Execute(g, &messages.Message{FromUser: user, Character: char, Data: "attack"}) {
+		t.Fatal("attack was not handled")
+	}
+	if g.CombatController.GetCombatInstance(char.ID) != nil {
+		t.Fatal("ask started a fight")
+	}
+	saw := false
+	for _, msg := range drainGameMessages(g.SendMessage()) {
+		if text := messageText(msg); strings.Contains(text, "Attack whom?") {
+			saw = true
+		}
+	}
+	if !saw {
+		t.Fatal("missing Attack whom?")
+	}
+}
+
+func messageText(msg interface{}) string {
+	switch m := msg.(type) {
+	case messages.MessageResponse:
+		return m.GetMessage()
+	case *messages.MessageResponse:
+		if m != nil {
+			return m.GetMessage()
+		}
+	}
+	return ""
+}
+
 func TestBareAttackStartsAndAdvances(t *testing.T) {
 	ruleset.SetPacing(ruleset.PacingTurnBased)
+	ruleset.SetBareAttack(ruleset.BareAttackFirst)
 	t.Cleanup(ruleset.Reset)
 	g, facade := newNPCTestGame(t)
 	storeTestRoom(t, facade, "R-bare", nil)

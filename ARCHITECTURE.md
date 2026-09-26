@@ -199,7 +199,7 @@ type server struct {
 The game engine owns an in-memory session registry for live player state. The
 registry maps connected user IDs to their currently selected character, room,
 and last-seen timestamp. WebSocket connect/read/disconnect paths update this
-registry and persist `User.IsOnline` as a secondary status field. Disconnect ends a live fight without a defeat penalty and, when the character is in an instance or `combat.safe_room` says so, moves them to the return or bind room before the instance is deleted. A text-client connect runs the new-day pass and refills configured resources without requiring another character select. Player-directed replies are recorded by the text client and drawn back into its frame off the message-drain goroutine.
+registry and persist `User.IsOnline` as a secondary status field. `combat.disconnect: continue` (the default) leaves that fight running. `release` ends it without a defeat penalty and, when `combat.safe_room` says so, moves the character before an instance copy is deleted. A generated instance that times out still does that move. A text-client connect runs the new-day pass and refills configured resources without requiring another character select. Player-directed replies are recorded by the text client and drawn back into its frame off the message-drain goroutine.
 
 Room message fan-out, `who`, private tells, friends online flags, regeneration ticks, and room player
 payloads use the live session registry instead of scanning all users with

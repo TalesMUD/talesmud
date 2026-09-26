@@ -400,15 +400,15 @@ local solved = tales.game.getFlag(characterID, "puzzle_solved_statue")
 
 ### Ruleset profile
 
-`config/ruleset.yaml` sits beside `config/combat_balance.yaml` and must not repeat its keys (`level_gap`, `threat`, `reward_scale`, `class_balance`, difficulty multipliers, named overrides). The shipped file matches current play: level cap 50, automatic level-up, 10% XP loss and 1 on-hand gold on defeat, respawn at the bind room with half HP, no dawn heal, no resource keys, combat pacing `auto`, and `combat.safe_room: stay`.
+`config/ruleset.yaml` sits beside `config/combat_balance.yaml` and must not repeat its keys (`level_gap`, `threat`, `reward_scale`, `class_balance`, difficulty multipliers, named overrides). The shipped file matches current play: level cap 50, automatic level-up, 10% XP loss and 1 on-hand gold on defeat, respawn at the bind room with half HP, no dawn heal, no resource keys, combat pacing `auto`, `combat.safe_room: stay`, `combat.disconnect: continue`, and `combat.bare_attack: ask`.
 
 An enemy's authored XP reward is the base. When that reward is 0, `progression.base_xp_by_enemy_level` supplies the base, and otherwise the built-in `15*level+5` curve does. `reward_scale` multiplies that base afterward. `level_up_mode: trainer` banks combat, quest, exploration, and select catch-up until `tales.characters.applyLevels`. Quest XP is not multiplied by `reward_scale`.
 
 Death math is `ruleset.ApplyDeath`, called from defeat only.
 
-`combat.pacing: auto` keeps the 5 second decision window and resolves a queued action on the next beat. `turn_based` leaves that window open until the player sends a command. NPCs still take their own turns afterward. The default file is `auto`. A bare `attack` with no name hits the first hostile in the room, and during a fight it queues an attack on the current target or the first living enemy so a turn-based round advances.
+`combat.pacing: auto` keeps the 5 second decision window and resolves a queued action on the next beat. `turn_based` leaves that window open until the player sends a command. NPCs still take their own turns afterward. The default file is `auto`. During a fight, a bare `attack` queues a swing on the current target or the first living enemy so a turn-based round advances. Outside combat, `combat.bare_attack: ask` (the default) still answers "Attack whom?". `first_hostile` starts the fight against the first hostile in the room.
 
-`combat.safe_room` is `stay` (default), `bind`, or `start`. Disconnect mid-combat ends the fight as a flee: no gold loss, no XP loss, and no death flag. `stay` leaves the character in a real room. `bind` and `start` move them. A character inside an instance is moved to that instance's return room either way, including when a generated instance times out. On the next enter, a saved room that no longer exists is replaced by the bind room, then the start room.
+`combat.disconnect: continue` (the default) leaves a dropped connection in the fight and does not move the character. `release` ends that fight as a flee: no gold loss, no XP loss, and no death flag. `combat.safe_room` is `stay` (default), `bind`, or `start`, and applies only when disconnect is `release`. `stay` leaves the character in a real room. `bind` and `start` move them. A generated instance that times out still moves its occupant to the return room and ends the fight without a defeat. On the next enter, a saved room that no longer exists is replaced by the bind room, then the start room.
 
 ### Refilling resources
 
@@ -418,7 +418,7 @@ Another world can use a key for a daily gathering node or a delve ticket, spent 
 
 ### Procedural instances
 
-`tales.instances.generate(characterID, playerLevel, spec)` builds a private line of up to 20 rooms from a template pool. Encounters whose level band contains `playerLevel` are returned as a spawn plan and placed when a game is attached. A second character gets a different copy. The same character cannot hold two instances. Leaving to a non-clone room destroys the line, and a timeout (default 30 minutes) destroys only these generated instances. Authored cellar graphs are unchanged. Every generated exit is marked so Party Follow does not cross it. The generator does not spend a resource and does not move the character; the room-action script does. Disconnect and the timeout sweep end a fight in that copy without a defeat penalty and move the character to the return room before the copy is deleted.
+`tales.instances.generate(characterID, playerLevel, spec)` builds a private line of up to 20 rooms from a template pool. Encounters whose level band contains `playerLevel` are returned as a spawn plan and placed when a game is attached. A second character gets a different copy. The same character cannot hold two instances. Leaving to a non-clone room destroys the line, and a timeout (default 30 minutes) destroys only these generated instances. Authored cellar graphs are unchanged. Every generated exit is marked so Party Follow does not cross it. The generator does not spend a resource and does not move the character; the room-action script does. A timeout still ends a fight in that copy without a defeat penalty and moves the character to the return room before the copy is deleted. A disconnect does that only when `combat.disconnect` is `release`.
 
 ### CopyOnPickup Tracking
 ```go

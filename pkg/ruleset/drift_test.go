@@ -25,6 +25,9 @@ func TestShippedRulesetEqualsBuiltin(t *testing.T) {
 	if err := LoadBytes(raw); err != nil {
 		t.Fatal(err)
 	}
+	if Disconnect() != DisconnectContinue || BareAttack() != BareAttackAsk || SafeRoom() != SafeStay {
+		t.Fatalf("shipped combat gates disconnect=%s bare=%s room=%s", Disconnect(), BareAttack(), SafeRoom())
+	}
 	mu.RLock()
 	got := current
 	mu.RUnlock()
