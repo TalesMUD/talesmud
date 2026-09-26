@@ -487,6 +487,9 @@ make run-server
 # (example: presentation door_tui, auth local, port 8030)
 ./bin/tales -config config/gamemode.yaml
 
+# Forwarded client IPs are trusted only from loopback unless this is set
+# TRUSTED_PROXIES=127.0.0.1,::1
+
 # Run the server with SQLite (single binary + embedded frontend)
 DB_DRIVER=sqlite SQLITE_PATH=./talesmud.db ./bin/tales
 

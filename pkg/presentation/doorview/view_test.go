@@ -77,7 +77,7 @@ func TestViewNamePromptCreatesAndSelects(t *testing.T) {
 	facade := service.NewFacade(repository.NewSQLiteFactory(client), nil)
 	if _, err := facade.RoomsService().Import(&rooms.Room{
 		Entity:      &entities.Entity{ID: "R0001"},
-		Name:        "Ashmarket Square",
+		Name:        "Market Square",
 		Description: "Brass skyline.",
 		Exits:       &rooms.Exits{{Name: "north", Target: "R0001"}},
 		Actions:     &rooms.Actions{{Name: "news", Type: rooms.RoomActionTypeResponse, Description: "Read the notices.", Response: "A notice."}},
@@ -100,7 +100,7 @@ func TestViewNamePromptCreatesAndSelects(t *testing.T) {
 			frame = f
 		}
 	})
-	if !strings.Contains(frame.ANSI, "Ashmarket Square") || !strings.Contains(frame.ANSI, "Actions: news") {
+	if !strings.Contains(frame.ANSI, "Market Square") || !strings.Contains(frame.ANSI, "Actions: news") {
 		t.Fatalf("created character did not enter the start room:\n%s", frame.ANSI)
 	}
 	if user.LastCharacter == "" {

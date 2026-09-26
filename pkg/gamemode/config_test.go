@@ -70,6 +70,26 @@ func TestApplyFileAlsoLoadsRulesetSections(t *testing.T) {
 	}
 }
 
+func TestTrustedProxiesDefaultToLoopback(t *testing.T) {
+	current = normalize(Config{})
+	t.Cleanup(func() { current = normalize(Config{}) })
+	t.Setenv("TRUSTED_PROXIES", "")
+	got := TrustedProxies()
+	if len(got) != 2 || got[0] != "127.0.0.1" || got[1] != "::1" {
+		t.Fatalf("default proxies %v", got)
+	}
+	t.Setenv("TRUSTED_PROXIES", " 10.0.0.1 , 10.0.0.2 ")
+	got = TrustedProxies()
+	if len(got) != 2 || got[0] != "10.0.0.1" || got[1] != "10.0.0.2" {
+		t.Fatalf("env proxies %v", got)
+	}
+	current.TrustedProxies = []string{"192.0.2.1"}
+	got = TrustedProxies()
+	if len(got) != 1 || got[0] != "192.0.2.1" {
+		t.Fatalf("config proxies %v", got)
+	}
+}
+
 func TestClientPageDefaultsAreGeneric(t *testing.T) {
 	current = normalize(Config{})
 	t.Cleanup(func() { current = normalize(Config{}) })

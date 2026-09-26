@@ -97,6 +97,9 @@ func NewApp() App {
 	repos := repository.NewSQLiteFactory(client)
 
 	r := gin.New()
+	if err := r.SetTrustedProxies(gamemode.TrustedProxies()); err != nil {
+		log.WithError(err).Fatal("Invalid trusted proxy list")
+	}
 	r.Use(gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
 		path := util.RedactAccessToken(param.Path)
 		return fmt.Sprintf("[GIN] %s | %3d | %13v | %15s | %-7s %s\n",

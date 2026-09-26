@@ -1,12 +1,12 @@
 # Door on the MUD engine
 
-Design for running the Aethermoor Door game on the shared TalesMUD engine (engine-june). The Door client may be Door-specific. Every rule, resource, combat behavior, and piece of character state lives in the shared engine and is usable by Veilspan.
+Design for running a second world on the shared TalesMUD engine. Its client may be specific to that world. Every rule, resource, combat behavior, and piece of character state lives in the shared engine and stays available to an unconfigured server.
 
 Written 2026-09-26. Work happens on `feat/door-on-mud` in this worktree. Nothing here merges into `engine-june`.
 
 ## The rule
 
-Door differs from Veilspan only by:
+A second world differs from an unconfigured server only by:
 
 1. Config: ruleset and game-mode YAML toggles and parameters.
 2. World content: pack YAML and Lua.
@@ -14,17 +14,17 @@ Door differs from Veilspan only by:
 
 The Door UI is a view. It reads real rooms, NPCs, merchants, services, combat, and resources, and it sends normal engine commands. It does not own game rules or state.
 
-No Door, Aethermoor, or licensed-property names appear in engine Go code or engine defaults. Those strings live in the pack and in the Door client.
+World-specific names stay out of engine Go code and engine defaults. They live in a separate world pack and in that world's client.
 
-Every new engine behavior has a Veilspan use case and is default-off or default-unchanged. Tests prove the current Veilspan path when the new file is absent and when it is present with the shipped defaults.
+Every new engine behavior is useful without that pack and is default-off or default-unchanged. Tests prove the unconfigured path when the new file is absent and when it is present with the shipped defaults.
 
 ## Decision tiers
 
 Marcus, 2026-09-26: where code does not work, work around it with a Lua script in the pack. The order for every system below is:
 
 1. An existing engine feature plus YAML config.
-2. A Lua script in the pack (`worlds/aethermoor-lord`).
-3. A small generic Lua API or hook (a getter, a setter, or an event). Engine code, so no Door, Aethermoor, or licensed-property strings. Sandboxed, tested, and listed in this document.
+2. A Lua script in a separate world pack.
+3. A small generic Lua API or hook (a getter, a setter, or an event). Engine code, so no world-specific names. Sandboxed, tested, and listed in this document.
 4. A new generic Go primitive only when Lua cannot own it: persistence across restart, the combat core, auth, or transport.
 
 Prices, news, service chatter, daily flavor, forest events, trainer speech, and a later dragon or prestige script stay at tier 2. When a rule can be "the engine exposes a hook and Lua does the rule," it stops at tier 3. The map records the tier each item landed on, and why a lower tier was not enough.
@@ -52,7 +52,7 @@ Not in this engine: a refilling resource store, a trainer/healer/banker/inn role
 
 Each row is one system. The first number is the tier that owns it. Later numbers are the pieces under it. Door names, prices, and chatter are pack content.
 
-| System | Tier | Why | Veilspan default |
+| System | Tier | Why | Default when unset |
 | --- | --- | --- | --- |
 | Daily walks | **4**, then **3** `tales.resources`, **1** allowance YAML, **2** the pack script | The balance has to survive restart on a calendar or interval clock. Lua cannot own that table. The script spends a key and prints the line. | No keys. An unknown key writes nothing. |
 | Daily flavor | **2** | A room-action `response` or on-enter script. The new-day pass does not run scripts: select still has no script event. | No lines. |
@@ -156,9 +156,9 @@ The orange attack warning in `attack.go` stays. Death does not consult threat co
 - Period key: `YYYY-MM-DD` in the allowance timezone, or the interval bucket start.
 - `Get` refills `remaining` to `allowance` when the period key changes. Inside a period, a config edit does not grant more uses.
 - `Consume` fails with `ErrExhausted` and does not write when `n` exceeds `remaining`.
-- `Modifier` is `func(characterID, key string, allowance int) int`. Zero modifiers means the config allowance. A Veilspan script can register one to add a boon. Modifiers run before the period check so a changed allowance still does not refill mid-period; they only affect the next refill and the displayed allowance.
+- `Modifier` is `func(characterID, key string, allowance int) int`. Zero modifiers means the config allowance. A content script can register one to add a boon. Modifiers run before the period check so a changed allowance still does not refill mid-period; they only affect the next refill and the displayed allowance.
 
-No game command calls the store. A pack script calls `tales.resources.consume` (slice 1a exposes it; with no configured key the call returns exhausted and changes nothing). An empty `resources` map is the Veilspan state. The Go modifier hook stays for tests and for a boon registered by engine code; content uses the YAML allowance.
+No game command calls the store. A pack script calls `tales.resources.consume` (slice 1a exposes it; with no configured key the call returns exhausted and changes nothing). An empty `resources` map is the unconfigured state. The Go modifier hook stays for tests and for a boon registered by engine code; content uses the YAML allowance.
 
 ### Combat pacing
 
@@ -185,7 +185,7 @@ Existing exits with `instance: true` still call `Enter` and clone the authored g
 
 ### Lua additions
 
-Small, generic, no world names. Each is a no-op or a pure read when the caller passes nothing new, and each has a Veilspan caller in mind (a toll script, a shrine, a mentor, a daily node, a delve).
+Small, generic, no world names. Each is a no-op or a pure read when the caller passes nothing new, and each has an ordinary content caller in mind (a toll script, a shrine, a mentor, a daily node, a delve).
 
 | Function | Behavior |
 | --- | --- |
@@ -219,9 +219,9 @@ outbox_path: data/auth-outbox.log
 
 `auth: local` enables the Argon2id username/password routes from `pkg/authlocal`. Auth0 routes stay mounted for `auth: auth0`. Local auth is off unless the mode says so.
 
-Second port means a second process, not a second listener inside Veilspan. Door runs with its own `-config`, port, and database. Veilspan's process is not modified to listen twice.
+A second port means a second process, not a second listener inside the unconfigured server. That process runs with its own `-config`, port, and database. The default process is not modified to listen twice.
 
-Environment overrides, all generic names: `PRESENTATION`, `RULESET` (path to the ruleset file, default `config/ruleset.yaml`), `AUTH_MODE`, `SESSION_SECRET`, `AUTH_OUTBOX_PATH`. No engine default mentions a specific world.
+Environment overrides, all generic names: `PRESENTATION`, `RULESET` (path to the ruleset file, default `config/ruleset.yaml`), `AUTH_MODE`, `SESSION_SECRET`, `AUTH_OUTBOX_PATH`, `TRUSTED_PROXIES` (comma-separated; default `127.0.0.1,::1`). No engine default mentions a specific world. A game-mode file may set `trusted_proxies` instead of the environment variable. Forwarded client headers are ignored unless the peer is on that list.
 
 ## Door presentation
 
@@ -265,7 +265,7 @@ Local auth pages in that client post to `/api/auth/register`, `/api/auth/login`,
 4. **1c.** `turn_based` branch. Default auto tests, including the named balance tests, stay green. A turn-based test shows the window does not fire and a queued action still resolves, with the NPC acting on a later turn. Progress note flagged for review before 1d.
 5. **1d.** `Generate` plus `tales.instances.generate`. A scripted room action is the entry and the place that spends a resource. Existing instance and follow tests stay green. New tests: level filter, per-character clone, no follow across, cleanup on leave and timeout. The generator itself does not charge a resource.
 6. **1e.** ANSI view, `public/door`, local auth, gamemode `-config` and port/sqlite override. Classic startup does not mount local auth and does not install the hook.
-7. **Phase 2** (only if Phase 1 is green). Pack repo `talesmud-door`, branch `feat/lord-on-mud`: `worlds/aethermoor-lord` in importer layout, town rooms, merchant and service NPCs, forest templates, level-banded monsters, and a Door config (turn-based, forest walks 25/day Europe/Berlin, cap 12, trainer level-up). No commit to that repo's `main`.
+7. **Phase 2** (only if Phase 1 is green). A separate world pack, not this repository: importer YAML for town rooms, merchants, service scripts, and level-banded encounters, plus a game-mode file for the text client, local accounts, turn-based fights, a level cap, trainer level-up, and a daily resource.
 
 ## Docs kept in sync
 

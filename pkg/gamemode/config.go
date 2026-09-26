@@ -23,18 +23,19 @@ const (
 
 // Config is the process-wide mode. Zero value matches an unset classic server.
 type Config struct {
-	Presentation  string `yaml:"presentation"`
-	Auth          string `yaml:"auth"`
-	Port          string `yaml:"port"`
-	SQLitePath    string `yaml:"sqlite_path"`
-	WorldPack     string `yaml:"world_pack"`
-	Timezone      string `yaml:"timezone"`
-	Title         string `yaml:"title"`
-	Subtitle      string `yaml:"subtitle"`
-	TokenKey      string `yaml:"token_key"`
-	SessionSecret string `yaml:"session_secret"`
-	SecretPath    string `yaml:"secret_path"`
-	OutboxPath    string `yaml:"outbox_path"`
+	Presentation   string   `yaml:"presentation"`
+	Auth           string   `yaml:"auth"`
+	Port           string   `yaml:"port"`
+	SQLitePath     string   `yaml:"sqlite_path"`
+	WorldPack      string   `yaml:"world_pack"`
+	Timezone       string   `yaml:"timezone"`
+	Title          string   `yaml:"title"`
+	Subtitle       string   `yaml:"subtitle"`
+	TokenKey       string   `yaml:"token_key"`
+	TrustedProxies []string `yaml:"trusted_proxies"`
+	SessionSecret  string   `yaml:"session_secret"`
+	SecretPath     string   `yaml:"secret_path"`
+	OutboxPath     string   `yaml:"outbox_path"`
 }
 
 var (
@@ -69,6 +70,30 @@ const (
 	defaultDoorSubtitle = "A text client on TalesMUD"
 	defaultDoorTokenKey = "talesmudDoorToken"
 )
+
+// TrustedProxies is the list gin may trust for X-Forwarded-For and X-Real-IP.
+// A non-empty game-mode list wins. Otherwise TRUSTED_PROXIES (comma-separated)
+// wins. The default is loopback, which matches a local reverse proxy.
+func TrustedProxies() []string {
+	if list := cleanProxies(Current().TrustedProxies); len(list) > 0 {
+		return list
+	}
+	if env := strings.TrimSpace(os.Getenv("TRUSTED_PROXIES")); env != "" {
+		return cleanProxies(strings.Split(env, ","))
+	}
+	return []string{"127.0.0.1", "::1"}
+}
+
+func cleanProxies(in []string) []string {
+	out := make([]string, 0, len(in))
+	for _, item := range in {
+		item = strings.TrimSpace(item)
+		if item != "" {
+			out = append(out, item)
+		}
+	}
+	return out
+}
 
 // ClientPage is the public branding for the text client.
 // Empty config fields use the generic defaults. The token key is limited to

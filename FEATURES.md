@@ -412,7 +412,7 @@ Death math is `ruleset.ApplyDeath`, called from defeat only.
 
 Per-character balances live in the `character_resources` table. A key grants uses only after something configures an allowance (calendar day in a timezone, or a fixed interval). Inside a period, raising the allowance or a modifier does not give the extra uses back; the next period refills to the new amount. An empty catalog, which is the process default, answers every key as not configured and writes no row.
 
-Veilspan use: a daily gathering node or a delve ticket, spent from a room-action script. No content ships a key, so play is unchanged.
+Another world can use a key for a daily gathering node or a delve ticket, spent from a room-action script. No content ships a key, so play is unchanged.
 
 ### Procedural instances
 
@@ -2371,7 +2371,7 @@ The leveling system (`CheckLevelUp`, `ApplyLevelUp`) respects `MaxLevelCap` auto
 - Guest HMAC tokens are validated before Auth0 JWTs in `AuthMiddleware`
 - Token claims: `sub` (RefID), `uid` (user entity ID), `exp` (30min), `guest: true`
 - If `GUEST_SECRET` is not set, a random key is generated at startup
-- Optional local username/password sessions (Argon2id) when a game-mode file sets `auth: local`. Classic servers leave this off. API responses omit the password hash.
+- Optional local username/password sessions (Argon2id) when a game-mode file sets `auth: local`. Classic servers leave this off. API responses omit the password hash. Login attempts are limited per client address. `X-Forwarded-For` is trusted only from loopback unless `trusted_proxies` or `TRUSTED_PROXIES` says otherwise.
 - `presentation: door_tui` serves `public/door` and `GET /api/door/config` (title, subtitle, token key). Classic mode does not mount `/door`. The page paints live rooms, exits, actions, NPCs, resources, and combat status. Keys and typed lines become engine commands. With no character selected, the page asks for a name: an existing character of that account is selected, and a new name is stored as a level-1 character from the first system template, then selected into the start room.
 
 ---
