@@ -1,0 +1,258 @@
+# Door on the MUD engine
+
+Design for running the Aethermoor Door game on the shared TalesMUD engine (engine-june). The Door client may be Door-specific. Every rule, resource, combat behavior, and piece of character state lives in the shared engine and is usable by Veilspan.
+
+Written 2026-09-26. Work happens on `feat/door-on-mud` in this worktree. Nothing here merges into `engine-june`.
+
+## The rule
+
+Door differs from Veilspan only by:
+
+1. Config: ruleset and game-mode YAML toggles and parameters.
+2. World content: pack YAML and Lua.
+3. Its client UI.
+
+The Door UI is a view. It reads real rooms, NPCs, merchants, services, combat, and resources, and it sends normal engine commands. It does not own game rules or state.
+
+No Door, Aethermoor, or licensed-property names appear in engine Go code or engine defaults. Those strings live in the pack and in the Door client.
+
+Every new engine behavior has a Veilspan use case and is default-off or default-unchanged. Tests prove the current Veilspan path when the new file is absent and when it is present with the shipped defaults.
+
+## Decision tiers
+
+For each system the order is: (1) an existing engine feature plus YAML, (2) a Lua script in the pack, (3) a small generic Lua API or hook, (4) a new Go primitive only when Lua cannot own it (persistence, combat core, auth, transport). Door flavor, prices, news, and service chatter stay in the pack. The tier each system landed on is in the map below.
+
+`config/combat_balance.yaml` stays the owner of difficulty multipliers, named overrides, `level_gap`, threat colors, `reward_scale` (including `first_kill_bonus`), and `class_balance`. The new ruleset file sits beside it and must not repeat those keys. The loader rejects a ruleset document that contains any of them.
+
+## What already exists
+
+| Need | Already in engine-june |
+| --- | --- |
+| Fights | Tactical combat (`pkg/mudserver/game/combat`): d20 vs AC, skills, threat, party assist. Autofire is a 5s decision window; a queued action resolves on the next beat (`kickWaitingPlayerTurnLocked`). |
+| Level-gap rewards | `reward_scale` multiplies **base** XP and gold after the split is planned, using the highest level among recipients. Boss first-kill bonus is `Character.FirstBossKills`. |
+| Level curve | `pkg/mudserver/game/leveling`: cumulative XP table for levels 1–50, cap 50, per-character `MaxLevelCap` (guests). |
+| Level-up checks | Combat victory, quest turn-in (`GrantQuestRewards`), exploration grants (`commands/xp_grants.go`), and character select. |
+| Death today | `processCombatDefeat` in `game_combat.go`: 10% of XP, 1 on-hand gold, armor durability, 50% HP, relocate to `BoundRoomID` when set. Orange-or-worse attack warning stays in `commands/attack.go` and is not part of death or victory. |
+| Private rooms | `pkg/instances`: per-character clone of an authored graph, destroyed when empty. Party Follow does not cross instances (`PullPartyFollowers` only when `allow=true`). |
+| Shops | `MerchantTrait` buy/sell. |
+| Rest | `rest` sets a faster-regen flag. It does not heal to full and does not bind. |
+| People online | `who`. |
+| Script hooks | Room on-enter, room actions (`response`, `response_room`, `script`), item on-use, quest hooks. The global events registry has no `Dispatch` callers. `EnemyTrait` OnDeath / OnAggro / OnFlee are not executed. |
+
+Not in this engine: a refilling resource store, a trainer/healer/banker/inn role, a ruleset file, turn-based pacing, procedural instance generation, local Argon2id auth, or the ANSI door client. Those exist on `feat/door-mode-p0` (`pkg/daily`, `pkg/gamemode`, `pkg/authlocal`, `pkg/door`, `public/door`) and are the porting source. `pkg/door` game logic is not ported.
+
+## System map
+
+Each row is a generic primitive. The Door column is content or config, not a Go fork.
+
+| System | Tier | Why | Veilspan default |
+| --- | --- | --- | --- |
+| Daily walks | **4** store, **3** `tales.resources` get/consume, **1** allowance YAML, **2** the pack script that spends a key and narrates the walk | Balances have to survive restart on a calendar or interval clock. Lua cannot own that table. Flavor text is a room-action script. | No keys. Nothing in play calls the store. |
+| Level-scaled monsters | **1** authored `EnemyTrait`, `level_gap`, threat. **4** generator filter by player level (see instances). **2** any extra forest event on enter | Stats and colors already exist. A random event is a script. | Authored rooms and spawners unchanged. |
+| 12 levels and trainer gate | **1** `level_cap` and `level_up_mode` in the ruleset. **4** `MaybeLevelUp` at the four existing XP call sites, because combat and quests apply levels in Go today. **3** `tales.characters.applyLevels`. **2** the trainer script (price, dialogue, master duel via a normal attack) | The mode has to intercept victory and quest XP or it never banks. The mentor's price and speech are content. Masters are boss NPCs; first-kill bonus already pays them. | `auto`, cap 50. Levels still apply immediately. |
+| Death | **4** `ApplyDeath`, called only from `processCombatDefeat`. **1** the percents and respawn mode | Defeat has no script hook, and the default path must match today's losses with no content installed. Not wired through victory or `reward_scale`. Orange attack warning stays in `attack.go`. | 10% XP, 1 on-hand gold, bindpoint, 50% HP, armor damage. |
+| Healer | **2** room or dialog script. **3** `tales.characters.addGold` (heal already exists) | `tales.characters.heal` already fills HP. The script checks gold and calls `addGold` with a negative amount. No service command. | No script, no charge. |
+| Bank | **2** script. **3** `addGold`. Coin held in a character flag via existing `setFlag` | Death percent reads on-hand `Gold` only, so a script that moves coin into a flag keeps the vault safe. No `BankGold` field. | No script. Flag absent. |
+| Weapon and armor shops | **1** `MerchantTrait` | Already live. | Unchanged. |
+| Inn | **2** script calls `setFlag(id, "resting", true)` (what `rest` already does). **3** `tales.characters.setBind` | Bind is a persisted room id the defeat hook already reads. | `rest` unchanged. Nothing binds unless a script calls `setBind`. |
+| Gems | **2** a flag or a normal item | A counter does not need a column. | Unchanged. |
+| News and ledger | **2** a room-action `response` or script | Lines are content. | No new command. |
+| Player list | **1** `who` | The Door view renders that reply. | Unchanged. |
+| New day full heal | **1** `new_day.full_heal` applied on character select | Select has no script event (the registry still has no `Dispatch` callers). A YAML switch has to work with no pack script. Resource refill stays on the store's clock. | `false`. Select does not heal. |
+| Dragon, prestige reset | **2** later, a pack script. Not Phase 1 | Needs no engine type until a script is actually short of an API. | Off. |
+| PvP | Not built | No flag that pretends it works. | Impossible, as today. |
+| Global events | Not built | Registry stays without callers. OnDeath / OnAggro / OnFlee stay unexecuted. | Unchanged. |
+| Turn-based fights | **1** `combat.pacing`. **4** one branch in the combat ticker | This is the combat core. `auto` must stay the current 5s window and manual kick. | `auto`. |
+| Procedural dungeon | **4** `instances.Manager.Generate` (clone lifecycle, timeout, per-character map). **3** `tales.instances.generate`. **2** the room-action script, which consumes a resource first | Exit rewriting, cleanup, and follow blocking are the instance manager. The script decides whether to pay and what flavor to print. The manager does not read the calendar and does not pull followers. | Existing `Enter` graph clone unchanged. |
+
+## Ruleset file
+
+Path: `config/ruleset.yaml`, next to `config/combat_balance.yaml`.
+
+Absent file and the shipped file below are the same behavior. The loader records which one it used so tests can prove both.
+
+```yaml
+progression:
+  level_cap: 50
+  level_up_mode: auto    # auto | trainer
+  # xp_required:         # omit = leveling.CalculateXPRequired
+  #   1: 0
+  #   2: 40
+  # base_xp_by_enemy_level:   # omit = 15*level+5 when EnemyTrait.XPReward is 0
+  #   1: 20
+
+death:
+  xp_loss_percent: 10
+  gold_loss_flat: 1          # used when gold_loss_percent is 0
+  gold_loss_percent: 0       # percent of on-hand gold; ignores the flat amount when > 0
+  respawn: bindpoint         # bindpoint | next_reset
+  respawn_hp_percent: 50
+  damage_armor: true
+
+new_day:
+  full_heal: false
+  timezone: UTC
+
+resources: {}
+  # forest_walks:
+  #   allowance: 25
+  #   reset: calendar        # calendar | interval
+  #   timezone: Europe/Berlin
+  #   interval: 24h          # only for reset: interval
+
+combat:
+  pacing: auto               # auto | turn_based
+```
+
+Rejected keys if present: `difficulty_multipliers`, `named_overrides`, `level_gap`, `threat`, `reward_scale`, `class_balance`, `first_kill_bonus`.
+
+### How XP meets reward_scale
+
+`EnemyTrait.XPReward`, when non-zero, is the base. When it is zero, the base is `base_xp_by_enemy_level[level]` if that table has the level, otherwise `15*level+5`. That integer is what victory already stores as base XP. `applyRewardScale` and the first-kill bonus run after it, exactly as they do now. The table never writes a final award and never reads `reward_scale`.
+
+Quest XP is not an enemy base. It stays a flat quest reward. It does call the same level-up hook, so `trainer` mode banks quest levels too. Quest XP is not multiplied by `reward_scale`.
+
+`xp_required` replaces the cumulative curve when present. Missing levels fall back to `CalculateXPRequired`. `level_cap` is the global cap passed into `GetEffectiveMaxLevel`. A lower `MaxLevelCap` on the character (guests) still wins.
+
+### Level-up hook
+
+One function, `ruleset.MaybeLevelUp(char)`:
+
+- `auto`: current `CheckLevelUp` + `ApplyLevelUp`.
+- `trainer`: returns nil. XP stays above the threshold. A pack script calls `tales.characters.applyLevels`, which applies whatever `CheckLevelUp` now reports. In `auto` mode that call is a no-op when victory already applied the levels.
+
+Call sites, all of them: combat victory, `GrantQuestRewards`, `commands/xp_grants.go`, `commands/select_character.go`. Select in `auto` still catches up. Select in `trainer` does not silently train.
+
+### Death hook
+
+`ApplyDeath(policy, char) Outcome` computes XP lost, gold lost, respawn room (empty when `next_reset` or unbound), and the HP to set. `processCombatDefeat` applies the outcome, optionally damages armor, calls the existing `RelocateCharacter` when a room is returned, and sends the defeat message.
+
+`next_reset` sets `Character.AwaitingReset`, leaves the character in the death room at the policy HP (0 unless `respawn_hp_percent` says otherwise), and does not relocate. The new-day pass clears `AwaitingReset` when it runs. With the default policy this path never runs.
+
+The orange attack warning in `attack.go` stays. Death does not consult threat color.
+
+### New-day pass
+
+`ruleset.ApplyNewDay(char, now) bool` on successful character select. When `full_heal` is false, it returns false and writes nothing. When true, it compares `now` in `new_day.timezone` to `Character.LastResetDay`. On a new day it fills HP and mana and stores the day. It does not refill resource balances; the store does that on the next `Get`/`Consume` because the period key changed.
+
+### Resource store
+
+`pkg/resources.Store` on the process SQLite DB (`character_resources` table, created if missing).
+
+- Identity: `characterID|key`.
+- Period key: `YYYY-MM-DD` in the allowance timezone, or the interval bucket start.
+- `Get` refills `remaining` to `allowance` when the period key changes. Inside a period, a config edit does not grant more uses.
+- `Consume` fails with `ErrExhausted` and does not write when `n` exceeds `remaining`.
+- `Modifier` is `func(characterID, key string, allowance int) int`. Zero modifiers means the config allowance. A Veilspan script can register one to add a boon. Modifiers run before the period check so a changed allowance still does not refill mid-period; they only affect the next refill and the displayed allowance.
+
+No game command calls the store. A pack script calls `tales.resources.consume` (slice 1a exposes it; with no configured key the call returns exhausted and changes nothing). An empty `resources` map is the Veilspan state. The Go modifier hook stays for tests and for a boon registered by engine code; content uses the YAML allowance.
+
+### Combat pacing
+
+Read by the combat controller only as a branch around the existing decision window.
+
+`auto` (default): the block in `processAllTurnsLocked` is unchanged. Five-second window, then auto-attack. A queued action still kicks the waiting turn. Balance tests (`TestGapMatrixTargets`, `TestCombatDuration`, `TestLevel1*`, `TestBosses`) do not go through this branch; formulas stay put.
+
+`turn_based`: a living player's turn sets the phase to waiting and does not arm a deadline. The ticker does not auto-attack and does not resolve that turn. Queueing an action still kicks, the player's turn resolves, and later combatants (including NPCs) take their turns under the existing beat. NPC turns that are already current still resolve; the mode does not reorder initiative. It only refuses to invent a player action.
+
+### Procedural instances
+
+`Manager.Generate(rooms, characterID, spec, playerLevel)`:
+
+- Picks `spec.Count` templates from `spec.TemplateIDs` (with replacement if the pool is smaller).
+- Links them in a line. The last room's exit returns to `spec.ReturnRoomID`. The first room is the entry.
+- Spawns NPC templates from `spec.Encounters` whose `[minLevel, maxLevel]` contains `playerLevel`, weighted. Templates outside the band are skipped. An empty band match spawns nothing.
+- Registers the clones on the existing per-character map. A second character does not join this copy.
+- `NoteLeave` to a non-clone destroys it, as today. A timeout (spec, default 30 minutes) sweeps only instances this generator created. Authored graph instances are not on that list.
+- The generator does not read the clock calendar and does not call Party Follow.
+
+Entry is an existing `type: script` room action. The script consumes a resource, then calls `tales.instances.generate`. Params live in the script and in the action's `params` map, which room actions already pass into the script context. Exhausted budget: the script does not call generate. Followers are not pulled (`allow=false` is already how instance crossings work). There is no new action type.
+
+Existing exits with `instance: true` still call `Enter` and clone the authored graph.
+
+### Lua additions
+
+Small, generic, no world names. Each is a no-op or a pure read when the caller passes nothing new, and each has a Veilspan caller in mind (a toll script, a shrine, a mentor, a daily node, a delve).
+
+| Function | Behavior |
+| --- | --- |
+| `tales.characters.addGold(id, delta)` | Adds a signed amount. Refuses a debit that would go below 0 and changes nothing. Persists. |
+| `tales.characters.setBind(id, roomID)` | Sets `BoundRoomID` when the room exists. Empty room id clears it. |
+| `tales.characters.applyLevels(id)` | Runs `MaybeLevelUp` and returns the number of levels gained (0 in trainer mode until this is called, 0 in auto mode when nothing is pending). |
+| `tales.resources.get(characterID, key)` | Returns allowance and remaining for a configured key. Unknown key returns remaining 0 and `ok=false`. |
+| `tales.resources.consume(characterID, key, n)` | Spends `n` against the configured allowance. Returns remaining, or `ok=false` when the key is missing or the balance is short. |
+| `tales.instances.generate(characterID, spec)` | Spec is count, template room ids, return room, encounters `{id, minLevel, maxLevel, weight}`, timeout seconds. Returns the entry room id or fails without leaving clones. |
+
+`tales.characters.heal`, `damage`, `giveXP`, `teleport`, and `tales.game.setFlag` / `getFlag` stay as they are. `giveXP` still does not itself level; the ruleset hook does that on the combat and quest paths, and `applyLevels` is the explicit catch-up.
+
+## Game-mode file
+
+Path: `config/gamemode.yaml`, loaded only when the process is started with `-config`. Unset process keeps today's Auth0, classic client, `PORT`, and `SQLITE_PATH`.
+
+```yaml
+presentation: classic     # classic | door_tui
+auth: auth0               # auth0 | local
+port: ""                  # sets PORT when non-empty, so a second process can bind another port
+sqlite_path: ""           # sets SQLITE_PATH when non-empty
+world_pack: ""            # content folder the presentation may read for screen art
+timezone: UTC
+session_secret: ""        # prefer SESSION_SECRET in the environment
+secret_path: data/session.key
+outbox_path: data/auth-outbox.log
+```
+
+`presentation: door_tui` serves `public/door` and installs the view session hook. Classic mode does not redirect `/` and does not install the hook. `/play` stays the classic client either way.
+
+`auth: local` enables the Argon2id username/password routes from `pkg/authlocal`. Auth0 routes stay mounted for `auth: auth0`. Local auth is off unless the mode says so.
+
+Second port means a second process, not a second listener inside Veilspan. Door runs with its own `-config`, port, and database. Veilspan's process is not modified to listen twice.
+
+Environment overrides, all generic names: `PRESENTATION`, `RULESET` (path to the ruleset file, default `config/ruleset.yaml`), `AUTH_MODE`, `SESSION_SECRET`, `AUTH_OUTBOX_PATH`. No engine default mentions a specific world.
+
+## Door presentation
+
+Port `public/door` (xterm page, hotkeys, login form) and the 80×25 ANSI frame builder.
+
+The frame builder moves to `pkg/presentation/ansi`. It paints a title, body, prompt, and footer supplied by the caller. It does not know towns, prices, or combat math. The default title is empty; the Door pack supplies its title in the view's world-pack config, which is data, not an engine default.
+
+The session hook (`pkg/presentation/doorview`) is a view:
+
+- On connect, if the account has no selected character, the frame offers create/select and the hook calls the existing character services.
+- Otherwise it loads the character's current room, NPCs, exits, resources, and combat phase from the engine and paints them.
+- A hotkey or a typed line becomes an engine command or an existing room-action name (`north`, `attack`, `buy`, `look`, `who`, `rest`, or whatever the room authored). Service rooms expose those names as script actions. The view does not invent prices or outcomes.
+- Combat results are the engine's combat messages, rendered into the next frame. The view does not roll hit, damage, XP, or death.
+
+Screen art files live in the world pack (`screens/<id>.ans`) and are looked up by room id. Missing art is a text frame of the room name and description. The classic client never reads these files.
+
+Local auth pages in that client post to `/api/auth/register`, `/api/auth/login`, `/api/auth/forgot`, `/api/auth/reset`. Tokens are the local session tokens. Forgot-password writes the outbox file and does not return the token in the response.
+
+## Retiring pkg/door
+
+| Old piece | Replacement |
+| --- | --- |
+| `pkg/door/combat.go` | Engine combat, NPC templates, `combat.pacing: turn_based`. |
+| `pkg/door/hub.go` services and new-day heal | Pack scripts (`addGold`, `heal`, `setFlag`, `setBind`) and `ApplyNewDay`. |
+| `pkg/door/dispatch.go` | `doorview` key-to-command map. Keys fire engine commands and room actions. |
+| `pkg/door/screen.go` | `pkg/presentation/ansi`. |
+| `pkg/door/pack.go` | Importer YAML world plus `ruleset.yaml` and `gamemode.yaml`. |
+| `Character.Door` (`DoorProfile`) | On-hand `Gold`, a bank flag set by script, `LastResetDay`, `AwaitingReset`. Gems are a flag or an item. |
+| `pkg/daily` forest-fights key | `pkg/resources` with a config key. |
+| `pkg/gamemode` Door env names | `pkg/gamemode` with the generic names above. |
+| `pkg/authlocal` | Ported as-is in behavior (Argon2id PHC, outbox mailer), generic paths. |
+| `public/door` | Ported as the Door client. |
+
+`pkg/door` is not copied into this branch.
+
+## Phase plan
+
+1. **0.** This document.
+2. **1a.** `pkg/resources`, the SQLite table, and `tales.resources` get/consume. Store tests for calendar rollover, interval rollover, exhaust, modifier, and mid-period config edits. An unknown key does not create a balance. No default key is configured.
+3. **1b.** `config/ruleset.yaml` and `pkg/ruleset`. XP base hook, level cap, level-up mode at all four call sites, `ApplyDeath` used only by defeat, new-day pass, `LastResetDay` and `AwaitingReset`, plus `addGold`, `setBind`, and `applyLevels`. Tests: defaults match current XP curve, fallback enemy XP, defeat losses, and auto level-up; a sample document rejects combat-balance keys; trainer mode banks combat and quest XP until `applyLevels`; `reward_scale` still multiplies a table base.
+4. **1c.** `turn_based` branch. Default auto tests, including the named balance tests, stay green. A turn-based test shows the window does not fire and a queued action still resolves, with the NPC acting on a later turn. Progress note flagged for review before 1d.
+5. **1d.** `Generate` plus `tales.instances.generate`. A scripted room action is the entry and the place that spends a resource. Existing instance and follow tests stay green. New tests: level filter, per-character clone, no follow across, cleanup on leave and timeout. The generator itself does not charge a resource.
+6. **1e.** ANSI view, `public/door`, local auth, gamemode `-config` and port/sqlite override. Classic startup does not mount local auth and does not install the hook.
+7. **Phase 2** (only if Phase 1 is green). Pack repo `talesmud-door`, branch `feat/lord-on-mud`: `worlds/aethermoor-lord` in importer layout, town rooms, merchant and service NPCs, forest templates, level-banded monsters, and a Door config (turn-based, forest walks 25/day Europe/Berlin, cap 12, trainer level-up). No commit to that repo's `main`.
+
+## Docs kept in sync
+
+Each implementation slice updates `PROJECT.md`, `ARCHITECTURE.md`, and `FEATURES.md` for the behavior it adds. This design stays the map; those files stay the current-state reference.
