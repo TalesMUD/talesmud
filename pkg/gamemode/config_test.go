@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/talesmud/talesmud/pkg/ruleset"
 )
 
 func TestDefaultIsClassic(t *testing.T) {
@@ -41,6 +43,30 @@ func TestApplyFileSetsPortAndDatabase(t *testing.T) {
 	}
 	if cfg.Location().String() != "Europe/Berlin" {
 		t.Fatalf("tz %s", cfg.Location())
+	}
+}
+
+func TestApplyFileAlsoLoadsRulesetSections(t *testing.T) {
+	ruleset.Reset()
+	t.Cleanup(func() {
+		rulesetFromConfig = false
+		ruleset.Reset()
+		current = normalize(Config{})
+	})
+	path := filepath.Join(t.TempDir(), "mode.yaml")
+	body := []byte("presentation: door_tui\nauth: local\nport: \"8030\"\nprogression:\n  level_cap: 12\n  level_up_mode: trainer\ncombat:\n  pacing: turn_based\nresources:\n  forest_walks:\n    allowance: 25\n    reset: calendar\n    timezone: Europe/Berlin\n")
+	if err := os.WriteFile(path, body, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := ApplyFile(path); err != nil {
+		t.Fatal(err)
+	}
+	if !RulesetFromConfig() || ruleset.LevelCap() != 12 || ruleset.LevelUpMode() != ruleset.ModeTrainer || ruleset.Pacing() != ruleset.PacingTurnBased {
+		t.Fatalf("cap=%d mode=%s pacing=%s from=%v", ruleset.LevelCap(), ruleset.LevelUpMode(), ruleset.Pacing(), RulesetFromConfig())
+	}
+	allow := ruleset.ResourceAllowances()
+	if len(allow) != 1 || allow[0].Key != "forest_walks" || allow[0].Amount != 25 {
+		t.Fatalf("%+v", allow)
 	}
 }
 

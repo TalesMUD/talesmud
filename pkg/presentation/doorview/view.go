@@ -5,6 +5,8 @@ package doorview
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -122,6 +124,10 @@ func (v *View) paint(user *entities.User, send func(any)) {
 		body = append(body, "You are nowhere.")
 	} else {
 		page.Location = room.Name
+		if art := screenArt(room.ID); art != "" {
+			body = append(body, "")
+			body = append(body, strings.Split(art, "\n")...)
+		}
 		if room.Description != "" {
 			body = append(body, "", room.Description)
 		}
@@ -175,6 +181,23 @@ func (v *View) characterLines(user *entities.User) []string {
 		}
 	}
 	return lines
+}
+
+func screenArt(roomID string) string {
+	root := strings.TrimSpace(gamemode.Current().WorldPack)
+	if root == "" || roomID == "" {
+		return ""
+	}
+	raw, err := os.ReadFile(filepath.Join(root, "screens", roomID+".ans"))
+	if err != nil {
+		return ""
+	}
+	text := strings.ReplaceAll(string(raw), "\r\n", "\n")
+	lines := strings.Split(text, "\n")
+	if len(lines) > 8 {
+		lines = lines[:8]
+	}
+	return strings.Join(lines, "\n")
 }
 
 func mapKey(text string) string {

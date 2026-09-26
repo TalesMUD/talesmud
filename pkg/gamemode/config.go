@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/talesmud/talesmud/pkg/ruleset"
 )
 
 const (
@@ -33,7 +35,17 @@ type Config struct {
 	OutboxPath    string `yaml:"outbox_path"`
 }
 
-var current = normalize(Config{})
+var (
+	current           = normalize(Config{})
+	rulesetFromConfig bool
+)
+
+// RulesetFromConfig reports whether ApplyFile already installed a ruleset
+// from the same document. Server startup should not replace that with the
+// shipped default file.
+func RulesetFromConfig() bool {
+	return rulesetFromConfig
+}
 
 // Current returns the loaded mode.
 func Current() Config {
@@ -110,6 +122,12 @@ func ApplyFile(path string) error {
 			return err
 		}
 	}
+	if documentHasRuleset(raw) {
+		if err := ruleset.LoadBytes(raw); err != nil {
+			return err
+		}
+		rulesetFromConfig = true
+	}
 	if secret := strings.TrimSpace(os.Getenv("SESSION_SECRET")); secret != "" {
 		cfg.SessionSecret = secret
 	}
@@ -118,6 +136,33 @@ func ApplyFile(path string) error {
 	}
 	current = cfg
 	return nil
+}
+
+func documentHasRuleset(raw []byte) bool {
+	var node yaml.Node
+	if err := yaml.Unmarshal(raw, &node); err != nil {
+		return false
+	}
+	root := &node
+	if root.Kind == yaml.DocumentNode && len(root.Content) > 0 {
+		root = root.Content[0]
+	}
+	if root.Kind != yaml.MappingNode {
+		return false
+	}
+	want := map[string]bool{
+		"progression": true,
+		"death":       true,
+		"new_day":     true,
+		"resources":   true,
+		"combat":      true,
+	}
+	for i := 0; i+1 < len(root.Content); i += 2 {
+		if want[root.Content[i].Value] {
+			return true
+		}
+	}
+	return false
 }
 
 func normalize(cfg Config) Config {

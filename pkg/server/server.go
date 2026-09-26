@@ -113,8 +113,10 @@ func NewApp() App {
 	facade := service.NewFacade(repos, scriptRunner)
 	mud := mud.New(facade)
 	scriptRunner.SetServices(facade, mud.GameCtrl())
-	if err := ruleset.LoadDefault(); err != nil {
-		log.WithError(err).Warn("Ruleset file failed to load; using built-in defaults")
+	if !gamemode.RulesetFromConfig() {
+		if err := ruleset.LoadDefault(); err != nil {
+			log.WithError(err).Warn("Ruleset file failed to load; using built-in defaults")
+		}
 	}
 	if store, err := resources.New(client.DB()); err != nil {
 		log.WithError(err).Warn("Refilling resource store unavailable")
