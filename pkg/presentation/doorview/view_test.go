@@ -67,3 +67,43 @@ func TestViewPaintsTheLiveRoom(t *testing.T) {
 		t.Fatalf("look did not repaint the room:\n%s", frame.ANSI)
 	}
 }
+
+func TestViewNamePromptCreatesAndSelects(t *testing.T) {
+	client, err := dbsqlite.Open(filepath.Join(t.TempDir(), "view.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	facade := service.NewFacade(repository.NewSQLiteFactory(client), nil)
+	if _, err := facade.RoomsService().Import(&rooms.Room{
+		Entity:      &entities.Entity{ID: "R0001"},
+		Name:        "Ashmarket Square",
+		Description: "Brass skyline.",
+		Exits:       &rooms.Exits{{Name: "north", Target: "R0001"}},
+		Actions:     &rooms.Actions{{Name: "news", Type: rooms.RoomActionTypeResponse, Description: "Read the notices.", Response: "A notice."}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	user := &entities.User{Entity: &entities.Entity{ID: "user-2"}, RefID: "user-2"}
+	view := &View{Game: game.New(facade), Title: "Sample"}
+	var frame ansi.Frame
+	view.OnConnect(user, func(msg any) {
+		if f, ok := msg.(ansi.Frame); ok {
+			frame = f
+		}
+	})
+	if frame.InputMode != "line" || !strings.Contains(frame.ANSI, "No characters yet.") {
+		t.Fatalf("prompt = %q mode %s", frame.ANSI, frame.InputMode)
+	}
+	view.OnInput(user, "Bram", func(msg any) {
+		if f, ok := msg.(ansi.Frame); ok {
+			frame = f
+		}
+	})
+	if !strings.Contains(frame.ANSI, "Ashmarket Square") || !strings.Contains(frame.ANSI, "Actions: news") {
+		t.Fatalf("created character did not enter the start room:\n%s", frame.ANSI)
+	}
+	if user.LastCharacter == "" {
+		t.Fatal("character was not selected")
+	}
+}

@@ -11,6 +11,8 @@ import (
 	"sync"
 
 	"github.com/talesmud/talesmud/pkg/entities"
+	"github.com/talesmud/talesmud/pkg/entities/characters"
+	"github.com/talesmud/talesmud/pkg/entities/traits"
 	"github.com/talesmud/talesmud/pkg/gamemode"
 	"github.com/talesmud/talesmud/pkg/mudserver/game"
 	"github.com/talesmud/talesmud/pkg/presentation/ansi"
@@ -24,6 +26,7 @@ type View struct {
 
 	mu   sync.Mutex
 	line map[string]bool
+	note map[string]string
 }
 
 // Active reports whether this process is serving the text client.
@@ -32,7 +35,9 @@ func (v *View) Active() bool {
 }
 
 // OnConnect paints the current room, or a character prompt.
+// A returning account with no active character is selected the same way a classic join does.
 func (v *View) OnConnect(user *entities.User, send func(any)) {
+	v.ensureReturning(user)
 	v.paint(user, send)
 }
 
@@ -46,7 +51,11 @@ func (v *View) OnInput(user *entities.User, text string, send func(any)) bool {
 		return true
 	}
 	if v.takeLine(user.ID) {
-		v.Game.DispatchCommand(user, text)
+		if v.noCharacter(user) {
+			v.openCharacter(user, text)
+		} else {
+			v.Game.DispatchCommand(user, text)
+		}
 		v.paint(user, send)
 		return true
 	}
@@ -87,7 +96,8 @@ func (v *View) paint(user *entities.User, send func(any)) {
 		page.Prompt = "Command:"
 	}
 	facade := v.Game.GetFacade()
-	if facade == nil || user.LastCharacter == "" {
+	if facade == nil || v.noCharacter(user) {
+		v.setLine(user.ID, true)
 		page.Location = "Characters"
 		page.ScreenID = "select"
 		page.InputMode = "line"
@@ -143,6 +153,17 @@ func (v *View) paint(user *entities.User, send func(any)) {
 				body = append(body, "", "Exits: "+strings.Join(names, ", "))
 			}
 		}
+		if room.Actions != nil && len(*room.Actions) > 0 {
+			names := make([]string, 0, len(*room.Actions))
+			for _, action := range *room.Actions {
+				if action.Name != "" {
+					names = append(names, action.Name)
+				}
+			}
+			if len(names) > 0 {
+				body = append(body, "Actions: "+strings.Join(names, ", "))
+			}
+		}
 		if v.Game.NPCManager != nil {
 			var npcs []string
 			for _, n := range v.Game.NPCManager.GetInstancesInRoom(room.ID) {
@@ -166,6 +187,9 @@ func (v *View) paint(user *entities.User, send func(any)) {
 
 func (v *View) characterLines(user *entities.User) []string {
 	lines := []string{"Type a character name."}
+	if note := v.peekNote(user.ID); note != "" {
+		lines = append(lines, note)
+	}
 	facade := v.Game.GetFacade()
 	if facade == nil {
 		return lines
@@ -198,6 +222,83 @@ func screenArt(roomID string) string {
 		lines = lines[:8]
 	}
 	return strings.Join(lines, "\n")
+}
+
+func (v *View) ensureReturning(user *entities.User) {
+	if v == nil || user == nil || user.LastCharacter != "" || v.Game == nil || v.Game.GetFacade() == nil {
+		return
+	}
+	chars, err := v.Game.GetFacade().CharactersService().FindAllForUser(user.ID)
+	if err != nil || len(chars) == 0 {
+		v.setLine(user.ID, true)
+		return
+	}
+	for _, ch := range chars {
+		if ch != nil && ch.Name != "" {
+			v.Game.DispatchCommand(user, "selectcharacter "+ch.Name)
+			return
+		}
+	}
+	v.setLine(user.ID, true)
+}
+
+func (v *View) noCharacter(user *entities.User) bool {
+	if user == nil || user.LastCharacter == "" || v == nil || v.Game == nil || v.Game.GetFacade() == nil {
+		return true
+	}
+	ch, err := v.Game.GetFacade().CharactersService().FindByID(user.LastCharacter)
+	return err != nil || ch == nil
+}
+
+func (v *View) openCharacter(user *entities.User, name string) {
+	name = strings.TrimSpace(name)
+	if user == nil || v == nil || v.Game == nil || v.Game.GetFacade() == nil {
+		return
+	}
+	if name == "" {
+		v.setLine(user.ID, true)
+		return
+	}
+	facade := v.Game.GetFacade()
+	if chars, err := facade.CharactersService().FindAllForUser(user.ID); err == nil {
+		for _, ch := range chars {
+			if ch != nil && strings.EqualFold(ch.Name, name) {
+				v.clearNote(user.ID)
+				v.Game.DispatchCommand(user, "selectcharacter "+ch.Name)
+				return
+			}
+		}
+	}
+	presets := characters.SystemCharacterTemplatePresets()
+	if len(presets) == 0 || presets[0] == nil {
+		v.setNote(user.ID, "No character template is available.")
+		v.setLine(user.ID, true)
+		return
+	}
+	preset := presets[0]
+	ch := &characters.Character{
+		Name:             name,
+		Race:             preset.Race,
+		Class:            preset.Class,
+		Level:            preset.Level,
+		CurrentHitPoints: preset.CurrentHitPoints,
+		MaxHitPoints:     preset.MaxHitPoints,
+		CurrentMana:      preset.CurrentMana,
+		MaxMana:          preset.MaxMana,
+		Attributes:       append(characters.Attributes(nil), preset.Attributes...),
+		BelongsUser:      *traits.BelongsToUser(user.ID),
+	}
+	if ch.Level < 1 {
+		ch.Level = 1
+	}
+	created, err := facade.CharactersService().Store(ch)
+	if err != nil || created == nil {
+		v.setNote(user.ID, "That name is not available.")
+		v.setLine(user.ID, true)
+		return
+	}
+	v.clearNote(user.ID)
+	v.Game.DispatchCommand(user, "selectcharacter "+created.Name)
 }
 
 func mapKey(text string) string {
@@ -254,4 +355,28 @@ func (v *View) setLine(id string, on bool) {
 	} else {
 		delete(v.line, id)
 	}
+}
+
+func (v *View) peekNote(id string) string {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	if v.note == nil {
+		return ""
+	}
+	return v.note[id]
+}
+
+func (v *View) setNote(id, text string) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	if v.note == nil {
+		v.note = map[string]string{}
+	}
+	v.note[id] = text
+}
+
+func (v *View) clearNote(id string) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	delete(v.note, id)
 }

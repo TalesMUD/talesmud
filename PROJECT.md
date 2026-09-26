@@ -250,7 +250,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Optional per-character refilling resources (`character_resources`). Keys come from `config/ruleset.yaml`. The shipped file lists none, so a default server never spends a balance. Scripts read them through `tales.resources`.
   - Ruleset death penalties, level-up mode (`auto` or `trainer`), and an optional dawn heal. Defaults match the previous 10% XP loss, 1 gold, bind-point respawn, cap 50, and immediate level-up.
   - Procedural private instances (`tales.instances.generate`): a per-character room line from templates, level-filtered encounters, cleanup on leave or timeout. Existing cellar instances and Party Follow are unchanged. Generated exits do not pull followers.
-  - Optional text client at `/door` when `presentation: door_tui`. It paints rooms, exits, NPCs, resources, and combat status from the engine and sends normal commands. `-config` can point a second process at its own port and database. Classic play is unchanged when no config is set.
+  - Optional text client at `/door` when `presentation: door_tui`. It paints rooms, exits, actions, NPCs, resources, and combat status from the engine and sends normal commands. A name at the character prompt creates a level-1 character from the first system template and selects it. `-config` can point a second process at its own port and database. Classic play is unchanged when no config is set.
 
 ## Technology Stack
 
