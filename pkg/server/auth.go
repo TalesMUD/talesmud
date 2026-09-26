@@ -14,6 +14,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	"github.com/talesmud/talesmud/pkg/authlocal"
 	e "github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/service"
 )
@@ -201,6 +202,15 @@ func setUser(c *gin.Context, facade service.Facade) {
 	}
 }
 
+// localSessions is set only when this process runs auth=local.
+// Classic servers leave it nil.
+var localSessions *authlocal.Service
+
+// UseLocalAuth installs the local session verifier. Nil disables it.
+func UseLocalAuth(svc *authlocal.Service) {
+	localSessions = svc
+}
+
 // AuthMiddleware is a gin middleware function for authentication.
 // It verifies the JWT token from the query parameter or the authorization header.
 // Supports both Auth0 JWTs and guest HMAC tokens (tried first for fast validation).
@@ -245,6 +255,25 @@ func AuthMiddleware(facade service.Facade) gin.HandlerFunc {
 					return
 				}
 			}
+		}
+
+		// Local username/password sessions. Tokens from this process are not sent to the external provider.
+		if localSessions != nil && authlocal.IsLocalIssuer(tokenStr) {
+			user, err := localSessions.UserFromToken(tokenStr)
+			if err != nil || user == nil {
+				handleTokenError(c, err, nil)
+				return
+			}
+			if user.IsBanned {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+					"error": "Your account has been banned",
+				})
+				return
+			}
+			c.Set("userid", user.RefID)
+			c.Set("user", user)
+			c.Next()
+			return
 		}
 
 		// Fall back to Auth0 JWT validation

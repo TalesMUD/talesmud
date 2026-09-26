@@ -10,7 +10,9 @@ import (
 	"github.com/gorilla/handlers"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/talesmud/talesmud/pkg/authlocal"
 	dbsqlite "github.com/talesmud/talesmud/pkg/db/sqlite"
+	"github.com/talesmud/talesmud/pkg/gamemode"
 	mud "github.com/talesmud/talesmud/pkg/mudserver"
 	"github.com/talesmud/talesmud/pkg/repository"
 	"github.com/talesmud/talesmud/pkg/resources"
@@ -30,9 +32,10 @@ type App interface {
 }
 
 type app struct {
-	Router *gin.Engine
-	Facade service.Facade
-	mud    mud.MUDServer
+	Router    *gin.Engine
+	Facade    service.Facade
+	mud       mud.MUDServer
+	localAuth *authlocal.Service
 }
 
 func adminAuthMiddleware() gin.HandlerFunc {
@@ -121,11 +124,23 @@ func NewApp() App {
 		scriptRunner.SetResourceStore(store)
 	}
 
-	return &app{
+	application := &app{
 		Router: r,
 		Facade: facade,
 		mud:    mud,
 	}
+	if gamemode.LocalAuth() {
+		secret, err := authlocal.ResolveSecret(gamemode.Current())
+		if err != nil {
+			log.WithError(err).Fatal("Failed to load local session secret")
+		}
+		application.localAuth = authlocal.New(client.DB(), facade.UsersService(), secret, authlocal.OutboxMailer{
+			Path: gamemode.Current().OutboxPath,
+		})
+		UseLocalAuth(application.localAuth)
+		log.WithField("outbox", gamemode.Current().OutboxPath).Info("Local auth enabled")
+	}
+	return application
 }
 
 // SetupRoutes ... Configures the routes
@@ -260,6 +275,10 @@ func (app *app) setupRoutes() {
 	protected.Use(AuthMiddleware(app.Facade))
 	{
 		// Player-level routes (any authenticated user)
+		if app.localAuth != nil {
+			localAuth := &handler.LocalAuthHandler{Auth: app.localAuth}
+			protected.GET("auth/me", localAuth.Me)
+		}
 
 		// Characters
 		protected.GET("characters", csh.GetCharacters)
@@ -441,6 +460,14 @@ func (app *app) setupRoutes() {
 			GuestService: app.Facade.GuestService(),
 		}
 		public.POST("guest", guest.CreateGuestSession)
+
+		if app.localAuth != nil {
+			localAuth := &handler.LocalAuthHandler{Auth: app.localAuth}
+			public.POST("auth/register", localAuth.Register)
+			public.POST("auth/login", localAuth.Login)
+			public.POST("auth/forgot", localAuth.Forgot)
+			public.POST("auth/reset", localAuth.Reset)
+		}
 	}
 
 	// Start MUD Server
@@ -455,6 +482,18 @@ func (app *app) setupRoutes() {
 
 	// Serve mud-client (game client) at /play
 	r.Use(SPAMiddleware("/play", webuiplay.FS(), webuiplay.IndexFile))
+
+	if st, err := os.Stat("public/door"); err == nil && st.IsDir() {
+		r.Static("/door", "public/door")
+		if gamemode.ANSI() {
+			r.GET("/", func(c *gin.Context) {
+				c.Redirect(http.StatusFound, "/door/")
+			})
+		}
+	}
+	if gamemode.ANSI() {
+		return
+	}
 
 	// Optional landing page from OS filesystem
 	landingPath := strings.TrimSpace(os.Getenv("LANDING_PATH"))

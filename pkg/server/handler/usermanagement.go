@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	e "github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
@@ -19,7 +20,11 @@ func (h *UserManagementHandler) GetAllUsers(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load users"})
 		return
 	}
-	c.JSON(http.StatusOK, users)
+	out := make([]*e.User, 0, len(users))
+	for _, user := range users {
+		out = append(out, user.RedactedCopy())
+	}
+	c.JSON(http.StatusOK, out)
 }
 
 // roleRequest is the JSON body for role update requests.

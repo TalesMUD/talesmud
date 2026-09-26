@@ -2367,6 +2367,8 @@ The leveling system (`CheckLevelUp`, `ApplyLevelUp`) respects `MaxLevelCap` auto
 - Guest HMAC tokens are validated before Auth0 JWTs in `AuthMiddleware`
 - Token claims: `sub` (RefID), `uid` (user entity ID), `exp` (30min), `guest: true`
 - If `GUEST_SECRET` is not set, a random key is generated at startup
+- Optional local username/password sessions (Argon2id) when a game-mode file sets `auth: local`. Classic servers leave this off. API responses omit the password hash.
+- `presentation: door_tui` serves `public/door` and paints an ANSI page from live rooms, exits, NPCs, resources, and combat status. Keys and typed lines become engine commands.
 
 ---
 

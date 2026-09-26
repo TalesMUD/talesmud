@@ -1,6 +1,7 @@
 package game
 
 import (
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -133,6 +134,22 @@ func (g *Game) SendMessage(msg interface{}) {
 // SendMessage ...
 func (g *Game) SendMessage() chan interface{} {
 	return g.sendMessage
+}
+
+// DispatchCommand runs one command against the current character, synchronously.
+func (g *Game) DispatchCommand(user *entities.User, text string) {
+	if g == nil || user == nil {
+		return
+	}
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return
+	}
+	msg := m.NewMessage(user, text)
+	g.attachCharacterToMessage(msg)
+	if !g.CommandProcessor.Process(g, msg) {
+		g.RoomProcessor.Process(g, msg)
+	}
 }
 
 // OnMessageReceived returns onMessageReceived channel

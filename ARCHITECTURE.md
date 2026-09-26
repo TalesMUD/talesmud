@@ -1534,6 +1534,9 @@ pkg/
 ├── db/                # Database client
 ├── resources/         # Per-character refilling balances
 ├── ruleset/           # Level cap, level-up mode, death, new day, resource catalog
+├── gamemode/          # Process presentation and auth mode
+├── authlocal/         # Optional Argon2id username/password sessions
+├── presentation/      # Text-client frame renderer and view
 ├── scripts/           # Script execution
 │   ├── scripts.go     # Script entity and types
 │   ├── scriptrunner.go # Runner interface
