@@ -11,6 +11,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/ruleset"
 	luarunner "github.com/talesmud/talesmud/pkg/scripts/runner/lua"
 )
 
@@ -307,6 +308,52 @@ func RegisterCharactersModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 			pushGoldUpdate(runner, id)
 		}
 		L.Push(lua.LNumber(gained))
+		return 1
+	}))
+
+	// tales.characters.setProgress(id, level, xp [, maxHP])
+	// Sets level and XP without touching class, skills, inventory, gold, or flags.
+	// Level is clamped to 1..the effective cap. XP below zero becomes zero.
+	// A positive maxHP replaces max and current hit points.
+	mod.RawSetString("setProgress", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+		level := int32(L.CheckInt(2))
+		xp := int32(L.CheckInt(3))
+		var maxHP int32
+		if L.GetTop() >= 4 && L.Get(4).Type() != lua.LTNil {
+			maxHP = int32(L.CheckInt(4))
+		}
+		facade := runner.GetFacade()
+		if facade == nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+		err := facade.CharactersService().Modify(id, func(character *characters.Character) error {
+			capLevel := character.GetEffectiveMaxLevel(ruleset.LevelCap())
+			if level < 1 {
+				level = 1
+			}
+			if capLevel > 0 && level > capLevel {
+				level = capLevel
+			}
+			if xp < 0 {
+				xp = 0
+			}
+			character.Level = level
+			character.XP = xp
+			if maxHP > 0 {
+				character.MaxHitPoints = maxHP
+				character.CurrentHitPoints = maxHP
+			}
+			return nil
+		})
+		if err != nil {
+			log.WithError(err).WithField("characterID", id).Warn("setProgress failed")
+			L.Push(lua.LBool(false))
+			return 1
+		}
+		pushGoldUpdate(runner, id)
+		L.Push(lua.LBool(true))
 		return 1
 	}))
 

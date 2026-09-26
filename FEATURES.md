@@ -1703,6 +1703,10 @@ tales.characters.setBind(characterID, roomID)
 
 -- Apply levels the current XP can already buy. Returns how many levels were gained.
 tales.characters.applyLevels(characterID)
+
+-- Set level and XP directly. Level clamps to 1..the effective cap. Optional maxHP replaces hit points.
+-- Class, skills, inventory, gold, and flags are left alone.
+tales.characters.setProgress(characterID, level, xp, maxHP)
 ```
 
 ### tales.resources Module

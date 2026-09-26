@@ -77,17 +77,19 @@ local missing = tales.characters.setBind(%q, "nope")
 local cleared = tales.characters.setBind(%q, "")
 local levels = tales.characters.applyLevels(%q)
 local again = tales.characters.applyLevels(%q)
-return {paid, refused, bound, missing, cleared, levels, again}
-`, id, id, id, id, id, id, id),
+local reset = tales.characters.setProgress(%q, 1, 0, 25)
+local capped = tales.characters.setProgress(%q, 99, -5, 25)
+return {paid, refused, bound, missing, cleared, levels, again, reset, capped}
+`, id, id, id, id, id, id, id, id, id),
 	}, scripts.NewScriptContext())
 	if result == nil || !result.Success {
 		t.Fatalf("script: %+v", result)
 	}
 	row, ok := result.Result.([]interface{})
-	if !ok || len(row) != 7 {
+	if !ok || len(row) != 9 {
 		t.Fatalf("result %#v", result.Result)
 	}
-	want := []interface{}{true, false, true, false, true, float64(1), float64(0)}
+	want := []interface{}{true, false, true, false, true, float64(1), float64(0), true, true}
 	for i := range want {
 		if row[i] != want[i] {
 			t.Fatalf("index %d = %#v want %#v full %#v", i, row[i], want[i], row)
@@ -97,7 +99,10 @@ return {paid, refused, bound, missing, cleared, levels, again}
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stored.Gold != 7 || stored.BoundRoomID != "" || stored.Level != 2 {
-		t.Fatalf("gold=%d bind=%q level=%d", stored.Gold, stored.BoundRoomID, stored.Level)
+	if stored.Gold != 7 || stored.BoundRoomID != "" || stored.Level != 50 || stored.XP != 0 || stored.MaxHitPoints != 25 {
+		t.Fatalf("gold=%d bind=%q level=%d xp=%d hp=%d", stored.Gold, stored.BoundRoomID, stored.Level, stored.XP, stored.MaxHitPoints)
+	}
+	if stored.Class != characters.ClassWarrior {
+		t.Fatalf("class changed: %+v", stored.Class)
 	}
 }

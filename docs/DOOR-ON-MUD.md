@@ -70,7 +70,7 @@ Each row is one system. The first number is the tier that owns it. Later numbers
 | Player list | **1** | `who`. The Door view renders that reply. | Unchanged. |
 | New-day full heal | **1** | `new_day.full_heal` on character select. Select has no script event, so a YAML switch has to work with no pack script. Resource refill stays on the store's clock. | `false`. Select does not heal. |
 | Dragon endgame | **2** | A later pack script. No engine type until a script is actually short of an API. Not written in Phase 1. | Off. |
-| Prestige reset | **2** | A later pack script, same bar as the dragon. Not written in Phase 1. | Off. |
+| Prestige reset | **3** `setProgress`, then **2** the pack script | Level and XP have to change without a combat victory. `setProgress` does only that. The script decides when a win earns the reset and what hit points to keep. | The call is unused. Level still comes from XP. |
 | PvP | **4**, not built | Hits are the combat core. Lua cannot resolve them. No flag was added that pretends a duel exists. | Impossible, as today. |
 | Global event dispatch | **2** | Room and on-enter scripts already carry a flavor event. The registry still has no `Dispatch` callers, and OnDeath / OnAggro / OnFlee stay unexecuted. Calling that registry would be tier 4 and was not done. | Unchanged. |
 | Turn-based fights | **4**, then **1** `combat.pacing` | This is the combat core. `auto` must stay the current 5s window and manual kick. | `auto`. |
@@ -191,7 +191,8 @@ Small, generic, no world names. Each is a no-op or a pure read when the caller p
 | --- | --- |
 | `tales.characters.addGold(id, delta)` | Adds a signed amount. Refuses a debit that would go below 0 and changes nothing. Persists. |
 | `tales.characters.setBind(id, roomID)` | Sets `BoundRoomID` when the room exists. Empty room id clears it. |
-| `tales.characters.applyLevels(id)` | Runs `MaybeLevelUp` and returns the number of levels gained (0 in trainer mode until this is called, 0 in auto mode when nothing is pending). |
+| `tales.characters.applyLevels(id)` | Applies every level the current XP can buy and returns how many were gained. Trainer mode banks XP until this call. Auto mode returns 0 when nothing is pending. |
+| `tales.characters.setProgress(id, level, xp [, maxHP])` | Sets level and XP. Level clamps to 1..the effective cap. Negative XP becomes 0. A positive maxHP replaces max and current hit points. Class, skills, inventory, gold, and flags stay. |
 | `tales.resources.get(characterID, key)` | Returns allowance and remaining for a configured key. Unknown key returns remaining 0 and `ok=false`. |
 | `tales.resources.consume(characterID, key, n)` | Spends `n` against the configured allowance. Returns remaining, or `ok=false` when the key is missing or the balance is short. |
 | `tales.instances.generate(characterID, playerLevel, spec)` | Spec is count, template room ids, return room, encounters `{id, minLevel, maxLevel, weight}`, timeout seconds. Returns the entry room id or fails without leaving clones. The caller script moves the character. |
