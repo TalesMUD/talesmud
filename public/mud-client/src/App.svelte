@@ -280,14 +280,7 @@
       </span>
     </a>
 
-    <!-- User menu in top right -->
-    <div class="user-menu-wrapper">
-      <ul>
-        <UserMenu {isGuest} {login} />
-      </ul>
-    </div>
-
-    <!-- Game component -->
+    <!-- Play header (Edit Layout, party, friends, account) is inside Game. -->
     <Game />
 
     <!-- Settings Modal (global) -->

@@ -52,6 +52,66 @@
     flex-shrink: 0;
   }
 
+  .acct {
+    position: relative;
+  }
+
+  .acct-btn {
+    width: 36px;
+    height: 36px;
+    box-sizing: border-box;
+    border: 1px solid rgba(251, 191, 36, 0.45);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fbbf24;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .acct-btn i { font-size: 20px; }
+
+  .acct-btn:hover { background: rgba(251, 191, 36, 0.2); }
+
+  .acct-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 30;
+    min-width: 180px;
+    border: 1px solid rgba(251, 191, 36, 0.45);
+    border-radius: 8px;
+    background: rgba(7, 9, 12, 0.96);
+    box-shadow: 0 18px 46px rgba(0, 0, 0, 0.55);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .acct-menu button {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    width: 100%;
+    padding: 0.7rem 0.8rem;
+    border: 0;
+    background: transparent;
+    color: #f0e6d3;
+    font-family: 'Cinzel', serif;
+    font-size: 0.82rem;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .acct-menu button i { font-size: 18px; color: #fbbf24; }
+
+  .acct-menu button:hover {
+    background: rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+  }
+
   .hp-pill {
     display: flex;
     align-items: center;
@@ -113,7 +173,74 @@
 </style>
 
 <script>
+  import { onMount, onDestroy } from "svelte";
+  import { getAuth } from "../../auth.js";
+  import { layoutStore } from "../layout/LayoutStore.js";
+  import { settingsStore } from "../SettingsStore.js";
+
   export let store;
+
+  const { login, logout } = getAuth();
+  let open = false;
+  let root;
+
+  function isGuest() {
+    try {
+      return typeof sessionStorage !== "undefined" && !!sessionStorage.getItem("talesmud_guest_token");
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function toggle(event) {
+    event.stopPropagation();
+    open = !open;
+  }
+
+  function onKey(event) {
+    if (event.key === "Escape") open = false;
+  }
+
+  function onPointerDown(event) {
+    if (!open || !root) return;
+    if (root.contains(event.target)) return;
+    open = false;
+  }
+
+  onMount(() => {
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("pointerdown", onPointerDown, true);
+  });
+
+  onDestroy(() => {
+    window.removeEventListener("keydown", onKey);
+    window.removeEventListener("pointerdown", onPointerDown, true);
+  });
+
+  function editLayout() {
+    open = false;
+    layoutStore.enterEditMode();
+  }
+
+  function openSettings() {
+    open = false;
+    settingsStore.openModal();
+  }
+
+  function endSession() {
+    open = false;
+    if (isGuest()) {
+      try { sessionStorage.removeItem("talesmud_guest_token"); } catch (err) { /* ignore */ }
+      window.location.reload();
+      return;
+    }
+    logout();
+  }
+
+  function createAccount() {
+    open = false;
+    if (login) login(null, { screen_hint: "signup" });
+  }
 
   $: roomName = $store.roomName || 'Unknown';
   $: stats = $store.characterStats || {};
@@ -138,6 +265,23 @@
     <div class="hp-pill {hpClass}">
       <i class="material-icons">favorite</i>
       {currentHP}/{maxHP}
+    </div>
+    <div class="acct" bind:this={root}>
+      <button class="acct-btn" type="button" title="Account" aria-label="Account" aria-expanded={open} on:click={toggle}>
+        <i class="material-icons">person</i>
+      </button>
+      {#if open}
+        <div class="acct-menu" role="menu">
+          <button type="button" role="menuitem" on:click={editLayout}><i class="material-icons">dashboard_customize</i> Edit Layout</button>
+          <button type="button" role="menuitem" on:click={openSettings}><i class="material-icons">settings</i> Settings</button>
+          {#if isGuest()}
+            <button type="button" role="menuitem" on:click={createAccount}><i class="material-icons">person_add</i> Create Account</button>
+            <button type="button" role="menuitem" on:click={endSession}><i class="material-icons">logout</i> End Session</button>
+          {:else}
+            <button type="button" role="menuitem" on:click={endSession}><i class="material-icons">logout</i> Logout</button>
+          {/if}
+        </div>
+      {/if}
     </div>
   </div>
 </div>
