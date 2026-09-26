@@ -96,3 +96,13 @@
 
 B5+B6 DONE
 
+## B7 HOTFIX auth
+- SHA: `19d77bcb090757de9988c85807e567ec08892952` (`19d77bc`)
+- Root cause: Logout cleared the Auth0 cache and sent the browser home, then a guest token still in this tab's sessionStorage was restored. The next load skipped the welcome choice and re-entered a guest game, whose menu said Create Account (signup hint) instead of a login that offers X, Google, and email. B6 also hid the desktop character switcher on the phone and never put the character list on the phone account menu. The server still enters on `lastCharacter`, so a player with several characters (Marcus landed on QA Ember) had no picker there. A global `.backdrop` rule (`visibility: hidden`, `opacity: 0`) would also have hidden a picker that reused that class name.
+- What changed: The logged-out screen is **Log in / Sign up** (`loginWithRedirect`, no signup-only hint) and **Play as guest**. Logout clears the Auth0 session and the guest token before returning to `/play`. A real Auth0 login drops a leftover guest token so it cannot swallow the session; a guest reload still resumes. **Switch character** in the desktop chip and the phone account menu opens a picker of every character from `/api/my-characters` and sends `sc <name>`. Guests get **Log in / Save progress**. Signed-in players get **Log out**. A signed-in player with more than one character sees that picker once per login. Cache-bust `?v=b7auth`.
+- Tests: `node public/mud-client/src/authSession_test.mjs` green. mud-client `npm run build` succeeded (existing unused-CSS and a11y warnings only).
+- Deploy: pushed `engine-june`. VPS fast-forwarded `110cba1` → `19d77bc`, copied the client into `pkg/webuiplay/dist`, rebuilt `bin/tales`. `sudo systemctl restart` needs a password, so pid 754911 was SIGTERM'd and `Restart=always` started pid 755956. Door pid 695590 on :8020 was not restarted. No production database writes.
+- Smoke: `https://veilspan.com/` 200, `/play/` 200 and `bundle.js?v=b7auth`, that bundle is 200 and contains "Log in / Sign up" and "Switch character", `/api/server-info` 200. Process started 2026-09-26 13:00:49Z. No panic. Public logged-out desktop and 390×844 show Log in / Sign up and Play as guest. Clicking Log in / Sign up reached `https://owndnd.eu.auth0.com/u/login` with email, password, Continue with Google, and Continue with X. No credentials were submitted. Local guest: the account menu has Switch character, Log in / Save progress, and End Session on desktop and at 390×844; the picker listed nine names; choosing one sent `sc` (server replied for a name that is not on that guest). End Session, and clearing the guest token, both return to the welcome choice. A guest reload still resumes the game. Shots: `.director/hotfix-auth/`.
+
+B7 HOTFIX DONE
+
