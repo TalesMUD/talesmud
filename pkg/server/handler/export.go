@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	e "github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/exporter"
 	"github.com/talesmud/talesmud/pkg/repository"
 	"github.com/talesmud/talesmud/pkg/service"
@@ -28,7 +29,13 @@ func (handler *ExportHandler) Export(c *gin.Context) {
 
 	d.Rooms, _ = handler.RoomsService.FindAll()
 	d.Characters, _ = handler.CharactersService.FindAll()
-	d.Users, _ = handler.UserService.FindAll()
+	if users, err := handler.UserService.FindAll(); err == nil {
+		redacted := make([]*e.User, 0, len(users))
+		for _, user := range users {
+			redacted = append(redacted, user.RedactedCopy())
+		}
+		d.Users = redacted
+	}
 	d.Items, _ = handler.ItemsService.FindAll(repository.ItemsQuery{}) // Gets all items (templates + instances)
 	d.Scripts, _ = handler.ScriptService.FindAll()
 	d.NPCs, _ = handler.NPCsService.FindAll()

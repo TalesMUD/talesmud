@@ -11,6 +11,9 @@ import (
 // log the token at info level. The HTTP API never returns the raw token.
 type Mailer interface {
 	SendPasswordReset(to, rawToken string) error
+	// DeliversExternally is true when the token reaches the account holder
+	// through a channel other than a file on this machine.
+	DeliversExternally() bool
 }
 
 // OutboxMailer appends reset tokens to a local file when SMTP is not configured.
@@ -37,12 +40,18 @@ func (m OutboxMailer) SendPasswordReset(to, rawToken string) error {
 	return err
 }
 
+// DeliversExternally reports that the outbox keeps the token on local disk.
+func (m OutboxMailer) DeliversExternally() bool { return false }
+
 // CaptureMailer records the last reset token for tests.
 type CaptureMailer struct {
 	LastTo    string
 	LastToken string
 	Err       error
 }
+
+// DeliversExternally reports that a test mailer stands in for a real delivery.
+func (m *CaptureMailer) DeliversExternally() bool { return true }
 
 func (m *CaptureMailer) SendPasswordReset(to, rawToken string) error {
 	if m.Err != nil {

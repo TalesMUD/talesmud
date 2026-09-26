@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Aethermoor Door</title>
+  <title>TalesMUD Door</title>
   <link rel="stylesheet" href="vendor/xterm.css">
   <style>
     html, body { margin: 0; height: 100%; background: #000; color: #d0d0d0; }
@@ -54,8 +54,8 @@
 <body>
   <div id="auth">
     <form id="form">
-      <h1>AETHERMOOR DOOR</h1>
-      <p class="sub">Veilspan &mdash; Ashmarket. A daily door on TalesMUD.</p>
+      <h1 id="title">TalesMUD Door</h1>
+      <p class="sub" id="sub">A text client on TalesMUD.</p>
       <label id="userLabel" for="username">Username</label>
       <input id="username" name="username" autocomplete="username" maxlength="20" required>
       <div id="emailRow">
@@ -71,10 +71,10 @@
       <div class="row">
         <button type="submit" id="submit">Enter</button>
         <button type="button" class="ghost" id="toggle">Create an account</button>
-        <button type="button" class="ghost" id="forgot">Forgot password</button>
+        <button type="button" class="ghost" id="forgot" hidden>Forgot password</button>
       </div>
       <div id="err"></div>
-      <div class="powered">Powered by TalesMUD Door Mode</div>
+      <div class="powered">Powered by TalesMUD</div>
     </form>
   </div>
   <div id="stage" hidden>

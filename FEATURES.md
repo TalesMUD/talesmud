@@ -2372,7 +2372,7 @@ The leveling system (`CheckLevelUp`, `ApplyLevelUp`) respects `MaxLevelCap` auto
 - Token claims: `sub` (RefID), `uid` (user entity ID), `exp` (30min), `guest: true`
 - If `GUEST_SECRET` is not set, a random key is generated at startup
 - Optional local username/password sessions (Argon2id) when a game-mode file sets `auth: local`. Classic servers leave this off. API responses omit the password hash.
-- `presentation: door_tui` serves `public/door` and paints an ANSI page from live rooms, exits, actions, NPCs, resources, and combat status. Keys and typed lines become engine commands. With no character selected, the page asks for a name: an existing character of that account is selected, and a new name is stored as a level-1 character from the first system template, then selected into the start room.
+- `presentation: door_tui` serves `public/door` and `GET /api/door/config` (title, subtitle, token key). Classic mode does not mount `/door`. The page paints live rooms, exits, actions, NPCs, resources, and combat status. Keys and typed lines become engine commands. With no character selected, the page asks for a name: an existing character of that account is selected, and a new name is stored as a level-1 character from the first system template, then selected into the start room.
 
 ---
 

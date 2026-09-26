@@ -70,6 +70,26 @@ func TestApplyFileAlsoLoadsRulesetSections(t *testing.T) {
 	}
 }
 
+func TestClientPageDefaultsAreGeneric(t *testing.T) {
+	current = normalize(Config{})
+	t.Cleanup(func() { current = normalize(Config{}) })
+	title, subtitle, key := ClientPage()
+	if title != "TalesMUD Door" || subtitle != "A text client on TalesMUD" || key != "talesmudDoorToken" {
+		t.Fatalf("title=%q subtitle=%q key=%q", title, subtitle, key)
+	}
+	current.Title = "Sample"
+	current.Subtitle = "A place"
+	current.TokenKey = "sample_token"
+	title, subtitle, key = ClientPage()
+	if title != "Sample" || subtitle != "A place" || key != "sample_token" {
+		t.Fatalf("configured title=%q subtitle=%q key=%q", title, subtitle, key)
+	}
+	current.TokenKey = "bad key"
+	if _, _, key = ClientPage(); key != "talesmudDoorToken" {
+		t.Fatalf("unsafe key accepted: %s", key)
+	}
+}
+
 func TestApplyEnvLeavesClassicWhenUnset(t *testing.T) {
 	current = normalize(Config{})
 	t.Setenv("PRESENTATION", "")

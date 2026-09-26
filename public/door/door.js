@@ -1,5 +1,5 @@
 (function () {
-  const TOKEN_KEY = "aethermoorDoorToken";
+  let TOKEN_KEY = "talesmudDoorToken";
   const form = document.getElementById("form");
   const err = document.getElementById("err");
   const emailRow = document.getElementById("emailRow");
@@ -74,7 +74,7 @@
       post("/api/auth/forgot", { email: email }).then(function () {
         setMode("reset");
         err.style.color = "#9c9";
-        err.textContent = "If that email is registered, a one-time token was issued. On a dev server it is appended to data/door-outbox.log. The page never receives the token.";
+        err.textContent = "If that email is registered, a reset token was sent. This page never receives the token.";
       }).catch(showErr);
       return;
     }
@@ -197,8 +197,22 @@
     }
   }
 
-  const existing = localStorage.getItem(TOKEN_KEY);
-  if (existing) {
+  function applyBranding(cfg) {
+    cfg = cfg || {};
+    if (cfg.tokenKey) TOKEN_KEY = cfg.tokenKey;
+    if (cfg.title) {
+      document.title = cfg.title;
+      var heading = document.getElementById("title");
+      if (heading) heading.textContent = cfg.title;
+    }
+    if (cfg.subtitle) {
+      var sub = document.getElementById("sub");
+      if (sub) sub.textContent = cfg.subtitle;
+    }
+    var forgotButton = document.getElementById("forgot");
+    if (forgotButton) forgotButton.hidden = !cfg.forgotEnabled;
+    var existing = localStorage.getItem(TOKEN_KEY);
+    if (!existing) return;
     fetch("/api/auth/me", { headers: { Authorization: "Bearer " + existing } })
       .then(function (res) {
         if (!res.ok) {
@@ -211,4 +225,9 @@
         localStorage.removeItem(TOKEN_KEY);
       });
   }
+
+  fetch("/api/door/config").then(function (res) {
+    if (!res.ok) return {};
+    return res.json();
+  }).then(applyBranding).catch(function () { applyBranding({}); });
 })();

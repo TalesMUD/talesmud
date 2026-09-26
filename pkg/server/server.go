@@ -32,10 +32,11 @@ type App interface {
 }
 
 type app struct {
-	Router    *gin.Engine
-	Facade    service.Facade
-	mud       mud.MUDServer
-	localAuth *authlocal.Service
+	Router      *gin.Engine
+	Facade      service.Facade
+	mud         mud.MUDServer
+	localAuth   *authlocal.Service
+	resetByMail bool
 }
 
 func adminAuthMiddleware() gin.HandlerFunc {
@@ -136,11 +137,14 @@ func NewApp() App {
 		if err != nil {
 			log.WithError(err).Fatal("Failed to load local session secret")
 		}
-		application.localAuth = authlocal.New(client.DB(), facade.UsersService(), secret, authlocal.OutboxMailer{
-			Path: gamemode.Current().OutboxPath,
-		})
+		mailer := authlocal.OutboxMailer{Path: gamemode.Current().OutboxPath}
+		application.localAuth = authlocal.New(client.DB(), facade.UsersService(), secret, mailer)
+		application.resetByMail = mailer.DeliversExternally()
 		UseLocalAuth(application.localAuth)
-		log.WithField("outbox", gamemode.Current().OutboxPath).Info("Local auth enabled")
+		log.WithFields(log.Fields{
+			"outbox":    gamemode.Current().OutboxPath,
+			"resetMail": application.resetByMail,
+		}).Info("Local auth enabled")
 	}
 	return application
 }
@@ -467,8 +471,10 @@ func (app *app) setupRoutes() {
 			localAuth := &handler.LocalAuthHandler{Auth: app.localAuth}
 			public.POST("auth/register", localAuth.Register)
 			public.POST("auth/login", localAuth.Login)
-			public.POST("auth/forgot", localAuth.Forgot)
-			public.POST("auth/reset", localAuth.Reset)
+			if app.resetByMail {
+				public.POST("auth/forgot", localAuth.Forgot)
+				public.POST("auth/reset", localAuth.Reset)
+			}
 		}
 	}
 
@@ -485,15 +491,22 @@ func (app *app) setupRoutes() {
 	// Serve mud-client (game client) at /play
 	r.Use(SPAMiddleware("/play", webuiplay.FS(), webuiplay.IndexFile))
 
-	if st, err := os.Stat("public/door"); err == nil && st.IsDir() {
-		r.Static("/door", "public/door")
-		if gamemode.ANSI() {
-			r.GET("/", func(c *gin.Context) {
-				c.Redirect(http.StatusFound, "/door/")
-			})
-		}
-	}
 	if gamemode.ANSI() {
+		if st, err := os.Stat("public/door"); err == nil && st.IsDir() {
+			r.Static("/door", "public/door")
+		}
+		r.GET("/api/door/config", func(c *gin.Context) {
+			title, subtitle, tokenKey := gamemode.ClientPage()
+			c.JSON(http.StatusOK, gin.H{
+				"title":         title,
+				"subtitle":      subtitle,
+				"tokenKey":      tokenKey,
+				"forgotEnabled": app.resetByMail,
+			})
+		})
+		r.GET("/", func(c *gin.Context) {
+			c.Redirect(http.StatusFound, "/door/")
+		})
 		return
 	}
 

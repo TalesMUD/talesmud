@@ -215,7 +215,7 @@ secret_path: data/session.key
 outbox_path: data/auth-outbox.log
 ```
 
-`presentation: door_tui` serves `public/door` and installs the view session hook. The page lists room exits and actions. A name typed at the character prompt selects that account's character, or stores a level-1 character from the first system template and selects it into the start room. Classic mode does not redirect `/` and does not install the hook. `/play` stays the classic client either way.
+`presentation: door_tui` serves `public/door`, publishes `GET /api/door/config` for the page title, subtitle, and token key, and installs the view session hook. Classic mode does not mount `/door`. The shipped page defaults are "TalesMUD Door" and `talesmudDoorToken`. The page lists room exits and actions. A name typed at the character prompt selects that account's character, or stores a level-1 character from the first system template and selects it into the start room. Classic mode does not redirect `/` and does not install the hook. `/play` stays the classic client either way.
 
 `auth: local` enables the Argon2id username/password routes from `pkg/authlocal`. Auth0 routes stay mounted for `auth: auth0`. Local auth is off unless the mode says so.
 

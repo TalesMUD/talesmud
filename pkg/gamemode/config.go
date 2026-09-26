@@ -30,6 +30,8 @@ type Config struct {
 	WorldPack     string `yaml:"world_pack"`
 	Timezone      string `yaml:"timezone"`
 	Title         string `yaml:"title"`
+	Subtitle      string `yaml:"subtitle"`
+	TokenKey      string `yaml:"token_key"`
 	SessionSecret string `yaml:"session_secret"`
 	SecretPath    string `yaml:"secret_path"`
 	OutboxPath    string `yaml:"outbox_path"`
@@ -60,6 +62,43 @@ func ANSI() bool {
 // LocalAuth reports whether username/password sessions are enabled.
 func LocalAuth() bool {
 	return current.Auth == AuthLocal
+}
+
+const (
+	defaultDoorTitle    = "TalesMUD Door"
+	defaultDoorSubtitle = "A text client on TalesMUD"
+	defaultDoorTokenKey = "talesmudDoorToken"
+)
+
+// ClientPage is the public branding for the text client.
+// Empty config fields use the generic defaults. The token key is limited to
+// letters, digits, underscore, and hyphen so it can be a storage key.
+func ClientPage() (title, subtitle, tokenKey string) {
+	cfg := Current()
+	title = cfg.Title
+	if title == "" {
+		title = defaultDoorTitle
+	}
+	subtitle = cfg.Subtitle
+	if subtitle == "" {
+		subtitle = defaultDoorSubtitle
+	}
+	tokenKey = safeTokenKey(cfg.TokenKey)
+	return title, subtitle, tokenKey
+}
+
+func safeTokenKey(s string) string {
+	if s == "" || len(s) > 64 {
+		return defaultDoorTokenKey
+	}
+	for _, r := range s {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '_', r == '-':
+		default:
+			return defaultDoorTokenKey
+		}
+	}
+	return s
 }
 
 // Location returns the configured timezone. Invalid names fall back to UTC.
@@ -182,6 +221,8 @@ func normalize(cfg Config) Config {
 	cfg.SQLitePath = strings.TrimSpace(cfg.SQLitePath)
 	cfg.WorldPack = strings.TrimSpace(cfg.WorldPack)
 	cfg.Title = strings.TrimSpace(cfg.Title)
+	cfg.Subtitle = strings.TrimSpace(cfg.Subtitle)
+	cfg.TokenKey = strings.TrimSpace(cfg.TokenKey)
 	cfg.SecretPath = strings.TrimSpace(cfg.SecretPath)
 	if cfg.SecretPath == "" {
 		cfg.SecretPath = "data/session.key"

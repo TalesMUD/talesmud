@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/talesmud/talesmud/pkg/db/sqlite"
@@ -15,6 +16,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/quests"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/entities/traits"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	"github.com/talesmud/talesmud/pkg/repository"
 	"github.com/talesmud/talesmud/pkg/scripts/runner"
 	"github.com/talesmud/talesmud/pkg/service"
@@ -97,6 +99,83 @@ func TestImportValidatesJSONBeforeDroppingData(t *testing.T) {
 
 	if _, err := facade.RoomsService().FindByID(room.ID); err != nil {
 		t.Fatalf("room was dropped before import body was validated: %v", err)
+	}
+}
+
+func TestPasswordHashStaysOutOfUserResponses(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	facade := testFacade(t)
+	user := testUser("user-hash", "auth0|user-hash", entities.RoleAdmin)
+	user.PasswordHash = "$argon2id$v=19$m=65536,t=3,p=2$c2FsdHNhbHRzYWx0$aGFzaGhhc2hoYXNo"
+	user.Username = "hashuser"
+	if _, err := facade.UsersService().Create(user); err != nil {
+		t.Fatal(err)
+	}
+
+	users := &UsersHandler{Service: facade.UsersService()}
+	rec := performHandlerRequest(http.MethodGet, "/api/user", nil, user, nil, users.GetUser)
+	if rec.Code != http.StatusOK || bytes.Contains(rec.Body.Bytes(), []byte("passwordHash")) || bytes.Contains(rec.Body.Bytes(), []byte("argon2id")) {
+		t.Fatalf("user response leaked a hash: %d %s", rec.Code, rec.Body.String())
+	}
+
+	admin := &UserManagementHandler{Service: facade.UsersService()}
+	rec = performHandlerRequest(http.MethodGet, "/api/admin/users", nil, user, nil, admin.GetAllUsers)
+	if rec.Code != http.StatusOK || bytes.Contains(rec.Body.Bytes(), []byte("passwordHash")) || bytes.Contains(rec.Body.Bytes(), []byte("argon2id")) {
+		t.Fatalf("admin list leaked a hash: %d %s", rec.Code, rec.Body.String())
+	}
+
+	exp := &ExportHandler{
+		RoomsService:      facade.RoomsService(),
+		CharactersService: facade.CharactersService(),
+		UserService:       facade.UsersService(),
+		ItemsService:      facade.ItemsService(),
+		ScriptService:     facade.ScriptsService(),
+		NPCsService:       facade.NPCsService(),
+		DialogsService:    facade.DialogsService(),
+		PartiesService:    facade.PartiesService(),
+	}
+	rec = performHandlerRequest(http.MethodGet, "/admin/export", nil, nil, nil, exp.Export)
+	if rec.Code != http.StatusOK || bytes.Contains(rec.Body.Bytes(), []byte("passwordHash")) || bytes.Contains(rec.Body.Bytes(), []byte("argon2id")) {
+		t.Fatalf("export leaked a hash: %d %s", rec.Code, rec.Body.String())
+	}
+	stored, err := facade.UsersService().FindByID(user.ID)
+	if err != nil || stored.PasswordHash == "" {
+		t.Fatalf("redaction wiped the stored hash: %+v %v", stored, err)
+	}
+}
+
+func TestPartyAndFriendsPayloadsOmitSecrets(t *testing.T) {
+	user := testUser("user-hash", "auth0|user-hash", entities.RolePlayer)
+	user.PasswordHash = "$argon2id$secret"
+	friends, err := json.Marshal(messages.NewFriendsMessage(user.ID, []messages.FriendEntry{{
+		ID: "c1", Name: "Hero", Online: true,
+	}}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	party, err := json.Marshal(messages.NewPartyMessage(user.ID, true, "p1", "Band", []messages.PartyMemberEntry{{
+		ID: "c1", Name: "Hero", Online: true, Level: 2,
+	}}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	internal, err := json.Marshal(&messages.Message{FromUser: user, Data: "look"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	blob := append(append(friends, party...), internal...)
+	if bytes.Contains(blob, []byte("passwordHash")) || bytes.Contains(blob, []byte("argon2id")) {
+		t.Fatalf("socket payload leaked a hash: %s", blob)
+	}
+}
+
+func TestAuthLimiterBlocksBurst(t *testing.T) {
+	lim := newIPLimiter(2, time.Minute)
+	if !lim.allow("203.0.113.5") || !lim.allow("203.0.113.5") || lim.allow("203.0.113.5") {
+		t.Fatal("same address was not limited")
+	}
+	if !lim.allow("203.0.113.6") {
+		t.Fatal("a second address was limited")
 	}
 }
 
