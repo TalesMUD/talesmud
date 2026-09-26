@@ -109,9 +109,11 @@
     logout();
   }
 
-  function loginToSave() {
+  function loginWith(connection) {
     open = false;
-    if (login) login();
+    if (!login) return;
+    if (connection) login(undefined, { connection });
+    else login();
   }
 </script>
 
@@ -173,9 +175,17 @@
         Settings
       </button>
       {#if guest}
-        <button class="menu-item" type="button" role="menuitem" on:click={loginToSave}>
+        <button class="menu-item" type="button" role="menuitem" on:click={() => loginWith("twitter")}>
           <i class="material-icons">login</i>
-          Log in / Save progress
+          Continue with X
+        </button>
+        <button class="menu-item" type="button" role="menuitem" on:click={() => loginWith("google-oauth2")}>
+          <i class="material-icons">login</i>
+          Continue with Google
+        </button>
+        <button class="menu-item subtle" type="button" role="menuitem" on:click={() => loginWith()}>
+          <i class="material-icons">mail</i>
+          Email and password
         </button>
       {:else if $user && ($user.role === "creator" || $user.role === "admin")}
         <a class="menu-item" role="menuitem" href="/creator" target="_blank" rel="noreferrer">
@@ -365,6 +375,11 @@
   .menu-item:hover {
     background: rgba(251, 191, 36, 0.2);
     color: #fbbf24;
+  }
+
+  .menu-item.subtle {
+    font-size: 0.74rem;
+    color: rgba(240, 230, 211, 0.72);
   }
 
   .menu-rule {

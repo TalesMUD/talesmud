@@ -80,7 +80,7 @@
     top: calc(100% + 6px);
     right: 0;
     z-index: 30;
-    min-width: 180px;
+    min-width: 220px;
     border: 1px solid rgba(251, 191, 36, 0.45);
     border-radius: 8px;
     background: rgba(7, 9, 12, 0.96);
@@ -111,6 +111,11 @@
   .acct-menu button:hover {
     background: rgba(251, 191, 36, 0.2);
     color: #fbbf24;
+  }
+
+  .acct-menu button.subtle {
+    font-size: 0.74rem;
+    color: rgba(240, 230, 211, 0.72);
   }
 
   .hp-pill {
@@ -234,9 +239,11 @@
     logout();
   }
 
-  function loginToSave() {
+  function loginWith(connection) {
     open = false;
-    if (login) login();
+    if (!login) return;
+    if (connection) login(undefined, { connection });
+    else login();
   }
 
   function switchCharacter() {
@@ -278,7 +285,9 @@
           <button type="button" role="menuitem" on:click={switchCharacter}><i class="material-icons">switch_account</i> Switch character</button>
           <button type="button" role="menuitem" on:click={openSettings}><i class="material-icons">settings</i> Settings</button>
           {#if guest}
-            <button type="button" role="menuitem" on:click={loginToSave}><i class="material-icons">login</i> Log in / Save progress</button>
+            <button type="button" role="menuitem" on:click={() => loginWith("twitter")}><i class="material-icons">login</i> Continue with X</button>
+            <button type="button" role="menuitem" on:click={() => loginWith("google-oauth2")}><i class="material-icons">login</i> Continue with Google</button>
+            <button class="subtle" type="button" role="menuitem" on:click={() => loginWith()}><i class="material-icons">mail</i> Email and password</button>
             <button type="button" role="menuitem" on:click={endSession}><i class="material-icons">logout</i> End Session</button>
           {:else}
             <button type="button" role="menuitem" on:click={endSession}><i class="material-icons">logout</i> Log out</button>

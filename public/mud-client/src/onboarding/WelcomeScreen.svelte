@@ -120,6 +120,20 @@
     transform: translateY(-1px);
   }
 
+  .btn-welcome.secondary {
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #9ca3af;
+    background: transparent;
+    font-size: 0.75rem;
+    padding: 0.45rem 1rem;
+  }
+
+  .btn-welcome.secondary:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.28);
+    color: #e5e7eb;
+  }
+
   .btn-welcome.guest {
     border: 1px solid rgba(245, 158, 11, 0.3);
     color: #f59e0b;
@@ -155,6 +169,23 @@
     max-width: 280px;
     text-align: center;
   }
+
+  @media (max-width: 520px) {
+    .welcome-screen {
+      overflow-y: auto;
+      align-items: flex-start;
+      padding: 1.25rem 0 2rem;
+    }
+
+    .card {
+      padding: 1.75rem 1.25rem;
+      gap: 0.9rem;
+    }
+
+    .title {
+      font-size: 1.35rem;
+    }
+  }
 </style>
 
 <script>
@@ -166,10 +197,11 @@
   let guestLoading = false;
   let guestError = null;
 
-  function handleLogin() {
-    // No screen_hint: Auth0 universal login offers X, Google, and email,
-    // and the hosted page has both log in and sign up.
-    login();
+  // A named connection skips Auth0 universal login. Email is the only
+  // button that opens that page, where the browser can autofill a password.
+  function loginWith(connection) {
+    if (connection) login(undefined, { connection });
+    else login();
   }
 
   function handleGuest() {
@@ -215,8 +247,14 @@
     {/if}
 
     <div class="buttons">
-      <button class="btn-welcome primary" on:click={handleLogin}>
-        Log in / Sign up
+      <button class="btn-welcome primary" type="button" on:click={() => loginWith("twitter")}>
+        Continue with X
+      </button>
+      <button class="btn-welcome primary" type="button" on:click={() => loginWith("google-oauth2")}>
+        Continue with Google
+      </button>
+      <button class="btn-welcome secondary" type="button" on:click={() => loginWith()}>
+        Email and password
       </button>
 
       <div class="divider" style="width: 100%; margin: 0.25rem 0;"></div>

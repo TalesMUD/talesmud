@@ -128,7 +128,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
 
 - **Guest Mode (Play as Guest)**
   - Anonymous 30-minute demo sessions without Auth0 registration
-  - "Play as guest" button on the logged-out welcome screen, next to "Log in / Sign up"
+  - "Play as guest" button on the logged-out welcome screen, under Continue with X, Continue with Google, and Email and password
   - Random character with random class from system templates
   - Spawns in `ServerSettings.StartRoomID` (default `R0001` when that room exists)
   - Auto-grants `source.type: auto` quests for the start room's zone (Z00 catacombs: QST0001–QST0004)
@@ -145,9 +145,9 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
 
 - **New Player Onboarding**
   - Phase-based flow: Welcome Screen, Nickname Setup, Character Creation Wizard, Game
-  - Logged-out players see a welcome choice: **Log in / Sign up** (Auth0 universal login, which offers X, Google, and email) and **Play as guest**
+  - Logged-out players see **Continue with X**, **Continue with Google**, **Email and password**, and **Play as guest**. X and Google pass `connection` (`twitter`, `google-oauth2`) so Auth0 skips the universal login password form. Email is the only button that opens that form
   - Logout clears the Auth0 session and this tab's guest token, then returns to that choice. A guest reload still resumes the guest session
-  - The account menu has **Switch character**, which opens a picker of every character from `/api/my-characters` and sends `sc <name>`. Guests also get **Log in / Save progress**. Signed-in players get **Log out**
+  - The account menu has **Switch character**, which opens a picker of every character from `/api/my-characters` and sends `sc <name>`. Guests get the same X, Google, and email choices. Signed-in players get **Log out**
   - A signed-in player with more than one character sees that picker once per login (the server still enters on `lastCharacter`)
   - First-time users prompted to choose a display name/nickname
   - Three-step character creation wizard: Choose Template, Name Character, Confirm & Create

@@ -1248,7 +1248,7 @@ The MUD client (`/play`) uses a phase-based routing system in `App.svelte` to gu
 App.svelte (phase-based routing)
 ├── LoadingScreen           (phase: "loading" — Auth0 initializing)
 ├── WelcomeScreen           (phase: "welcome" — unauthenticated)
-│   ├── Login / Signup (Auth0)
+│   ├── Continue with X / Google (Auth0 connection) or Email and password
 │   └── Play as Guest (POST /api/guest → skip onboarding, go to "ready")
 ├── NicknameSetup           (phase: "nickname" — new user, needs display name)
 ├── CharacterCreationWizard (phase: "character" — no characters yet)
@@ -1265,7 +1265,7 @@ Phase detection:
 
 Onboarding components are in `src/onboarding/`:
 - `LoadingScreen.svelte` — Minimal dark loading screen
-- `WelcomeScreen.svelte` — Cinematic landing with Login/Signup CTAs
+- `WelcomeScreen.svelte` — Cinematic landing. X and Google log in through a named Auth0 connection. Email opens universal login. Guest play stays on the card
 - `NicknameSetup.svelte` — Glass-morphism card for nickname entry
 - `CharacterCreationWizard.svelte` — Three-step full-page wizard
 

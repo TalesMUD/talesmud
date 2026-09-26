@@ -565,8 +565,9 @@ close. `CharacterSwitcher.svelte` shows the active character and connection stat
 `CharacterPicker.svelte`, which lists every character from `/api/my-characters`.
 Choosing one sends `sc <name>`. A signed-in player with more than one character
 sees that picker once per login; the server still enters on `lastCharacter`.
-Guests get **Log in / Save progress** (Auth0 `loginWithRedirect`, no signup-only
-hint). **Log out** clears the Auth0 session and this tab's guest token and
+Guests get **Continue with X**, **Continue with Google**, and **Email and password**
+(Auth0 `loginWithRedirect`; X and Google pass `connection` so the password form
+is not the default). **Log out** clears the Auth0 session and this tab's guest token and
 returns to the welcome choice instead of restoring a guest. `Client.js` handles `roomPresence` messages and
 updates `MUDXPlusStore.players` without changing the room description.
 
@@ -2368,9 +2369,9 @@ func (c *Character) GetEffectiveMaxLevel(globalMax int32) int32
 The leveling system (`CheckLevelUp`, `ApplyLevelUp`) respects `MaxLevelCap` automatically.
 
 ### Frontend Guest Flow
-- `WelcomeScreen.svelte` — logged-out choice: "Log in / Sign up" and "Play as guest"
+- `WelcomeScreen.svelte` — logged-out choice: "Continue with X", "Continue with Google", "Email and password", and "Play as guest"
 - `App.svelte` — `handleGuestPlay()` stores token in sessionStorage, skips onboarding. Logout clears that token so the next load is the welcome choice
-- Account menu — guests see "Log in / Save progress" and "End Session"; a signed-in player sees "Switch character" and "Log out"
+- Account menu — guests see Continue with X, Continue with Google, Email and password, and End Session; a signed-in player sees "Switch character" and "Log out"
 - `api/guest.js` — `createGuestSession()` API client
 
 ### Authentication
