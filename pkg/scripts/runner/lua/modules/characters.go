@@ -2,6 +2,7 @@ package modules
 
 import (
 	"errors"
+	"sort"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -74,6 +75,73 @@ func RegisterCharactersModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 		}
 
 		L.Push(luar.New(L, characters))
+		return 1
+	}))
+
+	// tales.characters.top(n, sortKey) - read-only name, level, and XP.
+	// sortKey "xp" orders by experience. Any other key orders by level, then experience.
+	mod.RawSetString("top", L.NewFunction(func(L *lua.LState) int {
+		n := 12
+		if L.GetTop() >= 1 && L.Get(1).Type() == lua.LTNumber {
+			n = L.CheckInt(1)
+		}
+		sortKey := "level"
+		if L.GetTop() >= 2 && L.Get(2).Type() == lua.LTString {
+			sortKey = strings.ToLower(strings.TrimSpace(L.CheckString(2)))
+		}
+		if n < 1 {
+			n = 1
+		}
+		if n > 50 {
+			n = 50
+		}
+		facade := runner.GetFacade()
+		tbl := L.NewTable()
+		if facade == nil {
+			L.Push(tbl)
+			return 1
+		}
+		list, err := facade.CharactersService().FindAll()
+		if err != nil {
+			L.Push(tbl)
+			return 1
+		}
+		rows := make([]*characters.Character, 0, len(list))
+		for _, ch := range list {
+			if ch != nil && strings.TrimSpace(ch.Name) != "" {
+				rows = append(rows, ch)
+			}
+		}
+		sort.Slice(rows, func(i, j int) bool {
+			a, b := rows[i], rows[j]
+			if sortKey == "xp" {
+				if a.XP != b.XP {
+					return a.XP > b.XP
+				}
+				if a.Level != b.Level {
+					return a.Level > b.Level
+				}
+			} else {
+				if a.Level != b.Level {
+					return a.Level > b.Level
+				}
+				if a.XP != b.XP {
+					return a.XP > b.XP
+				}
+			}
+			return strings.ToLower(a.Name) < strings.ToLower(b.Name)
+		})
+		if n > len(rows) {
+			n = len(rows)
+		}
+		for i := 0; i < n; i++ {
+			row := L.NewTable()
+			row.RawSetString("name", lua.LString(rows[i].Name))
+			row.RawSetString("level", lua.LNumber(rows[i].Level))
+			row.RawSetString("xp", lua.LNumber(rows[i].XP))
+			tbl.RawSetInt(i+1, row)
+		}
+		L.Push(tbl)
 		return 1
 	}))
 

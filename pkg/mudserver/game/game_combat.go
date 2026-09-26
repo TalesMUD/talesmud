@@ -258,6 +258,27 @@ func (c *CombatController) ProcessPlayerSkill(characterID, skillID, targetID str
 	return
 }
 
+// BriefStatus is one line of live hit points for the text client.
+func (c *CombatController) BriefStatus(characterID string) string {
+	if c == nil || c.manager == nil || characterID == "" {
+		return ""
+	}
+	instance := c.manager.GetInstanceByPlayerID(characterID)
+	if instance == nil {
+		return ""
+	}
+	var parts []string
+	if player := instance.GetPlayerByID(characterID); player != nil {
+		parts = append(parts, fmt.Sprintf("You %d/%d", player.CurrentHP, player.MaxHP))
+	}
+	for _, enemy := range instance.Enemies {
+		if enemy.IsAlive {
+			parts = append(parts, fmt.Sprintf("%s %d/%d", enemy.Name, enemy.CurrentHP, enemy.MaxHP))
+		}
+	}
+	return strings.Join(parts, "   ")
+}
+
 // GetCombatStatus returns a formatted status string for the combat
 func (c *CombatController) GetCombatStatus(characterID string) string {
 	instance := c.manager.GetInstanceByPlayerID(characterID)

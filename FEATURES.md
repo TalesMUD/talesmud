@@ -400,23 +400,25 @@ local solved = tales.game.getFlag(characterID, "puzzle_solved_statue")
 
 ### Ruleset profile
 
-`config/ruleset.yaml` sits beside `config/combat_balance.yaml` and must not repeat its keys (`level_gap`, `threat`, `reward_scale`, `class_balance`, difficulty multipliers, named overrides). The shipped file matches current play: level cap 50, automatic level-up, 10% XP loss and 1 on-hand gold on defeat, respawn at the bind room with half HP, no dawn heal, no resource keys, combat pacing `auto`.
+`config/ruleset.yaml` sits beside `config/combat_balance.yaml` and must not repeat its keys (`level_gap`, `threat`, `reward_scale`, `class_balance`, difficulty multipliers, named overrides). The shipped file matches current play: level cap 50, automatic level-up, 10% XP loss and 1 on-hand gold on defeat, respawn at the bind room with half HP, no dawn heal, no resource keys, combat pacing `auto`, and `combat.safe_room: stay`.
 
 An enemy's authored XP reward is the base. When that reward is 0, `progression.base_xp_by_enemy_level` supplies the base, and otherwise the built-in `15*level+5` curve does. `reward_scale` multiplies that base afterward. `level_up_mode: trainer` banks combat, quest, exploration, and select catch-up until `tales.characters.applyLevels`. Quest XP is not multiplied by `reward_scale`.
 
 Death math is `ruleset.ApplyDeath`, called from defeat only.
 
-`combat.pacing: auto` keeps the 5 second decision window and resolves a queued action on the next beat. `turn_based` leaves that window open until the player sends a command. NPCs still take their own turns afterward. The default file is `auto`.
+`combat.pacing: auto` keeps the 5 second decision window and resolves a queued action on the next beat. `turn_based` leaves that window open until the player sends a command. NPCs still take their own turns afterward. The default file is `auto`. A bare `attack` with no name hits the first hostile in the room, and during a fight it queues an attack on the current target or the first living enemy so a turn-based round advances.
+
+`combat.safe_room` is `stay` (default), `bind`, or `start`. Disconnect mid-combat ends the fight as a flee: no gold loss, no XP loss, and no death flag. `stay` leaves the character in a real room. `bind` and `start` move them. A character inside an instance is moved to that instance's return room either way, including when a generated instance times out. On the next enter, a saved room that no longer exists is replaced by the bind room, then the start room.
 
 ### Refilling resources
 
 Per-character balances live in the `character_resources` table. A key grants uses only after something configures an allowance (calendar day in a timezone, or a fixed interval). Inside a period, raising the allowance or a modifier does not give the extra uses back; the next period refills to the new amount. An empty catalog, which is the process default, answers every key as not configured and writes no row.
 
-Another world can use a key for a daily gathering node or a delve ticket, spent from a room-action script. No content ships a key, so play is unchanged.
+Another world can use a key for a daily gathering node or a delve ticket, spent from a room-action script. No content ships a key, so play is unchanged. Entering play calls `Get` for each configured key, so a new period is refilled even before a script reads it. A one-word room action accepts a trailing argument (`deposit 20`); the script sees it as `ctx.args`. Multi-word action names stay exact.
 
 ### Procedural instances
 
-`tales.instances.generate(characterID, playerLevel, spec)` builds a private line of up to 20 rooms from a template pool. Encounters whose level band contains `playerLevel` are returned as a spawn plan and placed when a game is attached. A second character gets a different copy. The same character cannot hold two instances. Leaving to a non-clone room destroys the line, and a timeout (default 30 minutes) destroys only these generated instances. Authored cellar graphs are unchanged. Every generated exit is marked so Party Follow does not cross it. The generator does not spend a resource and does not move the character; the room-action script does.
+`tales.instances.generate(characterID, playerLevel, spec)` builds a private line of up to 20 rooms from a template pool. Encounters whose level band contains `playerLevel` are returned as a spawn plan and placed when a game is attached. A second character gets a different copy. The same character cannot hold two instances. Leaving to a non-clone room destroys the line, and a timeout (default 30 minutes) destroys only these generated instances. Authored cellar graphs are unchanged. Every generated exit is marked so Party Follow does not cross it. The generator does not spend a resource and does not move the character; the room-action script does. Disconnect and the timeout sweep end a fight in that copy without a defeat penalty and move the character to the return room before the copy is deleted.
 
 ### CopyOnPickup Tracking
 ```go
@@ -1707,6 +1709,10 @@ tales.characters.applyLevels(characterID)
 -- Set level and XP directly. Level clamps to 1..the effective cap. Optional maxHP replaces hit points.
 -- Class, skills, inventory, gold, and flags are left alone.
 tales.characters.setProgress(characterID, level, xp, maxHP)
+
+-- Read-only top list. n defaults to 12 and is capped at 50.
+-- sortKey "xp" orders by experience. Any other key orders by level, then experience.
+local rows = tales.characters.top(n, sortKey) -- rows[i].name, .level, .xp
 ```
 
 ### tales.resources Module
@@ -2372,7 +2378,7 @@ The leveling system (`CheckLevelUp`, `ApplyLevelUp`) respects `MaxLevelCap` auto
 - Token claims: `sub` (RefID), `uid` (user entity ID), `exp` (30min), `guest: true`
 - If `GUEST_SECRET` is not set, a random key is generated at startup
 - Optional local username/password sessions (Argon2id) when a game-mode file sets `auth: local`. Classic servers leave this off. API responses omit the password hash. Login attempts are limited per client address. `X-Forwarded-For` is trusted only from loopback unless `trusted_proxies` or `TRUSTED_PROXIES` says otherwise.
-- `presentation: door_tui` serves `public/door` and `GET /api/door/config` (title, subtitle, token key). Classic mode does not mount `/door`. The page paints live rooms, exits, actions, NPCs, resources, and combat status. Keys and typed lines become engine commands. With no character selected, the page asks for a name: an existing character of that account is selected, and a new name is stored as a level-1 character from the first system template, then selected into the start room.
+- `presentation: door_tui` serves `public/door` and `GET /api/door/config` (title, subtitle, token key). Classic mode does not mount `/door`. The page paints live rooms, exits, actions, NPCs, resources, and combat status, plus the last few command replies. Keys and typed lines become engine commands. A world pack may add `keymap.yaml` (per room, per area, and a combat overlay) and `character_paths.yaml`. `d` stays down. With no character selected, the page asks for a name, then a numbered path, then sex. An existing name is selected. A new character uses the pack path when that file is present, and otherwise a numbered system template. Reconnect runs the new-day pass without another select.
 
 ---
 

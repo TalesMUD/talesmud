@@ -42,6 +42,13 @@ func (a *roomInstanceAdapter) IsClone(roomID string) bool {
 	return a.mgr.IsClone(roomID)
 }
 
+func (a *roomInstanceAdapter) ReturnRoom(characterID string) string {
+	if a == nil || a.mgr == nil {
+		return ""
+	}
+	return a.mgr.ReturnRoom(characterID)
+}
+
 // Generate builds a private room line and spawns the planned encounters.
 // It does not move the character and does not pull party followers.
 func (a *roomInstanceAdapter) Generate(characterID string, playerLevel int32, spec instances.ProcSpec) (instances.ProcResult, error) {
@@ -64,6 +71,9 @@ func (a *roomInstanceAdapter) Generate(characterID string, playerLevel int32, sp
 func (a *roomInstanceAdapter) Expire(now time.Time) {
 	if a == nil || a.game == nil || a.game.Facade == nil {
 		return
+	}
+	for _, id := range a.mgr.ProceduralOccupantsDue(now) {
+		a.game.ReleaseToSafety(id)
 	}
 	deleted := a.mgr.Expire(a.game.Facade.RoomsService(), now)
 	a.dropNPCs(deleted)

@@ -174,8 +174,11 @@ func (g *Game) DisconnectUserSession(userID string) {
 			_ = g.Facade.UsersService().Update(user.RefID, user)
 		}
 	}
-	if charID := g.Sessions.characterID(userID); charID != "" && g.RoomInstances != nil {
-		g.RoomInstances.DestroyCharacterInstance(charID)
+	if charID := g.Sessions.characterID(userID); charID != "" {
+		g.ReleaseToSafety(charID)
+		if g.RoomInstances != nil {
+			g.RoomInstances.DestroyCharacterInstance(charID)
+		}
 	}
 	g.Sessions.disconnect(userID)
 	if departed.CharacterID != "" {

@@ -9,4 +9,7 @@ type SessionHook interface {
 	OnConnect(user *entities.User, send func(any))
 	OnInput(user *entities.User, text string, send func(any)) bool
 	OnDisconnect(user *entities.User)
+	// OnNotice records one player-visible line and redraws. Callers may
+	// invoke it off the message-drain goroutine.
+	OnNotice(user *entities.User, text string, send func(any))
 }

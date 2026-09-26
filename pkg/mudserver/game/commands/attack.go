@@ -119,10 +119,13 @@ func (command *AttackCommand) Execute(game def.GameCtrl, message *messages.Messa
 		}
 	}
 
-	// Not in combat - need a target name to initiate
+	// Not in combat. A bare attack hits the first hostile in the room.
 	if targetName == "" {
-		game.SendMessage() <- message.Reply("Attack whom? Usage: attack <target>")
-		return true
+		targetName = firstHostileName(game, message.Character.CurrentRoomID)
+		if targetName == "" {
+			game.SendMessage() <- message.Reply("Attack whom? Usage: attack <target>")
+			return true
+		}
 	}
 
 	// Player is not in combat - try to initiate combat
@@ -272,6 +275,23 @@ func (command *AttackCommand) handleInitiateCombat(game def.GameCtrl, message *m
 	nudgePartyAssist(game, message, combatEngine, target.Name, enemyNames)
 
 	return true
+}
+
+func firstHostileName(game def.GameCtrl, roomID string) string {
+	if game == nil || roomID == "" {
+		return ""
+	}
+	mgr := game.GetNPCInstanceManager()
+	if mgr == nil {
+		return ""
+	}
+	for _, n := range mgr.GetInstancesInRoom(roomID) {
+		if n == nil || n.IsDead || !n.IsEnemy() || strings.TrimSpace(n.Name) == "" {
+			continue
+		}
+		return n.Name
+	}
+	return ""
 }
 
 // handleJoinCombat adds a same-room player to an existing fight against this NPC.
@@ -439,20 +459,32 @@ func (command *AttackCommand) handleInCombatAttack(game def.GameCtrl, message *m
 	}
 
 	if targetName == "" {
-		if len(livingEnemies) == 1 {
-			// Switch to the only enemy
-			combatEngine.SetAutoAttackTarget(message.Character.Entity.ID, livingEnemies[0].id)
-			game.SendMessage() <- message.Reply(fmt.Sprintf("You focus your attacks on %s.", livingEnemies[0].name))
-			return true
-		} else if len(livingEnemies) > 1 {
-			var targets []string
-			for _, e := range livingEnemies {
-				targets = append(targets, fmt.Sprintf("%s (%d/%d HP)", e.name, e.hp, e.maxHP))
+		targetID := ""
+		if player := instance.GetPlayerByID(message.Character.Entity.ID); player != nil && player.AutoAttackTargetID != "" {
+			for _, enemy := range livingEnemies {
+				if enemy.id == player.AutoAttackTargetID {
+					targetID = enemy.id
+					break
+				}
 			}
-			game.SendMessage() <- message.Reply(fmt.Sprintf("Switch target to whom? Usage: attack <target>\nAvailable: %s", strings.Join(targets, ", ")))
+		}
+		if targetID == "" && len(livingEnemies) > 0 {
+			targetID = livingEnemies[0].id
+		}
+		if targetID == "" {
+			game.SendMessage() <- message.Reply("No enemies to attack!")
 			return true
 		}
-		game.SendMessage() <- message.Reply("No enemies to attack!")
+		combatEngine.SetAutoAttackTarget(message.Character.Entity.ID, targetID)
+		combatEngine.QueuePlayerAction(message.Character.Entity.ID, combat.CombatActionAttack, targetID)
+		name := targetID
+		for _, enemy := range livingEnemies {
+			if enemy.id == targetID {
+				name = enemy.name
+				break
+			}
+		}
+		game.SendMessage() <- message.Reply(fmt.Sprintf("You attack %s.", name))
 		return true
 	}
 

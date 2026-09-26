@@ -59,7 +59,11 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 	// Normalize attribute short names to uppercase (migration for pre-fix characters)
 	character.NormalizeAttributeShorts()
 
-	if ruleset.ApplyNewDay(character, time.Now()) {
+	if starter, ok := game.(interface {
+		ApplySessionStart(*characters.Character)
+	}); ok {
+		starter.ApplySessionStart(character)
+	} else if ruleset.ApplyNewDay(character, time.Now()) {
 		if err := game.GetFacade().CharactersService().Update(character.ID, character); err != nil {
 			log.WithError(err).WithField("characterID", character.ID).Warn("new day: failed to persist")
 		}
@@ -145,15 +149,21 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 	if character.CurrentRoomID != "" {
 		if currentRoom, err = game.GetFacade().RoomsService().FindByID(character.CurrentRoomID); err != nil {
 			log.WithField("room", character.CurrentRoomID).Warn("CurrentRoomID for player not found (room might have been deleted or temporary)")
-			// set to ""
 			character.CurrentRoomID = ""
 		}
 	}
 
-	// new character or not part of a room?
+	// new character, or the saved room is gone: bind room, then the start room
 	if character.CurrentRoomID == "" {
 		facade := game.GetFacade()
-		currentRoom = service.ResolveStartRoom(facade.ServerSettingsService(), facade.RoomsService())
+		if character.BoundRoomID != "" {
+			if bound, berr := facade.RoomsService().FindByID(character.BoundRoomID); berr == nil && bound != nil {
+				currentRoom = bound
+			}
+		}
+		if currentRoom == nil {
+			currentRoom = service.ResolveStartRoom(facade.ServerSettingsService(), facade.RoomsService())
+		}
 		if currentRoom != nil {
 			character.CurrentRoomID = currentRoom.ID
 			if character.BoundRoomID == "" {

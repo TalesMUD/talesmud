@@ -29,3 +29,4 @@ resources: {}
 
 combat:
   pacing: auto          # auto | turn_based
+  safe_room: stay       # stay | bind | start — mid-combat disconnect in a real room

@@ -28,6 +28,14 @@ const (
 	PacingAuto      = "auto"
 	PacingTurnBased = "turn_based"
 
+	// SafeStay leaves a disconnecting character in a real room.
+	// SafeBind moves a mid-combat disconnect to BoundRoomID.
+	// SafeStart moves that disconnect to the world's start room.
+	// A room that is about to be destroyed still relocates, whatever this says.
+	SafeStay  = "stay"
+	SafeBind  = "bind"
+	SafeStart = "start"
+
 	defaultPath = "config/ruleset.yaml"
 )
 
@@ -67,7 +75,8 @@ type fileShape struct {
 		Interval  string `yaml:"interval"`
 	} `yaml:"resources"`
 	Combat struct {
-		Pacing string `yaml:"pacing"`
+		Pacing   string `yaml:"pacing"`
+		SafeRoom string `yaml:"safe_room"`
 	} `yaml:"combat"`
 }
 
@@ -88,6 +97,7 @@ type state struct {
 	timezone    string
 	resources   map[string]resourceSpec
 	pacing      string
+	safeRoom    string
 }
 
 var (
@@ -119,6 +129,7 @@ func builtin() state {
 		fullHeal: false,
 		timezone: "UTC",
 		pacing:   PacingAuto,
+		safeRoom: SafeStay,
 	}
 }
 
@@ -185,6 +196,7 @@ func decode(raw []byte) (state, error) {
 	file.NewDay.FullHeal = &heal
 	file.NewDay.Timezone = base.timezone
 	file.Combat.Pacing = base.pacing
+	file.Combat.SafeRoom = base.safeRoom
 	if err := yaml.Unmarshal(raw, &file); err != nil {
 		return state{}, fmt.Errorf("parse ruleset: %w", err)
 	}
@@ -247,6 +259,13 @@ func decode(raw []byte) (state, error) {
 	}
 	if next.pacing != PacingAuto && next.pacing != PacingTurnBased {
 		return state{}, fmt.Errorf("combat pacing %q", next.pacing)
+	}
+	next.safeRoom = strings.TrimSpace(file.Combat.SafeRoom)
+	if next.safeRoom == "" {
+		next.safeRoom = SafeStay
+	}
+	if next.safeRoom != SafeStay && next.safeRoom != SafeBind && next.safeRoom != SafeStart {
+		return state{}, fmt.Errorf("combat safe_room %q", next.safeRoom)
 	}
 	if len(file.Resources) > 0 {
 		next.resources = map[string]resourceSpec{}
@@ -367,6 +386,19 @@ func Pacing() string {
 	return current.pacing
 }
 
+// SafeRoom is stay, bind, or start. stay is the unconfigured default.
+// A destroyed instance room still relocates; this only applies to a real room.
+func SafeRoom() string {
+	mu.RLock()
+	defer mu.RUnlock()
+	switch current.safeRoom {
+	case SafeBind, SafeStart:
+		return current.safeRoom
+	default:
+		return SafeStay
+	}
+}
+
 // XPRequired returns a cumulative XP threshold when the profile defines one.
 func XPRequired(level int32) (int32, bool) {
 	mu.RLock()
@@ -466,6 +498,17 @@ func SetBaseEnemyXP(table map[int32]int64) {
 func SetDeath(policy DeathPolicy) {
 	mu.Lock()
 	current.death = policy
+	mu.Unlock()
+}
+
+// SetSafeRoom overrides the disconnect room until Reset. Unknown values are ignored.
+func SetSafeRoom(mode string) {
+	mode = strings.TrimSpace(mode)
+	if mode != SafeStay && mode != SafeBind && mode != SafeStart {
+		return
+	}
+	mu.Lock()
+	current.safeRoom = mode
 	mu.Unlock()
 }
 

@@ -459,9 +459,11 @@ func (server *server) receiveMessages() {
 			switch msg.GetAudience() {
 			case messages.MessageAudienceOrigin:
 				server.sendMessage(msg.GetAudienceID(), msg)
+				server.noteANSI(msg)
 				break
 			case messages.MessageAudienceUser:
 				server.sendMessage(msg.GetAudienceID(), msg)
+				server.noteANSI(msg)
 				break
 			case messages.MessageAudienceRoom:
 				// Do not load rooms from SQLite here: this goroutine drains
@@ -487,6 +489,31 @@ func (server *server) receiveMessages() {
 			}
 		}
 	}
+}
+
+func (server *server) noteANSI(msg messages.MessageResponder) {
+	if server == nil || !server.ansiSession() || server.hook == nil || msg == nil {
+		return
+	}
+	text := strings.TrimSpace(msg.GetMessage())
+	userID := msg.GetAudienceID()
+	if text == "" || userID == "" {
+		return
+	}
+	go server.repaintANSI(userID, text)
+}
+
+func (server *server) repaintANSI(userID, text string) {
+	if server == nil || server.hook == nil || userID == "" {
+		return
+	}
+	client, ok := server.Clients.Get(userID)
+	if !ok || client == nil || client.User == nil {
+		return
+	}
+	server.hook.OnNotice(client.User, text, func(v any) {
+		server.sendMessage(userID, v)
+	})
 }
 
 func (server *server) runRoomEnterScript(enter *messages.EnterRoomMessage) {

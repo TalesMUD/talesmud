@@ -146,7 +146,7 @@ The orange attack warning in `attack.go` stays. Death does not consult threat co
 
 ### New-day pass
 
-`ruleset.ApplyNewDay(char, now) bool` on successful character select. When `full_heal` is false, it returns false and writes nothing. When true, it compares `now` in `new_day.timezone` to `Character.LastResetDay`. On a new day it fills HP and mana and stores the day. It does not refill resource balances; the store does that on the next `Get`/`Consume` because the period key changed.
+`ruleset.ApplyNewDay(char, now) bool` on successful character select, and again from `Game.ApplySessionStart` when a text-client session connects with a character already chosen. When `full_heal` is false, it returns false and writes nothing. When true, it compares `now` in `new_day.timezone` to `Character.LastResetDay`. On a new day it fills HP and mana, clears `AwaitingReset`, and stores the day. Resource balances refill when `ApplySessionStart` calls `Get` for each configured key, because the store refills on a new period.
 
 ### Resource store
 
@@ -166,7 +166,9 @@ Read by the combat controller only as a branch around the existing decision wind
 
 `auto` (default): the block in `processAllTurnsLocked` is unchanged. Five-second window, then auto-attack. A queued action still kicks the waiting turn. Balance tests (`TestGapMatrixTargets`, `TestCombatDuration`, `TestLevel1*`, `TestBosses`) do not go through this branch; formulas stay put.
 
-`turn_based`: a living player's turn sets the phase to waiting and does not arm a deadline. The ticker does not auto-attack and does not resolve that turn. Queueing an action still kicks, the player's turn resolves, and later combatants (including NPCs) take their turns under the existing beat. NPC turns that are already current still resolve; the mode does not reorder initiative. It only refuses to invent a player action.
+`turn_based`: a living player's turn sets the phase to waiting and does not arm a deadline. The ticker does not auto-attack and does not resolve that turn. Queueing an action still kicks, the player's turn resolves, and later combatants (including NPCs) take their turns under the existing beat. NPC turns that are already current still resolve; the mode does not reorder initiative. It only refuses to invent a player action. A bare `attack` queues that kick against the current target, or the first living enemy, and outside combat it starts a fight against the first hostile in the room.
+
+`combat.safe_room` is `stay` by default. Disconnect mid-combat ends the fight as a flee, so gold, XP, and the death flag are untouched. `bind` and `start` then move a character who was in a real room. An instance copy always moves them to its return room before the copy is deleted. A missing room on the next enter uses the bind room, then the start room.
 
 ### Procedural instances
 
@@ -176,7 +178,7 @@ Read by the combat controller only as a branch around the existing decision wind
 - Links them in a line. The last room's exit returns to `spec.ReturnRoomID`. The first room is the entry.
 - Spawns NPC templates from `spec.Encounters` whose `[minLevel, maxLevel]` contains `playerLevel`, weighted. Templates outside the band are skipped. An empty band match spawns nothing.
 - Registers the clones on the existing per-character map. A second character does not join this copy.
-- `NoteLeave` to a non-clone destroys it, as today. A timeout (spec, default 30 minutes) sweeps only instances this generator created. Authored graph instances are not on that list.
+- `NoteLeave` to a non-clone destroys it, as today. A timeout (spec, default 30 minutes) sweeps only instances this generator created, after the occupant is moved to the return room and any fight is ended without a defeat. Authored graph instances are not on that list.
 - The generator does not read the clock calendar and does not call Party Follow.
 
 Entry is an existing `type: script` room action. The script consumes a resource, then calls `tales.instances.generate`. Params live in the script and in the action's `params` map, which room actions already pass into the script context. Exhausted budget: the script does not call generate. Followers are not pulled (`allow=false` is already how instance crossings work). There is no new action type.
@@ -193,6 +195,7 @@ Small, generic, no world names. Each is a no-op or a pure read when the caller p
 | `tales.characters.setBind(id, roomID)` | Sets `BoundRoomID` when the room exists. Empty room id clears it. |
 | `tales.characters.applyLevels(id)` | Applies every level the current XP can buy and returns how many were gained. Trainer mode banks XP until this call. Auto mode returns 0 when nothing is pending. |
 | `tales.characters.setProgress(id, level, xp [, maxHP])` | Sets level and XP. Level clamps to 1..the effective cap. Negative XP becomes 0. A positive maxHP replaces max and current hit points. Class, skills, inventory, gold, and flags stay. |
+| `tales.characters.top(n, sortKey)` | Read-only rows of name, level, and XP. `n` defaults to 12 and caps at 50. `sortKey` `"xp"` orders by experience. Any other key orders by level, then experience. |
 | `tales.resources.get(characterID, key)` | Returns allowance and remaining for a configured key. Unknown key returns remaining 0 and `ok=false`. |
 | `tales.resources.consume(characterID, key, n)` | Spends `n` against the configured allowance. Returns remaining, or `ok=false` when the key is missing or the balance is short. |
 | `tales.instances.generate(characterID, playerLevel, spec)` | Spec is count, template room ids, return room, encounters `{id, minLevel, maxLevel, weight}`, timeout seconds. Returns the entry room id or fails without leaving clones. The caller script moves the character. |
@@ -215,7 +218,7 @@ secret_path: data/session.key
 outbox_path: data/auth-outbox.log
 ```
 
-`presentation: door_tui` serves `public/door`, publishes `GET /api/door/config` for the page title, subtitle, and token key, and installs the view session hook. Classic mode does not mount `/door`. The shipped page defaults are "TalesMUD Door" and `talesmudDoorToken`. The page lists room exits and actions. A name typed at the character prompt selects that account's character, or stores a level-1 character from the first system template and selects it into the start room. Classic mode does not redirect `/` and does not install the hook. `/play` stays the classic client either way.
+`presentation: door_tui` serves `public/door`, publishes `GET /api/door/config` for the page title, subtitle, and token key, and installs the view session hook. Classic mode does not mount `/door`. The shipped page defaults are "TalesMUD Door" and `talesmudDoorToken`. The page lists room exits and actions, and it keeps recent command replies inside the frame. A pack `keymap.yaml` binds keys by room, area, or combat; `d` stays down. A name typed at the character prompt selects that account's character, or asks for a numbered path and then sex. Paths come from `character_paths.yaml` in the world pack when that file exists, and otherwise from the system templates. Classic mode does not redirect `/` and does not install the hook. `/play` stays the classic client either way.
 
 `auth: local` enables the Argon2id username/password routes from `pkg/authlocal`. Auth0 routes stay mounted for `auth: auth0`. Local auth is off unless the mode says so.
 

@@ -38,6 +38,7 @@ type Page struct {
 	Footer    string
 	InputMode string
 	ScreenID  string
+	Keys      map[string]string
 }
 
 // Render builds one frame. An empty title leaves the left side of the bar blank.
@@ -83,6 +84,7 @@ func Render(page Page) Frame {
 		Prompt:    page.Prompt,
 		Screen:    page.ScreenID,
 		Accepts:   accepts,
+		Keys:      page.Keys,
 	}
 }
 
