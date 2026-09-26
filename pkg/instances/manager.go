@@ -5,19 +5,22 @@ import (
 	"encoding/hex"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
-// Instance is one private copy of a cellar graph for a party of occupants.
+// Instance is one private copy of a cellar graph, or a generated line of rooms.
 type Instance struct {
 	ID         string
 	HubRoomID  string
 	Occupants  map[string]bool
-	Clones     map[string]string // template room ID -> clone room ID
+	Clones     map[string]string // template or slot -> clone room ID
 	CloneOrder []string
+	Procedural bool
+	ExpiresAt  time.Time
 }
 
 // Manager tracks live cellar instances. Destroyed when empty.

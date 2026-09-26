@@ -15,4 +15,5 @@ func RegisterAllModules(runner *luarunner.LuaRunner) {
 	runner.RegisterModule("utils", RegisterUtilsModule)
 	runner.RegisterModule("quests", RegisterQuestsModule)
 	runner.RegisterModule("resources", RegisterResourcesModule)
+	runner.RegisterModule("instances", RegisterInstancesModule)
 }

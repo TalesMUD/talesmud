@@ -9,6 +9,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/items"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
+	"github.com/talesmud/talesmud/pkg/instances"
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
@@ -110,6 +111,8 @@ type RoomInstanceCtrl interface {
 	NoteLeave(characterID, fromRoomID, toRoomID string)
 	DestroyCharacterInstance(characterID string)
 	IsClone(roomID string) bool
+	Generate(characterID string, playerLevel int32, spec instances.ProcSpec) (instances.ProcResult, error)
+	Expire(now time.Time)
 }
 
 // GameCtrl def

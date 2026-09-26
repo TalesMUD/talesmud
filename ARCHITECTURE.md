@@ -1600,6 +1600,7 @@ Refilling resources are a SQLite table (`character_resources`) owned by `pkg/res
 | `tales.quests` | Quest operations (accept, complete, progress, grant, abandon) |
 | `tales.utils` | Utilities (random, UUID, dice rolling) |
 | `tales.resources` | Configured refilling balances (`get`, `consume`) |
+| `tales.instances` | Generate a private room line (`generate`) |
 
 #### tales.game Functions
 

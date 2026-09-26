@@ -1,6 +1,8 @@
 package game
 
 import (
+	"time"
+
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
@@ -68,6 +70,9 @@ func (g *Game) removeOfflineCharacters(room *rooms.Room) {
 }
 
 func (g *Game) handleRoomUpdates() {
+	if g.RoomInstances != nil {
+		g.RoomInstances.Expire(time.Now())
+	}
 
 	if allRooms, err := g.Facade.RoomsService().FindAll(); err == nil {
 

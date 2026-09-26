@@ -1,6 +1,9 @@
 package game
 
 import (
+	"time"
+
+	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/entities"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/entities/quests"
@@ -37,6 +40,33 @@ func (a *roomInstanceAdapter) DestroyCharacterInstance(characterID string) {
 
 func (a *roomInstanceAdapter) IsClone(roomID string) bool {
 	return a.mgr.IsClone(roomID)
+}
+
+// Generate builds a private room line and spawns the planned encounters.
+// It does not move the character and does not pull party followers.
+func (a *roomInstanceAdapter) Generate(characterID string, playerLevel int32, spec instances.ProcSpec) (instances.ProcResult, error) {
+	res, err := a.mgr.Generate(a.game.Facade.RoomsService(), characterID, playerLevel, spec)
+	if err != nil {
+		return res, err
+	}
+	if a.game.NPCManager == nil {
+		return res, nil
+	}
+	for _, spawn := range res.Spawns {
+		if _, err := a.game.NPCManager.SpawnInstanceDirect(spawn.TemplateID, spawn.RoomID); err != nil {
+			log.WithError(err).WithField("template", spawn.TemplateID).Warn("procedural spawn failed")
+		}
+	}
+	return res, nil
+}
+
+// Expire drops procedural instances whose timeout has passed.
+func (a *roomInstanceAdapter) Expire(now time.Time) {
+	if a == nil || a.game == nil || a.game.Facade == nil {
+		return
+	}
+	deleted := a.mgr.Expire(a.game.Facade.RoomsService(), now)
+	a.dropNPCs(deleted)
 }
 
 func (a *roomInstanceAdapter) cloneNPCs(characterID string) {

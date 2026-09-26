@@ -142,6 +142,21 @@ local allowance, remaining, ok = tales.resources.get(characterID, key)
 local remaining, ok = tales.resources.consume(characterID, key, n)
 ```
 
+### tales.instances
+
+Builds a private room line. Does not move the character or spend a resource.
+
+```lua
+local entryRoomID, err = tales.instances.generate(characterID, playerLevel, {
+  count = 3,
+  templates = { "glade", "thicket" },
+  returnRoom = "town",
+  timeout = 1800,
+  seed = 1,
+  encounters = { { id = "wolf", minLevel = 1, maxLevel = 4, weight = 1 } }
+})
+```
+
 ### tales.npcs
 
 ```lua

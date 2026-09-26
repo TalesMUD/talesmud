@@ -249,6 +249,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - YAML/JSON data file support
   - Optional per-character refilling resources (`character_resources`). Keys come from `config/ruleset.yaml`. The shipped file lists none, so a default server never spends a balance. Scripts read them through `tales.resources`.
   - Ruleset death penalties, level-up mode (`auto` or `trainer`), and an optional dawn heal. Defaults match the previous 10% XP loss, 1 gold, bind-point respawn, cap 50, and immediate level-up.
+  - Procedural private instances (`tales.instances.generate`): a per-character room line from templates, level-filtered encounters, cleanup on leave or timeout. Existing cellar instances and Party Follow are unchanged. Generated exits do not pull followers.
 
 ## Technology Stack
 

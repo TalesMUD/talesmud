@@ -414,6 +414,10 @@ Per-character balances live in the `character_resources` table. A key grants use
 
 Veilspan use: a daily gathering node or a delve ticket, spent from a room-action script. No content ships a key, so play is unchanged.
 
+### Procedural instances
+
+`tales.instances.generate(characterID, playerLevel, spec)` builds a private line of up to 20 rooms from a template pool. Encounters whose level band contains `playerLevel` are returned as a spawn plan and placed when a game is attached. A second character gets a different copy. The same character cannot hold two instances. Leaving to a non-clone room destroys the line, and a timeout (default 30 minutes) destroys only these generated instances. Authored cellar graphs are unchanged. Every generated exit is marked so Party Follow does not cross it. The generator does not spend a resource and does not move the character; the room-action script does.
+
 ### CopyOnPickup Tracking
 ```go
 // Character methods:
