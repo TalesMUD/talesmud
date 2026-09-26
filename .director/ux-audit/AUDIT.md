@@ -90,10 +90,15 @@ The xterm screen ends about 34px inside the terminal panel, and long lines wrap 
 - Phone: the hero is shorter. The description box is 101px with overflow hidden (scroll height 144). "TAP TO EXPAND" starts 6px below that box. The hotbar and action buttons follow in the column.
 - Edit mode still shows the gold corners, Undo, and Lock. The chip no longer covers the terminal's remove button.
 
+### After B5 (2026-09-26)
+
+Re-shot the desktop room viewports against public `https://veilspan.com/play/` (`?v=b5wrap`). Files replaced: `after/room-1366x768.png`, `after/room-1920x1080.png`, `after/room-2560x1440.png`, `after/room-3440x1440.png`.
+
+The terminal keeps `light`, `centuries`, and `whisper` on one line. The spell bar is the top strip of the action-bar frame (8 slots, empty dashes still visible), not a separate row. On 1366 the dock bottom is 732 in a 768 viewport (36px under it). On 1080 and 1440 the gap under the dock is 28px.
+
 ### Still open
 
-- Terminal wrap is by character, so a word can split across two lines (`lig` / `ht`).
-- The hotbar is still its own row between the panels and the action bar.
 - Default layout still has no character sheet. Stats stay on the corner chip.
 - BattleStage uses the same header type, padding, and gold rule. This pass did not open a fight: north of the Awakening Chamber is an empty corridor.
 - Focusing a panel parks the others at 2×2 under it until focus is toggled again. Saving while focused writes that arrangement.
+- The top-right account chip, Edit Layout, and the party/friends icons still overlap. That is B6.
