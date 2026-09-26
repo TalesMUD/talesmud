@@ -47,6 +47,7 @@
   import { onMount } from "svelte";
 
   import { getAuth } from "./auth.js";
+  import { clearGuestToken } from "./authSession.js";
   import { getUser } from "./api/user.js";
   import { user } from "./stores.js";
   import { layoutStore } from "./game/layout/LayoutStore.js";
@@ -103,9 +104,9 @@
     </li>
     <li>
       <!-- svelte-ignore a11y-invalid-attribute -->
-      <a href="#!" on:click="{() => login ? login(null, { screen_hint: 'signup' }) : authLogin()}">
-        <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">person_add</i>
-        Create Account
+      <a href="#!" on:click="{() => login ? login() : authLogin()}">
+        <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">login</i>
+        Log in / Save progress
       </a>
     </li>
     <li>
@@ -118,7 +119,7 @@
     <li class="divider"></li>
     <li>
       <!-- svelte-ignore a11y-invalid-attribute -->
-      <a href="#!" on:click="{() => { sessionStorage.removeItem('talesmud_guest_token'); window.location.reload(); }}">
+      <a href="#!" on:click="{() => { clearGuestToken(); window.location.reload(); }}">
         <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">logout</i>
         End Session
       </a>
@@ -151,7 +152,7 @@
       <!-- svelte-ignore a11y-invalid-attribute -->
       <a href="#!" on:click="{() => logout()}">
         <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">logout</i>
-        Logout
+        Log out
       </a>
     </li>
   {/if}

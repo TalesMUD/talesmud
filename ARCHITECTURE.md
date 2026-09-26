@@ -1355,8 +1355,10 @@ connection took the session — the client shows that and does not auto-reconnec
 reconnecting state to the UI store when a player tries to send while offline.
 It also handles `roomPresence` messages by updating `MUDXPlusStore.players`
 without re-rendering the full room.
-`CharacterSwitcher.svelte` loads `/api/my-characters`, shows the active
-character and connection state, and sends `sc <name>` to switch characters.
+`CharacterSwitcher.svelte` shows the active character and connection state.
+Switch character opens `CharacterPicker.svelte`, which loads `/api/my-characters`
+and sends `sc <name>`. The same entry is on the phone account menu. Logout
+clears the Auth0 session and the tab guest token before returning to `/play`.
 
 ### Terminal Integration
 

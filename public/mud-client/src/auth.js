@@ -3,6 +3,7 @@
 import { onMount, setContext, getContext } from "svelte";
 import { writable } from "svelte/store";
 import createAuth0Client from "@auth0/auth0-spa-js";
+import { clearGuestToken, clearLocalSession, readGuestToken, restoredSession } from "./authSession.js";
 
 const isLoading = writable(true);
 const isAuthenticated = writable(false);
@@ -50,18 +51,21 @@ function createAuth(config) {
       }
 
       const _isAuthenticated = await auth0.isAuthenticated();
-      let guestToken = "";
-      try {
-        guestToken = sessionStorage.getItem("talesmud_guest_token") || "";
-      } catch (e) {
-        guestToken = "";
-      }
+      const guestToken = readGuestToken();
+      // Auth0 wins. A guest token is restored only when this tab is not signed in,
+      // so a reload keeps a guest in the game. Logout clears that token first.
+      const sessionKind = restoredSession({
+        auth0Authenticated: _isAuthenticated,
+        guestToken,
+      });
 
-      // A guest token lives only in this tab. Restoring it here keeps a reload
-      // (including a mobile-emulation reload) inside the game instead of the welcome screen.
-      if (_isAuthenticated) {
+      if (sessionKind === "auth0") {
+        // Drop a guest token left over from this tab so logout cannot fall
+        // back into that guest. Leave the character-picker flag alone so a
+        // reload does not open the picker again.
+        clearGuestToken();
         isAuthenticated.set(true);
-      } else if (guestToken) {
+      } else if (sessionKind === "guest") {
         authToken.set(guestToken);
         isAuthenticated.set(true);
       } else {
@@ -112,14 +116,10 @@ function createAuth(config) {
     } catch (initError) {
       console.error("Failed to initialize Auth0:", initError);
       authError.set(initError);
-      try {
-        const guestToken = sessionStorage.getItem("talesmud_guest_token") || "";
-        if (guestToken) {
-          authToken.set(guestToken);
-          isAuthenticated.set(true);
-        }
-      } catch (e) {
-        /* sessionStorage unavailable */
+      const guestToken = readGuestToken();
+      if (guestToken && restoredSession({ auth0Authenticated: false, guestToken }) === "guest") {
+        authToken.set(guestToken);
+        isAuthenticated.set(true);
       }
     }
 
@@ -146,21 +146,23 @@ function createAuth(config) {
   };
 
   const logout = async () => {
-    if (!auth0) {
-      console.error("Auth0 client not initialized");
-      return;
-    }
-
     // Clear interval before logout
     if (intervalId) {
       clearInterval(intervalId);
     }
 
-    // Clear all auth stores
+    // Guest token and Auth0 cache both have to go. Leaving the guest token
+    // made the next load skip the welcome choice and re-enter as a guest.
+    clearLocalSession();
     authToken.set("");
     isAuthenticated.set(false);
     userInfo.set({});
     authError.set(null);
+
+    if (!auth0) {
+      window.location.assign(window.location.origin + "/play/");
+      return;
+    }
 
     auth0.logout({
       returnTo: window.location.origin + "/play",

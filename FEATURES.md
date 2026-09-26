@@ -536,9 +536,14 @@ add the other player. Guests hide the HUD entry.
 The MUD client exposes connection state in `MUDXPlusStore`:
 `disconnected`, `connecting`, `connected`, and `reconnecting`.
 `Game.svelte` owns reconnect scheduling and retries automatically after socket
-close. `CharacterSwitcher.svelte` shows the active character, connection state,
-and the user's character list from `/api/my-characters`; switching sends the
-existing `sc <name>` command. `Client.js` handles `roomPresence` messages and
+close. `CharacterSwitcher.svelte` shows the active character and connection state.
+**Switch character** in the account menu (desktop chip and phone header) opens
+`CharacterPicker.svelte`, which lists every character from `/api/my-characters`.
+Choosing one sends `sc <name>`. A signed-in player with more than one character
+sees that picker once per login; the server still enters on `lastCharacter`.
+Guests get **Log in / Save progress** (Auth0 `loginWithRedirect`, no signup-only
+hint). **Log out** clears the Auth0 session and this tab's guest token and
+returns to the welcome choice instead of restoring a guest. `Client.js` handles `roomPresence` messages and
 updates `MUDXPlusStore.players` without changing the room description.
 
 ---
@@ -872,7 +877,7 @@ After the level-gap multiplier and before a crit, `damage_dealt` scales hits tha
 `threat` in `config/combat_balance.yaml` maps `(enemyLevel - playerLevel)` to `grey / green / yellow / orange / red / skull` (defaults: ≤ −3 grey, −2..−1 green, 0..+1 yellow, +2 orange, +3..+4 red, ≥ +5 skull). The tier is on the room NPC payload (`threat`) and on combat enemy views, computed for the viewer. Room cards and BattleStage nameplates use that color; skull enemies also show ☠. `attack` on orange, red, or skull warns once ("X is much stronger than you") and does not engage. `attack!` or a second `attack` on that enemy does. The room Attack button confirms, then sends `attack!`.
 
 ### Viewport layout presets
-With no saved layout, the play client picks Compact (under 1100px wide, room stacked over the terminal), Desktop, or Wide from the window size, and sizes the grid so the room, terminal, and action bar fill the viewport height. The spell bar is docked in the top of the action bar instead of a separate row. Resize reflows that preset. A saved layout is kept and only clamped back onto the 24-column grid (minimum 2×2, nothing past the right edge). A saved full-width spell bar that sits directly on the action bar is folded into that dock on load; a spell bar placed somewhere else stays its own widget and can still be moved in edit mode. Edit mode can switch Compact / Desktop / Wide without deleting a saved layout until Save. Guests open the same editor from the account menu. The toolbar has multi-step Undo, Reset, and a Lock toggle that keeps edit mode open but stops dragging and resizing. Corner handles stay visible while the layout is unlocked, and a gold ghost shows where a widget will land. A guest token in this tab is restored after a reload, so crossing into a mobile-emulation reload does not dump the session back to the welcome screen. Panels share one header (title, collapse, focus) in the same type and padding; the inventory overlay keeps a single title. The account chip, Edit Layout, and the Party and Friends buttons share one header row in that top band: same height, gold border, and gold hover. Edit Layout is its own button until the window is under 1100px wide, where it moves into the account menu. The menu is gold, lines up with the chip's right edge, and closes on Escape or an outside click. On a phone the same menu hangs from the account button in the room header. Terminal lines wrap on word boundaries inside the panel; a token longer than the row may still break. Resizing the terminal reflows that scrollback.
+With no saved layout, the play client picks Compact (under 1100px wide, room stacked over the terminal), Desktop, or Wide from the window size, and sizes the grid so the room, terminal, and action bar fill the viewport height. The spell bar is docked in the top of the action bar instead of a separate row. Resize reflows that preset. A saved layout is kept and only clamped back onto the 24-column grid (minimum 2×2, nothing past the right edge). A saved full-width spell bar that sits directly on the action bar is folded into that dock on load; a spell bar placed somewhere else stays its own widget and can still be moved in edit mode. Edit mode can switch Compact / Desktop / Wide without deleting a saved layout until Save. Guests open the same editor from the account menu. The toolbar has multi-step Undo, Reset, and a Lock toggle that keeps edit mode open but stops dragging and resizing. Corner handles stay visible while the layout is unlocked, and a gold ghost shows where a widget will land. A guest token in this tab is restored after a reload, so crossing into a mobile-emulation reload does not dump the session back to the welcome screen. Panels share one header (title, collapse, focus) in the same type and padding; the inventory overlay keeps a single title. The account chip, Edit Layout, and the Party and Friends buttons share one header row in that top band: same height, gold border, and gold hover. Edit Layout is its own button until the window is under 1100px wide, where it moves into the account menu. The menu is gold, lines up with the chip's right edge, and closes on Escape or an outside click. On a phone the same menu hangs from the account button in the room header and includes Switch character, Log in / Save progress for guests, and Log out for a signed-in player. Terminal lines wrap on word boundaries inside the panel; a token longer than the row may still break. Resizing the terminal reflows that scrollback.
 
 ### Reward scaling
 `reward_scale` in `config/combat_balance.yaml` multiplies each enemy's base XP and gold by that threat tier. The reference level is the **highest** level among characters who receive the victory split (living fighters plus same-room online party), so a high-level member greys out the whole award. Defaults: grey 15%, green 60%, yellow 100%, orange 125%, red 150%, skull 200%. A boss's first kill for a character adds `first_kill_bonus` (default 50%) of that character's own share of the boss, once, stored on `Character.FirstBossKills` (`tpl:<templateId>` or `name:<lower name>`). BattleStage victory lists base, level modifier, first-kill bonus, and party split. The terminal victory text includes the same lines, then the final `+ N XP` / `+ N Gold`.
@@ -2311,9 +2316,9 @@ func (c *Character) GetEffectiveMaxLevel(globalMax int32) int32
 The leveling system (`CheckLevelUp`, `ApplyLevelUp`) respects `MaxLevelCap` automatically.
 
 ### Frontend Guest Flow
-- `WelcomeScreen.svelte` — "Play as Guest" button (amber/gold styling)
-- `App.svelte` — `handleGuestPlay()` stores token in sessionStorage, skips onboarding
-- `UserMenu.svelte` — Guest-aware: shows "Create Account" and "End Session" instead of Auth0 controls
+- `WelcomeScreen.svelte` — logged-out choice: "Log in / Sign up" and "Play as guest"
+- `App.svelte` — `handleGuestPlay()` stores token in sessionStorage, skips onboarding. Logout clears that token so the next load is the welcome choice
+- Account menu — guests see "Log in / Save progress" and "End Session"; a signed-in player sees "Switch character" and "Log out"
 - `api/guest.js` — `createGuestSession()` API client
 
 ### Authentication

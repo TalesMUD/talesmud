@@ -120,18 +120,6 @@
     transform: translateY(-1px);
   }
 
-  .btn-welcome.secondary {
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    color: #d1d5db;
-    background: transparent;
-  }
-
-  .btn-welcome.secondary:hover {
-    border-color: rgba(255, 255, 255, 0.25);
-    background: rgba(255, 255, 255, 0.04);
-    color: #e5e7eb;
-  }
-
   .btn-welcome.guest {
     border: 1px solid rgba(245, 158, 11, 0.3);
     color: #f59e0b;
@@ -178,11 +166,9 @@
   let guestLoading = false;
   let guestError = null;
 
-  function handleSignup() {
-    login(null, { screen_hint: "signup" });
-  }
-
   function handleLogin() {
+    // No screen_hint: Auth0 universal login offers X, Google, and email,
+    // and the hosted page has both log in and sign up.
     login();
   }
 
@@ -229,11 +215,8 @@
     {/if}
 
     <div class="buttons">
-      <button class="btn-welcome primary" on:click={handleSignup}>
-        Sign Up
-      </button>
-      <button class="btn-welcome secondary" on:click={handleLogin}>
-        Log In
+      <button class="btn-welcome primary" on:click={handleLogin}>
+        Log in / Sign up
       </button>
 
       <div class="divider" style="width: 100%; margin: 0.25rem 0;"></div>
@@ -243,7 +226,7 @@
         on:click={handleGuest}
         disabled={guestLoading}
       >
-        {guestLoading ? 'Starting...' : 'Play as Guest'}
+        {guestLoading ? 'Starting...' : 'Play as guest'}
       </button>
       <span class="guest-note">
         30 min session, no login required

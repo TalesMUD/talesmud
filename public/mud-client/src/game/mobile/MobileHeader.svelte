@@ -87,7 +87,8 @@
     box-shadow: 0 18px 46px rgba(0, 0, 0, 0.55);
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    max-height: min(70vh, 420px);
+    overflow: auto;
   }
 
   .acct-menu button {
@@ -175,22 +176,18 @@
 <script>
   import { onMount, onDestroy } from "svelte";
   import { getAuth } from "../../auth.js";
+  import { isGuestSession, clearGuestToken } from "../../authSession.js";
   import { layoutStore } from "../layout/LayoutStore.js";
   import { settingsStore } from "../SettingsStore.js";
+  import { openCharacterPicker } from "../ui/characterPickerStore.js";
 
   export let store;
+  export let authToken = "";
 
   const { login, logout } = getAuth();
+  $: guest = isGuestSession(authToken);
   let open = false;
   let root;
-
-  function isGuest() {
-    try {
-      return typeof sessionStorage !== "undefined" && !!sessionStorage.getItem("talesmud_guest_token");
-    } catch (err) {
-      return false;
-    }
-  }
 
   function toggle(event) {
     event.stopPropagation();
@@ -229,17 +226,22 @@
 
   function endSession() {
     open = false;
-    if (isGuest()) {
-      try { sessionStorage.removeItem("talesmud_guest_token"); } catch (err) { /* ignore */ }
+    if (guest) {
+      clearGuestToken();
       window.location.reload();
       return;
     }
     logout();
   }
 
-  function createAccount() {
+  function loginToSave() {
     open = false;
-    if (login) login(null, { screen_hint: "signup" });
+    if (login) login();
+  }
+
+  function switchCharacter() {
+    open = false;
+    openCharacterPicker();
   }
 
   $: roomName = $store.roomName || 'Unknown';
@@ -273,12 +275,13 @@
       {#if open}
         <div class="acct-menu" role="menu">
           <button type="button" role="menuitem" on:click={editLayout}><i class="material-icons">dashboard_customize</i> Edit Layout</button>
+          <button type="button" role="menuitem" on:click={switchCharacter}><i class="material-icons">switch_account</i> Switch character</button>
           <button type="button" role="menuitem" on:click={openSettings}><i class="material-icons">settings</i> Settings</button>
-          {#if isGuest()}
-            <button type="button" role="menuitem" on:click={createAccount}><i class="material-icons">person_add</i> Create Account</button>
+          {#if guest}
+            <button type="button" role="menuitem" on:click={loginToSave}><i class="material-icons">login</i> Log in / Save progress</button>
             <button type="button" role="menuitem" on:click={endSession}><i class="material-icons">logout</i> End Session</button>
           {:else}
-            <button type="button" role="menuitem" on:click={endSession}><i class="material-icons">logout</i> Logout</button>
+            <button type="button" role="menuitem" on:click={endSession}><i class="material-icons">logout</i> Log out</button>
           {/if}
         </div>
       {/if}

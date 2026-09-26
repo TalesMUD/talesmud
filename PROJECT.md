@@ -126,7 +126,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
 
 - **Guest Mode (Play as Guest)**
   - Anonymous 30-minute demo sessions without Auth0 registration
-  - "Play as Guest" button on welcome screen
+  - "Play as guest" button on the logged-out welcome screen, next to "Log in / Sign up"
   - Random character with random class from system templates
   - Spawns in `ServerSettings.StartRoomID` (default `R0001` when that room exists)
   - Auto-grants `source.type: auto` quests for the start room's zone (Z00 catacombs: QST0001–QST0004)
@@ -143,9 +143,10 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
 
 - **New Player Onboarding**
   - Phase-based flow: Welcome Screen, Nickname Setup, Character Creation Wizard, Game
-  - Unauthenticated users see a cinematic welcome landing screen (not the game UI)
-  - Signup and Login via Auth0 with dedicated CTA buttons
-  - "Play as Guest" option for anonymous demo play
+  - Logged-out players see a welcome choice: **Log in / Sign up** (Auth0 universal login, which offers X, Google, and email) and **Play as guest**
+  - Logout clears the Auth0 session and this tab's guest token, then returns to that choice. A guest reload still resumes the guest session
+  - The account menu has **Switch character**, which opens a picker of every character from `/api/my-characters` and sends `sc <name>`. Guests also get **Log in / Save progress**. Signed-in players get **Log out**
+  - A signed-in player with more than one character sees that picker once per login (the server still enters on `lastCharacter`)
   - First-time users prompted to choose a display name/nickname
   - Three-step character creation wizard: Choose Template, Name Character, Confirm & Create
   - Automatic phase detection from user profile and character data

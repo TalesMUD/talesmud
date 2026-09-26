@@ -105,6 +105,10 @@
   import MobileLayout from "./mobile/MobileLayout.svelte";
   import QuestNotifications from "./ui/QuestNotifications.svelte";
   import CharacterSwitcher from "./ui/CharacterSwitcher.svelte";
+  import CharacterPicker from "./ui/CharacterPicker.svelte";
+  import { characterPickerOpen, openCharacterPicker, closeCharacterPicker } from "./ui/characterPickerStore.js";
+  import { getMyCharacters } from "../api/characters.js";
+  import { isGuestSession, PICKER_SEEN_KEY, shouldAutoOpenCharacterPicker } from "../authSession.js";
   import InventoryOverlay from "./ui/InventoryOverlay.svelte";
   import BattleStage from "./ui/BattleStage.svelte";
   import MapOverviewOverlay from "./ui/MapOverviewOverlay.svelte";
@@ -313,6 +317,24 @@
     }
   }
 
+  let pickerChecked = false;
+  $: if ($authToken && $muxStore.connectionStatus === "connected" && !pickerChecked) {
+    pickerChecked = true;
+    if (!isGuestSession($authToken)) {
+      let seen = false;
+      try { seen = sessionStorage.getItem(PICKER_SEEN_KEY) === "1"; } catch (err) { seen = false; }
+      if (!seen) {
+        getMyCharacters($authToken, (chars) => {
+          const list = Array.isArray(chars) ? chars : [];
+          if (shouldAutoOpenCharacterPicker({ guest: false, seen: false, characterCount: list.length })) {
+            try { sessionStorage.setItem(PICKER_SEEN_KEY, "1"); } catch (err) { /* ignore */ }
+            openCharacterPicker();
+          }
+        }, () => {});
+      }
+    }
+  }
+
   onMount(async () => {
     document.body.style.backgroundImage = "url('" + backend + "/backgrounds/oldtown-griphon.png')";
     document.body.style.backgroundAttachment = "fixed";
@@ -350,12 +372,12 @@
   <CharacterSwitcher
     store={muxStore}
     authToken={$authToken}
-    {sendMessage}
   />
 
   {#if $isMobile}
     <MobileLayout
       store={muxStore}
+      authToken={$authToken}
       {sendMessage}
       onTerminalReady={handleTerminalReady}
       onTerminalInput={handleTerminalInput}
@@ -394,3 +416,13 @@
 
 <!-- C2: full-screen battle stage over dimmed room chrome -->
 <BattleStage store={muxStore} {sendMessage} />
+
+{#if $characterPickerOpen}
+  <CharacterPicker
+    authToken={$authToken}
+    activeCharacter={$muxStore.character}
+    canSwitch={$muxStore.connectionStatus === "connected"}
+    {sendMessage}
+    onClose={closeCharacterPicker}
+  />
+{/if}
