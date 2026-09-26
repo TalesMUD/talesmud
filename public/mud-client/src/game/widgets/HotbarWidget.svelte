@@ -22,6 +22,8 @@
   export let sendMessage;
   /** Compact strip for mobile (no widget chrome). */
   export let compact = false;
+  /** Slots drawn inside the action-bar dock. */
+  export let docked = false;
 
   let pickerIndex = -1;
   let longPressTimer = null;
@@ -190,6 +192,24 @@
     padding: 6px 8px 4px;
     background: rgba(0, 0, 0, 0.45);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .hotbar-widget.docked {
+    height: auto;
+    padding: 8px 12px 8px;
+    background: transparent;
+  }
+
+  .hotbar-widget.docked .slots {
+    max-width: none;
+  }
+
+  .hotbar-widget.docked .slot {
+    width: clamp(36px, 4.2vw, 48px);
+    height: clamp(36px, 4.2vw, 48px);
+    aspect-ratio: auto;
+    border-color: rgba(203, 213, 225, 0.55);
+    background: rgba(0, 0, 0, 0.45);
   }
 
   .slots {
@@ -400,7 +420,7 @@
   }
 </style>
 
-<div class="hotbar-widget" class:compact aria-label="Spell bar">
+<div class="hotbar-widget" class:compact class:docked aria-label="Spell bar">
   <div class="slots">
     {#each binds as bind, index}
       {@const item = bind?.kind === 'item' ? findInventoryItem(inventory, bind) : null}

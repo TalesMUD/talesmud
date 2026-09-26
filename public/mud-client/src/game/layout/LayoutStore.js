@@ -8,11 +8,11 @@ import {
   widgetsEqual,
   normalizeTemplates,
 } from './layoutTemplates.js';
-import { clampWidgets, kindForWidth, presetWidgets } from './layoutPresets.js';
+import { clampWidgets, foldDockedHotbar, kindForWidth, presetWidgets } from './layoutPresets.js';
 
 const STORAGE_KEY = LAYOUT_STORAGE_KEY;
 
-// Default layout: Room + Terminal, Spell Bar between room and Action Bar
+// Default layout: Room + Terminal, spell bar docked inside the action bar.
 const DEFAULT_LAYOUT = [
   {
     id: 'room-1',
@@ -33,21 +33,12 @@ const DEFAULT_LAYOUT = [
     visible: true
   },
   {
-    id: 'hotbar-1',
-    widgetType: 'hotbar',
-    x: 0,
-    y: 12,
-    w: 24,
-    h: 2,
-    visible: true
-  },
-  {
     id: 'actionbar-1',
     widgetType: 'actionbar',
     x: 0,
-    y: 14,
+    y: 12,
     w: 24,
-    h: 3,
+    h: 4,
     visible: true
   }
 ];
@@ -194,7 +185,7 @@ function createLayoutStore() {
         const stored = localStorage.getItem(STORAGE_KEY);
         const parsed = parseLayoutStorage(stored);
         if (parsed) {
-          const widgets = clampWidgets(ensureHotbarInLayout(parsed.widgets));
+          const widgets = clampWidgets(foldDockedHotbar(ensureHotbarInLayout(parsed.widgets)));
           update(state => ({
             ...state,
             widgets: toGridItems(widgets, state.editMode),
@@ -574,9 +565,9 @@ function createLayoutStore() {
       const tpl = state.templates.find((t) => t.id === templateId);
       if (!tpl) return false;
 
-      const widgets = ensureHotbarInLayout(
+      const widgets = foldDockedHotbar(ensureHotbarInLayout(
         JSON.parse(JSON.stringify(tpl.widgets))
-      );
+      ));
       const gridItems = toGridItems(widgets, state.editMode);
 
       update((s) => ({

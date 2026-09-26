@@ -1,18 +1,22 @@
-/** Viewport presets for the 24-column widget grid (row height 40, gap 8). */
+/** Viewport presets for the 24-column widget grid (row height 40, horizontal gap 8). */
 
 export const GRID_COLS = 24;
 export const ROW_HEIGHT = 40;
 export const GRID_GAP = 8;
+/** Spell slots live inside the action bar, so the dock is one widget this tall. */
+export const ACTION_DOCK_H = 4;
 
-const HOTBAR_H = 2;
-const ACTION_H = 3;
+const ACTION_H = ACTION_DOCK_H;
 
-/** How many rows fit in a viewport height, including gaps. */
+/**
+ * How many 40px rows fit under the account band.
+ * 52px top padding + 12px bottom padding. The grid container is the rest,
+ * and svelte-grid's content height is rows * ROW_HEIGHT.
+ */
 export function viewportRows(heightPx) {
   const height = Number(heightPx) || 800;
-  /* 96px keeps the grid under the account-chip band and the bottom padding. */
-  const usable = Math.max(ROW_HEIGHT * 10, height - 96);
-  const rows = Math.floor((usable + GRID_GAP) / (ROW_HEIGHT + GRID_GAP));
+  const usable = Math.max(ROW_HEIGHT * 10, height - 64);
+  const rows = Math.floor(usable / ROW_HEIGHT);
   return Math.max(12, Math.min(36, rows));
 }
 
@@ -36,10 +40,9 @@ export function presetLabel(kind) {
  */
 export function presetWidgets(kind, heightPx) {
   const rows = viewportRows(heightPx);
-  const body = Math.max(6, rows - HOTBAR_H - ACTION_H);
+  const body = Math.max(6, rows - ACTION_H);
   const bars = [
-    { id: 'hotbar-1', widgetType: 'hotbar', x: 0, y: body, w: GRID_COLS, h: HOTBAR_H, visible: true },
-    { id: 'actionbar-1', widgetType: 'actionbar', x: 0, y: body + HOTBAR_H, w: GRID_COLS, h: ACTION_H, visible: true },
+    { id: 'actionbar-1', widgetType: 'actionbar', x: 0, y: body, w: GRID_COLS, h: ACTION_H, visible: true },
   ];
   if (kind === 'compact') {
     const top = Math.max(4, Math.floor(body * 0.55));
@@ -72,4 +75,28 @@ export function clampWidgets(widgets) {
     if (x + width > GRID_COLS) x = Math.max(0, GRID_COLS - width);
     return { ...w, x, y, w: width, h: height };
   });
+}
+
+/**
+ * A full-width spell bar sitting on a full-width action bar is the old
+ * floating strip. Fold those rows into the action bar so the slots render
+ * inside that dock. A hotbar the player moved elsewhere stays put.
+ */
+export function foldDockedHotbar(widgets) {
+  if (!Array.isArray(widgets)) return [];
+  const hot = widgets.find((w) => w.widgetType === 'hotbar' && w.visible !== false);
+  const act = widgets.find((w) => w.widgetType === 'actionbar' && w.visible !== false);
+  if (!hot || !act) return widgets.slice();
+  const hx = Math.round(Number(hot.x) || 0);
+  const hy = Math.round(Number(hot.y) || 0);
+  const hw = Math.round(Number(hot.w) || 0);
+  const hh = Math.round(Number(hot.h) || 0);
+  const ax = Math.round(Number(act.x) || 0);
+  const ay = Math.round(Number(act.y) || 0);
+  const aw = Math.round(Number(act.w) || 0);
+  const ah = Math.round(Number(act.h) || 0);
+  if (hx !== ax || hw !== aw || hw < GRID_COLS || hy + hh !== ay) return widgets.slice();
+  return widgets
+    .filter((w) => w !== hot)
+    .map((w) => (w === act ? { ...w, y: hy, h: hh + ah } : w));
 }
