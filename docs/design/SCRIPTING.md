@@ -122,6 +122,15 @@ local success = tales.characters.teleport(characterID, roomID)
 
 -- Give XP to character
 local success = tales.characters.giveXP(characterID, amount)
+
+-- Signed gold change. Refuses a debit below zero.
+local success = tales.characters.addGold(characterID, delta)
+
+-- Set or clear the respawn room. Unknown rooms return false.
+local success = tales.characters.setBind(characterID, roomID)
+
+-- Apply levels already earned. Returns the number gained.
+local levels = tales.characters.applyLevels(characterID)
 ```
 
 ### tales.resources

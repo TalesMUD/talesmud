@@ -1,0 +1,31 @@
+# Ruleset profile. Defaults match current play.
+# Do not copy keys from config/combat_balance.yaml into this file.
+# level_gap, threat, reward_scale, class_balance, difficulty multipliers,
+# and named overrides stay in that file. Base XP listed here is multiplied
+# by reward_scale afterward.
+
+progression:
+  level_cap: 50
+  level_up_mode: auto   # auto | trainer
+  # xp_required:        # cumulative XP to reach that level; omit = built-in curve
+  #   1: 0
+  #   2: 40
+  # base_xp_by_enemy_level:  # used only when an enemy's xp reward is 0
+  #   1: 20
+
+death:
+  xp_loss_percent: 10
+  gold_loss_flat: 1
+  gold_loss_percent: 0
+  respawn: bindpoint    # bindpoint | next_reset
+  respawn_hp_percent: 50
+  damage_armor: true
+
+new_day:
+  full_heal: false
+  timezone: UTC
+
+resources: {}
+
+combat:
+  pacing: auto          # auto | turn_based

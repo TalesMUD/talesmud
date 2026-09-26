@@ -1533,6 +1533,7 @@ pkg/
 ├── repository/        # Data access
 ├── db/                # Database client
 ├── resources/         # Per-character refilling balances
+├── ruleset/           # Level cap, level-up mode, death, new day, resource catalog
 ├── scripts/           # Script execution
 │   ├── scripts.go     # Script entity and types
 │   ├── scriptrunner.go # Runner interface
@@ -1592,7 +1593,7 @@ Refilling resources are a SQLite table (`character_resources`) owned by `pkg/res
 |--------|---------|
 | `tales.items` | Item and template operations |
 | `tales.rooms` | Room queries and management |
-| `tales.characters` | Character operations (damage, heal, teleport) |
+| `tales.characters` | Character operations (damage, heal, teleport, gold, bind, apply levels) |
 | `tales.npcs` | NPC operations (templates, instances, spawning) |
 | `tales.dialogs` | Dialog and conversation management |
 | `tales.game` | Messaging, flags, items, room manipulation |

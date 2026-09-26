@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	m "github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
+	"github.com/talesmud/talesmud/pkg/ruleset"
 	"github.com/talesmud/talesmud/pkg/service"
 	"github.com/talesmud/talesmud/pkg/worldmap"
 )
@@ -57,9 +59,14 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 	// Normalize attribute short names to uppercase (migration for pre-fix characters)
 	character.NormalizeAttributeShorts()
 
-	// Catch-up: banked quest XP historically skipped CheckLevelUp; apply pending levels on select
-	if levelsGained, _ := leveling.CheckLevelUp(character); levelsGained > 0 {
-		result := leveling.ApplyLevelUp(character, levelsGained)
+	if ruleset.ApplyNewDay(character, time.Now()) {
+		if err := game.GetFacade().CharactersService().Update(character.ID, character); err != nil {
+			log.WithError(err).WithField("characterID", character.ID).Warn("new day: failed to persist")
+		}
+	}
+
+	// Catch-up in auto mode. Trainer mode leaves the XP banked.
+	if result := leveling.MaybeLevelUp(character); result != nil {
 		if err := game.GetFacade().CharactersService().Update(character.ID, character); err != nil {
 			log.WithError(err).WithField("characterID", character.ID).Warn("level catch-up: failed to persist")
 		} else {

@@ -10,6 +10,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/items"
 	"github.com/talesmud/talesmud/pkg/entities/traits"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/ruleset"
 )
 
 func TestDefeatRespawnsAtBoundRoomAndDamagesArmor(t *testing.T) {
@@ -112,6 +113,63 @@ func TestDefeatRespawnsAtBoundRoomAndDamagesArmor(t *testing.T) {
 	forestAfter, _ := facade.RoomsService().FindByID("R0106")
 	if forestAfter != nil && forestAfter.IsCharacterInRoom(character.ID) {
 		t.Fatal("character should be removed from death room")
+	}
+}
+
+func TestNextResetDeathDoesNotRelocate(t *testing.T) {
+	ruleset.Reset()
+	t.Cleanup(ruleset.Reset)
+	ruleset.SetDeath(ruleset.DeathPolicy{
+		XPLossPercent:    10,
+		GoldLossFlat:     1,
+		Respawn:          ruleset.RespawnNextReset,
+		RespawnHPPercent: 0,
+		DamageArmor:      false,
+	})
+
+	g, facade := newNPCTestGame(t)
+	storeTestRoom(t, facade, "wild", nil)
+	storeTestRoom(t, facade, "town", nil)
+	character, err := facade.CharactersService().Store(&characters.Character{
+		Entity:           &entities.Entity{ID: "char-wait"},
+		Name:             "Waiter",
+		BelongsUser:      *traits.BelongsToUser("user-wait"),
+		CurrentRoom:      traits.CurrentRoom{CurrentRoomID: "wild"},
+		BoundRoomID:      "town",
+		MaxHitPoints:     20,
+		CurrentHitPoints: 1,
+		XP:               100,
+		Gold:             5,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wild, _ := facade.RoomsService().FindByID("wild")
+	wild.AddCharacter(character.ID)
+	_ = facade.RoomsService().Update("wild", wild)
+
+	g.CombatController.processCombatDefeat(&combat.CombatInstance{
+		ID:           "combat-wait",
+		OriginRoomID: "wild",
+		State:        combat.CombatStateDefeat,
+		Players: []combat.CombatantRef{
+			{ID: character.ID, Name: character.Name, CurrentHP: 0, MaxHP: 20, IsAlive: false},
+		},
+	})
+
+	stored, err := facade.CharactersService().FindByID(character.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stored.CurrentRoomID != "wild" || !stored.AwaitingReset || stored.CurrentHitPoints != 0 {
+		t.Fatalf("stay put: room=%s reset=%v hp=%d", stored.CurrentRoomID, stored.AwaitingReset, stored.CurrentHitPoints)
+	}
+	if stored.XP != 90 || stored.Gold != 4 {
+		t.Fatalf("xp=%d gold=%d", stored.XP, stored.Gold)
+	}
+	still, _ := facade.RoomsService().FindByID("wild")
+	if still == nil || !still.IsCharacterInRoom(character.ID) {
+		t.Fatal("character left the death room")
 	}
 }
 

@@ -115,6 +115,11 @@ type Character struct {
 	// Respawn binding - room where player respawns on death
 	BoundRoomID string `bson:"boundRoomId,omitempty" json:"boundRoomId,omitempty"`
 
+	// LastResetDay is the calendar day (YYYY-MM-DD) of the last new-day pass.
+	LastResetDay string `bson:"lastResetDay,omitempty" json:"lastResetDay,omitempty"`
+	// AwaitingReset is set when a death policy waits for the next reset.
+	AwaitingReset bool `bson:"awaitingReset,omitempty" json:"awaitingReset,omitempty"`
+
 	// Game flags for scripting (puzzles, quests, state tracking)
 	Flags map[string]interface{} `bson:"flags,omitempty" json:"flags,omitempty"`
 

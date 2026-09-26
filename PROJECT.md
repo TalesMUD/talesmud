@@ -12,6 +12,7 @@ TalesMUD is a browser-based Multi-User Dungeon (MUD) framework built with Go and
 - **Core Systems & Features:** `FEATURES.md` (comprehensive reference for all systems, data structures, and APIs)
 - **Game design + MVP backlog:** `docs/design/GAME_DESIGN.md`
 - **Door on the shared engine:** `docs/DOOR-ON-MUD.md`
+- **Ruleset profile:** `config/ruleset.yaml` (level cap, level-up mode, death, new day, resource keys, combat pacing). Combat math stays in `config/combat_balance.yaml`.
 - **Scripting system:** `docs/design/SCRIPTING.md`
 - **World map implementation:** `docs/design/WORLD_MAP_IMPLEMENTATION.md`
 - **Quest authoring guide:** `docs/design/QUEST_AUTHORING.md`
@@ -246,7 +247,8 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - SQLite for all game data
   - World export/import functionality
   - YAML/JSON data file support
-  - Optional per-character refilling resources (`character_resources`). No key is configured unless a ruleset lists one, so an unconfigured server never spends a balance. Scripts read them through `tales.resources`.
+  - Optional per-character refilling resources (`character_resources`). Keys come from `config/ruleset.yaml`. The shipped file lists none, so a default server never spends a balance. Scripts read them through `tales.resources`.
+  - Ruleset death penalties, level-up mode (`auto` or `trainer`), and an optional dawn heal. Defaults match the previous 10% XP loss, 1 gold, bind-point respawn, cap 50, and immediate level-up.
 
 ## Technology Stack
 

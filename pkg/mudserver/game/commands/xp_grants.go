@@ -55,9 +55,8 @@ func GrantExplorationXP(game def.GameCtrl, char *characters.Character, userID st
 		msg = fmt.Sprintf("You discovered: %s (+%d XP)", room.Name, xp)
 	}
 
-	// Check for level-up
-	if levelsGained, _ := leveling.CheckLevelUp(char); levelsGained > 0 {
-		result := leveling.ApplyLevelUp(char, levelsGained)
+	// Check for level-up. Trainer mode banks the XP.
+	if result := leveling.MaybeLevelUp(char); result != nil {
 
 		// Save character with all updates
 		game.GetFacade().CharactersService().Update(char.ID, char)

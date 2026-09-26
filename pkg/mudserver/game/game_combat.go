@@ -18,6 +18,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
+	"github.com/talesmud/talesmud/pkg/ruleset"
 )
 
 const combatBreathGrace = 3 * time.Second
@@ -977,11 +978,9 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 			continue
 		}
 
-		// Use configured XP or calculate from NPC level
-		xpReward := npcData.EnemyTrait.XPReward
-		if xpReward == 0 {
-			xpReward = leveling.CalculateEnemyXPReward(npcData.Level)
-		}
+		// Authored reward, else the ruleset table, else 15*level+5.
+		// This number is base XP. reward_scale multiplies it below.
+		xpReward := leveling.ResolveEnemyBaseXP(npcData.Level, npcData.EnemyTrait.XPReward)
 
 		// Roll gold - use configured GoldDrop range or calculate from level/difficulty
 		var goldRoll int64
@@ -1120,12 +1119,9 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 		char.XP += int32(awardedXP)
 		char.Gold += awardedGold
 
-		levelsGained, _ := leveling.CheckLevelUp(char)
 		var levelMsg string
-		if levelsGained > 0 {
-			if result := leveling.ApplyLevelUp(char, levelsGained); result != nil {
-				levelMsg = result.Message
-			}
+		if result := leveling.MaybeLevelUp(char); result != nil {
+			levelMsg = result.Message
 		}
 		_ = c.game.Facade.CharactersService().Update(share.ID, char)
 
@@ -1186,46 +1182,35 @@ func (c *CombatController) processCombatDefeat(instance *combat.CombatInstance) 
 			continue
 		}
 
+		outcome := ruleset.ApplyDeath(char)
+
 		var sb strings.Builder
 		sb.WriteString("\n═══════════════════════════════════════════════════\n")
 		sb.WriteString("              DEFEAT\n")
 		sb.WriteString("═══════════════════════════════════════════════════\n\n")
 		sb.WriteString("You have been defeated!\n\n")
 
-		// XP loss penalty (10%)
-		xpLoss := int32(float64(char.XP) * 0.10)
-		if xpLoss > 0 {
-			char.XP -= xpLoss
-			if char.XP < 0 {
-				char.XP = 0
+		if outcome.XPLost > 0 {
+			sb.WriteString(fmt.Sprintf("PENALTY: Lost %d experience\n", outcome.XPLost))
+		}
+		if outcome.GoldLost > 0 {
+			sb.WriteString(fmt.Sprintf("PENALTY: Lost %d gold\n", outcome.GoldLost))
+		}
+
+		if outcome.DamageArmor {
+			if damaged := char.DamageEquippedArmor(); len(damaged) > 0 {
+				sb.WriteString("Your armor is battered:\n")
+				for _, name := range damaged {
+					sb.WriteString("  - ")
+					sb.WriteString(name)
+					sb.WriteString("\n")
+				}
+				sb.WriteString("A merchant can repair it.\n")
 			}
-			sb.WriteString(fmt.Sprintf("PENALTY: Lost %d experience\n", xpLoss))
 		}
 
-		// Gold loss penalty (1 gold)
-		if char.Gold > 0 {
-			char.Gold -= 1
-			sb.WriteString("PENALTY: Lost 1 gold\n")
-		}
-
-		if damaged := char.DamageEquippedArmor(); len(damaged) > 0 {
-			sb.WriteString("Your armor is battered:\n")
-			for _, name := range damaged {
-				sb.WriteString("  - ")
-				sb.WriteString(name)
-				sb.WriteString("\n")
-			}
-			sb.WriteString("A merchant can repair it.\n")
-		}
-
-		// Respawn with 50% HP
-		char.CurrentHitPoints = char.MaxHitPoints / 2
-		if char.CurrentHitPoints < 1 {
-			char.CurrentHitPoints = 1
-		}
-
-		if char.BoundRoomID != "" && char.BoundRoomID != char.CurrentRoomID {
-			if boundRoom, ok := c.game.RelocateCharacter(char, char.BelongsUserID, char.BoundRoomID); ok {
+		if outcome.RespawnRoomID != "" && outcome.RespawnRoomID != char.CurrentRoomID {
+			if boundRoom, ok := c.game.RelocateCharacter(char, char.BelongsUserID, outcome.RespawnRoomID); ok {
 				sb.WriteString(fmt.Sprintf("\nYou find yourself back at %s.\n", boundRoom.Name))
 			}
 		}

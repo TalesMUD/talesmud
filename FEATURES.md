@@ -396,6 +396,16 @@ local solved = tales.game.getFlag(characterID, "puzzle_solved_statue")
 
 **Common uses**: Quest state, puzzle progress, secret discoveries
 
+`LastResetDay` records the calendar day of a new-day heal. `AwaitingReset` is set when the death policy's respawn mode is `next_reset`. Both stay empty on existing characters.
+
+### Ruleset profile
+
+`config/ruleset.yaml` sits beside `config/combat_balance.yaml` and must not repeat its keys (`level_gap`, `threat`, `reward_scale`, `class_balance`, difficulty multipliers, named overrides). The shipped file matches current play: level cap 50, automatic level-up, 10% XP loss and 1 on-hand gold on defeat, respawn at the bind room with half HP, no dawn heal, no resource keys, combat pacing `auto`.
+
+An enemy's authored XP reward is the base. When that reward is 0, `progression.base_xp_by_enemy_level` supplies the base, and otherwise the built-in `15*level+5` curve does. `reward_scale` multiplies that base afterward. `level_up_mode: trainer` banks combat, quest, exploration, and select catch-up until `tales.characters.applyLevels`. Quest XP is not multiplied by `reward_scale`.
+
+Death math is `ruleset.ApplyDeath`, called from defeat only.
+
 ### Refilling resources
 
 Per-character balances live in the `character_resources` table. A key grants uses only after something configures an allowance (calendar day in a timezone, or a fixed interval). Inside a period, raising the allowance or a modifier does not give the extra uses back; the next period refills to the new amount. An empty catalog, which is the process default, answers every key as not configured and writes no row.
@@ -1678,6 +1688,15 @@ tales.characters.damage(characterID, amount)
 tales.characters.heal(characterID, amount)
 tales.characters.teleport(characterID, roomID)
 tales.characters.giveXP(characterID, amount)
+
+-- Signed gold change. A debit that would go below zero is refused and returns false.
+tales.characters.addGold(characterID, delta)
+
+-- Set the respawn room. An empty room id clears it. Unknown rooms return false.
+tales.characters.setBind(characterID, roomID)
+
+-- Apply levels the current XP can already buy. Returns how many levels were gained.
+tales.characters.applyLevels(characterID)
 ```
 
 ### tales.resources Module

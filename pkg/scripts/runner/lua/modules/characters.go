@@ -1,11 +1,20 @@
 package modules
 
 import (
+	"errors"
+	"strings"
+
+	log "github.com/sirupsen/logrus"
 	lua "github.com/yuin/gopher-lua"
 	luar "layeh.com/gopher-luar"
 
+	"github.com/talesmud/talesmud/pkg/entities/characters"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	luarunner "github.com/talesmud/talesmud/pkg/scripts/runner/lua"
 )
+
+var errNotEnoughGold = errors.New("not enough gold")
 
 // RegisterCharactersModule registers the tales.characters module
 func RegisterCharactersModule(L *lua.LState, runner *luarunner.LuaRunner) int {
@@ -209,6 +218,123 @@ func RegisterCharactersModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 		return 1
 	}))
 
+	// tales.characters.addGold(id, delta) - signed gold change. A debit below zero is refused.
+	mod.RawSetString("addGold", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+		delta := int64(L.CheckNumber(2))
+		facade := runner.GetFacade()
+		if facade == nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+		err := facade.CharactersService().Modify(id, func(character *characters.Character) error {
+			if character.Gold+delta < 0 {
+				return errNotEnoughGold
+			}
+			character.Gold += delta
+			return nil
+		})
+		if err != nil {
+			if !errors.Is(err, errNotEnoughGold) {
+				log.WithError(err).WithField("characterID", id).Warn("addGold failed")
+			}
+			L.Push(lua.LBool(false))
+			return 1
+		}
+		pushGoldUpdate(runner, id)
+		L.Push(lua.LBool(true))
+		return 1
+	}))
+
+	// tales.characters.setBind(id, roomID) - set or clear the respawn room.
+	mod.RawSetString("setBind", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+		roomID := strings.TrimSpace(L.CheckString(2))
+		facade := runner.GetFacade()
+		if facade == nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+		if roomID != "" {
+			room, err := facade.RoomsService().FindByID(roomID)
+			if err != nil || room == nil {
+				L.Push(lua.LBool(false))
+				return 1
+			}
+		}
+		err := facade.CharactersService().Modify(id, func(character *characters.Character) error {
+			character.BoundRoomID = roomID
+			return nil
+		})
+		L.Push(lua.LBool(err == nil))
+		return 1
+	}))
+
+	// tales.characters.applyLevels(id) - apply levels the current XP can buy.
+	mod.RawSetString("applyLevels", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+		facade := runner.GetFacade()
+		if facade == nil {
+			L.Push(lua.LNumber(0))
+			return 1
+		}
+		var gained int
+		var userID, msg string
+		err := facade.CharactersService().Modify(id, func(character *characters.Character) error {
+			userID = character.BelongsUserID
+			result := leveling.ApplyPendingLevels(character)
+			if result == nil {
+				return nil
+			}
+			gained = result.LevelsGained
+			msg = result.Message
+			return nil
+		})
+		if err != nil {
+			log.WithError(err).WithField("characterID", id).Warn("applyLevels failed")
+			L.Push(lua.LNumber(0))
+			return 1
+		}
+		if gained > 0 {
+			if game := runner.GetGame(); game != nil && msg != "" {
+				game.SendMessage() <- messages.MessageResponse{
+					Audience:   messages.MessageAudienceUser,
+					AudienceID: userID,
+					Type:       messages.MessageTypeLevelUp,
+					Message:    msg,
+				}
+			}
+			pushGoldUpdate(runner, id)
+		}
+		L.Push(lua.LNumber(gained))
+		return 1
+	}))
+
 	L.Push(mod)
 	return 1
+}
+
+func pushGoldUpdate(runner *luarunner.LuaRunner, characterID string) {
+	game := runner.GetGame()
+	facade := runner.GetFacade()
+	if game == nil || facade == nil {
+		return
+	}
+	character, err := facade.CharactersService().FindByID(characterID)
+	if err != nil || character == nil {
+		return
+	}
+	if update := messages.NewCharacterUpdateMessage(character.BelongsUserID, character); update != nil {
+		game.SendMessage() <- update
+	}
+	game.SendMessage() <- messages.InventoryUpdateMessage{
+		MessageResponse: messages.MessageResponse{
+			Audience:   messages.MessageAudienceUser,
+			AudienceID: character.BelongsUserID,
+			Type:       messages.MessageTypeInventoryUpdate,
+		},
+		Inventory:     character.Inventory,
+		EquippedItems: character.EquippedItems,
+		Gold:          character.Gold,
+	}
 }

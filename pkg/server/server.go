@@ -14,6 +14,7 @@ import (
 	mud "github.com/talesmud/talesmud/pkg/mudserver"
 	"github.com/talesmud/talesmud/pkg/repository"
 	"github.com/talesmud/talesmud/pkg/resources"
+	"github.com/talesmud/talesmud/pkg/ruleset"
 	"github.com/talesmud/talesmud/pkg/scripts/runner"
 	"github.com/talesmud/talesmud/pkg/server/handler"
 	"github.com/talesmud/talesmud/pkg/service"
@@ -109,10 +110,13 @@ func NewApp() App {
 	facade := service.NewFacade(repos, scriptRunner)
 	mud := mud.New(facade)
 	scriptRunner.SetServices(facade, mud.GameCtrl())
+	if err := ruleset.LoadDefault(); err != nil {
+		log.WithError(err).Warn("Ruleset file failed to load; using built-in defaults")
+	}
 	if store, err := resources.New(client.DB()); err != nil {
 		log.WithError(err).Warn("Refilling resource store unavailable")
 	} else {
-		// Empty catalog: no key grants a use until a ruleset configures one.
+		store.Configure(ruleset.ResourceAllowances())
 		mud.SetResourceStore(store)
 		scriptRunner.SetResourceStore(store)
 	}
