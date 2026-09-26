@@ -13,6 +13,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/mudserver/game"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/resources"
 	"github.com/talesmud/talesmud/pkg/scripts"
 	"github.com/talesmud/talesmud/pkg/service"
 )
@@ -22,6 +23,7 @@ type MUDServer interface {
 	Run()
 	GameCtrl() def.GameCtrl
 	HandleConnections(*gin.Context)
+	SetResourceStore(*resources.Store)
 }
 
 // WS close codes (application-specific, RFC6455 4000-4999).
@@ -62,6 +64,14 @@ type server struct {
 
 func (server *server) GameCtrl() def.GameCtrl {
 	return server.Game
+}
+
+// SetResourceStore keeps the game and any later caller on the same catalog.
+func (server *server) SetResourceStore(store *resources.Store) {
+	if server == nil || server.Game == nil {
+		return
+	}
+	server.Game.Resources = store
 }
 
 // New creates a new mud server
@@ -165,12 +175,12 @@ func (server *server) HandleConnections(c *gin.Context) {
 	old := server.Clients.Replace(user.ID, connection)
 	if old != nil && old.ws != nil {
 		log.WithFields(log.Fields{
-			"userId":     user.ID,
-			"nickname":   user.Nickname,
-			"ip":         remoteIP,
-			"oldIP":      old.remoteIP,
+			"userId":      user.ID,
+			"nickname":    user.Nickname,
+			"ip":          remoteIP,
+			"oldIP":       old.remoteIP,
 			"characterId": user.LastCharacter,
-			"reason":     "session replaced",
+			"reason":      "session replaced",
 		}).Info("WS replace-existing")
 		deadline := time.Now().Add(time.Second)
 		_ = old.ws.WriteControl(

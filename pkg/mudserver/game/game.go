@@ -10,6 +10,7 @@ import (
 	c "github.com/talesmud/talesmud/pkg/mudserver/game/commands"
 	def "github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	m "github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/resources"
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
@@ -34,6 +35,10 @@ type Game struct {
 
 	// Private cellar copies (WoW-style, not a raid platform)
 	RoomInstances *roomInstanceAdapter
+
+	// Resources is the refilling balance store. Nil until the process attaches one.
+	// An attached store with an empty catalog does not grant any uses.
+	Resources *resources.Store
 
 	// messages
 	onMessageReceived chan interface{}

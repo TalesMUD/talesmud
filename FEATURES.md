@@ -396,6 +396,12 @@ local solved = tales.game.getFlag(characterID, "puzzle_solved_statue")
 
 **Common uses**: Quest state, puzzle progress, secret discoveries
 
+### Refilling resources
+
+Per-character balances live in the `character_resources` table. A key grants uses only after something configures an allowance (calendar day in a timezone, or a fixed interval). Inside a period, raising the allowance or a modifier does not give the extra uses back; the next period refills to the new amount. An empty catalog, which is the process default, answers every key as not configured and writes no row.
+
+Veilspan use: a daily gathering node or a delve ticket, spent from a room-action script. No content ships a key, so play is unchanged.
+
 ### CopyOnPickup Tracking
 ```go
 // Character methods:
@@ -1673,6 +1679,17 @@ tales.characters.heal(characterID, amount)
 tales.characters.teleport(characterID, roomID)
 tales.characters.giveXP(characterID, amount)
 ```
+
+### tales.resources Module
+
+Balances for configured keys. An unknown key returns `ok=false` and does not create a row.
+
+```lua
+local allowance, remaining, ok = tales.resources.get(characterID, key)
+local remaining, ok = tales.resources.consume(characterID, key, n)
+```
+
+`consume` with `n <= 0` returns the current remaining and `ok=true` when the key exists. Spending more than `remaining` leaves the balance unchanged and returns `ok=false`.
 
 ### tales.npcs Module
 ```lua

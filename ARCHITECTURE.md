@@ -1532,6 +1532,7 @@ pkg/
 ├── service/           # Business logic
 ├── repository/        # Data access
 ├── db/                # Database client
+├── resources/         # Per-character refilling balances
 ├── scripts/           # Script execution
 │   ├── scripts.go     # Script entity and types
 │   ├── scriptrunner.go # Runner interface
@@ -1553,6 +1554,8 @@ pkg/
 ## Scripting System Architecture
 
 The scripting system uses Lua (via gopher-lua) for dynamic game content. JavaScript support is deprecated but maintained for backward compatibility.
+
+Refilling resources are a SQLite table (`character_resources`) owned by `pkg/resources`. The HTTP startup attaches one empty store to the game and to the Lua runner. Callers configure allowances later. Until then, `tales.resources.get` and `consume` report the key as missing.
 
 ### Script Runner Architecture
 
@@ -1595,6 +1598,7 @@ The scripting system uses Lua (via gopher-lua) for dynamic game content. JavaScr
 | `tales.game` | Messaging, flags, items, room manipulation |
 | `tales.quests` | Quest operations (accept, complete, progress, grant, abandon) |
 | `tales.utils` | Utilities (random, UUID, dice rolling) |
+| `tales.resources` | Configured refilling balances (`get`, `consume`) |
 
 #### tales.game Functions
 

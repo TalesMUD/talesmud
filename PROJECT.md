@@ -246,6 +246,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - SQLite for all game data
   - World export/import functionality
   - YAML/JSON data file support
+  - Optional per-character refilling resources (`character_resources`). No key is configured unless a ruleset lists one, so an unconfigured server never spends a balance. Scripts read them through `tales.resources`.
 
 ## Technology Stack
 

@@ -124,6 +124,15 @@ local success = tales.characters.teleport(characterID, roomID)
 local success = tales.characters.giveXP(characterID, amount)
 ```
 
+### tales.resources
+
+Configured keys only. An unknown key returns `ok = false` and writes nothing.
+
+```lua
+local allowance, remaining, ok = tales.resources.get(characterID, key)
+local remaining, ok = tales.resources.consume(characterID, key, n)
+```
+
 ### tales.npcs
 
 ```lua

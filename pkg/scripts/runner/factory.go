@@ -3,6 +3,7 @@ package runner
 import (
 	"github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
+	"github.com/talesmud/talesmud/pkg/resources"
 	"github.com/talesmud/talesmud/pkg/scripts"
 	luarunner "github.com/talesmud/talesmud/pkg/scripts/runner/lua"
 	"github.com/talesmud/talesmud/pkg/scripts/runner/lua/modules"
@@ -38,6 +39,14 @@ func (r *MultiRunner) SetServices(facade service.Facade, game def.GameCtrl) {
 // GetLuaRunner returns the Lua runner for module registration
 func (r *MultiRunner) GetLuaRunner() *luarunner.LuaRunner {
 	return r.luaRunner
+}
+
+// SetResourceStore installs the store the Lua resource API reads.
+func (r *MultiRunner) SetResourceStore(store *resources.Store) {
+	if r == nil {
+		return
+	}
+	r.luaRunner.SetResourceStore(store)
 }
 
 // Run executes a script with the given context, routing to the appropriate runner

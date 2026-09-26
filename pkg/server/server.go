@@ -13,12 +13,13 @@ import (
 	dbsqlite "github.com/talesmud/talesmud/pkg/db/sqlite"
 	mud "github.com/talesmud/talesmud/pkg/mudserver"
 	"github.com/talesmud/talesmud/pkg/repository"
+	"github.com/talesmud/talesmud/pkg/resources"
 	"github.com/talesmud/talesmud/pkg/scripts/runner"
 	"github.com/talesmud/talesmud/pkg/server/handler"
 	"github.com/talesmud/talesmud/pkg/service"
 	"github.com/talesmud/talesmud/pkg/service/groq"
-	"github.com/talesmud/talesmud/pkg/webui"
 	"github.com/talesmud/talesmud/pkg/util"
+	"github.com/talesmud/talesmud/pkg/webui"
 	"github.com/talesmud/talesmud/pkg/webuiplay"
 )
 
@@ -108,6 +109,13 @@ func NewApp() App {
 	facade := service.NewFacade(repos, scriptRunner)
 	mud := mud.New(facade)
 	scriptRunner.SetServices(facade, mud.GameCtrl())
+	if store, err := resources.New(client.DB()); err != nil {
+		log.WithError(err).Warn("Refilling resource store unavailable")
+	} else {
+		// Empty catalog: no key grants a use until a ruleset configures one.
+		mud.SetResourceStore(store)
+		scriptRunner.SetResourceStore(store)
+	}
 
 	return &app{
 		Router: r,

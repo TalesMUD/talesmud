@@ -11,6 +11,7 @@ import (
 	luar "layeh.com/gopher-luar"
 
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
+	"github.com/talesmud/talesmud/pkg/resources"
 	"github.com/talesmud/talesmud/pkg/scripts"
 	"github.com/talesmud/talesmud/pkg/service"
 )
@@ -20,8 +21,9 @@ type LuaRunner struct {
 	mu sync.RWMutex
 
 	// Services for script API
-	facade service.Facade
-	game   def.GameCtrl
+	facade    service.Facade
+	game      def.GameCtrl
+	resources *resources.Store
 
 	// VM pool for performance
 	pool *VMPool
@@ -69,6 +71,27 @@ func (r *LuaRunner) GetGame() def.GameCtrl {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.game
+}
+
+// SetResourceStore installs the refilling-resource store scripts read.
+// Nil leaves every tales.resources call unanswered.
+func (r *LuaRunner) SetResourceStore(store *resources.Store) {
+	if r == nil {
+		return
+	}
+	r.mu.Lock()
+	r.resources = store
+	r.mu.Unlock()
+}
+
+// ResourceStore returns the store set for this runner, or nil.
+func (r *LuaRunner) ResourceStore() *resources.Store {
+	if r == nil {
+		return nil
+	}
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.resources
 }
 
 // RegisterModule registers a custom module loader
@@ -169,14 +192,15 @@ func (r *LuaRunner) logModuleDiagnostics(L *lua.LState, scriptName string) {
 	}
 
 	logrus.WithFields(logrus.Fields{
-		"script":        scriptName,
-		"talesType":     talesType,
-		"talesUtils":    utilsType,
+		"script":         scriptName,
+		"talesType":      talesType,
+		"talesUtils":     utilsType,
 		"talesUtilsRoll": rollType,
-		"talesGame":     gameType,
-		"talesGameLog":  gameLogType,
+		"talesGame":      gameType,
+		"talesGameLog":   gameLogType,
 	}).Debug("Lua module diagnostics")
 }
+
 // createState creates a new Lua state with modules and sandbox applied
 func (r *LuaRunner) createState() *lua.LState {
 	L := lua.NewState(lua.Options{
