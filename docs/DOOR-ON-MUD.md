@@ -20,7 +20,14 @@ Every new engine behavior has a Veilspan use case and is default-off or default-
 
 ## Decision tiers
 
-For each system the order is: (1) an existing engine feature plus YAML, (2) a Lua script in the pack, (3) a small generic Lua API or hook, (4) a new Go primitive only when Lua cannot own it (persistence, combat core, auth, transport). Door flavor, prices, news, and service chatter stay in the pack. The tier each system landed on is in the map below.
+Marcus, 2026-09-26: where code does not work, work around it with a Lua script in the pack. The order for every system below is:
+
+1. An existing engine feature plus YAML config.
+2. A Lua script in the pack (`worlds/aethermoor-lord`).
+3. A small generic Lua API or hook (a getter, a setter, or an event). Engine code, so no Door, Aethermoor, or licensed-property strings. Sandboxed, tested, and listed in this document.
+4. A new generic Go primitive only when Lua cannot own it: persistence across restart, the combat core, auth, or transport.
+
+Prices, news, service chatter, daily flavor, forest events, trainer speech, and a later dragon or prestige script stay at tier 2. When a rule can be "the engine exposes a hook and Lua does the rule," it stops at tier 3. The map records the tier each item landed on, and why a lower tier was not enough.
 
 `config/combat_balance.yaml` stays the owner of difficulty multipliers, named overrides, `level_gap`, threat colors, `reward_scale` (including `first_kill_bonus`), and `class_balance`. The new ruleset file sits beside it and must not repeat those keys. The loader rejects a ruleset document that contains any of them.
 
@@ -43,27 +50,33 @@ Not in this engine: a refilling resource store, a trainer/healer/banker/inn role
 
 ## System map
 
-Each row is a generic primitive. The Door column is content or config, not a Go fork.
+Each row is one system. The first number is the tier that owns it. Later numbers are the pieces under it. Door names, prices, and chatter are pack content.
 
 | System | Tier | Why | Veilspan default |
 | --- | --- | --- | --- |
-| Daily walks | **4** store, **3** `tales.resources` get/consume, **1** allowance YAML, **2** the pack script that spends a key and narrates the walk | Balances have to survive restart on a calendar or interval clock. Lua cannot own that table. Flavor text is a room-action script. | No keys. Nothing in play calls the store. |
-| Level-scaled monsters | **1** authored `EnemyTrait`, `level_gap`, threat. **4** generator filter by player level (see instances). **2** any extra forest event on enter | Stats and colors already exist. A random event is a script. | Authored rooms and spawners unchanged. |
-| 12 levels and trainer gate | **1** `level_cap` and `level_up_mode` in the ruleset. **4** `MaybeLevelUp` at the four existing XP call sites, because combat and quests apply levels in Go today. **3** `tales.characters.applyLevels`. **2** the trainer script (price, dialogue, master duel via a normal attack) | The mode has to intercept victory and quest XP or it never banks. The mentor's price and speech are content. Masters are boss NPCs; first-kill bonus already pays them. | `auto`, cap 50. Levels still apply immediately. |
-| Death | **4** `ApplyDeath`, called only from `processCombatDefeat`. **1** the percents and respawn mode | Defeat has no script hook, and the default path must match today's losses with no content installed. Not wired through victory or `reward_scale`. Orange attack warning stays in `attack.go`. | 10% XP, 1 on-hand gold, bindpoint, 50% HP, armor damage. |
-| Healer | **2** room or dialog script. **3** `tales.characters.addGold` (heal already exists) | `tales.characters.heal` already fills HP. The script checks gold and calls `addGold` with a negative amount. No service command. | No script, no charge. |
-| Bank | **2** script. **3** `addGold`. Coin held in a character flag via existing `setFlag` | Death percent reads on-hand `Gold` only, so a script that moves coin into a flag keeps the vault safe. No `BankGold` field. | No script. Flag absent. |
-| Weapon and armor shops | **1** `MerchantTrait` | Already live. | Unchanged. |
-| Inn | **2** script calls `setFlag(id, "resting", true)` (what `rest` already does). **3** `tales.characters.setBind` | Bind is a persisted room id the defeat hook already reads. | `rest` unchanged. Nothing binds unless a script calls `setBind`. |
-| Gems | **2** a flag or a normal item | A counter does not need a column. | Unchanged. |
-| News and ledger | **2** a room-action `response` or script | Lines are content. | No new command. |
-| Player list | **1** `who` | The Door view renders that reply. | Unchanged. |
-| New day full heal | **1** `new_day.full_heal` applied on character select | Select has no script event (the registry still has no `Dispatch` callers). A YAML switch has to work with no pack script. Resource refill stays on the store's clock. | `false`. Select does not heal. |
-| Dragon, prestige reset | **2** later, a pack script. Not Phase 1 | Needs no engine type until a script is actually short of an API. | Off. |
-| PvP | Not built | No flag that pretends it works. | Impossible, as today. |
-| Global events | Not built | Registry stays without callers. OnDeath / OnAggro / OnFlee stay unexecuted. | Unchanged. |
-| Turn-based fights | **1** `combat.pacing`. **4** one branch in the combat ticker | This is the combat core. `auto` must stay the current 5s window and manual kick. | `auto`. |
-| Procedural dungeon | **4** `instances.Manager.Generate` (clone lifecycle, timeout, per-character map). **3** `tales.instances.generate`. **2** the room-action script, which consumes a resource first | Exit rewriting, cleanup, and follow blocking are the instance manager. The script decides whether to pay and what flavor to print. The manager does not read the calendar and does not pull followers. | Existing `Enter` graph clone unchanged. |
+| Daily walks | **4**, then **3** `tales.resources`, **1** allowance YAML, **2** the pack script | The balance has to survive restart on a calendar or interval clock. Lua cannot own that table. The script spends a key and prints the line. | No keys. An unknown key writes nothing. |
+| Daily flavor | **2** | A room-action `response` or on-enter script. The new-day pass does not run scripts: select still has no script event. | No lines. |
+| Level-scaled monsters | **1** | Authored `EnemyTrait`, `level_gap`, and threat already scale a fight. The generator's level filter is part of the procedural row. | Authored rooms and spawners unchanged. |
+| Forest random events | **2** | An on-enter or room-action script. The generator does not roll story events. | No script, no event. |
+| 12 levels and trainer gate | **4**, then **1** `level_cap` / `level_up_mode`, **3** `applyLevels`, **2** the trainer script | Combat victory and quest turn-in apply levels in Go today. The mode has to intercept those sites or XP never banks. Price and speech are the script. | `auto`, cap 50. Levels still apply immediately. |
+| Master challenges | **2**, on top of **1** | A normal `attack` on a boss NPC. `first_kill_bonus` in `combat_balance.yaml` already pays the first kill. No duel command. | Bosses stay authored content. |
+| Death | **4**, then **1** the percents and respawn mode | Defeat has no script hook, and the default path must match today's losses with no content installed. `ApplyDeath` is called only from `processCombatDefeat`. It is not wired through victory or `reward_scale`. The orange attack warning stays in `attack.go`. | 10% XP, 1 on-hand gold, bindpoint, 50% HP, armor damage. |
+| Healer | **2**, plus **3** `addGold` | `tales.characters.heal` already fills HP. The script checks coin and debits with `addGold`. No healer command. | No script, no charge. |
+| Bank | **2**, plus **3** `addGold` and existing **1** `setFlag` | Death percent reads on-hand `Gold` only. The script moves coin into a character flag. No `BankGold` field. | No script. Flag absent. |
+| Weapon and armor shops | **1** | `MerchantTrait` buy and sell. | Unchanged. |
+| Inn | **2**, plus **3** `setBind` | The script calls `setFlag(id, "resting", true)`, which is what `rest` already stores, and `setBind` for the room id defeat already reads. | `rest` unchanged. Nothing binds unless a script calls `setBind`. |
+| Gems | **2** | A character flag or a normal item. A counter does not need a column. | Unchanged. |
+| News and ledger | **2** | A room-action `response` or script. Lines are content. | No new command. |
+| Player list | **1** | `who`. The Door view renders that reply. | Unchanged. |
+| New-day full heal | **1** | `new_day.full_heal` on character select. Select has no script event, so a YAML switch has to work with no pack script. Resource refill stays on the store's clock. | `false`. Select does not heal. |
+| Dragon endgame | **2** | A later pack script. No engine type until a script is actually short of an API. Not written in Phase 1. | Off. |
+| Prestige reset | **2** | A later pack script, same bar as the dragon. Not written in Phase 1. | Off. |
+| PvP | **4**, not built | Hits are the combat core. Lua cannot resolve them. No flag was added that pretends a duel exists. | Impossible, as today. |
+| Global event dispatch | **2** | Room and on-enter scripts already carry a flavor event. The registry still has no `Dispatch` callers, and OnDeath / OnAggro / OnFlee stay unexecuted. Calling that registry would be tier 4 and was not done. | Unchanged. |
+| Turn-based fights | **4**, then **1** `combat.pacing` | This is the combat core. `auto` must stay the current 5s window and manual kick. | `auto`. |
+| Procedural dungeon | **4**, then **3** `tales.instances.generate`, **2** the room-action script | Exit rewriting, cleanup, and follow blocking are the instance manager. The script pays the resource first and prints the line. The manager does not read the calendar and does not pull followers. | Existing `Enter` graph clone unchanged. |
+| Local accounts | **4** | Password hashing, sessions, and the reset outbox are auth. Lua cannot own them. | Auth0. Local routes are not mounted. |
+| Text client | **4** | The socket, the frame, and the key-to-command map are transport. The page reads rooms, NPCs, merchants, combat, and resources and sends engine commands. It keeps no prices, XP, or fight results. | Classic `/play`. The hook is not installed. |
 
 ## Ruleset file
 
@@ -157,7 +170,7 @@ Read by the combat controller only as a branch around the existing decision wind
 
 ### Procedural instances
 
-`Manager.Generate(rooms, characterID, spec, playerLevel)`:
+`Manager.Generate(rooms, characterID, playerLevel, spec)`:
 
 - Picks `spec.Count` templates from `spec.TemplateIDs` (with replacement if the pool is smaller).
 - Links them in a line. The last room's exit returns to `spec.ReturnRoomID`. The first room is the entry.
@@ -181,7 +194,7 @@ Small, generic, no world names. Each is a no-op or a pure read when the caller p
 | `tales.characters.applyLevels(id)` | Runs `MaybeLevelUp` and returns the number of levels gained (0 in trainer mode until this is called, 0 in auto mode when nothing is pending). |
 | `tales.resources.get(characterID, key)` | Returns allowance and remaining for a configured key. Unknown key returns remaining 0 and `ok=false`. |
 | `tales.resources.consume(characterID, key, n)` | Spends `n` against the configured allowance. Returns remaining, or `ok=false` when the key is missing or the balance is short. |
-| `tales.instances.generate(characterID, spec)` | Spec is count, template room ids, return room, encounters `{id, minLevel, maxLevel, weight}`, timeout seconds. Returns the entry room id or fails without leaving clones. |
+| `tales.instances.generate(characterID, playerLevel, spec)` | Spec is count, template room ids, return room, encounters `{id, minLevel, maxLevel, weight}`, timeout seconds. Returns the entry room id or fails without leaving clones. The caller script moves the character. |
 
 `tales.characters.heal`, `damage`, `giveXP`, `teleport`, and `tales.game.setFlag` / `getFlag` stay as they are. `giveXP` still does not itself level; the ruleset hook does that on the combat and quest paths, and `applyLevels` is the explicit catch-up.
 
