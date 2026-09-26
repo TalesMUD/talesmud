@@ -86,3 +86,13 @@
 - Smoke: `https://veilspan.com/` 200, `/play/` 200 and `bundle.js?v=b5wrap`, that bundle is 200 and contains `docked-hotbar`, `/api/server-info` 200, `POST /api/guest` 200. Listening on 8010 at 2026-09-26 12:01:01Z. Production guest at 1366×768: terminal lines keep `light`, `centuries`, and `whisper` whole. The spell bar is inside the action-bar frame (8 slots, 7 empty). Dock bottom is 732/768. At 1920×1080 and 2560×1440 the dock sits on the bottom of the grid (28px under it). Shots are in `.director/ux-audit/after/room-*.png`.
 - Residuals: the 40px row grid leaves 28–36px under the dock. Phone room copy is still clamped. No character sheet in the default layout. Focus-save still writes the expanded arrangement. The top-right chip still overlaps Edit Layout (B6). No BattleStage shot.
 
+## B6 — Top-right header
+- SHA: `110cba1ce2bd32c595bea949e1edd45dfcc20126` (`110cba1`)
+- What changed: the play view no longer stacks a Materialize account menu on top of the character chip. Edit Layout, Party, Friends, and the chip are one flex row (36px, 8px gap, gold border `rgba(251, 191, 36, 0.45)`, radius 8px, gold hover). Party and Friends are the same gold icon buttons with those aria-labels; guests do not get those two buttons. The chip opens a gold menu aligned to the chip's right edge (`z-index` 80). It closes on Escape and on a click outside. Under 1100px, and on the phone header, Edit Layout moves into that menu. Cache-bust `?v=b6header`.
+- Tests: mud-client `npm run build` succeeded (existing unused-CSS and a11y warnings only). No new Go tests (client-only).
+- Deploy: pushed `engine-june`. VPS fast-forwarded `9681bdf` → `110cba1` (includes the B5 progress commit), copied the client into `pkg/webuiplay/dist`, rebuilt `bin/tales`. `sudo systemctl restart` needs a password, so pid 754506 was SIGTERM'd and `Restart=always` started pid 754911. Door pid 695590 on :8020 was not restarted.
+- Smoke: `https://veilspan.com/` 200, `/play/` 200 and `bundle.js?v=b6header`, that bundle is 200 and contains "Edit Layout", `/api/server-info` 200, `POST /api/guest` 200. Listening on 8010 at 2026-09-26 12:10:25Z. Guest at 1366, 1920, 2560, and 3440: Edit Layout does not intersect the chip or the Veilspan link, the menu's right edge matches the chip, Escape closes it, and a click outside closes it. Phone 390×844: the account button opens Edit Layout / Settings / Create Account / End Session without covering the room title. Shots: `.director/ux-audit/after/b6-before-*.png` and `b6-after-*.png`.
+- Residuals: a logged-in account adds the Party and Friends buttons in that same row; this pass opened guests only. No character sheet in the default layout. Focus-save still writes the expanded arrangement. No BattleStage shot.
+
+B5+B6 DONE
+
