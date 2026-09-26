@@ -406,6 +406,8 @@ An enemy's authored XP reward is the base. When that reward is 0, `progression.b
 
 Death math is `ruleset.ApplyDeath`, called from defeat only.
 
+`combat.pacing: auto` keeps the 5 second decision window and resolves a queued action on the next beat. `turn_based` leaves that window open until the player sends a command. NPCs still take their own turns afterward. The default file is `auto`.
+
 ### Refilling resources
 
 Per-character balances live in the `character_resources` table. A key grants uses only after something configures an allowance (calendar day in a timezone, or a fixed interval). Inside a period, raising the allowance or a modifier does not give the extra uses back; the next period refills to the new amount. An empty catalog, which is the process default, answers every key as not configured and writes no row.

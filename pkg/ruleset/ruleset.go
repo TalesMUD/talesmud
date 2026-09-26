@@ -469,6 +469,17 @@ func SetDeath(policy DeathPolicy) {
 	mu.Unlock()
 }
 
+// SetPacing overrides combat pacing until Reset. Unknown values are ignored.
+func SetPacing(mode string) {
+	mode = strings.TrimSpace(mode)
+	if mode != PacingAuto && mode != PacingTurnBased {
+		return
+	}
+	mu.Lock()
+	current.pacing = mode
+	mu.Unlock()
+}
+
 // SetNewDay overrides the dawn heal switch until Reset.
 func SetNewDay(fullHeal bool, timezone string) {
 	if strings.TrimSpace(timezone) == "" {

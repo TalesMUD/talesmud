@@ -508,9 +508,13 @@ func (c *CombatController) emitCombatTurn(instance *combat.CombatInstance, actor
 	deadlineMs := int64(0)
 	prose := fmt.Sprintf("Round %d — %s's turn.", instance.Round, actor.Name)
 	if actor.Type == combat.CombatantTypePlayer {
-		deadlineMs = deadline.UnixMilli()
-		prose = fmt.Sprintf("Round %d — Your turn, %s! Choose an action (auto-attack in %ds).",
-			instance.Round, actor.Name, c.engine.Config.DecisionWindowSeconds)
+		if ruleset.Pacing() == ruleset.PacingTurnBased {
+			prose = fmt.Sprintf("Round %d — Your turn, %s! Choose an action.", instance.Round, actor.Name)
+		} else {
+			deadlineMs = deadline.UnixMilli()
+			prose = fmt.Sprintf("Round %d — Your turn, %s! Choose an action (auto-attack in %ds).",
+				instance.Round, actor.Name, c.engine.Config.DecisionWindowSeconds)
+		}
 	}
 	for _, player := range instance.Players {
 		if !player.IsAlive || player.HasFled {
@@ -731,7 +735,11 @@ func (c *CombatController) processAllTurnsLocked(instance *combat.CombatInstance
 		if instance.Phase != combat.CombatPhaseWaitingPlayer {
 			instance.Phase = combat.CombatPhaseWaitingPlayer
 			instance.TurnStartTime = now
-			instance.DecisionDeadline = now.Add(c.engine.Config.DecisionWindow())
+			if ruleset.Pacing() == ruleset.PacingTurnBased {
+				instance.DecisionDeadline = time.Time{}
+			} else {
+				instance.DecisionDeadline = now.Add(c.engine.Config.DecisionWindow())
+			}
 			c.emitCombatTurn(instance, current, instance.DecisionDeadline)
 			// If already queued, resolve on the next eligible tick (small windup via NextActionAt)
 			if hasQueue {
@@ -740,7 +748,7 @@ func (c *CombatController) processAllTurnsLocked(instance *combat.CombatInstance
 			return
 		}
 
-		if !hasQueue && now.Before(instance.DecisionDeadline) {
+		if !hasQueue && (ruleset.Pacing() == ruleset.PacingTurnBased || now.Before(instance.DecisionDeadline)) {
 			return
 		}
 	}
