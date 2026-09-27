@@ -186,6 +186,9 @@
   .character-widget {
     container-type: inline-size;
     container-name: character;
+    height: 100%;
+    min-height: 0;
+    overflow: auto;
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
   }
 

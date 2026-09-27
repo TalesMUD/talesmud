@@ -52,7 +52,7 @@ export function presetWidgets(kind, heightPx) {
       ...bars,
     ];
   }
-  let sheetTop = Math.max(4, Math.round(body * 0.45));
+  let sheetTop = Math.max(4, Math.round(body * 0.38));
   if (sheetTop > body - 2) sheetTop = Math.max(2, body - 2);
   const sheetBot = body - sheetTop;
   return [
