@@ -560,13 +560,21 @@ func (c *CombatController) emitCombatTurn(instance *combat.CombatInstance, actor
 	}
 }
 
+func combatantView(r combat.CombatantRef) messages.CombatantView {
+	return messages.CombatantView{
+		ID: r.ID, Name: r.Name, Portrait: r.Portrait,
+		HP: r.CurrentHP, MaxHP: r.MaxHP, Level: r.Level,
+		Telegraph: r.TelegraphAbility, Enraged: r.Enraged,
+	}
+}
+
 func combatantViewsFromInstance(instance *combat.CombatInstance) []messages.CombatantView {
 	out := make([]messages.CombatantView, 0, len(instance.Players)+len(instance.Enemies))
 	for _, p := range instance.Players {
-		out = append(out, messages.CombatantView{ID: p.ID, Name: p.Name, Portrait: p.Portrait, HP: p.CurrentHP, MaxHP: p.MaxHP, Level: p.Level})
+		out = append(out, combatantView(p))
 	}
 	for _, e := range instance.Enemies {
-		out = append(out, messages.CombatantView{ID: e.ID, Name: e.Name, Portrait: e.Portrait, HP: e.CurrentHP, MaxHP: e.MaxHP, Level: e.Level})
+		out = append(out, combatantView(e))
 	}
 	return out
 }
@@ -844,7 +852,19 @@ func (c *CombatController) resolveNPCTurn(instance *combat.CombatInstance, curre
 	switch action {
 	case combat.CombatActionAttack:
 		if targetID != "" {
-			result := c.engine.ProcessAttack(instance, current.ID, targetID)
+			step := c.engine.StepNPCAttack(instance, current.ID, targetID)
+			if step.Telegraph {
+				c.notifyCombatAction(instance, messages.CombatActionMessage{
+					ActorID:   current.ID,
+					ActorName: current.Name,
+					TargetID:  targetID,
+					Action:    "telegraph",
+					Result:    "telegraph",
+					FxID:      "telegraph",
+				}, step.Message)
+				break
+			}
+			result := step.Attack
 			target := instance.GetCombatantByID(targetID)
 			remaining, maxHP := int32(0), int32(0)
 			if target != nil {

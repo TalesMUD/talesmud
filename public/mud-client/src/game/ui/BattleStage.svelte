@@ -46,6 +46,10 @@
   $: visible = phase === 'active' || phase === 'ending';
   $: if (!visible) logExpanded = false;
   $: enemies = $store.combatEnemies || [];
+  $: windupEnemy = enemies.find((e) => e && e.telegraph && (e.hp ?? 0) > 0);
+  $: windupText = windupEnemy
+    ? `${windupEnemy.name} is winding up ${windupEnemy.telegraph}!`
+    : "";
   $: players = $store.combatPlayers || [];
   $: targetId = $store.combatTargetId;
   $: turn = $store.combatTurn;
@@ -665,6 +669,9 @@
     data-count={enemyCount}
     aria-label="Enemies"
   >
+    {#if windupText}
+      <div class="telegraph-banner" role="status">{windupText}</div>
+    {/if}
     {#each enemies as enemy (enemy.id)}
       {@const pct = hpPct(enemy.hp, enemy.maxHp)}
       {@const dead = (enemy.hp ?? 0) <= 0}
@@ -694,7 +701,9 @@
             class:threat-orange={enemy.threat === 'orange'}
             class:threat-red={enemy.threat === 'red'}
             class:threat-skull={enemy.threat === 'skull'}
-          >{#if enemy.threat === 'skull'}<span class="skull-mark" title="Skull" aria-hidden="true">☠</span>{/if}{enemy.name}</div>
+            class:winding={!!enemy.telegraph}
+            class:enraged={!!enemy.enraged}
+          >{#if enemy.threat === 'skull'}<span class="skull-mark" title="Skull" aria-hidden="true">☠</span>{/if}{enemy.name}{#if enemy.enraged}<span class="enrage-badge">Enraged</span>{/if}</div>
           <div class="hp-row">
             <span class="hp-label">HP</span>
             <div class="hp-track">
@@ -1371,6 +1380,48 @@
       0 0 0 1px rgba(0, 0, 0, 0.55),
       inset 0 0 0 1px rgba(255, 220, 150, 0.12),
       0 4px 12px rgba(0, 0, 0, 0.35);
+  }
+
+  .nameplate.winding {
+    animation: telegraphPulse 1.4s ease-in-out infinite;
+    border-color: #fbbf24;
+  }
+
+  .nameplate.enraged {
+    border-color: #ef4444;
+    color: #fecaca;
+  }
+
+  .enrage-badge {
+    margin-left: 0.45rem;
+    padding: 0.05rem 0.35rem;
+    border-radius: 3px;
+    background: rgba(239, 68, 68, 0.85);
+    color: #fff;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .telegraph-banner {
+    flex: 1 0 100%;
+    z-index: 6;
+    max-width: 100%;
+    padding: 0.45rem 0.9rem;
+    border: 1px solid rgba(251, 191, 36, 0.85);
+    border-radius: 6px;
+    background: rgba(40, 18, 4, 0.92);
+    color: #fde68a;
+    font-family: var(--font-display, 'Cinzel', serif);
+    letter-spacing: 0.06em;
+    text-align: center;
+    text-transform: uppercase;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  }
+
+  @keyframes telegraphPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.15); }
+    50% { box-shadow: 0 0 16px 2px rgba(251, 191, 36, 0.85); }
   }
 
   .nameplate.threat-grey { color: #9ca3af; }

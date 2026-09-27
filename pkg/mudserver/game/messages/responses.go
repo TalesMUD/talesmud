@@ -543,8 +543,10 @@ type CombatantView struct {
 	Portrait string `json:"portrait,omitempty"`
 	HP       int32  `json:"hp"`
 	MaxHP    int32  `json:"maxHp"`
-	Level    int32  `json:"level,omitempty"`
-	Threat   string `json:"threat,omitempty"` // enemy con color relative to the viewer
+	Level     int32  `json:"level,omitempty"`
+	Threat    string `json:"threat,omitempty"` // enemy con color relative to the viewer
+	Telegraph string `json:"telegraph"`        // wind-up ability; empty clears the warning
+	Enraged   bool   `json:"enraged"`
 }
 
 // CombatStartMessage is the structured combat UI payload (portraits, HP).

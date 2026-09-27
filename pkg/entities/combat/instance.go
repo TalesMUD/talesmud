@@ -73,12 +73,17 @@ type CombatantRef struct {
 	HasFled    bool          `json:"hasFled"`
 
 	// Snapshot of combat stats at combat start
-	Level       int32  `json:"level,omitempty"`
-	ClassID     string `json:"classId,omitempty"`
-	MaxHP       int32  `json:"maxHp"`
-	CurrentHP   int32  `json:"currentHp"`
-	AttackPower int32  `json:"attackPower"`
-	Defense     int32  `json:"defense"`
+	Level      int32  `json:"level,omitempty"`
+	ClassID    string `json:"classId,omitempty"`
+	Difficulty string `json:"difficulty,omitempty"`
+	// TelegraphAbility is the wind-up name while TelegraphTurns is still counting down.
+	TelegraphAbility string `json:"telegraphAbility,omitempty"`
+	TelegraphTurns   int    `json:"telegraphTurns,omitempty"`
+	Enraged          bool   `json:"enraged,omitempty"`
+	MaxHP            int32  `json:"maxHp"`
+	CurrentHP        int32  `json:"currentHp"`
+	AttackPower      int32  `json:"attackPower"`
+	Defense          int32  `json:"defense"`
 
 	// Attribute modifiers (calculated from character attributes)
 	STRMod int `json:"strMod"`

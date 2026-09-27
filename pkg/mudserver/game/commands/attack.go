@@ -422,6 +422,7 @@ func combatViews(refs []combat.CombatantRef, viewerLevel int32) []messages.Comba
 	for _, r := range refs {
 		view := messages.CombatantView{
 			ID: r.ID, Name: r.Name, Portrait: r.Portrait, HP: r.CurrentHP, MaxHP: r.MaxHP, Level: r.Level,
+			Telegraph: r.TelegraphAbility, Enraged: r.Enraged,
 		}
 		if r.Type == combat.CombatantTypeNPC {
 			view.Threat = balance.ThreatTier(viewerLevel, r.Level)

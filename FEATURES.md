@@ -898,6 +898,11 @@ Players and NPCs both use `CombatantRef.Level`, copied from the character or NPC
 
 After the level-gap multiplier and before a crit, `damage_dealt` scales hits that class lands and `damage_taken` scales hits that class receives. `behind_dealt` multiplies `damage_dealt` again when that class is the lower level. Class id `wizard` uses the `mage` row. A missing class or a multiplier of 1 leaves that side unchanged. The level-10 gap table uses this so warrior, rogue, ranger, and mage share one band: at-level bosses about 50–65%, and a good-gear boss three levels up about 50%.
 
+### Boss telegraph and enrage
+**Config**: `boss_mechanics` in `config/combat_balance.yaml`.
+
+Bosses and elites (`hard`) spend `telegraph_turns` actions winding up `telegraph_label` before that hit lands. BattleStage shows a banner and pulses the nameplate for that window (`telegraph_ms`). Bosses enrage after `enrage_after_rounds` or at `enrage_below_hp`, gain an Enraged badge, hit for `enrage_damage`, and stop starting new wind-ups. Trash does not wind up. Elites do not enrage.
+
 ### Threat colors
 `threat` in `config/combat_balance.yaml` maps `(enemyLevel - playerLevel)` to `grey / green / yellow / orange / red / skull` (defaults: ≤ −3 grey, −2..−1 green, 0..+1 yellow, +2 orange, +3..+4 red, ≥ +5 skull). The tier is on the room NPC payload (`threat`) and on combat enemy views, computed for the viewer. Room cards and BattleStage nameplates use that color; skull enemies also show ☠. `attack` on orange, red, or skull warns once ("X is much stronger than you") and does not engage. `attack!` or a second `attack` on that enemy does. The room Attack button confirms, then sends `attack!`.
 

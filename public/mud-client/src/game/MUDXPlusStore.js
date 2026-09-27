@@ -198,6 +198,8 @@ function normalizeCombatant(raw) {
     maxHp: raw.maxHp ?? raw.MaxHP ?? raw.maxHP ?? 1,
     level: raw.level ?? raw.Level ?? 0,
     threat: raw.threat || raw.Threat || '',
+    telegraph: raw.telegraph || raw.Telegraph || '',
+    enraged: !!(raw.enraged || raw.Enraged),
   };
 }
 

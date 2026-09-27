@@ -118,6 +118,22 @@ class_balance:
     damage_dealt: 2.65
     damage_taken: 0.46
 
+# Boss wind-up and late-fight spike. telegraph_turns is how many of this
+# enemy's actions are a warning before the hit. telegraph_ms is the pulse
+# length on the battle screen. Enrage is bosses only: after the round count
+# or at/under the HP fraction, damage is multiplied and further wind-ups stop.
+# hard is the elite tier. Trash does not wind up.
+boss_mechanics:
+  telegraph_turns: 1
+  telegraph_ms: 1400
+  telegraph_label: "Crushing Blow"
+  telegraph_tiers: ["boss", "hard"]
+  enrage_after_rounds: 16
+  enrage_below_hp: 0.30
+  enrage_damage: 1.20
+  enrage_tiers: ["boss"]
+  enrage_skips_telegraph: true
+
 # Notes:
 # - Tuned so strength difference drives duration (trash fast, bosses long but killable).
 # - Sims auto-spend distributable attribute points on primary attr (competent player).
