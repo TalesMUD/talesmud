@@ -8,7 +8,7 @@ import {
   widgetsEqual,
   normalizeTemplates,
 } from './layoutTemplates.js';
-import { clampWidgets, foldDockedHotbar, kindForWidth, presetWidgets } from './layoutPresets.js';
+import { clampWidgets, foldDockedHotbar, kindForWidth, presetWidgets, widgetsToPersist } from './layoutPresets.js';
 
 const STORAGE_KEY = LAYOUT_STORAGE_KEY;
 
@@ -236,7 +236,7 @@ function createLayoutStore() {
     saveToStorage() {
       const state = get({ subscribe });
       const data = buildLayoutStoragePayload({
-        widgets: fromGridItems(state.widgets),
+        widgets: widgetsToPersist(fromGridItems(state.widgets), state.focusId, state.focusSnapshot),
         templates: state.templates,
         activeTemplateId: state.activeTemplateId,
       });
@@ -264,12 +264,20 @@ function createLayoutStore() {
     exitEditMode(save = true) {
       update(state => {
         if (save) {
-          // Keep current widgets, disable editing
+          // A focused widget is a temporary cover. Write and show the
+          // arrangement from before that expansion.
+          const focused = state.focusId && Array.isArray(state.focusSnapshot);
+          const widgets = focused
+            ? toGridItems(clampWidgets(state.focusSnapshot), false)
+            : setWidgetsEditable(state.widgets, false);
           return {
             ...state,
             editMode: false,
-            widgets: setWidgetsEditable(state.widgets, false),
-            pendingWidgets: null
+            widgets,
+            pendingWidgets: null,
+            focusId: null,
+            focusSnapshot: null,
+            layoutEpoch: focused ? bumpEpoch(state) : state.layoutEpoch,
           };
         } else {
           // Restore from pending, disable editing
@@ -528,7 +536,7 @@ function createLayoutStore() {
       if (!trimmed) return null;
 
       const state = get({ subscribe });
-      const snapshot = fromGridItems(state.widgets);
+      const snapshot = widgetsToPersist(fromGridItems(state.widgets), state.focusId, state.focusSnapshot);
       const existing = state.templates.find(
         (t) => t.name.toLowerCase() === trimmed.toLowerCase()
       );

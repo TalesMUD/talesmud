@@ -1,6 +1,7 @@
 <script>
   import { afterUpdate, onDestroy, tick } from 'svelte';
   import { isTextEntry, prefersReducedMotion, rarityClass } from '../keyboardShortcuts.js';
+  import { battleDockOpen } from '../uiChrome.js';
   import { hashedAvatar } from '../portraitSrc.js';
   import {
     skillDisplayName,
@@ -303,6 +304,7 @@
   }
 
   onDestroy(() => {
+    unsubDock();
     stopTick();
     stopLootReveal();
     if (bannerTimer) clearTimeout(bannerTimer);
@@ -344,8 +346,13 @@
 
   function cmd(text) {
     panel = null;
+    battleDockOpen.set(false);
     if (sendMessage && text) sendMessage(text);
   }
+
+  const unsubDock = battleDockOpen.subscribe((open) => {
+    if (!open && panel === 'items') panel = null;
+  });
 
   function doAttack() {
     const target = enemies.find((e) => e.id === targetId) || enemies.find((e) => (e.hp ?? 0) > 0);
@@ -625,6 +632,7 @@
 
   function togglePanel(name) {
     panel = panel === name ? null : name;
+    battleDockOpen.set(panel === 'items');
   }
 
   function toggleLogExpanded() {

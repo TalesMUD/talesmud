@@ -52,7 +52,8 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Play client WS: single-flight socket gate; close 4001 (session replaced) does not auto-reconnect; `/play` JS/CSS served no-cache
   - Action bar Option C: room dirs + room actions + Shop; fixed INV/MAP/SAY chrome; **Recipes** pin seeded by default; optional Look/Rest/… via ⋯
   - Gathering & crafting v1 (no professions): room GATHER chips + recipes/craft; R0209 CRAFT/RECIPES chips; R0102 first-gather hint
-  - Spell Bar / Hotbar: docked on the desktop action bar (a moved hotbar widget stays separate); skills + consumables; Rest seeded on empty/default bar (slot 7); Look/Talk/Flee bindable; no Search=look
+  - Spell Bar / Hotbar: docked on the desktop action bar (a moved hotbar widget stays separate); nine slots; skills + consumables; Rest seeded on empty/default bar (slot 7); Look/Talk/Flee bindable; no Search=look. Keys 1–9 fire those slots, Tab cycles combat targets, Escape closes the top panel, and `?` opens the shortcut list. None of those fire while a command or other text field is focused.
+  - Desktop and wide presets include the character sheet and equipment beside the room and terminal. Saving a layout while a widget is focused stores the arrangement from before that expansion.
   - Play terminal wraps room lines on word boundaries and reflows that scrollback when the panel is resized
   - Play header: one row for Edit Layout, Party, Friends, and the account chip, with a gold menu aligned to the chip
   - OOC Resting chip on character HP / mobile header while `Flags.resting`; clears on combat or rest end

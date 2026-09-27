@@ -874,6 +874,19 @@ function createStore() {
       });
     },
 
+    cycleCombatTarget: (dir = 1) => {
+      update((state) => {
+        const living = (state.combatEnemies || []).filter((e) => (e.hp ?? 0) > 0);
+        if (!living.length) return state;
+        const step = dir < 0 ? -1 : 1;
+        let idx = living.findIndex((e) => e.id === state.combatTargetId);
+        if (idx < 0) idx = step > 0 ? -1 : 0;
+        idx = (idx + step + living.length) % living.length;
+        state.combatTargetId = living[idx].id;
+        return state;
+      });
+    },
+
     beginCombat: (enemies, players, message) => {
       update((state) => {
         const nextEnemies = normalizeCombatantList(enemies);

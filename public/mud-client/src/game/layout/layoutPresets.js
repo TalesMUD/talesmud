@@ -52,11 +52,33 @@ export function presetWidgets(kind, heightPx) {
       ...bars,
     ];
   }
+  let sheetTop = Math.max(4, Math.round(body * 0.45));
+  if (sheetTop > body - 2) sheetTop = Math.max(2, body - 2);
+  const sheetBot = body - sheetTop;
   return [
-    { id: 'room-1', widgetType: 'room', x: 0, y: 0, w: 12, h: body, visible: true },
-    { id: 'terminal-1', widgetType: 'terminal', x: 12, y: 0, w: 12, h: body, visible: true },
+    { id: 'room-1', widgetType: 'room', x: 0, y: 0, w: 9, h: body, visible: true },
+    { id: 'terminal-1', widgetType: 'terminal', x: 9, y: 0, w: 9, h: body, visible: true },
+    { id: 'character-1', widgetType: 'character', x: 18, y: 0, w: 6, h: sheetTop, visible: true },
+    { id: 'equipment-1', widgetType: 'equipment', x: 18, y: sheetTop, w: 6, h: sheetBot, visible: true },
     ...bars,
   ];
+}
+
+/** True when two grid rects share any cell. */
+export function widgetsOverlap(a, b) {
+  if (!a || !b) return false;
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+/**
+ * A focused widget is expanded over the grid. Persist the arrangement from
+ * before that expansion so Save does not store the 24-column cover.
+ */
+export function widgetsToPersist(live, focusId, focusSnapshot) {
+  if (focusId && Array.isArray(focusSnapshot)) {
+    return focusSnapshot.map((w) => ({ ...w }));
+  }
+  return Array.isArray(live) ? live.map((w) => ({ ...w })) : [];
 }
 
 /** Pull every widget back onto the 24-column grid. Minimum size is 2×2. Does not reorder a saved layout. */

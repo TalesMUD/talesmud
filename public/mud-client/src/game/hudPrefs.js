@@ -22,7 +22,7 @@ export const INVENTORY_OPEN_OVERLAY = 'overlay';
 export const INVENTORY_OPEN_WIDGET = 'widget';
 export const DEFAULT_INVENTORY_OPEN_MODE = INVENTORY_OPEN_OVERLAY;
 
-export const HOTBAR_SLOT_COUNT = 8;
+export const HOTBAR_SLOT_COUNT = 9;
 /** 0-based index for the default Rest seed (slot 7). */
 export const DEFAULT_REST_SLOT = 6;
 
