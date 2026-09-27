@@ -4,6 +4,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/talesmud/talesmud/pkg/entities/characters"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 )
 
@@ -40,4 +41,33 @@ func ForNPC(n *npc.NPC) string {
 		return ""
 	}
 	return URL(n.ID, n.TemplateID)
+}
+
+// ForPlayer returns the shared portrait for a supported race/class pair.
+func ForPlayer(ch *characters.Character) string {
+	if ch == nil {
+		return ""
+	}
+	race := strings.ToLower(strings.TrimSpace(ch.Race.ID))
+	class := strings.ToLower(strings.TrimSpace(ch.Class.ID))
+	if race == "elve" || race == "elves" {
+		race = "elf"
+	}
+	if class == "wizard" {
+		class = "mage"
+	}
+	if class == "hunter" {
+		class = "ranger"
+	}
+	switch race {
+	case "human", "dwarf", "elf":
+	default:
+		return ""
+	}
+	switch class {
+	case "warrior", "rogue", "mage", "ranger", "cleric", "druid":
+	default:
+		return ""
+	}
+	return path.Join(PublicPath, "player-"+race+"-"+class+".png")
 }

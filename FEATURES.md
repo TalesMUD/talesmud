@@ -142,6 +142,9 @@ DiscoveredAreas map[string]bool  // Area names
 ### NPC / enemy portraits
 Room presence sends `portrait` URLs (`/api/portraits/{templateOrId}.png`). Import copies `assets/images/sprites/{npcs,enemies}/` into `uploads/portraits/`. Sprites are 512px full-figure art; the original NPC/enemy cards clip a 48px square around the body (`object-fit: cover` + zoom). Missing files fall back to hashed `img/avatars/{1-14}p.png`. Component CSS lives in `public/mud-client/public/extra.css` and must be deployed with `bundle.js`.
 
+### Player portraits
+The equipment paper doll, combat card, and party roster use 512px transparent sprites at `/api/portraits/player-<race>-<class>.png`. The set covers Human, Dwarf, Elf × Warrior, Rogue, Mage, Ranger, Cleric, Druid. Stored `elve` maps to `elf`, `wizard` to `mage`, and `hunter` to `ranger`. The server supplies combat and party portrait URLs; the client derives the equipment URL from character race/class. An unavailable combination or failed image uses a class silhouette.
+
 WebSocket connects go through a process-wide gate (`websocketGate.js`): one CONNECTING/OPEN/CLOSING socket, no reactive `ws=null` reconnect, and close code 4001 (session replaced) does not auto-reconnect. The Map overview is an Inventory-style body-portal panel (`map-panel`, never Materialize's `.modal`) with explicit pixel size so the canvas fills the stage. `/play` JS/CSS/HTML is served `Cache-Control: no-cache` plus `?v=` on asset URLs so deploys are not stuck behind a cached `bundle.js`.
 
 ### Instanced cellars

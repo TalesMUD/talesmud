@@ -94,11 +94,26 @@ export function portraitTemplateKey(entity) {
   return "";
 }
 
+/** Stable race/class portrait for playable characters. */
+export function playerPortraitSrc(entity) {
+  if (!entity) return '';
+  const value = (field) => typeof field === 'string' ? field : (field?.id || field?.name || '');
+  let race = String(value(entity.race)).toLowerCase();
+  let cls = String(classToken(entity)).toLowerCase();
+  if (race === 'elve' || race === 'elves') race = 'elf';
+  if (cls === 'wizard') cls = 'mage';
+  if (cls === 'hunter') cls = 'ranger';
+  if (!['human', 'dwarf', 'elf'].includes(race) || !['warrior', 'rogue', 'mage', 'ranger', 'cleric', 'druid'].includes(cls)) return '';
+  return `/api/portraits/player-${race}-${cls}.png`;
+}
+
 /** Full-body sprite URL for room cards (2:3). Players with no template use a class silhouette. */
 export function portraitSrc(entity) {
   if (!entity) return figureFallback(null);
   const key = portraitTemplateKey(entity);
   if (key) return `/api/portraits/${key}.png`;
+  const player = playerPortraitSrc(entity);
+  if (player) return player;
   return figureFallback(entity);
 }
 

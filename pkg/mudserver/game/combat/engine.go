@@ -108,6 +108,7 @@ func (e *Engine) CreateCombatantFromCharacter(char *characters.Character) combat
 		HasFled:     false,
 		Level:       char.Level,
 		ClassID:     char.Class.ID,
+		Portrait:    portraits.ForPlayer(char),
 		MaxHP:       char.MaxHitPoints,
 		CurrentHP:   char.CurrentHitPoints,
 		AttackPower: attackPower,

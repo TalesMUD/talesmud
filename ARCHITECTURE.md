@@ -100,7 +100,7 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
     ├── quests/            # Quest CRUD (creator for writes)
     ├── quest-progress/    # Quest log per character (owner/admin)
     ├── characters/:id/map # Per-character discovered-world atlas (owner/admin)
-    ├── portraits/:filename # Public NPC/enemy portrait images (no auth, guest-ok)
+    ├── portraits/:filename # Public NPC/enemy/player portrait images (no auth, guest-ok)
     ├── world/validation   # Creator world health diagnostics
     ├── diagnostics/world  # Creator world health diagnostics
     ├── validate/:entityType # Draft Creator entity validation
@@ -117,7 +117,7 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
 
 `GET /api/quest-progress/:characterId` returns quest progress merged with quest definition fields for the player UI. Objective rows include `objectiveId`, definition `description`, current/required counts, and completion state so REST refreshes and WebSocket quest log messages have matching player-facing text.
 
-`GET /api/portraits/:filename` is public (no Auth0), same pattern as room backgrounds. The importer copies `assets/images/npcs/` and `assets/images/sprites/{npcs,enemies}/` into `uploads/portraits/` (flat `{id}.png`). Room NPC payloads include `portrait` URLs; the web client falls back to hashed `img/avatars` so faces always render.
+`GET /api/portraits/:filename` is public (no Auth0), same pattern as room backgrounds. The importer copies NPC/enemy sprites into `uploads/portraits/` (flat `{id}.png`); player race/class sprites are published there as `player-<race>-<class>.png`. Room NPC, combatant, and party roster payloads include portrait URLs. The client maps player race/class for the paper doll and uses a built-in class silhouette if a file fails to load.
 
 Private cellars: an exit with `type: instance` or `instance: true`, or a normal exit from a non-instance room into a room tagged `instance`/`instanced`, clones the dest room plus rooms reachable without returning to the hub. Each character gets their own copy; the hub stays shared. Empty instances are deleted.
 

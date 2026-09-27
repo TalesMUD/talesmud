@@ -2,7 +2,7 @@
   import { afterUpdate, onDestroy, tick } from 'svelte';
   import { isTextEntry, prefersReducedMotion, rarityClass } from '../keyboardShortcuts.js';
   import { battleDockOpen } from '../uiChrome.js';
-  import { enemySilhouette, playerSilhouette } from '../portraitSrc.js';
+  import { enemySilhouette, playerSilhouette, portraitSrc } from '../portraitSrc.js';
   import {
     skillDisplayName,
     isConsumableItem,
@@ -318,7 +318,7 @@
       if (p.startsWith('/') || p.startsWith('http')) return p;
       return `/api/portraits/${String(p).replace(/\.png$/i, '')}.png`;
     }
-    if (c && selfId && c.id === selfId) return playerSilhouette(selfClass);
+    if (c && selfId && c.id === selfId) return portraitSrc(character);
     return enemySilhouette();
   }
 
