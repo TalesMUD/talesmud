@@ -189,6 +189,7 @@
     height: 100%;
     min-height: 0;
     overflow: auto;
+    --panel-padding: 0.55em;
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
   }
 
@@ -253,7 +254,7 @@
 
   /* Character identity */
   .char-identity {
-    margin-bottom: 1em;
+    margin-bottom: 0.35em;
   }
 
   .char-name {
@@ -289,8 +290,8 @@
   .stat-bars {
     display: flex;
     flex-direction: column;
-    gap: 0.6em;
-    margin-bottom: 0.75em;
+    gap: 0.28em;
+    margin-bottom: 0.35em;
   }
 
   .bar-container {
@@ -370,11 +371,11 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.5em 0.6em;
+    padding: 0.28em 0.5em;
     background: rgba(251, 191, 36, 0.08);
     border-radius: 6px;
     border: 1px solid rgba(251, 191, 36, 0.15);
-    margin-bottom: 0.75em;
+    margin-bottom: 0.35em;
   }
 
   .gold-label {
@@ -401,14 +402,18 @@
   .attributes-grid {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
-    gap: 0.4em;
+    gap: 0.25em;
+  }
+
+  .game-panel-divider {
+    margin: 0.3em 0 0.2em;
   }
 
   .attr-item {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 0.45em 0.35em;
+    padding: 0.22em 0.25em;
     background: var(--panel-inner-bg);
     border-radius: 6px;
     border: 1px solid var(--panel-inner-border);
@@ -509,8 +514,8 @@
   .combat-stat {
     display: flex;
     align-items: center;
-    gap: 0.5em;
-    padding: 0.45em 0.55em;
+    gap: 0.35em;
+    padding: 0.28em 0.4em;
     background: var(--panel-inner-bg);
     border-radius: 6px;
     border: 1px solid var(--panel-inner-border);
@@ -709,9 +714,9 @@
   /* Internal Stats | Skills tabs */
   .sheet-tabs {
     display: flex;
-    gap: 0.35em;
-    margin: 0 0 0.85em;
-    padding: 0.2em;
+    gap: 0.3em;
+    margin: 0 0 0.4em;
+    padding: 0.15em;
     background: var(--panel-inner-bg);
     border: 1px solid var(--panel-inner-border);
     border-radius: 8px;
@@ -719,7 +724,7 @@
 
   .sheet-tab {
     flex: 1;
-    min-height: 40px;
+    min-height: 30px;
     display: inline-flex;
     align-items: center;
     justify-content: center;

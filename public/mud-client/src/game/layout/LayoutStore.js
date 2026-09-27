@@ -8,7 +8,7 @@ import {
   widgetsEqual,
   normalizeTemplates,
 } from './layoutTemplates.js';
-import { clampWidgets, foldDockedHotbar, kindForWidth, presetWidgets, widgetsToPersist } from './layoutPresets.js';
+import { clampWidgets, fitWidgetsToRows, foldDockedHotbar, kindForWidth, presetWidgets, viewportRows, widgetsToPersist } from './layoutPresets.js';
 
 const STORAGE_KEY = LAYOUT_STORAGE_KEY;
 
@@ -132,6 +132,31 @@ function bumpEpoch(state) {
   return (state.layoutEpoch || 0) + 1;
 }
 
+/**
+ * Player's layout in row units, before it is scaled to the current window.
+ * Null until a saved layout or a preset is applied. Edits replace it.
+ * Save writes this, so a temporary fit is not what gets stored.
+ */
+let canonicalWidgets = null;
+let canonicalAtEdit = null;
+
+function cloneWidgets(widgets) {
+  return Array.isArray(widgets) ? widgets.map((w) => ({ ...w })) : [];
+}
+
+function adoptCanonical(widgets) {
+  canonicalWidgets = cloneWidgets(widgets);
+}
+
+function rowsForWindow() {
+  const height = (typeof window !== 'undefined' && window.innerHeight) || 800;
+  return viewportRows(height);
+}
+
+function fittedNow(widgets) {
+  return fitWidgetsToRows(widgets, rowsForWindow());
+}
+
 function createLayoutStore() {
   const { subscribe, set, update } = writable({
     widgets: toGridItems(DEFAULT_LAYOUT, false),
@@ -166,6 +191,7 @@ function createLayoutStore() {
     const height = (typeof window !== 'undefined' && window.innerHeight) || 800;
     const safeKind = kind === 'compact' || kind === 'wide' ? kind : 'desktop';
     const widgets = clampWidgets(presetWidgets(safeKind, height));
+    adoptCanonical(widgets);
     update(state => ({
       ...state,
       widgets: toGridItems(widgets, state.editMode),
@@ -186,9 +212,10 @@ function createLayoutStore() {
         const parsed = parseLayoutStorage(stored);
         if (parsed) {
           const widgets = clampWidgets(foldDockedHotbar(ensureHotbarInLayout(parsed.widgets)));
+          adoptCanonical(widgets);
           update(state => ({
             ...state,
-            widgets: toGridItems(widgets, state.editMode),
+            widgets: toGridItems(fittedNow(widgets), state.editMode),
             templates: parsed.templates,
             activeTemplateId: parsed.activeTemplateId,
             presetKind: null,
@@ -213,21 +240,23 @@ function createLayoutStore() {
       applyPresetKind(kind, opts);
     },
 
-    /** Refill a preset on resize. Saved layouts are only clamped back onto the grid. */
+    /** Refill a preset on resize. A saved layout is scaled down when it is taller than the window. */
     onViewportResize() {
       const state = get({ subscribe });
       if (state.editMode || typeof window === 'undefined') return;
+      if (state.focusId) return;
       if (state.presetKind) {
         const kind = state.presetLocked ? state.presetKind : kindForWidth(window.innerWidth);
         applyPresetKind(kind, { lock: !!state.presetLocked });
         return;
       }
+      if (!canonicalWidgets) adoptCanonical(fromGridItems(state.widgets));
+      const next = fittedNow(clampWidgets(canonicalWidgets));
       const current = fromGridItems(state.widgets);
-      const clamped = clampWidgets(current);
-      if (widgetsEqual(current, clamped)) return;
+      if (widgetsEqual(current, next)) return;
       update(s => ({
         ...s,
-        widgets: toGridItems(clamped, s.editMode),
+        widgets: toGridItems(next, s.editMode),
         layoutEpoch: bumpEpoch(s),
       }));
     },
@@ -235,8 +264,12 @@ function createLayoutStore() {
     // Save current layout (+ templates metadata) to localStorage
     saveToStorage() {
       const state = get({ subscribe });
+      // A saved layout stores the player's rows, not the copy scaled to this window.
+      const source = (!state.presetKind && canonicalWidgets)
+        ? cloneWidgets(canonicalWidgets)
+        : widgetsToPersist(fromGridItems(state.widgets), state.focusId, state.focusSnapshot);
       const data = buildLayoutStoragePayload({
-        widgets: widgetsToPersist(fromGridItems(state.widgets), state.focusId, state.focusSnapshot),
+        widgets: source,
         templates: state.templates,
         activeTemplateId: state.activeTemplateId,
       });
@@ -252,6 +285,7 @@ function createLayoutStore() {
     // Enter edit mode - enable dragging/resizing
     enterEditMode() {
       undoStack.length = 0;
+      canonicalAtEdit = canonicalWidgets ? cloneWidgets(canonicalWidgets) : null;
       update(state => ({
         ...state,
         editMode: true,
@@ -281,6 +315,7 @@ function createLayoutStore() {
           };
         } else {
           // Restore from pending, disable editing
+          canonicalWidgets = canonicalAtEdit ? cloneWidgets(canonicalAtEdit) : canonicalWidgets;
           const restored = state.pendingWidgets || state.widgets;
           return {
             ...state,
@@ -294,6 +329,8 @@ function createLayoutStore() {
 
       if (save) {
         this.saveToStorage();
+        const state = get({ subscribe });
+        if (!state.presetKind && !state.focusId) this.onViewportResize();
       }
     },
 
@@ -301,6 +338,7 @@ function createLayoutStore() {
     updateWidgets(newWidgets) {
       update(state => {
         remember(state);
+        if (!state.focusId) adoptCanonical(fromGridItems(newWidgets));
         return {
           ...state,
           widgets: newWidgets,
@@ -311,6 +349,7 @@ function createLayoutStore() {
     undo() {
       const prev = undoStack.pop();
       if (!prev) return false;
+      adoptCanonical(prev);
       update(state => ({
         ...state,
         widgets: toGridItems(clampWidgets(prev), state.editMode && !state.layoutLocked),
@@ -325,9 +364,8 @@ function createLayoutStore() {
     toggleCollapse(id) {
       const state = get({ subscribe });
       remember(state);
-      update(s => ({
-        ...s,
-        widgets: s.widgets.map(w => {
+      update(s => {
+        const widgets = s.widgets.map(w => {
           if (w.id !== id) return w;
           const cell = { ...(w[24] || {}) };
           const curH = cell.h ?? w.h ?? 6;
@@ -336,9 +374,14 @@ function createLayoutStore() {
             return { ...w, collapsed: false, h, [24]: { ...cell, h } };
           }
           return { ...w, collapsed: true, restoreH: curH, h: 2, [24]: { ...cell, h: 2 } };
-        }),
-        layoutEpoch: bumpEpoch(s),
-      }));
+        });
+        if (!s.focusId) adoptCanonical(fromGridItems(widgets));
+        return {
+          ...s,
+          widgets,
+          layoutEpoch: bumpEpoch(s),
+        };
+      });
     },
 
     /**
@@ -430,10 +473,12 @@ function createLayoutStore() {
         const maxY = Math.max(...state.widgets.map(w => (w[24]?.y || w.y) + (w[24]?.h || w.h)), 0);
         newWidget.y = maxY;
         newWidget[24].y = maxY;
+        const widgets = [...state.widgets, newWidget];
+        if (!state.focusId) adoptCanonical(fromGridItems(widgets));
 
         return {
           ...state,
-          widgets: [...state.widgets, newWidget]
+          widgets,
         };
       });
 
@@ -443,10 +488,14 @@ function createLayoutStore() {
     // Remove a widget
     removeWidget(id) {
       remember(get({ subscribe }));
-      update(state => ({
-        ...state,
-        widgets: state.widgets.filter(w => w.id !== id)
-      }));
+      update(state => {
+        const widgets = state.widgets.filter(w => w.id !== id);
+        if (!state.focusId) adoptCanonical(fromGridItems(widgets));
+        return {
+          ...state,
+          widgets,
+        };
+      });
     },
 
     // Reset to default layout (in edit mode, so editable=true)
@@ -573,15 +622,18 @@ function createLayoutStore() {
       const tpl = state.templates.find((t) => t.id === templateId);
       if (!tpl) return false;
 
-      const widgets = foldDockedHotbar(ensureHotbarInLayout(
+      const widgets = clampWidgets(foldDockedHotbar(ensureHotbarInLayout(
         JSON.parse(JSON.stringify(tpl.widgets))
-      ));
-      const gridItems = toGridItems(widgets, state.editMode);
+      )));
+      adoptCanonical(widgets);
+      const gridItems = toGridItems(fittedNow(widgets), state.editMode);
 
       update((s) => ({
         ...s,
         widgets: gridItems,
         activeTemplateId: tpl.id,
+        presetKind: null,
+        presetLocked: false,
         pendingWidgets: s.editMode
           ? JSON.parse(JSON.stringify(gridItems))
           : s.pendingWidgets,

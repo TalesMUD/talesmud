@@ -19,17 +19,20 @@
     flex-direction: column;
     box-sizing: border-box;
     /* Top band holds the account chip so it does not cover a panel corner. */
-    padding: 52px 12px 12px;
+    padding: 52px 12px 8px;
     margin: 0 auto;
     max-width: 100vw;
-    height: 100vh;
-    height: 100dvh;
-    gap: var(--panel-gap);
+    height: 100%;
+    max-height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    gap: 0;
   }
 
   .grid-container {
     flex: 1;
     min-height: 0;
+    overflow: hidden;
   }
 
   /* Animation for panel appearance */
@@ -51,12 +54,18 @@
   .gameContainer.mobile {
     padding: 0;
     max-width: 100vw;
-    height: 100vh;
-    height: 100dvh;
+    height: 100%;
+    max-height: 100dvh;
+    overflow: auto;
   }
 
   .gameContainer.mobile :global(.switcher) {
     display: none;
+  }
+
+  /* Edit mode can scroll inside the shell so a new widget under the fold stays reachable. */
+  .gameContainer.edit-mode {
+    overflow: auto;
   }
 
   .gameContainer.combat-dimmed {
@@ -470,7 +479,7 @@
 
 <div class="bg-overlay"></div>
 
-<div class="gameContainer" class:mobile={$isMobile} class:combat-dimmed={$muxStore.combatPhase === "active" || ($muxStore.inCombat && $muxStore.combatPhase !== "ending")}>
+<div class="gameContainer" class:mobile={$isMobile} class:edit-mode={editMode} class:combat-dimmed={$muxStore.combatPhase === "active" || ($muxStore.inCombat && $muxStore.combatPhase !== "ending")}>
   <CharacterSwitcher
     store={muxStore}
     authToken={$authToken}

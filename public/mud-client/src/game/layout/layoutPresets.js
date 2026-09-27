@@ -8,16 +8,112 @@ export const ACTION_DOCK_H = 4;
 
 const ACTION_H = ACTION_DOCK_H;
 
+/** 52px top band + 8px bottom padding inside the play shell. */
+export const VIEWPORT_CHROME_PX = 60;
+
 /**
- * How many 40px rows fit under the account band.
- * 52px top padding + 12px bottom padding. The grid container is the rest,
- * and svelte-grid's content height is rows * ROW_HEIGHT.
+ * How many 40px rows fit in the play shell.
+ * Leaves at least 8px so a border or a subpixel does not spill into page scroll.
  */
 export function viewportRows(heightPx) {
   const height = Number(heightPx) || 800;
-  const usable = Math.max(ROW_HEIGHT * 10, height - 64);
-  const rows = Math.floor(usable / ROW_HEIGHT);
-  return Math.max(12, Math.min(36, rows));
+  const budget = Math.max(ROW_HEIGHT * 8, height - VIEWPORT_CHROME_PX);
+  let rows = Math.floor(budget / ROW_HEIGHT);
+  if (rows * ROW_HEIGHT > budget - 8) rows -= 1;
+  return Math.max(10, Math.min(36, rows));
+}
+
+/** Lowest occupied row (y + h) in a layout. */
+export function layoutBottom(widgets) {
+  let bottom = 0;
+  if (!Array.isArray(widgets)) return 0;
+  for (const w of widgets) {
+    const y = Math.round(Number(w.y) || 0);
+    const h = Math.round(Number(w.h) || 0);
+    if (y + h > bottom) bottom = y + h;
+  }
+  return bottom;
+}
+
+/**
+ * Scale a layout that is taller than `rows` so it ends on that row.
+ * A full-width action bar that already sits on the bottom keeps a readable
+ * height and stays pinned there. Shorter layouts are returned unchanged.
+ * x and w are left alone. Tab lists are copied with the widget.
+ */
+export function fitWidgetsToRows(widgets, rows) {
+  if (!Array.isArray(widgets)) return [];
+  const target = Math.max(6, Math.round(Number(rows) || 0));
+  const copy = widgets.map((w) => ({ ...w }));
+  const bottom = layoutBottom(copy);
+  if (bottom <= target) return copy;
+
+  const action = copy.find((w) => w.widgetType === 'actionbar' && w.visible !== false);
+  let pin = false;
+  let dockSrc = 0;
+  let dockH = 0;
+  if (action) {
+    const ay = Math.round(Number(action.y) || 0);
+    const ah = Math.max(2, Math.round(Number(action.h) || 2));
+    const aw = Math.round(Number(action.w) || 0);
+    if (ay + ah >= bottom && aw >= GRID_COLS) {
+      pin = true;
+      dockSrc = ah;
+      dockH = Math.min(ah, ACTION_DOCK_H);
+      if (dockH < 3 && ah >= 3 && target >= 8) dockH = 3;
+      if (target - dockH < 4) dockH = Math.max(2, target - 4);
+    }
+  }
+
+  const srcSpan = Math.max(1, bottom - (pin ? dockSrc : 0));
+  const destSpan = Math.max(1, target - (pin ? dockH : 0));
+  const mapped = copy.map((w) => {
+    if (pin && w === action) {
+      return { ...w, y: target - dockH, h: dockH };
+    }
+    const y = Math.max(0, Math.round(Number(w.y) || 0));
+    const h = Math.max(1, Math.round(Number(w.h) || 1));
+    const y1 = Math.min(y, srcSpan);
+    const y2 = Math.min(y + h, srcSpan);
+    let ny = Math.round((y1 * destSpan) / srcSpan);
+    let nh = Math.round((y2 * destSpan) / srcSpan) - ny;
+    if (nh < 1) nh = 1;
+    if (ny >= destSpan) ny = destSpan - 1;
+    if (ny + nh > destSpan) nh = destSpan - ny;
+    if (nh < 1) nh = 1;
+    return { ...w, y: ny, h: nh };
+  });
+  return mapped.map((w) => {
+    let y = Math.max(0, Math.round(Number(w.y) || 0));
+    let h = Math.max(1, Math.round(Number(w.h) || 1));
+    if (y >= target) {
+      y = target - 1;
+      h = 1;
+    } else if (y + h > target) {
+      h = target - y;
+    }
+    return { ...w, y, h };
+  });
+}
+
+/** Right-hand column heights for the desktop preset. Sum is `body`. */
+function columnSplit(body) {
+  const total = Math.max(6, body);
+  let sheet = Math.max(3, Math.round(total * 0.5));
+  let tools = Math.max(2, Math.round(total * 0.28));
+  let inv = total - sheet - tools;
+  if (inv < 2) {
+    const fromTools = Math.min(2 - inv, Math.max(0, tools - 2));
+    tools -= fromTools;
+    inv += fromTools;
+  }
+  if (inv < 2) {
+    const fromSheet = Math.min(2 - inv, Math.max(0, sheet - 3));
+    sheet -= fromSheet;
+    inv += fromSheet;
+  }
+  inv = total - sheet - tools;
+  return { sheet, tools, inv };
 }
 
 /** Shape id from width. Height is applied separately so the grid fills the window. */
@@ -36,7 +132,8 @@ export function presetLabel(kind) {
 
 /**
  * Widgets for a named preset. Compact stacks room over terminal.
- * Desktop and wide are side by side; wide is the same split, just taller on big screens.
+ * Desktop and wide keep the room large on the left. The right column is
+ * Character/Equipment tabs, Terminal/Quest/Map tabs, then Inventory.
  */
 export function presetWidgets(kind, heightPx) {
   const rows = viewportRows(heightPx);
@@ -52,14 +149,41 @@ export function presetWidgets(kind, heightPx) {
       ...bars,
     ];
   }
-  let sheetTop = Math.max(4, Math.round(body * 0.38));
-  if (sheetTop > body - 2) sheetTop = Math.max(2, body - 2);
-  const sheetBot = body - sheetTop;
+  const { sheet, tools, inv } = columnSplit(body);
+  const side = 10;
+  const roomW = GRID_COLS - side;
   return [
-    { id: 'room-1', widgetType: 'room', x: 0, y: 0, w: 9, h: body, visible: true },
-    { id: 'terminal-1', widgetType: 'terminal', x: 9, y: 0, w: 9, h: body, visible: true },
-    { id: 'character-1', widgetType: 'character', x: 18, y: 0, w: 6, h: sheetTop, visible: true },
-    { id: 'equipment-1', widgetType: 'equipment', x: 18, y: sheetTop, w: 6, h: sheetBot, visible: true },
+    { id: 'room-1', widgetType: 'room', x: 0, y: 0, w: roomW, h: body, visible: true },
+    {
+      id: 'sheet-1',
+      widgetType: 'tabcontainer',
+      x: roomW,
+      y: 0,
+      w: side,
+      h: sheet,
+      visible: true,
+      activeTabIndex: 0,
+      tabs: [
+        { widgetType: 'character', id: 'character-1' },
+        { widgetType: 'equipment', id: 'equipment-1' },
+      ],
+    },
+    {
+      id: 'tools-1',
+      widgetType: 'tabcontainer',
+      x: roomW,
+      y: sheet,
+      w: side,
+      h: tools,
+      visible: true,
+      activeTabIndex: 0,
+      tabs: [
+        { widgetType: 'terminal', id: 'terminal-1' },
+        { widgetType: 'questlog', id: 'questlog-1' },
+        { widgetType: 'minimap', id: 'minimap-1' },
+      ],
+    },
+    { id: 'inventory-1', widgetType: 'inventory', x: roomW, y: sheet + tools, w: side, h: inv, visible: true },
     ...bars,
   ];
 }

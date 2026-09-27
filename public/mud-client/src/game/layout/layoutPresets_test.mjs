@@ -3,7 +3,10 @@ import {
   ACTION_DOCK_H,
   GRID_COLS,
   ROW_HEIGHT,
+  VIEWPORT_CHROME_PX,
+  fitWidgetsToRows,
   foldDockedHotbar,
+  layoutBottom,
   presetWidgets,
   viewportRows,
   widgetsOverlap,
@@ -27,34 +30,101 @@ function assertOnGrid(widgets, rows, label) {
   }
 }
 
-for (const height of [768, 1080, 1440]) {
+for (const height of [730, 768, 945, 1080, 1440]) {
   const rows = viewportRows(height);
   const stack = rows * ROW_HEIGHT;
-  assert.ok(stack <= height - 64, `${height} stack ${stack} overflows the grid`);
-  assert.ok(stack > height - 64 - ROW_HEIGHT, `${height} leaves a tall empty band`);
+  assert.ok(stack <= height - VIEWPORT_CHROME_PX, `${height} stack ${stack} overflows the grid`);
+  assert.ok(stack > height - VIEWPORT_CHROME_PX - ROW_HEIGHT - 8, `${height} leaves a tall empty band`);
   for (const kind of ['desktop', 'wide']) {
     const layout = presetWidgets(kind, height);
     assert.equal(byType(layout, 'hotbar'), undefined);
+    assert.equal(byType(layout, 'character'), undefined);
+    assert.equal(byType(layout, 'equipment'), undefined);
+    assert.equal(byType(layout, 'terminal'), undefined);
     const action = byType(layout, 'actionbar');
     assert.equal(action.x, 0);
     assert.equal(action.w, GRID_COLS);
     assert.equal(action.h, ACTION_DOCK_H);
     assert.equal(action.y + action.h, rows);
     const room = byType(layout, 'room');
-    const term = byType(layout, 'terminal');
-    const sheet = byType(layout, 'character');
-    const gear = byType(layout, 'equipment');
-    assert.equal(room.y, 0);
-    assert.equal(term.y, 0);
+    const sheet = layout.find((w) => w.id === 'sheet-1');
+    const tools = layout.find((w) => w.id === 'tools-1');
+    const inv = byType(layout, 'inventory');
     assert.equal(room.x, 0);
-    assert.equal(term.x, 9);
-    assert.equal(sheet.x, 18);
-    assert.equal(gear.x, 18);
+    assert.equal(room.w, 14);
     assert.equal(room.h, action.y);
-    assert.equal(sheet.y + sheet.h, gear.y);
-    assert.equal(gear.y + gear.h, action.y);
+    assert.equal(sheet.widgetType, 'tabcontainer');
+    assert.equal(sheet.activeTabIndex, 0);
+    assert.equal(sheet.tabs[0].widgetType, 'character');
+    assert.equal(sheet.tabs[1].widgetType, 'equipment');
+    assert.equal(tools.tabs[0].widgetType, 'terminal');
+    assert.equal(tools.tabs[1].widgetType, 'questlog');
+    assert.equal(tools.tabs[2].widgetType, 'minimap');
+    assert.equal(sheet.x, 14);
+    assert.equal(tools.x, 14);
+    assert.equal(inv.x, 14);
+    assert.equal(sheet.y, 0);
+    assert.equal(tools.y, sheet.h);
+    assert.equal(inv.y, tools.y + tools.h);
+    assert.equal(inv.y + inv.h, action.y);
+    assert.ok(sheet.h >= tools.h, `${kind}@${height} sheet shorter than the tool tabs`);
     assertOnGrid(layout, rows, `${kind}@${height}`);
   }
+}
+
+{
+  // Saved Gimli-style stack: sheet on the left, room in the middle, two tab
+  // columns on the right, action bar under a layout that is taller than 1080p.
+  const gimli = [
+    { id: 'equipment-1', widgetType: 'equipment', x: 0, y: 0, w: 6, h: 14, visible: true },
+    { id: 'character-1', widgetType: 'character', x: 0, y: 14, w: 6, h: 14, visible: true },
+    { id: 'room-1', widgetType: 'room', x: 6, y: 0, w: 10, h: 28, visible: true },
+    {
+      id: 'tabs-a',
+      widgetType: 'tabcontainer',
+      x: 16,
+      y: 0,
+      w: 8,
+      h: 14,
+      visible: true,
+      tabs: [{ widgetType: 'questlog', id: 'questlog-1' }],
+      activeTabIndex: 0,
+    },
+    {
+      id: 'tabs-b',
+      widgetType: 'tabcontainer',
+      x: 16,
+      y: 14,
+      w: 8,
+      h: 14,
+      visible: true,
+      tabs: [{ widgetType: 'terminal', id: 'terminal-1' }],
+      activeTabIndex: 0,
+    },
+    { id: 'actionbar-1', widgetType: 'actionbar', x: 0, y: 28, w: 24, h: 4, visible: true },
+  ];
+  assert.equal(layoutBottom(gimli), 32);
+  for (const height of [730, 768, 945, 1080, 1440]) {
+    const rows = viewportRows(height);
+    const fitted = fitWidgetsToRows(gimli, rows);
+    const bottom = layoutBottom(fitted);
+    assert.ok(bottom <= rows, `${height} fitted bottom ${bottom} > ${rows}`);
+    assert.ok(bottom * ROW_HEIGHT <= height - VIEWPORT_CHROME_PX, `${height} pixels overflow`);
+    const action = byType(fitted, 'actionbar');
+    assert.equal(action.y + action.h, bottom);
+    assert.ok(action.h >= 3, `${height} action bar shrank to ${action.h}`);
+    assert.equal(action.w, GRID_COLS);
+    assert.equal(byType(fitted, 'room').x, 6);
+    assert.equal(fitted.find((w) => w.id === 'tabs-a').tabs[0].widgetType, 'questlog');
+    for (const w of fitted) {
+      assert.ok(w.y + w.h <= bottom, `${height} ${w.id} past the fitted bottom`);
+    }
+  }
+  const short = fitWidgetsToRows(
+    [{ id: 'room-1', widgetType: 'room', x: 0, y: 0, w: 24, h: 8, visible: true }],
+    20,
+  );
+  assert.equal(short[0].h, 8);
 }
 
 {
