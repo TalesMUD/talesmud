@@ -57,7 +57,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Play terminal wraps room lines on word boundaries and reflows that scrollback when the panel is resized
   - Play header: one row for Edit Layout, Party, Friends, and the account chip, with a gold menu aligned to the chip
   - OOC Resting chip on character HP / mobile header while `Flags.resting`; clears on combat or rest end
-  - BattleStage: arena art clipped to the fight band; Attack/Defend/Items/Flee + hotbar share one dock strip; FF-style plates; queue chip centered in the dock
+  - BattleStage: arena art clipped to the fight band; Attack/Defend/Items/Flee + hotbar share one dock strip; FF-style plates; queue chip centered in the dock. Damage numbers float over the struck sprite in white with a dark outline. A missing portrait or item icon swaps once to a class, enemy, or generic silhouette instead of a broken image.
   - Say chrome opens a message popup, then sends `say <text>`
   - Inventory chrome opens overlay by default (preference: overlay | on-screen widget)
   - Equipment paper-doll: square slots around portrait (head/neck/chest/hands | legs/boots/ring1/ring2; main_hand + off_hand under); compact ATK/DEF strip

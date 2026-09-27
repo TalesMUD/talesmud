@@ -129,6 +129,7 @@
     requestCloseLayoutDialog,
   } from "./uiChrome.js";
   import ShortcutSheet from "./ui/ShortcutSheet.svelte";
+  import { ROOM_PLACEHOLDER } from "./portraitSrc.js";
   import { getAuth } from "../auth.js";
   import { showCharacterWizard } from "../onboarding/onboardingStore.js";
   import { createClient } from "./Client";
@@ -180,7 +181,7 @@
     const bgId = $muxStore.background;
     appliedBodyBackground = bgId;
     const bgUrl = backend + "/backgrounds/" + bgId + ".png";
-    const placeholderUrl = "img/placeholder.png";
+    const placeholderUrl = ROOM_PLACEHOLDER;
     const testImg = new Image();
     testImg.onload = () => {
       if (appliedBodyBackground === bgId) {

@@ -2,7 +2,7 @@
   import { afterUpdate, onDestroy, tick } from 'svelte';
   import { isTextEntry, prefersReducedMotion, rarityClass } from '../keyboardShortcuts.js';
   import { battleDockOpen } from '../uiChrome.js';
-  import { hashedAvatar } from '../portraitSrc.js';
+  import { enemySilhouette, playerSilhouette } from '../portraitSrc.js';
   import {
     skillDisplayName,
     isConsumableItem,
@@ -311,13 +311,15 @@
     if (arenaFlashTimer) clearTimeout(arenaFlashTimer);
   });
 
-  function combatantPortrait(c, fallbackKey) {
+  function combatantPortrait(c) {
     const p = (c && c.portrait) || '';
-    if (p) {
-      if (p.startsWith('/') || p.startsWith('http') || p.startsWith('img/')) return p;
-      return `/api/portraits/${p.replace(/\.png$/i, '')}.png`;
+    if (p.startsWith('data:')) return p;
+    if (p && !p.startsWith('img/')) {
+      if (p.startsWith('/') || p.startsWith('http')) return p;
+      return `/api/portraits/${String(p).replace(/\.png$/i, '')}.png`;
     }
-    return hashedAvatar(fallbackKey || (c && c.name) || 'hero');
+    if (c && selfId && c.id === selfId) return playerSilhouette(selfClass);
+    return enemySilhouette();
   }
 
   function hpPct(hp, maxHp) {
@@ -661,11 +663,12 @@
     return isFxTarget(id) && (fxDamage > 0 || fxHeal > 0 || fxIsMiss);
   }
 
-  function onImgError(ev, key) {
+  function onImgError(ev, who) {
     const img = ev && ev.currentTarget;
     if (!img || img.dataset.fallback === '1') return;
     img.dataset.fallback = '1';
-    img.src = hashedAvatar(key || 'npc');
+    const next = who === 'player' ? playerSilhouette(selfClass) : enemySilhouette();
+    if (img.getAttribute('src') !== next) img.src = next;
   }
 </script>
 
@@ -774,19 +777,7 @@
             class:hit-flash={tgt && (fxIsHit || fxIsMiss) && !fxIsCrit && !fxIsCrush}
             class:crit-flash={tgt && fxIsCrit && !fxIsCrush}
             class:crush-flash={tgt && fxIsCrush}
-          >{#if enemy.threat === 'skull'}<span class="skull-mark" title="Skull" aria-hidden="true">☠</span>{/if}{enemy.name}{#if enemy.enraged}<span class="enrage-badge">Enraged</span>{/if}
-            {#if showFloatOn(enemy.id)}
-              <div class="fx-float over-plate" data-key={fxKey}>
-                {#if fxIsMiss}
-                  <span class="fx-miss-label">miss</span>
-                {:else if fxDamage > 0}
-                  <span class="fx-dmg" class:crit={fxIsCrit} class:crush={fxIsCrush}>-{fxDamage}</span>
-                {:else if fxHeal > 0}
-                  <span class="fx-heal">+{fxHeal}</span>
-                {/if}
-              </div>
-            {/if}
-          </div>
+          >{#if enemy.threat === 'skull'}<span class="skull-mark" title="Skull" aria-hidden="true">☠</span>{/if}{enemy.name}{#if enemy.enraged}<span class="enrage-badge">Enraged</span>{/if}</div>
           <div class="hp-row">
             <span class="hp-label">HP</span>
             <div class="hp-track">
@@ -801,10 +792,21 @@
           {/if}
           <img
             class="enemy-sprite"
-            src={combatantPortrait(enemy, enemy.id || enemy.name)}
+            src={combatantPortrait(enemy)}
             alt=""
-            on:error={(e) => onImgError(e, enemy.name)}
+            on:error={(e) => onImgError(e, 'enemy')}
           />
+          {#if showFloatOn(enemy.id)}
+            <div class="fx-float over-sprite" data-key={fxKey}>
+              {#if fxIsMiss}
+                <span class="fx-miss-label">miss</span>
+              {:else if fxDamage > 0}
+                <span class="fx-dmg" class:crit={fxIsCrit} class:crush={fxIsCrush}>-{fxDamage}</span>
+              {:else if fxHeal > 0}
+                <span class="fx-heal">+{fxHeal}</span>
+              {/if}
+            </div>
+          {/if}
           {#if tgt && fxIsMiss}
             <div class="fx-puff" data-key={fxKey} aria-hidden="true"></div>
           {/if}
@@ -843,9 +845,9 @@
   >
     <div class="player-bust" class:shake={isFxTarget(selfId) && fxIsHit}>
       <img
-        src={combatantPortrait(selfCombatant, selfId || selfName)}
+        src={combatantPortrait(selfCombatant)}
         alt=""
-        on:error={(e) => onImgError(e, selfName)}
+        on:error={(e) => onImgError(e, 'player')}
       />
       {#if isFxTarget(selfId) && fxIsMiss}
         <div class="fx-puff" data-key={fxKey} aria-hidden="true"></div>
@@ -1763,20 +1765,30 @@
     white-space: nowrap;
   }
 
-  .fx-float.over-plate {
-    top: 0;
-    left: 50%;
-    font-size: clamp(1.05rem, 2.2vw, 1.55rem);
+  .fx-float.over-sprite {
+    top: 18%;
+    z-index: 6;
+    font-size: clamp(2rem, 5.2vw, 3.4rem);
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    color: #fff;
+    -webkit-text-stroke: 3px #140804;
+    paint-order: stroke fill;
+    text-shadow:
+      0 2px 0 #140804,
+      0 0 8px #000,
+      0 4px 12px rgba(0, 0, 0, 0.9);
   }
-  .fx-dmg { color: #fca5a5; }
-  .fx-dmg.crit { color: #fde68a; font-size: 1.45em; }
-  .fx-dmg.crush { color: #fecaca; font-size: 1.75em; }
-  .fx-heal { color: #86efac; }
+  .fx-dmg { color: #fff; }
+  .fx-dmg.crit { color: #fde68a; font-size: 1.28em; }
+  .fx-dmg.crush { color: #fecaca; font-size: 1.45em; }
+  .fx-heal { color: #bbf7d0; }
   .fx-miss-label {
-    color: #e5e7eb;
-    letter-spacing: 0.08em;
-    font-size: 0.95em;
-    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.12em;
+    font-size: 0.72em;
+    font-weight: 900;
+    text-transform: lowercase;
   }
 
   @keyframes floatNum {

@@ -52,23 +52,32 @@ export function itemArtSrc(item) {
   return `/api/item-art/generic-${itemArtGenericKey(item)}.png`;
 }
 
+const ITEM_SILHOUETTE =
+  "data:image/svg+xml;charset=utf-8," +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#1c1814"/><rect x="18" y="14" width="28" height="36" rx="4" fill="#d4a44a"/></svg>'
+  );
+
+/** Next src after a failed item image. Stage 2 is a data URI and cannot 404. */
+export function itemArtFallbackSrc(item, stage) {
+  const key = itemArtGenericKey(item);
+  const n = Number(stage) || 0;
+  if (n <= 0) return `/api/item-art/generic-${key}.png`;
+  if (n === 1) return "/api/item-art/generic-default.png";
+  return ITEM_SILHOUETTE;
+}
+
 export function onItemArtError(ev, item) {
   const img = ev && ev.currentTarget;
-  if (!img) return;
-  const stage = img.dataset.fallback || "0";
-  const key = itemArtGenericKey(item);
-  if (stage === "0") {
-    img.dataset.fallback = "1";
-    img.src = `/api/item-art/generic-${key}.png`;
-    return;
+  if (!img || img.dataset.fallback === "done") return;
+  let stage = Number(img.dataset.fallback || "0");
+  if (!Number.isFinite(stage) || stage < 0) stage = 0;
+  let next = itemArtFallbackSrc(item, stage);
+  const attr = img.getAttribute("src") || "";
+  if (attr === next || (next.startsWith("/") && String(img.src || "").endsWith(next))) {
+    stage += 1;
+    next = itemArtFallbackSrc(item, stage);
   }
-  if (stage === "1") {
-    img.dataset.fallback = "2";
-    img.src = `sprites/items/generic-${key}.svg`;
-    return;
-  }
-  if (stage === "2") {
-    img.dataset.fallback = "3";
-    img.src = "sprites/items/generic-default.svg";
-  }
+  img.dataset.fallback = stage >= 2 ? "done" : String(stage + 1);
+  img.src = next;
 }

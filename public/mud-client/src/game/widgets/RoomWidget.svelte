@@ -8,6 +8,7 @@
   import { findNpcByName } from '../MUDXPlusStore';
   import { settingsStore } from '../SettingsStore.js';
   import { backend } from '../../api/base.js';
+  import { ROOM_PLACEHOLDER } from '../portraitSrc.js';
 
   export let store;
   export let sendMessage;
@@ -43,7 +44,7 @@
 
     if (newImg && oldImg) {
       const bgUrl = `${backend}/backgrounds/${background}.png`;
-      const placeholderUrl = 'img/placeholder.png';
+      const placeholderUrl = ROOM_PLACEHOLDER;
 
       // Test if image exists before displaying
       const testImg = new Image();
