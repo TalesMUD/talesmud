@@ -1,6 +1,7 @@
 package combat_test
 
 import (
+	"math/rand"
 	"testing"
 
 	"github.com/talesmud/talesmud/pkg/entities/skills"
@@ -16,25 +17,25 @@ func TestGapMatrixTargets(t *testing.T) {
 	skills.LoadFromDB(skills.SeedSkills())
 	t.Cleanup(func() { skills.LoadFromDB(prev) })
 
-	rows := simutil.RunGapMatrix(simutil.GapMatrixConfig{Iterations: 24})
-	t.Log("\n" + simutil.FormatGapMarkdown(rows))
+	// The combat engine rolls the global math/rand source. A 24-fight draw
+	// of mage at-level bosses has crossed the top of the band. Each row
+	// restarts the same seed and takes 200 fights, so the rate does not
+	// depend on which row ran before it.
+	const iterations = 200
 
-	// Bands are wide enough for a 24-iteration sample. An 80-iteration check
-	// of the same config put warrior at-level bosses near 51%, rogue and
-	// ranger good-gear +3 bosses near 50–60%, and mage elite/boss near the
-	// same band. A single 24-iteration draw still swings.
 	check := func(class, gear, tier string, gap int, min, max float64) {
 		t.Helper()
-		for _, r := range rows {
-			if r.Class == class && r.Gear == gear && r.Tier == tier && r.Gap == gap {
-				if r.WinRate < min || r.WinRate > max {
-					t.Errorf("%s %s %s gap %+d win %.0f%% outside %.0f–%.0f%%",
-						class, gear, tier, gap, r.WinRate*100, min*100, max*100)
-				}
-				return
-			}
+		rand.Seed(20260927)
+		cls := simutil.ClassConfigByName(class)
+		if cls == nil {
+			t.Fatalf("missing class %s", class)
 		}
-		t.Errorf("missing row %s %s %s gap %+d", class, gear, tier, gap)
+		sim := simutil.RunScaledMatchup(*cls, gap, tier, gear, iterations)
+		t.Logf("%s %s %s gap %+d win %.1f%% over %d", class, gear, tier, gap, sim.WinRate*100, iterations)
+		if sim.WinRate < min || sim.WinRate > max {
+			t.Errorf("%s %s %s gap %+d win %.0f%% outside %.0f–%.0f%%",
+				class, gear, tier, gap, sim.WinRate*100, min*100, max*100)
+		}
 	}
 
 	check("Warrior", simutil.GearAppropriate, "trash", 0, 0.90, 1)

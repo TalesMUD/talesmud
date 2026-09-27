@@ -1,5 +1,6 @@
 <script>
   import { afterUpdate, onDestroy, tick } from 'svelte';
+  import { isTextEntry, prefersReducedMotion, rarityClass } from '../keyboardShortcuts.js';
   import { hashedAvatar } from '../portraitSrc.js';
   import {
     skillDisplayName,
@@ -126,6 +127,63 @@
     fxId === 'slash' || fxIsDeath || fxResult === 'hit' || fxResult === 'crit' || fxDamage > 0
   );
   $: fxIsCrit = fxActive && fxResult === 'crit';
+  $: fxAbility = (fx && fx.ability) || '';
+  $: fxIsCrush = fxActive && /crushing blow/i.test(fxAbility);
+
+  $: lootList = Array.isArray(rewardBreakdown?.loot) ? rewardBreakdown.loot : [];
+  $: levelUp = rewardBreakdown?.levelUp || null;
+  $: defeatInfo = rewardBreakdown?.defeat || null;
+  $: hasRewardBreakdown = !!(rewardBreakdown && (
+    rewardBreakdown.baseXp != null || rewardBreakdown.xp != null || rewardBreakdown.baseGold != null
+  ));
+
+  let lootShown = 0;
+  let lootTimer = null;
+  let armedLootKey = '';
+
+  function stopLootReveal() {
+    if (lootTimer) {
+      clearInterval(lootTimer);
+      lootTimer = null;
+    }
+  }
+
+  function armLootReveal(items) {
+    stopLootReveal();
+    const list = Array.isArray(items) ? items : [];
+    if (prefersReducedMotion() || list.length === 0) {
+      lootShown = list.length;
+      return;
+    }
+    lootShown = 0;
+    lootTimer = setInterval(() => {
+      lootShown += 1;
+      if (lootShown >= list.length) stopLootReveal();
+    }, 420);
+  }
+
+  $: if (phase === 'ending') {
+    const names = lootList.map((item) => item && item.name).join('|');
+    const key = `${outcome}|${names}|${levelUp?.newLevel || 0}`;
+    if (key !== armedLootKey) {
+      armedLootKey = key;
+      armLootReveal(lootList);
+    }
+  } else if (armedLootKey) {
+    armedLootKey = '';
+    stopLootReveal();
+    lootShown = 0;
+  }
+
+  $: levelReady = !levelUp || lootShown >= lootList.length;
+
+  function onOutcomeKey(event) {
+    if (phase !== 'ending') return;
+    if (isTextEntry(event.target)) return;
+    if (event.key !== 'Enter' && event.key !== 'Escape') return;
+    event.preventDefault();
+    dismissOutcome();
+  }
 
   $: if (visible && (phase === 'active' || phase === 'ending')) startTick();
   else stopTick();
@@ -246,6 +304,7 @@
 
   onDestroy(() => {
     stopTick();
+    stopLootReveal();
     if (bannerTimer) clearTimeout(bannerTimer);
     if (arenaFlashTimer) clearTimeout(arenaFlashTimer);
   });
@@ -602,6 +661,7 @@
   }
 </script>
 
+<svelte:window on:keydown={onOutcomeKey} />
 {#if visible}
 <div class="battle-stage" class:ending={phase === 'ending'} role="dialog" aria-label="Combat">
   <div class="battle-backdrop" aria-hidden="true"></div>
@@ -703,7 +763,22 @@
             class:threat-skull={enemy.threat === 'skull'}
             class:winding={!!enemy.telegraph}
             class:enraged={!!enemy.enraged}
-          >{#if enemy.threat === 'skull'}<span class="skull-mark" title="Skull" aria-hidden="true">☠</span>{/if}{enemy.name}{#if enemy.enraged}<span class="enrage-badge">Enraged</span>{/if}</div>
+            class:hit-flash={tgt && (fxIsHit || fxIsMiss) && !fxIsCrit && !fxIsCrush}
+            class:crit-flash={tgt && fxIsCrit && !fxIsCrush}
+            class:crush-flash={tgt && fxIsCrush}
+          >{#if enemy.threat === 'skull'}<span class="skull-mark" title="Skull" aria-hidden="true">☠</span>{/if}{enemy.name}{#if enemy.enraged}<span class="enrage-badge">Enraged</span>{/if}
+            {#if showFloatOn(enemy.id)}
+              <div class="fx-float over-plate" data-key={fxKey}>
+                {#if fxIsMiss}
+                  <span class="fx-miss-label">miss</span>
+                {:else if fxDamage > 0}
+                  <span class="fx-dmg" class:crit={fxIsCrit} class:crush={fxIsCrush}>-{fxDamage}</span>
+                {:else if fxHeal > 0}
+                  <span class="fx-heal">+{fxHeal}</span>
+                {/if}
+              </div>
+            {/if}
+          </div>
           <div class="hp-row">
             <span class="hp-label">HP</span>
             <div class="hp-track">
@@ -726,18 +801,7 @@
             <div class="fx-puff" data-key={fxKey} aria-hidden="true"></div>
           {/if}
           {#if tgt && fxIsHit && !fxIsMiss}
-            <div class="fx-slash" class:crit={fxIsCrit} data-key={fxKey} aria-hidden="true"></div>
-          {/if}
-          {#if showFloatOn(enemy.id)}
-            <div class="fx-float" data-key={fxKey}>
-              {#if fxDamage > 0}
-                <span class="fx-dmg" class:crit={fxIsCrit}>-{fxDamage}</span>
-              {:else if fxHeal > 0}
-                <span class="fx-heal">+{fxHeal}</span>
-              {:else if fxIsMiss}
-                <span class="fx-miss-label">Miss</span>
-              {/if}
-            </div>
+            <div class="fx-slash" class:crit={fxIsCrit || fxIsCrush} data-key={fxKey} aria-hidden="true"></div>
           {/if}
         </div>
       </button>
@@ -784,20 +848,26 @@
       {#if isFxActor(selfId) && fxIsDefend}
         <div class="fx-shield" data-key={fxKey} aria-hidden="true"></div>
       {/if}
-      {#if showFloatOn(selfId)}
-        <div class="fx-float" data-key={fxKey}>
-          {#if fxDamage > 0}
-            <span class="fx-dmg" class:crit={fxIsCrit}>-{fxDamage}</span>
-          {:else if fxHeal > 0}
-            <span class="fx-heal">+{fxHeal}</span>
-          {:else if fxIsMiss}
-            <span class="fx-miss-label">Miss</span>
-          {/if}
-        </div>
-      {/if}
     </div>
     <div class="player-meta">
-      <div class="player-name">{selfName}</div>
+      <div
+        class="player-name"
+        class:hit-flash={isFxTarget(selfId) && (fxIsHit || fxIsMiss) && !fxIsCrit && !fxIsCrush}
+        class:crit-flash={isFxTarget(selfId) && fxIsCrit && !fxIsCrush}
+        class:crush-flash={isFxTarget(selfId) && fxIsCrush}
+      >{selfName}
+        {#if showFloatOn(selfId)}
+          <div class="fx-float over-plate" data-key={fxKey}>
+            {#if fxIsMiss}
+              <span class="fx-miss-label">miss</span>
+            {:else if fxDamage > 0}
+              <span class="fx-dmg" class:crit={fxIsCrit} class:crush={fxIsCrush}>-{fxDamage}</span>
+            {:else if fxHeal > 0}
+              <span class="fx-heal">+{fxHeal}</span>
+            {/if}
+          </div>
+        {/if}
+      </div>
       <div class="hp-row player-hp">
         <span class="hp-label">HP</span>
         <div class="hp-track">
@@ -1029,33 +1099,61 @@
 
   {#if phase === 'ending'}
     <div class="outcome-panel" class:victory={outcome === 'victory'} class:defeat={outcome === 'defeat'} class:fled={outcome === 'fled'}>
-      <div class="outcome-card">
+      <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+      <div class="outcome-card" role="status" on:click={dismissOutcome}>
         <div class="outcome-ornament" aria-hidden="true">♦</div>
         <div class="outcome-title">{outcomeLabel(outcome)}</div>
-        {#if outcomeRewards?.summary}
+        {#if outcome === 'victory' && hasRewardBreakdown}
+          <ul class="reward-breakdown">
+            <li>Base: {rewardBreakdown.baseXp || 0} XP, {rewardBreakdown.baseGold || 0} gold</li>
+            <li>Level modifier (highest in the split, L{rewardBreakdown.referenceLevel || 1}): {signedReward(rewardBreakdown.levelModXp)} XP, {signedReward(rewardBreakdown.levelModGold)} gold</li>
+            {#if (rewardBreakdown.firstKillXp || 0) !== 0 || (rewardBreakdown.firstKillGold || 0) !== 0}
+              <li>First-kill bonus: {signedReward(rewardBreakdown.firstKillXp)} XP, {signedReward(rewardBreakdown.firstKillGold)} gold</li>
+            {/if}
+            <li>Your share: {rewardBreakdown.xp || 0} XP, {rewardBreakdown.gold || 0} gold</li>
+          </ul>
+          {#if (rewardBreakdown.xp || 0) > 0 || (rewardBreakdown.gold || 0) > 0}
+            <div class="outcome-rewards">
+              {#if rewardBreakdown.xp}
+                <span class="reward-chip xp"><i class="material-icons">star</i> +{rewardBreakdown.xp} XP</span>
+              {/if}
+              {#if rewardBreakdown.gold}
+                <span class="reward-chip gold"><i class="material-icons">monetization_on</i> +{rewardBreakdown.gold} Gold</span>
+              {/if}
+            </div>
+          {/if}
+          {#if lootList.length}
+            <ul class="loot-reveal" aria-label="Loot">
+              {#each lootList.slice(0, lootShown) as item, index (`${item.name}-${index}`)}
+                <li class="loot-item rarity-{rarityClass(item.quality)}">{item.name}{#if item.quantity > 1} ×{item.quantity}{/if}</li>
+              {/each}
+            </ul>
+          {/if}
+          {#if levelUp && levelReady}
+            <div class="level-callout">Level {levelUp.newLevel}</div>
+          {/if}
+        {:else if outcome === 'defeat' && defeatInfo}
+          <ul class="reward-breakdown">
+            <li>Lost {defeatInfo.xpLost || 0} XP</li>
+            <li>Lost {defeatInfo.goldLost || 0} gold</li>
+            {#if defeatInfo.armor && defeatInfo.armor.length}
+              <li>Armor battered: {defeatInfo.armor.join(', ')}</li>
+            {/if}
+            <li>
+              {#if defeatInfo.respawnRoom}
+                You awaken at {defeatInfo.respawnRoom}
+              {:else}
+                You stay where you fell
+              {/if}
+              ({defeatInfo.hp || 0}/{defeatInfo.maxHp || 0} HP)
+            </li>
+          </ul>
+        {:else if outcomeRewards?.summary}
           <div class="outcome-summary">{outcomeRewards.summary}</div>
         {:else if endMessage}
           <div class="outcome-summary">{endMessage}</div>
         {/if}
-        {#if outcome === 'victory' && rewardBreakdown}
-          <ul class="reward-breakdown">
-            <li>Base: {rewardBreakdown.baseXp || 0} XP, {rewardBreakdown.baseGold || 0} gold</li>
-            <li>Level modifier (highest in the split, L{rewardBreakdown.referenceLevel || 1}): {signedReward(rewardBreakdown.levelModXp)} XP, {signedReward(rewardBreakdown.levelModGold)} gold</li>
-            <li>First-kill bonus: {signedReward(rewardBreakdown.firstKillXp)} XP, {signedReward(rewardBreakdown.firstKillGold)} gold</li>
-            <li>Party split: {rewardBreakdown.partySize || 1} recipients, your share {rewardBreakdown.shareXp || 0} XP, {rewardBreakdown.shareGold || 0} gold</li>
-          </ul>
-        {/if}
-        {#if outcomeRewards?.xp || outcomeRewards?.gold}
-          <div class="outcome-rewards">
-            {#if outcomeRewards.xp}
-              <span class="reward-chip xp"><i class="material-icons">star</i> +{outcomeRewards.xp} XP</span>
-            {/if}
-            {#if outcomeRewards.gold}
-              <span class="reward-chip gold"><i class="material-icons">monetization_on</i> +{outcomeRewards.gold} Gold</span>
-            {/if}
-          </div>
-        {/if}
-        <button type="button" class="outcome-continue" on:click={dismissOutcome}>
+        <button type="button" class="outcome-continue" on:click|stopPropagation={dismissOutcome}>
           Continue
         </button>
       </div>
@@ -1392,6 +1490,38 @@
     color: #fecaca;
   }
 
+  .nameplate,
+  .player-name {
+    position: relative;
+  }
+
+  .nameplate.hit-flash,
+  .player-name.hit-flash {
+    animation: plateHit 0.32s ease-out;
+  }
+  .nameplate.crit-flash,
+  .player-name.crit-flash {
+    animation: plateCrit 0.48s ease-out;
+  }
+  .nameplate.crush-flash,
+  .player-name.crush-flash {
+    animation: plateCrush 0.55s ease-out;
+  }
+
+  @keyframes plateHit {
+    0% { box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.95), 0 0 16px rgba(248, 113, 113, 0.75); filter: brightness(1.7); }
+    100% { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55); filter: none; }
+  }
+  @keyframes plateCrit {
+    0% { transform: scale(1.08); box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.95), 0 0 26px #fbbf24; filter: brightness(1.9); }
+    100% { transform: scale(1); filter: none; }
+  }
+  @keyframes plateCrush {
+    0% { transform: scale(1.16); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.95), 0 0 36px #ef4444; filter: brightness(2.3); }
+    45% { transform: scale(0.96); }
+    100% { transform: scale(1); filter: none; }
+  }
+
   .enrage-badge {
     margin-left: 0.45rem;
     padding: 0.05rem 0.35rem;
@@ -1625,8 +1755,14 @@
     white-space: nowrap;
   }
 
+  .fx-float.over-plate {
+    top: 0;
+    left: 50%;
+    font-size: clamp(1.05rem, 2.2vw, 1.55rem);
+  }
   .fx-dmg { color: #fca5a5; }
-  .fx-dmg.crit { color: #fde68a; font-size: 1.15em; }
+  .fx-dmg.crit { color: #fde68a; font-size: 1.45em; }
+  .fx-dmg.crush { color: #fecaca; font-size: 1.75em; }
   .fx-heal { color: #86efac; }
   .fx-miss-label {
     color: #e5e7eb;
@@ -2620,6 +2756,108 @@
       0 0 0 3px rgba(8, 7, 6, 0.95),
       0 0 0 5px rgba(245, 215, 140, 0.8),
       0 0 22px rgba(232, 200, 120, 0.35);
+  }
+
+  .battle-stage.ending {
+    pointer-events: none;
+    background: none;
+  }
+  .battle-stage.ending .battle-backdrop {
+    display: none;
+  }
+  .battle-stage.ending .battle-frame {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    pointer-events: none;
+  }
+  .battle-stage.ending .battle-header,
+  .battle-stage.ending .decision-timer,
+  .battle-stage.ending .battle-arena,
+  .battle-stage.ending .battle-controls,
+  .battle-stage.ending .combat-log {
+    visibility: hidden;
+  }
+  .battle-stage.ending .outcome-panel {
+    pointer-events: none;
+    background: transparent;
+    place-content: start;
+    justify-items: start;
+    padding: 4.75rem 1.25rem 1rem;
+  }
+  .battle-stage.ending .outcome-card {
+    pointer-events: auto;
+    cursor: pointer;
+    max-width: min(26rem, 38vw);
+    text-align: left;
+  }
+  .battle-stage.ending .outcome-title,
+  .battle-stage.ending .outcome-ornament,
+  .battle-stage.ending .outcome-rewards,
+  .battle-stage.ending .outcome-continue {
+    text-align: center;
+  }
+  .battle-stage.ending .outcome-rewards,
+  .battle-stage.ending .outcome-continue {
+    display: flex;
+  }
+  .battle-stage.ending .outcome-continue {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .loot-reveal {
+    list-style: none;
+    margin: 0.2rem 0 0.7rem;
+    padding: 0;
+    font-family: system-ui, sans-serif;
+    font-size: 0.92rem;
+    font-weight: 700;
+  }
+  .loot-item {
+    padding: 0.18rem 0;
+    animation: lootIn 0.28s ease-out;
+  }
+  .rarity-normal { color: #e5e7eb; }
+  .rarity-magic { color: #60a5fa; }
+  .rarity-rare { color: #facc15; }
+  .rarity-legendary { color: #fb923c; }
+  .rarity-mythic { color: #e879f9; }
+  @keyframes lootIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .level-callout {
+    margin: 0.35rem 0 0.8rem;
+    padding: 0.45rem 0.7rem;
+    border: 1px solid rgba(251, 191, 36, 0.85);
+    border-radius: 8px;
+    background: rgba(48, 34, 8, 0.92);
+    color: #fde68a;
+    font-size: 1.15rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fx-float,
+    .fx-slash,
+    .fx-puff,
+    .nameplate.hit-flash,
+    .nameplate.crit-flash,
+    .nameplate.crush-flash,
+    .player-name.hit-flash,
+    .player-name.crit-flash,
+    .player-name.crush-flash,
+    .enemy-card.fx-hit .enemy-sprite,
+    .enemy-card.fx-crit .enemy-sprite,
+    .enemy-sprite-wrap.shake,
+    .loot-item {
+      animation: none !important;
+    }
+    .fx-float { opacity: 1; }
   }
 
   /* Primary Attack — double gold border glow (C0 mock) */

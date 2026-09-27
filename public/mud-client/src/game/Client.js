@@ -335,6 +335,7 @@ function createClient(renderer, characterCreator, muxStore) {
         result: msg.result || "",
         damage: msg.damage || 0,
         heal: msg.heal || 0,
+        ability: msg.ability || "",
         remainingHp: msg.remainingHp,
         maxHp: msg.maxHp,
         fxId: msg.fxId || "",
@@ -372,7 +373,12 @@ function createClient(renderer, characterCreator, muxStore) {
     renderer(msg.message);
     if (mux) {
       if (mux.endCombat) {
-        mux.endCombat(msg.outcome || "victory", msg.message, msg.rewards || null);
+        mux.endCombat(msg.outcome || "victory", msg.message, {
+          ...(msg.rewards || {}),
+          loot: Array.isArray(msg.loot) ? msg.loot : [],
+          levelUp: msg.levelUp || null,
+          defeat: msg.defeat || null,
+        });
       } else {
         mux.setGameContext({ inCombat: false });
         mux.updateCharacterStats({ inCombat: false });

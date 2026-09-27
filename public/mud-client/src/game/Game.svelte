@@ -368,7 +368,7 @@
 
 <div class="bg-overlay"></div>
 
-<div class="gameContainer" class:mobile={$isMobile} class:combat-dimmed={($muxStore.combatPhase === "active" || $muxStore.combatPhase === "ending" || $muxStore.inCombat)}>
+<div class="gameContainer" class:mobile={$isMobile} class:combat-dimmed={$muxStore.combatPhase === "active" || ($muxStore.inCombat && $muxStore.combatPhase !== "ending")}>
   <CharacterSwitcher
     store={muxStore}
     authToken={$authToken}

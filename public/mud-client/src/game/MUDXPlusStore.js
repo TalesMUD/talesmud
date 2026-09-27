@@ -987,6 +987,7 @@ function createStore() {
             heal: msg.heal || 0,
             result: msg.result || "",
             action: msg.action || "",
+            ability: msg.ability || "",
           };
         }
 

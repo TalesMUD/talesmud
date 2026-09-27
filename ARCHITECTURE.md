@@ -1240,6 +1240,8 @@ type MessageResponse struct {
 }
 ```
 
+`combatEnd` keeps `outcome` and `message`. Optional `rewards`, `loot`, `levelUp`, and `defeat` objects ride on the same message. `combatAction` may include `ability` when a named blow lands. Clients that only read `message` still work.
+
 ## Frontend Architecture
 
 ### MUD Client — Onboarding Flow

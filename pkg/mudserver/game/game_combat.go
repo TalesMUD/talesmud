@@ -875,6 +875,7 @@ func (c *CombatController) resolveNPCTurn(instance *combat.CombatInstance, curre
 				ActorName:   current.Name,
 				TargetID:    targetID,
 				Action:      string(combat.CombatActionAttack),
+				Ability:     step.Ability,
 				Result:      resultStringForAttack(result),
 				Damage:      result.Damage,
 				RemainingHP: remaining,
@@ -1011,6 +1012,7 @@ func (c *CombatController) refreshOriginRoomAfterCombat(instance *combat.CombatI
 func (c *CombatController) processCombatVictory(instance *combat.CombatInstance) {
 	var rawRewards []rawEnemyReward
 	var allLootItems []string
+	var allLoot []messages.LootReveal
 	var enemyNames []string
 
 	// Get the room for loot drops
@@ -1067,11 +1069,12 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 
 			lootResult, err := DropLootFromNPC(c.game.Facade, npcData, room, killerLevel)
 			if err == nil && lootResult != nil {
-				for _, item := range lootResult.Items {
-					if item.Stackable && item.Quantity > 1 {
-						allLootItems = append(allLootItems, fmt.Sprintf("%s (x%d)", item.Name, item.Quantity))
+				for _, reveal := range lootReveals(lootResult.Items) {
+					allLoot = append(allLoot, reveal)
+					if reveal.Quantity > 1 {
+						allLootItems = append(allLootItems, fmt.Sprintf("%s (x%d)", reveal.Name, reveal.Quantity))
 					} else {
-						allLootItems = append(allLootItems, item.Name)
+						allLootItems = append(allLootItems, reveal.Name)
 					}
 				}
 			}
@@ -1169,8 +1172,14 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 		char.Gold += awardedGold
 
 		var levelMsg string
+		var callout *messages.LevelUpCallout
 		if result := leveling.MaybeLevelUp(char); result != nil {
 			levelMsg = result.Message
+			callout = &messages.LevelUpCallout{
+				OldLevel: result.OldLevel,
+				NewLevel: result.NewLevel,
+				Message:  result.Message,
+			}
 		}
 		_ = c.game.Facade.CharactersService().Update(share.ID, char)
 
@@ -1179,6 +1188,10 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 			victoryText := formatCombatVictoryText(enemyNames, allLootItems, awardedXP, awardedGold, shareBlock, formatRewardLines(breakdown))
 			end := messages.NewCombatEndMessage(userID, victoryText, string(combat.CombatStateVictory))
 			end.Rewards = &breakdown
+			if len(allLoot) > 0 {
+				end.Loot = append([]messages.LootReveal(nil), allLoot...)
+			}
+			end.LevelUp = callout
 			c.game.sendMessage <- end
 		}
 		if toast != "" {
@@ -1232,6 +1245,10 @@ func (c *CombatController) processCombatDefeat(instance *combat.CombatInstance) 
 		}
 
 		outcome := ruleset.ApplyDeath(char)
+		summary := &messages.DefeatSummary{
+			XPLost:   outcome.XPLost,
+			GoldLost: outcome.GoldLost,
+		}
 
 		var sb strings.Builder
 		sb.WriteString("\n═══════════════════════════════════════════════════\n")
@@ -1248,6 +1265,7 @@ func (c *CombatController) processCombatDefeat(instance *combat.CombatInstance) 
 
 		if outcome.DamageArmor {
 			if damaged := char.DamageEquippedArmor(); len(damaged) > 0 {
+				summary.Armor = damaged
 				sb.WriteString("Your armor is battered:\n")
 				for _, name := range damaged {
 					sb.WriteString("  - ")
@@ -1260,6 +1278,8 @@ func (c *CombatController) processCombatDefeat(instance *combat.CombatInstance) 
 
 		if outcome.RespawnRoomID != "" && outcome.RespawnRoomID != char.CurrentRoomID {
 			if boundRoom, ok := c.game.RelocateCharacter(char, char.BelongsUserID, outcome.RespawnRoomID); ok {
+				summary.RespawnRoom = boundRoom.Name
+				summary.RespawnRoomID = boundRoom.ID
 				sb.WriteString(fmt.Sprintf("\nYou find yourself back at %s.\n", boundRoom.Name))
 			}
 		}
@@ -1274,10 +1294,14 @@ func (c *CombatController) processCombatDefeat(instance *combat.CombatInstance) 
 
 		sb.WriteString(fmt.Sprintf("\nYou awaken with %d/%d HP.\n", char.CurrentHitPoints, char.MaxHitPoints))
 		sb.WriteString("═══════════════════════════════════════════════════")
+		summary.HP = char.CurrentHitPoints
+		summary.MaxHP = char.MaxHitPoints
 
 		c.game.Facade.CharactersService().Update(player.ID, char)
 
-		c.game.sendMessage <- messages.NewCombatEndMessage(char.BelongsUserID, sb.String(), string(combat.CombatStateDefeat))
+		end := messages.NewCombatEndMessage(char.BelongsUserID, sb.String(), string(combat.CombatStateDefeat))
+		end.Defeat = summary
+		c.game.sendMessage <- end
 	}
 }
 
