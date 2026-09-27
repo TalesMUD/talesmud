@@ -240,6 +240,7 @@ func TestPartyCreateSetsLeaderAndRichMembers(t *testing.T) {
 	character := &characters.Character{
 		Entity:      &entities.Entity{ID: "char-1"},
 		Name:        "Aster",
+		Race:        characters.RaceHuman,
 		Class:       characters.ClassWarrior,
 		Level:       3,
 		BelongsUser: *traits.BelongsToUser("user-1"),

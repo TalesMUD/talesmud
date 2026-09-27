@@ -358,6 +358,21 @@ func (command *AttackCommand) handleJoinCombat(game def.GameCtrl, message *messa
 		combatViews(instance.Players, message.Character.Level),
 	)
 
+	// Existing fighters need the new roster before the next action resolves.
+	for _, fighter := range instance.Players {
+		if fighter.ID == message.Character.ID || !fighter.IsAlive || fighter.HasFled {
+			continue
+		}
+		ch, err := game.GetFacade().CharactersService().FindByID(fighter.ID)
+		if err != nil || ch == nil || ch.BelongsUserID == "" {
+			continue
+		}
+		roster := append(combatViews(instance.Players, fighter.Level), combatViews(instance.Enemies, fighter.Level)...)
+		game.SendMessage() <- messages.NewCombatActionMessage(ch.BelongsUserID,
+			fmt.Sprintf("%s joins the fight!", message.Character.Name),
+			messages.CombatActionMessage{ActorID: message.Character.ID, ActorName: message.Character.Name, Action: "join", Combatants: roster})
+	}
+
 	combatEngine.SetAutoAttackTarget(message.Character.Entity.ID, target.Entity.ID)
 	game.SendMessage() <- message.Reply("\nCombat is automatic. Commands: attack <target> (switch target) | defend | flee | status")
 
@@ -421,7 +436,8 @@ func combatViews(refs []combat.CombatantRef, viewerLevel int32) []messages.Comba
 	out := make([]messages.CombatantView, 0, len(refs))
 	for _, r := range refs {
 		view := messages.CombatantView{
-			ID: r.ID, Name: r.Name, Portrait: r.Portrait, HP: r.CurrentHP, MaxHP: r.MaxHP, Level: r.Level,
+			ID: r.ID, Type: string(r.Type), Name: r.Name, Portrait: r.Portrait, HP: r.CurrentHP, MaxHP: r.MaxHP,
+			Mana: r.CurrentMana, MaxMana: r.MaxMana, ClassID: r.ClassID, IsAlive: r.IsAlive, HasFled: r.HasFled, Level: r.Level,
 			Telegraph: r.TelegraphAbility, Enraged: r.Enraged,
 		}
 		if r.Type == combat.CombatantTypeNPC {

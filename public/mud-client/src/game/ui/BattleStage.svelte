@@ -53,6 +53,9 @@
     ? `${windupEnemy.name} is winding up ${windupEnemy.telegraph}!`
     : "";
   $: players = $store.combatPlayers || [];
+  $: allies = players.filter((p) => p.id !== selfCombatant?.id);
+  $: combatJoin = $store.combatJoin;
+  $: showJoinBanner = !!(combatJoin?.at && nowMs - combatJoin.at < 3000);
   $: targetId = $store.combatTargetId;
   $: turn = $store.combatTurn;
   $: logRaw = $store.combatLog || [];
@@ -318,7 +321,9 @@
       if (p.startsWith('/') || p.startsWith('http')) return p;
       return `/api/portraits/${String(p).replace(/\.png$/i, '')}.png`;
     }
-    if (c && selfId && c.id === selfId) return portraitSrc(character);
+    if (c && players.some((player) => player.id === c.id)) {
+      return c.id === selfId ? portraitSrc(character) : playerSilhouette(c.classId);
+    }
     return enemySilhouette();
   }
 
@@ -663,11 +668,11 @@
     return isFxTarget(id) && (fxDamage > 0 || fxHeal > 0 || fxIsMiss);
   }
 
-  function onImgError(ev, who) {
+  function onImgError(ev, who, className = selfClass) {
     const img = ev && ev.currentTarget;
     if (!img || img.dataset.fallback === '1') return;
     img.dataset.fallback = '1';
-    const next = who === 'player' ? playerSilhouette(selfClass) : enemySilhouette();
+    const next = who === 'player' ? playerSilhouette(className) : enemySilhouette();
     if (img.getAttribute('src') !== next) img.src = next;
   }
 </script>
@@ -832,6 +837,50 @@
       </div>
     {/if}
   </div>
+
+  {#if showJoinBanner}
+    <div class="join-banner" role="status">{combatJoin.actorName} joins the fight!</div>
+  {/if}
+
+  {#if allies.length}
+    <section class="ally-strip" aria-label="Allies">
+      {#each allies as ally (ally.id)}
+        {@const pct = hpPct(ally.hp, ally.maxHp)}
+        {@const down = !ally.isAlive || (ally.hp ?? 0) <= 0}
+        {@const tgt = isFxTarget(ally.id)}
+        <div
+          class="ally-card"
+          class:ally-turn={turn?.actorId === ally.id}
+          class:ally-down={down}
+          class:ally-fled={ally.hasFled}
+          class:ally-hit={tgt && fxIsHit}
+          class:ally-crit={tgt && fxIsCrit}
+          class:just-joined={showJoinBanner && combatJoin.actorId === ally.id}
+        >
+          <div class="ally-portrait">
+            <img src={combatantPortrait(ally)} alt="" on:error={(e) => onImgError(e, 'player', ally.classId)} />
+            {#if showFloatOn(ally.id)}
+              <div class="fx-float over-sprite" data-key={fxKey}>
+                {#if fxIsMiss}<span class="fx-miss-label">miss</span>
+                {:else if fxDamage > 0}<span class="fx-dmg" class:crit={fxIsCrit} class:crush={fxIsCrush}>-{fxDamage}</span>
+                {:else if fxHeal > 0}<span class="fx-heal">+{fxHeal}</span>{/if}
+              </div>
+            {/if}
+          </div>
+          <div class="ally-meta">
+            <div class="ally-name" class:hit-flash={tgt && fxIsHit}>{ally.name}</div>
+            <div class="ally-sub">{ally.classId || 'Adventurer'} · Lv {ally.level || 1}{#if down} · Down{:else if ally.hasFled} · Fled{:else if turn?.actorId === ally.id} · Turn{/if}</div>
+            <div class="ally-bar"><span style="width: {pct}%; background: {playerHpColor(pct)}"></span></div>
+            <div class="ally-numbers">HP {ally.hp ?? 0}/{ally.maxHp ?? 0}</div>
+            {#if ally.maxMana > 0}
+              <div class="ally-bar mana"><span style="width: {hpPct(ally.mana, ally.maxMana)}%"></span></div>
+              <div class="ally-numbers">MP {ally.mana ?? 0}/{ally.maxMana}</div>
+            {/if}
+          </div>
+        </div>
+      {/each}
+    </section>
+  {/if}
 
   <!-- Player lower-left -->
   <section
@@ -1956,6 +2005,62 @@
     backdrop-filter: blur(2px);
   }
 
+  .join-banner {
+    position: absolute;
+    left: 50%;
+    top: 44%;
+    transform: translate(-50%, -50%);
+    z-index: 8;
+    padding: 0.45rem 1rem;
+    border: 1px solid #d4a44a;
+    border-radius: 6px;
+    background: rgba(10, 9, 8, 0.94);
+    color: #ffe1a0;
+    font-weight: 800;
+    white-space: nowrap;
+    box-shadow: 0 4px 20px #000;
+    pointer-events: none;
+  }
+
+  .ally-strip {
+    position: absolute;
+    left: 1.1rem;
+    bottom: 8rem;
+    z-index: 4;
+    display: flex;
+    gap: 0.45rem;
+    max-width: min(65%, 700px);
+    overflow-x: auto;
+    padding: 0.25rem;
+  }
+  .ally-card {
+    display: flex;
+    flex: 0 0 162px;
+    min-width: 0;
+    gap: 0.4rem;
+    padding: 0.35rem;
+    border: 1px solid rgba(212, 164, 74, 0.55);
+    border-radius: 6px;
+    background: rgba(8, 8, 10, 0.93);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  }
+  .ally-card.ally-turn { border-color: #fbbf24; box-shadow: 0 0 0 1px #fbbf24, 0 0 15px rgba(251, 191, 36, 0.5); }
+  .ally-card.ally-down, .ally-card.ally-fled { opacity: 0.65; }
+  .ally-card.ally-hit { animation: plateHit 0.32s ease-out; }
+  .ally-card.ally-crit { animation: plateCrit 0.48s ease-out; }
+  .ally-card.just-joined { animation: allyJoin 0.4s ease-out; }
+  @keyframes allyJoin { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .ally-portrait { position: relative; flex: 0 0 42px; height: 48px; }
+  .ally-portrait img { width: 42px; height: 48px; object-fit: cover; object-position: top center; }
+  .ally-portrait .fx-float.over-sprite { top: 0; font-size: 1.75rem; -webkit-text-stroke-width: 2px; }
+  .ally-meta { min-width: 0; flex: 1; }
+  .ally-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #f6e3b2; font-weight: 800; font-size: 0.8rem; }
+  .ally-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #aeb5c2; font-size: 0.62rem; text-transform: capitalize; }
+  .ally-bar { height: 4px; margin-top: 0.22rem; border-radius: 3px; background: #251a18; overflow: hidden; }
+  .ally-bar span { display: block; height: 100%; }
+  .ally-bar.mana span { background: #60a5fa; }
+  .ally-numbers { color: #cfd3dc; font-size: 0.59rem; line-height: 1.05; }
+
   .player-bust {
     width: clamp(56px, 7.5vw, 92px);
     aspect-ratio: 1;
@@ -2862,6 +2967,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .ally-card.just-joined, .ally-card.ally-hit, .ally-card.ally-crit { animation: none; }
     .fx-float,
     .fx-slash,
     .fx-puff,
@@ -2989,10 +3095,11 @@
     .battle-arena {
       grid-area: arena;
       display: grid;
-      grid-template-rows: minmax(0, 1fr) auto auto;
+      grid-template-rows: minmax(0, 1fr) auto auto auto;
       grid-template-areas:
         "enemies"
         "fx"
+        "allies"
         "player";
       min-height: 0;
       overflow: hidden;
@@ -3141,6 +3248,22 @@
       align-items: center;
       z-index: 3;
     }
+    .ally-strip {
+      grid-area: allies;
+      position: relative;
+      left: auto;
+      right: auto;
+      bottom: auto;
+      max-width: none;
+      width: calc(100% - 1rem);
+      margin: 0.1rem 0.5rem;
+      padding: 0.1rem;
+      overflow-x: auto;
+    }
+    .ally-card { flex-basis: 138px; padding: 0.2rem; }
+    .ally-portrait { flex-basis: 32px; height: 42px; }
+    .ally-portrait img { width: 32px; height: 42px; }
+    .join-banner { top: 35%; max-width: 90%; font-size: 0.85rem; }
     .player-bust {
       width: clamp(40px, 11vw, 48px);
       border-radius: 6px;

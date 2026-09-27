@@ -145,6 +145,9 @@ Room presence sends `portrait` URLs (`/api/portraits/{templateOrId}.png`). Impor
 ### Player portraits
 The equipment paper doll, combat card, and party roster use 512px transparent sprites at `/api/portraits/player-<race>-<class>.png`. The set covers Human, Dwarf, Elf × Warrior, Rogue, Mage, Ranger, Cleric, Druid. Stored `elve` maps to `elf`, `wizard` to `mage`, and `hunter` to `ranger`. The server supplies combat and party portrait URLs; the client derives the equipment URL from character race/class. An unavailable combination or failed image uses a class silhouette.
 
+### Group combat cards
+BattleStage shows the local player and all other combat players (up to the five-player party cap). Compact ally cards display portrait, class, level, live HP/MP, current turn, and down/fled state. Combat action snapshots carry participant type, class, mana, and status; a join sends the roster to existing fighters immediately and triggers a short join banner. Healing and buffs currently target self or enemies only; ally-card clicks do not queue unsupported commands.
+
 WebSocket connects go through a process-wide gate (`websocketGate.js`): one CONNECTING/OPEN/CLOSING socket, no reactive `ws=null` reconnect, and close code 4001 (session replaced) does not auto-reconnect. The Map overview is an Inventory-style body-portal panel (`map-panel`, never Materialize's `.modal`) with explicit pixel size so the canvas fills the stage. `/play` JS/CSS/HTML is served `Cache-Control: no-cache` plus `?v=` on asset URLs so deploys are not stuck behind a cached `bundle.js`.
 
 ### Instanced cellars

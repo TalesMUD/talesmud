@@ -562,8 +562,9 @@ func (c *CombatController) emitCombatTurn(instance *combat.CombatInstance, actor
 
 func combatantView(r combat.CombatantRef) messages.CombatantView {
 	return messages.CombatantView{
-		ID: r.ID, Name: r.Name, Portrait: r.Portrait,
-		HP: r.CurrentHP, MaxHP: r.MaxHP, Level: r.Level,
+		ID: r.ID, Type: string(r.Type), Name: r.Name, Portrait: r.Portrait,
+		HP: r.CurrentHP, MaxHP: r.MaxHP, Mana: r.CurrentMana, MaxMana: r.MaxMana,
+		ClassID: r.ClassID, IsAlive: r.IsAlive, HasFled: r.HasFled, Level: r.Level,
 		Telegraph: r.TelegraphAbility, Enraged: r.Enraged,
 	}
 }
