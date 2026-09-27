@@ -1,5 +1,7 @@
 <script>
   import { itemArtSrc, onItemArtError } from '../itemArtSrc.js';
+  import ItemDetailCard from './ItemDetailCard.svelte';
+  import { isClearUpgrade } from './itemComparison.js';
 
   export let store = null;
   export let sendMessage = null;
@@ -8,6 +10,7 @@
 
   let inventory = [];
   let equippedItems = {};
+  let character = null;
   let gold = 0;
   let hasMerchant = false;
   let detailItem = null;
@@ -40,6 +43,7 @@
   $: if (store) {
     inventory = $store.inventory || [];
     equippedItems = $store.equippedItems || {};
+    character = $store.character || null;
     gold = $store.gold || 0;
     hasMerchant = $store.hasMerchant || false;
   }
@@ -156,6 +160,16 @@
   function handleExamine(item) {
     const name = item.instanceSuffix ? item.name + '-' + item.instanceSuffix : item.name;
     sendCmd('examine ' + name);
+  }
+
+  function onDetailAction(event) {
+    const { verb, item } = event.detail;
+    if (verb === 'equip') handleEquip(item);
+    else if (verb === 'unequip') handleUnequip(item);
+    else if (verb === 'use') handleUse(item);
+    else if (verb === 'drop') handleDrop(item);
+    else if (verb === 'examine') handleExamine(item);
+    else if (verb === 'sell') handleSell(item);
   }
 
   function handleSell(item) {
@@ -390,6 +404,21 @@
   .item-slot.equipped-item {
     background: rgba(34, 197, 94, 0.1);
   }
+
+  .upgrade-badge {
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    min-width: 18px;
+    text-align: center;
+    border-radius: 10px;
+    background: #166534;
+    color: #dcfce7;
+    font-weight: 800;
+    font-size: 13px;
+    line-height: 18px;
+  }
+  .list-upgrade-tag { color: #86efac; font-size: var(--text-xs); font-weight: 700; }
 
   .equipped-badge {
     position: absolute;
@@ -1036,6 +1065,9 @@
                   {#if equipped}
                     <span class="equipped-badge">E</span>
                   {/if}
+                  {#if !equipped && isClearUpgrade(item, equippedItems, character)}
+                    <span class="upgrade-badge" title="Equipment upgrade" aria-label="Equipment upgrade">↑</span>
+                  {/if}
 
                   <img
                     class="item-art"
@@ -1084,6 +1116,9 @@
                     {#if equipped}
                       <span class="list-equipped-tag">Equipped</span>
                     {/if}
+                    {#if !equipped && isClearUpgrade(item, equippedItems, character)}
+                      <span class="list-upgrade-tag" title="Equipment upgrade">↑ Upgrade</span>
+                    {/if}
                     {#if item.stackable && item.quantity > 1}
                       <span class="list-item-qty">x{item.quantity}</span>
                     {/if}
@@ -1098,119 +1133,15 @@
   {/if}
 
   {#if detailItem}
-    {@const equipped = isEquipped(detailItem)}
-    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-    <div class="detail-backdrop" on:click={closeDetail}></div>
-    <div class="detail-overlay">
-      <div class="detail-header">
-        <div class="detail-title-row">
-          <div class="detail-art-wrap">
-            <img
-              class="detail-art"
-              src={itemArtSrc(detailItem)}
-              alt=""
-              on:error={(e) => onItemArtError(e, detailItem)}
-            />
-          </div>
-          <div class="detail-title-info">
-            <span class="detail-name" style="color: {getQualityColor(detailItem.quality)}">{detailItem.name}</span>
-            <span class="detail-meta">
-              {#if detailItem.quality}
-                <span class="detail-quality" style="color: {getQualityColor(detailItem.quality)}">{formatTypeName(detailItem.quality)}</span>
-              {/if}
-              {#if detailItem.type}
-                <span class="detail-type">{formatTypeName(detailItem.type)}{#if detailItem.subType} ({formatTypeName(detailItem.subType)}){/if}</span>
-              {/if}
-            </span>
-          </div>
-        </div>
-        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-        <i class="material-icons detail-close" on:click={closeDetail}>close</i>
-      </div>
-
-      {#if detailItem.slot && detailItem.slot !== 'inventory' && detailItem.slot !== 'container' && detailItem.slot !== 'purse'}
-        <div class="detail-slot">
-          <i class="material-icons" style="font-size: 0.85em">straighten</i>
-          Slot: {detailItem.slot.replace('_', ' ')}
-        </div>
-      {/if}
-
-      {#if detailItem.attributes && Object.keys(detailItem.attributes).length > 0}
-        <div class="detail-stats">
-          {#each Object.entries(detailItem.attributes) as [key, value]}
-            <div class="stat-row">
-              <span class="stat-label">{formatAttributeLabel(key)}</span>
-              <span class="stat-value" class:stat-offensive={isOffensiveStat(key)} class:stat-defensive={isDefensiveStat(key)}>
-                {#if !isOffensiveStat(key) && !isDefensiveStat(key)}+{/if}{value}
-              </span>
-            </div>
-          {/each}
-        </div>
-      {/if}
-
-      {#if detailItem.description}
-        <div class="detail-description">{detailItem.description}</div>
-      {/if}
-
-      {#if detailItem.level || detailItem.stackable || detailItem.basePrice || equipped}
-        <div class="detail-info-grid">
-          {#if detailItem.level && detailItem.level > 0}
-            <div class="info-item">
-              <span class="info-label">Level</span>
-              <span class="info-value">{detailItem.level}</span>
-            </div>
-          {/if}
-          {#if detailItem.stackable}
-            <div class="info-item">
-              <span class="info-label">Stack</span>
-              <span class="info-value">{detailItem.quantity || 1}/{detailItem.maxStack || '?'}</span>
-            </div>
-          {/if}
-          {#if detailItem.basePrice}
-            <div class="info-item">
-              <span class="info-label">Value</span>
-              <span class="info-value detail-gold">{detailItem.basePrice} gold</span>
-            </div>
-          {/if}
-        </div>
-      {/if}
-
-      {#if equipped}
-        <div class="detail-equipped-tag">
-          <i class="material-icons" style="font-size: 0.85em">check_circle</i> Equipped
-        </div>
-      {/if}
-
-      <div class="detail-actions">
-        <button class="detail-action-btn examine" on:click={() => handleExamine(detailItem)}>
-          <i class="material-icons">search</i> Examine
-        </button>
-        {#if equipped}
-          <button class="detail-action-btn unequip" on:click={() => handleUnequip(detailItem)}>
-            <i class="material-icons">remove_circle_outline</i> Unequip
-          </button>
-        {:else}
-          {#if isEquippable(detailItem)}
-            <button class="detail-action-btn equip" on:click={() => handleEquip(detailItem)}>
-              <i class="material-icons">shield</i> Equip
-            </button>
-          {/if}
-          {#if isConsumable(detailItem)}
-            <button class="detail-action-btn use" on:click={() => handleUse(detailItem)}>
-              <i class="material-icons">local_drink</i> Use
-            </button>
-          {/if}
-        {/if}
-        {#if canSell(detailItem)}
-          <button class="detail-action-btn sell" on:click={() => handleSell(detailItem)}>
-            <i class="material-icons">sell</i> Sell
-          </button>
-        {/if}
-        <button class="detail-action-btn drop" on:click={() => handleDrop(detailItem)}>
-          <i class="material-icons">delete_outline</i> Drop
-        </button>
-      </div>
-    </div>
+    <ItemDetailCard
+      item={detailItem}
+      {equippedItems}
+      {character}
+      equipped={isEquipped(detailItem)}
+      sellable={canSell(detailItem)}
+      on:close={closeDetail}
+      on:action={onDetailAction}
+    />
   {/if}
 
   {#if showSellPopup && sellItem}

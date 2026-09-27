@@ -1049,6 +1049,8 @@ type Item struct {
 }
 ```
 
+`equip <item>` validates `class:*` tags, minimum `Item.Level`, and explicit armor weight (`Properties.armorWeight` or an `armor:cloth|leather|plate` tag) against the character class before moving an item from inventory. The play client mirrors these checks in its shared item card and computes class-weighted comparison deltas from `Attributes`. Optional item weight is read from `Properties.weight` when present; current item data need not supply it.
+
 **Template/Instance Lifecycle:**
 - Templates (`IsTemplate=true`) are blueprints stored in the database
 - Instances (`IsTemplate=false`, `TemplateID` set) are created from templates

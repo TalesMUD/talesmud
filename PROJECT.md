@@ -61,6 +61,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Say chrome opens a message popup, then sends `say <text>`
   - Inventory chrome opens overlay by default (preference: overlay | on-screen widget)
   - Equipment paper-doll: square slots around portrait (head/neck/chest/hands | legs/boots/ring1/ring2; main_hand + off_hand under); compact ATK/DEF strip
+  - Clicking equipped gear opens a detail card; Unequip is an explicit action. Inventory item cards show stats, value, available weight, usability requirements, and differences from worn gear. Clear class-relevant upgrades get a green badge. Equip, Use, Sell, and Drop remain explicit buttons.
   - Room action/system reaction toast: centered on room hero art; LOOK-sized padding (no half-cut last line)
   - Quest Accepted / Complete: Veilspan moment cards (centered); open Talk dialog refreshes `[Quest]` → `[In Progress]`
   - Quest log Turn In for anywhere-ready quests; otherwise Turn in: NPC hint
