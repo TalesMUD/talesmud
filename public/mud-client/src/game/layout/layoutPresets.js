@@ -96,11 +96,15 @@ export function fitWidgetsToRows(widgets, rows) {
   });
 }
 
-/** Right-hand column heights for the desktop preset. Sum is `body`. */
+/**
+ * Right-hand column heights for the desktop preset. Sum is `body`.
+ * The character tab gets about two thirds so attributes and combat stats
+ * fit at 1080p without the panel scrolling.
+ */
 function columnSplit(body) {
   const total = Math.max(6, body);
-  let sheet = Math.max(3, Math.round(total * 0.5));
-  let tools = Math.max(2, Math.round(total * 0.28));
+  let sheet = Math.max(4, Math.round(total * 0.66));
+  let tools = Math.max(2, Math.round(total * 0.18));
   let inv = total - sheet - tools;
   if (inv < 2) {
     const fromTools = Math.min(2 - inv, Math.max(0, tools - 2));

@@ -22,7 +22,7 @@
     padding: 52px 12px 8px;
     margin: 0 auto;
     max-width: 100vw;
-    height: 100%;
+    height: 100dvh;
     max-height: 100dvh;
     min-height: 0;
     overflow: hidden;
@@ -54,7 +54,7 @@
   .gameContainer.mobile {
     padding: 0;
     max-width: 100vw;
-    height: 100%;
+    height: 100dvh;
     max-height: 100dvh;
     overflow: auto;
   }
