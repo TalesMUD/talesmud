@@ -180,3 +180,11 @@ B5–B8 UX/auth track ACCEPTED live 2026-09-27. Next crown = A6 combat (boss tel
 - Deploy: pushed content repo `main` and game `engine-june`, uploaded all 18 PNGs to VPS `uploads/portraits`, fast-forwarded game checkout, copied play assets, rebuilt and renamed the binary, and SIGTERM'd only talesmud. New pid 787696 on :8010; Door pid 758959 on :8020 unchanged. Previous binary is `bin/tales.prev-17adfed`.
 - Smoke: live `/play/` 200 with `?v=c2portraits`, `/api/server-info` 200, `POST /api/guest` 200, and sample Human Warrior, Elf Mage, Dwarf Druid portrait URLs 200. The authenticated Gimli account was not accessed; the live path and the matching local data shape were verified separately.
 - Residuals: unsupported race/class pairs use the class silhouette. Existing authenticated user profile pictures are used in party rosters only when no matching game portrait exists.
+
+## A8 — Group fighters and live ally state
+- SHA: `7341bc1`
+- What changed: BattleStage shows an ally strip with live HP/MP, turn/down/fled state, join animation, and hit/crit flashes. Combat join payloads update the roster mid-fight. Cache-bust `?v=a8group`.
+- Tests: `combatRoster_test.mjs` and related attack/party tests in the commit; mud-client build included in the slice.
+- Deploy: pushed `engine-june`; VPS at `7341bc1`, previous binary `bin/tales.prev-552fd34`. SIGTERM only talesmud (:8010). Door pid 758959 on :8020 unchanged.
+- Smoke: live `/play/` serves `?v=a8group` with `ally-strip`/`ally-card`/`combatJoin` in the bundle; `/api/server-info` 200; `POST /api/guest` 200. Guest group-fight shots: `.director/ux-audit/after/a8-guest-a-1366x768.png`, `a8-guest-b-1366x768.png`.
+- Residuals: Material icon ligatures sometimes render as raw names (`hourglass_top`, `military_tech`) in the BattleStage chrome; not introduced as the A8 goal. Progress entry written by the watch routine after Codex hit its usage limit mid-wrap-up.
