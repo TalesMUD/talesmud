@@ -44,12 +44,13 @@
   export let sendMessage;
   export let onTerminalReady;
   export let onTerminalInput;
+  export let authToken = "";
 
   const { activeTab, openSheet } = mobileStore;
 </script>
 
 <div class="mobile-layout">
-  <MobileHeader {store} />
+  <MobileHeader {store} {authToken} />
 
   <div class="mobile-content">
     <!-- Both tabs always mounted; inactive hidden via CSS to preserve terminal state -->

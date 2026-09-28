@@ -10,13 +10,18 @@ import (
 	"github.com/gorilla/handlers"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/talesmud/talesmud/pkg/authlocal"
 	dbsqlite "github.com/talesmud/talesmud/pkg/db/sqlite"
+	"github.com/talesmud/talesmud/pkg/gamemode"
 	mud "github.com/talesmud/talesmud/pkg/mudserver"
 	"github.com/talesmud/talesmud/pkg/repository"
+	"github.com/talesmud/talesmud/pkg/resources"
+	"github.com/talesmud/talesmud/pkg/ruleset"
 	"github.com/talesmud/talesmud/pkg/scripts/runner"
 	"github.com/talesmud/talesmud/pkg/server/handler"
 	"github.com/talesmud/talesmud/pkg/service"
 	"github.com/talesmud/talesmud/pkg/service/groq"
+	"github.com/talesmud/talesmud/pkg/util"
 	"github.com/talesmud/talesmud/pkg/webui"
 	"github.com/talesmud/talesmud/pkg/webuiplay"
 )
@@ -27,28 +32,12 @@ type App interface {
 }
 
 type app struct {
-	Router  *gin.Engine
-	Facade  service.Facade
-	mud     mud.MUDServer
-	tickets *TicketStore
-}
-
-func trustedProxies() []string {
-	raw := strings.TrimSpace(os.Getenv("TRUSTED_PROXIES"))
-	if raw == "" {
-		return []string{"127.0.0.1", "::1"}
-	}
-	var out []string
-	for _, p := range strings.Split(raw, ",") {
-		p = strings.TrimSpace(p)
-		if p != "" {
-			out = append(out, p)
-		}
-	}
-	if len(out) == 0 {
-		return []string{"127.0.0.1", "::1"}
-	}
-	return out
+	Router      *gin.Engine
+	Facade      service.Facade
+	mud         mud.MUDServer
+	tickets     *TicketStore
+	localAuth   *authlocal.Service
+	resetByMail bool
 }
 
 func adminAuthMiddleware() gin.HandlerFunc {
@@ -78,6 +67,11 @@ func adminCredentialsInsecure(user, pass string) bool {
 	weak := map[string]bool{"admin": true, "password": true, "changeme": true}
 	return weak[strings.ToLower(strings.TrimSpace(user))] ||
 		weak[strings.ToLower(strings.TrimSpace(pass))]
+}
+
+// trustedProxies keeps the master-era helper name; game-mode YAML / env win via gamemode.
+func trustedProxies() []string {
+	return gamemode.TrustedProxies()
 }
 
 func allowedCORSOrigins() []string {
@@ -118,14 +112,11 @@ func NewApp() App {
 	repos := repository.NewSQLiteFactory(client)
 
 	r := gin.New()
-	if err := r.SetTrustedProxies(trustedProxies()); err != nil {
-		log.WithError(err).Warn("Failed to set trusted proxies; using Gin defaults")
+	if err := r.SetTrustedProxies(gamemode.TrustedProxies()); err != nil {
+		log.WithError(err).Fatal("Invalid trusted proxy list")
 	}
 	r.Use(gin.LoggerWithFormatter(func(param gin.LogFormatterParams) string {
-		path := param.Path
-		if i := strings.Index(path, "?"); i >= 0 {
-			path = path[:i]
-		}
+		path := util.RedactAccessToken(param.Path)
 		return fmt.Sprintf("[GIN] %s | %3d | %13v | %15s | %-7s %s\n",
 			param.TimeStamp.Format("2006/01/02 - 15:04:05"),
 			param.StatusCode,
@@ -141,13 +132,40 @@ func NewApp() App {
 	facade := service.NewFacade(repos, scriptRunner)
 	mudSrv := mud.New(facade, allowedCORSOrigins())
 	scriptRunner.SetServices(facade, mudSrv.GameCtrl())
+	if !gamemode.RulesetFromConfig() {
+		if err := ruleset.LoadDefault(); err != nil {
+			log.WithError(err).Warn("Ruleset file failed to load; using built-in defaults")
+		}
+	}
+	if store, err := resources.New(client.DB()); err != nil {
+		log.WithError(err).Warn("Refilling resource store unavailable")
+	} else {
+		store.Configure(ruleset.ResourceAllowances())
+		mudSrv.SetResourceStore(store)
+		scriptRunner.SetResourceStore(store)
+	}
 
-	return &app{
+	application := &app{
 		Router:  r,
 		Facade:  facade,
 		mud:     mudSrv,
 		tickets: NewTicketStore(),
 	}
+	if gamemode.LocalAuth() {
+		secret, err := authlocal.ResolveSecret(gamemode.Current())
+		if err != nil {
+			log.WithError(err).Fatal("Failed to load local session secret")
+		}
+		mailer := authlocal.OutboxMailer{Path: gamemode.Current().OutboxPath}
+		application.localAuth = authlocal.New(client.DB(), facade.UsersService(), secret, mailer)
+		application.resetByMail = mailer.DeliversExternally()
+		UseLocalAuth(application.localAuth)
+		log.WithFields(log.Fields{
+			"outbox":    gamemode.Current().OutboxPath,
+			"resetMail": application.resetByMail,
+		}).Info("Local auth enabled")
+	}
+	return application
 }
 
 // SetupRoutes ... Configures the routes
@@ -282,23 +300,53 @@ func (app *app) setupRoutes() {
 	protected.Use(AuthMiddleware(app.Facade))
 	{
 		// Player-level routes (any authenticated user)
+		if app.localAuth != nil {
+			localAuth := &handler.LocalAuthHandler{Auth: app.localAuth}
+			protected.GET("auth/me", localAuth.Me)
+		}
 
 		// Characters
+		protected.POST("ws-ticket", app.tickets.IssueWSTicket)
 		protected.GET("characters", csh.GetCharacters)
 		protected.GET("my-characters", csh.GetMyCharacters)
+		protected.POST("characters", csh.PostCharacter)
 		protected.GET("characters/:id", csh.GetCharacterByID)
 		protected.GET("characters/:id/map", characterMap.GetCharacterMap)
 		protected.DELETE("characters/:id", csh.DeleteCharacterByID)
 		protected.PUT("characters/:id", csh.UpdateCharacterByID)
 		protected.POST("newcharacter", csh.CreateNewCharacter)
-		protected.POST("ws-ticket", app.tickets.IssueWSTicket)
 
 		// AI-powered generation
 		protected.POST("generate/character", generate.GenerateCharacter)
 
+		// Read-only game data (accessible to all authenticated users)
+		protected.GET("rooms", rooms.GetRooms)
+		protected.GET("rooms-vh", rooms.GetRoomValueHelp)
+		protected.GET("rooms/:id", rooms.GetRoomByID)
+		protected.GET("items", items.GetItems)
+		protected.GET("items/:id", items.GetItemByID)
+		protected.GET("scripts", scripts.GetScripts)
+		protected.GET("script-types", scripts.GetScriptTypes)
+		protected.GET("world/graph", worldRenderer.RenderGraphData)
+		protected.GET("world/rooms-minimal", worldRenderer.GetMinimalRooms)
+		protected.GET("npcs", npcs.GetNPCs)
+		protected.GET("npcs/templates", npcs.GetNPCTemplates)
+		protected.GET("npcs/:id", npcs.GetNPCByID)
+		protected.GET("spawners", npcSpawners.GetSpawners)
+		protected.GET("spawners/:id", npcSpawners.GetSpawnerByID)
+		protected.GET("dialogs", dialogs.GetDialogs)
+		protected.GET("dialogs/:id", dialogs.GetDialogByID)
 		protected.GET("character-templates", charTemplates.GetCharacterTemplates)
 		protected.GET("character-templates/:id", charTemplates.GetCharacterTemplateByID)
 		protected.GET("character-templates/presets", charTemplates.GetCharacterTemplatePresets)
+		protected.GET("loottables", lootTables.GetLootTables)
+		protected.GET("loottables/:id", lootTables.GetLootTableByID)
+		protected.GET("backgrounds", backgrounds.ListBackgrounds)
+		protected.GET("settings", serverSettings.GetServerSettings)
+		protected.GET("quests", questsHandler.GetQuests)
+		protected.GET("quests/:id", questsHandler.GetQuestByID)
+		protected.GET("skills", skillsHandler.GetSkills)
+		protected.GET("skills/:id", skillsHandler.GetSkillByID)
 		protected.GET("quest-progress/:characterId", questsHandler.GetQuestLog)
 		protected.POST("quest-progress/:characterId/accept/:questId", questsHandler.AcceptQuest)
 		protected.POST("quest-progress/:characterId/abandon/:questId", questsHandler.AbandonQuest)
@@ -312,33 +360,6 @@ func (app *app) setupRoutes() {
 		creator := protected.Group("")
 		creator.Use(CreatorMiddleware())
 		{
-			creator.POST("characters", csh.PostCharacter)
-
-			creator.GET("rooms", rooms.GetRooms)
-			creator.GET("rooms-vh", rooms.GetRoomValueHelp)
-			creator.GET("rooms/:id", rooms.GetRoomByID)
-			creator.GET("items", items.GetItems)
-			creator.GET("items/:id", items.GetItemByID)
-			creator.GET("scripts", scripts.GetScripts)
-			creator.GET("script-types", scripts.GetScriptTypes)
-			creator.GET("world/graph", worldRenderer.RenderGraphData)
-			creator.GET("world/rooms-minimal", worldRenderer.GetMinimalRooms)
-			creator.GET("npcs", npcs.GetNPCs)
-			creator.GET("npcs/templates", npcs.GetNPCTemplates)
-			creator.GET("npcs/:id", npcs.GetNPCByID)
-			creator.GET("spawners", npcSpawners.GetSpawners)
-			creator.GET("spawners/:id", npcSpawners.GetSpawnerByID)
-			creator.GET("dialogs", dialogs.GetDialogs)
-			creator.GET("dialogs/:id", dialogs.GetDialogByID)
-			creator.GET("loottables", lootTables.GetLootTables)
-			creator.GET("loottables/:id", lootTables.GetLootTableByID)
-			creator.GET("backgrounds", backgrounds.ListBackgrounds)
-			creator.GET("settings", serverSettings.GetServerSettings)
-			creator.GET("quests", questsHandler.GetQuests)
-			creator.GET("quests/:id", questsHandler.GetQuestByID)
-			creator.GET("skills", skillsHandler.GetSkills)
-			creator.GET("skills/:id", skillsHandler.GetSkillByID)
-
 			// Rooms
 			creator.POST("rooms", rooms.PostRoom)
 			creator.PUT("rooms/:id", rooms.PutRoom)
@@ -465,6 +486,16 @@ func (app *app) setupRoutes() {
 			GuestService: app.Facade.GuestService(),
 		}
 		public.POST("guest", guest.CreateGuestSession)
+
+		if app.localAuth != nil {
+			localAuth := &handler.LocalAuthHandler{Auth: app.localAuth}
+			public.POST("auth/register", localAuth.Register)
+			public.POST("auth/login", localAuth.Login)
+			if app.resetByMail {
+				public.POST("auth/forgot", localAuth.Forgot)
+				public.POST("auth/reset", localAuth.Reset)
+			}
+		}
 	}
 
 	// Start MUD Server
@@ -479,6 +510,25 @@ func (app *app) setupRoutes() {
 
 	// Serve mud-client (game client) at /play
 	r.Use(SPAMiddleware("/play", webuiplay.FS(), webuiplay.IndexFile))
+
+	if gamemode.ANSI() {
+		if st, err := os.Stat("public/door"); err == nil && st.IsDir() {
+			r.Static("/door", "public/door")
+		}
+		r.GET("/api/door/config", func(c *gin.Context) {
+			title, subtitle, tokenKey := gamemode.ClientPage()
+			c.JSON(http.StatusOK, gin.H{
+				"title":         title,
+				"subtitle":      subtitle,
+				"tokenKey":      tokenKey,
+				"forgotEnabled": app.resetByMail,
+			})
+		})
+		r.GET("/", func(c *gin.Context) {
+			c.Redirect(http.StatusFound, "/door/")
+		})
+		return
+	}
 
 	// Optional landing page from OS filesystem
 	landingPath := strings.TrimSpace(os.Getenv("LANDING_PATH"))

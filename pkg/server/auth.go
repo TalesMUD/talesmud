@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	log "github.com/sirupsen/logrus"
+	"github.com/talesmud/talesmud/pkg/authlocal"
 	e "github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/service"
 )
@@ -194,6 +195,15 @@ func setUser(c *gin.Context, facade service.Facade) {
 	}
 }
 
+// localSessions is set only when this process runs auth=local.
+// Classic servers leave it nil.
+var localSessions *authlocal.Service
+
+// UseLocalAuth installs the local session verifier. Nil disables it.
+func UseLocalAuth(svc *authlocal.Service) {
+	localSessions = svc
+}
+
 func abortMissingToken(c *gin.Context, reason string) {
 	log.WithFields(log.Fields{
 		"ip":     c.ClientIP(),
@@ -228,6 +238,25 @@ func authenticateToken(c *gin.Context, facade service.Facade, tokenStr string) {
 				return
 			}
 		}
+	}
+
+	// Local username/password sessions. Tokens from this process are not sent to the external provider.
+	if localSessions != nil && authlocal.IsLocalIssuer(tokenStr) {
+		user, err := localSessions.UserFromToken(tokenStr)
+		if err != nil || user == nil {
+			handleTokenError(c, err, nil)
+			return
+		}
+		if user.IsBanned {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+				"error": "Your account has been banned",
+			})
+			return
+		}
+		c.Set("userid", user.RefID)
+		c.Set("user", user)
+		c.Next()
+		return
 	}
 
 	aud := strings.TrimSpace(os.Getenv("AUTH0_AUDIENCE"))

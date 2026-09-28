@@ -1,6 +1,7 @@
 <script>
   import { itemArtSrc, onItemArtError } from '../itemArtSrc.js';
   import { portraitSrc, onPortraitError } from '../portraitSrc.js';
+  import ItemDetailCard from './ItemDetailCard.svelte';
 
   export let store = null;
   export let sendMessage = null;
@@ -10,6 +11,7 @@
   let equippedItems = {};
   let character = null;
   let stats = {};
+  let detailItem = null;
 
   $: if (store) {
     equippedItems = $store.equippedItems || {};
@@ -81,7 +83,6 @@
       tip += ' [' + item.quality.toUpperCase() + ']';
     }
     if (item.type) tip += ' (' + item.type + ')';
-    tip += '\nClick to unequip';
     if (item.attributes) {
       const parts = [];
       if (item.attributes.damage != null) parts.push('Dmg: ' + item.attributes.damage);
@@ -100,13 +101,20 @@
     const name = item.instanceSuffix ? item.name + '-' + item.instanceSuffix : item.name;
     sendMessage('unequip ' + name);
   }
+
+  function onItemAction(event) {
+    if (event.detail.verb === 'unequip') handleUnequip(event.detail.item);
+    detailItem = null;
+  }
 </script>
 
 <style>
   .equipment-widget {
     display: flex;
     flex-direction: column;
+    height: 100%;
     min-height: 0;
+    overflow: auto;
   }
 
   .widget-title {
@@ -290,14 +298,17 @@
     <div class="slot-col left">
       {#each leftSlots as slot}
         {@const item = equippedItems[slot.key]}
-        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
         <div
           class="equip-slot"
           class:empty={!item}
           class:filled={!!item}
           style="border-color: {item ? getQualityColor(item.quality) : 'rgba(148, 163, 184, 0.35)'}"
           title={getItemTooltip(item, slot.label)}
-          on:click={() => item && handleUnequip(item)}
+          role={item ? 'button' : undefined}
+          tabindex={item ? 0 : undefined}
+          on:click={() => { if (item) detailItem = item; }}
+          on:contextmenu={(event) => { if (item) { event.preventDefault(); detailItem = item; } }}
+          on:keydown={(event) => { if (item && event.key === 'Enter') { event.preventDefault(); detailItem = item; } }}
         >
           <span class="slot-tag">{slot.label}</span>
           {#if item}
@@ -330,14 +341,17 @@
     <div class="slot-col right">
       {#each rightSlots as slot}
         {@const item = equippedItems[slot.key]}
-        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
         <div
           class="equip-slot"
           class:empty={!item}
           class:filled={!!item}
           style="border-color: {item ? getQualityColor(item.quality) : 'rgba(148, 163, 184, 0.35)'}"
           title={getItemTooltip(item, slot.label)}
-          on:click={() => item && handleUnequip(item)}
+          role={item ? 'button' : undefined}
+          tabindex={item ? 0 : undefined}
+          on:click={() => { if (item) detailItem = item; }}
+          on:contextmenu={(event) => { if (item) { event.preventDefault(); detailItem = item; } }}
+          on:keydown={(event) => { if (item && event.key === 'Enter') { event.preventDefault(); detailItem = item; } }}
         >
           <span class="slot-tag">{slot.label}</span>
           {#if item}
@@ -352,14 +366,17 @@
     <div class="weapon-row">
       {#each weaponSlots as slot}
         {@const item = equippedItems[slot.key]}
-        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
         <div
           class="equip-slot"
           class:empty={!item}
           class:filled={!!item}
           style="border-color: {item ? getQualityColor(item.quality) : 'rgba(148, 163, 184, 0.35)'}"
           title={getItemTooltip(item, slot.label)}
-          on:click={() => item && handleUnequip(item)}
+          role={item ? 'button' : undefined}
+          tabindex={item ? 0 : undefined}
+          on:click={() => { if (item) detailItem = item; }}
+          on:contextmenu={(event) => { if (item) { event.preventDefault(); detailItem = item; } }}
+          on:keydown={(event) => { if (item && event.key === 'Enter') { event.preventDefault(); detailItem = item; } }}
         >
           <span class="slot-tag">{slot.label}</span>
           {#if item}
@@ -381,3 +398,7 @@
     <span>DEF <strong>{defense}</strong></span>
   </div>
 </div>
+
+{#if detailItem}
+  <ItemDetailCard item={detailItem} source="equipment" {character} on:close={() => detailItem = null} on:action={onItemAction} />
+{/if}

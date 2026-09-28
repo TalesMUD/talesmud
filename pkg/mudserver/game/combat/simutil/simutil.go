@@ -93,7 +93,7 @@ func RunSimulation(players []*characters.Character, enemies []*npc.NPC) SingleRe
 			action, targetID := engine.GetNPCAIAction(instance, current, nil)
 			switch action {
 			case combatentity.CombatActionAttack:
-				engine.ProcessAttack(instance, current.ID, targetID)
+				engine.StepNPCAttack(instance, current.ID, targetID)
 			case combatentity.CombatActionDefend:
 				engine.ProcessDefend(instance, current.ID)
 			}

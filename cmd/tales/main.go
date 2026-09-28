@@ -10,6 +10,7 @@ import (
 
 	"github.com/joho/godotenv"
 	dbsqlite "github.com/talesmud/talesmud/pkg/db/sqlite"
+	"github.com/talesmud/talesmud/pkg/gamemode"
 	"github.com/talesmud/talesmud/pkg/importer"
 	"github.com/talesmud/talesmud/pkg/repository"
 	"github.com/talesmud/talesmud/pkg/server"
@@ -19,6 +20,7 @@ import (
 func main() {
 	// Parse command-line flags
 	importFolder := flag.String("import", "", "Import world data from folder (e.g., mvp-rpg-1)")
+	configPath := flag.String("config", "", "Game mode YAML. Sets port and database when those fields are present.")
 	verbose := flag.Bool("verbose", false, "Enable verbose output during import")
 	dryRun := flag.Bool("dry-run", false, "Validate import data without making changes")
 	flag.Parse()
@@ -28,6 +30,12 @@ func main() {
 	if err != nil {
 		log.Warn("Error loading .env file")
 	}
+	if *configPath != "" {
+		if err := gamemode.ApplyFile(*configPath); err != nil {
+			log.Fatal(err)
+		}
+	}
+	gamemode.ApplyEnv()
 
 	// Configure logging (stderr + rotating file, 7-day retention)
 	util.ConfigureLogging()

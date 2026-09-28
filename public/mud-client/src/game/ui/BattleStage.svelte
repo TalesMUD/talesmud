@@ -1,6 +1,8 @@
 <script>
   import { afterUpdate, onDestroy, tick } from 'svelte';
-  import { hashedAvatar } from '../portraitSrc.js';
+  import { combatStageFocus, isTextEntry, prefersReducedMotion, rarityClass } from '../keyboardShortcuts.js';
+  import { battleDockOpen } from '../uiChrome.js';
+  import { enemySilhouette, playerSilhouette, portraitSrc } from '../portraitSrc.js';
   import {
     skillDisplayName,
     isConsumableItem,
@@ -37,7 +39,6 @@
   let bannerFlashKey = 0;
   let arenaFlash = false;
   let arenaFlashTimer = null;
-  let bannerStack = []; // recent faded lines [{id, parts, raw}]
   let logEl = null;
   let logScrollPending = false;
   let logExpanded = false;
@@ -46,7 +47,14 @@
   $: visible = phase === 'active' || phase === 'ending';
   $: if (!visible) logExpanded = false;
   $: enemies = $store.combatEnemies || [];
+  $: windupEnemy = enemies.find((e) => e && e.telegraph && (e.hp ?? 0) > 0);
+  $: windupText = windupEnemy
+    ? `${windupEnemy.name} is winding up ${windupEnemy.telegraph}!`
+    : "";
   $: players = $store.combatPlayers || [];
+  $: allies = players.filter((p) => p.id !== selfCombatant?.id);
+  $: combatJoin = $store.combatJoin;
+  $: showJoinBanner = !!(combatJoin?.at && nowMs - combatJoin.at < 3000);
   $: targetId = $store.combatTargetId;
   $: turn = $store.combatTurn;
   $: logRaw = $store.combatLog || [];
@@ -122,6 +130,63 @@
     fxId === 'slash' || fxIsDeath || fxResult === 'hit' || fxResult === 'crit' || fxDamage > 0
   );
   $: fxIsCrit = fxActive && fxResult === 'crit';
+  $: fxAbility = (fx && fx.ability) || '';
+  $: fxIsCrush = fxActive && /crushing blow/i.test(fxAbility);
+
+  $: lootList = Array.isArray(rewardBreakdown?.loot) ? rewardBreakdown.loot : [];
+  $: levelUp = rewardBreakdown?.levelUp || null;
+  $: defeatInfo = rewardBreakdown?.defeat || null;
+  $: hasRewardBreakdown = !!(rewardBreakdown && (
+    rewardBreakdown.baseXp != null || rewardBreakdown.xp != null || rewardBreakdown.baseGold != null
+  ));
+
+  let lootShown = 0;
+  let lootTimer = null;
+  let armedLootKey = '';
+
+  function stopLootReveal() {
+    if (lootTimer) {
+      clearInterval(lootTimer);
+      lootTimer = null;
+    }
+  }
+
+  function armLootReveal(items) {
+    stopLootReveal();
+    const list = Array.isArray(items) ? items : [];
+    if (prefersReducedMotion() || list.length === 0) {
+      lootShown = list.length;
+      return;
+    }
+    lootShown = 0;
+    lootTimer = setInterval(() => {
+      lootShown += 1;
+      if (lootShown >= list.length) stopLootReveal();
+    }, 420);
+  }
+
+  $: if (phase === 'ending') {
+    const names = lootList.map((item) => item && item.name).join('|');
+    const key = `${outcome}|${names}|${levelUp?.newLevel || 0}`;
+    if (key !== armedLootKey) {
+      armedLootKey = key;
+      armLootReveal(lootList);
+    }
+  } else if (armedLootKey) {
+    armedLootKey = '';
+    stopLootReveal();
+    lootShown = 0;
+  }
+
+  $: levelReady = !levelUp || lootShown >= lootList.length;
+
+  function onOutcomeKey(event) {
+    if (phase !== 'ending') return;
+    if (isTextEntry(event.target)) return;
+    if (event.key !== 'Enter' && event.key !== 'Escape') return;
+    event.preventDefault();
+    dismissOutcome();
+  }
 
   $: if (visible && (phase === 'active' || phase === 'ending')) startTick();
   else stopTick();
@@ -156,7 +221,7 @@
   $: queuedLabel = queuedChipLabel(queuedAction, queuedSkillId);
 
 
-  // Short hit banner: prefer combatFx summary; log only if short prose (no rolls/ASCII dumps).
+  // One concise banner per structured action. Prose stays in the log.
   $: {
     let nextParts = null;
     let nextKey = '';
@@ -164,23 +229,7 @@
       nextKey = `fx-${fx.at}`;
       nextParts = formatFxBannerParts(fx);
     }
-    if (!nextParts) {
-      const latest = log.length ? log[log.length - 1] : null;
-      const candidate = latest?.text ? String(latest.text).trim() : '';
-      if (latest && isBannerWorthy(candidate)) {
-        nextKey = String(latest.id);
-        nextParts = parseBannerParts(shortenBannerText(candidate));
-      }
-    }
     if (nextParts && nextKey && nextKey !== lastBannerKey) {
-      const prevRaw = bannerText;
-      const prevParts = bannerParts;
-      if (prevRaw && lastBannerKey) {
-        bannerStack = [
-          { id: lastBannerKey, parts: prevParts, raw: prevRaw },
-          ...bannerStack,
-        ].slice(0, 2);
-      }
       lastBannerKey = nextKey;
       bannerParts = nextParts;
       bannerText = nextParts.raw || '';
@@ -241,18 +290,24 @@
   }
 
   onDestroy(() => {
+    unsubDock();
     stopTick();
+    stopLootReveal();
     if (bannerTimer) clearTimeout(bannerTimer);
     if (arenaFlashTimer) clearTimeout(arenaFlashTimer);
   });
 
-  function combatantPortrait(c, fallbackKey) {
+  function combatantPortrait(c) {
     const p = (c && c.portrait) || '';
-    if (p) {
-      if (p.startsWith('/') || p.startsWith('http') || p.startsWith('img/')) return p;
-      return `/api/portraits/${p.replace(/\.png$/i, '')}.png`;
+    if (p.startsWith('data:')) return p;
+    if (p && !p.startsWith('img/')) {
+      if (p.startsWith('/') || p.startsWith('http')) return p;
+      return `/api/portraits/${String(p).replace(/\.png$/i, '')}.png`;
     }
-    return hashedAvatar(fallbackKey || (c && c.name) || 'hero');
+    if (c && players.some((player) => player.id === c.id)) {
+      return c.id === selfId ? portraitSrc(character) : playerSilhouette(c.classId);
+    }
+    return enemySilhouette();
   }
 
   function hpPct(hp, maxHp) {
@@ -281,8 +336,13 @@
 
   function cmd(text) {
     panel = null;
+    battleDockOpen.set(false);
     if (sendMessage && text) sendMessage(text);
   }
+
+  const unsubDock = battleDockOpen.subscribe((open) => {
+    if (!open && panel === 'items') panel = null;
+  });
 
   function doAttack() {
     const target = enemies.find((e) => e.id === targetId) || enemies.find((e) => (e.hp ?? 0) > 0);
@@ -370,24 +430,6 @@
     return false;
   }
 
-  function isBannerWorthy(text) {
-    const t = String(text || '').trim();
-    if (!t || isCombatLogNoise(t)) return false;
-    if (t.includes('\n')) return false;
-    if (t.length > 96) return false;
-    // Roll math stays in log, not the giant banner
-    if (/\bd20\b|\broll(ed|s)?\b|\+\s*\d+\s*=|\(\s*\d+\s*[+\-]\s*\d+/i.test(t)) return false;
-    return true;
-  }
-
-  function shortenBannerText(text) {
-    const t = String(text || '').trim();
-    // Prefer "X hits Y for N" style clauses
-    const hit = t.match(/([^.]{0,40}?\b(?:hits|crits|misses|heals)\b[^.!]{0,50}(?:for\s+\d+)?)/i);
-    if (hit) return hit[1].trim();
-    return t.length > 72 ? `${t.slice(0, 69)}…` : t;
-  }
-
   function bannerIconFor(kind) {
     switch (kind) {
       case 'crit': return 'whatshot';
@@ -396,7 +438,7 @@
       case 'miss': return 'blur_on';
       case 'defend': return 'security';
       case 'flee': return 'directions_run';
-      case 'cast': return 'auto_fix';
+      case 'cast': return 'auto_fix_high';
       default: return 'campaign';
     }
   }
@@ -412,50 +454,6 @@
       icon: bannerIconFor(k),
       raw: raw || '',
     };
-  }
-
-  function parseBannerParts(text) {
-    const t = String(text || '').trim();
-    if (!t) return null;
-    let m = t.match(/^(.+?)\s+(crits)\s+(.+?)(?:\s+for\s+(\d+))?\.?$/i);
-    if (m) {
-      return makeBannerParts({
-        kind: 'crit', actor: m[1], verb: 'crits', target: m[3], amount: m[4] || 0, raw: t,
-      });
-    }
-    m = t.match(/^(.+?)\s+(hits)\s+(.+?)(?:\s+for\s+(\d+))?\.?$/i);
-    if (m) {
-      return makeBannerParts({
-        kind: 'hit', actor: m[1], verb: 'hits', target: m[3], amount: m[4] || 0, raw: t,
-      });
-    }
-    m = t.match(/^(.+?)\s+(heals)\s+(.+?)(?:\s+for\s+(\d+))?\.?$/i);
-    if (m) {
-      return makeBannerParts({
-        kind: 'heal', actor: m[1], verb: 'heals', target: m[3], amount: m[4] || 0, raw: t,
-      });
-    }
-    m = t.match(/^(.+?)\s+(misses)\s+(.+?)\.?$/i);
-    if (m) {
-      return makeBannerParts({
-        kind: 'miss', actor: m[1], verb: 'misses', target: m[3], raw: t,
-      });
-    }
-    m = t.match(/^(.+?)\s+(defends)\.?$/i);
-    if (m) {
-      return makeBannerParts({ kind: 'defend', actor: m[1], verb: 'defends', raw: t });
-    }
-    m = t.match(/^(.+?)\s+(flees)\.?$/i);
-    if (m) {
-      return makeBannerParts({ kind: 'flee', actor: m[1], verb: 'flees', raw: t });
-    }
-    m = t.match(/^(.+?)\s+(casts)\s+(.+)$/i);
-    if (m) {
-      return makeBannerParts({
-        kind: 'cast', actor: m[1], verb: 'casts', target: m[3], raw: t,
-      });
-    }
-    return makeBannerParts({ kind: 'other', raw: t });
   }
 
   function formatFxBannerParts(fxEvt) {
@@ -562,6 +560,7 @@
 
   function togglePanel(name) {
     panel = panel === name ? null : name;
+    battleDockOpen.set(panel === 'items');
   }
 
   function toggleLogExpanded() {
@@ -590,16 +589,18 @@
     return isFxTarget(id) && (fxDamage > 0 || fxHeal > 0 || fxIsMiss);
   }
 
-  function onImgError(ev, key) {
+  function onImgError(ev, who, className = selfClass) {
     const img = ev && ev.currentTarget;
     if (!img || img.dataset.fallback === '1') return;
     img.dataset.fallback = '1';
-    img.src = hashedAvatar(key || 'npc');
+    const next = who === 'player' ? playerSilhouette(className) : enemySilhouette();
+    if (img.getAttribute('src') !== next) img.src = next;
   }
 </script>
 
+<svelte:window on:keydown={onOutcomeKey} />
 {#if visible}
-<div class="battle-stage" class:ending={phase === 'ending'} role="dialog" aria-label="Combat">
+<div class="battle-stage" class:ending={phase === 'ending'} role="dialog" aria-label="Combat" tabindex="-1" use:combatStageFocus>
   <div class="battle-backdrop" aria-hidden="true"></div>
   <div class="battle-frame">
   <header class="battle-header">
@@ -665,6 +666,9 @@
     data-count={enemyCount}
     aria-label="Enemies"
   >
+    {#if windupText}
+      <div class="telegraph-banner" role="status">{windupText}</div>
+    {/if}
     {#each enemies as enemy (enemy.id)}
       {@const pct = hpPct(enemy.hp, enemy.maxHp)}
       {@const dead = (enemy.hp ?? 0) <= 0}
@@ -694,7 +698,12 @@
             class:threat-orange={enemy.threat === 'orange'}
             class:threat-red={enemy.threat === 'red'}
             class:threat-skull={enemy.threat === 'skull'}
-          >{#if enemy.threat === 'skull'}<span class="skull-mark" title="Skull" aria-hidden="true">☠</span>{/if}{enemy.name}</div>
+            class:winding={!!enemy.telegraph}
+            class:enraged={!!enemy.enraged}
+            class:hit-flash={tgt && (fxIsHit || fxIsMiss) && !fxIsCrit && !fxIsCrush}
+            class:crit-flash={tgt && fxIsCrit && !fxIsCrush}
+            class:crush-flash={tgt && fxIsCrush}
+          >{#if enemy.threat === 'skull'}<span class="skull-mark" title="Skull" aria-hidden="true">☠</span>{/if}{enemy.name}{#if enemy.enraged}<span class="enrage-badge">Enraged</span>{/if}</div>
           <div class="hp-row">
             <span class="hp-label">HP</span>
             <div class="hp-track">
@@ -709,26 +718,27 @@
           {/if}
           <img
             class="enemy-sprite"
-            src={combatantPortrait(enemy, enemy.id || enemy.name)}
+            src={combatantPortrait(enemy)}
             alt=""
-            on:error={(e) => onImgError(e, enemy.name)}
+            on:error={(e) => onImgError(e, 'enemy')}
           />
+          {#if dead}<span class="defeated-label">Defeated</span>{/if}
+          {#if showFloatOn(enemy.id)}
+            <div class="fx-float over-sprite" data-key={fxKey}>
+              {#if fxIsMiss}
+                <span class="fx-miss-label">miss</span>
+              {:else if fxDamage > 0}
+                <span class="fx-dmg" class:crit={fxIsCrit} class:crush={fxIsCrush}>-{fxDamage}</span>
+              {:else if fxHeal > 0}
+                <span class="fx-heal">+{fxHeal}</span>
+              {/if}
+            </div>
+          {/if}
           {#if tgt && fxIsMiss}
             <div class="fx-puff" data-key={fxKey} aria-hidden="true"></div>
           {/if}
           {#if tgt && fxIsHit && !fxIsMiss}
-            <div class="fx-slash" class:crit={fxIsCrit} data-key={fxKey} aria-hidden="true"></div>
-          {/if}
-          {#if showFloatOn(enemy.id)}
-            <div class="fx-float" data-key={fxKey}>
-              {#if fxDamage > 0}
-                <span class="fx-dmg" class:crit={fxIsCrit}>-{fxDamage}</span>
-              {:else if fxHeal > 0}
-                <span class="fx-heal">+{fxHeal}</span>
-              {:else if fxIsMiss}
-                <span class="fx-miss-label">Miss</span>
-              {/if}
-            </div>
+            <div class="fx-slash" class:crit={fxIsCrit || fxIsCrush} data-key={fxKey} aria-hidden="true"></div>
           {/if}
         </div>
       </button>
@@ -750,6 +760,51 @@
     {/if}
   </div>
 
+  {#if showJoinBanner}
+    <div class="join-banner" role="status">{combatJoin.actorName} joins the fight!</div>
+  {/if}
+
+  <div class="player-team" class:solo={allies.length === 0}>
+  {#if allies.length}
+    <section class="ally-strip" aria-label="Allies">
+      {#each allies as ally (ally.id)}
+        {@const pct = hpPct(ally.hp, ally.maxHp)}
+        {@const down = !ally.isAlive || (ally.hp ?? 0) <= 0}
+        {@const tgt = isFxTarget(ally.id)}
+        <div
+          class="ally-card"
+          class:ally-turn={turn?.actorId === ally.id}
+          class:ally-down={down}
+          class:ally-fled={ally.hasFled}
+          class:ally-hit={tgt && fxIsHit}
+          class:ally-crit={tgt && fxIsCrit}
+          class:just-joined={showJoinBanner && combatJoin.actorId === ally.id}
+        >
+          <div class="ally-portrait">
+            <img src={combatantPortrait(ally)} alt="" on:error={(e) => onImgError(e, 'player', ally.classId)} />
+            {#if showFloatOn(ally.id)}
+              <div class="fx-float over-sprite" data-key={fxKey}>
+                {#if fxIsMiss}<span class="fx-miss-label">miss</span>
+                {:else if fxDamage > 0}<span class="fx-dmg" class:crit={fxIsCrit} class:crush={fxIsCrush}>-{fxDamage}</span>
+                {:else if fxHeal > 0}<span class="fx-heal">+{fxHeal}</span>{/if}
+              </div>
+            {/if}
+          </div>
+          <div class="ally-meta">
+            <div class="ally-name" class:hit-flash={tgt && fxIsHit}>{ally.name}</div>
+            <div class="ally-sub">{ally.classId || 'Adventurer'} · Lv {ally.level || 1}{#if down} · Down{:else if ally.hasFled} · Fled{:else if turn?.actorId === ally.id} · Turn{/if}</div>
+            <div class="ally-bar"><span style="width: {pct}%; background: {playerHpColor(pct)}"></span></div>
+            <div class="ally-numbers">HP {ally.hp ?? 0}/{ally.maxHp ?? 0}</div>
+            {#if ally.maxMana > 0}
+              <div class="ally-bar mana"><span style="width: {hpPct(ally.mana, ally.maxMana)}%"></span></div>
+              <div class="ally-numbers">MP {ally.mana ?? 0}/{ally.maxMana}</div>
+            {/if}
+          </div>
+        </div>
+      {/each}
+    </section>
+  {/if}
+
   <!-- Player lower-left -->
   <section
     class="player-panel"
@@ -762,10 +817,17 @@
   >
     <div class="player-bust" class:shake={isFxTarget(selfId) && fxIsHit}>
       <img
-        src={combatantPortrait(selfCombatant, selfId || selfName)}
+        src={combatantPortrait(selfCombatant)}
         alt=""
-        on:error={(e) => onImgError(e, selfName)}
+        on:error={(e) => onImgError(e, 'player')}
       />
+      {#if showFloatOn(selfId)}
+        <div class="fx-float over-sprite" data-key={fxKey}>
+          {#if fxIsMiss}<span class="fx-miss-label">miss</span>
+          {:else if fxDamage > 0}<span class="fx-dmg" class:crit={fxIsCrit} class:crush={fxIsCrush}>-{fxDamage}</span>
+          {:else if fxHeal > 0}<span class="fx-heal">+{fxHeal}</span>{/if}
+        </div>
+      {/if}
       {#if isFxTarget(selfId) && fxIsMiss}
         <div class="fx-puff" data-key={fxKey} aria-hidden="true"></div>
       {/if}
@@ -775,20 +837,15 @@
       {#if isFxActor(selfId) && fxIsDefend}
         <div class="fx-shield" data-key={fxKey} aria-hidden="true"></div>
       {/if}
-      {#if showFloatOn(selfId)}
-        <div class="fx-float" data-key={fxKey}>
-          {#if fxDamage > 0}
-            <span class="fx-dmg" class:crit={fxIsCrit}>-{fxDamage}</span>
-          {:else if fxHeal > 0}
-            <span class="fx-heal">+{fxHeal}</span>
-          {:else if fxIsMiss}
-            <span class="fx-miss-label">Miss</span>
-          {/if}
-        </div>
-      {/if}
     </div>
     <div class="player-meta">
-      <div class="player-name">{selfName}</div>
+      <div
+        class="player-name"
+        class:hit-flash={isFxTarget(selfId) && (fxIsHit || fxIsMiss) && !fxIsCrit && !fxIsCrush}
+        class:crit-flash={isFxTarget(selfId) && fxIsCrit && !fxIsCrush}
+        class:crush-flash={isFxTarget(selfId) && fxIsCrush}
+      >{selfName}
+      </div>
       <div class="hp-row player-hp">
         <span class="hp-label">HP</span>
         <div class="hp-track">
@@ -820,6 +877,7 @@
       </div>
     </div>
   </section>
+  </div>
 
   {#if arenaFlash}
     <div
@@ -831,7 +889,7 @@
   {/if}
 
   <div class="action-banner-stack" aria-live="polite">
-    {#if bannerVisible && bannerParts}
+    {#if bannerVisible && bannerParts && !showJoinBanner}
       <div
         class="action-banner kind-{bannerParts.kind}"
         class:flash={bannerFlashKey > 0}
@@ -857,16 +915,6 @@
         </div>
       </div>
     {/if}
-    {#each bannerStack as stale (stale.id)}
-      {#if !(bannerVisible && stale.id === lastBannerKey)}
-        <div class="action-banner stale kind-{(stale.parts && stale.parts.kind) || 'other'}" aria-hidden="true">
-          <i class="material-icons banner-icon">{(stale.parts && stale.parts.icon) || 'campaign'}</i>
-          <div class="banner-copy">
-            <span class="banner-raw">{stale.raw}</span>
-          </div>
-        </div>
-      {/if}
-    {/each}
   </div>
   </div><!-- /.battle-arena -->
 
@@ -1020,33 +1068,61 @@
 
   {#if phase === 'ending'}
     <div class="outcome-panel" class:victory={outcome === 'victory'} class:defeat={outcome === 'defeat'} class:fled={outcome === 'fled'}>
-      <div class="outcome-card">
+      <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+      <div class="outcome-card" role="status" on:click={dismissOutcome}>
         <div class="outcome-ornament" aria-hidden="true">♦</div>
         <div class="outcome-title">{outcomeLabel(outcome)}</div>
-        {#if outcomeRewards?.summary}
+        {#if outcome === 'victory' && hasRewardBreakdown}
+          <ul class="reward-breakdown">
+            <li>Base: {rewardBreakdown.baseXp || 0} XP, {rewardBreakdown.baseGold || 0} gold</li>
+            <li>Level modifier (highest in the split, L{rewardBreakdown.referenceLevel || 1}): {signedReward(rewardBreakdown.levelModXp)} XP, {signedReward(rewardBreakdown.levelModGold)} gold</li>
+            {#if (rewardBreakdown.firstKillXp || 0) !== 0 || (rewardBreakdown.firstKillGold || 0) !== 0}
+              <li>First-kill bonus: {signedReward(rewardBreakdown.firstKillXp)} XP, {signedReward(rewardBreakdown.firstKillGold)} gold</li>
+            {/if}
+            <li>Your share: {rewardBreakdown.xp || 0} XP, {rewardBreakdown.gold || 0} gold</li>
+          </ul>
+          {#if (rewardBreakdown.xp || 0) > 0 || (rewardBreakdown.gold || 0) > 0}
+            <div class="outcome-rewards">
+              {#if rewardBreakdown.xp}
+                <span class="reward-chip xp"><i class="material-icons">star</i> +{rewardBreakdown.xp} XP</span>
+              {/if}
+              {#if rewardBreakdown.gold}
+                <span class="reward-chip gold"><i class="material-icons">monetization_on</i> +{rewardBreakdown.gold} Gold</span>
+              {/if}
+            </div>
+          {/if}
+          {#if lootList.length}
+            <ul class="loot-reveal" aria-label="Loot">
+              {#each lootList.slice(0, lootShown) as item, index (`${item.name}-${index}`)}
+                <li class="loot-item rarity-{rarityClass(item.quality)}">{item.name}{#if item.quantity > 1} ×{item.quantity}{/if}</li>
+              {/each}
+            </ul>
+          {/if}
+          {#if levelUp && levelReady}
+            <div class="level-callout">Level {levelUp.newLevel}</div>
+          {/if}
+        {:else if outcome === 'defeat' && defeatInfo}
+          <ul class="reward-breakdown">
+            <li>Lost {defeatInfo.xpLost || 0} XP</li>
+            <li>Lost {defeatInfo.goldLost || 0} gold</li>
+            {#if defeatInfo.armor && defeatInfo.armor.length}
+              <li>Armor battered: {defeatInfo.armor.join(', ')}</li>
+            {/if}
+            <li>
+              {#if defeatInfo.respawnRoom}
+                You awaken at {defeatInfo.respawnRoom}
+              {:else}
+                You stay where you fell
+              {/if}
+              ({defeatInfo.hp || 0}/{defeatInfo.maxHp || 0} HP)
+            </li>
+          </ul>
+        {:else if outcomeRewards?.summary}
           <div class="outcome-summary">{outcomeRewards.summary}</div>
         {:else if endMessage}
           <div class="outcome-summary">{endMessage}</div>
         {/if}
-        {#if outcome === 'victory' && rewardBreakdown}
-          <ul class="reward-breakdown">
-            <li>Base: {rewardBreakdown.baseXp || 0} XP, {rewardBreakdown.baseGold || 0} gold</li>
-            <li>Level modifier (highest in the split, L{rewardBreakdown.referenceLevel || 1}): {signedReward(rewardBreakdown.levelModXp)} XP, {signedReward(rewardBreakdown.levelModGold)} gold</li>
-            <li>First-kill bonus: {signedReward(rewardBreakdown.firstKillXp)} XP, {signedReward(rewardBreakdown.firstKillGold)} gold</li>
-            <li>Party split: {rewardBreakdown.partySize || 1} recipients, your share {rewardBreakdown.shareXp || 0} XP, {rewardBreakdown.shareGold || 0} gold</li>
-          </ul>
-        {/if}
-        {#if outcomeRewards?.xp || outcomeRewards?.gold}
-          <div class="outcome-rewards">
-            {#if outcomeRewards.xp}
-              <span class="reward-chip xp"><i class="material-icons">star</i> +{outcomeRewards.xp} XP</span>
-            {/if}
-            {#if outcomeRewards.gold}
-              <span class="reward-chip gold"><i class="material-icons">monetization_on</i> +{outcomeRewards.gold} Gold</span>
-            {/if}
-          </div>
-        {/if}
-        <button type="button" class="outcome-continue" on:click={dismissOutcome}>
+        <button type="button" class="outcome-continue" on:click|stopPropagation={dismissOutcome}>
           Continue
         </button>
       </div>
@@ -1082,6 +1158,7 @@
     max-width: calc(100vw - 1.2rem);
     max-height: calc(100vh - 1.2rem);
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto minmax(0, 1fr) auto auto;
     grid-template-areas:
       "header"
@@ -1373,6 +1450,80 @@
       0 4px 12px rgba(0, 0, 0, 0.35);
   }
 
+  .nameplate.winding {
+    animation: telegraphPulse 1.4s ease-in-out infinite;
+    border-color: #fbbf24;
+  }
+
+  .nameplate.enraged {
+    border-color: #ef4444;
+    color: #fecaca;
+  }
+
+  .nameplate,
+  .player-name {
+    position: relative;
+  }
+
+  .nameplate.hit-flash,
+  .player-name.hit-flash {
+    animation: plateHit 0.32s ease-out;
+  }
+  .nameplate.crit-flash,
+  .player-name.crit-flash {
+    animation: plateCrit 0.48s ease-out;
+  }
+  .nameplate.crush-flash,
+  .player-name.crush-flash {
+    animation: plateCrush 0.55s ease-out;
+  }
+
+  @keyframes plateHit {
+    0% { box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.95), 0 0 16px rgba(248, 113, 113, 0.75); filter: brightness(1.7); }
+    100% { box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55); filter: none; }
+  }
+  @keyframes plateCrit {
+    0% { transform: scale(1.08); box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.95), 0 0 26px #fbbf24; filter: brightness(1.9); }
+    100% { transform: scale(1); filter: none; }
+  }
+  @keyframes plateCrush {
+    0% { transform: scale(1.16); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.95), 0 0 36px #ef4444; filter: brightness(2.3); }
+    45% { transform: scale(0.96); }
+    100% { transform: scale(1); filter: none; }
+  }
+
+  .enrage-badge {
+    margin-left: 0.45rem;
+    padding: 0.05rem 0.35rem;
+    border-radius: 3px;
+    background: rgba(239, 68, 68, 0.85);
+    color: #fff;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .telegraph-banner {
+    flex: 1 0 100%;
+    z-index: 6;
+    max-width: 100%;
+    padding: 0.45rem 0.9rem;
+    border: 1px solid rgba(251, 191, 36, 0.85);
+    border-radius: 6px;
+    background: rgba(40, 18, 4, 0.92);
+    color: #fde68a;
+    font-family: var(--font-display, 'Cinzel', serif);
+    letter-spacing: 0.06em;
+    text-align: center;
+    text-transform: uppercase;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  }
+
+  @keyframes telegraphPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.15); }
+    50% { box-shadow: 0 0 16px 2px rgba(251, 191, 36, 0.85); }
+  }
+
   .nameplate.threat-grey { color: #9ca3af; }
   .nameplate.threat-green { color: #4ade80; }
   .nameplate.threat-yellow { color: #facc15; }
@@ -1500,6 +1651,26 @@
     animation: deathDissolve 0.9s ease-out forwards;
   }
 
+  .enemy-card.dead { opacity: 1; filter: none; }
+  .enemy-card.dead .foe-plate { opacity: 0.65; }
+  .enemy-card.dead .enemy-sprite {
+    animation: none;
+    opacity: 0.55;
+    filter: grayscale(1) brightness(0.85);
+  }
+  .defeated-label {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.85);
+    color: #cbd5e1;
+    font: 700 0.65rem system-ui, sans-serif;
+    z-index: 2;
+  }
+
   .player-panel.fx-death .player-bust img {
     animation: deathDissolve 0.9s ease-out forwards;
   }
@@ -1574,19 +1745,36 @@
     white-space: nowrap;
   }
 
-  .fx-dmg { color: #fca5a5; }
-  .fx-dmg.crit { color: #fde68a; font-size: 1.15em; }
-  .fx-heal { color: #86efac; }
+  .fx-float.over-sprite {
+    top: 18%;
+    z-index: 6;
+    font-size: clamp(2rem, 5.2vw, 3.4rem);
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    color: #fff;
+    -webkit-text-stroke: 3px #140804;
+    paint-order: stroke fill;
+    text-shadow:
+      0 2px 0 #140804,
+      0 0 8px #000,
+      0 4px 12px rgba(0, 0, 0, 0.9);
+  }
+  .fx-dmg { color: #fff; }
+  .fx-dmg.crit { color: #fde68a; font-size: 1.28em; }
+  .fx-dmg.crush { color: #fecaca; font-size: 1.45em; }
+  .fx-heal { color: #bbf7d0; }
   .fx-miss-label {
-    color: #e5e7eb;
-    letter-spacing: 0.08em;
-    font-size: 0.95em;
-    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.12em;
+    font-size: 0.72em;
+    font-weight: 900;
+    text-transform: lowercase;
   }
 
   @keyframes floatNum {
     0% { opacity: 0; transform: translate(-50%, 8px) scale(0.8); }
     18% { opacity: 1; transform: translate(-50%, 0) scale(1.08); }
+    70% { opacity: 1; transform: translate(-50%, -20px) scale(1); }
     100% { opacity: 0; transform: translate(-50%, -28px) scale(1); }
   }
 
@@ -1730,15 +1918,27 @@
     will-change: transform, opacity;
   }
 
-  .player-panel {
+  .player-team {
     position: absolute;
     left: 1.1rem;
+    right: 1.1rem;
     bottom: 0.85rem;
     z-index: 3;
+    display: grid;
+    grid-template-columns: minmax(320px, 36%) minmax(0, 1fr);
+    grid-template-areas: "self allies";
+    gap: 0.75rem;
+    align-items: end;
+  }
+  .player-team.solo { grid-template-columns: minmax(320px, 440px); grid-template-areas: "self"; }
+  .player-panel {
+    grid-area: self;
+    box-sizing: border-box;
+    position: relative;
     display: flex;
     align-items: flex-end;
     gap: 0.9rem;
-    max-width: min(440px, 42%);
+    min-width: 0;
     padding: 0.45rem 0.55rem 0.45rem 0.45rem;
     border: 1.5px solid rgba(212, 164, 74, 0.5);
     border-radius: 8px;
@@ -1749,7 +1949,65 @@
     backdrop-filter: blur(2px);
   }
 
+  .join-banner {
+    position: absolute;
+    left: 50%;
+    top: 44%;
+    transform: translate(-50%, -50%);
+    z-index: 8;
+    padding: 0.45rem 1rem;
+    border: 1px solid #d4a44a;
+    border-radius: 6px;
+    background: rgba(10, 9, 8, 0.94);
+    color: #ffe1a0;
+    font-weight: 800;
+    white-space: nowrap;
+    box-shadow: 0 4px 20px #000;
+    pointer-events: none;
+  }
+
+  .ally-strip {
+    grid-area: allies;
+    box-sizing: border-box;
+    z-index: 4;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    min-width: 0;
+    padding: 0.25rem;
+  }
+  .ally-card {
+    display: flex;
+    flex: 1 1 150px;
+    max-width: 200px;
+    box-sizing: border-box;
+    min-width: 0;
+    gap: 0.4rem;
+    padding: 0.35rem;
+    border: 1px solid rgba(212, 164, 74, 0.55);
+    border-radius: 6px;
+    background: rgba(8, 8, 10, 0.93);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  }
+  .ally-card.ally-turn { border-color: #fbbf24; box-shadow: 0 0 0 1px #fbbf24, 0 0 15px rgba(251, 191, 36, 0.5); }
+  .ally-card.ally-down, .ally-card.ally-fled { opacity: 0.65; }
+  .ally-card.ally-hit { animation: plateHit 0.32s ease-out; }
+  .ally-card.ally-crit { animation: plateCrit 0.48s ease-out; }
+  .ally-card.just-joined { animation: allyJoin 0.4s ease-out; }
+  @keyframes allyJoin { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .ally-portrait { position: relative; flex: 0 0 42px; height: 48px; }
+  .ally-portrait img { width: 42px; height: 48px; object-fit: cover; object-position: top center; }
+  .ally-portrait .fx-float.over-sprite { top: 0; font-size: 1.75rem; -webkit-text-stroke-width: 2px; }
+  .ally-meta { min-width: 0; flex: 1; }
+  .ally-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #f6e3b2; font-weight: 800; font-size: 0.8rem; }
+  .ally-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #aeb5c2; font-size: 0.62rem; text-transform: capitalize; }
+  .ally-bar { height: 4px; margin-top: 0.22rem; border-radius: 3px; background: #251a18; overflow: hidden; }
+  .ally-bar span { display: block; height: 100%; }
+  .ally-bar.mana span { background: #60a5fa; }
+  .ally-numbers { color: #cfd3dc; font-size: 0.59rem; line-height: 1.05; }
+
   .player-bust {
+    position: relative;
     width: clamp(56px, 7.5vw, 92px);
     aspect-ratio: 1;
     border: 2px solid #d4a44a;
@@ -1796,7 +2054,7 @@
   .player-hp,
   .player-mp {
     margin-bottom: 0.35rem;
-    min-width: 190px;
+    min-width: 0;
   }
 
   .player-panel .hp-track {
@@ -1903,8 +2161,8 @@
   .action-banner-stack {
     position: absolute;
     left: 50%;
-    bottom: 16%;
-    transform: translateX(-50%);
+    top: 48%;
+    transform: translate(-50%, -50%);
     z-index: 6;
     display: flex;
     flex-direction: column-reverse;
@@ -1943,15 +2201,6 @@
   }
   .action-banner.flash {
     animation: bannerPop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.15), bannerShake 0.42s ease-out;
-  }
-  .action-banner.stale {
-    opacity: 0.42;
-    transform: scale(0.92);
-    filter: saturate(0.75);
-    animation: bannerFadeStale 0.35s ease-out;
-    font-size: clamp(0.82rem, 1.5vw, 1rem);
-    padding: 0.32rem 0.75rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   }
   .action-banner.kind-hit {
     border-color: rgba(248, 113, 113, 0.75);
@@ -2053,10 +2302,6 @@
     40% { transform: translateY(1px) rotate(0.8deg) scale(1.04); }
     60% { transform: translateY(-1px) rotate(-0.5deg) scale(1.02); }
     80% { transform: translateY(0) rotate(0.35deg) scale(1.01); }
-  }
-  @keyframes bannerFadeStale {
-    from { opacity: 0.75; transform: scale(0.98); }
-    to { opacity: 0.42; transform: scale(0.92); }
   }
   @keyframes spinSlow {
     from { transform: rotate(0deg); }
@@ -2571,6 +2816,109 @@
       0 0 22px rgba(232, 200, 120, 0.35);
   }
 
+  .battle-stage.ending {
+    pointer-events: none;
+    background: none;
+  }
+  .battle-stage.ending .battle-backdrop {
+    display: none;
+  }
+  .battle-stage.ending .battle-frame {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    pointer-events: none;
+  }
+  .battle-stage.ending .battle-header,
+  .battle-stage.ending .decision-timer,
+  .battle-stage.ending .battle-arena,
+  .battle-stage.ending .battle-controls,
+  .battle-stage.ending .combat-log {
+    visibility: hidden;
+  }
+  .battle-stage.ending .outcome-panel {
+    pointer-events: none;
+    background: transparent;
+    place-content: start;
+    justify-items: start;
+    padding: 4.75rem 1.25rem 1rem;
+  }
+  .battle-stage.ending .outcome-card {
+    pointer-events: auto;
+    cursor: pointer;
+    max-width: min(26rem, 38vw);
+    text-align: left;
+  }
+  .battle-stage.ending .outcome-title,
+  .battle-stage.ending .outcome-ornament,
+  .battle-stage.ending .outcome-rewards,
+  .battle-stage.ending .outcome-continue {
+    text-align: center;
+  }
+  .battle-stage.ending .outcome-rewards,
+  .battle-stage.ending .outcome-continue {
+    display: flex;
+  }
+  .battle-stage.ending .outcome-continue {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .loot-reveal {
+    list-style: none;
+    margin: 0.2rem 0 0.7rem;
+    padding: 0;
+    font-family: system-ui, sans-serif;
+    font-size: 0.92rem;
+    font-weight: 700;
+  }
+  .loot-item {
+    padding: 0.18rem 0;
+    animation: lootIn 0.28s ease-out;
+  }
+  .rarity-normal { color: #e5e7eb; }
+  .rarity-magic { color: #60a5fa; }
+  .rarity-rare { color: #facc15; }
+  .rarity-legendary { color: #fb923c; }
+  .rarity-mythic { color: #e879f9; }
+  @keyframes lootIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .level-callout {
+    margin: 0.35rem 0 0.8rem;
+    padding: 0.45rem 0.7rem;
+    border: 1px solid rgba(251, 191, 36, 0.85);
+    border-radius: 8px;
+    background: rgba(48, 34, 8, 0.92);
+    color: #fde68a;
+    font-size: 1.15rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ally-card.just-joined, .ally-card.ally-hit, .ally-card.ally-crit { animation: none; }
+    .fx-float,
+    .fx-slash,
+    .fx-puff,
+    .nameplate.hit-flash,
+    .nameplate.crit-flash,
+    .nameplate.crush-flash,
+    .player-name.hit-flash,
+    .player-name.crit-flash,
+    .player-name.crush-flash,
+    .enemy-card.fx-hit .enemy-sprite,
+    .enemy-card.fx-crit .enemy-sprite,
+    .enemy-sprite-wrap.shake,
+    .loot-item {
+      animation: none !important;
+    }
+    .fx-float { opacity: 1; }
+  }
+
   /* Primary Attack — double gold border glow (C0 mock) */
   .dock-btn.primary {
     border: 2px solid #e8c878;
@@ -2680,6 +3028,7 @@
     .battle-arena {
       grid-area: arena;
       display: grid;
+      grid-template-columns: minmax(0, 1fr);
       grid-template-rows: minmax(0, 1fr) auto auto;
       grid-template-areas:
         "enemies"
@@ -2785,15 +3134,14 @@
     }
 
     .action-banner-stack {
-      position: relative;
-      left: auto;
+      top: 35%;
+      position: absolute;
+      left: 50%;
       bottom: auto;
-      transform: none;
-      margin: 0.15rem auto 0;
+      transform: translate(-50%, -50%);
+      margin: 0;
       width: calc(100% - 1rem);
       max-width: calc(100% - 1rem);
-      grid-column: 1 / -1;
-      justify-self: center;
       z-index: 6;
     }
     .action-banner {
@@ -2813,12 +3161,18 @@
     .banner-amount { font-size: 1.12em; }
 
     /* Compact horizontal Self strip — free vertical space for arena */
-    .player-panel {
+    .player-team, .player-team.solo {
       grid-area: player;
       position: relative;
       left: auto;
       right: auto;
       bottom: auto;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas: "self" "allies";
+      gap: 0;
+      min-width: 0;
+    }
+    .player-panel {
       max-width: none;
       width: calc(100% - 1rem);
       margin: 0.1rem 0.5rem 0.2rem;
@@ -2832,6 +3186,20 @@
       align-items: center;
       z-index: 3;
     }
+    .ally-strip {
+      grid-area: allies;
+      flex-wrap: nowrap;
+      max-width: none;
+      width: calc(100% - 1rem);
+      margin: 0.1rem 0.5rem;
+      padding: 1.4rem 0.1rem 0.1rem;
+      margin-top: -1.2rem;
+      overflow-x: auto;
+    }
+    .ally-card { flex: 0 0 138px; padding: 0.2rem; }
+    .ally-portrait { flex-basis: 32px; height: 42px; }
+    .ally-portrait img { width: 32px; height: 42px; }
+    .join-banner { top: 35%; max-width: 90%; font-size: 0.85rem; }
     .player-bust {
       width: clamp(40px, 11vw, 48px);
       border-radius: 6px;
@@ -2872,6 +3240,8 @@
     /* Dock: queue chip → full-width hotbar → utility row (never beside log) */
     .battle-controls {
       grid-area: dock;
+      box-sizing: border-box;
+      min-width: 0;
       position: relative;
       left: auto;
       bottom: auto;
@@ -2898,6 +3268,8 @@
     .queued-chip i { font-size: 1.2rem; }
     .dock-main {
       display: flex;
+      box-sizing: border-box;
+      min-width: 0;
       flex-direction: column;
       align-items: stretch;
       justify-content: flex-start;
@@ -2917,6 +3289,7 @@
     }
     .combat-hotbar {
       order: 1;
+      min-width: 0;
       width: 100%;
       flex: 0 0 auto;
       box-sizing: border-box;

@@ -36,7 +36,7 @@ export const WIDGET_TYPES = {
   },
   hotbar: {
     name: 'Spell Bar',
-    description: '8-slot hotbar for equipped skills and consumables',
+    description: '8-slot hotbar. The default layout docks it on the action bar; a placed widget can still move',
     defaultSize: { w: 24, h: 2 },
     maxInstances: 1,
     icon: 'auto_awesome',

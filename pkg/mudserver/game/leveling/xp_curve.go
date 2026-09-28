@@ -1,6 +1,10 @@
 package leveling
 
-import "math"
+import (
+	"math"
+
+	"github.com/talesmud/talesmud/pkg/ruleset"
+)
 
 // XPTable is precomputed XP requirements for levels 1-50
 // Index represents the level, value is the cumulative XP needed to reach that level
@@ -50,16 +54,32 @@ func GetXPRequired(level int32) int32 {
 	if level < 0 {
 		return 0
 	}
+	if xp, ok := ruleset.XPRequired(level); ok {
+		return xp
+	}
 	if level > 50 {
 		level = 50
 	}
 	return XPTable[level]
 }
 
+// ResolveEnemyBaseXP is the XP amount reward scaling multiplies.
+// A non-zero authored reward wins. Otherwise a ruleset table entry wins.
+// Otherwise the built-in 15*level+5 fallback is the base.
+func ResolveEnemyBaseXP(level int32, authored int64) int64 {
+	if authored != 0 {
+		return authored
+	}
+	if xp, ok := ruleset.BaseXPForEnemyLevel(level); ok {
+		return xp
+	}
+	return CalculateEnemyXPReward(level)
+}
+
 // GetXPForNextLevel returns how much more XP is needed to reach the next level
 // Returns 0 if already at max level (50)
 func GetXPForNextLevel(currentLevel int32, currentXP int32) int32 {
-	if currentLevel >= 50 {
+	if currentLevel >= ruleset.LevelCap() {
 		return 0 // Already at max level
 	}
 
@@ -87,7 +107,7 @@ func CalculateEnemyXPReward(enemyLevel int32) int64 {
 // GetXPProgress returns the percentage progress to next level (0-100)
 // Returns 100 if at max level
 func GetXPProgress(currentLevel int32, currentXP int32) float64 {
-	if currentLevel >= 50 {
+	if currentLevel >= ruleset.LevelCap() {
 		return 100.0
 	}
 

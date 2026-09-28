@@ -11,6 +11,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/traits"
 	combatengine "github.com/talesmud/talesmud/pkg/mudserver/game/combat"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/ruleset"
 )
 
 // seedPacedCombat builds a 1v1 instance registered with the combat manager.
@@ -143,6 +144,69 @@ func TestPacingTwoTurnsNeedTimeAdvance(t *testing.T) {
 	g.CombatController.processAllTurns(inst)
 	if inst.NextActionAt.Equal(nextAt) && inst.CurrentTurnIdx == turnIdxAfterFirst && inst.Phase == phaseAfterFirst {
 		t.Fatal("expected progress after NextActionAt elapsed")
+	}
+}
+
+func TestTurnBasedWaitsForACommandThenNPCActs(t *testing.T) {
+	ruleset.Reset()
+	t.Cleanup(ruleset.Reset)
+	ruleset.SetPacing(ruleset.PacingTurnBased)
+
+	g, facade := newNPCTestGame(t)
+	storeTestRoom(t, facade, "R-pace", nil)
+	char, err := facade.CharactersService().Store(&characters.Character{
+		Entity:           &entities.Entity{ID: "char-turn"},
+		Name:             "Hero",
+		BelongsUser:      *traits.BelongsToUser("user-turn"),
+		CurrentRoom:      traits.CurrentRoom{CurrentRoomID: "R-pace"},
+		MaxHitPoints:     50,
+		CurrentHitPoints: 50,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := g.CombatController.engine.Config
+	cfg.DecisionWindowSeconds = 5
+	cfg.TurnBeatMs = 1
+	cfg.ReactionMs = 1
+
+	enemyID := "npc-turn-rat"
+	g.NPCManager.RegisterExistingNPC(&npc.NPC{
+		Entity:           &entities.Entity{ID: enemyID},
+		Name:             "Rat",
+		CurrentRoom:      traits.CurrentRoom{CurrentRoomID: "R-pace"},
+		MaxHitPoints:     30,
+		CurrentHitPoints: 30,
+		Level:            1,
+		EnemyTrait:       &npc.EnemyTrait{AttackPower: 3, Defense: 0},
+	}, "R-pace")
+	inst := seedPacedCombat(t, g, char.ID, enemyID, true)
+
+	g.CombatController.processAllTurns(inst)
+	if inst.Phase != combat.CombatPhaseWaitingPlayer {
+		t.Fatalf("phase %q", inst.Phase)
+	}
+	if !inst.DecisionDeadline.IsZero() {
+		t.Fatalf("turn-based armed a deadline %s", inst.DecisionDeadline)
+	}
+	turnBefore := inst.CurrentTurnIdx
+	inst.DecisionDeadline = time.Now().Add(-time.Second)
+	inst.NextActionAt = time.Now().Add(-time.Millisecond)
+	g.CombatController.processAllTurns(inst)
+	if inst.Phase != combat.CombatPhaseWaitingPlayer || inst.CurrentTurnIdx != turnBefore {
+		t.Fatalf("expired window resolved a turn: phase=%s idx=%d", inst.Phase, inst.CurrentTurnIdx)
+	}
+
+	g.CombatController.QueuePlayerAction(char.ID, combat.CombatActionAttack, enemyID)
+	if inst.CurrentTurnIdx == turnBefore && inst.Phase == combat.CombatPhaseWaitingPlayer {
+		t.Fatal("queued attack did not resolve the player turn")
+	}
+	afterPlayer := inst.CurrentTurnIdx
+	afterRound := inst.Round
+	inst.NextActionAt = time.Now().Add(-time.Millisecond)
+	g.CombatController.processAllTurns(inst)
+	if inst.CurrentTurnIdx == afterPlayer && inst.Round == afterRound {
+		t.Fatal("NPC turn did not resolve after the player")
 	}
 }
 

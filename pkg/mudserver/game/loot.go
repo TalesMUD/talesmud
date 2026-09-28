@@ -2,12 +2,14 @@ package game
 
 import (
 	"math/rand"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/entities/items"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
@@ -119,6 +121,36 @@ func shuffleItems(items []*items.Item) {
 		j := rand.Intn(i + 1)
 		items[i], items[j] = items[j], items[i]
 	}
+}
+
+// lootReveals is the victory-panel list for items already dropped in the room.
+func lootReveals(dropped []*items.Item) []messages.LootReveal {
+	if len(dropped) == 0 {
+		return nil
+	}
+	out := make([]messages.LootReveal, 0, len(dropped))
+	for _, item := range dropped {
+		if item == nil || strings.TrimSpace(item.Name) == "" {
+			continue
+		}
+		qty := item.Quantity
+		if qty < 1 {
+			qty = 1
+		}
+		quality := string(item.Quality)
+		if quality == "" {
+			quality = string(items.ItemQualityNormal)
+		}
+		out = append(out, messages.LootReveal{
+			Name:     item.Name,
+			Quality:  quality,
+			Quantity: qty,
+		})
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 // FormatLootMessage creates a player-facing message about loot drops

@@ -18,6 +18,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
+	"github.com/talesmud/talesmud/pkg/ruleset"
 )
 
 const combatBreathGrace = 3 * time.Second
@@ -255,6 +256,27 @@ func (c *CombatController) ProcessPlayerSkill(characterID, skillID, targetID str
 	}
 
 	return
+}
+
+// BriefStatus is one line of live hit points for the text client.
+func (c *CombatController) BriefStatus(characterID string) string {
+	if c == nil || c.manager == nil || characterID == "" {
+		return ""
+	}
+	instance := c.manager.GetInstanceByPlayerID(characterID)
+	if instance == nil {
+		return ""
+	}
+	var parts []string
+	if player := instance.GetPlayerByID(characterID); player != nil {
+		parts = append(parts, fmt.Sprintf("You %d/%d", player.CurrentHP, player.MaxHP))
+	}
+	for _, enemy := range instance.Enemies {
+		if enemy.IsAlive {
+			parts = append(parts, fmt.Sprintf("%s %d/%d", enemy.Name, enemy.CurrentHP, enemy.MaxHP))
+		}
+	}
+	return strings.Join(parts, "   ")
 }
 
 // GetCombatStatus returns a formatted status string for the combat
@@ -507,9 +529,13 @@ func (c *CombatController) emitCombatTurn(instance *combat.CombatInstance, actor
 	deadlineMs := int64(0)
 	prose := fmt.Sprintf("Round %d — %s's turn.", instance.Round, actor.Name)
 	if actor.Type == combat.CombatantTypePlayer {
-		deadlineMs = deadline.UnixMilli()
-		prose = fmt.Sprintf("Round %d — Your turn, %s! Choose an action (auto-attack in %ds).",
-			instance.Round, actor.Name, c.engine.Config.DecisionWindowSeconds)
+		if ruleset.Pacing() == ruleset.PacingTurnBased {
+			prose = fmt.Sprintf("Round %d — Your turn, %s! Choose an action.", instance.Round, actor.Name)
+		} else {
+			deadlineMs = deadline.UnixMilli()
+			prose = fmt.Sprintf("Round %d — Your turn, %s! Choose an action (auto-attack in %ds).",
+				instance.Round, actor.Name, c.engine.Config.DecisionWindowSeconds)
+		}
 	}
 	for _, player := range instance.Players {
 		if !player.IsAlive || player.HasFled {
@@ -534,13 +560,22 @@ func (c *CombatController) emitCombatTurn(instance *combat.CombatInstance, actor
 	}
 }
 
+func combatantView(r combat.CombatantRef) messages.CombatantView {
+	return messages.CombatantView{
+		ID: r.ID, Type: string(r.Type), Name: r.Name, Portrait: r.Portrait,
+		HP: r.CurrentHP, MaxHP: r.MaxHP, Mana: r.CurrentMana, MaxMana: r.MaxMana,
+		ClassID: r.ClassID, IsAlive: r.IsAlive, HasFled: r.HasFled, Level: r.Level,
+		Telegraph: r.TelegraphAbility, Enraged: r.Enraged,
+	}
+}
+
 func combatantViewsFromInstance(instance *combat.CombatInstance) []messages.CombatantView {
 	out := make([]messages.CombatantView, 0, len(instance.Players)+len(instance.Enemies))
 	for _, p := range instance.Players {
-		out = append(out, messages.CombatantView{ID: p.ID, Name: p.Name, Portrait: p.Portrait, HP: p.CurrentHP, MaxHP: p.MaxHP, Level: p.Level})
+		out = append(out, combatantView(p))
 	}
 	for _, e := range instance.Enemies {
-		out = append(out, messages.CombatantView{ID: e.ID, Name: e.Name, Portrait: e.Portrait, HP: e.CurrentHP, MaxHP: e.MaxHP, Level: e.Level})
+		out = append(out, combatantView(e))
 	}
 	return out
 }
@@ -730,7 +765,11 @@ func (c *CombatController) processAllTurnsLocked(instance *combat.CombatInstance
 		if instance.Phase != combat.CombatPhaseWaitingPlayer {
 			instance.Phase = combat.CombatPhaseWaitingPlayer
 			instance.TurnStartTime = now
-			instance.DecisionDeadline = now.Add(c.engine.Config.DecisionWindow())
+			if ruleset.Pacing() == ruleset.PacingTurnBased {
+				instance.DecisionDeadline = time.Time{}
+			} else {
+				instance.DecisionDeadline = now.Add(c.engine.Config.DecisionWindow())
+			}
 			c.emitCombatTurn(instance, current, instance.DecisionDeadline)
 			// If already queued, resolve on the next eligible tick (small windup via NextActionAt)
 			if hasQueue {
@@ -739,7 +778,7 @@ func (c *CombatController) processAllTurnsLocked(instance *combat.CombatInstance
 			return
 		}
 
-		if !hasQueue && now.Before(instance.DecisionDeadline) {
+		if !hasQueue && (ruleset.Pacing() == ruleset.PacingTurnBased || now.Before(instance.DecisionDeadline)) {
 			return
 		}
 	}
@@ -814,7 +853,19 @@ func (c *CombatController) resolveNPCTurn(instance *combat.CombatInstance, curre
 	switch action {
 	case combat.CombatActionAttack:
 		if targetID != "" {
-			result := c.engine.ProcessAttack(instance, current.ID, targetID)
+			step := c.engine.StepNPCAttack(instance, current.ID, targetID)
+			if step.Telegraph {
+				c.notifyCombatAction(instance, messages.CombatActionMessage{
+					ActorID:   current.ID,
+					ActorName: current.Name,
+					TargetID:  targetID,
+					Action:    "telegraph",
+					Result:    "telegraph",
+					FxID:      "telegraph",
+				}, step.Message)
+				break
+			}
+			result := step.Attack
 			target := instance.GetCombatantByID(targetID)
 			remaining, maxHP := int32(0), int32(0)
 			if target != nil {
@@ -825,6 +876,7 @@ func (c *CombatController) resolveNPCTurn(instance *combat.CombatInstance, curre
 				ActorName:   current.Name,
 				TargetID:    targetID,
 				Action:      string(combat.CombatActionAttack),
+				Ability:     step.Ability,
 				Result:      resultStringForAttack(result),
 				Damage:      result.Damage,
 				RemainingHP: remaining,
@@ -961,6 +1013,7 @@ func (c *CombatController) refreshOriginRoomAfterCombat(instance *combat.CombatI
 func (c *CombatController) processCombatVictory(instance *combat.CombatInstance) {
 	var rawRewards []rawEnemyReward
 	var allLootItems []string
+	var allLoot []messages.LootReveal
 	var enemyNames []string
 
 	// Get the room for loot drops
@@ -977,11 +1030,9 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 			continue
 		}
 
-		// Use configured XP or calculate from NPC level
-		xpReward := npcData.EnemyTrait.XPReward
-		if xpReward == 0 {
-			xpReward = leveling.CalculateEnemyXPReward(npcData.Level)
-		}
+		// Authored reward, else the ruleset table, else 15*level+5.
+		// This number is base XP. reward_scale multiplies it below.
+		xpReward := leveling.ResolveEnemyBaseXP(npcData.Level, npcData.EnemyTrait.XPReward)
 
 		// Roll gold - use configured GoldDrop range or calculate from level/difficulty
 		var goldRoll int64
@@ -1019,11 +1070,12 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 
 			lootResult, err := DropLootFromNPC(c.game.Facade, npcData, room, killerLevel)
 			if err == nil && lootResult != nil {
-				for _, item := range lootResult.Items {
-					if item.Stackable && item.Quantity > 1 {
-						allLootItems = append(allLootItems, fmt.Sprintf("%s (x%d)", item.Name, item.Quantity))
+				for _, reveal := range lootReveals(lootResult.Items) {
+					allLoot = append(allLoot, reveal)
+					if reveal.Quantity > 1 {
+						allLootItems = append(allLootItems, fmt.Sprintf("%s (x%d)", reveal.Name, reveal.Quantity))
 					} else {
-						allLootItems = append(allLootItems, item.Name)
+						allLootItems = append(allLootItems, reveal.Name)
 					}
 				}
 			}
@@ -1120,11 +1172,14 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 		char.XP += int32(awardedXP)
 		char.Gold += awardedGold
 
-		levelsGained, _ := leveling.CheckLevelUp(char)
 		var levelMsg string
-		if levelsGained > 0 {
-			if result := leveling.ApplyLevelUp(char, levelsGained); result != nil {
-				levelMsg = result.Message
+		var callout *messages.LevelUpCallout
+		if result := leveling.MaybeLevelUp(char); result != nil {
+			levelMsg = result.Message
+			callout = &messages.LevelUpCallout{
+				OldLevel: result.OldLevel,
+				NewLevel: result.NewLevel,
+				Message:  result.Message,
 			}
 		}
 		_ = c.game.Facade.CharactersService().Update(share.ID, char)
@@ -1134,6 +1189,10 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 			victoryText := formatCombatVictoryText(enemyNames, allLootItems, awardedXP, awardedGold, shareBlock, formatRewardLines(breakdown))
 			end := messages.NewCombatEndMessage(userID, victoryText, string(combat.CombatStateVictory))
 			end.Rewards = &breakdown
+			if len(allLoot) > 0 {
+				end.Loot = append([]messages.LootReveal(nil), allLoot...)
+			}
+			end.LevelUp = callout
 			c.game.sendMessage <- end
 		}
 		if toast != "" {
@@ -1186,46 +1245,42 @@ func (c *CombatController) processCombatDefeat(instance *combat.CombatInstance) 
 			continue
 		}
 
+		outcome := ruleset.ApplyDeath(char)
+		summary := &messages.DefeatSummary{
+			XPLost:   outcome.XPLost,
+			GoldLost: outcome.GoldLost,
+		}
+
 		var sb strings.Builder
 		sb.WriteString("\n═══════════════════════════════════════════════════\n")
 		sb.WriteString("              DEFEAT\n")
 		sb.WriteString("═══════════════════════════════════════════════════\n\n")
 		sb.WriteString("You have been defeated!\n\n")
 
-		// XP loss penalty (10%)
-		xpLoss := int32(float64(char.XP) * 0.10)
-		if xpLoss > 0 {
-			char.XP -= xpLoss
-			if char.XP < 0 {
-				char.XP = 0
+		if outcome.XPLost > 0 {
+			sb.WriteString(fmt.Sprintf("PENALTY: Lost %d experience\n", outcome.XPLost))
+		}
+		if outcome.GoldLost > 0 {
+			sb.WriteString(fmt.Sprintf("PENALTY: Lost %d gold\n", outcome.GoldLost))
+		}
+
+		if outcome.DamageArmor {
+			if damaged := char.DamageEquippedArmor(); len(damaged) > 0 {
+				summary.Armor = damaged
+				sb.WriteString("Your armor is battered:\n")
+				for _, name := range damaged {
+					sb.WriteString("  - ")
+					sb.WriteString(name)
+					sb.WriteString("\n")
+				}
+				sb.WriteString("A merchant can repair it.\n")
 			}
-			sb.WriteString(fmt.Sprintf("PENALTY: Lost %d experience\n", xpLoss))
 		}
 
-		// Gold loss penalty (1 gold)
-		if char.Gold > 0 {
-			char.Gold -= 1
-			sb.WriteString("PENALTY: Lost 1 gold\n")
-		}
-
-		if damaged := char.DamageEquippedArmor(); len(damaged) > 0 {
-			sb.WriteString("Your armor is battered:\n")
-			for _, name := range damaged {
-				sb.WriteString("  - ")
-				sb.WriteString(name)
-				sb.WriteString("\n")
-			}
-			sb.WriteString("A merchant can repair it.\n")
-		}
-
-		// Respawn with 50% HP
-		char.CurrentHitPoints = char.MaxHitPoints / 2
-		if char.CurrentHitPoints < 1 {
-			char.CurrentHitPoints = 1
-		}
-
-		if char.BoundRoomID != "" && char.BoundRoomID != char.CurrentRoomID {
-			if boundRoom, ok := c.game.RelocateCharacter(char, char.BelongsUserID, char.BoundRoomID); ok {
+		if outcome.RespawnRoomID != "" && outcome.RespawnRoomID != char.CurrentRoomID {
+			if boundRoom, ok := c.game.RelocateCharacter(char, char.BelongsUserID, outcome.RespawnRoomID); ok {
+				summary.RespawnRoom = boundRoom.Name
+				summary.RespawnRoomID = boundRoom.ID
 				sb.WriteString(fmt.Sprintf("\nYou find yourself back at %s.\n", boundRoom.Name))
 			}
 		}
@@ -1240,10 +1295,14 @@ func (c *CombatController) processCombatDefeat(instance *combat.CombatInstance) 
 
 		sb.WriteString(fmt.Sprintf("\nYou awaken with %d/%d HP.\n", char.CurrentHitPoints, char.MaxHitPoints))
 		sb.WriteString("═══════════════════════════════════════════════════")
+		summary.HP = char.CurrentHitPoints
+		summary.MaxHP = char.MaxHitPoints
 
 		c.game.Facade.CharactersService().Update(player.ID, char)
 
-		c.game.sendMessage <- messages.NewCombatEndMessage(char.BelongsUserID, sb.String(), string(combat.CombatStateDefeat))
+		end := messages.NewCombatEndMessage(char.BelongsUserID, sb.String(), string(combat.CombatStateDefeat))
+		end.Defeat = summary
+		c.game.sendMessage <- end
 	}
 }
 

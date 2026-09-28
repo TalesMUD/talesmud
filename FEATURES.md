@@ -142,6 +142,14 @@ DiscoveredAreas map[string]bool  // Area names
 ### NPC / enemy portraits
 Room presence sends `portrait` URLs (`/api/portraits/{templateOrId}.png`). Import copies `assets/images/sprites/{npcs,enemies}/` into `uploads/portraits/`. Sprites are 512px full-figure art; the original NPC/enemy cards clip a 48px square around the body (`object-fit: cover` + zoom). Missing files fall back to hashed `img/avatars/{1-14}p.png`. Component CSS lives in `public/mud-client/public/extra.css` and must be deployed with `bundle.js`.
 
+### Player portraits
+The equipment paper doll, combat card, and party roster use 512px transparent sprites at `/api/portraits/player-<race>-<class>.png`. The set covers Human, Dwarf, Elf × Warrior, Rogue, Mage, Ranger, Cleric, Druid. Stored `elve` maps to `elf`, `wizard` to `mage`, and `hunter` to `ranger`. The server supplies combat and party portrait URLs; the client derives the equipment URL from character race/class. An unavailable combination or failed image uses a class silhouette.
+
+### Group combat cards
+BattleStage shows the local player and all other combat players (up to the five-player party cap). Compact ally cards display portrait, class, level, live HP/MP, current turn, and down/fled state. Combat action snapshots carry participant type, class, mana, and status; a join sends the roster to existing fighters immediately and triggers a short join banner. Healing and buffs currently target self or enemies only; ally-card clicks do not queue unsupported commands.
+
+The self card and ally cards share a desktop row and stack on phones, with horizontally scrollable phone allies. Only structured actions generate an action banner; join prose is not repeated in stage banners. Defeated enemies keep a grey sprite and Defeated label. Damage and healing numbers sit over player/enemy sprites with a dark outline and hold full opacity before fading; reduced motion disables their animation. Material Icons use a preloaded local WOFF2 font and remain hidden if it fails to load.
+
 WebSocket connects go through a process-wide gate (`websocketGate.js`): one CONNECTING/OPEN/CLOSING socket, no reactive `ws=null` reconnect, and close code 4001 (session replaced) does not auto-reconnect. The Map overview is an Inventory-style body-portal panel (`map-panel`, never Materialize's `.modal`) with explicit pixel size so the canvas fills the stage. `/play` JS/CSS/HTML is served `Cache-Control: no-cache` plus `?v=` on asset URLs so deploys are not stuck behind a cached `bundle.js`.
 
 ### Instanced cellars
@@ -396,6 +404,30 @@ local solved = tales.game.getFlag(characterID, "puzzle_solved_statue")
 
 **Common uses**: Quest state, puzzle progress, secret discoveries
 
+`LastResetDay` records the calendar day of a new-day heal. `AwaitingReset` is set when the death policy's respawn mode is `next_reset`. Both stay empty on existing characters.
+
+### Ruleset profile
+
+`config/ruleset.yaml` sits beside `config/combat_balance.yaml` and must not repeat its keys (`level_gap`, `threat`, `reward_scale`, `class_balance`, difficulty multipliers, named overrides). The shipped file matches current play: level cap 50, automatic level-up, 10% XP loss and 1 on-hand gold on defeat, respawn at the bind room with half HP, no dawn heal, no resource keys, combat pacing `auto`, `combat.safe_room: stay`, `combat.disconnect: continue`, and `combat.bare_attack: ask`.
+
+An enemy's authored XP reward is the base. When that reward is 0, `progression.base_xp_by_enemy_level` supplies the base, and otherwise the built-in `15*level+5` curve does. `reward_scale` multiplies that base afterward. `level_up_mode: trainer` banks combat, quest, exploration, and select catch-up until `tales.characters.applyLevels`. Quest XP is not multiplied by `reward_scale`.
+
+Death math is `ruleset.ApplyDeath`, called from defeat only.
+
+`combat.pacing: auto` keeps the 5 second decision window and resolves a queued action on the next beat. `turn_based` leaves that window open until the player sends a command. NPCs still take their own turns afterward. The default file is `auto`. During a fight, a bare `attack` queues a swing on the current target or the first living enemy so a turn-based round advances. Outside combat, `combat.bare_attack: ask` (the default) still answers "Attack whom?". `first_hostile` starts the fight against the first hostile in the room.
+
+`combat.disconnect: continue` (the default) leaves a dropped connection in the fight and does not move the character. `release` ends that fight as a flee: no gold loss, no XP loss, and no death flag. `combat.safe_room` is `stay` (default), `bind`, or `start`, and applies only when disconnect is `release`. `stay` leaves the character in a real room. `bind` and `start` move them. A generated instance that times out still moves its occupant to the return room and ends the fight without a defeat. On the next enter, a saved room that no longer exists is replaced by the bind room, then the start room.
+
+### Refilling resources
+
+Per-character balances live in the `character_resources` table. A key grants uses only after something configures an allowance (calendar day in a timezone, or a fixed interval). Inside a period, raising the allowance or a modifier does not give the extra uses back; the next period refills to the new amount. An empty catalog, which is the process default, answers every key as not configured and writes no row.
+
+Another world can use a key for a daily gathering node or a delve ticket, spent from a room-action script. No content ships a key, so play is unchanged. Entering play calls `Get` for each configured key, so a new period is refilled even before a script reads it. A one-word room action accepts a trailing argument (`deposit 20`); the script sees it as `ctx.args`. Multi-word action names stay exact.
+
+### Procedural instances
+
+`tales.instances.generate(characterID, playerLevel, spec)` builds a private line of up to 20 rooms from a template pool. Encounters whose level band contains `playerLevel` are returned as a spawn plan and placed when a game is attached. A second character gets a different copy. The same character cannot hold two instances. Leaving to a non-clone room destroys the line, and a timeout (default 30 minutes) destroys only these generated instances. Authored cellar graphs are unchanged. Every generated exit is marked so Party Follow does not cross it. The generator does not spend a resource and does not move the character; the room-action script does. A timeout still ends a fight in that copy without a defeat penalty and moves the character to the return room before the copy is deleted. A disconnect does that only when `combat.disconnect` is `release`.
+
 ### CopyOnPickup Tracking
 ```go
 // Character methods:
@@ -536,9 +568,15 @@ add the other player. Guests hide the HUD entry.
 The MUD client exposes connection state in `MUDXPlusStore`:
 `disconnected`, `connecting`, `connected`, and `reconnecting`.
 `Game.svelte` owns reconnect scheduling and retries automatically after socket
-close. `CharacterSwitcher.svelte` shows the active character, connection state,
-and the user's character list from `/api/my-characters`; switching sends the
-existing `sc <name>` command. `Client.js` handles `roomPresence` messages and
+close. `CharacterSwitcher.svelte` shows the active character and connection state.
+**Switch character** in the account menu (desktop chip and phone header) opens
+`CharacterPicker.svelte`, which lists every character from `/api/my-characters`.
+Choosing one sends `sc <name>`. A signed-in player with more than one character
+sees that picker once per login; the server still enters on `lastCharacter`.
+Guests get **Continue with X**, **Continue with Google**, and **Email and password**
+(Auth0 `loginWithRedirect`; X and Google pass `connection` so the password form
+is not the default). **Log out** clears the Auth0 session and this tab's guest token and
+returns to the welcome choice instead of restoring a guest. `Client.js` handles `roomPresence` messages and
 updates `MUDXPlusStore.players` without changing the room description.
 
 ---
@@ -868,14 +906,25 @@ Players and NPCs both use `CombatantRef.Level`, copied from the character or NPC
 
 After the level-gap multiplier and before a crit, `damage_dealt` scales hits that class lands and `damage_taken` scales hits that class receives. `behind_dealt` multiplies `damage_dealt` again when that class is the lower level. Class id `wizard` uses the `mage` row. A missing class or a multiplier of 1 leaves that side unchanged. The level-10 gap table uses this so warrior, rogue, ranger, and mage share one band: at-level bosses about 50–65%, and a good-gear boss three levels up about 50%.
 
+### Boss telegraph and enrage
+**Config**: `boss_mechanics` in `config/combat_balance.yaml`.
+
+Bosses and elites (`hard`) spend `telegraph_turns` actions winding up `telegraph_label` before that hit lands. BattleStage shows a banner and pulses the nameplate for that window (`telegraph_ms`). The resolving hit carries `ability` (Crushing Blow) so the nameplate flash and the floating number are heavier than a normal crit. Bosses enrage after `enrage_after_rounds` or at `enrage_below_hp`, gain an Enraged badge, hit for `enrage_damage`, and stop starting new wind-ups. Trash does not wind up. Elites do not enrage. A miss floats the word "miss". `prefers-reduced-motion` leaves the number in place and skips the flash.
+
 ### Threat colors
 `threat` in `config/combat_balance.yaml` maps `(enemyLevel - playerLevel)` to `grey / green / yellow / orange / red / skull` (defaults: ≤ −3 grey, −2..−1 green, 0..+1 yellow, +2 orange, +3..+4 red, ≥ +5 skull). The tier is on the room NPC payload (`threat`) and on combat enemy views, computed for the viewer. Room cards and BattleStage nameplates use that color; skull enemies also show ☠. `attack` on orange, red, or skull warns once ("X is much stronger than you") and does not engage. `attack!` or a second `attack` on that enemy does. The room Attack button confirms, then sends `attack!`.
 
+### Equipment and inventory item cards
+
+Clicking or pressing Enter on an equipped paper-doll slot opens the shared item card. Right-click opens it too. The item stays equipped until the Unequip button is pressed; Escape, Close, or clicking outside closes the card. Inventory tiles and rows open the same card with explicit Equip, Use, Examine, Sell, and Drop actions. The card shows art, rarity, slot, stats, description, value, and weight when the item supplies it. Inventory cards compare stat differences with equipped gear; rings use the weaker worn ring, an empty ring slot counts as a full gain, and two-handed weapons compare with both hand slots. A green arrow marks a clear class-relevant, usable upgrade. Class tags, item level, and explicit armor-weight metadata can block equipping; the card explains the requirement and disables Equip. The `equip` command enforces the same requirements, including when typed in the terminal.
+
 ### Viewport layout presets
-With no saved layout, the play client picks Compact (under 1100px wide, room stacked over the terminal), Desktop, or Wide from the window size, and sizes the grid so the room, terminal, hotbar, and action bar fill the viewport height. Resize reflows that preset. A saved layout is kept and only clamped back onto the 24-column grid (minimum 2×2, nothing past the right edge). Edit mode can switch Compact / Desktop / Wide without deleting a saved layout until Save. Guests open the same editor from the account menu. The toolbar has multi-step Undo, Reset, and a Lock toggle that keeps edit mode open but stops dragging and resizing. Corner handles stay visible while the layout is unlocked, and a gold ghost shows where a widget will land. A guest token in this tab is restored after a reload, so crossing into a mobile-emulation reload does not dump the session back to the welcome screen. Panels share one header (title, collapse, focus) in the same type and padding; the inventory overlay keeps a single title. The account chip sits in a top band instead of covering a panel corner. Terminal lines keep the last glyph inside the panel.
+Combat start/join promotes the existing full-screen BattleStage cover using the layout focus/save contract. The widgets and terminal remain mounted with their prior geometry and active tabs. Victory/defeat dismissal, outcome timeout, and combatLeave restore the previous arrangement, including a manually focused panel; viewport fitting resumes on restore. Save and Save as template retain the normal arrangement during combat. Keyboard focus moves to the stage only when no command input or other text field is active, and returns to the prior control when the stage closes unless the player has focused another field. The combat stage fits Compact and phone viewports without document scrolling.
+
+With no usable saved layout, the play client picks Compact (under 1100px wide, room stacked over the terminal), Desktop, or Wide from the window size, and sizes the grid so the widgets fit the viewport height with no page scroll. Empty, unknown, malformed, or wholly hidden saved grids fall back to that preset. Desktop and Wide put the room on the left. On the right, Character and Equipment share one tab container (Character open), Terminal, Quest Log, and Map share another (Terminal open), and Inventory sits under those tabs, with the action bar across the bottom. Nothing in that preset crosses the 24-column grid or another widget. The room scene shrinks to share the panel with the description, and a long description scrolls inside the room. Panel padding and the character sheet are tight enough that attributes and combat stats fit in the Character tab at 1080p. Compact stays a stack and does not add the sheet. A saved layout that is taller than the window is scaled down for display (the action bar stays on the bottom row); Save still writes the player's unscaled rows. Compact and phone may still scroll. The spell bar is docked in the top of the action bar instead of a separate row and has nine slots. Keys 1–9 fire those slots, Tab cycles living combat targets, Escape closes the top open panel (shortcut list, dialogs, map, inventory, the battle outcome, the account menu, a focused widget, then edit mode), and `?` opens the shortcut list. Those keys do nothing while the command line or any text field is focused. Focusing a widget still covers the grid, and Save stores the arrangement from before that cover. Resize reflows that preset. A saved layout is kept, clamped back onto the 24-column grid (minimum 2×2, nothing past the right edge), and scaled vertically when it is taller than the window. A saved full-width spell bar that sits directly on the action bar is folded into that dock on load; a spell bar placed somewhere else stays its own widget and can still be moved in edit mode. Edit mode can switch Compact / Desktop / Wide without deleting a saved layout until Save. Guests open the same editor from the account menu. The toolbar has multi-step Undo, Reset, and a Lock toggle that keeps edit mode open but stops dragging and resizing. Corner handles stay visible while the layout is unlocked, and a gold ghost shows where a widget will land. A guest token in this tab is restored after a reload, so crossing into a mobile-emulation reload does not dump the session back to the welcome screen. Panels share one header (title, collapse, focus) in the same type and padding; the inventory overlay keeps a single title. A tab container uses that same single row: the tabs sit on the left, and collapse and focus stay on the right. Extra tabs scroll sideways and, past three, also open from a More menu. There is no separate "Tab container" title. The account chip, Edit Layout, and the Party and Friends buttons share one header row in that top band: same height, gold border, and gold hover. Edit Layout is its own button until the window is under 1100px wide, where it moves into the account menu. The menu is gold, lines up with the chip's right edge, and closes on Escape or an outside click. On a phone the same menu hangs from the account button in the room header and includes Switch character, Log in / Save progress for guests, and Log out for a signed-in player. Terminal lines wrap on word boundaries inside the panel; a token longer than the row may still break. Resizing the terminal reflows that scrollback.
 
 ### Reward scaling
-`reward_scale` in `config/combat_balance.yaml` multiplies each enemy's base XP and gold by that threat tier. The reference level is the **highest** level among characters who receive the victory split (living fighters plus same-room online party), so a high-level member greys out the whole award. Defaults: grey 15%, green 60%, yellow 100%, orange 125%, red 150%, skull 200%. A boss's first kill for a character adds `first_kill_bonus` (default 50%) of that character's own share of the boss, once, stored on `Character.FirstBossKills` (`tpl:<templateId>` or `name:<lower name>`). BattleStage victory lists base, level modifier, first-kill bonus, and party split. The terminal victory text includes the same lines, then the final `+ N XP` / `+ N Gold`.
+`reward_scale` in `config/combat_balance.yaml` multiplies each enemy's base XP and gold by that threat tier. The reference level is the **highest** level among characters who receive the victory split (living fighters plus same-room online party), so a high-level member greys out the whole award. Defaults: grey 15%, green 60%, yellow 100%, orange 125%, red 150%, skull 200%. A boss's first kill for a character adds `first_kill_bonus` (default 50%) of that character's own share of the boss, once, stored on `Character.FirstBossKills` (`tpl:<templateId>` or `name:<lower name>`). A missing item icon swaps once to `/api/item-art/generic-<type>.png`, then the default generic, then a built-in silhouette. A missing enemy or NPC portrait swaps once to a built-in silhouette (enemies darker, friendly NPCs gold). A player with no portrait file, including a guest on the battle card, uses a class silhouette. Those stand-ins are data URIs, so a failed image cannot loop or stay as a broken icon. `combatEnd` still carries `outcome` and the human `message`. Victory adds `rewards` (base, level modifier, first-kill, share) plus `loot` (`name`, `quality`, `quantity`) and `levelUp` (`oldLevel`, `newLevel`) when a level was gained. Defeat adds `defeat` (`xpLost`, `goldLost`, `armor`, `respawnRoom`, `hp`, `maxHp`). Older clients ignore the extra fields. BattleStage shows that breakdown, reveals each drop one at a time in its rarity color, and calls out the new level. The terminal still gets the full text. The panel sits over the room, dismisses on click, Enter, or Escape, and does not take pointer events away from the terminal. Typing in the command line keeps Enter.
 
 ---
 
@@ -1165,7 +1214,7 @@ Click the 📊 button in quest log header to access:
 Enhanced notification system with interactions:
 
 **Notification Types:**
-- **Quest Accepted** / **Quest Complete** — Veilspan centered moment cards (amber/brass), not top-right chips
+- **Quest Accepted** / **Quest Complete** — centered moment cards (amber/brass), not top-right chips
 - **Quest Progress** (blue border) - shows the changed objective and current/required counts
 - **Quest Ready** (yellow border) - shown when all objectives are complete and the quest can be turned in
 
@@ -1184,7 +1233,7 @@ Enhanced notification system with interactions:
 - Quest log: READY + turnInAnywhere shows **Turn In** (`complete <name>`); otherwise a **Turn in: &lt;NPC&gt;** hint
 
 ### Spell Bar / Hotbar
-- 8 square slots between room description and the action bar (desktop grid widget + mobile strip)
+- 8 square slots docked on top of the desktop action bar (a placed hotbar widget still floats on its own). Mobile keeps its own strip
 - Bind equipped combat skills (`cast` / combat-only) or inventory consumables (`use`)
 - Look / Talk / Flee are bindable actions but **not** seeded by default
 - Rest is seeded on an empty/default hotbar (slot 7). Customized binds are never overwritten
@@ -1667,7 +1716,35 @@ tales.characters.damage(characterID, amount)
 tales.characters.heal(characterID, amount)
 tales.characters.teleport(characterID, roomID)
 tales.characters.giveXP(characterID, amount)
+
+-- Signed gold change. A debit that would go below zero is refused and returns false.
+tales.characters.addGold(characterID, delta)
+
+-- Set the respawn room. An empty room id clears it. Unknown rooms return false.
+tales.characters.setBind(characterID, roomID)
+
+-- Apply levels the current XP can already buy. Returns how many levels were gained.
+tales.characters.applyLevels(characterID)
+
+-- Set level and XP directly. Level clamps to 1..the effective cap. Optional maxHP replaces hit points.
+-- Class, skills, inventory, gold, and flags are left alone.
+tales.characters.setProgress(characterID, level, xp, maxHP)
+
+-- Read-only top list. n defaults to 12 and is capped at 50.
+-- sortKey "xp" orders by experience. Any other key orders by level, then experience.
+local rows = tales.characters.top(n, sortKey) -- rows[i].name, .level, .xp
 ```
+
+### tales.resources Module
+
+Balances for configured keys. An unknown key returns `ok=false` and does not create a row.
+
+```lua
+local allowance, remaining, ok = tales.resources.get(characterID, key)
+local remaining, ok = tales.resources.consume(characterID, key, n)
+```
+
+`consume` with `n <= 0` returns the current remaining and `ok=true` when the key exists. Spending more than `remaining` leaves the balance unchanged and returns `ok=false`.
 
 ### tales.npcs Module
 ```lua
@@ -2311,15 +2388,17 @@ func (c *Character) GetEffectiveMaxLevel(globalMax int32) int32
 The leveling system (`CheckLevelUp`, `ApplyLevelUp`) respects `MaxLevelCap` automatically.
 
 ### Frontend Guest Flow
-- `WelcomeScreen.svelte` — "Play as Guest" button (amber/gold styling)
-- `App.svelte` — `handleGuestPlay()` stores token in sessionStorage, skips onboarding
-- `UserMenu.svelte` — Guest-aware: shows "Create Account" and "End Session" instead of Auth0 controls
+- `WelcomeScreen.svelte` — logged-out choice: "Continue with X", "Continue with Google", "Email and password", and "Play as guest"
+- `App.svelte` — `handleGuestPlay()` stores token in sessionStorage, skips onboarding. Logout clears that token so the next load is the welcome choice
+- Account menu — guests see Continue with X, Continue with Google, Email and password, and End Session; a signed-in player sees "Switch character" and "Log out"
 - `api/guest.js` — `createGuestSession()` API client
 
 ### Authentication
 - Guest HMAC tokens are validated before Auth0 JWTs in `AuthMiddleware`
 - Token claims: `sub` (RefID), `uid` (user entity ID), `exp` (30min), `guest: true`
 - If `GUEST_SECRET` is not set, a random key is generated at startup
+- Optional local username/password sessions (Argon2id) when a game-mode file sets `auth: local`. Classic servers leave this off. API responses omit the password hash. Login attempts are limited per client address. `X-Forwarded-For` is trusted only from loopback unless `trusted_proxies` or `TRUSTED_PROXIES` says otherwise.
+- `presentation: door_tui` serves `public/door` and `GET /api/door/config` (title, subtitle, token key). Classic mode does not mount `/door`. The page paints live rooms, exits, actions, NPCs, resources, and combat status, plus the last few command replies. Keys and typed lines become engine commands. A world pack may add `keymap.yaml` (per room, per area, and a combat overlay) and `character_paths.yaml`. `d` stays down. With no character selected, the page asks for a name, then a numbered path, then sex. An existing name is selected. A new character uses the pack path when that file is present, and otherwise a numbered system template. Reconnect runs the new-day pass without another select.
 
 ---
 

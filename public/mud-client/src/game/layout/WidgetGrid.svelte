@@ -184,6 +184,7 @@
 </style>
 
 <div class="widget-grid-container" class:edit-mode={editMode}>
+  {#key layoutEpoch}
   <Grid
     bind:items={widgets}
     rowHeight={ROW_HEIGHT}
@@ -216,6 +217,7 @@
       </WidgetWrapper>
     </div>
   </Grid>
+  {/key}
 </div>
 
 {#if configuringWidgetId}

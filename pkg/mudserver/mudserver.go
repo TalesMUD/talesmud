@@ -2,6 +2,7 @@ package mudserver
 
 import (
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -10,9 +11,12 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
+	"github.com/talesmud/talesmud/pkg/gamemode"
 	"github.com/talesmud/talesmud/pkg/mudserver/game"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/presentation/doorview"
+	"github.com/talesmud/talesmud/pkg/resources"
 	"github.com/talesmud/talesmud/pkg/scripts"
 	"github.com/talesmud/talesmud/pkg/service"
 )
@@ -22,6 +26,8 @@ type MUDServer interface {
 	Run()
 	GameCtrl() def.GameCtrl
 	HandleConnections(*gin.Context)
+	SetResourceStore(*resources.Store)
+	SetSessionHook(SessionHook)
 }
 
 // WS close codes (application-specific, RFC6455 4000-4999).
@@ -55,6 +61,8 @@ type server struct {
 
 	Game *game.Game
 
+	hook SessionHook
+
 	Clients   *clientRegistry
 	Broadcast chan interface{}
 	Upgrader  websocket.Upgrader
@@ -78,6 +86,26 @@ func OriginAllowed(origin string, allowed []string) bool {
 	return false
 }
 
+// SetSessionHook installs a presentation-mode input owner. Nil keeps classic play.
+func (server *server) SetSessionHook(hook SessionHook) {
+	if server == nil {
+		return
+	}
+	server.hook = hook
+}
+
+func (server *server) ansiSession() bool {
+	return server.hook != nil && server.hook.Active()
+}
+
+// SetResourceStore keeps the game and any later caller on the same catalog.
+func (server *server) SetResourceStore(store *resources.Store) {
+	if server == nil || server.Game == nil {
+		return
+	}
+	server.Game.Resources = store
+}
+
 // New creates a new mud server. allowedOrigins is the CORS/WebSocket allowlist.
 func New(facade service.Facade, allowedOrigins []string) MUDServer {
 
@@ -97,6 +125,9 @@ func New(facade service.Facade, allowedOrigins []string) MUDServer {
 		Game:      game,
 	}
 
+	if gamemode.ANSI() {
+		srv.SetSessionHook(&doorview.View{Game: game, Title: gamemode.Current().Title})
+	}
 	return srv
 }
 
@@ -214,10 +245,16 @@ func (server *server) HandleConnections(c *gin.Context) {
 	if ss, err := server.Facade.ServerSettingsService().Get(); err == nil && ss.ServerName != "" {
 		serverName = ss.ServerName
 	}
-	server.sendMessage(user.ID, messages.NewRoomBasedMessage("", "Connected to ["+serverName+"] ..."))
+	if server.ansiSession() {
+		server.hook.OnConnect(user, func(v any) {
+			server.sendMessage(user.ID, v)
+		})
+	} else {
+		server.sendMessage(user.ID, messages.NewRoomBasedMessage("", "Connected to ["+serverName+"] ..."))
 
-	server.Game.OnUserJoined <- &messages.UserJoined{
-		User: user,
+		server.Game.OnUserJoined <- &messages.UserJoined{
+			User: user,
+		}
 	}
 
 	// Guest session timeout: warn 5 minutes before expiry, then disconnect
@@ -286,6 +323,19 @@ func (server *server) HandleConnections(c *gin.Context) {
 			break
 		}
 
+		if server.ansiSession() {
+			text := msg.Message
+			if strings.EqualFold(msg.Type, "door_key") && msg.Key != "" {
+				text = msg.Key
+			}
+			if text != "" {
+				server.hook.OnInput(user, text, func(v any) {
+					server.sendMessage(user.ID, v)
+				})
+			}
+			continue
+		}
+
 		// update user online status
 		server.Game.ConnectUserSession(user)
 		user.LastSeen = time.Now()
@@ -303,6 +353,9 @@ func (server *server) handleConnectionClosed(user *entities.User, connection *Co
 		return false
 	}
 	// Stale/replaced socket: a newer session already owns this user id.
+	if server.hook != nil {
+		server.hook.OnDisconnect(user)
+	}
 	if !server.Clients.DeleteIf(user.ID, connection) {
 		log.WithFields(log.Fields{
 			"userId":   user.ID,
@@ -422,9 +475,11 @@ func (server *server) receiveMessages() {
 			switch msg.GetAudience() {
 			case messages.MessageAudienceOrigin:
 				server.sendMessage(msg.GetAudienceID(), msg)
+				server.noteANSI(msg)
 				break
 			case messages.MessageAudienceUser:
 				server.sendMessage(msg.GetAudienceID(), msg)
+				server.noteANSI(msg)
 				break
 			case messages.MessageAudienceRoom:
 				// Do not load rooms from SQLite here: this goroutine drains
@@ -450,6 +505,31 @@ func (server *server) receiveMessages() {
 			}
 		}
 	}
+}
+
+func (server *server) noteANSI(msg messages.MessageResponder) {
+	if server == nil || !server.ansiSession() || server.hook == nil || msg == nil {
+		return
+	}
+	text := strings.TrimSpace(msg.GetMessage())
+	userID := msg.GetAudienceID()
+	if text == "" || userID == "" {
+		return
+	}
+	go server.repaintANSI(userID, text)
+}
+
+func (server *server) repaintANSI(userID, text string) {
+	if server == nil || server.hook == nil || userID == "" {
+		return
+	}
+	client, ok := server.Clients.Get(userID)
+	if !ok || client == nil || client.User == nil {
+		return
+	}
+	server.hook.OnNotice(client.User, text, func(v any) {
+		server.sendMessage(userID, v)
+	})
 }
 
 func (server *server) runRoomEnterScript(enter *messages.EnterRoomMessage) {

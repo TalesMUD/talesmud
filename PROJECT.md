@@ -11,6 +11,8 @@ TalesMUD is a browser-based Multi-User Dungeon (MUD) framework built with Go and
 - **Architecture:** `ARCHITECTURE.md`
 - **Core Systems & Features:** `FEATURES.md` (comprehensive reference for all systems, data structures, and APIs)
 - **Game design + MVP backlog:** `docs/design/GAME_DESIGN.md`
+- **Door on the shared engine:** `docs/DOOR-ON-MUD.md`
+- **Ruleset profile:** `config/ruleset.yaml` (level cap, level-up mode, death, new day, resource keys, combat pacing). Combat math stays in `config/combat_balance.yaml`.
 - **Scripting system:** `docs/design/SCRIPTING.md`
 - **World map implementation:** `docs/design/WORLD_MAP_IMPLEMENTATION.md`
 - **Quest authoring guide:** `docs/design/QUEST_AUTHORING.md`
@@ -44,20 +46,27 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Dynamic item and NPC spawning
   - Unique NPCs auto-spawn into their assigned room on server start via `CurrentRoomID`
   - Per-character friends list (`friend add/remove/list`); HUD overlay with online flags + whisper; guests refused
-  - Guest-public NPC/enemy portraits (`/api/portraits/:filename`, hashed avatar fallback)
+  - Guest-public NPC, enemy, and player portraits (`/api/portraits/:filename`). Player art covers Human, Dwarf, and Elf across Warrior, Rogue, Mage/Wizard, Ranger/Hunter, Cleric, and Druid; missing art falls back to a class silhouette.
   - Merchant shop overlay in the room widget (structured `shop` WS message with item stats/description; click inspects, explicit Buy/Sell confirm; WoW-style compare-to-equipped deltas on buy inspect; dialog Trade inject)
   - Player chrome Map: Cartographer overlay (desktop ~80% + intel rail; phone full-bleed + bottom intel sheet); tap inspect, Travel button; biome tiles; gold you-icon; Overworld z==0; inter-area exits pack connected demo zones
   - Play client WS: single-flight socket gate; close 4001 (session replaced) does not auto-reconnect; `/play` JS/CSS served no-cache
   - Action bar Option C: room dirs + room actions + Shop; fixed INV/MAP/SAY chrome; **Recipes** pin seeded by default; optional Look/Rest/… via ⋯
   - Gathering & crafting v1 (no professions): room GATHER chips + recipes/craft; R0209 CRAFT/RECIPES chips; R0102 first-gather hint
-  - Spell Bar / Hotbar: skills + consumables; Rest seeded on empty/default bar (slot 7); Look/Talk/Flee bindable; no Search=look
+  - Spell Bar / Hotbar: docked on the desktop action bar (a moved hotbar widget stays separate); nine slots; skills + consumables; Rest seeded on empty/default bar (slot 7); Look/Talk/Flee bindable; no Search=look. Keys 1–9 fire those slots, Tab cycles combat targets, Escape closes the top panel, and `?` opens the shortcut list. None of those fire while a command or other text field is focused.
+  - Desktop and wide presets keep the room on the left. Character and Equipment share one tab (Character open), Terminal, Quest Log, and Map share another (Terminal open), and Inventory sits under those tabs. The play shell is the window height, and a saved layout taller than the window is scaled so the action bar stays on screen. Invalid saved layouts fall back to the viewport preset. Saving a layout while a widget is focused stores the arrangement from before that expansion.
+  - Play terminal wraps room lines on word boundaries and reflows that scrollback when the panel is resized
+  - Play header: one row for Edit Layout, Party, Friends, and the account chip, with a gold menu aligned to the chip
+  - Material Icons are served locally and preloaded; icon ligatures remain hidden until the font loads, so a font failure leaves empty icons.
   - OOC Resting chip on character HP / mobile header while `Flags.resting`; clears on combat or rest end
-  - BattleStage: arena art clipped to the fight band; Attack/Defend/Items/Flee + hotbar share one dock strip; FF-style plates; queue chip centered in the dock
+  - BattleStage: arena art clipped to the fight band; Attack/Defend/Items/Flee + hotbar share one dock strip; FF-style plates; queue chip centered in the dock. Every fighter in a group appears: the player's large card and up to four compact ally cards with live HP/MP, turn, down/fled, hit FX, and join banner. Damage numbers float over the struck sprite in white with a dark outline, holding full opacity before fading. A missing portrait or item icon swaps once to a class, enemy, or generic silhouette instead of a broken image.
+  - Combat start/join automatically focuses the existing BattleStage cover on every layout. Dismissing victory/defeat, outcome timeout, or leaving combat restores the previous panel focus. Layout and template saves keep the normal arrangement; command input and text fields keep their typing focus.
+  - Combat self and allies share one row on desktop and a stacked section on phones. Joins show one banner; combat prose stays in the log. Defeated enemy sprites remain visible in grey with a Defeated label.
   - Say chrome opens a message popup, then sends `say <text>`
   - Inventory chrome opens overlay by default (preference: overlay | on-screen widget)
   - Equipment paper-doll: square slots around portrait (head/neck/chest/hands | legs/boots/ring1/ring2; main_hand + off_hand under); compact ATK/DEF strip
+  - Clicking equipped gear opens a detail card; Unequip is an explicit action. Inventory item cards show stats, value, available weight, usability requirements, and differences from worn gear. Clear class-relevant upgrades get a green badge. Equip, Use, Sell, and Drop remain explicit buttons.
   - Room action/system reaction toast: centered on room hero art; LOOK-sized padding (no half-cut last line)
-  - Quest Accepted / Complete: Veilspan moment cards (centered); open Talk dialog refreshes `[Quest]` → `[In Progress]`
+  - Quest Accepted / Complete: centered moment cards (centered); open Talk dialog refreshes `[Quest]` → `[In Progress]`
   - Quest log Turn In for anywhere-ready quests; otherwise Turn in: NPC hint
   - WoW-style private cellar instances: `type: instance` exits, or a shared-room exit into a room tagged `instance`, clone a small room graph per character; town hub stays shared; empty copies are destroyed
 
@@ -124,7 +133,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
 
 - **Guest Mode (Play as Guest)**
   - Anonymous 30-minute demo sessions without Auth0 registration
-  - "Play as Guest" button on welcome screen
+  - "Play as guest" button on the logged-out welcome screen, under Continue with X, Continue with Google, and Email and password
   - Random character with random class from system templates
   - Spawns in `ServerSettings.StartRoomID` (default `R0001` when that room exists)
   - Auto-grants `source.type: auto` quests for the start room's zone (Z00 catacombs: QST0001–QST0004)
@@ -141,9 +150,10 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
 
 - **New Player Onboarding**
   - Phase-based flow: Welcome Screen, Nickname Setup, Character Creation Wizard, Game
-  - Unauthenticated users see a cinematic welcome landing screen (not the game UI)
-  - Signup and Login via Auth0 with dedicated CTA buttons
-  - "Play as Guest" option for anonymous demo play
+  - Logged-out players see **Continue with X**, **Continue with Google**, **Email and password**, and **Play as guest**. X and Google pass `connection` (`twitter`, `google-oauth2`) so Auth0 skips the universal login password form. Email is the only button that opens that form
+  - Logout clears the Auth0 session and this tab's guest token, then returns to that choice. A guest reload still resumes the guest session
+  - The account menu has **Switch character**, which opens a picker of every character from `/api/my-characters` and sends `sc <name>`. Guests get the same X, Google, and email choices. Signed-in players get **Log out**
+  - A signed-in player with more than one character sees that picker once per login (the server still enters on `lastCharacter`)
   - First-time users prompted to choose a display name/nickname
   - Three-step character creation wizard: Choose Template, Name Character, Confirm & Create
   - Automatic phase detection from user profile and character data
@@ -242,6 +252,10 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - SQLite for all game data
   - World export/import functionality
   - YAML/JSON data file support
+  - Optional per-character refilling resources (`character_resources`). Keys come from `config/ruleset.yaml`. The shipped file lists none, so a default server never spends a balance. Scripts read them through `tales.resources`.
+  - Ruleset death penalties, level-up mode (`auto` or `trainer`), and an optional dawn heal. Defaults match the previous 10% XP loss, 1 gold, bind-point respawn, cap 50, and immediate level-up.
+  - Procedural private instances (`tales.instances.generate`): a per-character room line from templates, level-filtered encounters, cleanup on leave or timeout. Existing cellar instances and Party Follow are unchanged. Generated exits do not pull followers.
+  - Optional text client at `/door` when `presentation: door_tui`. Classic mode does not mount that path. The page title, subtitle, and token key come from the game-mode file, with generic TalesMUD defaults. It paints rooms, exits, actions, NPCs, resources, combat status, and recent command replies, and it sends normal commands. A pack `keymap.yaml` can bind keys per room or area. A new character picks a numbered path, then sex. Reconnect applies the new-day pass. `-config` can point a second process at its own port and database. Classic play is unchanged when no config is set.
 
 ## Technology Stack
 
@@ -386,8 +400,9 @@ The NPCs branch represents the latest development work, focusing on NPC systems 
    - Combat starts with `attack`/`kill` and proceeds automatically
    - Level-gap modifiers (`config/combat_balance.yaml` `level_gap`): hit, crit, and damage dealt/taken scale with attacker level minus defender level, clamped (default ±6). Equal levels are unchanged. Applies to basic attacks and skills for players and NPCs.
    - Class balance (`class_balance`): per-class damage dealt and taken, plus an uphill `behind_dealt` multiplier, so warrior, rogue, ranger, and mage share the same win-rate bands. `wizard` uses the mage row.
+   - Boss telegraph and enrage (`boss_mechanics`): bosses and elites wind up a named blow before it lands; bosses enrage on a round count or HP percent, with a damage bump and an Enraged badge.
    - Threat colors from the same gap (grey through skull) on room enemy names and battle nameplates. Orange or worse asks once before `attack`; `attack!` or a second `attack` engages.
-   - Victory XP and gold scale by that tier against the highest level in the reward split. Bosses pay a one-time first-kill bonus per character. The battle victory screen shows base, level modifier, first-kill bonus, and party split.
+   - Victory XP and gold scale by that tier against the highest level in the reward split. Bosses pay a one-time first-kill bonus per character. The battle victory panel shows base, level modifier, and a first-kill bonus when one was paid, then reveals each drop in its rarity color and calls out a level-up. Defeat lists XP, gold, battered armor, and the room you wake in. The panel dismisses on click, Enter, or Escape and leaves the terminal usable. Hits float a number over the struck nameplate (a crit is larger, a miss reads "miss"); crits and Crushing Blow flash harder. `prefers-reduced-motion` turns those animations off.
    - No turn timeouts or AFK mechanics needed
 
 5. **NPC Behavior and Quest Interaction**
@@ -476,6 +491,13 @@ make build-backend
 
 # Run the server
 make run-server
+
+# Run a second process with its own port and database
+# (example: presentation door_tui, auth local, port 8030)
+./bin/tales -config config/gamemode.yaml
+
+# Forwarded client IPs are trusted only from loopback unless this is set
+# TRUSTED_PROXIES=127.0.0.1,::1
 
 # Run the server with SQLite (single binary + embedded frontend)
 DB_DRIVER=sqlite SQLITE_PATH=./talesmud.db ./bin/tales

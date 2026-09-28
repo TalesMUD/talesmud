@@ -22,7 +22,7 @@ export const INVENTORY_OPEN_OVERLAY = 'overlay';
 export const INVENTORY_OPEN_WIDGET = 'widget';
 export const DEFAULT_INVENTORY_OPEN_MODE = INVENTORY_OPEN_OVERLAY;
 
-export const HOTBAR_SLOT_COUNT = 8;
+export const HOTBAR_SLOT_COUNT = 9;
 /** 0-based index for the default Rest seed (slot 7). */
 export const DEFAULT_REST_SLOT = 6;
 
@@ -183,7 +183,7 @@ export function skillMaterialIcon(idOrName) {
   if (/lightning|arcane|bolt/.test(key)) return 'bolt';
   if (/poison|shadow|backstab|flurry/.test(key)) return 'visibility_off';
   if (/shot|volley|pin|aimed/.test(key)) return 'my_location';
-  if (/strike|bash|cleave|rage|cry/.test(key)) return 'swords';
+  if (/strike|bash|cleave|rage|cry/.test(key)) return 'flash_on';
   return 'auto_awesome';
 }
 

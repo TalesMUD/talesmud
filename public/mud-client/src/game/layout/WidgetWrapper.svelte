@@ -12,7 +12,7 @@
   const dispatch = createEventDispatcher();
 
   const TITLE_CHROME = new Set([
-    'terminal', 'terminalx', 'inventory', 'equipment', 'character', 'questlog', 'tabcontainer',
+    'terminal', 'terminalx', 'inventory', 'equipment', 'character', 'questlog',
   ]);
   const BUTTON_CHROME = new Set(['room']);
   const TERM_FONTS = ['small', 'medium', 'large'];
@@ -374,7 +374,7 @@
   }
 </style>
 
-<div class="widget-wrapper" class:has-title-chrome={showTitleBar}>
+<div class="widget-wrapper" class:has-title-chrome={showTitleBar || isTabContainer}>
   {#if showTitleBar}
     <WidgetChrome
       title={config?.name || widget.widgetType}
@@ -430,7 +430,7 @@
     {/if}
   {/if}
 
-  <div class="widget-content" class:disabled={editMode} class:is-collapsed={collapsed}>
+  <div class="widget-content" class:disabled={editMode} class:is-collapsed={collapsed && !isTabContainer}>
     <slot />
   </div>
 </div>

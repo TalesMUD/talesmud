@@ -25,6 +25,7 @@ type CombatBalanceConfig struct {
 	Threat                ThreatConfig                     `yaml:"threat"`
 	RewardScale           RewardScaleConfig                `yaml:"reward_scale"`
 	ClassBalance          map[string]ClassBalance          `yaml:"class_balance"`
+	BossMechanics         BossMechanicsConfig              `yaml:"boss_mechanics"`
 }
 
 var (
@@ -132,10 +133,11 @@ func getDefaultConfig() *CombatBalanceConfig {
 			"The Hollow Knight": {HP: 1.0, Attack: 0.85, Defense: 0.9},
 			"Hollow Knight":     {HP: 1.0, Attack: 0.85, Defense: 0.9},
 		},
-		LevelGap:     defaultLevelGap(),
-		Threat:       defaultThreat(),
-		RewardScale:  defaultRewardScale(),
-		ClassBalance: defaultClassBalance(),
+		LevelGap:      defaultLevelGap(),
+		Threat:        defaultThreat(),
+		RewardScale:   defaultRewardScale(),
+		ClassBalance:  defaultClassBalance(),
+		BossMechanics: defaultBossMechanics(),
 	}
 }
 
