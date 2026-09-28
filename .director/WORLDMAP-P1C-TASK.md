@@ -15,3 +15,9 @@ Problems visible in `.director/ux-audit/after/worldmap-p1b-overview-1920x1080.pn
 4. **Lower layer.** Give underground its own tile set in the same style: cave floor, rock walls around rooms, dark void between clusters, torch-lit crypt/cellar/sewer variants, stair/entrance markers. No plain coloured squares.
 5. Keep all P1b behaviour, tests, and perf (report the same median/p95 figures).
 6. Screenshots (fonts + images loaded): `.director/ux-audit/after/worldmap-p1c-overview-1920x1080.png`, `worldmap-p1c-zoom-1920x1080.png` (Oldtown + Silverbrook Vale), `worldmap-p1c-lower-1920x1080.png`, plus `worldmap-p1c-far-1920x1080.png` (whole continent at minimum zoom). Commit + push both repos, append "WORLDMAP P1c" to CORE-FOCUS-PROGRESS.md. No deploy.
+
+## Marcus feedback 2026-09-28 23:07 (on P1b screenshots)
+"REALLY REALLY GOOD, almost perfect — continue down that path." KEEP the overall direction and aesthetic exactly (palette, pixel style, roads, dither blending, tree/house sprites). On top of items 1–4:
+7. **Variation driven by room customization.** Use each room's own data (tags, description keywords, room type/category, zone biome, landmark flags, shops/services) to vary tiles and stamps: e.g. forge/smithy gets a chimney-smoke roof, shrine/temple a spire, tavern a sign, farms get crop fields, guard posts/gates a tower, ruins broken walls, graveyards headstones, docks piers, mines a mine entrance, magic sites a glowing stone. More sprite variants per terrain (tree species, rocks, flowers, reeds, stumps) placed deterministically so no two areas look copy-pasted.
+8. **Enhance graphics, same aesthetic.** Richer detail and depth: soft drop shadows under trees/buildings/mountains, subtle ambient animation if cheap (water shimmer, smoke), better water (depth bands, foam at shore), road edges and bridges where roads cross water, subtle zone-edge tint. Town paving shape should follow streets rather than an oval.
+Keep perf within P1b budgets.
