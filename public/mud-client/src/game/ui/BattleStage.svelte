@@ -1774,6 +1774,7 @@
   @keyframes floatNum {
     0% { opacity: 0; transform: translate(-50%, 8px) scale(0.8); }
     18% { opacity: 1; transform: translate(-50%, 0) scale(1.08); }
+    70% { opacity: 1; transform: translate(-50%, -20px) scale(1); }
     100% { opacity: 0; transform: translate(-50%, -28px) scale(1); }
   }
 
