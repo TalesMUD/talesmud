@@ -991,7 +991,7 @@
 <div class="character-widget game-panel" class:in-combat={inCombat}>
   {#if !embedded}
     <div class="game-panel-header">
-      <i class="material-icons">{inCombat ? 'swords' : 'person'}</i>
+      <i class="material-icons">{inCombat ? 'flash_on' : 'person'}</i>
       <span class="widget-title">Character</span>
     </div>
   {/if}

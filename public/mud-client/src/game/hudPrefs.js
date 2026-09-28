@@ -183,7 +183,7 @@ export function skillMaterialIcon(idOrName) {
   if (/lightning|arcane|bolt/.test(key)) return 'bolt';
   if (/poison|shadow|backstab|flurry/.test(key)) return 'visibility_off';
   if (/shot|volley|pin|aimed/.test(key)) return 'my_location';
-  if (/strike|bash|cleave|rage|cry/.test(key)) return 'swords';
+  if (/strike|bash|cleave|rage|cry/.test(key)) return 'flash_on';
   return 'auto_awesome';
 }
 

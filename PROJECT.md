@@ -56,8 +56,10 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Desktop and wide presets keep the room on the left. Character and Equipment share one tab (Character open), Terminal, Quest Log, and Map share another (Terminal open), and Inventory sits under those tabs. The play shell is the window height, and a saved layout taller than the window is scaled so the action bar stays on screen. Invalid saved layouts fall back to the viewport preset. Saving a layout while a widget is focused stores the arrangement from before that expansion.
   - Play terminal wraps room lines on word boundaries and reflows that scrollback when the panel is resized
   - Play header: one row for Edit Layout, Party, Friends, and the account chip, with a gold menu aligned to the chip
+  - Material Icons are served locally and preloaded; icon ligatures remain hidden until the font loads, so a font failure leaves empty icons.
   - OOC Resting chip on character HP / mobile header while `Flags.resting`; clears on combat or rest end
   - BattleStage: arena art clipped to the fight band; Attack/Defend/Items/Flee + hotbar share one dock strip; FF-style plates; queue chip centered in the dock. Every fighter in a group appears: the player's large card and up to four compact ally cards with live HP/MP, turn, down/fled, hit FX, and join banner. Damage numbers float over the struck sprite in white with a dark outline. A missing portrait or item icon swaps once to a class, enemy, or generic silhouette instead of a broken image.
+  - Combat self and allies share one row on desktop and a stacked section on phones. Joins show one banner; combat prose stays in the log. Defeated enemy sprites remain visible in grey with a Defeated label.
   - Say chrome opens a message popup, then sends `say <text>`
   - Inventory chrome opens overlay by default (preference: overlay | on-screen widget)
   - Equipment paper-doll: square slots around portrait (head/neck/chest/hands | legs/boots/ring1/ring2; main_hand + off_hand under); compact ATK/DEF strip

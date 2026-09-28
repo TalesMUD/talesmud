@@ -554,7 +554,7 @@
   };
 
   const combatCommands = [
-    { id: "attack", name: "attack", icon: "swords", label: "Attack", kind: "command" },
+    { id: "attack", name: "attack", icon: "flash_on", label: "Attack", kind: "command" },
     { id: "defend", name: "defend", icon: "security", label: "Defend", kind: "command" },
     { id: "flee", name: "flee", icon: "directions_run", label: "Flee", kind: "command" },
     { id: "status", name: "status", icon: "monitor_heart", label: "Status", kind: "command" },

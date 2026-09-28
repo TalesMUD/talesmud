@@ -39,7 +39,6 @@
   let bannerFlashKey = 0;
   let arenaFlash = false;
   let arenaFlashTimer = null;
-  let bannerStack = []; // recent faded lines [{id, parts, raw}]
   let logEl = null;
   let logScrollPending = false;
   let logExpanded = false;
@@ -222,7 +221,7 @@
   $: queuedLabel = queuedChipLabel(queuedAction, queuedSkillId);
 
 
-  // Short hit banner: prefer combatFx summary; log only if short prose (no rolls/ASCII dumps).
+  // One concise banner per structured action. Prose stays in the log.
   $: {
     let nextParts = null;
     let nextKey = '';
@@ -230,23 +229,7 @@
       nextKey = `fx-${fx.at}`;
       nextParts = formatFxBannerParts(fx);
     }
-    if (!nextParts) {
-      const latest = log.length ? log[log.length - 1] : null;
-      const candidate = latest?.text ? String(latest.text).trim() : '';
-      if (latest && isBannerWorthy(candidate)) {
-        nextKey = String(latest.id);
-        nextParts = parseBannerParts(shortenBannerText(candidate));
-      }
-    }
     if (nextParts && nextKey && nextKey !== lastBannerKey) {
-      const prevRaw = bannerText;
-      const prevParts = bannerParts;
-      if (prevRaw && lastBannerKey) {
-        bannerStack = [
-          { id: lastBannerKey, parts: prevParts, raw: prevRaw },
-          ...bannerStack,
-        ].slice(0, 2);
-      }
       lastBannerKey = nextKey;
       bannerParts = nextParts;
       bannerText = nextParts.raw || '';
@@ -447,24 +430,6 @@
     return false;
   }
 
-  function isBannerWorthy(text) {
-    const t = String(text || '').trim();
-    if (!t || isCombatLogNoise(t)) return false;
-    if (t.includes('\n')) return false;
-    if (t.length > 96) return false;
-    // Roll math stays in log, not the giant banner
-    if (/\bd20\b|\broll(ed|s)?\b|\+\s*\d+\s*=|\(\s*\d+\s*[+\-]\s*\d+/i.test(t)) return false;
-    return true;
-  }
-
-  function shortenBannerText(text) {
-    const t = String(text || '').trim();
-    // Prefer "X hits Y for N" style clauses
-    const hit = t.match(/([^.]{0,40}?\b(?:hits|crits|misses|heals)\b[^.!]{0,50}(?:for\s+\d+)?)/i);
-    if (hit) return hit[1].trim();
-    return t.length > 72 ? `${t.slice(0, 69)}…` : t;
-  }
-
   function bannerIconFor(kind) {
     switch (kind) {
       case 'crit': return 'whatshot';
@@ -473,7 +438,7 @@
       case 'miss': return 'blur_on';
       case 'defend': return 'security';
       case 'flee': return 'directions_run';
-      case 'cast': return 'auto_fix';
+      case 'cast': return 'auto_fix_high';
       default: return 'campaign';
     }
   }
@@ -489,50 +454,6 @@
       icon: bannerIconFor(k),
       raw: raw || '',
     };
-  }
-
-  function parseBannerParts(text) {
-    const t = String(text || '').trim();
-    if (!t) return null;
-    let m = t.match(/^(.+?)\s+(crits)\s+(.+?)(?:\s+for\s+(\d+))?\.?$/i);
-    if (m) {
-      return makeBannerParts({
-        kind: 'crit', actor: m[1], verb: 'crits', target: m[3], amount: m[4] || 0, raw: t,
-      });
-    }
-    m = t.match(/^(.+?)\s+(hits)\s+(.+?)(?:\s+for\s+(\d+))?\.?$/i);
-    if (m) {
-      return makeBannerParts({
-        kind: 'hit', actor: m[1], verb: 'hits', target: m[3], amount: m[4] || 0, raw: t,
-      });
-    }
-    m = t.match(/^(.+?)\s+(heals)\s+(.+?)(?:\s+for\s+(\d+))?\.?$/i);
-    if (m) {
-      return makeBannerParts({
-        kind: 'heal', actor: m[1], verb: 'heals', target: m[3], amount: m[4] || 0, raw: t,
-      });
-    }
-    m = t.match(/^(.+?)\s+(misses)\s+(.+?)\.?$/i);
-    if (m) {
-      return makeBannerParts({
-        kind: 'miss', actor: m[1], verb: 'misses', target: m[3], raw: t,
-      });
-    }
-    m = t.match(/^(.+?)\s+(defends)\.?$/i);
-    if (m) {
-      return makeBannerParts({ kind: 'defend', actor: m[1], verb: 'defends', raw: t });
-    }
-    m = t.match(/^(.+?)\s+(flees)\.?$/i);
-    if (m) {
-      return makeBannerParts({ kind: 'flee', actor: m[1], verb: 'flees', raw: t });
-    }
-    m = t.match(/^(.+?)\s+(casts)\s+(.+)$/i);
-    if (m) {
-      return makeBannerParts({
-        kind: 'cast', actor: m[1], verb: 'casts', target: m[3], raw: t,
-      });
-    }
-    return makeBannerParts({ kind: 'other', raw: t });
   }
 
   function formatFxBannerParts(fxEvt) {
@@ -801,6 +722,7 @@
             alt=""
             on:error={(e) => onImgError(e, 'enemy')}
           />
+          {#if dead}<span class="defeated-label">Defeated</span>{/if}
           {#if showFloatOn(enemy.id)}
             <div class="fx-float over-sprite" data-key={fxKey}>
               {#if fxIsMiss}
@@ -842,6 +764,7 @@
     <div class="join-banner" role="status">{combatJoin.actorName} joins the fight!</div>
   {/if}
 
+  <div class="player-team" class:solo={allies.length === 0}>
   {#if allies.length}
     <section class="ally-strip" aria-label="Allies">
       {#each allies as ally (ally.id)}
@@ -898,6 +821,13 @@
         alt=""
         on:error={(e) => onImgError(e, 'player')}
       />
+      {#if showFloatOn(selfId)}
+        <div class="fx-float over-sprite" data-key={fxKey}>
+          {#if fxIsMiss}<span class="fx-miss-label">miss</span>
+          {:else if fxDamage > 0}<span class="fx-dmg" class:crit={fxIsCrit} class:crush={fxIsCrush}>-{fxDamage}</span>
+          {:else if fxHeal > 0}<span class="fx-heal">+{fxHeal}</span>{/if}
+        </div>
+      {/if}
       {#if isFxTarget(selfId) && fxIsMiss}
         <div class="fx-puff" data-key={fxKey} aria-hidden="true"></div>
       {/if}
@@ -915,17 +845,6 @@
         class:crit-flash={isFxTarget(selfId) && fxIsCrit && !fxIsCrush}
         class:crush-flash={isFxTarget(selfId) && fxIsCrush}
       >{selfName}
-        {#if showFloatOn(selfId)}
-          <div class="fx-float over-plate" data-key={fxKey}>
-            {#if fxIsMiss}
-              <span class="fx-miss-label">miss</span>
-            {:else if fxDamage > 0}
-              <span class="fx-dmg" class:crit={fxIsCrit} class:crush={fxIsCrush}>-{fxDamage}</span>
-            {:else if fxHeal > 0}
-              <span class="fx-heal">+{fxHeal}</span>
-            {/if}
-          </div>
-        {/if}
       </div>
       <div class="hp-row player-hp">
         <span class="hp-label">HP</span>
@@ -958,6 +877,7 @@
       </div>
     </div>
   </section>
+  </div>
 
   {#if arenaFlash}
     <div
@@ -969,7 +889,7 @@
   {/if}
 
   <div class="action-banner-stack" aria-live="polite">
-    {#if bannerVisible && bannerParts}
+    {#if bannerVisible && bannerParts && !showJoinBanner}
       <div
         class="action-banner kind-{bannerParts.kind}"
         class:flash={bannerFlashKey > 0}
@@ -995,16 +915,6 @@
         </div>
       </div>
     {/if}
-    {#each bannerStack as stale (stale.id)}
-      {#if !(bannerVisible && stale.id === lastBannerKey)}
-        <div class="action-banner stale kind-{(stale.parts && stale.parts.kind) || 'other'}" aria-hidden="true">
-          <i class="material-icons banner-icon">{(stale.parts && stale.parts.icon) || 'campaign'}</i>
-          <div class="banner-copy">
-            <span class="banner-raw">{stale.raw}</span>
-          </div>
-        </div>
-      {/if}
-    {/each}
   </div>
   </div><!-- /.battle-arena -->
 
@@ -1248,6 +1158,7 @@
     max-width: calc(100vw - 1.2rem);
     max-height: calc(100vh - 1.2rem);
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto minmax(0, 1fr) auto auto;
     grid-template-areas:
       "header"
@@ -1740,6 +1651,26 @@
     animation: deathDissolve 0.9s ease-out forwards;
   }
 
+  .enemy-card.dead { opacity: 1; filter: none; }
+  .enemy-card.dead .foe-plate { opacity: 0.65; }
+  .enemy-card.dead .enemy-sprite {
+    animation: none;
+    opacity: 0.55;
+    filter: grayscale(1) brightness(0.85);
+  }
+  .defeated-label {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.85);
+    color: #cbd5e1;
+    font: 700 0.65rem system-ui, sans-serif;
+    z-index: 2;
+  }
+
   .player-panel.fx-death .player-bust img {
     animation: deathDissolve 0.9s ease-out forwards;
   }
@@ -1986,15 +1917,27 @@
     will-change: transform, opacity;
   }
 
-  .player-panel {
+  .player-team {
     position: absolute;
     left: 1.1rem;
+    right: 1.1rem;
     bottom: 0.85rem;
     z-index: 3;
+    display: grid;
+    grid-template-columns: minmax(320px, 36%) minmax(0, 1fr);
+    grid-template-areas: "self allies";
+    gap: 0.75rem;
+    align-items: end;
+  }
+  .player-team.solo { grid-template-columns: minmax(320px, 440px); grid-template-areas: "self"; }
+  .player-panel {
+    grid-area: self;
+    box-sizing: border-box;
+    position: relative;
     display: flex;
     align-items: flex-end;
     gap: 0.9rem;
-    max-width: min(440px, 42%);
+    min-width: 0;
     padding: 0.45rem 0.55rem 0.45rem 0.45rem;
     border: 1.5px solid rgba(212, 164, 74, 0.5);
     border-radius: 8px;
@@ -2023,19 +1966,20 @@
   }
 
   .ally-strip {
-    position: absolute;
-    left: 1.1rem;
-    bottom: 8rem;
+    grid-area: allies;
+    box-sizing: border-box;
     z-index: 4;
     display: flex;
+    flex-wrap: wrap;
     gap: 0.45rem;
-    max-width: min(65%, 700px);
-    overflow-x: auto;
+    min-width: 0;
     padding: 0.25rem;
   }
   .ally-card {
     display: flex;
-    flex: 0 0 162px;
+    flex: 1 1 150px;
+    max-width: 200px;
+    box-sizing: border-box;
     min-width: 0;
     gap: 0.4rem;
     padding: 0.35rem;
@@ -2062,6 +2006,7 @@
   .ally-numbers { color: #cfd3dc; font-size: 0.59rem; line-height: 1.05; }
 
   .player-bust {
+    position: relative;
     width: clamp(56px, 7.5vw, 92px);
     aspect-ratio: 1;
     border: 2px solid #d4a44a;
@@ -2108,7 +2053,7 @@
   .player-hp,
   .player-mp {
     margin-bottom: 0.35rem;
-    min-width: 190px;
+    min-width: 0;
   }
 
   .player-panel .hp-track {
@@ -2215,8 +2160,8 @@
   .action-banner-stack {
     position: absolute;
     left: 50%;
-    bottom: 16%;
-    transform: translateX(-50%);
+    top: 48%;
+    transform: translate(-50%, -50%);
     z-index: 6;
     display: flex;
     flex-direction: column-reverse;
@@ -2255,15 +2200,6 @@
   }
   .action-banner.flash {
     animation: bannerPop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.15), bannerShake 0.42s ease-out;
-  }
-  .action-banner.stale {
-    opacity: 0.42;
-    transform: scale(0.92);
-    filter: saturate(0.75);
-    animation: bannerFadeStale 0.35s ease-out;
-    font-size: clamp(0.82rem, 1.5vw, 1rem);
-    padding: 0.32rem 0.75rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   }
   .action-banner.kind-hit {
     border-color: rgba(248, 113, 113, 0.75);
@@ -2365,10 +2301,6 @@
     40% { transform: translateY(1px) rotate(0.8deg) scale(1.04); }
     60% { transform: translateY(-1px) rotate(-0.5deg) scale(1.02); }
     80% { transform: translateY(0) rotate(0.35deg) scale(1.01); }
-  }
-  @keyframes bannerFadeStale {
-    from { opacity: 0.75; transform: scale(0.98); }
-    to { opacity: 0.42; transform: scale(0.92); }
   }
   @keyframes spinSlow {
     from { transform: rotate(0deg); }
@@ -3095,11 +3027,11 @@
     .battle-arena {
       grid-area: arena;
       display: grid;
-      grid-template-rows: minmax(0, 1fr) auto auto auto;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr) auto auto;
       grid-template-areas:
         "enemies"
         "fx"
-        "allies"
         "player";
       min-height: 0;
       overflow: hidden;
@@ -3201,15 +3133,14 @@
     }
 
     .action-banner-stack {
-      position: relative;
-      left: auto;
+      top: 35%;
+      position: absolute;
+      left: 50%;
       bottom: auto;
-      transform: none;
-      margin: 0.15rem auto 0;
+      transform: translate(-50%, -50%);
+      margin: 0;
       width: calc(100% - 1rem);
       max-width: calc(100% - 1rem);
-      grid-column: 1 / -1;
-      justify-self: center;
       z-index: 6;
     }
     .action-banner {
@@ -3229,12 +3160,18 @@
     .banner-amount { font-size: 1.12em; }
 
     /* Compact horizontal Self strip — free vertical space for arena */
-    .player-panel {
+    .player-team, .player-team.solo {
       grid-area: player;
       position: relative;
       left: auto;
       right: auto;
       bottom: auto;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas: "self" "allies";
+      gap: 0;
+      min-width: 0;
+    }
+    .player-panel {
       max-width: none;
       width: calc(100% - 1rem);
       margin: 0.1rem 0.5rem 0.2rem;
@@ -3250,17 +3187,15 @@
     }
     .ally-strip {
       grid-area: allies;
-      position: relative;
-      left: auto;
-      right: auto;
-      bottom: auto;
+      flex-wrap: nowrap;
       max-width: none;
       width: calc(100% - 1rem);
       margin: 0.1rem 0.5rem;
-      padding: 0.1rem;
+      padding: 1.4rem 0.1rem 0.1rem;
+      margin-top: -1.2rem;
       overflow-x: auto;
     }
-    .ally-card { flex-basis: 138px; padding: 0.2rem; }
+    .ally-card { flex: 0 0 138px; padding: 0.2rem; }
     .ally-portrait { flex-basis: 32px; height: 42px; }
     .ally-portrait img { width: 32px; height: 42px; }
     .join-banner { top: 35%; max-width: 90%; font-size: 0.85rem; }
@@ -3304,6 +3239,8 @@
     /* Dock: queue chip → full-width hotbar → utility row (never beside log) */
     .battle-controls {
       grid-area: dock;
+      box-sizing: border-box;
+      min-width: 0;
       position: relative;
       left: auto;
       bottom: auto;
@@ -3330,6 +3267,8 @@
     .queued-chip i { font-size: 1.2rem; }
     .dock-main {
       display: flex;
+      box-sizing: border-box;
+      min-width: 0;
       flex-direction: column;
       align-items: stretch;
       justify-content: flex-start;
@@ -3349,6 +3288,7 @@
     }
     .combat-hotbar {
       order: 1;
+      min-width: 0;
       width: 100%;
       flex: 0 0 auto;
       box-sizing: border-box;

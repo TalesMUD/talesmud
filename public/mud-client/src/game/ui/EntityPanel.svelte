@@ -538,7 +538,7 @@
         {#if npc.isEnemy || npc.isMerchant || npc.isQuestGiver || npc.hasDialog}
           <div class="entity-badges">
             {#if npc.isEnemy}
-              <span class="state-badge enemy" title="Enemy"><i class="material-icons">swords</i></span>
+              <span class="state-badge enemy" title="Enemy"><i class="material-icons">flash_on</i></span>
             {/if}
             {#if npc.hasDialog}
               <span class="state-badge dialog" title="Dialog"><i class="material-icons">chat_bubble</i></span>

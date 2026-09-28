@@ -121,6 +121,8 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
 
 Combat start and action `CombatantView` snapshots include participant type, class ID, HP/MP, alive/fled state, level, and portrait. When a player joins an existing fight, the joining client gets `combatStart` and existing fighters get a `combatAction` with `action: "join"` and the full roster. The client merges snapshots by participant type so new players enter the ally list without waiting for the next attack.
 
+The play embed includes `fonts/MaterialIcons-Regular.woff2` and its Apache license. `icons.css` declares the font with `font-display: block`, and the initial HTML preloads it. The client enables icon visibility after the local FontFace loads; failed loads leave the ligatures hidden. Icon rendering no longer depends on a Google Fonts request.
+
 Private cellars: an exit with `type: instance` or `instance: true`, or a normal exit from a non-instance room into a room tagged `instance`/`instanced`, clones the dest room plus rooms reachable without returning to the hub. Each character gets their own copy; the hub stays shared. Empty instances are deleted.
 
 `GET /api/characters/:id/map` returns that character's fog-of-war atlas. `pkg/worldmap` pins authored `coords`, layouts each area from compass exits, then packs zones with a gap so they read as separate clusters. Reveal then applies discovered rooms, uncharted neighbors through visible exits, area hulls, and overworld/lower/upper layers. Discovered places include exits, danger, a short summary, and optional NPC/enemy residents. Hidden exits stay off the map until revealed. The JSON is the contract for both the web atlas widget and a future mobile renderer.
