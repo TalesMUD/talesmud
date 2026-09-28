@@ -139,6 +139,13 @@ DiscoveredAreas map[string]bool  // Area names
 
 **Atlas API**: `GET /api/characters/:id/map` returns the character's fog-of-war atlas (places, paths, area hulls, overworld/lower/upper layers). Layout pins authored `coords` when present, clusters remaining rooms by area using compass exits, then packs zones with a gap so Oldtown / Meadows / Ashenveil read as separate clusters. Hidden exits stay off the map until `revealExit`.
 
+### Terrain atlas tiles (Worldmap P1)
+Discovered atlas places carry `terrain`: grassland, forest, farmland, city, castle, dungeon, swamp, mountain, snow, desert, water, shore, ruins, or interior. Unexplored neighbors carry `terrain: "fog"`; their art remains hidden. `pkg/worldmap/map_terrain.json` owns ordered aliases, area defaults, and the unknown-ground default (grassland). RoomType/areaType and specific tags take priority, followed by name, indoor/underground context, area, then descriptive/legacy fallbacks. Classification does not add persisted entity fields or scripting APIs.
+
+The overview and minimap draw three stable variants per terrain from a single 32px sprite sheet, with nearest-neighbor sampling. Grid neighbors touch; short charted compass-exit gaps within the same zone/layer receive ground without replacing fog or other occupied cells. Zone labels, room selection/intel, travel, layer tabs, zoom/pan, and the current-room glow remain available. The overview opens fitted to the current layer; Fit world resets that view and Recenter on you switches to the local camera. A textured sea replaces zone boxes and the dark grid. Terrain-only updates repaint, and an older fog snapshot cannot overwrite a previously charted tile.
+
+`GET/HEAD /api/map-tiles/terrain-sheet.png` serves the embedded sheet with a content-hash query version; client JS/CSS uses `?v=worldmap-p1`. Canonical art and deterministic Pillow source live in the content repo (`assets/map-tiles`, `tools/generate_map_tiles.py`). See `tools/WORLDMAP-PREVIEW.md` for rule precedence, regeneration, read-only counts, local screenshots, and performance checks. POI artwork, ornate zone banners, alpha edge blending, and full world framing remain later passes.
+
 ### NPC / enemy portraits
 Room presence sends `portrait` URLs (`/api/portraits/{templateOrId}.png`). Import copies `assets/images/sprites/{npcs,enemies}/` into `uploads/portraits/`. Sprites are 512px full-figure art; the original NPC/enemy cards clip a 48px square around the body (`object-fit: cover` + zoom). Missing files fall back to hashed `img/avatars/{1-14}p.png`. Component CSS lives in `public/mud-client/public/extra.css` and must be deployed with `bundle.js`.
 

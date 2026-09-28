@@ -34,7 +34,9 @@ func Compile(rs []*rooms.Room) *World {
 		}
 		src[r.ID] = r
 		ids = append(ids, r.ID)
+		terrain, _ := ClassifyTerrain(r)
 		pr := &placedRoom{
+			terrain:  terrain,
 			id:       r.ID,
 			name:     r.Name,
 			area:     r.Area,

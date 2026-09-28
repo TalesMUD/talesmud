@@ -127,6 +127,10 @@ Private cellars: an exit with `type: instance` or `instance: true`, or a normal 
 
 `GET /api/characters/:id/map` returns that character's fog-of-war atlas. `pkg/worldmap` pins authored `coords`, layouts each area from compass exits, then packs zones with a gap so they read as separate clusters. Reveal then applies discovered rooms, uncharted neighbors through visible exits, area hulls, and overworld/lower/upper layers. Discovered places include exits, danger, a short summary, and optional NPC/enemy residents. Hidden exits stay off the map until revealed. The JSON is the contract for both the web atlas widget and a future mobile renderer.
 
+Terrain classification happens once per room during `worldmap.Compile`, using embedded `pkg/worldmap/map_terrain.json`. `Place.terrain` is a derived JSON field, supplied to both WebSocket and HTTP atlas consumers; Reveal replaces it with `fog` for unexplored neighbors. Room storage and discovery storage are unchanged. The separate content `build_public_map_data.py` still produces public lore/zone map data, not the in-game room atlas.
+
+Both map views share the canvas renderer and one 96×512 terrain sprite sheet. The content repo's deterministic Pillow generator emits sheet/manifest/review art; `tools/sync_map_tiles.py` verifies row mapping and content hash before copying the runtime sheet and generating client metadata. `GET/HEAD /api/map-tiles/terrain-sheet.png` exposes only that file from `webuiplay.FS()` with public cache headers and a versioned client URL. The regular play asset copy must precede the Go embed build. Canvas draws are culled to the viewport, sea pattern creation is cached, and short terrain connectors require known endpoints in the same zone/layer. Overview camera world-fit is independent of the minimap's local framing. Development-only census/preview tools use room snapshots and an in-memory character; they neither run gameplay nor write the database.
+
 #### Landing Page Middleware
 
 **File:** `pkg/server/landing.go`

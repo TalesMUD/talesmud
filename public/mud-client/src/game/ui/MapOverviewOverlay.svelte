@@ -21,6 +21,8 @@
   let panX = 0;
   let panY = 0;
   let userScale = 1;
+  let frameWorld = true;
+  let stopTileListener;
   let isPanning = false;
   let didDrag = false;
   let panStart = { x: 0, y: 0, panX: 0, panY: 0 };
@@ -196,6 +198,8 @@
   $: if (open && !wasOpen) {
     wasOpen = true;
     userScale = 1;
+    frameWorld = true;
+    panX = panY = 0;
     intelExpanded = false;
     lastStageSize = null;
     paintAfterLayout();
@@ -341,6 +345,7 @@
       panX,
       panY,
       userScale,
+      frameWorld,
       travelPathRoomIds,
       travelTargetId,
       selectedId,
@@ -364,7 +369,7 @@
       const h = items[i];
       const dx = mx - h.px;
       const dy = my - h.py;
-      if (dx * dx + dy * dy <= h.r * h.r) return h.place;
+      if (Math.abs(dx) <= h.half && Math.abs(dy) <= h.half) return h.place;
     }
     return null;
   }
@@ -469,6 +474,7 @@
 
   function applyRecenterToYou(keepScale = true) {
     if (!keepScale) userScale = 1;
+    if (frameWorld) { panX = panY = 0; return; }
     const size = readStageSize(stageWrap);
     const here = resolveHerePlace();
     if (here && size.w >= 4 && size.h >= 4) {
@@ -482,7 +488,15 @@
   }
 
   function recenter() {
+    frameWorld = false;
     applyRecenterToYou(false);
+    scheduleDraw();
+  }
+
+  function fitWorld() {
+    frameWorld = true;
+    userScale = 1;
+    panX = panY = 0;
     scheduleDraw();
   }
 
@@ -525,7 +539,7 @@
   }
 
   onMount(() => {
-    onMapTilesReady(() => scheduleDraw());
+    stopTileListener = onMapTilesReady(() => scheduleDraw());
     escHandler = (e) => {
       if (e.key === 'Escape' && open) {
         e.preventDefault();
@@ -541,6 +555,7 @@
   });
 
   onDestroy(() => {
+    if (stopTileListener) stopTileListener();
     if (escHandler) window.removeEventListener('keydown', escHandler);
     if (resizeHandler) window.removeEventListener('resize', resizeHandler);
     if (resizeHandler && window.visualViewport) window.visualViewport.removeEventListener('resize', resizeHandler);
@@ -739,6 +754,7 @@
     width: 100%;
     height: 100%;
     cursor: grab;
+    image-rendering: pixelated;
     touch-action: none;
   }
   canvas:active { cursor: grabbing; }
@@ -900,6 +916,9 @@
           </div>
         {/if}
         <span class="spacer"></span>
+        <button class="icon-btn" title="Fit world" on:click={fitWorld}>
+          <i class="material-icons">public</i>
+        </button>
         <button class="icon-btn" title="Recenter on you" on:click={recenter}>
           <i class="material-icons">my_location</i>
         </button>
@@ -950,7 +969,7 @@
               <div class="intel-chips">
                 <span class="chip danger-{selectedPlace.danger || 'low'}">{dangerLabel(selectedPlace.danger)}</span>
                 <span class="chip">Z:{selectedPlace.z} {selectedPlace.layer}</span>
-                <span class="chip">{selectedPlace.biome || 'wild'}</span>
+                <span class="chip">{selectedPlace.terrain || selectedPlace.biome || 'wild'}</span>
                 <span class="chip">{selectedPlace.kind || 'place'}</span>
                 {#if selectedPlace.current}<span class="chip you">You are here</span>{/if}
               </div>

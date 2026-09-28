@@ -25,6 +25,7 @@
 
   let widgetWrap, widgetCanvas;
   let widgetObserver;
+  let stopTileListener;
   const hitState = { items: [] };
   let lastWidgetSize = null;
   let selectedId = null;
@@ -196,7 +197,7 @@
       const h = items[i];
       const dx = mx - h.px;
       const dy = my - h.py;
-      if (dx * dx + dy * dy <= h.r * h.r) return h.place;
+      if (Math.abs(dx) <= h.half && Math.abs(dy) <= h.half) return h.place;
     }
     return null;
   }
@@ -317,10 +318,11 @@
   }
 
   onMount(() => {
-    onMapTilesReady(() => scheduleDraw());
+    stopTileListener = onMapTilesReady(() => scheduleDraw());
   });
 
   onDestroy(() => {
+    if (stopTileListener) stopTileListener();
     if (drawRaf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(drawRaf);
     if (widgetObserver) widgetObserver.disconnect();
     cancelTravel();

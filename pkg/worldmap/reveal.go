@@ -102,6 +102,7 @@ func Reveal(w *World, ch *characters.Character) PlayerMap {
 			Y:          float64(pr.y),
 			Z:          pr.z,
 			Biome:      pr.biome,
+			Terrain:    pr.terrain,
 			Kind:       pr.kind,
 			Landmark:   pr.landmark && !isFog,
 			Discovered: !isFog,
@@ -110,6 +111,7 @@ func Reveal(w *World, ch *characters.Character) PlayerMap {
 		}
 		if isFog {
 			p.Name = ""
+			p.Terrain = "fog"
 			p.Kind = "uncharted"
 			p.CanTravel = false
 			p.Danger = "uncharted"

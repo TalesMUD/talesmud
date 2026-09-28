@@ -59,6 +59,8 @@ function mergeAtlas(existing, incoming) {
       ...prev,
       ...place,
       discovered: prev.discovered || place.discovered,
+      terrain: prev.discovered && !place.discovered ? prev.terrain : place.terrain,
+      kind: prev.discovered && !place.discovered ? prev.kind : place.kind,
       name: place.name || prev.name,
       landmark: prev.landmark || place.landmark,
     });
@@ -390,13 +392,14 @@ function sameAtlasSnapshot(a, b) {
   if ((a.places || []).length !== (b.places || []).length) return false;
   if ((a.paths || []).length !== (b.paths || []).length) return false;
   if ((a.layers || []).length !== (b.layers || []).length) return false;
-  // Cheap place fingerprint — id/current/discovered/layer/name
+  // Cheap place fingerprint — includes terrain-only Creator updates.
   for (let i = 0; i < (a.places || []).length; i++) {
     const p = a.places[i];
     const q = b.places[i];
     if (!p || !q) return false;
     if (p.id !== q.id || !!p.current !== !!q.current || !!p.discovered !== !!q.discovered) return false;
     if ((p.layer || "") !== (q.layer || "") || (p.name || "") !== (q.name || "")) return false;
+    if ((p.terrain || "") !== (q.terrain || "")) return false;
   }
   return true;
 }

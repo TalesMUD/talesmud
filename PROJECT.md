@@ -48,7 +48,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Per-character friends list (`friend add/remove/list`); HUD overlay with online flags + whisper; guests refused
   - Guest-public NPC, enemy, and player portraits (`/api/portraits/:filename`). Player art covers Human, Dwarf, and Elf across Warrior, Rogue, Mage/Wizard, Ranger/Hunter, Cleric, and Druid; missing art falls back to a class silhouette.
   - Merchant shop overlay in the room widget (structured `shop` WS message with item stats/description; click inspects, explicit Buy/Sell confirm; WoW-style compare-to-equipped deltas on buy inspect; dialog Trade inject)
-  - Player chrome Map: Cartographer overlay (desktop ~80% + intel rail; phone full-bleed + bottom intel sheet); tap inspect, Travel button; biome tiles; gold you-icon; Overworld z==0; Oldtown north of Meadows
+  - Player chrome Map: Cartographer overlay (desktop ~80% + intel rail; phone full-bleed + bottom intel sheet); tap inspect, Travel button; 14 terrain types with three pixel-art variants each on one sprite sheet, adjoining ground tiles, parchment fog, textured sea, glowing you-marker, Fit world / recenter and zoom/pan. The minimap shares the tiles; Overworld z==0. Terrain rules/defaults live in `pkg/worldmap/map_terrain.json`; read-only preview instructions are in `tools/WORLDMAP-PREVIEW.md`
   - Play client WS: single-flight socket gate; close 4001 (session replaced) does not auto-reconnect; `/play` JS/CSS served no-cache
   - Action bar Option C: room dirs + room actions + Shop; fixed INV/MAP/SAY chrome; **Recipes** pin seeded by default; optional Look/Rest/… via ⋯
   - Gathering & crafting v1 (no professions): room GATHER chips + recipes/craft; R0209 CRAFT/RECIPES chips; R0102 first-gather hint

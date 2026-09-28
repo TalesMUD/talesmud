@@ -30,6 +30,7 @@ type Place struct {
 	Y          float64         `json:"y"`
 	Z          int             `json:"z"`
 	Biome      string          `json:"biome"`
+	Terrain    string          `json:"terrain"`
 	Kind       string          `json:"kind"`
 	Landmark   bool            `json:"landmark,omitempty"`
 	Discovered bool            `json:"discovered"`
@@ -84,6 +85,7 @@ type placedRoom struct {
 	areaName string
 	tags     []string
 	x, y, z  int
+	terrain  string
 	biome    string
 	kind     string
 	landmark bool

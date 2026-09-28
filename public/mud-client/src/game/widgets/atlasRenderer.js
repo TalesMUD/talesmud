@@ -1,3 +1,5 @@
+import { TERRAIN_SHEET } from './terrainSheet.js';
+
 const BIOME = {
   meadow: {
     wash: 'rgba(100, 140, 80, 0.11)',
@@ -48,20 +50,6 @@ const BIOME = {
     ink: '#7a8494',
   },
 };
-
-// Muted tints derived from Creator GridWorldEditor area palette
-const AREA_TINTS = [
-  'rgba(180, 90, 80, 0.14)',
-  'rgba(80, 120, 160, 0.14)',
-  'rgba(80, 140, 90, 0.14)',
-  'rgba(180, 130, 60, 0.14)',
-  'rgba(130, 90, 160, 0.14)',
-  'rgba(70, 140, 130, 0.14)',
-  'rgba(180, 110, 60, 0.14)',
-  'rgba(60, 110, 150, 0.14)',
-  'rgba(70, 130, 80, 0.14)',
-  'rgba(150, 70, 70, 0.14)',
-];
 
 const COMPASS_DIRS = new Set([
   'north', 'south', 'east', 'west',
@@ -163,55 +151,25 @@ function biomeOf(key) {
   return BIOME[key] || BIOME.wild;
 }
 
-const TILE_FILES = {
-  meadow: 'img/map-tiles/meadow.png',
-  forest: 'img/map-tiles/forest.png',
-  settlement: 'img/map-tiles/settlement.png',
-  dungeon: 'img/map-tiles/dungeon.png',
-  water: 'img/map-tiles/water.png',
-  wild: 'img/map-tiles/wild.png',
-  fog: 'img/map-tiles/fog.png',
-};
-
 const tileImages = Object.create(null);
-let landmarkImage = null;
 let youPortraitImage = null;
 let youPortraitSrc = '';
 let tilesReady = false;
-const tileWaiters = [];
+const tileWaiters = new Set();
 
 function notifyTilesReady() {
   tilesReady = true;
-  for (const fn of tileWaiters) {
-    try { fn(); } catch (e) { /* ignore */ }
-  }
+  for (const fn of tileWaiters) fn();
 }
 
 function startTileLoad() {
-  if (typeof Image === 'undefined') {
-    tilesReady = true;
-    return;
-  }
-  const keys = Object.keys(TILE_FILES);
-  let pending = keys.length + 1;
-  const done = () => {
-    pending -= 1;
-    if (pending <= 0) notifyTilesReady();
-  };
-  for (const key of keys) {
-    const img = new Image();
-    img.onload = done;
-    img.onerror = done;
-    img.src = TILE_FILES[key];
-    tileImages[key] = img;
-  }
-  const lm = new Image();
-  lm.onload = done;
-  lm.onerror = done;
-  lm.src = 'img/map-tiles/landmark.png';
-  landmarkImage = lm;
+  if (typeof Image === 'undefined') { tilesReady = true; return; }
+  const img = new Image();
+  img.onload = notifyTilesReady;
+  img.onerror = notifyTilesReady;
+  img.src = `/api/map-tiles/terrain-sheet.png?v=${TERRAIN_SHEET.version}`;
+  tileImages.sheet = img;
 }
-
 startTileLoad();
 
 export function setYouPortrait(url) {
@@ -226,25 +184,33 @@ export function setYouPortrait(url) {
 }
 
 export function onMapTilesReady(fn) {
-  if (typeof fn !== 'function') return;
+  if (typeof fn !== 'function') return () => {};
+  tileWaiters.add(fn);
   if (tilesReady) fn();
-  else tileWaiters.push(fn);
+  return () => tileWaiters.delete(fn);
 }
 
 function tileImageReady(img) {
   return !!(img && img.complete && img.naturalWidth > 0);
 }
 
-function tileKeyFor(place) {
+export function tileKeyFor(place) {
   if (!place || !place.discovered || place.kind === 'uncharted') return 'fog';
-  const k = String(place.kind || '').toLowerCase();
-  if (k === 'settlement') return 'settlement';
-  if (k === 'dungeon') return 'dungeon';
-  if (k === 'water') return 'water';
-  const b = String(place.biome || '').toLowerCase();
-  if (b === 'town') return 'settlement';
-  if (TILE_FILES[b]) return b;
-  return 'wild';
+  return Object.hasOwn(TERRAIN_SHEET.rows, place.terrain) && !['fog', 'sea'].includes(place.terrain)
+    ? place.terrain : TERRAIN_SHEET.default;
+}
+
+function drawTerrain(ctx, key, seed, x, y, size) {
+  const img = tileImages.sheet;
+  const { tileSize, variants, rows } = TERRAIN_SHEET;
+  if (tileImageReady(img)) {
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(img, (hashString(seed) % variants) * tileSize, rows[key] * tileSize,
+      tileSize, tileSize, x, y, size, size);
+  } else {
+    ctx.fillStyle = key === 'fog' ? '#746a51' : key === 'sea' ? '#173947' : '#649c48';
+    ctx.fillRect(x, y, size, size);
+  }
 }
 
 function hashString(str) {
@@ -254,11 +220,6 @@ function hashString(str) {
     h |= 0;
   }
   return Math.abs(h);
-}
-
-function areaTint(area) {
-  if (!area) return 'rgba(120, 110, 90, 0.08)';
-  return AREA_TINTS[hashString(area) % AREA_TINTS.length];
 }
 
 /** Chebyshev distance in layout units between two places. */
@@ -353,9 +314,9 @@ function computeCamera(places, w, h, panX, panY, userScale, focus = null, paths 
   }
   const spanX = Math.max(1, maxX - minX + 1);
   const spanY = Math.max(1, maxY - minY + 1);
-  const pad = Math.max(40, Math.min(w, h) * 0.14);
+  const pad = Math.max(24, Math.min(w, h) * 0.07);
   const fit = Math.min((w - pad * 2) / spanX, (h - pad * 2) / spanY);
-  const tileStep = Math.max(28, Math.min(fit * userScale, MAP_TILE_STEP_MAX));
+  const tileStep = Math.max(3, Math.min(fit * userScale, MAP_TILE_STEP_MAX));
   return {
     tileStep,
     ox: (minX + maxX) / 2,
@@ -391,7 +352,7 @@ function projectPlace(place, cam, w, h) {
   return projectGrid(Math.round(place.x), Math.round(place.y), cam, w, h);
 }
 
-export const MAP_SCALE_MIN = 0.5;
+export const MAP_SCALE_MIN = 0.12;
 export const MAP_SCALE_MAX = 5;
 export const MAP_TILE_STEP_MAX = 110;
 
@@ -402,7 +363,7 @@ export function clampMapScale(s) {
 }
 
 function tileHalf(tileStep) {
-  return tileStep * 0.42;
+  return tileStep * 0.5;
 }
 
 function worldDelta(a, b) {
@@ -449,98 +410,24 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-function shadeColor(hex, percent) {
-  if (!hex || hex[0] !== '#') return hex;
-  const num = parseInt(hex.slice(1), 16);
-  const r = Math.min(255, Math.max(0, (num >> 16) + percent));
-  const g = Math.min(255, Math.max(0, ((num >> 8) & 0xff) + percent));
-  const b = Math.min(255, Math.max(0, (num & 0xff) + percent));
-  return `rgb(${r},${g},${b})`;
-}
-
-function drawParchmentBg(ctx, w, h, maximized) {
-  const base = ctx.createLinearGradient(0, 0, w, h);
-  base.addColorStop(0, '#2a2218');
-  base.addColorStop(0.5, '#1e1812');
-  base.addColorStop(1, '#14100c');
-  ctx.fillStyle = base;
+function drawParchmentBg(ctx, w, h) {
+  // One cached repeat pattern; no per-room DOM images or per-frame texture generation.
+  if (tileImageReady(tileImages.sheet) && typeof document !== 'undefined') {
+    if (!tileImages.seaPattern) {
+      const texture = document.createElement('canvas');
+      texture.width = texture.height = 96;
+      const tc = texture.getContext('2d');
+      drawTerrain(tc, 'sea', 'backdrop', 0, 0, 96);
+      tileImages.seaPattern = ctx.createPattern(texture, 'repeat');
+    }
+    ctx.fillStyle = tileImages.seaPattern;
+  } else ctx.fillStyle = '#173947';
   ctx.fillRect(0, 0, w, h);
-
-  ctx.fillStyle = 'rgba(180, 150, 110, 0.025)';
-  for (let i = 0; i < 120; i++) {
-    const x = (i * 97) % w;
-    const y = (i * 53) % h;
-    ctx.fillRect(x, y, 1, 1);
-  }
-
-  if (maximized) {
-    drawCompassRose(ctx, w - 36, 36, 14);
-  }
-}
-
-function drawCompassRose(ctx, cx, cy, r) {
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.strokeStyle = 'rgba(200, 170, 120, 0.35)';
-  ctx.fillStyle = 'rgba(200, 170, 120, 0.12)';
-  ctx.lineWidth = 1;
-  for (let i = 0; i < 4; i++) {
-    ctx.rotate(Math.PI / 2);
-    ctx.beginPath();
-    ctx.moveTo(0, -r);
-    ctx.lineTo(r * 0.28, -r * 0.28);
-    ctx.lineTo(0, 0);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-  }
-  ctx.beginPath();
-  ctx.arc(0, 0, r * 0.18, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.font = '600 8px Georgia, serif';
-  ctx.fillStyle = 'rgba(220, 190, 140, 0.55)';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('N', 0, -r - 8);
-  ctx.restore();
-}
-
-function drawGrid(ctx, cam, w, h, places) {
-  if (!places.length) return;
-  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-  for (const p of places) {
-    const gx = Math.round(p.x);
-    const gy = Math.round(p.y);
-    if (gx < minX) minX = gx;
-    if (gx > maxX) maxX = gx;
-    if (gy < minY) minY = gy;
-    if (gy > maxY) maxY = gy;
-  }
-  minX -= 1;
-  maxX += 1;
-  minY -= 1;
-  maxY += 1;
-  const half = tileHalf(cam.tileStep);
-  ctx.strokeStyle = 'rgba(180, 160, 110, 0.09)';
-  ctx.lineWidth = 1;
-  ctx.setLineDash([1, 7]);
-  for (let gx = minX; gx <= maxX; gx++) {
-    const top = projectGrid(gx, minY, cam, w, h);
-    const bottom = projectGrid(gx, maxY, cam, w, h);
-    ctx.beginPath();
-    ctx.moveTo(top.px - half, top.py - half);
-    ctx.lineTo(bottom.px - half, bottom.py + half);
-    ctx.stroke();
-  }
-  for (let gy = minY; gy <= maxY; gy++) {
-    const left = projectGrid(minX, gy, cam, w, h);
-    const right = projectGrid(maxX, gy, cam, w, h);
-    ctx.beginPath();
-    ctx.moveTo(left.px - half, left.py + half);
-    ctx.lineTo(right.px + half, right.py + half);
-    ctx.stroke();
-  }
-  ctx.setLineDash([]);
+  const wash = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.max(w, h) * 0.75);
+  wash.addColorStop(0, 'rgba(65, 110, 119, 0.12)');
+  wash.addColorStop(1, 'rgba(4, 17, 28, 0.5)');
+  ctx.fillStyle = wash;
+  ctx.fillRect(0, 0, w, h);
 }
 
 /** Readable area-name size that tracks map zoom (tileStep). */
@@ -637,29 +524,6 @@ function drawAreaLabels(ctx, places, regions, cam, w, h) {
   }
 }
 
-/** @deprecated name kept for callers; tint washes come from regions. */
-function drawAreaCells(ctx, places, cam, w, h, showLabels) {
-  if (!showLabels) return;
-  drawAreaLabels(ctx, places, [], cam, w, h);
-}
-
-function drawRegionWash(ctx, region, cam, w, h) {
-  const pts = (region.hull || []).map(([x, y]) => projectGrid(Math.round(x), Math.round(y), cam, w, h));
-  if (!pts.length) return;
-  const biome = biomeOf(region.biome);
-  let minPx = Infinity, maxPx = -Infinity, minPy = Infinity, maxPy = -Infinity;
-  for (const p of pts) {
-    if (p.px < minPx) minPx = p.px;
-    if (p.px > maxPx) maxPx = p.px;
-    if (p.py < minPy) minPy = p.py;
-    if (p.py > maxPy) maxPy = p.py;
-  }
-  const pad = cam.tileStep * 0.5;
-  ctx.fillStyle = biome.wash;
-  roundRect(ctx, minPx - pad, minPy - pad, maxPx - minPx + pad * 2, maxPy - minPy + pad * 2, 12);
-  ctx.fill();
-}
-
 function drawCorridor(ctx, a, b, pa, pb, path, cam, onTravel) {
   const half = tileHalf(cam.tileStep);
   const { dx, dy } = worldDelta(a, b);
@@ -721,28 +585,6 @@ function drawPortalLink(ctx, fromPx, fromPy, toPx, toPy, label, color, discovere
   }
 }
 
-function drawKindGlyph(ctx, place, px, py, size) {
-  const s = size * 0.2;
-  ctx.fillStyle = 'rgba(48, 40, 30, 0.35)';
-  if (place.kind === 'settlement' || place.landmark) {
-    ctx.fillRect(px - s, py - s * 0.5, s * 2, s * 1.2);
-    ctx.beginPath();
-    ctx.moveTo(px, py - s * 1.1);
-    ctx.lineTo(px + s * 0.9, py - s * 0.15);
-    ctx.lineTo(px - s * 0.9, py - s * 0.15);
-    ctx.closePath();
-    ctx.fill();
-  } else if (place.kind === 'dungeon') {
-    ctx.beginPath();
-    ctx.moveTo(px, py - s);
-    ctx.lineTo(px + s, py + s * 0.2);
-    ctx.lineTo(px, py + s);
-    ctx.lineTo(px - s, py + s * 0.2);
-    ctx.closePath();
-    ctx.fill();
-  }
-}
-
 function drawSilhouette(ctx, px, py, size) {
   ctx.fillStyle = '#e8d5a8';
   ctx.beginPath();
@@ -756,6 +598,15 @@ function drawSilhouette(ctx, px, py, size) {
 }
 
 function drawYouMarker(ctx, px, py, half, portraitImg) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(px, py, Math.max(14, half * 0.85), 0, Math.PI * 2);
+  ctx.shadowColor = '#ffdc78';
+  ctx.shadowBlur = 20;
+  ctx.strokeStyle = '#ffe69b';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.restore();
   const size = Math.max(18, Math.min(26, half * 0.72));
   const x = px - size / 2;
   const y = py - size / 2;
@@ -786,88 +637,40 @@ function drawYouMarker(ctx, px, py, half, portraitImg) {
   ctx.restore();
 }
 
-function drawFallbackTile(ctx, place, x, y, size, fog) {
-  const biome = biomeOf(place.biome);
-  if (fog) {
-    ctx.strokeStyle = 'rgba(148, 130, 100, 0.22)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 4]);
-    roundRect(ctx, x, y, size, size, 3);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = 'rgba(24, 20, 16, 0.45)';
-    roundRect(ctx, x + 2, y + 2, size - 4, size - 4, 2);
-    ctx.fill();
-    return;
-  }
-  const grad = ctx.createLinearGradient(x, y, x + size, y + size);
-  grad.addColorStop(0, shadeColor(biome.tile, 8));
-  grad.addColorStop(0.45, biome.tile);
-  grad.addColorStop(1, shadeColor(biome.tile, -22));
-  ctx.fillStyle = grad;
-  roundRect(ctx, x, y, size, size, 3);
-  ctx.fill();
-  ctx.strokeStyle = biome.tileEdge;
-  ctx.lineWidth = 1.4;
-  roundRect(ctx, x, y, size, size, 3);
-  ctx.stroke();
-  drawKindGlyph(ctx, place, x + size / 2, y + size / 2, size);
-}
-
 function drawTile(ctx, place, px, py, tileStep, opts) {
   const half = tileHalf(tileStep);
-  const x = px - half;
-  const y = py - half;
-  const size = half * 2;
-  const key = tileKeyFor(place);
-  const img = tileImages[key];
-  const fog = key === 'fog';
-
-  ctx.save();
-  if (fog) ctx.globalAlpha = 0.62;
-  if (tileImageReady(img)) {
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(img, x, y, size, size);
-  } else {
-    drawFallbackTile(ctx, place, x, y, size, fog);
+  // Round shared boundaries independently to avoid subpixel seams while panning.
+  const x = Math.round(px - half), y = Math.round(py - half);
+  const size = Math.ceil(tileStep);
+  drawTerrain(ctx, tileKeyFor(place), place.id, x, y, size);
+  if (place.id === opts.travelTargetId) {
+    ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, size, size);
   }
+  if (opts.selected) drawCornerBrackets(ctx, x - 2, y - 2, size + 4, '#ffe29a');
+  return half;
+}
 
-  ctx.globalAlpha = 1;
-  ctx.strokeStyle = fog ? 'rgba(80, 70, 55, 0.7)' : 'rgba(8, 6, 4, 0.92)';
-  ctx.lineWidth = Math.max(1.5, size * 0.045);
-  ctx.strokeRect(x + 0.5, y + 0.5, size - 1, size - 1);
-  if (!fog) {
-    ctx.strokeStyle = 'rgba(255, 236, 200, 0.18)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x + 1.5, y + 1.5, size - 3, size - 3);
-  }
-  ctx.restore();
-
-  if (!fog && (place.landmark || place.kind === 'landmark')) {
-    if (tileImageReady(landmarkImage)) {
-      const s = Math.max(11, size * 0.44);
-      ctx.save();
-      ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(landmarkImage, px - s / 2, py - s / 2, s, s);
-      ctx.restore();
-    } else {
-      drawKindGlyph(ctx, place, px, py, size);
+/** Short same-zone exit gaps become ground; never cross fog or another layer. */
+export function terrainConnectors(places, paths) {
+  const byId = new Map(places.map(p => [p.id, p]));
+  const occupied = new Set(places.map(p => `${p.layer}:${Math.round(p.x)}:${Math.round(p.y)}`));
+  const fill = new Map();
+  for (const path of paths) {
+    const a = byId.get(path.from), b = byId.get(path.to);
+    if (!a || !b || !a.discovered || !b.discovered || a.area !== b.area || a.layer !== b.layer ||
+      !COMPASS_DIRS.has(String(path.dir).toLowerCase()) || ['hidden', 'stair', 'passage'].includes(path.kind)) continue;
+    const { dx, dy } = worldDelta(a, b);
+    const distance = Math.max(Math.abs(dx), Math.abs(dy));
+    if (distance < 2 || distance > 3 || (dx && dy && Math.abs(dx) !== Math.abs(dy))) continue;
+    const dominant = a.id < b.id ? a : b;
+    for (let i = 1; i < distance; i++) {
+      const x = Math.round(a.x) + dx / distance * i, y = Math.round(a.y) + dy / distance * i;
+      const key = `${a.layer}:${x}:${y}`;
+      if (!occupied.has(key) && !fill.has(key)) fill.set(key, { ...dominant, id: key, x, y });
     }
   }
-
-  if (place.id === opts.travelTargetId) {
-    ctx.strokeStyle = '#22d3ee';
-    ctx.lineWidth = 2;
-    roundRect(ctx, x - 2, y - 2, size + 4, size + 4, 4);
-    ctx.stroke();
-  }
-  if (opts.selected) {
-    drawCornerBrackets(ctx, x - 3, y - 3, size + 6, '#e8c060');
-  } else if (!fog) {
-    drawCornerBrackets(ctx, x - 1, y - 1, size + 2, 'rgba(200, 180, 130, 0.35)');
-  }
-
-  return half;
+  return [...fill.values()];
 }
 
 function drawCornerBrackets(ctx, x, y, size, color) {
@@ -901,6 +704,7 @@ export function paintAtlas(ctx, params) {
     travelPathRoomIds = new Set(),
     travelTargetId = null,
     selectedId = null,
+    frameWorld = false,
   } = params;
 
   ctx.clearRect(0, 0, w, h);
@@ -926,20 +730,16 @@ export function paintAtlas(ctx, params) {
   const hereId = herePlace ? herePlace.id : null;
 
   // Frame you + nearby so separateAreas (Oldtown vs Meadow) follow the player.
-  const cam = computeCamera(visiblePlaces, w, h, panX, panY, userScale, herePlace, atlas.paths || []);
+  const cam = computeCamera(visiblePlaces, w, h, panX, panY, userScale, frameWorld ? null : herePlace, atlas.paths || []);
   const lod = labelLodForScale(userScale);
   const nearIds = lod === 'near'
     ? adjacentPlaceIds(atlas.paths || [], currentRoomId, visiblePlaces)
     : new Set();
 
-  drawGrid(ctx, cam, w, h, visiblePlaces);
-
-  for (const region of visibleRegions) {
-    drawRegionWash(ctx, region, cam, w, h);
+  for (const place of terrainConnectors(visiblePlaces, atlas.paths || [])) {
+    const { px, py } = projectPlace(place, cam, w, h);
+    drawTile(ctx, place, px, py, cam.tileStep, {});
   }
-
-  // Area names always on (tinted region/area groups); room names stay LOD-gated below.
-  drawAreaLabels(ctx, visiblePlaces, visibleRegions, cam, w, h);
 
   const layerPaths = (atlas.paths || []).filter((path) => {
     const a = byId[path.from];
@@ -957,17 +757,19 @@ export function paintAtlas(ctx, params) {
     const onTravel =
       travelPathRoomIds.has(path.from) && travelPathRoomIds.has(path.to) ||
       travelPathRoomIds.has(path.to) && path.from === currentRoomId;
-    drawCorridor(ctx, a, b, pa, pb, path, cam, onTravel);
+    if (onTravel || isCrossArea(a, b)) drawCorridor(ctx, a, b, pa, pb, path, cam, onTravel);
   }
 
   for (const path of layerPaths) {
     const a = byId[path.from];
     const b = byId[path.to];
     if (!a.discovered || isGridLink(path, a, b)) continue;
+    if (a.layer === b.layer && a.area === b.area && COMPASS_DIRS.has(path.dir) && layoutDistance(a, b) <= 3) continue;
     const pa = projectPlace(a, cam, w, h);
     const pb = projectPlace(b, cam, w, h);
     const biome = biomeOf(a.biome);
     // Never paint compass/vertical dir strings — ticks only.
+    if (cam.tileStep < 28) continue;
     const label = isBlockedDirLabel(path.dir) ? '' : path.dir;
     drawPortalLink(ctx, pa.px, pa.py, pb.px, pb.py, label, biome.ink, b.discovered, isCrossArea(a, b));
   }
@@ -985,12 +787,14 @@ export function paintAtlas(ctx, params) {
   for (const place of sorted) {
     const { px, py } = projectPlace(place, cam, w, h);
     const isHere = place.id === hereId;
+    const half = tileHalf(cam.tileStep);
+    if (px + half < 0 || py + half < 0 || px - half > w || py - half > h) continue;
     const r = drawTile(ctx, place, px, py, cam.tileStep, {
       travelTargetId,
       isHere,
       selected: selectedId && place.id === selectedId,
     });
-    hits.push({ px, py, r: r + 4, place: { ...place, current: isHere } });
+    if (px + r >= 0 && py + r >= 0 && px - r <= w && py - r <= h) hits.push({ px, py, r: r + 4, half: r, place: { ...place, current: isHere } });
     if (isHere) {
       herePx = px;
       herePy = py;
@@ -1017,12 +821,14 @@ export function paintAtlas(ctx, params) {
     drawYouMarker(ctx, herePx, herePy, hereHalf, youPortraitImage);
   }
 
-  if (lod === 'near' || lod === 'all') {
+  drawAreaLabels(ctx, visiblePlaces, visibleRegions, cam, w, h);
+
+  if (cam.tileStep >= 20 && (lod === 'near' || lod === 'all')) {
     const candidates = [];
     for (const place of visiblePlaces) {
       if (!place.discovered || !place.name) continue;
       const isHere = place.id === hereId;
-      if (lod === 'near' && !isHere && !nearIds.has(place.id)) continue;
+      if (!isHere && place.id !== selectedId && (cam.tileStep < 60 || lod === 'near' && !nearIds.has(place.id))) continue;
       const { px, py } = projectPlace(place, cam, w, h);
       const half = tileHalf(cam.tileStep);
       candidates.push({
