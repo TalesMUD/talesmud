@@ -1,6 +1,7 @@
 package game
 
 import (
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -10,6 +11,7 @@ import (
 	c "github.com/talesmud/talesmud/pkg/mudserver/game/commands"
 	def "github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	m "github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/resources"
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
@@ -34,6 +36,10 @@ type Game struct {
 
 	// Private cellar copies (WoW-style, not a raid platform)
 	RoomInstances *roomInstanceAdapter
+
+	// Resources is the refilling balance store. Nil until the process attaches one.
+	// An attached store with an empty catalog does not grant any uses.
+	Resources *resources.Store
 
 	// messages
 	onMessageReceived chan interface{}
@@ -128,6 +134,22 @@ func (g *Game) SendMessage(msg interface{}) {
 // SendMessage ...
 func (g *Game) SendMessage() chan interface{} {
 	return g.sendMessage
+}
+
+// DispatchCommand runs one command against the current character, synchronously.
+func (g *Game) DispatchCommand(user *entities.User, text string) {
+	if g == nil || user == nil {
+		return
+	}
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return
+	}
+	msg := m.NewMessage(user, text)
+	g.attachCharacterToMessage(msg)
+	if !g.CommandProcessor.Process(g, msg) {
+		g.RoomProcessor.Process(g, msg)
+	}
 }
 
 // OnMessageReceived returns onMessageReceived channel

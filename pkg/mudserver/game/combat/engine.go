@@ -108,6 +108,7 @@ func (e *Engine) CreateCombatantFromCharacter(char *characters.Character) combat
 		HasFled:     false,
 		Level:       char.Level,
 		ClassID:     char.Class.ID,
+		Portrait:    portraits.ForPlayer(char),
 		MaxHP:       char.MaxHitPoints,
 		CurrentHP:   char.CurrentHitPoints,
 		AttackPower: attackPower,
@@ -135,9 +136,11 @@ func (e *Engine) CreateCombatantFromNPC(n *npc.NPC) combat.CombatantRef {
 	var defense int32 = 0
 	var dexMod int = 0
 
+	difficulty := ""
 	if n.EnemyTrait != nil {
 		attackPower = n.EnemyTrait.AttackPower
 		defense = n.EnemyTrait.Defense
+		difficulty = n.EnemyTrait.Difficulty
 	}
 
 	// Use level as a rough approximation for DEX modifier if not specified
@@ -153,6 +156,7 @@ func (e *Engine) CreateCombatantFromNPC(n *npc.NPC) combat.CombatantRef {
 		IsAlive:     true,
 		HasFled:     false,
 		Level:       n.Level,
+		Difficulty:  difficulty,
 		MaxHP:       n.MaxHitPoints,
 		CurrentHP:   n.CurrentHitPoints,
 		AttackPower: attackPower,
@@ -426,11 +430,15 @@ func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targ
 			attacker.Name, target.Name, result.Damage, roll, attacker.STRMod, toHit, targetAC)
 	}
 
+	if attacker.Enraged {
+		result.Message = "Enraged! " + result.Message
+	}
 	if result.TargetDied {
 		result.Message += fmt.Sprintf(" %s has been defeated!", target.Name)
 	} else {
 		result.Message += fmt.Sprintf(" (%d/%d HP)", target.CurrentHP, target.MaxHP)
 	}
+	e.refreshEnrage(instance, target)
 
 	// Add to combat log
 	logResult := "hit"
@@ -484,6 +492,9 @@ func (e *Engine) CalculateDamage(attacker, target *combat.CombatantRef, critical
 	// Equal levels leave the pre-gap number unchanged.
 	damage = balance.ScaleDamage(attacker.Level, target.Level, damage)
 	damage = balance.ScaleClassDamage(attacker.ClassID, target.ClassID, attacker.Level, target.Level, damage)
+	if attacker.Enraged {
+		damage = balance.ScaleEnrageDamage(damage)
+	}
 
 	// Critical hit doubles damage (or uses CriticalHitMultiplier when it is not 2).
 	if critical {
@@ -740,6 +751,90 @@ func (e *Engine) EndCombat(instance *combat.CombatInstance, result combat.Combat
 		"result":     result,
 		"rounds":     instance.Round,
 	}).Info("Combat ended")
+}
+
+// NPCAttackStep is one enemy attack action: a wind-up, or the hit that follows it.
+type NPCAttackStep struct {
+	Telegraph bool
+	Ability   string
+	Message   string
+	Attack    AttackResult
+}
+
+// StepNPCAttack spends a boss or elite action on a telegraph, or resolves the hit.
+// A stored wind-up counts down and lands when it reaches zero. Enrage skips new wind-ups.
+func (e *Engine) StepNPCAttack(instance *combat.CombatInstance, actorID, targetID string) NPCAttackStep {
+	actor := instance.GetCombatantByID(actorID)
+	if actor == nil || instance == nil {
+		return NPCAttackStep{Message: "Invalid attacker"}
+	}
+	e.refreshEnrage(instance, actor)
+
+	if actor.TelegraphTurns > 0 {
+		actor.TelegraphTurns--
+		ability := actor.TelegraphAbility
+		if actor.TelegraphTurns > 0 {
+			e.UpdateCombatant(instance, actor)
+			msg := fmt.Sprintf("%s is still winding up %s!", actor.Name, ability)
+			instance.AddLogEntry(combat.CombatLogEntry{
+				ActorID:   actor.ID,
+				ActorName: actor.Name,
+				Action:    combat.CombatActionAttack,
+				Result:    "telegraph",
+				Message:   msg,
+			})
+			return NPCAttackStep{Telegraph: true, Ability: ability, Message: msg}
+		}
+		actor.TelegraphAbility = ""
+		e.UpdateCombatant(instance, actor)
+		result := e.ProcessAttack(instance, actorID, targetID)
+		if ability != "" && result.Message != "" {
+			result.Message = ability + " lands! " + result.Message
+		}
+		return NPCAttackStep{Ability: ability, Message: result.Message, Attack: result}
+	}
+
+	turns := balance.BossTelegraphTurns(actor.Difficulty, actor.Enraged)
+	if turns > 0 && targetID != "" {
+		label := balance.BossTelegraphLabel()
+		actor.TelegraphTurns = turns
+		actor.TelegraphAbility = label
+		e.UpdateCombatant(instance, actor)
+		msg := fmt.Sprintf("%s is winding up %s!", actor.Name, label)
+		instance.AddLogEntry(combat.CombatLogEntry{
+			ActorID:   actor.ID,
+			ActorName: actor.Name,
+			Action:    combat.CombatActionAttack,
+			Result:    "telegraph",
+			Message:   msg,
+		})
+		return NPCAttackStep{Telegraph: true, Ability: label, Message: msg}
+	}
+
+	result := e.ProcessAttack(instance, actorID, targetID)
+	return NPCAttackStep{Message: result.Message, Attack: result}
+}
+
+func (e *Engine) refreshEnrage(instance *combat.CombatInstance, actor *combat.CombatantRef) {
+	if e == nil || instance == nil || actor == nil || actor.Type != combat.CombatantTypeNPC {
+		return
+	}
+	if !balance.ShouldEnrage(actor.Difficulty, instance.Round, actor.CurrentHP, actor.MaxHP, actor.Enraged) {
+		return
+	}
+	actor.Enraged = true
+	if balance.BossTelegraphTurns(actor.Difficulty, true) == 0 {
+		actor.TelegraphTurns = 0
+		actor.TelegraphAbility = ""
+	}
+	e.UpdateCombatant(instance, actor)
+	instance.AddLogEntry(combat.CombatLogEntry{
+		ActorID:   actor.ID,
+		ActorName: actor.Name,
+		Action:    combat.CombatActionAttack,
+		Result:    "enrage",
+		Message:   fmt.Sprintf("%s becomes enraged!", actor.Name),
+	})
 }
 
 // GetNPCAIAction determines what action an NPC should take

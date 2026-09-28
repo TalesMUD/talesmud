@@ -52,6 +52,72 @@
     flex-shrink: 0;
   }
 
+  .acct {
+    position: relative;
+  }
+
+  .acct-btn {
+    width: 36px;
+    height: 36px;
+    box-sizing: border-box;
+    border: 1px solid rgba(251, 191, 36, 0.45);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fbbf24;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .acct-btn i { font-size: 20px; }
+
+  .acct-btn:hover { background: rgba(251, 191, 36, 0.2); }
+
+  .acct-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 30;
+    min-width: 220px;
+    border: 1px solid rgba(251, 191, 36, 0.45);
+    border-radius: 8px;
+    background: rgba(7, 9, 12, 0.96);
+    box-shadow: 0 18px 46px rgba(0, 0, 0, 0.55);
+    display: flex;
+    flex-direction: column;
+    max-height: min(70vh, 420px);
+    overflow: auto;
+  }
+
+  .acct-menu button {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    width: 100%;
+    padding: 0.7rem 0.8rem;
+    border: 0;
+    background: transparent;
+    color: #f0e6d3;
+    font-family: 'Cinzel', serif;
+    font-size: 0.82rem;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .acct-menu button i { font-size: 18px; color: #fbbf24; }
+
+  .acct-menu button:hover {
+    background: rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+  }
+
+  .acct-menu button.subtle {
+    font-size: 0.74rem;
+    color: rgba(240, 230, 211, 0.72);
+  }
+
   .hp-pill {
     display: flex;
     align-items: center;
@@ -113,7 +179,77 @@
 </style>
 
 <script>
+  import { onMount, onDestroy } from "svelte";
+  import { getAuth } from "../../auth.js";
+  import { isGuestSession, clearGuestToken } from "../../authSession.js";
+  import { layoutStore } from "../layout/LayoutStore.js";
+  import { settingsStore } from "../SettingsStore.js";
+  import { openCharacterPicker } from "../ui/characterPickerStore.js";
+
   export let store;
+  export let authToken = "";
+
+  const { login, logout } = getAuth();
+  $: guest = isGuestSession(authToken);
+  let open = false;
+  let root;
+
+  function toggle(event) {
+    event.stopPropagation();
+    open = !open;
+  }
+
+  function onKey(event) {
+    if (event.key === "Escape") open = false;
+  }
+
+  function onPointerDown(event) {
+    if (!open || !root) return;
+    if (root.contains(event.target)) return;
+    open = false;
+  }
+
+  onMount(() => {
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("pointerdown", onPointerDown, true);
+  });
+
+  onDestroy(() => {
+    window.removeEventListener("keydown", onKey);
+    window.removeEventListener("pointerdown", onPointerDown, true);
+  });
+
+  function editLayout() {
+    open = false;
+    layoutStore.enterEditMode();
+  }
+
+  function openSettings() {
+    open = false;
+    settingsStore.openModal();
+  }
+
+  function endSession() {
+    open = false;
+    if (guest) {
+      clearGuestToken();
+      window.location.reload();
+      return;
+    }
+    logout();
+  }
+
+  function loginWith(connection) {
+    open = false;
+    if (!login) return;
+    if (connection) login(undefined, { connection });
+    else login();
+  }
+
+  function switchCharacter() {
+    open = false;
+    openCharacterPicker();
+  }
 
   $: roomName = $store.roomName || 'Unknown';
   $: stats = $store.characterStats || {};
@@ -138,6 +274,26 @@
     <div class="hp-pill {hpClass}">
       <i class="material-icons">favorite</i>
       {currentHP}/{maxHP}
+    </div>
+    <div class="acct" bind:this={root}>
+      <button class="acct-btn" type="button" title="Account" aria-label="Account" aria-expanded={open} on:click={toggle}>
+        <i class="material-icons">person</i>
+      </button>
+      {#if open}
+        <div class="acct-menu" role="menu">
+          <button type="button" role="menuitem" on:click={editLayout}><i class="material-icons">dashboard_customize</i> Edit Layout</button>
+          <button type="button" role="menuitem" on:click={switchCharacter}><i class="material-icons">switch_account</i> Switch character</button>
+          <button type="button" role="menuitem" on:click={openSettings}><i class="material-icons">settings</i> Settings</button>
+          {#if guest}
+            <button type="button" role="menuitem" on:click={() => loginWith("twitter")}><i class="material-icons">login</i> Continue with X</button>
+            <button type="button" role="menuitem" on:click={() => loginWith("google-oauth2")}><i class="material-icons">login</i> Continue with Google</button>
+            <button class="subtle" type="button" role="menuitem" on:click={() => loginWith()}><i class="material-icons">mail</i> Email and password</button>
+            <button type="button" role="menuitem" on:click={endSession}><i class="material-icons">logout</i> End Session</button>
+          {:else}
+            <button type="button" role="menuitem" on:click={endSession}><i class="material-icons">logout</i> Log out</button>
+          {/if}
+        </div>
+      {/if}
     </div>
   </div>
 </div>

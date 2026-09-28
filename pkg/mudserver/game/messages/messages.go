@@ -5,18 +5,23 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 )
 
-//UserJoined ... player joined event
-type UserJoined struct{ User *e.User }
+// UserJoined is an in-process event. The user pointer is not a client payload.
+type UserJoined struct {
+	User *e.User `json:"-"`
+}
 
-//UserQuit ... player joined event
-type UserQuit struct{ User *e.User }
+// UserQuit is an in-process event. The user pointer is not a client payload.
+type UserQuit struct {
+	User *e.User `json:"-"`
+}
 
-// Message ... main message container to pass data from e to server and back
+// Message is the in-process command envelope. It is not written to the socket.
+// The json tags keep a mistaken WriteJSON from emitting the account or the character.
 type Message struct {
-	FromUser  *e.User
-	Character *characters.Character
+	FromUser  *e.User               `json:"-"`
+	Character *characters.Character `json:"-"`
 
-	Data string
+	Data string `json:"data,omitempty"`
 }
 
 // Reply o a message

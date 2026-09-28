@@ -538,13 +538,21 @@ type AtlasMessage struct {
 
 // CombatantView is a portrait-bearing combatant for the web client.
 type CombatantView struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Portrait string `json:"portrait,omitempty"`
-	HP       int32  `json:"hp"`
-	MaxHP    int32  `json:"maxHp"`
-	Level    int32  `json:"level,omitempty"`
-	Threat   string `json:"threat,omitempty"` // enemy con color relative to the viewer
+	ID        string `json:"id"`
+	Type      string `json:"type,omitempty"`
+	Name      string `json:"name"`
+	Portrait  string `json:"portrait,omitempty"`
+	HP        int32  `json:"hp"`
+	MaxHP     int32  `json:"maxHp"`
+	Mana      int32  `json:"mana"`
+	MaxMana   int32  `json:"maxMana"`
+	ClassID   string `json:"classId,omitempty"`
+	IsAlive   bool   `json:"isAlive"`
+	HasFled   bool   `json:"hasFled"`
+	Level     int32  `json:"level,omitempty"`
+	Threat    string `json:"threat,omitempty"` // enemy con color relative to the viewer
+	Telegraph string `json:"telegraph"`        // wind-up ability; empty clears the warning
+	Enraged   bool   `json:"enraged"`
 }
 
 // CombatStartMessage is the structured combat UI payload (portraits, HP).
@@ -587,11 +595,43 @@ type RewardBreakdown struct {
 	Gold           int64 `json:"gold"`
 }
 
+// LootReveal is one dropped item for the victory panel.
+// Quality is normal, magic, rare, legendary, or mythic. Quantity is at least 1.
+type LootReveal struct {
+	Name     string `json:"name"`
+	Quality  string `json:"quality,omitempty"`
+	Quantity int32  `json:"quantity,omitempty"`
+}
+
+// LevelUpCallout is set when this victory raised the character's level.
+type LevelUpCallout struct {
+	OldLevel int32  `json:"oldLevel"`
+	NewLevel int32  `json:"newLevel"`
+	Message  string `json:"message,omitempty"`
+}
+
+// DefeatSummary is what the character lost and where they wake up.
+// RespawnRoom is empty when they stay in the room they fell.
+type DefeatSummary struct {
+	XPLost        int32    `json:"xpLost"`
+	GoldLost      int64    `json:"goldLost"`
+	RespawnRoom   string   `json:"respawnRoom,omitempty"`
+	RespawnRoomID string   `json:"respawnRoomId,omitempty"`
+	Armor         []string `json:"armor,omitempty"`
+	HP            int32    `json:"hp"`
+	MaxHP         int32    `json:"maxHp"`
+}
+
 // CombatEndMessage is a machine-readable combat end payload.
+// Rewards, Loot, LevelUp, and Defeat are optional. Older clients ignore them
+// and still read outcome plus the human Message.
 type CombatEndMessage struct {
 	MessageResponse
 	Outcome string           `json:"outcome"` // victory | defeat | fled | timeout
 	Rewards *RewardBreakdown `json:"rewards,omitempty"`
+	Loot    []LootReveal     `json:"loot,omitempty"`
+	LevelUp *LevelUpCallout  `json:"levelUp,omitempty"`
+	Defeat  *DefeatSummary   `json:"defeat,omitempty"`
 }
 
 // NewCombatEndMessage builds a combatEnd with human text + machine outcome.
@@ -652,7 +692,8 @@ type CombatActionMessage struct {
 	TargetID    string          `json:"targetId,omitempty"`
 	TargetIDs   []string        `json:"targetIds,omitempty"`
 	Action      string          `json:"action"`
-	Result      string          `json:"result"` // hit | miss | crit | block | fled | defended | dodged | cast
+	Ability     string          `json:"ability,omitempty"` // named blow, e.g. Crushing Blow; empty on a plain attack
+	Result      string          `json:"result"`            // hit | miss | crit | block | fled | defended | dodged | cast
 	Damage      int32           `json:"damage,omitempty"`
 	Heal        int32           `json:"heal,omitempty"`
 	RemainingHP int32           `json:"remainingHp,omitempty"`

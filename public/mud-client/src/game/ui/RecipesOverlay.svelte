@@ -490,7 +490,7 @@
           <div class="detail-header">
             <div class="detail-title-row">
               <div class="detail-art-wrap">
-                <img class="detail-art" src={artFor(selected.output)} alt="" />
+                <img class="detail-art" src={artFor(selected.output)} alt="" on:error={(e) => onItemArtError(e, { templateId: selected.output?.item, name: selected.output?.name })} />
               </div>
               <div>
                 <div class="detail-name">{selected.name}</div>
@@ -509,7 +509,7 @@
           <div class="ing-list">
             {#each selected.ingredients || [] as ing}
               <div class="ing-row">
-                <img src={artFor(ing)} alt="" />
+                <img src={artFor(ing)} alt="" on:error={(e) => onItemArtError(e, { templateId: ing.item, name: ing.name })} />
                 <span class="ing-name">{ing.name}</span>
                 <span class="ing-count" class:ing-ok={ing.haveEnough} class:ing-miss={!ing.haveEnough}>{ing.have}/{ing.qty}</span>
               </div>

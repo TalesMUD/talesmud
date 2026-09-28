@@ -1,91 +1,209 @@
 <script>
-  import { onMount } from "svelte";
-  import { getMyCharacters } from "../../api/characters.js";
+  import { onMount, onDestroy } from "svelte";
+  import { getUser } from "../../api/user.js";
+  import { getAuth } from "../../auth.js";
+  import { isGuestSession, clearGuestToken } from "../../authSession.js";
+  import { user } from "../../stores.js";
+  import { layoutStore } from "../layout/LayoutStore.js";
+  import { settingsStore } from "../SettingsStore.js";
+  import { openCharacterPicker } from "./characterPickerStore.js";
+  import { accountMenuOpen } from "../uiChrome.js";
 
   export let store;
   export let authToken;
-  export let sendMessage;
 
-  let characters = [];
-  let loading = false;
-  let open = false;
-  let error = "";
+  const { login, logout } = getAuth();
 
+  let narrow = false;
+  let root;
+
+  $: open = $accountMenuOpen;
   $: activeCharacter = $store.character;
   $: connectionStatus = $store.connectionStatus;
-  $: canSwitch = connectionStatus === "connected";
-
-  onMount(() => {
-    loadCharacters();
-  });
-
-  $: if (authToken && characters.length === 0 && !loading) {
-    loadCharacters();
-  }
-
-  function loadCharacters() {
-    if (!authToken || loading) return;
-    loading = true;
-    error = "";
-    getMyCharacters(
-      authToken,
-      (data) => {
-        characters = data || [];
-        loading = false;
-      },
-      () => {
-        error = "Could not load characters";
-        loading = false;
-      }
-    );
-  }
-
-  function toggleOpen() {
-    open = !open;
-    if (open && characters.length === 0) {
-      loadCharacters();
-    }
-  }
-
-  function selectCharacter(character) {
-    if (!character || !canSwitch || character.id === activeCharacter?.id) return;
-    sendMessage(`sc ${character.name}`);
-    open = false;
-  }
 
   function className(character) {
     return character?.class?.name || character?.class?.Name || "Adventurer";
   }
 
-  function isGuestClient() {
-    try {
-      return typeof sessionStorage !== 'undefined' && !!sessionStorage.getItem('talesmud_guest_token');
-    } catch (err) {
-      return false;
-    }
+  onMount(() => {
+    measure();
+    window.addEventListener("resize", measure);
+    window.addEventListener("pointerdown", onPointerDown, true);
+  });
+
+  onDestroy(() => {
+    window.removeEventListener("resize", measure);
+    window.removeEventListener("pointerdown", onPointerDown, true);
+  });
+
+  function measure() {
+    narrow = window.innerWidth < 1100;
   }
 
-  $: showFriends = !isGuestClient();
-  $: showParty = !isGuestClient();
+  function closeMenu() {
+    accountMenuOpen.set(false);
+  }
+
+  function onPointerDown(event) {
+    if (!$accountMenuOpen || !root) return;
+    if (root.contains(event.target)) return;
+    closeMenu();
+  }
+
+  $: guest = isGuestSession(authToken);
+  $: showFriends = !guest;
+  $: showParty = !guest;
   $: resting = !!(!$store.inCombat && $store.characterStats?.resting);
+  $: if (showFriends && authToken) {
+    loadAccount();
+  }
+
+  let accountLoaded = false;
+  function loadAccount() {
+    if (accountLoaded || !authToken || guest) return;
+    accountLoaded = true;
+    getUser(authToken, (u) => user.set(u), () => {});
+  }
+
+  function toggleOpen() {
+    accountMenuOpen.update((v) => !v);
+  }
+
+  function switchCharacter() {
+    closeMenu();
+    openCharacterPicker();
+  }
 
   function openFriends() {
     if (!showFriends) return;
+    closeMenu();
     if (store && store.openFriendsOverlay) store.openFriendsOverlay();
   }
 
   function openParty() {
     if (!showParty) return;
+    closeMenu();
     if (store && store.openPartyOverlay) store.openPartyOverlay();
   }
+
+  function editLayout() {
+    closeMenu();
+    layoutStore.enterEditMode();
+  }
+
+  function openSettings() {
+    closeMenu();
+    settingsStore.openModal();
+  }
+
+  function endSession() {
+    closeMenu();
+    if (guest) {
+      clearGuestToken();
+      window.location.reload();
+      return;
+    }
+    logout();
+  }
+
+  function loginWith(connection) {
+    closeMenu();
+    if (!login) return;
+    if (connection) login(undefined, { connection });
+    else login();
+  }
 </script>
+
+<div class="switcher play-header" bind:this={root}>
+  <div class="switcher-row">
+    {#if resting}
+      <span class="hdr-btn rest-launch" title="Resting"><i class="material-icons">hotel</i> Resting</span>
+    {/if}
+    {#if !narrow}
+      <button class="hdr-btn text-btn" type="button" on:click={editLayout}>Edit Layout</button>
+    {/if}
+    {#if showParty}
+      <button class="hdr-btn icon-btn" type="button" title="Party" aria-label="Party" on:click={openParty}>
+        <i class="material-icons">groups</i>
+      </button>
+    {/if}
+    {#if showFriends}
+      <button class="hdr-btn icon-btn" type="button" title="Friends" aria-label="Friends" on:click={openFriends}>
+        <i class="material-icons">group</i>
+      </button>
+    {/if}
+    <button
+      class="hdr-btn switcher-button"
+      type="button"
+      aria-haspopup="menu"
+      aria-expanded={open}
+      on:click={toggleOpen}
+    >
+      <span class="status-dot" class:connected={connectionStatus === 'connected'} class:connecting={connectionStatus === 'connecting'} class:reconnecting={connectionStatus === 'reconnecting'}></span>
+      <span class="identity">
+        <span class="name">{activeCharacter?.name || "Selecting character"}</span>
+        <span class="meta">
+          {#if connectionStatus !== "connected"}
+            {$store.connectionMessage || "Connecting"}
+          {:else}
+            {className(activeCharacter)}{activeCharacter?.level ? `, Level ${activeCharacter.level}` : ""}
+          {/if}
+        </span>
+      </span>
+      <i class="material-icons chevron">{open ? "expand_less" : "expand_more"}</i>
+    </button>
+  </div>
+
+  {#if open}
+    <div class="menu" role="menu">
+      {#if narrow}
+        <button class="menu-item" type="button" role="menuitem" on:click={editLayout}>
+          <i class="material-icons">dashboard_customize</i>
+          Edit Layout
+        </button>
+      {/if}
+      <button class="menu-item" type="button" role="menuitem" on:click={switchCharacter}>
+        <i class="material-icons">switch_account</i>
+        Switch character
+      </button>
+      <div class="menu-rule"></div>
+      <button class="menu-item" type="button" role="menuitem" on:click={openSettings}>
+        <i class="material-icons">settings</i>
+        Settings
+      </button>
+      {#if guest}
+        <button class="menu-item" type="button" role="menuitem" on:click={() => loginWith("twitter")}>
+          <i class="material-icons">login</i>
+          Continue with X
+        </button>
+        <button class="menu-item" type="button" role="menuitem" on:click={() => loginWith("google-oauth2")}>
+          <i class="material-icons">login</i>
+          Continue with Google
+        </button>
+        <button class="menu-item subtle" type="button" role="menuitem" on:click={() => loginWith()}>
+          <i class="material-icons">mail</i>
+          Email and password
+        </button>
+      {:else if $user && ($user.role === "creator" || $user.role === "admin")}
+        <a class="menu-item" role="menuitem" href="/creator" target="_blank" rel="noreferrer">
+          <i class="material-icons">public</i>
+          World Builder
+        </a>
+      {/if}
+      <button class="menu-item" type="button" role="menuitem" on:click={endSession}>
+        <i class="material-icons">logout</i>
+        {guest ? "End Session" : "Log out"}
+      </button>
+    </div>
+  {/if}
+</div>
 
 <style>
   .switcher {
     position: fixed;
     top: 8px;
-    right: 64px;
-    z-index: 40;
+    right: 12px;
+    z-index: 80;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
@@ -101,76 +219,62 @@
     pointer-events: auto;
   }
 
-  .friends-launch {
+  .hdr-btn {
     pointer-events: auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 38px;
-    min-height: 38px;
-    padding: 0;
-    border: 1px solid rgba(194, 162, 99, 0.38);
+    box-sizing: border-box;
+    height: 36px;
+    min-height: 36px;
+    border: 1px solid rgba(251, 191, 36, 0.45);
     border-radius: 8px;
-    background:
-      linear-gradient(180deg, rgba(28, 23, 18, 0.92), rgba(9, 10, 12, 0.86));
-    color: #c4b5fd;
-    cursor: pointer;
-  }
-  .friends-launch i { font-size: 20px; }
-  .friends-launch:hover { border-color: rgba(196, 181, 253, 0.7); }
-
-  .party-launch {
-    pointer-events: auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 38px;
-    min-height: 38px;
-    padding: 0;
-    border: 1px solid rgba(194, 162, 99, 0.38);
-    border-radius: 8px;
-    background:
-      linear-gradient(180deg, rgba(28, 23, 18, 0.92), rgba(9, 10, 12, 0.86));
+    background: rgba(0, 0, 0, 0.55);
     color: #fbbf24;
     cursor: pointer;
+    font-family: 'Cinzel', serif;
   }
-  .party-launch i { font-size: 20px; }
-  .party-launch:hover { border-color: rgba(251, 191, 36, 0.7); }
+
+  .hdr-btn:hover {
+    background: rgba(251, 191, 36, 0.2);
+  }
+
+  .icon-btn {
+    width: 36px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .icon-btn i { font-size: 20px; color: #fbbf24; }
+
+  .text-btn {
+    padding: 0 0.75rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
 
   .rest-launch {
-    pointer-events: none;
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    min-height: 38px;
     padding: 0 0.7rem;
-    border: 1px solid rgba(34, 197, 94, 0.45);
-    border-radius: 8px;
-    background: rgba(8, 20, 12, 0.92);
     color: #86efac;
     font-size: 0.68rem;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+    cursor: default;
   }
-  .rest-launch i { font-size: 16px; }
+  .rest-launch i { font-size: 16px; color: #86efac; }
 
   .switcher-button {
-    pointer-events: auto;
     display: inline-flex;
     align-items: center;
     gap: 0.55rem;
-    min-height: 38px;
-    padding: 0.35rem 0.85rem;
-    border: 1px solid rgba(194, 162, 99, 0.38);
-    border-radius: 8px;
-    background:
-      linear-gradient(180deg, rgba(28, 23, 18, 0.92), rgba(9, 10, 12, 0.86)),
-      radial-gradient(circle at 20% 0%, rgba(194, 162, 99, 0.18), transparent 40%);
+    padding: 0 0.7rem 0 0.55rem;
     color: #f0e6d3;
-    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
-    cursor: pointer;
-    max-width: min(78vw, 380px);
+    max-width: min(42vw, 280px);
   }
 
   .switcher-button:disabled {
@@ -203,183 +307,81 @@
     flex-direction: column;
     min-width: 0;
     text-align: left;
+    line-height: 1.1;
   }
 
   .name {
-    font-size: 0.92rem;
+    font-size: 0.82rem;
     font-weight: 700;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    letter-spacing: 0;
   }
 
   .meta {
-    font-size: 0.66rem;
+    font-size: 0.62rem;
     color: rgba(240, 230, 211, 0.68);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    letter-spacing: 0;
   }
 
   .chevron {
-    font-size: 1.2rem;
-    color: rgba(240, 230, 211, 0.72);
+    font-size: 1.1rem;
+    color: #fbbf24;
     line-height: 1;
   }
 
   .menu {
     pointer-events: auto;
-    margin-top: 0.45rem;
-    width: min(86vw, 420px);
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 81;
+    width: min(86vw, 280px);
     max-height: min(62vh, 440px);
     overflow: auto;
-    border: 1px solid rgba(194, 162, 99, 0.28);
+    border: 1px solid rgba(251, 191, 36, 0.45);
     border-radius: 8px;
-    background: rgba(7, 9, 12, 0.94);
-    box-shadow: 0 18px 46px rgba(0, 0, 0, 0.52);
-    backdrop-filter: blur(14px);
-    align-self: flex-end;
+    background: rgba(7, 9, 12, 0.96);
+    box-shadow: 0 18px 46px rgba(0, 0, 0, 0.55);
   }
 
-  .menu-header {
+  .menu-item {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 0.65rem 0.75rem;
-    color: rgba(240, 230, 211, 0.72);
-    font-size: 0.68rem;
-    text-transform: uppercase;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    letter-spacing: 0;
-  }
-
-  .refresh {
-    border: 0;
-    background: transparent;
-    color: #c2a263;
-    cursor: pointer;
-    padding: 0.1rem 0.2rem;
-  }
-
-  .character-row {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 0.75rem;
+    gap: 0.55rem;
     width: 100%;
-    padding: 0.7rem 0.8rem;
+    box-sizing: border-box;
+    padding: 0.65rem 0.85rem;
     border: 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     background: transparent;
     color: #f0e6d3;
     cursor: pointer;
     text-align: left;
+    text-decoration: none;
+    font-family: 'Cinzel', serif;
+    font-size: 0.82rem;
   }
 
-  .character-row:hover,
-  .character-row.active {
-    background: rgba(194, 162, 99, 0.12);
-  }
-
-  .character-row:disabled {
-    cursor: default;
-    opacity: 0.58;
-  }
-
-  .level {
+  .menu-item i {
+    font-size: 18px;
     color: #fbbf24;
+  }
+
+  .menu-item:hover {
+    background: rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+  }
+
+  .menu-item.subtle {
     font-size: 0.74rem;
-    align-self: center;
+    color: rgba(240, 230, 211, 0.72);
   }
 
-  .notice {
-    padding: 0.8rem;
-    color: rgba(240, 230, 211, 0.68);
-    font-size: 0.78rem;
-  }
-
-  @media screen and (max-width: 768px) {
-    .switcher {
-      top: 10px;
-      right: 10px;
-      left: auto;
-      transform: none;
-      align-items: flex-end;
-    }
-    .friends-launch {
-      min-width: 44px;
-      min-height: 44px;
-    }
-    .party-launch {
-      min-width: 44px;
-      min-height: 44px;
-    }
-    .rest-launch { min-height: 44px; }
+  .menu-rule {
+    height: 1px;
+    margin: 0.15rem 0.75rem;
+    background: rgba(251, 191, 36, 0.28);
   }
 </style>
-
-<div class="switcher">
-  <div class="switcher-row">
-    {#if resting}
-      <span class="rest-launch" title="Resting"><i class="material-icons">hotel</i> Resting</span>
-    {/if}
-    {#if showParty}
-      <button class="party-launch" type="button" title="Party" on:click={openParty}>
-        <i class="material-icons">groups</i>
-      </button>
-    {/if}
-    {#if showFriends}
-      <button class="friends-launch" type="button" title="Friends" on:click={openFriends}>
-        <i class="material-icons">group</i>
-      </button>
-    {/if}
-    <button class="switcher-button" on:click={toggleOpen} disabled={loading && characters.length === 0}>
-    <span class="status-dot" class:connected={connectionStatus === 'connected'} class:connecting={connectionStatus === 'connecting'} class:reconnecting={connectionStatus === 'reconnecting'}></span>
-    <span class="identity">
-      <span class="name">{activeCharacter?.name || "Selecting character"}</span>
-      <span class="meta">
-        {#if connectionStatus !== "connected"}
-          {$store.connectionMessage || "Connecting"}
-        {:else}
-          {className(activeCharacter)}{activeCharacter?.level ? `, Level ${activeCharacter.level}` : ""}
-        {/if}
-      </span>
-    </span>
-    <i class="material-icons chevron">{open ? "expand_less" : "expand_more"}</i>
-    </button>
-  </div>
-
-  {#if open}
-    <div class="menu">
-      <div class="menu-header">
-        <span>Characters</span>
-        <button class="refresh" on:click={loadCharacters} title="Refresh characters">
-          <i class="material-icons" style="font-size: 16px;">refresh</i>
-        </button>
-      </div>
-      {#if error}
-        <div class="notice">{error}</div>
-      {:else if loading && characters.length === 0}
-        <div class="notice">Loading characters...</div>
-      {:else if characters.length === 0}
-        <div class="notice">No characters found.</div>
-      {:else}
-        {#each characters as character (character.id)}
-          <button
-            class="character-row"
-            class:active={character.id === activeCharacter?.id}
-            disabled={!canSwitch || character.id === activeCharacter?.id}
-            on:click={() => selectCharacter(character)}
-          >
-            <span class="identity">
-              <span class="name">{character.name}</span>
-              <span class="meta">{className(character)} | {character.race?.name || "Unknown race"}</span>
-            </span>
-            <span class="level">Lv {character.level || 1}</span>
-          </button>
-        {/each}
-      {/if}
-    </div>
-  {/if}
-</div>

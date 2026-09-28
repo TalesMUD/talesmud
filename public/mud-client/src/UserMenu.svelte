@@ -9,7 +9,12 @@
     border: 1px solid rgba(61, 220, 132, 0.12);
     border-radius: 6px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-    min-width: 180px;
+    min-width: 220px;
+  }
+
+  :global(#dropdown1.dropdown-content li > a.login-email) {
+    font-size: 0.8rem;
+    color: #9ca3af;
   }
 
   :global(#dropdown1.dropdown-content li > a) {
@@ -47,6 +52,7 @@
   import { onMount } from "svelte";
 
   import { getAuth } from "./auth.js";
+  import { clearGuestToken } from "./authSession.js";
   import { getUser } from "./api/user.js";
   import { user } from "./stores.js";
   import { layoutStore } from "./game/layout/LayoutStore.js";
@@ -89,6 +95,12 @@
       M.Dropdown.init(elems);
     }
   });
+
+  function startLogin(connection) {
+    const fn = login || authLogin;
+    if (connection) fn(undefined, { connection });
+    else fn();
+  }
 </script>
 
 <!-- Dropdown Structure -->
@@ -103,9 +115,23 @@
     </li>
     <li>
       <!-- svelte-ignore a11y-invalid-attribute -->
-      <a href="#!" on:click="{() => login ? login(null, { screen_hint: 'signup' }) : authLogin()}">
-        <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">person_add</i>
-        Create Account
+      <a href="#!" on:click="{() => startLogin('twitter')}">
+        <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">login</i>
+        Continue with X
+      </a>
+    </li>
+    <li>
+      <!-- svelte-ignore a11y-invalid-attribute -->
+      <a href="#!" on:click="{() => startLogin('google-oauth2')}">
+        <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">login</i>
+        Continue with Google
+      </a>
+    </li>
+    <li>
+      <!-- svelte-ignore a11y-invalid-attribute -->
+      <a class="login-email" href="#!" on:click="{() => startLogin()}">
+        <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">mail</i>
+        Email and password
       </a>
     </li>
     <li>
@@ -118,7 +144,7 @@
     <li class="divider"></li>
     <li>
       <!-- svelte-ignore a11y-invalid-attribute -->
-      <a href="#!" on:click="{() => { sessionStorage.removeItem('talesmud_guest_token'); window.location.reload(); }}">
+      <a href="#!" on:click="{() => { clearGuestToken(); window.location.reload(); }}">
         <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">logout</i>
         End Session
       </a>
@@ -151,7 +177,7 @@
       <!-- svelte-ignore a11y-invalid-attribute -->
       <a href="#!" on:click="{() => logout()}">
         <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">logout</i>
-        Logout
+        Log out
       </a>
     </li>
   {/if}

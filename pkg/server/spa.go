@@ -49,7 +49,7 @@ func SPAMiddleware(urlPrefix string, spaFS fs.FS, indexFile string) gin.HandlerF
 		} else {
 			// For root prefix, don't handle paths that start with other known prefixes
 			// This allows /play to be handled by its own middleware
-			if strings.HasPrefix(pth, "/play") {
+			if strings.HasPrefix(pth, "/play") || strings.HasPrefix(pth, "/door") {
 				return
 			}
 		}

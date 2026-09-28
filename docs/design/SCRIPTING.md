@@ -122,6 +122,39 @@ local success = tales.characters.teleport(characterID, roomID)
 
 -- Give XP to character
 local success = tales.characters.giveXP(characterID, amount)
+
+-- Signed gold change. Refuses a debit below zero.
+local success = tales.characters.addGold(characterID, delta)
+
+-- Set or clear the respawn room. Unknown rooms return false.
+local success = tales.characters.setBind(characterID, roomID)
+
+-- Apply levels already earned. Returns the number gained.
+local levels = tales.characters.applyLevels(characterID)
+```
+
+### tales.resources
+
+Configured keys only. An unknown key returns `ok = false` and writes nothing.
+
+```lua
+local allowance, remaining, ok = tales.resources.get(characterID, key)
+local remaining, ok = tales.resources.consume(characterID, key, n)
+```
+
+### tales.instances
+
+Builds a private room line. Does not move the character or spend a resource.
+
+```lua
+local entryRoomID, err = tales.instances.generate(characterID, playerLevel, {
+  count = 3,
+  templates = { "glade", "thicket" },
+  returnRoom = "town",
+  timeout = 1800,
+  seed = 1,
+  encounters = { { id = "wolf", minLevel = 1, maxLevel = 4, weight = 1 } }
+})
 ```
 
 ### tales.npcs

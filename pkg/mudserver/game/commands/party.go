@@ -8,6 +8,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/portraits"
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
@@ -569,8 +570,8 @@ func collectPartyMembers(game def.GameCtrl, party *entities.Party) []messages.Pa
 		if className == "" {
 			className = ch.Class.ID
 		}
-		portrait := ""
-		if ch.BelongsUserID != "" {
+		portrait := portraits.ForPlayer(ch)
+		if portrait == "" && ch.BelongsUserID != "" {
 			if user, err := game.GetFacade().UsersService().FindByID(ch.BelongsUserID); err == nil && user != nil {
 				portrait = strings.TrimSpace(user.Picture)
 			}

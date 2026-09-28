@@ -99,7 +99,7 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
     ├── quests/            # Quest definition CRUD (creator level, including GET)
     ├── quest-progress/    # Quest log per character (owner/admin)
     ├── characters/:id/map # Per-character discovered-world atlas (owner/admin)
-    ├── portraits/:filename # Public NPC/enemy portrait images (no auth, guest-ok)
+    ├── portraits/:filename # Public NPC/enemy/player portrait images (no auth, guest-ok)
     ├── world/validation   # Creator world health diagnostics
     ├── diagnostics/world  # Creator world health diagnostics
     ├── validate/:entityType # Draft Creator entity validation
@@ -116,7 +116,11 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
 
 `GET /api/quest-progress/:characterId` returns quest progress merged with quest definition fields for the player UI. Objective rows include `objectiveId`, definition `description`, current/required counts, and completion state so REST refreshes and WebSocket quest log messages have matching player-facing text.
 
-`GET /api/portraits/:filename` is public (no Auth0), same pattern as room backgrounds. The importer copies `assets/images/npcs/` and `assets/images/sprites/{npcs,enemies}/` into `uploads/portraits/` (flat `{id}.png`). Room NPC payloads include `portrait` URLs; the web client falls back to hashed `img/avatars` so faces always render.
+`GET /api/portraits/:filename` is public (no Auth0), same pattern as room backgrounds. The importer copies NPC/enemy sprites into `uploads/portraits/` (flat `{id}.png`); player race/class sprites are published there as `player-<race>-<class>.png`. Room NPC, combatant, and party roster payloads include portrait URLs. The client maps player race/class for the paper doll and uses a built-in class silhouette if a file fails to load.
+
+Combat start and action `CombatantView` snapshots include participant type, class ID, HP/MP, alive/fled state, level, and portrait. When a player joins an existing fight, the joining client gets `combatStart` and existing fighters get a `combatAction` with `action: "join"` and the full roster. The client merges snapshots by participant type so new players enter the ally list without waiting for the next attack.
+
+The play embed includes `fonts/MaterialIcons-Regular.woff2` and its Apache license. `icons.css` declares the font with `font-display: block`, and the initial HTML preloads it. The client enables icon visibility after the local FontFace loads; failed loads leave the ligatures hidden. Icon rendering no longer depends on a Google Fonts request.
 
 Private cellars: an exit with `type: instance` or `instance: true`, or a normal exit from a non-instance room into a room tagged `instance`/`instanced`, clones the dest room plus rooms reachable without returning to the hub. Each character gets their own copy; the hub stays shared. Empty instances are deleted.
 
@@ -200,7 +204,7 @@ type server struct {
 The game engine owns an in-memory session registry for live player state. The
 registry maps connected user IDs to their currently selected character, room,
 and last-seen timestamp. WebSocket connect/read/disconnect paths update this
-registry and persist `User.IsOnline` as a secondary status field.
+registry and persist `User.IsOnline` as a secondary status field. `combat.disconnect: continue` (the default) leaves that fight running. `release` ends it without a defeat penalty and, when `combat.safe_room` says so, moves the character before an instance copy is deleted. A generated instance that times out still does that move. A text-client connect runs the new-day pass and refills configured resources without requiring another character select. Player-directed replies are recorded by the text client and drawn back into its frame off the message-drain goroutine.
 
 Room message fan-out, `who`, private tells, friends online flags, regeneration ticks, and room player
 payloads use the live session registry instead of scanning all users with
@@ -447,6 +451,8 @@ type StatusEffect struct {
        │   │     Gap 0 matches the pre-gap formulas.
        │   │     class_balance then scales damage dealt and taken per class
        │   │     (wizard uses the mage row; behind_dealt applies when lower level).
+       │   │     boss_mechanics: bosses and hard elites wind up one action before
+       │   │     the hit; bosses enrage on round 16 or at 30% HP (1.20× damage).
        │   │     Room NPC and combat payloads include a viewer-relative threat tier
        │   │     (grey..skull). Orange+ blocks the first attack until attack! or a repeat.
        │   ├── cast <skill> [target] - Use skill (mana/cooldown cost)
@@ -1048,6 +1054,8 @@ type Item struct {
 }
 ```
 
+`equip <item>` validates `class:*` tags, minimum `Item.Level`, and explicit armor weight (`Properties.armorWeight` or an `armor:cloth|leather|plate` tag) against the character class before moving an item from inventory. The play client mirrors these checks in its shared item card and computes class-weighted comparison deltas from `Attributes`. Optional item weight is read from `Properties.weight` when present; current item data need not supply it.
+
 **Template/Instance Lifecycle:**
 - Templates (`IsTemplate=true`) are blueprints stored in the database
 - Instances (`IsTemplate=false`, `TemplateID` set) are created from templates
@@ -1239,7 +1247,11 @@ type MessageResponse struct {
 }
 ```
 
+`combatEnd` keeps `outcome` and `message`. Optional `rewards`, `loot`, `levelUp`, and `defeat` objects ride on the same message. `combatAction` may include `ability` when a named blow lands. Clients that only read `message` still work.
+
 ## Frontend Architecture
+
+The play client observes `combatPhase` in `Game.svelte` and calls `LayoutStore.syncCombatFocus`: active starts the existing BattleStage cover, ending retains it, and idle restores prior focus. The cover uses `focusId`/`focusSnapshot` for normal-layout persistence and a transient `combatFocusReturn` for prior manual focus; it does not change grid geometry or remount terminals. The stage keyboard-focus action guards text entry and restores the prior DOM control on removal.
 
 ### MUD Client — Onboarding Flow
 
@@ -1249,7 +1261,7 @@ The MUD client (`/play`) uses a phase-based routing system in `App.svelte` to gu
 App.svelte (phase-based routing)
 ├── LoadingScreen           (phase: "loading" — Auth0 initializing)
 ├── WelcomeScreen           (phase: "welcome" — unauthenticated)
-│   ├── Login / Signup (Auth0)
+│   ├── Continue with X / Google (Auth0 connection) or Email and password
 │   └── Play as Guest (POST /api/guest → skip onboarding, go to "ready")
 ├── NicknameSetup           (phase: "nickname" — new user, needs display name)
 ├── CharacterCreationWizard (phase: "character" — no characters yet)
@@ -1266,7 +1278,7 @@ Phase detection:
 
 Onboarding components are in `src/onboarding/`:
 - `LoadingScreen.svelte` — Minimal dark loading screen
-- `WelcomeScreen.svelte` — Cinematic landing with Login/Signup CTAs
+- `WelcomeScreen.svelte` — Cinematic landing. X and Google log in through a named Auth0 connection. Email opens universal login. Guest play stays on the card
 - `NicknameSetup.svelte` — Glass-morphism card for nickname entry
 - `CharacterCreationWizard.svelte` — Three-step full-page wizard
 
@@ -1356,8 +1368,10 @@ connection took the session — the client shows that and does not auto-reconnec
 reconnecting state to the UI store when a player tries to send while offline.
 It also handles `roomPresence` messages by updating `MUDXPlusStore.players`
 without re-rendering the full room.
-`CharacterSwitcher.svelte` loads `/api/my-characters`, shows the active
-character and connection state, and sends `sc <name>` to switch characters.
+`CharacterSwitcher.svelte` shows the active character and connection state.
+Switch character opens `CharacterPicker.svelte`, which loads `/api/my-characters`
+and sends `sc <name>`. The same entry is on the phone account menu. Logout
+clears the Auth0 session and the tab guest token before returning to `/play`.
 
 ### Terminal Integration
 
@@ -1531,6 +1545,11 @@ pkg/
 ├── service/           # Business logic
 ├── repository/        # Data access
 ├── db/                # Database client
+├── resources/         # Per-character refilling balances
+├── ruleset/           # Level cap, level-up mode, death, new day, resource catalog
+├── gamemode/          # Process presentation and auth mode
+├── authlocal/         # Optional Argon2id username/password sessions
+├── presentation/      # Text-client frame renderer and view
 ├── scripts/           # Script execution
 │   ├── scripts.go     # Script entity and types
 │   ├── scriptrunner.go # Runner interface
@@ -1552,6 +1571,8 @@ pkg/
 ## Scripting System Architecture
 
 The scripting system uses Lua (via gopher-lua) for dynamic game content. JavaScript support is deprecated but maintained for backward compatibility.
+
+Refilling resources are a SQLite table (`character_resources`) owned by `pkg/resources`. The HTTP startup attaches one empty store to the game and to the Lua runner. Callers configure allowances later. Until then, `tales.resources.get` and `consume` report the key as missing.
 
 ### Script Runner Architecture
 
@@ -1588,12 +1609,14 @@ The scripting system uses Lua (via gopher-lua) for dynamic game content. JavaScr
 |--------|---------|
 | `tales.items` | Item and template operations |
 | `tales.rooms` | Room queries and management |
-| `tales.characters` | Character operations (damage, heal, teleport) |
+| `tales.characters` | Character operations (damage, heal, teleport, gold, bind, apply levels) |
 | `tales.npcs` | NPC operations (templates, instances, spawning) |
 | `tales.dialogs` | Dialog and conversation management |
 | `tales.game` | Messaging, flags, items, room manipulation |
 | `tales.quests` | Quest operations (accept, complete, progress, grant, abandon) |
 | `tales.utils` | Utilities (random, UUID, dice rolling) |
+| `tales.resources` | Configured refilling balances (`get`, `consume`) |
+| `tales.instances` | Generate a private room line (`generate`) |
 
 #### tales.game Functions
 

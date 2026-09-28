@@ -17,7 +17,7 @@ type RoomProcessor struct {
 	commands map[string]RoomCommand
 }
 
-//RoomCommand ...
+// RoomCommand ...
 type RoomCommand func(room *rooms.Room, game def.GameCtrl, message *messages.Message) bool
 
 // NewRoomProcessor .. creates a new room processor
@@ -107,7 +107,8 @@ func (roomProcessor *RoomProcessor) matchesDynamicCommand(key string, room *room
 
 	if room.Actions != nil {
 		for _, action := range *room.Actions {
-			if !commandEquals(message.Data, action.Name) {
+			args, ok := actionArgs(message.Data, action.Name)
+			if !ok {
 				continue
 			}
 
@@ -146,41 +147,42 @@ func (roomProcessor *RoomProcessor) matchesDynamicCommand(key string, room *room
 					return true
 				}, true
 
-				case rooms.RoomActionTypeScript:
-					scriptID := action.ScriptId
-					actionCopy := action
-					return func(room *rooms.Room, game def.GameCtrl, message *messages.Message) bool {
-						if scriptID == "" {
-							log.WithField("name", actionCopy.Name).Error("action script ID is empty")
-							game.SendMessage() <- message.Reply("Nothing happens.")
-							return true
-						}
-
-						script, err := game.GetFacade().ScriptsService().FindByID(scriptID)
-						if err != nil || script == nil {
-							log.WithField("scriptID", scriptID).WithError(err).Warn("Room action script not found")
-							game.SendMessage() <- message.Reply("Nothing happens.")
-							return true
-						}
-
-						ctx := scripts.NewScriptContext()
-						ctx.Set("eventType", "room.action")
-						ctx.Set("action", actionCopy.Name)
-						ctx.Set("room", room)
-						ctx.Set("roomID", room.ID)
-						ctx.Set("character", message.Character)
-						ctx.Set("characterID", message.Character.ID)
-						if actionCopy.Params != nil {
-							ctx.Set("params", actionCopy.Params)
-						}
-
-						result := game.GetFacade().Runner().RunWithResult(*script, ctx)
-						if result != nil && !result.Success {
-							log.WithField("script", script.Name).WithField("error", result.Error).Warn("Room action script failed")
-						}
-
+			case rooms.RoomActionTypeScript:
+				scriptID := action.ScriptId
+				actionCopy := action
+				return func(room *rooms.Room, game def.GameCtrl, message *messages.Message) bool {
+					if scriptID == "" {
+						log.WithField("name", actionCopy.Name).Error("action script ID is empty")
+						game.SendMessage() <- message.Reply("Nothing happens.")
 						return true
-					}, true
+					}
+
+					script, err := game.GetFacade().ScriptsService().FindByID(scriptID)
+					if err != nil || script == nil {
+						log.WithField("scriptID", scriptID).WithError(err).Warn("Room action script not found")
+						game.SendMessage() <- message.Reply("Nothing happens.")
+						return true
+					}
+
+					ctx := scripts.NewScriptContext()
+					ctx.Set("eventType", "room.action")
+					ctx.Set("action", actionCopy.Name)
+					ctx.Set("room", room)
+					ctx.Set("roomID", room.ID)
+					ctx.Set("character", message.Character)
+					ctx.Set("characterID", message.Character.ID)
+					ctx.Set("args", args)
+					if actionCopy.Params != nil {
+						ctx.Set("params", actionCopy.Params)
+					}
+
+					result := game.GetFacade().Runner().RunWithResult(*script, ctx)
+					if result != nil && !result.Success {
+						log.WithField("script", script.Name).WithField("error", result.Error).Warn("Room action script failed")
+					}
+
+					return true
+				}, true
 
 			default:
 				log.WithField("type", action.Type).WithField("name", action.Name).Error("matched action name but unsupported or empty action type")

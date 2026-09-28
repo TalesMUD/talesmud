@@ -1,0 +1,55 @@
+{
+  "views": [
+    {
+      "width": 1920,
+      "inner": 1080,
+      "scroll": 1080,
+      "focused": "battle-stage svelte-1mhtbso",
+      "stage": {
+        "x": 0,
+        "y": 0,
+        "right": 1920,
+        "bottom": 1080
+      },
+      "self": "Wanderer_3e31",
+      "allies": [
+        "Wanderer_34a5"
+      ],
+      "join": 1,
+      "actionBanner": 0,
+      "overlap": false,
+      "font": true
+    },
+    {
+      "width": 1366,
+      "inner": 768,
+      "scroll": 768,
+      "focused": "xterm-helper-textarea",
+      "stage": {
+        "x": 0,
+        "y": 0,
+        "right": 1366,
+        "bottom": 768
+      },
+      "self": "Wanderer_34a5",
+      "allies": [
+        "Wanderer_3e31"
+      ],
+      "join": 0,
+      "actionBanner": 1,
+      "overlap": false,
+      "font": true
+    }
+  ],
+  "errors": [],
+  "outcome": {
+    "outcome": "victory",
+    "message": "\n═══════════════════════════════════════════════════\n              VICTORY!\n═══════════════════════════════════════════════════\n\nDefeated: Catacomb Rat\nDefeated: Catacomb Rat\nDefeated: Catacomb Rat\n\nREWARDS:\n  Base: 42 XP, 8 Gold\n  Level modifier (highest in the split, L1): 0 XP, 0 Gold\n  First-kill bonus: 0 XP, 0 Gold\n  Party split: 2 recipients, your share 21 XP, 4 Gold\n  + 21 XP\n  + 4 Gold\n\nLOOT DROPPED:\n  - Rat Tail\n  - Rat Tail\n  - Rat Tail\n\n═══════════════════════════════════════════════════"
+  },
+  "restored": {
+    "scroll": 1080,
+    "inner": 1080,
+    "focused": ""
+  },
+  "ok": true
+}

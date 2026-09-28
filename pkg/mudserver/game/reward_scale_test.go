@@ -5,6 +5,7 @@ import (
 
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/combat"
+	"github.com/talesmud/talesmud/pkg/entities/items"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/balance"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
@@ -125,5 +126,86 @@ func TestBossFirstKillBonusOnce(t *testing.T) {
 	}
 	if len(second.FirstBossKills) != 1 {
 		t.Fatalf("first-kill flag should stay one entry, got %#v", second.FirstBossKills)
+	}
+}
+
+func TestVictoryPayloadCarriesLootAndLevelUp(t *testing.T) {
+	if _, err := balance.ReloadConfig(); err != nil {
+		t.Fatal(err)
+	}
+	g, facade := newNPCTestGame(t)
+	storeTestRoom(t, facade, "room-loot", nil)
+	_, hero := sharePlayer(t, facade, "user-loot", "ref-loot", "char-loot", "Looter", "room-loot")
+	hero.Level = 1
+	hero.XP = 0
+	if err := facade.CharactersService().Update(hero.ID, hero); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := facade.ItemsService().Import(&items.Item{
+		Entity:     &entities.Entity{ID: "tpl-fang"},
+		Name:       "Rat Fang",
+		IsTemplate: true,
+		Quality:    items.ItemQualityRare,
+		Quantity:   1,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	const baseXP int64 = 100
+	enemy := &npc.NPC{
+		Entity:           &entities.Entity{ID: "rat-loot"},
+		Name:             "Cellar Rat",
+		Level:            1,
+		IsDead:           true,
+		MaxHitPoints:     8,
+		CurrentHitPoints: 0,
+		EnemyTrait: &npc.EnemyTrait{
+			XPReward:       baseXP,
+			GoldDrop:       npc.Range{Min: 4, Max: 4},
+			Difficulty:     "easy",
+			GuaranteedLoot: []string{"tpl-fang"},
+		},
+	}
+	g.NPCManager.RegisterExistingNPC(enemy, "room-loot")
+	_ = drainGameMessages(g.SendMessage())
+	g.CombatController.processCombatVictory(&combat.CombatInstance{
+		ID:           "combat-loot",
+		OriginRoomID: "room-loot",
+		State:        combat.CombatStateVictory,
+		Players: []combat.CombatantRef{{
+			ID: hero.ID, Name: hero.Name, IsAlive: true, CurrentHP: 20, MaxHP: 30, Level: 1,
+		}},
+		Enemies: []combat.CombatantRef{{
+			ID: enemy.ID, Name: enemy.Name, IsAlive: false, Type: combat.CombatantTypeNPC, Level: 1,
+		}},
+	})
+
+	var end *messages.CombatEndMessage
+	for _, msg := range drainGameMessages(g.SendMessage()) {
+		got, ok := msg.(*messages.CombatEndMessage)
+		if ok {
+			end = got
+		}
+	}
+	if end == nil {
+		t.Fatal("missing combat end")
+	}
+	if end.Outcome != "victory" || end.Message == "" {
+		t.Fatalf("old clients need outcome and text, got %#v", end.Outcome)
+	}
+	if end.Rewards == nil || end.Rewards.BaseXP != baseXP || end.Rewards.BaseGold != 4 {
+		t.Fatalf("breakdown %+v", end.Rewards)
+	}
+	if end.Rewards.LevelModXP != 0 || end.Rewards.FirstKillXP != 0 || end.Rewards.XP != baseXP {
+		t.Fatalf("even fight should not add a gap or first-kill bonus: %+v", end.Rewards)
+	}
+	if len(end.Loot) != 1 || end.Loot[0].Name != "Rat Fang" || end.Loot[0].Quality != "rare" || end.Loot[0].Quantity != 1 {
+		t.Fatalf("loot %+v", end.Loot)
+	}
+	if end.LevelUp == nil || end.LevelUp.NewLevel <= end.LevelUp.OldLevel || end.LevelUp.OldLevel != 1 {
+		t.Fatalf("level-up callout %+v", end.LevelUp)
+	}
+	if end.Defeat != nil {
+		t.Fatalf("victory must not carry a defeat summary: %+v", end.Defeat)
 	}
 }

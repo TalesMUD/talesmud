@@ -5,19 +5,22 @@ import (
 	"encoding/hex"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
-// Instance is one private copy of a cellar graph for a party of occupants.
+// Instance is one private copy of a cellar graph, or a generated line of rooms.
 type Instance struct {
 	ID         string
 	HubRoomID  string
 	Occupants  map[string]bool
-	Clones     map[string]string // template room ID -> clone room ID
+	Clones     map[string]string // template or slot -> clone room ID
 	CloneOrder []string
+	Procedural bool
+	ExpiresAt  time.Time
 }
 
 // Manager tracks live cellar instances. Destroyed when empty.
@@ -142,6 +145,39 @@ func (m *Manager) DestroyCharacterInstance(roomsSvc service.RoomsService, charac
 		return m.destroyLocked(roomsSvc, inst)
 	}
 	return nil
+}
+
+// ReturnRoom is the hub or exit room for the character's live instance.
+func (m *Manager) ReturnRoom(characterID string) string {
+	if m == nil || characterID == "" {
+		return ""
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	inst := m.instances[m.byCharacter[characterID]]
+	if inst == nil {
+		return ""
+	}
+	return inst.HubRoomID
+}
+
+// ProceduralOccupantsDue lists characters whose generated instance has timed out.
+func (m *Manager) ProceduralOccupantsDue(now time.Time) []string {
+	if m == nil {
+		return nil
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var ids []string
+	for _, inst := range m.instances {
+		if inst == nil || !inst.Procedural || inst.ExpiresAt.IsZero() || now.Before(inst.ExpiresAt) {
+			continue
+		}
+		for cid := range inst.Occupants {
+			ids = append(ids, cid)
+		}
+	}
+	return ids
 }
 
 // IsClone reports whether roomID is a live instance copy.

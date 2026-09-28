@@ -1,3 +1,5 @@
+import { WIDGET_TYPES } from './WidgetRegistry.js';
+
 /**
  * Personal HUD layout templates (named snapshots).
  *
@@ -8,6 +10,30 @@
 
 export const LAYOUT_STORAGE_KEY = 'talesmud_layout_v1';
 export const LAYOUT_STORAGE_VERSION = 2;
+
+const KNOWN_WIDGETS = new Set(Object.keys(WIDGET_TYPES));
+
+/** Reject unusable saved grids before they can replace the viewport preset. */
+export function isUsableLayout(widgets) {
+  if (!Array.isArray(widgets) || widgets.length === 0) return false;
+  const ids = new Set();
+  let visible = false;
+  for (const w of widgets) {
+    if (!w || typeof w !== 'object' || typeof w.id !== 'string' || !w.id ||
+        ids.has(w.id) || !KNOWN_WIDGETS.has(w.widgetType)) return false;
+    ids.add(w.id);
+    for (const key of ['x', 'y', 'w', 'h']) {
+      if (!Number.isFinite(Number(w[key])) || Math.abs(Number(w[key])) > 10000) return false;
+    }
+    if (Number(w.w) <= 0 || Number(w.h) <= 0) return false;
+    if (w.visible !== false) visible = true;
+    if (w.widgetType === 'tabcontainer' &&
+        (!Array.isArray(w.tabs) || w.tabs.length === 0 ||
+          w.tabs.some((tab) => !tab || !KNOWN_WIDGETS.has(tab.widgetType) ||
+            tab.widgetType === 'tabcontainer' || typeof tab.id !== 'string' || !tab.id))) return false;
+  }
+  return visible;
+}
 
 /** @typedef {{ id: string, name: string, savedAt: string, widgets: object[], shareId?: string|null }} LayoutTemplate */
 
@@ -89,7 +115,7 @@ export function parseLayoutStorage(raw) {
   } catch {
     return null;
   }
-  if (!data || !Array.isArray(data.widgets)) return null;
+  if (!data || !isUsableLayout(data.widgets)) return null;
   if (data.version !== 1 && data.version !== 2) return null;
   return {
     version: LAYOUT_STORAGE_VERSION,

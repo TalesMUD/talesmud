@@ -2,6 +2,7 @@
   import { createEventDispatcher, onDestroy, tick } from 'svelte';
   import { layoutStore } from './LayoutStore.js';
   import { widgetsEqual } from './layoutTemplates.js';
+  import { layoutDialogOpen, setLayoutDialogCloser } from '../uiChrome.js';
 
   const dispatch = createEventDispatcher();
 
@@ -54,13 +55,18 @@
   }
 
   $: bindEsc(!!dialog);
+  $: layoutDialogOpen.set(!!dialog);
 
   onDestroy(() => {
     if (escHandler && typeof window !== 'undefined') {
       window.removeEventListener('keydown', escHandler, true);
     }
     escHandler = null;
+    setLayoutDialogCloser(null);
+    layoutDialogOpen.set(false);
   });
+
+  setLayoutDialogCloser(() => closeDialog());
 
   async function focusDialogInput() {
     await tick();

@@ -4,6 +4,7 @@
   import xterm from 'xterm';
   import { FitAddon } from 'xterm-addon-fit';
   import LocalEchoController from '../echo/LocalEchoController';
+  import { wrapAnsi } from '../echo/wrapAnsi.js';
   import '../../../node_modules/xterm/css/xterm.css';
   import { hexToRgb } from '../playerColors.js';
 
@@ -17,6 +18,8 @@
   let fitAddon;
   let localEcho;
   let resizeObserver;
+  const rawLines = [];
+  let paintedCols = 0;
 
   // ── Font size configuration (S / M / L) ──
 
@@ -91,6 +94,50 @@
     };
   }
 
+  function restorePrompt() {
+    if (!localEcho || !localEcho._active) return;
+    localEcho._termSize = { cols: term.cols, rows: term.rows };
+    localEcho.setInput(localEcho._input, false);
+  }
+
+  function writeWrapped(text) {
+    const cols = Math.max(1, term.cols || 1);
+    if (localEcho && localEcho._active) localEcho.clearInput();
+    term.writeln(wrapAnsi(String(text ?? ''), cols));
+    restorePrompt();
+  }
+
+  function repaint() {
+    if (!term) return;
+    const cols = Math.max(1, term.cols || 1);
+    paintedCols = cols;
+    const input = localEcho ? localEcho._input : '';
+    const cursor = localEcho ? localEcho._cursor : 0;
+    const active = !!(localEcho && localEcho._active);
+    term.write('\x1b[3J\x1b[2J\x1b[H');
+    for (const raw of rawLines) {
+      term.writeln(wrapAnsi(raw, cols));
+    }
+    if (active) {
+      localEcho._termSize = { cols: term.cols, rows: term.rows };
+      localEcho._input = input;
+      localEcho._cursor = Math.min(cursor, input.length);
+      localEcho.setInput(input, false);
+    }
+  }
+
+  function pushOutput(text) {
+    const raw = text == null ? '' : String(text);
+    rawLines.push(raw);
+    if (rawLines.length > 500) rawLines.splice(0, rawLines.length - 500);
+    const cols = Math.max(1, term.cols || 1);
+    if (cols !== paintedCols) {
+      repaint();
+      return;
+    }
+    writeWrapped(raw);
+  }
+
   function readLine() {
     localEcho
       .read('~$ ')
@@ -122,23 +169,28 @@
 
     term.open(terminalContainer);
     fitTerm();
+    paintedCols = term.cols || 0;
 
     localEcho = new LocalEchoController(term);
     localEcho.addAutocompleteHandler(autocompleteCommonCommands);
+    term.onResize(() => {
+      if (!rawLines.length) {
+        paintedCols = term.cols || paintedCols;
+        return;
+      }
+      if ((term.cols || 0) === paintedCols) return;
+      repaint();
+    });
 
     // Create renderer function
     const renderer = (data) => {
-      localEcho.clearInput();
-
-      // Structured chat message with colored player name
-      if (typeof data === 'object' && data.username) {
+      if (typeof data === 'object' && data && data.username) {
         const { r, g, b } = hexToRgb(data.color);
         const coloredName = `\x1b[1;38;2;${r};${g};${b}m${data.username}\x1b[0m`;
-        term.writeln(coloredName + ':  ' + data.message);
+        pushOutput(coloredName + ':  ' + data.message);
         return;
       }
-
-      term.writeln(data);
+      pushOutput(data);
     };
 
     // Notify parent that terminal is ready
@@ -183,12 +235,7 @@
 
   // Expose methods for external use
   export function writeln(text) {
-    if (localEcho) {
-      localEcho.clearInput();
-    }
-    if (term) {
-      term.writeln(text);
-    }
+    if (term) pushOutput(text);
   }
 
   export function getTerminal() {

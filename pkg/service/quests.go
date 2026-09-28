@@ -1032,10 +1032,10 @@ func (s *questsService) GrantQuestRewards(characterID, questID string) ([]string
 		}).Info("Awarded quest XP")
 	}
 
-	// 3b. Level-up from quest XP (combat/exploration already do this; quests previously banked past thresholds)
+	// 3b. Level-up from quest XP. Trainer mode banks the XP until applyLevels.
 	var levelUp *leveling.LevelUpResult
-	if levelsGained, _ := leveling.CheckLevelUp(char); levelsGained > 0 {
-		levelUp = leveling.ApplyLevelUp(char, levelsGained)
+	if result := leveling.MaybeLevelUp(char); result != nil {
+		levelUp = result
 		log.WithFields(log.Fields{
 			"characterID":  characterID,
 			"questID":      questID,

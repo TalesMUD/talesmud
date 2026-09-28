@@ -302,3 +302,15 @@ const boundSecond = bindSkillToFirstEmptyHotbar(boundOnce.binds, 'warrior_shield
 assert.strictEqual(boundSecond.status, 'bound');
 assert.strictEqual(boundSecond.index, 1);
 console.log('hudPrefs: skill catalog + slot helpers OK');
+
+// Combat's temporary cover leaves all nine saved binds usable and unchanged.
+{
+  const binds = normalizeHotbarBinds(Array.from({ length: 9 }, () => makeActionBind('flee')));
+  const before = JSON.stringify(binds);
+  for (const inCombat of [false, true, false]) {
+    for (const bind of binds) {
+      assert.equal(resolveHotbarActivation(bind, { inCombat, inventory: [] }).ok, true);
+    }
+  }
+  assert.equal(JSON.stringify(binds), before);
+}

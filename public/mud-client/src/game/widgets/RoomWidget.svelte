@@ -8,6 +8,7 @@
   import { findNpcByName } from '../MUDXPlusStore';
   import { settingsStore } from '../SettingsStore.js';
   import { backend } from '../../api/base.js';
+  import { ROOM_PLACEHOLDER } from '../portraitSrc.js';
 
   export let store;
   export let sendMessage;
@@ -43,7 +44,7 @@
 
     if (newImg && oldImg) {
       const bgUrl = `${backend}/backgrounds/${background}.png`;
-      const placeholderUrl = 'img/placeholder.png';
+      const placeholderUrl = ROOM_PLACEHOLDER;
 
       // Test if image exists before displaying
       const testImg = new Image();
@@ -90,8 +91,8 @@
 
   .roomImageSection {
     position: relative;
-    flex: 1 1 auto;
-    min-height: 140px;
+    flex: 1 1 0;
+    min-height: 0;
     overflow: hidden;
   }
 
@@ -186,17 +187,18 @@
 
   /* Content-sized, flush to widget bottom — no flex-grow black void */
   .roomContentSection {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    padding: 0.55em 1em 0.75em;
+    padding: 0.4em 0.85em 0.55em;
+    overflow-x: hidden;
     overflow-y: auto;
     background: #000;
     position: relative;
     z-index: 5;
     margin-top: 0;
-    max-height: 32%;
+    max-height: 42%;
     min-height: 0;
   }
 
@@ -234,15 +236,11 @@
     container-name: room-entities;
   }
 
-  /* Portrait: tall widget — maximize art, keep desc compact at bottom */
+  /* Portrait: tall widget — art shrinks, description keeps a scroll region */
   @container room-widget (aspect-ratio < 0.85) {
-    .roomImageSection {
-      min-height: 55%;
-    }
-
     .roomContentSection {
-      max-height: 26%;
-      padding: 0.45em 0.9em 0.65em;
+      max-height: 34%;
+      padding: 0.4em 0.85em 0.55em;
     }
 
     .roomDescription {
@@ -272,15 +270,11 @@
     }
   }
 
-  /* Landscape: horizontal art priority, tighter description chrome */
+  /* Landscape: art shares the short height; a long description scrolls */
   @container room-widget (aspect-ratio > 1.25) {
-    .roomImageSection {
-      min-height: 48%;
-    }
-
     .roomContentSection {
-      max-height: 38%;
-      padding: 0.4em 1em 0.55em;
+      max-height: 46%;
+      padding: 0.35em 0.85em 0.45em;
     }
 
     .roomDescription {

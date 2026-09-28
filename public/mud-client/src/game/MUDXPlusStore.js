@@ -192,12 +192,20 @@ function normalizeCombatant(raw) {
   if (!raw) return null;
   return {
     id: raw.id || raw.ID || "",
+    type: raw.type || raw.Type || "",
     name: raw.name || raw.Name || "?",
     portrait: raw.portrait || raw.Portrait || "",
     hp: raw.hp ?? raw.HP ?? raw.currentHp ?? 0,
     maxHp: raw.maxHp ?? raw.MaxHP ?? raw.maxHP ?? 1,
+    mana: raw.mana ?? raw.Mana ?? raw.currentMana ?? 0,
+    maxMana: raw.maxMana ?? raw.MaxMana ?? 0,
+    classId: raw.classId || raw.ClassID || "",
+    isAlive: raw.isAlive ?? raw.IsAlive ?? ((raw.hp ?? raw.HP ?? raw.currentHp ?? 0) > 0),
+    hasFled: !!(raw.hasFled || raw.HasFled),
     level: raw.level ?? raw.Level ?? 0,
     threat: raw.threat || raw.Threat || '',
+    telegraph: raw.telegraph || raw.Telegraph || '',
+    enraged: !!(raw.enraged || raw.Enraged),
   };
 }
 
@@ -279,6 +287,10 @@ function mergeCombatantSnapshots(enemies, players, snapshots) {
       enemyMap.set(snap.id, { ...enemyMap.get(snap.id), ...snap });
     } else if (playerMap.has(snap.id)) {
       playerMap.set(snap.id, { ...playerMap.get(snap.id), ...snap });
+    } else if (snap.type === 'player') {
+      playerMap.set(snap.id, snap);
+    } else if (snap.type === 'npc') {
+      enemyMap.set(snap.id, snap);
     } else if ((enemies || []).length && !(players || []).some((p) => p.id === snap.id)) {
       // Unknown id after start — treat as enemy refresh
       enemyMap.set(snap.id, snap);
@@ -436,6 +448,7 @@ function createStore() {
     combatLog: [], // thin optional log [{id,text}]
     combatOutcome: null, // victory | defeat | fled | timeout
     combatFx: null, // { fxId, at, targetId, actorId, damage, heal, result, action }
+    combatJoin: null, // { actorId, actorName, at }
     combatEndMessage: "",
     combatRewards: null,
     hasItems: false,
@@ -872,6 +885,19 @@ function createStore() {
       });
     },
 
+    cycleCombatTarget: (dir = 1) => {
+      update((state) => {
+        const living = (state.combatEnemies || []).filter((e) => (e.hp ?? 0) > 0);
+        if (!living.length) return state;
+        const step = dir < 0 ? -1 : 1;
+        let idx = living.findIndex((e) => e.id === state.combatTargetId);
+        if (idx < 0) idx = step > 0 ? -1 : 0;
+        idx = (idx + step + living.length) % living.length;
+        state.combatTargetId = living[idx].id;
+        return state;
+      });
+    },
+
     beginCombat: (enemies, players, message) => {
       update((state) => {
         const nextEnemies = normalizeCombatantList(enemies);
@@ -889,6 +915,7 @@ function createStore() {
         state.combatTargetId = nextEnemies[0]?.id || null;
         state.combatTurn = null;
         state.combatFx = null;
+        state.combatJoin = null;
         clearCombatQueueFields(state);
         {
           const lines = proseCombatLogLines(message);
@@ -985,7 +1012,12 @@ function createStore() {
             heal: msg.heal || 0,
             result: msg.result || "",
             action: msg.action || "",
+            ability: msg.ability || "",
           };
+        }
+
+        if (msg?.action === 'join' && msg.actorId) {
+          state.combatJoin = { actorId: msg.actorId, actorName: msg.actorName || 'An ally', at: Date.now() };
         }
 
         if (msg?.message) {
@@ -1031,6 +1063,7 @@ function createStore() {
           state.combatTargetId = null;
           state.combatTurn = null;
           state.combatFx = null;
+          state.combatJoin = null;
           state.combatLog = [];
           clearCombatQueueFields(state);
           return state;
@@ -1050,6 +1083,7 @@ function createStore() {
         state.combatTargetId = null;
         state.combatTurn = null;
         state.combatFx = null;
+        state.combatJoin = null;
         state.combatLog = [];
         clearCombatQueueFields(state);
         state.characterStats = { ...state.characterStats, inCombat: false };
@@ -1069,6 +1103,7 @@ function createStore() {
         state.combatTargetId = null;
         state.combatTurn = null;
         state.combatFx = null;
+        state.combatJoin = null;
         state.combatLog = [];
         clearCombatQueueFields(state);
         state.characterStats = { ...state.characterStats, inCombat: false };
@@ -1438,6 +1473,8 @@ function findNpcByName(npcs, npcName) {
 
 export {
   createStore,
+  normalizeCombatant,
+  mergeCombatantSnapshots,
   getCardinalExits,
   getSpecialExits,
   getVerticalExits,

@@ -7,6 +7,7 @@ import {
   widgetsEqual,
   serializeWidgets,
   LAYOUT_STORAGE_VERSION,
+  isUsableLayout,
 } from './layoutTemplates.js';
 
 // v1 migrate: no templates field
@@ -59,5 +60,12 @@ import {
 
 assert.equal(normalizeTemplateName('  x  '), 'x');
 assert.equal(normalizeTemplateName(''), '');
+
+for (const widgets of [[], [{ id: 'lost', widgetType: 'unknown', x: 0, y: 0, w: 2, h: 2 }],
+  [{ id: 'room', widgetType: 'room', x: 0, y: 0, w: 2, h: 2, visible: false }],
+  [{ id: 'room', widgetType: 'room', x: 0, y: 0, w: NaN, h: 2 }]]) {
+  assert.equal(isUsableLayout(widgets), false);
+  assert.equal(parseLayoutStorage({ version: 2, widgets }), null);
+}
 
 console.log('layoutTemplates_test: ok');

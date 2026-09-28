@@ -89,6 +89,7 @@
   import NicknameSetup from "./onboarding/NicknameSetup.svelte";
   import CharacterCreationWizard from "./onboarding/CharacterCreationWizard.svelte";
   import { showCharacterWizard } from "./onboarding/onboardingStore.js";
+  import { isGuestSession } from "./authSession.js";
 
   const config = isAuth0Configured() ? auth0Config : { domain: "", client_id: "", audience: "" };
 
@@ -99,15 +100,6 @@
   let serverName = "Tales";
   let currentUser = null;
   let loadingUser = false;
-  function readGuestToken() {
-    try {
-      if (typeof sessionStorage === "undefined") return "";
-      return sessionStorage.getItem("talesmud_guest_token") || "";
-    } catch (e) {
-      return "";
-    }
-  }
-
   let isGuest = false;
 
   String.prototype.capitalize = function () {
@@ -128,8 +120,7 @@
   // Phase detection: single reactive block to avoid race conditions
   // between auth state changes and onboarding data loading
   $: if (!$isLoading) {
-    const guestToken = readGuestToken();
-    if (guestToken && $authToken === guestToken) {
+    if (isGuestSession($authToken)) {
       // Guest users skip onboarding entirely (character already created server-side).
       // Match the stored token so a stale guest token does not swallow an Auth0 session.
       isGuest = true;
@@ -221,10 +212,6 @@
   <script
     src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0-beta/js/materialize.min.js">
   </script>
-  <link
-    rel="stylesheet"
-    href="https://fonts.googleapis.com/icon?family=Material+Icons"
-  />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -276,14 +263,7 @@
       </span>
     </a>
 
-    <!-- User menu in top right -->
-    <div class="user-menu-wrapper">
-      <ul>
-        <UserMenu {isGuest} {login} />
-      </ul>
-    </div>
-
-    <!-- Game component -->
+    <!-- Play header (Edit Layout, party, friends, account) is inside Game. -->
     <Game />
 
     <!-- Settings Modal (global) -->

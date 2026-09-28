@@ -47,6 +47,10 @@ func (command *EquipCommand) Execute(game def.GameCtrl, message *messages.Messag
 		game.SendMessage() <- message.Reply(item.Name + " cannot be equipped.")
 		return true
 	}
+	if reason := equipRestriction(item, message.Character); reason != "" {
+		game.SendMessage() <- message.Reply(reason)
+		return true
+	}
 
 	// Ensure EquippedItems map exists
 	if message.Character.EquippedItems == nil {

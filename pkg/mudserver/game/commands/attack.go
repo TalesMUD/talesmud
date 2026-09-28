@@ -11,6 +11,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/mudserver/game/balance"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/ruleset"
 )
 
 // threatArmed remembers a character who was warned about a specific enemy.
@@ -119,10 +120,15 @@ func (command *AttackCommand) Execute(game def.GameCtrl, message *messages.Messa
 		}
 	}
 
-	// Not in combat - need a target name to initiate
+	// Not in combat. first_hostile picks the first hostile; ask does not.
 	if targetName == "" {
-		game.SendMessage() <- message.Reply("Attack whom? Usage: attack <target>")
-		return true
+		if ruleset.BareAttack() == ruleset.BareAttackFirst {
+			targetName = firstHostileName(game, message.Character.CurrentRoomID)
+		}
+		if targetName == "" {
+			game.SendMessage() <- message.Reply("Attack whom? Usage: attack <target>")
+			return true
+		}
 	}
 
 	// Player is not in combat - try to initiate combat
@@ -274,6 +280,23 @@ func (command *AttackCommand) handleInitiateCombat(game def.GameCtrl, message *m
 	return true
 }
 
+func firstHostileName(game def.GameCtrl, roomID string) string {
+	if game == nil || roomID == "" {
+		return ""
+	}
+	mgr := game.GetNPCInstanceManager()
+	if mgr == nil {
+		return ""
+	}
+	for _, n := range mgr.GetInstancesInRoom(roomID) {
+		if n == nil || n.IsDead || !n.IsEnemy() || strings.TrimSpace(n.Name) == "" {
+			continue
+		}
+		return n.Name
+	}
+	return ""
+}
+
 // handleJoinCombat adds a same-room player to an existing fight against this NPC.
 func (command *AttackCommand) handleJoinCombat(game def.GameCtrl, message *messages.Message, combatEngine def.CombatEngineCtrl, target *npc.NPC, force bool) bool {
 	instance := combatEngine.GetCombatInstanceByNPC(target.Entity.ID)
@@ -334,6 +357,21 @@ func (command *AttackCommand) handleJoinCombat(game def.GameCtrl, message *messa
 		combatViews(instance.Enemies, message.Character.Level),
 		combatViews(instance.Players, message.Character.Level),
 	)
+
+	// Existing fighters need the new roster before the next action resolves.
+	for _, fighter := range instance.Players {
+		if fighter.ID == message.Character.ID || !fighter.IsAlive || fighter.HasFled {
+			continue
+		}
+		ch, err := game.GetFacade().CharactersService().FindByID(fighter.ID)
+		if err != nil || ch == nil || ch.BelongsUserID == "" {
+			continue
+		}
+		roster := append(combatViews(instance.Players, fighter.Level), combatViews(instance.Enemies, fighter.Level)...)
+		game.SendMessage() <- messages.NewCombatActionMessage(ch.BelongsUserID,
+			fmt.Sprintf("%s joins the fight!", message.Character.Name),
+			messages.CombatActionMessage{ActorID: message.Character.ID, ActorName: message.Character.Name, Action: "join", Combatants: roster})
+	}
 
 	combatEngine.SetAutoAttackTarget(message.Character.Entity.ID, target.Entity.ID)
 	game.SendMessage() <- message.Reply("\nCombat is automatic. Commands: attack <target> (switch target) | defend | flee | status")
@@ -398,7 +436,9 @@ func combatViews(refs []combat.CombatantRef, viewerLevel int32) []messages.Comba
 	out := make([]messages.CombatantView, 0, len(refs))
 	for _, r := range refs {
 		view := messages.CombatantView{
-			ID: r.ID, Name: r.Name, Portrait: r.Portrait, HP: r.CurrentHP, MaxHP: r.MaxHP, Level: r.Level,
+			ID: r.ID, Type: string(r.Type), Name: r.Name, Portrait: r.Portrait, HP: r.CurrentHP, MaxHP: r.MaxHP,
+			Mana: r.CurrentMana, MaxMana: r.MaxMana, ClassID: r.ClassID, IsAlive: r.IsAlive, HasFled: r.HasFled, Level: r.Level,
+			Telegraph: r.TelegraphAbility, Enraged: r.Enraged,
 		}
 		if r.Type == combat.CombatantTypeNPC {
 			view.Threat = balance.ThreatTier(viewerLevel, r.Level)
@@ -439,20 +479,32 @@ func (command *AttackCommand) handleInCombatAttack(game def.GameCtrl, message *m
 	}
 
 	if targetName == "" {
-		if len(livingEnemies) == 1 {
-			// Switch to the only enemy
-			combatEngine.SetAutoAttackTarget(message.Character.Entity.ID, livingEnemies[0].id)
-			game.SendMessage() <- message.Reply(fmt.Sprintf("You focus your attacks on %s.", livingEnemies[0].name))
-			return true
-		} else if len(livingEnemies) > 1 {
-			var targets []string
-			for _, e := range livingEnemies {
-				targets = append(targets, fmt.Sprintf("%s (%d/%d HP)", e.name, e.hp, e.maxHP))
+		targetID := ""
+		if player := instance.GetPlayerByID(message.Character.Entity.ID); player != nil && player.AutoAttackTargetID != "" {
+			for _, enemy := range livingEnemies {
+				if enemy.id == player.AutoAttackTargetID {
+					targetID = enemy.id
+					break
+				}
 			}
-			game.SendMessage() <- message.Reply(fmt.Sprintf("Switch target to whom? Usage: attack <target>\nAvailable: %s", strings.Join(targets, ", ")))
+		}
+		if targetID == "" && len(livingEnemies) > 0 {
+			targetID = livingEnemies[0].id
+		}
+		if targetID == "" {
+			game.SendMessage() <- message.Reply("No enemies to attack!")
 			return true
 		}
-		game.SendMessage() <- message.Reply("No enemies to attack!")
+		combatEngine.SetAutoAttackTarget(message.Character.Entity.ID, targetID)
+		combatEngine.QueuePlayerAction(message.Character.Entity.ID, combat.CombatActionAttack, targetID)
+		name := targetID
+		for _, enemy := range livingEnemies {
+			if enemy.id == targetID {
+				name = enemy.name
+				break
+			}
+		}
+		game.SendMessage() <- message.Reply(fmt.Sprintf("You attack %s.", name))
 		return true
 	}
 

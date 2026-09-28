@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/talesmud/talesmud/pkg/entities/characters"
+	"github.com/talesmud/talesmud/pkg/ruleset"
 )
 
 const (
@@ -27,7 +28,7 @@ type LevelUpResult struct {
 // Supports gaining multiple levels at once (for massive XP grants)
 // Respects the character's MaxLevelCap if set (e.g., guest characters capped at level 5)
 func CheckLevelUp(char *characters.Character) (levelsGained int, newLevel int32) {
-	effectiveMax := char.GetEffectiveMaxLevel(MaxLevel)
+	effectiveMax := char.GetEffectiveMaxLevel(ruleset.LevelCap())
 
 	// Already at max level
 	if char.Level >= effectiveMax {
@@ -61,7 +62,7 @@ func ApplyLevelUp(char *characters.Character, levelsGained int) *LevelUpResult {
 		return nil
 	}
 
-	effectiveMax := char.GetEffectiveMaxLevel(MaxLevel)
+	effectiveMax := char.GetEffectiveMaxLevel(ruleset.LevelCap())
 
 	oldLevel := char.Level
 	newLevel := oldLevel + int32(levelsGained)
@@ -169,4 +170,30 @@ func GetLevelProgress(char *characters.Character) (currentLevel int32, currentXP
 	progressPercent = GetXPProgress(currentLevel, currentXP)
 
 	return
+}
+
+// MaybeLevelUp applies pending levels in auto mode.
+// Trainer mode leaves the XP in place and returns nil.
+func MaybeLevelUp(char *characters.Character) *LevelUpResult {
+	if char == nil || ruleset.LevelUpMode() == ruleset.ModeTrainer {
+		return nil
+	}
+	levelsGained, _ := CheckLevelUp(char)
+	if levelsGained <= 0 {
+		return nil
+	}
+	return ApplyLevelUp(char, levelsGained)
+}
+
+// ApplyPendingLevels applies every level the current XP can buy.
+// A trainer script calls this. Auto mode is a no-op when nothing is pending.
+func ApplyPendingLevels(char *characters.Character) *LevelUpResult {
+	if char == nil {
+		return nil
+	}
+	levelsGained, _ := CheckLevelUp(char)
+	if levelsGained <= 0 {
+		return nil
+	}
+	return ApplyLevelUp(char, levelsGained)
 }
