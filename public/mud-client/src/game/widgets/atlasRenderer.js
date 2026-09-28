@@ -319,8 +319,8 @@ function computeCamera(places, w, h, panX, panY, userScale, focus = null, paths 
   const spanX = Math.max(1, maxX - minX + 1);
   const spanY = Math.max(1, maxY - minY + 1);
   const pad = Math.max(24, Math.min(w, h) * 0.07);
-  const fit = Math.min((w - pad * 2) / spanX, (h - pad * 2) / spanY);
-  const tileStep = Math.max(3, Math.min(fit * userScale, MAP_TILE_STEP_MAX));
+  const fit = Math.min((w - pad * 2) / spanX, h * .78 / spanY);
+  const tileStep = Math.max(3, Math.min(fit * Math.max(MAP_SCALE_MIN,userScale), MAP_TILE_STEP_MAX));
   return {
     tileStep,
     ox: (minX + maxX) / 2,
@@ -356,7 +356,7 @@ function projectPlace(place, cam, w, h) {
   return projectGrid(Math.round(place.x), Math.round(place.y), cam, w, h);
 }
 
-export const MAP_SCALE_MIN = 0.12;
+export const MAP_SCALE_MIN = 1;
 export const MAP_SCALE_MAX = 5;
 export const MAP_TILE_STEP_MAX = 110;
 
@@ -746,7 +746,7 @@ export function paintAtlas(ctx, params) {
   if (landscape) {
     const origin = projectGrid(landscape.bounds.minX - .5, landscape.bounds.minY - .5, cam, w, h);
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(cam.tileStep>=24 && landscape.nearCanvas ? landscape.nearCanvas : landscape.canvas, origin.px, origin.py,
+    ctx.drawImage(cam.tileStep>=24 && landscape.closeCanvas ? landscape.closeCanvas() : landscape.canvas, origin.px, origin.py,
       landscape.canvas.width / 32 * cam.tileStep, landscape.canvas.height / 32 * cam.tileStep);
   }
   const lod = labelLodForScale(userScale);
@@ -842,7 +842,7 @@ export function paintAtlas(ctx, params) {
       const {px,py}=projectGrid(ridge.x,ridge.y,cam,w,h);
       if(peakCenters.some(p=>Math.hypot(p.px-px,p.py-py)<18))continue;
       peakCenters.push({px,py});
-      drawMapSprite(ctx,tileImages.sheet,'ridge',`${ridge.x}:${ridge.y}`,px-9,py-11,18);
+      drawMapSprite(ctx,tileImages.sheet,ridge.kind,`${ridge.x}:${ridge.y}`,px-9,py-11,18,'decorations',ridge.variant);
     }
     for(const glyph of landscape.glyphs) {
       const place=renderPlaces.find(p=>p.id===glyph.roomId);if(!place?.discovered)continue;

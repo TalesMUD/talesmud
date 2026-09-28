@@ -15,15 +15,20 @@ meta = json.loads((a.assets/'terrain-sheet.json').read_text())
 expected = {key:i for i,key in enumerate(config['terrains']+['fog','sea'])}
 if meta['rows'] != expected or meta['default'] != config['default']:
     raise SystemExit('Terrain mapping differs: regenerate the sheet with the engine config')
-decoration_keys=['roof','keep','cave','forge','shrine','tavern','shop','farm','tower','ruins','graveyard','dock','mine','magic','ridge','canopy','town','village','gatehouse','stairs','torch','reeds','stump','flowers','bridge']
+decoration_keys=['roof','keep','cave','forge','shrine','tavern','shop','farm','tower','ruins','graveyard','dock','mine','magic','ridge','canopy','town','village','gatehouse','stairs','torch','reeds','stump','flowers','bridge','pine','oak','deadTree','hill','mesa','outcrop','cliff','well','cart','fence','windmill','lantern','barrel','bones','offshore']
 expected_decorations = {key:len(expected)+i for i,key in enumerate(decoration_keys)}
 expected_underground = {key:len(expected)+len(decoration_keys)+i for i,key in enumerate(['cave','crypt','cellar','sewer'])}
+directions=[(-1,0),(1,0),(0,-1),(0,1),(-1,-1),(1,-1),(-1,1),(1,1)]
+blend_start=len(expected)+len(expected_decorations)+len(expected_underground)
+expected_blends={k:{f'{dx}:{dy}':blend_start+i*8+j for j,(dx,dy) in enumerate(directions)} for i,k in enumerate(expected)}
+if meta.get('blends')!=expected_blends:
+    raise SystemExit('Dither overlay rows differ: regenerate the sheet')
 if meta.get('decorations') != expected_decorations or meta.get('underground') != expected_underground or meta.get('tileSize') != 32 or meta.get('variants') != 6:
     raise SystemExit('Art rows or sprite dimensions differ: regenerate the sheet')
 if set(meta.get('colors', {})) != set(expected):
     raise SystemExit('Fallback terrain colors differ: regenerate the metadata')
 sheet = (a.assets/'terrain-sheet.png').read_bytes()
-if sheet[:8] != b'\x89PNG\r\n\x1a\n' or struct.unpack('>II', sheet[16:24]) != (192, (len(expected)+len(expected_decorations)+len(expected_underground))*32):
+if sheet[:8] != b'\x89PNG\r\n\x1a\n' or struct.unpack('>II', sheet[16:24]) != (192, (blend_start+len(expected)*8)*32):
     raise SystemExit('PNG dimensions differ from the terrain/decoration manifest')
 if meta['version'] != hashlib.sha256(sheet).hexdigest()[:12]:
     raise SystemExit('Sheet content hash differs: regenerate the metadata')

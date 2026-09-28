@@ -45,9 +45,8 @@ export function smoothCoast(model) {
     [bi.data[k],bi.data[k+1],bi.data[k+2]]=color;bi.data[k+3]=alpha;
   }
   mc.putImageData(mi,0,0);bc.putImageData(bi,0,0);
-  // Native pixel resolution keeps the original pixel art crisp; the contour
-  // itself is sampled more finely than room cells, never as staircase tiles.
-  const upscale=c=>{const out=makeCanvas(w*4,h*4),ctx=out.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.drawImage(c,0,0,out.width,out.height);return out};
-  lastCoastKey=signature;lastCoast={mask:upscale(mask),bands:upscale(bands)};
+  // Scale these eight samples per cell only when compositing, avoiding two
+  // unnecessary multi-megapixel intermediate canvases.
+  lastCoastKey=signature;lastCoast={mask,bands};
   return lastCoast;
 }

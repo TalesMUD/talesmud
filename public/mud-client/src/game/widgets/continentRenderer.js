@@ -69,7 +69,7 @@ function paintTown(ctx,sheet,town,roads,native,bounds) {
 export function continentRaster(atlas,sheet) {
   const ready=!!sheetReady(sheet),prev=rasterCache.get(atlas);
   if(prev&&prev.ready===ready)return prev;
-  const bakeStart=performance.now();
+  const bakeStart=performance.now(),timings={};let stage=bakeStart;const mark=k=>{timings[k]=performance.now()-stage;stage=performance.now()};
   const model=landscapeModel(atlas);if(!model)return null;
   const {bounds,byCell,cells,groups,roads}=model;
   const signature=JSON.stringify([ready,cells,groups.map(g=>[
@@ -85,7 +85,7 @@ export function continentRaster(atlas,sheet) {
   const ground=makeCanvas(w,h),gc=ground.getContext('2d');
   const tileCanvas=makeCanvas(32,32),tc=tileCanvas.getContext('2d');
   const native=(x,y)=>({x:(x-bounds.minX+.5)*32,y:(y-bounds.minY+.5)*32});
-  const coast=smoothCoast(model),ridges=[],ambience=[];
+  const coast=smoothCoast(model),ridges=[],ambience=[];mark("coast");
 
   const roomSeeds=new Map(groups.filter(g=>g.discovered).map(g=>[`${g.x}:${g.y}`,g.artSeed]));
   const areaPoints=new Map();
@@ -143,7 +143,7 @@ export function continentRaster(atlas,sheet) {
     if(!byCell.has(key)&&!fringe.has(key))fringe.set(key,{x,y,terrain:c.terrain});
   }
   for(const c of fringe.values())drawSprite(gc,sheet,c.terrain,`fringe:${c.x}:${c.y}`,(c.x-bounds.minX)*32,(c.y-bounds.minY)*32,32);
-  const detail=makeCanvas(w,h),dc=detail.getContext('2d');
+  mark("terrain");const detail=makeCanvas(w,h),dc=detail.getContext('2d');
   const sprite=makeCanvas(100,100),spriteContext=sprite.getContext('2d');
   const detailStamp=(target,kind,seed,x,y,size)=>{
     // Interior stamps need no full-scene mask blit. Only coastal/fog-border
@@ -174,14 +174,14 @@ export function continentRaster(atlas,sheet) {
   for(const ridge of ridges.filter(r=>r.kind==='ridge')) {
     const at=native(ridge.x,ridge.y);detailStamp(nc,'ridge',`${ridge.x}:${ridge.y}`,at.x-34,at.y-40,68);
   }
-  clearFog(nc);
+  clearFog(nc);mark("detail");
   // Clip all surface art to the shared smooth contour, then place its depth
   // bands underneath. Rock/canopy shadows are authored into transparent stamps.
   gc.globalCompositeOperation='destination-in';gc.drawImage(coast.mask,0,0);gc.globalCompositeOperation='source-over';
   sc.drawImage(coast.bands,0,0);sc.drawImage(ground,0,0);
   const nearCanvas=makeCanvas(w,h),nearContext=nearCanvas.getContext('2d');nearContext.drawImage(canvas,0,0);
   sc.drawImage(detail,0,0);nearContext.drawImage(closeDetail,0,0);
-  const townAreas=new Map(),glyphs=[];
+  mark("copies");const townAreas=new Map(),glyphs=[];
   for(const group of groups) {
     if(!group.town||!group.discovered)continue;
     if(!townAreas.has(group.area))townAreas.set(group.area,[]);townAreas.get(group.area).push(group);
@@ -225,7 +225,7 @@ export function continentRaster(atlas,sheet) {
     if(known.some(p=>(p.entrances||[]).length))placeStamp(group,features.includes('mine')?'mine':'cave',group.x,group.y,29,group.id);
   }
   sc.drawImage(overlay,0,0);nearContext.drawImage(overlay,0,0);
-  const result={canvas,nearCanvas,bounds,buildings,ready,model,glyphs,ridges,ambience,bridges,stamps,coastMask:coast.mask,bakeMs:performance.now()-bakeStart};
+  mark("towns");const result={timings,canvas,nearCanvas,bounds,buildings,ready,model,glyphs,ridges,ambience,bridges,stamps,coastMask:coast.mask,bakeMs:performance.now()-bakeStart};
   rasterCache.set(atlas,result);recentRasters.set(signature,result);
   if(recentRasters.size>2)recentRasters.delete(recentRasters.keys().next().value);
   return result;

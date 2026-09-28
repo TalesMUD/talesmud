@@ -7,6 +7,11 @@ export function undergroundModel(atlas) {
   for(const path of atlas.paths||[]) {
     const a=byId.get(path.from),b=byId.get(path.to);if(!a||!b||!a.discovered||!b.discovered||a.area!==b.area)continue;
     const key=[a.id,b.id].sort().join('|');if(seen.has(key)||['up','down'].includes(path.dir))continue;
+    // Long or misaligned links are navigation exits, not exposed tubes across void.
+    const dx=b.x-a.x,dy=b.y-a.y,dir=String(path.dir||'').toLowerCase();
+    const compass={north:[0,-1],south:[0,1],east:[1,0],west:[-1,0],northeast:[1,-1],northwest:[-1,-1],southeast:[1,1],southwest:[-1,1]};
+    const vector=compass[dir];
+    if(!vector||Math.max(Math.abs(dx),Math.abs(dy))>2||Math.sign(dx)!==vector[0]||Math.sign(dy)!==vector[1])continue;
     seen.add(key);corridors.push({a,b});
   }
   const xs=places.map(p=>p.x),ys=places.map(p=>p.y);
@@ -20,7 +25,13 @@ export function undergroundRaster(atlas,sheet) {
   if(recent.has(key)){const r=recent.get(key);cache.set(atlas,r);return r}
   const canvas=makeCanvas((bounds.maxX-bounds.minX+1)*32,(bounds.maxY-bounds.minY+1)*32),ctx=canvas.getContext('2d');
   const native=(x,y)=>({x:(x-bounds.minX+.5)*32,y:(y-bounds.minY+.5)*32});
-  const torches=[],stairs=[];
+  const torches=[],stairs=[],props=[];
+  ctx.fillStyle='#102027';ctx.fillRect(0,0,canvas.width,canvas.height);
+  // Very dim light around clusters fades into the surrounding underground void.
+  for(const p of places.filter(p=>p.discovered)) {
+    const a=native(p.x,p.y),glow=ctx.createRadialGradient(a.x,a.y,8,a.x,a.y,72);
+    glow.addColorStop(0,'rgba(103,111,84,.1)');glow.addColorStop(1,'rgba(16,32,39,0)');ctx.fillStyle=glow;ctx.fillRect(a.x-72,a.y-72,144,144);
+  }
   // Rock-sided corridors follow actual exits. Isolated rooms remain isolated;
   // space between underground clusters is a dark void, never filler terrain.
   for(const {a,b} of corridors) {
@@ -64,11 +75,15 @@ export function undergroundRaster(atlas,sheet) {
       drawMapSprite(ctx,sheet,'torch',p.id,a.x-11,a.y-14,22);
       torches.push({x:tx,y:ty,roomId:p.id});
     }
+    if(['crypt','cellar'].includes(p.undergroundStyle)&&hash(p.id)%2===0) {
+      const kind=p.undergroundStyle==='crypt'?'bones':'barrel';
+      drawMapSprite(ctx,sheet,kind,p.artSeed||p.id,at.x+2,at.y+2,19);props.push({kind,roomId:p.id});
+    }
     if((p.exits||[]).some(e=>e.vertical)) {
       drawMapSprite(ctx,sheet,'stairs',p.id,at.x-11,at.y-12,23);stairs.push({roomId:p.id,x:p.x,y:p.y});
     }
   }
-  const result={canvas,bounds,ready,model,buildings:[],glyphs:[],ridges:[],ambience:[],torches,stairs};
+  const result={canvas,bounds,ready,model,buildings:[],glyphs:[],ridges:[],ambience:[],torches,stairs,props};
   cache.set(atlas,result);recent.set(key,result);if(recent.size>2)recent.delete(recent.keys().next().value);
   return result;
 }

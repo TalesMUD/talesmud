@@ -16,3 +16,6 @@ Marcus reviewed P1c (engine 7d86b3c/3995045, content ef31d0b) on 2026-09-29 00:3
 
 ## Deliver
 Screenshots (fonts + images loaded) in `.director/ux-audit/after/`: `worldmap-p1d-overview-1920x1080.png`, `worldmap-p1d-zoom-1920x1080.png` (Oldtown + Silverbrook Vale), `worldmap-p1d-lower-1920x1080.png`, `worldmap-p1d-far-1920x1080.png` (min zoom), plus `worldmap-p1d-highlands-1920x1080.png` (zoom on Thornfield Highlands/Ironspine Foothills mountains). Keep all tests green, report perf, commit + push both repos, append "WORLDMAP P1d" to CORE-FOCUS-PROGRESS.md.
+
+## Marcus feedback 2026-09-29 00:52
+9. The heavier drop shadows added in P1c didn't add much value. Tone them way down (subtle 1px offset at most, low opacity) or remove them from trees/buildings; keep only a faint shadow where it helps readability (e.g. mountains' shaded side). This also helps bake time.
