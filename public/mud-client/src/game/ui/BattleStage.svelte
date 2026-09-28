@@ -1,6 +1,6 @@
 <script>
   import { afterUpdate, onDestroy, tick } from 'svelte';
-  import { isTextEntry, prefersReducedMotion, rarityClass } from '../keyboardShortcuts.js';
+  import { combatStageFocus, isTextEntry, prefersReducedMotion, rarityClass } from '../keyboardShortcuts.js';
   import { battleDockOpen } from '../uiChrome.js';
   import { enemySilhouette, playerSilhouette, portraitSrc } from '../portraitSrc.js';
   import {
@@ -600,7 +600,7 @@
 
 <svelte:window on:keydown={onOutcomeKey} />
 {#if visible}
-<div class="battle-stage" class:ending={phase === 'ending'} role="dialog" aria-label="Combat">
+<div class="battle-stage" class:ending={phase === 'ending'} role="dialog" aria-label="Combat" tabindex="-1" use:combatStageFocus>
   <div class="battle-backdrop" aria-hidden="true"></div>
   <div class="battle-frame">
   <header class="battle-header">

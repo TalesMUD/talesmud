@@ -1250,6 +1250,8 @@ type MessageResponse struct {
 
 ## Frontend Architecture
 
+The play client observes `combatPhase` in `Game.svelte` and calls `LayoutStore.syncCombatFocus`: active starts the existing BattleStage cover, ending retains it, and idle restores prior focus. The cover uses `focusId`/`focusSnapshot` for normal-layout persistence and a transient `combatFocusReturn` for prior manual focus; it does not change grid geometry or remount terminals. The stage keyboard-focus action guards text entry and restores the prior DOM control on removal.
+
 ### MUD Client — Onboarding Flow
 
 The MUD client (`/play`) uses a phase-based routing system in `App.svelte` to guide new players through onboarding before showing the game UI:

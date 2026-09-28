@@ -54,3 +54,19 @@ export function prefersReducedMotion() {
   if (typeof window === 'undefined' || !window.matchMedia) return false;
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
+
+/** Svelte action: give the combat cover keyboard focus without interrupting typing. */
+export function combatStageFocus(node) {
+  const doc = node.ownerDocument;
+  const previous = doc.activeElement;
+  if (!isTextEntry(previous)) node.focus({ preventScroll: true });
+  return {
+    destroy() {
+      // Restore only if focus still belongs to the cover. Another text field wins.
+      const current = doc.activeElement;
+      if ((node.contains(current) || current === doc.body) && previous?.isConnected) {
+        previous.focus({ preventScroll: true });
+      }
+    },
+  };
+}

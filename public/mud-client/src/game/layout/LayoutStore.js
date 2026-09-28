@@ -175,6 +175,8 @@ function createLayoutStore() {
     /** Widget id currently expanded over the others. Null restores the snapshot. */
     focusId: null,
     focusSnapshot: null,
+    /** Arrangement covered by BattleStage, including any prior manual focus. */
+    combatFocusReturn: null,
   });
 
   const undoStack = [];
@@ -204,6 +206,32 @@ function createLayoutStore() {
 
   const api = {
     subscribe,
+
+    /** Reuse the focus/save contract for the existing fixed BattleStage cover.
+     * Keep widgets mounted and unchanged so terminal input and tabs survive.
+     * Ending keeps the cover until the outcome is dismissed (or times out).
+     */
+    syncCombatFocus(phase) {
+      const state = get({ subscribe });
+      if (phase === 'active' && !state.combatFocusReturn) {
+        update(s => ({
+          ...s,
+          combatFocusReturn: {
+            focusId: s.focusId, focusSnapshot: s.focusSnapshot,
+            width: typeof window !== 'undefined' ? window.innerWidth : 0,
+            height: typeof window !== 'undefined' ? window.innerHeight : 0,
+          },
+          focusId: 'battle-stage',
+          focusSnapshot: widgetsToPersist(fromGridItems(s.widgets), s.focusId, s.focusSnapshot),
+        }));
+      } else if (phase !== 'active' && phase !== 'ending' && state.combatFocusReturn) {
+        const prior = state.combatFocusReturn;
+        update(s => ({ ...s, focusId: prior.focusId, focusSnapshot: prior.focusSnapshot, combatFocusReturn: null }));
+        if (typeof window !== 'undefined' && (window.innerWidth !== prior.width || window.innerHeight !== prior.height)) {
+          this.onViewportResize();
+        }
+      }
+    },
 
     // Load layout from localStorage
     loadFromStorage() {
@@ -297,6 +325,15 @@ function createLayoutStore() {
     // Exit edit mode - disable dragging/resizing
     exitEditMode(save = true) {
       update(state => {
+        if (state.combatFocusReturn) {
+          // Saving during combat must neither dismiss its cover nor persist it.
+          return {
+            ...state,
+            editMode: false,
+            widgets: setWidgetsEditable(state.widgets, false),
+            pendingWidgets: null,
+          };
+        }
         if (save) {
           // A focused widget is a temporary cover. Write and show the
           // arrangement from before that expansion.
@@ -390,6 +427,7 @@ function createLayoutStore() {
      */
     toggleFocus(id) {
       const state = get({ subscribe });
+      if (state.combatFocusReturn) return;
       remember(state);
       if (state.focusId === id && Array.isArray(state.focusSnapshot)) {
         update(s => ({

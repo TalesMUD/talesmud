@@ -426,6 +426,9 @@
     }
   }
 
+  // Combat start/join promotes the existing stage cover; idle restores focus.
+  $: layoutStore.syncCombatFocus($muxStore.combatPhase);
+
   let pickerChecked = false;
   $: if ($authToken && $muxStore.connectionStatus === "connected" && !pickerChecked) {
     pickerChecked = true;
@@ -460,6 +463,7 @@
 
   onDestroy(async () => {
     destroyed = true;
+    layoutStore.syncCombatFocus("idle");
     window.removeEventListener("keydown", onShortcutKey);
     clearTimeout(reconnectTimer);
     reconnectTimer = null;

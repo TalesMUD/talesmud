@@ -387,6 +387,12 @@ function createClient(renderer, characterCreator, muxStore) {
     }
   };
 
+  // Explicit leave (for example a fled participant) has no outcome to dismiss.
+  messageHandlers["combatLeave"] = (msg) => {
+    if (msg.message) renderer(msg.message);
+    if (mux?.clearCombat) mux.clearCombat();
+  };
+
   // Quest message handlers
   messageHandlers["questAccepted"] = (msg) => {
     renderer(msg.message);
