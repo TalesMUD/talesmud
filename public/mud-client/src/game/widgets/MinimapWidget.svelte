@@ -1,6 +1,7 @@
 <script>
   import { onDestroy, onMount, tick } from 'svelte';
   import { readStageSize, shouldRepaintSize, applyCanvasBitmap } from './atlasLayout.js';
+  import { surfaceGroups, groupForRoom } from './surfaceAtlas.js';
   import { paintAtlas, isCurrentPlace, panToCenterPlace, onMapTilesReady, clampMapScale, setYouPortrait } from './atlasRenderer.js';
 
   export let store = null;
@@ -254,12 +255,7 @@
   }
 
   function resolveHerePlace() {
-    const places = visiblePlaces || [];
-    return (
-      places.find((p) => p.id === currentRoomId) ||
-      places.find((p) => isCurrentPlace(p.id, currentRoomId)) ||
-      null
-    );
+    return groupForRoom(surfaceGroups(visiblePlaces, activeLayer), currentRoomId) || null;
   }
 
   function applyRecenterToYou(keepScale = true) {
@@ -267,7 +263,7 @@
     const size = readStageSize(widgetWrap);
     const here = resolveHerePlace();
     if (here && size.w >= 4 && size.h >= 4) {
-      const pan = panToCenterPlace(visiblePlaces, here, size.w, size.h, userScale, atlas.paths || []);
+      const pan = panToCenterPlace(surfaceGroups(visiblePlaces, activeLayer), here, size.w, size.h, userScale, atlas.paths || []);
       panX = pan.panX;
       panY = pan.panY;
     } else {

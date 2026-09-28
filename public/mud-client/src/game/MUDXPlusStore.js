@@ -61,6 +61,7 @@ function mergeAtlas(existing, incoming) {
       discovered: prev.discovered || place.discovered,
       terrain: prev.discovered && !place.discovered ? prev.terrain : place.terrain,
       kind: prev.discovered && !place.discovered ? prev.kind : place.kind,
+      entrances: prev.discovered && !place.discovered ? prev.entrances : place.entrances,
       name: place.name || prev.name,
       landmark: prev.landmark || place.landmark,
     });
@@ -85,6 +86,7 @@ function mergeAtlas(existing, incoming) {
     regionMap.set(region.id, region);
   }
 
+  const groundByCell = new Map((base.landscape || []).map(p => [`${p.x}:${p.y}`, p]));
   const characterId = incoming.characterId || base.characterId;
   const currentRoomId = incoming.currentRoomId || base.currentRoomId;
   const currentLayer = incoming.currentLayer || base.currentLayer;
@@ -118,6 +120,10 @@ function mergeAtlas(existing, incoming) {
     places,
     paths,
     regions: Array.from(regionMap.values()),
+    landscape: (incoming.landscape || base.landscape || []).map(cell => {
+      const previous = groundByCell.get(`${cell.x}:${cell.y}`);
+      return cell.terrain === 'fog' && previous && previous.terrain !== 'fog' ? previous : cell;
+    }),
   };
 }
 
@@ -392,7 +398,12 @@ function sameAtlasSnapshot(a, b) {
   if ((a.places || []).length !== (b.places || []).length) return false;
   if ((a.paths || []).length !== (b.paths || []).length) return false;
   if ((a.layers || []).length !== (b.layers || []).length) return false;
-  // Cheap place fingerprint — includes terrain-only Creator updates.
+  if ((a.landscape || []).length !== (b.landscape || []).length) return false;
+  for (let i = 0; i < (a.landscape || []).length; i++) {
+    const x = a.landscape[i], y = b.landscape[i];
+    if (!y || x.x !== y.x || x.y !== y.y || x.terrain !== y.terrain) return false;
+  }
+  // Cheap place fingerprint — includes terrain and presentation updates.
   for (let i = 0; i < (a.places || []).length; i++) {
     const p = a.places[i];
     const q = b.places[i];
@@ -400,6 +411,8 @@ function sameAtlasSnapshot(a, b) {
     if (p.id !== q.id || !!p.current !== !!q.current || !!p.discovered !== !!q.discovered) return false;
     if ((p.layer || "") !== (q.layer || "") || (p.name || "") !== (q.name || "")) return false;
     if ((p.terrain || "") !== (q.terrain || "")) return false;
+    if (p.x !== q.x || p.y !== q.y || p.z !== q.z || p.mapRole !== q.mapRole || p.surfaceRoomId !== q.surfaceRoomId || p.town !== q.town) return false;
+    if (JSON.stringify(p.entrances || []) !== JSON.stringify(q.entrances || [])) return false;
   }
   return true;
 }

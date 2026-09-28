@@ -3,13 +3,14 @@ package worldmap
 // PlayerMap is the client-facing discovered-world atlas.
 // Coordinates are layout units (not pixels). Clients scale and render.
 type PlayerMap struct {
-	CharacterID   string   `json:"characterId"`
-	CurrentRoomID string   `json:"currentRoomId"`
-	CurrentLayer  string   `json:"currentLayer"`
-	Layers        []Layer  `json:"layers"`
-	Places        []Place  `json:"places"`
-	Paths         []Path   `json:"paths"`
-	Regions       []Region `json:"regions"`
+	CharacterID   string     `json:"characterId"`
+	CurrentRoomID string     `json:"currentRoomId"`
+	CurrentLayer  string     `json:"currentLayer"`
+	Layers        []Layer    `json:"layers"`
+	Places        []Place    `json:"places"`
+	Paths         []Path     `json:"paths"`
+	Regions       []Region   `json:"regions"`
+	Landscape     []LandCell `json:"landscape,omitempty"`
 }
 
 // Layer is a vertical slice of the atlas (overworld / lower / upper).
@@ -21,26 +22,30 @@ type Layer struct {
 
 // Place is a room (or fog neighbor) in layout space.
 type Place struct {
-	ID         string          `json:"id"`
-	Name       string          `json:"name,omitempty"`
-	Area       string          `json:"area,omitempty"`
-	AreaName   string          `json:"areaName,omitempty"`
-	Layer      string          `json:"layer"`
-	X          float64         `json:"x"`
-	Y          float64         `json:"y"`
-	Z          int             `json:"z"`
-	Biome      string          `json:"biome"`
-	Terrain    string          `json:"terrain"`
-	Kind       string          `json:"kind"`
-	Landmark   bool            `json:"landmark,omitempty"`
-	Discovered bool            `json:"discovered"`
-	Current    bool            `json:"current,omitempty"`
-	CanTravel  bool            `json:"canTravel,omitempty"`
-	Tags       []string        `json:"tags,omitempty"`
-	Danger     string          `json:"danger,omitempty"` // safe | low | hazard | hostile | uncharted
-	Summary    string          `json:"summary,omitempty"`
-	Exits      []PlaceExit     `json:"exits,omitempty"`
-	Residents  []PlaceResident `json:"residents,omitempty"`
+	ID            string          `json:"id"`
+	Name          string          `json:"name,omitempty"`
+	Area          string          `json:"area,omitempty"`
+	AreaName      string          `json:"areaName,omitempty"`
+	Layer         string          `json:"layer"`
+	X             float64         `json:"x"`
+	Y             float64         `json:"y"`
+	Z             int             `json:"z"`
+	Biome         string          `json:"biome"`
+	Terrain       string          `json:"terrain"`
+	MapRole       string          `json:"mapRole,omitempty"`
+	SurfaceRoomID string          `json:"surfaceRoomId,omitempty"`
+	Town          bool            `json:"town,omitempty"`
+	Entrances     []string        `json:"entrances,omitempty"`
+	Kind          string          `json:"kind"`
+	Landmark      bool            `json:"landmark,omitempty"`
+	Discovered    bool            `json:"discovered"`
+	Current       bool            `json:"current,omitempty"`
+	CanTravel     bool            `json:"canTravel,omitempty"`
+	Tags          []string        `json:"tags,omitempty"`
+	Danger        string          `json:"danger,omitempty"` // safe | low | hazard | hostile | uncharted
+	Summary       string          `json:"summary,omitempty"`
+	Exits         []PlaceExit     `json:"exits,omitempty"`
+	Residents     []PlaceResident `json:"residents,omitempty"`
 }
 
 // PlaceExit is a visible (or revealed) way out of a discovered room.
@@ -78,17 +83,29 @@ type Region struct {
 	Places []string     `json:"places"`
 }
 
+// LandCell is decorative ground. It never identifies a room or permits travel.
+type LandCell struct {
+	X       int    `json:"x"`
+	Y       int    `json:"y"`
+	Terrain string `json:"terrain"`
+	area    string
+}
+
 type placedRoom struct {
-	id       string
-	name     string
-	area     string
-	areaName string
-	tags     []string
-	x, y, z  int
-	terrain  string
-	biome    string
-	kind     string
-	landmark bool
-	canBind  bool
-	locked   bool // authored Coords — do not spiral away from intent
+	id        string
+	name      string
+	area      string
+	areaName  string
+	tags      []string
+	x, y, z   int
+	layer     string
+	role      string
+	surfaceID string
+	town      bool
+	entrances []string
+	terrain   string
+	biome     string
+	kind      string
+	landmark  bool
+	canBind   bool
 }

@@ -2,6 +2,7 @@
   import { onDestroy, onMount, tick } from 'svelte';
   import { readStageSize, shouldRepaintSize, applyCanvasBitmap } from '../widgets/atlasLayout.js';
   import { paintAtlas, isCurrentPlace, panToCenterPlace, onMapTilesReady, clampMapScale, setYouPortrait } from '../widgets/atlasRenderer.js';
+  import { interiorChoices, surfaceId, surfaceGroups, groupForRoom } from '../widgets/surfaceAtlas.js';
   import { mobileStore } from '../mobile/mobileStore.js';
 
   const { isMobile } = mobileStore;
@@ -32,6 +33,7 @@
   let selectedId = null;
   let lastTap = { id: null, at: 0 };
   let intelExpanded = false;
+  let roomFilter = '';
   const pointers = new Map();
   let pinchStart = null;
   let stageObserver;
@@ -218,6 +220,10 @@
     if ($isMobile) intelExpanded = false;
   }
   $: selectedPlace = (atlas.places || []).find(p => p.id === selectedId) || null;
+  $: townRooms = interiorChoices(atlas.places, selectedPlace);
+  $: filteredTownRooms = townRooms.filter(p => String(p.name || p.id).toLowerCase().includes(roomFilter.toLowerCase()));
+  $: selectedStreet = selectedPlace?.mapRole === 'interior' ? (atlas.places || []).find(p => p.id === surfaceId(selectedPlace) && p.discovered) : null;
+  $: entranceRooms = selectedPlace?.discovered ? (atlas.places || []).filter(p => (selectedPlace.entrances || []).includes(p.id)) : [];
   $: canTravel = !!(selectedPlace && selectedPlace.discovered && selectedPlace.id !== currentRoomId);
   let lastNarrow = null;
   $: if (open && $isMobile !== lastNarrow) {
@@ -270,6 +276,14 @@
       }
     }
     return null;
+  }
+
+  function selectRoom(room, changeLayer = false) {
+    selectedId = room.id;
+    roomFilter = '';
+    if (store && store.selectMapPlace) store.selectMapPlace(room.id);
+    if (changeLayer && room.layer !== activeLayer) selectLayer(room.layer);
+    scheduleDraw();
   }
 
   function requestTravel() {
@@ -464,12 +478,7 @@
   }
 
   function resolveHerePlace() {
-    const places = visiblePlaces || [];
-    return (
-      places.find((p) => p.id === currentRoomId) ||
-      places.find((p) => isCurrentPlace(p.id, currentRoomId)) ||
-      null
-    );
+    return groupForRoom(surfaceGroups(visiblePlaces, activeLayer), currentRoomId) || null;
   }
 
   function applyRecenterToYou(keepScale = true) {
@@ -478,7 +487,7 @@
     const size = readStageSize(stageWrap);
     const here = resolveHerePlace();
     if (here && size.w >= 4 && size.h >= 4) {
-      const pan = panToCenterPlace(visiblePlaces, here, size.w, size.h, userScale, atlas.paths || []);
+      const pan = panToCenterPlace(surfaceGroups(visiblePlaces, activeLayer), here, size.w, size.h, userScale, atlas.paths || []);
       panX = pan.panX;
       panY = pan.panY;
     } else {
@@ -659,6 +668,11 @@
     border-bottom: 1px solid rgba(148,163,184,0.12);
     padding-bottom: 3px;
   }
+  .room-choices { max-height: 230px; overflow: auto; margin-bottom: 10px; }
+  .room-choice, .room-link { display: flex; flex-direction: column; width: 100%; padding: 7px 8px; margin: 3px 0; border: 1px solid rgba(190,170,120,.22); border-radius: 4px; background: #1b252b; color: #e6dcc4; text-align: left; font: inherit; cursor: pointer; }
+  .room-choice:hover, .room-choice.chosen, .room-link:hover { border-color: #c7ac69; background: #29352e; }
+  .room-choice em { font-size: 10px; font-style: normal; color: #cdb77f; }
+  .room-filter { width: 100%; box-sizing: border-box; margin-bottom: 6px; padding: 7px; border: 1px solid #475549; border-radius: 4px; background: #162128; color: #f0e3c4; font: inherit; }
   .exit-row, .res-row {
     display: flex;
     align-items: center;
@@ -980,6 +994,28 @@
               </button>
             {/if}
             <div class="intel-more">
+              {#if selectedStreet}
+                <button class="room-link" type="button" on:click={() => selectRoom(selectedStreet)}>Back to {selectedStreet.name}</button>
+              {/if}
+              {#if townRooms.length}
+                <div class="intel-section">{selectedPlace.town ? 'Buildings in town' : 'Inside this building'} · {townRooms.length}</div>
+                {#if townRooms.length > 6}
+                  <input class="room-filter" aria-label="Filter buildings" placeholder="Find a building…" bind:value={roomFilter} />
+                {/if}
+                <div class="room-choices">
+                  {#each filteredTownRooms as room}
+                    <button class="room-choice" class:chosen={room.id === selectedId} type="button" data-room-id={room.id} on:click={() => selectRoom(room)}>
+                      <span>{room.name}</span>{#if isCurrentPlace(room.id, currentRoomId)}<em>You are here</em>{/if}
+                    </button>
+                  {/each}
+                </div>
+              {/if}
+              {#if entranceRooms.length}
+                <div class="intel-section">Below this entrance</div>
+                {#each entranceRooms as room}
+                  <button class="room-choice" type="button" data-entrance-id={room.id} on:click={() => selectRoom(room, true)}>{room.discovered ? room.name : 'Uncharted passage'} <em>Lower layer</em></button>
+                {/each}
+              {/if}
               <p class="intel-summary">{selectedPlace.summary || ''}</p>
               {#if selectedPlace.tags && selectedPlace.tags.length}
                 <div class="intel-tags">{selectedPlace.tags.join(' · ')}</div>

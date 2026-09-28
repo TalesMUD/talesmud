@@ -1,4 +1,6 @@
 import { TERRAIN_SHEET } from './terrainSheet.js';
+import { continentRaster } from './continentRenderer.js';
+import { surfaceGroups, groupForRoom, primaryGroupPlace } from './surfaceAtlas.js';
 
 const BIOME = {
   meadow: {
@@ -208,7 +210,7 @@ function drawTerrain(ctx, key, seed, x, y, size) {
     ctx.drawImage(img, (hashString(seed) % variants) * tileSize, rows[key] * tileSize,
       tileSize, tileSize, x, y, size, size);
   } else {
-    ctx.fillStyle = key === 'fog' ? '#746a51' : key === 'sea' ? '#173947' : '#649c48';
+    ctx.fillStyle = TERRAIN_SHEET.colors?.[key] || '#649c48';
     ctx.fillRect(x, y, size, size);
   }
 }
@@ -410,7 +412,13 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-function drawParchmentBg(ctx, w, h) {
+function drawParchmentBg(ctx, w, h, layer) {
+  if (layer !== 'overworld') {
+    ctx.fillStyle = '#1c2429'; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = 'rgba(116, 137, 134, .045)';
+    for (let y = 0; y < h; y += 12) for (let x = y % 24; x < w; x += 24) ctx.fillRect(x, y, 11, 2);
+    return;
+  }
   // One cached repeat pattern; no per-room DOM images or per-frame texture generation.
   if (tileImageReady(tileImages.sheet) && typeof document !== 'undefined') {
     if (!tileImages.seaPattern) {
@@ -708,7 +716,7 @@ export function paintAtlas(ctx, params) {
   } = params;
 
   ctx.clearRect(0, 0, w, h);
-  drawParchmentBg(ctx, w, h, maximized);
+  drawParchmentBg(ctx, w, h, activeLayer);
 
   if (!visiblePlaces.length) {
     ctx.fillStyle = '#b8a888';
@@ -722,21 +730,29 @@ export function paintAtlas(ctx, params) {
   const byId = {};
   for (const p of atlas.places || []) byId[p.id] = p;
 
-  // Exactly one you-are-here place: prefer exact id, else template match.
-  let herePlace = visiblePlaces.find((p) => p.id === currentRoomId) || null;
-  if (!herePlace) {
-    herePlace = visiblePlaces.find((p) => isCurrentPlace(p.id, currentRoomId)) || null;
+  const renderPlaces = surfaceGroups(visiblePlaces, activeLayer);
+  const current = visiblePlaces.find(p => p.id === currentRoomId) || visiblePlaces.find(p => isCurrentPlace(p.id, currentRoomId));
+  const herePlace = groupForRoom(renderPlaces, currentRoomId) || null;
+  const hereId = herePlace?.id || null;
+  const selectedGroup = groupForRoom(renderPlaces, selectedId);
+  const landscape = activeLayer === 'overworld' ? continentRaster(atlas, tileImages.sheet) : null;
+  const frame = frameWorld && landscape ? [
+    {x:landscape.bounds.minX,y:landscape.bounds.minY},
+    {x:landscape.bounds.maxX,y:landscape.bounds.maxY}
+  ] : renderPlaces;
+  const cam = computeCamera(frame, w, h, panX, panY, userScale, frameWorld ? null : herePlace, atlas.paths || []);
+  if (landscape) {
+    const origin = projectGrid(landscape.bounds.minX - .5, landscape.bounds.minY - .5, cam, w, h);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(landscape.canvas, origin.px, origin.py,
+      landscape.canvas.width / 32 * cam.tileStep, landscape.canvas.height / 32 * cam.tileStep);
   }
-  const hereId = herePlace ? herePlace.id : null;
-
-  // Frame you + nearby so separateAreas (Oldtown vs Meadow) follow the player.
-  const cam = computeCamera(visiblePlaces, w, h, panX, panY, userScale, frameWorld ? null : herePlace, atlas.paths || []);
   const lod = labelLodForScale(userScale);
   const nearIds = lod === 'near'
     ? adjacentPlaceIds(atlas.paths || [], currentRoomId, visiblePlaces)
     : new Set();
 
-  for (const place of terrainConnectors(visiblePlaces, atlas.paths || [])) {
+  for (const place of activeLayer === 'overworld' ? [] : terrainConnectors(visiblePlaces, atlas.paths || [])) {
     const { px, py } = projectPlace(place, cam, w, h);
     drawTile(ctx, place, px, py, cam.tileStep, {});
   }
@@ -757,13 +773,13 @@ export function paintAtlas(ctx, params) {
     const onTravel =
       travelPathRoomIds.has(path.from) && travelPathRoomIds.has(path.to) ||
       travelPathRoomIds.has(path.to) && path.from === currentRoomId;
-    if (onTravel || isCrossArea(a, b)) drawCorridor(ctx, a, b, pa, pb, path, cam, onTravel);
+    if (onTravel || activeLayer !== 'overworld') drawCorridor(ctx, a, b, pa, pb, path, cam, onTravel);
   }
 
   for (const path of layerPaths) {
     const a = byId[path.from];
     const b = byId[path.to];
-    if (!a.discovered || isGridLink(path, a, b)) continue;
+    if (activeLayer === 'overworld' || !a.discovered || isGridLink(path, a, b)) continue;
     if (a.layer === b.layer && a.area === b.area && COMPASS_DIRS.has(path.dir) && layoutDistance(a, b) <= 3) continue;
     const pa = projectPlace(a, cam, w, h);
     const pb = projectPlace(b, cam, w, h);
@@ -775,7 +791,7 @@ export function paintAtlas(ctx, params) {
   }
 
   const hits = [];
-  const sorted = [...visiblePlaces].sort((a, b) => {
+  const sorted = [...renderPlaces].sort((a, b) => {
     if (a.discovered === b.discovered) return 0;
     return a.discovered ? 1 : -1;
   });
@@ -789,17 +805,31 @@ export function paintAtlas(ctx, params) {
     const isHere = place.id === hereId;
     const half = tileHalf(cam.tileStep);
     if (px + half < 0 || py + half < 0 || px - half > w || py - half > h) continue;
-    const r = drawTile(ctx, place, px, py, cam.tileStep, {
-      travelTargetId,
-      isHere,
-      selected: selectedId && place.id === selectedId,
-    });
-    if (px + r >= 0 && py + r >= 0 && px - r <= w && py - r <= h) hits.push({ px, py, r: r + 4, half: r, place: { ...place, current: isHere } });
+    const selected = selectedGroup && place.id === selectedGroup.id;
+    let r = half;
+    if (activeLayer !== 'overworld' || !landscape || !place.discovered && !place.members.some(p => p.discovered)) {
+      r = drawTile(ctx, place, px, py, cam.tileStep, {travelTargetId, selected});
+    } else {
+      if (selected) drawCornerBrackets(ctx, px - half - 2, py - half - 2, cam.tileStep + 4, '#ffe29a');
+      if (place.members.some(p => p.id === travelTargetId)) {
+        ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 2; ctx.strokeRect(px - half, py - half, cam.tileStep, cam.tileStep);
+      }
+    }
+    hits.push({ px, py, r: r + 4, half: r, place: { ...primaryGroupPlace(place, currentRoomId), current: isHere } });
     if (isHere) {
       herePx = px;
       herePy = py;
       hereHalf = r;
     }
+  }
+
+  // Roof stamps select their owning street/building group, never filler ground.
+  if (landscape) for (const building of landscape.buildings) {
+    const place = renderPlaces.find(p => p.id === building.surfaceId);
+    if (!place) continue;
+    const {px,py} = projectGrid(building.x, building.y, cam, w, h);
+    const half = building.half * cam.tileStep;
+    hits.push({px,py,half,r:half,place:{...primaryGroupPlace(place,currentRoomId),current:place.id===hereId}});
   }
 
   // Soft trail: dim gold ring on the previous step along travel path (optional).
@@ -825,15 +855,15 @@ export function paintAtlas(ctx, params) {
 
   if (cam.tileStep >= 20 && (lod === 'near' || lod === 'all')) {
     const candidates = [];
-    for (const place of visiblePlaces) {
+    for (const place of renderPlaces) {
       if (!place.discovered || !place.name) continue;
       const isHere = place.id === hereId;
-      if (!isHere && place.id !== selectedId && (cam.tileStep < 60 || lod === 'near' && !nearIds.has(place.id))) continue;
+      if (!isHere && place.id !== selectedGroup?.id && (cam.tileStep < 60 || lod === 'near' && !nearIds.has(place.id))) continue;
       const { px, py } = projectPlace(place, cam, w, h);
       const half = tileHalf(cam.tileStep);
       candidates.push({
         id: place.id,
-        text: place.name,
+        text: isHere && current ? current.name : place.name,
         px,
         py: py + half + 4,
         font: isHere ? '700 10px Georgia, serif' : '600 9px Georgia, serif',
@@ -861,7 +891,7 @@ export function paintAtlas(ctx, params) {
     }
   }
 
-  return { hits };
+  return { hits, camera: cam };
 }
 
 export { BIOME, projectPlace, computeCamera, COMPASS_DIRS, DIR_LABEL_BLOCKLIST };

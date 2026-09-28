@@ -20,6 +20,29 @@ export const TERRAIN_SHEET = {
     "fog": 14,
     "sea": 15
   },
+  "decorations": {
+    "roof": 16,
+    "keep": 17,
+    "cave": 18
+  },
+  "colors": {
+    "grassland": "#649c48",
+    "forest": "#48743d",
+    "farmland": "#917747",
+    "city": "#a89d7c",
+    "castle": "#889392",
+    "dungeon": "#5a6066",
+    "swamp": "#5c744e",
+    "mountain": "#747f69",
+    "snow": "#b9d1ce",
+    "desert": "#c6a164",
+    "water": "#367a92",
+    "shore": "#d4ba7f",
+    "ruins": "#708357",
+    "interior": "#97734d",
+    "fog": "#746a51",
+    "sea": "#173947"
+  },
   "default": "grassland",
-  "version": "740f23241459"
+  "version": "d6d91d651af8"
 };

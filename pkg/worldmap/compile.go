@@ -12,15 +12,15 @@ type edge struct {
 }
 
 type World struct {
-	rooms map[string]*placedRoom
-	edges []edge
+	rooms     map[string]*placedRoom
+	edges     []edge
+	landscape []LandCell
 }
 
 // Compile builds a stable atlas of the whole world from room exits and
-// optional coords. Authored Coords are pinned. Remaining rooms layout per
-// area using compass exits, then area clusters are packed with a gap so
-// zones do not bleed. Positions do not depend on who has explored; Reveal
-// applies fog of war on top.
+// optional area-local coords. Compact zone offsets preserve local geometry on
+// one decorative continent; interiors project onto exterior anchors. Positions
+// do not depend on who has explored; Reveal applies fog of war on top.
 func Compile(rs []*rooms.Room) *World {
 	w := &World{
 		rooms: make(map[string]*placedRoom, len(rs)),
@@ -61,10 +61,30 @@ func Compile(rs []*rooms.Room) *World {
 		}
 	}
 	sort.Strings(ids)
+	sort.Slice(w.edges, func(i, j int) bool {
+		a, b := w.edges[i], w.edges[j]
+		if a.from != b.from {
+			return a.from < b.from
+		}
+		if a.dir != b.dir {
+			return a.dir < b.dir
+		}
+		return a.to < b.to
+	})
 
 	assignZ(w, src, ids)
+	assignSurface(w, src, ids)
 	placeXY(w, src, ids)
-	separateAreas(w)
+	packContinent(w, ids)
+	for _, id := range ids {
+		p := w.rooms[id]
+		if p.role == "interior" && p.surfaceID != id {
+			if q := w.rooms[p.surfaceID]; q != nil {
+				p.x, p.y = q.x, q.y
+			}
+		}
+	}
+	w.landscape = buildLandscape(w, ids)
 	return w
 }
 
@@ -82,7 +102,17 @@ func assignZ(w *World, src map[string]*rooms.Room, ids []string) {
 			continue
 		}
 		r := src[id]
-		ug := hasTag(r.Tags, "underground")
+		ug := undergroundRoom(r)
+		if ug {
+			w.rooms[id].z = -1
+			known[id] = true
+			continue
+		}
+		if hasTag(r.Tags, "indoor") {
+			w.rooms[id].z = 0
+			known[id] = true
+			continue
+		}
 		if hasTag(r.Tags, "outdoor") && !ug {
 			w.rooms[id].z = 0
 			known[id] = true
@@ -132,28 +162,31 @@ func sameCluster(a, b *placedRoom) bool {
 }
 
 func placeXY(w *World, src map[string]*rooms.Room, ids []string) {
-	occupied := map[cell]string{}
+	occupiedByArea := map[string]map[cell]string{}
 	placed := map[string]bool{}
 
 	placeAt := func(id string, x, y, z int, occ map[cell]string) {
 		pr := w.rooms[id]
-		if _, taken := occ[cell{z, x, y}]; taken {
-			x, y = spiralEmpty(occ, z, x, y)
+		plane := layoutPlane(pr)
+		if _, taken := occ[cell{plane, x, y}]; taken {
+			x, y = spiralEmpty(occ, plane, x, y)
 		}
 		pr.x, pr.y, pr.z = x, y, z
-		occ[cell{z, x, y}] = id
+		occ[cell{plane, x, y}] = id
 		placed[id] = true
 	}
 
-	// Authored Coords win. Later graph placement must not shove these.
+	// Authored area-local Coords take precedence over inferred graph positions.
 	for _, id := range ids {
 		r := src[id]
 		if r.Coords == nil {
 			continue
 		}
 		pr := w.rooms[id]
-		pr.locked = true
-		placeAt(id, int(r.Coords.X), int(r.Coords.Y), pr.z, occupied)
+		if occupiedByArea[pr.area] == nil {
+			occupiedByArea[pr.area] = map[cell]string{}
+		}
+		placeAt(id, int(r.Coords.X), int(r.Coords.Y), pr.z, occupiedByArea[pr.area])
 	}
 
 	groups := map[string][]string{}
@@ -176,10 +209,13 @@ func placeXY(w *World, src map[string]*rooms.Room, ids []string) {
 				break
 			}
 		}
-		occ := occupied
-		if !anchored {
-			// Isolated origin so this zone does not spiral into another zone.
+		occ := occupiedByArea[area]
+		if occ == nil {
 			occ = map[cell]string{}
+			occupiedByArea[area] = occ
+		}
+		if !anchored {
+			// Each area has its own occupancy map and local origin.
 			seed := pickSeedIn(src, gids)
 			placeAt(seed, 0, 0, w.rooms[seed].z, occ)
 		}
@@ -190,7 +226,11 @@ func placeXY(w *World, src map[string]*rooms.Room, ids []string) {
 		if placed[id] {
 			continue
 		}
-		placeAt(id, 0, 0, w.rooms[id].z, occupied)
+		p := w.rooms[id]
+		if occupiedByArea[p.area] == nil {
+			occupiedByArea[p.area] = map[cell]string{}
+		}
+		placeAt(id, 0, 0, p.z, occupiedByArea[p.area])
 	}
 }
 
@@ -207,11 +247,12 @@ func walkCluster(w *World, gids []string, placed map[string]bool, occ map[cell]s
 
 	placeAt := func(id string, x, y, z int) {
 		pr := w.rooms[id]
-		if _, taken := occ[cell{z, x, y}]; taken {
-			x, y = spiralEmpty(occ, z, x, y)
+		plane := layoutPlane(pr)
+		if _, taken := occ[cell{plane, x, y}]; taken {
+			x, y = spiralEmpty(occ, plane, x, y)
 		}
 		pr.x, pr.y, pr.z = x, y, z
-		occ[cell{z, x, y}] = id
+		occ[cell{plane, x, y}] = id
 		placed[id] = true
 	}
 
@@ -357,205 +398,24 @@ func (b bbox) overlaps(o bbox, pad int) bool {
 func (b bbox) width() int  { return b.maxX - b.minX + 1 }
 func (b bbox) height() int { return b.maxY - b.minY + 1 }
 
-const areaGap = 4
-
 func translateGroup(w *World, ids []string, dx, dy int) {
-	if dx == 0 && dy == 0 {
-		return
-	}
 	for _, id := range ids {
-		w.rooms[id].x += dx
-		w.rooms[id].y += dy
+		p := w.rooms[id]
+		p.x += dx
+		p.y += dy
 	}
 }
 
-func groupAnchored(w *World, ids []string) bool {
-	for _, id := range ids {
-		if w.rooms[id].locked {
-			return true
-		}
+// Interiors occupy a separate placement plane until attached to their surface.
+func layoutPlane(p *placedRoom) int {
+	if p.role == "interior" {
+		return 2
 	}
-	return false
-}
-
-func separateAreas(w *World) {
-	groups := map[string][]string{}
-	for id, pr := range w.rooms {
-		groups[pr.area] = append(groups[pr.area], id)
+	if p.layer == "lower" {
+		return -1
 	}
-	for area := range groups {
-		sort.Strings(groups[area])
+	if p.layer == "upper" {
+		return 1
 	}
-
-	placedArea := map[string]bool{}
-	for area, ids := range groups {
-		if groupAnchored(w, ids) {
-			placedArea[area] = true
-		}
-	}
-
-	type link struct {
-		fromArea, toArea, fromID, toID string
-		off                            vec
-	}
-	var links []link
-	for _, e := range w.edges {
-		off, ok := offsetFor(e.dir)
-		if !ok || off.z != 0 {
-			continue
-		}
-		from, to := w.rooms[e.from], w.rooms[e.to]
-		if from == nil || to == nil || from.area == to.area {
-			continue
-		}
-		links = append(links, link{from.area, to.area, e.from, e.to, off})
-	}
-
-	seed := pickAreaSeed(w, groups)
-	if seed != "" {
-		placedArea[seed] = true
-	}
-	queue := make([]string, 0, len(placedArea))
-	for area := range placedArea {
-		queue = append(queue, area)
-	}
-	sort.Strings(queue)
-
-	for len(queue) > 0 {
-		area := queue[0]
-		queue = queue[1:]
-		for _, ln := range links {
-			var destArea string
-			var fromID, toID string
-			var off vec
-			if ln.fromArea == area && !placedArea[ln.toArea] {
-				destArea, fromID, toID, off = ln.toArea, ln.fromID, ln.toID, ln.off
-			} else if ln.toArea == area && !placedArea[ln.fromArea] {
-				destArea, fromID, toID, off = ln.fromArea, ln.toID, ln.fromID, vec{-ln.off.x, -ln.off.y, 0}
-			} else {
-				continue
-			}
-			alignAreaByExit(w, groups, fromID, toID, off)
-			pushAreaOut(w, groups, destArea, placedArea, off)
-			placedArea[destArea] = true
-			queue = append(queue, destArea)
-		}
-	}
-
-	leftover := make([]string, 0)
-	for area := range groups {
-		if !placedArea[area] {
-			leftover = append(leftover, area)
-		}
-	}
-	sort.Strings(leftover)
-	settled := make([]bbox, 0, len(groups))
-	for area := range placedArea {
-		settled = append(settled, boundsOf(w, groups[area]))
-	}
-	cursorX, cursorY, rowH := 0, 0, 0
-	if len(settled) > 0 {
-		maxX, minY := settled[0].maxX, settled[0].minY
-		for _, b := range settled[1:] {
-			if b.maxX > maxX {
-				maxX = b.maxX
-			}
-			if b.minY < minY {
-				minY = b.minY
-			}
-		}
-		cursorX = maxX + areaGap + 1
-		cursorY = minY
-	}
-	for _, area := range leftover {
-		ids := groups[area]
-		b := boundsOf(w, ids)
-		wdt, hgt := b.width(), b.height()
-		if cursorX > 0 && cursorX+wdt > 18 && rowH > 0 {
-			cursorY += rowH + areaGap
-			cursorX = 0
-			rowH = 0
-		}
-		dx := cursorX - b.minX
-		dy := cursorY - b.minY
-		trial := b.shifted(dx, dy)
-		for _, prev := range settled {
-			if trial.overlaps(prev, areaGap) {
-				dx = prev.maxX + areaGap + 1 - b.minX
-				trial = b.shifted(dx, dy)
-			}
-		}
-		translateGroup(w, ids, dx, dy)
-		nb := boundsOf(w, ids)
-		settled = append(settled, nb)
-		placedArea[area] = true
-		cursorX = nb.maxX + areaGap + 1
-		if hgt > rowH {
-			rowH = hgt
-		}
-	}
-}
-
-func pickAreaSeed(w *World, groups map[string][]string) string {
-	for _, pr := range w.rooms {
-		if hasTag(pr.tags, "starting_room") && !hasTag(pr.tags, "underground") {
-			return pr.area
-		}
-	}
-	for _, pr := range w.rooms {
-		if hasTag(pr.tags, "entry_point") && hasTag(pr.tags, "outdoor") {
-			return pr.area
-		}
-	}
-	if _, ok := groups["Z01_meadows_forest_path"]; ok {
-		return "Z01_meadows_forest_path"
-	}
-	areas := make([]string, 0, len(groups))
-	for a := range groups {
-		areas = append(areas, a)
-	}
-	sort.Strings(areas)
-	if len(areas) == 0 {
-		return ""
-	}
-	return areas[0]
-}
-
-func alignAreaByExit(w *World, groups map[string][]string, fromID, toID string, off vec) {
-	from, to := w.rooms[fromID], w.rooms[toID]
-	if from == nil || to == nil {
-		return
-	}
-	step := areaGap + 1
-	tx := from.x + off.x*step
-	ty := from.y + off.y*step
-	translateGroup(w, groups[to.area], tx-to.x, ty-to.y)
-}
-
-func pushAreaOut(w *World, groups map[string][]string, area string, placed map[string]bool, off vec) {
-	ids := groups[area]
-	if len(ids) == 0 {
-		return
-	}
-	if off.x == 0 && off.y == 0 {
-		off = vec{0, -1, 0}
-	}
-	for guard := 0; guard < 48; guard++ {
-		b := boundsOf(w, ids)
-		hit := false
-		for other := range placed {
-			if other == area {
-				continue
-			}
-			ob := boundsOf(w, groups[other])
-			if b.overlaps(ob, areaGap) {
-				translateGroup(w, ids, off.x*(areaGap+1), off.y*(areaGap+1))
-				hit = true
-				break
-			}
-		}
-		if !hit {
-			return
-		}
-	}
+	return 0
 }

@@ -137,14 +137,16 @@ DiscoveredAreas map[string]bool  // Area names
 - **5 XP** per new room discovered (grant path is currently gated; discovery itself still records)
 - **15 XP** for first room in a new area/zone
 
-**Atlas API**: `GET /api/characters/:id/map` returns the character's fog-of-war atlas (places, paths, area hulls, overworld/lower/upper layers). Layout pins authored `coords` when present, clusters remaining rooms by area using compass exits, then packs zones with a gap so Oldtown / Meadows / Ashenveil read as separate clusters. Hidden exits stay off the map until `revealExit`.
+**Atlas API**: `GET /api/characters/:id/map` returns the character's fog-of-war atlas (places, paths, area hulls, overworld/lower/upper layers). Layout preserves authored area-local geometry and compass exits, translates zones onto compact configurable centers, and fills anonymous ground between zones into one connected continent. Hidden exits stay off the map until `revealExit`.
 
-### Terrain atlas tiles (Worldmap P1)
+### Terrain atlas and continent (Worldmap P1/P1b)
 Discovered atlas places carry `terrain`: grassland, forest, farmland, city, castle, dungeon, swamp, mountain, snow, desert, water, shore, ruins, or interior. Unexplored neighbors carry `terrain: "fog"`; their art remains hidden. `pkg/worldmap/map_terrain.json` owns ordered aliases, area defaults, and the unknown-ground default (grassland). RoomType/areaType and specific tags take priority, followed by name, indoor/underground context, area, then descriptive/legacy fallbacks. Classification does not add persisted entity fields or scripting APIs.
 
-The overview and minimap draw three stable variants per terrain from a single 32px sprite sheet, with nearest-neighbor sampling. Grid neighbors touch; short charted compass-exit gaps within the same zone/layer receive ground without replacing fog or other occupied cells. Zone labels, room selection/intel, travel, layer tabs, zoom/pan, and the current-room glow remain available. The overview opens fitted to the current layer; Fit world resets that view and Recenter on you switches to the local camera. A textured sea replaces zone boxes and the dark grid. Terrain-only updates repaint, and an older fog snapshot cannot overwrite a previously charted tile.
+The overview and minimap share a cached 32px landscape with three stable variants per terrain, nearest-neighbor sampling, ordered-dither edge/corner transitions, masked coastal shallows, and dirt roads following charted outdoor compass exits. Towns render continuous streets, rooftops, and walls; keeps have castle stamps and visible underground passages have cave mouths. Shops, taverns, houses, halls, and upstairs rooms share exterior anchors instead of separate overworld floor tiles. Selecting a town/building offers a filterable list of discovered interiors; the selected interior keeps its actual room ID, intel, exits, and Travel action. Visible entrance choices switch to Lower, without disclosing unexplored names or hidden exits.
 
-`GET/HEAD /api/map-tiles/terrain-sheet.png` serves the embedded sheet with a content-hash query version; client JS/CSS uses `?v=worldmap-p1`. Canonical art and deterministic Pillow source live in the content repo (`assets/map-tiles`, `tools/generate_map_tiles.py`). See `tools/WORLDMAP-PREVIEW.md` for rule precedence, regeneration, read-only counts, local screenshots, and performance checks. POI artwork, ornate zone banners, alpha edge blending, and full world framing remain later passes.
+Derived presentation fields are `Place.mapRole` (`surface`, `interior`, `underground`), `surfaceRoomId` (interior anchor), `town`, and `entrances` (visible Lower target IDs). `PlayerMap.landscape` contains decorative `{x,y,terrain}` cells: no room IDs, names, hit targets, or travel destinations. Ground reveals near discovered surface/interior rooms or across a fully charted surface area; other ground is fogged. Terrain/fog, coordinates, grouping, towns, and entrance updates repaint; stale fog cannot replace charted ground. Outdoor positive Z represents elevation on Overworld; subterranean rooms stay Lower. Other untagged above-ground floors can still use Upper. Gold current-room glow (including instanced interiors), zone labels, selection/intel, travel, layer tabs, zoom/pan, Fit world, and local recenter remain available.
+
+`GET/HEAD /api/map-tiles/terrain-sheet.png` serves the 96×608 RGBA sheet with a content-hash query version; client JS/CSS uses `?v=worldmap-p1b`. Canonical art and deterministic Pillow source live in the content repo (`assets/map-tiles`, `tools/generate_map_tiles.py`). `pkg/worldmap/map_layout.json` configures zone centers, natural ground, town flags, separation, and coast padding; unconfigured zones attach using exits. The layout does not mutate stored coordinates or gameplay topology. See `tools/WORLDMAP-PREVIEW.md` for regeneration, read-only snapshots, screenshots, and performance checks. Ornate banners and map framing ornaments remain later work; this pass does not deploy.
 
 ### NPC / enemy portraits
 Room presence sends `portrait` URLs (`/api/portraits/{templateOrId}.png`). Import copies `assets/images/sprites/{npcs,enemies}/` into `uploads/portraits/`. Sprites are 512px full-figure art; the original NPC/enemy cards clip a 48px square around the body (`object-fit: cover` + zoom). Missing files fall back to hashed `img/avatars/{1-14}p.png`. Component CSS lives in `public/mud-client/public/extra.css` and must be deployed with `bundle.js`.
@@ -2243,15 +2245,15 @@ instance, err := service.CreateInstanceFromTemplate(templateID)
 ### Overview
 The atlas is a per-character fog-of-war map. The server compiles a **stable world layout** from room exits (and optional `coords`), then reveals only rooms this character has entered plus unnamed fog neighbors through visible exits. Web and mobile clients render the same JSON.
 
-This is not a grid of room rectangles. Nearby rooms stay next to each other because compass exits (`n/s/e/w` plus diagonals) are treated as geography. Areas get organic hulls. The client draws parchment, biome blobs, curved trails, and place glyphs (stars, houses, diamonds) instead of boxes.
+Area-local authored coordinates and compass exits define geography. Compact zone translations and anonymous filler ground make one overworld continent with blended biomes, coastal sea, dirt paths, and towns. Interiors remain real selectable rooms grouped under exterior anchors; decorative ground never becomes a room.
 
 ### Server
 - `Character.DiscoveredRooms` / `DiscoveredAreas` persist on enter (`worldmap.MarkOn` during `TakeExit` and character select)
 - `GET /api/characters/:id/map` (owner or admin) returns `PlayerMap`
 - Layout package: `pkg/worldmap` — `Compile(rooms)` then `Reveal(world, character)`
-- Layers: `overworld` (z=0), `lower` (z<0), `upper` (z>0), inferred from `up`/`down` and outdoor vs underground tags
+- Layers: semantic `overworld` for outdoors (including positive elevation) and anchored interiors, `lower` for subterranean context/negative depth, `upper` for other positive floors
 - Hidden exits do not appear until the character has revealed them
-- Optional room `coords` pin a room; everything else is inferred. No extra YAML required.
+- Optional room `coords` define area-local geometry. Embedded `map_layout.json` translates zones to compact centers; no room YAML migration is required.
 
 ### Payload
 ```json
@@ -2260,9 +2262,10 @@ This is not a grid of room rectangles. Nearby rooms stay next to each other beca
   "currentRoomId": "R0102",
   "currentLayer": "overworld",
   "layers": [{"id": "overworld", "name": "Overworld", "kind": "overworld"}],
-  "places": [{"id": "R0102", "name": "Wildflower Field", "x": 2, "y": -1, "layer": "overworld", "biome": "meadow", "kind": "wild", "discovered": true, "canTravel": true}],
+  "places": [{"id": "R0102", "name": "Wildflower Field", "x": 2, "y": -1, "layer": "overworld", "biome": "meadow", "terrain": "grassland", "mapRole": "surface", "kind": "wild", "discovered": true, "canTravel": true}],
   "paths": [{"from": "R0101", "to": "R0102", "dir": "north", "kind": "trail", "layer": "overworld"}],
-  "regions": [{"id": "Z01_meadows_forest_path:overworld", "name": "Meadows Forest Path", "hull": [[1.2, -1.8], ...], "biome": "meadow"}]
+  "regions": [{"id": "Z01_meadows_forest_path:overworld", "name": "Meadows Forest Path", "hull": [[1, -2], [3, -2], [3, 0]], "biome": "meadow"}],
+  "landscape": [{"x": 2, "y": -1, "terrain": "grassland"}]
 }
 ```
 Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "uncharted"`.
@@ -2270,11 +2273,11 @@ Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "unc
 ### Client
 - Map widget (player-facing name; same `minimap` widget slot / atlas protocol) receives the atlas over WebSocket on enter, and can also fetch `GET /api/characters/:id/map`
 - Action-bar **Map** chrome / Expand always opens a real fullscreen Map overlay (dimmed play surface, Esc/X close) via `MapOverviewOverlay` portaled to `document.body` — Inventory-style centered panel (`#map-overview-overlay` / `.map-panel`), not clipped to the Map widget and not Materialize `.modal`
-- Area names: always drawn on tinted region/area groups (gold/cream + dark stroke, font scales with zoom); uses `region.name` / `place.areaName` only — never invents labels. Room-name LOD unchanged: mid = current + adjacent; zoomed in = more room names (collision-aware). Compass/vertical exit words are never painted (exit ticks only)
+- Area names: drawn over landscape regions (gold/cream + dark stroke, font scales with zoom); uses `region.name` / `place.areaName` only — never invents labels. Room-name LOD unchanged: mid = current + adjacent; zoomed in = more room names (collision-aware). Compass/vertical exit words are never painted (exit ticks only)
 - Cartographer overlay fills ~80% of the viewport on desktop (side intel rail). On phone (≤768px) it is full-bleed / safe-area; intel is a bottom sheet (peek summary + Travel, expand for exits/residents). Tap selects; Travel is a thumb button (no double-tap). Pinch-zoom and pan keep scale. Compact map tap still inspects.
-- Atlas layers follow room Z: Overworld is z==0 only; up/down switches the map to Upper/Lower. Oldtown packs north of Meadows via the R0108→R0201 north exit.
+- Exterior elevations and upstairs interiors stay on Overworld; dungeons, crypts, cellars, and sewers use Lower. Oldtown stays north of Meadows on the configured continent. Interior selection retains the actual room ID.
 - Title stays **Map**. Layer tabs (Overworld/Lower/Upper) only when `atlas.layers` has more than one entry. Compact optional widget opens fullscreen; Map chrome pin is primary
-- Each room paints as a 48px biome pixel tile (`public/img/map-tiles/`: meadow, forest, settlement, dungeon, water, wild, fog). Landmark/bind rooms overlay a bind-stone icon. Compact minimap and fullscreen MapOverviewOverlay share `atlasRenderer.paintAtlas`. Fog tiles are muted; one gold you-are-here pawn; paths/exits and label LOD unchanged.
+- Compact minimap and fullscreen MapOverviewOverlay share `atlasRenderer.paintAtlas`, surface grouping, and the cached blended continent. Lower/Upper retain room terrain tiles. Fog hides uncharted art; one gold marker follows the current room or its exterior anchor.
 - The widget auto-fits discovered places into its panel and keeps that fit (canvas is out of flow so it cannot resize the widget)
 - Layer tabs, pan, wheel zoom, click-to-travel along discovered paths
 - Desktop/mobile action bars (Option C): room-only dirs + room actions + Shop when a merchant is present; fixed INV / MAP / SAY chrome; **Recipes** seeded by default for crafting discoverability; optional Look/Rest/… pins via ⋯; layout revision migrates legacy Look/pin clutter and seeds Recipes onto rev-2 bars
@@ -2285,9 +2288,10 @@ Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "unc
 ### Key Files
 - `pkg/worldmap/` — layout, biomes, hulls, discovery, reveal
 - `pkg/server/handler/charactermap.go` — REST endpoint
-- `public/mud-client/src/game/widgets/MinimapWidget.svelte` — parchment Map renderer + fullscreen overlay host
-- `public/mud-client/src/game/widgets/atlasRenderer.js` — biome tiles, label LOD, collision, single you-marker
-- `public/mud-client/public/img/map-tiles/` — 48px biome PNGs + landmark overlay
+- `public/mud-client/src/game/widgets/MinimapWidget.svelte` — local Map renderer + fullscreen overlay host
+- `public/mud-client/src/game/widgets/atlasRenderer.js` — layer framing, hit targets, label LOD, single you-marker
+- `public/mud-client/src/game/widgets/continentRenderer.js` / `surfaceAtlas.js` — cached blended landscape, town/interior grouping, outdoor roads
+- `public/mud-client/public/map-tiles/terrain-sheet.png` — shared 32px terrain and transparent building sprites
 - `public/mud-client/src/game/hudPrefs.js` — Option C action-bar chrome/pins + hotbar helpers
 
 ---
