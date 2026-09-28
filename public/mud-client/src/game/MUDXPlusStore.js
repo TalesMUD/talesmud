@@ -61,6 +61,9 @@ function mergeAtlas(existing, incoming) {
       discovered: prev.discovered || place.discovered,
       terrain: prev.discovered && !place.discovered ? prev.terrain : place.terrain,
       kind: prev.discovered && !place.discovered ? prev.kind : place.kind,
+      mapFeatures: prev.discovered && !place.discovered ? prev.mapFeatures : place.mapFeatures,
+      artSeed: prev.discovered && !place.discovered ? prev.artSeed : place.artSeed,
+      undergroundStyle: prev.discovered && !place.discovered ? prev.undergroundStyle : place.undergroundStyle,
       entrances: prev.discovered && !place.discovered ? prev.entrances : place.entrances,
       name: place.name || prev.name,
       landmark: prev.landmark || place.landmark,
@@ -412,6 +415,7 @@ function sameAtlasSnapshot(a, b) {
     if ((p.layer || "") !== (q.layer || "") || (p.name || "") !== (q.name || "")) return false;
     if ((p.terrain || "") !== (q.terrain || "")) return false;
     if (p.x !== q.x || p.y !== q.y || p.z !== q.z || p.mapRole !== q.mapRole || p.surfaceRoomId !== q.surfaceRoomId || p.town !== q.town) return false;
+    if (p.artSeed !== q.artSeed || p.undergroundStyle !== q.undergroundStyle || JSON.stringify(p.mapFeatures || []) !== JSON.stringify(q.mapFeatures || [])) return false;
     if (JSON.stringify(p.entrances || []) !== JSON.stringify(q.entrances || [])) return false;
   }
   return true;

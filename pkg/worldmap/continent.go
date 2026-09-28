@@ -338,26 +338,32 @@ func buildLandscape(w *World, ids []string) []LandCell {
 	// interiors, and cave floors never color the overworld filler as crate tiles.
 	for i := range result {
 		c := &result[i]
+	roomLoop:
 		for _, id := range ids {
 			p := w.rooms[id]
-			if p.role != "surface" || p.layer != "overworld" || p.area != c.area {
+			if p.role != "surface" || p.layer != "overworld" {
 				continue
 			}
 			d := abs(c.X-p.x) + abs(c.Y-p.y)
 			if d > 1 {
 				continue
 			}
-			switch p.terrain {
-			case "water":
-				if d == 0 {
-					c.Terrain = "water"
+
+			if d == 0 {
+				c.area = p.area
+				switch p.terrain {
+				case "water", "shore", "farmland", "forest", "swamp":
+					c.Terrain = p.terrain
+					// The room's own water/biome beats neighboring vegetation.
+					// In particular, Creek Crossing must remain bridgeable water.
+					break roomLoop
 				}
-			case "shore":
-				if d == 0 {
-					c.Terrain = "shore"
+			}
+			if d == 1 && p.area == c.area {
+				switch p.terrain {
+				case "farmland", "forest", "swamp":
+					c.Terrain = p.terrain
 				}
-			case "farmland", "forest", "swamp":
-				c.Terrain = p.terrain
 			}
 		}
 	}

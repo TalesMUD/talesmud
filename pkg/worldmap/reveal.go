@@ -129,6 +129,11 @@ func Reveal(w *World, ch *characters.Character) PlayerMap {
 			p.Summary = "Fog of war. Walk closer to chart this ground."
 		} else {
 			p.Name = pr.name
+			p.MapFeatures = pr.mapFeatures
+			p.ArtSeed = pr.artSeed
+			if pr.layer == "lower" {
+				p.UndergroundStyle = pr.undergroundStyle
+			}
 			for _, target := range pr.entrances {
 				if entranceVisible(w, ch, id, target) {
 					p.Entrances = append(p.Entrances, target)

@@ -1,4 +1,6 @@
 import { TERRAIN_SHEET } from './terrainSheet.js';
+import { undergroundRaster } from './undergroundRenderer.js';
+import { drawMapSprite } from './mapArt.js';
 import { continentRaster } from './continentRenderer.js';
 import { surfaceGroups, groupForRoom, primaryGroupPlace } from './surfaceAtlas.js';
 
@@ -474,7 +476,7 @@ function drawAreaLabels(ctx, places, regions, cam, w, h) {
       px: (minPx + maxPx) / 2,
       py: minPy - pad - labelH - 2,
       font,
-      force: true,
+      force: cam.tileStep >= 7,
       priority: -(region.places ? region.places.length : pts.length),
     });
     labeled.add(text.toLowerCase());
@@ -506,7 +508,7 @@ function drawAreaLabels(ctx, places, regions, cam, w, h) {
       px: (minPx + maxPx) / 2,
       py: minPy - pad - labelH - 2,
       font,
-      force: true,
+      force: cam.tileStep >= 7,
       priority: -rooms.length,
     });
     labeled.add(text.toLowerCase());
@@ -735,7 +737,7 @@ export function paintAtlas(ctx, params) {
   const herePlace = groupForRoom(renderPlaces, currentRoomId) || null;
   const hereId = herePlace?.id || null;
   const selectedGroup = groupForRoom(renderPlaces, selectedId);
-  const landscape = activeLayer === 'overworld' ? continentRaster(atlas, tileImages.sheet) : null;
+  const landscape = activeLayer === 'overworld' ? continentRaster(atlas, tileImages.sheet) : activeLayer === 'lower' ? undergroundRaster(atlas,tileImages.sheet) : null;
   const frame = frameWorld && landscape ? [
     {x:landscape.bounds.minX,y:landscape.bounds.minY},
     {x:landscape.bounds.maxX,y:landscape.bounds.maxY}
@@ -744,7 +746,7 @@ export function paintAtlas(ctx, params) {
   if (landscape) {
     const origin = projectGrid(landscape.bounds.minX - .5, landscape.bounds.minY - .5, cam, w, h);
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(landscape.canvas, origin.px, origin.py,
+    ctx.drawImage(cam.tileStep>=24 && landscape.nearCanvas ? landscape.nearCanvas : landscape.canvas, origin.px, origin.py,
       landscape.canvas.width / 32 * cam.tileStep, landscape.canvas.height / 32 * cam.tileStep);
   }
   const lod = labelLodForScale(userScale);
@@ -752,7 +754,7 @@ export function paintAtlas(ctx, params) {
     ? adjacentPlaceIds(atlas.paths || [], currentRoomId, visiblePlaces)
     : new Set();
 
-  for (const place of activeLayer === 'overworld' ? [] : terrainConnectors(visiblePlaces, atlas.paths || [])) {
+  for (const place of landscape ? [] : terrainConnectors(visiblePlaces, atlas.paths || [])) {
     const { px, py } = projectPlace(place, cam, w, h);
     drawTile(ctx, place, px, py, cam.tileStep, {});
   }
@@ -773,13 +775,13 @@ export function paintAtlas(ctx, params) {
     const onTravel =
       travelPathRoomIds.has(path.from) && travelPathRoomIds.has(path.to) ||
       travelPathRoomIds.has(path.to) && path.from === currentRoomId;
-    if (onTravel || activeLayer !== 'overworld') drawCorridor(ctx, a, b, pa, pb, path, cam, onTravel);
+    if (onTravel || !landscape) drawCorridor(ctx, a, b, pa, pb, path, cam, onTravel);
   }
 
   for (const path of layerPaths) {
     const a = byId[path.from];
     const b = byId[path.to];
-    if (activeLayer === 'overworld' || !a.discovered || isGridLink(path, a, b)) continue;
+    if (landscape || !a.discovered || isGridLink(path, a, b)) continue;
     if (a.layer === b.layer && a.area === b.area && COMPASS_DIRS.has(path.dir) && layoutDistance(a, b) <= 3) continue;
     const pa = projectPlace(a, cam, w, h);
     const pb = projectPlace(b, cam, w, h);
@@ -807,7 +809,7 @@ export function paintAtlas(ctx, params) {
     if (px + half < 0 || py + half < 0 || px - half > w || py - half > h) continue;
     const selected = selectedGroup && place.id === selectedGroup.id;
     let r = half;
-    if (activeLayer !== 'overworld' || !landscape || !place.discovered && !place.members.some(p => p.discovered)) {
+    if (!landscape || !place.discovered && !place.members.some(p => p.discovered)) {
       r = drawTile(ctx, place, px, py, cam.tileStep, {travelTargetId, selected});
     } else {
       if (selected) drawCornerBrackets(ctx, px - half - 2, py - half - 2, cam.tileStep + 4, '#ffe29a');
@@ -832,6 +834,39 @@ export function paintAtlas(ctx, params) {
     hits.push({px,py,half,r:half,place:{...primaryGroupPlace(place,currentRoomId),current:place.id===hereId}});
   }
 
+  // Far zoom uses crisp map glyphs owned by real room groups. Texture-only
+  // ridge/canopy accents never become hit targets or disclose unknown places.
+  if(landscape && activeLayer==='overworld' && cam.tileStep<10) {
+    const peakCenters=[];
+    for(const ridge of landscape.ridges.filter(r=>r.kind==='ridge')) {
+      const {px,py}=projectGrid(ridge.x,ridge.y,cam,w,h);
+      if(peakCenters.some(p=>Math.hypot(p.px-px,p.py-py)<18))continue;
+      peakCenters.push({px,py});
+      drawMapSprite(ctx,tileImages.sheet,'ridge',`${ridge.x}:${ridge.y}`,px-9,py-11,18);
+    }
+    for(const glyph of landscape.glyphs) {
+      const place=renderPlaces.find(p=>p.id===glyph.roomId);if(!place?.discovered)continue;
+      const {px,py}=projectGrid(glyph.x,glyph.y,cam,w,h),size=cam.tileStep<5?18:24;
+      drawMapSprite(ctx,tileImages.sheet,glyph.kind,glyph.roomId,px-size/2,py-size*.6,size);
+      hits.push({px,py,half:size/2,r:size/2,place:{...primaryGroupPlace(place,currentRoomId),current:place.id===hereId}});
+    }
+  }
+  // Low-rate ambient accents sit above cached pixels and reveal no new art.
+  if(landscape && cam.tileStep>=20) {
+    const reduced=typeof window!=='undefined'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const phase=reduced?0:Math.floor(Date.now()/650)%6;
+    for(const a of landscape.ambience||[]) {
+      const {px,py}=projectGrid(a.x,a.y,cam,w,h);if(px<0||py<0||px>w||py>h)continue;
+      ctx.save();ctx.globalAlpha=.2;
+      if(a.kind==='smoke') {
+        ctx.fillStyle='#d7d4ba';ctx.beginPath();ctx.ellipse(px+phase*.25,py-phase*.6,2,3,0,0,Math.PI*2);ctx.fill();
+      } else {
+        ctx.strokeStyle='#c1e0c6';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(px-4+phase,py);ctx.lineTo(px+3+phase,py);ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
   // Soft trail: dim gold ring on the previous step along travel path (optional).
   if (travelPathRoomIds.size && hereId) {
     for (const id of travelPathRoomIds) {
@@ -849,6 +884,8 @@ export function paintAtlas(ctx, params) {
 
   if (herePx != null) {
     drawYouMarker(ctx, herePx, herePy, hereHalf, youPortraitImage);
+    const markerHalf=Math.max(14,hereHalf*.85);
+    hits.push({px:herePx,py:herePy,half:markerHalf,r:markerHalf,place:{...(current || primaryGroupPlace(herePlace,currentRoomId)),current:true}});
   }
 
   drawAreaLabels(ctx, visiblePlaces, visibleRegions, cam, w, h);
@@ -891,7 +928,7 @@ export function paintAtlas(ctx, params) {
     }
   }
 
-  return { hits, camera: cam };
+  return { hits, camera: cam, scene: landscape };
 }
 
 export { BIOME, projectPlace, computeCamera, COMPASS_DIRS, DIR_LABEL_BLOCKLIST };

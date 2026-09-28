@@ -16,6 +16,11 @@ if a.database:
 else:
     import yaml
     records=[yaml.safe_load(p.read_text()) for p in sorted(a.content_rooms.glob('*.yaml'))]
-keys=['id','name','description','detail','roomType','areaType','area','tags','coords','exits','canBind']
-a.out.write_text(json.dumps([{key:r[key] for key in keys if key in r} for r in records],indent=2)+'\n')
+keys=['id','name','description','detail','roomType','areaType','area','tags','coords','exits','canBind','actions']
+exported=[{key:r[key] for key in keys if key in r} for r in records]
+# Art classification needs service action names, never scripts/params/responses.
+for r in exported:
+    if isinstance(r.get('actions'),list):
+        r['actions']=[{'name':action.get('name','')} for action in r['actions'] if isinstance(action,dict)]
+a.out.write_text(json.dumps(exported,indent=2)+'\n')
 print(f'Exported {len(records)} rooms to {a.out}')

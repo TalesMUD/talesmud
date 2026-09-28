@@ -156,3 +156,20 @@ func TestDisconnectedSurfaceRoomsDoNotOverlap(t *testing.T) {
 		seen[key] = true
 	}
 }
+
+func TestOutdoorWaterBeatsNeighborVegetation(t *testing.T) {
+	w := Compile([]*rooms.Room{
+		withCoords(testRoom("a-water", "Creek Crossing", "zone", []string{"outdoor", "water"}), 0, 0, 0),
+		withCoords(testRoom("b-forest", "Forest", "zone", []string{"outdoor", "forest"}), 1, 0, 0),
+		withCoords(testRoom("c-swamp", "Marsh", "zone", []string{"outdoor", "swamp"}), 0, -1, 0),
+	})
+	for _, c := range w.landscape {
+		if c.X == 0 && c.Y == 0 {
+			if c.Terrain != "water" {
+				t.Fatalf("water room overwritten by adjacent %s", c.Terrain)
+			}
+			return
+		}
+	}
+	t.Fatal("water room ground absent")
+}

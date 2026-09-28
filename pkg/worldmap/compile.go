@@ -35,17 +35,21 @@ func Compile(rs []*rooms.Room) *World {
 		src[r.ID] = r
 		ids = append(ids, r.ID)
 		terrain, _ := ClassifyTerrain(r)
+		features, seed := ClassifyArt(r)
 		pr := &placedRoom{
-			terrain:  terrain,
-			id:       r.ID,
-			name:     r.Name,
-			area:     r.Area,
-			areaName: displayArea(r.Area),
-			tags:     append([]string(nil), r.Tags...),
-			canBind:  r.CanBind,
-			biome:    inferBiome(r.Area, r.Tags),
-			kind:     inferKind(r.Tags, r.CanBind, inferBiome(r.Area, r.Tags)),
-			landmark: isLandmark(r.Tags, r.CanBind),
+			terrain:          terrain,
+			mapFeatures:      features,
+			artSeed:          seed,
+			undergroundStyle: undergroundStyle(r),
+			id:               r.ID,
+			name:             r.Name,
+			area:             r.Area,
+			areaName:         displayArea(r.Area),
+			tags:             append([]string(nil), r.Tags...),
+			canBind:          r.CanBind,
+			biome:            inferBiome(r.Area, r.Tags),
+			kind:             inferKind(r.Tags, r.CanBind, inferBiome(r.Area, r.Tags)),
+			landmark:         isLandmark(r.Tags, r.CanBind),
 		}
 		w.rooms[r.ID] = pr
 		if r.Exits == nil {

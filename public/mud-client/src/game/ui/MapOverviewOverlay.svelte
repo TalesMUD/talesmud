@@ -24,6 +24,7 @@
   let userScale = 1;
   let frameWorld = true;
   let stopTileListener;
+  let ambientTimer;
   let isPanning = false;
   let didDrag = false;
   let panStart = { x: 0, y: 0, panX: 0, panY: 0 };
@@ -549,6 +550,9 @@
 
   onMount(() => {
     stopTileListener = onMapTilesReady(() => scheduleDraw());
+    ambientTimer = setInterval(() => {
+      if(open && !document.hidden && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) scheduleDraw();
+    },650);
     escHandler = (e) => {
       if (e.key === 'Escape' && open) {
         e.preventDefault();
@@ -565,6 +569,7 @@
 
   onDestroy(() => {
     if (stopTileListener) stopTileListener();
+    clearInterval(ambientTimer);
     if (escHandler) window.removeEventListener('keydown', escHandler);
     if (resizeHandler) window.removeEventListener('resize', resizeHandler);
     if (resizeHandler && window.visualViewport) window.visualViewport.removeEventListener('resize', resizeHandler);

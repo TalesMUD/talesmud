@@ -25,3 +25,7 @@ for(const change of [{x:2},{mapRole:'interior',surfaceRoomId:'B'},{town:true},{e
 }
 assert.equal(mergeAtlas(ground,{...explored,landscape:[{x:1,y:0,terrain:'forest'}]}).landscape.length,1,'layout changes drop obsolete filler cells');
 console.log('atlasTerrainStore: landscape merge and surface presentation updates OK');
+const art={...explored,places:[{...explored.places[0],mapFeatures:['forge'],artSeed:'one',undergroundStyle:'crypt'}]};
+const preserved=mergeAtlas(art,fog);assert.deepEqual(preserved.places[0].mapFeatures,['forge']);assert.equal(preserved.places[0].artSeed,'one');assert.equal(preserved.places[0].undergroundStyle,'crypt');
+for(const change of [{mapFeatures:['shrine']},{artSeed:'two'},{undergroundStyle:'sewer'}])assert.equal(sameAtlasSnapshot(art,{...art,places:[{...art.places[0],...change}]}),false,'room art updates repaint');
+console.log('atlasTerrainStore: room art survives stale fog and customization updates repaint');

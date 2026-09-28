@@ -15,13 +15,15 @@ meta = json.loads((a.assets/'terrain-sheet.json').read_text())
 expected = {key:i for i,key in enumerate(config['terrains']+['fog','sea'])}
 if meta['rows'] != expected or meta['default'] != config['default']:
     raise SystemExit('Terrain mapping differs: regenerate the sheet with the engine config')
-expected_decorations = {key:len(expected)+i for i,key in enumerate(['roof','keep','cave'])}
-if meta.get('decorations') != expected_decorations or meta.get('tileSize') != 32 or meta.get('variants') != 3:
-    raise SystemExit('Decoration rows or sprite dimensions differ: regenerate the sheet')
+decoration_keys=['roof','keep','cave','forge','shrine','tavern','shop','farm','tower','ruins','graveyard','dock','mine','magic','ridge','canopy','town','village','gatehouse','stairs','torch','reeds','stump','flowers','bridge']
+expected_decorations = {key:len(expected)+i for i,key in enumerate(decoration_keys)}
+expected_underground = {key:len(expected)+len(decoration_keys)+i for i,key in enumerate(['cave','crypt','cellar','sewer'])}
+if meta.get('decorations') != expected_decorations or meta.get('underground') != expected_underground or meta.get('tileSize') != 32 or meta.get('variants') != 6:
+    raise SystemExit('Art rows or sprite dimensions differ: regenerate the sheet')
 if set(meta.get('colors', {})) != set(expected):
     raise SystemExit('Fallback terrain colors differ: regenerate the metadata')
 sheet = (a.assets/'terrain-sheet.png').read_bytes()
-if sheet[:8] != b'\x89PNG\r\n\x1a\n' or struct.unpack('>II', sheet[16:24]) != (96, (len(expected)+len(expected_decorations))*32):
+if sheet[:8] != b'\x89PNG\r\n\x1a\n' or struct.unpack('>II', sheet[16:24]) != (192, (len(expected)+len(expected_decorations)+len(expected_underground))*32):
     raise SystemExit('PNG dimensions differ from the terrain/decoration manifest')
 if meta['version'] != hashlib.sha256(sheet).hexdigest()[:12]:
     raise SystemExit('Sheet content hash differs: regenerate the metadata')

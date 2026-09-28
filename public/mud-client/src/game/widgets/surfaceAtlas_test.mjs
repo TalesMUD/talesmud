@@ -22,6 +22,6 @@ assert.equal(outdoorRoads(places,paths).length,1,'roads deduplicate outdoor exit
 for(const change of [{hidden:true},{kind:'passage'},{dir:'portal'}])assert.equal(outdoorRoads(places,[{...paths[0],...change}]).length,0);
 assert.equal(outdoorRoads([{...street,discovered:false},field],paths).length,0,'fog endpoints never draw roads');
 const model=landscapeModel({places,paths,landscape:[{x:-3,y:-4,terrain:'forest'},{x:4,y:8,terrain:'grassland'}]});
-assert.deepEqual(model.bounds,{minX:-3,maxX:4,minY:-4,maxY:8});
+assert.deepEqual(model.bounds,{minX:-5,maxX:6,minY:-6,maxY:10});
 assert.equal(model.groups.length,2,'decorative cells do not create selection groups');
 console.log('surfaceAtlas: grouping, interior/instance selection, fog, real roads and decorative ground OK');
