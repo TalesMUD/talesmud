@@ -30,7 +30,7 @@ Local-only prototype, 2026-09-29. No deploy or production tile/client replacemen
 | P1h-B | 488,044 | +16,314 | Rim light and underside darkening on existing pixels |
 | **P1h-C darker follow-up** | **461,741** | **−9,989 (−2.12%)** | Same C silhouettes and density, lower material values, softer top-left light and deeper underside |
 
-The new sheet is 3,086 bytes larger than prior C (458,655 bytes), with version `564fb637ba15` and MD5 `0afbf807ff841cb27111f24facd28df1`. Sampled opaque luminance fell from 77.2 to 58.9 for canopy, 78.7 to 59.3 for oak, 121.2 to 97.4 for keep and 103.1 to 84.2 for town; the sampled stamp alpha masks are identical to prior C.
+The new sheet is 3,086 bytes larger than prior C (458,655 bytes; version `564fb637ba15`, MD5 `0afbf807ff841cb27111f24facd28df1`). Current C is version `bca0011165f6`, MD5 `85a814d36e7ef54b8c6544a384ead994`. Sampled opaque luminance fell from 77.2 to 58.9 for canopy, 78.7 to 59.3 for oak, 121.2 to 97.4 for keep and 103.1 to 84.2 for town; the sampled stamp alpha masks are identical to prior C.
 
 P1h-C reads most distinctly at maximum zoom. P1h-A preserves the P1g silhouette most closely; P1h-B changes lighting without redrawing forms. C uses stronger contours and simpler crowns, so repeated forest rows look more regular and adjacent town buildings can visually merge at overview scale. The village/town yard accessories are intentionally tiny and are mainly visible at close zoom. The darker stamps now have stronger contrast against unchanged grassland; a future terrain pass could lower grass selectively if review finds that gap distracting.
 
