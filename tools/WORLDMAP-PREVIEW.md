@@ -1,4 +1,4 @@
-# Continent map P1/P1b/P1c/P1d/P1e/P1f/P1g: local review
+# Continent map P1/P1b/P1c/P1d/P1e/P1f/P1g/P1j
 
 The in-game atlas uses `pkg/worldmap/map_terrain.json`, embedded at Go build time. The content repository's `tools/build_public_map_data.py` serves the separate public lore map and does not supply room tiles. No public lore/spoiler export was changed.
 
@@ -70,6 +70,20 @@ Roads are a single batched network beneath terrain relief, trees, buildings and 
 ## P1f deeper zoom
 
 Scale now spans 1–10 with a 220px tile cap, twice the prior maximum; minimum zoom and continent fit remain P1d’s frame. Wheel and pinch use the shared clamp, and nearest-neighbor sampling keeps enlarged pixels crisp. Run `tools/capture_worldmap_p1f.cjs` against the local production-overlay preview to save overview and Oldtown at maximum zoom, and check wheel/pinch limits, Fit world, local recenter, pixel sampling and page errors. Evidence is under `.director/ux-audit/after/worldmap-p1f-*`.
+
+
+## P1j production atlas
+
+Live Veilspan uses the imagegen craft sheet (content version `c8169d17ef81`, `?v=worldmap-p1j`). Promote by copying `assets/map-tiles/prototypes/p1j/{terrain-sheet.png,terrain-review.png}` and a production-trimmed `terrain-sheet.json` (drop prototype-only keys) into `assets/map-tiles/`, then:
+
+```sh
+python3 tools/sync_map_tiles.py ../talesmud-rpg-1/assets/map-tiles
+# bump client cache queries to ?v=worldmap-p1j
+cd public/mud-client && npm run build
+# copy public/ → pkg/webuiplay/dist/
+```
+
+Do not run `generate_map_tiles.py` for this promotion — that rebuilds Pillow P1g art and overwrites the imagegen atlas. P1e roads-under-stamps, P1f zoom clamps, A9, and 48px sheet dimensions are unchanged.
 
 ## P1g native art and performance comparison
 

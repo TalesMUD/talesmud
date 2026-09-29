@@ -231,23 +231,23 @@ export const TERRAIN_SHEET = {
     "sewer": 59
   },
   "colors": {
-    "grassland": "#649c48",
-    "forest": "#48743d",
-    "farmland": "#917747",
-    "city": "#a89d7c",
-    "castle": "#889392",
-    "dungeon": "#5a6066",
-    "swamp": "#5c744e",
-    "mountain": "#747f69",
-    "snow": "#b9d1ce",
-    "desert": "#c6a164",
-    "water": "#367a92",
-    "shore": "#d4ba7f",
-    "ruins": "#708357",
-    "interior": "#97734d",
-    "fog": "#746a51",
-    "sea": "#173947"
+    "grassland": "#507d3a",
+    "forest": "#3a5d31",
+    "farmland": "#745f39",
+    "city": "#8b8267",
+    "castle": "#717a79",
+    "dungeon": "#4b5055",
+    "swamp": "#4c6041",
+    "mountain": "#606957",
+    "snow": "#a1b6b3",
+    "desert": "#a48653",
+    "water": "#2d6579",
+    "shore": "#b09a69",
+    "ruins": "#5a6946",
+    "interior": "#7d5f40",
+    "fog": "#605843",
+    "sea": "#14323e"
   },
   "default": "grassland",
-  "version": "39069d368e7e"
+  "version": "c8169d17ef81"
 };

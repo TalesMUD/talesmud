@@ -1,6 +1,6 @@
 # WORLDMAP P1j — imagegen craft sheet prototype
 
-Local review, 2026-09-30 (Europe/Berlin). **No deploy.** Production remains P1g at `?v=worldmap-p1g`.
+Prototype built 2026-09-30 (Europe/Berlin). **Promoted to production** as P1j (`?v=worldmap-p1j`, sheet `c8169d17ef81`) after Marcus approved “Ship P1j imagegen sheet to veilspan.com”.
 
 ## Tool used
 
@@ -54,4 +54,4 @@ Residual visual risk: Gemini plate-09/11 props may sit slightly off Codex style;
 
 - Optional: Codex-replace Gemini rows (plate-09, plate-11) for full style lock.
 - Optional: regenerate any terrain plate that still vignettes after seamless post (none flagged by edge MSE).
-- No `sync_map_tiles` into production; no deploy; live stays `?v=worldmap-p1g`.
+- Promoted via `sync_map_tiles` into production; live client cache `?v=worldmap-p1j`.

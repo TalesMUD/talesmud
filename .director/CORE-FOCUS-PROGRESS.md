@@ -396,6 +396,11 @@ Alpha channels match P1g byte-for-byte. Screenshots: `.director/ux-audit/after/w
 
 Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated blend rows. Dusk graded ground and Lower floors now match material-rich timber, stone, roofs, trees and town props; P1h-C's silhouette ink pass is absent. Prototype atlas: `assets/map-tiles/prototypes/p1i/` in content, 551,122 bytes (+79,392 B vs P1g), version `60a66e52904c`. Three 1920×1080 captures and the review plate are `.director/ux-audit/after/worldmap-p1i-*`; judgment, checks and residuals are in `.director/WORLDMAP-P1I-PROTOTYPE.md`. Production P1g sheet and client remain untouched; no deploy.
 
-## P1j — imagegen craft sheet (2026-09-30 local)
+## WORLDMAP P1j — imagegen craft sheet shipped (2026-09-30)
 
-Codex built-in `image_gen` craft atlas (Gemini fill for 8 prop rows). Terrains post-processed with `make_seamless`; stamps chroma/alpha overlays; blends recomposed. Prototype `assets/map-tiles/prototypes/p1j/` version `c8169d17ef81` (1,389,081 B). Captures `.director/ux-audit/after/worldmap-p1j-*`. No deploy; live P1g. Details: `.director/WORLDMAP-P1J-PROTOTYPE.md`.
+- Content promotion SHA: `ccf50b8` on content `main`; engine ship SHA: _(this commit)_ on `engine-june`. Every commit includes `[grokbot]`. Prototype commits already existed: content `4ea5c64`, engine `6a3fd41`.
+- Art: promoted `assets/map-tiles/prototypes/p1j/` into production `assets/map-tiles/` (sheet version `c8169d17ef81`, 1,389,081 B, 288×9024, 48px, six variants). Seamless terrains, chroma/alpha stamps, recomposed directional dither blends. Row order unchanged so `tools/sync_map_tiles.py` validates. Pillow `generate_map_tiles.py` / `map_hires_art.py` not re-run (would overwrite imagegen art).
+- Runtime unchanged aside from atlas + cache: P1e roads-under-stamps, P1f zoom clamps (1–10, 220px cap), A9 boss phases, and 48px sheet dimensions retained. Client/worker cache queries are `?v=worldmap-p1j`.
+- Deployment (Marcus approved “Ship P1j imagegen sheet to veilspan.com”): _(filled after VPS steps)_.
+- Live smoke: _(filled after VPS steps)_.
+- Details: `.director/WORLDMAP-P1J-PROTOTYPE.md`.
