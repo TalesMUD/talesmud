@@ -1,20 +1,36 @@
 package balance
 
-import "strings"
+import (
+	"fmt"
+	"math"
+	"strings"
+)
 
 // BossMechanicsConfig is the telegraph window and enrage spike for boss fights.
 // Tiers match EnemyTrait.Difficulty (boss, hard). A turn of telegraph spends
 // the enemy action on a warning; the hit lands on a later action.
+// BossPhaseConfig describes a descending HP band. Optional overrides compose
+// with the global telegraph/enrage rules; zero damage means the inherited value.
+type BossPhaseConfig struct {
+	Label          string  `yaml:"label"`
+	BelowHP        float64 `yaml:"below_hp"`
+	TelegraphLabel string  `yaml:"telegraph_label"`
+	DamageDealt    float64 `yaml:"damage_dealt"`
+	EnrageDamage   float64 `yaml:"enrage_damage"`
+}
+
 type BossMechanicsConfig struct {
-	TelegraphTurns       int      `yaml:"telegraph_turns"`
-	TelegraphMS          int      `yaml:"telegraph_ms"`
-	TelegraphLabel       string   `yaml:"telegraph_label"`
-	TelegraphTiers       []string `yaml:"telegraph_tiers"`
-	EnrageAfterRounds    int      `yaml:"enrage_after_rounds"`
-	EnrageBelowHP        float64  `yaml:"enrage_below_hp"`
-	EnrageDamage         float64  `yaml:"enrage_damage"`
-	EnrageTiers          []string `yaml:"enrage_tiers"`
-	EnrageSkipsTelegraph bool     `yaml:"enrage_skips_telegraph"`
+	PhaseTiers           []string          `yaml:"phase_tiers"`
+	Phases               []BossPhaseConfig `yaml:"phases"`
+	TelegraphTurns       int               `yaml:"telegraph_turns"`
+	TelegraphMS          int               `yaml:"telegraph_ms"`
+	TelegraphLabel       string            `yaml:"telegraph_label"`
+	TelegraphTiers       []string          `yaml:"telegraph_tiers"`
+	EnrageAfterRounds    int               `yaml:"enrage_after_rounds"`
+	EnrageBelowHP        float64           `yaml:"enrage_below_hp"`
+	EnrageDamage         float64           `yaml:"enrage_damage"`
+	EnrageTiers          []string          `yaml:"enrage_tiers"`
+	EnrageSkipsTelegraph bool              `yaml:"enrage_skips_telegraph"`
 }
 
 func defaultBossMechanics() BossMechanicsConfig {
@@ -37,7 +53,7 @@ func bossMechanics() BossMechanicsConfig {
 		return defaultBossMechanics()
 	}
 	m := cfg.BossMechanics
-	if m.TelegraphLabel == "" && m.TelegraphTurns == 0 && len(m.TelegraphTiers) == 0 && m.EnrageDamage == 0 {
+	if m.TelegraphLabel == "" && m.TelegraphTurns == 0 && len(m.TelegraphTiers) == 0 && m.EnrageDamage == 0 && len(m.Phases) == 0 {
 		return defaultBossMechanics()
 	}
 	if m.TelegraphLabel == "" {
@@ -130,4 +146,71 @@ func ScaleEnrageDamage(damage int32) int32 {
 		return 1
 	}
 	return out
+}
+
+// ValidateBossPhases rejects ambiguous ordering and invalid balance values.
+func ValidateBossPhases(m BossMechanicsConfig) error {
+	previous := 2.0
+	for i, p := range m.Phases {
+		if strings.TrimSpace(p.Label) == "" || math.IsNaN(p.BelowHP) || math.IsInf(p.BelowHP, 0) || p.BelowHP <= 0 || p.BelowHP > 1 || p.BelowHP >= previous || (i == 0 && p.BelowHP != 1) {
+			return fmt.Errorf("boss phase %d requires a label and descending below_hp (opening must be 1)", i+1)
+		}
+		for _, mult := range []float64{p.DamageDealt, p.EnrageDamage} {
+			if math.IsNaN(mult) || math.IsInf(mult, 0) || mult < 0 {
+				return fmt.Errorf("boss phase %d has invalid damage multiplier", i+1)
+			}
+		}
+		previous = p.BelowHP
+	}
+	return nil
+}
+
+// BossPhases defaults to bosses only. An omitted phase list disables phases.
+func BossPhases(difficulty string) []BossPhaseConfig {
+	m := bossMechanics()
+	tiers := m.PhaseTiers
+	if len(tiers) == 0 {
+		tiers = []string{"boss"}
+	}
+	if !tierListed(difficulty, tiers) {
+		return nil
+	}
+	return m.Phases
+}
+
+// BossPhase uses a one-based phase number; zero means no phase mechanics.
+func BossPhase(difficulty string, phase int) BossPhaseConfig {
+	phases := BossPhases(difficulty)
+	if phase <= 0 || phase > len(phases) {
+		return BossPhaseConfig{}
+	}
+	return phases[phase-1]
+}
+
+func BossPhaseTelegraphLabel(difficulty string, phase int) string {
+	if label := BossPhase(difficulty, phase).TelegraphLabel; label != "" {
+		return label
+	}
+	return BossTelegraphLabel()
+}
+
+// ScaleBossPhaseDamage applies a phase multiplier and an optional enrage override.
+// The enrage multiplier replaces the global value, rather than multiplying it twice.
+func ScaleBossPhaseDamage(damage int32, difficulty string, phase int, enraged bool) int32 {
+	if damage <= 0 {
+		return damage
+	}
+	p := BossPhase(difficulty, phase)
+	mult := p.DamageDealt
+	if mult <= 0 {
+		mult = 1
+	}
+	if enraged {
+		rage := p.EnrageDamage
+		if rage <= 0 {
+			rage = bossMechanics().EnrageDamage
+		}
+		mult *= rage
+	}
+	return int32(math.Max(1, math.Round(float64(damage)*mult)))
 }

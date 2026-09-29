@@ -566,6 +566,7 @@ func combatantView(r combat.CombatantRef) messages.CombatantView {
 		HP: r.CurrentHP, MaxHP: r.MaxHP, Mana: r.CurrentMana, MaxMana: r.MaxMana,
 		ClassID: r.ClassID, IsAlive: r.IsAlive, HasFled: r.HasFled, Level: r.Level,
 		Telegraph: r.TelegraphAbility, Enraged: r.Enraged,
+		BossPhase: r.BossPhase, BossPhaseLabel: r.BossPhaseLabel, BossPhaseCount: r.BossPhaseCount,
 	}
 }
 
@@ -790,11 +791,15 @@ func (c *CombatController) processAllTurnsLocked(instance *combat.CombatInstance
 	logLenBefore := len(instance.Log)
 	stunned := c.engine.ProcessStatusEffects(instance, current)
 	for j := logLenBefore; j < len(instance.Log); j++ {
-		if instance.Log[j].Message != "" {
-			c.notifyPlayersInCombat(instance, instance.Log[j].Message)
+		entry := instance.Log[j]
+		if entry.Result == "phase-enter" {
+			c.notifyBossPhaseEntry(instance, entry)
+		} else if entry.Message != "" {
+			c.notifyPlayersInCombat(instance, entry.Message)
 		}
 	}
 
+	logLenBefore = len(instance.Log)
 	current = instance.GetCurrentTurnCombatant()
 	if current == nil || !current.IsAlive {
 		endState := c.engine.CheckCombatEnd(instance)
@@ -819,6 +824,13 @@ func (c *CombatController) processAllTurnsLocked(instance *combat.CombatInstance
 		c.processPlayerAutoAttack(instance, current)
 	}
 
+	// Phase entries are emitted after the action with live roster snapshots.
+	// All HP paths (attack, skill, DoT) share this turn boundary.
+	for _, entry := range instance.Log[logLenBefore:] {
+		if entry.Result == "phase-enter" {
+			c.notifyBossPhaseEntry(instance, entry)
+		}
+	}
 	c.sendPlayerCharacterUpdate(instance)
 
 	endState := c.engine.CheckCombatEnd(instance)
@@ -829,6 +841,13 @@ func (c *CombatController) processAllTurnsLocked(instance *combat.CombatInstance
 	}
 
 	c.finishTurnBeat(instance)
+}
+
+func (c *CombatController) notifyBossPhaseEntry(instance *combat.CombatInstance, entry combat.CombatLogEntry) {
+	c.notifyCombatAction(instance, messages.CombatActionMessage{
+		ActorID: entry.ActorID, ActorName: entry.ActorName,
+		Action: "phase-enter", Result: "phase-enter", FxID: "phase-enter",
+	}, entry.Message)
 }
 
 // finishTurnBeat advances to the next combatant and applies the authored beat budget gate.

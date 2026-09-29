@@ -538,21 +538,24 @@ type AtlasMessage struct {
 
 // CombatantView is a portrait-bearing combatant for the web client.
 type CombatantView struct {
-	ID        string `json:"id"`
-	Type      string `json:"type,omitempty"`
-	Name      string `json:"name"`
-	Portrait  string `json:"portrait,omitempty"`
-	HP        int32  `json:"hp"`
-	MaxHP     int32  `json:"maxHp"`
-	Mana      int32  `json:"mana"`
-	MaxMana   int32  `json:"maxMana"`
-	ClassID   string `json:"classId,omitempty"`
-	IsAlive   bool   `json:"isAlive"`
-	HasFled   bool   `json:"hasFled"`
-	Level     int32  `json:"level,omitempty"`
-	Threat    string `json:"threat,omitempty"` // enemy con color relative to the viewer
-	Telegraph string `json:"telegraph"`        // wind-up ability; empty clears the warning
-	Enraged   bool   `json:"enraged"`
+	ID             string `json:"id"`
+	Type           string `json:"type,omitempty"`
+	Name           string `json:"name"`
+	Portrait       string `json:"portrait,omitempty"`
+	HP             int32  `json:"hp"`
+	MaxHP          int32  `json:"maxHp"`
+	Mana           int32  `json:"mana"`
+	MaxMana        int32  `json:"maxMana"`
+	ClassID        string `json:"classId,omitempty"`
+	IsAlive        bool   `json:"isAlive"`
+	HasFled        bool   `json:"hasFled"`
+	Level          int32  `json:"level,omitempty"`
+	Threat         string `json:"threat,omitempty"` // enemy con color relative to the viewer
+	Telegraph      string `json:"telegraph"`        // wind-up ability; empty clears the warning
+	Enraged        bool   `json:"enraged"`
+	BossPhase      int    `json:"bossPhase"`
+	BossPhaseLabel string `json:"bossPhaseLabel"`
+	BossPhaseCount int    `json:"bossPhaseCount"`
 }
 
 // CombatStartMessage is the structured combat UI payload (portraits, HP).

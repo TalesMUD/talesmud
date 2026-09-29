@@ -69,6 +69,9 @@ func loadConfigFromDisk() (*CombatBalanceConfig, error) {
 		log.WithError(err).Error("Failed to parse combat balance config, using defaults")
 		return getDefaultConfig(), err
 	}
+	if err := ValidateBossPhases(cfg.BossMechanics); err != nil {
+		return getDefaultConfig(), err
+	}
 	if cfg.DifficultyMultipliers == nil {
 		cfg.DifficultyMultipliers = getDefaultConfig().DifficultyMultipliers
 	}

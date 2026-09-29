@@ -217,6 +217,9 @@ function normalizeCombatant(raw) {
     threat: raw.threat || raw.Threat || '',
     telegraph: raw.telegraph || raw.Telegraph || '',
     enraged: !!(raw.enraged || raw.Enraged),
+    bossPhase: raw.bossPhase ?? raw.BossPhase ?? 0,
+    bossPhaseLabel: raw.bossPhaseLabel || raw.BossPhaseLabel || '',
+    bossPhaseCount: raw.bossPhaseCount ?? raw.BossPhaseCount ?? 0,
   };
 }
 
@@ -465,6 +468,7 @@ function createStore() {
     combatSkillCooldowns: {}, // { skillId: roundsRemaining }
     combatNextActionAtMs: 0,
     combatDecisionDeadlineMs: 0,
+    combatPhaseEnter: null,
     combatLog: [], // thin optional log [{id,text}]
     combatOutcome: null, // victory | defeat | fled | timeout
     combatFx: null, // { fxId, at, targetId, actorId, damage, heal, result, action }
@@ -927,6 +931,7 @@ function createStore() {
         if (state.characterStats) {
           state.characterStats = { ...state.characterStats, inCombat: true, resting: false };
         }
+        state.combatPhaseEnter = null;
         state.combatOutcome = null;
         state.combatEndMessage = "";
         state.combatRewards = null;
@@ -1021,6 +1026,10 @@ function createStore() {
           }
         }
 
+        if (msg?.action === 'phase-enter') {
+          state.combatPhaseEnter = { actorId: msg.actorId, text: msg.message || '', at: Date.now() };
+        }
+
         // Always pulse FX when structured action arrives (fxId preferred; result fallback).
         if (msg?.fxId || msg?.result || msg?.damage || msg?.heal) {
           state.combatFx = {
@@ -1075,6 +1084,7 @@ function createStore() {
         update((state) => {
           if (state.combatPhase !== "ending") return state;
           state.combatPhase = "idle";
+          state.combatPhaseEnter = null;
           state.combatOutcome = null;
           state.combatEndMessage = "";
           state.combatRewards = null;
@@ -1095,6 +1105,7 @@ function createStore() {
       update((state) => {
         state.inCombat = false;
         state.combatPhase = "idle";
+        state.combatPhaseEnter = null;
         state.combatOutcome = null;
         state.combatEndMessage = "";
         state.combatRewards = null;
@@ -1115,6 +1126,7 @@ function createStore() {
       update((state) => {
         state.inCombat = false;
         state.combatPhase = "idle";
+        state.combatPhaseEnter = null;
         state.combatOutcome = null;
         state.combatEndMessage = "";
         state.combatRewards = null;
