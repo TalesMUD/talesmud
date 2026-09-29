@@ -398,7 +398,7 @@ Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated bl
 
 ## WORLDMAP P1j — imagegen craft sheet shipped (2026-09-30)
 
-- Content promotion SHA: `ccf50b8` on content `main`; engine ship SHA: _(this commit)_ on `engine-june`. Every commit includes `[grokbot]`. Prototype commits already existed: content `4ea5c64`, engine `6a3fd41`.
+- Content promotion SHA: `ccf50b8` on content `main`; engine ship SHA: `b0dd321` on `engine-june`. Every commit includes `[grokbot]`. Prototype commits already existed: content `4ea5c64`, engine `6a3fd41`.
 - Art: promoted `assets/map-tiles/prototypes/p1j/` into production `assets/map-tiles/` (sheet version `c8169d17ef81`, 1,389,081 B, 288×9024, 48px, six variants). Seamless terrains, chroma/alpha stamps, recomposed directional dither blends. Row order unchanged so `tools/sync_map_tiles.py` validates. Pillow `generate_map_tiles.py` / `map_hires_art.py` not re-run (would overwrite imagegen art).
 - Runtime unchanged aside from atlas + cache: P1e roads-under-stamps, P1f zoom clamps (1–10, 220px cap), A9 boss phases, and 48px sheet dimensions retained. Client/worker cache queries are `?v=worldmap-p1j`.
 - Deployment (Marcus approved “Ship P1j imagegen sheet to veilspan.com”): _(filled after VPS steps)_.
