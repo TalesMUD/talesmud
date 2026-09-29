@@ -7,7 +7,7 @@ import css from "rollup-plugin-css-only";
 
 const production = !process.env.ROLLUP_WATCH;
 
-export default {
+export default [{
 	input: 'src/main.js',
 	output: {
 		sourcemap: true,
@@ -45,7 +45,11 @@ export default {
 	watch: {
 		clearScreen: false
 	}
-};
+}, {
+ input:'src/game/widgets/worldmapWorker.js',
+ output:{file:'public/worldmap-worker.js',format:'iife',sourcemap:true},
+ plugins:[resolve({browser:true}),production&&terser()]
+}];
 
 function serve() {
 	let started = false;

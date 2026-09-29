@@ -44,7 +44,7 @@ export function undergroundRaster(atlas,sheet) {
   // Adjacent floors merge; a later room's border never covers its neighbor.
   for(const p of places) {
     const at=native(p.x,p.y);
-    ctx.save();ctx.shadowColor='#020c12';ctx.shadowBlur=7;ctx.shadowOffsetY=3;
+    ctx.save();
     ctx.fillStyle=p.discovered?'#758479':'#363d3b';ctx.beginPath();ctx.roundRect(at.x-20,at.y-20,40,40,8);ctx.fill();ctx.restore();
   }
   for(const p of places) {

@@ -1,7 +1,7 @@
 import { TERRAIN_SHEET } from './terrainSheet.js';
 import { undergroundRaster } from './undergroundRenderer.js';
 import { drawMapSprite } from './mapArt.js';
-import { continentRaster } from './continentRenderer.js';
+import { worldmapScene, onMapScenesReady } from './worldmapSceneStore.js';
 import { surfaceGroups, groupForRoom, primaryGroupPlace } from './surfaceAtlas.js';
 
 const BIOME = {
@@ -169,12 +169,20 @@ function notifyTilesReady() {
 function startTileLoad() {
   if (typeof Image === 'undefined') { tilesReady = true; return; }
   const img = new Image();
-  img.onload = notifyTilesReady;
+  img.onload = async () => {
+    // Decode once into a reusable bitmap. Cropping a tall PNG image repeatedly
+    // otherwise forces expensive image-source conversion on canvas draws.
+    if(typeof createImageBitmap==='function') {
+      try { tileImages.sheet=await createImageBitmap(img); } catch { tileImages.sheet=img; }
+    }
+    notifyTilesReady();
+  };
   img.onerror = notifyTilesReady;
   img.src = `/api/map-tiles/terrain-sheet.png?v=${TERRAIN_SHEET.version}`;
   tileImages.sheet = img;
 }
 startTileLoad();
+onMapScenesReady(notifyTilesReady);
 
 export function setYouPortrait(url) {
   const next = String(url || '');
@@ -195,7 +203,7 @@ export function onMapTilesReady(fn) {
 }
 
 function tileImageReady(img) {
-  return !!(img && img.complete && img.naturalWidth > 0);
+  return !!(img && (img.complete && img.naturalWidth > 0 || typeof img.close==='function' && img.width>0));
 }
 
 export function tileKeyFor(place) {
@@ -416,6 +424,7 @@ function roundRect(ctx, x, y, w, h, r) {
 
 function drawParchmentBg(ctx, w, h, layer) {
   if (layer !== 'overworld') {
+    if(layer==='lower'){ctx.fillStyle='#102027';ctx.fillRect(0,0,w,h);return;}
     ctx.fillStyle = '#1c2429'; ctx.fillRect(0, 0, w, h);
     ctx.fillStyle = 'rgba(116, 137, 134, .045)';
     for (let y = 0; y < h; y += 12) for (let x = y % 24; x < w; x += 24) ctx.fillRect(x, y, 11, 2);
@@ -425,9 +434,9 @@ function drawParchmentBg(ctx, w, h, layer) {
   if (tileImageReady(tileImages.sheet) && typeof document !== 'undefined') {
     if (!tileImages.seaPattern) {
       const texture = document.createElement('canvas');
-      texture.width = texture.height = 96;
+      texture.width = texture.height = 192;
       const tc = texture.getContext('2d');
-      drawTerrain(tc, 'sea', 'backdrop', 0, 0, 96);
+      for(let y=0;y<3;y++)for(let x=0;x<3;x++)drawTerrain(tc,'sea',`sea:${x}:${y}`,x*64,y*64,64);
       tileImages.seaPattern = ctx.createPattern(texture, 'repeat');
     }
     ctx.fillStyle = tileImages.seaPattern;
@@ -699,6 +708,7 @@ function drawCornerBrackets(ctx, x, y, size, color) {
 }
 
 export function paintAtlas(ctx, params) {
+  const frameStart=performance.now();
   const {
     w,
     h,
@@ -737,17 +747,21 @@ export function paintAtlas(ctx, params) {
   const herePlace = groupForRoom(renderPlaces, currentRoomId) || null;
   const hereId = herePlace?.id || null;
   const selectedGroup = groupForRoom(renderPlaces, selectedId);
-  const landscape = activeLayer === 'overworld' ? continentRaster(atlas, tileImages.sheet) : activeLayer === 'lower' ? undergroundRaster(atlas,tileImages.sheet) : null;
+  const landscape = activeLayer === 'overworld' ? worldmapScene(atlas, tileImages.sheet) : activeLayer === 'lower' ? undergroundRaster(atlas,tileImages.sheet) : null;
   const frame = frameWorld && landscape ? [
     {x:landscape.bounds.minX,y:landscape.bounds.minY},
     {x:landscape.bounds.maxX,y:landscape.bounds.maxY}
   ] : renderPlaces;
   const cam = computeCamera(frame, w, h, panX, panY, userScale, frameWorld ? null : herePlace, atlas.paths || []);
-  if (landscape) {
+  if (landscape&&!landscape.pending) {
     const origin = projectGrid(landscape.bounds.minX - .5, landscape.bounds.minY - .5, cam, w, h);
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(cam.tileStep>=24 && landscape.closeCanvas ? landscape.closeCanvas() : landscape.canvas, origin.px, origin.py,
-      landscape.canvas.width / 32 * cam.tileStep, landscape.canvas.height / 32 * cam.tileStep);
+    const drawLayer=canvas=>{
+      const scale=cam.tileStep/32,sx=Math.max(0,-origin.px/scale),sy=Math.max(0,-origin.py/scale);
+      const sw=Math.min(canvas.width-sx,(w-origin.px)/scale-sx),sh=Math.min(canvas.height-sy,(h-origin.py)/scale-sy);
+      if(sw>0&&sh>0)ctx.drawImage(canvas,sx,sy,sw,sh,origin.px+sx*scale,origin.py+sy*scale,sw*scale,sh*scale);
+    };
+    drawLayer(cam.tileStep>=24&&landscape.closeCanvas?landscape.closeCanvas():landscape.canvas);
   }
   const lod = labelLodForScale(userScale);
   const nearIds = lod === 'near'
@@ -809,7 +823,7 @@ export function paintAtlas(ctx, params) {
     if (px + half < 0 || py + half < 0 || px - half > w || py - half > h) continue;
     const selected = selectedGroup && place.id === selectedGroup.id;
     let r = half;
-    if (!landscape || !place.discovered && !place.members.some(p => p.discovered)) {
+    if (!landscape) {
       r = drawTile(ctx, place, px, py, cam.tileStep, {travelTargetId, selected});
     } else {
       if (selected) drawCornerBrackets(ctx, px - half - 2, py - half - 2, cam.tileStep + 4, '#ffe29a');
@@ -836,7 +850,7 @@ export function paintAtlas(ctx, params) {
 
   // Far zoom uses crisp map glyphs owned by real room groups. Texture-only
   // ridge/canopy accents never become hit targets or disclose unknown places.
-  if(landscape && activeLayer==='overworld' && cam.tileStep<10) {
+  if(landscape && !landscape.pending && activeLayer==='overworld' && cam.tileStep<10) {
     const peakCenters=[];
     for(const ridge of landscape.ridges.filter(r=>r.kind==='ridge')) {
       const {px,py}=projectGrid(ridge.x,ridge.y,cam,w,h);
@@ -852,7 +866,7 @@ export function paintAtlas(ctx, params) {
     }
   }
   // Low-rate ambient accents sit above cached pixels and reveal no new art.
-  if(landscape && cam.tileStep>=20) {
+  if(landscape && !landscape.pending && cam.tileStep>=20) {
     const reduced=typeof window!=='undefined'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const phase=reduced?0:Math.floor(Date.now()/650)%6;
     for(const a of landscape.ambience||[]) {
@@ -867,6 +881,12 @@ export function paintAtlas(ctx, params) {
     }
   }
 
+  // Real room centers win over decorative props from nearby room groups.
+  // Roof outskirts still select their owning exterior/interior group.
+  for(const place of renderPlaces.filter(p=>p.discovered)) {
+    const {px,py}=projectPlace(place,cam,w,h),half=Math.max(3,cam.tileStep*.2);
+    hits.push({px,py,half,r:half,place:{...primaryGroupPlace(place,currentRoomId),current:place.id===hereId}});
+  }
   // Soft trail: dim gold ring on the previous step along travel path (optional).
   if (travelPathRoomIds.size && hereId) {
     for (const id of travelPathRoomIds) {
@@ -928,6 +948,7 @@ export function paintAtlas(ctx, params) {
     }
   }
 
+  if(landscape&&!landscape.pending&&landscape.firstPaintMs==null)landscape.firstPaintMs=performance.now()-frameStart;
   return { hits, camera: cam, scene: landscape };
 }
 

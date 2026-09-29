@@ -11,7 +11,7 @@ const bridges=roadWaterCrossings([{a:known,b},{a:b,b:known}],cells);
 assert.equal(bridges.length,1,'one bridge per charted water cell; never over fog');assert.equal(bridges[0].x,2);
 const hull=roundedHull([{x:0,y:0},{x:0,y:100}],20);
 assert.equal(hull.length,4);assert.ok(hull.some(p=>p.y===-20)&&hull.some(p=>p.y===120),'wall envelope follows the street extent');
-const lower=[{...known,layer:'lower',undergroundStyle:'crypt'},{...b,layer:'lower',undergroundStyle:'sewer'}, {...unknown,id:'fog',layer:'lower'}];
+const lower=[{...known,layer:'lower',undergroundStyle:'crypt'},{...b,x:1,layer:'lower',undergroundStyle:'sewer'}, {...unknown,id:'fog',layer:'lower'}];
 const atlas={places:lower,paths:[{from:'a',to:'b',dir:'east'},{from:'a',to:'fog',dir:'west'}]};
 const model=undergroundModel(atlas);assert.equal(model.corridors.length,1,'unknown underground rooms never expose corridors');
 assert.equal(undergroundModel({places:[],paths:[]}),null);

@@ -1,7 +1,8 @@
 import { TERRAIN_SHEET } from './terrainSheet.js';
 export const hash = text => { let n=0; for (const c of String(text)) n=(n*31+c.charCodeAt(0))|0; return n>>>0; };
-export const makeCanvas = (w,h) => { const c=document.createElement('canvas');c.width=w;c.height=h;return c; };
-export const sheetReady = sheet => sheet && sheet.complete && sheet.naturalWidth > 0;
+export const makeCanvas = (w,h) => { if(typeof OffscreenCanvas!=='undefined')return new OffscreenCanvas(w,h);const c=document.createElement('canvas');c.width=w;c.height=h;return c; };
+export const freezeCanvas = canvas => typeof canvas.transferToImageBitmap==='function'?canvas.transferToImageBitmap():canvas;
+export const sheetReady = sheet => sheet && (sheet.complete && sheet.naturalWidth > 0 || typeof sheet.close==='function' && sheet.width > 0);
 export function drawMapSprite(ctx,sheet,key,seed,x,y,size,section='decorations',variant=null) {
   const row=TERRAIN_SHEET[section]?.[key];
   if(row==null)return;
