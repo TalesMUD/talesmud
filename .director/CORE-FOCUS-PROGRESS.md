@@ -395,3 +395,7 @@ Alpha channels match P1g byte-for-byte. Screenshots: `.director/ux-audit/after/w
 ## WORLDMAP P1i — Full sheet craft prototype (2026-09-29)
 
 Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated blend rows. Dusk graded ground and Lower floors now match material-rich timber, stone, roofs, trees and town props; P1h-C's silhouette ink pass is absent. Prototype atlas: `assets/map-tiles/prototypes/p1i/` in content, 551,122 bytes (+79,392 B vs P1g), version `60a66e52904c`. Three 1920×1080 captures and the review plate are `.director/ux-audit/after/worldmap-p1i-*`; judgment, checks and residuals are in `.director/WORLDMAP-P1I-PROTOTYPE.md`. Production P1g sheet and client remain untouched; no deploy.
+
+## P1j — imagegen craft sheet (2026-09-30 local)
+
+Codex built-in `image_gen` craft atlas (Gemini fill for 8 prop rows). Terrains post-processed with `make_seamless`; stamps chroma/alpha overlays; blends recomposed. Prototype `assets/map-tiles/prototypes/p1j/` version `c8169d17ef81` (1,389,081 B). Captures `.director/ux-audit/after/worldmap-p1j-*`. No deploy; live P1g. Details: `.director/WORLDMAP-P1J-PROTOTYPE.md`.
