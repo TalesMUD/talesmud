@@ -383,3 +383,12 @@ B5–B8 UX/auth track ACCEPTED live 2026-09-27. Next crown = A6 combat (boss tel
 - Deployment (Marcus approved “Ship P1g to veilspan.com”): VPS `~/dev/talesmud` fast-forwarded `b516d11` (P1f) → `867ca5c` on `engine-june`. Copied the full play client into `pkg/webuiplay/dist` (48px terrain sheet 288×9024, `?v=worldmap-p1g`). Built `bin/tales.next`, preserved previous binary as `bin/tales.prev-b516d11` (sha256 `d25d4b3959a01c58b8798d30cee3d2bd309512b686955482ac399a245fd0ee2f`), replaced by rename with new sha256 `d2fb7e25cb8043f50733d67ff864ad051f3118cb2ee17f28fc31b9861ee0c746`. `sudo systemctl restart` needs a password, so SIGTERM only to talesmud.service MainPID `817130`; Restart=always started MainPID `819645` at 11:59:52Z (13:59:52 Berlin) listening on :8010. Door :8020 remained PID `758959` (tales-door-mud); no Door binary/service/port touched. No production DB writes.
 - Live smoke: public `https://veilspan.com/`, `/api/server-info` (Veilspan Chapter I), and `/play/` return 200. Play HTML references all client assets at `?v=worldmap-p1g`. `bundle.js?v=worldmap-p1g`, `worldmap-worker.js?v=worldmap-p1g`, and `/api/map-tiles/terrain-sheet.png` return 200. Served sheet is 288×9024 (471,730 bytes, content hash `39069d368e7e`); public bundle sha256 matches committed client `1011077361de51dae364e9dc1b9089fc33c219f1fe3f5f1c23356172cb7b0eb2`. Verified from clawdbot and from the agent box.
 
+## WORLDMAP P1h — Exploratory stamp polish prototypes (2026-09-29)
+
+Local review only; production remains P1g (`?v=worldmap-p1g`, sheet `39069d368e7e`). Two 48px directions without rewriting the map system:
+
+- **P1h-A** material read (+4,486 B): denser roof courses, mortar, bark/stump grain, leaf/needle marks, plank rails. Content `tools/map_hires_art_p1h_a.py`; sheet `assets/map-tiles/prototypes/p1h-a/`.
+- **P1h-B** silhouette/depth (+16,314 B): 1px warm lit edges + internal underside darkening; timber vs stone cooler/warmer. Content `tools/map_hires_art_p1h_b.py`; sheet `assets/map-tiles/prototypes/p1h-b/`.
+
+Alpha channels match P1g byte-for-byte. Screenshots: `.director/ux-audit/after/worldmap-p1h-{a,b}-{maxzoom,oldtown,overview}-1920x1080.png` plus terrain-review plates. Comparison: `.director/WORLDMAP-P1H-PROTOTYPE.md`. Capture helper: `tools/capture_worldmap_p1h.cjs`. No VPS/Door deploy; bake timings not re-measured.
+
