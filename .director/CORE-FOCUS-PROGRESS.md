@@ -317,3 +317,11 @@ B5–B8 UX/auth track ACCEPTED live 2026-09-27. Next crown = A6 combat (boss tel
 - Screenshots, all **1920×1080**, fonts/images/worker complete: `.director/ux-audit/after/worldmap-p1d-overview-1920x1080.png`; `worldmap-p1d-zoom-1920x1080.png` (Oldtown + Silverbrook Vale); `worldmap-p1d-lower-1920x1080.png`; `worldmap-p1d-far-1920x1080.png` (actual minimum, same frame as Fit world); `worldmap-p1d-highlands-1920x1080.png` (Thornfield Highlands + Ironspine Foothills). Reports: `worldmap-p1d-browser-checks.json`, `worldmap-p1d-layout-checks.json`. Reproduce with `tools/WORLDMAP-PREVIEW.md` and `tools/capture_worldmap_p1d.cjs`.
 - Deployment: **No VPS access, upload, restart or deployment. No :8010/:8020 listener was started or changed. Door files/service untouched.** Local read-only snapshots, preview and isolated builds only. Engine/content commits are pushed for review.
 - Other limits: Geography and art inference remain schematic; explicit room tags/types and existing mappings resolve ambiguous prose. Screenshots use local/content fixtures, not an authenticated live character. Ornate map framing and a later deployment remain outside this pass.
+
+## ACCEPT — 2026-09-29 daily director (~10:03 Europe/Berlin)
+- Live healthy: HTTPS/play/guest 200; `/api/server-info` Veilspan Chapter I; bundle `?v=worldmap-p1d` (binary on :8010 embeds worldmap client); door.veilspan.com/door 200 (FYI only).
+- ACCEPTED yesterday crown **B13** (`cdb47a7` / docs `8b1bde8`, bundle was `?v=b13focus`, smoke screenshots under `.director/ux-audit/after/b13-*`).
+- ACCEPTED overnight EXTRA **WORLDMAP P1→P1d** (tip `44cac0c`, live `?v=worldmap-p1d`). Note: VPS git checkout still reported `8b1bde8` while running binary served worldmap — Step 0 of today's crown aligns checkout to tip on next deploy. Marcus praised the blended continent look 2026-09-28.
+- No Marcus-signed open P0 (DSA armor-weight still unsigned; Google OAuth client still Marcus).
+- Crown today: **A9 boss phases** (combat track). Task: `.director/CORE-FOCUS-A9-TASK.md`. Worker: Codex on clawdbot (`codex-a9`).
+
