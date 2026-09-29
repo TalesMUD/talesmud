@@ -365,8 +365,9 @@ function projectPlace(place, cam, w, h) {
 }
 
 export const MAP_SCALE_MIN = 1;
-export const MAP_SCALE_MAX = 5;
-export const MAP_TILE_STEP_MAX = 110;
+// Raise both caps together so local recenter and world-fit views can zoom twice as close.
+export const MAP_SCALE_MAX = 10;
+export const MAP_TILE_STEP_MAX = 220;
 
 export function clampMapScale(s) {
   const n = Number(s);

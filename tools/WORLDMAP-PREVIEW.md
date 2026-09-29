@@ -1,4 +1,4 @@
-# Continent map P1/P1b/P1c/P1d/P1e: local review
+# Continent map P1/P1b/P1c/P1d/P1e/P1f: local review
 
 The in-game atlas uses `pkg/worldmap/map_terrain.json`, embedded at Go build time. The content repository's `tools/build_public_map_data.py` serves the separate public lore map and does not supply room tiles. No public lore/spoiler export was changed.
 
@@ -66,3 +66,7 @@ Lower paints only short aligned known compass tunnels. Longer/misaligned/vertica
 ## P1e quieter roads
 
 Roads are a single batched network beneath terrain relief, trees, buildings and props. Town paving is fully opaque, so the dirt paths do not show through street tiles. Each discovered outdoor exit is included once and thin strokes keep overview junctions clear. Capture the four 1920×1080 overview, Oldtown/Silverbrook zoom, Lower and minimum-zoom views with `tools/capture_worldmap_p1e.cjs`; the local tool waits for fonts, art and worker scenes before saving.
+
+## P1f deeper zoom
+
+Scale now spans 1–10 with a 220px tile cap, twice the prior maximum; minimum zoom and continent fit remain P1d’s frame. Wheel and pinch use the shared clamp, and nearest-neighbor sampling keeps enlarged pixels crisp. Run `tools/capture_worldmap_p1f.cjs` against the local production-overlay preview to save overview and Oldtown at maximum zoom, and check wheel/pinch limits, Fit world, local recenter, pixel sampling and page errors. Evidence is under `.director/ux-audit/after/worldmap-p1f-*`.
