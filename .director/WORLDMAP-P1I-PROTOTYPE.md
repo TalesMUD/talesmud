@@ -24,4 +24,4 @@ Production `assets/map-tiles/terrain-sheet.png` still has MD5 `41f0924505f4381cb
 
 ## Residuals
 
-The local captures use the read-only preview fixture, not a live character state. The denser P1i atlas adds 79 KB; worker bake cost was not remeasured. Room labels and repeated tree clusters still come from map layout and renderer rules. Aethermoor composite mocks were not refreshed because the direct screenshots show the generated sheet on actual layout without extra staged stamp placements.
+The local captures use the read-only preview fixture, not a live character state. The denser P1i atlas adds 79 KB; worker bake cost was not remeasured. Room labels and repeated tree clusters still come from map layout and renderer rules. Optional Aethermoor mocks `worldmap-p1i-aethermoor-mock-1-oldtown-meadows-1920x1080.png` and `worldmap-p1i-aethermoor-mock-2-overview-1920x1080.png` are light graded captions of the real P1i oldtown/overview captures (craft sheet on Aethermoor layout; not outline-heavy composites).
