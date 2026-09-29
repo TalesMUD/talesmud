@@ -57,8 +57,8 @@ export class SceneQueue {
     if(job.close){state.nearCanvas=message.bitmap;state.closeBakeMs=message.bakeMs;state.closePending=false}
     else {
       state.canvas=message.bitmap;state.pending=false;state.cancelled=false;
-      for(const key of ['bakeMs','buildings','glyphs','ridges','ambience','bridges','stamps','fortifications','coastDetails'])state[key]=message[key];
-      state.coastMask=this.decodeCoast(message.coast);state.coastScale=4;
+      for(const key of ['cellSize','closeCellSize','coastScale','bakeMs','buildings','glyphs','ridges','ambience','bridges','stamps','fortifications','coastDetails'])state[key]=message[key];
+      state.coastMask=this.decodeCoast(message.coast);
     }
     if(job.close){state.closeDispatchMs=job.dispatchMs;state.closeDeliveryMs=performance.now()-start;state.closeElapsedMs=performance.now()-job.requestedAt}
     else {state.dispatchMs=job.dispatchMs;state.deliveryMs=performance.now()-start;state.elapsedMs=performance.now()-state.requestedAt}
@@ -79,7 +79,7 @@ export function worldmapScene(atlas,sheet) {
   if(!sheetReady(sheet)||typeof Worker==='undefined'||typeof OffscreenCanvas==='undefined'||typeof createImageBitmap==='undefined')return continentRaster(atlas,sheet);
   if(!queue) {
     try {
-      const worker=new Worker(new URL(`worldmap-worker.js?v=worldmap-p1f-${TERRAIN_SHEET.version}`,document.baseURI));
+      const worker=new Worker(new URL(`worldmap-worker.js?v=worldmap-p1g-${TERRAIN_SHEET.version}`,document.baseURI));
       const initialize=createImageBitmap(sheet).then(bitmap=>worker.postMessage({type:'sheet',sheet:bitmap},[bitmap]));
       queue=new SceneQueue(worker,initialize,notify);
     } catch {return continentRaster(atlas,sheet)}

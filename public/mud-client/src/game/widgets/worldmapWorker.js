@@ -10,7 +10,7 @@ self.onmessage=async ({data})=>{
     if(data.close){self.postMessage({id:data.id,bitmap,bakeMs:scene.closeBakeMs},[bitmap]);return}
     const coast=scene.coastMask.getContext('2d').getImageData(0,0,scene.coastMask.width,scene.coastMask.height);
     const message={id:data.id,bitmap,coast:{width:coast.width,height:coast.height,pixels:coast.data}};
-    for(const key of ['bakeMs','buildings','glyphs','ridges','ambience','bridges','stamps','fortifications','coastDetails'])message[key]=scene[key];
+    for(const key of ['cellSize','closeCellSize','coastScale','bakeMs','buildings','glyphs','ridges','ambience','bridges','stamps','fortifications','coastDetails'])message[key]=scene[key];
     self.postMessage(message,[bitmap,coast.data.buffer]);
   } catch(error){self.postMessage({id:data.id,error:String(error)})}
 };

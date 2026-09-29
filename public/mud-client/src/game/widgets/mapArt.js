@@ -1,4 +1,13 @@
 import { TERRAIN_SHEET } from './terrainSheet.js';
+// Geometry retains 32 logical units per cell; raster pixels follow the art manifest.
+export const MAP_CELL_UNITS = 32;
+export const MAP_RASTER_SIZE = TERRAIN_SHEET.tileSize;
+export const MAP_RASTER_SCALE = MAP_RASTER_SIZE / MAP_CELL_UNITS;
+export function makeMapCanvas(w,h) {
+  const canvas=makeCanvas(Math.ceil(w*MAP_RASTER_SCALE),Math.ceil(h*MAP_RASTER_SCALE));
+  const ctx=canvas.getContext('2d');ctx.scale(MAP_RASTER_SCALE,MAP_RASTER_SCALE);ctx.imageSmoothingEnabled=false;
+  return canvas;
+}
 export const hash = text => { let n=0; for (const c of String(text)) n=(n*31+c.charCodeAt(0))|0; return n>>>0; };
 export const makeCanvas = (w,h) => { if(typeof OffscreenCanvas!=='undefined')return new OffscreenCanvas(w,h);const c=document.createElement('canvas');c.width=w;c.height=h;return c; };
 export const freezeCanvas = canvas => typeof canvas.transferToImageBitmap==='function'?canvas.transferToImageBitmap():canvas;
@@ -8,7 +17,8 @@ export function drawMapSprite(ctx,sheet,key,seed,x,y,size,section='decorations',
   if(row==null)return;
   if(sheetReady(sheet)) {
     ctx.imageSmoothingEnabled=false;
-    ctx.drawImage(sheet,(variant??hash(seed)%TERRAIN_SHEET.variants)*32,row*32,32,32,x,y,size,size);
+    const cell=TERRAIN_SHEET.tileSize;
+    ctx.drawImage(sheet,(variant??hash(seed)%TERRAIN_SHEET.variants)*cell,row*cell,cell,cell,x,y,size,size);
   } else if(section!=='decorations') {
     ctx.fillStyle=TERRAIN_SHEET.colors?.[key]||'#485b5c';ctx.fillRect(x,y,size,size);
   }

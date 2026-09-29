@@ -758,7 +758,8 @@ export function paintAtlas(ctx, params) {
     const origin = projectGrid(landscape.bounds.minX - .5, landscape.bounds.minY - .5, cam, w, h);
     ctx.imageSmoothingEnabled = false;
     const drawLayer=canvas=>{
-      const scale=cam.tileStep/32,sx=Math.max(0,-origin.px/scale),sy=Math.max(0,-origin.py/scale);
+      const cellSize=canvas.width/(landscape.bounds.maxX-landscape.bounds.minX+1);
+      const scale=cam.tileStep/cellSize,sx=Math.max(0,-origin.px/scale),sy=Math.max(0,-origin.py/scale);
       const sw=Math.min(canvas.width-sx,(w-origin.px)/scale-sx),sh=Math.min(canvas.height-sy,(h-origin.py)/scale-sy);
       if(sw>0&&sh>0)ctx.drawImage(canvas,sx,sy,sw,sh,origin.px+sx*scale,origin.py+sy*scale,sw*scale,sh*scale);
     };
