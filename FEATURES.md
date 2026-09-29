@@ -137,7 +137,22 @@ DiscoveredAreas map[string]bool  // Area names
 - **5 XP** per new room discovered (grant path is currently gated; discovery itself still records)
 - **15 XP** for first room in a new area/zone
 
-**Atlas API**: `GET /api/characters/:id/map` returns the character's fog-of-war atlas (places, paths, area hulls, overworld/lower/upper layers). Layout pins authored `coords` when present, clusters remaining rooms by area using compass exits, then packs zones with a gap so adjacent demo areas read as separate clusters. Hidden exits stay off the map until `revealExit`.
+**Atlas API**: `GET /api/characters/:id/map` returns the character's fog-of-war atlas (places, paths, area hulls, overworld/lower/upper layers). Layout preserves authored area-local geometry and compass exits, translates zones onto compact configurable centers, and fills anonymous ground between zones into one connected continent. Hidden exits stay off the map until `revealExit`.
+
+### Terrain atlas and continent (Worldmap P1/P1b/P1c/P1d/P1e)
+Discovered atlas places carry `terrain`: grassland, forest, farmland, city, castle, dungeon, swamp, mountain, snow, desert, water, shore, ruins, or interior. Unexplored neighbors carry `terrain: "fog"`; their art remains hidden. `pkg/worldmap/map_terrain.json` owns ordered aliases, area defaults, and the unknown-ground default (grassland). RoomType/areaType and specific tags take priority, followed by name, indoor/underground context, area, then descriptive/legacy fallbacks. Classification does not add persisted entity fields or scripting APIs.
+
+The overview and minimap share a cached 32px landscape with precomposed directional dither sprites and close detail baked on demand with six stable variants per terrain, nearest-neighbor sampling, ordered-dither edge/corner transitions, a smoothed organic contour with sand/foam/depth bands, mixed rock foothills/taller central peaks and biome-specific oak/pine/dead-tree clumps, and quieter dirt roads/bridges following charted outdoor compass exits. The road network batches unique exit segments into one path beneath mountains, tree canopies, town paving, walls, buildings and props; full-opacity town paving hides dirt inside streets and thinner strokes reduce far-zoom clutter. Towns render street-shaped paving, varied red/brown/blue roofs, angular wall polygons following courtyard/street footprints, corner towers, incoming road gatehouses, keeps, and small hamlet clusters. Crisp town/keep/village glyphs remain readable at far zoom and select their owning real room. Close zoom retains small pixel trees; overview uses larger biome-specific clumps and varied ridge chains, with snow caps only on the highest peak variants. Towns/farms add wells, carts, lanterns, fences and one windmill per farm zone; plateau/highland rooms add mesa edges/outcrops. Seas use varied wave texture, offshore rocks and highland coastal cliffs. World fit and minimum zoom share a frame filling roughly 70–80% of desktop map height (width permitting). Visible underground passages have cave or mine entrances. Shops, taverns, houses, halls, and upstairs rooms share exterior anchors instead of separate overworld floor tiles. Selecting a town/building offers a filterable list of discovered interiors; the selected interior keeps its actual room ID, intel, exits, and Travel action. Visible entrance choices switch to Lower, without disclosing unexplored names or hidden exits.
+
+Derived presentation fields are `Place.mapRole` (`surface`, `interior`, `underground`), `surfaceRoomId` (interior anchor), `town`, and `entrances` (visible Lower target IDs). Discovered rooms additionally carry `mapFeatures` (derived decoration keys), `artSeed` (deterministic customization seed), and `undergroundStyle` (`cave`, `crypt`, `cellar`, `sewer` on Lower); fog rooms omit all three. `PlayerMap.landscape` contains decorative `{x,y,terrain}` cells: no room IDs, names, hit targets, or travel destinations. Ground reveals near discovered surface/interior rooms or across a fully charted surface area; other ground is fogged. Terrain/fog, coordinates, grouping, towns, entrances, features, art seeds, and underground style updates repaint; stale fog cannot replace charted ground. Outdoor positive Z represents elevation on Overworld; subterranean rooms stay Lower. Other untagged above-ground floors can still use Upper. Gold current-room glow (including instanced interiors), zone labels, selection/intel, travel, layer tabs, zoom/pan, Fit world, and local recenter remain available.
+
+Room art follows tags, room/area types, names, service action names, descriptions/detail fallbacks, and bind context. Forge roofs have chimney smoke; shrines spires; taverns/shops signs; farms fields/farmhouses; guards/gates towers; ruins broken walls; graveyards headstones; docks piers; mines timber entrances; magic sites glowing stones. Reeds, stumps, flowers, rocks, and tree species vary deterministically. Hints do not export source descriptions, script IDs, or service parameters. Outdoor water rooms retain their own terrain even beside forests/swamps. Art changes require no new authored entity fields or Lua API.
+
+Lower uses dedicated cave/crypt/cellar/sewer floors, merged adjacent rooms, actual-exit rock-sided corridors, perimeter stone walls, torch light, and disclosed stair/entrance marks against dark void. Unknown rooms keep fog and expose no art hints. The full overlay has low-rate water shimmer and smoke; hidden/closed views pause it, reduced motion fixes the phase and suppresses its timer, and teardown clears it. Cached overview/close/Lower scenes preserve marker-only reuse and fog isolation.
+
+P1d Lower uses rough cave rock, crypt paving/bones, sewer water channels, and wooden cellar floors/barrels with dim cluster light. Only short, aligned known compass exits get visible tunnels; longer/ambiguous links remain usable navigation exits without grey lines across void. Tree/building drop shadows are removed; only restrained mountain face shading remains. On supported browsers an OffscreenCanvas worker builds scene bitmaps while the main thread remains responsive; only one job runs and stale queued exploration work is replaced. Close LOD builds on demand; worker/canvas fallback preserves map behavior if unavailable. Cached fog ground is painted once, and real room centers win hit testing over neighboring decorative props.
+
+`GET/HEAD /api/map-tiles/terrain-sheet.png` serves the 192×6016 RGBA sheet with a content-hash query version; client JS/CSS uses `?v=worldmap-p1d`. Canonical art and deterministic Pillow source live in the content repo (`assets/map-tiles`, `tools/generate_map_tiles.py`). `pkg/worldmap/map_layout.json` configures zone centers, natural ground, town flags, separation, and coast padding; unconfigured zones attach using exits. The layout does not mutate stored coordinates or gameplay topology. See `tools/WORLDMAP-PREVIEW.md` for regeneration, read-only snapshots, screenshots, and performance checks. Ornate banners and map framing ornaments remain later work; this pass does not deploy.
 
 ### NPC / enemy portraits
 Room presence sends `portrait` URLs (`/api/portraits/{templateOrId}.png`). Import copies `assets/images/sprites/{npcs,enemies}/` into `uploads/portraits/`. Sprites are 512px full-figure art; the original NPC/enemy cards clip a 48px square around the body (`object-fit: cover` + zoom). Missing files fall back to hashed `img/avatars/{1-14}p.png`. Component CSS lives in `public/mud-client/public/extra.css` and must be deployed with `bundle.js`.
@@ -910,6 +925,10 @@ After the level-gap multiplier and before a crit, `damage_dealt` scales hits tha
 **Config**: `boss_mechanics` in `config/combat_balance.yaml`.
 
 Bosses and elites (`hard`) spend `telegraph_turns` actions winding up `telegraph_label` before that hit lands. BattleStage shows a banner and pulses the nameplate for that window (`telegraph_ms`). The resolving hit carries `ability` (Crushing Blow) so the nameplate flash and the floating number are heavier than a normal crit. Bosses enrage after `enrage_after_rounds` or at `enrage_below_hp`, gain an Enraged badge, hit for `enrage_damage`, and stop starting new wind-ups. Trash does not wind up. Elites do not enrage. A miss floats the word "miss". `prefers-reduced-motion` leaves the number in place and skips the flash.
+
+Boss phases are configured by `boss_mechanics.phase_tiers` (defaults to bosses only) and `phases`, an ordered list of `label` / `below_hp` bands. The opening band must be 1.0; later thresholds must descend and remain above zero. Current defaults are Opening (100%), Escalation (66%), and Last Stand (33%). Omit the list to disable phases; explicitly add `hard` to opt elites in. Phase state is per enemy and per encounter (`bossPhase`, `bossPhaseLabel`, `bossPhaseCount`), advances once at or below each threshold on attacks, skills, or DoT, and never rolls back after healing. Large nonlethal hits emit every crossed threshold; lethal hits do not announce a phase.
+
+A phase can override `telegraph_label`, `damage_dealt`, and `enrage_damage`; omitted values inherit the global behavior (phase damage defaults to 1). Phase damage multiplies after class/level scaling and before crits. An enrage override replaces the global enrage multiplier. A6 enrage still triggers at round 16 or 30% HP in any phase and cancels/skips wind-ups. A wind-up already in progress retains its original ability label across a phase transition unless enrage cancels it. Each phase entry sends a structured `combatAction` with action/result/fxId `phase-enter`, human text, and current combatant snapshots to all living participants. BattleStage shows a four-second phase banner and a persistent phase number/name under each boss nameplate; reduced motion disables the arrival animation. Late joiners see the current phase without replaying a transition. Group roster and contextual focus/restore behavior are preserved.
 
 ### Threat colors
 `threat` in `config/combat_balance.yaml` maps `(enemyLevel - playerLevel)` to `grey / green / yellow / orange / red / skull` (defaults: ≤ −3 grey, −2..−1 green, 0..+1 yellow, +2 orange, +3..+4 red, ≥ +5 skull). The tier is on the room NPC payload (`threat`) and on combat enemy views, computed for the viewer. Room cards and BattleStage nameplates use that color; skull enemies also show ☠. `attack` on orange, red, or skull warns once ("X is much stronger than you") and does not engage. `attack!` or a second `attack` on that enemy does. The room Attack button confirms, then sends `attack!`.
@@ -2236,15 +2255,15 @@ instance, err := service.CreateInstanceFromTemplate(templateID)
 ### Overview
 The atlas is a per-character fog-of-war map. The server compiles a **stable world layout** from room exits (and optional `coords`), then reveals only rooms this character has entered plus unnamed fog neighbors through visible exits. Web and mobile clients render the same JSON.
 
-This is not a grid of room rectangles. Nearby rooms stay next to each other because compass exits (`n/s/e/w` plus diagonals) are treated as geography. Areas get organic hulls. The client draws parchment, biome blobs, curved trails, and place glyphs (stars, houses, diamonds) instead of boxes.
+Area-local authored coordinates and compass exits define geography. Compact zone translations and anonymous filler ground make one overworld continent with blended biomes, coastal sea, dirt paths, and towns. Interiors remain real selectable rooms grouped under exterior anchors; decorative ground never becomes a room.
 
 ### Server
 - `Character.DiscoveredRooms` / `DiscoveredAreas` persist on enter (`worldmap.MarkOn` during `TakeExit` and character select)
 - `GET /api/characters/:id/map` (owner or admin) returns `PlayerMap`
 - Layout package: `pkg/worldmap` — `Compile(rooms)` then `Reveal(world, character)`
-- Layers: `overworld` (z=0), `lower` (z<0), `upper` (z>0), inferred from `up`/`down` and outdoor vs underground tags
+- Layers: semantic `overworld` for outdoors (including positive elevation) and anchored interiors, `lower` for subterranean context/negative depth, `upper` for other positive floors
 - Hidden exits do not appear until the character has revealed them
-- Optional room `coords` pin a room; everything else is inferred. No extra YAML required.
+- Optional room `coords` define area-local geometry. Embedded `map_layout.json` translates zones to compact centers; no room YAML migration is required.
 
 ### Payload
 ```json
@@ -2253,9 +2272,10 @@ This is not a grid of room rectangles. Nearby rooms stay next to each other beca
   "currentRoomId": "R0102",
   "currentLayer": "overworld",
   "layers": [{"id": "overworld", "name": "Overworld", "kind": "overworld"}],
-  "places": [{"id": "R0102", "name": "Wildflower Field", "x": 2, "y": -1, "layer": "overworld", "biome": "meadow", "kind": "wild", "discovered": true, "canTravel": true}],
+  "places": [{"id": "R0102", "name": "Wildflower Field", "x": 2, "y": -1, "layer": "overworld", "biome": "meadow", "terrain": "grassland", "mapRole": "surface", "kind": "wild", "discovered": true, "canTravel": true}],
   "paths": [{"from": "R0101", "to": "R0102", "dir": "north", "kind": "trail", "layer": "overworld"}],
-  "regions": [{"id": "Z01_meadows_forest_path:overworld", "name": "Meadows Forest Path", "hull": [[1.2, -1.8], ...], "biome": "meadow"}]
+  "regions": [{"id": "Z01_meadows_forest_path:overworld", "name": "Meadows Forest Path", "hull": [[1, -2], [3, -2], [3, 0]], "biome": "meadow"}],
+  "landscape": [{"x": 2, "y": -1, "terrain": "grassland"}]
 }
 ```
 Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "uncharted"`.
@@ -2263,11 +2283,11 @@ Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "unc
 ### Client
 - Map widget (player-facing name; same `minimap` widget slot / atlas protocol) receives the atlas over WebSocket on enter, and can also fetch `GET /api/characters/:id/map`
 - Action-bar **Map** chrome / Expand always opens a real fullscreen Map overlay (dimmed play surface, Esc/X close) via `MapOverviewOverlay` portaled to `document.body` — Inventory-style centered panel (`#map-overview-overlay` / `.map-panel`), not clipped to the Map widget and not Materialize `.modal`
-- Area names: always drawn on tinted region/area groups (gold/cream + dark stroke, font scales with zoom); uses `region.name` / `place.areaName` only — never invents labels. Room-name LOD unchanged: mid = current + adjacent; zoomed in = more room names (collision-aware). Compass/vertical exit words are never painted (exit ticks only)
+- Area names: drawn over landscape regions (gold/cream + dark stroke, font scales with zoom); uses `region.name` / `place.areaName` only — never invents labels. Room-name LOD unchanged: mid = current + adjacent; zoomed in = more room names (collision-aware). Compass/vertical exit words are never painted (exit ticks only)
 - Cartographer overlay fills ~80% of the viewport on desktop (side intel rail). On phone (≤768px) it is full-bleed / safe-area; intel is a bottom sheet (peek summary + Travel, expand for exits/residents). Tap selects; Travel is a thumb button (no double-tap). Pinch-zoom and pan keep scale. Compact map tap still inspects.
-- Atlas layers follow room Z: Overworld is z==0 only; up/down switches the map to Upper/Lower. Inter-area compass exits pack connected demo zones along that geography (no hardcoded zone layout).
+- Exterior elevations and upstairs interiors stay on Overworld; dungeons, crypts, cellars, and sewers use Lower. Configured zone centers in `map_layout.json` place areas on the continent (demo worlds can override). Interior selection retains the actual room ID.
 - Title stays **Map**. Layer tabs (Overworld/Lower/Upper) only when `atlas.layers` has more than one entry. Compact optional widget opens fullscreen; Map chrome pin is primary
-- Each room paints as a 48px biome pixel tile (`public/img/map-tiles/`: meadow, forest, settlement, dungeon, water, wild, fog). Landmark/bind rooms overlay a bind-stone icon. Compact minimap and fullscreen MapOverviewOverlay share `atlasRenderer.paintAtlas`. Fog tiles are muted; one gold you-are-here pawn; paths/exits and label LOD unchanged.
+- Compact minimap and fullscreen MapOverviewOverlay share `atlasRenderer.paintAtlas`, surface grouping, and the cached blended continent. Lower has a dedicated torch-lit rock/floor/corridor scene; Upper retains terrain tiles. Fog hides uncharted art; one gold marker follows the current room or its exterior anchor.
 - The widget auto-fits discovered places into its panel and keeps that fit (canvas is out of flow so it cannot resize the widget)
 - Layer tabs, pan, wheel zoom, click-to-travel along discovered paths
 - Desktop/mobile action bars (Option C): room-only dirs + room actions + Shop when a merchant is present; fixed INV / MAP / SAY chrome; **Recipes** seeded by default for crafting discoverability; optional Look/Rest/… pins via ⋯; layout revision migrates legacy Look/pin clutter and seeds Recipes onto rev-2 bars
@@ -2278,9 +2298,11 @@ Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "unc
 ### Key Files
 - `pkg/worldmap/` — layout, biomes, hulls, discovery, reveal
 - `pkg/server/handler/charactermap.go` — REST endpoint
-- `public/mud-client/src/game/widgets/MinimapWidget.svelte` — parchment Map renderer + fullscreen overlay host
-- `public/mud-client/src/game/widgets/atlasRenderer.js` — biome tiles, label LOD, collision, single you-marker
-- `public/mud-client/public/img/map-tiles/` — 48px biome PNGs + landmark overlay
+- `public/mud-client/src/game/widgets/MinimapWidget.svelte` — local Map renderer + fullscreen overlay host
+- `public/mud-client/src/game/widgets/atlasRenderer.js` — layer framing, hit targets, label LOD, single you-marker
+- `public/mud-client/src/game/widgets/continentRenderer.js` / `coastline.js` / `mapArt.js` / `surfaceAtlas.js` — cached zoom scenes, organic shores, room art, town/interior grouping, roads/bridges
+- `public/mud-client/src/game/widgets/undergroundRenderer.js` — rock-sided corridors, themed floors, torches, stairs
+- `public/mud-client/public/map-tiles/terrain-sheet.png` — shared 32px terrain and transparent building sprites
 - `public/mud-client/src/game/hudPrefs.js` — Option C action-bar chrome/pins + hotbar helpers
 
 ---

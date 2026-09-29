@@ -469,6 +469,10 @@ func (app *app) setupRoutes() {
 		public.GET("item-art/:filename", itemsHandler.ServeBackground)
 		public.HEAD("item-art/:filename", itemsHandler.ServeBackground)
 
+		// Terrain art shares the embedded play assets; no upload or disk configuration.
+		public.GET("map-tiles/:filename", handler.MapTiles(webuiplay.FS()))
+		public.HEAD("map-tiles/:filename", handler.MapTiles(webuiplay.FS()))
+
 		// Legacy endpoint for old character creation flow (returns hardcoded templates)
 		public.GET("templates/characters", csh.GetCharacterTemplates)
 		public.GET("item-slots", items.GetItemSlots)

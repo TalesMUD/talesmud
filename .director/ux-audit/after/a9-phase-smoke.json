@@ -1,0 +1,180 @@
+{
+  "base": "https://veilspan.com",
+  "preparation": "Fresh owner-authorized guest records only: level 5 warrior, 250 HP, STR 26, room R0216. Existing live The Hollow Knight is unchanged.",
+  "guests": [
+    {
+      "id": "c3118b3a-52cc-4f87-8e07-8fd9b676d06c",
+      "name": "Wanderer_d37f",
+      "reducedMotion": false,
+      "guestStatus": 200,
+      "restored": true
+    },
+    {
+      "id": "1ee09fdc-3954-4683-9408-89b619986af3",
+      "name": "Pilgrim_3f77",
+      "reducedMotion": true,
+      "guestStatus": 200,
+      "restored": true
+    }
+  ],
+  "phases": [
+    {
+      "phase": 2,
+      "guest": 0,
+      "width": 1920,
+      "height": 1080,
+      "scroll": 1080,
+      "caption": "Phase 2 / 3 · Escalation",
+      "banner": "The Hollow Knight enters phase 2: Escalation!",
+      "animation": "svelte-xkuofn-phaseArrival",
+      "allies": 1,
+      "overlap": false,
+      "focus": "battle-stage svelte-xkuofn",
+      "font": true
+    },
+    {
+      "phase": 2,
+      "guest": 1,
+      "width": 1920,
+      "height": 1080,
+      "scroll": 1080,
+      "caption": "Phase 2 / 3 · Escalation",
+      "banner": "The Hollow Knight enters phase 2: Escalation!",
+      "animation": "none",
+      "allies": 1,
+      "overlap": false,
+      "focus": "xterm-helper-textarea",
+      "font": true
+    },
+    {
+      "phase": 3,
+      "guest": 0,
+      "width": 1920,
+      "height": 1080,
+      "scroll": 1080,
+      "caption": "Phase 3 / 3 · Last Stand",
+      "banner": "The Hollow Knight enters phase 3: Last Stand!",
+      "animation": "svelte-xkuofn-phaseArrival",
+      "allies": 1,
+      "overlap": false,
+      "focus": "battle-stage svelte-xkuofn",
+      "font": true
+    },
+    {
+      "phase": 3,
+      "guest": 1,
+      "width": 1920,
+      "height": 1080,
+      "scroll": 1080,
+      "caption": "Phase 3 / 3 · Last Stand",
+      "banner": "The Hollow Knight enters phase 3: Last Stand!",
+      "animation": "none",
+      "allies": 1,
+      "overlap": false,
+      "focus": "xterm-helper-textarea",
+      "font": true
+    }
+  ],
+  "errors": [],
+  "outcome": "victory",
+  "events": [
+    [
+      {
+        "text": "The Hollow Knight enters phase 2: Escalation!",
+        "boss": {
+          "id": "ENM0009",
+          "type": "npc",
+          "name": "The Hollow Knight",
+          "portrait": "/api/portraits/ENM0009.png",
+          "hp": 95,
+          "maxHp": 150,
+          "mana": 0,
+          "maxMana": 0,
+          "isAlive": true,
+          "hasFled": false,
+          "level": 6,
+          "threat": "yellow",
+          "telegraph": "",
+          "enraged": false,
+          "bossPhase": 2,
+          "bossPhaseLabel": "Escalation",
+          "bossPhaseCount": 3
+        },
+        "action": "phase-enter"
+      },
+      {
+        "text": "The Hollow Knight enters phase 3: Last Stand!",
+        "boss": {
+          "id": "ENM0009",
+          "type": "npc",
+          "name": "The Hollow Knight",
+          "portrait": "/api/portraits/ENM0009.png",
+          "hp": 29,
+          "maxHp": 150,
+          "mana": 0,
+          "maxMana": 0,
+          "isAlive": true,
+          "hasFled": false,
+          "level": 6,
+          "threat": "yellow",
+          "telegraph": "",
+          "enraged": true,
+          "bossPhase": 3,
+          "bossPhaseLabel": "Last Stand",
+          "bossPhaseCount": 3
+        },
+        "action": "phase-enter"
+      }
+    ],
+    [
+      {
+        "text": "The Hollow Knight enters phase 2: Escalation!",
+        "boss": {
+          "id": "ENM0009",
+          "type": "npc",
+          "name": "The Hollow Knight",
+          "portrait": "/api/portraits/ENM0009.png",
+          "hp": 95,
+          "maxHp": 150,
+          "mana": 0,
+          "maxMana": 0,
+          "isAlive": true,
+          "hasFled": false,
+          "level": 6,
+          "threat": "yellow",
+          "telegraph": "",
+          "enraged": false,
+          "bossPhase": 2,
+          "bossPhaseLabel": "Escalation",
+          "bossPhaseCount": 3
+        },
+        "action": "phase-enter"
+      },
+      {
+        "text": "The Hollow Knight enters phase 3: Last Stand!",
+        "boss": {
+          "id": "ENM0009",
+          "type": "npc",
+          "name": "The Hollow Knight",
+          "portrait": "/api/portraits/ENM0009.png",
+          "hp": 29,
+          "maxHp": 150,
+          "mana": 0,
+          "maxMana": 0,
+          "isAlive": true,
+          "hasFled": false,
+          "level": 6,
+          "threat": "yellow",
+          "telegraph": "",
+          "enraged": true,
+          "bossPhase": 3,
+          "bossPhaseLabel": "Last Stand",
+          "bossPhaseCount": 3
+        },
+        "action": "phase-enter"
+      }
+    ]
+  ],
+  "restored": true,
+  "ok": true
+}

@@ -133,3 +133,140 @@ func TestBossEnrageBoostsDamage(t *testing.T) {
 		t.Fatal("elites telegraph but do not enrage")
 	}
 }
+
+func TestBossPhaseThresholdsAndNoDoubleFire(t *testing.T) {
+	if _, err := balance.ReloadConfig(); err != nil {
+		t.Fatal(err)
+	}
+	e := NewEngine(NewManager(), DefaultConfig())
+	inst := e.InitiateCombat("phases", []*characters.Character{testFighter("Hero", 800)}, []*npc.NPC{testEnemy("Boss", "boss", 100, 8)})
+	boss := &inst.Enemies[0]
+	if boss.BossPhase != 1 || boss.BossPhaseLabel != "Opening" || boss.BossPhaseCount != 3 {
+		t.Fatalf("opening: %+v", boss)
+	}
+	count := func() int {
+		n := 0
+		for _, entry := range inst.Log {
+			if entry.Result == "phase-enter" {
+				n++
+			}
+		}
+		return n
+	}
+	for _, check := range []struct {
+		hp            int32
+		phase, events int
+	}{
+		{67, 1, 0}, {66, 2, 1}, {66, 2, 1}, {100, 2, 1}, {65, 2, 1}, {34, 2, 1}, {33, 3, 2}, {33, 3, 2}, {100, 3, 2},
+	} {
+		boss.CurrentHP = check.hp
+		e.UpdateCombatant(inst, boss)
+		if boss.BossPhase != check.phase || count() != check.events {
+			t.Fatalf("HP %d: phase %d events %d", check.hp, boss.BossPhase, count())
+		}
+		turn := inst.GetCombatantByID(boss.ID)
+		if turn.BossPhase != check.phase {
+			t.Fatal("turn-order snapshot lost phase")
+		}
+	}
+}
+
+func TestBossPhaseMultiThresholdAndLethalHit(t *testing.T) {
+	if _, err := balance.ReloadConfig(); err != nil {
+		t.Fatal(err)
+	}
+	e := NewEngine(NewManager(), DefaultConfig())
+	inst := e.InitiateCombat("skip", []*characters.Character{testFighter("Hero", 800)}, []*npc.NPC{testEnemy("Boss", "boss", 100, 8)})
+	boss := &inst.Enemies[0]
+	boss.CurrentHP = 20
+	e.UpdateCombatant(inst, boss)
+	phases := []string{}
+	for _, entry := range inst.Log {
+		if entry.Result == "phase-enter" {
+			phases = append(phases, entry.Message)
+		}
+	}
+	if len(phases) != 2 || boss.BossPhase != 3 {
+		t.Fatalf("multi-threshold: phase %d events %v", boss.BossPhase, phases)
+	}
+	inst2 := e.InitiateCombat("lethal", []*characters.Character{testFighter("Hero", 800)}, []*npc.NPC{testEnemy("Boss", "boss", 100, 8)})
+	dead := &inst2.Enemies[0]
+	dead.CurrentHP = 0
+	dead.IsAlive = false
+	e.UpdateCombatant(inst2, dead)
+	e.refreshEnrage(inst2, dead)
+	if dead.BossPhase != 1 || dead.Enraged {
+		t.Fatal("lethal hit entered a phase or enraged")
+	}
+}
+
+func TestBossPhaseTrashAndEliteUnchanged(t *testing.T) {
+	if _, err := balance.ReloadConfig(); err != nil {
+		t.Fatal(err)
+	}
+	for _, tier := range []string{"trivial", "easy", "normal", "hard", "elite"} {
+		e := NewEngine(NewManager(), DefaultConfig())
+		inst := e.InitiateCombat(tier, []*characters.Character{testFighter("Hero", 800)}, []*npc.NPC{testEnemy("Other", tier, 100, 8)})
+		actor := &inst.Enemies[0]
+		actor.CurrentHP = 20
+		e.UpdateCombatant(inst, actor)
+		if actor.BossPhase != 0 || actor.BossPhaseLabel != "" {
+			t.Fatalf("%s acquired phases", tier)
+		}
+		for _, entry := range inst.Log {
+			if entry.Result == "phase-enter" {
+				t.Fatalf("%s emitted phase-enter", tier)
+			}
+		}
+	}
+}
+
+func TestBossPhaseTelegraphAndEnrageCompose(t *testing.T) {
+	if _, err := balance.ReloadConfig(); err != nil {
+		t.Fatal(err)
+	}
+	e := NewEngine(NewManager(), DefaultConfig())
+	inst := e.InitiateCombat("compose", []*characters.Character{testFighter("Hero", 800)}, []*npc.NPC{testEnemy("Boss", "boss", 100, 8)})
+	actor := &inst.Enemies[0]
+	actor.CurrentHP = 66
+	e.UpdateCombatant(inst, actor)
+	step := stepNextEnemy(t, e, inst)
+	if !step.Telegraph || step.Ability != "Shattering Blow" {
+		t.Fatalf("phase telegraph: %+v", step)
+	}
+	actor = &inst.Enemies[0]
+	actor.CurrentHP = 33
+	e.UpdateCombatant(inst, actor)
+	if actor.Enraged {
+		t.Fatal("33% should retain A6 30% threshold")
+	}
+	step = stepNextEnemy(t, e, inst)
+	if step.Telegraph || step.Ability != "Shattering Blow" {
+		t.Fatalf("pending blow should retain original label: %+v", step)
+	}
+	step = stepNextEnemy(t, e, inst)
+	if !step.Telegraph || step.Ability != "Desperate Crush" {
+		t.Fatalf("final phase telegraph: %+v", step)
+	}
+	actor = &inst.Enemies[0]
+	actor.CurrentHP = 30
+	step = stepNextEnemy(t, e, inst)
+	if !inst.Enemies[0].Enraged || step.Telegraph || inst.Enemies[0].TelegraphTurns != 0 {
+		t.Fatal("A6 enrage must cancel/skip phase wind-ups")
+	}
+}
+
+func TestBossPhaseDamageOverTime(t *testing.T) {
+	if _, err := balance.ReloadConfig(); err != nil {
+		t.Fatal(err)
+	}
+	e := NewEngine(NewManager(), DefaultConfig())
+	inst := e.InitiateCombat("dot", []*characters.Character{testFighter("Hero", 800)}, []*npc.NPC{testEnemy("Boss", "boss", 100, 8)})
+	actor := &inst.Enemies[0]
+	actor.CurrentHP = 70
+	actor.StatusEffects = []entcombat.StatusEffect{{ID: "burn", Name: "Burn", Type: "dot", Value: 10, Duration: 2}}
+	e.ProcessStatusEffects(inst, actor)
+	if inst.Enemies[0].BossPhase != 2 || inst.Enemies[0].CurrentHP != 60 {
+		t.Fatalf("DoT did not advance phase: %+v", inst.Enemies[0])
+	}
+}

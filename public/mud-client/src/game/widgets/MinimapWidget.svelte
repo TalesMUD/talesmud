@@ -1,6 +1,7 @@
 <script>
   import { onDestroy, onMount, tick } from 'svelte';
   import { readStageSize, shouldRepaintSize, applyCanvasBitmap } from './atlasLayout.js';
+  import { surfaceGroups, groupForRoom } from './surfaceAtlas.js';
   import { paintAtlas, isCurrentPlace, panToCenterPlace, onMapTilesReady, clampMapScale, setYouPortrait } from './atlasRenderer.js';
 
   export let store = null;
@@ -25,6 +26,7 @@
 
   let widgetWrap, widgetCanvas;
   let widgetObserver;
+  let stopTileListener;
   const hitState = { items: [] };
   let lastWidgetSize = null;
   let selectedId = null;
@@ -196,7 +198,7 @@
       const h = items[i];
       const dx = mx - h.px;
       const dy = my - h.py;
-      if (dx * dx + dy * dy <= h.r * h.r) return h.place;
+      if (Math.abs(dx) <= h.half && Math.abs(dy) <= h.half) return h.place;
     }
     return null;
   }
@@ -253,12 +255,7 @@
   }
 
   function resolveHerePlace() {
-    const places = visiblePlaces || [];
-    return (
-      places.find((p) => p.id === currentRoomId) ||
-      places.find((p) => isCurrentPlace(p.id, currentRoomId)) ||
-      null
-    );
+    return groupForRoom(surfaceGroups(visiblePlaces, activeLayer), currentRoomId) || null;
   }
 
   function applyRecenterToYou(keepScale = true) {
@@ -266,7 +263,7 @@
     const size = readStageSize(widgetWrap);
     const here = resolveHerePlace();
     if (here && size.w >= 4 && size.h >= 4) {
-      const pan = panToCenterPlace(visiblePlaces, here, size.w, size.h, userScale, atlas.paths || []);
+      const pan = panToCenterPlace(surfaceGroups(visiblePlaces, activeLayer), here, size.w, size.h, userScale, atlas.paths || []);
       panX = pan.panX;
       panY = pan.panY;
     } else {
@@ -317,10 +314,11 @@
   }
 
   onMount(() => {
-    onMapTilesReady(() => scheduleDraw());
+    stopTileListener = onMapTilesReady(() => scheduleDraw());
   });
 
   onDestroy(() => {
+    if (stopTileListener) stopTileListener();
     if (drawRaf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(drawRaf);
     if (widgetObserver) widgetObserver.disconnect();
     cancelTravel();

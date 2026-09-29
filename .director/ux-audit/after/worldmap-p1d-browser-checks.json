@@ -1,0 +1,379 @@
+{
+  "source": "Local read-only 351-room content snapshot in production Svelte overlay; no VPS or game session.",
+  "sheets": [
+    {
+      "url": "http://127.0.0.1:8140/api/map-tiles/terrain-sheet.png?v=d82132481c3f",
+      "status": 200
+    }
+  ],
+  "workers": [
+    {
+      "url": "http://127.0.0.1:8140/worldmap-worker.js?v=worldmap-p1d-d82132481c3f",
+      "status": 200
+    }
+  ],
+  "errors": [],
+  "interiorCount": 14,
+  "marker": {
+    "ids": [
+      "R0203"
+    ],
+    "anchor": "R0201"
+  },
+  "cache": {
+    "markerReusesCanvas": true,
+    "fogReusesCanvas": false,
+    "knownPixel": [
+      100,
+      156,
+      72,
+      255
+    ],
+    "fogPixel": [
+      116,
+      106,
+      81,
+      255
+    ]
+  },
+  "polish": {
+    "surfaceRoomCentersClipped": [],
+    "features": {
+      "ruins": 18,
+      "flowers": 2,
+      "reeds": 7,
+      "cave": 12,
+      "tower": 41,
+      "tavern": 15,
+      "shrine": 4,
+      "shop": 16,
+      "forge": 12,
+      "cart": 6,
+      "roof": 55,
+      "lantern": 12,
+      "dock": 6,
+      "well": 6,
+      "magic": 6,
+      "stump": 3,
+      "keep": 15,
+      "farm": 7,
+      "windmill": 2,
+      "fence": 7,
+      "graveyard": 1,
+      "outcrop": 12,
+      "mine": 1,
+      "mesa": 5,
+      "gatehouse": 7
+    },
+    "bridges": 2,
+    "ridges": 35,
+    "canopyClumps": 133,
+    "townGlyphs": 6,
+    "farTileStep": 9.9815625,
+    "worldFitTileStep": 9.9815625,
+    "heightRatio": 0.7312500000000001,
+    "fortifications": [
+      {
+        "area": "Z02_oldtown",
+        "corners": 18,
+        "towers": 10,
+        "gates": 4
+      },
+      {
+        "area": "Z10_kazgrath",
+        "corners": 26,
+        "towers": 14,
+        "gates": 1
+      },
+      {
+        "area": "Z11_aelindor",
+        "corners": 36,
+        "towers": 16,
+        "gates": 1
+      },
+      {
+        "area": "Z12_veridane",
+        "corners": 12,
+        "towers": 8,
+        "gates": 1
+      }
+    ],
+    "relief": {
+      "hills": 26,
+      "uncapped": 28,
+      "capped": 7
+    },
+    "species": [
+      "oak",
+      "pine",
+      "deadTree"
+    ],
+    "coastDetails": [
+      {
+        "x": -12,
+        "y": -30,
+        "kind": "cliff"
+      },
+      {
+        "x": -12,
+        "y": -29,
+        "kind": "cliff"
+      },
+      {
+        "x": -10,
+        "y": -28,
+        "kind": "cliff"
+      },
+      {
+        "x": -20,
+        "y": -27,
+        "kind": "cliff"
+      },
+      {
+        "x": -19,
+        "y": -27,
+        "kind": "cliff"
+      },
+      {
+        "x": -9,
+        "y": -26,
+        "kind": "cliff"
+      },
+      {
+        "x": 17,
+        "y": -21,
+        "kind": "offshore"
+      },
+      {
+        "x": -8,
+        "y": -20,
+        "kind": "cliff"
+      },
+      {
+        "x": -6,
+        "y": -18,
+        "kind": "cliff"
+      },
+      {
+        "x": 4,
+        "y": -18,
+        "kind": "cliff"
+      },
+      {
+        "x": 21,
+        "y": -16,
+        "kind": "offshore"
+      },
+      {
+        "x": 9,
+        "y": -15,
+        "kind": "offshore"
+      },
+      {
+        "x": 10,
+        "y": -11,
+        "kind": "offshore"
+      },
+      {
+        "x": 20,
+        "y": -10,
+        "kind": "offshore"
+      },
+      {
+        "x": 22,
+        "y": -4,
+        "kind": "offshore"
+      },
+      {
+        "x": 5,
+        "y": -3,
+        "kind": "offshore"
+      },
+      {
+        "x": 13,
+        "y": 3,
+        "kind": "offshore"
+      },
+      {
+        "x": 12,
+        "y": 7,
+        "kind": "offshore"
+      },
+      {
+        "x": -9,
+        "y": 15,
+        "kind": "offshore"
+      },
+      {
+        "x": -8,
+        "y": 18,
+        "kind": "cliff"
+      },
+      {
+        "x": 6,
+        "y": 18,
+        "kind": "offshore"
+      },
+      {
+        "x": -3,
+        "y": 23,
+        "kind": "cliff"
+      },
+      {
+        "x": 8,
+        "y": 24,
+        "kind": "offshore"
+      },
+      {
+        "x": 7,
+        "y": 27,
+        "kind": "offshore"
+      }
+    ],
+    "lower": {
+      "rooms": 106,
+      "styles": [
+        "cave",
+        "cellar",
+        "sewer",
+        "crypt"
+      ],
+      "torches": 82,
+      "stairs": 37,
+      "props": [
+        {
+          "kind": "barrel",
+          "roomId": "R0215"
+        },
+        {
+          "kind": "barrel",
+          "roomId": "R0231"
+        },
+        {
+          "kind": "barrel",
+          "roomId": "R0233"
+        },
+        {
+          "kind": "barrel",
+          "roomId": "R0235"
+        },
+        {
+          "kind": "bones",
+          "roomId": "R0237"
+        },
+        {
+          "kind": "barrel",
+          "roomId": "R0239"
+        },
+        {
+          "kind": "barrel",
+          "roomId": "R0240"
+        },
+        {
+          "kind": "bones",
+          "roomId": "R0314"
+        },
+        {
+          "kind": "barrel",
+          "roomId": "R0815"
+        },
+        {
+          "kind": "barrel",
+          "roomId": "R0817"
+        },
+        {
+          "kind": "barrel",
+          "roomId": "R0819"
+        },
+        {
+          "kind": "barrel",
+          "roomId": "R0820"
+        },
+        {
+          "kind": "barrel",
+          "roomId": "R0910"
+        },
+        {
+          "kind": "bones",
+          "roomId": "R1913"
+        },
+        {
+          "kind": "barrel",
+          "roomId": "R1917"
+        }
+      ],
+      "voidCrossings": 0
+    },
+    "fogHints": []
+  },
+  "coastFixture": {
+    "landCenterAlpha": 255,
+    "singleCellSpurTipAlpha": 0
+  },
+  "performance": {
+    "rooms": 351,
+    "landCells": 1448,
+    "changedBakeHeartbeats": 33,
+    "firstSceneBakeMs": 192.30000019073486,
+    "firstSceneMainThreadMs": 18.90000009536743,
+    "firstSceneElapsedMs": 287.2999997138977,
+    "changedSceneWorkerBakeMs": 154.59999990463257,
+    "changedSceneElapsedMs": 190.89999961853027,
+    "firstCloseElapsedMs": 163.09999990463257,
+    "firstCloseWorkerBakeMs": 139.90000009536743,
+    "firstCloseDrawMs": 12.700000286102295,
+    "changedSceneMainThreadMs": 54.700000286102295,
+    "markerOnlySnapshotMs": 7.299999713897705,
+    "closeZoom": {
+      "frames": 80,
+      "medianMs": 2.1000003814697266,
+      "p95Ms": 2.700000286102295,
+      "maxMs": 2.8000001907348633
+    },
+    "overworld": {
+      "frames": 80,
+      "medianMs": 2.200000286102295,
+      "p95Ms": 2.700000286102295,
+      "maxMs": 4
+    },
+    "lower": {
+      "frames": 80,
+      "medianMs": 0.5999999046325684,
+      "p95Ms": 1,
+      "maxMs": 1.3999996185302734
+    }
+  },
+  "performanceScope": "SceneBakeMs/WorkerBakeMs are worker CPU time; ElapsedMs includes worker/queue/message delay; MainThreadMs/firstCloseDrawMs sum main-thread request, dispatch, delivery and first paint. Warm frame samples and marker-only timings are synchronous production draw work.",
+  "phone": {
+    "w": 390,
+    "h": 844,
+    "scroll": 844
+  },
+  "checks": [
+    "fonts/images loaded",
+    "smooth coast retains all surface rooms",
+    "room-driven stamp variation",
+    "four underground floor styles",
+    "torch/stair markers",
+    "minimum zoom/world-fit height clamp",
+    "angular walls/corner towers/road gates",
+    "varied mountain relief",
+    "biome species/town/farm details",
+    "offshore rocks/highland cliffs",
+    "bones/barrels/no Lower void diagonals",
+    "first/changed/close main-thread budget",
+    "worker bake keeps main-thread timers responsive",
+    "continent overview",
+    "Oldtown + Silverbrook zoom/pan",
+    "exterior hit selection",
+    "decorative ground not clickable",
+    "recenter preserves selection",
+    "Fit world",
+    "town filter",
+    "interior selection",
+    "entrance switches Lower",
+    "instance marker on surface anchor",
+    "phone bounds",
+    "Escape"
+  ]
+}

@@ -439,6 +439,7 @@ func combatViews(refs []combat.CombatantRef, viewerLevel int32) []messages.Comba
 			ID: r.ID, Type: string(r.Type), Name: r.Name, Portrait: r.Portrait, HP: r.CurrentHP, MaxHP: r.MaxHP,
 			Mana: r.CurrentMana, MaxMana: r.MaxMana, ClassID: r.ClassID, IsAlive: r.IsAlive, HasFled: r.HasFled, Level: r.Level,
 			Telegraph: r.TelegraphAbility, Enraged: r.Enraged,
+			BossPhase: r.BossPhase, BossPhaseLabel: r.BossPhaseLabel, BossPhaseCount: r.BossPhaseCount,
 		}
 		if r.Type == combat.CombatantTypeNPC {
 			view.Threat = balance.ThreatTier(viewerLevel, r.Level)

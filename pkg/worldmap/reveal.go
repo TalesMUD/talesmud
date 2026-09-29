@@ -45,6 +45,14 @@ func Reveal(w *World, ch *characters.Character) PlayerMap {
 		include[id] = true
 	}
 
+	for id := range include {
+		p := w.rooms[id]
+		if p.surfaceID != "" && p.surfaceID != id && !include[p.surfaceID] {
+			include[p.surfaceID] = true
+			fog[p.surfaceID] = !discovered[p.surfaceID]
+		}
+	}
+
 	type pathKey struct{ a, b, dir string }
 	seenPath := map[pathKey]bool{}
 
@@ -74,7 +82,7 @@ func Reveal(w *World, ch *characters.Character) PlayerMap {
 			To:     e.to,
 			Dir:    e.dir,
 			Kind:   pathKind(e.dir, from.tags, dest.tags, e.hidden),
-			Layer:  layerID(from.z),
+			Layer:  from.layer,
 			Hidden: e.hidden,
 		})
 	}
@@ -90,32 +98,47 @@ func Reveal(w *World, ch *characters.Character) PlayerMap {
 
 	for _, id := range ids {
 		pr := w.rooms[id]
-		lid := layerID(pr.z)
+		lid := pr.layer
 		layerSet[lid] = Layer{ID: lid, Name: layerName(lid), Kind: layerKind(lid)}
 		isFog := fog[id] && !discovered[id]
 		p := Place{
-			ID:         pr.id,
-			Area:       pr.area,
-			AreaName:   pr.areaName,
-			Layer:      lid,
-			X:          float64(pr.x),
-			Y:          float64(pr.y),
-			Z:          pr.z,
-			Biome:      pr.biome,
-			Kind:       pr.kind,
-			Landmark:   pr.landmark && !isFog,
-			Discovered: !isFog,
-			Current:    ch != nil && placeIsCurrent(id, ch.CurrentRoomID),
-			Tags:       pr.tags,
+			ID:            pr.id,
+			Area:          pr.area,
+			AreaName:      pr.areaName,
+			Layer:         lid,
+			X:             float64(pr.x),
+			Y:             float64(pr.y),
+			Z:             pr.z,
+			Biome:         pr.biome,
+			Terrain:       pr.terrain,
+			MapRole:       pr.role,
+			SurfaceRoomID: pr.surfaceID,
+			Town:          pr.town,
+			Kind:          pr.kind,
+			Landmark:      pr.landmark && !isFog,
+			Discovered:    !isFog,
+			Current:       ch != nil && placeIsCurrent(id, ch.CurrentRoomID),
+			Tags:          pr.tags,
 		}
 		if isFog {
 			p.Name = ""
+			p.Terrain = "fog"
 			p.Kind = "uncharted"
 			p.CanTravel = false
 			p.Danger = "uncharted"
 			p.Summary = "Fog of war. Walk closer to chart this ground."
 		} else {
 			p.Name = pr.name
+			p.MapFeatures = pr.mapFeatures
+			p.ArtSeed = pr.artSeed
+			if pr.layer == "lower" {
+				p.UndergroundStyle = pr.undergroundStyle
+			}
+			for _, target := range pr.entrances {
+				if entranceVisible(w, ch, id, target) {
+					p.Entrances = append(p.Entrances, target)
+				}
+			}
 			p.CanTravel = ch != nil && !placeIsCurrent(id, ch.CurrentRoomID)
 			p.Danger = inferDanger(pr.tags, pr.kind)
 			p.Summary = inferSummary(pr.kind, p.Danger)
@@ -162,15 +185,16 @@ func Reveal(w *World, ch *characters.Character) PlayerMap {
 			pts = append(pts, [2]float64{float64(p.x), float64(p.y)})
 		}
 		out.Regions = append(out.Regions, Region{
-			ID:     pr.area + ":" + layerID(pr.z),
+			ID:     pr.area + ":" + pr.layer,
 			Name:   pr.areaName,
-			Layer:  layerID(pr.z),
+			Layer:  pr.layer,
 			Biome:  majorityBiome(w, rids),
 			Hull:   convexHull(pts),
 			Places: rids,
 		})
 	}
 
+	out.Landscape = revealLandscape(w, discovered)
 	return out
 }
 
@@ -276,4 +300,49 @@ func majorityBiome(w *World, ids []string) string {
 		}
 	}
 	return best
+}
+
+// Entrance targets follow the same hidden-exit disclosure contract as paths.
+func entranceVisible(w *World, ch *characters.Character, from, to string) bool {
+	for _, e := range w.edges {
+		if e.from == from && e.to == to && (!e.hidden || ch != nil && ch.HasRevealedExit(from, e.dir)) {
+			return true
+		}
+	}
+	return false
+}
+func revealLandscape(w *World, discovered map[string]bool) []LandCell {
+	totals, known := map[string]int{}, map[string]int{}
+	charted := []*placedRoom{}
+	for id, p := range w.rooms {
+		if p.layer != "overworld" {
+			continue
+		}
+		if p.role != "interior" || p.surfaceID == id {
+			totals[p.area]++
+			if discovered[id] {
+				known[p.area]++
+			}
+		}
+		if discovered[id] {
+			charted = append(charted, p)
+		}
+	}
+	out := make([]LandCell, len(w.landscape))
+	for i, c := range w.landscape {
+		visible := totals[c.area] > 0 && known[c.area] == totals[c.area]
+		if !visible {
+			for _, p := range charted {
+				if p.area == c.area && (c.X-p.x)*(c.X-p.x)+(c.Y-p.y)*(c.Y-p.y) <= 16 {
+					visible = true
+					break
+				}
+			}
+		}
+		out[i] = c
+		if !visible {
+			out[i].Terrain = "fog"
+		}
+	}
+	return out
 }

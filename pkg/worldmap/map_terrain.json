@@ -1,0 +1,219 @@
+{
+  "default": "grassland",
+  "terrains": [
+    "grassland",
+    "forest",
+    "farmland",
+    "city",
+    "castle",
+    "dungeon",
+    "swamp",
+    "mountain",
+    "snow",
+    "desert",
+    "water",
+    "shore",
+    "ruins",
+    "interior"
+  ],
+  "rules": [
+    {
+      "terrain": "snow",
+      "words": [
+        "snow",
+        "snowfield",
+        "glacier",
+        "ice",
+        "tundra",
+        "frozen"
+      ]
+    },
+    {
+      "terrain": "desert",
+      "words": [
+        "desert",
+        "sand",
+        "dunes",
+        "arid",
+        "sandstone"
+      ]
+    },
+    {
+      "terrain": "shore",
+      "words": [
+        "shore",
+        "shoreline",
+        "beach",
+        "coast",
+        "docks",
+        "harbor",
+        "harbour",
+        "riverbank",
+        "bridge"
+      ]
+    },
+    {
+      "terrain": "water",
+      "words": [
+        "water",
+        "underwater",
+        "flooded",
+        "lake",
+        "river",
+        "creek",
+        "pond",
+        "sea",
+        "ocean"
+      ]
+    },
+    {
+      "terrain": "farmland",
+      "words": [
+        "farmland",
+        "farmstead",
+        "farm",
+        "fields",
+        "cropland",
+        "wheat",
+        "vineyard"
+      ]
+    },
+    {
+      "terrain": "castle",
+      "words": [
+        "castle",
+        "keep",
+        "fortress",
+        "battlement",
+        "rampart",
+        "citadel",
+        "watchtower"
+      ]
+    },
+    {
+      "terrain": "ruins",
+      "words": [
+        "ruins",
+        "ruin",
+        "ruined",
+        "graveyard",
+        "cemetery"
+      ]
+    },
+    {
+      "terrain": "dungeon",
+      "words": [
+        "dungeon",
+        "cave",
+        "cavern",
+        "catacombs",
+        "crypt",
+        "tunnel",
+        "mine",
+        "sewer",
+        "cellar"
+      ]
+    },
+    {
+      "terrain": "interior",
+      "words": [
+        "interior",
+        "inn",
+        "tavern",
+        "shop",
+        "library",
+        "workshop",
+        "hall",
+        "bedroom",
+        "guest room",
+        "chamber",
+        "kitchen",
+        "residence",
+        "house",
+        "healer"
+      ]
+    },
+    {
+      "terrain": "swamp",
+      "words": [
+        "swamp",
+        "bog",
+        "marsh",
+        "fen",
+        "mire",
+        "wetland"
+      ]
+    },
+    {
+      "terrain": "forest",
+      "words": [
+        "forest",
+        "woods",
+        "woodland",
+        "grove",
+        "thicket",
+        "orchard",
+        "jungle"
+      ]
+    },
+    {
+      "terrain": "mountain",
+      "words": [
+        "mountain",
+        "mountains",
+        "cliff",
+        "ridge",
+        "crag",
+        "highlands",
+        "plateau",
+        "foothills"
+      ]
+    },
+    {
+      "terrain": "city",
+      "words": [
+        "city",
+        "town",
+        "settlement",
+        "street",
+        "alley",
+        "plaza",
+        "market",
+        "village",
+        "road"
+      ]
+    },
+    {
+      "terrain": "grassland",
+      "words": [
+        "grassland",
+        "meadow",
+        "meadows",
+        "plains",
+        "pasture"
+      ]
+    }
+  ],
+  "areas": {
+    "Z00_catacombs_intro": "dungeon",
+    "Z01_meadows_forest_path": "grassland",
+    "Z02_oldtown": "city",
+    "Z03_gloomfen_marsh": "swamp",
+    "Z04_ashenvale_woods": "forest",
+    "Z05_silverbrook_vale": "grassland",
+    "Z06_ironspine_foothills": "mountain",
+    "Z07_verdant_reach": "forest",
+    "Z08_gearwind_plateau": "mountain",
+    "Z09_thornfield_highlands": "mountain",
+    "Z10_kazgrath": "city",
+    "Z11_aelindor": "forest",
+    "Z12_veridane": "city",
+    "Z19_gloomfen_depths": "dungeon"
+  },
+  "genericTags": {
+    "underground": "dungeon",
+    "indoor": "interior",
+    "outdoor": "grassland"
+  },
+  "notes": "Ordered rules: exact roomType/areaType, specific tags, room name words, generic underground/indoor tags, exact area then area words, description words, legacy biome/kind, outdoor tag, default. Match whole words with underscore/hyphen treated as spaces; grassland is the documented unknown-ground default. Counts track actual fallback separately from classified grassland."
+}

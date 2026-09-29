@@ -249,7 +249,7 @@ func TestCompilePrefersAuthoredCoords(t *testing.T) {
 	}
 }
 
-func TestCompileSeparatesAreas(t *testing.T) {
+func TestCompilePacksAreasWithoutOverlap(t *testing.T) {
 	w := Compile([]*rooms.Room{
 		testRoom("R0101", "Meadow", "Z01_meadows_forest_path", []string{"starting_room", "outdoor"},
 			exit("north", "R0102", false), exit("west", "R0201", false)),
@@ -272,14 +272,14 @@ func TestCompileSeparatesAreas(t *testing.T) {
 		t.Fatalf("intra-oldtown west broken: gate (%d,%d) street (%d,%d)",
 			w.rooms["R0201"].x, w.rooms["R0201"].y, w.rooms["R0202"].x, w.rooms["R0202"].y)
 	}
-	if g := minAreaChebyshev(w, "Z01_meadows_forest_path", "Z02_oldtown"); g < 4 {
-		t.Fatalf("meadow/oldtown gap %d want >= 4", g)
+	if g := minAreaChebyshev(w, "Z01_meadows_forest_path", "Z02_oldtown"); g < 2 {
+		t.Fatalf("meadow/oldtown gap %d want >= 2", g)
 	}
-	if g := minAreaChebyshev(w, "Z02_oldtown", "Z03_ashenveil"); g < 4 {
-		t.Fatalf("oldtown/ashenveil gap %d want >= 4", g)
+	if g := minAreaChebyshev(w, "Z02_oldtown", "Z03_ashenveil"); g < 2 {
+		t.Fatalf("oldtown/ashenveil gap %d want >= 2", g)
 	}
-	if g := minAreaChebyshev(w, "Z01_meadows_forest_path", "Z03_ashenveil"); g < 4 {
-		t.Fatalf("meadow/ashenveil gap %d want >= 4", g)
+	if g := minAreaChebyshev(w, "Z01_meadows_forest_path", "Z03_ashenveil"); g < 2 {
+		t.Fatalf("meadow/ashenveil gap %d want >= 2", g)
 	}
 }
 

@@ -146,7 +146,7 @@ func (e *Engine) CreateCombatantFromNPC(n *npc.NPC) combat.CombatantRef {
 	// Use level as a rough approximation for DEX modifier if not specified
 	dexMod = int(n.Level) / 4
 
-	return combat.CombatantRef{
+	ref := combat.CombatantRef{
 		ID:          n.Entity.ID,
 		Type:        combat.CombatantTypeNPC,
 		Name:        n.GetDisplayName(),
@@ -165,6 +165,11 @@ func (e *Engine) CreateCombatantFromNPC(n *npc.NPC) combat.CombatantRef {
 		DEXMod:      dexMod,
 		CONMod:      int(n.Level) / 4, // Approximation
 	}
+	phases := balance.BossPhases(difficulty)
+	if len(phases) > 0 {
+		ref.BossPhase, ref.BossPhaseLabel, ref.BossPhaseCount = 1, phases[0].Label, len(phases)
+	}
+	return ref
 }
 
 // RollInitiative rolls initiative (1d20 + DEX modifier) for a combatant
@@ -492,8 +497,8 @@ func (e *Engine) CalculateDamage(attacker, target *combat.CombatantRef, critical
 	// Equal levels leave the pre-gap number unchanged.
 	damage = balance.ScaleDamage(attacker.Level, target.Level, damage)
 	damage = balance.ScaleClassDamage(attacker.ClassID, target.ClassID, attacker.Level, target.Level, damage)
-	if attacker.Enraged {
-		damage = balance.ScaleEnrageDamage(damage)
+	if attacker.Type == combat.CombatantTypeNPC {
+		damage = balance.ScaleBossPhaseDamage(damage, attacker.Difficulty, attacker.BossPhase, attacker.Enraged)
 	}
 
 	// Critical hit doubles damage (or uses CriticalHitMultiplier when it is not 2).
@@ -551,6 +556,7 @@ func ResolveAttackRoll(roll, strMod, hitBonus, targetAC int, critChance, baseCri
 
 // UpdateCombatant updates a combatant's data in both the player/enemy list and turn order
 func (e *Engine) UpdateCombatant(instance *combat.CombatInstance, updated *combat.CombatantRef) {
+	e.refreshBossPhase(instance, updated)
 	// Update in players or enemies list
 	for i := range instance.Players {
 		if instance.Players[i].ID == updated.ID {
@@ -764,10 +770,14 @@ type NPCAttackStep struct {
 // StepNPCAttack spends a boss or elite action on a telegraph, or resolves the hit.
 // A stored wind-up counts down and lands when it reaches zero. Enrage skips new wind-ups.
 func (e *Engine) StepNPCAttack(instance *combat.CombatInstance, actorID, targetID string) NPCAttackStep {
+	if instance == nil {
+		return NPCAttackStep{Message: "Invalid combat"}
+	}
 	actor := instance.GetCombatantByID(actorID)
-	if actor == nil || instance == nil {
+	if actor == nil {
 		return NPCAttackStep{Message: "Invalid attacker"}
 	}
+	e.UpdateCombatant(instance, actor)
 	e.refreshEnrage(instance, actor)
 
 	if actor.TelegraphTurns > 0 {
@@ -796,7 +806,7 @@ func (e *Engine) StepNPCAttack(instance *combat.CombatInstance, actorID, targetI
 
 	turns := balance.BossTelegraphTurns(actor.Difficulty, actor.Enraged)
 	if turns > 0 && targetID != "" {
-		label := balance.BossTelegraphLabel()
+		label := balance.BossPhaseTelegraphLabel(actor.Difficulty, actor.BossPhase)
 		actor.TelegraphTurns = turns
 		actor.TelegraphAbility = label
 		e.UpdateCombatant(instance, actor)
@@ -815,8 +825,36 @@ func (e *Engine) StepNPCAttack(instance *combat.CombatInstance, actorID, targetI
 	return NPCAttackStep{Message: result.Message, Attack: result}
 }
 
+// refreshBossPhase runs on every stat update, including skills and status effects.
+// Healing never reverses a phase; lethal hits do not announce a new chapter.
+func (e *Engine) refreshBossPhase(instance *combat.CombatInstance, actor *combat.CombatantRef) {
+	if instance == nil || actor == nil || actor.Type != combat.CombatantTypeNPC || !actor.IsAlive || actor.HasFled || actor.CurrentHP <= 0 || actor.MaxHP <= 0 {
+		return
+	}
+	phases := balance.BossPhases(actor.Difficulty)
+	if len(phases) == 0 {
+		return
+	}
+	actor.BossPhaseCount = len(phases)
+	if actor.BossPhase == 0 {
+		actor.BossPhase, actor.BossPhaseLabel = 1, phases[0].Label
+	}
+	for actor.BossPhase < len(phases) {
+		next := phases[actor.BossPhase]
+		if float64(actor.CurrentHP)/float64(actor.MaxHP) > next.BelowHP {
+			break
+		}
+		actor.BossPhase++
+		actor.BossPhaseLabel = next.Label
+		instance.AddLogEntry(combat.CombatLogEntry{
+			ActorID: actor.ID, ActorName: actor.Name, Action: combat.CombatActionAttack,
+			Result: "phase-enter", Message: fmt.Sprintf("%s enters phase %d: %s!", actor.Name, actor.BossPhase, next.Label),
+		})
+	}
+}
+
 func (e *Engine) refreshEnrage(instance *combat.CombatInstance, actor *combat.CombatantRef) {
-	if e == nil || instance == nil || actor == nil || actor.Type != combat.CombatantTypeNPC {
+	if e == nil || instance == nil || actor == nil || actor.Type != combat.CombatantTypeNPC || !actor.IsAlive || actor.CurrentHP <= 0 {
 		return
 	}
 	if !balance.ShouldEnrage(actor.Difficulty, instance.Round, actor.CurrentHP, actor.MaxHP, actor.Enraged) {
