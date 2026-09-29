@@ -1,4 +1,4 @@
-# Continent map P1/P1b/P1c/P1d: local review
+# Continent map P1/P1b/P1c/P1d/P1e: local review
 
 The in-game atlas uses `pkg/worldmap/map_terrain.json`, embedded at Go build time. The content repository's `tools/build_public_map_data.py` serves the separate public lore map and does not supply room tiles. No public lore/spoiler export was changed.
 
@@ -62,3 +62,7 @@ P1d traces angular walls from quarter-cell courtyard/street footprints, with cor
 Authoring precomposes directional dither masks into the sheet. Runtime uses a cached vector coast clip, shared shore palette tables, a bounded town/road/prop overlay cache and completed offscreen bitmaps; close detail bakes only on first close zoom. The browser report separately measures first scene, changed scene, first close draw and marker-only updates, plus 80-frame median/p95 overview/close/Lower draws. On supported browsers `worldmap-worker.js` builds scenes off the main thread; a bounded signature cache and one running/one queued job keep stale exploration work isolated. Assertions enforce P1b’s 162 ms main-thread bake benchmark and 16.7 ms warm draw budget on this review machine, and verify timers continue firing during worker work. Reports separately disclose worker CPU bake time and elapsed completion time; these are not counted as main-thread blocking. Capability or worker-load failures fall back to the synchronous painter and can take longer to bake. These remain local measurements, not guarantees for all devices.
 
 Lower paints only short aligned known compass tunnels. Longer/misaligned/vertical links remain navigation exits without lines across void; stairs stay as room-owned entrance glyphs. Crypt bones, cellar barrels/wood, sewer channels and rough caves retain their own floors, with dim ambient cluster light. Historical P1/P1b/P1c captures describe their corresponding commits; use the P1d tool with current code.
+
+## P1e quieter roads
+
+Roads are a single batched network beneath terrain relief, trees, buildings and props. Town paving is fully opaque, so the dirt paths do not show through street tiles. Each discovered outdoor exit is included once and thin strokes keep overview junctions clear. Capture the four 1920×1080 overview, Oldtown/Silverbrook zoom, Lower and minimum-zoom views with `tools/capture_worldmap_p1e.cjs`; the local tool waits for fonts, art and worker scenes before saving.

@@ -29,7 +29,7 @@ function paintTown(ctx,sheet,town,roads,native) {
   for(const p of points){mc.beginPath();mc.arc(p.x-x,p.y-y,13,0,Math.PI*2);mc.fill()}
   for(let yy=0;yy<h;yy+=32)for(let xx=0;xx<w;xx+=32)drawMapSprite(pc,sheet,'city',`${town[0].area}:${xx}:${yy}`,xx,yy,32,'rows');
   pc.globalCompositeOperation='destination-in';pc.filter='blur(3px)';pc.drawImage(mask,0,0);pc.filter='none';
-  ctx.globalAlpha=.82;ctx.drawImage(pavement,x,y);ctx.globalAlpha=1;
+  ctx.drawImage(pavement,x,y);
   const walls=town.length>3?townFortifications(town,roads):{loops:[],towers:[],gates:[]};
   for(const loop of walls.loops) {
     ctx.beginPath();loop.forEach((p,i)=>{const at=native(p.x,p.y);if(i)ctx.lineTo(at.x,at.y);else ctx.moveTo(at.x,at.y)});ctx.closePath();
@@ -38,6 +38,24 @@ function paintTown(ctx,sheet,town,roads,native) {
     ctx.setLineDash([3,5]);ctx.strokeStyle='#d6cfac';ctx.lineWidth=1;ctx.stroke();ctx.setLineDash([]);
   }
   return walls;
+}
+
+function paintRoadNetwork(ctx,roads,native,coastPath) {
+  ctx.save();ctx.clip(coastPath);ctx.beginPath();
+  const seen=new Set();
+  for(const {a,b} of roads) {
+    const key=[a.id,b.id].sort().join('|');if(seen.has(key))continue;seen.add(key);
+    const from=native(a.x,a.y),to=native(b.x,b.y),dx=to.x-from.x,dy=to.y-from.y;
+    ctx.moveTo(from.x,from.y);
+    ctx.quadraticCurveTo((from.x+to.x)/2-dy*.06,(from.y+to.y)/2+dx*.06,to.x,to.y);
+  }
+  ctx.lineCap='round';ctx.lineJoin='round';
+  // Each pass strokes the full compound network once. Shared exit junctions
+  // therefore join cleanly without darkening from repeated per-road strokes.
+  ctx.strokeStyle='rgba(37,48,34,.22)';ctx.lineWidth=3;ctx.stroke();
+  ctx.strokeStyle='rgba(128,108,69,.72)';ctx.lineWidth=1.7;ctx.stroke();
+  ctx.strokeStyle='rgba(199,173,117,.28)';ctx.lineWidth=.55;ctx.stroke();
+  ctx.restore();
 }
 
 // Ground and town art are shared by the two LOD scenes. Detailed trees are
@@ -131,6 +149,9 @@ export function continentRaster(atlas,sheet) {
     }
 
   };
+  // Roads sit on the ground. Relief and tree canopies, followed by town
+  // paving and all room-owned structures, are painted over them.
+  paintRoadNetwork(sc,roads,native,coast.path);
   paintDetail(sc,false);
   const bridges=roadWaterCrossings(roads,byCell),townKey=JSON.stringify([artInputs,bounds,bridges]);
   let art=townLayers.get(townKey);
@@ -143,12 +164,6 @@ export function continentRaster(atlas,sheet) {
       fortifications.push({area:town[0].area,...paintTown(ctx,sheet,town,roads,native)});
       const keep=town.some(g=>knownFeatures(g).includes('keep')||g.members.some(p=>p.discovered&&p.terrain==='castle'));
       glyphs.push({x:town.reduce((n,g)=>n+g.x,0)/town.length,y:town.reduce((n,g)=>n+g.y,0)/town.length,roomId:town[0].id,kind:keep?'keep':town.length>3?'town':'village'});
-    }
-    for(const {a,b} of roads) {
-      const from=native(a.x,a.y),to=native(b.x,b.y),dx=to.x-from.x,dy=to.y-from.y;
-      ctx.beginPath();ctx.moveTo(from.x,from.y);ctx.quadraticCurveTo((from.x+to.x)/2-dy*.06,(from.y+to.y)/2+dx*.06,to.x,to.y);
-      ctx.lineCap='round';ctx.strokeStyle='rgba(39,57,35,.28)';ctx.lineWidth=7;ctx.stroke();
-      ctx.strokeStyle='#806c45';ctx.lineWidth=5;ctx.stroke();ctx.strokeStyle='#c7ad75';ctx.lineWidth=3;ctx.stroke();
     }
     for(const b of bridges){const at=native(b.x,b.y);ctx.save();ctx.translate(at.x,at.y);ctx.rotate(b.angle);sprite(ctx,sheet,'bridge',`${b.from}:${b.to}`,-20,-20,40);ctx.restore()}
     const buildings=[],stamps=[],mills=new Set();
@@ -192,7 +207,7 @@ export function continentRaster(atlas,sheet) {
     target.save();target.clip(coast.path);
     for(const c of cells)paintGround(c,true,target);for(const c of fringe.values())paintGround(c,false,target);
     for(const tint of tints){target.fillStyle=tint.color;target.fillRect(tint.x,tint.y,32,32)}
-    target.restore();paintDetail(target,true);target.drawImage(overlay,0,0);
+    target.restore();paintRoadNetwork(target,roads,native,coast.path);paintDetail(target,true);target.drawImage(overlay,0,0);
     nearCanvas=freezeCanvas(nearCanvas);result.closeBakeMs=performance.now()-start;return nearCanvas;
   };
   const result={canvas:freezeCanvas(canvas),closeCanvas,bounds,buildings,ready,model,glyphs,ridges,ambience,bridges,stamps,fortifications,coastDetails,coastMask:coast.mask,coastScale:4,bakeMs:performance.now()-bakeStart};
