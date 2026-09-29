@@ -59,6 +59,12 @@ function mergeAtlas(existing, incoming) {
       ...prev,
       ...place,
       discovered: prev.discovered || place.discovered,
+      terrain: prev.discovered && !place.discovered ? prev.terrain : place.terrain,
+      kind: prev.discovered && !place.discovered ? prev.kind : place.kind,
+      mapFeatures: prev.discovered && !place.discovered ? prev.mapFeatures : place.mapFeatures,
+      artSeed: prev.discovered && !place.discovered ? prev.artSeed : place.artSeed,
+      undergroundStyle: prev.discovered && !place.discovered ? prev.undergroundStyle : place.undergroundStyle,
+      entrances: prev.discovered && !place.discovered ? prev.entrances : place.entrances,
       name: place.name || prev.name,
       landmark: prev.landmark || place.landmark,
     });
@@ -83,6 +89,7 @@ function mergeAtlas(existing, incoming) {
     regionMap.set(region.id, region);
   }
 
+  const groundByCell = new Map((base.landscape || []).map(p => [`${p.x}:${p.y}`, p]));
   const characterId = incoming.characterId || base.characterId;
   const currentRoomId = incoming.currentRoomId || base.currentRoomId;
   const currentLayer = incoming.currentLayer || base.currentLayer;
@@ -116,6 +123,10 @@ function mergeAtlas(existing, incoming) {
     places,
     paths,
     regions: Array.from(regionMap.values()),
+    landscape: (incoming.landscape || base.landscape || []).map(cell => {
+      const previous = groundByCell.get(`${cell.x}:${cell.y}`);
+      return cell.terrain === 'fog' && previous && previous.terrain !== 'fog' ? previous : cell;
+    }),
   };
 }
 
@@ -206,6 +217,9 @@ function normalizeCombatant(raw) {
     threat: raw.threat || raw.Threat || '',
     telegraph: raw.telegraph || raw.Telegraph || '',
     enraged: !!(raw.enraged || raw.Enraged),
+    bossPhase: raw.bossPhase ?? raw.BossPhase ?? 0,
+    bossPhaseLabel: raw.bossPhaseLabel || raw.BossPhaseLabel || '',
+    bossPhaseCount: raw.bossPhaseCount ?? raw.BossPhaseCount ?? 0,
   };
 }
 
@@ -390,13 +404,22 @@ function sameAtlasSnapshot(a, b) {
   if ((a.places || []).length !== (b.places || []).length) return false;
   if ((a.paths || []).length !== (b.paths || []).length) return false;
   if ((a.layers || []).length !== (b.layers || []).length) return false;
-  // Cheap place fingerprint — id/current/discovered/layer/name
+  if ((a.landscape || []).length !== (b.landscape || []).length) return false;
+  for (let i = 0; i < (a.landscape || []).length; i++) {
+    const x = a.landscape[i], y = b.landscape[i];
+    if (!y || x.x !== y.x || x.y !== y.y || x.terrain !== y.terrain) return false;
+  }
+  // Cheap place fingerprint — includes terrain and presentation updates.
   for (let i = 0; i < (a.places || []).length; i++) {
     const p = a.places[i];
     const q = b.places[i];
     if (!p || !q) return false;
     if (p.id !== q.id || !!p.current !== !!q.current || !!p.discovered !== !!q.discovered) return false;
     if ((p.layer || "") !== (q.layer || "") || (p.name || "") !== (q.name || "")) return false;
+    if ((p.terrain || "") !== (q.terrain || "")) return false;
+    if (p.x !== q.x || p.y !== q.y || p.z !== q.z || p.mapRole !== q.mapRole || p.surfaceRoomId !== q.surfaceRoomId || p.town !== q.town) return false;
+    if (p.artSeed !== q.artSeed || p.undergroundStyle !== q.undergroundStyle || JSON.stringify(p.mapFeatures || []) !== JSON.stringify(q.mapFeatures || [])) return false;
+    if (JSON.stringify(p.entrances || []) !== JSON.stringify(q.entrances || [])) return false;
   }
   return true;
 }
@@ -445,6 +468,7 @@ function createStore() {
     combatSkillCooldowns: {}, // { skillId: roundsRemaining }
     combatNextActionAtMs: 0,
     combatDecisionDeadlineMs: 0,
+    combatPhaseEnter: null,
     combatLog: [], // thin optional log [{id,text}]
     combatOutcome: null, // victory | defeat | fled | timeout
     combatFx: null, // { fxId, at, targetId, actorId, damage, heal, result, action }
@@ -907,6 +931,7 @@ function createStore() {
         if (state.characterStats) {
           state.characterStats = { ...state.characterStats, inCombat: true, resting: false };
         }
+        state.combatPhaseEnter = null;
         state.combatOutcome = null;
         state.combatEndMessage = "";
         state.combatRewards = null;
@@ -1001,6 +1026,10 @@ function createStore() {
           }
         }
 
+        if (msg?.action === 'phase-enter') {
+          state.combatPhaseEnter = { actorId: msg.actorId, text: msg.message || '', at: Date.now() };
+        }
+
         // Always pulse FX when structured action arrives (fxId preferred; result fallback).
         if (msg?.fxId || msg?.result || msg?.damage || msg?.heal) {
           state.combatFx = {
@@ -1055,6 +1084,7 @@ function createStore() {
         update((state) => {
           if (state.combatPhase !== "ending") return state;
           state.combatPhase = "idle";
+          state.combatPhaseEnter = null;
           state.combatOutcome = null;
           state.combatEndMessage = "";
           state.combatRewards = null;
@@ -1075,6 +1105,7 @@ function createStore() {
       update((state) => {
         state.inCombat = false;
         state.combatPhase = "idle";
+        state.combatPhaseEnter = null;
         state.combatOutcome = null;
         state.combatEndMessage = "";
         state.combatRewards = null;
@@ -1095,6 +1126,7 @@ function createStore() {
       update((state) => {
         state.inCombat = false;
         state.combatPhase = "idle";
+        state.combatPhaseEnter = null;
         state.combatOutcome = null;
         state.combatEndMessage = "";
         state.combatRewards = null;

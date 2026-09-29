@@ -28,6 +28,7 @@ out/
 *.tsbuildinfo
 pkg/webui/dist/index.html
 public/mud-client/public/bundle.js.map
+public/mud-client/public/worldmap-worker.js.map
 
 # Vite/bundler cache
 .vite/

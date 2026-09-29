@@ -79,6 +79,9 @@ type CombatantRef struct {
 	// TelegraphAbility is the wind-up name while TelegraphTurns is still counting down.
 	TelegraphAbility string `json:"telegraphAbility,omitempty"`
 	TelegraphTurns   int    `json:"telegraphTurns,omitempty"`
+	BossPhase        int    `json:"bossPhase,omitempty"` // one-based; never moves backward
+	BossPhaseLabel   string `json:"bossPhaseLabel,omitempty"`
+	BossPhaseCount   int    `json:"bossPhaseCount,omitempty"`
 	Enraged          bool   `json:"enraged,omitempty"`
 	MaxHP            int32  `json:"maxHp"`
 	CurrentHP        int32  `json:"currentHp"`

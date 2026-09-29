@@ -1,6 +1,7 @@
 <script>
   import { afterUpdate, onDestroy, tick } from 'svelte';
   import { combatStageFocus, isTextEntry, prefersReducedMotion, rarityClass } from '../keyboardShortcuts.js';
+  import { phaseCaption, phaseBanner } from '../bossPhases.js';
   import { battleDockOpen } from '../uiChrome.js';
   import { enemySilhouette, playerSilhouette, portraitSrc } from '../portraitSrc.js';
   import {
@@ -47,6 +48,7 @@
   $: visible = phase === 'active' || phase === 'ending';
   $: if (!visible) logExpanded = false;
   $: enemies = $store.combatEnemies || [];
+  $: phaseNotice = phaseBanner($store.combatPhaseEnter, nowMs, visible);
   $: windupEnemy = enemies.find((e) => e && e.telegraph && (e.hp ?? 0) > 0);
   $: windupText = windupEnemy
     ? `${windupEnemy.name} is winding up ${windupEnemy.telegraph}!`
@@ -225,7 +227,7 @@
   $: {
     let nextParts = null;
     let nextKey = '';
-    if (fx && fx.at) {
+    if (fx && fx.at && fx.action !== 'phase-enter') {
       nextKey = `fx-${fx.at}`;
       nextParts = formatFxBannerParts(fx);
     }
@@ -666,6 +668,9 @@
     data-count={enemyCount}
     aria-label="Enemies"
   >
+    {#if phaseNotice}
+      <div class="phase-banner" role="status">{phaseNotice}</div>
+    {/if}
     {#if windupText}
       <div class="telegraph-banner" role="status">{windupText}</div>
     {/if}
@@ -704,6 +709,9 @@
             class:crit-flash={tgt && fxIsCrit && !fxIsCrush}
             class:crush-flash={tgt && fxIsCrush}
           >{#if enemy.threat === 'skull'}<span class="skull-mark" title="Skull" aria-hidden="true">☠</span>{/if}{enemy.name}{#if enemy.enraged}<span class="enrage-badge">Enraged</span>{/if}</div>
+          {#if enemy.bossPhase}
+            <div class="boss-phase-label" aria-label="Boss phase">{phaseCaption(enemy)}</div>
+          {/if}
           <div class="hp-row">
             <span class="hp-label">HP</span>
             <div class="hp-track">
@@ -1503,6 +1511,29 @@
     text-transform: uppercase;
   }
 
+  .boss-phase-label {
+    color: #fde68a;
+    font-size: 0.78rem;
+    text-align: center;
+    margin: 0.25rem 0;
+    letter-spacing: 0.04em;
+  }
+  .phase-banner {
+    flex: 1 0 100%;
+    max-width: 100%;
+    padding: 0.6rem 0.9rem;
+    border: 2px solid #e8c878;
+    border-radius: 6px;
+    background: rgba(30, 20, 8, 0.96);
+    color: #fff1bd;
+    font-family: var(--font-display, 'Cinzel', serif);
+    text-align: center;
+    animation: phaseArrival 400ms ease-out;
+  }
+  @keyframes phaseArrival {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
   .telegraph-banner {
     flex: 1 0 100%;
     z-index: 6;
@@ -2900,6 +2931,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
+    .phase-banner { animation: none; }
     .ally-card.just-joined, .ally-card.ally-hit, .ally-card.ally-crit { animation: none; }
     .fx-float,
     .fx-slash,

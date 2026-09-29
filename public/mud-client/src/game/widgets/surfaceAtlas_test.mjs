@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import {surfaceGroups,groupForRoom,primaryGroupPlace,interiorChoices,outdoorRoads} from './surfaceAtlas.js';
+import {landscapeModel} from './continentRenderer.js';
+const street={id:'street',name:'Gate',x:0,y:0,layer:'overworld',mapRole:'surface',area:'town',town:true,discovered:true};
+const inn={...street,id:'inn',name:'Inn',mapRole:'interior',surfaceRoomId:'street'};
+const guest={...inn,id:'guest',name:'Guest room'};
+const fog={...inn,id:'secret',name:'',discovered:false,terrain:'fog'};
+const field={...street,id:'field',x:2,area:'field',town:false};
+const cave={...street,id:'cave',layer:'lower',mapRole:'underground'};
+const places=[street,inn,guest,fog,field,cave];
+const groups=surfaceGroups(places);
+assert.equal(groups.length,2,'interiors never become separate overworld tiles');
+assert.equal(groupForRoom(groups,'guest~player').id,'street','instance marker remains on its exterior anchor');
+assert.deepEqual(interiorChoices(places,street).map(p=>p.id),['guest','inn'],'town list includes only charted interiors');
+assert.equal(surfaceGroups(places,'lower')[0].id,'cave');
+const uncharted=surfaceGroups([{...street,discovered:false,name:''},inn]);
+assert.equal(primaryGroupPlace(uncharted[0],'inn').id,'inn','known interior stays selectable when its street is fog');
+assert.equal(primaryGroupPlace(uncharted[0],'inn').name,'Inn');
+const paths=[{from:'street',to:'field',dir:'east',kind:'trail'},{from:'field',to:'street',dir:'west',kind:'trail'},
+ {from:'street',to:'inn',dir:'inside',kind:'passage'},{from:'street',to:'cave',dir:'down',kind:'stair'}];
+assert.equal(outdoorRoads(places,paths).length,1,'roads deduplicate outdoor exits and exclude interiors/stairs');
+for(const change of [{hidden:true},{kind:'passage'},{dir:'portal'}])assert.equal(outdoorRoads(places,[{...paths[0],...change}]).length,0);
+assert.equal(outdoorRoads([{...street,discovered:false},field],paths).length,0,'fog endpoints never draw roads');
+const model=landscapeModel({places,paths,landscape:[{x:-3,y:-4,terrain:'forest'},{x:4,y:8,terrain:'grassland'}]});
+assert.deepEqual(model.bounds,{minX:-5,maxX:6,minY:-6,maxY:10});
+assert.equal(model.groups.length,2,'decorative cells do not create selection groups');
+console.log('surfaceAtlas: grouping, interior/instance selection, fog, real roads and decorative ground OK');

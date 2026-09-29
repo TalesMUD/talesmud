@@ -133,6 +133,19 @@ boss_mechanics:
   enrage_damage: 1.20
   enrage_tiers: ["boss"]
   enrage_skips_telegraph: true
+  # Bosses advance permanently through descending HP bands, including on skills/DoT.
+  # Omit phases to disable. Optional damage_dealt / enrage_damage default to inherited.
+  # A6 enrage still triggers at round 16 or 30% HP; it skips all phase wind-ups.
+  phase_tiers: ["boss"]
+  phases:
+    - label: "Opening"
+      below_hp: 1.0
+    - label: "Escalation"
+      below_hp: 0.66
+      telegraph_label: "Shattering Blow"
+    - label: "Last Stand"
+      below_hp: 0.33
+      telegraph_label: "Desperate Crush"
 
 # Notes:
 # - Tuned so strength difference drives duration (trash fast, bosses long but killable).

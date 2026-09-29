@@ -1,0 +1,50 @@
+{
+  "sources": {
+    "local": {
+      "counts": {
+        "grassland": 6,
+        "forest": 21,
+        "farmland": 2,
+        "city": 11,
+        "castle": 1,
+        "dungeon": 62,
+        "swamp": 13,
+        "mountain": 0,
+        "snow": 0,
+        "desert": 0,
+        "water": 7,
+        "shore": 2,
+        "ruins": 10,
+        "interior": 26
+      },
+      "total": 161,
+      "defaultFallback": 0,
+      "fallbackIds": [],
+      "roomSnapshotSha256": "51f623d7cf819a0eb65b540acc37cca3e1d3196dc23a4be9c0fccf86fc8b7863"
+    },
+    "content": {
+      "counts": {
+        "grassland": 7,
+        "forest": 47,
+        "farmland": 2,
+        "city": 42,
+        "castle": 4,
+        "dungeon": 101,
+        "swamp": 13,
+        "mountain": 41,
+        "snow": 0,
+        "desert": 0,
+        "water": 7,
+        "shore": 8,
+        "ruins": 19,
+        "interior": 60
+      },
+      "total": 351,
+      "defaultFallback": 0,
+      "fallbackIds": [],
+      "roomSnapshotSha256": "f0425e945470a24e5bd48b520bf7484d4e0bc1a30293209811983a68f0d4bf40"
+    }
+  },
+  "note": "Local SQLite snapshot and canonical content YAML export, both read-only. Deployed VPS database not queried in this no-VPS pass.",
+  "mappingSha256": "33d125a465267b6d2b3d60604c6020e782ed00030784a533b25ce77228c73822"
+}
