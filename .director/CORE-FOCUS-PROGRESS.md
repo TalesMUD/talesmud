@@ -392,3 +392,6 @@ Local review only; production remains P1g (`?v=worldmap-p1g`, sheet `39069d368e7
 
 Alpha channels match P1g byte-for-byte. Screenshots: `.director/ux-audit/after/worldmap-p1h-{a,b}-{maxzoom,oldtown,overview}-1920x1080.png` plus terrain-review plates. Comparison: `.director/WORLDMAP-P1H-PROTOTYPE.md`. Capture helper: `tools/capture_worldmap_p1h.cjs`. No VPS/Door deploy; bake timings not re-measured.
 
+## WORLDMAP P1i — Full sheet craft prototype (2026-09-29)
+
+Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated blend rows. Dusk graded ground and Lower floors now match material-rich timber, stone, roofs, trees and town props; P1h-C's silhouette ink pass is absent. Prototype atlas: `assets/map-tiles/prototypes/p1i/` in content, 551,122 bytes (+79,392 B vs P1g), version `60a66e52904c`. Three 1920×1080 captures and the review plate are `.director/ux-audit/after/worldmap-p1i-*`; judgment, checks and residuals are in `.director/WORLDMAP-P1I-PROTOTYPE.md`. Production P1g sheet and client remain untouched; no deploy.
