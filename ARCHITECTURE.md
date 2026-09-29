@@ -1258,6 +1258,10 @@ type MessageResponse struct {
 
 `combatEnd` keeps `outcome` and `message`. Optional `rewards`, `loot`, `levelUp`, and `defeat` objects ride on the same message. `combatAction` may include `ability` when a named blow lands. Clients that only read `message` still work.
 
+### Boss phase data flow
+
+`BossMechanicsConfig.Phases` validates descending HP bands with an opening threshold of 1.0. `phase_tiers` defaults to `boss`; an absent `phases` list disables phases. `CombatantRef` holds encounter-local `BossPhase`, `BossPhaseLabel`, and `BossPhaseCount`, separately from the combat instance's turn-pacing `Phase`. Every engine `UpdateCombatant` checks live NPC HP and records monotonic `phase-enter` log entries, including skill and DoT changes. The controller publishes those entries as structured combat actions at resolution boundaries; start/join/action `CombatantView` snapshots include `bossPhase`, `bossPhaseLabel`, and `bossPhaseCount`. The play store preserves the snapshots and retains a short-lived phase notice independently of hit FX. BattleStage renders the notice and persistent labels without changing the layout focus or party contracts. Configuration optionally replaces telegraph labels and enrage multipliers or scales outgoing damage; existing global enrage timing and wind-up cancellation still apply.
+
 ## Frontend Architecture
 
 The play client observes `combatPhase` in `Game.svelte` and calls `LayoutStore.syncCombatFocus`: active starts the existing BattleStage cover, ending retains it, and idle restores prior focus. The cover uses `focusId`/`focusSnapshot` for normal-layout persistence and a transient `combatFocusReturn` for prior manual focus; it does not change grid geometry or remount terminals. The stage keyboard-focus action guards text entry and restores the prior DOM control on removal.
@@ -1683,7 +1687,3 @@ Event types include:
 - Quest events: `quest.start`, `quest.complete`, `quest.progress`
 
 See [SCRIPTING.md](SCRIPTING.md) for full documentation.
-
-### Boss phase data flow
-
-`BossMechanicsConfig.Phases` validates descending HP bands with an opening threshold of 1.0. `phase_tiers` defaults to `boss`; an absent list disables phases. `CombatantRef` holds encounter-local `BossPhase`, `BossPhaseLabel`, and `BossPhaseCount`, separately from the combat instance's turn-pacing `Phase`. Every engine `UpdateCombatant` checks live NPC HP and records monotonic `phase-enter` log entries, including skill and DoT changes. The controller publishes those entries as structured combat actions at resolution boundaries; start/join/action `CombatantView` snapshots include `bossPhase`, `bossPhaseLabel`, and `bossPhaseCount`. The play store preserves the snapshots and retains a short-lived phase notice independently of hit FX. BattleStage renders the notice and persistent labels without changing the layout focus or party contracts. Configuration optionally replaces telegraph labels and enrage multipliers or scales outgoing damage; existing global enrage timing and wind-up cancellation still apply.
