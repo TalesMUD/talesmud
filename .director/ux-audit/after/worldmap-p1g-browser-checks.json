@@ -1,0 +1,418 @@
+{
+  "manifest": {
+    "tileSize": 48,
+    "variants": 6,
+    "rows": {
+      "grassland": 0,
+      "forest": 1,
+      "farmland": 2,
+      "city": 3,
+      "castle": 4,
+      "dungeon": 5,
+      "swamp": 6,
+      "mountain": 7,
+      "snow": 8,
+      "desert": 9,
+      "water": 10,
+      "shore": 11,
+      "ruins": 12,
+      "interior": 13,
+      "fog": 14,
+      "sea": 15
+    },
+    "decorations": {
+      "roof": 16,
+      "keep": 17,
+      "cave": 18,
+      "forge": 19,
+      "shrine": 20,
+      "tavern": 21,
+      "shop": 22,
+      "farm": 23,
+      "tower": 24,
+      "ruins": 25,
+      "graveyard": 26,
+      "dock": 27,
+      "mine": 28,
+      "magic": 29,
+      "ridge": 30,
+      "canopy": 31,
+      "town": 32,
+      "village": 33,
+      "gatehouse": 34,
+      "stairs": 35,
+      "torch": 36,
+      "reeds": 37,
+      "stump": 38,
+      "flowers": 39,
+      "bridge": 40,
+      "pine": 41,
+      "oak": 42,
+      "deadTree": 43,
+      "hill": 44,
+      "mesa": 45,
+      "outcrop": 46,
+      "cliff": 47,
+      "well": 48,
+      "cart": 49,
+      "fence": 50,
+      "windmill": 51,
+      "lantern": 52,
+      "barrel": 53,
+      "bones": 54,
+      "offshore": 55
+    },
+    "blends": {
+      "grassland": {
+        "-1:0": 60,
+        "1:0": 61,
+        "0:-1": 62,
+        "0:1": 63,
+        "-1:-1": 64,
+        "1:-1": 65,
+        "-1:1": 66,
+        "1:1": 67
+      },
+      "forest": {
+        "-1:0": 68,
+        "1:0": 69,
+        "0:-1": 70,
+        "0:1": 71,
+        "-1:-1": 72,
+        "1:-1": 73,
+        "-1:1": 74,
+        "1:1": 75
+      },
+      "farmland": {
+        "-1:0": 76,
+        "1:0": 77,
+        "0:-1": 78,
+        "0:1": 79,
+        "-1:-1": 80,
+        "1:-1": 81,
+        "-1:1": 82,
+        "1:1": 83
+      },
+      "city": {
+        "-1:0": 84,
+        "1:0": 85,
+        "0:-1": 86,
+        "0:1": 87,
+        "-1:-1": 88,
+        "1:-1": 89,
+        "-1:1": 90,
+        "1:1": 91
+      },
+      "castle": {
+        "-1:0": 92,
+        "1:0": 93,
+        "0:-1": 94,
+        "0:1": 95,
+        "-1:-1": 96,
+        "1:-1": 97,
+        "-1:1": 98,
+        "1:1": 99
+      },
+      "dungeon": {
+        "-1:0": 100,
+        "1:0": 101,
+        "0:-1": 102,
+        "0:1": 103,
+        "-1:-1": 104,
+        "1:-1": 105,
+        "-1:1": 106,
+        "1:1": 107
+      },
+      "swamp": {
+        "-1:0": 108,
+        "1:0": 109,
+        "0:-1": 110,
+        "0:1": 111,
+        "-1:-1": 112,
+        "1:-1": 113,
+        "-1:1": 114,
+        "1:1": 115
+      },
+      "mountain": {
+        "-1:0": 116,
+        "1:0": 117,
+        "0:-1": 118,
+        "0:1": 119,
+        "-1:-1": 120,
+        "1:-1": 121,
+        "-1:1": 122,
+        "1:1": 123
+      },
+      "snow": {
+        "-1:0": 124,
+        "1:0": 125,
+        "0:-1": 126,
+        "0:1": 127,
+        "-1:-1": 128,
+        "1:-1": 129,
+        "-1:1": 130,
+        "1:1": 131
+      },
+      "desert": {
+        "-1:0": 132,
+        "1:0": 133,
+        "0:-1": 134,
+        "0:1": 135,
+        "-1:-1": 136,
+        "1:-1": 137,
+        "-1:1": 138,
+        "1:1": 139
+      },
+      "water": {
+        "-1:0": 140,
+        "1:0": 141,
+        "0:-1": 142,
+        "0:1": 143,
+        "-1:-1": 144,
+        "1:-1": 145,
+        "-1:1": 146,
+        "1:1": 147
+      },
+      "shore": {
+        "-1:0": 148,
+        "1:0": 149,
+        "0:-1": 150,
+        "0:1": 151,
+        "-1:-1": 152,
+        "1:-1": 153,
+        "-1:1": 154,
+        "1:1": 155
+      },
+      "ruins": {
+        "-1:0": 156,
+        "1:0": 157,
+        "0:-1": 158,
+        "0:1": 159,
+        "-1:-1": 160,
+        "1:-1": 161,
+        "-1:1": 162,
+        "1:1": 163
+      },
+      "interior": {
+        "-1:0": 164,
+        "1:0": 165,
+        "0:-1": 166,
+        "0:1": 167,
+        "-1:-1": 168,
+        "1:-1": 169,
+        "-1:1": 170,
+        "1:1": 171
+      },
+      "fog": {
+        "-1:0": 172,
+        "1:0": 173,
+        "0:-1": 174,
+        "0:1": 175,
+        "-1:-1": 176,
+        "1:-1": 177,
+        "-1:1": 178,
+        "1:1": 179
+      },
+      "sea": {
+        "-1:0": 180,
+        "1:0": 181,
+        "0:-1": 182,
+        "0:1": 183,
+        "-1:-1": 184,
+        "1:-1": 185,
+        "-1:1": 186,
+        "1:1": 187
+      }
+    },
+    "underground": {
+      "cave": 56,
+      "crypt": 57,
+      "cellar": 58,
+      "sewer": 59
+    },
+    "colors": {
+      "grassland": "#649c48",
+      "forest": "#48743d",
+      "farmland": "#917747",
+      "city": "#a89d7c",
+      "castle": "#889392",
+      "dungeon": "#5a6066",
+      "swamp": "#5c744e",
+      "mountain": "#747f69",
+      "snow": "#b9d1ce",
+      "desert": "#c6a164",
+      "water": "#367a92",
+      "shore": "#d4ba7f",
+      "ruins": "#708357",
+      "interior": "#97734d",
+      "fog": "#746a51",
+      "sea": "#173947"
+    },
+    "default": "grassland",
+    "version": "39069d368e7e"
+  },
+  "performance": {
+    "rooms": 351,
+    "cells": 1448,
+    "heartbeats": 48,
+    "firstWorkerBakeMs": 331.40000009536743,
+    "firstMainMs": 17.200000286102295,
+    "changedWorkerBakeMs": 262.30000019073486,
+    "changedMainMs": 29.30000066757202,
+    "changedElapsedMs": 295.7000002861023,
+    "closeWorkerBakeMs": 370.7999997138977,
+    "closeMainMs": 21.09999990463257,
+    "closeElapsedMs": 407.09999990463257,
+    "markerOnlyMs": 6.599999904632568,
+    "overview": {
+      "frames": 80,
+      "medianMs": 2.3000001907348633,
+      "p95Ms": 3.4000000953674316,
+      "maxMs": 3.9000000953674316
+    },
+    "maximum": {
+      "frames": 80,
+      "medianMs": 3,
+      "p95Ms": 3.9000000953674316,
+      "maxMs": 4.399999618530273
+    },
+    "lower": {
+      "frames": 80,
+      "medianMs": 0.6999998092651367,
+      "p95Ms": 1.4000000953674316,
+      "maxMs": 1.5999999046325684
+    }
+  },
+  "baselinePerformance": {
+    "rooms": 351,
+    "cells": 1448,
+    "heartbeats": 50,
+    "firstWorkerBakeMs": 267.09999990463257,
+    "firstMainMs": 25.399999618530273,
+    "changedWorkerBakeMs": 255.40000009536743,
+    "changedMainMs": 29.799999237060547,
+    "changedElapsedMs": 281,
+    "closeWorkerBakeMs": 203.09999990463257,
+    "closeMainMs": 11.300000190734863,
+    "closeElapsedMs": 224.59999990463257,
+    "markerOnlyMs": 4,
+    "overview": {
+      "frames": 80,
+      "medianMs": 2.1999998092651367,
+      "p95Ms": 3.0999999046325684,
+      "maxMs": 5
+    },
+    "maximum": {
+      "frames": 80,
+      "medianMs": 1.8000001907348633,
+      "p95Ms": 2.3000001907348633,
+      "maxMs": 2.8000001907348633
+    },
+    "lower": {
+      "frames": 80,
+      "medianMs": 0.6000003814697266,
+      "p95Ms": 1.5,
+      "maxMs": 1.700000286102295
+    }
+  },
+  "polish": {
+    "cellSize": 32,
+    "closeCellSize": 48,
+    "lowerCellSize": 48,
+    "overviewRaster": {
+      "width": 1504,
+      "height": 2048
+    },
+    "closeRaster": {
+      "width": 2256,
+      "height": 3072
+    },
+    "markerReusesScene": true,
+    "clippedRoomCenters": [],
+    "bridges": 2,
+    "lookout": [
+      {
+        "roomId": "R0104",
+        "kind": "tower",
+        "x": -1,
+        "y": 7.55
+      }
+    ],
+    "features": {
+      "ruins": 18,
+      "flowers": 2,
+      "reeds": 7,
+      "cave": 12,
+      "tower": 41,
+      "tavern": 15,
+      "shrine": 4,
+      "shop": 16,
+      "forge": 12,
+      "cart": 6,
+      "roof": 55,
+      "lantern": 12,
+      "dock": 6,
+      "well": 6,
+      "magic": 6,
+      "stump": 3,
+      "keep": 15,
+      "farm": 7,
+      "windmill": 2,
+      "fence": 7,
+      "graveyard": 1,
+      "outcrop": 12,
+      "mine": 1,
+      "mesa": 5,
+      "gatehouse": 7
+    }
+  },
+  "source": "Local read-only production-overlay preview; fonts, art and worker scenes settled before screenshots.",
+  "viewport": {
+    "width": 1920,
+    "height": 1080
+  },
+  "overview": {
+    "tileStep": 9.9815625,
+    "smoothing": false
+  },
+  "maximum": {
+    "tileStep": 99.81562500000001,
+    "smoothing": false
+  },
+  "oldMaximum": 49.907812500000006,
+  "maxZoomRatio": 2,
+  "recenterMaximum": {
+    "tileStep": 220,
+    "smoothing": false
+  },
+  "minimum": {
+    "tileStep": 9.9815625,
+    "smoothing": false
+  },
+  "pinchMaximum": {
+    "tileStep": 99.81562500000001,
+    "smoothing": false
+  },
+  "pinchMinimum": {
+    "tileStep": 9.9815625,
+    "smoothing": false
+  },
+  "workers": [
+    {
+      "url": "http://127.0.0.1:8144/worldmap-worker.js?v=worldmap-p1g-39069d368e7e",
+      "status": 200
+    }
+  ],
+  "sheets": [
+    {
+      "url": "http://127.0.0.1:8144/api/map-tiles/terrain-sheet.png?v=39069d368e7e",
+      "status": 200
+    }
+  ],
+  "errors": [],
+  "screenshots": [
+    "worldmap-p1g-overview-1920x1080.png",
+    "worldmap-p1g-maxzoom-1920x1080.png",
+    "worldmap-p1g-oldtown-1920x1080.png"
+  ]
+}

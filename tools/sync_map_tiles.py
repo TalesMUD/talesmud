@@ -23,12 +23,12 @@ blend_start=len(expected)+len(expected_decorations)+len(expected_underground)
 expected_blends={k:{f'{dx}:{dy}':blend_start+i*8+j for j,(dx,dy) in enumerate(directions)} for i,k in enumerate(expected)}
 if meta.get('blends')!=expected_blends:
     raise SystemExit('Dither overlay rows differ: regenerate the sheet')
-if meta.get('decorations') != expected_decorations or meta.get('underground') != expected_underground or meta.get('tileSize') != 32 or meta.get('variants') != 6:
+if meta.get('decorations') != expected_decorations or meta.get('underground') != expected_underground or meta.get('tileSize') not in (32, 48, 64) or meta.get('variants') != 6:
     raise SystemExit('Art rows or sprite dimensions differ: regenerate the sheet')
 if set(meta.get('colors', {})) != set(expected):
     raise SystemExit('Fallback terrain colors differ: regenerate the metadata')
 sheet = (a.assets/'terrain-sheet.png').read_bytes()
-if sheet[:8] != b'\x89PNG\r\n\x1a\n' or struct.unpack('>II', sheet[16:24]) != (192, (blend_start+len(expected)*8)*32):
+if sheet[:8] != b'\x89PNG\r\n\x1a\n' or struct.unpack('>II', sheet[16:24]) != (meta['variants']*meta['tileSize'], (blend_start+len(expected)*8)*meta['tileSize']):
     raise SystemExit('PNG dimensions differ from the terrain/decoration manifest')
 if meta['version'] != hashlib.sha256(sheet).hexdigest()[:12]:
     raise SystemExit('Sheet content hash differs: regenerate the metadata')

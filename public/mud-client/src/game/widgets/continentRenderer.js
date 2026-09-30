@@ -1,9 +1,9 @@
 import { TERRAIN_SHEET } from './terrainSheet.js';
 import { surfaceGroups, outdoorRoads } from './surfaceAtlas.js';
 import { smoothCoast } from './coastline.js';
-import { hash, makeCanvas, freezeCanvas, sheetReady, drawMapSprite, knownFeatures, roofKind, roadWaterCrossings } from './mapArt.js';
+import { hash, makeCanvas, makeMapCanvas, MAP_RASTER_SIZE, freezeCanvas, sheetReady, drawMapSprite, knownFeatures, roofKind, roadWaterCrossings } from './mapArt.js';
 import { townFortifications, mountainDepth, reliefAt, forestSpecies } from './mapDetails.js';
-export const LAND_CELL_SIZE = 32;
+export const LAND_CELL_SIZE = MAP_RASTER_SIZE;
 const rasterCache = new WeakMap(), recentRasters = new Map(), townLayers = new Map();
 const directions = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[1,-1],[-1,1],[1,1]];
 const sprite=(ctx,sheet,key,seed,x,y,size)=>drawMapSprite(ctx,sheet,key,seed,x,y,size);
@@ -20,16 +20,16 @@ function paintTown(ctx,sheet,town,roads,native) {
   const points=town.map(p=>native(p.x,p.y)),ids=new Set(town.map(p=>p.id));
   const x=Math.floor(Math.min(...points.map(p=>p.x))-32),y=Math.floor(Math.min(...points.map(p=>p.y))-32);
   const w=Math.ceil(Math.max(...points.map(p=>p.x))-x+32),h=Math.ceil(Math.max(...points.map(p=>p.y))-y+32);
-  const pavement=makeCanvas(w,h),pc=pavement.getContext('2d');
-  const mask=makeCanvas(w,h),mc=mask.getContext('2d');
+  const pavement=makeMapCanvas(w,h),pc=pavement.getContext('2d');
+  const mask=makeMapCanvas(w,h),mc=mask.getContext('2d');
   mc.strokeStyle=mc.fillStyle='#fff';mc.lineCap=mc.lineJoin='round';mc.lineWidth=19;
   for(const {a,b} of roads.filter(({a,b})=>ids.has(a.id)&&ids.has(b.id))) {
     const p=native(a.x,a.y),q=native(b.x,b.y);mc.beginPath();mc.moveTo(p.x-x,p.y-y);mc.lineTo(q.x-x,q.y-y);mc.stroke();
   }
   for(const p of points){mc.beginPath();mc.arc(p.x-x,p.y-y,13,0,Math.PI*2);mc.fill()}
   for(let yy=0;yy<h;yy+=32)for(let xx=0;xx<w;xx+=32)drawMapSprite(pc,sheet,'city',`${town[0].area}:${xx}:${yy}`,xx,yy,32,'rows');
-  pc.globalCompositeOperation='destination-in';pc.filter='blur(3px)';pc.drawImage(mask,0,0);pc.filter='none';
-  ctx.drawImage(pavement,x,y);
+  pc.globalCompositeOperation='destination-in';pc.filter='blur(2px)';pc.drawImage(mask,0,0,w,h);pc.filter='none';
+  ctx.drawImage(pavement,x,y,w,h);
   const walls=town.length>3?townFortifications(town,roads):{loops:[],towers:[],gates:[]};
   for(const loop of walls.loops) {
     ctx.beginPath();loop.forEach((p,i)=>{const at=native(p.x,p.y);if(i)ctx.lineTo(at.x,at.y);else ctx.moveTo(at.x,at.y)});ctx.closePath();
@@ -74,6 +74,7 @@ export function continentRaster(atlas,sheet) {
     const r=recentRasters.get(signature);recentRasters.delete(signature);recentRasters.set(signature,r);rasterCache.set(atlas,r);return r;
   }
   const w=(bounds.maxX-bounds.minX+1)*32,h=(bounds.maxY-bounds.minY+1)*32;
+  // Keep the distant LOD compact; close detail retains every native sprite pixel.
   const canvas=makeCanvas(w,h),sc=canvas.getContext('2d');
   const native=(x,y)=>({x:(x-bounds.minX+.5)*32,y:(y-bounds.minY+.5)*32});
   const coast=smoothCoast(model),ridges=[],ambience=[],coastDetails=[],tints=[];
@@ -84,7 +85,7 @@ export function continentRaster(atlas,sheet) {
   }
   const areas=[...areaPoints.values()].map(a=>({...a,x:a.x/a.n,y:a.y/a.n}));
   const nearestArea=c=>areas.reduce((best,a)=>!best||Math.hypot(c.x-a.x,c.y-a.y)<Math.hypot(c.x-best.x,c.y-best.y)?a:best,null)?.area||'';
-  sc.imageSmoothingEnabled=true;sc.drawImage(coast.bands,0,0,w,h);
+  sc.imageSmoothingEnabled=false;sc.drawImage(coast.bands,0,0,w,h);
   const paintGround=(c,blend=true,output=sc)=>{
     if(coast.tileKinds.get(`${c.x}:${c.y}`)==='empty')return;
     const x=(c.x-bounds.minX)*32,y=(c.y-bounds.minY)*32;
@@ -92,7 +93,7 @@ export function continentRaster(atlas,sheet) {
     if(blend&&c.terrain!=='fog'&&ready)for(const [dx,dy] of directions) {
       const n=byCell.get(`${c.x+dx}:${c.y+dy}`);if(!n||n.terrain===c.terrain)continue;
       const row=TERRAIN_SHEET.blends[n.terrain]?.[`${dx}:${dy}`];
-      if(row!=null)output.drawImage(sheet,hash(`${n.terrain}:${c.x+dx}:${c.y+dy}`)%6*32,row*32,32,32,x,y,32,32);
+      if(row!=null)output.drawImage(sheet,hash(`${n.terrain}:${c.x+dx}:${c.y+dy}`)%TERRAIN_SHEET.variants*MAP_RASTER_SIZE,row*MAP_RASTER_SIZE,MAP_RASTER_SIZE,MAP_RASTER_SIZE,x,y,32,32);
     }
   };
   sc.save();sc.clip(coast.path);
@@ -136,7 +137,7 @@ export function continentRaster(atlas,sheet) {
     }
     for(const c of cells)if(c.terrain==='fog') {
       const x=(c.x-bounds.minX)*32,y=(c.y-bounds.minY)*32;target.clearRect(x,y,32,32);
-      target.imageSmoothingEnabled=true;target.drawImage(coast.bands,x/4,y/4,8,8,x,y,32,32);paintGround(c,false,target);
+      target.imageSmoothingEnabled=false;target.drawImage(coast.bands,x/coast.scale,y/coast.scale,32/coast.scale,32/coast.scale,x,y,32,32);paintGround(c,false,target);
     }
     target.restore();
     for(const c of coastDetails.filter(c=>c.kind==='offshore')) {
@@ -157,7 +158,7 @@ export function continentRaster(atlas,sheet) {
   let art=townLayers.get(townKey);
   if(art)ambience.push(...art.smoke);
   else {
-    const overlay=makeCanvas(w,h),ctx=overlay.getContext('2d');
+    const overlay=makeMapCanvas(w,h),ctx=overlay.getContext('2d');
     const townAreas=new Map(),glyphs=[],fortifications=[];
     for(const g of groups)if(g.town&&g.discovered){if(!townAreas.has(g.area))townAreas.set(g.area,[]);townAreas.get(g.area).push(g)}
     for(const town of townAreas.values()) {
@@ -167,8 +168,8 @@ export function continentRaster(atlas,sheet) {
     }
     for(const b of bridges){const at=native(b.x,b.y);ctx.save();ctx.translate(at.x,at.y);ctx.rotate(b.angle);sprite(ctx,sheet,'bridge',`${b.from}:${b.to}`,-20,-20,40);ctx.restore()}
     const buildings=[],stamps=[],mills=new Set();
-    const placeStamp=(group,kind,x,y,size,seed)=>{
-      const at=native(x,y);sprite(ctx,sheet,kind,seed,at.x-size/2,at.y-size*.58,size);
+    const placeStamp=(group,kind,x,y,size,seed,variant=null)=>{
+      const at=native(x,y);drawMapSprite(ctx,sheet,kind,seed,at.x-size/2,at.y-size*.58,size,'decorations',variant);
       buildings.push({surfaceId:group.id,x,y,half:size/64});stamps.push({roomId:group.id,kind,x,y});
       if(kind==='forge')ambience.push({x:x+.23,y:y-.44,kind:'smoke'});
     };
@@ -176,9 +177,9 @@ export function continentRaster(atlas,sheet) {
       const known=group.members.filter(p=>p.discovered);if(!known.length)continue;
       const interiors=known.filter(p=>p.mapRole==='interior'),features=knownFeatures(group);
       const count=Math.min(5,Math.max(interiors.length,group.town?2:0)),offsets=[[-.63,-.48],[.65,-.32],[-.64,.57],[.64,.67],[0,-1.05]];
-      for(let i=0;i<count;i++){const [ox,oy]=offsets[i],room=interiors[i]||known[0],kind=roofKind(room);placeStamp(group,kind,group.x+ox,group.y+oy,kind==='keep'?41:29,room.artSeed||`${group.id}:${i}`)}
+      for(let i=0;i<count;i++){const [ox,oy]=offsets[i],room=interiors[i]||known[0],kind=roofKind(room);placeStamp(group,kind,group.x+ox,group.y+oy,kind==='keep'?41:29,room.artSeed||`${group.id}:${i}`,kind==='tower'&&group.town?3+hash(room.artSeed||room.id)%3:null)}
       if(features.includes('keep')&&!interiors.some(p=>roofKind(p)==='keep'))placeStamp(group,'keep',group.x-.12,group.y-.55,43,group.id);
-      if(features.includes('tower')&&!group.town)placeStamp(group,'tower',group.x,group.y-.45,34,group.id);
+      if(features.includes('tower')&&!group.town)placeStamp(group,'tower',group.x,group.y-.45,34,group.id,hash(group.artSeed||group.id)%3);
       for(const kind of ['dock','ruins','graveyard','magic','farm','reeds','stump','flowers'])if(features.includes(kind)&&(!group.town||!['reeds','flowers'].includes(kind)))placeStamp(group,kind,group.x+(count ? .8 : 0),group.y+.32,kind==='dock'?37:30,`${group.id}:${kind}`);
       if(known.some(p=>(p.entrances||[]).length))placeStamp(group,features.includes('mine')?'mine':'cave',group.x,group.y,29,group.id);
       if(group.town&&hash(group.id)%4===0)placeStamp(group,'lantern',group.x-.65,group.y+.5,20,group.id);
@@ -191,26 +192,26 @@ export function continentRaster(atlas,sheet) {
       if(/highland|foothill/i.test(group.area)&&hash(group.id)%3===0)placeStamp(group,'outcrop',group.x+.65,group.y+.4,32,group.id);
     }
     for(const wall of fortifications) {
-      for(const p of wall.towers){const at=native(p.x,p.y);sprite(ctx,sheet,'tower',`${wall.area}:${p.x}:${p.y}`,at.x-11,at.y-16,22)}
+      for(const p of wall.towers){const at=native(p.x,p.y);drawMapSprite(ctx,sheet,'tower',`${wall.area}:${p.x}:${p.y}`,at.x-11,at.y-16,22,'decorations',3+hash(`${wall.area}:${p.x}:${p.y}`)%3)}
       for(const gate of wall.gates){const group=groups.find(g=>g.id===gate.roomId);if(group)placeStamp(group,'gatehouse',gate.x,gate.y,34,group.id)}
     }
     art={overlay,buildings,stamps,glyphs,fortifications,smoke:ambience.filter(a=>a.kind==='smoke')};
     townLayers.set(townKey,art);if(townLayers.size>2)townLayers.delete(townLayers.keys().next().value);
   }
   const {overlay,buildings,stamps,glyphs,fortifications}=art;
-  sc.drawImage(overlay,0,0);
+  sc.drawImage(overlay,0,0,w,h);
   let nearCanvas=null;
   const closeCanvas=()=>{
     if(nearCanvas)return nearCanvas;
-    const start=performance.now();nearCanvas=makeCanvas(w,h);const target=nearCanvas.getContext('2d');
-    target.imageSmoothingEnabled=true;target.drawImage(coast.bands,0,0,w,h);
+    const start=performance.now();nearCanvas=makeMapCanvas(w,h);const target=nearCanvas.getContext('2d');
+    target.imageSmoothingEnabled=false;target.drawImage(coast.bands,0,0,w,h);
     target.save();target.clip(coast.path);
     for(const c of cells)paintGround(c,true,target);for(const c of fringe.values())paintGround(c,false,target);
     for(const tint of tints){target.fillStyle=tint.color;target.fillRect(tint.x,tint.y,32,32)}
-    target.restore();paintRoadNetwork(target,roads,native,coast.path);paintDetail(target,true);target.drawImage(overlay,0,0);
+    target.restore();paintRoadNetwork(target,roads,native,coast.path);paintDetail(target,true);target.drawImage(overlay,0,0,w,h);
     nearCanvas=freezeCanvas(nearCanvas);result.closeBakeMs=performance.now()-start;return nearCanvas;
   };
-  const result={canvas:freezeCanvas(canvas),closeCanvas,bounds,buildings,ready,model,glyphs,ridges,ambience,bridges,stamps,fortifications,coastDetails,coastMask:coast.mask,coastScale:4,bakeMs:performance.now()-bakeStart};
+  const result={canvas:freezeCanvas(canvas),closeCanvas,bounds,buildings,ready,model,glyphs,ridges,ambience,bridges,stamps,fortifications,coastDetails,coastMask:coast.mask,coastScale:coast.scale,cellSize:32,closeCellSize:MAP_RASTER_SIZE,bakeMs:performance.now()-bakeStart};
   rasterCache.set(atlas,result);recentRasters.set(signature,result);if(recentRasters.size>2)recentRasters.delete(recentRasters.keys().next().value);
   return result;
 }

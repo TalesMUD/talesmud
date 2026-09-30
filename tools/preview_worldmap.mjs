@@ -18,6 +18,7 @@ const entry = path.join(client, '.worldmap-preview-entry.mjs');
 process.chdir(client);
 try {
   await fs.writeFile(entry, `
+import { TERRAIN_SHEET } from './src/game/widgets/terrainSheet.js';
 import { writable } from 'svelte/store';
 import Overlay from './src/game/ui/MapOverviewOverlay.svelte';
 import { onMapTilesReady, paintAtlas } from './src/game/widgets/atlasRenderer.js';
@@ -32,7 +33,7 @@ store.selectMapPlace = id => store.update(s=>({...s,mapSelectedId:id}));
 store.closeMapOverview = () => store.update(s=>({...s,mapOverviewOpen:false}));
 store.setAtlasLayer = id => store.update(s=>({...s,atlasLayer:id}));
 new Overlay({target:document.getElementById('app'),props:{store}});
-window.__mapPreview = { store, snapshot, paintAtlas, surfaceGroups, groupForRoom, landscapeModel, continentRaster, undergroundRaster, undergroundModel, mapScenesPending, waitForMapScenes, ready:false };
+window.__mapPreview = { terrainSheet:TERRAIN_SHEET, store, snapshot, paintAtlas, surfaceGroups, groupForRoom, landscapeModel, continentRaster, undergroundRaster, undergroundModel, mapScenesPending, waitForMapScenes, ready:false };
 onMapTilesReady(()=>{window.__mapPreview.ready=true});
 `);
   const bundle = await rollup({ input:entry, plugins:[svelte({emitCss:true}), css({output:'preview.css'}), resolve({browser:true,dedupe:['svelte']})] });

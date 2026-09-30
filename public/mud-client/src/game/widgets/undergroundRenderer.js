@@ -1,4 +1,4 @@
-import { hash, makeCanvas, sheetReady, drawMapSprite } from './mapArt.js';
+import { hash, makeMapCanvas, MAP_RASTER_SIZE, freezeCanvas, sheetReady, drawMapSprite } from './mapArt.js';
 const cache=new WeakMap(),recent=new Map();
 export function undergroundModel(atlas) {
   const places=(atlas.places||[]).filter(p=>p.layer==='lower');if(!places.length)return null;
@@ -23,7 +23,7 @@ export function undergroundRaster(atlas,sheet) {
   const {places,byCell,corridors,bounds}=model;
   const key=JSON.stringify([ready,places.map(p=>[p.id,p.x,p.y,p.discovered,p.undergroundStyle,p.artSeed,p.exits]),corridors.map(({a,b})=>[a.id,b.id])]);
   if(recent.has(key)){const r=recent.get(key);cache.set(atlas,r);return r}
-  const canvas=makeCanvas((bounds.maxX-bounds.minX+1)*32,(bounds.maxY-bounds.minY+1)*32),ctx=canvas.getContext('2d');
+  const canvas=makeMapCanvas((bounds.maxX-bounds.minX+1)*32,(bounds.maxY-bounds.minY+1)*32),ctx=canvas.getContext('2d');
   const native=(x,y)=>({x:(x-bounds.minX+.5)*32,y:(y-bounds.minY+.5)*32});
   const torches=[],stairs=[],props=[];
   ctx.fillStyle='#102027';ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -83,7 +83,7 @@ export function undergroundRaster(atlas,sheet) {
       drawMapSprite(ctx,sheet,'stairs',p.id,at.x-11,at.y-12,23);stairs.push({roomId:p.id,x:p.x,y:p.y});
     }
   }
-  const result={canvas,bounds,ready,model,buildings:[],glyphs:[],ridges:[],ambience:[],torches,stairs,props};
+  const result={canvas:freezeCanvas(canvas),cellSize:MAP_RASTER_SIZE,bounds,ready,model,buildings:[],glyphs:[],ridges:[],ambience:[],torches,stairs,props};
   cache.set(atlas,result);recent.set(key,result);if(recent.size>2)recent.delete(recent.keys().next().value);
   return result;
 }

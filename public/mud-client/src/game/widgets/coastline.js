@@ -20,14 +20,14 @@ const {bandTable,maskTable}=(()=>{
 // A blurred binary field rejects narrow cell spurs and rounds diagonal shores.
 // Thresholds make beach/foam/shallow bands follow the same organic contour.
 export function smoothCoast(model) {
-  const {bounds,cells,byCell}=model,scale=8;
+  const {bounds,cells,byCell}=model,scale=12;
   const signature=JSON.stringify([bounds,cells.map(c=>[c.x,c.y,c.terrain==='fog'])]);
   if(signature===lastCoastKey)return lastCoast;
   const w=(bounds.maxX-bounds.minX+1)*scale,h=(bounds.maxY-bounds.minY+1)*scale;
   const raw=makeCanvas(w,h),rc=raw.getContext('2d');rc.fillStyle='#fff';
   for(const c of cells)rc.fillRect((c.x-bounds.minX)*scale,(c.y-bounds.minY)*scale,scale,scale);
   const field=makeCanvas(w,h),fc=field.getContext('2d',{willReadFrequently:true});
-  fc.filter='blur(5px)';fc.drawImage(raw,0,0);fc.filter='none';
+  fc.filter='blur(7.5px)';fc.drawImage(raw,0,0);fc.filter='none';
   const alpha=fc.getImageData(0,0,w,h).data;
   const mask=makeCanvas(w,h),mc=mask.getContext('2d'),mi=mc.createImageData(w,h);
   const bands=makeCanvas(w,h),bc=bands.getContext('2d'),bi=bc.createImageData(w,h);
@@ -48,10 +48,12 @@ export function smoothCoast(model) {
   for(let y=0;y<h;y++)for(let x=0;x<w;x++) {
     const i=y*w+x,v=alpha[i*4+3],t=BAYER[(y%4)*4+x%4],key=v*16+t;
     maskPixels[i]=maskTable[key];bandPixels[i]=bandTable[key+fogGrid[i]*4096];
-    tileFlags[(y>>3)*(w/scale)+(x>>3)]|=maskPixels[i]?1:2;
+    // Broken foam glints follow the existing band, never charted ground or fog.
+    if(!fogGrid[i]&&v>=112&&v<123&&((x*17+y*31)%11<3))bandPixels[i]=bandTable[v*16+15];
+    tileFlags[Math.floor(y/scale)*(w/scale)+Math.floor(x/scale)]|=maskPixels[i]?1:2;
   }
   mc.putImageData(mi,0,0);bc.putImageData(bi,0,0);
-  // Scale these eight samples per cell only when compositing, avoiding two
+  // Scale these twelve samples per cell only when compositing, avoiding two
   // unnecessary multi-megapixel intermediate canvases.
   const tileKinds=new Map();
   for(let gy=0;gy<h/scale;gy++)for(let gx=0;gx<w/scale;gx++) {
@@ -73,7 +75,7 @@ export function smoothCoast(model) {
   while(edges.size) {
     const first=edges.keys().next().value,loop=[];let key=first;
     while(edges.has(key)) {
-      loop.push({x:key%stride*4,y:Math.floor(key/stride)*4});
+      loop.push({x:key%stride*32/scale,y:Math.floor(key/stride)*32/scale});
       const next=edges.get(key);edges.delete(key);key=next;if(key===first)break;
     }
     const corners=loop.filter((p,i)=>{const a=loop[(i+loop.length-1)%loop.length],b=loop[(i+1)%loop.length];return (p.x-a.x)*(b.y-p.y)!==(p.y-a.y)*(b.x-p.x)});
@@ -81,6 +83,6 @@ export function smoothCoast(model) {
     const start=corners[0],last=corners.at(-1);path.moveTo((start.x+last.x)/2,(start.y+last.y)/2);
     corners.forEach((p,i)=>{const next=corners[(i+1)%corners.length];path.quadraticCurveTo(p.x,p.y,(p.x+next.x)/2,(p.y+next.y)/2)});path.closePath();
   }
-  lastCoastKey=signature;lastCoast={mask,bands,tileKinds,path};
+  lastCoastKey=signature;lastCoast={mask,bands,tileKinds,path,scale:32/scale};
   return lastCoast;
 }

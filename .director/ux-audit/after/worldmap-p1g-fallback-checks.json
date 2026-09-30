@@ -1,0 +1,19 @@
+{
+  "source": "Local read-only preview with Worker disabled; synchronous fallback and native raster geometry.",
+  "checks": {
+    "workerDisabled": true,
+    "pending": false,
+    "overviewCell": 32,
+    "detailCell": 48,
+    "lowerCell": 48,
+    "tileStep": 99.81562500000001,
+    "lowerTileStep": 114.075,
+    "markerReusesScene": true,
+    "smoothing": false,
+    "stamps": 278,
+    "bridges": 2,
+    "bakeMs": 308.8999996185303,
+    "closeBakeMs": 350.1000003814697
+  },
+  "errors": []
+}

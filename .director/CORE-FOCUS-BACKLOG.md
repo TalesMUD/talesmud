@@ -31,10 +31,12 @@ Goal: every class lands in the same win-rate bands per gap and gear tier. Next c
 ## Queued: B13 — Combat contextual layout (2026-09-28 director)
 Backlog next UX topic after B9 shortcuts: contextual widgets (combat auto-focus). When combat starts, focus BattleStage; on end, restore. See CORE-FOCUS-B13-TASK.md.
 
-## Queued: A9 — Boss phases (2026-09-29 director)
-Backlog next combat topic after A6 telegraph/enrage: HP-threshold phases with BattleStage beats. See CORE-FOCUS-A9-TASK.md.
+## Queued: B14 — Settings panel (2026-09-30 director)
+Backlog next UX topic after B13: settings panel players can trust (reduced motion, combat auto-focus, inventory mode, gold chrome). See CORE-FOCUS-B14-TASK.md.
 
 ## Done (recent)
-- B13 combat contextual layout — accepted 2026-09-29 (live after `?v=b13focus`; tip later advanced through worldmap).
-- WORLDMAP P1–P1d — accepted 2026-09-29 as live on veilspan.com (`?v=worldmap-p1d`); overnight EXTRA beyond B13 crown.
+- A9 boss phases — accepted 2026-09-30 (code `9026bba`, smoke `152eadd`; live under later tip `?v=worldmap-p1j`).
+- WORLDMAP P1e–P1j — accepted 2026-09-30 as live EXTRA (`?v=worldmap-p1j` Kenney-inspired craft sheet).
+- B13 combat contextual layout — accepted 2026-09-29.
+- WORLDMAP P1–P1d — accepted 2026-09-29.
 

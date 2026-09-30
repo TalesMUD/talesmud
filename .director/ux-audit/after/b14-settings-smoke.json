@@ -1,0 +1,119 @@
+{
+  "playUrl": "http://127.0.0.1:8010/play/",
+  "checks": {
+    "desktop": {
+      "viewport": [
+        1920,
+        1080
+      ],
+      "pageHeight": 1080,
+      "modal": {
+        "x": 600,
+        "y": 262.21875,
+        "right": 1320,
+        "bottom": 817.78125
+      },
+      "reducedMotion": "system",
+      "activeTab": "Interface"
+    },
+    "inactiveControlsHidden": true,
+    "audioNote": "Game audio is coming soonThere are no active sound effects or music controls yet.",
+    "saved": {
+      "theme": "dark-fantasy",
+      "parchmentBackground": false,
+      "compactMode": false,
+      "roomTextOverlay": false,
+      "actionBarPins": [
+        "recipes"
+      ],
+      "actionBarLayoutRevision": 3,
+      "inventoryOpenMode": "widget",
+      "reducedMotion": "on",
+      "combatAutoFocus": false,
+      "hotbarBinds": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "kind": "action",
+          "id": "rest",
+          "name": "Rest",
+          "command": "rest"
+        },
+        null,
+        null
+      ]
+    },
+    "reloaded": {
+      "iface": {
+        "theme": "dark-fantasy",
+        "parchmentBackground": false,
+        "compactMode": false,
+        "roomTextOverlay": false,
+        "actionBarPins": [
+          "recipes"
+        ],
+        "actionBarLayoutRevision": 3,
+        "inventoryOpenMode": "widget",
+        "reducedMotion": "on",
+        "combatAutoFocus": false,
+        "hotbarBinds": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "kind": "action",
+            "id": "rest",
+            "name": "Rest",
+            "command": "rest"
+          },
+          null,
+          null
+        ]
+      },
+      "on": "true",
+      "combat": false,
+      "inventory": "true"
+    },
+    "smallDesktop": {
+      "viewport": [
+        1366,
+        768
+      ],
+      "pageHeight": 768,
+      "modal": {
+        "x": 323,
+        "y": 107.921875,
+        "right": 1043,
+        "bottom": 660.078125
+      },
+      "reducedMotion": "on",
+      "activeTab": "Interface"
+    },
+    "phone": {
+      "viewport": [
+        390,
+        844
+      ],
+      "pageHeight": 844,
+      "modal": {
+        "x": 7,
+        "y": 94.453125,
+        "right": 383,
+        "bottom": 749.53125
+      },
+      "reducedMotion": "on",
+      "activeTab": "Interface"
+    }
+  },
+  "pageErrors": [],
+  "playStatus": 200,
+  "guestPost": 200,
+  "ok": true
+}

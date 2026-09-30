@@ -25,6 +25,7 @@
 
   export let store;
   export let sendMessage;
+  export let shown = true;
 
   const cdClock = createSkillCooldownClock();
 
@@ -45,7 +46,7 @@
   let logExpanded = false;
 
   $: phase = $store.combatPhase || ($store.inCombat ? 'active' : 'idle');
-  $: visible = phase === 'active' || phase === 'ending';
+  $: visible = shown && (phase === 'active' || phase === 'ending');
   $: if (!visible) logExpanded = false;
   $: enemies = $store.combatEnemies || [];
   $: phaseNotice = phaseBanner($store.combatPhaseEnter, nowMs, visible);
@@ -602,7 +603,7 @@
 
 <svelte:window on:keydown={onOutcomeKey} />
 {#if visible}
-<div class="battle-stage" class:ending={phase === 'ending'} role="dialog" aria-label="Combat" tabindex="-1" use:combatStageFocus>
+<div class="battle-stage" class:ending={phase === 'ending'} class:reduced-motion={prefersReducedMotion($settingsStore.interface?.reducedMotion)} role="dialog" aria-label="Combat" tabindex="-1" use:combatStageFocus>
   <div class="battle-backdrop" aria-hidden="true"></div>
   <div class="battle-frame">
   <header class="battle-header">
@@ -2930,26 +2931,26 @@
     text-align: center;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .phase-banner { animation: none; }
-    .ally-card.just-joined, .ally-card.ally-hit, .ally-card.ally-crit { animation: none; }
-    .fx-float,
-    .fx-slash,
-    .fx-puff,
-    .nameplate.hit-flash,
-    .nameplate.crit-flash,
-    .nameplate.crush-flash,
-    .player-name.hit-flash,
-    .player-name.crit-flash,
-    .player-name.crush-flash,
-    .enemy-card.fx-hit .enemy-sprite,
-    .enemy-card.fx-crit .enemy-sprite,
-    .enemy-sprite-wrap.shake,
-    .loot-item {
+    .battle-stage.reduced-motion .phase-banner { animation: none; }
+    .battle-stage.reduced-motion .ally-card.just-joined,
+    .battle-stage.reduced-motion .ally-card.ally-hit,
+    .battle-stage.reduced-motion .ally-card.ally-crit { animation: none; }
+    .battle-stage.reduced-motion .fx-float,
+    .battle-stage.reduced-motion .fx-slash,
+    .battle-stage.reduced-motion .fx-puff,
+    .battle-stage.reduced-motion .nameplate.hit-flash,
+    .battle-stage.reduced-motion .nameplate.crit-flash,
+    .battle-stage.reduced-motion .nameplate.crush-flash,
+    .battle-stage.reduced-motion .player-name.hit-flash,
+    .battle-stage.reduced-motion .player-name.crit-flash,
+    .battle-stage.reduced-motion .player-name.crush-flash,
+    .battle-stage.reduced-motion .enemy-card.fx-hit .enemy-sprite,
+    .battle-stage.reduced-motion .enemy-card.fx-crit .enemy-sprite,
+    .battle-stage.reduced-motion .enemy-sprite-wrap.shake,
+    .battle-stage.reduced-motion .loot-item {
       animation: none !important;
     }
-    .fx-float { opacity: 1; }
-  }
+    .battle-stage.reduced-motion .fx-float { opacity: 1; }
 
   /* Primary Attack — double gold border glow (C0 mock) */
   .dock-btn.primary {
