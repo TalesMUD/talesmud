@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Veilspan for Android</title>
+  <meta name="description" content="Download the Veilspan Android APK — a mobile RPG with crossplay to the browser client. Playtest builds for Chapter I: Gloomfen Depths.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;500;600;700&family=Fira+Code:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-abyss: #06080c;
+      --bg-deep: #0a0e14;
+      --bg-surface: #111820;
+      --bg-card: #141c26;
+      --bg-card-hover: #1a2433;
+
+      --green-glow: #3ddc84;
+      --green-dim: #1a5c38;
+      --green-text: #7ae8a4;
+
+      --amber-glow: #e8a849;
+      --amber-dim: #5c4419;
+      --amber-text: #f0c674;
+      --gold: #c8a84e;
+
+      --text-bright: #e8e6e3;
+      --text-body: #b0aca6;
+      --text-dim: #6b6660;
+      --text-ghost: #3d3a36;
+
+      --border-subtle: rgba(232, 168, 73, 0.12);
+      --border-glow: rgba(232, 168, 73, 0.35);
+
+      --font-display: 'Cinzel Decorative', serif;
+      --font-heading: 'Cinzel', serif;
+      --font-body: 'Cormorant Garamond', serif;
+      --font-mono: 'Fira Code', monospace;
+
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      scrollbar-width: thin;
+      scrollbar-color: var(--amber-dim) var(--bg-abyss);
+    }
+
+    body {
+      background: var(--bg-abyss);
+      color: var(--text-body);
+      font-family: var(--font-body);
+      font-size: 18px;
+      line-height: 1.7;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.03) 2px,
+        rgba(0, 0, 0, 0.03) 4px
+      );
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 9998;
+      pointer-events: none;
+      background: radial-gradient(ellipse at 50% 0%, rgba(232,168,73,0.06) 0%, transparent 55%),
+                  radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.45) 100%);
+    }
+
+    a { color: var(--amber-text); text-decoration: none; transition: color 0.2s var(--ease-out); }
+    a:hover { color: var(--text-bright); }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 4rem;
+    }
+
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem 1.5rem;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .nav-brand {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      color: var(--amber-text);
+      letter-spacing: 0.06em;
+    }
+
+    .nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem 1.25rem;
+      font-family: var(--font-heading);
+      font-size: 0.85rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .nav-links a { color: var(--text-dim); }
+    .nav-links a:hover { color: var(--amber-text); }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--gold);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin-bottom: 0.85rem;
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 5vw, 3rem);
+      color: var(--text-bright);
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.75rem;
+      text-shadow: 0 0 40px rgba(232,168,73,0.25);
+    }
+
+    .pitch {
+      font-size: 1.25rem;
+      color: var(--text-body);
+      max-width: 36em;
+      margin: 0 auto 1.75rem;
+    }
+
+    .cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.65rem;
+      background: linear-gradient(180deg, #e8a849 0%, #c8922e 100%);
+      color: #1a1206 !important;
+      font-family: var(--font-heading);
+      font-weight: 600;
+      font-size: 1rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0.95rem 1.75rem;
+      border-radius: 4px;
+      border: 1px solid rgba(255,220,140,0.45);
+      box-shadow: 0 0 0 1px rgba(232,168,73,0.2), 0 8px 32px rgba(232,168,73,0.25);
+      transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+    }
+
+    .cta:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 0 1px rgba(232,168,73,0.35), 0 12px 40px rgba(232,168,73,0.35);
+      color: #0a0804 !important;
+    }
+
+    .cta-meta {
+      margin-top: 0.85rem;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-dim);
+    }
+
+    .warn {
+      margin: 2rem 0;
+      padding: 1rem 1.2rem;
+      background: rgba(232,168,73,0.06);
+      border: 1px solid var(--border-glow);
+      border-left: 3px solid var(--amber-glow);
+      border-radius: 4px;
+      font-size: 1.05rem;
+      color: var(--amber-text);
+    }
+
+    .warn strong {
+      font-family: var(--font-heading);
+      font-weight: 600;
+      color: var(--text-bright);
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 1.4rem 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .card h2 {
+      font-family: var(--font-heading);
+      font-size: 1.15rem;
+      color: var(--amber-text);
+      letter-spacing: 0.05em;
+      margin-bottom: 1rem;
+      padding-bottom: 0.55rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .version {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .version-head {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1rem;
+      align-items: baseline;
+      justify-content: space-between;
+    }
+
+    .version-tag {
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      color: var(--green-text);
+    }
+
+    .version-date {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-dim);
+    }
+
+    .badge {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #1a1206;
+      background: var(--amber-glow);
+      padding: 0.15rem 0.45rem;
+      border-radius: 3px;
+      margin-left: 0.4rem;
+      vertical-align: middle;
+    }
+
+    ul.changes {
+      list-style: none;
+      padding: 0;
+    }
+
+    ul.changes li {
+      position: relative;
+      padding-left: 1.1rem;
+      margin-bottom: 0.35rem;
+      color: var(--text-body);
+    }
+
+    ul.changes li::before {
+      content: '▸';
+      position: absolute;
+      left: 0;
+      color: var(--gold);
+      font-size: 0.85rem;
+    }
+
+    .dl-row {
+      margin-top: 0.9rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1.25rem;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+    }
+
+    .dl-row a.secondary {
+      color: var(--amber-text);
+      border-bottom: 1px solid rgba(232,168,73,0.35);
+    }
+
+    .hash {
+      color: var(--text-ghost);
+      word-break: break-all;
+      font-size: 0.68rem;
+    }
+
+    .links {
+      display: grid;
+      gap: 0.65rem;
+      font-size: 1.1rem;
+    }
+
+    .links a {
+      display: block;
+      padding: 0.65rem 0.9rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      color: var(--text-body);
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .links a:hover {
+      border-color: var(--border-glow);
+      background: var(--bg-card-hover);
+      color: var(--amber-text);
+    }
+
+    .links span {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      display: block;
+    }
+
+    footer {
+      margin-top: 2.5rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border-subtle);
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-ghost);
+    }
+
+    footer .brand {
+      font-family: var(--font-display);
+      color: var(--amber-text);
+      font-size: 0.95rem;
+      margin-bottom: 0.35rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="nav" aria-label="Site">
+      <a class="nav-brand" href="https://veilspan.com/">Veilspan</a>
+      <div class="nav-links">
+        <a href="https://veilspan.com/play">Play in browser</a>
+        <a href="https://play.veilspan.com/">play.veilspan.com</a>
+        <a href="https://veilspan.com/docs/">Docs</a>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <p class="eyebrow">Android playtest · Chapter I</p>
+      <h1>Veilspan for Android</h1>
+      <p class="pitch">
+        A mobile RPG client for Veilspan — explore Gloomfen Depths on your phone,
+        with full crossplay to the browser at
+        <a href="https://veilspan.com/play">veilspan.com/play</a>.
+      </p>
+      <a class="cta" href="/app/downloads/veilspan-7cbb5df.apk" download>
+        ↓ Download latest APK
+      </a>
+      <p class="cta-meta">build <strong style="color:var(--green-text)">7cbb5df</strong> · ~55&nbsp;MB · Android 7.0+</p>
+    </header>
+
+    <aside class="warn" role="note">
+      <strong>Play Protect may warn.</strong>
+      This is a debug / playtest-signed APK, not a Play Store release.
+      Android may show an “unknown app” or Play Protect warning — that is expected
+      until we ship a production-signed build. Install only if you trust this source
+      (<a href="https://veilspan.com/">veilspan.com</a>).
+    </aside>
+
+    <section class="card" aria-labelledby="history-h">
+      <h2 id="history-h">Version history</h2>
+      <article class="version">
+        <div class="version-head">
+          <div>
+            <span class="version-tag">7cbb5df</span>
+            <span class="badge">latest</span>
+          </div>
+          <span class="version-date">2026-09-30 · playtest</span>
+        </div>
+        <ul class="changes">
+          <li><strong>A9 boss phases</strong> — multi-phase boss encounters wired for mobile</li>
+          <li><strong>Settings</strong> — in-app settings surface for playtest controls</li>
+          <li><strong>P1j map</strong> — worldmap craft atlas / tile updates</li>
+          <li><strong>Haptics</strong> — tactile feedback on key combat / UI events</li>
+        </ul>
+        <div class="dl-row">
+          <a class="secondary" href="/app/downloads/veilspan-7cbb5df.apk" download>veilspan-7cbb5df.apk</a>
+          <span class="hash">sha256 efa262db9d3ec469b96eea6b750842fcc7a424afd5a08b4e7e4b6215b5375aa2</span>
+        </div>
+      </article>
+    </section>
+
+    <section class="card" aria-labelledby="also-h">
+      <h2 id="also-h">Also play in the browser</h2>
+      <div class="links">
+        <a href="https://veilspan.com/play">
+          veilspan.com/play
+          <span>Primary web client</span>
+        </a>
+        <a href="https://play.veilspan.com/">
+          play.veilspan.com
+          <span>Play subdomain</span>
+        </a>
+        <a href="https://veilspan.com/">
+          veilspan.com
+          <span>Marketing / Chapter I landing</span>
+        </a>
+      </div>
+    </section>
+
+    <footer>
+      <div class="brand">Veilspan</div>
+      <div>Android playtest builds · not Play Store · &copy; 2026 Veilspan</div>
+    </footer>
+  </div>
+</body>
+</html>
