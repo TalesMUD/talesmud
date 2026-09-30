@@ -1,4 +1,11 @@
 
+
+## Android APK ae4412c (2026-10-01)
+
+- Flutter tip `ae4412c` (APK `veilspan-ae4412c.apk`, sha256 `c8a08cefd6c504847a35bb95632118394a83e1227d4764aad7d659ee201638d4`).
+- Engine tip `34bace1` (`?v=buffport1`). Content tip `1694ca9` (ENM0012/NPC0028 chroma).
+- APK uploaded to VPS landing downloads; `/app` changelog updated. Door untouched.
+
 ## Buff portrait placement + equip stats + Servitor chroma (2026-10-01)
 
 - What changed: BattleStage buff/debuff icons moved from under the name into small rectangles above/beside combat portraits. Equipment paper-doll compact HP/MP/ATK/DEF row is larger and higher contrast. Awakened Servitor (`ENM0012`) portrait chroma green keyed to transparent (content + uploads); Guardsman Pell (`NPC0028`) same fix. Flutter battle stage parses `statusEffects` and shows portrait-adjacent buff chips; equipment compact stats match the web contrast bump. Client `?v=buffport1`.
