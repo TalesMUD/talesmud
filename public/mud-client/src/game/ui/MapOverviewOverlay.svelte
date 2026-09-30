@@ -994,11 +994,9 @@
                 {#if selectedPlace.current}<span class="chip you">You are here</span>{/if}
               </div>
             </div>
-            {#if $isMobile}
-              <button class="travel-btn" type="button" on:click|stopPropagation={requestTravel} disabled={!canTravel || isTraveling}>
-                {isTraveling ? 'Traveling…' : (canTravel ? 'Travel' : 'You are here')}
-              </button>
-            {/if}
+            <button class="travel-btn" type="button" on:click|stopPropagation={requestTravel} disabled={!canTravel || isTraveling}>
+              {isTraveling ? 'Traveling…' : (canTravel ? 'Travel' : 'You are here')}
+            </button>
             <div class="intel-more">
               {#if selectedStreet}
                 <button class="room-link" type="button" on:click={() => selectRoom(selectedStreet)}>Back to {selectedStreet.name}</button>
@@ -1052,11 +1050,8 @@
               {:else}
                 <div class="intel-muted">None recorded.</div>
               {/if}
-              {#if !$isMobile && canTravel}
-                <button class="travel-btn" type="button" on:click={requestTravel} disabled={isTraveling}>
-                  {isTraveling ? 'Traveling…' : 'Travel'}
-                </button>
-                <div class="intel-hint">Double-click a room to travel.</div>
+              {#if canTravel && !isTraveling}
+                <div class="intel-hint">Double-click a room to travel, or use Travel above.</div>
               {/if}
             </div>
           {/if}

@@ -79,6 +79,12 @@
   $: visibleRegions = (atlas.regions || []).filter(r => r.layer === activeLayer);
   $: if (store && $store.mapSelectedId) selectedId = $store.mapSelectedId;
   $: selectedPlace = (atlas.places || []).find(p => p.id === selectedId) || null;
+  $: canTravel = !!(selectedPlace && selectedPlace.discovered && selectedPlace.id !== currentRoomId && !isCurrentPlace(selectedPlace.id, currentRoomId));
+
+  function requestTravel() {
+    if (!canTravel || isTraveling || !selectedPlace) return;
+    startTravel(selectedPlace.id);
+  }
 
   function findPath(startId, targetId) {
     if (!startId || !targetId || startId === targetId) return null;
@@ -226,7 +232,7 @@
       let text = found.discovered ? (found.name || found.id) : 'Uncharted';
       if (found.areaName && found.discovered) text += ' · ' + found.areaName;
       if (found.current || isCurrentPlace(found.id, currentRoomId)) text += ' (you are here)';
-      else if (found.discovered) text += ' · inspect';
+      else if (found.discovered) text += ' · travel';
       tooltip = { visible: true, text, x: e.clientX - rect.left, y: e.clientY - rect.top };
     } else {
       tooltip = { ...tooltip, visible: false };
@@ -432,6 +438,34 @@
     padding: 2px 6px;
     border-radius: 3px;
     cursor: pointer;
+    flex: 0 0 auto;
+  }
+  .intel-strip-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+  .intel-strip-btn.travel {
+    border-color: rgba(34, 211, 238, 0.55);
+    background: rgba(34, 211, 238, 0.12);
+    color: #67e8f9;
+    font-weight: 700;
+  }
+  .intel-strip-btn.travel:hover:not(:disabled) {
+    background: rgba(34, 211, 238, 0.22);
+  }
+  .intel-strip-btn.ghost {
+    border-color: rgba(148, 163, 184, 0.35);
+    color: #94a3b8;
+  }
+  .intel-strip-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+  .toolbar-title {
+    display: none; /* tab already says Map — avoid double header */
   }
   @media (max-width: 768px) {
     .icon-btn {
@@ -461,12 +495,12 @@
 
 <div class="atlas atlas-compact">
   <div class="toolbar">
-    <i class="material-icons">map</i>
-    Map
-    {#if isTraveling}<span class="travel">Traveling…</span>{/if}
-    {#if mapOpen}<span class="travel">Fullscreen</span>{/if}
+    <span class="toolbar-title" aria-hidden="true">Map</span>
+    {#if isTraveling}<span class="travel">Traveling…</span>
+    {:else if mapOpen}<span class="travel">Fullscreen</span>
+    {:else}<span class="travel" style="color:#94a3b8">Tap a room to travel</span>{/if}
     <span class="spacer"></span>
-    <button class="icon-btn" title={mapOpen ? 'Close Map' : 'Open Map'} on:click={toggleMaximize}>
+    <button class="icon-btn" title={mapOpen ? 'Close fullscreen map' : 'Open fullscreen map'} on:click={toggleMaximize} aria-label={mapOpen ? 'Close fullscreen map' : 'Open fullscreen map'}>
       <i class="material-icons">{mapOpen ? 'close_fullscreen' : 'open_in_full'}</i>
     </button>
   </div>
@@ -480,17 +514,6 @@
       on:wheel={onWheel}
       on:dblclick={toggleMaximize}
     ></canvas>
-    {#if mapOpen}
-      <button class="compact-open compact-open-live" type="button" title="Map is open — click to close" on:click={toggleMaximize}>
-        <i class="material-icons">map</i>
-        Map open
-      </button>
-    {:else}
-      <button class="compact-open" type="button" title="Open fullscreen Map" on:click={toggleMaximize}>
-        <i class="material-icons">open_in_full</i>
-        Open Map
-      </button>
-    {/if}
     {#if tooltip.visible}
       <div class="tooltip" style="left: {tooltip.x}px; top: {tooltip.y}px;">{tooltip.text}</div>
     {/if}
@@ -499,7 +522,15 @@
     <div class="intel-strip">
       <span class="intel-strip-name">{selectedPlace.discovered ? (selectedPlace.name || selectedPlace.id) : 'Uncharted'}</span>
       <span class="intel-strip-meta">{selectedPlace.discovered ? (selectedPlace.areaName || selectedPlace.biome || '') : 'Fog'}</span>
-      <button type="button" class="intel-strip-btn" on:click={inspectSelected}>Inspect</button>
+      <div class="intel-strip-actions">
+        <button
+          type="button"
+          class="intel-strip-btn travel"
+          on:click={requestTravel}
+          disabled={!canTravel || isTraveling}
+        >{isTraveling ? 'Traveling…' : (canTravel ? 'Travel' : (selectedPlace.discovered ? 'Here' : 'Fog'))}</button>
+        <button type="button" class="intel-strip-btn ghost" on:click={inspectSelected} title="Open room details">Inspect</button>
+      </div>
     </div>
   {/if}
 </div>
