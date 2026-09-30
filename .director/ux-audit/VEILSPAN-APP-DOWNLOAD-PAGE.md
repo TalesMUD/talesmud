@@ -34,3 +34,13 @@ scp -i ~/.ssh/veilspan_vps \
 
 ## Branding
 Gold/dark Veilspan vibe (Cinzel + Cormorant, amber `#e8a849` / gold `#c8a84e` on abyss `#06080c`).
+
+## Smoke (2026-09-30 ~13:52 CEST)
+- `curl -I https://veilspan.com/app` → 200 text/html 11957
+- `curl -I https://veilspan.com/app/` → 200 text/html 11957
+- `curl -I https://veilspan.com/app/downloads/veilspan-7cbb5df.apk` → 200 application/vnd.android.package-archive 58292643
+- talesmud MainPID **835725** unchanged (no SIGTERM / no binary rebuild)
+- Door :8020 PID **758959** unchanged (started Sat Sep 26 17:21:48 2026)
+- Screenshot: `.director/ux-audit/veilspan-app-download-page.png` (+ box `/workspace/ux-audit/flutter-playtest-0930/`)
+- Commit: `1ecb05c` on `engine-june` (HTML/gitignore/docs only; APK via scp)
+- nginx.conf on VPS gained apk MIME in `types{}` for a future reload; live APK MIME already correct via Go + `/etc/mime.types`
