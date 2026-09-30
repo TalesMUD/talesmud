@@ -440,3 +440,13 @@ Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated bl
 - Equipment: larger slots/portrait, tighter columns to fill whitespace.
 - Combat: WoW-style buff icon rows on self/allies/enemies from `statusEffects` with remaining rounds.
 - Flutter: WorldMapOverlay smooth travel follow + fade-close on arrival (APK if shipped).
+
+## Cartographer quest turn-in markers (2026-10-01)
+
+- Engine tip `5a35e93` (`?v=map-turnin1`). Flutter tip `3de00bc` (APK `veilspan-3de00bc.apk`).
+- What changed: questLog exposes `turnInRoomId` (NPC current/spawn room). Cartographer paints gold quest markers on ready turn-in rooms (distinct from you-marker), tooltips/intel with quest name, compact You/Turn in/Selected legend. Flutter map mirrors markers + legend.
+- Tests: Go quest log/turn-in room helpers; `atlasRenderer_test.mjs` collectTurnInMarkers; Flutter world_map_* / game_view_state tests green.
+- Deploy: VPS ff `51ba25a`→`5a35e93`, embed play client, rebuilt `bin/tales`, Restart=always pid `850595` on :8010. Door pid `758959` on :8020 untouched.
+- Smoke: `https://veilspan.com/play/` serves `bundle.js?v=map-turnin1` (200); guest POST 200; bundle contains map-legend / Turn in; `/api/server-info` Veilspan Chapter I; door.veilspan.com/door 301 (FYI).
+- APK: uploaded `veilspan-3de00bc.apk` to VPS landing downloads; `/app` changelog updated.
+
