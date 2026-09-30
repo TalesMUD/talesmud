@@ -1,10 +1,10 @@
-# Continent map P1/P1b/P1c/P1d/P1e: local review
+# Continent map P1/P1b/P1c/P1d/P1e/P1f/P1g/P1j
 
 The in-game atlas uses `pkg/worldmap/map_terrain.json`, embedded at Go build time. The content repository's `tools/build_public_map_data.py` serves the separate public lore map and does not supply room tiles. No public lore/spoiler export was changed.
 
 The ordered classifier checks exact roomType/areaType, specific tags, room-name words, underground/indoor tags, exact area and area words, description/detail words, legacy biome/kind, then outdoor. Unknown ground defaults to grassland; the census counts fallback separately from deliberately classified grassland. Words match whole tokens; underscores and punctuation become spaces. Edit the JSON to change rules or area defaults, then rebuild Go. No room or character schema migration is needed.
 
-Art is hand-authored through deterministic Pillow drawing code in the content repo. There are six 32px variants for each of 14 terrains, fog/sea rows, and 40 transparent building/service/landmark/nature stamps plus four underground floor rows and 128 precomposed directional dither rows. City ground contains paving only. The sheet is 192×6016 RGBA, one cache-busted PNG request through `GET/HEAD /api/map-tiles/terrain-sheet.png`. The endpoint reads the embedded play assets. Keep the normal `public/mud-client/public/` → `pkg/webuiplay/dist/` copy in local build steps.
+Art is hand-authored through deterministic Pillow drawing code in the content repo. There are six native 48px variants for each of 14 terrains, fog/sea rows, and 40 transparent building/service/landmark/nature stamps plus four underground floor rows and 128 precomposed directional dither rows. City ground contains paving only. The sheet is 288×9024 RGBA, one cache-busted PNG request through `GET/HEAD /api/map-tiles/terrain-sheet.png`. The endpoint reads the embedded play assets. Keep the normal `public/mud-client/public/` → `pkg/webuiplay/dist/` copy in local build steps.
 
 ## Rebuild art
 
@@ -31,7 +31,7 @@ python3 -m http.server 8140 --bind 127.0.0.1 --directory /tmp/worldmap-preview
 
 Open `http://127.0.0.1:8140/`. This mounts the production Svelte overlay on a fully explored in-memory atlas, with the requested fog neighbors. It does not start the game, create a guest, write a database, or connect to production. The JSON includes counts and fallback IDs. `tools/worldmap_snapshot.py` exports only atlas inputs and opens SQLite with `mode=ro`.
 
-For captures, install Puppeteer Core in a separate development environment, then set `PUPPETEER_MODULE` to its directory and `CHROMIUM_PATH` to your Chromium executable. Optionally set `WORLDMAP_CONTENT_JSON` to the census JSON for a larger-world performance check. Run `node tools/capture_worldmap_p1d.cjs` (the P1 script retains its historical 8137 capture flow) while the local preview server is up. It waits for terrain loading, `document.fonts.ready`, image decoding, and layout frames. It captures overview, Oldtown + Silverbrook zoom, a Lower close-up, minimum zoom and a Highlands close-up; exercises exterior selection, non-clickable filler, town filtering/interior selection, visible entrance switching, instanced interior marker, recenter, world fit, phone bounds, and Escape; and records changed-scene bake, marker-only snapshot, warm draw timings, and sheet requests in `.director/ux-audit/after/`.
+For captures, install Puppeteer Core in a separate development environment, then set `PUPPETEER_MODULE` to its directory and `CHROMIUM_PATH` to your Chromium executable. Optionally set `WORLDMAP_CONTENT_JSON` to the census JSON for a larger-world performance check. Historical P1d checks use `node tools/capture_worldmap_p1d.cjs` against that commit; use `node tools/capture_worldmap_p1g.cjs` for the current art. The P1d tool runs against a local preview server (the P1 script retains its historical 8137 capture flow). It waits for terrain loading, `document.fonts.ready`, image decoding, and layout frames. It captures overview, Oldtown + Silverbrook zoom, a Lower close-up, minimum zoom and a Highlands close-up; exercises exterior selection, non-clickable filler, town filtering/interior selection, visible entrance switching, instanced interior marker, recenter, world fit, phone bounds, and Escape; and records changed-scene bake, marker-only snapshot, warm draw timings, and sheet requests in `.director/ux-audit/after/`.
 
 ## Layout and rendering
 
@@ -49,7 +49,7 @@ Additional landmark art, ornate zone banners, compass/legend ornaments, and VPS 
 
 ## P1c art hints and polish checks
 
-`pkg/worldmap/art.go` derives `mapFeatures`, `artSeed`, and Lower `undergroundStyle` from existing room customization. Explicit tags/types/names/service action names precede description/detail fallbacks. Reveal omits hints for unknown rooms. The snapshot helper copies action names only, excluding scripts, parameters, and responses. Sprite source is the content repo's `generate_map_tiles.py` plus `map_polish_art.py`; room inputs/discovery storage do not change.
+`pkg/worldmap/art.go` derives `mapFeatures`, `artSeed`, and Lower `undergroundStyle` from existing room customization. Explicit tags/types/names/service action names precede description/detail fallbacks. Reveal omits hints for unknown rooms. The snapshot helper copies action names only, excluding scripts, parameters, and responses. Sprite source is the content repo's `generate_map_tiles.py` plus `map_hires_art.py` (row definitions remain in `map_polish_art.py`); room inputs/discovery storage do not change.
 
 P1c capture checks all P1b interactions plus fog-sensitive cache pixels, every surface room center inside the smooth coastline, single-cell spur removal, specialized stamp kinds, bridge crossings, grouped ridges/canopies, four underground styles, torch/stair markers, and minimum zoom. Reports separate first/changed-scene bakes, marker-only replacements, and median/p95 warm overview/close/Lower draws. The viewport zoom threshold chooses the cached detailed or overview scene; far zoom uses fixed-size town glyphs. Low-rate ambient accents respect reduced motion and pause while hidden or closed.
 
@@ -66,3 +66,27 @@ Lower paints only short aligned known compass tunnels. Longer/misaligned/vertica
 ## P1e quieter roads
 
 Roads are a single batched network beneath terrain relief, trees, buildings and props. Town paving is fully opaque, so the dirt paths do not show through street tiles. Each discovered outdoor exit is included once and thin strokes keep overview junctions clear. Capture the four 1920×1080 overview, Oldtown/Silverbrook zoom, Lower and minimum-zoom views with `tools/capture_worldmap_p1e.cjs`; the local tool waits for fonts, art and worker scenes before saving.
+
+## P1f deeper zoom
+
+Scale now spans 1–10 with a 220px tile cap, twice the prior maximum; minimum zoom and continent fit remain P1d’s frame. Wheel and pinch use the shared clamp, and nearest-neighbor sampling keeps enlarged pixels crisp. Run `tools/capture_worldmap_p1f.cjs` against the local production-overlay preview to save overview and Oldtown at maximum zoom, and check wheel/pinch limits, Fit world, local recenter, pixel sampling and page errors. Evidence is under `.director/ux-audit/after/worldmap-p1f-*`.
+
+
+## P1j production atlas
+
+Live Veilspan uses the imagegen craft sheet (content version `c8169d17ef81`, `?v=worldmap-p1j`). Promote by copying `assets/map-tiles/prototypes/p1j/{terrain-sheet.png,terrain-review.png}` and a production-trimmed `terrain-sheet.json` (drop prototype-only keys) into `assets/map-tiles/`, then:
+
+```sh
+python3 tools/sync_map_tiles.py ../talesmud-rpg-1/assets/map-tiles
+# bump client cache queries to ?v=worldmap-p1j
+cd public/mud-client && npm run build
+# copy public/ → pkg/webuiplay/dist/
+```
+
+Do not run `generate_map_tiles.py` for this promotion — that rebuilds Pillow P1g art and overwrites the imagegen atlas. P1e roads-under-stamps, P1f zoom clamps, A9, and 48px sheet dimensions are unchanged.
+
+## P1g native art and performance comparison
+
+Native 48px terrain, all 40 stamp rows and Lower floors retain six room-driven variants. The detailed and Lower scenes keep native resolution; the overview stays at 32px per cell after measurements showed repeated 48px overview downscales cost too much. Logical geography stays at 32 units per cell, and projection derives the displayed bitmap resolution. Coastal fields use twelve samples per cell, and every bitmap scale uses nearest-neighbor. Outdoor towers select braced wooden lookout variants; town defensive towers select stone variants. Roads remain under all stamps and opaque town paving.
+
+Serve the current preview on :8144 and a retained P1e preview of the same 351-room fixture on :8143, then run `PUPPETEER_MODULE=/path/to/puppeteer-core node tools/capture_worldmap_p1g.cjs`. Override `WORLDMAP_PREVIEW_URL` and `WORLDMAP_BASELINE_URL` if needed. It captures `worldmap-p1g-{maxzoom,oldtown,overview}-1920x1080.png`, validates unchanged zoom clamps/fit, native detailed/Lower cells, disclosed stamp roles and coastline bounds, then records matched first/changed/close bake and 80-frame warm draw measurements. `maxzoom` frames Oldtown Road Sign, Bandit Lookout and Meadows; `oldtown` frames the town. The report documents bake, asset-size and memory deltas rather than treating off-thread bake latency as main-thread blocking. This pass is local review only, with no VPS access or deployment.

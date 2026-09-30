@@ -2,6 +2,7 @@
   import { onDestroy, onMount, tick } from 'svelte';
   import { readStageSize, shouldRepaintSize, applyCanvasBitmap } from '../widgets/atlasLayout.js';
   import { paintAtlas, isCurrentPlace, panToCenterPlace, onMapTilesReady, clampMapScale, setYouPortrait } from '../widgets/atlasRenderer.js';
+  import { prefersReducedMotion } from '../keyboardShortcuts.js';
   import { interiorChoices, surfaceId, surfaceGroups, groupForRoom } from '../widgets/surfaceAtlas.js';
   import { mobileStore } from '../mobile/mobileStore.js';
 
@@ -551,7 +552,7 @@
   onMount(() => {
     stopTileListener = onMapTilesReady(() => scheduleDraw());
     ambientTimer = setInterval(() => {
-      if(open && !document.hidden && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) scheduleDraw();
+      if(open && !document.hidden && !prefersReducedMotion()) scheduleDraw();
     },650);
     escHandler = (e) => {
       if (e.key === 'Escape' && open) {

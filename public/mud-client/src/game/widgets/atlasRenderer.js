@@ -1,3 +1,4 @@
+import { prefersReducedMotion } from '../keyboardShortcuts.js';
 import { TERRAIN_SHEET } from './terrainSheet.js';
 import { undergroundRaster } from './undergroundRenderer.js';
 import { drawMapSprite } from './mapArt.js';
@@ -365,8 +366,9 @@ function projectPlace(place, cam, w, h) {
 }
 
 export const MAP_SCALE_MIN = 1;
-export const MAP_SCALE_MAX = 5;
-export const MAP_TILE_STEP_MAX = 110;
+// Raise both caps together so local recenter and world-fit views can zoom twice as close.
+export const MAP_SCALE_MAX = 10;
+export const MAP_TILE_STEP_MAX = 220;
 
 export function clampMapScale(s) {
   const n = Number(s);
@@ -757,7 +759,8 @@ export function paintAtlas(ctx, params) {
     const origin = projectGrid(landscape.bounds.minX - .5, landscape.bounds.minY - .5, cam, w, h);
     ctx.imageSmoothingEnabled = false;
     const drawLayer=canvas=>{
-      const scale=cam.tileStep/32,sx=Math.max(0,-origin.px/scale),sy=Math.max(0,-origin.py/scale);
+      const cellSize=canvas.width/(landscape.bounds.maxX-landscape.bounds.minX+1);
+      const scale=cam.tileStep/cellSize,sx=Math.max(0,-origin.px/scale),sy=Math.max(0,-origin.py/scale);
       const sw=Math.min(canvas.width-sx,(w-origin.px)/scale-sx),sh=Math.min(canvas.height-sy,(h-origin.py)/scale-sy);
       if(sw>0&&sh>0)ctx.drawImage(canvas,sx,sy,sw,sh,origin.px+sx*scale,origin.py+sy*scale,sw*scale,sh*scale);
     };
@@ -867,7 +870,7 @@ export function paintAtlas(ctx, params) {
   }
   // Low-rate ambient accents sit above cached pixels and reveal no new art.
   if(landscape && !landscape.pending && cam.tileStep>=20) {
-    const reduced=typeof window!=='undefined'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduced=prefersReducedMotion();
     const phase=reduced?0:Math.floor(Date.now()/650)%6;
     for(const a of landscape.ambience||[]) {
       const {px,py}=projectGrid(a.x,a.y,cam,w,h);if(px<0||py<0||px>w||py>h)continue;

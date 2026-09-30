@@ -1,5 +1,17 @@
 import assert from 'assert';
-import { combatStageFocus, hotbarSlotFromKey, isTextEntry, topOpenPanel } from './keyboardShortcuts.js';
+import { combatStageFocus, hotbarSlotFromKey, isTextEntry, topOpenPanel, prefersReducedMotion } from './keyboardShortcuts.js';
+import { settingsStore } from './SettingsStore.js';
+
+globalThis.localStorage = { setItem() {}, getItem() { return null; } };
+globalThis.window = { matchMedia: () => ({ matches: true }) };
+assert.equal(prefersReducedMotion(), true, 'system follows OS preference');
+settingsStore.setSetting('interface', 'reducedMotion', 'off');
+assert.equal(prefersReducedMotion(), false, 'off overrides reduced OS motion');
+window.matchMedia = () => ({ matches: false });
+settingsStore.setSetting('interface', 'reducedMotion', 'on');
+assert.equal(prefersReducedMotion(), true, 'on overrides normal OS motion');
+settingsStore.setSetting('interface', 'reducedMotion', 'system');
+assert.equal(prefersReducedMotion(), false);
 
 assert.equal(hotbarSlotFromKey('1'), 0);
 assert.equal(hotbarSlotFromKey('9'), 8);
