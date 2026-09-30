@@ -404,3 +404,11 @@ Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated bl
 - Deployment (Marcus approved “Ship P1j imagegen sheet to veilspan.com”): VPS `~/dev/talesmud` fast-forwarded `9cd3a09` (P1g) → `4a5b6ec` on `engine-june`. Copied the full play client into `pkg/webuiplay/dist` (48px terrain sheet 288×9024 / 1,389,081 B, `?v=worldmap-p1j`). Built `bin/tales.next` via `go build -o bin/tales.next ./cmd/tales`, preserved previous binary as `bin/tales.prev-9cd3a09` (sha256 `d2fb7e25cb8043f50733d67ff864ad051f3118cb2ee17f28fc31b9861ee0c746`), replaced by rename with new sha256 `b001340ae4051b11695ec0f99f7cbf5721def35d4c95d37ae338be8ec8a4d613`. `sudo systemctl restart` needs a password, so SIGTERM only to talesmud.service MainPID `819645`; Restart=always started MainPID `827329` at 23:59:11Z (01:59:11 Berlin, Sep 30) listening on :8010. Door :8020 remained PID `758959` (tales-door-mud); no Door binary/service/port touched. No production DB writes.
 - Live smoke: public `https://veilspan.com/`, `/api/server-info` (Veilspan Chapter I), and `/play/` return 200. Play HTML references all client assets at `?v=worldmap-p1j`. `bundle.js?v=worldmap-p1j`, `worldmap-worker.js?v=worldmap-p1j`, and `/api/map-tiles/terrain-sheet.png` (also `?v=c8169d17ef81`) return 200. Served sheet is 288×9024 (1,389,081 bytes, content hash `c8169d17ef81`); public bundle sha256 matches committed client `1904a546492bbfc6a7e52fe0cfcf1dbf600585060287cb132792c30f6cfe9634`.
 - Details: `.director/WORLDMAP-P1J-PROTOTYPE.md`.
+
+
+## ACCEPT — 2026-09-30 daily director (~10:10 Europe/Berlin)
+- Live healthy: HTTPS/play 200; POST `/api/guest` 200; `/api/server-info` Veilspan Chapter I; bundle `?v=worldmap-p1j`; door.veilspan.com/door 301→OK (FYI only). clawdbot local :8010 200.
+- ACCEPTED yesterday crown **A9 boss phases** (`9026bba` code / `152eadd` smoke+docs; BattleStage Opening→Escalation→Last Stand; Hollow Knight two-guest smoke; Door untouched).
+- ACCEPTED overnight EXTRA **WORLDMAP P1e–P1j** (quieter roads, 2× max zoom, native 48px, craft prototypes, imagegen P1j sheet live `?v=worldmap-p1j`, tip `a64b5f7`).
+- No Marcus-signed open P0 (DSA armor-weight still unsigned; Google OAuth client still Marcus).
+- Crown today: **B14 Settings panel** (browser UX track after combat A9). Task: `.director/CORE-FOCUS-B14-TASK.md`. Worker: Codex on clawdbot (`codex-b14`).
