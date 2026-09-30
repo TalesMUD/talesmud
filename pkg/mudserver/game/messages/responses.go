@@ -483,6 +483,7 @@ type QuestLogEntry struct {
 	QuestName      string                   `json:"questName"`
 	Description    string                   `json:"description,omitempty"`
 	Category       string                   `json:"category,omitempty"`
+	Area           string                   `json:"area,omitempty"`
 	Level          int32                    `json:"level,omitempty"`
 	Status         string                   `json:"status"`
 	ReadyToTurnIn  bool                     `json:"readyToTurnIn,omitempty"`

@@ -282,6 +282,7 @@ func (qt *QuestTracker) pushQuestLogSnapshot(userID, characterID string) {
 			entry.QuestName = quest.Name
 			entry.Description = quest.Description
 			entry.Category = quest.Category
+			entry.Area = quest.DisplayArea()
 			entry.Level = quest.Level
 			entry.Rewards = &messages.QuestReward{
 				XP:              quest.Rewards.XP,

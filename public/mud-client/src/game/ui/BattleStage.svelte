@@ -300,6 +300,34 @@
     if (arenaFlashTimer) clearTimeout(arenaFlashTimer);
   });
 
+  function statusEffectsOf(c) {
+    const list = (c && c.statusEffects) || [];
+    return Array.isArray(list) ? list.filter((se) => se && (se.duration > 0 || se.name)) : [];
+  }
+
+  function buffIconUrl(se) {
+    const skillId = se?.skillId || se?.id || '';
+    try {
+      return skillGenericArtUrl(skillId) || '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function buffTitle(se) {
+    const name = se?.name || skillDisplayName(se?.skillId || se?.id) || 'Effect';
+    const rounds = se?.duration != null ? `${se.duration} round${se.duration === 1 ? '' : 's'}` : '';
+    const kind = se?.type ? String(se.type) : 'buff';
+    return rounds ? `${name} (${kind}) · ${rounds}` : `${name} (${kind})`;
+  }
+
+  function buffKindClass(se) {
+    const t = String(se?.type || 'buff').toLowerCase();
+    if (t === 'debuff' || t === 'dot' || t === 'stun') return t;
+    if (t === 'hot') return 'hot';
+    return 'buff';
+  }
+
   function combatantPortrait(c) {
     const p = (c && c.portrait) || '';
     if (p.startsWith('data:')) return p;
@@ -713,6 +741,21 @@
           {#if enemy.bossPhase}
             <div class="boss-phase-label" aria-label="Boss phase">{phaseCaption(enemy)}</div>
           {/if}
+
+          {#if statusEffectsOf(enemy).length}
+            <div class="buff-row" aria-label="Enemy effects">
+              {#each statusEffectsOf(enemy) as se (se.id || se.name + '-' + se.duration)}
+                <div class="buff-icon {buffKindClass(se)}" title={buffTitle(se)}>
+                  {#if buffIconUrl(se)}
+                    <img src={buffIconUrl(se)} alt="" />
+                  {:else}
+                    <span class="buff-fallback">{(se.name || '?').slice(0, 1)}</span>
+                  {/if}
+                  <span class="buff-stacks">{se.duration}</span>
+                </div>
+              {/each}
+            </div>
+          {/if}
           <div class="hp-row">
             <span class="hp-label">HP</span>
             <div class="hp-track">
@@ -801,6 +844,21 @@
           </div>
           <div class="ally-meta">
             <div class="ally-name" class:hit-flash={tgt && fxIsHit}>{ally.name}</div>
+
+            {#if statusEffectsOf(ally).length}
+              <div class="buff-row ally" aria-label="Ally effects">
+                {#each statusEffectsOf(ally) as se (se.id || se.name + '-' + se.duration)}
+                  <div class="buff-icon {buffKindClass(se)}" title={buffTitle(se)}>
+                    {#if buffIconUrl(se)}
+                      <img src={buffIconUrl(se)} alt="" />
+                    {:else}
+                      <span class="buff-fallback">{(se.name || '?').slice(0, 1)}</span>
+                    {/if}
+                    <span class="buff-stacks">{se.duration}</span>
+                  </div>
+                {/each}
+              </div>
+            {/if}
             <div class="ally-sub">{ally.classId || 'Adventurer'} · Lv {ally.level || 1}{#if down} · Down{:else if ally.hasFled} · Fled{:else if turn?.actorId === ally.id} · Turn{/if}</div>
             <div class="ally-bar"><span style="width: {pct}%; background: {playerHpColor(pct)}"></span></div>
             <div class="ally-numbers">HP {ally.hp ?? 0}/{ally.maxHp ?? 0}</div>
@@ -855,6 +913,21 @@
         class:crush-flash={isFxTarget(selfId) && fxIsCrush}
       >{selfName}
       </div>
+
+      {#if statusEffectsOf(selfCombatant).length}
+        <div class="buff-row player" aria-label="Your buffs">
+          {#each statusEffectsOf(selfCombatant) as se (se.id || se.name + '-' + se.duration)}
+            <div class="buff-icon {buffKindClass(se)}" title={buffTitle(se)}>
+              {#if buffIconUrl(se)}
+                <img src={buffIconUrl(se)} alt="" />
+              {:else}
+                <span class="buff-fallback">{(se.name || '?').slice(0, 1)}</span>
+              {/if}
+              <span class="buff-stacks">{se.duration}</span>
+            </div>
+          {/each}
+        </div>
+      {/if}
       <div class="hp-row player-hp">
         <span class="hp-label">HP</span>
         <div class="hp-track">
@@ -3566,4 +3639,60 @@
     }
   }
 
+
+  .buff-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin: 3px 0 2px;
+    max-width: 100%;
+  }
+  .buff-row.player { margin: 4px 0 6px; }
+  .buff-row.ally { margin: 2px 0 3px; }
+  .buff-icon {
+    position: relative;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    border: 1px solid rgba(212, 175, 55, 0.55);
+    background: rgba(8, 10, 16, 0.92);
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.45);
+    flex: 0 0 auto;
+  }
+  .buff-icon.debuff, .buff-icon.dot, .buff-icon.stun { border-color: rgba(248, 113, 113, 0.75); }
+  .buff-icon.hot { border-color: rgba(74, 222, 128, 0.7); }
+  .buff-icon.buff { border-color: rgba(96, 165, 250, 0.7); }
+  .buff-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    image-rendering: pixelated;
+    display: block;
+  }
+  .buff-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-size: 10px;
+    font-weight: 700;
+    color: #fde68a;
+    text-transform: uppercase;
+  }
+  .buff-stacks {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    min-width: 11px;
+    padding: 0 2px;
+    font-size: 9px;
+    line-height: 11px;
+    font-weight: 800;
+    color: #fff;
+    background: rgba(0,0,0,0.78);
+    border-top-left-radius: 3px;
+    text-align: center;
+  }
 </style>

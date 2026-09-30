@@ -19,6 +19,10 @@
   let travelPath = [];
   let isTraveling = false;
   let travelPathRoomIds = new Set();
+  let travelFollowActive = false;
+  let overlayFading = false;
+  let panAnimRaf = 0;
+  let closeAfterTravelTimer = 0;
 
   let panX = 0;
   let panY = 0;
@@ -191,8 +195,13 @@
     // Follow / recenter when you move or atlas/layer catches up (meadow clusters).
     if (open && (roomChanged || layerChanged || (atlasChanged && currentRoomId))) {
       tick().then(() => {
-        applyRecenterToYou(true);
-        scheduleDraw();
+        if (travelFollowActive || isTraveling) {
+          frameWorld = false;
+          animatePanToYou({ durationMs: prefersReducedMotion() ? 0 : 280 });
+        } else {
+          applyRecenterToYou(true);
+          scheduleDraw();
+        }
       });
     } else if (open && atlasChanged) {
       scheduleDraw();
@@ -304,22 +313,99 @@
     return ({ safe: 'Safe', low: 'Low', hazard: 'Hazard', hostile: 'Hostile', uncharted: 'Unknown' })[d] || d || '—';
   }
 
+  function targetPanForYou() {
+    const size = readStageSize(stageWrap);
+    const here = resolveHerePlace();
+    if (here && size.w >= 4 && size.h >= 4) {
+      return panToCenterPlace(surfaceGroups(visiblePlaces, activeLayer), here, size.w, size.h, userScale, atlas.paths || []);
+    }
+    return { panX: 0, panY: 0 };
+  }
+
+  function stopPanAnim() {
+    if (panAnimRaf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(panAnimRaf);
+    panAnimRaf = 0;
+  }
+
+  function animatePanToYou({ durationMs = 280 } = {}) {
+    const target = targetPanForYou();
+    if (prefersReducedMotion() || !durationMs || durationMs <= 0) {
+      stopPanAnim();
+      panX = target.panX;
+      panY = target.panY;
+      scheduleDraw();
+      return;
+    }
+    stopPanAnim();
+    const fromX = panX;
+    const fromY = panY;
+    const dx = target.panX - fromX;
+    const dy = target.panY - fromY;
+    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) {
+      panX = target.panX;
+      panY = target.panY;
+      scheduleDraw();
+      return;
+    }
+    const start = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    const ease = (t) => 1 - Math.pow(1 - t, 3);
+    const step = (now) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      const e = ease(t);
+      panX = fromX + dx * e;
+      panY = fromY + dy * e;
+      scheduleDraw();
+      if (t < 1) {
+        panAnimRaf = requestAnimationFrame(step);
+      } else {
+        panAnimRaf = 0;
+        panX = target.panX;
+        panY = target.panY;
+        scheduleDraw();
+      }
+    };
+    panAnimRaf = requestAnimationFrame(step);
+  }
+
   function startTravel(targetId) {
-    if (!currentRoomId || targetId === currentRoomId) return;
+    if (!currentRoomId || targetId === currentRoomId || overlayFading) return;
     const path = findPath(currentRoomId, targetId);
     if (!path || !path.length) return;
+    if (closeAfterTravelTimer) {
+      clearTimeout(closeAfterTravelTimer);
+      closeAfterTravelTimer = 0;
+    }
     travelTargetId = targetId;
     travelPath = path;
     isTraveling = true;
-    travelPathRoomIds = new Set(path.map(s => s.roomId));
+    travelFollowActive = true;
+    travelPathRoomIds = new Set([currentRoomId, ...path.map(s => s.roomId)]);
+    // Leave world-fit so the camera can track the walker.
+    frameWorld = false;
+    animatePanToYou({ durationMs: prefersReducedMotion() ? 0 : 320 });
     if (sendMessage) sendMessage(path[0].direction);
   }
 
-  function cancelTravel() {
+  function cancelTravel({ arrived = false } = {}) {
     travelTargetId = null;
     travelPath = [];
     isTraveling = false;
     travelPathRoomIds = new Set();
+    if (!arrived) travelFollowActive = false;
+  }
+
+  function finishTravelAndMaybeCloseOverlay() {
+    cancelTravel({ arrived: true });
+    travelFollowActive = false;
+    // Overlay mode only: fade out Cartographer and close. Compact Map tab stays open.
+    if (!open || overlayFading) return;
+    overlayFading = true;
+    const delay = prefersReducedMotion() ? 60 : 520;
+    closeAfterTravelTimer = setTimeout(() => {
+      closeAfterTravelTimer = 0;
+      overlayFading = false;
+      closeOverview();
+    }, delay);
   }
 
   function advanceTravel(newRoomId) {
@@ -329,9 +415,18 @@
     }
     if (travelPath[0].roomId === newRoomId) {
       travelPath = travelPath.slice(1);
-      travelPathRoomIds = new Set(travelPath.map(s => s.roomId));
-      if (!travelPath.length) cancelTravel();
-      else setTimeout(() => { if (sendMessage && travelPath[0]) sendMessage(travelPath[0].direction); }, 160);
+      travelPathRoomIds = new Set([
+        newRoomId,
+        ...travelPath.map(s => s.roomId),
+        ...(travelTargetId ? [travelTargetId] : []),
+      ]);
+      if (!travelPath.length) {
+        // Final step arrived — linger briefly on destination, then fade overlay.
+        animatePanToYou({ durationMs: prefersReducedMotion() ? 0 : 240 });
+        finishTravelAndMaybeCloseOverlay();
+      } else {
+        setTimeout(() => { if (sendMessage && travelPath[0]) sendMessage(travelPath[0].direction); }, 160);
+      }
     } else {
       cancelTravel();
     }
@@ -512,6 +607,13 @@
   }
 
   function closeOverview() {
+    if (closeAfterTravelTimer) {
+      clearTimeout(closeAfterTravelTimer);
+      closeAfterTravelTimer = 0;
+    }
+    overlayFading = false;
+    travelFollowActive = false;
+    stopPanAnim();
     if (store && store.closeMapOverview) store.closeMapOverview();
     else if (store && store.setMapOverviewOpen) store.setMapOverviewOpen(false);
   }
@@ -575,6 +677,8 @@
     if (resizeHandler) window.removeEventListener('resize', resizeHandler);
     if (resizeHandler && window.visualViewport) window.visualViewport.removeEventListener('resize', resizeHandler);
     if (drawRaf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(drawRaf);
+    stopPanAnim();
+    if (closeAfterTravelTimer) clearTimeout(closeAfterTravelTimer);
     if (stageObserver) stageObserver.disconnect();
     cancelTravel();
   });
@@ -595,6 +699,15 @@
     opacity: 1;
     visibility: visible;
   }
+  .map-overlay.fading {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.48s ease;
+  }
+  .map-overlay:not(.fading) {
+    transition: opacity 0.18s ease;
+  }
+
   /* Never class="modal" — Materialize global .modal is opacity:0 / display:none. */
   .map-panel {
     position: relative;
@@ -910,6 +1023,7 @@
     id="map-overview-overlay"
     class="map-overlay"
     class:narrow={$isMobile}
+    class:fading={overlayFading}
     style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:200000;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;background:rgba(0,0,0,0.82);opacity:1;visibility:visible;"
     use:portalToBody
     role="dialog"

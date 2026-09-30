@@ -132,6 +132,7 @@ type QuestLogEntry struct {
 	Status      string                   `json:"status"`
 	Description string                   `json:"description"`
 	Category    string                   `json:"category,omitempty"`
+	Area        string                   `json:"area,omitempty"`
 	Level       int32                    `json:"level,omitempty"`
 	Objectives  []QuestObjectiveProgress `json:"objectives"`
 	Rewards     *quests.Reward           `json:"rewards,omitempty"`
@@ -176,6 +177,7 @@ func (h *QuestsHandler) GetQuestLog(c *gin.Context) {
 			Status:      string(progress.Status),
 			Description: quest.Description,
 			Category:    quest.Category,
+			Area:        quest.DisplayArea(),
 			Level:       quest.Level,
 			Objectives:  buildQuestLogObjectives(quest, progress),
 			Rewards:     &quest.Rewards,

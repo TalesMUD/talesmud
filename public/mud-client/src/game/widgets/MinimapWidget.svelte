@@ -15,6 +15,7 @@
   let travelPath = [];
   let isTraveling = false;
   let travelPathRoomIds = new Set();
+  let panAnimRaf = 0;
 
   let panX = 0;
   let panY = 0;
@@ -65,8 +66,11 @@
     if (layerChanged) activeLayer = nextLayer;
     if (roomChanged || layerChanged || (atlasChanged && currentRoomId)) {
       tick().then(() => {
-        applyRecenterToYou(true);
-        scheduleDraw();
+        if (isTraveling) animatePanToYou(220);
+        else {
+          applyRecenterToYou(true);
+          scheduleDraw();
+        }
       });
     } else if (atlasChanged) {
       scheduleDraw();
@@ -124,6 +128,38 @@
     return null;
   }
 
+  function stopPanAnim() {
+    if (panAnimRaf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(panAnimRaf);
+    panAnimRaf = 0;
+  }
+
+  function animatePanToYou(durationMs = 220) {
+    const size = readStageSize(widgetWrap);
+    const here = resolveHerePlace();
+    let target = { panX: 0, panY: 0 };
+    if (here && size.w >= 4 && size.h >= 4) {
+      target = panToCenterPlace(surfaceGroups(visiblePlaces, activeLayer), here, size.w, size.h, userScale, atlas.paths || []);
+    }
+    stopPanAnim();
+    const fromX = panX, fromY = panY;
+    const dx = target.panX - fromX, dy = target.panY - fromY;
+    if (!durationMs || (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5)) {
+      panX = target.panX; panY = target.panY; scheduleDraw(); return;
+    }
+    const start = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    const ease = (t) => 1 - Math.pow(1 - t, 3);
+    const step = (now) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      const e = ease(t);
+      panX = fromX + dx * e;
+      panY = fromY + dy * e;
+      scheduleDraw();
+      if (t < 1) panAnimRaf = requestAnimationFrame(step);
+      else { panAnimRaf = 0; panX = target.panX; panY = target.panY; scheduleDraw(); }
+    };
+    panAnimRaf = requestAnimationFrame(step);
+  }
+
   function startTravel(targetId) {
     if (!currentRoomId || targetId === currentRoomId) return;
     const path = findPath(currentRoomId, targetId);
@@ -131,7 +167,8 @@
     travelTargetId = targetId;
     travelPath = path;
     isTraveling = true;
-    travelPathRoomIds = new Set(path.map(s => s.roomId));
+    travelPathRoomIds = new Set([currentRoomId, ...path.map(s => s.roomId)]);
+    animatePanToYou(280);
     if (sendMessage) sendMessage(path[0].direction);
   }
 

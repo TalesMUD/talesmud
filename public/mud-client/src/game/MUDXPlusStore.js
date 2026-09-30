@@ -220,7 +220,28 @@ function normalizeCombatant(raw) {
     bossPhase: raw.bossPhase ?? raw.BossPhase ?? 0,
     bossPhaseLabel: raw.bossPhaseLabel || raw.BossPhaseLabel || '',
     bossPhaseCount: raw.bossPhaseCount ?? raw.BossPhaseCount ?? 0,
+    statusEffects: normalizeStatusEffects(raw.statusEffects || raw.StatusEffects),
   };
+}
+
+function normalizeStatusEffects(list) {
+  if (!Array.isArray(list)) return [];
+  return list.map((se) => {
+    if (!se || typeof se !== 'object') return null;
+    const duration = se.duration ?? se.Duration ?? 0;
+    const name = se.name || se.Name || se.id || se.ID || 'Effect';
+    return {
+      id: se.id || se.ID || '',
+      skillId: se.skillId || se.SkillID || '',
+      name,
+      type: String(se.type || se.Type || 'buff').toLowerCase(),
+      stat: se.stat || se.Stat || '',
+      value: se.value ?? se.Value ?? 0,
+      percent: se.percent ?? se.Percent ?? 0,
+      duration: Number(duration) || 0,
+      sourceId: se.sourceId || se.SourceID || '',
+    };
+  }).filter(Boolean);
 }
 
 function normalizeCombatantList(list) {

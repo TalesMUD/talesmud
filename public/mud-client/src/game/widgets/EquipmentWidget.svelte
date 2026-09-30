@@ -123,18 +123,22 @@
 
   .doll {
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: max-content minmax(168px, 1.15fr) max-content;
     grid-template-rows: auto auto;
-    gap: 0.45em 0.55em;
-    padding: 0.55em 0.65em 0.35em;
-    align-items: start;
+    gap: 0.28em 0.38em;
+    padding: 0.4em 0.45em 0.25em;
+    align-items: stretch;
+    justify-content: center;
     justify-items: center;
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
   .slot-col {
     display: flex;
     flex-direction: column;
-    gap: 0.4em;
+    gap: 0.28em;
+    justify-content: space-evenly;
   }
 
   .slot-col.left { grid-column: 1; grid-row: 1; }
@@ -147,17 +151,18 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.35em;
+    gap: 0.3em;
     min-width: 0;
     width: 100%;
-    max-width: 140px;
+    max-width: 220px;
     align-self: stretch;
   }
 
   .portrait-frame {
     width: 100%;
     aspect-ratio: 2 / 3;
-    max-height: 210px;
+    max-height: 280px;
+    flex: 1 1 auto;
     border-radius: 8px;
     border: 1px solid rgba(148, 163, 184, 0.3);
     background: rgba(0, 0, 0, 0.35);
@@ -200,12 +205,13 @@
     grid-row: 2;
     display: flex;
     justify-content: center;
-    gap: 0.55em;
+    gap: 0.4em;
+    padding-top: 0.15em;
   }
 
   .equip-slot {
-    width: 72px;
-    height: 72px;
+    width: 88px;
+    height: 88px;
     border-radius: 6px;
     border: 1.5px solid rgba(148, 163, 184, 0.35);
     background: rgba(0, 0, 0, 0.4);
@@ -232,14 +238,14 @@
   }
 
   .equip-slot img {
-    width: 64px;
-    height: 64px;
+    width: 76px;
+    height: 76px;
     object-fit: contain;
     image-rendering: pixelated;
   }
 
   .equip-slot .slot-glyph {
-    font-size: 26px;
+    font-size: 30px;
     color: #4b5563;
   }
 
@@ -273,16 +279,24 @@
 
   @media (max-width: 420px) {
     .equip-slot {
+      width: 74px;
+      height: 74px;
+    }
+    .equip-slot img {
       width: 64px;
       height: 64px;
     }
-    .equip-slot img {
-      width: 56px;
-      height: 56px;
-    }
     .portrait-col {
-      max-width: 110px;
+      max-width: 150px;
     }
+    .portrait-frame { max-height: 220px; }
+  }
+
+  @media (min-width: 900px) {
+    .equip-slot { width: 96px; height: 96px; }
+    .equip-slot img { width: 84px; height: 84px; }
+    .portrait-col { max-width: 260px; }
+    .portrait-frame { max-height: 320px; }
   }
 </style>
 

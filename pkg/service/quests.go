@@ -83,6 +83,7 @@ type QuestLogEntry struct {
 	QuestName      string                        `json:"questName"`
 	Description    string                        `json:"description,omitempty"`
 	Category       string                        `json:"category,omitempty"`
+	Area           string                        `json:"area,omitempty"`
 	Level          int32                         `json:"level,omitempty"`
 	Status         string                        `json:"status"`
 	ReadyToTurnIn  bool                          `json:"readyToTurnIn"`
@@ -403,6 +404,7 @@ func (s *questsService) BuildQuestLog(characterID string) ([]QuestLogEntry, erro
 			QuestName:     quest.Name,
 			Description:   quest.Description,
 			Category:      quest.Category,
+			Area:          quest.DisplayArea(),
 			Level:         quest.Level,
 			Status:        string(progress.Status),
 			ReadyToTurnIn: progress.Status == quests.QuestStatusActive && allObjectivesComplete(progress.Objectives),
@@ -425,6 +427,7 @@ func (s *questsService) BuildQuestLog(characterID string) ([]QuestLogEntry, erro
 
 	return entries, nil
 }
+
 
 func allObjectivesComplete(objectives []quests.ObjectiveProgress) bool {
 	if len(objectives) == 0 {

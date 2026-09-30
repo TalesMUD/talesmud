@@ -428,5 +428,15 @@ Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated bl
 
 - Code on `engine-june`; commits include `[grokbot]`. Client assets use `?v=maptravel`.
 - What changed: Compact Map tab (`MinimapWidget`) selection strip offers **Travel** as the primary one-tap action; **Inspect** stays optional (opens Cartographer). Removed duplicate Map title + floating Open Map chrome (MAP tab is the only header; toolbar keeps fullscreen expand only). Cartographer intel always shows Travel under the room title on desktop and phone.
-- Flutter: world map overlay already had Travel-on-select; no Flutter change/APK this slice.
+- Extra: Travel smooth-follows the player camera; Cartographer overlay fades out and closes on arrival (compact Map tab does not). Flutter WorldMapOverlay mirrors follow + fade-close.
 - Tests: mapDetails/mapPolish/atlasLayout/worldmapSceneStore/mapOverviewStore/hudPrefs Node checks + `npm run build`.
+
+
+## UX batch — map travel follow, quest areas, equipment, buff bars (2026-10-01)
+
+- Client `?v=ux1001`. Commits include `[grokbot]`.
+- Map: Travel-on-select + no double Map header; Cartographer camera smooth-follows travel steps and fades/closes overlay on arrival (compact Map tab stays open).
+- Quest Log: active quests grouped by area (collapse/expand; current area expanded by default); Daily/Side/Main filters kept. Quest log entries carry `area` (authored or QST-zone derived).
+- Equipment: larger slots/portrait, tighter columns to fill whitespace.
+- Combat: WoW-style buff icon rows on self/allies/enemies from `statusEffects` with remaining rounds.
+- Flutter: WorldMapOverlay smooth travel follow + fade-close on arrival (APK if shipped).
