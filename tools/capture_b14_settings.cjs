@@ -40,7 +40,15 @@ const result = { playUrl, checks: {}, pageErrors: [] };
     assert.equal(result.checks.desktop.pageHeight, 1080);
     assert.ok(result.checks.desktop.modal.bottom <= 1080);
     assert.equal(result.checks.desktop.activeTab, 'Interface');
+    result.checks.inactiveControlsHidden = await page.evaluate(() =>
+      !document.querySelector('input[aria-label="Compact mode"], input[aria-label="Room text overlay"]'));
+    assert.equal(result.checks.inactiveControlsHidden, true);
     await page.screenshot({ path: path.join(out, 'b14-settings-1920x1080.png') });
+    await page.evaluate(() => [...document.querySelectorAll('.tab-btn')].find(b => b.textContent.includes('General')).click());
+    result.checks.audioNote = await page.$eval('.note', e => e.textContent.trim());
+    assert.ok(result.checks.audioNote.includes('Game audio is coming soon'));
+    assert.equal(await page.$('.tab-content input'), null, 'audio has no dead controls');
+    await page.evaluate(() => [...document.querySelectorAll('.tab-btn')].find(b => b.textContent.includes('Interface')).click());
     await page.evaluate(() => {
       [...document.querySelectorAll('[role="group"][aria-label="Reduced motion"] button')].find(b => b.textContent.trim() === 'On').click();
       document.querySelector('input[aria-label="Auto-focus BattleStage"]').click();

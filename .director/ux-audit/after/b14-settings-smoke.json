@@ -9,13 +9,15 @@
       "pageHeight": 1080,
       "modal": {
         "x": 600,
-        "y": 196.4375,
+        "y": 262.21875,
         "right": 1320,
-        "bottom": 883.5625
+        "bottom": 817.78125
       },
       "reducedMotion": "system",
       "activeTab": "Interface"
     },
+    "inactiveControlsHidden": true,
+    "audioNote": "Game audio is coming soonThere are no active sound effects or music controls yet.",
     "saved": {
       "theme": "dark-fantasy",
       "parchmentBackground": false,
@@ -87,9 +89,9 @@
       "pageHeight": 768,
       "modal": {
         "x": 323,
-        "y": 42.140625,
+        "y": 107.921875,
         "right": 1043,
-        "bottom": 725.859375
+        "bottom": 660.078125
       },
       "reducedMotion": "on",
       "activeTab": "Interface"
@@ -102,9 +104,9 @@
       "pageHeight": 844,
       "modal": {
         "x": 7,
-        "y": 32.953125,
+        "y": 94.453125,
         "right": 383,
-        "bottom": 811.03125
+        "bottom": 749.53125
       },
       "reducedMotion": "on",
       "activeTab": "Interface"
