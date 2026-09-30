@@ -29,8 +29,8 @@ const DEFAULT_SETTINGS = {
   interface: {
     theme: 'dark-fantasy',       // UI theme: 'dark-fantasy' or 'clean-hud'
     parchmentBackground: false,  // Room description parchment style (default off)
-    compactMode: false,
-    roomTextOverlay: false,      // Show game text overlay on room image (always on for mobile)
+    compactMode: false,          // Legacy stored field; no active UI consumer
+    roomTextOverlay: false,      // Legacy stored field; no active UI consumer
     actionBarPins: [...DEFAULT_ACTION_BAR_PINS],
     actionBarLayoutRevision: ACTION_BAR_LAYOUT_REVISION,
     inventoryOpenMode: DEFAULT_INVENTORY_OPEN_MODE, // 'overlay' | 'widget'

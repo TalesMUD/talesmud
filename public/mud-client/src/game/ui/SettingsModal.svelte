@@ -148,9 +148,7 @@
             </section>
             <section class="settings-section">
               <h2 class="section-title">Room display</h2>
-              {#each [{key:'parchmentBackground', label:'Parchment style', desc:'Textured room descriptions'}, {key:'compactMode', label:'Compact mode', desc:'Tighter panel spacing'}, {key:'roomTextOverlay', label:'Room text overlay', desc:'Show text over room art; always on for phones'}] as option}
-                <div class="setting-item"><div class="setting-info"><div class="setting-label">{option.label}</div><div class="setting-desc">{option.desc}</div></div><label class="toggle-switch"><input type="checkbox" aria-label={option.label} checked={$settingsStore.interface?.[option.key]} on:change={() => toggle(option.key)} /><span class="toggle-slider"></span></label></div>
-              {/each}
+              <div class="setting-item"><div class="setting-info"><div class="setting-label">Parchment style</div><div class="setting-desc">Textured room descriptions</div></div><label class="toggle-switch"><input type="checkbox" aria-label="Parchment style" checked={$settingsStore.interface?.parchmentBackground} on:change={() => toggle('parchmentBackground')} /><span class="toggle-slider"></span></label></div>
             </section>
           {:else}
             <section class="settings-section"><h2 class="section-title">Audio</h2><div class="note"><div class="setting-label">Game audio is coming soon</div><div class="setting-desc">There are no active sound effects or music controls yet.</div></div></section>
