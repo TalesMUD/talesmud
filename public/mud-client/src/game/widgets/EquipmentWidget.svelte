@@ -265,16 +265,20 @@
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 0.35em 0.75em;
-    padding: 0.35em 0.65em 0.65em;
-    border-top: 1px solid rgba(148, 163, 184, 0.15);
-    font-size: 0.72rem;
-    color: var(--text-dim, #94a3b8);
+    gap: 0.4em 0.9em;
+    padding: 0.45em 0.7em 0.7em;
+    border-top: 1px solid rgba(212, 175, 55, 0.28);
+    font-size: 0.92rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: #d7dee8;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
   }
 
   .compact-stats span strong {
-    color: var(--text-primary, #e5e7eb);
-    font-weight: 600;
+    color: #f5e6c0;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
   }
 
   @media (max-width: 420px) {

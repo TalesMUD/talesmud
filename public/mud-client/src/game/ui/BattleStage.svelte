@@ -742,8 +742,17 @@
             <div class="boss-phase-label" aria-label="Boss phase">{phaseCaption(enemy)}</div>
           {/if}
 
+          <div class="hp-row">
+            <span class="hp-label">HP</span>
+            <div class="hp-track">
+              <div class="hp-fill" style="width: {pct}%; background: {hpColor(pct)}"></div>
+            </div>
+            <span class="hp-nums">{enemy.hp ?? 0} / {enemy.maxHp ?? 0}</span>
+          </div>
+        </div>
+        <div class="enemy-sprite-wrap" class:shake={tgt && fxIsHit}>
           {#if statusEffectsOf(enemy).length}
-            <div class="buff-row" aria-label="Enemy effects">
+            <div class="buff-row portrait-buffs" aria-label="Enemy effects">
               {#each statusEffectsOf(enemy) as se (se.id || se.name + '-' + se.duration)}
                 <div class="buff-icon {buffKindClass(se)}" title={buffTitle(se)}>
                   {#if buffIconUrl(se)}
@@ -756,15 +765,6 @@
               {/each}
             </div>
           {/if}
-          <div class="hp-row">
-            <span class="hp-label">HP</span>
-            <div class="hp-track">
-              <div class="hp-fill" style="width: {pct}%; background: {hpColor(pct)}"></div>
-            </div>
-            <span class="hp-nums">{enemy.hp ?? 0} / {enemy.maxHp ?? 0}</span>
-          </div>
-        </div>
-        <div class="enemy-sprite-wrap" class:shake={tgt && fxIsHit}>
           {#if enemy.id === targetId && !dead}
             <div class="target-ring" aria-hidden="true"></div>
           {/if}
@@ -833,20 +833,8 @@
           class:just-joined={showJoinBanner && combatJoin.actorId === ally.id}
         >
           <div class="ally-portrait">
-            <img src={combatantPortrait(ally)} alt="" on:error={(e) => onImgError(e, 'player', ally.classId)} />
-            {#if showFloatOn(ally.id)}
-              <div class="fx-float over-sprite" data-key={fxKey}>
-                {#if fxIsMiss}<span class="fx-miss-label">miss</span>
-                {:else if fxDamage > 0}<span class="fx-dmg" class:crit={fxIsCrit} class:crush={fxIsCrush}>-{fxDamage}</span>
-                {:else if fxHeal > 0}<span class="fx-heal">+{fxHeal}</span>{/if}
-              </div>
-            {/if}
-          </div>
-          <div class="ally-meta">
-            <div class="ally-name" class:hit-flash={tgt && fxIsHit}>{ally.name}</div>
-
             {#if statusEffectsOf(ally).length}
-              <div class="buff-row ally" aria-label="Ally effects">
+              <div class="buff-row portrait-buffs ally" aria-label="Ally effects">
                 {#each statusEffectsOf(ally) as se (se.id || se.name + '-' + se.duration)}
                   <div class="buff-icon {buffKindClass(se)}" title={buffTitle(se)}>
                     {#if buffIconUrl(se)}
@@ -859,6 +847,18 @@
                 {/each}
               </div>
             {/if}
+            <img src={combatantPortrait(ally)} alt="" on:error={(e) => onImgError(e, 'player', ally.classId)} />
+            {#if showFloatOn(ally.id)}
+              <div class="fx-float over-sprite" data-key={fxKey}>
+                {#if fxIsMiss}<span class="fx-miss-label">miss</span>
+                {:else if fxDamage > 0}<span class="fx-dmg" class:crit={fxIsCrit} class:crush={fxIsCrush}>-{fxDamage}</span>
+                {:else if fxHeal > 0}<span class="fx-heal">+{fxHeal}</span>{/if}
+              </div>
+            {/if}
+          </div>
+          <div class="ally-meta">
+            <div class="ally-name" class:hit-flash={tgt && fxIsHit}>{ally.name}</div>
+
             <div class="ally-sub">{ally.classId || 'Adventurer'} · Lv {ally.level || 1}{#if down} · Down{:else if ally.hasFled} · Fled{:else if turn?.actorId === ally.id} · Turn{/if}</div>
             <div class="ally-bar"><span style="width: {pct}%; background: {playerHpColor(pct)}"></span></div>
             <div class="ally-numbers">HP {ally.hp ?? 0}/{ally.maxHp ?? 0}</div>
@@ -883,6 +883,20 @@
     aria-label="Player"
   >
     <div class="player-bust" class:shake={isFxTarget(selfId) && fxIsHit}>
+      {#if statusEffectsOf(selfCombatant).length}
+        <div class="buff-row portrait-buffs player" aria-label="Your buffs">
+          {#each statusEffectsOf(selfCombatant) as se (se.id || se.name + '-' + se.duration)}
+            <div class="buff-icon {buffKindClass(se)}" title={buffTitle(se)}>
+              {#if buffIconUrl(se)}
+                <img src={buffIconUrl(se)} alt="" />
+              {:else}
+                <span class="buff-fallback">{(se.name || '?').slice(0, 1)}</span>
+              {/if}
+              <span class="buff-stacks">{se.duration}</span>
+            </div>
+          {/each}
+        </div>
+      {/if}
       <img
         src={combatantPortrait(selfCombatant)}
         alt=""
@@ -914,20 +928,6 @@
       >{selfName}
       </div>
 
-      {#if statusEffectsOf(selfCombatant).length}
-        <div class="buff-row player" aria-label="Your buffs">
-          {#each statusEffectsOf(selfCombatant) as se (se.id || se.name + '-' + se.duration)}
-            <div class="buff-icon {buffKindClass(se)}" title={buffTitle(se)}>
-              {#if buffIconUrl(se)}
-                <img src={buffIconUrl(se)} alt="" />
-              {:else}
-                <span class="buff-fallback">{(se.name || '?').slice(0, 1)}</span>
-              {/if}
-              <span class="buff-stacks">{se.duration}</span>
-            </div>
-          {/each}
-        </div>
-      {/if}
       <div class="hp-row player-hp">
         <span class="hp-label">HP</span>
         <div class="hp-track">
@@ -3643,21 +3643,44 @@
   .buff-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 3px;
-    margin: 3px 0 2px;
+    gap: 2px;
+    margin: 0;
     max-width: 100%;
   }
-  .buff-row.player { margin: 4px 0 6px; }
-  .buff-row.ally { margin: 2px 0 3px; }
+  /* WoW-style: small rectangles above/beside the combat portrait */
+  .buff-row.portrait-buffs {
+    position: absolute;
+    z-index: 5;
+    left: 0;
+    top: 0;
+    transform: translateY(calc(-100% - 3px));
+    margin: 0;
+    max-width: 140px;
+    pointer-events: auto;
+  }
+  .ally-portrait .buff-row.portrait-buffs {
+    left: calc(100% + 3px);
+    top: 0;
+    transform: none;
+    flex-direction: column;
+    max-width: 28px;
+  }
+  .enemy-sprite-wrap .buff-row.portrait-buffs {
+    left: 50%;
+    top: 0;
+    transform: translate(-50%, calc(-100% - 2px));
+    justify-content: center;
+    max-width: 120px;
+  }
   .buff-icon {
     position: relative;
-    width: 22px;
-    height: 22px;
-    border-radius: 4px;
-    border: 1px solid rgba(212, 175, 55, 0.55);
-    background: rgba(8, 10, 16, 0.92);
+    width: 20px;
+    height: 24px;
+    border-radius: 3px;
+    border: 1px solid rgba(212, 175, 55, 0.65);
+    background: rgba(8, 10, 16, 0.94);
     overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.45);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.5);
     flex: 0 0 auto;
   }
   .buff-icon.debuff, .buff-icon.dot, .buff-icon.stun { border-color: rgba(248, 113, 113, 0.75); }
