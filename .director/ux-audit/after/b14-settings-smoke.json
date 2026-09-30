@@ -1,5 +1,5 @@
 {
-  "playUrl": "https://veilspan.com/play/",
+  "playUrl": "http://127.0.0.1:8010/play/",
   "checks": {
     "desktop": {
       "viewport": [

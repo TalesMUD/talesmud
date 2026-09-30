@@ -74,7 +74,7 @@ Scale now spans 1–10 with a 220px tile cap, twice the prior maximum; minimum z
 
 ## P1j production atlas
 
-Live Veilspan uses the imagegen craft sheet (content version `c8169d17ef81`, `?v=worldmap-p1j`). Promote by copying `assets/map-tiles/prototypes/p1j/{terrain-sheet.png,terrain-review.png}` and a production-trimmed `terrain-sheet.json` (drop prototype-only keys) into `assets/map-tiles/`, then:
+A production TalesMUD deploy can use the imagegen craft sheet (content version `c8169d17ef81`, `?v=worldmap-p1j`). Promote by copying `assets/map-tiles/prototypes/p1j/{terrain-sheet.png,terrain-review.png}` and a production-trimmed `terrain-sheet.json` (drop prototype-only keys) into `assets/map-tiles/`, then:
 
 ```sh
 python3 tools/sync_map_tiles.py ../talesmud-rpg-1/assets/map-tiles

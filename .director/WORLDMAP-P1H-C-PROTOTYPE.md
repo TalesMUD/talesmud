@@ -1,4 +1,4 @@
-# Worldmap P1h-C — Kenney-detail structure, Veilspan palette
+# Worldmap P1h-C — Kenney-detail structure, dusk palette
 
 Local-only prototype, 2026-09-29. No deploy or production tile/client replacement.
 
@@ -8,7 +8,7 @@ Local-only prototype, 2026-09-29. No deploy or production tile/client replacemen
 - A one-pixel dark olive/charcoal edge is inked **inside** major stamp alpha silhouettes. This protects the 48px footprint and leaves exterior transparency clean. There is no offset drop shadow or bloom.
 - Oaks have a rounded, lobed crown over a short visible trunk; pines use three stepped conical tiers. Top-left lit facets and darker right/bottom facets provide cell shading.
 - Houses have framed windows, doors, chimneys, scalloped roof courses and a lit top-left ridge. Town and village stamps add compact yard details. Gatehouse, keep and tower use staggered stone courses with darker mortar and shaded right faces. Fence posts and rails, a roofed stone well with water disk, carts and barrels use stronger silhouettes and material marks.
-- Marcus follow-up: the first C pass still read too bright against Veilspan room, NPC and enemy art. This pass lowers foliage midtones toward olive dusk, sets tree shade near `#1e3328` and a soft top-left highlight near `#6a8258`, and darkens plaster, timber, stone faces, mortar and roof courses. Roof base hues still derive from `map_polish_art.ROOFS`, with a darker value and softer ridge light. Right and bottom faces are deeper while top-left light remains legible. The aim is darker Veilspan lighting, not Kenney candy colors or bright cartoony overworld greens.
+- Marcus follow-up: the first C pass still read too bright against the live demo room, NPC and enemy art. This pass lowers foliage midtones toward olive dusk, sets tree shade near `#1e3328` and a soft top-left highlight near `#6a8258`, and darkens plaster, timber, stone faces, mortar and roof courses. Roof base hues still derive from `map_polish_art.ROOFS`, with a darker value and softer ridge light. Right and bottom faces are deeper while top-left light remains legible. The aim is darker the live demo lighting, not Kenney candy colors or bright cartoony overworld greens.
 - Ground terrain and underground floors remain P1g; their brighter grass is the principal remaining palette gap. Roads remain below stamps; atlas layout, zoom clamps and A9 code were not edited.
 
 ## Prototype and capture
@@ -19,7 +19,7 @@ Local-only prototype, 2026-09-29. No deploy or production tile/client replacemen
 - Sheet, metadata and review: content `assets/map-tiles/prototypes/p1h-c/`.
 - Local preview: `/tmp/worldmap-p1h-c-preview/`, built from `/tmp/worldmap-p1g-preview/atlas.json` and served on `127.0.0.1:8153`. Its copied `api/map-tiles/terrain-sheet.{png,json}` was refreshed.
 - Puppeteer captures at 1920×1080: `.director/ux-audit/after/worldmap-p1h-c-{maxzoom,oldtown,overview}-1920x1080.png`; review plate: `.director/ux-audit/after/worldmap-p1h-c-terrain-review.png`. Capture reported no page errors, maximum tile step 99.815625px and image smoothing disabled.
-- Aethermoor composites: `.director/ux-audit/after/worldmap-p1h-c-aethermoor-mock-1-oldtown-meadows-1920x1080.png` and `.director/ux-audit/after/worldmap-p1h-c-aethermoor-mock-2-overview-1920x1080.png`. These use the real atlas capture and current sheet, with a further dusk grade and labeled detail panels; the grade is a mock treatment, not a live client change.
+- Optional dusk-graded layout composites were local review only and are not checked into this sync.
 
 ## Comparison
 

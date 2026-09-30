@@ -8,7 +8,7 @@ P1i reauthors all 60 authored rows: 14 surface terrains, fog and sea, 40 transpa
 
 Terrain now uses dusk graded palettes, denser grass and crop marks, block courses in settlements and dungeons, water ripples, shore glints, and distinct cave, crypt, cellar and sewer detail. The metadata fallback colors match those new ground colors. Stamps use plank siding, shingle courses, staggered mortar, timber and stone props, yard details, and top-left lit oak and pine volumes. The P1h-C silhouette ink function was removed; form is separated by material values and internal shading.
 
-Visual review of the local 1920×1080 captures: compared with P1g, the ground no longer appears bright against darker buildings, and town walls, roofs, trees and the well read with more material detail at closest zoom. Compared with P1h-C, tree crowns and roofs have a softer edge and no repeated near-black rim. Oldtown remains legible amid dense overlapping stamps. The restrained Veilspan hues remain recognizable; P1i is still a colorful map at full zoom, especially grassland. Existing room placement determines the repeated tree clusters and town density, so the sheet alone cannot vary those patterns.
+Visual review of the local 1920×1080 captures: compared with P1g, the ground no longer appears bright against darker buildings, and town walls, roofs, trees and the well read with more material detail at closest zoom. Compared with P1h-C, tree crowns and roofs have a softer edge and no repeated near-black rim. Oldtown remains legible amid dense overlapping stamps. The restrained the live demo hues remain recognizable; P1i is still a colorful map at full zoom, especially grassland. Existing room placement determines the repeated tree clusters and town density, so the sheet alone cannot vary those patterns.
 
 ## Artifacts and measurement
 
@@ -24,4 +24,4 @@ Production `assets/map-tiles/terrain-sheet.png` still has MD5 `41f0924505f4381cb
 
 ## Residuals
 
-The local captures use the read-only preview fixture, not a live character state. The denser P1i atlas adds 79 KB; worker bake cost was not remeasured. Room labels and repeated tree clusters still come from map layout and renderer rules. Optional Aethermoor mocks `worldmap-p1i-aethermoor-mock-1-oldtown-meadows-1920x1080.png` and `worldmap-p1i-aethermoor-mock-2-overview-1920x1080.png` are light graded captions of the real P1i oldtown/overview captures (craft sheet on Aethermoor layout; not outline-heavy composites).
+The local captures use the read-only preview fixture, not a live character state. The denser P1i atlas adds 79 KB; worker bake cost was not remeasured. Room labels and repeated tree clusters still come from map layout and renderer rules. Optional dusk-graded layout mocks were local review only and are not checked into this sync.

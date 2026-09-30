@@ -4,7 +4,7 @@ Marcus correction on P1h-C (2026-09-29 Berlin): Kenney/town-map feedback was abo
 
 > "Naaaa my feedback was primarily about the pixel art style not the outline. We need to update all assets for the map with improved ones."
 
-Also earlier: colors/lighting should match darker room/NPC/enemy art; keep our palette; Aethermoor layout.
+Also earlier: colors/lighting should match darker room/NPC/enemy art; keep our palette; authored zone layout.
 
 ## Label
 **P1i** — full sheet rebuild of **ALL** map assets (14 terrains + fog/sea + all transparent stamps + Lower floors), not an outline pass on P1g silhouettes.
@@ -14,7 +14,7 @@ Also earlier: colors/lighting should match darker room/NPC/enemy art; keep our p
 - Trees with clear volume (lollipop oaks / conical pines) and soft top-left cell shading
 - Inhabited density on towns
 - **NO** heavy black outline treatment as the signature (subtle edge darkening OK if needed for readability)
-- Darker dusk midtones matching Veilspan rooms/NPCs/enemies — not bright Kenney candy
+- Darker dusk midtones matching darker room/NPC/enemy art — not bright Kenney candy
 
 ## Constraints
 - clawdbot; engine `talesmud-june` `engine-june`; content `talesmud-rpg-1` `main`
@@ -29,6 +29,6 @@ Also earlier: colors/lighting should match darker room/NPC/enemy art; keep our p
 1. `.director/WORLDMAP-P1I-TASK.md` (this) + progress notes in CORE-FOCUS-PROGRESS.md or P1I md
 2. New art module `tools/map_hires_art_p1i.py` + regenerated sheet under `assets/map-tiles/prototypes/p1i/`
 3. Screenshots: maxzoom, oldtown, overview 1920×1080 + terrain-review under `.director/ux-audit/after/worldmap-p1i-*`
-4. Optionally refresh Aethermoor mocks to match new craft (not outline-heavy)
+4. Optionally refresh layout mocks to match new craft (not outline-heavy)
 
 Return paths, judgment vs P1g/C, size delta, SHAs.

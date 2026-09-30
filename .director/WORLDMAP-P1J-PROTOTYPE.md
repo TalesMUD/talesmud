@@ -1,6 +1,6 @@
 # WORLDMAP P1j — imagegen craft sheet prototype
 
-Prototype built 2026-09-30 (Europe/Berlin). **Promoted to production** as P1j (`?v=worldmap-p1j`, sheet `c8169d17ef81`) after Marcus approved “Ship P1j imagegen sheet to veilspan.com”.
+Prototype built 2026-09-30 (Europe/Berlin). **Promoted to production** as P1j (`?v=worldmap-p1j`, sheet `c8169d17ef81`) after Marcus approved “Ship P1j imagegen sheet to production”.
 
 ## Tool used
 
@@ -19,7 +19,7 @@ Secondary fill: **Gemini `gemini-2.5-flash-image`** for five mid-priority stamp 
 ## Process
 
 1. Slice P1i authored row order (60 rows) into 15 plates of 4 kinds × 6 variants.
-2. Generate 3:2 plates with Kenney craft density, Veilspan dusk palette, **no heavy black outlines**, soft top-left light. Stamps prompted on **magenta `#FF00FF`** (Codex often returned native alpha instead; assembler accepts both).
+2. Generate 3:2 plates with Kenney craft density, dusk palette, **no heavy black outlines**, soft top-left light. Stamps prompted on **magenta `#FF00FF`** (Codex often returned native alpha instead; assembler accepts both).
 3. **Marcus mid-run correction:** terrains must be **seamless tileable** (not postcard chips). Assembler `assemble_p1j.py` applies wrap-offset + center crossfade `make_seamless`, harder edge match, then nearest-neighbor snap to **48px**. Engine **directional dither blend rows** recomposed from the seamless ground variants (same Bayer mask path as `generate_map_tiles.py`).
 4. Stamps: corner flood-fill + magenta/pink key; reject full-bleed framed scenes; preserve transparent overlays.
 5. Atlas layout unchanged: **288×9024**, 48px cells, 6 variants, same row order so `sync_map_tiles` validation still applies if promoted later.

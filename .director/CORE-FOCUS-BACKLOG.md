@@ -32,7 +32,7 @@ Goal: every class lands in the same win-rate bands per gap and gear tier. Next c
 Backlog next UX topic after B9 shortcuts: contextual widgets (combat auto-focus). When combat starts, focus BattleStage; on end, restore. See CORE-FOCUS-B13-TASK.md.
 
 ## Queued: B14 — Settings panel (2026-09-30 director)
-Backlog next UX topic after B13: settings panel players can trust (reduced motion, combat auto-focus, inventory mode, Veilspan chrome). See CORE-FOCUS-B14-TASK.md.
+Backlog next UX topic after B13: settings panel players can trust (reduced motion, combat auto-focus, inventory mode, gold chrome). See CORE-FOCUS-B14-TASK.md.
 
 ## Done (recent)
 - A9 boss phases — accepted 2026-09-30 (code `9026bba`, smoke `152eadd`; live under later tip `?v=worldmap-p1j`).
