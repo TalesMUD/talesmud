@@ -1,5 +1,6 @@
 import assert from 'assert';
 import {
+  collectTurnInMarkers,
   adjacentPlaceIds,
   computeCamera,
   isBlockedDirLabel,
@@ -121,3 +122,15 @@ assert.ok(!bfs.some((p) => p.id === 'O1'), 'BFS neighborhood excludes far Oldtow
 
 console.log('atlasRenderer: LOD + dir labels + you-marker + framing helpers OK');
 
+
+
+const markers = collectTurnInMarkers([
+  { questId: 'Q1', questName: 'Welcome', readyToTurnIn: true, turnInRoomId: 'R0201', turnInNpcName: 'Thom' },
+  { questId: 'Q2', questName: 'Anywhere', readyToTurnIn: true, turnInAnywhere: true, turnInRoomId: 'R0201' },
+  { questId: 'Q3', questName: 'Not ready', readyToTurnIn: false, turnInRoomId: 'R0203' },
+  { questId: 'Q4', questName: 'No room', readyToTurnIn: true, turnInNpcId: 'NPC0001' },
+]);
+assert.strictEqual(markers.length, 1);
+assert.strictEqual(markers[0].roomId, 'R0201');
+assert.strictEqual(markers[0].questName, 'Welcome');
+console.log('collectTurnInMarkers ok');

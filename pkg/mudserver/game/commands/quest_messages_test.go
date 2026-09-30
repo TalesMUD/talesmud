@@ -71,3 +71,31 @@ func containsRune(s string, r rune) bool {
 	}
 	return false
 }
+
+func TestBuildQuestLogEntryReadyTurnInNpcBound(t *testing.T) {
+	quest := &quests.Quest{
+		Entity: &entities.Entity{ID: "QST0201"},
+		Name:   "Welcome to Oldtown",
+		Source: quests.QuestSource{Type: "npc", NPCID: "NPC0005"},
+		Objectives: []quests.Objective{
+			{ID: "talk", Type: quests.ObjectiveTalk, Description: "Speak with Mira", Amount: 1},
+		},
+	}
+	progress := &quests.QuestProgress{
+		QuestID: quest.ID,
+		Status:  quests.QuestStatusActive,
+		Objectives: []quests.ObjectiveProgress{
+			{ObjectiveID: "talk", Current: 1, Required: 1, Completed: true},
+		},
+	}
+	entry := buildQuestLogEntry(nil, quest, progress)
+	if !entry.ReadyToTurnIn {
+		t.Fatal("expected readyToTurnIn")
+	}
+	if entry.TurnInNpcID != "NPC0005" {
+		t.Fatalf("turnInNpcId=%q", entry.TurnInNpcID)
+	}
+	if entry.TurnInAnywhere {
+		t.Fatal("expected NPC-bound turn-in")
+	}
+}

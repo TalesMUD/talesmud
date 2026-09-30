@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/items"
+	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/entities/quests"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
 	r "github.com/talesmud/talesmud/pkg/repository"
@@ -90,6 +91,7 @@ type QuestLogEntry struct {
 	TurnInAnywhere bool                          `json:"turnInAnywhere,omitempty"`
 	TurnInNpcID    string                        `json:"turnInNpcId,omitempty"`
 	TurnInNpcName  string                        `json:"turnInNpcName,omitempty"`
+	TurnInRoomID   string                        `json:"turnInRoomId,omitempty"`
 	Objectives     []QuestObjectiveProgressEntry `json:"objectives"`
 	Rewards        *QuestRewardEntry             `json:"rewards,omitempty"`
 	AcceptedAt     string                        `json:"acceptedAt,omitempty"`
@@ -427,7 +429,6 @@ func (s *questsService) BuildQuestLog(characterID string) ([]QuestLogEntry, erro
 
 	return entries, nil
 }
-
 
 func allObjectivesComplete(objectives []quests.ObjectiveProgress) bool {
 	if len(objectives) == 0 {
@@ -987,11 +988,24 @@ func applyQuestLogTurnIn(entry *QuestLogEntry, quest *quests.Quest, facade Facad
 	anywhere, npcID := quest.ResolveTurnIn()
 	entry.TurnInAnywhere = anywhere
 	entry.TurnInNpcID = npcID
-	if npcID != "" && facade != nil && facade.NPCsService() != nil {
-		if npc, err := facade.NPCsService().FindByID(npcID); err == nil && npc != nil {
-			entry.TurnInNpcName = npc.Name
-		}
+	if npcID == "" || facade == nil || facade.NPCsService() == nil {
+		return
 	}
+	if npc, err := facade.NPCsService().FindByID(npcID); err == nil && npc != nil {
+		entry.TurnInNpcName = npc.Name
+		entry.TurnInRoomID = resolveNPCTurnInRoom(npc)
+	}
+}
+
+// resolveNPCTurnInRoom picks the best known haunt for a turn-in NPC template/unique.
+func resolveNPCTurnInRoom(n *npc.NPC) string {
+	if n == nil {
+		return ""
+	}
+	if room := strings.TrimSpace(n.CurrentRoomID); room != "" {
+		return room
+	}
+	return strings.TrimSpace(n.SpawnRoomID)
 }
 
 func (s *questsService) npcName(id string) string {

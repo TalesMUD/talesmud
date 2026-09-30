@@ -1,7 +1,7 @@
 <script>
   import { onDestroy, onMount, tick } from 'svelte';
   import { readStageSize, shouldRepaintSize, applyCanvasBitmap } from '../widgets/atlasLayout.js';
-  import { paintAtlas, isCurrentPlace, panToCenterPlace, onMapTilesReady, clampMapScale, setYouPortrait } from '../widgets/atlasRenderer.js';
+  import { paintAtlas, isCurrentPlace, panToCenterPlace, onMapTilesReady, clampMapScale, setYouPortrait, collectTurnInMarkers } from '../widgets/atlasRenderer.js';
   import { prefersReducedMotion } from '../keyboardShortcuts.js';
   import { interiorChoices, surfaceId, surfaceGroups, groupForRoom } from '../widgets/surfaceAtlas.js';
   import { mobileStore } from '../mobile/mobileStore.js';
@@ -226,6 +226,8 @@
 
   $: visiblePlaces = (atlas.places || []).filter(p => p.layer === activeLayer);
   $: visibleRegions = (atlas.regions || []).filter(r => r.layer === activeLayer);
+  $: turnInMarkers = collectTurnInMarkers(store && $store ? $store.quests : []);
+  $: if (open && turnInMarkers) scheduleDraw();
   $: if (store && $store.mapSelectedId && $store.mapSelectedId !== selectedId) {
     selectedId = $store.mapSelectedId;
     if ($isMobile) intelExpanded = false;
@@ -460,6 +462,7 @@
       travelPathRoomIds,
       travelTargetId,
       selectedId,
+      turnInMarkers,
     });
     hitState.items = result.hits;
   }
@@ -530,8 +533,9 @@
     if (found) {
       let text = found.discovered ? (found.name || found.id) : 'Uncharted';
       if (found.areaName && found.discovered) text += ' · ' + found.areaName;
+      if (found.turnInLabel) text += ' · Turn in: ' + found.turnInLabel;
       if (found.current || isCurrentPlace(found.id, currentRoomId)) text += ' (you are here)';
-      else if (found.discovered) text += ' · inspect';
+      else if (found.discovered && !found.turnInLabel) text += ' · inspect';
       else text += ' · uncharted';
       tooltip = { visible: true, text, x: e.clientX - rect.left, y: e.clientY - rect.top };
     } else {
@@ -879,6 +883,15 @@
     min-height: 0;
     position: relative;
     overflow: hidden;
+    background: #0a0c10;
+  }
+  .stage::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.28) 100%);
   }
   canvas {
     position: absolute;
@@ -891,7 +904,105 @@
     touch-action: none;
   }
   canvas:active { cursor: grabbing; }
+  .map-legend {
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 7px 9px;
+    border-radius: 6px;
+    background: rgba(8, 10, 14, 0.82);
+    border: 1px solid rgba(212, 175, 55, 0.32);
+    color: #e8dcc8;
+    font-size: 10px;
+    letter-spacing: 0.02em;
+    pointer-events: none;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-swatch {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    border: 1.5px solid transparent;
+    flex: 0 0 auto;
+  }
+  .legend-swatch.you {
+    background: #1a140c;
+    border-color: #ffe69b;
+    box-shadow: 0 0 8px rgba(255, 220, 120, 0.55);
+  }
+  .legend-swatch.turnin {
+    background: #f5c542;
+    border-color: #ffe08a;
+    box-shadow: 0 0 8px rgba(245, 197, 66, 0.55);
+  }
+  .legend-swatch.selected {
+    background: transparent;
+    border-radius: 2px;
+    border-color: #ffe29a;
+    box-shadow: inset 0 0 0 1px rgba(255, 226, 154, 0.35);
+  }
+  .turnin-banner {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: rgba(48, 34, 8, 0.92);
+    border: 1px solid rgba(245, 197, 66, 0.65);
+    color: #ffe08a;
+    font-size: 11px;
+    font-weight: 600;
+    pointer-events: none;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+  }
+  .chip.turnin {
+    border-color: #f5c542;
+    color: #f5c542;
+    background: rgba(245, 197, 66, 0.12);
+  }
+  .turnin-list {
+    margin: 8px 0 2px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .turnin-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: rgba(245, 197, 66, 0.1);
+    border: 1px solid rgba(245, 197, 66, 0.35);
+    color: #fde68a;
+    font-size: 12px;
+  }
+  .turnin-row strong { display: block; color: #fff3c4; font-size: 12px; }
+  .turnin-row em { color: #d6b35c; font-style: normal; font-size: 11px; }
+  .turnin-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #f5c542;
+    color: #1a1204;
+    font-weight: 800;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    margin-top: 1px;
+  }
   .tooltip {
+
     position: absolute;
     background: rgba(2, 6, 23, 0.92);
     color: #e2e8f0;
@@ -1077,6 +1188,16 @@
             on:pointerleave={() => tooltip = { ...tooltip, visible: false }}
             on:wheel={onWheel}
           ></canvas>
+          <div class="map-legend" aria-hidden="true">
+            <div class="legend-item"><span class="legend-swatch you"></span> You</div>
+            <div class="legend-item"><span class="legend-swatch turnin"></span> Turn in</div>
+            <div class="legend-item"><span class="legend-swatch selected"></span> Selected</div>
+          </div>
+          {#if turnInMarkers.length}
+            <div class="turnin-banner">
+              {turnInMarkers.length} quest{turnInMarkers.length === 1 ? '' : 's'} ready to turn in
+            </div>
+          {/if}
           {#if tooltip.visible}
             <div class="tooltip" style="left: {tooltip.x}px; top: {tooltip.y}px;">{tooltip.text}</div>
           {/if}
@@ -1106,8 +1227,24 @@
                 <span class="chip">{selectedPlace.terrain || selectedPlace.biome || 'wild'}</span>
                 <span class="chip">{selectedPlace.kind || 'place'}</span>
                 {#if selectedPlace.current}<span class="chip you">You are here</span>{/if}
+                {#if turnInMarkers.some(m => m.roomId === selectedPlace.id || isCurrentPlace(selectedPlace.id, m.roomId))}
+                  <span class="chip turnin">Quest turn-in</span>
+                {/if}
               </div>
             </div>
+            {#if turnInMarkers.filter(m => m.roomId === selectedPlace.id || isCurrentPlace(selectedPlace.id, m.roomId)).length}
+              <div class="turnin-list">
+                {#each turnInMarkers.filter(m => m.roomId === selectedPlace.id || isCurrentPlace(selectedPlace.id, m.roomId)) as q}
+                  <div class="turnin-row">
+                    <span class="turnin-icon" aria-hidden="true">!</span>
+                    <div>
+                      <strong>{q.questName}</strong>
+                      {#if q.npcName}<em> → {q.npcName}</em>{/if}
+                    </div>
+                  </div>
+                {/each}
+              </div>
+            {/if}
             <button class="travel-btn" type="button" on:click|stopPropagation={requestTravel} disabled={!canTravel || isTraveling}>
               {isTraveling ? 'Traveling…' : (canTravel ? 'Travel' : 'You are here')}
             </button>

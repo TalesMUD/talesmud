@@ -490,6 +490,7 @@ type QuestLogEntry struct {
 	TurnInAnywhere bool                     `json:"turnInAnywhere,omitempty"`
 	TurnInNpcID    string                   `json:"turnInNpcId,omitempty"`
 	TurnInNpcName  string                   `json:"turnInNpcName,omitempty"`
+	TurnInRoomID   string                   `json:"turnInRoomId,omitempty"`
 	Objectives     []QuestObjectiveProgress `json:"objectives"`
 	Rewards        *QuestReward             `json:"rewards,omitempty"`
 	AcceptedAt     string                   `json:"acceptedAt,omitempty"`

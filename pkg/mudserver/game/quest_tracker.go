@@ -9,6 +9,7 @@ import (
 	def "github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	"github.com/talesmud/talesmud/pkg/service"
+	"strings"
 )
 
 // QuestTracker listens to game events and updates quest progress
@@ -292,6 +293,11 @@ func (qt *QuestTracker) pushQuestLogSnapshot(userID, characterID string) {
 			anywhere, npcID := quest.ResolveTurnIn()
 			entry.TurnInAnywhere = anywhere
 			entry.TurnInNpcID = npcID
+			if npcID != "" {
+				name, room := resolveQuestTurnInNPC(qt.game, qt.facade, npcID)
+				entry.TurnInNpcName = name
+				entry.TurnInRoomID = room
+			}
 		}
 		allDone := len(progress.Objectives) > 0
 		for _, op := range progress.Objectives {
@@ -372,4 +378,48 @@ func (qt *QuestTracker) buildObjectiveProgress(quest *quests.Quest, progress *qu
 	}
 
 	return result
+}
+
+func resolveQuestTurnInNPC(game def.GameCtrl, facade service.Facade, npcID string) (name, roomID string) {
+	npcID = strings.TrimSpace(npcID)
+	if npcID == "" {
+		return "", ""
+	}
+	if game != nil {
+		if mgr := game.GetNPCInstanceManager(); mgr != nil {
+			if inst := mgr.GetInstance(npcID); inst != nil && !inst.IsDead {
+				name = inst.Name
+				if room := strings.TrimSpace(inst.CurrentRoomID); room != "" {
+					return name, room
+				}
+				if room := strings.TrimSpace(inst.SpawnRoomID); room != "" {
+					return name, room
+				}
+			}
+			for _, inst := range mgr.GetAllInstances() {
+				if inst == nil || inst.IsDead || inst.Entity == nil {
+					continue
+				}
+				if inst.ID == npcID || inst.TemplateID == npcID {
+					name = inst.Name
+					if room := strings.TrimSpace(inst.CurrentRoomID); room != "" {
+						return name, room
+					}
+					if room := strings.TrimSpace(inst.SpawnRoomID); room != "" {
+						return name, room
+					}
+				}
+			}
+		}
+	}
+	if facade != nil && facade.NPCsService() != nil {
+		if n, err := facade.NPCsService().FindByID(npcID); err == nil && n != nil {
+			name = n.Name
+			if room := strings.TrimSpace(n.CurrentRoomID); room != "" {
+				return name, room
+			}
+			return name, strings.TrimSpace(n.SpawnRoomID)
+		}
+	}
+	return name, roomID
 }
