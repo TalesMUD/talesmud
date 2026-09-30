@@ -15,6 +15,19 @@ const geometry = items => items.map(w => ({
   tabs: w.tabs, activeTabIndex: w.activeTabIndex,
 }));
 
+layoutStore.applyPreset('desktop');
+const withoutFocus = widgets();
+layoutStore.syncCombatFocus('active', false);
+assert.equal(get(layoutStore).focusId, null, 'disabled preference leaves the normal layout open');
+assert.deepEqual(widgets(), withoutFocus);
+layoutStore.syncCombatFocus('ending', false);
+layoutStore.syncCombatFocus('idle', false);
+assert.deepEqual(widgets(), withoutFocus);
+layoutStore.syncCombatFocus('active', true);
+assert.equal(get(layoutStore).focusId, 'battle-stage', 'manual open can use the cover');
+layoutStore.syncCombatFocus('active', false);
+assert.equal(get(layoutStore).focusId, null, 'closing manual cover restores layout');
+
 for (const kind of ['desktop', 'wide', 'compact']) {
   layoutStore.applyPreset(kind);
   const normal = widgets();

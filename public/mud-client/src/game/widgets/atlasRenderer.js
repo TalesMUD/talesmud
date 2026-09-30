@@ -1,3 +1,4 @@
+import { prefersReducedMotion } from '../keyboardShortcuts.js';
 import { TERRAIN_SHEET } from './terrainSheet.js';
 import { undergroundRaster } from './undergroundRenderer.js';
 import { drawMapSprite } from './mapArt.js';
@@ -869,7 +870,7 @@ export function paintAtlas(ctx, params) {
   }
   // Low-rate ambient accents sit above cached pixels and reveal no new art.
   if(landscape && !landscape.pending && cam.tileStep>=20) {
-    const reduced=typeof window!=='undefined'&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduced=prefersReducedMotion();
     const phase=reduced?0:Math.floor(Date.now()/650)%6;
     for(const a of landscape.ambience||[]) {
       const {px,py}=projectGrid(a.x,a.y,cam,w,h);if(px<0||py<0||px>w||py>h)continue;

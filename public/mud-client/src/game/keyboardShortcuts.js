@@ -1,3 +1,4 @@
+import { settingsStore } from './SettingsStore.js';
 /** 1–9 → hotbar index. Anything else is -1. */
 export function hotbarSlotFromKey(key) {
   if (typeof key !== 'string' || key.length !== 1) return -1;
@@ -50,7 +51,9 @@ export function rarityClass(quality) {
   return 'normal';
 }
 
-export function prefersReducedMotion() {
+export function prefersReducedMotion(choice = settingsStore.getSetting('interface', 'reducedMotion')) {
+  if (choice === 'on') return true;
+  if (choice === 'off') return false;
   if (typeof window === 'undefined' || !window.matchMedia) return false;
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }

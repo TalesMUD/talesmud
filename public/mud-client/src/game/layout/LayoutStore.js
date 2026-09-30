@@ -211,9 +211,9 @@ function createLayoutStore() {
      * Keep widgets mounted and unchanged so terminal input and tabs survive.
      * Ending keeps the cover until the outcome is dismissed (or times out).
      */
-    syncCombatFocus(phase) {
+    syncCombatFocus(phase, autoFocus = true) {
       const state = get({ subscribe });
-      if (phase === 'active' && !state.combatFocusReturn) {
+      if (phase === 'active' && autoFocus && !state.combatFocusReturn) {
         update(s => ({
           ...s,
           combatFocusReturn: {
@@ -224,7 +224,7 @@ function createLayoutStore() {
           focusId: 'battle-stage',
           focusSnapshot: widgetsToPersist(fromGridItems(s.widgets), s.focusId, s.focusSnapshot),
         }));
-      } else if (phase !== 'active' && phase !== 'ending' && state.combatFocusReturn) {
+      } else if ((phase !== 'active' && phase !== 'ending' || !autoFocus) && state.combatFocusReturn) {
         const prior = state.combatFocusReturn;
         update(s => ({ ...s, focusId: prior.focusId, focusSnapshot: prior.focusSnapshot, combatFocusReturn: null }));
         if (typeof window !== 'undefined' && (window.innerWidth !== prior.width || window.innerHeight !== prior.height)) {

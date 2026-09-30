@@ -14,6 +14,10 @@ import {
 
 const STORAGE_KEY = 'talesmud_settings_v1';
 
+export function normalizeReducedMotion(value) {
+  return value === 'on' || value === 'off' ? value : 'system';
+}
+
 const DEFAULT_SETTINGS = {
   // General settings
   general: {
@@ -30,6 +34,8 @@ const DEFAULT_SETTINGS = {
     actionBarPins: [...DEFAULT_ACTION_BAR_PINS],
     actionBarLayoutRevision: ACTION_BAR_LAYOUT_REVISION,
     inventoryOpenMode: DEFAULT_INVENTORY_OPEN_MODE, // 'overlay' | 'widget'
+    reducedMotion: 'system', // 'system' | 'on' | 'off'
+    combatAutoFocus: true,
     hotbarBinds: [...DEFAULT_HOTBAR_BINDS],
   }
 };
@@ -55,6 +61,7 @@ function createSettingsStore() {
 
     // Load settings from localStorage
     loadFromStorage() {
+      if (typeof localStorage === 'undefined') return false;
       try {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
@@ -65,6 +72,8 @@ function createSettingsStore() {
             iface.actionBarPins = migrateActionBarPins(iface.actionBarPins, prevRev);
             iface.actionBarLayoutRevision = ACTION_BAR_LAYOUT_REVISION;
             iface.inventoryOpenMode = normalizeInventoryOpenMode(iface.inventoryOpenMode);
+            iface.reducedMotion = normalizeReducedMotion(iface.reducedMotion);
+            iface.combatAutoFocus = iface.combatAutoFocus !== false;
             const beforeSeed = scrubLegacySearchBinds(
               normalizeHotbarBinds(iface.hotbarBinds)
             );
@@ -103,6 +112,7 @@ function createSettingsStore() {
           actionBarPins: normalizeActionBarPins(state.interface.actionBarPins),
           actionBarLayoutRevision: ACTION_BAR_LAYOUT_REVISION,
           inventoryOpenMode: normalizeInventoryOpenMode(state.interface.inventoryOpenMode),
+          reducedMotion: normalizeReducedMotion(state.interface.reducedMotion),
           hotbarBinds: scrubLegacySearchBinds(
             normalizeHotbarBinds(state.interface.hotbarBinds)
           ),
@@ -133,6 +143,12 @@ function createSettingsStore() {
         }
         if (category === 'interface' && key === 'inventoryOpenMode') {
           nextValue = normalizeInventoryOpenMode(value);
+        }
+        if (category === 'interface' && key === 'reducedMotion') {
+          nextValue = normalizeReducedMotion(value);
+        }
+        if (category === 'interface' && key === 'combatAutoFocus') {
+          nextValue = value !== false;
         }
         if (category === 'interface' && key === 'hotbarBinds') {
           nextValue = scrubLegacySearchBinds(normalizeHotbarBinds(value));

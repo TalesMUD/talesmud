@@ -73,6 +73,20 @@
     pointer-events: none;
   }
 
+  .manual-battle-button {
+    position: fixed;
+    right: max(1rem, env(safe-area-inset-right));
+    bottom: max(1rem, env(safe-area-inset-bottom));
+    z-index: 1002;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid #d4a44a;
+    border-radius: 6px;
+    background: #21180e;
+    color: #f5d78c;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
   /* Old pink combat action-bar / hotbars must not bleed through the stage */
   .gameContainer.combat-dimmed :global(.action-bar),
   .gameContainer.combat-dimmed :global(.hotbar-widget),
@@ -426,8 +440,11 @@
     }
   }
 
-  // Combat start/join promotes the existing stage cover; idle restores focus.
-  $: layoutStore.syncCombatFocus($muxStore.combatPhase);
+  // The preference also applies mid-fight; an explicit manual cover uses the same restore contract.
+  let manualBattleOpen = false;
+  $: if ($muxStore.combatPhase === 'idle') manualBattleOpen = false;
+  $: showBattleStage = $settingsStore.interface?.combatAutoFocus !== false || manualBattleOpen;
+  $: layoutStore.syncCombatFocus($muxStore.combatPhase, showBattleStage);
 
   let pickerChecked = false;
   $: if ($authToken && $muxStore.connectionStatus === "connected" && !pickerChecked) {
@@ -483,7 +500,7 @@
 
 <div class="bg-overlay"></div>
 
-<div class="gameContainer" class:mobile={$isMobile} class:edit-mode={editMode} class:combat-dimmed={$muxStore.combatPhase === "active" || ($muxStore.inCombat && $muxStore.combatPhase !== "ending")}>
+<div class="gameContainer" class:mobile={$isMobile} class:edit-mode={editMode} class:combat-dimmed={showBattleStage && ($muxStore.combatPhase === "active" || ($muxStore.inCombat && $muxStore.combatPhase !== "ending"))}>
   <CharacterSwitcher
     store={muxStore}
     authToken={$authToken}
@@ -530,7 +547,12 @@
 <MapOverviewOverlay store={muxStore} {sendMessage} />
 
 <!-- C2: full-screen battle stage over dimmed room chrome -->
-<BattleStage store={muxStore} {sendMessage} />
+<BattleStage store={muxStore} {sendMessage} shown={showBattleStage} />
+{#if $muxStore.combatPhase === 'active' && $settingsStore.interface?.combatAutoFocus === false}
+  <button class="manual-battle-button" on:click={() => manualBattleOpen = !manualBattleOpen}>
+    {manualBattleOpen ? 'Return to layout' : 'Open BattleStage'}
+  </button>
+{/if}
 <ShortcutSheet />
 
 {#if $characterPickerOpen}
