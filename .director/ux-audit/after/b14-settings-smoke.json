@@ -1,0 +1,117 @@
+{
+  "playUrl": "https://veilspan.com/play/",
+  "checks": {
+    "desktop": {
+      "viewport": [
+        1920,
+        1080
+      ],
+      "pageHeight": 1080,
+      "modal": {
+        "x": 600,
+        "y": 196.4375,
+        "right": 1320,
+        "bottom": 883.5625
+      },
+      "reducedMotion": "system",
+      "activeTab": "Interface"
+    },
+    "saved": {
+      "theme": "dark-fantasy",
+      "parchmentBackground": false,
+      "compactMode": false,
+      "roomTextOverlay": false,
+      "actionBarPins": [
+        "recipes"
+      ],
+      "actionBarLayoutRevision": 3,
+      "inventoryOpenMode": "widget",
+      "reducedMotion": "on",
+      "combatAutoFocus": false,
+      "hotbarBinds": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "kind": "action",
+          "id": "rest",
+          "name": "Rest",
+          "command": "rest"
+        },
+        null,
+        null
+      ]
+    },
+    "reloaded": {
+      "iface": {
+        "theme": "dark-fantasy",
+        "parchmentBackground": false,
+        "compactMode": false,
+        "roomTextOverlay": false,
+        "actionBarPins": [
+          "recipes"
+        ],
+        "actionBarLayoutRevision": 3,
+        "inventoryOpenMode": "widget",
+        "reducedMotion": "on",
+        "combatAutoFocus": false,
+        "hotbarBinds": [
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          {
+            "kind": "action",
+            "id": "rest",
+            "name": "Rest",
+            "command": "rest"
+          },
+          null,
+          null
+        ]
+      },
+      "on": "true",
+      "combat": false,
+      "inventory": "true"
+    },
+    "smallDesktop": {
+      "viewport": [
+        1366,
+        768
+      ],
+      "pageHeight": 768,
+      "modal": {
+        "x": 323,
+        "y": 42.140625,
+        "right": 1043,
+        "bottom": 725.859375
+      },
+      "reducedMotion": "on",
+      "activeTab": "Interface"
+    },
+    "phone": {
+      "viewport": [
+        390,
+        844
+      ],
+      "pageHeight": 844,
+      "modal": {
+        "x": 7,
+        "y": 32.953125,
+        "right": 383,
+        "bottom": 811.03125
+      },
+      "reducedMotion": "on",
+      "activeTab": "Interface"
+    }
+  },
+  "pageErrors": [],
+  "playStatus": 200,
+  "guestPost": 200,
+  "ok": true
+}
