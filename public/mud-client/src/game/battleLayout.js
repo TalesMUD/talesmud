@@ -1,6 +1,6 @@
 /**
  * Battle layout B PoC — room sprites on gold markers (party left / enemies right),
- * edge-docked player (TL) + target (TR) frames, tiny over-sprite HP.
+ * edge-docked player (TL) + target (TR) frames, slim over-sprite HP (no name labels).
  * Toggle via Settings, localStorage, or URL.
  *
  * Enable:

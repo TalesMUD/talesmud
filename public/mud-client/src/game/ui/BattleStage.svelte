@@ -889,7 +889,6 @@
           ></div>
           {#if layoutB}
             <div class="sprite-hp" aria-hidden="true">
-              <span class="sprite-hp-name">{enemy.name}</span>
               <div class="sprite-hp-track"><div class="sprite-hp-fill" style="width: {pct}%; background: {hpColor(pct)}"></div></div>
             </div>
           {/if}
@@ -3924,67 +3923,91 @@
   .battle-stage.layout-b .layout-b-frame {
     position: absolute;
     z-index: 6;
-    top: 0.55rem;
-    width: min(280px, 28%);
+    top: 0.4rem;
+    width: min(248px, 24%);
     box-sizing: border-box;
-    padding: 0.45rem 0.55rem 0.5rem;
-    border: 1.5px solid rgba(212, 164, 74, 0.55);
-    border-radius: 8px;
-    background: rgba(10, 8, 6, 0.92);
-    background-image: linear-gradient(160deg, rgba(18, 14, 10, 0.96), rgba(6, 6, 8, 0.9));
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+    padding: 0.32rem 0.42rem 0.36rem;
+    border: 1px solid rgba(212, 164, 74, 0.5);
+    border-radius: 7px;
+    background: rgba(10, 8, 6, 0.9);
+    background-image: linear-gradient(160deg, rgba(18, 14, 10, 0.94), rgba(6, 6, 8, 0.88));
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
     pointer-events: none;
   }
   .battle-stage.layout-b .layout-b-frame.player-frame {
-    left: 0.55rem;
+    left: 0.45rem;
     right: auto;
   }
   .battle-stage.layout-b .layout-b-frame.target-frame {
-    right: 0.55rem;
+    right: 0.45rem;
     left: auto;
     text-align: left;
   }
   .battle-stage.layout-b .lb-name {
     font-family: 'Cinzel', Georgia, serif;
-    font-size: 0.92rem;
+    font-size: 0.82rem;
     font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
+    text-transform: none;
     color: #f5e6c0;
-    margin-bottom: 0.28rem;
+    margin-bottom: 0.18rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
   .battle-stage.layout-b .target-frame .lb-name {
     color: #fde68a;
-    text-transform: uppercase;
-    font-size: 0.84rem;
-    letter-spacing: 0.08em;
+    text-transform: none;
+    font-size: 0.8rem;
+    letter-spacing: 0.03em;
   }
   .battle-stage.layout-b .lb-hp,
   .battle-stage.layout-b .lb-mp {
-    margin-bottom: 0.22rem;
+    margin-bottom: 0.14rem;
   }
   .battle-stage.layout-b .layout-b-frame .hp-track {
-    height: 8px;
+    height: 7px;
   }
   .battle-stage.layout-b .layout-b-frame .hp-label,
   .battle-stage.layout-b .layout-b-frame .hp-nums {
-    font-size: 0.62rem;
+    font-size: 0.58rem;
   }
   .battle-stage.layout-b .lb-buffs {
-    margin-top: 0.28rem;
+    margin-top: 0.18rem;
     max-width: 100%;
+    gap: 0.18rem;
+  }
+  .battle-stage.layout-b .lb-buffs .buff-icon {
+    width: 22px;
+    height: 22px;
   }
   .battle-stage.layout-b .lb-chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.25rem;
-    margin-top: 0.35rem;
+    gap: 0.18rem;
+    margin-top: 0.22rem;
   }
   .battle-stage.layout-b .lb-chips .chip {
-    font-size: 0.62rem;
-    padding: 0.12rem 0.4rem;
+    font-size: 0.58rem;
+    padding: 0.08rem 0.32rem;
+  }
+  .battle-stage.layout-b .lb-chips .wait-chip {
+    opacity: 0.85;
+    font-weight: 600;
+  }
+  /* Mid-stage Resolving/Waiting pill — drop under layout B; header turn-chip keeps state */
+  .battle-stage.layout-b .dock-status .queued-chip.wait {
+    display: none;
+  }
+  .battle-stage.layout-b .dock-status,
+  .battle-stage.layout-b .dock-status.has-chip {
+    min-height: 0;
+  }
+  .battle-stage.layout-b .dock-status .queued-chip:not(.wait) {
+    padding: 0.28rem 0.72rem;
+    font-size: 0.78rem;
+    border-width: 1.5px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
   }
 
   /* Enemy field RIGHT — sprites on markers; tiny HP only over sprite */
@@ -3993,14 +4016,14 @@
   .battle-stage.layout-b .enemy-strip.pack-duo,
   .battle-stage.layout-b .enemy-strip.pack-swarm {
     top: auto;
-    bottom: 18%;
-    right: 4%;
+    bottom: 14%;
+    right: 7%;
     left: auto;
-    max-width: min(48%, 520px);
-    max-height: 70%;
+    max-width: min(42%, 460px);
+    max-height: 66%;
     align-items: flex-end;
     justify-content: flex-end;
-    gap: 1.1rem;
+    gap: 0.75rem;
   }
   .battle-stage.layout-b .enemy-card {
     display: flex;
@@ -4017,81 +4040,71 @@
   .battle-stage.layout-b .enemy-sprite-wrap {
     order: 1;
     aspect-ratio: auto;
-    min-height: clamp(110px, 22vmin, 220px);
-    padding-bottom: 1.4rem;
+    min-height: clamp(100px, 20vmin, 200px);
+    padding-bottom: 0.9rem;
     position: relative;
     border: none;
     background: transparent;
     box-shadow: none;
   }
   .battle-stage.layout-b .enemy-strip.pack-solo .enemy-sprite-wrap {
-    min-height: clamp(150px, 30vmin, 280px);
+    min-height: clamp(130px, 26vmin, 240px);
   }
   .battle-stage.layout-b .enemy-sprite {
     width: auto;
-    height: clamp(96px, 22vmin, 220px);
+    height: clamp(88px, 20vmin, 200px);
     max-width: 92%;
   }
   .battle-stage.layout-b .enemy-strip.pack-solo .enemy-sprite {
-    height: clamp(130px, 28vmin, 280px);
+    height: clamp(118px, 25vmin, 240px);
   }
   /* Hide per-sprite buff chips — shown in TR frame for focus */
   .battle-stage.layout-b .enemy-sprite-wrap > .buff-row.portrait-buffs {
     display: none;
   }
 
-  /* Tiny over-sprite HP (optional tiny name) */
+  /* Slim over-sprite HP only (names live in TL/TR frames) */
   .battle-stage.layout-b .sprite-hp {
     position: absolute;
     left: 50%;
     top: 0;
-    transform: translate(-50%, calc(-100% - 4px));
+    transform: translate(-50%, calc(-100% - 2px));
     z-index: 4;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
-    min-width: 52px;
-    max-width: 110px;
+    gap: 0;
+    min-width: 44px;
+    max-width: 88px;
     pointer-events: none;
   }
   .battle-stage.layout-b .sprite-hp-name {
-    font-family: system-ui, sans-serif;
-    font-size: 0.55rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: rgba(245, 230, 192, 0.88);
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
+    display: none; /* redundant with TR focus frame */
   }
   .battle-stage.layout-b .sprite-hp-track {
-    width: 64px;
+    width: 56px;
     max-width: 100%;
-    height: 5px;
+    height: 4px;
     border-radius: 999px;
-    background: rgba(0, 0, 0, 0.65);
-    border: 1px solid rgba(212, 164, 74, 0.45);
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(212, 164, 74, 0.4);
     overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
   }
   .battle-stage.layout-b .sprite-hp-fill {
     height: 100%;
     border-radius: inherit;
   }
   .battle-stage.layout-b .player-sprite-hp .sprite-hp-track {
-    width: 72px;
+    width: 60px;
   }
 
   /* Player field LEFT — sprite on marker (not giant card) */
   .battle-stage.layout-b .player-team {
-    left: 3%;
+    left: 6%;
     right: auto;
-    bottom: 14%;
-    width: min(34%, 360px);
+    bottom: 12%;
+    width: min(30%, 320px);
     grid-template-columns: 1fr;
     grid-template-areas:
       "allies"
@@ -4102,7 +4115,7 @@
   .battle-stage.layout-b .player-team.solo {
     grid-template-columns: 1fr;
     grid-template-areas: "self";
-    width: min(28%, 280px);
+    width: min(24%, 250px);
   }
   .battle-stage.layout-b .ally-strip {
     flex-direction: row;
@@ -4150,8 +4163,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: flex-end;
-    min-height: clamp(130px, 28vmin, 260px);
-    padding: 0 0 1.2rem;
+    min-height: clamp(118px, 24vmin, 220px);
+    padding: 0 0 0.85rem;
     width: auto;
     max-width: 100%;
     border: none;
@@ -4167,7 +4180,7 @@
     position: relative;
     z-index: 1;
     width: auto;
-    height: clamp(110px, 26vmin, 240px);
+    height: clamp(100px, 22vmin, 200px);
     max-width: 92%;
     object-fit: contain;
     image-rendering: pixelated;
@@ -4178,47 +4191,46 @@
   .battle-stage.layout-b .player-marker {
     display: block;
     bottom: 0;
-    width: 88%;
-    height: 28%;
-    opacity: 0.85;
+    width: 70%;
+    height: 16%;
+    opacity: 0.78;
     z-index: 0;
   }
 
   .battle-stage.layout-b .ground-marker,
   .battle-stage.layout-b .target-ring {
     bottom: 0;
-    width: 88%;
-    height: 28%;
+    width: 70%;
+    height: 16%;
     opacity: 1;
-    border: 2px dashed rgba(250, 204, 21, 0.72);
+    border: 1.5px dashed rgba(250, 204, 21, 0.55);
     border-radius: 50%;
     background: radial-gradient(
       ellipse at center,
-      rgba(250, 204, 21, 0.28) 0%,
-      rgba(212, 164, 74, 0.12) 42%,
-      rgba(250, 204, 21, 0.03) 68%,
-      transparent 78%
+      rgba(250, 204, 21, 0.16) 0%,
+      rgba(212, 164, 74, 0.07) 45%,
+      transparent 72%
     );
     box-shadow:
-      0 0 18px rgba(250, 204, 21, 0.25),
-      inset 0 0 12px rgba(250, 204, 21, 0.12);
+      0 0 10px rgba(250, 204, 21, 0.14),
+      inset 0 0 6px rgba(250, 204, 21, 0.08);
   }
   .battle-stage.layout-b .ground-marker.focus,
   .battle-stage.layout-b .target-ring.focus {
-    border-color: rgba(253, 224, 71, 0.95);
+    border-color: rgba(253, 224, 71, 0.88);
     border-style: solid;
+    border-width: 2px;
     background: radial-gradient(
       ellipse at center,
-      rgba(250, 204, 21, 0.45) 0%,
-      rgba(234, 179, 8, 0.22) 40%,
-      rgba(212, 164, 74, 0.08) 65%,
-      transparent 80%
+      rgba(250, 204, 21, 0.28) 0%,
+      rgba(234, 179, 8, 0.12) 42%,
+      transparent 74%
     );
     box-shadow:
-      0 0 28px rgba(250, 204, 21, 0.55),
-      0 0 8px rgba(253, 224, 71, 0.8),
-      inset 0 0 16px rgba(250, 204, 21, 0.2);
-    animation: layoutBFocusPulse 1.6s ease-in-out infinite;
+      0 0 14px rgba(250, 204, 21, 0.32),
+      0 0 4px rgba(253, 224, 71, 0.45),
+      inset 0 0 8px rgba(250, 204, 21, 0.12);
+    animation: layoutBFocusPulse 1.8s ease-in-out infinite;
   }
   .battle-stage.layout-b.reduced-motion .ground-marker.focus,
   .battle-stage.layout-b.reduced-motion .target-ring.focus {
@@ -4226,7 +4238,7 @@
   }
   @keyframes layoutBFocusPulse {
     0%, 100% { filter: brightness(1); }
-    50% { filter: brightness(1.25); }
+    50% { filter: brightness(1.12); }
   }
   .battle-stage.layout-b .ground-marker.dead {
     opacity: 0.2 !important;
@@ -4262,16 +4274,16 @@
     .battle-stage.layout-b .enemy-strip.pack-duo,
     .battle-stage.layout-b .enemy-strip.pack-swarm {
       top: auto;
-      bottom: 16%;
-      right: 2%;
+      bottom: 14%;
+      right: 3%;
       left: auto;
-      max-width: min(52%, 240px);
+      max-width: min(48%, 220px);
     }
     .battle-stage.layout-b .player-team,
     .battle-stage.layout-b .player-team.solo {
-      left: 2%;
-      bottom: 12%;
-      width: min(42%, 180px);
+      left: 4%;
+      bottom: 11%;
+      width: min(38%, 170px);
     }
     .battle-stage.layout-b .enemy-sprite {
       height: clamp(72px, 18vmin, 140px);
