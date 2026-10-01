@@ -520,3 +520,20 @@ Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated bl
 - Tests: `node …/battleLayout_test.mjs` ok; `npm run build` green.
 - Deploy: clawdbot local `:8010` rebuilt `bin/tales`, restarted pid `221331` (Door `:8020` pid `3406193` untouched). VPS ff `3d47301`→`d0b40a0`, embed play client, `bin/tales.prev-3d47301`, SIGTERM talesmud MainPID `872157`→`875545` on `:8010`. Door `:8020` pid `758959` untouched.
 - Smoke: public `/play/` 200 with six `?v=battlepoc1`; `bundle.js`/`extra.css` 200; extra contains `layoutBFocusPulse`; POST `/api/guest` 200. Local `/play/` 200.
+
+## Battle layout B refine — room sprites + edge frames (2026-10-02)
+
+- Code SHAs: `9ea6fe9` (layout refine) + `6148d0d` (strip classic player-bust gold card chrome), both `[grokbot]`, `engine-june`. Live client: `?v=battlepoc2`.
+- Tip was battlepoc1 `d0b40a0` / docs `5210721`.
+- What changed (layout B only; classic untouched):
+  1. **Player** rendered into the room on the left gold ground marker as a portrait avatar (no mid-stage info card).
+  2. **Player detail frame TOP-LEFT**: name, HP/MP, buffs/debuffs, class/Focused chips.
+  3. **Target detail frame TOP-RIGHT**: focused enemy name, HP, buffs/debuffs (FOCUS label when multi-enemy).
+  4. **Over each enemy sprite**: only a small HP bar (+ optional tiny name); full foe-plate hidden; focus ring stays.
+  5. Full hotbar 1–9 + Flee, room vignette, Settings/`localStorage`/`?battleLayout=` toggle kept.
+- Files: `BattleStage.svelte`, `battleLayout.js` header, `SettingsModal.svelte` desc, `FEATURES.md`, cache bump `index.html` + built `bundle.js`/`extra.css`. Capture helper `tools/capture_battlepoc2.cjs`.
+- Tests: `node …/battleLayout_test.mjs` ok; `npm run build` green (existing unused-CSS warnings only).
+- Local clawdbot `:8010`: embed play client, rebuilt `bin/tales`, prev `bin/tales.prev-5210721` / later `bin/tales.prev-9ea6fe9`; pid `224501` on `:8010`. Door `:8020` pid `3406193` untouched.
+- VPS: ff `d0b40a0`→`9ea6fe9` then `9ea6fe9`→`6148d0d`; embed play client; `bin/tales.prev-d0b40a0` / `bin/tales.prev-9ea6fe9`; SIGTERM talesmud only; Restart=always → MainPID `877311` on `:8010`. Door `:8020` pid `758959` untouched. New bin sha256 `0b11fdad3011ecf9271ba5609dcb17547deb64634ce67f811db74212e7ac42f4`.
+- Smoke: local Chromium guest + synthetic combat — `.battle-stage.layout-b`, TL/TR frames, foe-plate `display:none`, player-meta `display:none`, sprite-hp ≥1, player-bust border cleared, zero page errors. Screenshot `.director/ux-audit/after/battlepoc2-layoutb-1920x1080.png`; `battlepoc2-smoke.json`. Public `/play/` 200 with six `?v=battlepoc2`; `extra.css` contains `layout-b-frame`/`sprite-hp-track`; POST `/api/guest` 200; door.veilspan.com/door 307 FYI.
+- Residual: placeholder portraits (not dedicated battle sprites); ally party in layout B still compact near left marker without own edge frame.
