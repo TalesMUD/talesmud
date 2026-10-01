@@ -563,8 +563,9 @@ type CombatantView struct {
 // CombatStartMessage is the structured combat UI payload (portraits, HP).
 type CombatStartMessage struct {
 	MessageResponse
-	Enemies []CombatantView `json:"enemies"`
-	Players []CombatantView `json:"players"`
+	Enemies  []CombatantView `json:"enemies"`
+	Players  []CombatantView `json:"players"`
+	TargetID string          `json:"targetId,omitempty"`
 }
 
 // NewCombatStartMessage builds a combatStart for the attacker.

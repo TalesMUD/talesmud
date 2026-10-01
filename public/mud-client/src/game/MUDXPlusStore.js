@@ -1,4 +1,5 @@
 import { writable, derived } from "svelte/store";
+import { changeFocus, livingFocus } from './combatFocus.js';
 
 // Cardinal direction names for compass filtering
 const CARDINAL_DIRECTIONS = ["north", "south", "east", "west"];
@@ -482,6 +483,7 @@ function createStore() {
     combatEnemies: [],
     combatPlayers: [],
     combatTargetId: null,
+    combatThreatWarning: null,
     combatTurn: null, // { actorId, actorName, round, deadlineMs }
     combatQueuedAction: "", // attack|defend|flee|skill|item
     combatQueuedSkillId: "",
@@ -916,16 +918,14 @@ function createStore() {
       update((state) => {
         state.combatEnemies = enemies || [];
         state.combatPlayers = players || [];
-        if (!state.combatTargetId && (enemies || []).length) {
-          state.combatTargetId = enemies[0].id;
-        }
+        state.combatTargetId = livingFocus(state.combatEnemies, state.combatTargetId)?.id || null;
         return state;
       });
     },
 
     setCombatTarget: (targetId) => {
       update((state) => {
-        state.combatTargetId = targetId || null;
+        changeFocus(state, targetId);
         return state;
       });
     },
@@ -938,12 +938,12 @@ function createStore() {
         let idx = living.findIndex((e) => e.id === state.combatTargetId);
         if (idx < 0) idx = step > 0 ? -1 : 0;
         idx = (idx + step + living.length) % living.length;
-        state.combatTargetId = living[idx].id;
+        changeFocus(state, living[idx].id);
         return state;
       });
     },
 
-    beginCombat: (enemies, players, message) => {
+    beginCombat: (enemies, players, message, initialTargetId) => {
       update((state) => {
         const nextEnemies = normalizeCombatantList(enemies);
         const nextPlayers = normalizeCombatantList(players);
@@ -958,7 +958,8 @@ function createStore() {
         state.combatRewards = null;
         state.combatEnemies = nextEnemies;
         state.combatPlayers = nextPlayers;
-        state.combatTargetId = nextEnemies[0]?.id || null;
+        state.combatTargetId = livingFocus(nextEnemies, initialTargetId)?.id || null;
+        state.combatThreatWarning = null;
         state.combatTurn = null;
         state.combatFx = null;
         state.combatJoin = null;
@@ -1013,6 +1014,7 @@ function createStore() {
         if (state.characterStats?.resting) {
           state.characterStats = { ...state.characterStats, inCombat: true, resting: false };
         }
+        if (msg?.action === 'focus' && msg.targetId) changeFocus(state, msg.targetId);
 
         const snapshots = normalizeCombatantList(msg?.combatants);
         if (snapshots.length) {
@@ -1032,6 +1034,7 @@ function createStore() {
         const living = state.combatEnemies.filter((e) => (e.hp ?? 0) > 0);
         if (state.combatTargetId && !living.some((e) => e.id === state.combatTargetId)) {
           state.combatTargetId = living[0]?.id || null;
+          state.combatThreatWarning = null;
         }
 
         // Sync local character HP from player snapshot when present
@@ -1075,7 +1078,7 @@ function createStore() {
         }
         applyCombatQueueFields(state, msg);
         // Action resolve clears the chip when server omits queuedAction
-        if (msg && msg.queuedAction === undefined && msg.action) {
+        if (msg && msg.queuedAction === undefined && msg.action && msg.action !== 'focus') {
           state.combatQueuedAction = "";
           state.combatQueuedSkillId = "";
           state.combatQueuedTargetId = "";
@@ -1088,6 +1091,8 @@ function createStore() {
       update((state) => {
         state.inCombat = false;
         state.combatPhase = "ending";
+        state.combatTargetId = null;
+        state.combatThreatWarning = null;
         state.combatOutcome = outcome || "victory";
         state.combatEndMessage = message || "";
         state.combatRewards = rewards || null;
@@ -1112,6 +1117,7 @@ function createStore() {
           state.combatEnemies = [];
           state.combatPlayers = [];
           state.combatTargetId = null;
+          state.combatThreatWarning = null;
           state.combatTurn = null;
           state.combatFx = null;
           state.combatJoin = null;
@@ -1133,6 +1139,7 @@ function createStore() {
         state.combatEnemies = [];
         state.combatPlayers = [];
         state.combatTargetId = null;
+        state.combatThreatWarning = null;
         state.combatTurn = null;
         state.combatFx = null;
         state.combatJoin = null;
@@ -1154,6 +1161,7 @@ function createStore() {
         state.combatEnemies = [];
         state.combatPlayers = [];
         state.combatTargetId = null;
+        state.combatThreatWarning = null;
         state.combatTurn = null;
         state.combatFx = null;
         state.combatJoin = null;

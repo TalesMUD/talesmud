@@ -293,7 +293,7 @@ function createClient(renderer, characterCreator, muxStore) {
     if (mux) {
       mux.updateCharacterStats({ inCombat: true });
       if (mux.beginCombat) {
-        mux.beginCombat(msg.enemies || [], msg.players || [], msg.message);
+        mux.beginCombat(msg.enemies || [], msg.players || [], msg.message, msg.targetId);
       } else {
         mux.setGameContext({ inCombat: true });
         mux.setCombatants(msg.enemies || [], msg.players || []);
@@ -327,6 +327,7 @@ function createClient(renderer, characterCreator, muxStore) {
   messageHandlers["combatAction"] = (msg) => {
     renderer(msg.message);
     if (mux && mux.applyCombatAction) {
+      const priorTarget = msg.action === 'focus' ? get(mux).combatTargetId : null;
       mux.applyCombatAction({
         actorId: msg.actorId || "",
         actorName: msg.actorName || "",
@@ -348,6 +349,11 @@ function createClient(renderer, characterCreator, muxStore) {
         decisionDeadlineMs: msg.decisionDeadlineMs,
         message: msg.message,
       });
+      if (msg.action === 'focus' && priorTarget !== get(mux).combatTargetId &&
+          get(mux).combatThreatWarning && typeof document !== 'undefined' &&
+          !document.querySelector('.battle-stage')) {
+        overlayStore.pushMessage(get(mux).combatThreatWarning.text);
+      }
     }
   };
 

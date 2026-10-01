@@ -17,6 +17,7 @@
   import { overlayStore } from './overlayStore.js';
   import { itemArtSrc, onItemArtError } from '../itemArtSrc.js';
   import { backend } from '../../api/base.js';
+  import { livingFocus } from '../combatFocus.js';
   import {
     DEFAULT_DECISION_WINDOW_MS,
     DEFAULT_BEAT_BUDGET_MS,
@@ -59,6 +60,7 @@
   $: combatJoin = $store.combatJoin;
   $: showJoinBanner = !!(combatJoin?.at && nowMs - combatJoin.at < 3000);
   $: targetId = $store.combatTargetId;
+  $: threatWarning = $store.combatThreatWarning;
   $: turn = $store.combatTurn;
   $: logRaw = $store.combatLog || [];
   $: log = (logRaw || []).filter((line) => line && !isCombatLogNoise(line.text));
@@ -362,7 +364,9 @@
     // C3: tap portrait/sprite retargets only; Attack dock queues the hit
     if (!enemy || phase !== 'active') return;
     if ((enemy.hp ?? 0) <= 0) return;
+    if (enemy.id === targetId) return;
     if (store.setCombatTarget) store.setCombatTarget(enemy.id);
+    if (sendMessage) sendMessage(`focus ${enemy.id}`);
   }
 
   function cmd(text) {
@@ -376,7 +380,7 @@
   });
 
   function doAttack() {
-    const target = enemies.find((e) => e.id === targetId) || enemies.find((e) => (e.hp ?? 0) > 0);
+    const target = livingFocus(enemies, targetId);
     if (target?.name) cmd(`attack ${target.name}`);
     else cmd('attack');
   }
@@ -703,6 +707,9 @@
     {#if windupText}
       <div class="telegraph-banner" role="status">{windupText}</div>
     {/if}
+    {#if threatWarning && nowMs - threatWarning.at < 3200}
+      <div class="focus-threat-warning threat-{threatWarning.tier}" role="alert">{threatWarning.text}</div>
+    {/if}
     {#each enemies as enemy (enemy.id)}
       {@const pct = hpPct(enemy.hp, enemy.maxHp)}
       {@const dead = (enemy.hp ?? 0) <= 0}
@@ -737,7 +744,7 @@
             class:hit-flash={tgt && (fxIsHit || fxIsMiss) && !fxIsCrit && !fxIsCrush}
             class:crit-flash={tgt && fxIsCrit && !fxIsCrush}
             class:crush-flash={tgt && fxIsCrush}
-          >{#if enemy.threat === 'skull'}<span class="skull-mark" title="Skull" aria-hidden="true">☠</span>{/if}{enemy.name}{#if enemy.enraged}<span class="enrage-badge">Enraged</span>{/if}</div>
+          >{#if enemy.threat === 'skull'}<span class="skull-mark" title="Skull" aria-hidden="true">☠</span>{/if}{enemy.name}{#if enemy.id === targetId && enemyCount > 1 && !dead}<span class="enemy-focus-label">FOCUS</span>{/if}{#if enemy.enraged}<span class="enrage-badge">Enraged</span>{/if}</div>
           {#if enemy.bossPhase}
             <div class="boss-phase-label" aria-label="Boss phase">{phaseCaption(enemy)}</div>
           {/if}
@@ -1725,12 +1732,42 @@
   .enemy-card.targeted .foe-plate {
     border-color: rgba(250, 204, 21, 0.75);
   }
+  .focus-threat-warning {
+    position: absolute;
+    top: 3.1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 8;
+    padding: 0.45rem 0.8rem;
+    border: 1px solid currentColor;
+    border-radius: 0.35rem;
+    background: rgba(20, 13, 11, 0.95);
+    color: #fb923c;
+    font-weight: 700;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .focus-threat-warning.threat-red { color: #f87171; }
+  .focus-threat-warning.threat-skull { color: #fecaca; }
   .enemy-card.targeted .nameplate {
     border-color: #facc15;
     box-shadow:
       0 0 0 1px rgba(250, 204, 21, 0.55),
       inset 0 0 0 1px rgba(255, 220, 150, 0.15),
       0 4px 14px rgba(0, 0, 0, 0.4);
+  }
+  .enemy-focus-label {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0.08rem 0.3rem;
+    border: 1px solid #facc15;
+    border-radius: 0.2rem;
+    background: #2b210d;
+    color: #fde68a;
+    font-size: 0.58em;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    vertical-align: middle;
   }
   .enemy-card.targeted .enemy-sprite {
     filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 12px rgba(250, 204, 21, 0.45));
