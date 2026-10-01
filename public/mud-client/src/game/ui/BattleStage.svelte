@@ -388,6 +388,9 @@
   function doDefend() { cmd('defend'); }
   function doFlee() { cmd('flee'); }
 
+  /** When true, Attack/Defend/Items reappear on the left combat rail. Default off to declutter fights. */
+  const showCombatUtilityRail = false;
+
 
   function queuedChipLabel(action, skillId) {
     if (!action) return '';
@@ -1030,19 +1033,22 @@
       </div>
 
       <div class="dock-main">
-        <nav class="battle-rail" aria-label="Combat actions">
-          <button type="button" class="rail-btn primary" title="Attack" aria-label="Attack" on:click|stopPropagation={doAttack}>
-            <i class="material-icons">flash_on</i>
-            <span class="rail-label">Attack</span>
-          </button>
-          <button type="button" class="rail-btn" title="Defend" aria-label="Defend" on:click|stopPropagation={doDefend}>
-            <i class="material-icons">security</i>
-            <span class="rail-label">Defend</span>
-          </button>
-          <button type="button" class="rail-btn" class:active={panel === 'items'} title="Items" aria-label="Items" on:click|stopPropagation={() => togglePanel('items')}>
-            <i class="material-icons">shopping_bag</i>
-            <span class="rail-label">Items</span>
-          </button>
+        <!-- Combat rail: Flee only. Attack/Defend/Items deferred — hotbar (melee/defend/consumables) + auto-attack cover them. Flip showCombatUtilityRail to restore. -->
+        <nav class="battle-rail essential" aria-label="Combat actions">
+          {#if showCombatUtilityRail}
+            <button type="button" class="rail-btn primary" title="Attack" aria-label="Attack" on:click|stopPropagation={doAttack}>
+              <i class="material-icons">flash_on</i>
+              <span class="rail-label">Attack</span>
+            </button>
+            <button type="button" class="rail-btn" title="Defend" aria-label="Defend" on:click|stopPropagation={doDefend}>
+              <i class="material-icons">security</i>
+              <span class="rail-label">Defend</span>
+            </button>
+            <button type="button" class="rail-btn" class:active={panel === 'items'} title="Items" aria-label="Items" on:click|stopPropagation={() => togglePanel('items')}>
+              <i class="material-icons">shopping_bag</i>
+              <span class="rail-label">Items</span>
+            </button>
+          {/if}
           <button type="button" class="rail-btn flee" title="Flee" aria-label="Flee" on:click|stopPropagation={doFlee}>
             <i class="material-icons">directions_run</i>
             <span class="rail-label">Flee</span>
@@ -2668,6 +2674,10 @@
   .rail-btn.flee { border-color: rgba(239, 68, 68, 0.5); }
   .rail-btn.flee i { color: #f87171; }
 
+  .battle-rail.essential {
+    gap: 0;
+  }
+
   .battle-dock {
     position: relative;
     left: auto;
@@ -3464,6 +3474,18 @@
       gap: 0.3rem;
       padding: 0.2rem;
       box-sizing: border-box;
+    }
+    .battle-rail.essential {
+      justify-content: flex-end;
+      width: auto;
+      max-width: 100%;
+      align-self: flex-end;
+    }
+    .battle-rail.essential .rail-btn.flee {
+      flex: 0 0 auto;
+      min-width: 4.5rem;
+      padding-left: 0.75rem;
+      padding-right: 0.75rem;
     }
     .rail-btn {
       flex: 1 1 0;
