@@ -2,9 +2,9 @@
 
 ## Android APK ae4412c (2026-10-01)
 
-- Flutter tip `ae4412c` (APK `veilspan-ae4412c.apk`, sha256 `c8a08cefd6c504847a35bb95632118394a83e1227d4764aad7d659ee201638d4`).
+- Flutter tip `ae4412c` (APK `playtest-ae4412c.apk`, sha256 `c8a08cefd6c504847a35bb95632118394a83e1227d4764aad7d659ee201638d4`).
 - Engine tip `34bace1` (`?v=buffport1`). Content tip `1694ca9` (ENM0012/NPC0028 chroma).
-- APK uploaded to VPS landing downloads; `/app` changelog updated. Door untouched.
+- Playtest APK tracked privately (not part of public OSS tree). Door untouched.
 
 ## Buff portrait placement + equip stats + Servitor chroma (2026-10-01)
 
@@ -456,18 +456,18 @@ Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated bl
 
 ## Cartographer quest turn-in markers (2026-10-01)
 
-- Engine tip `5a35e93` (`?v=map-turnin1`). Flutter tip `3de00bc` (APK `veilspan-3de00bc.apk`).
+- Engine tip `5a35e93` (`?v=map-turnin1`). Flutter tip `3de00bc` (APK `playtest-3de00bc.apk`).
 - What changed: questLog exposes `turnInRoomId` (NPC current/spawn room). Cartographer paints gold quest markers on ready turn-in rooms (distinct from you-marker), tooltips/intel with quest name, compact You/Turn in/Selected legend. Flutter map mirrors markers + legend.
 - Tests: Go quest log/turn-in room helpers; `atlasRenderer_test.mjs` collectTurnInMarkers; Flutter world_map_* / game_view_state tests green.
 - Deploy: VPS ff `51ba25a`→`5a35e93`, embed play client, rebuilt `bin/tales`, Restart=always pid `850595` on :8010. Door pid `758959` on :8020 untouched.
-- Smoke: `https://veilspan.com/play/` serves `bundle.js?v=map-turnin1` (200); guest POST 200; bundle contains map-legend / Turn in; `/api/server-info` Veilspan Chapter I; door.veilspan.com/door 301 (FYI).
-- APK: uploaded `veilspan-3de00bc.apk` to VPS landing downloads; `/app` changelog updated.
+- Smoke: `https://example.com/play/` serves `bundle.js?v=map-turnin1` (200); guest POST 200; bundle contains map-legend / Turn in; `/api/server-info` server title; door.example.com/door 301 (FYI).
+- APK: playtest APK uploaded to private landing downloads (not part of public OSS tree).
 
 
 ## ACCEPT — 2026-10-01 daily director (~10:10 Europe/Berlin)
-- Live healthy: HTTPS/play 200; POST `/api/guest` 200; `/api/server-info` Veilspan Chapter I; bundle `?v=buffport1` (sha256 `cb023d9ee0b04da771ee7c4b0f2e599208ddad326ea057e00a39a35915505328` matches tip); door.veilspan.com/door 301 FYI only. clawdbot up (`acb32219`), workers idle.
+- Live healthy: HTTPS/play 200; POST `/api/guest` 200; `/api/server-info` server title; bundle `?v=buffport1` (sha256 `cb023d9ee0b04da771ee7c4b0f2e599208ddad326ea057e00a39a35915505328` matches tip); door.example.com/door 301 FYI only. clawdbot up (`acb32219`), workers idle.
 - ACCEPTED yesterday crown **B14 Settings panel** (`a233dd7` + cleanups through `d7bcb29`; reduced motion, combat auto-focus, inventory mode; live was `?v=b14settings`).
-- ACCEPTED overnight EXTRA **UX stack** live tip `2c8d37e` / `?v=buffport1`: map Travel-on-select + follow/fade, quest area groups, denser equip + contrast stats, portrait buff chips, Cartographer turn-in markers, Servitor/Pell chroma; Flutter APKs on `/app` incl. `veilspan-ae4412c`.
+- ACCEPTED overnight EXTRA **UX stack** live tip `2c8d37e` / `?v=buffport1`: map Travel-on-select + follow/fade, quest area groups, denser equip + contrast stats, portrait buff chips, Cartographer turn-in markers, Servitor/Pell chroma; Flutter playtest APKs tracked privately (not part of public OSS tree).
 - No Marcus-signed open P0 (DSA armor-weight still unsigned; Google OAuth client still Marcus).
 - Crown today: **A10 Focus target + threat re-warn** (combat track after B14). Task: `.director/CORE-FOCUS-A10-TASK.md`. Worker: Codex on clawdbot (`codex-a10`).
 
