@@ -3930,7 +3930,8 @@
     padding: 0.45rem 0.55rem 0.5rem;
     border: 1.5px solid rgba(212, 164, 74, 0.55);
     border-radius: 8px;
-    background: linear-gradient(160deg, rgba(12, 10, 8, 0.92), rgba(6, 6, 8, 0.82));
+    background: rgba(10, 8, 6, 0.92);
+    background-image: linear-gradient(160deg, rgba(18, 14, 10, 0.96), rgba(6, 6, 8, 0.9));
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
     pointer-events: none;
   }
@@ -4019,6 +4020,9 @@
     min-height: clamp(110px, 22vmin, 220px);
     padding-bottom: 1.4rem;
     position: relative;
+    border: none;
+    background: transparent;
+    box-shadow: none;
   }
   .battle-stage.layout-b .enemy-strip.pack-solo .enemy-sprite-wrap {
     min-height: clamp(150px, 30vmin, 280px);
@@ -4147,8 +4151,13 @@
     align-items: center;
     justify-content: flex-end;
     min-height: clamp(130px, 28vmin, 260px);
-    padding-bottom: 1.2rem;
-    width: 100%;
+    padding: 0 0 1.2rem;
+    width: auto;
+    max-width: 100%;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
   }
   .battle-stage.layout-b .player-bust > .buff-row.portrait-buffs {
     display: none; /* buffs in TL frame */
