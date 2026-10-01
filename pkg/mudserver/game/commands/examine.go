@@ -101,14 +101,16 @@ func examineItem(item *items.Item, equippedItems map[items.ItemSlot]*items.Item)
 
 	sb.WriteString("\n--- Item Details ---\n")
 
-	// Type and subtype
+	// Type and subtype (omit ugly internal subtype ids)
 	if item.Type != "" {
 		sb.WriteString("Type: ")
 		sb.WriteString(formatItemType(item.Type))
 		if item.SubType != "" {
-			sb.WriteString(" (")
-			sb.WriteString(formatItemSubType(item.SubType))
-			sb.WriteString(")")
+			if sub := formatItemSubType(item.SubType); sub != "" {
+				sb.WriteString(" (")
+				sb.WriteString(sub)
+				sb.WriteString(")")
+			}
 		}
 		sb.WriteString("\n")
 	}
@@ -259,7 +261,9 @@ func formatItemType(t items.ItemType) string {
 	}
 }
 
-// formatItemSubType formats item subtype for display
+// formatItemSubType formats item subtype for display.
+// Returns "" for internal/snake_case ids (e.g. artifact_fragment) so callers
+// can omit the parenthetical rather than dumping engine tags into player UI.
 func formatItemSubType(st items.ItemSubType) string {
 	switch st {
 	case items.ItemSubTypeSword:
@@ -273,7 +277,19 @@ func formatItemSubType(st items.ItemSubType) string {
 	case items.ItemSubTypeShield:
 		return "Shield"
 	default:
-		return string(st)
+		raw := string(st)
+		if raw == "" {
+			return ""
+		}
+		// Hide engine tags like artifact_fragment / crafting_material leftovers.
+		if strings.Contains(raw, "_") {
+			return ""
+		}
+		// Single known-looking token → Title Case; otherwise hide.
+		if raw == strings.ToLower(raw) && len(raw) <= 24 {
+			return strings.Title(raw)
+		}
+		return ""
 	}
 }
 
