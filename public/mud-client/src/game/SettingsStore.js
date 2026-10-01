@@ -1,4 +1,5 @@
 import { writable, get } from 'svelte/store';
+import { normalizeBattleLayoutB, writeBattleLayoutOverride } from './battleLayout.js';
 import {
   ACTION_BAR_LAYOUT_REVISION,
   DEFAULT_ACTION_BAR_PINS,
@@ -36,6 +37,7 @@ const DEFAULT_SETTINGS = {
     inventoryOpenMode: DEFAULT_INVENTORY_OPEN_MODE, // 'overlay' | 'widget'
     reducedMotion: 'system', // 'system' | 'on' | 'off'
     combatAutoFocus: true,
+    battleLayoutB: false, // PoC: FF-style party-left / enemies-right
     hotbarBinds: [...DEFAULT_HOTBAR_BINDS],
   }
 };
@@ -74,6 +76,7 @@ function createSettingsStore() {
             iface.inventoryOpenMode = normalizeInventoryOpenMode(iface.inventoryOpenMode);
             iface.reducedMotion = normalizeReducedMotion(iface.reducedMotion);
             iface.combatAutoFocus = iface.combatAutoFocus !== false;
+            iface.battleLayoutB = normalizeBattleLayoutB(iface.battleLayoutB);
             const beforeSeed = scrubLegacySearchBinds(
               normalizeHotbarBinds(iface.hotbarBinds)
             );
@@ -149,6 +152,11 @@ function createSettingsStore() {
         }
         if (category === 'interface' && key === 'combatAutoFocus') {
           nextValue = value !== false;
+        }
+        if (category === 'interface' && key === 'battleLayoutB') {
+          nextValue = normalizeBattleLayoutB(value);
+          // Mirror to LS so ?-less refresh keeps the PoC without URL; clear on off.
+          writeBattleLayoutOverride(nextValue ? true : null);
         }
         if (category === 'interface' && key === 'hotbarBinds') {
           nextValue = scrubLegacySearchBinds(normalizeHotbarBinds(value));

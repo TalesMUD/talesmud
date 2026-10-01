@@ -14,6 +14,7 @@
     actionGenericArtUrl,
   } from '../hudPrefs.js';
   import { settingsStore } from '../SettingsStore.js';
+  import { resolveBattleLayoutB } from '../battleLayout.js';
   import { overlayStore } from './overlayStore.js';
   import { itemArtSrc, onItemArtError } from '../itemArtSrc.js';
   import { backend } from '../../api/base.js';
@@ -205,6 +206,11 @@
   }).filter((s) => s.name);
 
   $: hotbarBinds = normalizeHotbarBinds($settingsStore.interface?.hotbarBinds);
+
+  // Layout B PoC: URL (?battleLayout=b / ?battlepoc=1) > localStorage > Settings
+  $: layoutB = resolveBattleLayoutB({
+    settingsFlag: $settingsStore.interface?.battleLayoutB,
+  });
 
   $: queuedAction = $store.combatQueuedAction || '';
   $: queuedSkillId = $store.combatQueuedSkillId || '';
@@ -638,12 +644,15 @@
 
 <svelte:window on:keydown={onOutcomeKey} />
 {#if visible}
-<div class="battle-stage" class:ending={phase === 'ending'} class:reduced-motion={prefersReducedMotion($settingsStore.interface?.reducedMotion)} role="dialog" aria-label="Combat" tabindex="-1" use:combatStageFocus>
+<div class="battle-stage" class:ending={phase === 'ending'} class:layout-b={layoutB} class:reduced-motion={prefersReducedMotion($settingsStore.interface?.reducedMotion)} role="dialog" aria-label="Combat" tabindex="-1" use:combatStageFocus>
   <div class="battle-backdrop" aria-hidden="true"></div>
   <div class="battle-frame">
   <header class="battle-header">
     <i class="material-icons header-icon" aria-hidden="true">explore</i>
     <span class="header-label">COMBAT</span>
+    {#if layoutB}
+      <span class="round-chip layout-b-chip" title="Battle layout B PoC — toggle off in Settings or ?battleLayout=classic">Layout B</span>
+    {/if}
     {#if turn?.round}
       <span class="round-chip">Round {turn.round}</span>
     {/if}
@@ -775,9 +784,12 @@
               {/each}
             </div>
           {/if}
-          {#if enemy.id === targetId && !dead}
-            <div class="target-ring" aria-hidden="true"></div>
-          {/if}
+          <div
+            class="ground-marker target-ring"
+            class:focus={enemy.id === targetId && !dead}
+            class:dead={dead}
+            aria-hidden="true"
+          ></div>
           <img
             class="enemy-sprite"
             src={combatantPortrait(enemy)}
@@ -907,6 +919,7 @@
           {/each}
         </div>
       {/if}
+      <div class="ground-marker player-marker" class:focus={decisionActive} aria-hidden="true"></div>
       <img
         src={combatantPortrait(selfCombatant)}
         alt=""
@@ -1712,7 +1725,8 @@
     z-index: 1;
   }
 
-  /* Soft ground puddle under feet — behind sprite, fades to 0 alpha at rim */
+  /* Soft ground puddle under feet — classic: only the focused target */
+  .ground-marker,
   .target-ring {
     position: absolute;
     bottom: 2%;
@@ -1733,6 +1747,17 @@
     box-shadow: none;
     pointer-events: none;
     z-index: 0;
+    opacity: 0;
+  }
+  .ground-marker.focus,
+  .target-ring.focus {
+    opacity: 1;
+  }
+  .ground-marker.dead {
+    opacity: 0 !important;
+  }
+  .player-marker {
+    display: none; /* classic: no player ground disc */
   }
 
   .enemy-card.targeted .foe-plate {
@@ -3778,4 +3803,183 @@
     border-top-left-radius: 3px;
     text-align: center;
   }
+
+  /* ===== Layout B PoC field — party LEFT / enemies RIGHT + gold markers ===== */
+  .battle-stage.layout-b .layout-b-chip {
+    border-color: rgba(250, 204, 21, 0.85);
+    color: #fde68a;
+    background: rgba(40, 28, 8, 0.9);
+  }
+
+  .battle-stage.layout-b .enemy-strip,
+  .battle-stage.layout-b .enemy-strip.pack-solo,
+  .battle-stage.layout-b .enemy-strip.pack-duo,
+  .battle-stage.layout-b .enemy-strip.pack-swarm {
+    top: auto;
+    bottom: 18%;
+    right: 4%;
+    left: auto;
+    max-width: min(48%, 520px);
+    max-height: 70%;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 1.1rem;
+  }
+
+  .battle-stage.layout-b .player-team {
+    left: 1rem;
+    right: auto;
+    bottom: 12%;
+    width: min(42%, 460px);
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "allies"
+      "self";
+    align-items: stretch;
+  }
+  .battle-stage.layout-b .player-team.solo {
+    grid-template-columns: 1fr;
+    grid-template-areas: "self";
+    width: min(38%, 420px);
+  }
+  .battle-stage.layout-b .ally-strip {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    max-height: 36vh;
+    overflow-y: auto;
+  }
+  .battle-stage.layout-b .ally-card {
+    max-width: none;
+    flex: 0 0 auto;
+  }
+
+  .battle-stage.layout-b .enemy-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .battle-stage.layout-b .foe-plate {
+    order: 0;
+    margin-bottom: 0.35rem;
+    width: min(100%, 240px);
+  }
+  .battle-stage.layout-b .enemy-sprite-wrap {
+    order: 1;
+    aspect-ratio: auto;
+    min-height: clamp(110px, 22vmin, 220px);
+    padding-bottom: 1.4rem;
+  }
+  .battle-stage.layout-b .enemy-strip.pack-solo .enemy-sprite-wrap {
+    min-height: clamp(150px, 30vmin, 280px);
+  }
+  .battle-stage.layout-b .enemy-sprite {
+    width: auto;
+    height: clamp(96px, 22vmin, 220px);
+    max-width: 92%;
+  }
+  .battle-stage.layout-b .enemy-strip.pack-solo .enemy-sprite {
+    height: clamp(130px, 28vmin, 280px);
+  }
+
+  .battle-stage.layout-b .ground-marker,
+  .battle-stage.layout-b .target-ring {
+    bottom: 0;
+    width: 88%;
+    height: 28%;
+    opacity: 1;
+    border: 2px dashed rgba(250, 204, 21, 0.72);
+    border-radius: 50%;
+    background: radial-gradient(
+      ellipse at center,
+      rgba(250, 204, 21, 0.28) 0%,
+      rgba(212, 164, 74, 0.12) 42%,
+      rgba(250, 204, 21, 0.03) 68%,
+      transparent 78%
+    );
+    box-shadow:
+      0 0 18px rgba(250, 204, 21, 0.25),
+      inset 0 0 12px rgba(250, 204, 21, 0.12);
+  }
+  .battle-stage.layout-b .ground-marker.focus,
+  .battle-stage.layout-b .target-ring.focus {
+    border-color: rgba(253, 224, 71, 0.95);
+    border-style: solid;
+    background: radial-gradient(
+      ellipse at center,
+      rgba(250, 204, 21, 0.45) 0%,
+      rgba(234, 179, 8, 0.22) 40%,
+      rgba(212, 164, 74, 0.08) 65%,
+      transparent 80%
+    );
+    box-shadow:
+      0 0 28px rgba(250, 204, 21, 0.55),
+      0 0 8px rgba(253, 224, 71, 0.8),
+      inset 0 0 16px rgba(250, 204, 21, 0.2);
+    animation: layoutBFocusPulse 1.6s ease-in-out infinite;
+  }
+  .battle-stage.layout-b.reduced-motion .ground-marker.focus,
+  .battle-stage.layout-b.reduced-motion .target-ring.focus {
+    animation: none;
+  }
+  @keyframes layoutBFocusPulse {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.25); }
+  }
+  .battle-stage.layout-b .ground-marker.dead {
+    opacity: 0.2 !important;
+    border-style: dotted;
+    filter: grayscale(0.8);
+    animation: none;
+    box-shadow: none;
+  }
+
+  .battle-stage.layout-b .player-bust {
+    overflow: visible;
+  }
+  .battle-stage.layout-b .player-marker {
+    display: block;
+    bottom: -10%;
+    width: 110%;
+    height: 28%;
+    opacity: 0.85;
+    z-index: 0;
+  }
+  .battle-stage.layout-b .player-bust img {
+    position: relative;
+    z-index: 1;
+  }
+
+  .battle-stage.layout-b .arena-art {
+    filter: brightness(0.38) saturate(0.7) contrast(1.08);
+  }
+  .battle-stage.layout-b .arena-vignette {
+    background:
+      radial-gradient(ellipse at 55% 48%, transparent 18%, rgba(0, 0, 0, 0.5) 58%, rgba(0, 0, 0, 0.88) 100%),
+      linear-gradient(to top, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.28) 30%, transparent 50%),
+      linear-gradient(to bottom, rgba(0, 0, 0, 0.45) 0%, transparent 24%),
+      linear-gradient(to right, rgba(0, 0, 0, 0.42) 0%, transparent 22%, transparent 78%, rgba(0, 0, 0, 0.42) 100%);
+  }
+
+  @media (max-width: 768px) {
+    .battle-stage.layout-b .enemy-strip,
+    .battle-stage.layout-b .enemy-strip.pack-solo,
+    .battle-stage.layout-b .enemy-strip.pack-duo,
+    .battle-stage.layout-b .enemy-strip.pack-swarm {
+      top: 6%;
+      bottom: auto;
+      right: 2%;
+      left: auto;
+      max-width: min(58%, 280px);
+    }
+    .battle-stage.layout-b .player-team,
+    .battle-stage.layout-b .player-team.solo {
+      left: 0.4rem;
+      bottom: 0.4rem;
+      width: min(55%, 260px);
+    }
+    .battle-stage.layout-b .enemy-sprite {
+      height: clamp(72px, 18vmin, 140px);
+    }
+  }
+
 </style>
