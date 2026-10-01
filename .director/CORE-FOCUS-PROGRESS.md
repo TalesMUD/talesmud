@@ -463,3 +463,11 @@ Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated bl
 - Smoke: `https://veilspan.com/play/` serves `bundle.js?v=map-turnin1` (200); guest POST 200; bundle contains map-legend / Turn in; `/api/server-info` Veilspan Chapter I; door.veilspan.com/door 301 (FYI).
 - APK: uploaded `veilspan-3de00bc.apk` to VPS landing downloads; `/app` changelog updated.
 
+
+## ACCEPT — 2026-10-01 daily director (~10:10 Europe/Berlin)
+- Live healthy: HTTPS/play 200; POST `/api/guest` 200; `/api/server-info` Veilspan Chapter I; bundle `?v=buffport1` (sha256 `cb023d9ee0b04da771ee7c4b0f2e599208ddad326ea057e00a39a35915505328` matches tip); door.veilspan.com/door 301 FYI only. clawdbot up (`acb32219`), workers idle.
+- ACCEPTED yesterday crown **B14 Settings panel** (`a233dd7` + cleanups through `d7bcb29`; reduced motion, combat auto-focus, inventory mode; live was `?v=b14settings`).
+- ACCEPTED overnight EXTRA **UX stack** live tip `2c8d37e` / `?v=buffport1`: map Travel-on-select + follow/fade, quest area groups, denser equip + contrast stats, portrait buff chips, Cartographer turn-in markers, Servitor/Pell chroma; Flutter APKs on `/app` incl. `veilspan-ae4412c`.
+- No Marcus-signed open P0 (DSA armor-weight still unsigned; Google OAuth client still Marcus).
+- Crown today: **A10 Focus target + threat re-warn** (combat track after B14). Task: `.director/CORE-FOCUS-A10-TASK.md`. Worker: Codex on clawdbot (`codex-a10`).
+
