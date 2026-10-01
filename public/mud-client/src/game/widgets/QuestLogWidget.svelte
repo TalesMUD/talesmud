@@ -313,24 +313,45 @@
 <div class="questlog-widget game-panel">
   <div class="questlog-header">
     <div class="header-title-row">
-      <h2>Quest Log</h2>
+      <h2 class="widget-chrome-title">Quest Log</h2>
+    </div>
+    <div class="quest-toolbar" role="toolbar" aria-label="Quest filters and tools">
+      <div class="type-filter-chips" role="group" aria-label="Filter by quest type">
+        {#each QUEST_TYPE_OPTIONS as chip}
+          <button
+            type="button"
+            class="type-chip"
+            class:active={selectedTypes.includes(chip.id)}
+            style="--chip-color: {chip.color}"
+            on:click={() => toggleTypeFilter(chip.id)}
+            aria-pressed={selectedTypes.includes(chip.id)}
+          >{chip.label}</button>
+        {/each}
+      </div>
       <div class="header-actions">
         <button
+          type="button"
           class="history-btn"
+          class:active={showHistory}
           on:click={() => { showHistory = !showHistory; showToolsMenu = false; }}
-          title="View Quest History"
+          title="Quest statistics"
+          aria-label="Quest statistics"
+          aria-pressed={showHistory}
         >
-          📊
+          <i class="material-icons" aria-hidden="true">bar_chart</i>
+          <span class="action-label">Stats</span>
         </button>
         <button
+          type="button"
           class="tools-btn"
           class:active={showToolsMenu || toolsActive}
           on:click={toggleToolsMenu}
-          title="Search and filters"
-          aria-label="Search and filters"
+          title="Search and more filters"
+          aria-label="Search and more filters"
           aria-expanded={showToolsMenu}
         >
-          <i class="material-icons">more_horiz</i>
+          <i class="material-icons" aria-hidden="true">tune</i>
+          <span class="action-label">More</span>
         </button>
       </div>
     </div>
@@ -376,18 +397,6 @@
         </div>
       </div>
     {/if}
-    <div class="type-filter-chips" role="group" aria-label="Filter by quest type">
-      {#each QUEST_TYPE_OPTIONS as chip}
-        <button
-          type="button"
-          class="type-chip"
-          class:active={selectedTypes.includes(chip.id)}
-          style="--chip-color: {chip.color}"
-          on:click={() => toggleTypeFilter(chip.id)}
-          aria-pressed={selectedTypes.includes(chip.id)}
-        >{chip.label}</button>
-      {/each}
-    </div>
   </div>
 
   <div class="questlog-content">
@@ -841,12 +850,12 @@
 
   .questlog-header {
     position: relative;
-    padding: 0.45em 0.75em;
+    padding: 0.35em 0.65em 0.4em;
     background: var(--panel-header-bg);
     border-bottom: 1px solid var(--panel-header-border);
     display: flex;
     flex-direction: column;
-    gap: 0;
+    gap: 0.3em;
     flex-shrink: 0;
   }
 
@@ -855,6 +864,14 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.5em;
+    min-height: 0;
+  }
+
+  .quest-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.45em;
     min-height: 28px;
   }
 
@@ -863,6 +880,7 @@
     align-items: center;
     gap: 0.3em;
     flex-shrink: 0;
+    margin-left: auto;
   }
 
   .questlog-header h2 {
@@ -881,28 +899,41 @@
     background: var(--btn-bg);
     border: 1px solid var(--btn-border);
     color: var(--accent-primary);
-    padding: 4px 8px;
-    border-radius: 4px;
+    padding: 3px 8px;
+    border-radius: 999px;
     cursor: pointer;
-    font-size: 14px;
-    transition: all 0.2s;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    transition: all 0.15s ease;
     line-height: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 28px;
-    min-height: 28px;
+    gap: 3px;
+    min-height: 26px;
+    font-family: inherit;
   }
 
+  .history-btn i,
   .tools-btn i {
-    font-size: 18px;
+    font-size: 15px;
+    line-height: 1;
+  }
+
+  .action-label {
+    font-size: 0.68rem;
+    line-height: 1;
   }
 
   .history-btn:hover,
   .tools-btn:hover,
+  .history-btn.active,
   .tools-btn.active {
     background: var(--btn-hover-bg);
     border-color: var(--btn-hover-border);
+    color: var(--text-primary, #f8fafc);
   }
 
   .tools-backdrop {
@@ -914,9 +945,9 @@
 
   .tools-menu {
     position: absolute;
-    top: calc(100% - 1px);
-    right: 0.5em;
-    left: 0.5em;
+    top: calc(100% - 2px);
+    right: 0.4em;
+    left: 0.4em;
     z-index: 45;
     display: flex;
     flex-direction: column;
@@ -1682,13 +1713,16 @@
 
   .type-filter-chips {
     display: flex;
-    gap: 6px;
+    gap: 5px;
     flex-wrap: wrap;
-    padding: 0.4em 0 0.1em;
+    align-items: center;
+    min-width: 0;
+    flex: 1;
+    padding: 0;
   }
 
   .type-chip {
-    padding: 3px 10px;
+    padding: 4px 11px;
     border-radius: 999px;
     font-size: var(--text-xs);
     font-weight: bold;
@@ -1696,24 +1730,37 @@
     letter-spacing: 0.06em;
     cursor: pointer;
     font-family: inherit;
-    border: 1px solid var(--chip-color);
-    color: var(--chip-color);
-    background: transparent;
-    opacity: 0.5;
+    border: 1px solid color-mix(in srgb, var(--chip-color) 35%, transparent);
+    color: color-mix(in srgb, var(--chip-color) 72%, #94a3b8);
+    background: color-mix(in srgb, var(--chip-color) 8%, transparent);
+    opacity: 1;
     transition: all 0.15s ease;
-    line-height: 1.3;
+    line-height: 1.25;
+    min-height: 26px;
   }
 
   .type-chip:hover {
-    opacity: 0.85;
+    color: var(--chip-color);
+    border-color: color-mix(in srgb, var(--chip-color) 70%, transparent);
     background: color-mix(in srgb, var(--chip-color) 18%, transparent);
   }
 
   .type-chip.active {
-    opacity: 1;
     color: #ffffff;
     background: var(--chip-color);
     border-color: var(--chip-color);
-    box-shadow: 0 0 8px color-mix(in srgb, var(--chip-color) 45%, transparent);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--chip-color) 40%, transparent);
+  }
+
+  @media (max-width: 420px) {
+    .action-label {
+      display: none;
+    }
+
+    .history-btn,
+    .tools-btn {
+      padding: 3px 6px;
+      min-width: 26px;
+    }
   }
 </style>

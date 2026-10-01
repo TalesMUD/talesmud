@@ -187,13 +187,18 @@
     display: none !important;
   }
 
-  .tab-pane :global(.questlog-header .header-title-row),
+  /* Quest Log title lives in the tab bar; collapse the empty title row. */
+  .tab-pane :global(.questlog-header .header-title-row) {
+    display: none !important;
+  }
+
   .tab-pane :global(.tx-titlebar) {
     justify-content: flex-end;
   }
 
   .tab-pane :global(.questlog-header) {
-    padding: 0.25em 0.5em;
+    padding: 0.3em 0.5em 0.35em;
+    gap: 0;
   }
 
   .tab-pane {
