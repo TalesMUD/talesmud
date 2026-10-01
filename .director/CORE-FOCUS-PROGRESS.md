@@ -507,3 +507,5 @@ Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated bl
 - Cause: useon1 rebuilt `bundle.js` (new Svelte scope hashes) but Rollup wrote component CSS to unlinked `bundle.css` while linked `extra.css` stayed on levelup1 hashes. Inventory grid + ItemDetailCard styles never applied → vertical unstyled slots + detail card under widgets.
 - Fix: single `css({ output: 'extra.css' })` after `svelte({ emitCss: true })` in `rollup.config.js`; rebuild so JS/CSS hashes match; cache bump `invfix1`.
 - Keep: Use / Use on… UI + server use-on paths unchanged.
+- Deploy: VPS ff `1cedbf0`→`63d3745`, embed play client, `bin/tales.prev-1cedbf0` (sha256 `4b36945b9f5653220abf093e54fa1aca484dd892b2e0dc2636ba339b443cbd9b`), new bin sha256 `a8b72f35c773a5fd1df3e2300a42f527c6a91ca37c43d5358308066918455412`. SIGTERM talesmud only; Restart=always → MainPID `872157` on :8010 at 23:22:13 Berlin. Door :8020 pid `758959` untouched.
+- Smoke: `/play/?v=invfix1` 200; guest POST 200; public HTTPS `?v=invfix1`; dist JS/CSS scope hashes match (`svelte-en6ew4` grid, `svelte-anbkw4` item-card).
