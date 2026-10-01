@@ -479,3 +479,11 @@ Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated bl
 - Deploy: VPS `engine-june` fast-forwarded through `fca48b0`; copied built play assets into `pkg/webuiplay/dist`, built `bin/tales.next`, renamed it over `bin/tales`, SIGTERM'd only talesmud MainPID. `Restart=always` started MainPID `858953` on :8010. Final bundle SHA256 `3fe131ac43f07790821b9115f6c913f057c0ad818c9f23ab77263f64bcac4669` matches VPS source/dist. Door path and service untouched.
 - Smoke: live `/`, `/play/?v=a10focus`, `/api/server-info`, `bundle.js?v=a10focus`, `extra.css?v=a10focus`, and `POST /api/guest` all returned 200. Play HTML references the A10 bundle and stylesheet. Controlled two-hostile live guest capture: `.director/ux-audit/after/a10-focus-1920x1080.png`; skull focus label/ring and warning visible, page height 1080, zero page errors. Screenshot uses a synthetic combat payload; server focus/aim is covered by Go tests.
 - Residual: Flutter combat focus and switch warning parity remains for a later mobile slice. The screenshot's multi-hostile state is controlled rather than a natural swarm encounter.
+
+## Examine item card overlay (2026-10-01 evening)
+
+- Code SHA: `22be19c` (`[grokbot]`), `engine-june`. Live client: `?v=examine1`.
+- What changed: Room overlay detects `=== … ===` examine dumps and renders a Veilspan dark/gold item card (title, blurb vs lore, Type/Quality chips, scroll, close). Server hides snake_case subtypes like `artifact_fragment` on the Type line. Non-examine toasts unchanged.
+- Tests: `node …/parseExamineOverlay_test.mjs`; `go test ./pkg/mudserver/game/commands/ -run TestFormatItemSubType|TestExamineItemOmits`.
+- Deploy: VPS ff `10d3276`→`22be19c`, embed play client, `bin/tales.prev-10d3276`, SIGTERM MainPID only; Restart=always → MainPID `870149` on :8010. Door :8020 pid `758959` untouched.
+- Smoke: `/play/?v=examine1` 200; `bundle.js?v=examine1` contains `examine-card`; POST `/api/guest` 200.
