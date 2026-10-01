@@ -487,3 +487,16 @@ Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated bl
 - Tests: `node …/parseExamineOverlay_test.mjs`; `go test ./pkg/mudserver/game/commands/ -run TestFormatItemSubType|TestExamineItemOmits`.
 - Deploy: VPS ff `10d3276`→`22be19c`, embed play client, `bin/tales.prev-10d3276`, SIGTERM MainPID only; Restart=always → MainPID `870149` on :8010. Door :8020 pid `758959` untouched.
 - Smoke: `/play/?v=examine1` 200; `bundle.js?v=examine1` contains `examine-card`; POST `/api/guest` 200.
+
+## Use item on item — inventory Use on… + bare flint (2026-10-01 evening)
+
+- Code SHA: `201c225` (`[grokbot]`), `engine-june`. Live client: `?v=useon1`.
+- Root cause: content YAML used `onUseScriptId` but importer only read `onUseScript`, so live ITM0002 had no OnUse → bare `use flint` said "You can't use". `use flint on torch` worked via built-in light path. Inventory Use only showed for consumables and never offered a target.
+- What changed:
+  - Importer accepts `onUseScript` **or** `onUseScriptId`.
+  - Bare `use flint` auto-lights a carried torch (built-in when no script; SCR0008 when template linked). Soft hint + examine "How to use" teach `use A on B`.
+  - Inventory item card: Use for usable tools/scripts; **Use on…** picker for second inventory item (no Terminal X).
+- Tests: `go test ./pkg/mudserver/game/commands/ -run TestUse|TestExamine`; `node …/itemComparison_test.mjs`; `npm run build`.
+- Deploy: VPS ff → `201c225`, embed play client, patch live ITM0002 `onUseScriptId=SCR0008`, `bin/tales.prev-*`, SIGTERM talesmud only. Door untouched.
+- Smoke: `/play/?v=useon1` 200; guest POST 200; Door :8020 untouched.
+- Residual: existing inventory flint *instances* without script id still work via built-in auto-target / template resolve; re-pickup from fixed template carries SCR0008.
