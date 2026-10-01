@@ -2,6 +2,7 @@ package quests
 
 import (
 	"strings"
+	"unicode"
 	"time"
 
 	"github.com/talesmud/talesmud/pkg/entities"
@@ -140,4 +141,74 @@ func (q *Quest) AllowsAnywhereTurnIn() bool {
 func (q *Quest) TurnInNPCID() string {
 	_, npcID := q.ResolveTurnIn()
 	return npcID
+}
+
+// DisplayArea returns a human-readable area/zone label for UI grouping.
+// Prefers authored Area; otherwise derives from the QST zone ID prefix.
+func (q *Quest) DisplayArea() string {
+	if q == nil {
+		return "Other"
+	}
+	if a := strings.TrimSpace(q.Area); a != "" {
+		return formatQuestAreaLabel(a)
+	}
+	id := ""
+	if q.Entity != nil {
+		id = q.ID
+	}
+	id = strings.ToUpper(strings.TrimSpace(id))
+	switch {
+	case strings.HasPrefix(id, "QST00"):
+		return "Catacombs"
+	case strings.HasPrefix(id, "QST01"):
+		return "Meadows"
+	case strings.HasPrefix(id, "QST02"):
+		return "Oldtown"
+	case strings.HasPrefix(id, "QST03"):
+		return "Gloomfen"
+	case strings.HasPrefix(id, "QST04"):
+		return "Ashenvale"
+	case strings.HasPrefix(id, "QST05"):
+		return "Silver Vale"
+	case strings.HasPrefix(id, "QST06"):
+		return "Kazgrath"
+	case strings.HasPrefix(id, "QST07"):
+		return "Mirrordeep"
+	case strings.HasPrefix(id, "QST08"):
+		return "Highlands"
+	case strings.HasPrefix(id, "QST09"):
+		return "Daily"
+	case strings.HasPrefix(id, "QST10"):
+		return "Frontier"
+	case strings.HasPrefix(id, "QST11"), strings.HasPrefix(id, "QST12"):
+		return "Far Reaches"
+	default:
+		return "Other"
+	}
+}
+
+func formatQuestAreaLabel(area string) string {
+	s := strings.TrimSpace(area)
+	if s == "" {
+		return "Other"
+	}
+	if len(s) >= 3 && (s[0] == 'Z' || s[0] == 'z') {
+		if i := strings.Index(s, "_"); i > 0 {
+			s = s[i+1:]
+		}
+	}
+	s = strings.ReplaceAll(s, "_", " ")
+	parts := strings.Fields(strings.ToLower(s))
+	for i, p := range parts {
+		r := []rune(p)
+		if len(r) == 0 {
+			continue
+		}
+		r[0] = unicode.ToTitle(r[0])
+		parts[i] = string(r)
+	}
+	if len(parts) == 0 {
+		return "Other"
+	}
+	return strings.Join(parts, " ")
 }

@@ -445,6 +445,8 @@
       if (play.combatPhase !== "active") return;
       event.preventDefault();
       if (muxStore.cycleCombatTarget) muxStore.cycleCombatTarget(event.shiftKey ? -1 : 1);
+      const focused = get(muxStore).combatTargetId;
+      if (focused && focused !== play.combatTargetId) sendMessage(`focus ${focused}`);
       return;
     }
     const slot = hotbarSlotFromKey(event.key);

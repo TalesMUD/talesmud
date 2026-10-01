@@ -40,3 +40,9 @@ Backlog next UX topic after B13: settings panel players can trust (reduced motio
 - B13 combat contextual layout — accepted 2026-09-29.
 - WORLDMAP P1–P1d — accepted 2026-09-29.
 
+## Queued: A10 — Focus target + threat re-warn (2026-10-01 director)
+Combat track after B14. Closes A2 residual (no re-warn on mid-fight target switch). See CORE-FOCUS-A10-TASK.md.
+
+## Done (2026-10-01 accept)
+- B14 Settings panel — accepted 2026-10-01.
+- Overnight UX EXTRA (buffport1) — accepted 2026-10-01.

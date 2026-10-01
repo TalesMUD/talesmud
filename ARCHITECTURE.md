@@ -1690,3 +1690,6 @@ Event types include:
 - Quest events: `quest.start`, `quest.complete`, `quest.progress`
 
 See [SCRIPTING.md](SCRIPTING.md) for full documentation.
+# A10 combat focus
+
+`combatStart.targetId` names the enemy engaged by the initiating or joining player. The web client keeps the local focus ID and short lived threat warning in `MUDXPlusStore`; BattleStage and Tab send `focus <enemy ID>` when the selection changes. The command validates a living enemy in the player's combat instance and updates `CombatantRef.AutoAttackTargetID` without queuing an action. It sends a `combatAction` with `action: "focus"` to synchronize the client. An in-combat `attack <name>` still queues the hit and now sends the same focus action. Existing attack and hostile skill commands read the server target, then fall back to a living enemy.

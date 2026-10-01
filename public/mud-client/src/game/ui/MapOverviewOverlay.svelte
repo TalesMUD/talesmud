@@ -1,7 +1,7 @@
 <script>
   import { onDestroy, onMount, tick } from 'svelte';
   import { readStageSize, shouldRepaintSize, applyCanvasBitmap } from '../widgets/atlasLayout.js';
-  import { paintAtlas, isCurrentPlace, panToCenterPlace, onMapTilesReady, clampMapScale, setYouPortrait } from '../widgets/atlasRenderer.js';
+  import { paintAtlas, isCurrentPlace, panToCenterPlace, onMapTilesReady, clampMapScale, setYouPortrait, collectTurnInMarkers } from '../widgets/atlasRenderer.js';
   import { prefersReducedMotion } from '../keyboardShortcuts.js';
   import { interiorChoices, surfaceId, surfaceGroups, groupForRoom } from '../widgets/surfaceAtlas.js';
   import { mobileStore } from '../mobile/mobileStore.js';
@@ -19,6 +19,10 @@
   let travelPath = [];
   let isTraveling = false;
   let travelPathRoomIds = new Set();
+  let travelFollowActive = false;
+  let overlayFading = false;
+  let panAnimRaf = 0;
+  let closeAfterTravelTimer = 0;
 
   let panX = 0;
   let panY = 0;
@@ -191,8 +195,13 @@
     // Follow / recenter when you move or atlas/layer catches up (meadow clusters).
     if (open && (roomChanged || layerChanged || (atlasChanged && currentRoomId))) {
       tick().then(() => {
-        applyRecenterToYou(true);
-        scheduleDraw();
+        if (travelFollowActive || isTraveling) {
+          frameWorld = false;
+          animatePanToYou({ durationMs: prefersReducedMotion() ? 0 : 280 });
+        } else {
+          applyRecenterToYou(true);
+          scheduleDraw();
+        }
       });
     } else if (open && atlasChanged) {
       scheduleDraw();
@@ -217,6 +226,8 @@
 
   $: visiblePlaces = (atlas.places || []).filter(p => p.layer === activeLayer);
   $: visibleRegions = (atlas.regions || []).filter(r => r.layer === activeLayer);
+  $: turnInMarkers = collectTurnInMarkers(store && $store ? $store.quests : []);
+  $: if (open && turnInMarkers) scheduleDraw();
   $: if (store && $store.mapSelectedId && $store.mapSelectedId !== selectedId) {
     selectedId = $store.mapSelectedId;
     if ($isMobile) intelExpanded = false;
@@ -304,22 +315,99 @@
     return ({ safe: 'Safe', low: 'Low', hazard: 'Hazard', hostile: 'Hostile', uncharted: 'Unknown' })[d] || d || '—';
   }
 
+  function targetPanForYou() {
+    const size = readStageSize(stageWrap);
+    const here = resolveHerePlace();
+    if (here && size.w >= 4 && size.h >= 4) {
+      return panToCenterPlace(surfaceGroups(visiblePlaces, activeLayer), here, size.w, size.h, userScale, atlas.paths || []);
+    }
+    return { panX: 0, panY: 0 };
+  }
+
+  function stopPanAnim() {
+    if (panAnimRaf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(panAnimRaf);
+    panAnimRaf = 0;
+  }
+
+  function animatePanToYou({ durationMs = 280 } = {}) {
+    const target = targetPanForYou();
+    if (prefersReducedMotion() || !durationMs || durationMs <= 0) {
+      stopPanAnim();
+      panX = target.panX;
+      panY = target.panY;
+      scheduleDraw();
+      return;
+    }
+    stopPanAnim();
+    const fromX = panX;
+    const fromY = panY;
+    const dx = target.panX - fromX;
+    const dy = target.panY - fromY;
+    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) {
+      panX = target.panX;
+      panY = target.panY;
+      scheduleDraw();
+      return;
+    }
+    const start = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    const ease = (t) => 1 - Math.pow(1 - t, 3);
+    const step = (now) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      const e = ease(t);
+      panX = fromX + dx * e;
+      panY = fromY + dy * e;
+      scheduleDraw();
+      if (t < 1) {
+        panAnimRaf = requestAnimationFrame(step);
+      } else {
+        panAnimRaf = 0;
+        panX = target.panX;
+        panY = target.panY;
+        scheduleDraw();
+      }
+    };
+    panAnimRaf = requestAnimationFrame(step);
+  }
+
   function startTravel(targetId) {
-    if (!currentRoomId || targetId === currentRoomId) return;
+    if (!currentRoomId || targetId === currentRoomId || overlayFading) return;
     const path = findPath(currentRoomId, targetId);
     if (!path || !path.length) return;
+    if (closeAfterTravelTimer) {
+      clearTimeout(closeAfterTravelTimer);
+      closeAfterTravelTimer = 0;
+    }
     travelTargetId = targetId;
     travelPath = path;
     isTraveling = true;
-    travelPathRoomIds = new Set(path.map(s => s.roomId));
+    travelFollowActive = true;
+    travelPathRoomIds = new Set([currentRoomId, ...path.map(s => s.roomId)]);
+    // Leave world-fit so the camera can track the walker.
+    frameWorld = false;
+    animatePanToYou({ durationMs: prefersReducedMotion() ? 0 : 320 });
     if (sendMessage) sendMessage(path[0].direction);
   }
 
-  function cancelTravel() {
+  function cancelTravel({ arrived = false } = {}) {
     travelTargetId = null;
     travelPath = [];
     isTraveling = false;
     travelPathRoomIds = new Set();
+    if (!arrived) travelFollowActive = false;
+  }
+
+  function finishTravelAndMaybeCloseOverlay() {
+    cancelTravel({ arrived: true });
+    travelFollowActive = false;
+    // Overlay mode only: fade out Cartographer and close. Compact Map tab stays open.
+    if (!open || overlayFading) return;
+    overlayFading = true;
+    const delay = prefersReducedMotion() ? 60 : 520;
+    closeAfterTravelTimer = setTimeout(() => {
+      closeAfterTravelTimer = 0;
+      overlayFading = false;
+      closeOverview();
+    }, delay);
   }
 
   function advanceTravel(newRoomId) {
@@ -329,9 +417,18 @@
     }
     if (travelPath[0].roomId === newRoomId) {
       travelPath = travelPath.slice(1);
-      travelPathRoomIds = new Set(travelPath.map(s => s.roomId));
-      if (!travelPath.length) cancelTravel();
-      else setTimeout(() => { if (sendMessage && travelPath[0]) sendMessage(travelPath[0].direction); }, 160);
+      travelPathRoomIds = new Set([
+        newRoomId,
+        ...travelPath.map(s => s.roomId),
+        ...(travelTargetId ? [travelTargetId] : []),
+      ]);
+      if (!travelPath.length) {
+        // Final step arrived — linger briefly on destination, then fade overlay.
+        animatePanToYou({ durationMs: prefersReducedMotion() ? 0 : 240 });
+        finishTravelAndMaybeCloseOverlay();
+      } else {
+        setTimeout(() => { if (sendMessage && travelPath[0]) sendMessage(travelPath[0].direction); }, 160);
+      }
     } else {
       cancelTravel();
     }
@@ -365,6 +462,7 @@
       travelPathRoomIds,
       travelTargetId,
       selectedId,
+      turnInMarkers,
     });
     hitState.items = result.hits;
   }
@@ -435,8 +533,9 @@
     if (found) {
       let text = found.discovered ? (found.name || found.id) : 'Uncharted';
       if (found.areaName && found.discovered) text += ' · ' + found.areaName;
+      if (found.turnInLabel) text += ' · Turn in: ' + found.turnInLabel;
       if (found.current || isCurrentPlace(found.id, currentRoomId)) text += ' (you are here)';
-      else if (found.discovered) text += ' · inspect';
+      else if (found.discovered && !found.turnInLabel) text += ' · inspect';
       else text += ' · uncharted';
       tooltip = { visible: true, text, x: e.clientX - rect.left, y: e.clientY - rect.top };
     } else {
@@ -512,6 +611,13 @@
   }
 
   function closeOverview() {
+    if (closeAfterTravelTimer) {
+      clearTimeout(closeAfterTravelTimer);
+      closeAfterTravelTimer = 0;
+    }
+    overlayFading = false;
+    travelFollowActive = false;
+    stopPanAnim();
     if (store && store.closeMapOverview) store.closeMapOverview();
     else if (store && store.setMapOverviewOpen) store.setMapOverviewOpen(false);
   }
@@ -575,6 +681,8 @@
     if (resizeHandler) window.removeEventListener('resize', resizeHandler);
     if (resizeHandler && window.visualViewport) window.visualViewport.removeEventListener('resize', resizeHandler);
     if (drawRaf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(drawRaf);
+    stopPanAnim();
+    if (closeAfterTravelTimer) clearTimeout(closeAfterTravelTimer);
     if (stageObserver) stageObserver.disconnect();
     cancelTravel();
   });
@@ -595,6 +703,15 @@
     opacity: 1;
     visibility: visible;
   }
+  .map-overlay.fading {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.48s ease;
+  }
+  .map-overlay:not(.fading) {
+    transition: opacity 0.18s ease;
+  }
+
   /* Never class="modal" — Materialize global .modal is opacity:0 / display:none. */
   .map-panel {
     position: relative;
@@ -766,6 +883,15 @@
     min-height: 0;
     position: relative;
     overflow: hidden;
+    background: #0a0c10;
+  }
+  .stage::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.28) 100%);
   }
   canvas {
     position: absolute;
@@ -778,7 +904,105 @@
     touch-action: none;
   }
   canvas:active { cursor: grabbing; }
+  .map-legend {
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 7px 9px;
+    border-radius: 6px;
+    background: rgba(8, 10, 14, 0.82);
+    border: 1px solid rgba(212, 175, 55, 0.32);
+    color: #e8dcc8;
+    font-size: 10px;
+    letter-spacing: 0.02em;
+    pointer-events: none;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-swatch {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    border: 1.5px solid transparent;
+    flex: 0 0 auto;
+  }
+  .legend-swatch.you {
+    background: #1a140c;
+    border-color: #ffe69b;
+    box-shadow: 0 0 8px rgba(255, 220, 120, 0.55);
+  }
+  .legend-swatch.turnin {
+    background: #f5c542;
+    border-color: #ffe08a;
+    box-shadow: 0 0 8px rgba(245, 197, 66, 0.55);
+  }
+  .legend-swatch.selected {
+    background: transparent;
+    border-radius: 2px;
+    border-color: #ffe29a;
+    box-shadow: inset 0 0 0 1px rgba(255, 226, 154, 0.35);
+  }
+  .turnin-banner {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: rgba(48, 34, 8, 0.92);
+    border: 1px solid rgba(245, 197, 66, 0.65);
+    color: #ffe08a;
+    font-size: 11px;
+    font-weight: 600;
+    pointer-events: none;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+  }
+  .chip.turnin {
+    border-color: #f5c542;
+    color: #f5c542;
+    background: rgba(245, 197, 66, 0.12);
+  }
+  .turnin-list {
+    margin: 8px 0 2px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .turnin-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: rgba(245, 197, 66, 0.1);
+    border: 1px solid rgba(245, 197, 66, 0.35);
+    color: #fde68a;
+    font-size: 12px;
+  }
+  .turnin-row strong { display: block; color: #fff3c4; font-size: 12px; }
+  .turnin-row em { color: #d6b35c; font-style: normal; font-size: 11px; }
+  .turnin-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #f5c542;
+    color: #1a1204;
+    font-weight: 800;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    margin-top: 1px;
+  }
   .tooltip {
+
     position: absolute;
     background: rgba(2, 6, 23, 0.92);
     color: #e2e8f0;
@@ -910,6 +1134,7 @@
     id="map-overview-overlay"
     class="map-overlay"
     class:narrow={$isMobile}
+    class:fading={overlayFading}
     style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:200000;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;background:rgba(0,0,0,0.82);opacity:1;visibility:visible;"
     use:portalToBody
     role="dialog"
@@ -963,6 +1188,16 @@
             on:pointerleave={() => tooltip = { ...tooltip, visible: false }}
             on:wheel={onWheel}
           ></canvas>
+          <div class="map-legend" aria-hidden="true">
+            <div class="legend-item"><span class="legend-swatch you"></span> You</div>
+            <div class="legend-item"><span class="legend-swatch turnin"></span> Turn in</div>
+            <div class="legend-item"><span class="legend-swatch selected"></span> Selected</div>
+          </div>
+          {#if turnInMarkers.length}
+            <div class="turnin-banner">
+              {turnInMarkers.length} quest{turnInMarkers.length === 1 ? '' : 's'} ready to turn in
+            </div>
+          {/if}
           {#if tooltip.visible}
             <div class="tooltip" style="left: {tooltip.x}px; top: {tooltip.y}px;">{tooltip.text}</div>
           {/if}
@@ -992,13 +1227,27 @@
                 <span class="chip">{selectedPlace.terrain || selectedPlace.biome || 'wild'}</span>
                 <span class="chip">{selectedPlace.kind || 'place'}</span>
                 {#if selectedPlace.current}<span class="chip you">You are here</span>{/if}
+                {#if turnInMarkers.some(m => m.roomId === selectedPlace.id || isCurrentPlace(selectedPlace.id, m.roomId))}
+                  <span class="chip turnin">Quest turn-in</span>
+                {/if}
               </div>
             </div>
-            {#if $isMobile}
-              <button class="travel-btn" type="button" on:click|stopPropagation={requestTravel} disabled={!canTravel || isTraveling}>
-                {isTraveling ? 'Traveling…' : (canTravel ? 'Travel' : 'You are here')}
-              </button>
+            {#if turnInMarkers.filter(m => m.roomId === selectedPlace.id || isCurrentPlace(selectedPlace.id, m.roomId)).length}
+              <div class="turnin-list">
+                {#each turnInMarkers.filter(m => m.roomId === selectedPlace.id || isCurrentPlace(selectedPlace.id, m.roomId)) as q}
+                  <div class="turnin-row">
+                    <span class="turnin-icon" aria-hidden="true">!</span>
+                    <div>
+                      <strong>{q.questName}</strong>
+                      {#if q.npcName}<em> → {q.npcName}</em>{/if}
+                    </div>
+                  </div>
+                {/each}
+              </div>
             {/if}
+            <button class="travel-btn" type="button" on:click|stopPropagation={requestTravel} disabled={!canTravel || isTraveling}>
+              {isTraveling ? 'Traveling…' : (canTravel ? 'Travel' : 'You are here')}
+            </button>
             <div class="intel-more">
               {#if selectedStreet}
                 <button class="room-link" type="button" on:click={() => selectRoom(selectedStreet)}>Back to {selectedStreet.name}</button>
@@ -1052,11 +1301,8 @@
               {:else}
                 <div class="intel-muted">None recorded.</div>
               {/if}
-              {#if !$isMobile && canTravel}
-                <button class="travel-btn" type="button" on:click={requestTravel} disabled={isTraveling}>
-                  {isTraveling ? 'Traveling…' : 'Travel'}
-                </button>
-                <div class="intel-hint">Double-click a room to travel.</div>
+              {#if canTravel && !isTraveling}
+                <div class="intel-hint">Double-click a room to travel, or use Travel above.</div>
               {/if}
             </div>
           {/if}

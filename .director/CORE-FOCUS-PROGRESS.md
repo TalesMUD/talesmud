@@ -1,3 +1,16 @@
+
+
+## Android APK ae4412c (2026-10-01)
+
+- Flutter tip `ae4412c` (APK `veilspan-ae4412c.apk`, sha256 `c8a08cefd6c504847a35bb95632118394a83e1227d4764aad7d659ee201638d4`).
+- Engine tip `34bace1` (`?v=buffport1`). Content tip `1694ca9` (ENM0012/NPC0028 chroma).
+- APK uploaded to VPS landing downloads; `/app` changelog updated. Door untouched.
+
+## Buff portrait placement + equip stats + Servitor chroma (2026-10-01)
+
+- What changed: BattleStage buff/debuff icons moved from under the name into small rectangles above/beside combat portraits. Equipment paper-doll compact HP/MP/ATK/DEF row is larger and higher contrast. Awakened Servitor (`ENM0012`) portrait chroma green keyed to transparent (content + uploads); Guardsman Pell (`NPC0028`) same fix. Flutter battle stage parses `statusEffects` and shows portrait-adjacent buff chips; equipment compact stats match the web contrast bump. Client `?v=buffport1`.
+- Door: untouched.
+
 # Core Focus progress
 
 ## A1 — Level-gap combat math
@@ -422,3 +435,47 @@ Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated bl
 - Residuals: Audio remains unavailable and is labelled coming soon. The 1366 and phone settings content may scroll inside the modal; the document itself does not scroll. No B14 smoke failure remains.
 - Final asset cleanup SHA: `2c1d6a7` removed the nonexistent `bundle.css` link. VPS fast-forwarded `479b47a` → `2c1d6a7`, copied the client, rebuilt `bin/tales` (sha256 `2ee94a8a6278d5496b9d8453605dceaff4bc24b8f78583166f47837e4818e0d7`), retained `bin/tales.prev-479b47a` (sha256 `b1c6bd89ecb966fd90de41d5586a45f4e21bf3df0e00082ea40cb91aa7ec3c28`), and SIGTERM'd only talesmud MainPID `834758`; Restart=always started `835266` on :8010. Door stayed PID `758959` on :8020. Final public HTML references only six existing versioned assets, all return 200 with correct CSS/JavaScript MIME types; fresh guest POST and Chromium persistence/viewport smoke passed again.
 - Final control cleanup SHA: `d7bcb29` hides Compact Mode and Room Text Overlay toggles because their stored fields have no active display consumer; existing local data remains readable. `npm run build` and the three Node tests passed again. VPS fast-forwarded `2b4e7f0` → `d7bcb29`, copied client assets, rebuilt `bin/tales` (sha256 `e2feca0bbe2d2fa19e280dce19ff40af845cd366bc3ea6d5b4227ea8d34ced08`), retained `bin/tales.prev-2b4e7f0` (sha256 `2ee94a8a6278d5496b9d8453605dceaff4bc24b8f78583166f47837e4818e0d7`), and SIGTERM'd only talesmud MainPID `835266`; Restart=always started `835725` on :8010. Door remained PID `758959` on :8020. Final public bundle sha256 `408d6677c61d8dac652f2ddbc6a5b41c5ebd5598926df7ee80abb7bbd4da1f36` matches local. Live Chromium guest/Settings/Escape/reload/viewport smoke passed again, including checks that inactive controls are hidden and the audio note is present; the committed screenshot and `b14-settings-smoke.json` reflect this final client.
+
+
+## MAP UX — Travel on select + no double Map header (2026-10-01)
+
+- Code on `engine-june`; commits include `[grokbot]`. Client assets use `?v=maptravel`.
+- What changed: Compact Map tab (`MinimapWidget`) selection strip offers **Travel** as the primary one-tap action; **Inspect** stays optional (opens Cartographer). Removed duplicate Map title + floating Open Map chrome (MAP tab is the only header; toolbar keeps fullscreen expand only). Cartographer intel always shows Travel under the room title on desktop and phone.
+- Extra: Travel smooth-follows the player camera; Cartographer overlay fades out and closes on arrival (compact Map tab does not). Flutter WorldMapOverlay mirrors follow + fade-close.
+- Tests: mapDetails/mapPolish/atlasLayout/worldmapSceneStore/mapOverviewStore/hudPrefs Node checks + `npm run build`.
+
+
+## UX batch — map travel follow, quest areas, equipment, buff bars (2026-10-01)
+
+- Client `?v=ux1001`. Commits include `[grokbot]`.
+- Map: Travel-on-select + no double Map header; Cartographer camera smooth-follows travel steps and fades/closes overlay on arrival (compact Map tab stays open).
+- Quest Log: active quests grouped by area (collapse/expand; current area expanded by default); Daily/Side/Main filters kept. Quest log entries carry `area` (authored or QST-zone derived).
+- Equipment: larger slots/portrait, tighter columns to fill whitespace.
+- Combat: WoW-style buff icon rows on self/allies/enemies from `statusEffects` with remaining rounds.
+- Flutter: WorldMapOverlay smooth travel follow + fade-close on arrival (APK if shipped).
+
+## Cartographer quest turn-in markers (2026-10-01)
+
+- Engine tip `5a35e93` (`?v=map-turnin1`). Flutter tip `3de00bc` (APK `veilspan-3de00bc.apk`).
+- What changed: questLog exposes `turnInRoomId` (NPC current/spawn room). Cartographer paints gold quest markers on ready turn-in rooms (distinct from you-marker), tooltips/intel with quest name, compact You/Turn in/Selected legend. Flutter map mirrors markers + legend.
+- Tests: Go quest log/turn-in room helpers; `atlasRenderer_test.mjs` collectTurnInMarkers; Flutter world_map_* / game_view_state tests green.
+- Deploy: VPS ff `51ba25a`→`5a35e93`, embed play client, rebuilt `bin/tales`, Restart=always pid `850595` on :8010. Door pid `758959` on :8020 untouched.
+- Smoke: `https://veilspan.com/play/` serves `bundle.js?v=map-turnin1` (200); guest POST 200; bundle contains map-legend / Turn in; `/api/server-info` Veilspan Chapter I; door.veilspan.com/door 301 (FYI).
+- APK: uploaded `veilspan-3de00bc.apk` to VPS landing downloads; `/app` changelog updated.
+
+
+## ACCEPT — 2026-10-01 daily director (~10:10 Europe/Berlin)
+- Live healthy: HTTPS/play 200; POST `/api/guest` 200; `/api/server-info` Veilspan Chapter I; bundle `?v=buffport1` (sha256 `cb023d9ee0b04da771ee7c4b0f2e599208ddad326ea057e00a39a35915505328` matches tip); door.veilspan.com/door 301 FYI only. clawdbot up (`acb32219`), workers idle.
+- ACCEPTED yesterday crown **B14 Settings panel** (`a233dd7` + cleanups through `d7bcb29`; reduced motion, combat auto-focus, inventory mode; live was `?v=b14settings`).
+- ACCEPTED overnight EXTRA **UX stack** live tip `2c8d37e` / `?v=buffport1`: map Travel-on-select + follow/fade, quest area groups, denser equip + contrast stats, portrait buff chips, Cartographer turn-in markers, Servitor/Pell chroma; Flutter APKs on `/app` incl. `veilspan-ae4412c`.
+- No Marcus-signed open P0 (DSA armor-weight still unsigned; Google OAuth client still Marcus).
+- Crown today: **A10 Focus target + threat re-warn** (combat track after B14). Task: `.director/CORE-FOCUS-A10-TASK.md`. Worker: Codex on clawdbot (`codex-a10`).
+
+## A10 — Focus target + threat re-warn (2026-10-01)
+
+- Code SHAs: `39e59ad` (focus command, client selection, warning, docs/tests) and `fca48b0` (exact-ID Attack aim and warning placement), both `[grokbot]`, pushed to `engine-june`. Live client: `?v=a10focus`.
+- Levers: `combatStart.targetId` carries the engaged NPC for start/join. The client stores the focus ID and short warning in `MUDXPlusStore`; portrait click and Tab send `focus <enemy ID>`, which validates a living enemy in that combat instance and sets `CombatantRef.AutoAttackTargetID` without spending a turn. BattleStage Attack sends `attack <enemy ID>` to handle duplicate names; room `attack <name>` still works and synchronizes focus. Untargeted hostile skills and automatic attacks use the engine target, with living-enemy fallback. Focus clears at combat end or death. A different orange/red/skull target shows "X is much stronger than you." in the A2 tier color; re-clicking the same target does not re-warn. Multi-enemy focus gets a gold label and ring; one enemy has no new label. The new banner does not animate.
+- Tests: `go test ./pkg/mudserver/game/...`, `node src/game/combatFocus_test.mjs`, `combatRoster_test.mjs`, `layout/combatFocus_test.mjs`, `layout/layoutPresets_test.mjs`, `keyboardShortcuts_test.mjs`, and `hudPrefs_test.mjs` passed. `npm run build` and `git diff --check` passed; build retained existing unused-CSS/a11y warnings. Go command test covers exact-ID focus, duplicate selection suppression, invalid selection, and exact-ID attack.
+- Deploy: VPS `engine-june` fast-forwarded through `fca48b0`; copied built play assets into `pkg/webuiplay/dist`, built `bin/tales.next`, renamed it over `bin/tales`, SIGTERM'd only talesmud MainPID. `Restart=always` started MainPID `858953` on :8010. Final bundle SHA256 `3fe131ac43f07790821b9115f6c913f057c0ad818c9f23ab77263f64bcac4669` matches VPS source/dist. Door path and service untouched.
+- Smoke: live `/`, `/play/?v=a10focus`, `/api/server-info`, `bundle.js?v=a10focus`, `extra.css?v=a10focus`, and `POST /api/guest` all returned 200. Play HTML references the A10 bundle and stylesheet. Controlled two-hostile live guest capture: `.director/ux-audit/after/a10-focus-1920x1080.png`; skull focus label/ring and warning visible, page height 1080, zero page errors. Screenshot uses a synthetic combat payload; server focus/aim is covered by Go tests.
+- Residual: Flutter combat focus and switch warning parity remains for a later mobile slice. The screenshot's multi-hostile state is controlled rather than a natural swarm encounter.

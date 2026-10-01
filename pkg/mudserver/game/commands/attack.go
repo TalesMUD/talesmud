@@ -251,12 +251,14 @@ func (command *AttackCommand) handleInitiateCombat(game def.GameCtrl, message *m
 	startMsg += "\n" + combatEngine.GetCombatStatus(message.Character.Entity.ID)
 	startMsg += "\n═══════════════════════════════════════════════════"
 
-	game.SendMessage() <- messages.NewCombatStartMessage(
+	start := messages.NewCombatStartMessage(
 		message.FromUser.ID,
 		startMsg,
 		combatViews(instance.Enemies, message.Character.Level),
 		combatViews(instance.Players, message.Character.Level),
 	)
+	start.TargetID = target.Entity.ID
+	game.SendMessage() <- start
 
 	// Set auto-attack target to the initial target
 	combatEngine.SetAutoAttackTarget(message.Character.Entity.ID, target.Entity.ID)
@@ -351,12 +353,14 @@ func (command *AttackCommand) handleJoinCombat(game def.GameCtrl, message *messa
 	startMsg += "\n" + combatEngine.GetCombatStatus(message.Character.Entity.ID)
 	startMsg += "\n═══════════════════════════════════════════════════"
 
-	game.SendMessage() <- messages.NewCombatStartMessage(
+	start := messages.NewCombatStartMessage(
 		message.FromUser.ID,
 		startMsg,
 		combatViews(instance.Enemies, message.Character.Level),
 		combatViews(instance.Players, message.Character.Level),
 	)
+	start.TargetID = target.Entity.ID
+	game.SendMessage() <- start
 
 	// Existing fighters need the new roster before the next action resolves.
 	for _, fighter := range instance.Players {
@@ -513,9 +517,17 @@ func (command *AttackCommand) handleInCombatAttack(game def.GameCtrl, message *m
 	var targetID string
 	targetNameLower := strings.ToLower(targetName)
 	for _, enemy := range livingEnemies {
-		if strings.Contains(strings.ToLower(enemy.name), targetNameLower) {
+		if strings.EqualFold(enemy.id, targetName) {
 			targetID = enemy.id
 			break
+		}
+	}
+	if targetID == "" {
+		for _, enemy := range livingEnemies {
+			if strings.Contains(strings.ToLower(enemy.name), targetNameLower) {
+				targetID = enemy.id
+				break
+			}
 		}
 	}
 
@@ -541,6 +553,9 @@ func (command *AttackCommand) handleInCombatAttack(game def.GameCtrl, message *m
 		}
 	}
 	game.SendMessage() <- message.Reply(fmt.Sprintf("You switch your focus to %s.", targetDisplayName))
+	game.SendMessage() <- messages.NewCombatActionMessage(message.FromUser.ID, "", messages.CombatActionMessage{
+		ActorID: message.Character.ID, TargetID: targetID, Action: "focus",
+	})
 
 	return true
 }

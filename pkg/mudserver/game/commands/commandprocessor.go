@@ -114,6 +114,7 @@ func (commandProcessor *CommandProcessor) registerCommands() {
 
 	// Combat commands
 	commandProcessor.RegisterCommand(&AttackCommand{}, "Attack a target: attack [target]. attack! confirms a much stronger foe", "attack", "a", "hit", "attack!", "a!", "hit!")
+	commandProcessor.RegisterCommand(&FocusCommand{}, "Focus a living combat enemy without attacking: focus <enemy ID or name>", "focus")
 	commandProcessor.RegisterCommand(&DefendCommand{}, "Take defensive stance in combat", "defend", "d", "guard")
 	commandProcessor.RegisterCommand(&FleeCommand{}, "Attempt to flee from combat", "flee", "run", "escape")
 	commandProcessor.RegisterCommand(&CombatStatusCommand{}, "Show combat status", "status", "cs", "combat")
