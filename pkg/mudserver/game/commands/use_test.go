@@ -202,3 +202,103 @@ func TestUseFlintOnTorchSetsTorchLit(t *testing.T) {
 		t.Fatal("expected lighting message")
 	}
 }
+
+func TestUseBareFlintLightsCarriedTorch(t *testing.T) {
+	g, facade := newTradeTestGame(t)
+
+	flint := &items.Item{
+		Entity:  &entities.Entity{ID: "flint-bare"},
+		Name:    "Flint and Steel",
+		Type:    items.ItemTypeCollectible,
+		SubType: "tool",
+		Tags:    []string{"tool", "utility"},
+	}
+	torch := &items.Item{
+		Entity:  &entities.Entity{ID: "torch-bare"},
+		Name:    "Dusty Torch",
+		Type:    items.ItemTypeCollectible,
+		SubType: "light_source",
+		Tags:    []string{"light"},
+	}
+	if _, err := facade.ItemsService().Import(flint); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := facade.ItemsService().Import(torch); err != nil {
+		t.Fatal(err)
+	}
+	character, err := facade.CharactersService().Store(&characters.Character{
+		Name:        "Bare Flint",
+		BelongsUser: *traits.BelongsToUser("user-bare-flint"),
+		Inventory: items.Inventory{
+			Size:  5,
+			Items: []*items.Item{flint, torch},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	msg := &messages.Message{
+		FromUser:  &entities.User{Entity: &entities.Entity{ID: "user-bare-flint"}},
+		Character: character,
+		Data:      "use flint",
+	}
+	if !(&commands.UseCommand{}).Execute(g, msg) {
+		t.Fatal("bare use flint should handle")
+	}
+
+	updated, _ := facade.CharactersService().FindByID(character.ID)
+	if updated.Flags == nil || updated.Flags["torch_lit"] != true {
+		t.Fatalf("expected torch_lit from bare use, got %#v", updated.Flags)
+	}
+}
+
+func TestUseBareFlintWithoutTorchHintsOnSyntax(t *testing.T) {
+	g, facade := newTradeTestGame(t)
+
+	flint := &items.Item{
+		Entity:  &entities.Entity{ID: "flint-hint"},
+		Name:    "Flint and Steel",
+		Type:    items.ItemTypeCollectible,
+		SubType: "tool",
+		Tags:    []string{"tool", "utility"},
+	}
+	if _, err := facade.ItemsService().Import(flint); err != nil {
+		t.Fatal(err)
+	}
+	character, err := facade.CharactersService().Store(&characters.Character{
+		Name:        "Hint Flint",
+		BelongsUser: *traits.BelongsToUser("user-hint-flint"),
+		Inventory: items.Inventory{
+			Size:  5,
+			Items: []*items.Item{flint},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	msg := &messages.Message{
+		FromUser:  &entities.User{Entity: &entities.Entity{ID: "user-hint-flint"}},
+		Character: character,
+		Data:      "use flint",
+	}
+	if !(&commands.UseCommand{}).Execute(g, msg) {
+		t.Fatal("bare use should handle")
+	}
+
+	var sawHint bool
+	for _, out := range drainTradeMessages(g.SendMessage()) {
+		if rsp, ok := out.(messages.MessageResponse); ok {
+			if strings.Contains(rsp.Message, "use flint on") || strings.Contains(rsp.Message, "Use on") {
+				sawHint = true
+			}
+			if strings.Contains(rsp.Message, "can't use") && !strings.Contains(rsp.Message, "on") {
+				t.Fatalf("expected soft hint, got %q", rsp.Message)
+			}
+		}
+	}
+	if !sawHint {
+		t.Fatal("expected use-on hint when bare flint has no torch")
+	}
+}

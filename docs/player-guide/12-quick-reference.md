@@ -15,6 +15,7 @@ Fast lookup for commands, shortcuts, and essential information.
 | `pickup [item]` | Pick up item |
 | `drop [item]` | Drop item |
 | `use [item]` | Use/consume item |
+| `use [item] on [item]` | Use one item on another (e.g. flint on torch) |
 | `equip [item]` | Equip item |
 | `unequip [item]` | Remove equipped item |
 | `talk [npc]` | Talk to NPC |

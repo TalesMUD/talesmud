@@ -236,7 +236,30 @@ func examineItem(item *items.Item, equippedItems map[items.ItemSlot]*items.Item)
 		}
 	}
 
+	if hint := itemUseHint(item); hint != "" {
+		sb.WriteString("\n--- How to use ---\n")
+		sb.WriteString(hint)
+		sb.WriteString("\n")
+	}
+
 	return sb.String()
+}
+
+// itemUseHint teaches "use A on B" for tools / fire-starters / scripted items.
+func itemUseHint(item *items.Item) string {
+	if item == nil {
+		return ""
+	}
+	if isFireStarter(item) {
+		return "Tip: use " + shortUseName(item) + " on a torch (or Use while carrying one). Inventory → Use on… also works."
+	}
+	if item.OnUseScriptID != "" {
+		return "Tip: use " + shortUseName(item) + " — some items need a target: use " + shortUseName(item) + " on <item>."
+	}
+	if item.Consumable || item.Type == items.ItemTypeConsumable {
+		return "Tip: use " + shortUseName(item) + " from Inventory or the terminal."
+	}
+	return ""
 }
 
 // formatItemType formats item type for display

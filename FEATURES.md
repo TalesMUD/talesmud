@@ -289,10 +289,13 @@ Attributes: {
 ```
 
 **Usage flow**:
-1. Player uses item: `use health potion`
+1. Player uses item: `use health potion` or `use flint on torch` (optional `on <target>`)
 2. System checks `Attributes` for built-in effects
-3. If `OnUseScriptID` is set, executes Lua script
-4. If `Consumable = true`, decrements quantity or removes item
+3. If `OnUseScriptID` is set, executes Lua script (preferred over built-in torch lighting)
+4. Fire-starters without a script auto-target a carried `light_source` on bare `use`; otherwise soft-hint `use <item> on <target>`
+5. If `Consumable = true`, decrements quantity or removes item
+
+World YAML may set `onUseScript` or `onUseScriptId` (importer accepts both). Inventory UI shows **Use** for usable items and **Use on…** for tools/fire-starters to pick a second inventory item without Terminal X.
 
 ### Item Template/Instance Pattern
 ```go
@@ -937,7 +940,7 @@ In combat, the gold nameplate and portrait ring mark the local player's focus ta
 
 ### Equipment and inventory item cards
 
-Clicking or pressing Enter on an equipped paper-doll slot opens the shared item card. Right-click opens it too. The item stays equipped until the Unequip button is pressed; Escape, Close, or clicking outside closes the card. Inventory tiles and rows open the same card with explicit Equip, Use, Examine, Sell, and Drop actions. The card shows art, rarity, slot, stats, description, value, and weight when the item supplies it. Inventory cards compare stat differences with equipped gear; rings use the weaker worn ring, an empty ring slot counts as a full gain, and two-handed weapons compare with both hand slots. A green arrow marks a clear class-relevant, usable upgrade. Class tags, item level, and explicit armor-weight metadata can block equipping; the card explains the requirement and disables Equip. The `equip` command enforces the same requirements, including when typed in the terminal.
+Clicking or pressing Enter on an equipped paper-doll slot opens the shared item card. Right-click opens it too. The item stays equipped until the Unequip button is pressed; Escape, Close, or clicking outside closes the card. Inventory tiles and rows open the same card with explicit Equip, Use, Use on… (tools/fire-starters), Examine, Sell, and Drop actions. Use on… picks another inventory item and sends `use A on B`; bare Use still works (flint lights a carried torch). The card shows art, rarity, slot, stats, description, value, and weight when the item supplies it. Inventory cards compare stat differences with equipped gear; rings use the weaker worn ring, an empty ring slot counts as a full gain, and two-handed weapons compare with both hand slots. A green arrow marks a clear class-relevant, usable upgrade. Class tags, item level, and explicit armor-weight metadata can block equipping; the card explains the requirement and disables Equip. The `equip` command enforces the same requirements, including when typed in the terminal.
 
 ### Viewport layout presets
 Combat start/join promotes the existing full-screen BattleStage cover using the layout focus/save contract. The widgets and terminal remain mounted with their prior geometry and active tabs. Victory/defeat dismissal, outcome timeout, and combatLeave restore the previous arrangement, including a manually focused panel; viewport fitting resumes on restore. Save and Save as template retain the normal arrangement during combat. Keyboard focus moves to the stage only when no command input or other text field is active, and returns to the prior control when the stage closes unless the player has focused another field. The combat stage fits Compact and phone viewports without document scrolling.

@@ -352,7 +352,7 @@ talesmud/
 | `drop` | - | Drop an item to the room (blocked for bound items) |
 | `destroy` | `discard` | Destroy an item from inventory |
 | `examine` | `inspect` | Examine an item in detail |
-| `use` | `eat`, `drink`, `consume` | Use a consumable item |
+| `use` | `eat`, `drink`, `consume` | Use an item (`use flint on torch` for item-on-item); Inventory Use on… picks a target |
 | `equip` | `wear` | Equip an item |
 | `unequip` | `remove` | Unequip an item |
 | `equipment` | `eq`, `gear` | Show equipped items |
