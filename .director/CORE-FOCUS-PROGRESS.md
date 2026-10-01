@@ -503,7 +503,7 @@ Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated bl
 
 ## Inventory grid + detail overlay regression fix (2026-10-01 night)
 
-- Code SHA:  (`[grokbot]`), `engine-june`. Live client: `?v=invfix1`.
+- Code SHA: `5b21a73` (`[grokbot]`), `engine-june`. Live client: `?v=invfix1`.
 - Cause: useon1 rebuilt `bundle.js` (new Svelte scope hashes) but Rollup wrote component CSS to unlinked `bundle.css` while linked `extra.css` stayed on levelup1 hashes. Inventory grid + ItemDetailCard styles never applied → vertical unstyled slots + detail card under widgets.
 - Fix: single `css({ output: 'extra.css' })` after `svelte({ emitCss: true })` in `rollup.config.js`; rebuild so JS/CSS hashes match; cache bump `invfix1`.
 - Keep: Use / Use on… UI + server use-on paths unchanged.
