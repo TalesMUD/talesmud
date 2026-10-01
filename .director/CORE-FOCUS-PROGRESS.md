@@ -513,8 +513,10 @@ Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated bl
 
 ## Battle layout B PoC (2026-10-02)
 
-- Client `?v=battlepoc1` on `engine-june`; commits include `[grokbot]`.
-- What: Toggleable BattleStage layout B — party/player LEFT, enemies RIGHT, gold ground markers / focus ring, portrait+buff strip, target bar. Full action/spellbar (hotbar 1–9) + Flee kept; room art darkened + vignette reused. Classic layout remains default.
-- Toggle: Settings → Gameplay → Battle layout B (PoC); `localStorage talesmud_battle_layout_b=1`; URL `?battleLayout=b` / `?battlepoc=1`. Revert: Settings off, LS clear/`0`, or `?battleLayout=classic`. URL beats LS beats Settings.
+- Code SHA: `d0b40a0` (`[grokbot]`), `engine-june`. Live client: `?v=battlepoc1`.
+- What: Toggleable BattleStage layout B — party/player LEFT, enemies RIGHT, gold ground markers / focus ring, portrait+buff strip, target bar. Full action/spellbar (hotbar 1–9) + Flee kept; room art darkened + vignette reused. Classic layout remains default. Existing portraits used as placeholders on markers.
+- Toggle: Settings → Gameplay → Battle layout B (PoC); `localStorage talesmud_battle_layout_b=1`; URL `?battleLayout=b` / `?battlepoc=1`. Revert: Settings off, LS clear/`0`, or `?battleLayout=classic`. Priority: URL > localStorage > Settings.
 - Files: `battleLayout.js` (+test), SettingsStore/Modal, BattleStage.svelte layout-b CSS/markup, cache bump.
-- Door untouched.
+- Tests: `node …/battleLayout_test.mjs` ok; `npm run build` green.
+- Deploy: clawdbot local `:8010` rebuilt `bin/tales`, restarted pid `221331` (Door `:8020` pid `3406193` untouched). VPS ff `3d47301`→`d0b40a0`, embed play client, `bin/tales.prev-3d47301`, SIGTERM talesmud MainPID `872157`→`875545` on `:8010`. Door `:8020` pid `758959` untouched.
+- Smoke: public `/play/` 200 with six `?v=battlepoc1`; `bundle.js`/`extra.css` 200; extra contains `layoutBFocusPulse`; POST `/api/guest` 200. Local `/play/` 200.
