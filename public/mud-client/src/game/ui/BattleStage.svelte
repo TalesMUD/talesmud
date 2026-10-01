@@ -61,6 +61,7 @@
   $: combatJoin = $store.combatJoin;
   $: showJoinBanner = !!(combatJoin?.at && nowMs - combatJoin.at < 3000);
   $: targetId = $store.combatTargetId;
+  $: focusedEnemy = (enemies || []).find((e) => e && e.id === targetId) || null;
   $: threatWarning = $store.combatThreatWarning;
   $: turn = $store.combatTurn;
   $: logRaw = $store.combatLog || [];
@@ -707,6 +708,102 @@
   {#if threatWarning && nowMs - threatWarning.at < 3200}
     <div class="focus-threat-warning threat-{threatWarning.tier}" role="alert">{threatWarning.text}</div>
   {/if}
+
+  {#if layoutB}
+    <aside class="layout-b-frame player-frame" aria-label="Player details">
+      <div class="lb-frame-head">
+        <div
+          class="lb-name"
+          class:hit-flash={isFxTarget(selfId) && (fxIsHit || fxIsMiss) && !fxIsCrit && !fxIsCrush}
+          class:crit-flash={isFxTarget(selfId) && fxIsCrit && !fxIsCrush}
+          class:crush-flash={isFxTarget(selfId) && fxIsCrush}
+        >{selfName}</div>
+      </div>
+      <div class="hp-row lb-hp">
+        <span class="hp-label">HP</span>
+        <div class="hp-track">
+          <div
+            class="hp-fill"
+            style="width: {hpPct(selfHp, selfMaxHp)}%; background: {playerHpColor(hpPct(selfHp, selfMaxHp))}"
+          ></div>
+        </div>
+        <span class="hp-nums">{selfHp} / {selfMaxHp}</span>
+      </div>
+      {#if selfMaxMana > 0}
+        <div class="hp-row lb-mp">
+          <span class="hp-label">MP</span>
+          <div class="hp-track">
+            <div class="hp-fill mp" style="width: {hpPct(selfMana, selfMaxMana)}%"></div>
+          </div>
+          <span class="hp-nums">{selfMana} / {selfMaxMana}</span>
+        </div>
+      {/if}
+      {#if statusEffectsOf(selfCombatant).length}
+        <div class="buff-row lb-buffs" aria-label="Your buffs">
+          {#each statusEffectsOf(selfCombatant) as se (se.id || se.name + '-' + se.duration)}
+            <div class="buff-icon {buffKindClass(se)}" title={buffTitle(se)}>
+              {#if buffIconUrl(se)}
+                <img src={buffIconUrl(se)} alt="" />
+              {:else}
+                <span class="buff-fallback">{(se.name || '?').slice(0, 1)}</span>
+              {/if}
+              <span class="buff-stacks">{se.duration}</span>
+            </div>
+          {/each}
+        </div>
+      {/if}
+      <div class="status-chips lb-chips">
+        {#if selfClass}
+          <span class="chip class-chip"><i class="material-icons">military_tech</i> {selfClass}</span>
+        {/if}
+        {#if decisionActive}
+          <span class="chip focus-chip"><i class="material-icons">flare</i> Focused</span>
+        {:else if showWaitingTimer}
+          <span class="chip wait-chip status-pill"><i class="material-icons spin-slow">hourglass_top</i> {waitingLabel}</span>
+        {/if}
+      </div>
+    </aside>
+    {#if focusedEnemy}
+      {@const fePct = hpPct(focusedEnemy.hp, focusedEnemy.maxHp)}
+      {@const feDead = (focusedEnemy.hp ?? 0) <= 0}
+      <aside class="layout-b-frame target-frame" aria-label="Target details">
+        <div
+          class="lb-name"
+          class:threat-grey={focusedEnemy.threat === 'grey'}
+          class:threat-green={focusedEnemy.threat === 'green'}
+          class:threat-yellow={focusedEnemy.threat === 'yellow'}
+          class:threat-orange={focusedEnemy.threat === 'orange'}
+          class:threat-red={focusedEnemy.threat === 'red'}
+          class:threat-skull={focusedEnemy.threat === 'skull'}
+        >{#if focusedEnemy.threat === 'skull'}<span class="skull-mark" title="Skull" aria-hidden="true">☠</span>{/if}{focusedEnemy.name}{#if enemyCount > 1 && !feDead}<span class="enemy-focus-label">FOCUS</span>{/if}</div>
+        {#if focusedEnemy.bossPhase}
+          <div class="boss-phase-label" aria-label="Boss phase">{phaseCaption(focusedEnemy)}</div>
+        {/if}
+        <div class="hp-row lb-hp">
+          <span class="hp-label">HP</span>
+          <div class="hp-track">
+            <div class="hp-fill" style="width: {fePct}%; background: {hpColor(fePct)}"></div>
+          </div>
+          <span class="hp-nums">{focusedEnemy.hp ?? 0} / {focusedEnemy.maxHp ?? 0}</span>
+        </div>
+        {#if statusEffectsOf(focusedEnemy).length}
+          <div class="buff-row lb-buffs" aria-label="Target effects">
+            {#each statusEffectsOf(focusedEnemy) as se (se.id || se.name + '-' + se.duration)}
+              <div class="buff-icon {buffKindClass(se)}" title={buffTitle(se)}>
+                {#if buffIconUrl(se)}
+                  <img src={buffIconUrl(se)} alt="" />
+                {:else}
+                  <span class="buff-fallback">{(se.name || '?').slice(0, 1)}</span>
+                {/if}
+                <span class="buff-stacks">{se.duration}</span>
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </aside>
+    {/if}
+  {/if}
+
   <!-- Enemies upper-right -->
   <section
     class="enemy-strip"
@@ -790,6 +887,12 @@
             class:dead={dead}
             aria-hidden="true"
           ></div>
+          {#if layoutB}
+            <div class="sprite-hp" aria-hidden="true">
+              <span class="sprite-hp-name">{enemy.name}</span>
+              <div class="sprite-hp-track"><div class="sprite-hp-fill" style="width: {pct}%; background: {hpColor(pct)}"></div></div>
+            </div>
+          {/if}
           <img
             class="enemy-sprite"
             src={combatantPortrait(enemy)}
@@ -920,7 +1023,13 @@
         </div>
       {/if}
       <div class="ground-marker player-marker" class:focus={decisionActive} aria-hidden="true"></div>
+      {#if layoutB}
+        <div class="sprite-hp player-sprite-hp" aria-hidden="true">
+          <div class="sprite-hp-track"><div class="sprite-hp-fill" style="width: {hpPct(selfHp, selfMaxHp)}%; background: {playerHpColor(hpPct(selfHp, selfMaxHp))}"></div></div>
+        </div>
+      {/if}
       <img
+        class="player-sprite"
         src={combatantPortrait(selfCombatant)}
         alt=""
         on:error={(e) => onImgError(e, 'player')}
@@ -3804,13 +3913,80 @@
     text-align: center;
   }
 
-  /* ===== Layout B PoC field — party LEFT / enemies RIGHT + gold markers ===== */
+  /* ===== Layout B PoC — room sprites + edge info frames ===== */
   .battle-stage.layout-b .layout-b-chip {
     border-color: rgba(250, 204, 21, 0.85);
     color: #fde68a;
     background: rgba(40, 28, 8, 0.9);
   }
 
+  /* Edge-docked detail frames (TL player / TR target) */
+  .battle-stage.layout-b .layout-b-frame {
+    position: absolute;
+    z-index: 6;
+    top: 0.55rem;
+    width: min(280px, 28%);
+    box-sizing: border-box;
+    padding: 0.45rem 0.55rem 0.5rem;
+    border: 1.5px solid rgba(212, 164, 74, 0.55);
+    border-radius: 8px;
+    background: linear-gradient(160deg, rgba(12, 10, 8, 0.92), rgba(6, 6, 8, 0.82));
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+    pointer-events: none;
+  }
+  .battle-stage.layout-b .layout-b-frame.player-frame {
+    left: 0.55rem;
+    right: auto;
+  }
+  .battle-stage.layout-b .layout-b-frame.target-frame {
+    right: 0.55rem;
+    left: auto;
+    text-align: left;
+  }
+  .battle-stage.layout-b .lb-name {
+    font-family: 'Cinzel', Georgia, serif;
+    font-size: 0.92rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #f5e6c0;
+    margin-bottom: 0.28rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .battle-stage.layout-b .target-frame .lb-name {
+    color: #fde68a;
+    text-transform: uppercase;
+    font-size: 0.84rem;
+    letter-spacing: 0.08em;
+  }
+  .battle-stage.layout-b .lb-hp,
+  .battle-stage.layout-b .lb-mp {
+    margin-bottom: 0.22rem;
+  }
+  .battle-stage.layout-b .layout-b-frame .hp-track {
+    height: 8px;
+  }
+  .battle-stage.layout-b .layout-b-frame .hp-label,
+  .battle-stage.layout-b .layout-b-frame .hp-nums {
+    font-size: 0.62rem;
+  }
+  .battle-stage.layout-b .lb-buffs {
+    margin-top: 0.28rem;
+    max-width: 100%;
+  }
+  .battle-stage.layout-b .lb-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-top: 0.35rem;
+  }
+  .battle-stage.layout-b .lb-chips .chip {
+    font-size: 0.62rem;
+    padding: 0.12rem 0.4rem;
+  }
+
+  /* Enemy field RIGHT — sprites on markers; tiny HP only over sprite */
   .battle-stage.layout-b .enemy-strip,
   .battle-stage.layout-b .enemy-strip.pack-solo,
   .battle-stage.layout-b .enemy-strip.pack-duo,
@@ -3825,49 +4001,24 @@
     justify-content: flex-end;
     gap: 1.1rem;
   }
-
-  .battle-stage.layout-b .player-team {
-    left: 1rem;
-    right: auto;
-    bottom: 12%;
-    width: min(42%, 460px);
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "allies"
-      "self";
-    align-items: stretch;
-  }
-  .battle-stage.layout-b .player-team.solo {
-    grid-template-columns: 1fr;
-    grid-template-areas: "self";
-    width: min(38%, 420px);
-  }
-  .battle-stage.layout-b .ally-strip {
-    flex-direction: column;
-    flex-wrap: nowrap;
-    max-height: 36vh;
-    overflow-y: auto;
-  }
-  .battle-stage.layout-b .ally-card {
-    max-width: none;
-    flex: 0 0 auto;
-  }
-
   .battle-stage.layout-b .enemy-card {
     display: flex;
     flex-direction: column;
     align-items: center;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
   }
   .battle-stage.layout-b .foe-plate {
-    order: 0;
-    margin-bottom: 0.35rem;
-    width: min(100%, 240px);
+    display: none; /* details live in TR target frame */
   }
   .battle-stage.layout-b .enemy-sprite-wrap {
     order: 1;
     aspect-ratio: auto;
     min-height: clamp(110px, 22vmin, 220px);
     padding-bottom: 1.4rem;
+    position: relative;
   }
   .battle-stage.layout-b .enemy-strip.pack-solo .enemy-sprite-wrap {
     min-height: clamp(150px, 30vmin, 280px);
@@ -3879,6 +4030,149 @@
   }
   .battle-stage.layout-b .enemy-strip.pack-solo .enemy-sprite {
     height: clamp(130px, 28vmin, 280px);
+  }
+  /* Hide per-sprite buff chips — shown in TR frame for focus */
+  .battle-stage.layout-b .enemy-sprite-wrap > .buff-row.portrait-buffs {
+    display: none;
+  }
+
+  /* Tiny over-sprite HP (optional tiny name) */
+  .battle-stage.layout-b .sprite-hp {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    transform: translate(-50%, calc(-100% - 4px));
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 52px;
+    max-width: 110px;
+    pointer-events: none;
+  }
+  .battle-stage.layout-b .sprite-hp-name {
+    font-family: system-ui, sans-serif;
+    font-size: 0.55rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(245, 230, 192, 0.88);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  .battle-stage.layout-b .sprite-hp-track {
+    width: 64px;
+    max-width: 100%;
+    height: 5px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.65);
+    border: 1px solid rgba(212, 164, 74, 0.45);
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  }
+  .battle-stage.layout-b .sprite-hp-fill {
+    height: 100%;
+    border-radius: inherit;
+  }
+  .battle-stage.layout-b .player-sprite-hp .sprite-hp-track {
+    width: 72px;
+  }
+
+  /* Player field LEFT — sprite on marker (not giant card) */
+  .battle-stage.layout-b .player-team {
+    left: 3%;
+    right: auto;
+    bottom: 14%;
+    width: min(34%, 360px);
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "allies"
+      "self";
+    align-items: end;
+    justify-items: center;
+  }
+  .battle-stage.layout-b .player-team.solo {
+    grid-template-columns: 1fr;
+    grid-template-areas: "self";
+    width: min(28%, 280px);
+  }
+  .battle-stage.layout-b .ally-strip {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-height: none;
+    overflow: visible;
+    gap: 0.45rem;
+  }
+  .battle-stage.layout-b .ally-card {
+    max-width: 88px;
+    flex: 0 0 auto;
+    padding: 0.15rem;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
+  .battle-stage.layout-b .ally-card .ally-meta {
+    display: none;
+  }
+  .battle-stage.layout-b .ally-portrait img {
+    width: auto;
+    height: clamp(56px, 12vmin, 96px);
+  }
+  .battle-stage.layout-b .player-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    min-width: 0;
+    width: 100%;
+  }
+  .battle-stage.layout-b .player-panel .player-meta {
+    display: none; /* details live in TL player frame */
+  }
+  .battle-stage.layout-b .player-bust {
+    overflow: visible;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    min-height: clamp(130px, 28vmin, 260px);
+    padding-bottom: 1.2rem;
+    width: 100%;
+  }
+  .battle-stage.layout-b .player-bust > .buff-row.portrait-buffs {
+    display: none; /* buffs in TL frame */
+  }
+  .battle-stage.layout-b .player-bust img,
+  .battle-stage.layout-b .player-sprite {
+    position: relative;
+    z-index: 1;
+    width: auto;
+    height: clamp(110px, 26vmin, 240px);
+    max-width: 92%;
+    object-fit: contain;
+    image-rendering: pixelated;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+  }
+  .battle-stage.layout-b .player-marker {
+    display: block;
+    bottom: 0;
+    width: 88%;
+    height: 28%;
+    opacity: 0.85;
+    z-index: 0;
   }
 
   .battle-stage.layout-b .ground-marker,
@@ -3933,22 +4227,6 @@
     box-shadow: none;
   }
 
-  .battle-stage.layout-b .player-bust {
-    overflow: visible;
-  }
-  .battle-stage.layout-b .player-marker {
-    display: block;
-    bottom: -10%;
-    width: 110%;
-    height: 28%;
-    opacity: 0.85;
-    z-index: 0;
-  }
-  .battle-stage.layout-b .player-bust img {
-    position: relative;
-    z-index: 1;
-  }
-
   .battle-stage.layout-b .arena-art {
     filter: brightness(0.38) saturate(0.7) contrast(1.08);
   }
@@ -3961,25 +4239,39 @@
   }
 
   @media (max-width: 768px) {
+    .battle-stage.layout-b .layout-b-frame {
+      width: min(46%, 200px);
+      top: 0.35rem;
+      padding: 0.35rem 0.4rem;
+    }
+    .battle-stage.layout-b .layout-b-frame.player-frame { left: 0.3rem; }
+    .battle-stage.layout-b .layout-b-frame.target-frame { right: 0.3rem; }
+    .battle-stage.layout-b .lb-name { font-size: 0.72rem; }
+    .battle-stage.layout-b .sprite-hp-name { display: none; }
     .battle-stage.layout-b .enemy-strip,
     .battle-stage.layout-b .enemy-strip.pack-solo,
     .battle-stage.layout-b .enemy-strip.pack-duo,
     .battle-stage.layout-b .enemy-strip.pack-swarm {
-      top: 6%;
-      bottom: auto;
+      top: auto;
+      bottom: 16%;
       right: 2%;
       left: auto;
-      max-width: min(58%, 280px);
+      max-width: min(52%, 240px);
     }
     .battle-stage.layout-b .player-team,
     .battle-stage.layout-b .player-team.solo {
-      left: 0.4rem;
-      bottom: 0.4rem;
-      width: min(55%, 260px);
+      left: 2%;
+      bottom: 12%;
+      width: min(42%, 180px);
     }
     .battle-stage.layout-b .enemy-sprite {
       height: clamp(72px, 18vmin, 140px);
     }
+    .battle-stage.layout-b .player-bust img,
+    .battle-stage.layout-b .player-sprite {
+      height: clamp(84px, 20vmin, 160px);
+    }
   }
+
 
 </style>

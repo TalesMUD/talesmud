@@ -1,6 +1,7 @@
 /**
- * Battle layout B PoC — FF-style side field (party left / enemies right)
- * with gold ground markers. Toggle via Settings, localStorage, or URL.
+ * Battle layout B PoC — room sprites on gold markers (party left / enemies right),
+ * edge-docked player (TL) + target (TR) frames, tiny over-sprite HP.
+ * Toggle via Settings, localStorage, or URL.
  *
  * Enable:
  *   Settings → Gameplay → "Battle layout B (PoC)"

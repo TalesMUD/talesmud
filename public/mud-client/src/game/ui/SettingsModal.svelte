@@ -139,7 +139,7 @@
                 <label class="toggle-switch"><input type="checkbox" aria-label="Auto-focus BattleStage" checked={$settingsStore.interface?.combatAutoFocus !== false} on:change={() => toggle('combatAutoFocus')} /><span class="toggle-slider"></span></label>
               </div>
               <div class="setting-item">
-                <div class="setting-info"><div class="setting-label">Battle layout B (PoC)</div><div class="setting-desc">Party left / enemies right with gold ground markers. Also ?battleLayout=b or localStorage talesmud_battle_layout_b=1.</div></div>
+                <div class="setting-info"><div class="setting-label">Battle layout B (PoC)</div><div class="setting-desc">Sprites on markers; player TL + target TR frames; tiny over-sprite HP. Also ?battleLayout=b or localStorage talesmud_battle_layout_b=1.</div></div>
                 <label class="toggle-switch"><input type="checkbox" aria-label="Battle layout B PoC" checked={!!$settingsStore.interface?.battleLayoutB} on:change={() => toggle('battleLayoutB')} /><span class="toggle-slider"></span></label>
               </div>
               <div class="setting-item">
