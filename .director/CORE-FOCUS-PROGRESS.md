@@ -500,3 +500,10 @@ Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated bl
 - Deploy: VPS ff → `201c225`, embed play client, patch live ITM0002 `onUseScriptId=SCR0008`, `bin/tales.prev-*`, SIGTERM talesmud only. Door untouched.
 - Smoke: `/play/?v=useon1` 200; guest POST 200; Door :8020 untouched.
 - Residual: existing inventory flint *instances* without script id still work via built-in auto-target / template resolve; re-pickup from fixed template carries SCR0008.
+
+## Inventory grid + detail overlay regression fix (2026-10-01 night)
+
+- Code SHA:  (`[grokbot]`), `engine-june`. Live client: `?v=invfix1`.
+- Cause: useon1 rebuilt `bundle.js` (new Svelte scope hashes) but Rollup wrote component CSS to unlinked `bundle.css` while linked `extra.css` stayed on levelup1 hashes. Inventory grid + ItemDetailCard styles never applied → vertical unstyled slots + detail card under widgets.
+- Fix: single `css({ output: 'extra.css' })` after `svelte({ emitCss: true })` in `rollup.config.js`; rebuild so JS/CSS hashes match; cache bump `invfix1`.
+- Keep: Use / Use on… UI + server use-on paths unchanged.

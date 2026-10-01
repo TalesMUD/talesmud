@@ -16,15 +16,17 @@ export default [{
 		file: 'public/bundle.js'
 	},
 	plugins: [
-		css({ output: "extra.css" }),
-
+		// Single CSS sink: imported sheets (materialize/xterm/global) + Svelte emitCss.
+		// A second css({output:'bundle.css'}) after svelte left component styles in an
+		// unlinked file while extra.css stayed stale — scoped hashes then diverged from
+		// bundle.js (useon1 inventory grid + item-card overlay regression).
 		svelte({
 			compilerOptions: {
 				dev: !production
 			},
 			emitCss: true
 		}),
-		css({ output: 'bundle.css' }),
+		css({ output: 'extra.css' }),
 
 		resolve({
 			browser: true,
