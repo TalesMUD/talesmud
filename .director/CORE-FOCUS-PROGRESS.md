@@ -537,3 +537,20 @@ Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated bl
 - VPS: ff `d0b40a0`→`9ea6fe9` then `9ea6fe9`→`6148d0d`; embed play client; `bin/tales.prev-d0b40a0` / `bin/tales.prev-9ea6fe9`; SIGTERM talesmud only; Restart=always → MainPID `877311` on `:8010`. Door `:8020` pid `758959` untouched. New bin sha256 `0b11fdad3011ecf9271ba5609dcb17547deb64634ce67f811db74212e7ac42f4`.
 - Smoke: local Chromium guest + synthetic combat — `.battle-stage.layout-b`, TL/TR frames, foe-plate `display:none`, player-meta `display:none`, sprite-hp ≥1, player-bust border cleared, zero page errors. Screenshot `.director/ux-audit/after/battlepoc2-layoutb-1920x1080.png`; `battlepoc2-smoke.json`. Public `/play/` 200 with six `?v=battlepoc2`; `extra.css` contains `layout-b-frame`/`sprite-hp-track`; POST `/api/guest` 200; door.veilspan.com/door 307 FYI.
 - Residual: placeholder portraits (not dedicated battle sprites); ally party in layout B still compact near left marker without own edge frame.
+
+## Battle layout B polish — slim HP + quieter chrome (2026-10-02)
+
+- Code SHA: `bf8fea0` (`[grokbot]`), `engine-june`. Live client: `?v=battlepoc3`.
+- Tip was battlepoc2 `92e1a98` / code `6148d0d`.
+- What changed (layout B only; classic untouched):
+  1. **Over-sprite**: slim HP bar only — dropped ALL-CAPS name labels (names live in TL/TR frames).
+  2. **Mid-stage Resolving/Waiting pill**: hidden under layout B; header turn-chip + decision timer keep subtle state.
+  3. **Markers / focus ring**: tighter (≈70%×16%), softer glow/pulse; combatants nudged inward on the floor.
+  4. **TL/TR frames**: tighter padding/spacing, smaller buff chips, no forced uppercase on target name.
+  5. Hotbar 1–9 + Flee, room vignette, Settings/`localStorage`/`?battleLayout=` toggle kept.
+- Files: `BattleStage.svelte`, `battleLayout.js` header, `SettingsModal.svelte` desc, `FEATURES.md`, cache bump `index.html` + built `bundle.js`/`extra.css`. Capture helper `tools/capture_battlepoc3.cjs`.
+- Tests: `node …/battleLayout_test.mjs` ok; `npm run build` green (existing unused-CSS warnings only).
+- Local clawdbot `:8010`: embed play client, rebuilt `bin/tales`, prev `bin/tales.prev-92e1a98`; pid `227711` on `:8010`. Door `:8020` pid `3406193` untouched. New bin sha256 `896c50531c8825d08ffe6a61984d66a71c0ec24ac42b6d6ffe99d8c6aabf82e5`.
+- VPS: ff `92e1a98`→`bf8fea0`; embed play client; `bin/tales.prev-92e1a98`; SIGTERM talesmud MainPID `877311`; Restart=always → MainPID `878486` on `:8010`. Door `:8020` pid `758959` untouched. New bin sha256 `8e4bf4513ec691f53df32b68bef7487334bb34c24fdf79d020a2f1e078542701`.
+- Smoke: local Chromium guest + synthetic combat — `.battle-stage.layout-b`, TL/TR frames, foe-plate/`player-meta` `display:none`, sprite-hp ≥1, sprite-hp-name `none`, dock wait chip `none`, `?v=battlepoc3`, zero page errors. Screenshot `.director/ux-audit/after/battlepoc3-layoutb-1920x1080.png`; `battlepoc3-smoke.json`. Public `/play/` 200 with six `?v=battlepoc3`; `extra.css` 200 contains sprite-hp-name hide + dock wait hide; POST `/api/guest` 200; door.veilspan.com/door 301 FYI (pid untouched).
+- Residual: placeholder portraits (not dedicated battle sprites); TL frame still shows compact class + Waiting chip (header also shows Waiting); ally party in layout B still compact near left marker without own edge frame.
