@@ -381,7 +381,7 @@
 
   function doAttack() {
     const target = livingFocus(enemies, targetId);
-    if (target?.name) cmd(`attack ${target.name}`);
+    if (target?.id) cmd(`attack ${target.id}`);
     else cmd('attack');
   }
 
@@ -692,6 +692,9 @@
     aria-hidden="true"
   ></div>
   <div class="arena-vignette" aria-hidden="true"></div>
+  {#if threatWarning && nowMs - threatWarning.at < 3200}
+    <div class="focus-threat-warning threat-{threatWarning.tier}" role="alert">{threatWarning.text}</div>
+  {/if}
   <!-- Enemies upper-right -->
   <section
     class="enemy-strip"
@@ -706,9 +709,6 @@
     {/if}
     {#if windupText}
       <div class="telegraph-banner" role="status">{windupText}</div>
-    {/if}
-    {#if threatWarning && nowMs - threatWarning.at < 3200}
-      <div class="focus-threat-warning threat-{threatWarning.tier}" role="alert">{threatWarning.text}</div>
     {/if}
     {#each enemies as enemy (enemy.id)}
       {@const pct = hpPct(enemy.hp, enemy.maxHp)}
@@ -1734,17 +1734,18 @@
   }
   .focus-threat-warning {
     position: absolute;
-    top: 3.1rem;
+    top: 1.1rem;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 8;
+    z-index: 5;
+    max-width: calc(100% - 1rem);
     padding: 0.45rem 0.8rem;
     border: 1px solid currentColor;
     border-radius: 0.35rem;
     background: rgba(20, 13, 11, 0.95);
     color: #fb923c;
     font-weight: 700;
-    white-space: nowrap;
+    text-align: center;
     pointer-events: none;
   }
   .focus-threat-warning.threat-red { color: #f87171; }

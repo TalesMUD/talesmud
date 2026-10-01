@@ -517,9 +517,17 @@ func (command *AttackCommand) handleInCombatAttack(game def.GameCtrl, message *m
 	var targetID string
 	targetNameLower := strings.ToLower(targetName)
 	for _, enemy := range livingEnemies {
-		if strings.Contains(strings.ToLower(enemy.name), targetNameLower) {
+		if strings.EqualFold(enemy.id, targetName) {
 			targetID = enemy.id
 			break
+		}
+	}
+	if targetID == "" {
+		for _, enemy := range livingEnemies {
+			if strings.Contains(strings.ToLower(enemy.name), targetNameLower) {
+				targetID = enemy.id
+				break
+			}
 		}
 	}
 

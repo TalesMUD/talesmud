@@ -64,4 +64,8 @@ func TestCombatFocusSelectAndRejectInvalid(t *testing.T) {
 	if got := inst.GetPlayerByID(char.ID).AutoAttackTargetID; got != "focus-ogre" {
 		t.Fatalf("invalid changed focus to %s", got)
 	}
+	(&commands.AttackCommand{}).Execute(g, &messages.Message{FromUser: user, Character: char, Data: "attack focus-rat"})
+	if got := inst.GetPlayerByID(char.ID).AutoAttackTargetID; got != "focus-rat" {
+		t.Fatalf("attack by exact ID targeted %s", got)
+	}
 }

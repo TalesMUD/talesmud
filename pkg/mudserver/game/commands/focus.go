@@ -27,7 +27,11 @@ func (*FocusCommand) Execute(game def.GameCtrl, message *messages.Message) bool 
 	if instance == nil {
 		return true
 	}
-	query := strings.TrimSpace(strings.TrimPrefix(message.Data, strings.Fields(message.Data)[0]))
+	parts := strings.Fields(message.Data)
+	query := ""
+	if len(parts) > 1 {
+		query = strings.Join(parts[1:], " ")
+	}
 	if query == "" {
 		game.SendMessage() <- message.Reply("Focus whom? Usage: focus <enemy ID or name>")
 		return true
