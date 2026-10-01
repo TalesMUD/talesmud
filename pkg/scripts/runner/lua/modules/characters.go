@@ -348,7 +348,8 @@ func RegisterCharactersModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 			return 1
 		}
 		var gained int
-		var userID, msg string
+		var userID string
+		var levelUp *leveling.LevelUpResult
 		err := facade.CharactersService().Modify(id, func(character *characters.Character) error {
 			userID = character.BelongsUserID
 			result := leveling.ApplyPendingLevels(character)
@@ -356,7 +357,7 @@ func RegisterCharactersModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 				return nil
 			}
 			gained = result.LevelsGained
-			msg = result.Message
+			levelUp = result
 			return nil
 		})
 		if err != nil {
@@ -365,12 +366,9 @@ func RegisterCharactersModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 			return 1
 		}
 		if gained > 0 {
-			if game := runner.GetGame(); game != nil && msg != "" {
-				game.SendMessage() <- messages.MessageResponse{
-					Audience:   messages.MessageAudienceUser,
-					AudienceID: userID,
-					Type:       messages.MessageTypeLevelUp,
-					Message:    msg,
+			if game := runner.GetGame(); game != nil {
+				if msg := messages.NewLevelUpMessage(userID, levelUp); msg != nil {
+					game.SendMessage() <- msg
 				}
 			}
 			pushGoldUpdate(runner, id)

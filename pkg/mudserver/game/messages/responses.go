@@ -616,6 +616,52 @@ type LevelUpCallout struct {
 	Message  string `json:"message,omitempty"`
 }
 
+// LevelUpMessage is the structured celebration payload for MessageTypeLevelUp.
+// Message keeps the ASCII fallback for the terminal; numeric fields drive the
+// Veilspan level-up card (gains + attribute spend UI).
+type LevelUpMessage struct {
+	MessageResponse
+	OldLevel               int32            `json:"oldLevel"`
+	NewLevel               int32            `json:"newLevel"`
+	LevelsGained           int              `json:"levelsGained"`
+	HPGained               int32            `json:"hpGained"`
+	ManaGained             int32            `json:"manaGained,omitempty"`
+	AttributeGains         map[string]int32 `json:"attributeGains,omitempty"`
+	AttributePointsGained  int32            `json:"attributePointsGained,omitempty"`
+	UnspentAttributePoints int32            `json:"unspentAttributePoints,omitempty"`
+	MaxHitPoints           int32            `json:"maxHitPoints,omitempty"`
+	MaxMana                int32            `json:"maxMana,omitempty"`
+}
+
+// NewLevelUpMessage builds a structured levelUp WS payload from ApplyLevelUp.
+func NewLevelUpMessage(userID string, result *leveling.LevelUpResult) *LevelUpMessage {
+	if userID == "" || result == nil || result.LevelsGained <= 0 {
+		return nil
+	}
+	gains := result.AttributeGains
+	if len(gains) == 0 {
+		gains = nil
+	}
+	return &LevelUpMessage{
+		MessageResponse: MessageResponse{
+			Audience:   MessageAudienceUser,
+			AudienceID: userID,
+			Type:       MessageTypeLevelUp,
+			Message:    result.Message,
+		},
+		OldLevel:               result.OldLevel,
+		NewLevel:               result.NewLevel,
+		LevelsGained:           result.LevelsGained,
+		HPGained:               result.HPGained,
+		ManaGained:             result.ManaGained,
+		AttributeGains:         gains,
+		AttributePointsGained:  result.AttributePointsGained,
+		UnspentAttributePoints: result.UnspentAttributePoints,
+		MaxHitPoints:           result.MaxHitPoints,
+		MaxMana:                result.MaxMana,
+	}
+}
+
 // DefeatSummary is what the character lost and where they wake up.
 // RespawnRoom is empty when they stay in the room they fell.
 type DefeatSummary struct {

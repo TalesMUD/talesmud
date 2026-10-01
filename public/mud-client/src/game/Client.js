@@ -399,6 +399,46 @@ function createClient(renderer, characterCreator, muxStore) {
     if (mux?.clearCombat) mux.clearCombat();
   };
 
+  // Level-up celebration — structured card (not RoomTextOverlay ASCII).
+  messageHandlers["levelUp"] = (msg) => {
+    if (msg.message) renderer(msg.message);
+    if (!mux) return;
+    // Seed HUD immediately so spend buttons work before characterUpdate.
+    const seed = {};
+    if (msg.newLevel) seed.level = msg.newLevel;
+    if (msg.maxHitPoints) seed.maxHitPoints = msg.maxHitPoints;
+    if (msg.maxHitPoints) seed.currentHitPoints = msg.maxHitPoints;
+    if (msg.maxMana) seed.maxMana = msg.maxMana;
+    if (msg.maxMana) seed.currentMana = msg.maxMana;
+    if (msg.unspentAttributePoints != null) {
+      seed.unspentAttributePoints = msg.unspentAttributePoints;
+    }
+    if (Object.keys(seed).length && mux.updateCharacterStats) {
+      mux.updateCharacterStats(seed);
+    }
+    if (!mux.addQuestNotification) return;
+    const gains = msg.attributeGains && typeof msg.attributeGains === 'object'
+      ? msg.attributeGains
+      : {};
+    mux.addQuestNotification({
+      id: `level-up-${msg.newLevel || Date.now()}-${Date.now()}`,
+      type: 'levelup',
+      questId: null,
+      questName: msg.newLevel ? `Level ${msg.newLevel}` : 'Level Up',
+      message: msg.message || '',
+      oldLevel: msg.oldLevel || 0,
+      newLevel: msg.newLevel || 0,
+      levelsGained: msg.levelsGained || 0,
+      hpGained: msg.hpGained || 0,
+      manaGained: msg.manaGained || 0,
+      attributeGains: gains,
+      attributePointsGained: msg.attributePointsGained || 0,
+      unspentAttributePoints: msg.unspentAttributePoints || 0,
+      maxHitPoints: msg.maxHitPoints || 0,
+      maxMana: msg.maxMana || 0,
+    });
+  };
+
   // Quest message handlers
   messageHandlers["questAccepted"] = (msg) => {
     renderer(msg.message);

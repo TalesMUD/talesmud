@@ -13,14 +13,17 @@ const (
 
 // LevelUpResult contains all changes from a level-up event
 type LevelUpResult struct {
-	OldLevel              int32
-	NewLevel              int32
-	LevelsGained          int
-	HPGained              int32
-	ManaGained            int32
-	AttributeGains        map[string]int32 // attribute short name -> gain amount
-	AttributePointsGained int32            // distributable points earned
-	Message               string           // Formatted level-up message for player
+	OldLevel               int32
+	NewLevel               int32
+	LevelsGained           int
+	HPGained               int32
+	ManaGained             int32
+	AttributeGains         map[string]int32 // attribute short name -> gain amount
+	AttributePointsGained  int32            // distributable points earned
+	UnspentAttributePoints int32            // total unspent after this level-up
+	MaxHitPoints           int32            // max HP after level-up
+	MaxMana                int32            // max mana after level-up
+	Message                string           // Formatted level-up message for player
 }
 
 // CheckLevelUp determines if a character should level up based on their current XP
@@ -104,14 +107,17 @@ func ApplyLevelUp(char *characters.Character, levelsGained int) *LevelUpResult {
 
 	// Build result with formatted message
 	result := &LevelUpResult{
-		OldLevel:              oldLevel,
-		NewLevel:              newLevel,
-		LevelsGained:          levelsGained,
-		HPGained:              hpGained,
-		ManaGained:            manaGained,
-		AttributeGains:        attributeGains,
-		AttributePointsGained: pointsGained,
-		Message:               formatLevelUpMessage(oldLevel, newLevel, levelsGained, hpGained, manaGained, attributeGains, pointsGained, char),
+		OldLevel:               oldLevel,
+		NewLevel:               newLevel,
+		LevelsGained:           levelsGained,
+		HPGained:               hpGained,
+		ManaGained:             manaGained,
+		AttributeGains:         attributeGains,
+		AttributePointsGained:  pointsGained,
+		UnspentAttributePoints: char.UnspentAttributePoints,
+		MaxHitPoints:           char.MaxHitPoints,
+		MaxMana:                char.MaxMana,
+		Message:                formatLevelUpMessage(oldLevel, newLevel, levelsGained, hpGained, manaGained, attributeGains, pointsGained, char),
 	}
 
 	return result

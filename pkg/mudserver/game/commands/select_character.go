@@ -80,11 +80,8 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 				"newLevel":     result.NewLevel,
 				"levelsGained": result.LevelsGained,
 			}).Info("Applied banked XP level catch-up on character select")
-			game.SendMessage() <- messages.MessageResponse{
-				Audience:   messages.MessageAudienceUser,
-				AudienceID: user.ID,
-				Type:       messages.MessageTypeLevelUp,
-				Message:    result.Message,
+			if msg := messages.NewLevelUpMessage(user.ID, result); msg != nil {
+				game.SendMessage() <- msg
 			}
 		}
 	}
