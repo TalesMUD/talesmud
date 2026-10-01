@@ -658,6 +658,53 @@ function drawYouMarker(ctx, px, py, half, portraitImg) {
   ctx.restore();
 }
 
+
+function drawTurnInMarker(ctx, px, py, half) {
+  const r = Math.max(10, Math.min(16, half * 0.55));
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(px, py - r * 0.15, r, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(18, 12, 4, 0.88)';
+  ctx.shadowColor = 'rgba(255, 196, 64, 0.75)';
+  ctx.shadowBlur = 14;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = '#f5c542';
+  ctx.lineWidth = 2.2;
+  ctx.stroke();
+  // Quest scroll glyph
+  ctx.fillStyle = '#ffe08a';
+  ctx.beginPath();
+  const s = r * 0.55;
+  ctx.moveTo(px - s * 0.55, py - s * 0.7);
+  ctx.lineTo(px + s * 0.55, py - s * 0.7);
+  ctx.quadraticCurveTo(px + s * 0.75, py, px + s * 0.55, py + s * 0.7);
+  ctx.lineTo(px - s * 0.55, py + s * 0.7);
+  ctx.quadraticCurveTo(px - s * 0.75, py, px - s * 0.55, py - s * 0.7);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#b8860b';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(120, 72, 8, 0.75)';
+  ctx.beginPath();
+  ctx.moveTo(px - s * 0.28, py - s * 0.25);
+  ctx.lineTo(px + s * 0.28, py - s * 0.25);
+  ctx.moveTo(px - s * 0.28, py + 0.05);
+  ctx.lineTo(px + s * 0.2, py + 0.05);
+  ctx.stroke();
+  // Pin tip under the medallion so it reads as a map marker
+  ctx.fillStyle = '#f5c542';
+  ctx.beginPath();
+  ctx.moveTo(px - r * 0.35, py + r * 0.75);
+  ctx.lineTo(px + r * 0.35, py + r * 0.75);
+  ctx.lineTo(px, py + r * 1.35);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+
 function drawTile(ctx, place, px, py, tileStep, opts) {
   const half = tileHalf(tileStep);
   // Round shared boundaries independently to avoid subpixel seams while panning.
@@ -727,6 +774,7 @@ export function paintAtlas(ctx, params) {
     travelTargetId = null,
     selectedId = null,
     frameWorld = false,
+    turnInMarkers = [],
   } = params;
 
   ctx.clearRect(0, 0, w, h);
@@ -905,10 +953,52 @@ export function paintAtlas(ctx, params) {
     }
   }
 
+  const turnInByRoom = new Map();
+  for (const m of turnInMarkers || []) {
+    if (!m || !m.roomId) continue;
+    const list = turnInByRoom.get(m.roomId) || [];
+    list.push(m);
+    turnInByRoom.set(m.roomId, list);
+  }
+  for (const [roomId, quests] of turnInByRoom) {
+    if (hereId && (roomId === hereId || isCurrentPlace(roomId, currentRoomId))) continue;
+    const place = byId[roomId] || renderPlaces.find(p => isCurrentPlace(p.id, roomId));
+    if (!place || !place.discovered || place.layer !== activeLayer) continue;
+    const group = groupForRoom(renderPlaces, roomId) || place;
+    const { px, py } = projectPlace(group, cam, w, h);
+    const half = tileHalf(cam.tileStep);
+    drawTurnInMarker(ctx, px, py - half * 0.15, half);
+    const tip = quests.map(q => q.questName || q.questId).filter(Boolean).join(', ');
+    hits.push({
+      px,
+      py,
+      half: Math.max(12, half * 0.55),
+      r: Math.max(12, half * 0.55),
+      place: {
+        ...primaryGroupPlace(group, currentRoomId),
+        turnInQuests: quests,
+        turnInLabel: tip,
+      },
+    });
+  }
+
   if (herePx != null) {
+    // If you stand on a turn-in room, keep you-marker primary but still expose quest tip via hit.
+    const hereTurnIns = turnInByRoom.get(hereId) || turnInByRoom.get(currentRoomId) || [];
     drawYouMarker(ctx, herePx, herePy, hereHalf, youPortraitImage);
     const markerHalf=Math.max(14,hereHalf*.85);
-    hits.push({px:herePx,py:herePy,half:markerHalf,r:markerHalf,place:{...(current || primaryGroupPlace(herePlace,currentRoomId)),current:true}});
+    hits.push({
+      px:herePx,
+      py:herePy,
+      half:markerHalf,
+      r:markerHalf,
+      place:{
+        ...(current || primaryGroupPlace(herePlace,currentRoomId)),
+        current:true,
+        turnInQuests: hereTurnIns.length ? hereTurnIns : undefined,
+        turnInLabel: hereTurnIns.length ? hereTurnIns.map(q => q.questName || q.questId).filter(Boolean).join(', ') : undefined,
+      },
+    });
   }
 
   drawAreaLabels(ctx, visiblePlaces, visibleRegions, cam, w, h);
@@ -956,3 +1046,28 @@ export function paintAtlas(ctx, params) {
 }
 
 export { BIOME, projectPlace, computeCamera, COMPASS_DIRS, DIR_LABEL_BLOCKLIST };
+
+/** Build map markers from quest log entries ready to turn in at an NPC room. */
+export function collectTurnInMarkers(quests) {
+  const out = [];
+  const seen = new Set();
+  for (const q of quests || []) {
+    if (!q) continue;
+    const ready = !!(q.readyToTurnIn || (q.status === 'active' && Array.isArray(q.objectives) && q.objectives.length && q.objectives.every(o => o.completed)));
+    if (!ready || q.turnInAnywhere) continue;
+    const roomId = q.turnInRoomId || q.turnInRoomID || '';
+    if (!roomId) continue;
+    const key = `${roomId}::${q.questId || q.questName || ''}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      roomId,
+      questId: q.questId || '',
+      questName: q.questName || q.name || 'Quest',
+      npcId: q.turnInNpcId || '',
+      npcName: q.turnInNpcName || '',
+    });
+  }
+  return out;
+}
+

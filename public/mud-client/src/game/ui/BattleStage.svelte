@@ -17,6 +17,7 @@
   import { overlayStore } from './overlayStore.js';
   import { itemArtSrc, onItemArtError } from '../itemArtSrc.js';
   import { backend } from '../../api/base.js';
+  import { livingFocus } from '../combatFocus.js';
   import {
     DEFAULT_DECISION_WINDOW_MS,
     DEFAULT_BEAT_BUDGET_MS,
@@ -59,6 +60,7 @@
   $: combatJoin = $store.combatJoin;
   $: showJoinBanner = !!(combatJoin?.at && nowMs - combatJoin.at < 3000);
   $: targetId = $store.combatTargetId;
+  $: threatWarning = $store.combatThreatWarning;
   $: turn = $store.combatTurn;
   $: logRaw = $store.combatLog || [];
   $: log = (logRaw || []).filter((line) => line && !isCombatLogNoise(line.text));
@@ -300,6 +302,34 @@
     if (arenaFlashTimer) clearTimeout(arenaFlashTimer);
   });
 
+  function statusEffectsOf(c) {
+    const list = (c && c.statusEffects) || [];
+    return Array.isArray(list) ? list.filter((se) => se && (se.duration > 0 || se.name)) : [];
+  }
+
+  function buffIconUrl(se) {
+    const skillId = se?.skillId || se?.id || '';
+    try {
+      return skillGenericArtUrl(skillId) || '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function buffTitle(se) {
+    const name = se?.name || skillDisplayName(se?.skillId || se?.id) || 'Effect';
+    const rounds = se?.duration != null ? `${se.duration} round${se.duration === 1 ? '' : 's'}` : '';
+    const kind = se?.type ? String(se.type) : 'buff';
+    return rounds ? `${name} (${kind}) · ${rounds}` : `${name} (${kind})`;
+  }
+
+  function buffKindClass(se) {
+    const t = String(se?.type || 'buff').toLowerCase();
+    if (t === 'debuff' || t === 'dot' || t === 'stun') return t;
+    if (t === 'hot') return 'hot';
+    return 'buff';
+  }
+
   function combatantPortrait(c) {
     const p = (c && c.portrait) || '';
     if (p.startsWith('data:')) return p;
@@ -334,7 +364,9 @@
     // C3: tap portrait/sprite retargets only; Attack dock queues the hit
     if (!enemy || phase !== 'active') return;
     if ((enemy.hp ?? 0) <= 0) return;
+    if (enemy.id === targetId) return;
     if (store.setCombatTarget) store.setCombatTarget(enemy.id);
+    if (sendMessage) sendMessage(`focus ${enemy.id}`);
   }
 
   function cmd(text) {
@@ -348,8 +380,8 @@
   });
 
   function doAttack() {
-    const target = enemies.find((e) => e.id === targetId) || enemies.find((e) => (e.hp ?? 0) > 0);
-    if (target?.name) cmd(`attack ${target.name}`);
+    const target = livingFocus(enemies, targetId);
+    if (target?.id) cmd(`attack ${target.id}`);
     else cmd('attack');
   }
 
@@ -660,6 +692,9 @@
     aria-hidden="true"
   ></div>
   <div class="arena-vignette" aria-hidden="true"></div>
+  {#if threatWarning && nowMs - threatWarning.at < 3200}
+    <div class="focus-threat-warning threat-{threatWarning.tier}" role="alert">{threatWarning.text}</div>
+  {/if}
   <!-- Enemies upper-right -->
   <section
     class="enemy-strip"
@@ -709,10 +744,11 @@
             class:hit-flash={tgt && (fxIsHit || fxIsMiss) && !fxIsCrit && !fxIsCrush}
             class:crit-flash={tgt && fxIsCrit && !fxIsCrush}
             class:crush-flash={tgt && fxIsCrush}
-          >{#if enemy.threat === 'skull'}<span class="skull-mark" title="Skull" aria-hidden="true">☠</span>{/if}{enemy.name}{#if enemy.enraged}<span class="enrage-badge">Enraged</span>{/if}</div>
+          >{#if enemy.threat === 'skull'}<span class="skull-mark" title="Skull" aria-hidden="true">☠</span>{/if}{enemy.name}{#if enemy.id === targetId && enemyCount > 1 && !dead}<span class="enemy-focus-label">FOCUS</span>{/if}{#if enemy.enraged}<span class="enrage-badge">Enraged</span>{/if}</div>
           {#if enemy.bossPhase}
             <div class="boss-phase-label" aria-label="Boss phase">{phaseCaption(enemy)}</div>
           {/if}
+
           <div class="hp-row">
             <span class="hp-label">HP</span>
             <div class="hp-track">
@@ -722,6 +758,20 @@
           </div>
         </div>
         <div class="enemy-sprite-wrap" class:shake={tgt && fxIsHit}>
+          {#if statusEffectsOf(enemy).length}
+            <div class="buff-row portrait-buffs" aria-label="Enemy effects">
+              {#each statusEffectsOf(enemy) as se (se.id || se.name + '-' + se.duration)}
+                <div class="buff-icon {buffKindClass(se)}" title={buffTitle(se)}>
+                  {#if buffIconUrl(se)}
+                    <img src={buffIconUrl(se)} alt="" />
+                  {:else}
+                    <span class="buff-fallback">{(se.name || '?').slice(0, 1)}</span>
+                  {/if}
+                  <span class="buff-stacks">{se.duration}</span>
+                </div>
+              {/each}
+            </div>
+          {/if}
           {#if enemy.id === targetId && !dead}
             <div class="target-ring" aria-hidden="true"></div>
           {/if}
@@ -790,6 +840,20 @@
           class:just-joined={showJoinBanner && combatJoin.actorId === ally.id}
         >
           <div class="ally-portrait">
+            {#if statusEffectsOf(ally).length}
+              <div class="buff-row portrait-buffs ally" aria-label="Ally effects">
+                {#each statusEffectsOf(ally) as se (se.id || se.name + '-' + se.duration)}
+                  <div class="buff-icon {buffKindClass(se)}" title={buffTitle(se)}>
+                    {#if buffIconUrl(se)}
+                      <img src={buffIconUrl(se)} alt="" />
+                    {:else}
+                      <span class="buff-fallback">{(se.name || '?').slice(0, 1)}</span>
+                    {/if}
+                    <span class="buff-stacks">{se.duration}</span>
+                  </div>
+                {/each}
+              </div>
+            {/if}
             <img src={combatantPortrait(ally)} alt="" on:error={(e) => onImgError(e, 'player', ally.classId)} />
             {#if showFloatOn(ally.id)}
               <div class="fx-float over-sprite" data-key={fxKey}>
@@ -801,6 +865,7 @@
           </div>
           <div class="ally-meta">
             <div class="ally-name" class:hit-flash={tgt && fxIsHit}>{ally.name}</div>
+
             <div class="ally-sub">{ally.classId || 'Adventurer'} · Lv {ally.level || 1}{#if down} · Down{:else if ally.hasFled} · Fled{:else if turn?.actorId === ally.id} · Turn{/if}</div>
             <div class="ally-bar"><span style="width: {pct}%; background: {playerHpColor(pct)}"></span></div>
             <div class="ally-numbers">HP {ally.hp ?? 0}/{ally.maxHp ?? 0}</div>
@@ -825,6 +890,20 @@
     aria-label="Player"
   >
     <div class="player-bust" class:shake={isFxTarget(selfId) && fxIsHit}>
+      {#if statusEffectsOf(selfCombatant).length}
+        <div class="buff-row portrait-buffs player" aria-label="Your buffs">
+          {#each statusEffectsOf(selfCombatant) as se (se.id || se.name + '-' + se.duration)}
+            <div class="buff-icon {buffKindClass(se)}" title={buffTitle(se)}>
+              {#if buffIconUrl(se)}
+                <img src={buffIconUrl(se)} alt="" />
+              {:else}
+                <span class="buff-fallback">{(se.name || '?').slice(0, 1)}</span>
+              {/if}
+              <span class="buff-stacks">{se.duration}</span>
+            </div>
+          {/each}
+        </div>
+      {/if}
       <img
         src={combatantPortrait(selfCombatant)}
         alt=""
@@ -855,6 +934,7 @@
         class:crush-flash={isFxTarget(selfId) && fxIsCrush}
       >{selfName}
       </div>
+
       <div class="hp-row player-hp">
         <span class="hp-label">HP</span>
         <div class="hp-track">
@@ -1652,12 +1732,43 @@
   .enemy-card.targeted .foe-plate {
     border-color: rgba(250, 204, 21, 0.75);
   }
+  .focus-threat-warning {
+    position: absolute;
+    top: 1.1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+    max-width: calc(100% - 1rem);
+    padding: 0.45rem 0.8rem;
+    border: 1px solid currentColor;
+    border-radius: 0.35rem;
+    background: rgba(20, 13, 11, 0.95);
+    color: #fb923c;
+    font-weight: 700;
+    text-align: center;
+    pointer-events: none;
+  }
+  .focus-threat-warning.threat-red { color: #f87171; }
+  .focus-threat-warning.threat-skull { color: #fecaca; }
   .enemy-card.targeted .nameplate {
     border-color: #facc15;
     box-shadow:
       0 0 0 1px rgba(250, 204, 21, 0.55),
       inset 0 0 0 1px rgba(255, 220, 150, 0.15),
       0 4px 14px rgba(0, 0, 0, 0.4);
+  }
+  .enemy-focus-label {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0.08rem 0.3rem;
+    border: 1px solid #facc15;
+    border-radius: 0.2rem;
+    background: #2b210d;
+    color: #fde68a;
+    font-size: 0.58em;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    vertical-align: middle;
   }
   .enemy-card.targeted .enemy-sprite {
     filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 12px rgba(250, 204, 21, 0.45));
@@ -3566,4 +3677,83 @@
     }
   }
 
+
+  .buff-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    margin: 0;
+    max-width: 100%;
+  }
+  /* WoW-style: small rectangles above/beside the combat portrait */
+  .buff-row.portrait-buffs {
+    position: absolute;
+    z-index: 5;
+    left: 0;
+    top: 0;
+    transform: translateY(calc(-100% - 3px));
+    margin: 0;
+    max-width: 140px;
+    pointer-events: auto;
+  }
+  .ally-portrait .buff-row.portrait-buffs {
+    left: calc(100% + 3px);
+    top: 0;
+    transform: none;
+    flex-direction: column;
+    max-width: 28px;
+  }
+  .enemy-sprite-wrap .buff-row.portrait-buffs {
+    left: 50%;
+    top: 0;
+    transform: translate(-50%, calc(-100% - 2px));
+    justify-content: center;
+    max-width: 120px;
+  }
+  .buff-icon {
+    position: relative;
+    width: 20px;
+    height: 24px;
+    border-radius: 3px;
+    border: 1px solid rgba(212, 175, 55, 0.65);
+    background: rgba(8, 10, 16, 0.94);
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    flex: 0 0 auto;
+  }
+  .buff-icon.debuff, .buff-icon.dot, .buff-icon.stun { border-color: rgba(248, 113, 113, 0.75); }
+  .buff-icon.hot { border-color: rgba(74, 222, 128, 0.7); }
+  .buff-icon.buff { border-color: rgba(96, 165, 250, 0.7); }
+  .buff-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    image-rendering: pixelated;
+    display: block;
+  }
+  .buff-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-size: 10px;
+    font-weight: 700;
+    color: #fde68a;
+    text-transform: uppercase;
+  }
+  .buff-stacks {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    min-width: 11px;
+    padding: 0 2px;
+    font-size: 9px;
+    line-height: 11px;
+    font-weight: 800;
+    color: #fff;
+    background: rgba(0,0,0,0.78);
+    border-top-left-radius: 3px;
+    text-align: center;
+  }
 </style>

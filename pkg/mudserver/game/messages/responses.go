@@ -483,12 +483,14 @@ type QuestLogEntry struct {
 	QuestName      string                   `json:"questName"`
 	Description    string                   `json:"description,omitempty"`
 	Category       string                   `json:"category,omitempty"`
+	Area           string                   `json:"area,omitempty"`
 	Level          int32                    `json:"level,omitempty"`
 	Status         string                   `json:"status"`
 	ReadyToTurnIn  bool                     `json:"readyToTurnIn,omitempty"`
 	TurnInAnywhere bool                     `json:"turnInAnywhere,omitempty"`
 	TurnInNpcID    string                   `json:"turnInNpcId,omitempty"`
 	TurnInNpcName  string                   `json:"turnInNpcName,omitempty"`
+	TurnInRoomID   string                   `json:"turnInRoomId,omitempty"`
 	Objectives     []QuestObjectiveProgress `json:"objectives"`
 	Rewards        *QuestReward             `json:"rewards,omitempty"`
 	AcceptedAt     string                   `json:"acceptedAt,omitempty"`
@@ -561,8 +563,9 @@ type CombatantView struct {
 // CombatStartMessage is the structured combat UI payload (portraits, HP).
 type CombatStartMessage struct {
 	MessageResponse
-	Enemies []CombatantView `json:"enemies"`
-	Players []CombatantView `json:"players"`
+	Enemies  []CombatantView `json:"enemies"`
+	Players  []CombatantView `json:"players"`
+	TargetID string          `json:"targetId,omitempty"`
 }
 
 // NewCombatStartMessage builds a combatStart for the attacker.
