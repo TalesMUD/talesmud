@@ -38,6 +38,8 @@ import {
   normalizeClassId,
   skillById,
   skillsForClass,
+  filterHotbarSkillsForCharacter,
+  reconcileHotbarForCharacter,
 } from './hudPrefs.js';
 
 assert.deepStrictEqual(DEFAULT_ACTION_BAR_PINS, ['recipes'], 'Recipes seeded for crafting discoverability');
@@ -316,3 +318,108 @@ console.log('hudPrefs: skill catalog + slot helpers OK');
   }
   assert.equal(JSON.stringify(binds), before);
 }
+
+// --- Per-character hotbar: drop other class's spells ---
+{
+  const mageBar = normalizeHotbarBinds([
+    makeSkillBind('mage_fireball'),
+    makeSkillBind('mage_frost_shield'),
+    makeActionBind('rest'),
+    makeItemBind({ name: 'Health Potion', templateId: 'ITM0099' }),
+  ]);
+  const asWarrior = filterHotbarSkillsForCharacter(mageBar, {
+    classId: 'warrior',
+    level: 20,
+    equippedIds: ['warrior_power_strike'],
+  });
+  assert.strictEqual(asWarrior[0], null, 'mage fireball dropped for warrior');
+  assert.strictEqual(asWarrior[1], null, 'mage frost shield dropped for warrior');
+  assert.strictEqual(asWarrior[2]?.id, 'rest', 'action binds stay');
+  assert.strictEqual(asWarrior[3]?.kind, 'item', 'item binds stay');
+
+  const asMage = filterHotbarSkillsForCharacter(mageBar, {
+    classId: 'wizard',
+    level: 12,
+    equippedIds: ['mage_fireball'],
+  });
+  assert.strictEqual(asMage[0]?.id, 'mage_fireball', 'equipped mage skill kept');
+  assert.strictEqual(asMage[1], null, 'unequipped mage skill dropped even on a mage');
+
+  const high = skillsForClass('mage').find((s) => s.levelRequired > 1);
+  if (high) {
+    const gated = filterHotbarSkillsForCharacter(
+      [makeSkillBind(high.id)],
+      { classId: 'mage', level: 1, equippedIds: [] }
+    );
+    assert.strictEqual(gated[0], null, 'skill not in the equipped set is dropped');
+    const equippedLocked = filterHotbarSkillsForCharacter(
+      [makeSkillBind(high.id)],
+      { classId: 'mage', level: 1, equippedIds: [high.id] }
+    );
+    assert.strictEqual(equippedLocked[0]?.id, high.id, 'equipped skill kept even if over level gate');
+  }
+
+  const untouched = filterHotbarSkillsForCharacter(mageBar, {
+    classId: '',
+    level: 0,
+    equippedIds: null,
+  });
+  assert.strictEqual(untouched[0]?.id, 'mage_fireball', 'no class and no equipped list does not wipe');
+  const classOnly = filterHotbarSkillsForCharacter(mageBar, {
+    classId: 'mage',
+    level: 10,
+    equippedIds: null,
+  });
+  assert.strictEqual(classOnly[0]?.id, 'mage_fireball', 'class catalog keeps available skills when equipped list is unknown');
+  const wiped = filterHotbarSkillsForCharacter(mageBar, {
+    classId: 'warrior',
+    level: 10,
+    equippedIds: [],
+  });
+  assert.strictEqual(wiped[0], null, 'empty equipped set clears skill slots');
+
+  let state = reconcileHotbarForCharacter({
+    activeCharacterId: '',
+    map: {},
+    activeBinds: mageBar,
+    characterId: 'char-mage',
+    classId: 'mage',
+    level: 10,
+    equippedIds: ['mage_fireball'],
+  });
+  assert.strictEqual(state.activeCharacterId, 'char-mage');
+  assert.strictEqual(state.binds[0]?.id, 'mage_fireball');
+  assert.ok(state.map['char-mage'], 'legacy bar claimed by the first character');
+
+  state = reconcileHotbarForCharacter({
+    activeCharacterId: state.activeCharacterId,
+    map: state.map,
+    activeBinds: state.binds,
+    characterId: 'char-warrior',
+    classId: 'warrior',
+    level: 15,
+    equippedIds: ['warrior_shield_bash'],
+  });
+  assert.strictEqual(state.map['char-mage'][0]?.id, 'mage_fireball', 'previous character bar preserved');
+  assert.ok(
+    state.binds.every((b) => !b || b.kind !== 'skill' || b.id.startsWith('warrior_')),
+    'warrior bar has no mage spells'
+  );
+  assert.strictEqual(state.binds[DEFAULT_REST_SLOT]?.id, 'rest', 'new character gets Rest, not the other bar');
+
+  const back = reconcileHotbarForCharacter({
+    activeCharacterId: state.activeCharacterId,
+    map: state.map,
+    activeBinds: state.binds,
+    characterId: 'char-mage',
+    classId: 'mage',
+    level: 10,
+    equippedIds: ['mage_fireball'],
+  });
+  assert.strictEqual(back.binds[0]?.id, 'mage_fireball', 'switching back restores that character bar');
+  assert.ok(
+    !back.binds.some((b) => b && b.kind === 'skill' && String(b.id).startsWith('warrior_')),
+    'mage bar does not show warrior skills'
+  );
+}
+console.log('hudPrefs: per-character hotbar filter OK');
