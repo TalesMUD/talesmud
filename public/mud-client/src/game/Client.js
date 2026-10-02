@@ -566,7 +566,9 @@ function createClient(renderer, characterCreator, muxStore) {
   const requestQuestLog = () => {
     if (!currentCharacter || !currentCharacter.id) return;
 
-    const token = localStorage.getItem('token');
+    // Guests keep their JWT in sessionStorage (talesmud_guest_token), not localStorage.
+    // Use the same resolver as atlas/map fetches so quest-log refresh works for both.
+    const token = getAuthToken();
     if (!token) return;
 
     fetch(`/api/quest-progress/${currentCharacter.id}`, {
