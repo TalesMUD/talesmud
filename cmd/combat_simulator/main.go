@@ -11,7 +11,7 @@ import (
 func main() {
 	iterations := flag.Int("n", 500, "Number of simulations per matchup")
 	classFilter := flag.String("class", "", "Filter to specific class (e.g. Warrior)")
-	enemyFilter := flag.String("enemy", "", "Filter to specific enemy (e.g. 'Meadow Wolf')")
+	enemyFilter := flag.String("enemy", "", "Filter to specific enemy (e.g. 'Sample Wolf')")
 	levelFilter := flag.Int("level", 0, "Filter to specific player level (0 = all)")
 	statsOnly := flag.Bool("stats", false, "Only show stat diagnostics, no combat sims")
 	flag.Parse()

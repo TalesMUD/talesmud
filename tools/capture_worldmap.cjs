@@ -11,7 +11,7 @@ const settle=page=>page.evaluate(async()=>{await document.fonts.ready;await Prom
   page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.url().includes('/api/map-tiles/'))sheets.push({url:r.url(),status:r.status()})});
   await page.setViewport({width:1920,height:1080});await page.goto('http://127.0.0.1:8137/',{waitUntil:'networkidle0'});
   await page.waitForFunction(()=>window.__mapPreview?.ready);await settle(page);
-  assert.equal(await page.$eval('.intel-title',e=>e.textContent),'Oldtown Gate');
+  assert.equal(await page.$eval('.intel-title',e=>e.textContent),'Sampletown Gate');
   assert.equal(await page.$eval('[title="Fit world"] i',e=>getComputedStyle(e).opacity),'1');
   await page.screenshot({path:path.join(out,'worldmap-p1-overview-1920x1080.png')});
   const bounds=await page.$eval('canvas',e=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,w:r.width,h:r.height}});
@@ -22,7 +22,7 @@ const settle=page=>page.evaluate(async()=>{await document.fonts.ready;await Prom
    const ox=(Math.min(...xs)+Math.max(...xs))/2,oy=(Math.min(...ys)+Math.max(...ys))/2;
    const pad=Math.max(24,Math.min(w,h)*.07);
    const fit=Math.min((w-2*pad)/(Math.max(...xs)-Math.min(...xs)+1),(h-2*pad)/(Math.max(...ys)-Math.min(...ys)+1));
-   const near=ps.filter(p=>['Z02_oldtown','Z05_silverbrook_vale'].includes(p.area));
+   const near=ps.filter(p=>['Z02_sample_town','Z04_sample_woods'].includes(p.area));
    const nx=near.map(p=>p.x),ny=near.map(p=>p.y);
    const cx=(Math.min(...nx)+Math.max(...nx))/2,cy=(Math.min(...ny)+Math.max(...ny))/2;
    const targetStep=Math.min(w*.8/(Math.max(...nx)-Math.min(...nx)+1),h*.8/(Math.max(...ny)-Math.min(...ny)+1),80);
@@ -63,7 +63,7 @@ const settle=page=>page.evaluate(async()=>{await document.fonts.ready;await Prom
   const phone=await page.$eval('#map-overview-overlay',e=>{const r=e.getBoundingClientRect();return{w:r.width,h:r.height,scroll:document.scrollingElement.scrollHeight}});
   assert.equal(phone.w,390);assert.equal(phone.h,844);
   await page.keyboard.press('Escape');assert.equal(await page.$('#map-overview-overlay'),null);
-  const report={source:'Local read-only production-overlay preview; fully explored fixture with fog neighbors. No VPS access.',sheets,errors,performance:performanceResult,phone,checks:['fonts/images ready','overview/zoom','click selects Silverbrook room','recenter','world fit','layer switching','phone bounds','Escape closes']};
+  const report={source:'Local read-only production-overlay preview; fully explored fixture with fog neighbors. No VPS access.',sheets,errors,performance:performanceResult,phone,checks:['fonts/images ready','overview/zoom','click selects Sample Woods room','recenter','world fit','layer switching','phone bounds','Escape closes']};
   fs.writeFileSync(path.join(out,'worldmap-p1-browser-checks.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});

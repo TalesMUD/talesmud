@@ -29,8 +29,7 @@ func inferBiome(area string, tags []string) string {
 		hasTag(tags, "tutorial"), areaLooksLike(area, "catacomb"):
 		return "dungeon"
 	case hasTag(tags, "road"), hasTag(tags, "gate"), hasTag(tags, "town"),
-		hasTag(tags, "inn"), hasTag(tags, "guards"), areaLooksLike(area, "oldtown"),
-		areaLooksLike(area, "town"):
+		hasTag(tags, "inn"), hasTag(tags, "guards"), areaLooksLike(area, "town"):
 		return "settlement"
 	case hasTag(tags, "outdoor"), areaLooksLike(area, "meadow"):
 		return "meadow"

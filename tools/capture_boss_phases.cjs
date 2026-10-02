@@ -1,9 +1,9 @@
 // Live A9 smoke: only fresh disposable guests are prepared through their owner API.
 // Existing boss content, rooms, other characters, and Door are never edited.
 const fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
-const puppeteer = require(process.env.PUPPETEER_MODULE || '/home/clawd/clawd/node_modules/puppeteer-core');
+const puppeteer = require(process.env.PUPPETEER_MODULE || path.join(process.env.HOME || '', 'dev/node_modules/puppeteer-core'));
 const base = process.env.A9_BASE_URL || 'http://127.0.0.1:8010';
-const bossName = process.env.A9_BOSS_NAME || 'Burrow Brute';
+const bossName = process.env.A9_BOSS_NAME || 'Sample Brute';
 const roomId = process.env.A9_ROOM_ID || 'R0112';
 const guestLevel = Number(process.env.A9_GUEST_LEVEL || 4);
 const guestStrength = Number(process.env.A9_GUEST_STRENGTH || 18);

@@ -28,55 +28,55 @@ func TestWarriorBalanceAnalysis(t *testing.T) {
 	fmt.Println("  WARRIOR BALANCE ANALYSIS")
 	fmt.Println("========================================")
 
-	// Current Hollow Knight stats
-	fmt.Println("\n--- CURRENT: Hollow Knight (HP=150, ATK=13, DEF=6) ---")
+	// Current Sample Warden stats
+	fmt.Println("\n--- CURRENT: Sample Warden (HP=150, ATK=13, DEF=6) ---")
 	for _, lvl := range []int32{5, 6, 7, 8, 10} {
 		r := simutil.RunMatchup(simutil.MatchupConfig{
 			PlayerConfigs: []simutil.ClassConfig{warrior},
 			PlayerLevel:   lvl,
-			EnemyConfigs:  []simutil.EnemyConfig{enemyConfig("Hollow Knight", 6, 150, 13, 6, "boss")},
+			EnemyConfigs:  []simutil.EnemyConfig{enemyConfig("Sample Warden", 6, 150, 13, 6, "boss")},
 			Iterations:    500,
 		})
-		fmt.Printf("  Warrior L%d vs HK(150/13/6): win=%5.1f%% avgRnds=%4.1f  P[ATK=%d DEF=%d HP=%d]\n",
+		fmt.Printf("  Warrior L%d vs Warden(150/13/6): win=%5.1f%% avgRnds=%4.1f  P[ATK=%d DEF=%d HP=%d]\n",
 			lvl, r.WinRate*100, r.AvgRounds, r.PlayerAttackPower, r.PlayerDefense, r.PlayerMaxHP)
 	}
 
-	// What-if: Reduce HK HP
-	fmt.Println("\n--- WHAT-IF: Hollow Knight with reduced HP ---")
+	// What-if: Reduce Warden HP
+	fmt.Println("\n--- WHAT-IF: Sample Warden with reduced HP ---")
 	for _, hp := range []int32{120, 100, 90, 80, 70} {
 		r := simutil.RunMatchup(simutil.MatchupConfig{
 			PlayerConfigs: []simutil.ClassConfig{warrior},
 			PlayerLevel:   6,
-			EnemyConfigs:  []simutil.EnemyConfig{enemyConfig("Hollow Knight", 6, hp, 13, 6, "boss")},
+			EnemyConfigs:  []simutil.EnemyConfig{enemyConfig("Sample Warden", 6, hp, 13, 6, "boss")},
 			Iterations:    500,
 		})
-		fmt.Printf("  Warrior L6 vs HK(HP=%3d, ATK=13, DEF=6): win=%5.1f%%  avgRnds=%4.1f\n",
+		fmt.Printf("  Warrior L6 vs Warden(HP=%3d, ATK=13, DEF=6): win=%5.1f%%  avgRnds=%4.1f\n",
 			hp, r.WinRate*100, r.AvgRounds)
 	}
 
-	// What-if: Reduce HK DEF
-	fmt.Println("\n--- WHAT-IF: Hollow Knight with reduced DEF ---")
+	// What-if: Reduce Warden DEF
+	fmt.Println("\n--- WHAT-IF: Sample Warden with reduced DEF ---")
 	for _, def := range []int32{6, 5, 4, 3, 2} {
 		r := simutil.RunMatchup(simutil.MatchupConfig{
 			PlayerConfigs: []simutil.ClassConfig{warrior},
 			PlayerLevel:   6,
-			EnemyConfigs:  []simutil.EnemyConfig{enemyConfig("Hollow Knight", 6, 150, 13, def, "boss")},
+			EnemyConfigs:  []simutil.EnemyConfig{enemyConfig("Sample Warden", 6, 150, 13, def, "boss")},
 			Iterations:    500,
 		})
-		fmt.Printf("  Warrior L6 vs HK(HP=150, ATK=13, DEF=%d): win=%5.1f%%  avgRnds=%4.1f\n",
+		fmt.Printf("  Warrior L6 vs Warden(HP=150, ATK=13, DEF=%d): win=%5.1f%%  avgRnds=%4.1f\n",
 			def, r.WinRate*100, r.AvgRounds)
 	}
 
-	// What-if: Reduce HK ATK
-	fmt.Println("\n--- WHAT-IF: Hollow Knight with reduced ATK ---")
+	// What-if: Reduce Warden ATK
+	fmt.Println("\n--- WHAT-IF: Sample Warden with reduced ATK ---")
 	for _, atk := range []int32{13, 11, 10, 9, 8} {
 		r := simutil.RunMatchup(simutil.MatchupConfig{
 			PlayerConfigs: []simutil.ClassConfig{warrior},
 			PlayerLevel:   6,
-			EnemyConfigs:  []simutil.EnemyConfig{enemyConfig("Hollow Knight", 6, 150, atk, 6, "boss")},
+			EnemyConfigs:  []simutil.EnemyConfig{enemyConfig("Sample Warden", 6, 150, atk, 6, "boss")},
 			Iterations:    500,
 		})
-		fmt.Printf("  Warrior L6 vs HK(HP=150, ATK=%2d, DEF=6): win=%5.1f%%  avgRnds=%4.1f\n",
+		fmt.Printf("  Warrior L6 vs Warden(HP=150, ATK=%2d, DEF=6): win=%5.1f%%  avgRnds=%4.1f\n",
 			atk, r.WinRate*100, r.AvgRounds)
 	}
 
@@ -91,10 +91,10 @@ func TestWarriorBalanceAnalysis(t *testing.T) {
 		r := simutil.RunMatchup(simutil.MatchupConfig{
 			PlayerConfigs: []simutil.ClassConfig{warrior},
 			PlayerLevel:   6,
-			EnemyConfigs:  []simutil.EnemyConfig{enemyConfig("Hollow Knight", 6, c.hp, c.atk, c.def, "boss")},
+			EnemyConfigs:  []simutil.EnemyConfig{enemyConfig("Sample Warden", 6, c.hp, c.atk, c.def, "boss")},
 			Iterations:    500,
 		})
-		fmt.Printf("  Warrior L6 vs HK(HP=%3d, ATK=%2d, DEF=%d): win=%5.1f%%  avgRnds=%4.1f\n",
+		fmt.Printf("  Warrior L6 vs Warden(HP=%3d, ATK=%2d, DEF=%d): win=%5.1f%%  avgRnds=%4.1f\n",
 			c.hp, c.atk, c.def, r.WinRate*100, r.AvgRounds)
 	}
 
@@ -109,12 +109,12 @@ func TestWarriorBalanceAnalysis(t *testing.T) {
 		{110, 10, 3, "Tanky but soft"},
 	}
 	for _, c := range bestCombos {
-		fmt.Printf("\n  [%s] HK(HP=%d, ATK=%d, DEF=%d):\n", c.label, c.hp, c.atk, c.def)
+		fmt.Printf("\n  [%s] Warden(HP=%d, ATK=%d, DEF=%d):\n", c.label, c.hp, c.atk, c.def)
 		for _, lvl := range []int32{4, 5, 6, 7, 8, 10} {
 			r := simutil.RunMatchup(simutil.MatchupConfig{
 				PlayerConfigs: []simutil.ClassConfig{warrior},
 				PlayerLevel:   lvl,
-				EnemyConfigs:  []simutil.EnemyConfig{enemyConfig("Hollow Knight", 6, c.hp, c.atk, c.def, "boss")},
+				EnemyConfigs:  []simutil.EnemyConfig{enemyConfig("Sample Warden", 6, c.hp, c.atk, c.def, "boss")},
 				Iterations:    500,
 			})
 			fmt.Printf("    L%2d: win=%5.1f%%  avgRnds=%4.1f\n", lvl, r.WinRate*100, r.AvgRounds)
@@ -123,7 +123,7 @@ func TestWarriorBalanceAnalysis(t *testing.T) {
 
 	// L1 Warrior vs L2 enemies - is armor too strong?
 	fmt.Println("\n--- L1 WARRIOR VS L2 ENEMIES (current DEF=8) ---")
-	l2Enemies := []string{"Sewer Rat", "Tunnel Mole", "Meadow Wolf", "Alley Thug", "Wild Boar"}
+	l2Enemies := []string{"Sample Pest", "Sample Burrower", "Sample Wolf", "Sample Thug", "Sample Boar"}
 	for _, name := range l2Enemies {
 		enemy := simutil.EnemyConfigByName(name)
 		r := simutil.RunMatchup(simutil.MatchupConfig{
@@ -176,12 +176,12 @@ func TestWarriorBalanceAnalysis(t *testing.T) {
 	}
 }
 
-// TestHollowKnightSweetSpot focuses on finding the right HK stats for ~20-30% at L6, ~5% at L5
-func TestHollowKnightSweetSpot(t *testing.T) {
+// TestSampleWardenSweetSpot focuses on finding sample boss stats for ~20-30% at L6, ~5% at L5
+func TestSampleWardenSweetSpot(t *testing.T) {
 	warrior := *simutil.ClassConfigByName("Warrior")
 
 	fmt.Println("\n========================================")
-	fmt.Println("  HOLLOW KNIGHT SWEET SPOT SEARCH")
+	fmt.Println("  SAMPLE WARDEN SWEET SPOT SEARCH")
 	fmt.Println("========================================")
 
 	// Key insight from analysis: DEF is the problem. DEF=6 means warrior does only 4 dmg/hit.
@@ -196,7 +196,7 @@ func TestHollowKnightSweetSpot(t *testing.T) {
 		{150, 12, 3}, {150, 12, 4}, {150, 11, 3},
 	}
 
-	fmt.Printf("\n  %-30s  %6s  %6s  %6s  %6s  %6s\n", "HK Stats", "L4", "L5", "L6", "L7", "L8")
+	fmt.Printf("\n  %-30s  %6s  %6s  %6s  %6s  %6s\n", "Warden Stats", "L4", "L5", "L6", "L7", "L8")
 	fmt.Println("  " + "----------------------------------------------------------------------")
 	for _, c := range combos {
 		label := fmt.Sprintf("HP=%3d ATK=%2d DEF=%d", c.hp, c.atk, c.def)
@@ -205,7 +205,7 @@ func TestHollowKnightSweetSpot(t *testing.T) {
 			r := simutil.RunMatchup(simutil.MatchupConfig{
 				PlayerConfigs: []simutil.ClassConfig{warrior},
 				PlayerLevel:   lvl,
-				EnemyConfigs:  []simutil.EnemyConfig{enemyConfig("Hollow Knight", 6, c.hp, c.atk, c.def, "boss")},
+				EnemyConfigs:  []simutil.EnemyConfig{enemyConfig("Sample Warden", 6, c.hp, c.atk, c.def, "boss")},
 				Iterations:    500,
 			})
 			fmt.Printf("  %5.1f%%", r.WinRate*100)
@@ -213,8 +213,8 @@ func TestHollowKnightSweetSpot(t *testing.T) {
 		fmt.Println()
 	}
 
-	// Also check the Thornback Bear and Burrow Brute
-	fmt.Println("\n--- THORNBACK BEAR CURRENT (HP=80, ATK=11, DEF=4) ---")
+	// Also check the Sample Bear and Sample Brute
+	fmt.Println("\n--- SAMPLE BEAR CURRENT (HP=80, ATK=11, DEF=4) ---")
 	fmt.Printf("  %-30s  %6s  %6s  %6s  %6s  %6s\n", "Bear Stats", "L3", "L4", "L5", "L6", "L7")
 	fmt.Println("  " + "----------------------------------------------------------------------")
 	bearCombos := []struct{ hp, atk, def int32 }{
@@ -230,7 +230,7 @@ func TestHollowKnightSweetSpot(t *testing.T) {
 			r := simutil.RunMatchup(simutil.MatchupConfig{
 				PlayerConfigs: []simutil.ClassConfig{warrior},
 				PlayerLevel:   lvl,
-				EnemyConfigs:  []simutil.EnemyConfig{enemyConfig("Thornback Bear", 5, c.hp, c.atk, c.def, "hard")},
+				EnemyConfigs:  []simutil.EnemyConfig{enemyConfig("Sample Bear", 5, c.hp, c.atk, c.def, "hard")},
 				Iterations:    500,
 			})
 			fmt.Printf("  %5.1f%%", r.WinRate*100)

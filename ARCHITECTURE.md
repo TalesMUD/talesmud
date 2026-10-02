@@ -701,7 +701,7 @@ SQLite JSON document storage with one row per entity, using JSON1 extension for 
 
 ```go
 NewQueryParams().
-    With(QueryParam{Key: "area", Value: "oldtown"}).
+    With(QueryParam{Key: "area", Value: "sampletown"}).
     With(QueryParam{Key: "roomType", Value: "tavern"})
 ```
 

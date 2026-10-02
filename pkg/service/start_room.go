@@ -4,10 +4,13 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 )
 
+// DefaultStartRoomID is a conventional sample room id used only when a pack
+// leaves StartRoomID empty and that room actually exists in the loaded world.
 const DefaultStartRoomID = "R0001"
 
 // ResolveStartRoomID returns the room ID new/guest characters should spawn in.
-// Order: configured settings.StartRoomID, then R0001. Empty string means neither exists.
+// Order: configured settings.StartRoomID, then DefaultStartRoomID if that room
+// exists. Empty string means neither exists. Never falls back to rooms[0].
 func ResolveStartRoomID(settings ServerSettingsService, roomsSvc RoomsService) string {
 	candidates := make([]string, 0, 2)
 	if settings != nil {

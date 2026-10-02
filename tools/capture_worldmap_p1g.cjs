@@ -87,8 +87,8 @@ const measure = (page, maxScale) => page.evaluate(async maxScale => {
       assert.deepEqual(await read(), maximum, 'pan preserves maximum zoom and nearest-neighbor sampling');
       await page.mouse.move(30, 30); await save(kind);
     };
-    await frame('Z01_meadows_forest_path', 'maxzoom');
-    await frame('Z02_oldtown', 'oldtown');
+    await frame('Z01_sample_meadow', 'maxzoom');
+    await frame('Z02_sample_town', 'sampletown');
     await page.click('[title="Recenter on you"]'); await settle(page);
     await wheel(-100, 30);
     const recenterMaximum = await read();
@@ -134,7 +134,7 @@ const measure = (page, maxScale) => page.evaluate(async maxScale => {
     assert.ok(performance.heartbeats>2, 'worker bake leaves the main thread responsive');
     for(const timing of [performance.overview,performance.maximum,performance.lower])assert.ok(timing.p95Ms<16.7,'warm draw stays within one 60fps frame locally');
     console.log('Performance comparison:', JSON.stringify({performance,baselinePerformance}));
-    const report = {manifest, performance, baselinePerformance, polish, source: 'Local read-only production-overlay preview; fonts, art and worker scenes settled before screenshots.', viewport: {width: 1920, height: 1080}, overview, maximum, oldMaximum, maxZoomRatio: maximum.tileStep / oldMaximum, recenterMaximum, minimum, pinchMaximum, pinchMinimum, workers, sheets, errors, screenshots: ['overview', 'maxzoom', 'oldtown'].map(n => `worldmap-p1g-${n}-1920x1080.png`)};
+    const report = {manifest, performance, baselinePerformance, polish, source: 'Local read-only production-overlay preview; fonts, art and worker scenes settled before screenshots.', viewport: {width: 1920, height: 1080}, overview, maximum, oldMaximum, maxZoomRatio: maximum.tileStep / oldMaximum, recenterMaximum, minimum, pinchMaximum, pinchMinimum, workers, sheets, errors, screenshots: ['overview', 'maxzoom', 'sampletown'].map(n => `worldmap-p1g-${n}-1920x1080.png`)};
     fs.writeFileSync(path.join(out, 'worldmap-p1g-browser-checks.json'), JSON.stringify(report, null, 2) + '\n');
     console.log(JSON.stringify(report, null, 2));
   } finally { await browser.close(); }

@@ -280,9 +280,9 @@
   }
 
   onMount(async () => {
-    // change global background<img src="/img/bg/oldtown-griphon.png"/>
+    // change global background<img src="/img/bg/sample-tavern.png"/>
 
-    document.body.style.backgroundImage = "url('/img/bg/oldtown-griphon.png')";
+    document.body.style.backgroundImage = "url('/img/bg/sample-tavern.png')";
     document.body.style.backdropFilter =
       "blur(10px) saturate(30%) brightness(50%)";
 

@@ -20,7 +20,7 @@ export const WIDGET_TYPES = {
   },
   terminalx: {
     name: 'Terminal X',
-    description: 'Veilspan-style MUD terminal with CRT effects',
+    description: 'MUD terminal with CRT effects',
     defaultSize: { w: 12, h: 14 },
     maxInstances: 1,
     icon: 'computer',

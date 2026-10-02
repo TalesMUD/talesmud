@@ -28,13 +28,13 @@ func exit(name, target string, hidden bool) rooms.Exit {
 
 func TestCompilePlacesCardinalNeighbors(t *testing.T) {
 	w := Compile([]*rooms.Room{
-		testRoom("R0001", "Awakening", "Z00_catacombs_intro", []string{"starting_room", "underground", "safe"},
+		testRoom("R0001", "Awakening", "Z00_sample_crypt", []string{"starting_room", "underground", "safe"},
 			exit("north", "R0002", false), exit("east", "R0005", false)),
-		testRoom("R0002", "Corridor", "Z00_catacombs_intro", []string{"underground"},
+		testRoom("R0002", "Corridor", "Z00_sample_crypt", []string{"underground"},
 			exit("south", "R0001", false), exit("west", "R0003", false)),
-		testRoom("R0003", "Alcove", "Z00_catacombs_intro", []string{"underground"},
+		testRoom("R0003", "Alcove", "Z00_sample_crypt", []string{"underground"},
 			exit("east", "R0002", false), exit("north", "R0004", false)),
-		testRoom("R0005", "Nest", "Z00_catacombs_intro", []string{"underground"},
+		testRoom("R0005", "Nest", "Z00_sample_crypt", []string{"underground"},
 			exit("west", "R0001", false)),
 	})
 
@@ -55,11 +55,11 @@ func TestCompilePlacesCardinalNeighbors(t *testing.T) {
 
 func TestCompileUpDownChangesLayer(t *testing.T) {
 	w := Compile([]*rooms.Room{
-		testRoom("R0006", "Stairwell", "Z00_catacombs_intro", []string{"underground", "starting_room"},
+		testRoom("R0006", "Stairwell", "Z00_sample_crypt", []string{"underground", "starting_room"},
 			exit("up", "R0101", false)),
-		testRoom("R0101", "Meadow", "Z01_meadows_forest_path", []string{"outdoor", "entry_point", "safe"},
+		testRoom("R0101", "Meadow", "Z01_sample_meadow", []string{"outdoor", "entry_point", "safe"},
 			exit("north", "R0102", false)),
-		testRoom("R0102", "Field", "Z01_meadows_forest_path", []string{"outdoor", "gathering"},
+		testRoom("R0102", "Field", "Z01_sample_meadow", []string{"outdoor", "gathering"},
 			exit("south", "R0101", false)),
 	})
 	if w.rooms["R0101"].z != w.rooms["R0006"].z+1 {
@@ -75,15 +75,15 @@ func TestCompileUpDownChangesLayer(t *testing.T) {
 
 func TestCompileDiagonalAndHiddenBurrow(t *testing.T) {
 	w := Compile([]*rooms.Room{
-		testRoom("R0103", "Creek", "Z01_meadows_forest_path", []string{"outdoor", "water", "starting_room"},
+		testRoom("R0103", "Creek", "Z01_sample_meadow", []string{"outdoor", "water", "starting_room"},
 			exit("northwest", "R0104", false),
 			exit("down", "R0109", true),
 			exit("north", "R0105", false)),
-		testRoom("R0104", "Camp", "Z01_meadows_forest_path", []string{"outdoor"},
+		testRoom("R0104", "Camp", "Z01_sample_meadow", []string{"outdoor"},
 			exit("southeast", "R0103", false)),
-		testRoom("R0105", "Forest", "Z01_meadows_forest_path", []string{"outdoor", "forest"},
+		testRoom("R0105", "Forest", "Z01_sample_meadow", []string{"outdoor", "forest"},
 			exit("south", "R0103", false)),
-		testRoom("R0109", "Burrow", "Z01_meadows_forest_path", []string{"underground"},
+		testRoom("R0109", "Burrow", "Z01_sample_meadow", []string{"underground"},
 			exit("back", "R0103", false)),
 	})
 	creek := w.rooms["R0103"]
@@ -98,13 +98,13 @@ func TestCompileDiagonalAndHiddenBurrow(t *testing.T) {
 
 func TestRevealHidesUndiscoveredAndFog(t *testing.T) {
 	w := Compile([]*rooms.Room{
-		testRoom("R0101", "Meadow", "Z01_meadows_forest_path", []string{"outdoor", "starting_room", "entry_point"},
+		testRoom("R0101", "Meadow", "Z01_sample_meadow", []string{"outdoor", "starting_room", "entry_point"},
 			exit("north", "R0102", false)),
-		testRoom("R0102", "Field", "Z01_meadows_forest_path", []string{"outdoor"},
+		testRoom("R0102", "Field", "Z01_sample_meadow", []string{"outdoor"},
 			exit("south", "R0101", false), exit("north", "R0103", false)),
-		testRoom("R0103", "Creek", "Z01_meadows_forest_path", []string{"outdoor", "water"},
+		testRoom("R0103", "Creek", "Z01_sample_meadow", []string{"outdoor", "water"},
 			exit("south", "R0102", false), exit("down", "R0109", true)),
-		testRoom("R0109", "Burrow", "Z01_meadows_forest_path", []string{"underground"},
+		testRoom("R0109", "Burrow", "Z01_sample_meadow", []string{"underground"},
 			exit("back", "R0103", false)),
 	})
 	ch := &characters.Character{
@@ -144,9 +144,9 @@ func TestRevealHidesUndiscoveredAndFog(t *testing.T) {
 
 func TestRevealShowsHiddenAfterRevealExit(t *testing.T) {
 	w := Compile([]*rooms.Room{
-		testRoom("R0103", "Creek", "Z01_meadows_forest_path", []string{"outdoor", "water", "starting_room"},
+		testRoom("R0103", "Creek", "Z01_sample_meadow", []string{"outdoor", "water", "starting_room"},
 			exit("down", "R0109", true)),
-		testRoom("R0109", "Burrow", "Z01_meadows_forest_path", []string{"underground"},
+		testRoom("R0109", "Burrow", "Z01_sample_meadow", []string{"underground"},
 			exit("back", "R0103", false)),
 	})
 	ch := &characters.Character{
@@ -169,14 +169,14 @@ func TestRevealShowsHiddenAfterRevealExit(t *testing.T) {
 
 func TestMarkOnIdempotent(t *testing.T) {
 	ch := &characters.Character{Entity: &entities.Entity{ID: "c1"}}
-	room := testRoom("R0001", "Awakening", "Z00_catacombs_intro", []string{"starting_room"})
+	room := testRoom("R0001", "Awakening", "Z00_sample_crypt", []string{"starting_room"})
 	if !MarkOn(ch, room) {
 		t.Fatal("first visit should be new")
 	}
 	if MarkOn(ch, room) {
 		t.Fatal("second visit should not count as new")
 	}
-	if !ch.DiscoveredRooms["R0001"] || !ch.DiscoveredAreas["Z00_catacombs_intro"] {
+	if !ch.DiscoveredRooms["R0001"] || !ch.DiscoveredAreas["Z00_sample_crypt"] {
 		t.Fatal("discovery maps not set")
 	}
 	if ch.AllTimeStats.RoomsDiscovered != 1 {
@@ -263,9 +263,9 @@ func TestCompileFlipsInvertedAuthoredY(t *testing.T) {
 }
 
 func TestCompilePrefersAuthoredCoords(t *testing.T) {
-	meadow := withCoords(testRoom("R0101", "Meadow", "Z01_meadows_forest_path", []string{"outdoor", "starting_room"},
+	meadow := withCoords(testRoom("R0101", "Meadow", "Z01_sample_meadow", []string{"outdoor", "starting_room"},
 		exit("north", "R0102", false)), 12, -4, 0)
-	field := testRoom("R0102", "Field", "Z01_meadows_forest_path", []string{"outdoor"},
+	field := testRoom("R0102", "Field", "Z01_sample_meadow", []string{"outdoor"},
 		exit("south", "R0101", false))
 	w := Compile([]*rooms.Room{meadow, field})
 	if w.rooms["R0101"].x != 12 || w.rooms["R0101"].y != -4 {
@@ -278,13 +278,13 @@ func TestCompilePrefersAuthoredCoords(t *testing.T) {
 
 func TestCompilePacksAreasWithoutOverlap(t *testing.T) {
 	w := Compile([]*rooms.Room{
-		testRoom("R0101", "Meadow", "Z01_meadows_forest_path", []string{"starting_room", "outdoor"},
+		testRoom("R0101", "Meadow", "Z01_sample_meadow", []string{"starting_room", "outdoor"},
 			exit("north", "R0102", false), exit("west", "R0201", false)),
-		testRoom("R0102", "Field", "Z01_meadows_forest_path", []string{"outdoor"},
+		testRoom("R0102", "Field", "Z01_sample_meadow", []string{"outdoor"},
 			exit("south", "R0101", false)),
-		testRoom("R0201", "Gate", "Z02_oldtown", []string{"outdoor", "entry_point"},
+		testRoom("R0201", "Gate", "Z02_sample_town", []string{"outdoor", "entry_point"},
 			exit("east", "R0101", false), exit("west", "R0202", false)),
-		testRoom("R0202", "Street", "Z02_oldtown", []string{"outdoor"},
+		testRoom("R0202", "Street", "Z02_sample_town", []string{"outdoor"},
 			exit("east", "R0201", false)),
 		testRoom("R0301", "Ashen", "Z03_ashenveil", []string{"outdoor", "entry_point"},
 			exit("south", "R0302", false)),
@@ -296,25 +296,25 @@ func TestCompilePacksAreasWithoutOverlap(t *testing.T) {
 			w.rooms["R0101"].x, w.rooms["R0101"].y, w.rooms["R0102"].x, w.rooms["R0102"].y)
 	}
 	if w.rooms["R0202"].x != w.rooms["R0201"].x-1 || w.rooms["R0202"].y != w.rooms["R0201"].y {
-		t.Fatalf("intra-oldtown west broken: gate (%d,%d) street (%d,%d)",
+		t.Fatalf("intra-town west broken: gate (%d,%d) street (%d,%d)",
 			w.rooms["R0201"].x, w.rooms["R0201"].y, w.rooms["R0202"].x, w.rooms["R0202"].y)
 	}
-	if g := minAreaChebyshev(w, "Z01_meadows_forest_path", "Z02_oldtown"); g < 2 {
-		t.Fatalf("meadow/oldtown gap %d want >= 2", g)
+	if g := minAreaChebyshev(w, "Z01_sample_meadow", "Z02_sample_town"); g < 2 {
+		t.Fatalf("meadow/town gap %d want >= 2", g)
 	}
-	if g := minAreaChebyshev(w, "Z02_oldtown", "Z03_ashenveil"); g < 2 {
-		t.Fatalf("oldtown/ashenveil gap %d want >= 2", g)
+	if g := minAreaChebyshev(w, "Z02_sample_town", "Z03_ashenveil"); g < 2 {
+		t.Fatalf("town/ashenveil gap %d want >= 2", g)
 	}
-	if g := minAreaChebyshev(w, "Z01_meadows_forest_path", "Z03_ashenveil"); g < 2 {
+	if g := minAreaChebyshev(w, "Z01_sample_meadow", "Z03_ashenveil"); g < 2 {
 		t.Fatalf("meadow/ashenveil gap %d want >= 2", g)
 	}
 }
 
 func TestUndergroundStartIsLowerLayer(t *testing.T) {
 	w := Compile([]*rooms.Room{
-		testRoom("R0001", "Awakening", "Z00_catacombs_intro", []string{"starting_room", "underground"},
+		testRoom("R0001", "Awakening", "Z00_sample_crypt", []string{"starting_room", "underground"},
 			exit("up", "R0101", false)),
-		testRoom("R0101", "Meadow", "Z01_meadows_forest_path", []string{"outdoor", "entry_point"},
+		testRoom("R0101", "Meadow", "Z01_sample_meadow", []string{"outdoor", "entry_point"},
 			exit("down", "R0001", false)),
 	})
 	if layerID(w.rooms["R0001"].z) != "lower" {
@@ -327,11 +327,11 @@ func TestUndergroundStartIsLowerLayer(t *testing.T) {
 
 func TestRevealOverworldOmitsNonZeroZ(t *testing.T) {
 	w := Compile([]*rooms.Room{
-		testRoom("R0001", "Awakening", "Z00_catacombs_intro", []string{"starting_room", "underground"},
+		testRoom("R0001", "Awakening", "Z00_sample_crypt", []string{"starting_room", "underground"},
 			exit("up", "R0101", false), exit("east", "R0005", false)),
-		testRoom("R0005", "Nest", "Z00_catacombs_intro", []string{"underground"},
+		testRoom("R0005", "Nest", "Z00_sample_crypt", []string{"underground"},
 			exit("west", "R0001", false)),
-		testRoom("R0101", "Meadow", "Z01_meadows_forest_path", []string{"outdoor", "entry_point"},
+		testRoom("R0101", "Meadow", "Z01_sample_meadow", []string{"outdoor", "entry_point"},
 			exit("down", "R0001", false)),
 	})
 	ch := &characters.Character{
@@ -350,28 +350,28 @@ func TestRevealOverworldOmitsNonZeroZ(t *testing.T) {
 	}
 }
 
-func TestCompileOldtownNorthOfMeadows(t *testing.T) {
+func TestCompileSampleTownNorthOfMeadow(t *testing.T) {
 	w := Compile([]*rooms.Room{
-		testRoom("R0108", "Sign", "Z01_meadows_forest_path", []string{"outdoor", "starting_room"},
+		testRoom("R0108", "Sign", "Z01_sample_meadow", []string{"outdoor", "starting_room"},
 			exit("north", "R0201", false)),
-		testRoom("R0201", "Gate", "Z02_oldtown", []string{"outdoor", "entry_point"},
+		testRoom("R0201", "Gate", "Z02_sample_town", []string{"outdoor", "entry_point"},
 			exit("south", "R0108", false), exit("northwest", "R0401", false)),
-		testRoom("R0401", "Timber", "Z04_ashenvale_woods", []string{"outdoor", "entry_point"},
+		testRoom("R0401", "Timber", "Z04_sample_woods", []string{"outdoor", "entry_point"},
 			exit("southeast", "R0201", false)),
 	})
 	if w.rooms["R0201"].y >= w.rooms["R0108"].y {
-		t.Fatalf("oldtown y=%d should be north (smaller y) of meadows y=%d", w.rooms["R0201"].y, w.rooms["R0108"].y)
+		t.Fatalf("sample town y=%d should be north (smaller y) of meadow y=%d", w.rooms["R0201"].y, w.rooms["R0108"].y)
 	}
 	if w.rooms["R0401"].y >= w.rooms["R0201"].y {
-		t.Fatalf("ashenveil y=%d should be north of oldtown y=%d", w.rooms["R0401"].y, w.rooms["R0201"].y)
+		t.Fatalf("woods y=%d should be north of sample town y=%d", w.rooms["R0401"].y, w.rooms["R0201"].y)
 	}
 }
 
 func TestRevealIncludesExitsAndDanger(t *testing.T) {
 	w := Compile([]*rooms.Room{
-		testRoom("R0101", "Meadow", "Z01_meadows_forest_path", []string{"outdoor", "starting_room", "safe"},
+		testRoom("R0101", "Meadow", "Z01_sample_meadow", []string{"outdoor", "starting_room", "safe"},
 			exit("north", "R0102", false)),
-		testRoom("R0102", "Field", "Z01_meadows_forest_path", []string{"outdoor"},
+		testRoom("R0102", "Field", "Z01_sample_meadow", []string{"outdoor"},
 			exit("south", "R0101", false)),
 	})
 	ch := &characters.Character{
@@ -402,11 +402,11 @@ func TestRevealIncludesExitsAndDanger(t *testing.T) {
 		t.Fatalf("fog field should be lean: %+v", field)
 	}
 	AttachResidents(&atlas, map[string][]PlaceResident{
-		"R0101": {{Name: "Wren", Kind: "npc"}},
+		"R0101": {{Name: "Guide", Kind: "npc"}},
 		"R0102": {{Name: "Wolf", Kind: "enemy"}},
 	})
 	for _, p := range atlas.Places {
-		if p.ID == "R0101" && (len(p.Residents) != 1 || p.Residents[0].Name != "Wren") {
+		if p.ID == "R0101" && (len(p.Residents) != 1 || p.Residents[0].Name != "Guide") {
 			t.Fatalf("meadow residents %+v", p.Residents)
 		}
 		if p.ID == "R0102" && len(p.Residents) != 0 {
@@ -416,16 +416,16 @@ func TestRevealIncludesExitsAndDanger(t *testing.T) {
 }
 
 func TestDisplayAreaStripsZonePrefix(t *testing.T) {
-	if got := displayArea("Z01_meadows_forest_path"); got != "Meadows Forest Path" {
+	if got := displayArea("Z01_sample_meadow"); got != "Sample Meadow" {
 		t.Fatalf("got %q", got)
 	}
 }
 
 func TestRevealMarksInstanceCloneAsTemplateCurrent(t *testing.T) {
 	w := Compile([]*rooms.Room{
-		testRoom("R0215", "The Weary Wanderer - Cellar", "Z02_oldtown", []string{"underground", "instance"},
+		testRoom("R0215", "Roadside Inn - Cellar", "Z02_sample_town", []string{"underground", "instance"},
 			exit("up", "R0203", false)),
-		testRoom("R0203", "The Weary Wanderer", "Z02_oldtown", []string{"indoor"},
+		testRoom("R0203", "Roadside Inn", "Z02_sample_town", []string{"indoor"},
 			exit("down", "R0215", false)),
 	})
 	ch := &characters.Character{
@@ -455,7 +455,7 @@ func TestRevealMarksInstanceCloneAsTemplateCurrent(t *testing.T) {
 func TestDiscoveredRoomsJSONRoundTrip(t *testing.T) {
 	ch := &characters.Character{
 		DiscoveredRooms: map[string]bool{"R0101": true, "R0102": true},
-		DiscoveredAreas: map[string]bool{"Z01_meadows_forest_path": true},
+		DiscoveredAreas: map[string]bool{"Z01_sample_meadow": true},
 	}
 	ch.AllTimeStats.RoomsDiscovered = 2
 	raw, err := json.Marshal(ch)
@@ -472,7 +472,7 @@ func TestDiscoveredRoomsJSONRoundTrip(t *testing.T) {
 	if !back.DiscoveredRooms["R0101"] || !back.DiscoveredRooms["R0102"] {
 		t.Fatalf("rooms not restored: %#v", back.DiscoveredRooms)
 	}
-	if !back.DiscoveredAreas["Z01_meadows_forest_path"] {
+	if !back.DiscoveredAreas["Z01_sample_meadow"] {
 		t.Fatalf("areas not restored: %#v", back.DiscoveredAreas)
 	}
 }

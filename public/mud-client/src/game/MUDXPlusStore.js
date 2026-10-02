@@ -454,7 +454,7 @@ function createStore() {
     npcs: [],
     players: [],
     roomChat: [],
-    background: "oldtown-griphon",
+    background: "sample-tavern",
     roomName: "",
     roomDescription: "",
 

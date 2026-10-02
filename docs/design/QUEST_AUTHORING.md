@@ -226,7 +226,7 @@ Player must enter a specific room.
 {
   "id": "visit_marsh",
   "type": "visit",
-  "description": "Travel to Gloomfen Marsh",
+  "description": "Travel to Sample Marsh",
   "targetId": "R0301",
   "targetName": "Marsh Gate Trail",
   "amount": 1,
@@ -548,10 +548,10 @@ Quest IDs follow the pattern: `QST####` (4-digit zero-padded number).
 
 | Range | Purpose |
 |-------|---------|
-| QST0001–QST0099 | Tutorial / Zone 0 (Catacombs) |
-| QST0100–QST0199 | Zone 1 (Meadows / Forest Path) |
-| QST0200–QST0299 | Zone 2 (Oldtown) |
-| QST0300–QST0399 | Zone 3 (Gloomfen Marsh) |
+| QST0001–QST0099 | Sample crypt (`Z00_sample_crypt`) |
+| QST0100–QST0199 | Sample meadow (`Z01_sample_meadow`) |
+| QST0200–QST0299 | Sample town (`Z02_sample_town`) |
+| QST0300–QST0399 | Sample marsh (`Z03_sample_marsh`) |
 | QST0900–QST0999 | Daily / repeatable quests |
 
 ### YAML Quest File
@@ -560,9 +560,8 @@ Quest IDs follow the pattern: `QST####` (4-digit zero-padded number).
 id: QST0201
 name: Sewer Sweep
 description: >
-  Captain Aldric needs someone to clear the creatures infesting
-  Oldtown's sewer system. The maintenance workers refuse to go
-  back down until it is safe.
+  The town watch needs someone to clear the creatures in the
+  sample town drains. Workers will not go back down until it is safe.
 category: side
 level: 2
 repeatable: false
@@ -669,7 +668,7 @@ A quest with kill + collect + visit objectives.
 ```json
 {
   "name": "Marsh Expedition",
-  "description": "The Archivist wants samples from Gloomfen Marsh for her research. Dangerous work, but the pay is good.",
+  "description": "The archivist wants samples from Sample Marsh for research. Dangerous work, but the pay is good.",
   "category": "side",
   "level": 3,
   "source": {
@@ -861,13 +860,13 @@ curl -s -X POST http://localhost:8010/api/quests \
     \"level\": 4,
     \"source\": {\"type\": \"npc\", \"npcId\": \"NPC0004\"},
     \"objectives\": [
-      {\"id\": \"kill_boss\", \"type\": \"kill\", \"description\": \"Defeat the Hollow Knight\", \"targetId\": \"ENM0009\", \"amount\": 1, \"order\": 1},
-      {\"id\": \"collect_shard\", \"type\": \"collect\", \"description\": \"Collect the Hollow Knight Shard\", \"targetId\": \"ITM0020\", \"amount\": 1, \"order\": 2}
+      {\"id\": \"kill_boss\", \"type\": \"kill\", \"description\": \"Defeat the Sample Warden\", \"targetId\": \"ENM0009\", \"amount\": 1, \"order\": 1},
+      {\"id\": \"collect_shard\", \"type\": \"collect\", \"description\": \"Collect the Sample Shard\", \"targetId\": \"ITM0020\", \"amount\": 1, \"order\": 2}
     ],
     \"rewards\": {\"xp\": 200, \"gold\": 50, \"itemTemplateIds\": [\"ITM0015\"]},
     \"requiredQuestIds\": [\"$QUEST2\"],
     \"acceptDialogText\": \"The path is clear. Now find the source and end this.\",
-    \"completeDialogText\": \"It is done. Oldtown owes you a debt.\"
+    \"completeDialogText\": \"It is done. Sampletown owes you a debt.\"
   }"
 ```
 
@@ -949,58 +948,17 @@ end
 
 ## Entity ID Reference
 
-### Existing NPCs (Quest Givers)
+Quest targets are ids from the loaded content pack. The engine does not ship a bestiary. SampleWorld ids below are illustrations.
 
-| ID | Name | Location | Role |
-|----|------|----------|------|
-| NPC0001 | Mira Thornwood | R0203 (Weary Wanderer) | Innkeeper, merchant |
-| NPC0002 | Bramwick | R0202 (General Store) | Merchant |
-| NPC0003 | Kara Ironhand | R0204 (Smithy) | Blacksmith |
-| NPC0004 | Captain Aldric | R0205 (Guard Post) | Guard captain |
-| NPC0005 | Guardsman Thom | R0201 (Town Gate) | Gate guard |
-| NPC0007 | Archivist Maren | R0208 (Archive) | Scholar |
-| NPC0008 | The Stranger | R0210 | Mysterious figure |
-| NPC0013 | Darius Coinsworth | R0213 | Wealthy merchant |
-
-### Existing Enemies (Kill Targets)
-
-| ID | Name | Level | Type | Location |
-|----|------|-------|------|----------|
-| ENM0001 | Catacomb Rat | 1 | Beast | Z00 (Catacombs) |
-| ENM0002 | Meadow Wolf | 2 | Beast | Z01 (Meadows) |
-| ENM0003 | Wild Boar | 2 | Beast | Z01 (Meadows) |
-| ENM0005 | Thornback Bear | 5 | Beast (miniboss) | Z01 (Forest) |
-| ENM0006 | Night Whisper | 4 | Spirit | Z02 (Oldtown) |
-| ENM0007 | Alley Thug | 2 | Humanoid | Z02 (Oldtown) |
-| ENM0009 | The Hollow Knight | 6 | Construct (boss) | Z00 (Catacombs) |
-
-### Existing Items (Collect / Reward Targets)
-
-| ID | Name | Type | Notes |
-|----|------|------|-------|
-| ITM0001 | Dusty Torch | Collectible | Stackable, max 5 |
-| ITM0006 | Copper Bits | Currency | Stackable, max 999 |
-| ITM0010 | Leather Cap | Armor (head) | 1 defense |
-| ITM0011 | Padded Vest | Armor (chest) | 2 defense |
-| ITM0012 | Weak Health Potion | Consumable | Stackable, max 10 |
-| ITM0013 | Wolf Pelt | Crafting | Stackable, max 10 |
-| ITM0014 | Boar Tusk | Crafting | Stackable, max 20 |
-| ITM0015 | Silver Mark | Currency | Stackable, max 999 |
-| ITM0018 | Rat Tail | Junk/Trophy | Stackable, max 50 |
-| ITM0020 | Hollow Knight Shard | Quest | Boss loot |
-| ITM0021 | Sturdy Branch | Weapon | 2 damage, starter |
-
-### Zones and Key Rooms
-
-| Zone | ID Pattern | Key Rooms |
-|------|-----------|-----------|
-| Catacombs (Tutorial) | Z00, R0001–R0006 | R0001 (Start), R0005 (Rat Nest), R0006 (Stairwell) |
-| Meadows / Forest | Z01, R0101–R0112 | R0101 (Emergence), R0106 (Deep Forest) |
-| Oldtown (Hub) | Z02, R0201–R0222 | R0201 (Gate), R0203 (Tavern), R0205 (Guard Post) |
-| Gloomfen Marsh | Z03, R0301–R0321 | R0301 (Marsh Gate), R0310 (Deep Marsh) |
-| Gloomfen Depths | Z19, R1901+ | Underground areas |
-
----
+| Kind | Example id | Example name | Area |
+|------|------------|--------------|------|
+| Room | SW-GATE | Town Gate | Z02_sample_town |
+| Room | SW-MARSH | Marsh Edge | Z03_sample_marsh |
+| NPC | NPC-GUARD | Gate Guard | Z02_sample_town |
+| Enemy | ENM-RAT | Sample Rat | Z00_sample_crypt |
+| Enemy | ENM-WARDEN | Sample Warden | Z00_sample_crypt |
+| Item | ITM-HERB | Sample Herb | — |
+| Quest | Q-TOWN-1 | Drain Sweep | Z02_sample_town |
 
 ## Lua API for Quests
 

@@ -24,7 +24,7 @@ const settle=page=>page.evaluate(async()=>{await document.fonts.ready;await docu
    const atlas=window.__mapPreview.snapshot.atlas,b=window.__mapPreview.landscapeModel(atlas).bounds;
    const ox=(b.minX+b.maxX)/2,oy=(b.minY+b.maxY)/2,pad=Math.max(24,Math.min(w,h)*.07);
    const fit=Math.min((w-2*pad)/(b.maxX-b.minX+1),h*.78/(b.maxY-b.minY+1));
-   const near=window.__mapPreview.surfaceGroups(atlas.places).filter(p=>['Z02_oldtown','Z05_silverbrook_vale'].includes(p.area));
+   const near=window.__mapPreview.surfaceGroups(atlas.places).filter(p=>['Z02_sample_town','Z04_sample_woods'].includes(p.area));
    const xs=near.map(p=>p.x),ys=near.map(p=>p.y),cx=(Math.min(...xs)+Math.max(...xs))/2,cy=(Math.min(...ys)+Math.max(...ys))/2;
    const target=Math.min(w*.74/(Math.max(...xs)-Math.min(...xs)+3),h*.78/(Math.max(...ys)-Math.min(...ys)+3),72);
    const wheels=Math.max(0,Math.round(Math.log(target/fit)/Math.log(1.12))),scale=Math.min(5,1.12**wheels),step=Math.min(110,fit*scale);
@@ -48,7 +48,7 @@ const settle=page=>page.evaluate(async()=>{await document.fonts.ready;await docu
    const a=window.__mapPreview.snapshot.atlas,ps=a.places.filter(p=>p.layer==='lower'),b=window.__mapPreview.undergroundModel(a).bounds;
    const xs=ps.map(p=>p.x),ys=ps.map(p=>p.y),pad=Math.max(24,Math.min(w,h)*.07),ox=(b.minX+b.maxX)/2,oy=(b.minY+b.maxY)/2;
    const fit=Math.min((w-2*pad)/(b.maxX-b.minX+1),h*.78/(b.maxY-b.minY+1));
-   const near=ps.filter(p=>['Z02_oldtown','Z00_catacombs_intro','Z19_gloomfen_depths'].includes(p.area));
+   const near=ps.filter(p=>['Z02_sample_town','Z00_sample_crypt','Z03_sample_marsh'].includes(p.area));
    const nx=near.map(p=>p.x),ny=near.map(p=>p.y),cx=(Math.min(...nx)+Math.max(...nx))/2,cy=(Math.min(...ny)+Math.max(...ny))/2;
    const target=Math.min(w*.65/(Math.max(...nx)-Math.min(...nx)+3),h*.75/(Math.max(...ny)-Math.min(...ny)+3),48);
    const wheels=Math.max(0,Math.round(Math.log(target/fit)/Math.log(1.12))),step=fit*Math.min(5,1.12**wheels);

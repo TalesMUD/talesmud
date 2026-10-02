@@ -33,7 +33,7 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "name": "Oldtown Guard",
+  "name": "Sampletown Guard",
   "description": "A weathered guard keeping watch over the town gates.",
   "currentRoomID": "ROOM_ID_HERE",
   "dialogID": "DIALOG_ID_HERE",

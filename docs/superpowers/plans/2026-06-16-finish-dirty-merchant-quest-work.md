@@ -59,7 +59,7 @@
   Keep the sell action hidden for quest, bound, and equipped items. Ensure the sell quantity input is numeric, clamped from `1` to the available quantity, and closes the detail overlay cleanly when the popup opens.
 
 - [x] **Step 2: Build mud client**
-  Run: `/home/atla/.nvm/versions/node/v20.20.0/bin/node ./node_modules/rollup/dist/bin/rollup -c` from `public/mud-client`.
+  Run: `node ./node_modules/rollup/dist/bin/rollup -c` from `public/mud-client`.
   Expected: exit 0 and updated `public/bundle.js`.
 
 ### Task 4: Creator Quest Area And Docs
@@ -71,7 +71,7 @@
 - Modify: `FEATURES.md`
 
 - [x] **Step 1: Verify Creator behavior**
-  Build creator app with `/home/atla/.nvm/versions/node/v20.20.0/bin/node node_modules/vite/bin/vite.js build` from `public/app`.
+  Build creator app with `node node_modules/vite/bin/vite.js build` from `public/app`.
 
 - [x] **Step 2: Update docs**
   Document quest `area`, merchant trading/restock behavior, and inventory sell UI at the appropriate level in project docs.

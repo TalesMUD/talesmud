@@ -256,7 +256,7 @@
       </div>
       <div class="space-y-1.5">
         <label class="label-caps" for="ct_origin">Origin Area</label>
-        <input id="ct_origin" class="input-base" bind:value={$store.selectedElement.originArea} placeholder="e.g. Oldtown, Forest Edge" />
+        <input id="ct_origin" class="input-base" bind:value={$store.selectedElement.originArea} placeholder="e.g. Sampletown, Forest Edge" />
       </div>
     </div>
 

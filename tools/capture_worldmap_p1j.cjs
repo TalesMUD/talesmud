@@ -1,6 +1,6 @@
 // Local-only P1i prototype capture. Does not touch production.
 // Usage: CHROMIUM_PATH=/opt/google/chrome/chrome WORLDMAP_PREVIEW_URL=http://127.0.0.1:8155/ \
-//   PUPPETEER_MODULE=/home/clawd/clawd/node_modules/puppeteer-core \
+//   PUPPETEER_MODULE=$HOME/dev/node_modules/puppeteer-core \
 //   node tools/capture_worldmap_p1j.cjs
 const fs = require('node:fs'), path = require('node:path');
 const puppeteer = require(process.env.PUPPETEER_MODULE || 'puppeteer-core');
@@ -70,8 +70,8 @@ const settle = page => page.evaluate(async () => {
       await page.mouse.move(sx + pan.x, sy + pan.y, { steps: 12 }); await page.mouse.up(); await settle(page);
       await page.mouse.move(30, 30); await save(kind);
     };
-    await frame('Z01_meadows_forest_path', 'maxzoom');
-    await frame('Z02_oldtown', 'oldtown');
+    await frame('Z01_sample_meadow', 'maxzoom');
+    await frame('Z02_sample_town', 'sampletown');
     console.log(JSON.stringify({ label, errors, maximum, files: fs.readdirSync(out).filter(f => f.includes(`p1j`)) }, null, 2));
     if (errors.length) process.exitCode = 1;
   } finally {

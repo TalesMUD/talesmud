@@ -13,13 +13,13 @@ import (
 
 func continentFixture() []*rooms.Room {
 	return []*rooms.Room{
-		withCoords(testRoom("street", "Gate", "Z02_oldtown", []string{"outdoor", "gate"}, exit("north", "square", false), exit("inside", "inn", false), exit("down", "crypt", true)), 0, 0, 0),
-		withCoords(testRoom("square", "Square", "Z02_oldtown", []string{"outdoor"}), 0, -1, 0),
-		testRoom("inn", "Inn", "Z02_oldtown", []string{"indoor"}, exit("outside", "street", false), exit("up", "guest", false)),
-		withCoords(testRoom("guest", "Guest room", "Z02_oldtown", []string{"indoor"}), 0, 0, 2),
-		testRoom("crypt", "Crypt", "Z02_oldtown", []string{"dungeon"}, exit("up", "street", false)),
-		withCoords(testRoom("peak", "Peak", "Z09_thornfield_highlands", []string{"outdoor", "mountain"}, exit("south", "ridge", false)), 30, 30, 4),
-		withCoords(testRoom("ridge", "Ridge", "Z09_thornfield_highlands", []string{"outdoor", "mountain"}), 30, 31, 3),
+		withCoords(testRoom("street", "Gate", "Z02_sample_town", []string{"outdoor", "gate"}, exit("north", "square", false), exit("inside", "inn", false), exit("down", "crypt", true)), 0, 0, 0),
+		withCoords(testRoom("square", "Square", "Z02_sample_town", []string{"outdoor"}), 0, -1, 0),
+		testRoom("inn", "Inn", "Z02_sample_town", []string{"indoor"}, exit("outside", "street", false), exit("up", "guest", false)),
+		withCoords(testRoom("guest", "Guest room", "Z02_sample_town", []string{"indoor"}), 0, 0, 2),
+		testRoom("crypt", "Crypt", "Z02_sample_town", []string{"dungeon"}, exit("up", "street", false)),
+		withCoords(testRoom("peak", "Peak", "Z09_sample_peaks", []string{"outdoor", "mountain"}, exit("south", "ridge", false)), 30, 30, 4),
+		withCoords(testRoom("ridge", "Ridge", "Z09_sample_peaks", []string{"outdoor", "mountain"}), 30, 31, 3),
 		testRoom("forest", "Forest", "unconfigured", []string{"outdoor", "forest"}, exit("east", "street", false)),
 	}
 }

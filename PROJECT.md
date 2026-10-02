@@ -137,9 +137,9 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Anonymous 30-minute demo sessions without Auth0 registration
   - "Play as guest" button on the logged-out welcome screen, under Continue with X, Continue with Google, and Email and password
   - Random character with random class from system templates
-  - Spawns in `ServerSettings.StartRoomID` (default `R0001` when that room exists)
-  - Auto-grants `source.type: auto` quests for the start room's zone (Z00 catacombs: QST0001–QST0004)
-  - Entering a new area grants that zone's auto quests (Z01 meadows: QST010*)
+  - Spawns in `ServerSettings.StartRoomID` when the pack sets it. If that field is empty, the engine uses room `R0001` only when that room exists
+  - Auto-grants `source.type: auto` quests whose area matches the start room
+  - Entering a new area grants that area's auto quests
   - Full starter items equipped automatically
   - Per-character level cap of 5 for guest characters
   - Full chat access during session

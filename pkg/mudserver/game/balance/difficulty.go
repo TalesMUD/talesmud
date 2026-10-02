@@ -133,8 +133,7 @@ func getDefaultConfig() *CombatBalanceConfig {
 			"boss":    {HP: 1.85, Attack: 1.15, Defense: 1.5},
 		},
 		NamedOverrides: map[string]DifficultyMultipliers{
-			"The Hollow Knight": {HP: 1.0, Attack: 0.85, Defense: 0.9},
-			"Hollow Knight":     {HP: 1.0, Attack: 0.85, Defense: 0.9},
+			"Sample Warden": {HP: 1.0, Attack: 0.85, Defense: 0.9},
 		},
 		LevelGap:      defaultLevelGap(),
 		Threat:        defaultThreat(),

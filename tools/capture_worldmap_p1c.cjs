@@ -13,7 +13,7 @@ const settle=page=>page.evaluate(async()=>{await document.fonts.ready;await Prom
   await page.goto(process.env.WORLDMAP_PREVIEW_URL||'http://127.0.0.1:8139/',{waitUntil:'networkidle0'});
   await page.waitForFunction(()=>window.__mapPreview?.ready);await settle(page);
   const screenshot=kind=>page.screenshot({path:path.join(out,`worldmap-p1c-${kind}-1920x1080.png`)});
-  assert.equal(await page.$eval('.intel-title',e=>e.textContent),'Oldtown Gate');
+  assert.equal(await page.$eval('.intel-title',e=>e.textContent),'Sampletown Gate');
   await screenshot('overview');
   // The minimum user scale still frames the whole continent and keeps crisp
   // town glyphs. Return to world fit before the detail interaction checks.
@@ -30,7 +30,7 @@ const settle=page=>page.evaluate(async()=>{await document.fonts.ready;await Prom
    const ox=(b.minX+b.maxX)/2,oy=(b.minY+b.maxY)/2;
    const pad=Math.max(24,Math.min(w,h)*.07);
    const fit=Math.min((w-2*pad)/(b.maxX-b.minX+1),(h-2*pad)/(b.maxY-b.minY+1));
-   const near=window.__mapPreview.surfaceGroups(atlas.places).filter(p=>['Z02_oldtown','Z05_silverbrook_vale'].includes(p.area));
+   const near=window.__mapPreview.surfaceGroups(atlas.places).filter(p=>['Z02_sample_town','Z04_sample_woods'].includes(p.area));
    const xs=near.map(p=>p.x),ys=near.map(p=>p.y);
    const cx=(Math.min(...xs)+Math.max(...xs))/2,cy=(Math.min(...ys)+Math.max(...ys))/2;
    const targetStep=Math.min(w*.74/(Math.max(...xs)-Math.min(...xs)+3),h*.78/(Math.max(...ys)-Math.min(...ys)+3),72);
@@ -67,7 +67,7 @@ const settle=page=>page.evaluate(async()=>{await document.fonts.ready;await Prom
    return window.__mapPreview.paintAtlas(c.getContext('2d'),{w,h,atlas,activeLayer:'overworld',visiblePlaces:atlas.places.filter(p=>p.layer==='overworld'),visibleRegions:atlas.regions.filter(r=>r.layer==='overworld'),currentRoomId:atlas.currentRoomId,maximized:true,panX:0,panY:0,userScale:1,frameWorld:true}).hits.find(h=>h.place.id==='R0201');
   },bounds);
   await page.mouse.click(bounds.x+gate.px,bounds.y+gate.py);await settle(page);
-  assert.equal(await page.$eval('.intel-title',e=>e.textContent),'Oldtown Gate');
+  assert.equal(await page.$eval('.intel-title',e=>e.textContent),'Sampletown Gate');
   const interiorCount=await page.$$eval('.room-choice[data-room-id]',els=>els.length);assert.ok(interiorCount>6);
   await page.type('[aria-label="Filter buildings"]','Ground Floor');await settle(page);
   assert.equal(await page.$$eval('.room-choice[data-room-id]',els=>els.length),1);
@@ -84,7 +84,7 @@ const settle=page=>page.evaluate(async()=>{await document.fonts.ready;await Prom
    const xs=ps.map(p=>p.x),ys=ps.map(p=>p.y),pad=Math.max(24,Math.min(w,h)*.07);
    const ox=(b.minX+b.maxX)/2,oy=(b.minY+b.maxY)/2;
    const fit=Math.min((w-2*pad)/(b.maxX-b.minX+1),(h-2*pad)/(b.maxY-b.minY+1));
-   const near=ps.filter(p=>['Z02_oldtown','Z00_catacombs_intro','Z19_gloomfen_depths'].includes(p.area));
+   const near=ps.filter(p=>['Z02_sample_town','Z00_sample_crypt','Z03_sample_marsh'].includes(p.area));
    const nx=near.map(p=>p.x),ny=near.map(p=>p.y),cx=(Math.min(...nx)+Math.max(...nx))/2,cy=(Math.min(...ny)+Math.max(...ny))/2;
    const target=Math.min(w*.65/(Math.max(...nx)-Math.min(...nx)+3),h*.75/(Math.max(...ny)-Math.min(...ny)+3),48);
    const wheels=Math.max(0,Math.round(Math.log(target/fit)/Math.log(1.12))),step=fit*1.12**wheels;
@@ -161,7 +161,7 @@ const settle=page=>page.evaluate(async()=>{await document.fonts.ready;await Prom
   const phone=await page.$eval('#map-overview-overlay',e=>{const r=e.getBoundingClientRect();return{w:r.width,h:r.height,scroll:document.scrollingElement.scrollHeight}});
   assert.equal(phone.w,390);assert.equal(phone.h,844);assert.equal(phone.scroll,844);
   await page.keyboard.press('Escape');assert.equal(await page.$('#map-overview-overlay'),null);
-  const report={source:'Local read-only 351-room content snapshot in production Svelte overlay; no VPS or game session.',sheets,errors,interiorCount,marker,cache,polish,coastFixture,performance:performanceResult,phone,checks:['fonts/images loaded','smooth coast retains all surface rooms','room-driven stamp variation','four underground floor styles','torch/stair markers','minimum zoom town glyphs','continent overview','Oldtown + Silverbrook zoom/pan','exterior hit selection','decorative ground not clickable','recenter preserves selection','Fit world','town filter','interior selection','entrance switches Lower','instance marker on surface anchor','phone bounds','Escape']};
+  const report={source:'Local read-only 351-room content snapshot in production Svelte overlay; no VPS or game session.',sheets,errors,interiorCount,marker,cache,polish,coastFixture,performance:performanceResult,phone,checks:['fonts/images loaded','smooth coast retains all surface rooms','room-driven stamp variation','four underground floor styles','torch/stair markers','minimum zoom town glyphs','continent overview','Sampletown + Sample Woods zoom/pan','exterior hit selection','decorative ground not clickable','recenter preserves selection','Fit world','town filter','interior selection','entrance switches Lower','instance marker on surface anchor','phone bounds','Escape']};
   fs.writeFileSync(path.join(out,'worldmap-p1c-browser-checks.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});

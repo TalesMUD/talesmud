@@ -13,7 +13,7 @@
   const roomOfTheDay = writable({
     name: "RoomOfTheDay",
     meta: {
-      background: "oldtown-griphon",
+      background: "sample-tavern",
     },
   });
   let loaded = false;

@@ -27,14 +27,14 @@ func TestCombatDurationTargets(t *testing.T) {
 		maxRounds float64
 		minWin    float64 // minimum win rate for a fair at-level fight
 	}{
-		{"trash_rat", 1, "Catacomb Rat", "trash", 3, 6, 0.90},
-		{"trash_sewer", 2, "Sewer Rat", "trash", 3, 6, 0.90},
-		{"trash_mole", 2, "Tunnel Mole", "trash", 3, 7, 0.85}, // mole DEF can nudge past 6
-		{"elite_wolf", 2, "Meadow Wolf", "elite", 8, 15, 0.85},
-		{"elite_bandit", 3, "Bandit", "elite", 8, 15, 0.75},
-		{"elite_bear", 5, "Thornback Bear", "elite", 8, 16, 0.55},
-		{"boss_brute", 4, "Burrow Brute", "boss", 15, 30, 0.45},
-		{"boss_hollow", 6, "Hollow Knight", "boss", 15, 30, 0.35},
+		{"trash_rat", 1, "Sample Rat", "trash", 3, 6, 0.90},
+		{"trash_sewer", 2, "Sample Pest", "trash", 3, 6, 0.90},
+		{"trash_mole", 2, "Sample Burrower", "trash", 3, 7, 0.85}, // mole DEF can nudge past 6
+		{"elite_wolf", 2, "Sample Wolf", "elite", 8, 15, 0.85},
+		{"elite_bandit", 3, "Sample Bandit", "elite", 8, 15, 0.75},
+		{"elite_bear", 5, "Sample Bear", "elite", 8, 16, 0.55},
+		{"boss_brute", 4, "Sample Brute", "boss", 15, 30, 0.45},
+		{"boss_warden", 6, "Sample Warden", "boss", 15, 30, 0.35},
 	}
 
 	for _, tc := range cases {
@@ -77,13 +77,13 @@ func TestDurationBeforeAfterSnapshot(t *testing.T) {
 		level int32
 		name  string
 	}{
-		{1, "Catacomb Rat"},
-		{2, "Sewer Rat"},
-		{2, "Meadow Wolf"},
-		{3, "Bandit"},
-		{5, "Thornback Bear"},
-		{4, "Burrow Brute"},
-		{6, "Hollow Knight"},
+		{1, "Sample Rat"},
+		{2, "Sample Pest"},
+		{2, "Sample Wolf"},
+		{3, "Sample Bandit"},
+		{5, "Sample Bear"},
+		{4, "Sample Brute"},
+		{6, "Sample Warden"},
 	}
 	for _, e := range enemies {
 		en := simutil.EnemyConfigByName(e.name)

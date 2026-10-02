@@ -49,7 +49,7 @@ fields:
     type: string
     # Starting area name. Flavor text indicating where the character
     # comes from. May influence starting room placement.
-    # Examples: "Silverwood Forest", "Oldtown Slums", "Mountain Keep"
+    # Examples: "Silverwood Forest", "Sampletown Slums", "Mountain Keep"
 
   archetype:
     type: string

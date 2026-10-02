@@ -4,7 +4,7 @@ function createStore() {
   const { subscribe, set, update } = writable({
     exits: [],
     actions: [],
-    background: "oldtown-griphon",
+    background: "sample-tavern",
   });
   return {
     subscribe,

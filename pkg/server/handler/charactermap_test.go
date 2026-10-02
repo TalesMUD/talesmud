@@ -59,11 +59,11 @@ func TestGetCharacterMapReturnsDiscoveredAtlas(t *testing.T) {
 	}
 	for _, room := range []*rooms.Room{
 		{
-			Entity: &entities.Entity{ID: "R0101"}, Name: "Meadow", Area: "Z01_meadows_forest_path",
+			Entity: &entities.Entity{ID: "R0101"}, Name: "Meadow", Area: "Z01_sample_meadow",
 			Tags: []string{"outdoor", "starting_room"}, Exits: &exitsA,
 		},
 		{
-			Entity: &entities.Entity{ID: "R0102"}, Name: "Field", Area: "Z01_meadows_forest_path",
+			Entity: &entities.Entity{ID: "R0102"}, Name: "Field", Area: "Z01_sample_meadow",
 			Tags: []string{"outdoor"}, Exits: &exitsB,
 		},
 	} {

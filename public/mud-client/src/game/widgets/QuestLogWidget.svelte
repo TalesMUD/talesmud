@@ -79,24 +79,7 @@
       pinnedQuests = saved ? JSON.parse(saved) : [];
     }
     const here = ($store.atlas && ($store.atlas.places || []).find((pl) => pl.id === $store.currentRoomId)) || null;
-    currentAreaLabel = normalizeAreaLabel(here?.areaName || here?.area || '') || deriveAreaFromRoomId($store.currentRoomId);
-  }
-
-  function deriveAreaFromQuestId(questId) {
-    const id = String(questId || '').toUpperCase();
-    if (id.startsWith('QST00')) return 'Catacombs';
-    if (id.startsWith('QST01')) return 'Meadows';
-    if (id.startsWith('QST02')) return 'Oldtown';
-    if (id.startsWith('QST03')) return 'Gloomfen';
-    if (id.startsWith('QST04')) return 'Ashenvale';
-    if (id.startsWith('QST05')) return 'Silver Vale';
-    if (id.startsWith('QST06')) return 'Kazgrath';
-    if (id.startsWith('QST07')) return 'Mirrordeep';
-    if (id.startsWith('QST08')) return 'Highlands';
-    if (id.startsWith('QST09')) return 'Daily';
-    if (id.startsWith('QST10')) return 'Frontier';
-    if (id.startsWith('QST11') || id.startsWith('QST12')) return 'Far Reaches';
-    return 'Other';
+    currentAreaLabel = normalizeAreaLabel(here?.areaName || here?.area || '');
   }
 
   function normalizeAreaLabel(raw) {
@@ -107,19 +90,8 @@
     return s.replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
-  function deriveAreaFromRoomId(roomId) {
-    const id = String(roomId || '').toUpperCase();
-    if (id.startsWith('R00')) return 'Catacombs';
-    if (id.startsWith('R01')) return 'Meadows';
-    if (id.startsWith('R02')) return 'Oldtown';
-    if (id.startsWith('R03')) return 'Gloomfen';
-    if (id.startsWith('R04')) return 'Ashenvale';
-    if (id.startsWith('R05')) return 'Silver Vale';
-    return '';
-  }
-
   function questArea(q) {
-    return normalizeAreaLabel(q?.area) || deriveAreaFromQuestId(q?.questId);
+    return normalizeAreaLabel(q?.area) || 'Other';
   }
 
   function isAreaExpanded(area) {

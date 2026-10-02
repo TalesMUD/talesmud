@@ -68,9 +68,9 @@ func TestLevelScaling(t *testing.T) {
 // --- Balance Tests: L1 vs Trivial Enemies ---
 
 func TestLevel1VsTrivialEnemies(t *testing.T) {
-	rat := simutil.EnemyConfigByName("Catacomb Rat")
+	rat := simutil.EnemyConfigByName("Sample Rat")
 	if rat == nil {
-		t.Fatal("Catacomb Rat config not found")
+		t.Fatal("Sample Rat config not found")
 	}
 
 	for _, cls := range simutil.AllClassConfigs() {
@@ -82,7 +82,7 @@ func TestLevel1VsTrivialEnemies(t *testing.T) {
 				Iterations:    SimIterations,
 			})
 
-			t.Logf("%s L1 vs Catacomb Rat: win=%.1f%% avgRnds=%.1f ATK=%d DEF=%d HP=%d",
+			t.Logf("%s L1 vs Sample Rat: win=%.1f%% avgRnds=%.1f ATK=%d DEF=%d HP=%d",
 				cls.Name, result.WinRate*100, result.AvgRounds,
 				result.PlayerAttackPower, result.PlayerDefense, result.PlayerMaxHP)
 
@@ -100,7 +100,7 @@ func TestLevel1VsTrivialEnemies(t *testing.T) {
 // --- Balance Tests: L1 vs Same-Level Normal Enemies ---
 
 func TestLevel1VsSameLevelEnemies(t *testing.T) {
-	level2Enemies := []string{"Meadow Wolf", "Alley Thug", "Sewer Rat"}
+	level2Enemies := []string{"Sample Wolf", "Sample Thug", "Sample Pest"}
 
 	for _, cls := range simutil.AllClassConfigs() {
 		for _, enemyName := range level2Enemies {
@@ -138,7 +138,7 @@ func TestLevel1VsSameLevelEnemies(t *testing.T) {
 // --- Balance Tests: L5 vs L2 Enemies (the original bug scenario) ---
 
 func TestLevel5VsLevel2Enemies(t *testing.T) {
-	level2Enemies := []string{"Meadow Wolf", "Sewer Rat", "Tunnel Mole", "Alley Thug", "Wild Boar"}
+	level2Enemies := []string{"Sample Wolf", "Sample Pest", "Sample Burrower", "Sample Thug", "Sample Boar"}
 
 	for _, cls := range simutil.AllClassConfigs() {
 		for _, enemyName := range level2Enemies {
@@ -181,9 +181,9 @@ func TestSameLevelVsNormalEnemies(t *testing.T) {
 		enemyName string
 		level     int32
 	}{
-		{"Meadow Wolf", 2},
-		{"Bandit", 3},
-		{"Night Whisper", 4},
+		{"Sample Wolf", 2},
+		{"Sample Bandit", 3},
+		{"Sample Shade", 4},
 	}
 
 	for _, cls := range simutil.AllClassConfigs() {
@@ -233,8 +233,8 @@ func TestBossesRequireHigherLevel(t *testing.T) {
 		maxRounds  float64
 		classes    []string // empty = all
 	}{
-		{"Hollow Knight", 6, 0.25, 1.0, 12, 35, []string{"Warrior", "Ranger", "Rogue"}},
-		{"Burrow Brute", 4, 0.30, 1.0, 12, 35, []string{"Warrior", "Ranger", "Rogue"}},
+		{"Sample Warden", 6, 0.25, 1.0, 12, 35, []string{"Warrior", "Ranger", "Rogue"}},
+		{"Sample Brute", 4, 0.30, 1.0, 12, 35, []string{"Warrior", "Ranger", "Rogue"}},
 	}
 
 	for _, cls := range simutil.AllClassConfigs() {

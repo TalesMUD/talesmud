@@ -1,5 +1,5 @@
 
-@prod=https://veilspan.com/
+@prod=https://talesmud.io/
 @local=http://127.0.0.1:8010
 @host={{local}}
 

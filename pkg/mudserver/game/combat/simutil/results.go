@@ -126,7 +126,7 @@ func FormatBalanceReport(results []*SimResult) string {
 		}
 
 		// Bosses should be harder
-		if r.EnemyName == "Burrow Brute" || r.EnemyName == "Hollow Knight" || r.EnemyName == "Thornback Bear" {
+		if r.EnemyName == "Sample Brute" || r.EnemyName == "Sample Warden" || r.EnemyName == "Sample Bear" {
 			expectedMin -= 0.15
 			expectedMax -= 0.10
 		}

@@ -216,7 +216,7 @@
 
 <style>
   /* ═══════════════════════════════════════════════════
-     TERMINAL X — Veilspan-style MUD terminal widget
+     TERMINAL X — MUD terminal widget
      ═══════════════════════════════════════════════════ */
 
   .tx-window {

@@ -481,7 +481,7 @@
   }
 
   onMount(async () => {
-    document.body.style.backgroundImage = "url('" + backend + "/backgrounds/oldtown-griphon.png')";
+    document.body.style.backgroundImage = "url('" + backend + "/backgrounds/sample-tavern.png')";
     document.body.style.backgroundAttachment = "fixed";
 
     var nav = document.querySelector("nav");

@@ -474,7 +474,7 @@
           class="input-base"
           list="quest-area-suggestions"
           bind:value={$store.selectedElement.area}
-          placeholder="e.g. Gloomfen Marsh"
+          placeholder="e.g. Sample Marsh"
         />
         <datalist id="quest-area-suggestions">
           {#each areaSuggestions as val}

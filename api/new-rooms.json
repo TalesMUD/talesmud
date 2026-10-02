@@ -330,10 +330,10 @@
     {
         "id": "town-outskirts",
         "detail": "From here, you can see the town's bustling market square, filled with vendors and townsfolk.",
-        "name": "Outskirts of Oldtown",
+        "name": "Outskirts of Sampletown",
         "description": "As you descend the hills, you find yourself on the outskirts of a medium-sized walled town. The stone walls are worn but well maintained, and a large wooden gate stands open in welcome.",
         "roomType": "town",
-        "area": "Oldtown",
+        "area": "Sampletown",
         "areaType": "urban",
         "tags": null,
         "actions": null,
@@ -347,32 +347,32 @@
             {
                 "name": "north",
                 "description": "Enter through the town gates",
-                "target": "oldtown-gate",
+                "target": "sampletown-gate",
                 "params": null
             }
         ]
     },
     {
-        "id": "oldtown-gate",
+        "id": "sampletown-gate",
         "detail": "Above the gate, you see the town's crest - a shield bearing the image of a golden tree.",
-        "name": "Oldtown Gate",
-        "description": "You stand before the grand gate of Oldtown. It's a sturdy construction of thick wood and iron reinforcements. Town guards nod at you as you pass.",
+        "name": "Sampletown Gate",
+        "description": "You stand before the grand gate of Sampletown. It's a sturdy construction of thick wood and iron reinforcements. Town guards nod at you as you pass.",
         "roomType": "gate",
-        "area": "Oldtown",
+        "area": "Sampletown",
         "areaType": "urban",
         "tags": null,
         "actions": null,
         "exits": [
             {
                 "name": "leave",
-                "description": "Leave Oldtown",
+                "description": "Leave Sampletown",
                 "target": "town-outskirts",
                 "params": null
             },
             {
                 "name": "enter",
-                "description": "Enter Oldtown",
-                "target": "oldtown-market",
+                "description": "Enter Sampletown",
+                "target": "sampletown-market",
                 "params": null
             }
         ]

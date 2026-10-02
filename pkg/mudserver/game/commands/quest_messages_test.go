@@ -75,7 +75,7 @@ func containsRune(s string, r rune) bool {
 func TestBuildQuestLogEntryReadyTurnInNpcBound(t *testing.T) {
 	quest := &quests.Quest{
 		Entity: &entities.Entity{ID: "QST0201"},
-		Name:   "Welcome to Oldtown",
+		Name:   "Welcome to Sampletown",
 		Source: quests.QuestSource{Type: "npc", NPCID: "NPC0005"},
 		Objectives: []quests.Objective{
 			{ID: "talk", Type: quests.ObjectiveTalk, Description: "Speak with Mira", Amount: 1},

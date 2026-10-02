@@ -150,7 +150,7 @@ func candidateDirs() []string {
 		dirs = append(dirs, p)
 	}
 	dirs = append(dirs,
-		filepath.Join("import", "mvp-rpg-1", "data", "recipes"),
+		filepath.Join("import", "sample-world", "data", "recipes"),
 		filepath.Join("data", "recipes"),
 	)
 	return dirs

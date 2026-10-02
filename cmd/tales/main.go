@@ -19,7 +19,7 @@ import (
 
 func main() {
 	// Parse command-line flags
-	importFolder := flag.String("import", "", "Import world data from folder (e.g., mvp-rpg-1)")
+	importFolder := flag.String("import", "", "Import world data from folder (e.g., sample-world)")
 	configPath := flag.String("config", "", "Game mode YAML. Sets port and database when those fields are present.")
 	verbose := flag.Bool("verbose", false, "Enable verbose output during import")
 	dryRun := flag.Bool("dry-run", false, "Validate import data without making changes")

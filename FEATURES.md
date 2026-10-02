@@ -251,7 +251,7 @@ Stackable item quantities are kept consistent when consumed or partially dropped
 - **Gathering**: room actions `GATHER …` / `FORAGE …` / `HARVEST …` (scripted nodes with deplete flags) plus commands `gather` / `forage` / `harvest [target]`.
 - **Crafting**: `recipes` lists all recipes; bare `craft` opens the same list; `craft <recipe>` consumes mats and grants output. Client seeds a **Recipes** action-bar pin; R0209 also exposes **CRAFT** / **RECIPES** room chips.
 - Optional **stations**: recipe `station: forge` requires room tag `forge` or `crafting`; `campfire` requires `campfire`/`kitchen`/`hearth`. Food/leather recipes craft anywhere.
-- Recipe YAML lives in content `data/recipes/` (loaded from `import/mvp-rpg-1/data/recipes` at runtime; seed fallback in engine).
+- Recipe YAML lives in content `data/recipes/` (loaded from `import/sample-world/data/recipes` at runtime; seed fallback in engine).
 
 **Equipment Slots**:
 - `head`, `chest`, `legs`, `boots`, `hands`, `neck`, `ring1`, `ring2`
@@ -2283,7 +2283,7 @@ Area-local authored coordinates and compass exits define geography. Compact zone
   "layers": [{"id": "overworld", "name": "Overworld", "kind": "overworld"}],
   "places": [{"id": "R0102", "name": "Wildflower Field", "x": 2, "y": -1, "layer": "overworld", "biome": "meadow", "terrain": "grassland", "mapRole": "surface", "kind": "wild", "discovered": true, "canTravel": true}],
   "paths": [{"from": "R0101", "to": "R0102", "dir": "north", "kind": "trail", "layer": "overworld"}],
-  "regions": [{"id": "Z01_meadows_forest_path:overworld", "name": "Meadows Forest Path", "hull": [[1, -2], [3, -2], [3, 0]], "biome": "meadow"}],
+  "regions": [{"id": "Z01_sample_meadow:overworld", "name": "Sample Meadow", "hull": [[1, -2], [3, -2], [3, 0]], "biome": "meadow"}],
   "landscape": [{"x": 2, "y": -1, "terrain": "grassland"}]
 }
 ```
@@ -2380,10 +2380,10 @@ type GuestService interface {
 2. Server checks `ServerSettings.GuestsAllowed` and `MaxGuestAccounts`
 3. IP rate limit checked (10 per hour per IP)
 4. Random character created from system template presets with full starter items
-5. Character spawned in `ServerSettings.StartRoomID` (default `R0001` if that room exists); auto quests for that zone are granted
-5a. Entering a room grants auto-source quests for that room's area (Z01 meadows: QST010*) so they fire after leaving Z00
+5. Character spawned in `ServerSettings.StartRoomID` when the pack sets it. If that field is empty, the engine uses room `R0001` only when that room exists. Auto quests whose area matches the start room are granted
+5a. Entering a room grants auto-source quests for that room's area
 5b. Lua `tales.game.giveItem` notifies collect-quest progress (foraging, script rewards)
-5c. Quest YAML `onAcceptScriptId` runs after a dialog accept (Z01 Wren reveals the creek burrow)
+5c. Quest YAML `onAcceptScriptId` runs after a dialog accept
 6. Character `MaxLevelCap` set to 5
 7. User created with `IsGuest=true`, `GuestExpiresAt=now+30min`
 8. HMAC-SHA256 token signed with `GUEST_SECRET` env var
@@ -2397,7 +2397,7 @@ type GuestService interface {
 // In ServerSettings:
 GuestsAllowed    bool  // Enable/disable guest mode (default: true)
 MaxGuestAccounts int   // Max concurrent guests (default: 20, 0 = unlimited)
-StartRoomID      string // New/guest spawn room (default "R0001")
+StartRoomID      string // New/guest spawn room (empty until a pack sets it; R0001 is only a fallback when that room exists)
 ```
 
 ### User Entity Guest Fields

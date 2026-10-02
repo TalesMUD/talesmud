@@ -52,7 +52,7 @@ const settle = page => page.evaluate(async () => {
     await wheel(-100, 5); assert.deepEqual(await read(), maximum, 'wheel cannot exceed maximum');
     const pan = await page.evaluate(step => {
       const a = window.__mapPreview.snapshot.atlas, b = window.__mapPreview.landscapeModel(a).bounds;
-      const town = window.__mapPreview.surfaceGroups(a.places).filter(p => p.area === 'Z02_oldtown');
+      const town = window.__mapPreview.surfaceGroups(a.places).filter(p => p.area === 'Z02_sample_town');
       const xs = town.map(p => p.x), ys = town.map(p => p.y);
       return {x: ((b.minX + b.maxX) / 2 - (Math.min(...xs) + Math.max(...xs)) / 2) * step,
         y: ((b.minY + b.maxY) / 2 - (Math.min(...ys) + Math.max(...ys)) / 2) * step};
