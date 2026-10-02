@@ -138,5 +138,6 @@ export function onPortraitError(ev, entity) {
 
 export function onPortraitBustError(ev, entity) {
   const img = ev && ev.currentTarget;
-  swapOnce(img, figureFallback(entity));
+  // Prefer full-body sprite; only silhouette if that is also missing.
+  swapOnce(img, portraitSrc(entity));
 }
