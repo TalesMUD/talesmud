@@ -710,7 +710,21 @@ function drawTile(ctx, place, px, py, tileStep, opts) {
   // Round shared boundaries independently to avoid subpixel seams while panning.
   const x = Math.round(px - half), y = Math.round(py - half);
   const size = Math.ceil(tileStep);
-  drawTerrain(ctx, tileKeyFor(place), place.id, x, y, size);
+  const key = tileKeyFor(place);
+  if (key === 'fog') {
+    // Soft cloud blob instead of fog terrain stamp (non-landscape floors).
+    const r = Math.max(10, size * 0.72);
+    const g = ctx.createRadialGradient(px, py, r * 0.15, px, py, r * 1.35);
+    g.addColorStop(0, 'rgba(48, 64, 78, 0.82)');
+    g.addColorStop(0.55, 'rgba(22, 32, 42, 0.72)');
+    g.addColorStop(1, 'rgba(10, 16, 24, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(px, py, r * 1.15, r * 0.95, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    drawTerrain(ctx, key, place.id, x, y, size);
+  }
   if (place.id === opts.travelTargetId) {
     ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 2;
     ctx.strokeRect(x, y, size, size);

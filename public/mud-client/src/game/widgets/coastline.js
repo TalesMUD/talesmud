@@ -47,7 +47,8 @@ export function smoothCoast(model) {
   const bandPixels=new Uint32Array(bi.data.buffer),maskPixels=new Uint32Array(mi.data.buffer),tileFlags=new Uint8Array(w/scale*h/scale);
   for(let y=0;y<h;y++)for(let x=0;x<w;x++) {
     const i=y*w+x,v=alpha[i*4+3],t=BAYER[(y%4)*4+x%4],key=v*16+t;
-    maskPixels[i]=maskTable[key];bandPixels[i]=bandTable[key+fogGrid[i]*4096];
+    // Soft fog overlay owns unexplored look; coast bands stay organic (no Bayer fog checker).
+    maskPixels[i]=maskTable[key];bandPixels[i]=bandTable[key];
     // Broken foam glints follow the existing band, never charted ground or fog.
     if(!fogGrid[i]&&v>=112&&v<123&&((x*17+y*31)%11<3))bandPixels[i]=bandTable[v*16+15];
     tileFlags[Math.floor(y/scale)*(w/scale)+Math.floor(x/scale)]|=maskPixels[i]?1:2;
