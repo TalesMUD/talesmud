@@ -3,7 +3,7 @@
   import { combatStageFocus, isTextEntry, prefersReducedMotion, rarityClass } from '../keyboardShortcuts.js';
   import { phaseCaption, phaseBanner } from '../bossPhases.js';
   import { battleDockOpen } from '../uiChrome.js';
-  import { enemySilhouette, playerSilhouette, portraitSrc } from '../portraitSrc.js';
+  import { battleSpriteSrc, enemySilhouette, playerSilhouette } from '../portraitSrc.js';
   import {
     skillDisplayName,
     isConsumableItem,
@@ -14,6 +14,7 @@
     actionGenericArtUrl,
   } from '../hudPrefs.js';
   import { settingsStore } from '../SettingsStore.js';
+  import { resolveBattleLayoutB } from '../battleLayout.js';
   import { overlayStore } from './overlayStore.js';
   import { itemArtSrc, onItemArtError } from '../itemArtSrc.js';
   import { backend } from '../../api/base.js';
@@ -60,6 +61,7 @@
   $: combatJoin = $store.combatJoin;
   $: showJoinBanner = !!(combatJoin?.at && nowMs - combatJoin.at < 3000);
   $: targetId = $store.combatTargetId;
+  $: focusedEnemy = (enemies || []).find((e) => e && e.id === targetId) || null;
   $: threatWarning = $store.combatThreatWarning;
   $: turn = $store.combatTurn;
   $: logRaw = $store.combatLog || [];
@@ -206,6 +208,11 @@
 
   $: hotbarBinds = normalizeHotbarBinds($settingsStore.interface?.hotbarBinds);
 
+  // Layout B default: URL > localStorage 0/1 > Settings. No preference → B.
+  $: layoutB = resolveBattleLayoutB({
+    settingsFlag: $settingsStore.interface?.battleLayoutB,
+  });
+
   $: queuedAction = $store.combatQueuedAction || '';
   $: queuedSkillId = $store.combatQueuedSkillId || '';
   $: skillCooldowns = $store.combatSkillCooldowns || {};
@@ -331,16 +338,14 @@
   }
 
   function combatantPortrait(c) {
-    const p = (c && c.portrait) || '';
-    if (p.startsWith('data:')) return p;
-    if (p && !p.startsWith('img/')) {
-      if (p.startsWith('/') || p.startsWith('http')) return p;
-      return `/api/portraits/${String(p).replace(/\.png$/i, '')}.png`;
-    }
-    if (c && players.some((player) => player.id === c.id)) {
-      return c.id === selfId ? portraitSrc(character) : playerSilhouette(c.classId);
-    }
-    return enemySilhouette();
+    if (!c) return enemySilhouette();
+    const mineId = (selfCombatant && selfCombatant.id) || selfId;
+    const isPlayer = c.type === 'player' || (players || []).some((player) => player.id === c.id);
+    return battleSpriteSrc(c, {
+      isPlayer,
+      selfId: mineId,
+      character: c.id === mineId ? character : null,
+    });
   }
 
   function hpPct(hp, maxHp) {
@@ -387,6 +392,9 @@
 
   function doDefend() { cmd('defend'); }
   function doFlee() { cmd('flee'); }
+
+  /** When true, Attack/Defend/Items reappear on the left combat rail. Default off to declutter fights. */
+  const showCombatUtilityRail = false;
 
 
   function queuedChipLabel(action, skillId) {
@@ -635,16 +643,19 @@
 
 <svelte:window on:keydown={onOutcomeKey} />
 {#if visible}
-<div class="battle-stage" class:ending={phase === 'ending'} class:reduced-motion={prefersReducedMotion($settingsStore.interface?.reducedMotion)} role="dialog" aria-label="Combat" tabindex="-1" use:combatStageFocus>
+<div class="battle-stage" class:ending={phase === 'ending'} class:layout-b={layoutB} class:reduced-motion={prefersReducedMotion($settingsStore.interface?.reducedMotion)} role="dialog" aria-label="Combat" tabindex="-1" use:combatStageFocus>
   <div class="battle-backdrop" aria-hidden="true"></div>
   <div class="battle-frame">
   <header class="battle-header">
     <i class="material-icons header-icon" aria-hidden="true">explore</i>
     <span class="header-label">COMBAT</span>
+    {#if layoutB}
+      <span class="round-chip layout-b-chip" title="Battle layout B — Classic in Settings, or ?battleLayout=classic">Layout B</span>
+    {/if}
     {#if turn?.round}
       <span class="round-chip">Round {turn.round}</span>
     {/if}
-    {#if turn?.actorName || showWaitingTimer}
+    {#if (turn?.actorName || showWaitingTimer) && (!layoutB || decisionActive)}
       <span class="turn-chip" class:waiting={showWaitingTimer}>
         {#if decisionActive}
           Your turn
@@ -695,6 +706,97 @@
   {#if threatWarning && nowMs - threatWarning.at < 3200}
     <div class="focus-threat-warning threat-{threatWarning.tier}" role="alert">{threatWarning.text}</div>
   {/if}
+
+  {#if layoutB}
+    <aside class="layout-b-frame player-frame" aria-label="Player details">
+      <div class="lb-frame-head">
+        <div
+          class="lb-name"
+          class:hit-flash={isFxTarget(selfId) && (fxIsHit || fxIsMiss) && !fxIsCrit && !fxIsCrush}
+          class:crit-flash={isFxTarget(selfId) && fxIsCrit && !fxIsCrush}
+          class:crush-flash={isFxTarget(selfId) && fxIsCrush}
+        >{selfName}</div>
+      </div>
+      <div class="hp-row lb-hp">
+        <span class="hp-label">HP</span>
+        <div class="hp-track">
+          <div
+            class="hp-fill"
+            style="width: {hpPct(selfHp, selfMaxHp)}%; background: {playerHpColor(hpPct(selfHp, selfMaxHp))}"
+          ></div>
+        </div>
+        <span class="hp-nums">{selfHp} / {selfMaxHp}</span>
+      </div>
+      {#if selfMaxMana > 0}
+        <div class="hp-row lb-mp">
+          <span class="hp-label">MP</span>
+          <div class="hp-track">
+            <div class="hp-fill mp" style="width: {hpPct(selfMana, selfMaxMana)}%"></div>
+          </div>
+          <span class="hp-nums">{selfMana} / {selfMaxMana}</span>
+        </div>
+      {/if}
+      {#if statusEffectsOf(selfCombatant).length}
+        <div class="buff-row lb-buffs" aria-label="Your buffs">
+          {#each statusEffectsOf(selfCombatant) as se (se.id || se.name + '-' + se.duration)}
+            <div class="buff-icon {buffKindClass(se)}" title={buffTitle(se)}>
+              {#if buffIconUrl(se)}
+                <img src={buffIconUrl(se)} alt="" />
+              {:else}
+                <span class="buff-fallback">{(se.name || '?').slice(0, 1)}</span>
+              {/if}
+              <span class="buff-stacks">{se.duration}</span>
+            </div>
+          {/each}
+        </div>
+      {/if}
+      {#if decisionActive}
+        <div class="status-chips lb-chips">
+          <span class="chip focus-chip"><i class="material-icons">flare</i> Focused</span>
+        </div>
+      {/if}
+    </aside>
+    {#if focusedEnemy}
+      {@const fePct = hpPct(focusedEnemy.hp, focusedEnemy.maxHp)}
+      {@const feDead = (focusedEnemy.hp ?? 0) <= 0}
+      <aside class="layout-b-frame target-frame" aria-label="Target details">
+        <div
+          class="lb-name"
+          class:threat-grey={focusedEnemy.threat === 'grey'}
+          class:threat-green={focusedEnemy.threat === 'green'}
+          class:threat-yellow={focusedEnemy.threat === 'yellow'}
+          class:threat-orange={focusedEnemy.threat === 'orange'}
+          class:threat-red={focusedEnemy.threat === 'red'}
+          class:threat-skull={focusedEnemy.threat === 'skull'}
+        >{#if focusedEnemy.threat === 'skull'}<span class="skull-mark" title="Skull" aria-hidden="true">☠</span>{/if}{focusedEnemy.name}{#if enemyCount > 1 && !feDead}<span class="enemy-focus-label">FOCUS</span>{/if}</div>
+        {#if focusedEnemy.bossPhase}
+          <div class="boss-phase-label" aria-label="Boss phase">{phaseCaption(focusedEnemy)}</div>
+        {/if}
+        <div class="hp-row lb-hp">
+          <span class="hp-label">HP</span>
+          <div class="hp-track">
+            <div class="hp-fill" style="width: {fePct}%; background: {hpColor(fePct)}"></div>
+          </div>
+          <span class="hp-nums">{focusedEnemy.hp ?? 0} / {focusedEnemy.maxHp ?? 0}</span>
+        </div>
+        {#if statusEffectsOf(focusedEnemy).length}
+          <div class="buff-row lb-buffs" aria-label="Target effects">
+            {#each statusEffectsOf(focusedEnemy) as se (se.id || se.name + '-' + se.duration)}
+              <div class="buff-icon {buffKindClass(se)}" title={buffTitle(se)}>
+                {#if buffIconUrl(se)}
+                  <img src={buffIconUrl(se)} alt="" />
+                {:else}
+                  <span class="buff-fallback">{(se.name || '?').slice(0, 1)}</span>
+                {/if}
+                <span class="buff-stacks">{se.duration}</span>
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </aside>
+    {/if}
+  {/if}
+
   <!-- Enemies upper-right -->
   <section
     class="enemy-strip"
@@ -772,8 +874,16 @@
               {/each}
             </div>
           {/if}
-          {#if enemy.id === targetId && !dead}
-            <div class="target-ring" aria-hidden="true"></div>
+          <div
+            class="ground-marker target-ring"
+            class:focus={enemy.id === targetId && !dead}
+            class:dead={dead}
+            aria-hidden="true"
+          ></div>
+          {#if layoutB}
+            <div class="sprite-hp" aria-hidden="true">
+              <div class="sprite-hp-track"><div class="sprite-hp-fill" style="width: {pct}%; background: {hpColor(pct)}"></div></div>
+            </div>
           {/if}
           <img
             class="enemy-sprite"
@@ -904,7 +1014,14 @@
           {/each}
         </div>
       {/if}
+      <div class="ground-marker player-marker" class:focus={decisionActive} aria-hidden="true"></div>
+      {#if layoutB}
+        <div class="sprite-hp player-sprite-hp" aria-hidden="true">
+          <div class="sprite-hp-track"><div class="sprite-hp-fill" style="width: {hpPct(selfHp, selfMaxHp)}%; background: {playerHpColor(hpPct(selfHp, selfMaxHp))}"></div></div>
+        </div>
+      {/if}
       <img
+        class="player-sprite"
         src={combatantPortrait(selfCombatant)}
         alt=""
         on:error={(e) => onImgError(e, 'player')}
@@ -1030,19 +1147,22 @@
       </div>
 
       <div class="dock-main">
-        <nav class="battle-rail" aria-label="Combat actions">
-          <button type="button" class="rail-btn primary" title="Attack" aria-label="Attack" on:click|stopPropagation={doAttack}>
-            <i class="material-icons">flash_on</i>
-            <span class="rail-label">Attack</span>
-          </button>
-          <button type="button" class="rail-btn" title="Defend" aria-label="Defend" on:click|stopPropagation={doDefend}>
-            <i class="material-icons">security</i>
-            <span class="rail-label">Defend</span>
-          </button>
-          <button type="button" class="rail-btn" class:active={panel === 'items'} title="Items" aria-label="Items" on:click|stopPropagation={() => togglePanel('items')}>
-            <i class="material-icons">shopping_bag</i>
-            <span class="rail-label">Items</span>
-          </button>
+        <!-- Combat rail: Flee only. Attack/Defend/Items deferred — hotbar (melee/defend/consumables) + auto-attack cover them. Flip showCombatUtilityRail to restore. -->
+        <nav class="battle-rail essential" aria-label="Combat actions">
+          {#if showCombatUtilityRail}
+            <button type="button" class="rail-btn primary" title="Attack" aria-label="Attack" on:click|stopPropagation={doAttack}>
+              <i class="material-icons">flash_on</i>
+              <span class="rail-label">Attack</span>
+            </button>
+            <button type="button" class="rail-btn" title="Defend" aria-label="Defend" on:click|stopPropagation={doDefend}>
+              <i class="material-icons">security</i>
+              <span class="rail-label">Defend</span>
+            </button>
+            <button type="button" class="rail-btn" class:active={panel === 'items'} title="Items" aria-label="Items" on:click|stopPropagation={() => togglePanel('items')}>
+              <i class="material-icons">shopping_bag</i>
+              <span class="rail-label">Items</span>
+            </button>
+          {/if}
           <button type="button" class="rail-btn flee" title="Flee" aria-label="Flee" on:click|stopPropagation={doFlee}>
             <i class="material-icons">directions_run</i>
             <span class="rail-label">Flee</span>
@@ -1706,7 +1826,8 @@
     z-index: 1;
   }
 
-  /* Soft ground puddle under feet — behind sprite, fades to 0 alpha at rim */
+  /* Soft ground puddle under feet — classic: only the focused target */
+  .ground-marker,
   .target-ring {
     position: absolute;
     bottom: 2%;
@@ -1727,6 +1848,17 @@
     box-shadow: none;
     pointer-events: none;
     z-index: 0;
+    opacity: 0;
+  }
+  .ground-marker.focus,
+  .target-ring.focus {
+    opacity: 1;
+  }
+  .ground-marker.dead {
+    opacity: 0 !important;
+  }
+  .player-marker {
+    display: none; /* classic: no player ground disc */
   }
 
   .enemy-card.targeted .foe-plate {
@@ -2668,6 +2800,10 @@
   .rail-btn.flee { border-color: rgba(239, 68, 68, 0.5); }
   .rail-btn.flee i { color: #f87171; }
 
+  .battle-rail.essential {
+    gap: 0;
+  }
+
   .battle-dock {
     position: relative;
     left: auto;
@@ -3465,6 +3601,18 @@
       padding: 0.2rem;
       box-sizing: border-box;
     }
+    .battle-rail.essential {
+      justify-content: flex-end;
+      width: auto;
+      max-width: 100%;
+      align-self: flex-end;
+    }
+    .battle-rail.essential .rail-btn.flee {
+      flex: 0 0 auto;
+      min-width: 4.5rem;
+      padding-left: 0.75rem;
+      padding-right: 0.75rem;
+    }
     .rail-btn {
       flex: 1 1 0;
       width: auto;
@@ -3756,4 +3904,462 @@
     border-top-left-radius: 3px;
     text-align: center;
   }
+
+  /* ===== Layout B PoC — room sprites + edge info frames ===== */
+  .battle-stage.layout-b .layout-b-chip {
+    border-color: rgba(250, 204, 21, 0.85);
+    color: #fde68a;
+    background: rgba(40, 28, 8, 0.9);
+  }
+
+  /* Edge-docked detail frames (TL player / TR target) */
+  .battle-stage.layout-b .layout-b-frame {
+    position: absolute;
+    z-index: 6;
+    top: 0.4rem;
+    width: min(248px, 24%);
+    box-sizing: border-box;
+    padding: 0.32rem 0.42rem 0.36rem;
+    border: 1px solid rgba(212, 164, 74, 0.5);
+    border-radius: 7px;
+    background: rgba(10, 8, 6, 0.9);
+    background-image: linear-gradient(160deg, rgba(18, 14, 10, 0.94), rgba(6, 6, 8, 0.88));
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    pointer-events: none;
+  }
+  .battle-stage.layout-b .layout-b-frame.player-frame {
+    left: 0.45rem;
+    right: auto;
+  }
+  .battle-stage.layout-b .layout-b-frame.target-frame {
+    right: 0.45rem;
+    left: auto;
+    text-align: left;
+  }
+  .battle-stage.layout-b .lb-name {
+    font-family: 'Cinzel', Georgia, serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: none;
+    color: #f5e6c0;
+    margin-bottom: 0.18rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .battle-stage.layout-b .target-frame .lb-name {
+    color: #fde68a;
+    text-transform: none;
+    font-size: 0.8rem;
+    letter-spacing: 0.03em;
+  }
+  .battle-stage.layout-b .lb-hp,
+  .battle-stage.layout-b .lb-mp {
+    margin-bottom: 0.14rem;
+  }
+  .battle-stage.layout-b .layout-b-frame .hp-track {
+    height: 7px;
+  }
+  .battle-stage.layout-b .layout-b-frame .hp-label,
+  .battle-stage.layout-b .layout-b-frame .hp-nums {
+    font-size: 0.58rem;
+  }
+  .battle-stage.layout-b .lb-buffs {
+    margin-top: 0.18rem;
+    max-width: 100%;
+    gap: 0.18rem;
+  }
+  .battle-stage.layout-b .lb-buffs .buff-icon {
+    width: 22px;
+    height: 22px;
+  }
+  .battle-stage.layout-b .lb-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.18rem;
+    margin-top: 0.22rem;
+  }
+  .battle-stage.layout-b .lb-chips .chip {
+    font-size: 0.58rem;
+    padding: 0.08rem 0.32rem;
+  }
+  .battle-stage.layout-b .lb-chips .wait-chip {
+    opacity: 0.85;
+    font-weight: 600;
+  }
+  /* Mid-fight chrome stays quiet: no Resolving/Waiting pill, no turn-name chip.
+     The round chip and the your-turn countdown remain. */
+  .battle-stage.layout-b .decision-timer.waiting,
+  .battle-stage.layout-b .decision-timer.idle {
+    display: none;
+  }
+  .battle-stage.layout-b .dock-status .queued-chip.wait {
+    display: none;
+  }
+  .battle-stage.layout-b .dock-status,
+  .battle-stage.layout-b .dock-status.has-chip {
+    min-height: 0;
+  }
+  .battle-stage.layout-b .dock-status .queued-chip:not(.wait) {
+    padding: 0.28rem 0.72rem;
+    font-size: 0.78rem;
+    border-width: 1.5px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+  }
+
+  /* Enemy field RIGHT — sprites on markers; tiny HP only over sprite */
+  .battle-stage.layout-b .enemy-strip,
+  .battle-stage.layout-b .enemy-strip.pack-solo,
+  .battle-stage.layout-b .enemy-strip.pack-duo,
+  .battle-stage.layout-b .enemy-strip.pack-swarm {
+    top: auto;
+    bottom: 14%;
+    right: 7%;
+    left: auto;
+    max-width: min(42%, 460px);
+    max-height: 66%;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 0.75rem;
+  }
+  .battle-stage.layout-b .enemy-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+  }
+  .battle-stage.layout-b .foe-plate {
+    display: none; /* details live in TR target frame */
+  }
+  .battle-stage.layout-b .enemy-sprite-wrap {
+    order: 1;
+    aspect-ratio: auto;
+    min-height: clamp(100px, 20vmin, 200px);
+    padding-bottom: 0.9rem;
+    position: relative;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+  }
+  .battle-stage.layout-b .enemy-strip.pack-solo .enemy-sprite-wrap {
+    min-height: clamp(130px, 26vmin, 240px);
+  }
+  .battle-stage.layout-b .enemy-sprite {
+    width: auto;
+    height: clamp(88px, 20vmin, 200px);
+    max-width: 92%;
+    object-fit: contain;
+    object-position: bottom center;
+    image-rendering: auto;
+  }
+  .battle-stage.layout-b .enemy-strip.pack-solo .enemy-sprite {
+    height: clamp(118px, 25vmin, 240px);
+  }
+  /* Hide per-sprite buff chips — shown in TR frame for focus */
+  .battle-stage.layout-b .enemy-sprite-wrap > .buff-row.portrait-buffs {
+    display: none;
+  }
+
+  /* Slim over-sprite HP only (names live in TL/TR frames) */
+  .battle-stage.layout-b .sprite-hp {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    transform: translate(-50%, calc(-100% - 2px));
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    min-width: 44px;
+    max-width: 88px;
+    pointer-events: none;
+  }
+  .battle-stage.layout-b .sprite-hp-name {
+    display: none; /* redundant with TR focus frame */
+  }
+  .battle-stage.layout-b .sprite-hp-track {
+    width: 56px;
+    max-width: 100%;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(212, 164, 74, 0.4);
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  }
+  .battle-stage.layout-b .sprite-hp-fill {
+    height: 100%;
+    border-radius: inherit;
+  }
+  .battle-stage.layout-b .player-sprite-hp .sprite-hp-track {
+    width: 60px;
+  }
+
+  /* Player field LEFT — sprite on marker (not giant card). Solo stays a single marker. */
+  .battle-stage.layout-b .player-team {
+    left: 6%;
+    right: auto;
+    bottom: 12%;
+    width: min(30%, 320px);
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "allies"
+      "self";
+    align-items: end;
+    justify-items: center;
+  }
+  .battle-stage.layout-b .player-team.solo {
+    grid-template-columns: 1fr;
+    grid-template-areas: "self";
+    width: min(24%, 250px);
+  }
+  /* Allies: readable left column (portrait + name + slim HP). Solo rules above are unchanged. */
+  .battle-stage.layout-b .player-team:not(.solo) {
+    left: 2.2%;
+    width: min(46%, 520px);
+    grid-template-columns: minmax(148px, 210px) minmax(0, 1fr);
+    grid-template-areas: "allies self";
+    justify-items: start;
+    align-items: end;
+    gap: 0.45rem;
+  }
+  .battle-stage.layout-b .ally-strip {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    justify-content: flex-end;
+    width: 100%;
+    max-height: min(46vh, 420px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    gap: 0.35rem;
+    padding: 0;
+  }
+  .battle-stage.layout-b .ally-card {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    max-width: none;
+    width: 100%;
+    flex: 0 0 auto;
+    gap: 0.35rem;
+    padding: 0.18rem 0.4rem 0.22rem 0.12rem;
+    background: rgba(8, 8, 10, 0.78);
+    border: 1px solid rgba(212, 164, 74, 0.42);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+  .battle-stage.layout-b .ally-card .ally-meta {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-width: 0;
+    flex: 1;
+    padding-bottom: 0.2rem;
+  }
+  .battle-stage.layout-b .ally-card .ally-sub,
+  .battle-stage.layout-b .ally-card .ally-numbers,
+  .battle-stage.layout-b .ally-card .ally-bar.mana {
+    display: none;
+  }
+  .battle-stage.layout-b .ally-name {
+    display: block;
+    font-size: 0.74rem;
+    line-height: 1.15;
+  }
+  .battle-stage.layout-b .ally-bar {
+    display: block;
+    height: 4px;
+    margin-top: 0.28rem;
+  }
+  .battle-stage.layout-b .ally-portrait {
+    flex: 0 0 auto;
+    width: auto;
+    height: auto;
+    overflow: visible;
+  }
+  .battle-stage.layout-b .ally-portrait img {
+    width: auto;
+    height: clamp(72px, 14vmin, 108px);
+    max-width: 68px;
+    object-fit: contain;
+    object-position: bottom center;
+    image-rendering: auto;
+    filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
+  }
+  .battle-stage.layout-b .player-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    min-width: 0;
+    width: 100%;
+  }
+  .battle-stage.layout-b .player-panel .player-meta {
+    display: none; /* details live in TL player frame */
+  }
+  .battle-stage.layout-b .player-bust {
+    overflow: visible;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    min-height: clamp(118px, 24vmin, 220px);
+    padding: 0 0 0.85rem;
+    width: auto;
+    max-width: 100%;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+  }
+  .battle-stage.layout-b .player-bust > .buff-row.portrait-buffs {
+    display: none; /* buffs in TL frame */
+  }
+  .battle-stage.layout-b .player-bust img,
+  .battle-stage.layout-b .player-sprite {
+    position: relative;
+    z-index: 1;
+    width: auto;
+    height: clamp(100px, 22vmin, 200px);
+    max-width: 92%;
+    object-fit: contain;
+    object-position: bottom center;
+    image-rendering: auto;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+  }
+  .battle-stage.layout-b .player-marker {
+    display: block;
+    bottom: 0;
+    width: 70%;
+    height: 16%;
+    opacity: 0.78;
+    z-index: 0;
+  }
+
+  .battle-stage.layout-b .ground-marker,
+  .battle-stage.layout-b .target-ring {
+    bottom: 0;
+    width: 70%;
+    height: 16%;
+    opacity: 1;
+    border: 1.5px dashed rgba(250, 204, 21, 0.55);
+    border-radius: 50%;
+    background: radial-gradient(
+      ellipse at center,
+      rgba(250, 204, 21, 0.16) 0%,
+      rgba(212, 164, 74, 0.07) 45%,
+      transparent 72%
+    );
+    box-shadow:
+      0 0 10px rgba(250, 204, 21, 0.14),
+      inset 0 0 6px rgba(250, 204, 21, 0.08);
+  }
+  .battle-stage.layout-b .ground-marker.focus,
+  .battle-stage.layout-b .target-ring.focus {
+    border-color: rgba(253, 224, 71, 0.88);
+    border-style: solid;
+    border-width: 2px;
+    background: radial-gradient(
+      ellipse at center,
+      rgba(250, 204, 21, 0.28) 0%,
+      rgba(234, 179, 8, 0.12) 42%,
+      transparent 74%
+    );
+    box-shadow:
+      0 0 14px rgba(250, 204, 21, 0.32),
+      0 0 4px rgba(253, 224, 71, 0.45),
+      inset 0 0 8px rgba(250, 204, 21, 0.12);
+    animation: layoutBFocusPulse 1.8s ease-in-out infinite;
+  }
+  .battle-stage.layout-b.reduced-motion .ground-marker.focus,
+  .battle-stage.layout-b.reduced-motion .target-ring.focus {
+    animation: none;
+  }
+  @keyframes layoutBFocusPulse {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.12); }
+  }
+  .battle-stage.layout-b .ground-marker.dead {
+    opacity: 0.2 !important;
+    border-style: dotted;
+    filter: grayscale(0.8);
+    animation: none;
+    box-shadow: none;
+  }
+
+  .battle-stage.layout-b .arena-art {
+    filter: brightness(0.38) saturate(0.7) contrast(1.08);
+  }
+  .battle-stage.layout-b .arena-vignette {
+    background:
+      radial-gradient(ellipse at 55% 48%, transparent 18%, rgba(0, 0, 0, 0.5) 58%, rgba(0, 0, 0, 0.88) 100%),
+      linear-gradient(to top, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.28) 30%, transparent 50%),
+      linear-gradient(to bottom, rgba(0, 0, 0, 0.45) 0%, transparent 24%),
+      linear-gradient(to right, rgba(0, 0, 0, 0.42) 0%, transparent 22%, transparent 78%, rgba(0, 0, 0, 0.42) 100%);
+  }
+
+  @media (max-width: 768px) {
+    .battle-stage.layout-b .layout-b-frame {
+      width: min(46%, 200px);
+      top: 0.35rem;
+      padding: 0.35rem 0.4rem;
+    }
+    .battle-stage.layout-b .layout-b-frame.player-frame { left: 0.3rem; }
+    .battle-stage.layout-b .layout-b-frame.target-frame { right: 0.3rem; }
+    .battle-stage.layout-b .lb-name { font-size: 0.72rem; }
+    .battle-stage.layout-b .sprite-hp-name { display: none; }
+    .battle-stage.layout-b .enemy-strip,
+    .battle-stage.layout-b .enemy-strip.pack-solo,
+    .battle-stage.layout-b .enemy-strip.pack-duo,
+    .battle-stage.layout-b .enemy-strip.pack-swarm {
+      top: auto;
+      bottom: 14%;
+      right: 3%;
+      left: auto;
+      max-width: min(48%, 220px);
+    }
+    .battle-stage.layout-b .player-team,
+    .battle-stage.layout-b .player-team.solo {
+      left: 4%;
+      bottom: 11%;
+      width: min(38%, 170px);
+    }
+    .battle-stage.layout-b .player-team:not(.solo) {
+      left: 2%;
+      width: min(58%, 240px);
+      grid-template-columns: 1fr;
+      grid-template-areas:
+        "allies"
+        "self";
+    }
+    .battle-stage.layout-b .ally-strip {
+      max-height: 30vh;
+    }
+    .battle-stage.layout-b .ally-portrait img {
+      height: clamp(52px, 14vmin, 76px);
+    }
+    .battle-stage.layout-b .enemy-sprite {
+      height: clamp(72px, 18vmin, 140px);
+    }
+    .battle-stage.layout-b .player-bust img,
+    .battle-stage.layout-b .player-sprite {
+      height: clamp(84px, 20vmin, 160px);
+    }
+  }
+
+
 </style>

@@ -1191,10 +1191,10 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 		char.XP += int32(awardedXP)
 		char.Gold += awardedGold
 
-		var levelMsg string
+		var levelUpResult *leveling.LevelUpResult
 		var callout *messages.LevelUpCallout
 		if result := leveling.MaybeLevelUp(char); result != nil {
-			levelMsg = result.Message
+			levelUpResult = result
 			callout = &messages.LevelUpCallout{
 				OldLevel: result.OldLevel,
 				NewLevel: result.NewLevel,
@@ -1222,13 +1222,8 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 				Message:    toast,
 			}
 		}
-		if levelMsg != "" {
-			c.game.sendMessage <- messages.MessageResponse{
-				Audience:   messages.MessageAudienceUser,
-				AudienceID: userID,
-				Type:       messages.MessageTypeLevelUp,
-				Message:    levelMsg,
-			}
+		if msg := messages.NewLevelUpMessage(userID, levelUpResult); msg != nil {
+			c.game.sendMessage <- msg
 		}
 
 		// Character update carries the new XP. Inventory update carries gold.

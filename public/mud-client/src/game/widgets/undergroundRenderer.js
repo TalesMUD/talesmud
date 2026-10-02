@@ -1,4 +1,5 @@
 import { hash, makeMapCanvas, MAP_RASTER_SIZE, freezeCanvas, sheetReady, drawMapSprite } from './mapArt.js';
+import { paintUndergroundSoftFog } from './fogOverlay.js';
 const cache=new WeakMap(),recent=new Map();
 export function undergroundModel(atlas) {
   const places=(atlas.places||[]).filter(p=>p.layer==='lower');if(!places.length)return null;
@@ -45,15 +46,16 @@ export function undergroundRaster(atlas,sheet) {
   for(const p of places) {
     const at=native(p.x,p.y);
     ctx.save();
-    ctx.fillStyle=p.discovered?'#758479':'#363d3b';ctx.beginPath();ctx.roundRect(at.x-20,at.y-20,40,40,8);ctx.fill();ctx.restore();
+    ctx.fillStyle=p.discovered?'#758479':'#2a3336';ctx.beginPath();ctx.roundRect(at.x-20,at.y-20,40,40,8);ctx.fill();ctx.restore();
   }
-  for(const p of places) {
+  for(const p of places.filter(p=>p.discovered)) {
     const at=native(p.x,p.y),x=at.x-16,y=at.y-16;
     const open=(dx,dy)=>byCell.get(`${p.x+dx}:${p.y+dy}`)?.discovered;
     const corners=[!open(-1,0)&&!open(0,-1)?5:0,!open(1,0)&&!open(0,-1)?5:0,!open(1,0)&&!open(0,1)?5:0,!open(-1,0)&&!open(0,1)?5:0];
     ctx.save();ctx.beginPath();ctx.roundRect(x,y,32,32,corners);ctx.clip();
-    drawMapSprite(ctx,sheet,p.discovered?(p.undergroundStyle||'cave'):'fog',p.artSeed||p.id,x,y,32,p.discovered?'underground':'rows');ctx.restore();
+    drawMapSprite(ctx,sheet,p.undergroundStyle||'cave',p.artSeed||p.id,x,y,32,'underground');ctx.restore();
   }
+  paintUndergroundSoftFog(ctx,places,native,32);
   for(const p of places) {
     const at=native(p.x,p.y);
     if(!p.discovered)continue;

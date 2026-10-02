@@ -3,6 +3,7 @@ import { surfaceGroups, outdoorRoads } from './surfaceAtlas.js';
 import { smoothCoast } from './coastline.js';
 import { hash, makeCanvas, makeMapCanvas, MAP_RASTER_SIZE, freezeCanvas, sheetReady, drawMapSprite, knownFeatures, roofKind, roadWaterCrossings } from './mapArt.js';
 import { townFortifications, mountainDepth, reliefAt, forestSpecies } from './mapDetails.js';
+import { buildSoftFogOverlay } from './fogOverlay.js';
 export const LAND_CELL_SIZE = MAP_RASTER_SIZE;
 const rasterCache = new WeakMap(), recentRasters = new Map(), townLayers = new Map();
 const directions = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[1,-1],[-1,1],[1,1]];
@@ -89,8 +90,10 @@ export function continentRaster(atlas,sheet) {
   const paintGround=(c,blend=true,output=sc)=>{
     if(coast.tileKinds.get(`${c.x}:${c.y}`)==='empty')return;
     const x=(c.x-bounds.minX)*32,y=(c.y-bounds.minY)*32;
+    // Fog cells: skip terrain stamps; soft volumetric overlay covers them after bake.
+    if(c.terrain==='fog')return;
     drawMapSprite(output,sheet,c.terrain,roomSeeds.get(`${c.x}:${c.y}`)||`${c.terrain}:${c.x}:${c.y}`,x,y,32,'rows');
-    if(blend&&c.terrain!=='fog'&&ready)for(const [dx,dy] of directions) {
+    if(blend&&ready)for(const [dx,dy] of directions) {
       const n=byCell.get(`${c.x+dx}:${c.y+dy}`);if(!n||n.terrain===c.terrain)continue;
       const row=TERRAIN_SHEET.blends[n.terrain]?.[`${dx}:${dy}`];
       if(row!=null)output.drawImage(sheet,hash(`${n.terrain}:${c.x+dx}:${c.y+dy}`)%TERRAIN_SHEET.variants*MAP_RASTER_SIZE,row*MAP_RASTER_SIZE,MAP_RASTER_SIZE,MAP_RASTER_SIZE,x,y,32,32);
@@ -134,10 +137,6 @@ export function continentRaster(atlas,sheet) {
       const at=native(c.x,c.y);
       if(c.kind==='cliff')detailStamp(target,{...c,variant:hash(`${c.x}:${c.y}`)%6},40);
       else continue;
-    }
-    for(const c of cells)if(c.terrain==='fog') {
-      const x=(c.x-bounds.minX)*32,y=(c.y-bounds.minY)*32;target.clearRect(x,y,32,32);
-      target.imageSmoothingEnabled=false;target.drawImage(coast.bands,x/coast.scale,y/coast.scale,32/coast.scale,32/coast.scale,x,y,32,32);paintGround(c,false,target);
     }
     target.restore();
     for(const c of coastDetails.filter(c=>c.kind==='offshore')) {
@@ -200,6 +199,8 @@ export function continentRaster(atlas,sheet) {
   }
   const {overlay,buildings,stamps,glyphs,fortifications}=art;
   sc.drawImage(overlay,0,0,w,h);
+  const softFog=buildSoftFogOverlay(cells,bounds,w,h);
+  if(softFog)sc.drawImage(softFog,0,0,w,h);
   let nearCanvas=null;
   const closeCanvas=()=>{
     if(nearCanvas)return nearCanvas;
@@ -209,6 +210,7 @@ export function continentRaster(atlas,sheet) {
     for(const c of cells)paintGround(c,true,target);for(const c of fringe.values())paintGround(c,false,target);
     for(const tint of tints){target.fillStyle=tint.color;target.fillRect(tint.x,tint.y,32,32)}
     target.restore();paintRoadNetwork(target,roads,native,coast.path);paintDetail(target,true);target.drawImage(overlay,0,0,w,h);
+    if(softFog){target.imageSmoothingEnabled=true;target.drawImage(softFog,0,0,w,h)}
     nearCanvas=freezeCanvas(nearCanvas);result.closeBakeMs=performance.now()-start;return nearCanvas;
   };
   const result={canvas:freezeCanvas(canvas),closeCanvas,bounds,buildings,ready,model,glyphs,ridges,ambience,bridges,stamps,fortifications,coastDetails,coastMask:coast.mask,coastScale:coast.scale,cellSize:32,closeCellSize:MAP_RASTER_SIZE,bakeMs:performance.now()-bakeStart};

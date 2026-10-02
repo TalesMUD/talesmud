@@ -19,3 +19,13 @@ const twoHand = { slot: 'main_hand', subType: 'twohandsword', attributes: { dama
 assert.equal(comparisonItems(twoHand, { main_hand: sword, off_hand: { id: 'shield', attributes: { armor: 2 } } }, warrior).length, 2);
 assert.equal(comparisonRows(twoHand, { main_hand: sword, off_hand: { id: 'shield', attributes: { armor: 2 } } }, warrior).find((row) => row.key === 'damage').delta, 6);
 console.log('itemComparison_test ok');
+
+import { itemIsUsable, itemOffersUseOn, itemIsFireStarter, itemCmdName } from './itemComparison.js';
+
+assert.equal(itemIsFireStarter({ name: 'Flint and Steel', subType: 'tool', tags: ['tool'] }), true);
+assert.equal(itemOffersUseOn({ name: 'Flint and Steel', subType: 'tool', tags: ['utility'] }), true);
+assert.equal(itemIsUsable({ name: 'Flint and Steel', subType: 'tool', tags: ['tool'] }), true);
+assert.equal(itemIsUsable({ type: 'consumable', name: 'Potion' }), true);
+assert.equal(itemIsUsable({ name: 'Rusty Dagger', type: 'weapon' }), false);
+assert.equal(itemCmdName({ name: 'Dusty Torch', instanceSuffix: 'a1' }), 'Dusty Torch-a1');
+console.log('item use-on helpers ok');

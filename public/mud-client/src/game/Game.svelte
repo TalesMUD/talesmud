@@ -550,7 +550,7 @@
   {/if}
 
   <!-- Quest notifications - shown on all layouts -->
-  <QuestNotifications store={muxStore} />
+  <QuestNotifications store={muxStore} {sendMessage} />
 
   <!-- Inventory popup overlay (default inv open mode) -->
   <InventoryOverlay store={muxStore} {sendMessage} />

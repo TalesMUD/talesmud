@@ -139,6 +139,10 @@
                 <label class="toggle-switch"><input type="checkbox" aria-label="Auto-focus BattleStage" checked={$settingsStore.interface?.combatAutoFocus !== false} on:change={() => toggle('combatAutoFocus')} /><span class="toggle-slider"></span></label>
               </div>
               <div class="setting-item">
+                <div class="setting-info"><div class="setting-label">Battle layout B</div><div class="setting-desc">Default fight view: party on the left, enemies on the right. Turn off for Classic cards. ?battleLayout=classic or localStorage talesmud_battle_layout_b=0 also opts out.</div></div>
+                <label class="toggle-switch"><input type="checkbox" aria-label="Battle layout B" checked={!!$settingsStore.interface?.battleLayoutB} on:change={() => toggle('battleLayoutB')} /><span class="toggle-slider"></span></label>
+              </div>
+              <div class="setting-item">
                 <div class="setting-info"><div class="setting-label">Inventory opens as</div><div class="setting-desc">Choose a full overlay or a layout widget.</div></div>
                 <div class="choice-group" role="group" aria-label="Inventory opens as">
                   <button class="choice" class:active={$settingsStore.interface?.inventoryOpenMode === 'overlay'} aria-pressed={$settingsStore.interface?.inventoryOpenMode === 'overlay'} on:click={() => set('inventoryOpenMode', 'overlay')}>Overlay</button>

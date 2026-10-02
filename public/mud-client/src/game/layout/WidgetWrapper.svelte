@@ -89,7 +89,8 @@
   .widget-wrapper.has-title-chrome .widget-content :global(.game-panel-header),
   .widget-wrapper.has-title-chrome .widget-content :global(.terminal-toolbar),
   .widget-wrapper.has-title-chrome .widget-content :global(.tx-title),
-  .widget-wrapper.has-title-chrome .widget-content :global(.questlog-header h2) {
+  .widget-wrapper.has-title-chrome .widget-content :global(.questlog-header h2),
+  .widget-wrapper.has-title-chrome .widget-content :global(.questlog-header .header-title-row) {
     display: none !important;
   }
 
