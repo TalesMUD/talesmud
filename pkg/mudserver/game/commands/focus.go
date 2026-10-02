@@ -36,21 +36,11 @@ func (*FocusCommand) Execute(game def.GameCtrl, message *messages.Message) bool 
 		game.SendMessage() <- message.Reply("Focus whom? Usage: focus <enemy ID or name>")
 		return true
 	}
-	var targetID, targetName string
-	for _, enemy := range instance.Enemies {
-		if enemy.IsAlive && strings.EqualFold(enemy.ID, query) {
-			targetID, targetName = enemy.ID, enemy.Name
-			break
-		}
+	roomID := ""
+	if message.Character != nil {
+		roomID = message.Character.CurrentRoomID
 	}
-	if targetID == "" {
-		for _, enemy := range instance.Enemies {
-			if enemy.IsAlive && strings.Contains(strings.ToLower(enemy.Name), strings.ToLower(query)) {
-				targetID, targetName = enemy.ID, enemy.Name
-				break
-			}
-		}
-	}
+	targetID, targetName := resolveInCombatTarget(game, roomID, instance.Enemies, query)
 	if targetID == "" {
 		game.SendMessage() <- message.Reply("That enemy is not alive in this fight.")
 		return true
