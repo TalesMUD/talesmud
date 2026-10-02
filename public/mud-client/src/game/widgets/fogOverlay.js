@@ -5,7 +5,7 @@ function boxBlurAlpha(src, passes = 2) {
   const w = src.width, h = src.height;
   const ctx = src.getContext('2d', { willReadFrequently: true });
   let img = ctx.getImageData(0, 0, w, h);
-  const radius = 2;
+  const radius = 4;
   for (let pass = 0; pass < passes; pass++) {
     const srcData = img.data;
     const tmp = new Uint8ClampedArray(srcData.length);
@@ -51,7 +51,9 @@ function boxBlurAlpha(src, passes = 2) {
  */
 export function buildSoftFogOverlay(cells, bounds, logicalW, logicalH, options = {}) {
   const workScale = options.workScale ?? 2;
-  const opacity = options.opacity ?? 0.9;
+  const blurPasses = options.blurPasses ?? 5;
+  const blurRadius = options.blurRadius ?? 4;
+  const opacity = options.opacity ?? 0.86;
   const mw = Math.max(1, Math.ceil(logicalW / workScale));
   const mh = Math.max(1, Math.ceil(logicalH / workScale));
   const cell = 32 / workScale;
@@ -64,7 +66,7 @@ export function buildSoftFogOverlay(cells, bounds, logicalW, logicalH, options =
   for (const c of cells || []) {
     if (c.terrain !== 'fog') continue;
     fogCount++;
-    mc.fillRect((c.x - bounds.minX) * cell - 0.5, (c.y - bounds.minY) * cell - 0.5, cell + 1, cell + 1);
+    mc.fillRect((c.x - bounds.minX) * cell - 1.2, (c.y - bounds.minY) * cell - 1.2, cell + 2.4, cell + 2.4);
   }
   if (!fogCount) return null;
 
@@ -77,7 +79,7 @@ export function buildSoftFogOverlay(cells, bounds, logicalW, logicalH, options =
   } catch (_) {
     sc.drawImage(mask, 0, 0);
   }
-  boxBlurAlpha(soft, 3);
+  boxBlurAlpha(soft, 5);
 
   const fog = makeCanvas(logicalW, logicalH);
   const fc = fog.getContext('2d');
@@ -181,7 +183,7 @@ export function paintUndergroundSoftFog(ctx, places, native, size = 32) {
   } catch (_) {
     sc.drawImage(mask, 0, 0);
   }
-  boxBlurAlpha(soft, 3);
+  boxBlurAlpha(soft, 5);
 
   const fog = makeCanvas(w, h);
   const fc = fog.getContext('2d');
