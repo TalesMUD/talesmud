@@ -29,7 +29,8 @@ type CombatConfig struct {
 	DefendBonusPercent    float64 // Default: 0.50 (50% defense boost)
 	CriticalHitChance     float64 // Default: 0.05 (5%)
 	CriticalHitMultiplier float64 // Default: 2.0
-	CombatTimeoutMinutes  int     // Default: 30
+	CombatTimeoutMinutes     int // Absolute max combat length (Default: 15)
+	IdleCombatTimeoutMinutes int // Soft release after no action (Default: 5)
 }
 
 // DefaultConfig returns the default combat configuration
@@ -47,7 +48,8 @@ func DefaultConfig() *CombatConfig {
 		DefendBonusPercent:    0.50,
 		CriticalHitChance:     0.05,
 		CriticalHitMultiplier: 2.0,
-		CombatTimeoutMinutes:  30,
+		CombatTimeoutMinutes:     15,
+		IdleCombatTimeoutMinutes: 5,
 	}
 }
 
@@ -736,12 +738,36 @@ func (e *Engine) CheckCombatEnd(instance *combat.CombatInstance) combat.CombatSt
 		return combat.CombatStateFled
 	}
 
-	// Check for global timeout
+	// Idle soft-release (no resolved action for N minutes)
+	if e.idleTimedOut(instance) {
+		return combat.CombatStateTimeout
+	}
+
+	// Absolute max combat length backstop
 	if time.Since(instance.CreatedAt).Minutes() >= float64(e.Config.CombatTimeoutMinutes) {
 		return combat.CombatStateTimeout
 	}
 
 	return combat.CombatStateActive
+}
+
+// idleTimedOut reports whether combat has had no resolved action for IdleCombatTimeoutMinutes.
+func (e *Engine) idleTimedOut(instance *combat.CombatInstance) bool {
+	if e == nil || e.Config == nil || instance == nil {
+		return false
+	}
+	mins := e.Config.IdleCombatTimeoutMinutes
+	if mins <= 0 {
+		return false
+	}
+	anchor := instance.LastActionAt
+	if anchor.IsZero() {
+		anchor = instance.CreatedAt
+	}
+	if anchor.IsZero() {
+		return false
+	}
+	return time.Since(anchor).Minutes() >= float64(mins)
 }
 
 // EndCombat finalizes a combat instance with the given result

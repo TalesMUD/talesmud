@@ -729,8 +729,8 @@ func (c *CombatController) Update() {
 		// Process all turns continuously (both NPC and player)
 		c.processAllTurns(instance)
 
-		// Check for global combat timeout
-		if time.Since(instance.CreatedAt).Minutes() >= float64(c.engine.Config.CombatTimeoutMinutes) {
+		// Idle soft-release or absolute combat timeout → Timeout (no death/gold/XP loss)
+		if c.engine.CheckCombatEnd(instance) == combat.CombatStateTimeout {
 			c.engine.EndCombat(instance, combat.CombatStateTimeout)
 			c.cleanupCombatInstance(instance, combat.CombatStateTimeout)
 		}
@@ -965,7 +965,7 @@ func (c *CombatController) cleanupCombatInstance(instance *combat.CombatInstance
 	case combat.CombatStateFled:
 		c.notifyAllPlayersInInstance(instance, "\n═══════════════════════════════════════════════════\n              ESCAPED\n═══════════════════════════════════════════════════\n\nYou have fled from combat!\n═══════════════════════════════════════════════════", string(combat.CombatStateFled))
 	case combat.CombatStateTimeout:
-		c.notifyAllPlayersInInstance(instance, "Combat has timed out due to inactivity.", string(combat.CombatStateTimeout))
+		c.notifyAllPlayersInInstance(instance, "\n═══════════════════════════════════════════════════\n         COMBAT RELEASED\n═══════════════════════════════════════════════════\n\nCombat timed out — you are free to move again.\n(No death penalty.)\n═══════════════════════════════════════════════════", string(combat.CombatStateTimeout))
 	}
 
 	// Clear combat state from players
