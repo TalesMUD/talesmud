@@ -1,10 +1,14 @@
 ## Cartographer north = up (?v=mapnorth1) (2026-10-02)
 
-- Code: `[grokbot]` on tip after fog1 `e8200b2` / docs `4307c9e`.
-- Root cause: Aelindor authored room coords used +Y as north; Cartographer layout expects north = decreasing Y (`directions.go`, `projectGrid`). Moving north therefore painted downward.
-- Fix: `pkg/worldmap/compile.go` detects per-area authored Y polarity from compass exits and negates Y when +Y was north. Meadows/Oldtown (already correct) stay unflipped. Regression `TestCompileFlipsInvertedAuthoredY`. Cache-bust `?v=mapnorth1`. Content Z11 markdown Y values negated to match convention (DB still corrected at compile until reimport).
-- Door: untouched.
-- Deploy: local clawdbot `:8010` rebuild `bin/tales`; VPS ff + SIGTERM talesmud only.
+- Engine SHA: `4148568` (`[grokbot]`). Tip was fog1 `e8200b2` / docs `4307c9e`.
+- Content SHA: `ea356f2` (`talesmud-rpg-1` main) — Z11 markdown Y negated to north=−Y.
+- Root cause: Aelindor authored room coords used +Y as north; Cartographer layout expects north = decreasing Y (`directions.go`, `projectGrid`). Moving north painted downward on the atlas.
+- Fix: `pkg/worldmap/compile.go` `authoredYSign` detects per-area authored Y polarity from compass exits and negates Y when placing inverted zones. Meadows stay unflipped. Regression `TestCompileFlipsInvertedAuthoredY`. Cache-bust `?v=mapnorth1`.
+- Prod DB still has inverted Aelindor Y (28 disagree / 0 agree); compile flips at atlas build. Markdown fixed for future imports.
+- Verify: after flip, R1101→R1102→R1114→R1115→R1118 north chain has strictly decreasing Y (screen-up).
+- Local clawdbot: `bin/tales` pid `255022` on `:8010`; Door `:8020` pid `3406193` untouched.
+- VPS: ff `e8200b2`→`4148568`; embed play client; `bin/tales.prev-e8200b2`; SIGTERM only talesmud; new MainPID `886910` on `:8010`. Door `:8020` pid `758959` untouched.
+- Smoke: local + `https://veilspan.com/play/` 200 with `bundle.js?v=mapnorth1`; guest POST 200; `go test ./pkg/worldmap -run FlipsInverted` green.
 
 ## Cartographer soft volumetric fog (?v=fog1) (2026-10-02)
 
