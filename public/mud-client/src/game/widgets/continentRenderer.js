@@ -90,12 +90,8 @@ export function continentRaster(atlas,sheet) {
   const paintGround=(c,blend=true,output=sc)=>{
     if(coast.tileKinds.get(`${c.x}:${c.y}`)==='empty')return;
     const x=(c.x-bounds.minX)*32,y=(c.y-bounds.minY)*32;
-    // Fog cells: muted void wash only (no fog tile stamp). Soft overlay adds clouds.
-    if(c.terrain==='fog'){
-      output.fillStyle='rgba(22, 32, 40, 0.92)';
-      output.fillRect(x,y,32,32);
-      return;
-    }
+    // Fog cells: skip terrain stamps; soft volumetric overlay covers them after bake.
+    if(c.terrain==='fog')return;
     drawMapSprite(output,sheet,c.terrain,roomSeeds.get(`${c.x}:${c.y}`)||`${c.terrain}:${c.x}:${c.y}`,x,y,32,'rows');
     if(blend&&ready)for(const [dx,dy] of directions) {
       const n=byCell.get(`${c.x+dx}:${c.y+dy}`);if(!n||n.terrain===c.terrain)continue;

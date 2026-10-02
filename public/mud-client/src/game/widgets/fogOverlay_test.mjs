@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { createCanvas } from 'canvas';
+import { createCanvas, ImageData } from 'canvas';
+globalThis.ImageData = ImageData;
 
 // mapArt.makeCanvas prefers OffscreenCanvas when present.
 globalThis.OffscreenCanvas = class {
