@@ -119,6 +119,7 @@ func (y *YAMLItem) ToEntity() *items.Item {
 		Attributes:    y.Attributes,
 		Properties:    y.Properties,
 		OnUseScriptID: firstNonEmpty(y.OnUseScript, y.OnUseScriptID),
+		OnHitScriptID: firstNonEmpty(y.OnHitScript, y.OnHitScriptID),
 	}
 
 	// Set meta if img is provided

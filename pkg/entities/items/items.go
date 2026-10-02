@@ -134,6 +134,11 @@ type Item struct {
 	// OnUseScriptID is a Lua script executed when item is used
 	// Script context: ctx.item, ctx.character, ctx.room
 	OnUseScriptID string `bson:"onUseScriptId,omitempty" json:"onUseScriptId,omitempty"`
+	// OnHitScriptID is a Lua script executed after a successful basic-attack hit
+	// while this item is equipped in main_hand. Script context: ctx.item, ctx.character,
+	// ctx.targetID, ctx.targetName, ctx.damage, ctx.critical. Prefer tales.combat.applyDot
+	// for content-authored weapon procs (Maintainer-neutral).
+	OnHitScriptID string `bson:"onHitScriptId,omitempty" json:"onHitScriptId,omitempty"`
 
 	// Consumable indicates item is consumed on use (removed or quantity decremented)
 	Consumable bool `bson:"consumable,omitempty" json:"consumable,omitempty"`

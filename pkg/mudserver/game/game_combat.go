@@ -18,7 +18,9 @@ import (
 	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
+	"github.com/talesmud/talesmud/pkg/entities/items"
 	"github.com/talesmud/talesmud/pkg/ruleset"
+	"github.com/talesmud/talesmud/pkg/scripts"
 )
 
 const combatBreathGrace = 3 * time.Second
@@ -117,6 +119,7 @@ func (c *CombatController) ProcessPlayerAttack(characterID, targetID string) (me
 	}
 
 	result := c.engine.ProcessAttack(instance, characterID, targetID)
+	c.applyWeaponOnHitScript(instance, characterID, targetID, &result)
 	message = result.Message
 
 	// Advance turn
@@ -1482,6 +1485,7 @@ func (c *CombatController) processPlayerAutoAttack(instance *combat.CombatInstan
 				target := instance.GetCombatantByID(targetID)
 				if target != nil && target.IsAlive {
 					result := c.engine.ProcessAttack(instance, player.ID, targetID)
+					c.applyWeaponOnHitScript(instance, player.ID, targetID, &result)
 					c.notifyCombatAction(instance, messages.CombatActionMessage{
 						ActorID: player.ID, ActorName: player.Name, TargetID: targetID,
 						Action: string(combat.CombatActionAttack), Result: resultStringForAttack(result),
@@ -1548,6 +1552,7 @@ func (c *CombatController) doAutoAttack(instance *combat.CombatInstance, player 
 	}
 
 	result := c.engine.ProcessAttack(instance, player.ID, targetID)
+	c.applyWeaponOnHitScript(instance, player.ID, targetID, &result)
 	target := instance.GetCombatantByID(targetID)
 	remaining, maxHP := int32(0), int32(0)
 	if target != nil {
@@ -1577,3 +1582,90 @@ func npcFromCombatant(enemy combat.CombatantRef) *npc.NPC {
 		TemplateID: enemy.TemplateID,
 	}
 }
+
+// ApplyCombatDot applies a named DoT to a combatant in the attacker's active fight.
+// Used by Lua on-hit scripts (content-authored weapon procs). Refresh-on-reapply via effectID.
+func (c *CombatController) ApplyCombatDot(attackerID, targetID, effectID, name string, damage int32, duration int) bool {
+	if c == nil || c.engine == nil || attackerID == "" || targetID == "" || effectID == "" || damage < 1 || duration < 1 {
+		return false
+	}
+	instance := c.manager.GetInstanceByPlayerID(attackerID)
+	if instance == nil {
+		instance = c.manager.GetInstanceByNPCID(attackerID)
+	}
+	if instance == nil {
+		return false
+	}
+	se := combat.StatusEffect{
+		SkillID:  "onhit:" + effectID,
+		Name:     name,
+		Type:     "dot",
+		Value:    damage,
+		Duration: duration,
+		SourceID: attackerID,
+	}
+	if se.Name == "" {
+		se.Name = effectID
+	}
+	return c.engine.ApplyStatusEffectFromScript(instance, targetID, se)
+}
+
+// applyWeaponOnHitScript runs the equipped weapon's onHit Lua script after a successful hit.
+func (c *CombatController) applyWeaponOnHitScript(instance *combat.CombatInstance, attackerID, targetID string, result *combatpkg.AttackResult) {
+	if c == nil || c.game == nil || instance == nil || result == nil || !result.Hit || result.Miss {
+		return
+	}
+	attacker := instance.GetCombatantByID(attackerID)
+	if attacker == nil || attacker.Type != combat.CombatantTypePlayer {
+		return
+	}
+	facade := c.game.GetFacade()
+	if facade == nil {
+		return
+	}
+	scriptID := attacker.OnHitScriptID
+	if scriptID == "" {
+		// Resolve from live equipment / template (instances may drop script ids).
+		if char, err := facade.CharactersService().FindByID(attackerID); err == nil && char != nil && char.EquippedItems != nil {
+			if w := char.EquippedItems[items.ItemSlotMainHand]; w != nil {
+				scriptID = w.OnHitScriptID
+				if scriptID == "" && w.TemplateID != "" {
+					if tmpl, err := facade.ItemsService().FindByID(w.TemplateID); err == nil && tmpl != nil {
+						scriptID = tmpl.OnHitScriptID
+					}
+				}
+			}
+		}
+	}
+	if scriptID == "" {
+		return
+	}
+	script, err := facade.ScriptsService().FindByID(scriptID)
+	if err != nil || script == nil {
+		log.WithField("scriptID", scriptID).WithError(err).Warn("Weapon OnHit script not found")
+		return
+	}
+	target := instance.GetCombatantByID(targetID)
+	ctx := scripts.NewScriptContext()
+	if char, err := facade.CharactersService().FindByID(attackerID); err == nil && char != nil {
+		ctx.Set("character", char)
+		if char.EquippedItems != nil {
+			if w := char.EquippedItems[items.ItemSlotMainHand]; w != nil {
+				ctx.Set("item", w)
+			}
+		}
+	}
+	ctx.Set("attackerID", attackerID)
+	ctx.Set("targetID", targetID)
+	if target != nil {
+		ctx.Set("targetName", target.Name)
+	}
+	ctx.Set("damage", result.Damage)
+	ctx.Set("critical", result.Critical)
+	ctx.Set("combatInstanceID", instance.ID)
+	run := facade.Runner().RunWithResult(*script, ctx)
+	if !run.Success {
+		log.WithField("script", script.Name).WithField("error", run.Error).Warn("Weapon OnHit script failed")
+	}
+}
+

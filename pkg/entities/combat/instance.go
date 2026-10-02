@@ -48,6 +48,17 @@ const (
 	CombatPhaseResolving     CombatPhase = "resolving"     // Action being resolved this tick
 )
 
+// OnHitDot is a content-authored weapon proc applied after a successful basic attack hit.
+// SkillID is used as the refresh key (reapply refreshes duration; no stack spam).
+type OnHitDot struct {
+	Active   bool   `json:"active,omitempty"`
+	ID       string `json:"id,omitempty"`       // stable id for refresh (e.g. vigil_burn)
+	Name     string `json:"name,omitempty"`     // display name (e.g. Vigil Burn)
+	Damage   int32  `json:"damage,omitempty"`   // damage per tick
+	Duration int    `json:"duration,omitempty"` // rounds
+	Message  string `json:"message,omitempty"`  // optional combat-log flavor on apply
+}
+
 // StatusEffect represents an active buff, debuff, DoT, or HoT on a combatant
 type StatusEffect struct {
 	ID       string  `json:"id"`
@@ -103,6 +114,11 @@ type CombatantRef struct {
 	// Status effects
 	DefenseBonus  int32          `json:"defenseBonus"`            // From defend action
 	StatusEffects []StatusEffect `json:"statusEffects,omitempty"` // Active buffs, debuffs, DoTs, HoTs
+
+	// On-hit weapon proc (snapshotted from equipped main-hand at combat start).
+	// Content-driven: engine applies generically; game-set names/numbers live in item attrs / Lua.
+	OnHitScriptID string    `json:"onHitScriptId,omitempty"`
+	OnHitDot      OnHitDot  `json:"onHitDot,omitempty"`
 
 	// Skill cooldowns (skillID → rounds remaining)
 	SkillCooldowns map[string]int `json:"skillCooldowns,omitempty"`
