@@ -3,7 +3,7 @@
   import { combatStageFocus, isTextEntry, prefersReducedMotion, rarityClass } from '../keyboardShortcuts.js';
   import { phaseCaption, phaseBanner } from '../bossPhases.js';
   import { battleDockOpen } from '../uiChrome.js';
-  import { enemySilhouette, playerSilhouette, portraitSrc } from '../portraitSrc.js';
+  import { battleSpriteSrc, enemySilhouette, playerSilhouette } from '../portraitSrc.js';
   import {
     skillDisplayName,
     isConsumableItem,
@@ -208,7 +208,7 @@
 
   $: hotbarBinds = normalizeHotbarBinds($settingsStore.interface?.hotbarBinds);
 
-  // Layout B PoC: URL (?battleLayout=b / ?battlepoc=1) > localStorage > Settings
+  // Layout B default: URL > localStorage 0/1 > Settings. No preference → B.
   $: layoutB = resolveBattleLayoutB({
     settingsFlag: $settingsStore.interface?.battleLayoutB,
   });
@@ -338,16 +338,14 @@
   }
 
   function combatantPortrait(c) {
-    const p = (c && c.portrait) || '';
-    if (p.startsWith('data:')) return p;
-    if (p && !p.startsWith('img/')) {
-      if (p.startsWith('/') || p.startsWith('http')) return p;
-      return `/api/portraits/${String(p).replace(/\.png$/i, '')}.png`;
-    }
-    if (c && players.some((player) => player.id === c.id)) {
-      return c.id === selfId ? portraitSrc(character) : playerSilhouette(c.classId);
-    }
-    return enemySilhouette();
+    if (!c) return enemySilhouette();
+    const mineId = (selfCombatant && selfCombatant.id) || selfId;
+    const isPlayer = c.type === 'player' || (players || []).some((player) => player.id === c.id);
+    return battleSpriteSrc(c, {
+      isPlayer,
+      selfId: mineId,
+      character: c.id === mineId ? character : null,
+    });
   }
 
   function hpPct(hp, maxHp) {
@@ -652,12 +650,12 @@
     <i class="material-icons header-icon" aria-hidden="true">explore</i>
     <span class="header-label">COMBAT</span>
     {#if layoutB}
-      <span class="round-chip layout-b-chip" title="Battle layout B PoC — toggle off in Settings or ?battleLayout=classic">Layout B</span>
+      <span class="round-chip layout-b-chip" title="Battle layout B — Classic in Settings, or ?battleLayout=classic">Layout B</span>
     {/if}
     {#if turn?.round}
       <span class="round-chip">Round {turn.round}</span>
     {/if}
-    {#if turn?.actorName || showWaitingTimer}
+    {#if (turn?.actorName || showWaitingTimer) && (!layoutB || decisionActive)}
       <span class="turn-chip" class:waiting={showWaitingTimer}>
         {#if decisionActive}
           Your turn
@@ -752,16 +750,11 @@
           {/each}
         </div>
       {/if}
-      <div class="status-chips lb-chips">
-        {#if selfClass}
-          <span class="chip class-chip"><i class="material-icons">military_tech</i> {selfClass}</span>
-        {/if}
-        {#if decisionActive}
+      {#if decisionActive}
+        <div class="status-chips lb-chips">
           <span class="chip focus-chip"><i class="material-icons">flare</i> Focused</span>
-        {:else if showWaitingTimer}
-          <span class="chip wait-chip status-pill"><i class="material-icons spin-slow">hourglass_top</i> {waitingLabel}</span>
-        {/if}
-      </div>
+        </div>
+      {/if}
     </aside>
     {#if focusedEnemy}
       {@const fePct = hpPct(focusedEnemy.hp, focusedEnemy.maxHp)}
@@ -3995,7 +3988,12 @@
     opacity: 0.85;
     font-weight: 600;
   }
-  /* Mid-stage Resolving/Waiting pill — drop under layout B; header turn-chip keeps state */
+  /* Mid-fight chrome stays quiet: no Resolving/Waiting pill, no turn-name chip.
+     The round chip and the your-turn countdown remain. */
+  .battle-stage.layout-b .decision-timer.waiting,
+  .battle-stage.layout-b .decision-timer.idle {
+    display: none;
+  }
   .battle-stage.layout-b .dock-status .queued-chip.wait {
     display: none;
   }
@@ -4054,6 +4052,9 @@
     width: auto;
     height: clamp(88px, 20vmin, 200px);
     max-width: 92%;
+    object-fit: contain;
+    object-position: bottom center;
+    image-rendering: auto;
   }
   .battle-stage.layout-b .enemy-strip.pack-solo .enemy-sprite {
     height: clamp(118px, 25vmin, 240px);
@@ -4099,7 +4100,7 @@
     width: 60px;
   }
 
-  /* Player field LEFT — sprite on marker (not giant card) */
+  /* Player field LEFT — sprite on marker (not giant card). Solo stays a single marker. */
   .battle-stage.layout-b .player-team {
     left: 6%;
     right: auto;
@@ -4117,28 +4118,79 @@
     grid-template-areas: "self";
     width: min(24%, 250px);
   }
-  .battle-stage.layout-b .ally-strip {
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    max-height: none;
-    overflow: visible;
+  /* Allies: readable left column (portrait + name + slim HP). Solo rules above are unchanged. */
+  .battle-stage.layout-b .player-team:not(.solo) {
+    left: 2.2%;
+    width: min(46%, 520px);
+    grid-template-columns: minmax(148px, 210px) minmax(0, 1fr);
+    grid-template-areas: "allies self";
+    justify-items: start;
+    align-items: end;
     gap: 0.45rem;
   }
+  .battle-stage.layout-b .ally-strip {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    justify-content: flex-end;
+    width: 100%;
+    max-height: min(46vh, 420px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    gap: 0.35rem;
+    padding: 0;
+  }
   .battle-stage.layout-b .ally-card {
-    max-width: 88px;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    max-width: none;
+    width: 100%;
     flex: 0 0 auto;
-    padding: 0.15rem;
-    background: transparent;
-    border: none;
-    box-shadow: none;
+    gap: 0.35rem;
+    padding: 0.18rem 0.4rem 0.22rem 0.12rem;
+    background: rgba(8, 8, 10, 0.78);
+    border: 1px solid rgba(212, 164, 74, 0.42);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   }
   .battle-stage.layout-b .ally-card .ally-meta {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-width: 0;
+    flex: 1;
+    padding-bottom: 0.2rem;
+  }
+  .battle-stage.layout-b .ally-card .ally-sub,
+  .battle-stage.layout-b .ally-card .ally-numbers,
+  .battle-stage.layout-b .ally-card .ally-bar.mana {
     display: none;
+  }
+  .battle-stage.layout-b .ally-name {
+    display: block;
+    font-size: 0.74rem;
+    line-height: 1.15;
+  }
+  .battle-stage.layout-b .ally-bar {
+    display: block;
+    height: 4px;
+    margin-top: 0.28rem;
+  }
+  .battle-stage.layout-b .ally-portrait {
+    flex: 0 0 auto;
+    width: auto;
+    height: auto;
+    overflow: visible;
   }
   .battle-stage.layout-b .ally-portrait img {
     width: auto;
-    height: clamp(56px, 12vmin, 96px);
+    height: clamp(72px, 14vmin, 108px);
+    max-width: 68px;
+    object-fit: contain;
+    object-position: bottom center;
+    image-rendering: auto;
+    filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
   }
   .battle-stage.layout-b .player-panel {
     display: flex;
@@ -4183,7 +4235,8 @@
     height: clamp(100px, 22vmin, 200px);
     max-width: 92%;
     object-fit: contain;
-    image-rendering: pixelated;
+    object-position: bottom center;
+    image-rendering: auto;
     border-radius: 0;
     border: none;
     box-shadow: none;
@@ -4284,6 +4337,20 @@
       left: 4%;
       bottom: 11%;
       width: min(38%, 170px);
+    }
+    .battle-stage.layout-b .player-team:not(.solo) {
+      left: 2%;
+      width: min(58%, 240px);
+      grid-template-columns: 1fr;
+      grid-template-areas:
+        "allies"
+        "self";
+    }
+    .battle-stage.layout-b .ally-strip {
+      max-height: 30vh;
+    }
+    .battle-stage.layout-b .ally-portrait img {
+      height: clamp(52px, 14vmin, 76px);
     }
     .battle-stage.layout-b .enemy-sprite {
       height: clamp(72px, 18vmin, 140px);

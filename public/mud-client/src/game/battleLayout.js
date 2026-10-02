@@ -1,21 +1,26 @@
 /**
- * Battle layout B PoC — room sprites on gold markers (party left / enemies right),
+ * Battle layout B — room sprites on gold markers (party left / enemies right),
  * edge-docked player (TL) + target (TR) frames, slim over-sprite HP (no name labels).
- * Toggle via Settings, localStorage, or URL.
+ * Layout B is the default when the player has no explicit preference.
  *
- * Enable:
- *   Settings → Gameplay → "Battle layout B (PoC)"
+ * Classic opt-out:
+ *   Settings → Gameplay → turn off "Battle layout B"
+ *   localStorage.setItem('talesmud_battle_layout_b', '0')
+ *   /play/?battleLayout=classic   or   /play/?battlepoc=0
+ * Force Layout B:
+ *   Settings toggle on
  *   localStorage.setItem('talesmud_battle_layout_b', '1')
  *   /play/?battleLayout=b   or   /play/?battlepoc=1
- * Disable / revert:
- *   Settings toggle off
- *   localStorage.setItem('talesmud_battle_layout_b', '0')  (or remove)
- *   /play/?battleLayout=classic   or   /play/?battlepoc=0
  *
- * URL wins over localStorage; both win over the Settings flag.
+ * URL wins over localStorage; an explicit localStorage 0/1 wins over Settings.
+ * No URL and no localStorage key → Layout B, even if an older settings blob
+ * still has battleLayoutB: false (that was the previous default, not a choice).
  */
 
 export const BATTLE_LAYOUT_STORAGE_KEY = 'talesmud_battle_layout_b';
+
+/** Fresh guests and anyone with no stored preference use Layout B. */
+export const BATTLE_LAYOUT_DEFAULT = true;
 
 /**
  * @param {unknown} value
@@ -82,7 +87,23 @@ export function battleLayoutFromStorage(storage) {
 }
 
 /**
- * Final resolution: URL > localStorage > settings flag > false.
+ * Settings checkbox for a stored blob.
+ * Absent localStorage is "no preference" and stays on Layout B, including when
+ * the blob still has the old default `battleLayoutB: false`.
+ * @param {unknown} _storedFlag previous settings value (ignored when unset)
+ * @param {string|null|undefined} storageValue raw talesmud_battle_layout_b value
+ * @returns {boolean}
+ */
+export function battleLayoutSettingsDefault(_storedFlag, storageValue) {
+  const fromLs = parseBattleLayoutOverride(storageValue);
+  if (fromLs !== null) return fromLs;
+  return BATTLE_LAYOUT_DEFAULT;
+}
+
+/**
+ * Final resolution: URL > localStorage > settings flag > Layout B.
+ * Pass settingsFlag false only for an explicit Classic choice already in memory.
+ * Omit it (fresh guest / no blob) and the result is Layout B.
  * @param {{
  *   search?: string,
  *   storage?: Storage|null,
@@ -109,6 +130,9 @@ export function resolveBattleLayoutB(opts = {}) {
   const fromLs = battleLayoutFromStorage(storage);
   if (fromLs !== null) return fromLs;
 
+  if (opts.settingsFlag === undefined || opts.settingsFlag === null) {
+    return BATTLE_LAYOUT_DEFAULT;
+  }
   return normalizeBattleLayoutB(opts.settingsFlag);
 }
 

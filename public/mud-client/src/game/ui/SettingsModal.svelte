@@ -139,8 +139,8 @@
                 <label class="toggle-switch"><input type="checkbox" aria-label="Auto-focus BattleStage" checked={$settingsStore.interface?.combatAutoFocus !== false} on:change={() => toggle('combatAutoFocus')} /><span class="toggle-slider"></span></label>
               </div>
               <div class="setting-item">
-                <div class="setting-info"><div class="setting-label">Battle layout B (PoC)</div><div class="setting-desc">Sprites on markers; player TL + target TR frames; slim over-sprite HP (no names). Also ?battleLayout=b or localStorage talesmud_battle_layout_b=1.</div></div>
-                <label class="toggle-switch"><input type="checkbox" aria-label="Battle layout B PoC" checked={!!$settingsStore.interface?.battleLayoutB} on:change={() => toggle('battleLayoutB')} /><span class="toggle-slider"></span></label>
+                <div class="setting-info"><div class="setting-label">Battle layout B</div><div class="setting-desc">Default fight view: party on the left, enemies on the right. Turn off for Classic cards. ?battleLayout=classic or localStorage talesmud_battle_layout_b=0 also opts out.</div></div>
+                <label class="toggle-switch"><input type="checkbox" aria-label="Battle layout B" checked={!!$settingsStore.interface?.battleLayoutB} on:change={() => toggle('battleLayoutB')} /><span class="toggle-slider"></span></label>
               </div>
               <div class="setting-item">
                 <div class="setting-info"><div class="setting-label">Inventory opens as</div><div class="setting-desc">Choose a full overlay or a layout widget.</div></div>

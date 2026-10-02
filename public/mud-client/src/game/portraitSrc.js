@@ -107,6 +107,47 @@ export function playerPortraitSrc(entity) {
   return `/api/portraits/player-${race}-${cls}.png`;
 }
 
+/**
+ * Battle-stage sprite. Prefer the server portrait URL, then race/class art or
+ * the enemy template file. A class or enemy silhouette is only the last resort
+ * (and the image onerror target), so a missing file never stays a broken icon.
+ * @param {object} combatant
+ * @param {{ isPlayer?: boolean, selfId?: string, character?: object }} [opts]
+ */
+export function battleSpriteSrc(combatant, opts = {}) {
+  const c = combatant || {};
+  const p = String(c.portrait || '');
+  if (p.startsWith('data:')) return p;
+  if (p && !p.startsWith('img/')) {
+    if (p.startsWith('/') || p.startsWith('http')) return p;
+    return `/api/portraits/${p.replace(/\.png$/i, '')}.png`;
+  }
+  const isPlayer = opts.isPlayer === true || c.type === 'player';
+  if (isPlayer) {
+    const self = opts.selfId && c.id === opts.selfId ? opts.character : null;
+    if (self) {
+      const selfArt = portraitSrc(self);
+      if (selfArt && !String(selfArt).startsWith('data:')) return selfArt;
+    }
+    const raced = playerPortraitSrc({
+      race: c.race || c.raceId || (self && self.race),
+      class: c.classId || c.class || c.charClass || (self && classToken(self)),
+    });
+    if (raced) return raced;
+    if (self) return portraitSrc(self);
+    return playerSilhouette(c.classId || c.class);
+  }
+  const templateKey = stripInstance(c.templateId || c.templateID || '');
+  if (templateKey && !UUID_RE.test(templateKey)) {
+    return `/api/portraits/${templateKey.replace(/\.png$/i, '')}.png`;
+  }
+  const idKey = stripInstance(c.id || '');
+  if (idKey && !UUID_RE.test(idKey)) {
+    return `/api/portraits/${idKey.replace(/\.png$/i, '')}.png`;
+  }
+  return enemySilhouette();
+}
+
 /** Full-body sprite URL for room cards (2:3). Players with no template use a class silhouette. */
 export function portraitSrc(entity) {
   if (!entity) return figureFallback(null);

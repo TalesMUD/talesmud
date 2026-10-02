@@ -4,8 +4,10 @@ import {
   parseBattleLayoutOverride,
   battleLayoutFromSearch,
   battleLayoutFromStorage,
+  battleLayoutSettingsDefault,
   resolveBattleLayoutB,
   writeBattleLayoutOverride,
+  BATTLE_LAYOUT_DEFAULT,
   BATTLE_LAYOUT_STORAGE_KEY,
 } from './battleLayout.js';
 
@@ -62,5 +64,24 @@ assert.equal(
   resolveBattleLayoutB({ search: '', storage: mem, settingsFlag: false }),
   false
 );
+
+// No preference (fresh guest / no localStorage key) is Layout B.
+assert.equal(BATTLE_LAYOUT_DEFAULT, true);
+assert.equal(resolveBattleLayoutB({ search: '', storage: mem }), true);
+assert.equal(resolveBattleLayoutB({ search: '', storage: mem, settingsFlag: null }), true);
+assert.equal(battleLayoutSettingsDefault(false, null), true);
+assert.equal(battleLayoutSettingsDefault(false, ''), true);
+assert.equal(battleLayoutSettingsDefault(undefined, undefined), true);
+assert.equal(battleLayoutSettingsDefault(false, '0'), false);
+assert.equal(battleLayoutSettingsDefault(true, '0'), false);
+assert.equal(battleLayoutSettingsDefault(false, '1'), true);
+assert.equal(resolveBattleLayoutB({ search: '?battleLayout=classic', storage: mem }), false);
+assert.equal(
+  resolveBattleLayoutB({ search: '?battleLayout=b', storage: mem, settingsFlag: false }),
+  true
+);
+writeBattleLayoutOverride(false, mem);
+assert.equal(mem.getItem(BATTLE_LAYOUT_STORAGE_KEY), '0');
+assert.equal(resolveBattleLayoutB({ search: '', storage: mem, settingsFlag: true }), false);
 
 console.log('battleLayout_test: ok');

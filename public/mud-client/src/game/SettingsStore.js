@@ -1,5 +1,10 @@
 import { writable, get } from 'svelte/store';
-import { normalizeBattleLayoutB, writeBattleLayoutOverride } from './battleLayout.js';
+import {
+  BATTLE_LAYOUT_STORAGE_KEY,
+  battleLayoutSettingsDefault,
+  normalizeBattleLayoutB,
+  writeBattleLayoutOverride,
+} from './battleLayout.js';
 import {
   ACTION_BAR_LAYOUT_REVISION,
   DEFAULT_ACTION_BAR_PINS,
@@ -37,7 +42,7 @@ const DEFAULT_SETTINGS = {
     inventoryOpenMode: DEFAULT_INVENTORY_OPEN_MODE, // 'overlay' | 'widget'
     reducedMotion: 'system', // 'system' | 'on' | 'off'
     combatAutoFocus: true,
-    battleLayoutB: false, // PoC: FF-style party-left / enemies-right
+    battleLayoutB: true, // Layout B default; Classic is the Settings opt-out
     hotbarBinds: [...DEFAULT_HOTBAR_BINDS],
   }
 };
@@ -76,7 +81,18 @@ function createSettingsStore() {
             iface.inventoryOpenMode = normalizeInventoryOpenMode(iface.inventoryOpenMode);
             iface.reducedMotion = normalizeReducedMotion(iface.reducedMotion);
             iface.combatAutoFocus = iface.combatAutoFocus !== false;
-            iface.battleLayoutB = normalizeBattleLayoutB(iface.battleLayoutB);
+            // No talesmud_battle_layout_b key → Layout B, even if this blob
+            // still stores the old default false. Explicit 0/1 is the preference.
+            let layoutRaw = null;
+            try {
+              layoutRaw = localStorage.getItem(BATTLE_LAYOUT_STORAGE_KEY);
+            } catch (_) {
+              layoutRaw = null;
+            }
+            iface.battleLayoutB = battleLayoutSettingsDefault(
+              data.interface?.battleLayoutB,
+              layoutRaw
+            );
             const beforeSeed = scrubLegacySearchBinds(
               normalizeHotbarBinds(iface.hotbarBinds)
             );
@@ -155,8 +171,9 @@ function createSettingsStore() {
         }
         if (category === 'interface' && key === 'battleLayoutB') {
           nextValue = normalizeBattleLayoutB(value);
-          // Mirror to LS so ?-less refresh keeps the PoC without URL; clear on off.
-          writeBattleLayoutOverride(nextValue ? true : null);
+          // Explicit 1 or 0. Clearing the key would look like "no preference"
+          // and snap back to the Layout B default.
+          writeBattleLayoutOverride(nextValue ? true : false);
         }
         if (category === 'interface' && key === 'hotbarBinds') {
           nextValue = scrubLegacySearchBinds(normalizeHotbarBinds(value));
@@ -195,6 +212,7 @@ function createSettingsStore() {
           hotbarBinds: [...DEFAULT_HOTBAR_BINDS],
         }
       }));
+      writeBattleLayoutOverride(null);
       this.saveToStorage();
     }
   };
