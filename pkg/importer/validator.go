@@ -134,10 +134,21 @@ func (w *WorldImporter) validateData(
 
 	// 4. Item cross-reference checks
 	for _, i := range yamlItems {
-		if i.OnUseScript != "" && !scriptIDs[i.OnUseScript] {
-			w.addValidation("Item %s (%s): onUseScript references unknown script %s", i.ID, i.Name, i.OnUseScript)
-			warnings++
+			onUse := i.OnUseScript
+		if onUse == "" {
+			onUse = i.OnUseScriptID
 		}
+		if onUse != "" && !scriptIDs[onUse] {
+			w.addValidation("Item %s (%s): onUseScript references unknown script %s", i.ID, i.Name, onUse)
+		}
+		onHit := i.OnHitScript
+		if onHit == "" {
+			onHit = i.OnHitScriptID
+		}
+		if onHit != "" && !scriptIDs[onHit] {
+			w.addValidation("Item %s (%s): onHitScript references unknown script %s", i.ID, i.Name, onHit)
+		}
+
 	}
 
 	// 5. Loot table cross-reference checks

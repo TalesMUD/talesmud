@@ -5,11 +5,15 @@ import (
 	"math"
 	"math/rand"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/combat"
+	"github.com/talesmud/talesmud/pkg/entities/items"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/balance"
 	"github.com/talesmud/talesmud/pkg/portraits"
@@ -129,6 +133,7 @@ func (e *Engine) CreateCombatantFromCharacter(char *characters.Character) combat
 		copy(ref.EquippedSkills, char.EquippedSkills)
 		ref.SkillCooldowns = make(map[string]int)
 	}
+	snapshotWeaponOnHit(&ref, char)
 	return ref
 }
 
@@ -446,6 +451,11 @@ func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targ
 		result.Message += fmt.Sprintf(" (%d/%d HP)", target.CurrentHP, target.MaxHP)
 	}
 	e.refreshEnrage(instance, target)
+
+	// Content-authored weapon on-hit DoT (refresh duration; no stack spam).
+	if msg := e.applyWeaponOnHitDot(instance, attacker, target); msg != "" {
+		result.Message += " " + msg
+	}
 
 	// Add to combat log
 	logResult := "hit"
@@ -932,4 +942,150 @@ func (e *Engine) GetNPCAIAction(instance *combat.CombatInstance, npcCombatant *c
 
 	// No valid target (shouldn't happen in active combat)
 	return combat.CombatActionDefend, ""
+}
+
+// snapshotWeaponOnHit copies main-hand on-hit script id and optional attribute DoT
+// onto the combatant. Game-set names/numbers stay in content attrs / Lua scripts.
+func snapshotWeaponOnHit(ref *combat.CombatantRef, char *characters.Character) {
+	if ref == nil || char == nil || char.EquippedItems == nil {
+		return
+	}
+	weapon := char.EquippedItems[items.ItemSlotMainHand]
+	if weapon == nil {
+		return
+	}
+	ref.OnHitScriptID = weapon.OnHitScriptID
+	if ref.OnHitScriptID == "" && weapon.TemplateID != "" {
+		// Instance may have dropped script id; TemplateID alone is not enough here
+		// without a service lookup — content should stamp onHitScriptId onto templates
+		// so CreateInstanceFromTemplate copies it. Attributes still drive the DoT.
+	}
+	dot := parseOnHitDotAttrs(weapon.Attributes)
+	if dot.Active {
+		ref.OnHitDot = dot
+	}
+}
+
+func parseOnHitDotAttrs(attrs map[string]interface{}) combat.OnHitDot {
+	var out combat.OnHitDot
+	if attrs == nil {
+		return out
+	}
+	// Nested map form: on_hit_dot: {id, name, damage, duration, message}
+	if raw, ok := attrs["on_hit_dot"]; ok {
+		if m, ok := raw.(map[string]interface{}); ok {
+			out.ID = attrString(m["id"])
+			out.Name = attrString(m["name"])
+			out.Damage = attrInt32(m["damage"])
+			out.Duration = int(attrInt32(m["duration"]))
+			out.Message = attrString(m["message"])
+		}
+	}
+	// Flat form fallback
+	if out.ID == "" {
+		out.ID = attrString(attrs["on_hit_dot_id"])
+	}
+	if out.Name == "" {
+		out.Name = attrString(attrs["on_hit_dot_name"])
+	}
+	if out.Damage == 0 {
+		out.Damage = attrInt32(attrs["on_hit_dot_damage"])
+	}
+	if out.Duration == 0 {
+		out.Duration = int(attrInt32(attrs["on_hit_dot_duration"]))
+	}
+	if out.Message == "" {
+		out.Message = attrString(attrs["on_hit_dot_message"])
+	}
+	if out.ID == "" && out.Name != "" {
+		out.ID = strings.ToLower(strings.ReplaceAll(out.Name, " ", "_"))
+	}
+	if out.Name == "" {
+		out.Name = out.ID
+	}
+	if out.Damage > 0 && out.Duration > 0 && out.ID != "" {
+		out.Active = true
+	}
+	return out
+}
+
+func attrString(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	switch t := v.(type) {
+	case string:
+		return t
+	default:
+		return fmt.Sprintf("%v", t)
+	}
+}
+
+func attrInt32(v interface{}) int32 {
+	if v == nil {
+		return 0
+	}
+	switch t := v.(type) {
+	case int32:
+		return t
+	case int:
+		return int32(t)
+	case int64:
+		return int32(t)
+	case float64:
+		return int32(t)
+	case float32:
+		return int32(t)
+	case string:
+		n, err := strconv.ParseFloat(t, 64)
+		if err != nil {
+			return 0
+		}
+		return int32(n)
+	default:
+		return 0
+	}
+}
+
+// applyWeaponOnHitDot applies a snapshotted on-hit DoT, refreshing duration on reapply.
+func (e *Engine) applyWeaponOnHitDot(instance *combat.CombatInstance, attacker, target *combat.CombatantRef) string {
+	if e == nil || instance == nil || attacker == nil || target == nil || !target.IsAlive {
+		return ""
+	}
+	dot := attacker.OnHitDot
+	if !dot.Active || dot.Damage < 1 || dot.Duration < 1 {
+		return ""
+	}
+	se := combat.StatusEffect{
+		ID:       uuid.New().String(),
+		SkillID:  "onhit:" + dot.ID,
+		Name:     dot.Name,
+		Type:     "dot",
+		Value:    dot.Damage,
+		Duration: dot.Duration,
+		SourceID: attacker.ID,
+	}
+	e.applyStatusEffect(instance, target, se)
+	e.UpdateCombatant(instance, target)
+	if dot.Message != "" {
+		return dot.Message
+	}
+	return fmt.Sprintf("%s sears %s (%d/tick, %d rounds).", dot.Name, target.Name, dot.Damage, dot.Duration)
+}
+
+// ApplyStatusEffectFromScript exposes status-effect application for Lua on-hit scripts.
+func (e *Engine) ApplyStatusEffectFromScript(instance *combat.CombatInstance, targetID string, se combat.StatusEffect) bool {
+	if e == nil || instance == nil || targetID == "" {
+		return false
+	}
+	target := instance.GetCombatantByID(targetID)
+	if target == nil || !target.IsAlive {
+		return false
+	}
+	if se.ID == "" {
+		se.ID = uuid.New().String()
+	}
+	e.applyStatusEffect(instance, target, se)
+	e.UpdateCombatant(instance, target)
+	return true
 }

@@ -71,6 +71,8 @@ type CombatEngineCtrl interface {
 	SetAutoAttackTarget(characterID string, targetID string)
 	// ProcessPlayerSkill handles a player using a skill in combat
 	ProcessPlayerSkill(characterID, skillID, targetID string) (message string, combatEnded bool, endState combat.CombatState)
+	// ApplyCombatDot applies a content-authored DoT during an active fight (Lua on-hit procs)
+	ApplyCombatDot(attackerID, targetID, effectID, name string, damage int32, duration int) bool
 	// QueuePlayerSkill queues a skill for a player's next turn
 	QueuePlayerSkill(characterID, skillID, targetID string)
 }

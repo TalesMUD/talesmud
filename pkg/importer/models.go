@@ -133,6 +133,8 @@ type YAMLItem struct {
 	Meta          YAMLItemMeta           `yaml:"meta"`
 	OnUseScript   string                 `yaml:"onUseScript"`
 	OnUseScriptID string                 `yaml:"onUseScriptId"` // alias used by content packs
+	OnHitScript   string                 `yaml:"onHitScript"`
+	OnHitScriptID string                 `yaml:"onHitScriptId"` // alias used by content packs
 }
 
 // YAMLItemMeta contains item metadata
