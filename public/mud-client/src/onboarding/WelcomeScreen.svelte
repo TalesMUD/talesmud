@@ -12,7 +12,7 @@
   .bg-image {
     position: absolute;
     inset: 0;
-    background-image: url('img/bg/oldtown-griphon.png');
+    background-image: url('img/bg/sample-tavern.png');
     background-size: cover;
     background-position: center;
     image-rendering: pixelated;

@@ -60,8 +60,8 @@ func TestBossFirstKillBonusOnce(t *testing.T) {
 		t.Helper()
 		enemy := &npc.NPC{
 			Entity:           &entities.Entity{ID: id},
-			Name:             "Hollow Knight",
-			TemplateID:       "ENM-HK",
+			Name:             "Sample Warden",
+			TemplateID:       "ENM-WARDEN",
 			Level:            5,
 			IsDead:           true,
 			MaxHitPoints:     100,
@@ -88,7 +88,7 @@ func TestBossFirstKillBonusOnce(t *testing.T) {
 
 	storeTestRoom(t, facade, "room-boss", nil)
 	_ = drainGameMessages(g.SendMessage())
-	kill("hk-1")
+	kill("warden-1")
 
 	first, err := facade.CharactersService().FindByID(hero.ID)
 	if err != nil {
@@ -99,7 +99,7 @@ func TestBossFirstKillBonusOnce(t *testing.T) {
 	if int64(first.XP) != wantFirstXP || first.Gold != wantFirstGold {
 		t.Fatalf("first kill xp %d gold %d, want xp %d gold %d", first.XP, first.Gold, wantFirstXP, wantFirstGold)
 	}
-	if len(first.FirstBossKills) != 1 || first.FirstBossKills[0] != "tpl:ENM-HK" {
+	if len(first.FirstBossKills) != 1 || first.FirstBossKills[0] != "tpl:ENM-WARDEN" {
 		t.Fatalf("first-kill flag = %#v", first.FirstBossKills)
 	}
 
@@ -116,7 +116,7 @@ func TestBossFirstKillBonusOnce(t *testing.T) {
 		t.Fatalf("breakdown %+v", saw)
 	}
 
-	kill("hk-2")
+	kill("warden-2")
 	second, err := facade.CharactersService().FindByID(hero.ID)
 	if err != nil {
 		t.Fatal(err)

@@ -242,7 +242,7 @@ export function layoutDistance(a, b) {
 }
 
 /**
- * Prefer framing you + nearby rooms so distant separateAreas (Oldtown vs Meadow)
+ * Prefer framing you + nearby rooms so distant separate areas (town vs meadow)
  * do not shrink the camera to a world-fit. Falls back to all places when sparse.
  * @param {object[]} places
  * @param {object|null} focus

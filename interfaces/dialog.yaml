@@ -75,7 +75,7 @@ fields:
     # The NPC's spoken text at this dialog node. This is what the player reads.
     # Supports {{variable}} template syntax (see header).
     # Write in character — this is the NPC speaking directly.
-    # Example: "Welcome to Oldtown, {{player.name}}! First time here?"
+    # Example: "Welcome to Sampletown, {{player.name}}! First time here?"
 
   alternateTexts:
     type: string[]

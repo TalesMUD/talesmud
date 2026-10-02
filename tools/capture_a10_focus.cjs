@@ -2,7 +2,7 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const assert = require('node:assert/strict');
-const puppeteer = require(process.env.PUPPETEER_MODULE || '/home/clawd/clawd/node_modules/puppeteer-core');
+const puppeteer = require(process.env.PUPPETEER_MODULE || path.join(process.env.HOME || '', 'dev/node_modules/puppeteer-core'));
 
 (async () => {
   const base = process.env.A10_BASE_URL || 'http://127.0.0.1:8010';

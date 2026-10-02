@@ -75,9 +75,9 @@ func trustedProxies() []string {
 }
 
 func allowedCORSOrigins() []string {
+	// Framework defaults are the public site and local dev servers.
+	// Deployments add hosts with CORS_ALLOWED_ORIGINS (comma-separated).
 	origins := []string{
-		"https://veilspan.com",
-		"https://www.veilspan.com",
 		"https://talesmud.io",
 		"https://www.talesmud.io",
 		"http://localhost:5000",

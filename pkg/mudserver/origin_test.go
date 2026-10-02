@@ -3,11 +3,11 @@ package mudserver
 import "testing"
 
 func TestOriginAllowed(t *testing.T) {
-	allowed := []string{"https://veilspan.com", "http://localhost:8010"}
+	allowed := []string{"https://talesmud.io", "http://localhost:8010"}
 	if !OriginAllowed("", allowed) {
 		t.Fatal("empty origin should be allowed for non-browser clients")
 	}
-	if !OriginAllowed("https://veilspan.com", allowed) {
+	if !OriginAllowed("https://talesmud.io", allowed) {
 		t.Fatal("listed origin should be allowed")
 	}
 	if OriginAllowed("https://evil.example", allowed) {

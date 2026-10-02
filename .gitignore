@@ -41,6 +41,9 @@ public/mud-client/public/worldmap-worker.js.map
 .claude/
 .codex/
 
+# Local director notes and UX captures (not part of the engine)
+.director/
+
 img/
 
 # Database files
@@ -63,6 +66,7 @@ img/*.png
 *.Identifier
 *.Identifier
 import/*
+!import/README.md
 
 # Uploaded content (keep directory structure but not user uploads)
 uploads/backgrounds/*

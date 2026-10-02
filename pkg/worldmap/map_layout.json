@@ -1,21 +1,12 @@
 {
   "gap": 2,
   "coastPadding": 4,
-  "notes": "Decorative atlas centers in grid units. Compass inter-zone exits guide fallback placement; these compact overrides resolve cycles and authored area-local coordinate origins. Oldtown is north of Meadows; Silverbrook east; Ashenvale northwest; Gloomfen southwest. Positive outdoor Z is elevation on the overworld. Room coordinates remain local within each area before translation.",
+  "notes": "SampleWorld zone centers in grid units. Content packs replace these centers. Unconfigured areas attach by compass exits. Positive outdoor Z is elevation on the overworld. Room coordinates stay local to each area before translation.",
   "zones": {
-    "Z00_catacombs_intro": {"center": [0, 9], "ground": "grassland"},
-    "Z01_meadows_forest_path": {"center": [0, 8], "ground": "grassland"},
-    "Z02_oldtown": {"center": [0, 0], "ground": "grassland", "town": true},
-    "Z03_gloomfen_marsh": {"center": [-8, 7], "ground": "swamp"},
-    "Z04_ashenvale_woods": {"center": [-9, -3], "ground": "forest"},
-    "Z05_silverbrook_vale": {"center": [8, 2], "ground": "grassland"},
-    "Z06_ironspine_foothills": {"center": [-11, -13], "ground": "mountain"},
-    "Z07_verdant_reach": {"center": [15, -6], "ground": "forest"},
-    "Z08_gearwind_plateau": {"center": [-2, 16], "ground": "mountain"},
-    "Z09_thornfield_highlands": {"center": [1, -12], "ground": "mountain"},
-    "Z10_kazgrath": {"center": [-12, -21], "ground": "mountain", "town": true},
-    "Z11_aelindor": {"center": [15, -15], "ground": "forest", "town": true},
-    "Z12_veridane": {"center": [3, 23], "ground": "grassland", "town": true},
-    "Z19_gloomfen_depths": {"center": [-8, 8], "ground": "swamp"}
+    "Z00_sample_crypt": {"center": [0, 9], "ground": "dungeon"},
+    "Z01_sample_meadow": {"center": [0, 6], "ground": "grassland"},
+    "Z02_sample_town": {"center": [0, 0], "ground": "grassland", "town": true},
+    "Z03_sample_marsh": {"center": [-8, 6], "ground": "swamp"},
+    "Z04_sample_woods": {"center": [-8, -3], "ground": "forest"}
   }
 }

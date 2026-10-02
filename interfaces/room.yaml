@@ -55,7 +55,7 @@ fields:
     type: string
     # Zone/area grouping. All rooms in the same zone share this value.
     # Used for map display, area-based NPC spawning, and quest scoping.
-    # Example: "Oldtown", "Gloomfen Marsh", "Catacombs"
+    # Example: "Z02_sample_town", "Z03_sample_marsh", "crypt"
 
   areaType:
     type: string

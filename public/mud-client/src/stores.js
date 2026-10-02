@@ -30,7 +30,7 @@ function createSubMenuStore() {
 
 function createUserStore() {
   const { subscribe, set, update } = writable({
-    name: "marcus",
+    name: "",
     loggedIn: false,
   });
 

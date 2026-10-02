@@ -606,7 +606,8 @@ func (s *questsService) CompleteQuest(characterID, questID string) (*quests.Ques
 }
 
 // GrantAutoQuests accepts every auto-source quest that belongs to the
-// character's current room area (Z00 catacombs -> QST0001-QST0004).
+// character's current room area. A quest belongs when its Area matches, or
+// when a visit objective targets a room in that area.
 func (s *questsService) GrantAutoQuests(characterID, roomArea string) int {
 	allQuests, err := s.FindAll()
 	if err != nil {
@@ -630,16 +631,13 @@ func (s *questsService) GrantAutoQuests(characterID, roomArea string) int {
 }
 
 func (s *questsService) autoQuestBelongsToArea(q *quests.Quest, roomArea string) bool {
-	if q == nil {
+	if q == nil || strings.TrimSpace(roomArea) == "" {
 		return false
 	}
-	if strings.HasPrefix(roomArea, "Z00") && strings.HasPrefix(q.ID, "QST000") {
+	if areasMatch(q.Area, roomArea) {
 		return true
 	}
-	if strings.HasPrefix(roomArea, "Z01") && strings.HasPrefix(q.ID, "QST010") {
-		return true
-	}
-	if s.facade == nil || roomArea == "" {
+	if s.facade == nil {
 		return false
 	}
 	for _, obj := range q.Objectives {
@@ -647,11 +645,17 @@ func (s *questsService) autoQuestBelongsToArea(q *quests.Quest, roomArea string)
 			continue
 		}
 		room, err := s.facade.RoomsService().FindByID(obj.TargetID)
-		if err == nil && room != nil && room.Area == roomArea {
+		if err == nil && room != nil && areasMatch(room.Area, roomArea) {
 			return true
 		}
 	}
 	return false
+}
+
+func areasMatch(a, b string) bool {
+	a = strings.TrimSpace(a)
+	b = strings.TrimSpace(b)
+	return a != "" && strings.EqualFold(a, b)
 }
 
 func (s *questsService) GetAvailableQuests(characterID string) ([]*quests.Quest, error) {

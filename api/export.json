@@ -80,7 +80,7 @@
               {
                   "name": "north",
                   "description": "Follow the door to the left",
-                  "target": "oldtown-entrance",
+                  "target": "sampletown-entrance",
                   "params": null
               },
               {
@@ -97,20 +97,20 @@
           "Meta": null
       },
       {
-          "id": "oldtown-entrance",
+          "id": "sampletown-entrance",
           "detail": "",
-          "name": "Entrance to Oldtown",
-          "description": "You reach the gates of Oldtown. A long forgotten village of fishersman and sword craftsmen.",
+          "name": "Entrance to Sampletown",
+          "description": "You reach the gates of Sampletown. A long forgotten village of fishersman and sword craftsmen.",
           "roomType": "gate",
-          "area": "oldtown",
+          "area": "sampletown",
           "areaType": "city",
           "tags": null,
           "actions": null,
           "exits": [
               {
                   "name": "west",
-                  "description": "Enter Oldtown",
-                  "target": "oldtown-mainstreet",
+                  "description": "Enter Sampletown",
+                  "target": "sampletown-mainstreet",
                   "params": null
               }
           ],
@@ -121,12 +121,12 @@
           "Meta": null
       },
       {
-          "id": "oldtown-mainstreet",
+          "id": "sampletown-mainstreet",
           "detail": "You can see shops on all sides and even wandering merchants. Watch out for the thieve kids as you might lose a coin or two when you encounter them.",
-          "name": "The main street of old town",
-          "description": "As you pass through the gates you find yourself on a very busy street. The main street of old town leading up in the distance to the castle.\n",
+          "name": "The main street of Sampletown",
+          "description": "As you pass through the gates you find yourself on a very busy street. The main street of Sampletown leading up in the distance to the castle.\n",
           "roomType": "street",
-          "area": "oldtown",
+          "area": "sampletown",
           "areaType": "city",
           "tags": null,
           "actions": null,
@@ -134,19 +134,19 @@
               {
                   "name": "east",
                   "description": "Back to the entrance",
-                  "target": "oldtown-entrance",
+                  "target": "sampletown-entrance",
                   "params": null
               },
               {
-                  "name": "griphon",
-                  "description": "Enter the Old Feisty Griphon Inn",
-                  "target": "oldtown-feisty-griphon",
+                  "name": "tavern",
+                  "description": "Enter the Sample Tavern",
+                  "target": "sampletown-tavern",
                   "params": null
               },
               {
                   "name": "smith",
                   "description": "Enter the Weaponsmith",
-                  "target": "oldtown-weaponsmith",
+                  "target": "sampletown-weaponsmith",
                   "params": null
               }
           ],
@@ -160,12 +160,12 @@
           "Meta": null
       },
       {
-          "id": "oldtown-feisty-griphon",
+          "id": "sampletown-tavern",
           "detail": "You can see three rows of tables with chairs on both sides each",
-          "name": "Old Feisty Griphon",
+          "name": "Sample Tavern",
           "description": "As you enter the pub. ...\n\nyou can feel the alcohol in the air - as you breath your lungs fill with stink of rum and beer.",
           "roomType": "inn",
-          "area": "oldtown",
+          "area": "sampletown",
           "areaType": "city",
           "tags": null,
           "actions": null,
@@ -173,7 +173,7 @@
               {
                   "name": "leave",
                   "description": "Leave the Inn",
-                  "target": "oldtown-mainstreet",
+                  "target": "sampletown-mainstreet",
                   "params": null
               }
           ],
@@ -184,12 +184,12 @@
           "Meta": null
       },
       {
-          "id": "oldtown-weaponsmith",
+          "id": "sampletown-weaponsmith",
           "detail": "",
           "name": "The Weasponsmith",
           "description": "As you enter the smith you can see many gloriful swords and shields hanging on the wall.",
           "roomType": "merchant",
-          "area": "oldtown",
+          "area": "sampletown",
           "areaType": "city",
           "tags": null,
           "actions": null,
@@ -197,7 +197,7 @@
               {
                   "name": "leave",
                   "description": "Leave the Weaponsmith",
-                  "target": "oldtown-mainstreet",
+                  "target": "sampletown-mainstreet",
                   "params": null
               }
           ],
@@ -260,9 +260,9 @@
       {
           "id": "a623d128-41c8-48e2-a612-9307be3c1c56",
           "belongsUser": "5edc23487af5618b192f457e",
-          "currentRoom": "oldtown-mainstreet",
-          "name": "atla",
-          "description": "Best wizard of all time",
+          "currentRoom": "sampletown-mainstreet",
+          "name": "Ada",
+          "description": "A sample wizard",
           "race": {
               "id": "dwarf",
               "name": "Dwarf",
@@ -322,9 +322,9 @@
       {
           "id": "82fd1e20-b095-4ae2-9191-4422b4b47996",
           "belongsUser": "5edc23487af5618b192f457e",
-          "currentRoom": "oldtown-weaponsmith",
-          "name": "Conan",
-          "description": "the Barbarian",
+          "currentRoom": "sampletown-weaponsmith",
+          "name": "Bram",
+          "description": "a sample warrior",
           "race": {
               "id": "human",
               "name": "Human",
@@ -384,8 +384,8 @@
       {
           "id": "67a02931-92da-4350-be2f-be5b63779886",
           "belongsUser": "5edc23487af5618b192f457e",
-          "currentRoom": "oldtown-mainstreet",
-          "name": "Gumdalf the Bay",
+          "currentRoom": "sampletown-mainstreet",
+          "name": "Nia",
           "description": "Create a new Wizard",
           "race": {
               "id": "dwarf",
@@ -446,9 +446,9 @@
       {
           "id": "fa4f401e-730b-43ec-8d3e-2bd8f542082b",
           "belongsUser": "5edc23487af5618b192f457e",
-          "currentRoom": "oldtown-mainstreet",
-          "name": "Insany",
-          "description": "Master of All",
+          "currentRoom": "sampletown-mainstreet",
+          "name": "Cal",
+          "description": "a sample fighter",
           "race": {
               "id": "human",
               "name": "Human",
@@ -508,9 +508,9 @@
       {
           "id": "d010b5b0-890a-4da5-a8f9-bb7c8b5a1190",
           "belongsUser": "5edcde12c75e76dde2960e4b",
-          "currentRoom": "oldtown-mainstreet",
-          "name": "Legolas",
-          "description": "Legolas Longpants",
+          "currentRoom": "sampletown-mainstreet",
+          "name": "Ren",
+          "description": "a sample ranger",
           "race": {
               "id": "elve",
               "name": "Elve",
@@ -571,7 +571,7 @@
   "users": [
       {
           "id": "5eced4d95e21041390e0dad1",
-          "refid": "google-oauth2|115465922685935745669",
+          "refid": "auth0|EXAMPLE_GOOGLE",
           "name": "",
           "email": "",
           "nickname": "",
@@ -585,9 +585,9 @@
       {
           "id": "5edc23487af5618b192f457e",
           "refid": "auth0|EXAMPLE_SUB",
-          "name": "Marcus",
+          "name": "Ada",
           "email": "",
-          "nickname": "atla",
+          "nickname": "ada",
           "created": "2020-06-06T23:14:16.321Z",
           "lastSeen": "2020-06-11T22:30:07.429Z",
           "picture": "",
@@ -597,7 +597,7 @@
       },
       {
           "id": "5edcde12c75e76dde2960e4b",
-          "refid": "auth0|5ecaea247280410c1bb4fc30",
+          "refid": "auth0|EXAMPLE_SUB_2",
           "name": "",
           "email": "",
           "nickname": "",

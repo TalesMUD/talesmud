@@ -8,44 +8,42 @@
 #   Bosses:               ~15–30
 #
 # named_overrides replace difficulty multipliers for a specific enemy name
-# (exact match on NPC name as authored in content).
+# (exact match on NPC name). The entry below is a sample of the mechanism.
+# Content packs replace it with their own names.
 
 difficulty_multipliers:
   trivial:
-    hp: 2.5         # Catacomb Rat: 8 * 2.5 = 20 HP  (~4 turns)
-    attack: 3.0     # Catacomb Rat: 1 * 3.0 = 3 ATK
+    hp: 2.5         # Sample Rat: 8 * 2.5 = 20 HP  (~4 turns)
+    attack: 3.0     # Sample Rat: 1 * 3.0 = 3 ATK
     defense: 1.0
 
   easy:
-    hp: 1.9         # Sewer Rat: 12 * 1.9 ≈ 23 HP; Tunnel Mole: 15 * 1.9 ≈ 28
-    attack: 1.4     # Sewer Rat: 3 * 1.4 ≈ 4 ATK
-    defense: 0.5    # Tunnel Mole: 2 * 0.5 = 1 DEF (less sponge)
+    hp: 1.9         # Sample Pest: 12 * 1.9 ≈ 23 HP; Sample Burrower: 15 * 1.9 ≈ 28
+    attack: 1.4     # Sample Pest: 3 * 1.4 ≈ 4 ATK
+    defense: 0.5    # Sample Burrower: 2 * 0.5 = 1 DEF (less sponge)
 
   normal:
-    hp: 2.7         # Meadow Wolf: 18 * 2.7 ≈ 49; Bandit: 22 * 2.7 ≈ 59
-    attack: 1.35    # Meadow Wolf: 4 * 1.35 ≈ 5 ATK
-    defense: 1.5    # Meadow Wolf: 1 * 1.5 ≈ 1–2 DEF
+    hp: 2.7         # Sample Wolf: 18 * 2.7 ≈ 49; Sample Bandit: 22 * 2.7 ≈ 59
+    attack: 1.35    # Sample Wolf: 4 * 1.35 ≈ 5 ATK
+    defense: 1.5    # Sample Wolf: 1 * 1.5 ≈ 1–2 DEF
 
   hard:
-    hp: 0.9         # Thornback Bear: 80 * 0.9 = 72 HP (~13 turns at L5)
+    hp: 0.9         # Sample Bear: 80 * 0.9 = 72 HP (~13 turns at L5)
     attack: 1.0     # 11 ATK
     defense: 1.0    # 4 DEF
 
   boss:
-    hp: 1.85        # Burrow Brute: 55 * 1.85 ≈ 102 HP (~22 turns at L4)
-    attack: 1.15    # Burrow Brute: 8 * 1.15 ≈ 9 ATK (survivable)
-    defense: 1.5    # Burrow Brute: 3 * 1.5 ≈ 4–5 DEF
+    hp: 1.85        # Sample Brute: 55 * 1.85 ≈ 102 HP (~22 turns at L4)
+    attack: 1.15    # Sample Brute: 8 * 1.15 ≈ 9 ATK (survivable)
+    defense: 1.5    # Sample Brute: 3 * 1.5 ≈ 4–5 DEF
 
-# Per-enemy overrides (applied instead of the difficulty tier multipliers)
+# Per-enemy overrides (applied instead of the difficulty tier multipliers).
+# Sample only. Packs replace this map.
 named_overrides:
-  "The Hollow Knight":
+  "Sample Warden":
     hp: 1.0         # 150 HP (~22 turns with skills at L6)
     attack: 0.85    # 13 * 0.85 ≈ 11 ATK — threatening but killable
     defense: 0.9    # 6 * 0.9 ≈ 5 DEF
-  "Hollow Knight":
-    hp: 1.0
-    attack: 0.85
-    defense: 0.9
 
 # Level gap (attacker level − defender level), clamped to ±max_levels.
 # Gap 0 is neutral: hit, crit, and damage match the formulas without a gap.
@@ -150,6 +148,5 @@ boss_mechanics:
 # Notes:
 # - Tuned so strength difference drives duration (trash fast, bosses long but killable).
 # - Sims auto-spend distributable attribute points on primary attr (competent player).
-# - Content: prefer difficulty "easy" for Sewer Rat / Tunnel Mole (currently "normal"
-#   in talesmud-rpg-1); until retagged, named play still uses normal multipliers.
-# - Re-import NPCs after changing this file so live DB picks up new finals.
+# - Sample roster only. Packs author their own NPC names and difficulty tags.
+# - Re-import NPCs after changing this file so a live database picks up new finals.

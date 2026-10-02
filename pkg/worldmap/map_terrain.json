@@ -195,20 +195,11 @@
     }
   ],
   "areas": {
-    "Z00_catacombs_intro": "dungeon",
-    "Z01_meadows_forest_path": "grassland",
-    "Z02_oldtown": "city",
-    "Z03_gloomfen_marsh": "swamp",
-    "Z04_ashenvale_woods": "forest",
-    "Z05_silverbrook_vale": "grassland",
-    "Z06_ironspine_foothills": "mountain",
-    "Z07_verdant_reach": "forest",
-    "Z08_gearwind_plateau": "mountain",
-    "Z09_thornfield_highlands": "mountain",
-    "Z10_kazgrath": "city",
-    "Z11_aelindor": "forest",
-    "Z12_veridane": "city",
-    "Z19_gloomfen_depths": "dungeon"
+    "Z00_sample_crypt": "dungeon",
+    "Z01_sample_meadow": "grassland",
+    "Z02_sample_town": "city",
+    "Z03_sample_marsh": "swamp",
+    "Z04_sample_woods": "forest"
   },
   "genericTags": {
     "underground": "dungeon",

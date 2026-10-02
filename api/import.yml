@@ -4,9 +4,9 @@ characters:
   belongsuser:
     belongsuserid: 5edc23487af5618b192f457e
   currentroom:
-    currentroomid: oldtown-mainstreet
-  name: atla
-  description: Best wizard of all time
+    currentroomid: sampletown-mainstreet
+  name: Ada
+  description: A sample wizard
   race:
     id: dwarf
     name: Dwarf
@@ -51,9 +51,9 @@ characters:
   belongsuser:
     belongsuserid: 5edc23487af5618b192f457e
   currentroom:
-    currentroomid: oldtown-weaponsmith
-  name: Conan
-  description: the Barbarian
+    currentroomid: sampletown-weaponsmith
+  name: Bram
+  description: a sample warrior
   race:
     id: human
     name: Human
@@ -98,8 +98,8 @@ characters:
   belongsuser:
     belongsuserid: 5edc23487af5618b192f457e
   currentroom:
-    currentroomid: oldtown-mainstreet
-  name: Gumdalf the Bay
+    currentroomid: sampletown-mainstreet
+  name: Nia
   description: Create a new Wizard
   race:
     id: dwarf
@@ -145,9 +145,9 @@ characters:
   belongsuser:
     belongsuserid: 5edc23487af5618b192f457e
   currentroom:
-    currentroomid: oldtown-mainstreet
-  name: Insany
-  description: Master of All
+    currentroomid: sampletown-mainstreet
+  name: Cal
+  description: a sample fighter
   race:
     id: human
     name: Human
@@ -192,9 +192,9 @@ characters:
   belongsuser:
     belongsuserid: 5edcde12c75e76dde2960e4b
   currentroom:
-    currentroomid: oldtown-mainstreet
-  name: Legolas
-  description: Legolas Longpants
+    currentroomid: sampletown-mainstreet
+  name: Ren
+  description: a sample ranger
   race:
     id: elve
     name: Elve
@@ -324,7 +324,7 @@ rooms:
     description: Follow the door to the left
     type: ""
     hidden: false
-    target: oldtown-entrance
+    target: sampletown-entrance
     params: {}
   - name: south
     description: follow the path south
@@ -338,23 +338,23 @@ rooms:
   coords: null
   meta: null
 - entity:
-    id: oldtown-entrance
+    id: sampletown-entrance
   lookat:
     detail: ""
-  name: Entrance to Oldtown
-  description: You reach the gates of Oldtown. A long forgotten village of fishersman
+  name: Entrance to Sampletown
+  description: You reach the gates of Sampletown. A long forgotten village of fishersman
     and sword craftsmen.
   roomtype: gate
-  area: oldtown
+  area: sampletown
   areatype: city
   tags: []
   actions: []
   exits:
   - name: west
-    description: Enter Oldtown
+    description: Enter Sampletown
     type: ""
     hidden: false
-    target: oldtown-mainstreet
+    target: sampletown-mainstreet
     params: {}
   characters:
   - a623d128-41c8-48e2-a612-9307be3c1c56
@@ -362,15 +362,15 @@ rooms:
   coords: null
   meta: null
 - entity:
-    id: oldtown-mainstreet
+    id: sampletown-mainstreet
   lookat:
     detail: You can see shops on all sides and even wandering merchants. Watch out
       for the thieve kids as you might lose a coin or two when you encounter them.
-  name: The main street of old town
+  name: The main street of Sampletown
   description: |
-    As you pass through the gates you find yourself on a very busy street. The main street of old town leading up in the distance to the castle.
+    As you pass through the gates you find yourself on a very busy street. The main street of Sampletown leading up in the distance to the castle.
   roomtype: street
-  area: oldtown
+  area: sampletown
   areatype: city
   tags: []
   actions: []
@@ -379,19 +379,19 @@ rooms:
     description: Back to the entrance
     type: ""
     hidden: false
-    target: oldtown-entrance
+    target: sampletown-entrance
     params: {}
-  - name: griphon
-    description: Enter the Old Feisty Griphon Inn
+  - name: tavern
+    description: Enter the Sample Tavern
     type: ""
     hidden: false
-    target: oldtown-feisty-griphon
+    target: sampletown-tavern
     params: {}
   - name: smith
     description: Enter the Weaponsmith
     type: ""
     hidden: false
-    target: oldtown-weaponsmith
+    target: sampletown-weaponsmith
     params: {}
   characters:
   - a623d128-41c8-48e2-a612-9307be3c1c56
@@ -402,16 +402,16 @@ rooms:
   coords: null
   meta: null
 - entity:
-    id: oldtown-feisty-griphon
+    id: sampletown-tavern
   lookat:
     detail: You can see three rows of tables with chairs on both sides each
-  name: Old Feisty Griphon
+  name: Sample Tavern
   description: |-
     As you enter the pub. ...
 
     you can feel the alcohol in the air - as you breath your lungs fill with stink of rum and beer.
   roomtype: inn
-  area: oldtown
+  area: sampletown
   areatype: city
   tags: []
   actions: []
@@ -420,7 +420,7 @@ rooms:
     description: Leave the Inn
     type: ""
     hidden: false
-    target: oldtown-mainstreet
+    target: sampletown-mainstreet
     params: {}
   characters:
   - d010b5b0-890a-4da5-a8f9-bb7c8b5a1190
@@ -428,14 +428,14 @@ rooms:
   coords: null
   meta: null
 - entity:
-    id: oldtown-weaponsmith
+    id: sampletown-weaponsmith
   lookat:
     detail: ""
   name: The Weasponsmith
   description: As you enter the smith you can see many gloriful swords and shields
     hanging on the wall.
   roomtype: merchant
-  area: oldtown
+  area: sampletown
   areatype: city
   tags: []
   actions: []
@@ -444,7 +444,7 @@ rooms:
     description: Leave the Weaponsmith
     type: ""
     hidden: false
-    target: oldtown-mainstreet
+    target: sampletown-mainstreet
     params: {}
   characters:
   - 82fd1e20-b095-4ae2-9191-4422b4b47996

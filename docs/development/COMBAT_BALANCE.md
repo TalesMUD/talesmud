@@ -8,8 +8,8 @@ TalesMUD uses a **difficulty-based multiplier system** to balance enemy combat s
 
 ### Source Files (Unchanged)
 ```yaml
-# import/mvp-rpg-1/data/npcs/ENM0001.yaml
-name: Catacomb Rat
+# import/sample-world/data/npcs/ENM0001.yaml
+name: Sample Rat
 maxHitPoints: 8        # Base HP
 level: 1
 enemyTrait:
@@ -24,8 +24,8 @@ When the enemy is loaded into the game, the system applies multipliers from `con
 ```yaml
 difficulty_multipliers:
   trivial:
-    hp: 3.75      # Catacomb Rat: 8 * 3.75 = 30 HP
-    attack: 4.0   # Catacomb Rat: 1 * 4.0 = 4 ATK
+    hp: 3.75      # Sample Rat: 8 * 3.75 = 30 HP
+    attack: 4.0   # Sample Rat: 1 * 4.0 = 4 ATK
     defense: 1.0  # No change
 ```
 
@@ -68,7 +68,7 @@ difficulty_multipliers:
 
 ## Current Balance (Level 1 Testing)
 
-### Catacomb Rat (Trivial, L1)
+### Sample Rat (Trivial, L1)
 **Target:** 5-6 rounds to defeat
 
 | Class   | Rounds | Win Rate | Assessment |
@@ -84,13 +84,13 @@ difficulty_multipliers:
 
 | Enemy           | Level | HP  | ATK | DEF | Difficulty |
 |-----------------|-------|-----|-----|-----|------------|
-| Catacomb Rat    | 1     | 30  | 4   | 0   | trivial    |
-| Sewer Rat       | 2     | 34  | 5   | 0   | easy       |
-| Tunnel Mole     | 2     | 43  | 5   | 2   | easy       |
-| Meadow Wolf     | 2     | 48  | 6   | 2   | normal     |
-| Wild Boar       | 2     | 66  | 7   | 4   | normal     |
-| Burrow Brute    | 4     | 110 | 12  | 5   | boss       |
-| Hollow Knight   | 6     | 280 | 18  | 6   | boss       |
+| Sample Rat    | 1     | 30  | 4   | 0   | trivial    |
+| Sample Pest       | 2     | 34  | 5   | 0   | easy       |
+| Sample Burrower     | 2     | 43  | 5   | 2   | easy       |
+| Sample Wolf     | 2     | 48  | 6   | 2   | normal     |
+| Sample Boar       | 2     | 66  | 7   | 4   | normal     |
+| Sample Brute    | 4     | 110 | 12  | 5   | boss       |
+| Sample Warden   | 6     | 280 | 18  | 6   | boss       |
 
 ## Implementation Details
 
@@ -167,7 +167,7 @@ Use the combat simulator to test changes:
 go run cmd/combat_simulator/main.go -level 1 -n 100
 
 # Test specific matchup
-go run cmd/combat_simulator/main.go -class Warrior -enemy "Catacomb Rat" -level 1 -n 100
+go run cmd/combat_simulator/main.go -class Warrior -enemy "Sample Rat" -level 1 -n 100
 
 # Test all classes and levels (comprehensive)
 go run cmd/combat_simulator/main.go -n 500

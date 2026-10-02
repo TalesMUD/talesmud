@@ -3,7 +3,7 @@
 **Status:** C0 locked · **C1–C3 done** · **C5–C6 done** · **C7 polish** (grid header/arena/dock/log) · **A+B+C polish** (responsive arena, 5s autofire + early resolve, CD seconds) — on engine-june  
 **Follow-up:** Flutter FX / layout / pacing / CD-seconds parity (C4) — **not in this slice**; Flutter still assumes the old 10s window and postcard stage if it hardcodes them.
 **Milestone:** [Combat Battle Stage](https://github.com/TalesMUD/talesmud/milestone/4)  
-**Branch:** `engine-june` (do not merge to public `master` without Marcus okay)
+**Branch:** `engine-june` (historical working branch for this design)
 
 ## Backend truth
 
@@ -94,9 +94,9 @@ Clients **animate from events**; they do not invent outcomes.
 
 | Band | Examples | Player turns |
 |------|----------|--------------|
-| Trash | Catacomb Rat, Sewer Rat, Tunnel Mole | 3–6 |
-| Elite | Meadow Wolf, Bandit, Thornback Bear | 8–15 |
-| Boss | Burrow Brute, Hollow Knight | 15–30 |
+| Trash | Sample Rat, Sample Pest, Sample Burrower | 3–6 |
+| Elite | Sample Wolf, Sample Bandit, Sample Bear | 8–15 |
+| Boss | Sample Brute, Sample Warden | 15–30 |
 
 Reference harness: **Warrior** with distributable attribute points auto-spent on primary, skills AI enabled.
 
@@ -104,13 +104,13 @@ Reference harness: **Warrior** with distributable attribute points auto-spent on
 
 | Matchup | Before (approx) | After | Notes |
 |---------|-----------------|-------|-------|
-| L1 vs Catacomb Rat | ~7.2 rnds, 100% | **~4.3**, 100% | trash |
-| L2 vs Sewer Rat | ~7.0 | **~4.1**, 100% | trash |
-| L2 vs Meadow Wolf | ~13.1 | **~8.8**, 100% | elite |
-| L3 vs Bandit | ~24.3 | **~12.3**, 100% | elite |
-| L5 vs Thornback Bear | ~42, 40% win | **~11.6**, 100% | elite |
-| L4 vs Burrow Brute | ~39, 18% win | **~20**, ~100% | boss |
-| L6 vs Hollow Knight | ~34, **0%** win | **~21**, ~100% | boss (was unkillable) |
+| L1 vs Sample Rat | ~7.2 rnds, 100% | **~4.3**, 100% | trash |
+| L2 vs Sample Pest | ~7.0 | **~4.1**, 100% | trash |
+| L2 vs Sample Wolf | ~13.1 | **~8.8**, 100% | elite |
+| L3 vs Sample Bandit | ~24.3 | **~12.3**, 100% | elite |
+| L5 vs Sample Bear | ~42, 40% win | **~11.6**, 100% | elite |
+| L4 vs Sample Brute | ~39, 18% win | **~20**, ~100% | boss |
+| L6 vs Sample Warden | ~34, **0%** win | **~21**, ~100% | boss (was unkillable) |
 
 Before numbers: no attr spend, old `config/combat_balance.yaml` (boss ATK/HP too high → wipe or sponge).
 
@@ -122,29 +122,29 @@ go test ./pkg/mudserver/game/combat/ -run TestCombatDurationTargets -v
 
 # Broader balance matrix + CLI simulator:
 go test ./pkg/mudserver/game/combat/ -run 'TestFullBalanceMatrix|TestBosses' -v
-go run ./cmd/combat_simulator -class Warrior -level 6 -enemy 'Hollow Knight' -n 200
+go run ./cmd/combat_simulator -class Warrior -level 6 -enemy 'Sample Warden' -n 200
 ```
 
 Tuning knobs (prefer these over rewriting `ProcessAttack`):
 
 1. `config/combat_balance.yaml` — `difficulty_multipliers` + `named_overrides`
 2. Defaults mirrored in `pkg/mudserver/game/balance/difficulty.go`
-3. Content base stats in `talesmud-rpg-1` only if engine multipliers cannot separate two bosses on the same tier
+3. Content base stats in the content pack only if engine multipliers cannot separate two bosses on the same tier
 
 `ApplyEnemyMultipliers` runs at **import** (`pkg/importer`) and in **sims** (`simutil.CreateEnemy`). Re-import NPCs after changing the YAML so the live DB picks up new finals.
 
-### Content notes (talesmud-rpg-1)
+### Content notes (content pack)
 
 Engine-only is enough for C6 duration bands. Optional content cleanups (not required to ship C6):
 
 | NPC | Current | Suggested |
 |-----|---------|-----------|
-| Sewer Rat (`ENM0008`) | `difficulty: normal` | `easy` (trash tier) |
-| Tunnel Mole (`ENM0010`) | `difficulty: normal` | `easy` (trash tier) |
+| Sample Pest (`ENM0008`) | `difficulty: normal` | `easy` (trash tier) |
+| Sample Burrower (`ENM0010`) | `difficulty: normal` | `easy` (trash tier) |
 
 Sims already treat those two as `easy`. Until content is retagged + re-imported, live DB keeps `normal` multipliers for them.
 
-No Hollow Knight base-stat content patch needed — `named_overrides` for `"The Hollow Knight"` / `"Hollow Knight"` handle boss duration/survivability.
+No Sample Warden base-stat content patch needed — `named_overrides` for `"Sample Warden"` handle boss duration in the sample roster.
 
 ## Mocks
 

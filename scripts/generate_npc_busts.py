@@ -79,7 +79,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Generate bust portraits from full-body sprites")
     parser.add_argument(
         "--import-root",
-        default="import/mvp-rpg-1/assets/images/sprites",
+        default="import/sample-world/assets/images/sprites",
         help="Sprites root under repo",
     )
     parser.add_argument("--uploads", default="uploads/portraits", help="Runtime portraits dir")

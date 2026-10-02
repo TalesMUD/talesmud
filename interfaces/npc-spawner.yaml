@@ -41,7 +41,7 @@ fields:
     type: string
     # Optional human-readable label for the spawner. Used in the creator
     # tool for identification. Not shown to players.
-    # Example: "Gloomfen Wolf Pack", "Market Square Guards"
+    # Example: "Sample Marsh Wolves", "Market Square Guards"
 
   # ─── Configuration ──────────────────────────────────────────────────────────
 

@@ -577,7 +577,7 @@
   const backgrounds = [
     'img/bg/castle-1.png',
     'img/bg/forrest1.png',
-    'img/bg/oldtown-entrance.png',
+    'img/bg/sample-gate.png',
   ];
 
   $: currentBg = backgrounds[step - 1] || backgrounds[0];

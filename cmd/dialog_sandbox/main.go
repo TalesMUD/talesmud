@@ -39,7 +39,7 @@ func main() {
 	for dialogRunning {
 
 		prompt := promptui.Select{
-			Label: "Talk to Oldtown guard?",
+			Label: "Talk to Sampletown guard?",
 			Items: []string{"Yes", "No"},
 		}
 
@@ -55,8 +55,8 @@ func main() {
 		}
 	}
 
-	d.WriteToFile(createIdleDialog(), "oldtown_townguard_idle_dialog.yaml")
-	idleDialog := d.ReadFromFile("oldtown_townguard_idle_dialog.yaml")
+	d.WriteToFile(createIdleDialog(), "sampletown_townguard_idle_dialog.yaml")
+	idleDialog := d.ReadFromFile("sampletown_townguard_idle_dialog.yaml")
 
 	state2 := d.NewDialogState()
 	state2.Context["NPC"] = "Guard"
@@ -193,13 +193,13 @@ func runDialog(dialog *d.Dialog, state *d.DialogState, playerInteracted bool, ch
 func createIdleDialog() *d.Dialog {
 	return &d.Dialog{
 		NodeID: "main",
-		Text: "Have you checked out the well in the towns center yet?",
+		Text:   "Have you checked out the well in the towns center yet?",
 		Answer: &d.Dialog{
 			NodeID: "rambling2",
-			Text: "I heard a sip from it could work wonders on your health.",
+			Text:   "I heard a sip from it could work wonders on your health.",
 			Answer: &d.Dialog{
 				NodeID: "rambling3",
-				Text: "I'm sure it will at least be refreshing.",
+				Text:   "I'm sure it will at least be refreshing.",
 				Answer: &d.Dialog{
 					NodeID:       "end",
 					Text:         "Just make sure to not fall into the well.",
@@ -214,29 +214,29 @@ func createSampleDialog() *d.Dialog {
 
 	return &d.Dialog{
 		NodeID: "intro",
-		Text: "Hello stranger, are you visiting Oldtown for the first time?",
+		Text:   "Hello stranger, are you visiting Sampletown for the first time?",
 		AlternateTexts: []string{
-			"Hi there, new to Oldtown?",
-			"Welcome to Oldtown!",
+			"Hi there, new to Sampletown?",
+			"Welcome to Sampletown!",
 		},
 		Options: d.Options(
 			&d.Dialog{
 				NodeID: "intro_yes",
-				Text: "Yes, i go by the name {{PLAYER}}.",
+				Text:   "Yes, i go by the name {{PLAYER}}.",
 				Answer: &d.Dialog{
 					NodeID: "main",
-					Text: "Welcome to Oldtown {{PLAYER}}, let me show you around. How can i help you today?",
+					Text:   "Welcome to Sampletown {{PLAYER}}, let me show you around. How can i help you today?",
 					AlternateTexts: []string{
 						"Greetings {{PLAYER}}, let me show you around. How can serve you?",
-						"Let me welcome you to Oldtown {{PLAYER}}, how can i help you today?",
+						"Let me welcome you to Sampletown {{PLAYER}}, how can i help you today?",
 					},
 					Options: d.Options(
 						&d.Dialog{
 							NodeID: "smith",
-							Text: "Where can i find the next smith?",
+							Text:   "Where can i find the next smith?",
 							Answer: &d.Dialog{
 								NodeID: "smith_question",
-								Text: "You can find the next smith in the town center on the left side of the road.",
+								Text:   "You can find the next smith in the town center on the left side of the road.",
 								AlternateTexts: []string{
 									"Head to the town center and then go to the left side of the road you will reach the smith from there.",
 								},
@@ -248,36 +248,36 @@ func createSampleDialog() *d.Dialog {
 							RequiresVisitedDialogs: []string{"mayor"},
 							Answer: &d.Dialog{
 								NodeID: "hidden_question",
-								Text: "Secretly, i am the Mayor. Dont tell anyone!",
+								Text:   "Secretly, i am the Mayor. Dont tell anyone!",
 							},
 						},
 						&d.Dialog{
 							NodeID: "inn",
-							Text: "Where can i grab a drink?",
+							Text:   "Where can i grab a drink?",
 						},
 						&d.Dialog{
 							NodeID: "time",
-							Text: "How late is it?",
+							Text:   "How late is it?",
 							Answer: &d.Dialog{
 								NodeID: "time_answer",
-								Text: "It is currently {{TIME}}.",
+								Text:   "It is currently {{TIME}}.",
 							},
 						},
 						&d.Dialog{
 							NodeID: "mayor",
-							Text: "Where do i find the mayor of Oldtown?",
+							Text:   "Where do i find the mayor of Sampletown?",
 							Answer: &d.Dialog{
 								NodeID: "mayor_question",
-								Text: "Not sure, why do you ask?",
+								Text:   "Not sure, why do you ask?",
 							},
 						},
 						&d.Dialog{
 							NodeID: "quests",
-							Text: "Where could i offer my services for some coins?",
+							Text:   "Where could i offer my services for some coins?",
 						},
 						&d.Dialog{
 							NodeID: "leave",
-							Text: "I'm done, goodbye.",
+							Text:   "I'm done, goodbye.",
 							Answer: &d.Dialog{
 								NodeID:       "end",
 								Text:         "'Til next time {{PLAYER}}.",

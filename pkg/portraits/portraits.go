@@ -11,7 +11,7 @@ import (
 const PublicPath = "/api/portraits"
 
 // FileName is the on-disk / URL filename for an NPC portrait.
-// Spawned instances use their template ID so every Meadow Wolf shares one face.
+// Spawned instances use their template ID so every Sample Wolf shares one face.
 func FileName(id, templateID string) string {
 	key := strings.TrimSpace(templateID)
 	if key == "" {

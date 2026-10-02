@@ -509,7 +509,7 @@ function createClient(renderer, characterCreator, muxStore) {
 
   messageHandlers["questCompleted"] = (msg) => {
     renderer(msg.message);
-    // Do not push ASCII/reward blobs to RoomTextOverlay — completed uses the quest-moment card.
+    // Do not push ASCII/reward blobs to RoomTextOverlay — completed uses the quest card.
 
     requestQuestLog();
 

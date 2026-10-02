@@ -61,7 +61,7 @@ During MVP development, game content (rooms, NPCs, items, dialogs, scripts) is a
 
 ```
 import/
-└── mvp-rpg-1/
+└── sample-world/
     ├── rooms/
     │   ├── R0001.yaml
     │   ├── R0002.yaml
@@ -100,7 +100,7 @@ Authorization: Basic <credentials>
 
 Request Body:
 {
-  "folder": "mvp-rpg-1",
+  "folder": "sample-world",
   "startRoomId": "R0001",
   "clearInventories": false
 }
@@ -501,5 +501,5 @@ value: 5
 3. Create `pkg/importer/world_data.go` with WorldData struct
 4. Create `pkg/server/handler/reset_world.go` with endpoint handler
 5. Add route in `pkg/server/server.go`
-6. Test with existing `import/mvp-rpg-1/` data
+6. Test with existing `import/sample-world/` data
 7. Add Creator UI button (optional, can use curl for MVP)

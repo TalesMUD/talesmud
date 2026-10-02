@@ -9,7 +9,7 @@ import (
 )
 
 func TestPortraitURLUsesTemplateForInstances(t *testing.T) {
-	got := URL("Meadow Wolf-abc123", "NPC0010")
+	got := URL("Sample Wolf-abc123", "NPC0010")
 	if got != "/api/portraits/NPC0010.png" {
 		t.Fatalf("got %q", got)
 	}

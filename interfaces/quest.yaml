@@ -34,11 +34,11 @@
 # ID CONVENTIONS:
 # ───────────────
 # Quest IDs follow a zone-based numbering scheme:
-#   QST0001–QST0099  — Tutorial / Zone 0 (Catacombs)
-#   QST0100–QST0199  — Zone 1 (Meadows / Forest Path)
-#   QST0200–QST0299  — Zone 2 (Oldtown)
-#   QST0300–QST0399  — Zone 3 (Gloomfen Marsh)
-#   QST0900–QST0999  — Daily / repeatable quests
+#   Q-CRYPT-1        — sample crypt (Z00_sample_crypt)
+#   Q-MEADOW-1       — sample meadow (Z01_sample_meadow)
+#   Q-TOWN-1         — sample town (Z02_sample_town)
+#   Q-MARSH-1        — sample marsh (Z03_sample_marsh)
+# Packs choose their own ids. Numeric QST#### ids are optional.
 #
 # =============================================================================
 

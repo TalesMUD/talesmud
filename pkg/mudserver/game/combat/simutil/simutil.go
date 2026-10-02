@@ -39,7 +39,7 @@ type SingleResult struct {
 
 // SimResult holds aggregated results from N simulations of one matchup
 type SimResult struct {
-	Label       string // e.g. "Warrior L5 vs Meadow Wolf"
+	Label       string // e.g. "Warrior L5 vs Sample Wolf"
 	PlayerName  string
 	PlayerLevel int32
 	EnemyName   string

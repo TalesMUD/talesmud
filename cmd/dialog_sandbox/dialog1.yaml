@@ -1,5 +1,5 @@
 id: intro
-text: Hello stranger, are you visiting Oldtown for the first time?
+text: Hello stranger, are you visiting Sampletown for the first time?
 options:
     intro_yes:
         id: intro_yes
@@ -7,7 +7,7 @@ options:
         options:
             main:
                 id: main
-                text: Welcome to Oldtown {{PLAYER}}, let me show you around. How can
+                text: Welcome to Sampletown {{PLAYER}}, let me show you around. How can
                     i help you?
                 options:
                     inn:
@@ -15,7 +15,7 @@ options:
                         text: Where can i grab a drink?
                     mayor:
                         id: mayor
-                        text: Where do i find the mayor of Oldtown?
+                        text: Where do i find the mayor of Sampletown?
                     quests:
                         id: quests
                         text: Where could i offer my services for some coins?

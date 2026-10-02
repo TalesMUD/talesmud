@@ -8,7 +8,7 @@ import (
 
 func TestCopyAssetsFlattensSpritePortraits(t *testing.T) {
 	root := t.TempDir()
-	importPath := filepath.Join(root, "import", "mvp-rpg-1")
+	importPath := filepath.Join(root, "import", "sample-world")
 	mustWrite := func(rel string) {
 		p := filepath.Join(importPath, rel)
 		if err := os.MkdirAll(filepath.Dir(p), 0755); err != nil {

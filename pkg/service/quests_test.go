@@ -33,7 +33,7 @@ func TestGrantAutoQuestsAcceptsZ00TutorialQuests(t *testing.T) {
 	facade := newTestFacade(t)
 	exits := rooms.Exits{}
 	chars := rooms.Characters{}
-	roomsByID := map[string]string{"R0006": "Z00_catacombs_intro", "R0102": "Z01_meadows_forest_path"}
+	roomsByID := map[string]string{"R0006": "Z00_sample_crypt", "R0102": "Z01_sample_meadow"}
 	for id, area := range roomsByID {
 		if _, err := facade.RoomsService().Import(&rooms.Room{
 			Entity: &entities.Entity{ID: id}, Name: id, Area: area, Exits: &exits, Characters: &chars,
@@ -66,7 +66,7 @@ func TestGrantAutoQuestsAcceptsZ00TutorialQuests(t *testing.T) {
 	z00 := storeAuto("Find the Exit", "R0006")
 	z01 := storeAuto("A Breath of Fresh Air", "R0102")
 
-	granted := facade.QuestsService().GrantAutoQuests(character.ID, "Z00_catacombs_intro")
+	granted := facade.QuestsService().GrantAutoQuests(character.ID, "Z00_sample_crypt")
 	if granted != 1 {
 		t.Fatalf("expected 1 Z00 auto quest, granted %d", granted)
 	}
@@ -77,7 +77,7 @@ func TestGrantAutoQuestsAcceptsZ00TutorialQuests(t *testing.T) {
 		t.Fatal("Z01 auto quest should not grant in Z00")
 	}
 
-	grantedZ01 := facade.QuestsService().GrantAutoQuests(character.ID, "Z01_meadows_forest_path")
+	grantedZ01 := facade.QuestsService().GrantAutoQuests(character.ID, "Z01_sample_meadow")
 	if grantedZ01 != 1 {
 		t.Fatalf("expected 1 Z01 auto quest, granted %d", grantedZ01)
 	}

@@ -196,16 +196,12 @@ enums:
 # =============================================================================
 # Content IDs follow zone-based numbering for easier cross-referencing:
 #
-#   Rooms:   R0001, R0203, R0301  (R + 4 digits, first 2 = zone)
+#   Rooms:   R0101, R0203, R0301  (R + 4 digits, first 2 = zone)
 #   NPCs:    NPC0001, NPC0004     (NPC + 4 digits)
 #   Enemies: ENM0001, ENM0002     (ENM + 4 digits, enemy NPC templates)
 #   Items:   ITM0001, ITM0012     (ITM + 4 digits)
 #   Scripts: SCR0001, SCR0007     (SCR + 4 digits)
 #   Quests:  QST0001, QST0201    (QST + 4 digits, first 2 = zone)
 #
-# Zone numbering:
-#   00 = Tutorial / Catacombs
-#   01 = Meadows / Forest Path
-#   02 = Oldtown
-#   03 = Gloomfen Marsh
-#   09 = Daily / repeatable content
+# Zone numbers are pack-defined. SampleWorld fixtures in this repo:
+#   Z00_sample_crypt, Z01_sample_meadow, Z02_sample_town, Z03_sample_marsh

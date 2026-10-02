@@ -2,7 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
-const puppeteer = require(process.env.PUPPETEER_MODULE || '/home/clawd/clawd/node_modules/puppeteer-core');
+const puppeteer = require(process.env.PUPPETEER_MODULE || path.join(process.env.HOME || '', 'dev/node_modules/puppeteer-core'));
 const playUrl = process.env.B14_PLAY_URL || 'http://127.0.0.1:8010/play/';
 const out = path.resolve(__dirname, '../.director/ux-audit/after');
 const result = { playUrl, checks: {}, pageErrors: [] };

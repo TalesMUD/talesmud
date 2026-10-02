@@ -2,8 +2,8 @@ package quests
 
 import (
 	"strings"
-	"unicode"
 	"time"
+	"unicode"
 
 	"github.com/talesmud/talesmud/pkg/entities"
 )
@@ -143,8 +143,8 @@ func (q *Quest) TurnInNPCID() string {
 	return npcID
 }
 
-// DisplayArea returns a human-readable area/zone label for UI grouping.
-// Prefers authored Area; otherwise derives from the QST zone ID prefix.
+// DisplayArea returns a human-readable area label for UI grouping.
+// Uses the authored Area field. Quest id prefixes are not zone names.
 func (q *Quest) DisplayArea() string {
 	if q == nil {
 		return "Other"
@@ -152,39 +152,7 @@ func (q *Quest) DisplayArea() string {
 	if a := strings.TrimSpace(q.Area); a != "" {
 		return formatQuestAreaLabel(a)
 	}
-	id := ""
-	if q.Entity != nil {
-		id = q.ID
-	}
-	id = strings.ToUpper(strings.TrimSpace(id))
-	switch {
-	case strings.HasPrefix(id, "QST00"):
-		return "Catacombs"
-	case strings.HasPrefix(id, "QST01"):
-		return "Meadows"
-	case strings.HasPrefix(id, "QST02"):
-		return "Oldtown"
-	case strings.HasPrefix(id, "QST03"):
-		return "Gloomfen"
-	case strings.HasPrefix(id, "QST04"):
-		return "Ashenvale"
-	case strings.HasPrefix(id, "QST05"):
-		return "Silver Vale"
-	case strings.HasPrefix(id, "QST06"):
-		return "Kazgrath"
-	case strings.HasPrefix(id, "QST07"):
-		return "Mirrordeep"
-	case strings.HasPrefix(id, "QST08"):
-		return "Highlands"
-	case strings.HasPrefix(id, "QST09"):
-		return "Daily"
-	case strings.HasPrefix(id, "QST10"):
-		return "Frontier"
-	case strings.HasPrefix(id, "QST11"), strings.HasPrefix(id, "QST12"):
-		return "Far Reaches"
-	default:
-		return "Other"
-	}
+	return "Other"
 }
 
 func formatQuestAreaLabel(area string) string {

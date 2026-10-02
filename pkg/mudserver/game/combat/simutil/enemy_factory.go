@@ -16,22 +16,22 @@ type EnemyConfig struct {
 	Difficulty  string
 }
 
-// AllEnemyConfigs returns known enemy definitions aligned with talesmud-rpg-1 content.
-// Difficulties for Sewer Rat / Tunnel Mole use "easy" (intended trash tier) — content
-// currently tags them "normal"; see docs/combat-battle-stage.md C6 content notes.
+// AllEnemyConfigs returns sample enemies for balance sims.
+// Worlds load their own NPC templates. These names and numbers are a
+// labeled sample curve, not a shipped bestiary.
 func AllEnemyConfigs() []EnemyConfig {
 	return []EnemyConfig{
-		{"Catacomb Rat", 1, 8, 1, 0, "trivial"},
-		{"Sewer Rat", 2, 12, 3, 0, "easy"},
-		{"Tunnel Mole", 2, 15, 3, 2, "easy"},
-		{"Meadow Wolf", 2, 18, 4, 1, "normal"},
-		{"Alley Thug", 2, 18, 4, 1, "normal"},
-		{"Wild Boar", 2, 25, 5, 2, "normal"},
-		{"Bandit", 3, 22, 5, 2, "normal"},
-		{"Night Whisper", 4, 30, 7, 0, "normal"},
-		{"Burrow Brute", 4, 55, 8, 3, "boss"},
-		{"Thornback Bear", 5, 80, 11, 4, "hard"},
-		{"Hollow Knight", 6, 150, 13, 6, "boss"}, // content name: The Hollow Knight
+		{"Sample Rat", 1, 8, 1, 0, "trivial"},
+		{"Sample Pest", 2, 12, 3, 0, "easy"},
+		{"Sample Burrower", 2, 15, 3, 2, "easy"},
+		{"Sample Wolf", 2, 18, 4, 1, "normal"},
+		{"Sample Thug", 2, 18, 4, 1, "normal"},
+		{"Sample Boar", 2, 25, 5, 2, "normal"},
+		{"Sample Bandit", 3, 22, 5, 2, "normal"},
+		{"Sample Shade", 4, 30, 7, 0, "normal"},
+		{"Sample Brute", 4, 55, 8, 3, "boss"},
+		{"Sample Bear", 5, 80, 11, 4, "hard"},
+		{"Sample Warden", 6, 150, 13, 6, "boss"},
 	}
 }
 

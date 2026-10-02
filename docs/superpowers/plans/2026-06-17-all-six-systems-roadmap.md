@@ -109,7 +109,7 @@ they break runtime play.
 
 ### Verification
 - `/usr/local/go/bin/go test ./pkg/service ./pkg/server/handler`
-- Creator build with `/home/atla/.nvm/versions/node/v20.20.0/bin/node node_modules/vite/bin/vite.js build`
+- Creator build with `node node_modules/vite/bin/vite.js build`
 - Manual smoke check of validation API with an authenticated creator/admin token when available.
 
 ## Later Slices

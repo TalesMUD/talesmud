@@ -78,7 +78,7 @@ export function reliefAt(cell,depth) {
   return {kind:'ridge',variant:d<4?2+n%2:4+n%2,size:76+Math.min(d,5)*4};
 }
 export function forestSpecies(area,terrain) {
-  if(terrain==='swamp'||/marsh|gloomfen|bog/i.test(area))return 'deadTree';
-  if(/highland|foothill|ironspine|thornfield|mountain/i.test(area))return 'pine';
+  if(terrain==='swamp'||/marsh|bog|fen/i.test(area))return 'deadTree';
+  if(/highland|foothill|mountain|alpine/i.test(area))return 'pine';
   return 'oak';
 }

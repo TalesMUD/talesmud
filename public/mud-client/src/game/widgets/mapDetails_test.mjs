@@ -13,7 +13,7 @@ const cells=[];for(let y=0;y<11;y++)for(let x=0;x<11;x++)cells.push({x,y,terrain
 const depth=mountainDepth(cells,new Map(cells.map(c=>[`${c.x}:${c.y}`,c])));
 assert.equal(depth.get('0:0'),0);assert.equal(depth.get('5:5'),5);
 assert.equal(reliefAt(cells[0],depth).kind,'hill');assert.ok(reliefAt({x:5,y:5},depth).variant>=4);
-assert.equal(forestSpecies('Thornfield Highlands','forest'),'pine');assert.equal(forestSpecies('Ashenvale Woods','forest'),'oak');assert.equal(forestSpecies('Gloomfen Marsh','swamp'),'deadTree');
+assert.equal(forestSpecies('Highland Ridge','forest'),'pine');assert.equal(forestSpecies('Oak Woods','forest'),'oak');assert.equal(forestSpecies('Sample Marsh','swamp'),'deadTree');
 const places=[{id:'a',x:0,y:0,layer:'lower',area:'cave',discovered:true},{id:'b',x:1,y:0,layer:'lower',area:'cave',discovered:true},{id:'remote',x:4,y:7,layer:'lower',area:'cave',discovered:true}];
 const model=undergroundModel({places,paths:[{from:'a',to:'b',dir:'east'},{from:'a',to:'remote',dir:'southwest'}]});
 assert.equal(model.corridors.length,1,'normal short compass tunnels stay; void-crossing diagonals are omitted');

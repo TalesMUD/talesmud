@@ -15,15 +15,15 @@ func TestTerrainClassificationPrecedence(t *testing.T) {
 		want     string
 		fallback bool
 	}{
-		{"structured type wins", rooms.Room{RoomType: "snow", Tags: []string{"forest"}, Area: "Z02_oldtown"}, "snow", false},
+		{"structured type wins", rooms.Room{RoomType: "snow", Tags: []string{"forest"}, Area: "Z02_sample_town"}, "snow", false},
 		{"area type", rooms.Room{AreaType: "desert"}, "desert", false},
-		{"tags beat zone", rooms.Room{Tags: []string{"farmland", "outdoor"}, Area: "Z04_ashenvale_woods"}, "farmland", false},
+		{"tags beat zone", rooms.Room{Tags: []string{"farmland", "outdoor"}, Area: "Z04_sample_woods"}, "farmland", false},
 		{"tag order independent", rooms.Room{Tags: []string{"dungeon", "flooded"}}, "water", false},
-		{"inn floor", rooms.Room{Name: "The Weary Wanderer", Tags: []string{"indoor", "inn"}, Area: "Z02_oldtown"}, "interior", false},
-		{"keep name", rooms.Room{Name: "Oldtown Keep", Area: "Z02_oldtown"}, "castle", false},
-		{"whole words", rooms.Room{Name: "Innkeeper's Lane", Area: "Z02_oldtown"}, "city", false},
-		{"underground before forest zone", rooms.Room{Tags: []string{"underground"}, Area: "Z04_ashenvale_woods"}, "dungeon", false},
-		{"area fallback", rooms.Room{Area: "Z03_gloomfen_marsh"}, "swamp", false},
+		{"inn floor", rooms.Room{Name: "The Roadside Inn", Tags: []string{"indoor", "inn"}, Area: "Z02_sample_town"}, "interior", false},
+		{"keep name", rooms.Room{Name: "Sample Keep", Area: "Z02_sample_town"}, "castle", false},
+		{"whole words", rooms.Room{Name: "Innkeeper's Lane", Area: "Z02_sample_town"}, "city", false},
+		{"underground before forest zone", rooms.Room{Tags: []string{"underground"}, Area: "Z04_sample_woods"}, "dungeon", false},
+		{"area fallback", rooms.Room{Area: "Z03_sample_marsh"}, "swamp", false},
 		{"description last resort", rooms.Room{Name: "Silent Expanse", Description: "A glacier covers the ground."}, "snow", false},
 		{"unknown default", rooms.Room{Name: "Unclassified Expanse"}, "grassland", true},
 	}
@@ -37,8 +37,8 @@ func TestTerrainClassificationPrecedence(t *testing.T) {
 	}
 }
 func TestTerrainRevealDoesNotRevealFogArt(t *testing.T) {
-	a := &rooms.Room{Entity: &entities.Entity{ID: "A"}, Name: "Town Square", Area: "Z02_oldtown", Exits: &rooms.Exits{{Name: "north", Target: "B"}}}
-	b := &rooms.Room{Entity: &entities.Entity{ID: "B"}, Name: "Secret Glacier", RoomType: "snow", Area: "Z02_oldtown"}
+	a := &rooms.Room{Entity: &entities.Entity{ID: "A"}, Name: "Town Square", Area: "Z02_sample_town", Exits: &rooms.Exits{{Name: "north", Target: "B"}}}
+	b := &rooms.Room{Entity: &entities.Entity{ID: "B"}, Name: "Secret Glacier", RoomType: "snow", Area: "Z02_sample_town"}
 	ch := &characters.Character{Entity: &entities.Entity{ID: "test"}, DiscoveredRooms: map[string]bool{"A": true}}
 	ch.CurrentRoomID = "A"
 	atlas := Reveal(Compile([]*rooms.Room{a, b}), ch)

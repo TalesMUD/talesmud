@@ -1,9 +1,0 @@
-{
-  "errors": [],
-  "fogCells": 420,
-  "screenshots": [
-    "fog1-overview-1920x1080.png",
-    "fog1-maxzoom-1920x1080.png"
-  ],
-  "note": "Local preview atlas with expanded fog cells to demonstrate soft volumetric overlay"
-}

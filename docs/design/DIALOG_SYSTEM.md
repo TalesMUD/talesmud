@@ -404,7 +404,7 @@ options:
     show_only_once: true
     answer:
       nodeId: "accept_response"
-      text: "Thank the gods! He went into the Darkhollow Caves. Be careful!"
+      text: "Thank the gods! He went into the sample caves. Be careful!"
       is_dialog_exit: true
 
   - nodeId: "reward"

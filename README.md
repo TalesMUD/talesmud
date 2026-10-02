@@ -9,9 +9,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go)](https://golang.org/)
 [![Svelte](https://img.shields.io/badge/Svelte-4.2-FF3E00?logo=svelte)](https://svelte.dev/)
-[![Live Demo](https://img.shields.io/badge/Demo-veilspan.com-success)](https://veilspan.com)
+[![Live Demo](https://img.shields.io/badge/Demo-talesmud.io-success)](https://talesmud.io)
 
-[**Live Demo**](https://veilspan.com) • [**Documentation**](ARCHITECTURE.md) • [**Contributing**](#contributing) • [**Roadmap**](#roadmap)
+[**Live Demo**](https://talesmud.io) • [**Documentation**](ARCHITECTURE.md) • [**Contributing**](#contributing) • [**Roadmap**](#roadmap)
 
 </div>
 
@@ -33,7 +33,7 @@ Built with **Go** and **Svelte**, TalesMUD provides everything you need to launc
 
 ### 🎯 Live Demo
 
-Experience TalesMUD in action at **[veilspan.com](https://veilspan.com)** — a small MVP adventure set in the **Veilspan Universe** on the fantasy world of **Aethermoor**. This demo showcases the framework's capabilities running a complete fantasy RPG.
+See the framework at **[talesmud.io](https://talesmud.io)**. A playable world is a content pack you import. This repository ships the engine and a neutral landing page.
 
 ---
 
@@ -117,7 +117,7 @@ Experience TalesMUD in action at **[veilspan.com](https://veilspan.com)** — a 
 
 TalesMUD's **generic, reusable architecture** makes it perfect for any setting:
 
-- **Fantasy** — The included demo (Veilspan/Aethermoor) showcases medieval fantasy
+- **Fantasy** — Optional sample classes and skills show one fantasy rules shape
 - **Sci-Fi** — Space stations, alien worlds, cyberpunk cities
 - **Horror** — Lovecraftian mysteries, survival horror, gothic tales
 - **Modern** — Contemporary settings, spy thrillers, urban fantasy
@@ -460,7 +460,7 @@ furnished to do so, subject to the following conditions:
 
 ### Current Deployments
 
-- **[Veilspan MUD](https://veilspan.com)** — Fantasy adventure in the Veilspan Universe (official test deployment)
+- **[talesmud.io](https://talesmud.io)** — framework site
 
 *Using TalesMUD for your project? [Open an issue](https://github.com/TalesMUD/talesmud/issues) to get listed here!*
 
@@ -470,7 +470,7 @@ furnished to do so, subject to the following conditions:
 
 - **Issues** — [GitHub Issue Tracker](https://github.com/TalesMUD/talesmud/issues)
 - **Discussions** — [GitHub Discussions](https://github.com/TalesMUD/talesmud/discussions)
-- **Live Demo** — [veilspan.com](https://veilspan.com)
+- **Live Demo** — [talesmud.io](https://talesmud.io)
 
 ---
 
@@ -490,6 +490,6 @@ TalesMUD builds on the shoulders of giants:
 
 **Built with ❤️ by the TalesMUD community**
 
-*Start your adventure today at [veilspan.com](https://veilspan.com)*
+*Build your world on [talesmud.io](https://talesmud.io)*
 
 </div>
