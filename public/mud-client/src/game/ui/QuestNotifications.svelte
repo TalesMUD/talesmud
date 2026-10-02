@@ -198,7 +198,7 @@
   <div class="quest-moment-layer" aria-live="polite">
     {#each activeMoment as notification (notification.id || notification)}
       <div
-        class="veilspan-card"
+        class="quest-moment-card"
         class:level-up={notification.type === 'levelup'}
         class:slide-out={isDismissing(notification)}
         role="dialog"
@@ -316,7 +316,7 @@
     background: rgba(0, 0, 0, 0.38);
   }
 
-  .veilspan-card {
+  .quest-moment-card {
     pointer-events: auto;
     position: relative;
     width: min(84vw, 360px);
@@ -334,7 +334,7 @@
     animation: acceptPop 0.28s ease-out;
   }
 
-  .veilspan-card.level-up {
+  .quest-moment-card.level-up {
     border-color: rgba(240, 195, 106, 0.75);
     box-shadow:
       0 18px 48px rgba(0, 0, 0, 0.55),
@@ -342,7 +342,7 @@
       inset 0 0 0 1px rgba(116, 91, 51, 0.35);
   }
 
-  .veilspan-card.slide-out {
+  .quest-moment-card.slide-out {
     animation: acceptOut 0.25s ease-in forwards;
   }
 

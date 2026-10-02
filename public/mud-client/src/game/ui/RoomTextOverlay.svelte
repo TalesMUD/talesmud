@@ -139,7 +139,7 @@
     font-style: italic;
   }
 
-  /* Examine item card — Veilspan dark/gold, matches ItemDetailCard / Settings. */
+  /* Examine item card — dark/gold chrome, matches ItemDetailCard / Settings. */
   .overlay-message.examine {
     pointer-events: auto;
     text-align: left;

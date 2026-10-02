@@ -618,7 +618,7 @@ type LevelUpCallout struct {
 
 // LevelUpMessage is the structured celebration payload for MessageTypeLevelUp.
 // Message keeps the ASCII fallback for the terminal; numeric fields drive the
-// Veilspan level-up card (gains + attribute spend UI).
+// Level-up celebration card (gains + attribute spend UI).
 type LevelUpMessage struct {
 	MessageResponse
 	OldLevel               int32            `json:"oldLevel"`

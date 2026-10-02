@@ -10,7 +10,7 @@
 - Tests: `node public/mud-client/src/game/battleLayout_test.mjs` ok; `node public/mud-client/src/game/artFallback_test.mjs` ok; `npm run build` green (existing unused-CSS and a11y warnings).
 - Capture: `.director/ux-audit/after/b15-layoutb-1920x1080.png`. Fresh guest, layout key absent, `.battle-stage.layout-b`, Lyra left of Gimli left of Catacomb Rat, portrait URLs `player-human-warrior` / `player-elf-mage` / `ENM0001`, foe-plate and player-meta hidden, no Resolving or turn-name chip, scrollHeight 1080. Helper `tools/capture_b15.cjs`.
 - VPS: ff `cd0f9ea`→`80138fb`; embed `public/mud-client/public` into `pkg/webuiplay/dist`; `bin/tales.prev-cd0f9ea`; new binary sha256 `53b0675bf8eebf329ed0a6f642ef172c11b535373dacd8d37d6c2bf61bf23b69`; SIGTERM only talesmud MainPID `886910`; new MainPID `889038` on `:8010`. Door `:8020` pid `758959` untouched.
-- Smoke: public `/` and `/play/` 200 with `bundle.js?v=battleb1`; `bundle.js` and `extra.css` 200; `/api/server-info` 200, serverName "Veilspan - Chapter I: Gloomfen Depths"; POST `/api/guest` 200, expiresIn 1800. door.veilspan.com/door 301 FYI.
+- Smoke: public `/` and `/play/` 200 with `bundle.js?v=battleb1`; `bundle.js` and `extra.css` 200; `/api/server-info` 200, serverName (configured demo title); POST `/api/guest` 200, expiresIn 1800. door.example.com/door 301 FYI.
 - Residuals: the ally strip is a compact left card (portrait, name, HP), not a second full-size ground sprite; room art still comes from the current room; no new battle art.
 
 ## Cartographer north = up (?v=mapnorth1) (2026-10-02)
@@ -23,7 +23,7 @@
 - Verify: after flip, R1101→R1102→R1114→R1115→R1118 north chain has strictly decreasing Y (screen-up).
 - Local clawdbot: `bin/tales` pid `255022` on `:8010`; Door `:8020` pid `3406193` untouched.
 - VPS: ff `e8200b2`→`4148568`; embed play client; `bin/tales.prev-e8200b2`; SIGTERM only talesmud; new MainPID `886910` on `:8010`. Door `:8020` pid `758959` untouched.
-- Smoke: local + `https://veilspan.com/play/` 200 with `bundle.js?v=mapnorth1`; guest POST 200; `go test ./pkg/worldmap -run FlipsInverted` green.
+- Smoke: local + `https://example.com/play/` 200 with `bundle.js?v=mapnorth1`; guest POST 200; `go test ./pkg/worldmap -run FlipsInverted` green.
 
 ## Cartographer soft volumetric fog (?v=fog1) (2026-10-02)
 
@@ -521,7 +521,7 @@ Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated bl
 ## Examine item card overlay (2026-10-01 evening)
 
 - Code SHA: `22be19c` (`[grokbot]`), `engine-june`. Live client: `?v=examine1`.
-- What changed: Room overlay detects `=== … ===` examine dumps and renders a Veilspan dark/gold item card (title, blurb vs lore, Type/Quality chips, scroll, close). Server hides snake_case subtypes like `artifact_fragment` on the Type line. Non-examine toasts unchanged.
+- What changed: Room overlay detects `=== … ===` examine dumps and renders a dark/gold item card (title, blurb vs lore, Type/Quality chips, scroll, close). Server hides snake_case subtypes like `artifact_fragment` on the Type line. Non-examine toasts unchanged.
 - Tests: `node …/parseExamineOverlay_test.mjs`; `go test ./pkg/mudserver/game/commands/ -run TestFormatItemSubType|TestExamineItemOmits`.
 - Deploy: VPS ff `10d3276`→`22be19c`, embed play client, `bin/tales.prev-10d3276`, SIGTERM MainPID only; Restart=always → MainPID `870149` on :8010. Door :8020 pid `758959` untouched.
 - Smoke: `/play/?v=examine1` 200; `bundle.js?v=examine1` contains `examine-card`; POST `/api/guest` 200.
@@ -573,7 +573,7 @@ Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated bl
 - Tests: `node …/battleLayout_test.mjs` ok; `npm run build` green (existing unused-CSS warnings only).
 - Local clawdbot `:8010`: embed play client, rebuilt `bin/tales`, prev `bin/tales.prev-5210721` / later `bin/tales.prev-9ea6fe9`; pid `224501` on `:8010`. Door `:8020` pid `3406193` untouched.
 - VPS: ff `d0b40a0`→`9ea6fe9` then `9ea6fe9`→`6148d0d`; embed play client; `bin/tales.prev-d0b40a0` / `bin/tales.prev-9ea6fe9`; SIGTERM talesmud only; Restart=always → MainPID `877311` on `:8010`. Door `:8020` pid `758959` untouched. New bin sha256 `0b11fdad3011ecf9271ba5609dcb17547deb64634ce67f811db74212e7ac42f4`.
-- Smoke: local Chromium guest + synthetic combat — `.battle-stage.layout-b`, TL/TR frames, foe-plate `display:none`, player-meta `display:none`, sprite-hp ≥1, player-bust border cleared, zero page errors. Screenshot `.director/ux-audit/after/battlepoc2-layoutb-1920x1080.png`; `battlepoc2-smoke.json`. Public `/play/` 200 with six `?v=battlepoc2`; `extra.css` contains `layout-b-frame`/`sprite-hp-track`; POST `/api/guest` 200; door.veilspan.com/door 307 FYI.
+- Smoke: local Chromium guest + synthetic combat — `.battle-stage.layout-b`, TL/TR frames, foe-plate `display:none`, player-meta `display:none`, sprite-hp ≥1, player-bust border cleared, zero page errors. Screenshot `.director/ux-audit/after/battlepoc2-layoutb-1920x1080.png`; `battlepoc2-smoke.json`. Public `/play/` 200 with six `?v=battlepoc2`; `extra.css` contains `layout-b-frame`/`sprite-hp-track`; POST `/api/guest` 200; door.example.com/door 307 FYI.
 - Residual: placeholder portraits (not dedicated battle sprites); ally party in layout B still compact near left marker without own edge frame.
 
 ## Battle layout B polish — slim HP + quieter chrome (2026-10-02)
@@ -590,5 +590,5 @@ Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated bl
 - Tests: `node …/battleLayout_test.mjs` ok; `npm run build` green (existing unused-CSS warnings only).
 - Local clawdbot `:8010`: embed play client, rebuilt `bin/tales`, prev `bin/tales.prev-92e1a98`; pid `227711` on `:8010`. Door `:8020` pid `3406193` untouched. New bin sha256 `896c50531c8825d08ffe6a61984d66a71c0ec24ac42b6d6ffe99d8c6aabf82e5`.
 - VPS: ff `92e1a98`→`bf8fea0`; embed play client; `bin/tales.prev-92e1a98`; SIGTERM talesmud MainPID `877311`; Restart=always → MainPID `878486` on `:8010`. Door `:8020` pid `758959` untouched. New bin sha256 `8e4bf4513ec691f53df32b68bef7487334bb34c24fdf79d020a2f1e078542701`.
-- Smoke: local Chromium guest + synthetic combat — `.battle-stage.layout-b`, TL/TR frames, foe-plate/`player-meta` `display:none`, sprite-hp ≥1, sprite-hp-name `none`, dock wait chip `none`, `?v=battlepoc3`, zero page errors. Screenshot `.director/ux-audit/after/battlepoc3-layoutb-1920x1080.png`; `battlepoc3-smoke.json`. Public `/play/` 200 with six `?v=battlepoc3`; `extra.css` 200 contains sprite-hp-name hide + dock wait hide; POST `/api/guest` 200; door.veilspan.com/door 301 FYI (pid untouched).
+- Smoke: local Chromium guest + synthetic combat — `.battle-stage.layout-b`, TL/TR frames, foe-plate/`player-meta` `display:none`, sprite-hp ≥1, sprite-hp-name `none`, dock wait chip `none`, `?v=battlepoc3`, zero page errors. Screenshot `.director/ux-audit/after/battlepoc3-layoutb-1920x1080.png`; `battlepoc3-smoke.json`. Public `/play/` 200 with six `?v=battlepoc3`; `extra.css` 200 contains sprite-hp-name hide + dock wait hide; POST `/api/guest` 200; door.example.com/door 301 FYI (pid untouched).
 - Residual: placeholder portraits (not dedicated battle sprites); TL frame still shows compact class + Waiting chip (header also shows Waiting); ally party in layout B still compact near left marker without own edge frame.
