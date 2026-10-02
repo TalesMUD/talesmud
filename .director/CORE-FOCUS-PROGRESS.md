@@ -1,3 +1,18 @@
+## B15 — Layout B default (?v=battleb1) (2026-10-02)
+
+- Code SHA: `80138fb` (`[grokbot]`), `engine-june`. Live client: `?v=battleb1`.
+- Tip was mapnorth1 `4148568` / docs `cd0f9ea`.
+- Default: no `talesmud_battle_layout_b` key and no URL selects Layout B. An older settings blob that still stores `battleLayoutB: false` is treated as the previous default, not a choice, so fresh guests and players with no explicit preference get Layout B. The Settings checkbox defaults on.
+- Classic opt-out stays: Settings → Gameplay → turn Battle layout B off (writes localStorage `0`), or `?battleLayout=classic` / `?battlepoc=0`. URL wins over localStorage; an explicit `0`/`1` wins over Settings. `?battleLayout=b` / `?battlepoc=1` still forces Layout B. Reset clears the key and returns to the default. Classic is not removed.
+- Allies: in Layout B, other players sit in a compact left strip (existing portrait, name, slim HP) beside the player marker. Solo keeps the single left marker and the narrower team column.
+- Sprites: markers use the server portrait URL, then race/class art (`/api/portraits/player-<race>-<class>.png`) or the enemy template file. A class or enemy silhouette is only the failed-load fallback. Layout B draws those painted portraits without the pixelated placeholder filter. Slim over-sprite HP and the top-left / top-right frames from battlepoc3 stay.
+- Quiet chrome: under Layout B the mid-stage Resolving/Waiting pill, the dock wait chip, and the header turn-name chip stay hidden. The round chip and the your-turn countdown remain.
+- Tests: `node public/mud-client/src/game/battleLayout_test.mjs` ok; `node public/mud-client/src/game/artFallback_test.mjs` ok; `npm run build` green (existing unused-CSS and a11y warnings).
+- Capture: `.director/ux-audit/after/b15-layoutb-1920x1080.png`. Fresh guest, layout key absent, `.battle-stage.layout-b`, Lyra left of Gimli left of Catacomb Rat, portrait URLs `player-human-warrior` / `player-elf-mage` / `ENM0001`, foe-plate and player-meta hidden, no Resolving or turn-name chip, scrollHeight 1080. Helper `tools/capture_b15.cjs`.
+- VPS: ff `cd0f9ea`→`80138fb`; embed `public/mud-client/public` into `pkg/webuiplay/dist`; `bin/tales.prev-cd0f9ea`; new binary sha256 `53b0675bf8eebf329ed0a6f642ef172c11b535373dacd8d37d6c2bf61bf23b69`; SIGTERM only talesmud MainPID `886910`; new MainPID `889038` on `:8010`. Door `:8020` pid `758959` untouched.
+- Smoke: public `/` and `/play/` 200 with `bundle.js?v=battleb1`; `bundle.js` and `extra.css` 200; `/api/server-info` 200, serverName "Veilspan - Chapter I: Gloomfen Depths"; POST `/api/guest` 200, expiresIn 1800. door.veilspan.com/door 301 FYI.
+- Residuals: the ally strip is a compact left card (portrait, name, HP), not a second full-size ground sprite; room art still comes from the current room; no new battle art.
+
 ## Cartographer north = up (?v=mapnorth1) (2026-10-02)
 
 - Engine SHA: `4148568` (`[grokbot]`). Tip was fog1 `e8200b2` / docs `4307c9e`.
