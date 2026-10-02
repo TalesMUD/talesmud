@@ -165,6 +165,40 @@ func sameCluster(a, b *placedRoom) bool {
 	return a.area == b.area
 }
 
+
+// authoredYSign returns -1 when an area's authored coords treat +Y as north
+// (opposite of layout: north decreases Y). Otherwise +1. Used only when placing
+// authored Coords so Cartographer north always paints toward the top of the map.
+func authoredYSign(src map[string]*rooms.Room, edges []edge, area string) int {
+	agree, disagree := 0, 0
+	for _, e := range edges {
+		a, b := src[e.from], src[e.to]
+		if a == nil || b == nil || a.Area != area || b.Area != area {
+			continue
+		}
+		if a.Coords == nil || b.Coords == nil {
+			continue
+		}
+		off, ok := offsetFor(e.dir)
+		if !ok || off.z != 0 || off.y == 0 {
+			continue
+		}
+		dy := int(b.Coords.Y) - int(a.Coords.Y)
+		if dy == 0 {
+			continue
+		}
+		if (dy < 0) == (off.y < 0) {
+			agree++
+		} else {
+			disagree++
+		}
+	}
+	if disagree > agree {
+		return -1
+	}
+	return 1
+}
+
 func placeXY(w *World, src map[string]*rooms.Room, ids []string) {
 	occupiedByArea := map[string]map[cell]string{}
 	placed := map[string]bool{}
@@ -181,6 +215,8 @@ func placeXY(w *World, src map[string]*rooms.Room, ids []string) {
 	}
 
 	// Authored area-local Coords take precedence over inferred graph positions.
+	// Some zones authored +Y as north; layout wants north = decreasing Y.
+	ySignByArea := map[string]int{}
 	for _, id := range ids {
 		r := src[id]
 		if r.Coords == nil {
@@ -190,7 +226,12 @@ func placeXY(w *World, src map[string]*rooms.Room, ids []string) {
 		if occupiedByArea[pr.area] == nil {
 			occupiedByArea[pr.area] = map[cell]string{}
 		}
-		placeAt(id, int(r.Coords.X), int(r.Coords.Y), pr.z, occupiedByArea[pr.area])
+		sign, ok := ySignByArea[pr.area]
+		if !ok {
+			sign = authoredYSign(src, w.edges, pr.area)
+			ySignByArea[pr.area] = sign
+		}
+		placeAt(id, int(r.Coords.X), sign*int(r.Coords.Y), pr.z, occupiedByArea[pr.area])
 	}
 
 	groups := map[string][]string{}

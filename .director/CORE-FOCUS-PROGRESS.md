@@ -1,3 +1,11 @@
+## Cartographer north = up (?v=mapnorth1) (2026-10-02)
+
+- Code: `[grokbot]` on tip after fog1 `e8200b2` / docs `4307c9e`.
+- Root cause: Aelindor authored room coords used +Y as north; Cartographer layout expects north = decreasing Y (`directions.go`, `projectGrid`). Moving north therefore painted downward.
+- Fix: `pkg/worldmap/compile.go` detects per-area authored Y polarity from compass exits and negates Y when +Y was north. Meadows/Oldtown (already correct) stay unflipped. Regression `TestCompileFlipsInvertedAuthoredY`. Cache-bust `?v=mapnorth1`. Content Z11 markdown Y values negated to match convention (DB still corrected at compile until reimport).
+- Door: untouched.
+- Deploy: local clawdbot `:8010` rebuild `bin/tales`; VPS ff + SIGTERM talesmud only.
+
 ## Cartographer soft volumetric fog (?v=fog1) (2026-10-02)
 
 - Code SHA: `e8200b2` (`[grokbot]`), on `05291db` soft-fog feature + blur fixes. Tip was battlepoc3 `bf8fea0` / docs `a08822f` (rechecked).
