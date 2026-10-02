@@ -4,7 +4,8 @@
 - Engine: cache-bust `?v=creamtimber1`; worker `creamtimber1-${TERRAIN_SHEET.version}`; synced sheet via `tools/sync_map_tiles.py`.
 - What: Layout-faithful cream plaster / brown-roof / quieter remapper on P1j settlement decoration rows only (roof/keep/forge/shrine/tavern/shop/farm/tower/town/village/gatehouse). Current Oldtown room-node graph unchanged — not the rejected floating vertical iso stack. Tool: `talesmud-rpg-1/tools/restyle_cream_timber_stamps.py`.
 - Captures: `.director/ux-audit/after/worldmap-creamtimber1-{oldtown,overview}-1920x1080.png`; stamp before/after under content `assets/map-tiles/prototypes/cream-timber/`.
-- Door `:8020` untouched.
+- VPS: ff `c57ff3d`→`c6d5e05`; embed play client; `bin/tales.prev-c57ff3d`; SIGTERM talesmud MainPID `914566`→`914814` on `:8010`. Door `:8020` pid `758959` untouched.
+- Smoke: public `/` `/play/` 200 with `bundle.js?v=creamtimber1`; sheet `?v=5caee700810a` 200 (1,386,011 B, hash `5caee700810a`); POST `/api/guest` 200.
 
 ## B15 — Layout B default (?v=battleb1) (2026-10-02)
 
