@@ -1,7 +1,7 @@
 <script>
   import { createEventDispatcher, onMount } from 'svelte';
   import { itemArtSrc, onItemArtError } from '../itemArtSrc.js';
-  import { comparisonItems, comparisonRows, isTwoHanded, itemUsabilityReason, itemWeight } from './itemComparison.js';
+  import { comparisonItems, comparisonRows, isTwoHanded, itemUsabilityReason, itemWeight, itemIsUsable, itemOffersUseOn } from './itemComparison.js';
 
   export let item;
   export let source = 'inventory';
@@ -18,6 +18,8 @@
   $: weight = itemWeight(item);
   $: equippable = !!item?.slot && !['inventory', 'container', 'purse'].includes(item.slot);
   $: consumable = item?.type === 'consumable' || item?.consumable;
+  $: usable = itemIsUsable(item);
+  $: offersUseOn = itemOffersUseOn(item);
 
   onMount(() => card?.focus());
 
@@ -57,6 +59,7 @@
     </header>
 
     {#if item.description}<p class="item-card-description">{item.description}</p>{/if}
+    {#if offersUseOn}<p class="item-card-use-tip">Tip: use this on another item — tap <strong>Use on…</strong>, or type <code>use {item.name.toLowerCase().split(/\s+/)[0]} on &lt;item&gt;</code>.</p>{/if}
 
     {#if source === 'inventory' && equippable}
       <div class="item-card-compare-title">Compared with {worn.length ? 'equipped' : 'empty slot'}</div>
@@ -103,7 +106,8 @@
       {:else}
         <button type="button" on:click={() => action('examine')}>Examine</button>
         {#if equippable}<button type="button" class="primary" disabled={!!reason} on:click={() => action('equip')}>Equip</button>{/if}
-        {#if consumable}<button type="button" on:click={() => action('use')}>Use</button>{/if}
+        {#if usable}<button type="button" on:click={() => action('use')}>Use</button>{/if}
+        {#if offersUseOn}<button type="button" on:click={() => action('useon')}>Use on…</button>{/if}
         {#if sellable}<button type="button" on:click={() => action('sell')}>Sell</button>{/if}
         <button type="button" on:click={() => action('drop')}>Drop</button>
       {/if}
@@ -122,6 +126,8 @@
   .item-card-meta,.item-card-slot{font-size:.78rem;color:#a9a397}
   .item-card-close{font-size:1.5rem;line-height:1;padding:2px 8px;align-self:flex-start}
   .item-card-description{font-size:.9rem;line-height:1.45;color:#d1c8b8;margin:16px 0}
+  .item-card-use-tip{font-size:.78rem;color:#cfb573;margin:0 0 12px;line-height:1.4}
+  .item-card-use-tip code{font-size:.74rem;background:#1b2026;padding:1px 5px;border-radius:4px;color:#ffe3a4}
   .item-card-compare-title{font-size:.74rem;text-transform:uppercase;letter-spacing:.1em;color:#cfb573;margin:14px 0 5px}
   .item-card-worn{display:flex;gap:8px;flex-wrap:wrap;font-size:.82rem;color:#bbb4a6}
   .item-card-worn span{display:inline-flex;align-items:center;gap:5px;background:#24201b;border:1px solid #4a3b25;border-radius:5px;padding:3px 7px}

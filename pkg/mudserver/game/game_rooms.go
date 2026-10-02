@@ -70,11 +70,14 @@ func (g *Game) removeOfflineCharacters(room *rooms.Room) {
 }
 
 func (g *Game) handleRoomUpdates() {
+	now := time.Now()
 	if g.RoomInstances != nil {
-		g.RoomInstances.Expire(time.Now())
+		g.RoomInstances.Expire(now)
 	}
 
 	if allRooms, err := g.Facade.RoomsService().FindAll(); err == nil {
+		// Timed cleanup of unclaimed combat/player ground drops (junk vs important TTLs).
+		g.despawnExpiredGroundItems(now, allRooms)
 
 		for _, room := range allRooms {
 			if needsUpdate(room) {

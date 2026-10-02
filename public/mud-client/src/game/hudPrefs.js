@@ -374,6 +374,7 @@ export function classifySkills(classId, level, equippedIds) {
 /** Bindable hotbar actions. Rest is seeded on empty/default bars; Look/Talk/Flee are optional. */
 export const HOTBAR_ACTIONS = [
   { id: 'melee', label: 'Attack', command: 'attack', art: 'generic-action-melee' },
+  { id: 'defend', label: 'Defend', command: 'defend', art: 'generic-spell-shield' },
   { id: 'look', label: 'Look', command: 'look', art: 'generic-action-look' },
   { id: 'rest', label: 'Rest', command: 'rest', art: 'generic-action-rest' },
   { id: 'flee', label: 'Flee', command: 'flee', art: 'generic-action-flee' },

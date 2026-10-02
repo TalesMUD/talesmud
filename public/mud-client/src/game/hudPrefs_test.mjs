@@ -234,6 +234,8 @@ assert.ok(HOTBAR_ACTIONS.some((a) => a.id === 'look'), 'Look remains bindable');
 assert.ok(HOTBAR_ACTIONS.some((a) => a.id === 'rest'), 'Rest remains bindable');
 assert.ok(HOTBAR_ACTIONS.some((a) => a.id === 'talk'), 'Talk remains bindable');
 assert.ok(HOTBAR_ACTIONS.some((a) => a.id === 'flee'), 'Flee remains bindable');
+assert.ok(HOTBAR_ACTIONS.some((a) => a.id === 'defend'), 'Defend remains bindable');
+assert.equal(HOTBAR_ACTIONS.find((a) => a.id === 'defend')?.command, 'defend');
 
 const seeded = seedRestOnEmptyHotbar([null, null, null, null, null, null, null, null]);
 assert.strictEqual(seeded[DEFAULT_REST_SLOT]?.id, 'rest', 'empty bar seeds Rest');

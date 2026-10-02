@@ -130,8 +130,9 @@ type YAMLItem struct {
 	Tags         []string               `yaml:"tags"`
 	Attributes   map[string]interface{} `yaml:"attributes"`
 	Properties   map[string]interface{} `yaml:"properties"`
-	Meta         YAMLItemMeta           `yaml:"meta"`
-	OnUseScript  string                 `yaml:"onUseScript"`
+	Meta          YAMLItemMeta           `yaml:"meta"`
+	OnUseScript   string                 `yaml:"onUseScript"`
+	OnUseScriptID string                 `yaml:"onUseScriptId"` // alias used by content packs
 }
 
 // YAMLItemMeta contains item metadata

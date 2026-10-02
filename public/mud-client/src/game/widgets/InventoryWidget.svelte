@@ -1,7 +1,7 @@
 <script>
   import { itemArtSrc, onItemArtError } from '../itemArtSrc.js';
   import ItemDetailCard from './ItemDetailCard.svelte';
-  import { isClearUpgrade } from './itemComparison.js';
+  import { isClearUpgrade, itemCmdName } from './itemComparison.js';
 
   export let store = null;
   export let sendMessage = null;
@@ -21,6 +21,10 @@
   let showSellPopup = false;
   let sellItem = null;
   let sellQuantity = 1;
+
+  // Use-on target picker (flint → torch, etc.)
+  let showUseOnPicker = false;
+  let useOnSource = null;
 
   function toggleViewMode() {
     viewMode = viewMode === 'grid' ? 'list' : 'grid';
@@ -148,8 +152,38 @@
   }
 
   function handleUse(item) {
-    const name = item.instanceSuffix ? item.name + '-' + item.instanceSuffix : item.name;
-    sendCmd('use ' + name);
+    // Bare use — server auto-lights a carried torch for flint; potions just work.
+    sendCmd('use ' + itemCmdName(item));
+  }
+
+  function openUseOnPicker(item) {
+    useOnSource = item;
+    detailItem = null;
+    showUseOnPicker = true;
+  }
+
+  function closeUseOnPicker() {
+    showUseOnPicker = false;
+    useOnSource = null;
+  }
+
+  function useOnTargets(source) {
+    if (!source) return [];
+    return inventory.filter((it) => it && it.id !== source.id);
+  }
+
+  function confirmUseOn(target) {
+    if (!useOnSource || !target) return;
+    const a = itemCmdName(useOnSource);
+    const b = itemCmdName(target);
+    sendCmd('use ' + a + ' on ' + b);
+    closeUseOnPicker();
+  }
+
+  function confirmUseAlone() {
+    if (!useOnSource) return;
+    sendCmd('use ' + itemCmdName(useOnSource));
+    closeUseOnPicker();
   }
 
   function handleUnequip(item) {
@@ -167,6 +201,7 @@
     if (verb === 'equip') handleEquip(item);
     else if (verb === 'unequip') handleUnequip(item);
     else if (verb === 'use') handleUse(item);
+    else if (verb === 'useon') openUseOnPicker(item);
     else if (verb === 'drop') handleDrop(item);
     else if (verb === 'examine') handleExamine(item);
     else if (verb === 'sell') handleSell(item);
@@ -1002,6 +1037,50 @@
     margin-bottom: 0.5em;
     opacity: 0.4;
   }
+
+  .use-on-hint {
+    font-size: 12px;
+    color: #a9a397;
+    margin: 0 0 10px;
+    line-height: 1.4;
+  }
+  .use-on-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 240px;
+    overflow: auto;
+  }
+  .use-on-target {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    text-align: left;
+    background: #1b2026;
+    border: 1px solid #3d3423;
+    color: #e7e2d8;
+    border-radius: 8px;
+    padding: 8px 10px;
+    cursor: pointer;
+  }
+  .use-on-target:hover {
+    border-color: #b38c3f;
+    background: #24201b;
+  }
+  .use-on-target img {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    image-rendering: pixelated;
+    background: #080b0f;
+    border-radius: 4px;
+  }
+  .use-on-empty {
+    font-size: 12px;
+    color: #87929c;
+    padding: 8px 0;
+  }
 </style>
 
 <div class="inventory-widget game-panel">
@@ -1192,4 +1271,36 @@
       </div>
     </div>
   {/if}
+
+  {#if showUseOnPicker && useOnSource}
+    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+    <div class="sell-popup-backdrop" on:click={closeUseOnPicker}></div>
+    <div class="sell-popup use-on-popup" role="dialog" aria-label="Use on item">
+      <div class="sell-popup-header">
+        <span class="sell-popup-title">Use {useOnSource.name} on…</span>
+        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+        <i class="material-icons sell-popup-close" on:click={closeUseOnPicker}>close</i>
+      </div>
+      <div class="sell-popup-body">
+        <p class="use-on-hint">Pick another inventory item (example: Dusty Torch), or use it alone if you already carry what you need.</p>
+        <div class="use-on-list">
+          {#each useOnTargets(useOnSource) as target (target.id || target.name)}
+            <button type="button" class="use-on-target" on:click={() => confirmUseOn(target)}>
+              <img src={itemArtSrc(target)} alt="" on:error={(e) => onItemArtError(e, target)} />
+              <span>{target.name}</span>
+            </button>
+          {:else}
+            <div class="use-on-empty">No other items in inventory.</div>
+          {/each}
+        </div>
+      </div>
+      <div class="sell-popup-actions">
+        <button class="detail-action-btn use" on:click={confirmUseAlone}>
+          <i class="material-icons">play_arrow</i> Use alone
+        </button>
+        <button class="detail-action-btn drop" on:click={closeUseOnPicker}>Cancel</button>
+      </div>
+    </div>
+  {/if}
+
 </div>

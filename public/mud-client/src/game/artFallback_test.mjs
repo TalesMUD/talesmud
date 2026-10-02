@@ -1,6 +1,6 @@
 import assert from 'assert';
 import { itemArtFallbackSrc, itemArtGenericKey } from './itemArtSrc.js';
-import { figureFallback, playerPortraitSrc, playerSilhouette, portraitSrc, SILHOUETTE } from './portraitSrc.js';
+import { battleSpriteSrc, figureFallback, playerPortraitSrc, playerSilhouette, portraitSrc, SILHOUETTE } from './portraitSrc.js';
 
 const fang = { templateId: 'ITM0087', type: 'weapon', name: 'Fang' };
 assert.equal(itemArtGenericKey(fang), 'weapon');
@@ -21,5 +21,33 @@ assert.equal(playerPortraitSrc({ race: { id: 'elve' }, class: { id: 'wizard' } }
 assert.equal(playerPortraitSrc({ race: 'Dwarf', class: 'Hunter' }), '/api/portraits/player-dwarf-ranger.png');
 assert.equal(playerPortraitSrc({ race: 'Orc', class: 'Warrior' }), '');
 assert.equal(figureFallback({ name: 'Elder' }), SILHOUETTE.npc);
+
+assert.equal(
+  battleSpriteSrc({ id: 'ENM0001~abcd', type: 'npc', name: 'Rat' }),
+  '/api/portraits/ENM0001.png'
+);
+assert.equal(
+  battleSpriteSrc({ id: 'x', type: 'npc', portrait: '/api/portraits/ENM0009.png' }),
+  '/api/portraits/ENM0009.png'
+);
+assert.equal(
+  battleSpriteSrc({ id: 'p1', type: 'player', classId: 'warrior', race: 'human' }),
+  '/api/portraits/player-human-warrior.png'
+);
+assert.equal(
+  battleSpriteSrc({ id: 'p1', type: 'player', portrait: '/api/portraits/player-elf-mage.png' }),
+  '/api/portraits/player-elf-mage.png'
+);
+assert.equal(
+  battleSpriteSrc(
+    { id: 'self', type: 'player' },
+    { isPlayer: true, selfId: 'self', character: { race: 'dwarf', class: 'rogue' } }
+  ),
+  '/api/portraits/player-dwarf-rogue.png'
+);
+assert.equal(
+  battleSpriteSrc({ id: '11111111-1111-1111-1111-111111111111', type: 'player', classId: 'mage' }),
+  playerSilhouette('mage')
+);
 
 console.log('artFallback_test ok');

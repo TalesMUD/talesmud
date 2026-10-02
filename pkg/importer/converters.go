@@ -118,7 +118,7 @@ func (y *YAMLItem) ToEntity() *items.Item {
 		Tags:          y.Tags,
 		Attributes:    y.Attributes,
 		Properties:    y.Properties,
-		OnUseScriptID: y.OnUseScript,
+		OnUseScriptID: firstNonEmpty(y.OnUseScript, y.OnUseScriptID),
 	}
 
 	// Set meta if img is provided
@@ -483,4 +483,13 @@ func (y *YAMLSkill) ToEntity() *skills.Skill {
 	}
 
 	return s
+}
+
+func firstNonEmpty(vals ...string) string {
+	for _, v := range vals {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }

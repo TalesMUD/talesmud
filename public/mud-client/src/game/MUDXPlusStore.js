@@ -1200,7 +1200,7 @@ function createStore() {
       });
 
       // Accepted banner stays longer; corner toasts dismiss sooner
-      const ttl = (notification?.type === 'accepted' || notification?.type === 'completed') ? 10000 : 5000;
+      const ttl = (notification?.type === 'accepted' || notification?.type === 'completed' || notification?.type === 'levelup') ? 16000 : 5000;
       setTimeout(() => {
         update((state) => {
           state.questNotifications = state.questNotifications.filter(n => n.id !== notification.id && n !== notification);

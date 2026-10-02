@@ -69,12 +69,9 @@ func GrantExplorationXP(game def.GameCtrl, char *characters.Character, userID st
 			Message:    msg,
 		}
 
-		// Send level-up notification
-		game.SendMessage() <- messages.MessageResponse{
-			Audience:   messages.MessageAudienceUser,
-			AudienceID: userID,
-			Type:       messages.MessageTypeLevelUp,
-			Message:    result.Message,
+		// Send structured level-up celebration
+		if msg := messages.NewLevelUpMessage(userID, result); msg != nil {
+			game.SendMessage() <- msg
 		}
 
 		// Send updated character stats

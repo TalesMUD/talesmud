@@ -79,7 +79,7 @@ export function worldmapScene(atlas,sheet) {
   if(!sheetReady(sheet)||typeof Worker==='undefined'||typeof OffscreenCanvas==='undefined'||typeof createImageBitmap==='undefined')return continentRaster(atlas,sheet);
   if(!queue) {
     try {
-      const worker=new Worker(new URL(`worldmap-worker.js?v=ux1001-${TERRAIN_SHEET.version}`,document.baseURI));
+      const worker=new Worker(new URL(`worldmap-worker.js?v=mapnorth1-${TERRAIN_SHEET.version}`,document.baseURI));
       const initialize=createImageBitmap(sheet).then(bitmap=>worker.postMessage({type:'sheet',sheet:bitmap},[bitmap]));
       queue=new SceneQueue(worker,initialize,notify);
     } catch {return continentRaster(atlas,sheet)}

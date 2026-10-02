@@ -58,9 +58,9 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Play header: one row for Edit Layout, Party, Friends, and the account chip, with a gold menu aligned to the chip
   - Material Icons are served locally and preloaded; icon ligatures remain hidden until the font loads, so a font failure leaves empty icons.
   - OOC Resting chip on character HP / mobile header while `Flags.resting`; clears on combat or rest end
-  - BattleStage: arena art clipped to the fight band; Attack/Defend/Items/Flee + hotbar share one dock strip; FF-style plates; queue chip centered in the dock. Every fighter in a group appears: the player's large card and up to four compact ally cards with live HP/MP, turn, down/fled, hit FX, and join banner. Damage numbers float over the struck sprite in white with a dark outline, holding full opacity before fading. A missing portrait or item icon swaps once to a class, enemy, or generic silhouette instead of a broken image.
+  - BattleStage: arena art clipped to the fight band; Attack/Defend/Items/Flee + hotbar share one dock strip; FF-style plates; queue chip centered in the dock. Layout B is the default fight view (party left, enemies right, corner detail frames, slim over-sprite HP, existing race/class and enemy portraits). Other players show on a compact left ally strip. Classic cards remain a Settings opt-out (`?battleLayout=classic`). Every fighter in a group appears: the player's large card and up to four compact ally cards with live HP/MP, turn, down/fled, hit FX, and join banner. Damage numbers float over the struck sprite in white with a dark outline, holding full opacity before fading. A missing portrait or item icon swaps once to a class, enemy, or generic silhouette instead of a broken image.
   - Combat start/join focuses the existing BattleStage cover by default. The local Settings panel can turn auto-focus off; a manual Open BattleStage button remains available during combat. Dismissing victory/defeat, outcome timeout, or leaving combat restores the previous panel focus. Layout and template saves keep the normal arrangement; command input and text fields keep their typing focus.
-  - Settings persist locally: theme, parchment room descriptions, reduced motion (system/on/off), combat auto-focus, and inventory opening as an overlay or layout widget. Audio controls are held until game sound exists; inactive Compact Mode and Room Text Overlay controls are hidden.
+  - Settings persist locally: theme, parchment room descriptions, reduced motion (system/on/off), combat auto-focus, Battle layout B (default on; off selects Classic), and inventory opening as an overlay or layout widget. Audio controls are held until game sound exists; inactive Compact Mode and Room Text Overlay controls are hidden.
   - Combat self and allies share one row on desktop and a stacked section on phones. Joins show one banner; combat prose stays in the log. Defeated enemy sprites remain visible in grey with a Defeated label.
   - In multi-enemy combat, clicking a BattleStage enemy or pressing Tab changes the gold focus highlight and server aim without spending a turn. Basic attacks and hostile skills use that living target; switching to an orange, red, or skull foe repeats the level-gap warning once per change. A dead target falls back to a living foe.
   - Say chrome opens a message popup, then sends `say <text>`
@@ -354,7 +354,7 @@ talesmud/
 | `drop` | - | Drop an item to the room (blocked for bound items) |
 | `destroy` | `discard` | Destroy an item from inventory |
 | `examine` | `inspect` | Examine an item in detail |
-| `use` | `eat`, `drink`, `consume` | Use a consumable item |
+| `use` | `eat`, `drink`, `consume` | Use an item (`use flint on torch` for item-on-item); Inventory Use on… picks a target |
 | `equip` | `wear` | Equip an item |
 | `unequip` | `remove` | Unequip an item |
 | `equipment` | `eq`, `gear` | Show equipped items |

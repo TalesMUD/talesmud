@@ -127,3 +127,42 @@ export function isClearUpgrade(item, equippedItems = {}, character = null) {
   const gain = rows.reduce((sum, row) => sum + row.delta * weights[row.key], 0);
   return gain > 0 && rows.some((row) => row.delta > 0);
 }
+
+export function itemCmdName(item) {
+  if (!item) return '';
+  return item.instanceSuffix ? `${item.name}-${item.instanceSuffix}` : item.name;
+}
+
+export function itemIsFireStarter(item) {
+  if (!item) return false;
+  const name = String(item.name || '').toLowerCase();
+  if (name.includes('flint') || name.includes('tinder')) return true;
+  const attrs = item.attributes || {};
+  if (attrs.canLight === true || attrs.canLight === 'true' || attrs.canLight === 1 || attrs.canLight === '1') {
+    return true;
+  }
+  const sub = String(item.subType || '').toLowerCase();
+  const tags = (item.tags || []).map((t) => String(t).toLowerCase());
+  if (sub === 'tool' && (tags.includes('tool') || tags.includes('utility'))) return true;
+  return false;
+}
+
+/** Show Use when the item has an effect path (potion, OnUse script, or fire-starter). */
+export function itemIsUsable(item) {
+  if (!item) return false;
+  if (item.type === 'consumable' || item.consumable) return true;
+  if (item.onUseScriptId) return true;
+  if (itemIsFireStarter(item)) return true;
+  const attrs = item.attributes || {};
+  if (attrs.healthRestore != null || attrs.manaRestore != null || attrs.useMessage) return true;
+  return false;
+}
+
+/** Tools/fire-starters benefit from picking a second inventory item. */
+export function itemOffersUseOn(item) {
+  if (!item) return false;
+  if (itemIsFireStarter(item)) return true;
+  if (item.onUseScriptId && !(item.type === 'consumable' || item.consumable)) return true;
+  const sub = String(item.subType || '').toLowerCase();
+  return sub === 'tool';
+}

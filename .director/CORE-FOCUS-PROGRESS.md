@@ -1,3 +1,41 @@
+## B15 — Layout B default (?v=battleb1) (2026-10-02)
+
+- Code SHA: `80138fb` (`[grokbot]`), `engine-june`. Live client: `?v=battleb1`.
+- Tip was mapnorth1 `4148568` / docs `cd0f9ea`.
+- Default: no `talesmud_battle_layout_b` key and no URL selects Layout B. An older settings blob that still stores `battleLayoutB: false` is treated as the previous default, not a choice, so fresh guests and players with no explicit preference get Layout B. The Settings checkbox defaults on.
+- Classic opt-out stays: Settings → Gameplay → turn Battle layout B off (writes localStorage `0`), or `?battleLayout=classic` / `?battlepoc=0`. URL wins over localStorage; an explicit `0`/`1` wins over Settings. `?battleLayout=b` / `?battlepoc=1` still forces Layout B. Reset clears the key and returns to the default. Classic is not removed.
+- Allies: in Layout B, other players sit in a compact left strip (existing portrait, name, slim HP) beside the player marker. Solo keeps the single left marker and the narrower team column.
+- Sprites: markers use the server portrait URL, then race/class art (`/api/portraits/player-<race>-<class>.png`) or the enemy template file. A class or enemy silhouette is only the failed-load fallback. Layout B draws those painted portraits without the pixelated placeholder filter. Slim over-sprite HP and the top-left / top-right frames from battlepoc3 stay.
+- Quiet chrome: under Layout B the mid-stage Resolving/Waiting pill, the dock wait chip, and the header turn-name chip stay hidden. The round chip and the your-turn countdown remain.
+- Tests: `node public/mud-client/src/game/battleLayout_test.mjs` ok; `node public/mud-client/src/game/artFallback_test.mjs` ok; `npm run build` green (existing unused-CSS and a11y warnings).
+- Capture: `.director/ux-audit/after/b15-layoutb-1920x1080.png`. Fresh guest, layout key absent, `.battle-stage.layout-b`, Lyra left of Gimli left of Catacomb Rat, portrait URLs `player-human-warrior` / `player-elf-mage` / `ENM0001`, foe-plate and player-meta hidden, no Resolving or turn-name chip, scrollHeight 1080. Helper `tools/capture_b15.cjs`.
+- VPS: ff `cd0f9ea`→`80138fb`; embed `public/mud-client/public` into `pkg/webuiplay/dist`; `bin/tales.prev-cd0f9ea`; new binary sha256 `53b0675bf8eebf329ed0a6f642ef172c11b535373dacd8d37d6c2bf61bf23b69`; SIGTERM only talesmud MainPID `886910`; new MainPID `889038` on `:8010`. Door `:8020` pid `758959` untouched.
+- Smoke: public `/` and `/play/` 200 with `bundle.js?v=battleb1`; `bundle.js` and `extra.css` 200; `/api/server-info` 200, serverName (configured demo title); POST `/api/guest` 200, expiresIn 1800. door.example.com/door 301 FYI.
+- Residuals: the ally strip is a compact left card (portrait, name, HP), not a second full-size ground sprite; room art still comes from the current room; no new battle art.
+
+## Cartographer north = up (?v=mapnorth1) (2026-10-02)
+
+- Engine SHA: `4148568` (`[grokbot]`). Tip was fog1 `e8200b2` / docs `4307c9e`.
+- Content SHA: `ea356f2` (`talesmud-rpg-1` main) — Z11 markdown Y negated to north=−Y.
+- Root cause: Aelindor authored room coords used +Y as north; Cartographer layout expects north = decreasing Y (`directions.go`, `projectGrid`). Moving north painted downward on the atlas.
+- Fix: `pkg/worldmap/compile.go` `authoredYSign` detects per-area authored Y polarity from compass exits and negates Y when placing inverted zones. Meadows stay unflipped. Regression `TestCompileFlipsInvertedAuthoredY`. Cache-bust `?v=mapnorth1`.
+- Prod DB still has inverted Aelindor Y (28 disagree / 0 agree); compile flips at atlas build. Markdown fixed for future imports.
+- Verify: after flip, R1101→R1102→R1114→R1115→R1118 north chain has strictly decreasing Y (screen-up).
+- Local clawdbot: `bin/tales` pid `255022` on `:8010`; Door `:8020` pid `3406193` untouched.
+- VPS: ff `e8200b2`→`4148568`; embed play client; `bin/tales.prev-e8200b2`; SIGTERM only talesmud; new MainPID `886910` on `:8010`. Door `:8020` pid `758959` untouched.
+- Smoke: local + `https://example.com/play/` 200 with `bundle.js?v=mapnorth1`; guest POST 200; `go test ./pkg/worldmap -run FlipsInverted` green.
+
+## Cartographer soft volumetric fog (?v=fog1) (2026-10-02)
+
+- Code SHA: `e8200b2` (`[grokbot]`), on `05291db` soft-fog feature + blur fixes. Tip was battlepoc3 `bf8fea0` / docs `a08822f` (rechecked).
+- What changed: Unexplored overworld landscape no longer stamps fog terrain tiles or Bayer fog-band checkers. A soft volumetric overlay (`fogOverlay.js`) builds a blurred explore-boundary mask + cloud washes (manual box-blur because OffscreenCanvas workers ignore CSS `filter`). Underground undiscovered rooms use the same soft wash. You / Turn-in / Selected markers still paint above the baked scene. Travel/select hit testing unchanged. Cache-bust `?v=fog1`.
+- Files: `fogOverlay.js` (+test), `continentRenderer.js`, `coastline.js`, `undergroundRenderer.js`, `atlasRenderer.js` (non-landscape soft fog blobs), `worldmapSceneStore.js` worker query, `FEATURES.md`, built `bundle.js` / `worldmap-worker.js` / `index.html`.
+- Tests: `node …/fogOverlay_test.mjs` ok (soft mask + feather); existing mapPolish/surfaceAtlas/worldmapSceneStore/atlasRenderer tests green; `npm run build` green.
+- Local clawdbot `:8010`: embed play client, rebuilt `bin/tales`; Door `:8020` pid `3406193` untouched.
+- VPS: ff to `e8200b2`; embed play client; `bin/tales.prev-*`; SIGTERM talesmud only; MainPID `886603` on `:8010`. Door `:8020` pid `758959` untouched.
+- Smoke: local + public `/play/` 200 with `?v=fog1`; worker contains soft-fog bake; guest POST 200. Screenshots `.director/ux-audit/after/fog1-overview-1920x1080.png`, `fog1-maxzoom-1920x1080.png`, `fog1-smoke.json` (preview atlas with expanded fog cells).
+- Residual: fog mask is still cell-derived (soft-edged cloud regions follow charted disclosure), not a freeform shader volume; very far fringes can still read as large dark shapes until more of the continent is charted.
+
 
 
 ## Android APK ae4412c (2026-10-01)
@@ -479,3 +517,78 @@ Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated bl
 - Deploy: VPS `engine-june` fast-forwarded through `fca48b0`; copied built play assets into `pkg/webuiplay/dist`, built `bin/tales.next`, renamed it over `bin/tales`, SIGTERM'd only talesmud MainPID. `Restart=always` started MainPID `858953` on :8010. Final bundle SHA256 `3fe131ac43f07790821b9115f6c913f057c0ad818c9f23ab77263f64bcac4669` matches VPS source/dist. Door path and service untouched.
 - Smoke: live `/`, `/play/?v=a10focus`, `/api/server-info`, `bundle.js?v=a10focus`, `extra.css?v=a10focus`, and `POST /api/guest` all returned 200. Play HTML references the A10 bundle and stylesheet. Controlled two-hostile live guest capture: `.director/ux-audit/after/a10-focus-1920x1080.png`; skull focus label/ring and warning visible, page height 1080, zero page errors. Screenshot uses a synthetic combat payload; server focus/aim is covered by Go tests.
 - Residual: Flutter combat focus and switch warning parity remains for a later mobile slice. The screenshot's multi-hostile state is controlled rather than a natural swarm encounter.
+
+## Examine item card overlay (2026-10-01 evening)
+
+- Code SHA: `22be19c` (`[grokbot]`), `engine-june`. Live client: `?v=examine1`.
+- What changed: Room overlay detects `=== … ===` examine dumps and renders a dark/gold item card (title, blurb vs lore, Type/Quality chips, scroll, close). Server hides snake_case subtypes like `artifact_fragment` on the Type line. Non-examine toasts unchanged.
+- Tests: `node …/parseExamineOverlay_test.mjs`; `go test ./pkg/mudserver/game/commands/ -run TestFormatItemSubType|TestExamineItemOmits`.
+- Deploy: VPS ff `10d3276`→`22be19c`, embed play client, `bin/tales.prev-10d3276`, SIGTERM MainPID only; Restart=always → MainPID `870149` on :8010. Door :8020 pid `758959` untouched.
+- Smoke: `/play/?v=examine1` 200; `bundle.js?v=examine1` contains `examine-card`; POST `/api/guest` 200.
+
+## Use item on item — inventory Use on… + bare flint (2026-10-01 evening)
+
+- Code SHA: `201c225` (`[grokbot]`), `engine-june`. Live client: `?v=useon1`.
+- Root cause: content YAML used `onUseScriptId` but importer only read `onUseScript`, so live ITM0002 had no OnUse → bare `use flint` said "You can't use". `use flint on torch` worked via built-in light path. Inventory Use only showed for consumables and never offered a target.
+- What changed:
+  - Importer accepts `onUseScript` **or** `onUseScriptId`.
+  - Bare `use flint` auto-lights a carried torch (built-in when no script; SCR0008 when template linked). Soft hint + examine "How to use" teach `use A on B`.
+  - Inventory item card: Use for usable tools/scripts; **Use on…** picker for second inventory item (no Terminal X).
+- Tests: `go test ./pkg/mudserver/game/commands/ -run TestUse|TestExamine`; `node …/itemComparison_test.mjs`; `npm run build`.
+- Deploy: VPS ff → `201c225`, embed play client, patch live ITM0002 `onUseScriptId=SCR0008`, `bin/tales.prev-*`, SIGTERM talesmud only. Door untouched.
+- Smoke: `/play/?v=useon1` 200; guest POST 200; Door :8020 untouched.
+- Residual: existing inventory flint *instances* without script id still work via built-in auto-target / template resolve; re-pickup from fixed template carries SCR0008.
+
+## Inventory grid + detail overlay regression fix (2026-10-01 night)
+
+- Code SHA: `5b21a73` (`[grokbot]`), `engine-june`. Live client: `?v=invfix1`.
+- Cause: useon1 rebuilt `bundle.js` (new Svelte scope hashes) but Rollup wrote component CSS to unlinked `bundle.css` while linked `extra.css` stayed on levelup1 hashes. Inventory grid + ItemDetailCard styles never applied → vertical unstyled slots + detail card under widgets.
+- Fix: single `css({ output: 'extra.css' })` after `svelte({ emitCss: true })` in `rollup.config.js`; rebuild so JS/CSS hashes match; cache bump `invfix1`.
+- Keep: Use / Use on… UI + server use-on paths unchanged.
+- Deploy: VPS ff `1cedbf0`→`63d3745`, embed play client, `bin/tales.prev-1cedbf0` (sha256 `4b36945b9f5653220abf093e54fa1aca484dd892b2e0dc2636ba339b443cbd9b`), new bin sha256 `a8b72f35c773a5fd1df3e2300a42f527c6a91ca37c43d5358308066918455412`. SIGTERM talesmud only; Restart=always → MainPID `872157` on :8010 at 23:22:13 Berlin. Door :8020 pid `758959` untouched.
+- Smoke: `/play/?v=invfix1` 200; guest POST 200; public HTTPS `?v=invfix1`; dist JS/CSS scope hashes match (`svelte-en6ew4` grid, `svelte-anbkw4` item-card).
+
+
+## Battle layout B PoC (2026-10-02)
+
+- Code SHA: `d0b40a0` (`[grokbot]`), `engine-june`. Live client: `?v=battlepoc1`.
+- What: Toggleable BattleStage layout B — party/player LEFT, enemies RIGHT, gold ground markers / focus ring, portrait+buff strip, target bar. Full action/spellbar (hotbar 1–9) + Flee kept; room art darkened + vignette reused. Classic layout remains default. Existing portraits used as placeholders on markers.
+- Toggle: Settings → Gameplay → Battle layout B (PoC); `localStorage talesmud_battle_layout_b=1`; URL `?battleLayout=b` / `?battlepoc=1`. Revert: Settings off, LS clear/`0`, or `?battleLayout=classic`. Priority: URL > localStorage > Settings.
+- Files: `battleLayout.js` (+test), SettingsStore/Modal, BattleStage.svelte layout-b CSS/markup, cache bump.
+- Tests: `node …/battleLayout_test.mjs` ok; `npm run build` green.
+- Deploy: clawdbot local `:8010` rebuilt `bin/tales`, restarted pid `221331` (Door `:8020` pid `3406193` untouched). VPS ff `3d47301`→`d0b40a0`, embed play client, `bin/tales.prev-3d47301`, SIGTERM talesmud MainPID `872157`→`875545` on `:8010`. Door `:8020` pid `758959` untouched.
+- Smoke: public `/play/` 200 with six `?v=battlepoc1`; `bundle.js`/`extra.css` 200; extra contains `layoutBFocusPulse`; POST `/api/guest` 200. Local `/play/` 200.
+
+## Battle layout B refine — room sprites + edge frames (2026-10-02)
+
+- Code SHAs: `9ea6fe9` (layout refine) + `6148d0d` (strip classic player-bust gold card chrome), both `[grokbot]`, `engine-june`. Live client: `?v=battlepoc2`.
+- Tip was battlepoc1 `d0b40a0` / docs `5210721`.
+- What changed (layout B only; classic untouched):
+  1. **Player** rendered into the room on the left gold ground marker as a portrait avatar (no mid-stage info card).
+  2. **Player detail frame TOP-LEFT**: name, HP/MP, buffs/debuffs, class/Focused chips.
+  3. **Target detail frame TOP-RIGHT**: focused enemy name, HP, buffs/debuffs (FOCUS label when multi-enemy).
+  4. **Over each enemy sprite**: only a small HP bar (+ optional tiny name); full foe-plate hidden; focus ring stays.
+  5. Full hotbar 1–9 + Flee, room vignette, Settings/`localStorage`/`?battleLayout=` toggle kept.
+- Files: `BattleStage.svelte`, `battleLayout.js` header, `SettingsModal.svelte` desc, `FEATURES.md`, cache bump `index.html` + built `bundle.js`/`extra.css`. Capture helper `tools/capture_battlepoc2.cjs`.
+- Tests: `node …/battleLayout_test.mjs` ok; `npm run build` green (existing unused-CSS warnings only).
+- Local clawdbot `:8010`: embed play client, rebuilt `bin/tales`, prev `bin/tales.prev-5210721` / later `bin/tales.prev-9ea6fe9`; pid `224501` on `:8010`. Door `:8020` pid `3406193` untouched.
+- VPS: ff `d0b40a0`→`9ea6fe9` then `9ea6fe9`→`6148d0d`; embed play client; `bin/tales.prev-d0b40a0` / `bin/tales.prev-9ea6fe9`; SIGTERM talesmud only; Restart=always → MainPID `877311` on `:8010`. Door `:8020` pid `758959` untouched. New bin sha256 `0b11fdad3011ecf9271ba5609dcb17547deb64634ce67f811db74212e7ac42f4`.
+- Smoke: local Chromium guest + synthetic combat — `.battle-stage.layout-b`, TL/TR frames, foe-plate `display:none`, player-meta `display:none`, sprite-hp ≥1, player-bust border cleared, zero page errors. Screenshot `.director/ux-audit/after/battlepoc2-layoutb-1920x1080.png`; `battlepoc2-smoke.json`. Public `/play/` 200 with six `?v=battlepoc2`; `extra.css` contains `layout-b-frame`/`sprite-hp-track`; POST `/api/guest` 200; door.example.com/door 307 FYI.
+- Residual: placeholder portraits (not dedicated battle sprites); ally party in layout B still compact near left marker without own edge frame.
+
+## Battle layout B polish — slim HP + quieter chrome (2026-10-02)
+
+- Code SHA: `bf8fea0` (`[grokbot]`), `engine-june`. Live client: `?v=battlepoc3`.
+- Tip was battlepoc2 `92e1a98` / code `6148d0d`.
+- What changed (layout B only; classic untouched):
+  1. **Over-sprite**: slim HP bar only — dropped ALL-CAPS name labels (names live in TL/TR frames).
+  2. **Mid-stage Resolving/Waiting pill**: hidden under layout B; header turn-chip + decision timer keep subtle state.
+  3. **Markers / focus ring**: tighter (≈70%×16%), softer glow/pulse; combatants nudged inward on the floor.
+  4. **TL/TR frames**: tighter padding/spacing, smaller buff chips, no forced uppercase on target name.
+  5. Hotbar 1–9 + Flee, room vignette, Settings/`localStorage`/`?battleLayout=` toggle kept.
+- Files: `BattleStage.svelte`, `battleLayout.js` header, `SettingsModal.svelte` desc, `FEATURES.md`, cache bump `index.html` + built `bundle.js`/`extra.css`. Capture helper `tools/capture_battlepoc3.cjs`.
+- Tests: `node …/battleLayout_test.mjs` ok; `npm run build` green (existing unused-CSS warnings only).
+- Local clawdbot `:8010`: embed play client, rebuilt `bin/tales`, prev `bin/tales.prev-92e1a98`; pid `227711` on `:8010`. Door `:8020` pid `3406193` untouched. New bin sha256 `896c50531c8825d08ffe6a61984d66a71c0ec24ac42b6d6ffe99d8c6aabf82e5`.
+- VPS: ff `92e1a98`→`bf8fea0`; embed play client; `bin/tales.prev-92e1a98`; SIGTERM talesmud MainPID `877311`; Restart=always → MainPID `878486` on `:8010`. Door `:8020` pid `758959` untouched. New bin sha256 `8e4bf4513ec691f53df32b68bef7487334bb34c24fdf79d020a2f1e078542701`.
+- Smoke: local Chromium guest + synthetic combat — `.battle-stage.layout-b`, TL/TR frames, foe-plate/`player-meta` `display:none`, sprite-hp ≥1, sprite-hp-name `none`, dock wait chip `none`, `?v=battlepoc3`, zero page errors. Screenshot `.director/ux-audit/after/battlepoc3-layoutb-1920x1080.png`; `battlepoc3-smoke.json`. Public `/play/` 200 with six `?v=battlepoc3`; `extra.css` 200 contains sprite-hp-name hide + dock wait hide; POST `/api/guest` 200; door.example.com/door 301 FYI (pid untouched).
+- Residual: placeholder portraits (not dedicated battle sprites); TL frame still shows compact class + Waiting chip (header also shows Waiting); ally party in layout B still compact near left marker without own edge frame.

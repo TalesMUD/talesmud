@@ -1,22 +1,48 @@
 <script>
   export let store = null;
+  export let sendMessage = null;
   export let onQuestClick = null;
+
+  const ATTR_ORDER = ['STR', 'DEX', 'INT', 'WIS', 'STA'];
 
   let notifications = [];
   let dismissingIds = new Set();
+  let pendingSpend = {}; // attr -> local optimistic spends this card session
 
   $: if (store) {
     notifications = $store.questNotifications || [];
   }
 
-  $: momentCards = notifications.filter((n) => n.type === 'accepted' || n.type === 'completed');
-  $: corner = notifications.filter((n) => n.type !== 'accepted' && n.type !== 'completed');
+  $: characterStats = store ? ($store.characterStats || {}) : {};
+  $: liveUnspent = Number(characterStats.unspentAttributePoints || 0);
+  $: attributes = Array.isArray(characterStats.attributes) ? characterStats.attributes : [];
+
+  // One celebration at a time. Level-up outranks quest complete so XP gains
+  // and unspent points are never buried under a reward toast.
+  $: momentCards = prioritizeMoments(
+    notifications.filter((n) => n.type === 'accepted' || n.type === 'completed' || n.type === 'levelup')
+  );
+  $: activeMoment = momentCards.length ? [momentCards[0]] : [];
+  $: corner = notifications.filter((n) => n.type !== 'accepted' && n.type !== 'completed' && n.type !== 'levelup');
+
+  function prioritizeMoments(list) {
+    const rank = { levelup: 0, completed: 1, accepted: 2 };
+    return [...list].sort((a, b) => {
+      const ra = rank[a.type] ?? 9;
+      const rb = rank[b.type] ?? 9;
+      if (ra !== rb) return ra - rb;
+      return 0;
+    });
+  }
 
   function dismissNotification(notification) {
     if (dismissingIds.has(notification.id)) return;
 
     dismissingIds.add(notification.id);
     dismissingIds = dismissingIds;
+    if (notification.type === 'levelup') {
+      pendingSpend = {};
+    }
 
     setTimeout(() => {
       if (store) {
@@ -30,6 +56,10 @@
   }
 
   function handleNotificationClick(notification) {
+    if (notification.type === 'levelup') {
+      dismissNotification(notification);
+      return;
+    }
     if (onQuestClick) {
       onQuestClick(notification.questId);
     }
@@ -41,10 +71,15 @@
   }
 
   function kickerFor(notification) {
+    if (notification.type === 'levelup') return 'Level up';
     return notification.type === 'completed' ? 'Quest complete' : 'Quest accepted';
   }
 
   function titleFor(notification) {
+    if (notification.type === 'levelup') {
+      const lvl = notification.newLevel || 0;
+      return lvl ? `Level ${lvl}` : 'Level Up';
+    }
     const name = (notification.questName || '').trim();
     if (name && name.toLowerCase() !== 'quest') return name;
     return kickerFor(notification);
@@ -81,6 +116,76 @@
     if (notification.type === 'completed') return 'Rewards';
     return detailLines(notification).length ? 'Objectives' : '';
   }
+
+  function levelGainRows(notification) {
+    const rows = [];
+    const hp = Number(notification.hpGained || 0);
+    if (hp > 0) {
+      const now = notification.maxHitPoints
+        ? ` (now ${notification.maxHitPoints} HP)`
+        : '';
+      rows.push({ key: 'hp', label: `+${hp} Max HP${now}` });
+    }
+    const mana = Number(notification.manaGained || 0);
+    if (mana > 0) {
+      const now = notification.maxMana
+        ? ` (now ${notification.maxMana} Mana)`
+        : '';
+      rows.push({ key: 'mana', label: `+${mana} Max Mana${now}` });
+    }
+    const gains = notification.attributeGains || {};
+    for (const attr of ATTR_ORDER) {
+      const amount = Number(gains[attr] || 0);
+      if (amount > 0) {
+        rows.push({ key: `gain-${attr}`, label: `+${amount} ${attr}` });
+      }
+    }
+    // Any non-standard keys last
+    for (const [attr, amount] of Object.entries(gains)) {
+      if (ATTR_ORDER.includes(attr)) continue;
+      const n = Number(amount || 0);
+      if (n > 0) rows.push({ key: `gain-${attr}`, label: `+${n} ${attr}` });
+    }
+    const pts = Number(notification.attributePointsGained || 0);
+    if (pts > 0) {
+      rows.push({
+        key: 'points',
+        label: `+${pts} Attribute Point${pts === 1 ? '' : 's'}`,
+      });
+    }
+    return rows;
+  }
+
+  function unspentFor(notification) {
+    const payload = Math.max(0, Number(notification.unspentAttributePoints || 0));
+    // After a local spend, trust the HUD (characterUpdate).
+    if (Object.keys(pendingSpend).length) {
+      return Math.max(0, liveUnspent);
+    }
+    // Prefer live when characterUpdate already arrived; else payload.
+    if (liveUnspent > 0) return liveUnspent;
+    return payload;
+  }
+
+  function attrCurrent(short) {
+    const found = attributes.find(
+      (a) => String(a.short || a.Short || '').toUpperCase() === short
+    );
+    return found ? (found.value ?? found.Value ?? '—') : '—';
+  }
+
+  function spendAttr(short, notification) {
+    if (!sendMessage || unspentFor(notification) <= 0) return;
+    pendingSpend = { ...pendingSpend, [short]: (pendingSpend[short] || 0) + 1 };
+    sendMessage(`spend ${short}`);
+  }
+
+  function primaryActionLabel(notification) {
+    if (notification.type === 'levelup') {
+      return unspentFor(notification) > 0 ? 'Done allocating' : 'Continue';
+    }
+    return 'Open quest log';
+  }
 </script>
 
 <svelte:head>
@@ -89,11 +194,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
 </svelte:head>
 
-{#if momentCards.length > 0}
+{#if activeMoment.length > 0}
   <div class="quest-moment-layer" aria-live="polite">
-    {#each momentCards as notification (notification.id || notification)}
+    {#each activeMoment as notification (notification.id || notification)}
       <div
-        class="veilspan-card"
+        class="quest-moment-card"
+        class:level-up={notification.type === 'levelup'}
         class:slide-out={isDismissing(notification)}
         role="dialog"
         aria-label={kickerFor(notification)}
@@ -108,20 +214,60 @@
         </button>
         <div class="card-kicker">{kickerFor(notification)}</div>
         <div class="card-title">{titleFor(notification)}</div>
-        {#if detailLines(notification).length}
-          <div class="card-list-label">{listLabel(notification)}</div>
-          <ul class="card-list">
-            {#each detailLines(notification) as line}
-              <li>{line}</li>
-            {/each}
-          </ul>
+
+        {#if notification.type === 'levelup'}
+          {#if notification.levelsGained > 1}
+            <div class="level-sub">+{notification.levelsGained} levels</div>
+          {:else if notification.oldLevel}
+            <div class="level-sub">Reached from level {notification.oldLevel}</div>
+          {/if}
+
+          {#if levelGainRows(notification).length}
+            <div class="card-list-label">Stat increases</div>
+            <ul class="card-list">
+              {#each levelGainRows(notification) as row (row.key)}
+                <li>{row.label}</li>
+              {/each}
+            </ul>
+          {/if}
+
+          {#if unspentFor(notification) > 0}
+            <div class="card-list-label">Allocate points · {unspentFor(notification)} left</div>
+            <div class="attr-spend-grid" role="group" aria-label="Spend attribute points">
+              {#each ATTR_ORDER as attr}
+                <button
+                  type="button"
+                  class="attr-spend"
+                  disabled={!sendMessage || unspentFor(notification) <= 0}
+                  on:click={() => spendAttr(attr, notification)}
+                  title="Spend 1 point on {attr}"
+                >
+                  <span class="attr-spend-name">{attr}</span>
+                  <span class="attr-spend-val">{attrCurrent(attr)}</span>
+                  <span class="attr-spend-plus">+</span>
+                </button>
+              {/each}
+            </div>
+          {:else}
+            <p class="level-flavor">You feel more powerful.</p>
+          {/if}
+        {:else}
+          {#if detailLines(notification).length}
+            <div class="card-list-label">{listLabel(notification)}</div>
+            <ul class="card-list">
+              {#each detailLines(notification) as line}
+                <li>{line}</li>
+              {/each}
+            </ul>
+          {/if}
         {/if}
+
         <button
           class="accept-open"
           type="button"
           on:click={() => handleNotificationClick(notification)}
         >
-          Open quest log
+          {primaryActionLabel(notification)}
         </button>
       </div>
     {/each}
@@ -170,11 +316,11 @@
     background: rgba(0, 0, 0, 0.38);
   }
 
-  .veilspan-card {
+  .quest-moment-card {
     pointer-events: auto;
     position: relative;
     width: min(84vw, 360px);
-    max-height: min(62vh, 400px);
+    max-height: min(72vh, 480px);
     overflow: auto;
     text-align: center;
     background:
@@ -188,7 +334,15 @@
     animation: acceptPop 0.28s ease-out;
   }
 
-  .veilspan-card.slide-out {
+  .quest-moment-card.level-up {
+    border-color: rgba(240, 195, 106, 0.75);
+    box-shadow:
+      0 18px 48px rgba(0, 0, 0, 0.55),
+      0 0 28px rgba(240, 195, 106, 0.18),
+      inset 0 0 0 1px rgba(116, 91, 51, 0.35);
+  }
+
+  .quest-moment-card.slide-out {
     animation: acceptOut 0.25s ease-in forwards;
   }
 
@@ -212,8 +366,20 @@
     text-shadow:
       0 0 10px rgba(255, 215, 140, 0.25),
       0 2px 4px rgba(0, 0, 0, 0.75);
-    margin-bottom: 0.9rem;
+    margin-bottom: 0.45rem;
     line-height: 1.3;
+  }
+
+  .level-sub {
+    font-size: 0.78rem;
+    color: rgba(232, 224, 210, 0.72);
+    margin-bottom: 0.85rem;
+  }
+
+  .level-flavor {
+    margin: 0.35rem 0 1.1rem;
+    color: rgba(232, 224, 210, 0.78);
+    font-size: 0.9rem;
   }
 
   .card-list-label {
@@ -227,7 +393,7 @@
 
   .card-list {
     list-style: none;
-    margin: 0 0 1.2rem;
+    margin: 0 0 1.05rem;
     padding: 0 0.15rem;
     text-align: left;
     color: #e8e0d2;
@@ -245,6 +411,58 @@
     position: absolute;
     left: 0;
     color: #d3ad63;
+  }
+
+  .attr-spend-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.4rem;
+    margin: 0 0 1.15rem;
+  }
+
+  .attr-spend {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.12rem;
+    padding: 0.45rem 0.2rem 0.4rem;
+    border-radius: 7px;
+    border: 1px solid rgba(211, 173, 99, 0.4);
+    background: rgba(211, 173, 99, 0.1);
+    color: #f0e6d3;
+    font: inherit;
+    cursor: pointer;
+    min-width: 0;
+  }
+
+  .attr-spend:hover:not(:disabled) {
+    background: rgba(211, 173, 99, 0.22);
+    border-color: rgba(240, 195, 106, 0.7);
+  }
+
+  .attr-spend:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+
+  .attr-spend-name {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #f0c36a;
+  }
+
+  .attr-spend-val {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: #f0e6d3;
+  }
+
+  .attr-spend-plus {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #d3ad63;
+    line-height: 1;
   }
 
   .accept-open {
@@ -372,6 +590,12 @@
   .dismiss-btn:hover {
     background: rgba(255, 255, 255, 0.1);
     color: #e5e7eb;
+  }
+
+  @media (max-width: 420px) {
+    .attr-spend-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
   }
 
   @keyframes acceptPop {
