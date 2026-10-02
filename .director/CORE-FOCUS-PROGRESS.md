@@ -1,3 +1,14 @@
+## Cartographer soft volumetric fog (?v=fog1) (2026-10-02)
+
+- Code SHA: `e8200b2` (`[grokbot]`), on `05291db` soft-fog feature + blur fixes. Tip was battlepoc3 `bf8fea0` / docs `a08822f` (rechecked).
+- What changed: Unexplored overworld landscape no longer stamps fog terrain tiles or Bayer fog-band checkers. A soft volumetric overlay (`fogOverlay.js`) builds a blurred explore-boundary mask + cloud washes (manual box-blur because OffscreenCanvas workers ignore CSS `filter`). Underground undiscovered rooms use the same soft wash. You / Turn-in / Selected markers still paint above the baked scene. Travel/select hit testing unchanged. Cache-bust `?v=fog1`.
+- Files: `fogOverlay.js` (+test), `continentRenderer.js`, `coastline.js`, `undergroundRenderer.js`, `atlasRenderer.js` (non-landscape soft fog blobs), `worldmapSceneStore.js` worker query, `FEATURES.md`, built `bundle.js` / `worldmap-worker.js` / `index.html`.
+- Tests: `node …/fogOverlay_test.mjs` ok (soft mask + feather); existing mapPolish/surfaceAtlas/worldmapSceneStore/atlasRenderer tests green; `npm run build` green.
+- Local clawdbot `:8010`: embed play client, rebuilt `bin/tales`; Door `:8020` pid `3406193` untouched.
+- VPS: ff to `e8200b2`; embed play client; `bin/tales.prev-*`; SIGTERM talesmud only; MainPID `886603` on `:8010`. Door `:8020` pid `758959` untouched.
+- Smoke: local + public `/play/` 200 with `?v=fog1`; worker contains soft-fog bake; guest POST 200. Screenshots `.director/ux-audit/after/fog1-overview-1920x1080.png`, `fog1-maxzoom-1920x1080.png`, `fog1-smoke.json` (preview atlas with expanded fog cells).
+- Residual: fog mask is still cell-derived (soft-edged cloud regions follow charted disclosure), not a freeform shader volume; very far fringes can still read as large dark shapes until more of the continent is charted.
+
 
 
 ## Android APK ae4412c (2026-10-01)
