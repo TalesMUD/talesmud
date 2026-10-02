@@ -601,3 +601,9 @@ Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated bl
 - VPS: ff `92e1a98`→`bf8fea0`; embed play client; `bin/tales.prev-92e1a98`; SIGTERM talesmud MainPID `877311`; Restart=always → MainPID `878486` on `:8010`. Door `:8020` pid `758959` untouched. New bin sha256 `8e4bf4513ec691f53df32b68bef7487334bb34c24fdf79d020a2f1e078542701`.
 - Smoke: local Chromium guest + synthetic combat — `.battle-stage.layout-b`, TL/TR frames, foe-plate/`player-meta` `display:none`, sprite-hp ≥1, sprite-hp-name `none`, dock wait chip `none`, `?v=battlepoc3`, zero page errors. Screenshot `.director/ux-audit/after/battlepoc3-layoutb-1920x1080.png`; `battlepoc3-smoke.json`. Public `/play/` 200 with six `?v=battlepoc3`; `extra.css` 200 contains sprite-hp-name hide + dock wait hide; POST `/api/guest` 200; door.veilspan.com/door 301 FYI (pid untouched).
 - Residual: placeholder portraits (not dedicated battle sprites); TL frame still shows compact class + Waiting chip (header also shows Waiting); ally party in layout B still compact near left marker without own edge frame.
+
+## Flutter /app #10 catch-up (2026-10-02)
+
+- Client SHA: `c4ebc63` (`veilspan-client` main). APK https://veilspan.com/app/downloads/veilspan-c4ebc63.apk sha256 `37123c56c50b4f8da162940fe3970905a1feb2deab9010c7e8899c2244e3e868`.
+- Turn In already present via WS questLog; added guest reconnect `sc` memory + gold Turn In button.
+- Door :8020 untouched. Live play still `?v=creamtimber1` (guestturnin1 committed, not this ship).
