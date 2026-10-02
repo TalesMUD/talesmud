@@ -619,3 +619,148 @@ export function seedRestOnEmptyHotbar(binds) {
   out[DEFAULT_REST_SLOT] = makeActionBind('rest');
   return out;
 }
+
+/** localStorage map: character id -> hotbar binds. Separate from global settings. */
+export const HOTBAR_BY_CHARACTER_STORAGE_KEY = 'talesmud_hotbar_by_character_v1';
+
+export function parseHotbarByCharacter(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const out = {};
+  for (const [id, binds] of Object.entries(raw)) {
+    const key = String(id || '').trim();
+    if (!key) continue;
+    out[key] = normalizeHotbarBinds(binds);
+  }
+  return out;
+}
+
+function skillMatchKeys(raw) {
+  const keys = new Set();
+  const text = String(raw || '').trim();
+  if (!text) return keys;
+  keys.add(text);
+  keys.add(text.toLowerCase());
+  const skill = skillById(text);
+  if (skill) {
+    keys.add(skill.id);
+    keys.add(String(skill.name || '').toLowerCase());
+  }
+  return keys;
+}
+
+function bindMatchesKeys(bind, keys) {
+  if (!bind || !keys || keys.size === 0) return false;
+  if (bind.id && (keys.has(bind.id) || keys.has(String(bind.id).toLowerCase()))) return true;
+  const name = String(bind.name || '').trim().toLowerCase();
+  if (name && keys.has(name)) return true;
+  const skill = skillById(bind.id || bind.name);
+  if (!skill) return false;
+  return keys.has(skill.id) || keys.has(String(skill.name || '').toLowerCase());
+}
+
+/**
+ * Drop skill slots the current character cannot use.
+ * Keeps actions and items.
+ * When equippedIds is an array (even empty), a skill stays only if it is in
+ * that bound set. Otherwise, if classId is known, keep level-available skills
+ * for that class. No class and no equipped list is a no-op.
+ */
+export function filterHotbarSkillsForCharacter(binds, {
+  classId = '',
+  level = 0,
+  equippedIds = null,
+} = {}) {
+  const slots = normalizeHotbarBinds(binds);
+  const cls = normalizeClassId(classId);
+  const equippedList = Array.isArray(equippedIds) ? equippedIds : null;
+  const hasClass = !!cls;
+  if (!hasClass && !equippedList) return slots;
+
+  const equippedKeys = new Set();
+  if (equippedList) {
+    for (const raw of equippedList) {
+      for (const key of skillMatchKeys(raw)) equippedKeys.add(key);
+    }
+  }
+
+  const classKeys = new Set();
+  if (!equippedList && hasClass) {
+    const lvl = Number(level) || 0;
+    for (const skill of skillsForClass(cls)) {
+      if (lvl > 0 && skill.levelRequired > lvl) continue;
+      classKeys.add(skill.id);
+      classKeys.add(String(skill.name || '').toLowerCase());
+    }
+  }
+
+  return slots.map((bind) => {
+    if (!bind || bind.kind !== 'skill') return bind;
+    if (equippedList) {
+      return bindMatchesKeys(bind, equippedKeys) ? bind : null;
+    }
+    if (hasClass && bindMatchesKeys(bind, classKeys)) return bind;
+    return null;
+  });
+}
+
+function hotbarBindsEqual(a, b) {
+  return JSON.stringify(normalizeHotbarBinds(a)) === JSON.stringify(normalizeHotbarBinds(b));
+}
+
+/**
+ * Swap the active hotbar to characterId and strip skills they cannot use.
+ * Pure: caller persists `map` and, when `changed`, the returned binds.
+ *
+ * First character after upgrade inherits the legacy global bar (then filtered).
+ * Later characters start from their saved bar, or Rest-only if they have none.
+ */
+export function reconcileHotbarForCharacter({
+  activeCharacterId = '',
+  map = {},
+  activeBinds = [],
+  characterId = '',
+  classId = '',
+  level = 0,
+  equippedIds = null,
+} = {}) {
+  const nextId = String(characterId || '').trim();
+  const prevId = String(activeCharacterId || '').trim();
+  const book = parseHotbarByCharacter(map);
+  if (!nextId) {
+    return {
+      activeCharacterId: prevId,
+      map: book,
+      binds: normalizeHotbarBinds(activeBinds),
+      changed: false,
+    };
+  }
+
+  const switching = !!(prevId && prevId !== nextId);
+  if (switching) {
+    book[prevId] = normalizeHotbarBinds(activeBinds);
+  }
+
+  let source;
+  if (switching) {
+    source = Object.prototype.hasOwnProperty.call(book, nextId)
+      ? book[nextId]
+      : seedRestOnEmptyHotbar([]);
+  } else if (!prevId && Object.prototype.hasOwnProperty.call(book, nextId)) {
+    source = book[nextId];
+  } else if (!prevId && Object.keys(book).length === 0) {
+    source = activeBinds;
+  } else if (!prevId) {
+    source = seedRestOnEmptyHotbar([]);
+  } else {
+    source = activeBinds;
+  }
+
+  const filtered = filterHotbarSkillsForCharacter(source, { classId, level, equippedIds });
+  book[nextId] = filtered;
+  return {
+    activeCharacterId: nextId,
+    map: book,
+    binds: filtered,
+    changed: !hotbarBindsEqual(activeBinds, filtered),
+  };
+}

@@ -16,6 +16,9 @@ import {
   normalizeInventoryOpenMode,
   scrubLegacySearchBinds,
   seedRestOnEmptyHotbar,
+  HOTBAR_BY_CHARACTER_STORAGE_KEY,
+  parseHotbarByCharacter,
+  reconcileHotbarForCharacter,
 } from './hudPrefs.js';
 
 const STORAGE_KEY = 'talesmud_settings_v1';
@@ -46,6 +49,27 @@ const DEFAULT_SETTINGS = {
     hotbarBinds: [...DEFAULT_HOTBAR_BINDS],
   }
 };
+
+let activeHotbarCharacterId = '';
+
+function readHotbarCharacterMap() {
+  if (typeof localStorage === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(HOTBAR_BY_CHARACTER_STORAGE_KEY);
+    return parseHotbarByCharacter(raw ? JSON.parse(raw) : {});
+  } catch (_) {
+    return {};
+  }
+}
+
+function writeHotbarCharacterMap(map) {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(HOTBAR_BY_CHARACTER_STORAGE_KEY, JSON.stringify(map || {}));
+  } catch (_) {
+    /* quota / private mode */
+  }
+}
 
 function createSettingsStore() {
   const { subscribe, set, update } = writable({
@@ -139,6 +163,11 @@ function createSettingsStore() {
       };
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        if (activeHotbarCharacterId) {
+          const book = readHotbarCharacterMap();
+          book[activeHotbarCharacterId] = data.interface.hotbarBinds;
+          writeHotbarCharacterMap(book);
+        }
         return true;
       } catch (e) {
         console.error('Failed to save settings:', e);
@@ -214,6 +243,28 @@ function createSettingsStore() {
       }));
       writeBattleLayoutOverride(null);
       this.saveToStorage();
+    },
+
+    /**
+     * On login / character switch: load this character's bar and drop skills
+     * that are not equipped or available for their class.
+     */
+    syncHotbarForCharacter({ characterId, classId, level, equippedIds } = {}) {
+      const state = get({ subscribe });
+      const result = reconcileHotbarForCharacter({
+        activeCharacterId: activeHotbarCharacterId,
+        map: readHotbarCharacterMap(),
+        activeBinds: state.interface?.hotbarBinds,
+        characterId,
+        classId,
+        level,
+        equippedIds,
+      });
+      activeHotbarCharacterId = result.activeCharacterId;
+      writeHotbarCharacterMap(result.map);
+      if (result.changed) {
+        this.setSetting('interface', 'hotbarBinds', result.binds);
+      }
     }
   };
 }
