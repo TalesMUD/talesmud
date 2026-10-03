@@ -120,8 +120,12 @@ func (commandProcessor *CommandProcessor) registerCommands() {
 	commandProcessor.RegisterCommand(&DefendCommand{}, "Take defensive stance in combat", "defend", "d", "guard")
 	commandProcessor.RegisterCommand(&FleeCommand{}, "Attempt to flee from combat", "flee", "run", "escape")
 	commandProcessor.RegisterCommand(&CombatStatusCommand{}, "Show combat status", "status", "cs", "combat")
-	commandProcessor.RegisterCommand(&CastCommand{}, "Use a skill in combat: cast <skill> [target]", "cast", "spell")
-	commandProcessor.RegisterCommand(&SkillsCommand{}, "Manage skills: skills [equip|unequip] [name]", "skills", "spells", "abilities")
+	castCmd := &CastCommand{}
+	commandProcessor.RegisterCommand(castCmd, "Use a skill in combat: cast <skill> [target]", "cast")
+	commandProcessor.commands["spell"] = castCmd // silent legacy alias
+	skillsCmd := &SkillsCommand{}
+	commandProcessor.RegisterCommand(skillsCmd, "Manage skills: skills [equip|unequip] [name] (also: spells)", "skills", "abilities")
+	commandProcessor.commands["spells"] = skillsCmd // silent legacy alias
 	commandProcessor.RegisterCommand(&SkillShortcutCommand{}, "Quick-cast skill by slot number (in combat): 1, 2, 3, 4", "1", "2", "3", "4")
 
 	// Quest commands

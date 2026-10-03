@@ -729,7 +729,9 @@ function createClient(renderer, characterCreator, muxStore) {
   };
 
   const handleInput = async (data) => {
-    return `${data}`;
+    // `spells` is a silent legacy alias for the skills command. Players see Skills.
+    const text = `${data ?? ""}`;
+    return text.replace(/^(\s*)spells\b/i, "$1skills");
   };
 
   const client = {

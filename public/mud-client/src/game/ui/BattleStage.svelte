@@ -577,9 +577,9 @@
       return makeBannerParts({ kind: 'flee', actor: actorName, verb: 'flees', raw });
     }
     if (fxId === 'cast' || result === 'cast') {
-      const raw = action ? `${actorName} casts ${action}` : `${actorName} casts a spell`;
+      const raw = action ? `${actorName} casts ${action}` : `${actorName} uses a skill`;
       return makeBannerParts({
-        kind: 'cast', actor: actorName, verb: 'casts', target: action || 'a spell', raw,
+        kind: 'cast', actor: actorName, verb: action ? 'casts' : 'uses', target: action || 'a skill', raw,
       });
     }
     if (action) {
