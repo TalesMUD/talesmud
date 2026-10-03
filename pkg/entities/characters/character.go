@@ -342,6 +342,36 @@ func (c *Character) HasCollectedCopyItem(templateID string) bool {
 	return false
 }
 
+// CountOfTemplate counts inventory plus equipped copies of a catalog id.
+func (c *Character) CountOfTemplate(templateID string) int32 {
+	if c == nil || templateID == "" {
+		return 0
+	}
+	n := c.Inventory.CountMatchingTemplate(templateID)
+	for _, it := range c.EquippedItems {
+		if it == nil || !it.MatchesTemplate(templateID) {
+			continue
+		}
+		if it.Quantity > 0 {
+			n += it.Quantity
+		} else {
+			n++
+		}
+	}
+	return n
+}
+
+// PrepareUniquePickup drops extra inventory copies of a unique template down to one.
+// blocked is true when the character already holds one, so another pickup must fail.
+// Non-unique templates are left alone.
+func (c *Character) PrepareUniquePickup(templateID string, unique bool) (blocked bool, trimmed int) {
+	if c == nil || !unique || templateID == "" {
+		return false, 0
+	}
+	trimmed = c.Inventory.TrimMatchingTemplate(templateID)
+	return c.CountOfTemplate(templateID) >= 1, trimmed
+}
+
 // MarkCollectedCopyItem records that the character has collected a CopyOnPickup item
 func (c *Character) MarkCollectedCopyItem(templateID string) {
 	if c.Flags == nil {

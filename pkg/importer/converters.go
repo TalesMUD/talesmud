@@ -113,6 +113,7 @@ func (y *YAMLItem) ToEntity() *items.Item {
 		BasePrice:     y.BasePrice,
 		Stackable:     y.Stackable,
 		MaxStack:      y.MaxStack,
+		Unique:        y.Unique,
 		Consumable:    y.Consumable,
 		CopyOnPickup:  y.CopyOnPickup,
 		Tags:          y.Tags,

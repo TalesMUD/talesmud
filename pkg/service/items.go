@@ -109,17 +109,17 @@ func (srv *itemsService) CreateInstanceFromTemplate(templateID string) (*items.I
 
 	// Create instance (deep copy template fields)
 	instance := &items.Item{
-		Entity:      entities.NewEntity(),
-		Name:        template.Name,
-		Description: template.Description,
-		Type:        template.Type,
-		SubType:     template.SubType,
-		Slot:        template.Slot,
-		Quality:     template.Quality,
-		Level:       template.Level,
-		Properties:  copyMap(template.Properties),
-		Attributes:  copyMap(template.Attributes),
-		Tags:        append([]string{}, template.Tags...),
+		Entity:       entities.NewEntity(),
+		Name:         template.Name,
+		Description:  template.Description,
+		Type:         template.Type,
+		SubType:      template.SubType,
+		Slot:         template.Slot,
+		Quality:      template.Quality,
+		Level:        template.Level,
+		Properties:   copyMap(template.Properties),
+		Attributes:   copyMap(template.Attributes),
+		Tags:         append([]string{}, template.Tags...),
 		NoPickup:     template.NoPickup,
 		CopyOnPickup: false, // Instances are personal copies, not world items
 
@@ -144,6 +144,7 @@ func (srv *itemsService) CreateInstanceFromTemplate(templateID string) (*items.I
 	instance.Stackable = template.Stackable
 	instance.Quantity = template.Quantity
 	instance.MaxStack = template.MaxStack
+	instance.Unique = template.Unique
 	instance.BasePrice = template.BasePrice
 
 	// Copy LookAt trait

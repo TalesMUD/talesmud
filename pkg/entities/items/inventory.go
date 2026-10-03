@@ -90,6 +90,47 @@ func itemMatchesTemplateOrID(item *Item, targetID string) bool {
 	return item.ID == targetID
 }
 
+// TemplateKey is the catalog id used for uniqueness and quest matching.
+func TemplateKey(item *Item) string {
+	if item == nil {
+		return ""
+	}
+	if item.TemplateID != "" {
+		return item.TemplateID
+	}
+	return item.ID
+}
+
+// MatchesTemplate reports whether this item is an instance (or the template) of targetID.
+func (item *Item) MatchesTemplate(targetID string) bool {
+	return itemMatchesTemplateOrID(item, targetID)
+}
+
+// TrimMatchingTemplate keeps the first match and drops later copies.
+// Returns how many item rows were removed. Quantity on the kept row is unchanged.
+func (inv *Inventory) TrimMatchingTemplate(targetID string) int {
+	if inv == nil || targetID == "" {
+		return 0
+	}
+	kept := false
+	removed := 0
+	filtered := make([]*Item, 0, len(inv.Items))
+	for _, item := range inv.Items {
+		if itemMatchesTemplateOrID(item, targetID) {
+			if kept {
+				removed++
+				continue
+			}
+			kept = true
+		}
+		filtered = append(filtered, item)
+	}
+	if removed > 0 {
+		inv.Items = filtered
+	}
+	return removed
+}
+
 func (inv *Inventory) CountMatchingTemplate(targetID string) int32 {
 	var count int32
 	for _, item := range inv.Items {
