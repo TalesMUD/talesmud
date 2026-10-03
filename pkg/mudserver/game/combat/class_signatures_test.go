@@ -8,6 +8,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	entcombat "github.com/talesmud/talesmud/pkg/entities/combat"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
+	"github.com/talesmud/talesmud/pkg/entities/skills"
 )
 
 func newFight(class characters.Class, mana int32) (*Engine, *entcombat.CombatInstance, string, string) {
@@ -42,59 +43,102 @@ func TestAlleySwingsTwice(t *testing.T) {
 	}
 }
 
-func TestFenwatchBraceOnce(t *testing.T) {
+func equipKit(inst *entcombat.CombatInstance, heroID string, ids ...string) {
+	skills.LoadFromDB(skills.SeedSkills())
+	hero := inst.GetCombatantByID(heroID)
+	hero.EquippedSkills = append([]string(nil), ids...)
+	hero.SkillCooldowns = map[string]int{}
+	hero.KitSpent = map[string]bool{}
+}
+
+func TestFenwatchBraceIsASkill(t *testing.T) {
 	e, inst, heroID, enemyID := newFight(characters.ClassWarrior, 0)
-	var braced bool
-	for i := 0; i < 40; i++ {
+	equipKit(inst, heroID, "warrior_brace")
+	for i := 0; i < 5; i++ {
 		res := e.ProcessAttack(inst, enemyID, heroID)
 		if strings.Contains(res.Message, "You brace.") {
-			braced = true
+			t.Fatalf("brace proc without the button: %q", res.Message)
+		}
+	}
+	got := e.ProcessSkill(inst, heroID, "warrior_brace", "")
+	if !got.Success || !got.KeepsSwing {
+		t.Fatalf("brace skill %+v", got)
+	}
+	hero := inst.GetCombatantByID(heroID)
+	if hero.BraceLeft != 1 {
+		t.Fatalf("brace not armed: %d", hero.BraceLeft)
+	}
+	again := e.ProcessSkill(inst, heroID, "warrior_brace", "")
+	if again.Success {
+		t.Fatal("brace used twice")
+	}
+	var landed bool
+	for i := 0; i < 40; i++ {
+		res := e.ProcessAttack(inst, enemyID, heroID)
+		if res.Hit {
+			landed = true
 			break
 		}
 	}
-	if !braced {
-		t.Fatal("expected one brace")
+	if !landed {
+		t.Fatal("could not land a hit on the brace")
 	}
-	hero := inst.GetCombatantByID(heroID)
+	hero = inst.GetCombatantByID(heroID)
 	if hero.BraceLeft != 0 {
 		t.Fatalf("brace left %d", hero.BraceLeft)
 	}
-	res := e.ProcessAttack(inst, enemyID, heroID)
-	if strings.Contains(res.Message, "You brace.") {
-		t.Fatalf("brace fired twice: %q", res.Message)
-	}
 }
 
-func TestAlleySlipOnce(t *testing.T) {
+func TestAlleySlipDropsCombat(t *testing.T) {
 	e, inst, heroID, enemyID := newFight(characters.ClassRogue, 0)
+	equipKit(inst, heroID, "rogue_slip", "rogue_smoke")
 	res := e.ProcessAttack(inst, enemyID, heroID)
-	if res.Message != "You slip the blow." {
-		t.Fatalf("slip message %q", res.Message)
+	if strings.Contains(res.Message, "slip") {
+		t.Fatalf("slip proc: %q", res.Message)
 	}
-	res = e.ProcessAttack(inst, enemyID, heroID)
-	if strings.Contains(res.Message, "You slip the blow.") {
-		t.Fatal("slip fired twice")
+	got := e.ProcessSkill(inst, heroID, "rogue_slip", "")
+	if !got.Success || !got.SlipMove || got.KeepsSwing {
+		t.Fatalf("slip %+v", got)
+	}
+	hero := inst.GetCombatantByID(heroID)
+	if !hero.HasFled {
+		t.Fatal("slip did not drop combat")
+	}
+	if again := e.ProcessSkill(inst, heroID, "rogue_slip", ""); again.Success {
+		t.Fatal("slip twice")
+	}
+	smoke := e.ProcessSkill(inst, heroID, "rogue_smoke", enemyID)
+	if !smoke.Success {
+		t.Fatalf("smoke %+v", smoke)
+	}
+	enemy := inst.GetCombatantByID(enemyID)
+	if !enemy.SmokeMiss {
+		t.Fatal("smoke did not arm a miss")
 	}
 }
 
 func TestRuneHandInscribeRefreshNoMana(t *testing.T) {
 	e, inst, heroID, enemyID := newFight(characters.ClassWizard, 11)
-	var landed int
-	for i := 0; i < 50 && landed < 2; i++ {
-		res := e.ProcessAttack(inst, heroID, enemyID)
-		if res.Hit {
-			landed++
-			if !strings.Contains(res.Message, "You inscribe them.") {
-				t.Fatalf("missing inscribe: %q", res.Message)
-			}
-		}
+	equipKit(inst, heroID, "mage_inscribe")
+	res := e.ProcessAttack(inst, heroID, enemyID)
+	if strings.Contains(res.Message, "inscribe") {
+		t.Fatalf("inscribe proc: %q", res.Message)
 	}
-	if landed < 2 {
-		t.Fatal("could not land two rune hand hits")
+	got := e.ProcessSkill(inst, heroID, "mage_inscribe", enemyID)
+	if !got.Success || got.KeepsSwing {
+		t.Fatalf("inscribe %+v", got)
 	}
 	hero := inst.GetCombatantByID(heroID)
 	if hero.CurrentMana != 11 {
-		t.Fatalf("basic spent mana, left %d", hero.CurrentMana)
+		t.Fatalf("inscribe spent mana, left %d", hero.CurrentMana)
+	}
+	if again := e.ProcessSkill(inst, heroID, "mage_inscribe", enemyID); again.Success {
+		t.Fatal("inscribe ignored cooldown")
+	}
+	hero.SkillCooldowns = map[string]int{}
+	e.UpdateCombatant(inst, hero)
+	if refresh := e.ProcessSkill(inst, heroID, "mage_inscribe", enemyID); !refresh.Success {
+		t.Fatalf("refresh %+v", refresh)
 	}
 	target := inst.GetCombatantByID(enemyID)
 	var dots int
@@ -113,10 +157,11 @@ func TestRuneHandInscribeRefreshNoMana(t *testing.T) {
 
 func TestHitchPinCancelsNextLeave(t *testing.T) {
 	e, inst, heroID, enemyID := newFight(characters.ClassHitch, 0)
-	if !e.ArmPin(inst, heroID, enemyID) {
-		t.Fatal("ArmPin should arm once")
+	equipKit(inst, heroID, "hitch_pin", "hitch_reel")
+	if got := e.ProcessSkill(inst, heroID, "hitch_pin", enemyID); !got.Success || !got.KeepsSwing {
+		t.Fatalf("pin %+v", got)
 	}
-	if e.ArmPin(inst, heroID, enemyID) {
+	if again := e.ProcessSkill(inst, heroID, "hitch_pin", enemyID); again.Success {
 		t.Fatal("Pin armed twice")
 	}
 	flee := e.ProcessFlee(inst, enemyID)
@@ -126,5 +171,18 @@ func TestHitchPinCancelsNextLeave(t *testing.T) {
 	flee = e.ProcessFlee(inst, enemyID)
 	if flee.Message == "You hitch them. They stay." {
 		t.Fatal("pin consumed but still cancelled the next leave")
+	}
+	enemy := inst.GetCombatantByID(enemyID)
+	enemy.HasFled = true
+	e.UpdateCombatant(inst, enemy)
+	if reel := e.ProcessSkill(inst, heroID, "hitch_reel", enemyID); !reel.Success || reel.ReelID != enemyID {
+		t.Fatalf("reel %+v", reel)
+	}
+	enemy = inst.GetCombatantByID(enemyID)
+	if enemy.HasFled {
+		t.Fatal("reel did not resume combat")
+	}
+	if early := e.ProcessSkill(inst, heroID, "hitch_reel", enemyID); early.Success {
+		t.Fatal("reel should not fire when they have not left, or twice")
 	}
 }

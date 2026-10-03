@@ -108,6 +108,12 @@ type SkillResult struct {
 	TotalHeal   int32
 	TargetsDied []string
 	HitsLanded  int
+	// KeepsSwing: Brace and Pin. The round still autoattacks.
+	KeepsSwing bool
+	// SlipMove: drop combat and take one exit.
+	SlipMove bool
+	// ReelID: target to pull one room back into the fight.
+	ReelID string
 }
 
 // ProcessSkill handles a combatant using a skill in combat
@@ -132,6 +138,9 @@ func (e *Engine) ProcessSkill(instance *combat.CombatInstance, casterID, skillID
 	}
 	if !equipped {
 		return SkillResult{Success: false, Messages: []string{fmt.Sprintf("%s is not equipped", skill.Name)}}
+	}
+	if skill.Kit != "" {
+		return e.processClassKit(instance, caster, skill, targetID)
 	}
 
 	// Check resource availability
@@ -741,6 +750,7 @@ func (e *Engine) ProcessRoundStart(instance *combat.CombatInstance) {
 		if p.IsAlive && !p.HasFled {
 			e.TickCooldowns(instance, p)
 			e.ProcessManaRegen(instance, p)
+			e.tickKitRounds(instance, p)
 		}
 	}
 	for i := range instance.Enemies {
@@ -748,6 +758,7 @@ func (e *Engine) ProcessRoundStart(instance *combat.CombatInstance) {
 		if en.IsAlive {
 			e.TickCooldowns(instance, en)
 			e.ProcessManaRegen(instance, en)
+			e.tickKitRounds(instance, en)
 		}
 	}
 	e.tickRig(instance)

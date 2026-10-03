@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/talesmud/talesmud/pkg/entities/characters"
+	"github.com/talesmud/talesmud/pkg/entities/skills"
 	"github.com/talesmud/talesmud/pkg/ruleset"
 )
 
@@ -104,6 +105,8 @@ func ApplyLevelUp(char *characters.Character, levelsGained int) *LevelUpResult {
 	char.MaxMana = newMaxMana
 	char.CurrentMana = newMaxMana // Fully restore mana on level-up
 	manaGained := newMaxMana - oldMaxMana
+
+	char.EquippedSkills = skills.FillHotbar(char.Class.ID, char.Level, char.EquippedSkills)
 
 	// Build result with formatted message
 	result := &LevelUpResult{

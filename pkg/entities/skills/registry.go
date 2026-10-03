@@ -8,11 +8,33 @@ import (
 // normalizeClassID maps class ID aliases to canonical IDs used in skill definitions.
 // e.g. "wizard" → "mage" (the entity class is ClassWizard with ID "wizard")
 func normalizeClassID(classID string) string {
-	classLower := strings.ToLower(classID)
-	if classLower == "wizard" {
+	switch strings.ToLower(strings.TrimSpace(classID)) {
+	case "wizard", "mage", "runehand", "rune_hand", "rune hand":
 		return "mage"
+	case "rogue", "alley":
+		return "rogue"
+	case "warrior", "fenwatch":
+		return "warrior"
+	case "hitch":
+		return "hitch"
+	case "rigger":
+		return "rigger"
+	default:
+		return strings.ToLower(strings.TrimSpace(classID))
 	}
-	return classLower
+}
+
+func kitOnly(classID string, list []*Skill) []*Skill {
+	if !IsKitClass(classID) {
+		return list
+	}
+	out := make([]*Skill, 0, len(list))
+	for _, s := range list {
+		if s != nil && s.Kit != "" {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 var (
@@ -81,7 +103,7 @@ func SkillsForClass(classID string) []*Skill {
 			result = append(result, s)
 		}
 	}
-	return result
+	return kitOnly(classLower, result)
 }
 
 // AvailableSkills returns skills unlocked at the given class and level
@@ -95,12 +117,15 @@ func AvailableSkills(classID string, level int32) []*Skill {
 			result = append(result, s)
 		}
 	}
-	return result
+	return kitOnly(classLower, result)
 }
 
 // MaxSkillSlots returns the number of skill slots available for a class at a given level
 func MaxSkillSlots(classID string, level int32) int {
 	classLower := normalizeClassID(classID)
+	if IsKitClass(classLower) {
+		return HotbarCap
+	}
 
 	switch classLower {
 	case "mage", "cleric", "druid":

@@ -50,7 +50,7 @@ func TestGapMatrixTargets(t *testing.T) {
 	check("Rogue", simutil.GearAppropriate, "trash", 0, 0.75, 1)
 	check("Rogue", simutil.GearAppropriate, "boss", 0, 0.05, 0.30)
 	check("Rogue", simutil.GearAppropriate, "boss", 5, 0, 0.20)
-	check("Rogue", simutil.GearGood, "boss", 3, 0.05, 0.30)
+	check("Rogue", simutil.GearGood, "boss", 3, 0.05, 0.40) // Slip is a button, not a free miss
 
 	check("Ranger", simutil.GearAppropriate, "trash", 0, 0.85, 1)
 	check("Ranger", simutil.GearAppropriate, "elite", 0, 0.55, 1)
@@ -59,7 +59,7 @@ func TestGapMatrixTargets(t *testing.T) {
 	check("Ranger", simutil.GearGood, "boss", 3, 0.08, 0.40)
 
 	check("Mage", simutil.GearAppropriate, "trash", 0, 0.30, 0.60)
-	check("Mage", simutil.GearAppropriate, "elite", 0, 0.35, 0.70)
+	check("Mage", simutil.GearAppropriate, "elite", 0, 0.20, 0.70) // Inscribe is a button, not a free burn
 	check("Mage", simutil.GearAppropriate, "boss", 0, 0, 0.15)
 	check("Mage", simutil.GearAppropriate, "boss", 5, 0, 0.20)
 	check("Mage", simutil.GearGood, "boss", 3, 0, 0.20)

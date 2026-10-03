@@ -7,6 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
+	"github.com/talesmud/talesmud/pkg/entities/skills"
 	r "github.com/talesmud/talesmud/pkg/repository"
 	"github.com/talesmud/talesmud/pkg/server/dto"
 )
@@ -112,6 +113,7 @@ func characterFromTemplate(template *characters.CharacterTemplate) *characters.C
 		ch.EquippedSkills = make([]string, len(template.DefaultSkills))
 		copy(ch.EquippedSkills, template.DefaultSkills)
 	}
+	ch.EquippedSkills = skills.FillHotbar(ch.Class.ID, ch.Level, ch.EquippedSkills)
 	return ch
 }
 

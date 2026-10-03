@@ -128,10 +128,7 @@ func (e *Engine) CreateCombatantFromCharacter(char *characters.Character) combat
 		CurrentMana: char.CurrentMana,
 		ManaRegen:   char.CalculateManaRegen(),
 	}
-	brace, slip, pin := balance.SignatureCharges(char.Class.ID)
-	ref.BraceLeft = brace
-	ref.SlipLeft = slip
-	ref.PinLeft = pin
+	// Kit charges are armed by the skill button, not at combat start.
 	bolt, rig := balance.RiggerCharges(char.Class.ID)
 	ref.BoltLeft = bolt
 	ref.RigLeft = rig
@@ -338,7 +335,6 @@ func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targ
 	if attacker == nil {
 		return AttackResult{Miss: true, Message: "Invalid attacker or target"}
 	}
-	e.armPin(instance, attacker, targetID)
 	swings := balance.ClassSwings(attacker.ClassID)
 	if swings < 1 {
 		swings = 1
@@ -348,7 +344,7 @@ func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targ
 	var total int32
 	anyHit := false
 	for i := 0; i < swings; i++ {
-		last = e.processAttackSwing(instance, attackerID, targetID)
+		last = e.processAttackSwingMult(instance, attackerID, targetID, 1, true)
 		if last.Message != "" {
 			parts = append(parts, last.Message)
 		}
@@ -378,6 +374,10 @@ func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targ
 }
 
 func (e *Engine) processAttackSwing(instance *combat.CombatInstance, attackerID, targetID string) AttackResult {
+	return e.processAttackSwingMult(instance, attackerID, targetID, 1, true)
+}
+
+func (e *Engine) processAttackSwingMult(instance *combat.CombatInstance, attackerID, targetID string, mult float64, logIt bool) AttackResult {
 	attacker := instance.GetCombatantByID(attackerID)
 	target := instance.GetCombatantByID(targetID)
 
@@ -393,21 +393,28 @@ func (e *Engine) processAttackSwing(instance *combat.CombatInstance, attackerID,
 		return AttackResult{Miss: true, Message: "Target is already dead"}
 	}
 
-	// Alley Slip: once per fight, the next incoming swing misses.
-	if target.SlipLeft > 0 {
-		target.SlipLeft--
+	if stand := e.standRedirect(instance, attacker, target); stand != nil {
+		target = stand
+		targetID = stand.ID
+	}
+
+	// Smoke: the target misses their next swing. One swing, then it is gone.
+	if target.SmokeMiss {
+		target.SmokeMiss = false
 		e.UpdateCombatant(instance, target)
-		slip := AttackResult{Miss: true, Message: "You slip the blow."}
-		instance.AddLogEntry(combat.CombatLogEntry{
-			ActorID:    attacker.ID,
-			ActorName:  attacker.Name,
-			Action:     combat.CombatActionAttack,
-			TargetID:   target.ID,
-			TargetName: target.Name,
-			Result:     "slipped",
-			Message:    slip.Message,
-		})
-		return slip
+		smoked := AttackResult{Miss: true, Message: fmt.Sprintf("%s swings at %s and misses. The smoke holds.", attacker.Name, target.Name)}
+		if logIt {
+			instance.AddLogEntry(combat.CombatLogEntry{
+				ActorID:    attacker.ID,
+				ActorName:  attacker.Name,
+				Action:     combat.CombatActionAttack,
+				TargetID:   target.ID,
+				TargetName: target.Name,
+				Result:     "miss",
+				Message:    smoked.Message,
+			})
+		}
+		return smoked
 	}
 
 	// Check dodge from status effects (e.g. Evasion)
@@ -474,6 +481,13 @@ func (e *Engine) processAttackSwing(instance *combat.CombatInstance, attackerID,
 
 	// Calculate damage
 	result.Damage = e.CalculateDamage(attacker, target, result.Critical)
+	if mult > 0 && mult != 1 {
+		scaled := int32(math.Round(float64(result.Damage) * mult))
+		if scaled < 1 {
+			scaled = 1
+		}
+		result.Damage = scaled
+	}
 
 	// Fenwatch Brace: once per fight, the next landed blow is halved.
 	braced := false
@@ -524,6 +538,15 @@ func (e *Engine) processAttackSwing(instance *combat.CombatInstance, attackerID,
 			attacker.Name, target.Name, result.Damage, roll, attacker.STRMod, toHit, targetAC)
 	}
 
+	if target.GlyphCut > 0 && result.Damage > 0 {
+		result.Damage -= target.GlyphCut
+		if result.Damage < 0 {
+			result.Damage = 0
+		}
+		target.GlyphCut = 0
+		e.UpdateCombatant(instance, target)
+	}
+
 	if braced {
 		result.Message = "You brace. " + result.Message
 	}
@@ -541,26 +564,23 @@ func (e *Engine) processAttackSwing(instance *combat.CombatInstance, attackerID,
 	if msg := e.applyWeaponOnHitDot(instance, attacker, target); msg != "" {
 		result.Message += " " + msg
 	}
-	// Rune Hand Inscribe: 4 per round for 3 rounds, refresh, no stack. Basic costs no mana.
-	if msg := e.applyInscribe(instance, attacker, target); msg != "" {
-		result.Message += " " + msg
-	}
-
 	// Add to combat log
 	logResult := "hit"
 	if result.Critical {
 		logResult = "critical"
 	}
-	instance.AddLogEntry(combat.CombatLogEntry{
-		ActorID:    attacker.ID,
-		ActorName:  attacker.Name,
-		Action:     combat.CombatActionAttack,
-		TargetID:   target.ID,
-		TargetName: target.Name,
-		Result:     logResult,
-		Damage:     result.Damage,
-		Message:    result.Message,
-	})
+	if logIt {
+		instance.AddLogEntry(combat.CombatLogEntry{
+			ActorID:    attacker.ID,
+			ActorName:  attacker.Name,
+			Action:     combat.CombatActionAttack,
+			TargetID:   target.ID,
+			TargetName: target.Name,
+			Result:     logResult,
+			Damage:     result.Damage,
+			Message:    result.Message,
+		})
+	}
 
 	e.applyScrapReturn(instance, attacker, target, result.Damage, result.Hit)
 	return result
@@ -600,6 +620,13 @@ func (e *Engine) CalculateDamage(attacker, target *combat.CombatantRef, critical
 	damage = balance.ScaleDamage(attacker.Level, target.Level, damage)
 	damage = balance.ScaleClassDamage(attacker.ClassID, target.ClassID, attacker.Level, target.Level, damage)
 	damage = balance.ApplyRacialWeaponBonus(attacker.RaceID, attacker.WeaponSubType, damage)
+	if attacker.HobbleRounds > 0 {
+		hobbled := int32(math.Round(float64(damage) * 0.80))
+		if hobbled < 1 {
+			hobbled = 1
+		}
+		damage = hobbled
+	}
 	if attacker.Type == combat.CombatantTypeNPC {
 		damage = balance.ScaleBossPhaseDamage(damage, attacker.Difficulty, attacker.BossPhase, attacker.Enraged)
 	}

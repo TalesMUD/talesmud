@@ -125,6 +125,7 @@ func (e *Engine) ProcessRig(instance *entcombat.CombatInstance, actorID string) 
 		RoomID:     instance.OriginRoomID,
 		RoundsLeft: 2,
 		Follows:    false,
+		Mult:       0.50,
 	}
 	msg := "You drop a rig. It stays in the room."
 	instance.AddLogEntry(entcombat.CombatLogEntry{
@@ -173,7 +174,11 @@ func (e *Engine) tickRig(instance *entcombat.CombatInstance) string {
 		}
 	} else {
 		swing := e.CalculateDamage(owner, target, false)
-		dmg = int32(math.Round(float64(swing) * 0.50))
+		mult := rig.Mult
+		if mult <= 0 {
+			mult = 0.50
+		}
+		dmg = int32(math.Round(float64(swing) * mult))
 		if dmg < 1 {
 			dmg = 1
 		}

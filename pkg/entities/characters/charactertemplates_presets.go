@@ -39,7 +39,7 @@ func SystemCharacterTemplatePresets() []*CharacterTemplate {
 				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Rusty Sword"},
 				{Slot: items.ItemSlotChest, ItemTemplateName: "Leather Armor"},
 			},
-			DefaultSkills: []string{"warrior_power_strike"},
+			DefaultSkills: []string{"warrior_brace"},
 			Source:        "system",
 		},
 		{
@@ -59,7 +59,7 @@ func SystemCharacterTemplatePresets() []*CharacterTemplate {
 				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Worn Dagger"},
 				{Slot: items.ItemSlotChest, ItemTemplateName: "Leather Armor"},
 			},
-			DefaultSkills: []string{"rogue_backstab"},
+			DefaultSkills: []string{"rogue_slip"},
 			Source:        "system",
 		},
 		{
@@ -81,7 +81,7 @@ func SystemCharacterTemplatePresets() []*CharacterTemplate {
 				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Apprentice Staff"},
 				{Slot: items.ItemSlotChest, ItemTemplateName: "Cloth Robe"},
 			},
-			DefaultSkills: []string{"mage_fireball", "mage_frost_shield"},
+			DefaultSkills: []string{"mage_inscribe"},
 			Source:        "system",
 		},
 		{
@@ -101,7 +101,7 @@ func SystemCharacterTemplatePresets() []*CharacterTemplate {
 				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Worn Dagger"},
 				{Slot: items.ItemSlotChest, ItemTemplateName: "Leather Armor"},
 			},
-			DefaultSkills: []string{},
+			DefaultSkills: []string{"hitch_pin"},
 			Source:        "system",
 		},
 		{
@@ -121,7 +121,7 @@ func SystemCharacterTemplatePresets() []*CharacterTemplate {
 				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Rusty Sword"},
 				{Slot: items.ItemSlotChest, ItemTemplateName: "Leather Armor"},
 			},
-			DefaultSkills: []string{},
+			DefaultSkills: []string{"rigger_bolt", "rigger_rig"},
 			Source:        "system",
 		},
 	}

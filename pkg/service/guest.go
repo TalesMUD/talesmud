@@ -15,6 +15,7 @@ import (
 	e "github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/items"
+	"github.com/talesmud/talesmud/pkg/entities/skills"
 )
 
 const (
@@ -186,6 +187,7 @@ func (gs *guestService) CreateGuestSessionPick(remoteIP, templateID, raceID stri
 		character.EquippedSkills = make([]string, len(template.DefaultSkills))
 		copy(character.EquippedSkills, template.DefaultSkills)
 	}
+	character.EquippedSkills = skills.FillHotbar(character.Class.ID, character.Level, character.EquippedSkills)
 
 	// Equip starter items from template
 	if len(template.StartingItems) > 0 {

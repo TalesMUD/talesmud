@@ -98,6 +98,7 @@ func (c *CombatController) GetCombatInstance(characterID string) *combat.CombatI
 
 // InitiateCombat starts combat between players and enemies
 func (c *CombatController) InitiateCombat(roomID string, players []*characters.Character, enemies []*npc.NPC) *combat.CombatInstance {
+	c.fillKitHotbars(players)
 	return c.engine.InitiateCombat(roomID, players, enemies)
 }
 
@@ -1491,6 +1492,17 @@ func (c *CombatController) processPlayerAutoAttack(instance *combat.CombatInstan
 				if target != nil && target.Type == combat.CombatantTypePlayer {
 					c.syncPlayerHP(diedID, 0)
 				}
+			}
+			if skillResult.Success && skillResult.KeepsSwing {
+				if again := instance.GetPlayerByID(player.ID); again != nil && again.IsAlive && !again.HasFled {
+					c.doAutoAttack(instance, again)
+				}
+			}
+			if skillResult.Success && skillResult.SlipMove {
+				c.slipOneExit(instance, player.ID)
+			}
+			if skillResult.Success && skillResult.ReelID != "" {
+				c.reelOneRoom(instance, skillResult.ReelID)
 			}
 
 		case combat.CombatActionBolt:

@@ -128,11 +128,18 @@ type CombatantRef struct {
 	// Equipped skills (copied from character at combat start)
 	EquippedSkills []string `json:"equippedSkills,omitempty"`
 
-	// Class signatures. Brace and Slip are once per fight. PinLeft arms Pinned on the target.
-	BraceLeft int  `json:"braceLeft,omitempty"`
-	SlipLeft  int  `json:"slipLeft,omitempty"`
-	PinLeft   int  `json:"pinLeft,omitempty"`
-	Pinned    bool `json:"pinned,omitempty"`
+	// Class kit state for this fight. Charges start empty; the skill button arms them.
+	// BraceLeft halves the next landed hit. PinLeft arms Pinned. SmokeMiss misses the next swing.
+	BraceLeft    int             `json:"braceLeft,omitempty"`
+	SlipLeft     int             `json:"slipLeft,omitempty"`
+	PinLeft      int             `json:"pinLeft,omitempty"`
+	Pinned       bool            `json:"pinned,omitempty"`
+	SmokeMiss    bool            `json:"smokeMiss,omitempty"`
+	StandRounds  int             `json:"standRounds,omitempty"`
+	HobbleRounds int             `json:"hobbleRounds,omitempty"`
+	GlyphCut     int32           `json:"glyphCut,omitempty"`
+	KitSpent     map[string]bool `json:"kitSpent,omitempty"`
+	SlipTo       string          `json:"slipTo,omitempty"`
 
 	// Race and weapon kind, snapshotted so racial bonuses apply once per swing.
 	RaceID        string `json:"raceId,omitempty"`
@@ -201,12 +208,13 @@ type CombatInstance struct {
 
 // RigTurret is a construct dropped in the fight's room. It does not move or follow.
 type RigTurret struct {
-	ID         string `json:"id"`
-	OwnerID    string `json:"ownerId"`
-	Name       string `json:"name"`
-	RoomID     string `json:"roomId"`
-	RoundsLeft int    `json:"roundsLeft"`
-	Follows    bool   `json:"follows"`
+	ID         string  `json:"id"`
+	OwnerID    string  `json:"ownerId"`
+	Name       string  `json:"name"`
+	RoomID     string  `json:"roomId"`
+	RoundsLeft int     `json:"roundsLeft"`
+	Follows    bool    `json:"follows"`
+	Mult       float64 `json:"mult,omitempty"`
 }
 
 // NewCombatInstance creates a new combat instance with a generated UUID
