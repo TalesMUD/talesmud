@@ -140,6 +140,8 @@ func classByID(id string) (characters.Class, bool) {
 		return characters.ClassHunter, true
 	case "hitch":
 		return characters.ClassHitch, true
+	case "rigger":
+		return characters.ClassRigger, true
 	default:
 		return characters.Class{}, false
 	}
@@ -150,7 +152,9 @@ func raceByID(id string) characters.Race {
 	case "dwarf":
 		return characters.RaceDwarf
 	case "elve", "elf":
-		return characters.RaceElve
+		return characters.RaceElf
+	case "construct":
+		return characters.RaceConstruct
 	default:
 		return characters.RaceHuman
 	}

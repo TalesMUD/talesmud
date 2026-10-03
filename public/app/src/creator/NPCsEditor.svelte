@@ -45,7 +45,8 @@
 
   const races = [
     { id: "human", name: "Human", description: "The common race" },
-    { id: "elve", name: "Elve", description: "Splendid forestwalkers" },
+    { id: "elf", name: "Elf", description: "Splendid forestwalkers" },
+    { id: "construct", name: "Construct", description: "Built, not born" },
     { id: "dwarf", name: "Dwarf", description: "Small, but fierce" },
     { id: "halfling", name: "Halfling", description: "Small and nimble" },
     { id: "orc", name: "Orc", description: "Strong and fierce" },

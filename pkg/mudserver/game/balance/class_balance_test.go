@@ -53,6 +53,18 @@ func TestScaleClassDamageRoster(t *testing.T) {
 	if got := ScaleClassDamage("warrior", "rogue", 10, 10, 10); got != 12 {
 		t.Fatalf("fenwatch into alley 10 * 1.00 * 1.15 = %d, want 12", got)
 	}
+	if got := ScaleClassDamage("rigger", "", 10, 10, 20); got != 17 {
+		t.Fatalf("rigger dealt 20 * 0.85 = %d, want 17", got)
+	}
+	if got := ScaleClassDamage("", "rigger", 10, 10, 20); got != 20 {
+		t.Fatalf("rigger taken 20 * 1.00 = %d, want 20", got)
+	}
+	if got := ScaleClassDamage("rigger", "", 10, 13, 20); got != 20 {
+		t.Fatalf("rigger behind 20 * 0.85 * 1.15 = %d, want 20", got)
+	}
+	if got := ScaleClassDamage("warrior", "", 10, 10, 20); got == ScaleClassDamage("rigger", "", 10, 10, 20) {
+		t.Fatalf("rigger damage should not match warrior")
+	}
 
 	// A stale overtuned behind value must clamp, not stack.
 	cfg.ClassBalance["rogue"] = ClassBalance{DamageDealt: 0.55, DamageTaken: 1.15, BehindDealt: 2.35, Swings: 2}
@@ -81,7 +93,30 @@ func TestClassRosterShape(t *testing.T) {
 	if got := ScaleClassHP("hitch", 25); got != 26 {
 		t.Fatalf("hitch hp %d", got)
 	}
-	b, s, p := SignatureCharges("warrior")
+	if ClassSwings("rigger") != 1 {
+		t.Fatalf("rigger swings %d", ClassSwings("rigger"))
+	}
+	if got := ScaleClassHP("rigger", 25); got != 25 {
+		t.Fatalf("rigger hp 25 -> %d", got)
+	}
+	if got := ScaleClassHP("rigger", 40); got != 40 {
+		t.Fatalf("rigger hp 40 -> %d", got)
+	}
+	b, s, p := SignatureCharges("rigger")
+	if b != 0 || s != 0 || p != 0 {
+		t.Fatalf("rigger is not brace/slip/pin, got %d %d %d", b, s, p)
+	}
+	bolt, rig := RiggerCharges("rigger")
+	if bolt != 1 || rig != 1 {
+		t.Fatalf("rigger charges %d %d", bolt, rig)
+	}
+	if bolt, rig := RiggerCharges("hitch"); bolt != 0 || rig != 0 {
+		t.Fatalf("hitch rigger charges %d %d", bolt, rig)
+	}
+	if !IsRigger("rigger") || IsRigger("warrior") {
+		t.Fatal("rigger detect")
+	}
+	b, s, p = SignatureCharges("warrior")
 	if b != 1 || s != 0 || p != 0 {
 		t.Fatalf("brace charges %d %d %d", b, s, p)
 	}
@@ -105,6 +140,9 @@ func TestClassRosterShape(t *testing.T) {
 		}
 		if id == "rogue" && row.BehindDealt > BehindDealtCap {
 			t.Fatalf("rogue behind %v", row.BehindDealt)
+		}
+		if id == "rigger" && (row.DamageDealt != 0.85 || row.DamageTaken != 1 || row.Swings != 1 || row.BehindDealt != BehindDealtCap) {
+			t.Fatalf("rigger row %+v", row)
 		}
 	}
 }

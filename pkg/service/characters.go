@@ -63,6 +63,9 @@ func (srv *charactersService) CreateNewCharacter(dto *dto.CreateCharacterDTO) (*
 	}
 
 	character := characterFromTemplate(template)
+	if err := applyCreateRace(template, character, dto.Race); err != nil {
+		return nil, err
+	}
 	character.Name = dto.Name
 	character.Description = dto.Description
 	character.BelongsUserID = dto.UserID
@@ -77,6 +80,20 @@ func (srv *charactersService) CreateNewCharacter(dto *dto.CreateCharacterDTO) (*
 	}
 
 	return nil, errors.New("could not create new character")
+}
+
+func applyCreateRace(template *characters.CharacterTemplate, character *characters.Character, raceID string) error {
+	race, err := characters.ResolveCreateRace(template, raceID)
+	if err != nil {
+		return err
+	}
+	character.Race = race
+	baseline := int64(0)
+	if template != nil {
+		baseline = template.Gold
+	}
+	character.Gold = characters.StartingGold(baseline, race.ID)
+	return nil
 }
 
 func characterFromTemplate(template *characters.CharacterTemplate) *characters.Character {

@@ -78,6 +78,7 @@
   import SettingsModal from "./game/ui/SettingsModal.svelte";
   import { createAuth } from "./auth.js";
   import { createGuestSession } from "./api/guest.js";
+  import { guestCreateBody } from "./onboarding/raceAllow.js";
   import { getServerInfo } from "./api/server-info.js";
   import { getUser } from "./api/user.js";
   import { getMyCharacters } from "./api/characters.js";
@@ -139,7 +140,16 @@
   }
 
   // Handle "Play as Guest" button from WelcomeScreen
-  function handleGuestPlay(onDone, onError) {
+  function handleGuestPlay(onDone, onError, pick) {
+    const body = guestCreateBody(
+      typeof location !== "undefined" ? location.hostname : "",
+      pick?.templateId,
+      pick?.race
+    );
+    if (body == null) {
+      onError("That class and race cannot be chosen together.");
+      return;
+    }
     createGuestSession(
       (data) => {
         // Store in sessionStorage (not localStorage - dies with tab close)
@@ -154,7 +164,8 @@
         console.error("Guest session failed:", err);
         const msg = err?.response?.data?.error || "Could not start guest session. Please try again.";
         onError(msg);
-      }
+      },
+      body
     );
   }
 

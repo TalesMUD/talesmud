@@ -33,6 +33,8 @@ func defaultClassBalance() map[string]ClassBalance {
 		"mage": {DamageDealt: 1.40, DamageTaken: 1.25, BehindDealt: BehindDealtCap, Swings: 1},
 		// Hitch. One slightly light swing. Pin is applied in combat, not here.
 		"hitch": {DamageDealt: 0.90, DamageTaken: 1.05, BehindDealt: BehindDealtCap, Swings: 1},
+		// Rigger. One light swing. Bolt and Rig are applied in combat, not here.
+		"rigger": {DamageDealt: 0.85, DamageTaken: 1.00, BehindDealt: BehindDealtCap, Swings: 1},
 	}
 }
 
@@ -47,6 +49,8 @@ func classKey(id string) string {
 		return "warrior"
 	case "hitch":
 		return "hitch"
+	case "rigger":
+		return "rigger"
 	default:
 		return id
 	}
@@ -106,6 +110,8 @@ func ClassHPMultiplier(id string) float64 {
 		return 0.75
 	case "hitch":
 		return 1.05
+	case "rigger":
+		return 1
 	default:
 		return 1
 	}
@@ -136,6 +142,19 @@ func SignatureCharges(id string) (brace, slip, pin int) {
 	default:
 		return 0, 0, 0
 	}
+}
+
+// RiggerCharges is Bolt and Rig uses granted at combat start. Once each.
+func RiggerCharges(id string) (bolt, rig int) {
+	if classKey(id) == "rigger" {
+		return 1, 1
+	}
+	return 0, 0
+}
+
+// IsRigger reports the rigger class. It is not folded into another row.
+func IsRigger(id string) bool {
+	return classKey(id) == "rigger"
 }
 
 // IsRuneHand reports the wizard/mage class that inscribes on a basic hit.

@@ -27,6 +27,7 @@ const (
 // GuestService handles temporary guest account creation, token management, and cleanup.
 type GuestService interface {
 	CreateGuestSession(remoteIP string) (token string, err error)
+	CreateGuestSessionPick(remoteIP, templateID, raceID string) (token string, err error)
 	ValidateGuestToken(tokenStr string) (userID string, err error)
 	CleanupExpiredGuests()
 	StartCleanupLoop()
@@ -76,8 +77,14 @@ func generateGuestRefID() string {
 	return "guest:" + hex.EncodeToString(b)
 }
 
-// CreateGuestSession creates a temporary guest user + character and returns a signed JWT.
+// CreateGuestSession creates a random guest. An empty body stays valid.
 func (gs *guestService) CreateGuestSession(remoteIP string) (string, error) {
+	return gs.CreateGuestSessionPick(remoteIP, "", "")
+}
+
+// CreateGuestSessionPick creates a guest. templateID and raceID are both optional.
+// When both are set they must be on the allow-list. One without the other is rejected.
+func (gs *guestService) CreateGuestSessionPick(remoteIP, templateID, raceID string) (string, error) {
 	// Check server settings
 	settings, err := gs.facade.ServerSettingsService().Get()
 	if err != nil {
@@ -134,17 +141,30 @@ func (gs *guestService) CreateGuestSession(remoteIP string) (string, error) {
 		return "", fmt.Errorf("could not create guest user: %v", err)
 	}
 
-	// Pick a random class template
-	templates := characters.SystemCharacterTemplatePresets()
-	template := templates[mathrand.Intn(len(templates))]
+	pick, err := characters.ResolveGuestPick(templateID, raceID)
+	if err != nil {
+		gs.facade.UsersService().Delete(user.ID)
+		return "", err
+	}
+	var template *characters.CharacterTemplate
+	var race characters.Race
+	if pick.Random {
+		templates := characters.SystemCharacterTemplatePresets()
+		template = templates[mathrand.Intn(len(templates))]
+		race = characters.RandomAllowedRace(template.Class.ID, mathrand.Intn)
+	} else {
+		template = pick.Template
+		race = pick.Race
+	}
 
 	// Create character from template
 	character := &characters.Character{
 		Entity:           e.NewEntity(),
 		Name:             guestName,
 		Description:      "A mysterious guest adventurer.",
-		Race:             template.Race,
+		Race:             race,
 		Class:            template.Class,
+		Gold:             characters.StartingGold(template.Gold, race.ID),
 		CurrentHitPoints: template.CurrentHitPoints,
 		MaxHitPoints:     template.MaxHitPoints,
 		CurrentMana:      template.CurrentMana,

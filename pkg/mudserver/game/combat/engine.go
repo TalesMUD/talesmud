@@ -132,6 +132,10 @@ func (e *Engine) CreateCombatantFromCharacter(char *characters.Character) combat
 	ref.BraceLeft = brace
 	ref.SlipLeft = slip
 	ref.PinLeft = pin
+	bolt, rig := balance.RiggerCharges(char.Class.ID)
+	ref.BoltLeft = bolt
+	ref.RigLeft = rig
+	ref.RaceID = characters.CanonicalRaceID(char.Race.ID)
 	if len(char.EquippedSkills) > 0 {
 		ref.EquippedSkills = make([]string, len(char.EquippedSkills))
 		copy(ref.EquippedSkills, char.EquippedSkills)
@@ -355,6 +359,10 @@ func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targ
 		if last.TargetDied {
 			break
 		}
+		attacker = instance.GetCombatantByID(attackerID)
+		if attacker == nil || !attacker.IsAlive {
+			break
+		}
 		target := instance.GetCombatantByID(targetID)
 		if target == nil || !target.IsAlive {
 			break
@@ -554,6 +562,7 @@ func (e *Engine) processAttackSwing(instance *combat.CombatInstance, attackerID,
 		Message:    result.Message,
 	})
 
+	e.applyScrapReturn(instance, attacker, target, result.Damage, result.Hit)
 	return result
 }
 
@@ -590,6 +599,7 @@ func (e *Engine) CalculateDamage(attacker, target *combat.CombatantRef, critical
 	// Equal levels leave the pre-gap number unchanged.
 	damage = balance.ScaleDamage(attacker.Level, target.Level, damage)
 	damage = balance.ScaleClassDamage(attacker.ClassID, target.ClassID, attacker.Level, target.Level, damage)
+	damage = balance.ApplyRacialWeaponBonus(attacker.RaceID, attacker.WeaponSubType, damage)
 	if attacker.Type == combat.CombatantTypeNPC {
 		damage = balance.ScaleBossPhaseDamage(damage, attacker.Difficulty, attacker.BossPhase, attacker.Enraged)
 	}
@@ -1050,6 +1060,7 @@ func snapshotWeaponOnHit(ref *combat.CombatantRef, char *characters.Character) {
 	if weapon == nil {
 		return
 	}
+	ref.WeaponSubType = string(weapon.SubType)
 	ref.OnHitScriptID = weapon.OnHitScriptID
 	if ref.OnHitScriptID == "" && weapon.TemplateID != "" {
 		// Instance may have dropped script id; TemplateID alone is not enough here

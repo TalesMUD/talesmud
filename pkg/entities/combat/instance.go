@@ -36,6 +36,8 @@ const (
 	CombatActionSkill   CombatAction = "skill"
 	CombatActionFlee    CombatAction = "flee"
 	CombatActionTimeout CombatAction = "timeout" // Forced defend due to timeout
+	CombatActionBolt    CombatAction = "bolt"
+	CombatActionRig     CombatAction = "rig"
 )
 
 // CombatPhase tracks authored turn pacing for a combat instance (C1).
@@ -132,6 +134,15 @@ type CombatantRef struct {
 	PinLeft   int  `json:"pinLeft,omitempty"`
 	Pinned    bool `json:"pinned,omitempty"`
 
+	// Race and weapon kind, snapshotted so racial bonuses apply once per swing.
+	RaceID        string `json:"raceId,omitempty"`
+	WeaponSubType string `json:"weaponSubType,omitempty"`
+
+	// Rigger. BoltLeft arms ScrapArmed on a target. RigLeft drops one turret.
+	BoltLeft   int  `json:"boltLeft,omitempty"`
+	RigLeft    int  `json:"rigLeft,omitempty"`
+	ScrapArmed bool `json:"scrapArmed,omitempty"`
+
 	// Auto-attack system
 	AutoAttackTargetID string       `json:"autoAttackTargetId,omitempty"` // Persistent target for auto-attacks
 	QueuedAction       CombatAction `json:"queuedAction,omitempty"`       // Next action override (flee, defend, attack, skill)
@@ -183,6 +194,19 @@ type CombatInstance struct {
 
 	// Combat Log
 	Log []CombatLogEntry `json:"log"`
+
+	// Rig is the Rigger turret. It is not a pet, not a follower, and not in turn order.
+	Rig *RigTurret `json:"rig,omitempty"`
+}
+
+// RigTurret is a construct dropped in the fight's room. It does not move or follow.
+type RigTurret struct {
+	ID         string `json:"id"`
+	OwnerID    string `json:"ownerId"`
+	Name       string `json:"name"`
+	RoomID     string `json:"roomId"`
+	RoundsLeft int    `json:"roundsLeft"`
+	Follows    bool   `json:"follows"`
 }
 
 // NewCombatInstance creates a new combat instance with a generated UUID

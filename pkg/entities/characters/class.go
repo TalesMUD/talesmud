@@ -34,7 +34,7 @@ var (
 	ClassWarrior Class = Class{
 		ID:          "warrior",
 		Name:        "Fenwatch",
-		Description: "One swing, and you mean it. Extra health, hits land lighter. Brace once when a blow comes in.",
+		Description: "The door. You stand in it until they don't. Brace once when a blow comes in.",
 		ArmorType:   ArmorTypePlate,
 		CombatType:  CombatTypeMelee,
 	}
@@ -55,21 +55,28 @@ var (
 	ClassRogue Class = Class{
 		ID:          "rogue",
 		Name:        "Alley",
-		Description: "Two short swings, dagger or bow. Less health, you feel hits more. Slip the first one.",
+		Description: "Back street. Two cuts, then you Slip the first one that comes back.",
 		ArmorType:   ArmorTypeLeather,
 		CombatType:  CombatTypeMelee,
 	}
 	ClassWizard Class = Class{
 		ID:          "wizard",
 		Name:        "Rune Hand",
-		Description: "One heavy swing, then the rune burns for three rounds. Thin on health. The basic costs no mana.",
+		Description: "Vault runes. One heavy swing, then you Inscribe. The mark burns for three rounds.",
 		ArmorType:   ArmorTypeCloth,
 		CombatType:  CombatTypeMagic,
 	}
 	ClassHitch Class = Class{
 		ID:          "hitch",
 		Name:        "Hitch",
-		Description: "One careful swing. A bit more health. Pin once: the next time they try to leave, they stay.",
+		Description: "Fen rope. One careful swing. Pin once: the next time they try to leave, they stay.",
+		ArmorType:   ArmorTypeLeather,
+		CombatType:  CombatTypeMelee,
+	}
+	ClassRigger Class = Class{
+		ID:          "rigger",
+		Name:        "Rigger",
+		Description: "Constructs. Bolt scrap onto someone in the room; the next hit still lands, and the attacker takes the same amount back. Rig drops a turret that does not chase.",
 		ArmorType:   ArmorTypeLeather,
 		CombatType:  CombatTypeMelee,
 	}

@@ -213,6 +213,8 @@ func (csh *CharactersHandler) CreateNewCharacter(c *gin.Context) {
 
 	if newCharacter, err := csh.Service.CreateNewCharacter(&dto); err == nil {
 		c.JSON(http.StatusOK, newCharacter)
+	} else if errors.Is(err, characters.ErrRaceRequired) || errors.Is(err, characters.ErrRaceNotAllowed) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	} else {
 		c.AbortWithError(http.StatusInternalServerError, err)
 	}

@@ -64,7 +64,7 @@ fields:
     required: true
     # The character's race. Determines heritage and lore flavor.
     # Must be a valid Race. See Race type in npc.yaml.
-    # Built-in races: dwarf, human, elve
+    # Built-in races: dwarf, human, elf, construct
 
   class:
     type: Class

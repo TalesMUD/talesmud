@@ -12,6 +12,8 @@
     findInventoryItem,
     skillGenericArtUrl,
     actionGenericArtUrl,
+    characterClassId,
+    normalizeClassId,
   } from '../hudPrefs.js';
   import { settingsStore } from '../SettingsStore.js';
   import { resolveBattleLayoutB } from '../battleLayout.js';
@@ -393,6 +395,34 @@
   function doDefend() { cmd('defend'); }
   function doFlee() { cmd('flee'); }
 
+  let boltSpent = false;
+  let rigSpent = false;
+  let fightOpen = false;
+  $: {
+    const open = phase === 'active';
+    if (open !== fightOpen) {
+      fightOpen = open;
+      boltSpent = false;
+      rigSpent = false;
+    }
+  }
+  $: riggerId = normalizeClassId(characterClassId(character) || selfCombatant?.classId || selfClass);
+  $: isRigger = riggerId === 'rigger';
+
+  function doBolt() {
+    if (boltSpent || !isRigger) return;
+    boltSpent = true;
+    const target = livingFocus(enemies, targetId);
+    if (target?.id) cmd(`bolt ${target.id}`);
+    else cmd('bolt');
+  }
+
+  function doRig() {
+    if (rigSpent || !isRigger) return;
+    rigSpent = true;
+    cmd('rig');
+  }
+
   /** When true, Attack/Defend/Items reappear on the left combat rail. Default off to declutter fights. */
   const showCombatUtilityRail = false;
 
@@ -403,6 +433,8 @@
     if (action === 'attack') return 'Attack';
     if (action === 'defend') return 'Defend';
     if (action === 'flee') return 'Flee';
+    if (action === 'bolt') return 'Bolt';
+    if (action === 'rig') return 'Rig';
     if (action === 'item') return 'Item';
     return String(action);
   }
@@ -1161,6 +1193,18 @@
             <button type="button" class="rail-btn" class:active={panel === 'items'} title="Items" aria-label="Items" on:click|stopPropagation={() => togglePanel('items')}>
               <i class="material-icons">shopping_bag</i>
               <span class="rail-label">Items</span>
+            </button>
+          {/if}
+          {#if isRigger && !boltSpent}
+            <button type="button" class="rail-btn rigger" title="Bolt" aria-label="Bolt" on:click|stopPropagation={doBolt}>
+              <i class="material-icons">build</i>
+              <span class="rail-label">Bolt</span>
+            </button>
+          {/if}
+          {#if isRigger && !rigSpent}
+            <button type="button" class="rail-btn rigger" title="Rig" aria-label="Rig" on:click|stopPropagation={doRig}>
+              <i class="material-icons">memory</i>
+              <span class="rail-label">Rig</span>
             </button>
           {/if}
           <button type="button" class="rail-btn flee" title="Flee" aria-label="Flee" on:click|stopPropagation={doFlee}>
@@ -2799,6 +2843,8 @@
   .rail-btn.primary i { color: #e8c878; }
   .rail-btn.flee { border-color: rgba(239, 68, 68, 0.5); }
   .rail-btn.flee i { color: #f87171; }
+  .rail-btn.rigger { border-color: rgba(56, 189, 248, 0.45); }
+  .rail-btn.rigger i { color: #7dd3fc; }
 
   .battle-rail.essential {
     gap: 0;

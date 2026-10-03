@@ -46,6 +46,12 @@
     animation-delay: 0.15s;
   }
 
+  .card.picker-open {
+    max-width: 760px;
+    max-height: calc(100vh - 2rem);
+    overflow: auto;
+  }
+
   @keyframes fadeSlideIn {
     from {
       opacity: 0;
@@ -170,6 +176,57 @@
     text-align: center;
   }
 
+  .guest-picker {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    text-align: left;
+  }
+
+  .guest-picker-title {
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #9ca3af;
+    text-align: center;
+  }
+
+  .guest-class-grid,
+  .guest-race-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.4rem;
+  }
+
+  .guest-choice {
+    text-align: left;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    color: #e5e7eb;
+    padding: 0.45rem 0.55rem;
+    cursor: pointer;
+  }
+
+  .guest-choice.selected {
+    border-color: rgba(245, 158, 11, 0.55);
+    background: rgba(245, 158, 11, 0.1);
+  }
+
+  .guest-choice strong {
+    display: block;
+    font-size: 0.82rem;
+  }
+
+  .guest-choice span {
+    display: block;
+    margin-top: 0.15rem;
+    font-size: 0.72rem;
+    color: #9ca3af;
+    line-height: 1.3;
+  }
+
   @media (max-width: 520px) {
     .welcome-screen {
       overflow-y: auto;
@@ -189,6 +246,10 @@
 </style>
 
 <script>
+  import { onMount } from "svelte";
+  import { getCharacterTemplates } from "../api/characters.js";
+  import { FALLBACK_TEMPLATES, guestPickerEnabled, racesForTemplate } from "./raceAllow.js";
+
   export let login;
   export let serverName = "Tales";
   export let authError = null;
@@ -196,6 +257,30 @@
 
   let guestLoading = false;
   let guestError = null;
+  const showGuestPicker = guestPickerEnabled(typeof location !== "undefined" ? location.hostname : "");
+  let guestTemplates = FALLBACK_TEMPLATES;
+  let guestTemplate = null;
+  let guestRaceId = "";
+
+  onMount(() => {
+    if (!showGuestPicker) return;
+    getCharacterTemplates(
+      (result) => {
+        if (result && result.length) guestTemplates = result;
+      },
+      () => { guestTemplates = FALLBACK_TEMPLATES; }
+    );
+  });
+
+  function chooseGuestTemplate(template) {
+    guestTemplate = template;
+    const races = racesForTemplate(template);
+    if (!races.some((race) => race.id === guestRaceId)) {
+      guestRaceId = races[0]?.id || "";
+    }
+  }
+
+  $: guestRaces = guestTemplate ? racesForTemplate(guestTemplate) : [];
 
   // A named connection skips Auth0 universal login. Email is the only
   // button that opens that page, where the browser can autofill a password.
@@ -204,18 +289,27 @@
     else login();
   }
 
+  function startGuest(pick) {
+    if (!onGuestPlay) return;
+    guestLoading = true;
+    guestError = null;
+    onGuestPlay(
+      () => { guestLoading = false; },
+      (err) => {
+        guestLoading = false;
+        guestError = err;
+      },
+      pick
+    );
+  }
+
   function handleGuest() {
-    if (onGuestPlay) {
-      guestLoading = true;
-      guestError = null;
-      onGuestPlay(
-        () => { guestLoading = false; },
-        (err) => {
-          guestLoading = false;
-          guestError = err;
-        }
-      );
-    }
+    startGuest();
+  }
+
+  function handleGuestChosen() {
+    if (!guestTemplate || !guestRaceId) return;
+    startGuest({ templateId: guestTemplate.id, race: guestRaceId });
   }
 </script>
 
@@ -223,7 +317,7 @@
   <div class="bg-image"></div>
   <div class="bg-gradient"></div>
 
-  <div class="card">
+  <div class="card" class:picker-open={showGuestPicker}>
     <i class="material-icons icon">auto_stories</i>
 
     <h1 class="title">{serverName}</h1>
@@ -270,5 +364,47 @@
         30 min session, no login required
       </span>
     </div>
+
+    {#if showGuestPicker}
+      <div class="guest-picker">
+        <div class="guest-picker-title">Or pick a class and race</div>
+        <div class="guest-class-grid">
+          {#each guestTemplates as template}
+            <button
+              type="button"
+              class="guest-choice"
+              class:selected={guestTemplate && guestTemplate.id === template.id}
+              on:click={() => chooseGuestTemplate(template)}
+            >
+              <strong>{template.name}</strong>
+              <span>{template.description}</span>
+            </button>
+          {/each}
+        </div>
+        {#if guestTemplate}
+          <div class="guest-race-grid">
+            {#each guestRaces as race}
+              <button
+                type="button"
+                class="guest-choice"
+                class:selected={guestRaceId === race.id}
+                on:click={() => guestRaceId = race.id}
+              >
+                <strong>{race.name}</strong>
+                <span>{race.blurb}</span>
+              </button>
+            {/each}
+          </div>
+          <button
+            class="btn-welcome guest"
+            type="button"
+            on:click={handleGuestChosen}
+            disabled={guestLoading || !guestRaceId}
+          >
+            Play this guest
+          </button>
+        {/if}
+      </div>
+    {/if}
   </div>
 </div>

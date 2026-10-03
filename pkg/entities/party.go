@@ -17,16 +17,16 @@ const (
 )
 
 func (cr CharacterRace) String() string {
-	return [...]string{"human", "dwarf", "elve"}[cr]
+	return [...]string{"human", "dwarf", "elf"}[cr]
 }
 
 // Party data
 type Party struct {
 	*Entity
-	Name               string    `json:"name"`
-	Created            time.Time `json:"created,omitempty"`
-	Characters         []string  `json:"characters,omitempty"`
-	LeaderCharacterID  string    `json:"leaderCharacterId,omitempty"`
+	Name              string    `json:"name"`
+	Created           time.Time `json:"created,omitempty"`
+	Characters        []string  `json:"characters,omitempty"`
+	LeaderCharacterID string    `json:"leaderCharacterId,omitempty"`
 }
 
 // EnsureLeader sets LeaderCharacterID to the first member when empty/invalid.

@@ -100,8 +100,8 @@ reward_scale:
 # damage_dealt multiplies each swing. damage_taken multiplies hits received.
 # behind_dealt is capped at 1.15 for every class. swings is basic attacks per action.
 # wizard reads as mage. ranger and hunter read as rogue (Alley weapons, not classes).
-# HP percents are create-time only (warrior +20%, rogue -15%, mage -25%, hitch +5%).
-# Signatures are not damage rows: Brace, Slip, Inscribe (4/round x3), Pin.
+# HP percents are create-time only (warrior +20%, rogue -15%, mage -25%, hitch +5%, rigger +0%).
+# Signatures are not damage rows: Brace, Slip, Inscribe (4/round x3), Pin, Bolt, Rig.
 # Rune Hand basic attacks cost 0 mana.
 class_balance:
   warrior:
@@ -122,6 +122,11 @@ class_balance:
   hitch:
     damage_dealt: 0.90
     damage_taken: 1.05
+    behind_dealt: 1.15
+    swings: 1
+  rigger:
+    damage_dealt: 0.85
+    damage_taken: 1.00
     behind_dealt: 1.15
     swings: 1
 

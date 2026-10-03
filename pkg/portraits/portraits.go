@@ -48,11 +48,8 @@ func ForPlayer(ch *characters.Character) string {
 	if ch == nil {
 		return ""
 	}
-	race := strings.ToLower(strings.TrimSpace(ch.Race.ID))
+	race := characters.CanonicalRaceID(ch.Race.ID)
 	class := strings.ToLower(strings.TrimSpace(ch.Class.ID))
-	if race == "elve" || race == "elves" {
-		race = "elf"
-	}
 	if class == "wizard" {
 		class = "mage"
 	}

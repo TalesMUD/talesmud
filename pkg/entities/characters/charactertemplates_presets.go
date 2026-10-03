@@ -14,17 +14,18 @@ func presetEntity(id string) *entities.Entity {
 	return &entities.Entity{ID: id}
 }
 
-// SystemCharacterTemplatePresets is the signed create roster: Fenwatch, Alley, Rune Hand, Hitch.
+// SystemCharacterTemplatePresets is the signed create roster: Fenwatch, Alley, Rune Hand, Hitch, Rigger.
 func SystemCharacterTemplatePresets() []*CharacterTemplate {
 	fenHP := balance.ScaleClassHP("warrior", classHPBase)
 	alleyHP := balance.ScaleClassHP("rogue", classHPBase)
 	runeHP := balance.ScaleClassHP("wizard", classHPBase)
 	hitchHP := balance.ScaleClassHP("hitch", classHPBase)
+	riggerHP := balance.ScaleClassHP("rigger", classHPBase)
 	return []*CharacterTemplate{
 		{
 			Entity:           presetEntity("tpl-fenwatch"),
 			Name:             "Fenwatch",
-			Description:      "One swing, and you mean it. Extra health, hits land lighter. Brace once when a blow comes in.",
+			Description:      "The door. You stand in it until they don't. Brace once when a blow comes in.",
 			Backstory:        "You held a wet road until the wagons were through.",
 			OriginArea:       "Oldtown",
 			Archetype:        "fenwatch",
@@ -44,7 +45,7 @@ func SystemCharacterTemplatePresets() []*CharacterTemplate {
 		{
 			Entity:           presetEntity("tpl-alley"),
 			Name:             "Alley",
-			Description:      "Two short swings, dagger or bow. Less health, you feel hits more. Slip the first one.",
+			Description:      "Back street. Two cuts, then you Slip the first one that comes back.",
 			Backstory:        "You learned the lanes with a knife, and the tree line with a bow.",
 			OriginArea:       "Dockside",
 			Archetype:        "alley",
@@ -64,11 +65,11 @@ func SystemCharacterTemplatePresets() []*CharacterTemplate {
 		{
 			Entity:           presetEntity("tpl-runehand"),
 			Name:             "Rune Hand",
-			Description:      "One heavy swing, then the rune burns for three rounds. Thin on health. The basic costs no mana.",
+			Description:      "Vault runes. One heavy swing, then you Inscribe. The mark burns for three rounds.",
 			Backstory:        "You scratch a mark and it keeps burning after the staff goes still.",
 			OriginArea:       "Arcane Tower",
 			Archetype:        "runehand",
-			Race:             RaceDwarf,
+			Race:             RaceHuman,
 			Class:            ClassWizard,
 			Level:            1,
 			CurrentHitPoints: runeHP,
@@ -86,7 +87,7 @@ func SystemCharacterTemplatePresets() []*CharacterTemplate {
 		{
 			Entity:           presetEntity("tpl-hitch"),
 			Name:             "Hitch",
-			Description:      "One careful swing. A bit more health. Pin once: the next time they try to leave, they stay.",
+			Description:      "Fen rope. One careful swing. Pin once: the next time they try to leave, they stay.",
 			Backstory:        "You set the snare and wait. When they turn to run, the line is already tight.",
 			OriginArea:       "Forest Edge",
 			Archetype:        "hitch",
@@ -98,6 +99,26 @@ func SystemCharacterTemplatePresets() []*CharacterTemplate {
 			Attributes:       createBaseAttributes(12, 12, 6, 8, 12),
 			StartingItems: []StartingItem{
 				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Worn Dagger"},
+				{Slot: items.ItemSlotChest, ItemTemplateName: "Leather Armor"},
+			},
+			DefaultSkills: []string{},
+			Source:        "system",
+		},
+		{
+			Entity:           presetEntity("tpl-rigger"),
+			Name:             "Rigger",
+			Description:      "Constructs. Bolt scrap onto someone in the room; the next hit still lands, and the attacker takes the same amount back. Rig drops a turret that does not chase.",
+			Backstory:        "You bolt scrap onto a target and leave a turret where you stood.",
+			OriginArea:       "Gear Yard",
+			Archetype:        "rigger",
+			Race:             RaceConstruct,
+			Class:            ClassRigger,
+			Level:            1,
+			CurrentHitPoints: riggerHP,
+			MaxHitPoints:     riggerHP,
+			Attributes:       createBaseAttributes(12, 10, 8, 6, 14),
+			StartingItems: []StartingItem{
+				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Rusty Sword"},
 				{Slot: items.ItemSlotChest, ItemTemplateName: "Leather Armor"},
 			},
 			DefaultSkills: []string{},

@@ -365,6 +365,8 @@
     togglePin,
     INVENTORY_OPEN_OVERLAY,
     INVENTORY_OPEN_WIDGET,
+    characterClassId,
+    normalizeClassId,
   } from '../hudPrefs.js';
 
   export let store;
@@ -387,11 +389,28 @@
     west:  { label: "W", icon: "west" },
   };
 
-  const combatCommands = [
+  const baseCombatCommands = [
     { id: "attack", name: "attack", icon: "flash_on", label: "Attack", kind: "command" },
     { id: "defend", name: "defend", icon: "security", label: "Defend", kind: "command" },
     { id: "flee", name: "flee", icon: "directions_run", label: "Flee", kind: "command" },
     { id: "status", name: "status", icon: "monitor_heart", label: "Status", kind: "command" },
+  ];
+  let boltSpent = false;
+  let rigSpent = false;
+  let wasInCombat = false;
+  $: {
+    const now = !!$store.inCombat;
+    if (now !== wasInCombat) {
+      wasInCombat = now;
+      boltSpent = false;
+      rigSpent = false;
+    }
+  }
+  $: isRigger = normalizeClassId(characterClassId($store.character) || $store.character?.classId) === "rigger";
+  $: combatCommands = [
+    ...baseCombatCommands,
+    ...(isRigger && $store.inCombat && !boltSpent ? [{ id: "bolt", name: "bolt", icon: "build", label: "Bolt", kind: "command" }] : []),
+    ...(isRigger && $store.inCombat && !rigSpent ? [{ id: "rig", name: "rig", icon: "memory", label: "Rig", kind: "command" }] : []),
   ];
 
   $: pins = $settingsStore.interface?.actionBarPins;
@@ -410,6 +429,19 @@
     // Room chips CRAFT/RECIPES (and typed aliases) always open the recipes overlay.
     if (lower === 'craft' || lower === 'recipes' || lower === 'recipe') {
       sendMessage('recipes');
+      closeMenus();
+      return;
+    }
+    if (lower === 'bolt' || lower.startsWith('bolt ')) {
+      boltSpent = true;
+      const tid = lower === 'bolt' ? ($store.combatTargetId || '') : '';
+      sendMessage(tid ? `bolt ${tid}` : raw);
+      closeMenus();
+      return;
+    }
+    if (lower === 'rig' || lower.startsWith('rig ')) {
+      rigSpent = true;
+      sendMessage(raw);
       closeMenus();
       return;
     }

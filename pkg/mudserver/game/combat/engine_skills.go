@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/combat"
 	"github.com/talesmud/talesmud/pkg/entities/skills"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/balance"
@@ -575,6 +576,13 @@ func (e *Engine) resolveSecondaryEffect(instance *combat.CombatInstance, caster 
 
 // applyStatusEffect adds a status effect to a combatant, refreshing if the same skill+stat already exists
 func (e *Engine) applyStatusEffect(instance *combat.CombatInstance, target *combat.CombatantRef, se combat.StatusEffect) {
+	if target == nil {
+		return
+	}
+	// Construct: poison never applies. Do not add the status.
+	if isPoisonStatus(se) && characters.CanonicalRaceID(target.RaceID) == "construct" {
+		return
+	}
 	// Remove existing effect from same skill+stat (refresh)
 	effects := make([]combat.StatusEffect, 0, len(target.StatusEffects))
 	for _, existing := range target.StatusEffects {
@@ -742,6 +750,7 @@ func (e *Engine) ProcessRoundStart(instance *combat.CombatInstance) {
 			e.ProcessManaRegen(instance, en)
 		}
 	}
+	e.tickRig(instance)
 }
 
 // IsStunned returns true if the combatant has a stun status effect (public method)
