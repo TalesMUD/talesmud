@@ -21,7 +21,7 @@ const (
 	GuestSessionDuration = 30 * time.Minute
 	GuestMaxLevel        = 5
 	GuestCleanupInterval = 5 * time.Minute
-	GuestRateLimitPerIP  = 10 // max guest creations per IP per hour
+	GuestRateLimitPerIP  = 60 // max successful guest creations per IP per hour
 )
 
 // GuestService handles temporary guest account creation, token management, and cleanup.
@@ -102,7 +102,13 @@ func (gs *guestService) CreateGuestSessionPick(remoteIP, templateID, raceID stri
 		}
 	}
 
-	// Check rate limit
+	// Reject a bad class/race pair before it spends the hourly budget.
+	pick, err := characters.ResolveGuestPick(templateID, raceID)
+	if err != nil {
+		return "", err
+	}
+
+	// Check rate limit (successful creates only; rejected picks returned above).
 	if !gs.checkRateLimit(remoteIP) {
 		return "", errors.New("rate limit exceeded")
 	}
@@ -141,11 +147,6 @@ func (gs *guestService) CreateGuestSessionPick(remoteIP, templateID, raceID stri
 		return "", fmt.Errorf("could not create guest user: %v", err)
 	}
 
-	pick, err := characters.ResolveGuestPick(templateID, raceID)
-	if err != nil {
-		gs.facade.UsersService().Delete(user.ID)
-		return "", err
-	}
 	var template *characters.CharacterTemplate
 	var race characters.Race
 	if pick.Random {
