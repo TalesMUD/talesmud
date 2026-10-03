@@ -1,3 +1,15 @@
+## Borderless MTG room entity cards (?v=mtgcard1) (2026-10-04)
+
+- Web SHA: `87a373a` (`[grokbot]`). Flutter SHA: `1adb986` (`[grokbot]`). Landing follow-up tip includes this section's commit.
+- What changed: Room entity cards restyled to borderless MTG full-art language — portrait fills the card (no scale(0.8) inset), soft type-accent rim/glow instead of hard colored frames, soft bottom nameplate gradient with thin accent hairline, subtler circular role badges, cleaner stack ×N badge. HP bar, tap/target, threat colors, and combat Layout B sprites unchanged.
+- Files: `EntityPanel.svelte` (+ built `extra.css`/`bundle.js`/`index.html` `?v=mtgcard1`); Flutter `game_shell_screen.dart` `_RoomEntityCard`, `entity_card.dart`, `entity_stack.dart`, `entity_card_test.dart`; `/app` landing CTA → `veilspan-1adb986.apk`.
+- Tests: Flutter entity card + room/phone entity tests green; `npm run build` green.
+- Local clawdbot `:8010`: embedded play client, `bin/tales` rebuilt, restarted (Door not present on clawdbot).
+- VPS: ff `87a373a`; embed; rebuild; talesmud MainPID `947837` on `:8010`. Door `:8020` pid `758959` untouched.
+- Smoke: public `/play/` 200 with `?v=mtgcard1`; extra.css has `entity-accent` / `#0a0a0c`; guest POST 200. `/app` 200 with Borderless MTG entry; APK 200 application/vnd.android.package-archive.
+- Residual: entity cards still use existing Veilspan portrait art (no Wizards IP). Phone EntityStack × badge glyph is `×` not `x`. Wide-sprite letterbox path unchanged. entity_card_test.dart also normalized CRLF→LF in the same commit.
+
+
 ## Rigger and the race picker (?v=rigger1) (2026-10-03)
 
 - Engine feature: `465f47d` (`[grokbot]`). Content: no content change (`talesmud-rpg-1` main still `f7dabfa`; no stored race id `elve`). Live play client: `?v=rigger1`.
