@@ -28,6 +28,21 @@ export const DEFAULT_REST_SLOT = 6;
 
 /** Seed skill id → display name (cast matches Name, not id). */
 export const SKILL_LABELS = {
+  warrior_brace: 'Brace',
+  warrior_slam: 'Slam',
+  warrior_stand: 'Stand',
+  rogue_slip: 'Slip',
+  rogue_nick: 'Nick',
+  rogue_smoke: 'Smoke',
+  mage_inscribe: 'Inscribe',
+  mage_sear: 'Sear',
+  mage_glyph: 'Glyph',
+  hitch_pin: 'Pin',
+  hitch_hobble: 'Hobble',
+  hitch_reel: 'Reel',
+  rigger_bolt: 'Bolt',
+  rigger_rig: 'Rig',
+  rigger_overload: 'Overload',
   warrior_power_strike: 'Power Strike',
   warrior_shield_bash: 'Shield Bash',
   warrior_battle_cry: 'Battle Cry',
@@ -189,6 +204,21 @@ export function skillMaterialIcon(idOrName) {
 
 /** Equipped skill id/name → generic item-art stem (no .png). */
 export const SKILL_GENERIC_ART = {
+  warrior_brace: 'generic-spell-shield',
+  warrior_slam: 'generic-action-melee',
+  warrior_stand: 'generic-spell-shield',
+  rogue_slip: 'generic-action-flee',
+  rogue_nick: 'generic-action-melee',
+  rogue_smoke: 'generic-spell-curse',
+  mage_inscribe: 'generic-spell-arcane',
+  mage_sear: 'generic-spell-arcane',
+  mage_glyph: 'generic-spell-shield',
+  hitch_pin: 'generic-spell-stun',
+  hitch_hobble: 'generic-spell-curse',
+  hitch_reel: 'generic-action-melee',
+  rigger_bolt: 'generic-spell-shield',
+  rigger_rig: 'generic-action-ranged',
+  rigger_overload: 'generic-spell-strength',
   warrior_power_strike: 'generic-action-melee',
   warrior_shield_bash: 'generic-spell-stun',
   warrior_battle_cry: 'generic-spell-strength',
@@ -220,29 +250,77 @@ export const SKILL_GENERIC_ART = {
   druid_barkskin: 'generic-spell-shield',
 };
 
+/** Mirrors pkg/entities/skills/classkit.go kit(). */
+function kitSkill(id, name, classId, levelRequired, kit, keepsSwing, oncePerFight, cooldownRounds, swingMult, description) {
+  return {
+    id,
+    name,
+    classIds: [classId],
+    levelRequired,
+    description,
+    resourceType: 'cooldown',
+    manaCost: 0,
+    cooldownRounds,
+    effect: 'damage',
+    buffStat: '',
+    buffPercent: 0,
+    target: 'enemy',
+    scalingFactor: 0,
+    scalingAttr: '',
+    basePower: 0,
+    duration: 0,
+    hitCount: 0,
+    ignoresDefense: false,
+    kit,
+    keepsSwing,
+    oncePerFight,
+    swingMult,
+  };
+}
+
 /**
- * Combat skill catalog mirrored from pkg/entities/skills/seed.go.
- * Client uses this for Character → Skills (no extra server round-trip).
+ * Skills the Character → Skills panel may offer.
+ * Fenwatch / Alley / Rune Hand / Hitch / Rigger are the v1 class kit only
+ * (pkg/entities/skills/classkit.go). Cleric, ranger, and druid keep the old seed.
+ * Legacy warrior/rogue/mage rows live in LEGACY_SKILL_CATALOG for hotbar labels
+ * and never appear as Available.
  */
 export const SKILL_CATALOG = [
-  // Warrior
-  { id: 'warrior_power_strike', name: 'Power Strike', classIds: ['warrior'], levelRequired: 1, description: 'A powerful strike dealing 150% weapon damage.', resourceType: 'cooldown', manaCost: 0, cooldownRounds: 3, effect: 'damage', buffStat: '', buffPercent: 0, target: 'enemy', scalingFactor: 1.5, scalingAttr: 'STR', basePower: 3, duration: 0, hitCount: 0, ignoresDefense: false },
-  { id: 'warrior_shield_bash', name: 'Shield Bash', classIds: ['warrior'], levelRequired: 5, description: 'Bash the target with your shield, dealing damage and stunning for 1 round.', resourceType: 'cooldown', manaCost: 0, cooldownRounds: 4, effect: 'damage', buffStat: 'stun', buffPercent: 0, target: 'enemy', scalingFactor: 1.0, scalingAttr: 'STR', basePower: 2, duration: 1, hitCount: 0, ignoresDefense: false },
-  { id: 'warrior_battle_cry', name: 'Battle Cry', classIds: ['warrior'], levelRequired: 10, description: 'Let out a battle cry, increasing attack power by 30% for 3 rounds.', resourceType: 'cooldown', manaCost: 0, cooldownRounds: 5, effect: 'buff', buffStat: 'attack', buffPercent: 0.30, target: 'self', scalingFactor: 0, scalingAttr: '', basePower: 0, duration: 3, hitCount: 0, ignoresDefense: false },
-  { id: 'warrior_cleave', name: 'Cleave', classIds: ['warrior'], levelRequired: 15, description: 'Swing your weapon in a wide arc, hitting all enemies for 80% damage.', resourceType: 'cooldown', manaCost: 0, cooldownRounds: 4, effect: 'damage', buffStat: '', buffPercent: 0, target: 'all_enemies', scalingFactor: 0.8, scalingAttr: 'STR', basePower: 2, duration: 0, hitCount: 0, ignoresDefense: false },
-  { id: 'warrior_berserker_rage', name: 'Berserker Rage', classIds: ['warrior'], levelRequired: 20, description: 'Enter a berserker rage: +50% attack but -25% defense for 3 rounds.', resourceType: 'cooldown', manaCost: 0, cooldownRounds: 6, effect: 'buff', buffStat: 'attack', buffPercent: 0.50, target: 'self', scalingFactor: 0, scalingAttr: '', basePower: 0, duration: 3, hitCount: 0, ignoresDefense: false },
-  // Rogue
-  { id: 'rogue_backstab', name: 'Backstab', classIds: ['rogue'], levelRequired: 1, description: 'Strike from the shadows for 200% DEX-scaled damage.', resourceType: 'cooldown', manaCost: 0, cooldownRounds: 3, effect: 'damage', buffStat: '', buffPercent: 0, target: 'enemy', scalingFactor: 2.0, scalingAttr: 'DEX', basePower: 4, duration: 0, hitCount: 0, ignoresDefense: false },
-  { id: 'rogue_poison_strike', name: 'Poison Strike', classIds: ['rogue'], levelRequired: 5, description: 'Coat your blade with poison. Target takes damage each round for 3 rounds.', resourceType: 'cooldown', manaCost: 0, cooldownRounds: 4, effect: 'dot', buffStat: '', buffPercent: 0, target: 'enemy', scalingFactor: 0.5, scalingAttr: 'DEX', basePower: 3, duration: 3, hitCount: 0, ignoresDefense: false },
-  { id: 'rogue_evasion', name: 'Evasion', classIds: ['rogue'], levelRequired: 10, description: 'Heighten your reflexes, gaining +75% dodge chance for 2 rounds.', resourceType: 'cooldown', manaCost: 0, cooldownRounds: 5, effect: 'buff', buffStat: 'dodge', buffPercent: 0.75, target: 'self', scalingFactor: 0, scalingAttr: '', basePower: 0, duration: 2, hitCount: 0, ignoresDefense: false },
-  { id: 'rogue_shadow_strike', name: 'Shadow Strike', classIds: ['rogue'], levelRequired: 15, description: "Strike from the shadows, ignoring the target's armor.", resourceType: 'cooldown', manaCost: 0, cooldownRounds: 5, effect: 'damage', buffStat: '', buffPercent: 0, target: 'enemy', scalingFactor: 1.5, scalingAttr: 'DEX', basePower: 5, duration: 0, hitCount: 0, ignoresDefense: true },
-  { id: 'rogue_flurry', name: 'Flurry', classIds: ['rogue'], levelRequired: 20, description: 'Unleash a flurry of 3 rapid strikes, each at 60% damage.', resourceType: 'cooldown', manaCost: 0, cooldownRounds: 6, effect: 'damage', buffStat: '', buffPercent: 0, target: 'enemy', scalingFactor: 0.6, scalingAttr: 'DEX', basePower: 2, duration: 0, hitCount: 3, ignoresDefense: false },
-  // Mage (class id "wizard" aliases to mage)
-  { id: 'mage_fireball', name: 'Fireball', classIds: ['mage'], levelRequired: 1, description: 'Hurl a ball of fire at the target.', resourceType: 'mana', manaCost: 8, cooldownRounds: 0, effect: 'damage', buffStat: '', buffPercent: 0, target: 'enemy', scalingFactor: 1.5, scalingAttr: 'INT', basePower: 6, duration: 0, hitCount: 0, ignoresDefense: false },
-  { id: 'mage_frost_shield', name: 'Frost Shield', classIds: ['mage'], levelRequired: 1, description: 'Surround yourself with a shield of ice, increasing defense by 50% for 2 rounds.', resourceType: 'mana', manaCost: 6, cooldownRounds: 0, effect: 'buff', buffStat: 'defense', buffPercent: 0.50, target: 'self', scalingFactor: 0, scalingAttr: '', basePower: 0, duration: 2, hitCount: 0, ignoresDefense: false },
-  { id: 'mage_lightning_bolt', name: 'Lightning Bolt', classIds: ['mage'], levelRequired: 5, description: 'Call down a bolt of lightning that ignores armor.', resourceType: 'mana', manaCost: 15, cooldownRounds: 0, effect: 'damage', buffStat: '', buffPercent: 0, target: 'enemy', scalingFactor: 2.0, scalingAttr: 'INT', basePower: 10, duration: 0, hitCount: 0, ignoresDefense: true },
-  { id: 'mage_arcane_burst', name: 'Arcane Burst', classIds: ['mage'], levelRequired: 10, description: 'Release a burst of arcane energy, damaging all enemies.', resourceType: 'mana', manaCost: 20, cooldownRounds: 0, effect: 'damage', buffStat: '', buffPercent: 0, target: 'all_enemies', scalingFactor: 1.2, scalingAttr: 'INT', basePower: 5, duration: 0, hitCount: 0, ignoresDefense: false },
-  { id: 'mage_mana_shield', name: 'Mana Shield', classIds: ['mage'], levelRequired: 15, description: 'Create a shield that absorbs damage by consuming mana.', resourceType: 'mana', manaCost: 12, cooldownRounds: 0, effect: 'buff', buffStat: 'mana_shield', buffPercent: 0, target: 'self', scalingFactor: 2.0, scalingAttr: 'INT', basePower: 20, duration: 3, hitCount: 0, ignoresDefense: false },
+  kitSkill('warrior_brace', 'Brace', 'warrior', 1, 'brace', true, true, 0, 0,
+    'Once a fight. The next hit on you is halved. You still swing.'),
+  kitSkill('warrior_slam', 'Slam', 'warrior', 4, 'slam', false, false, 4, 1.4,
+    'A heavy swing, 1.40×. Replaces your swing this round.'),
+  kitSkill('warrior_stand', 'Stand', 'warrior', 8, 'stand', false, true, 0, 0,
+    'Once a fight, for two rounds hits aimed at others hit you.'),
+
+  kitSkill('rogue_slip', 'Slip', 'rogue', 1, 'slip', false, true, 0, 0,
+    'Once a fight. Drop the fight and take one exit.'),
+  kitSkill('rogue_nick', 'Nick', 'rogue', 4, 'nick', false, false, 3, 0.55,
+    'Extra 0.55× swing on top of your cadence. Replaces the autoattack this round.'),
+  kitSkill('rogue_smoke', 'Smoke', 'rogue', 8, 'smoke', false, true, 0, 0,
+    'Once a fight. The target misses their next swing.'),
+
+  kitSkill('mage_inscribe', 'Inscribe', 'mage', 1, 'inscribe', false, false, 4, 0,
+    'Mark them. 4 a round for 3 rounds. Refresh, no stack. Costs no mana.'),
+  kitSkill('mage_sear', 'Sear', 'mage', 4, 'sear', false, false, 4, 1.8,
+    'A cast at 1.80×. No burn. Replaces your swing this round.'),
+  kitSkill('mage_glyph', 'Glyph', 'mage', 8, 'glyph', false, true, 0, 0,
+    'Once a fight. The next hit on you is reduced by 4.'),
+
+  kitSkill('hitch_pin', 'Pin', 'hitch', 1, 'pin', true, true, 0, 0,
+    'Once a fight. Their next leave is cancelled. You still swing.'),
+  kitSkill('hitch_hobble', 'Hobble', 'hitch', 4, 'hobble', false, false, 4, 0.8,
+    'Their hits deal 0.80× for two rounds.'),
+  kitSkill('hitch_reel', 'Reel', 'hitch', 8, 'reel', false, true, 0, 0,
+    'Once a fight. If they left, pull them one room back and resume the fight.'),
+
+  kitSkill('rigger_bolt', 'Bolt', 'rigger', 1, 'bolt', false, true, 0, 0,
+    'Once a fight. Spend your swing. The next hit still lands, and the attacker takes it back.'),
+  kitSkill('rigger_rig', 'Rig', 'rigger', 1, 'rig', false, true, 0, 0.5,
+    'Once a fight. Drop a turret. It hits twice at 0.50×, then falls apart.'),
+  kitSkill('rigger_overload', 'Overload', 'rigger', 6, 'overload', false, true, 0, 0.8,
+    'Once a fight, while the turret is up. Its remaining hits deal 0.80×.'),
+
   // Cleric
   { id: 'cleric_heal', name: 'Heal', classIds: ['cleric'], levelRequired: 1, description: 'Channel divine energy to heal yourself.', resourceType: 'mana', manaCost: 8, cooldownRounds: 0, effect: 'heal', buffStat: '', buffPercent: 0, target: 'self', scalingFactor: 1.5, scalingAttr: 'WIS', basePower: 8, duration: 0, hitCount: 0, ignoresDefense: false },
   { id: 'cleric_holy_strike', name: 'Holy Strike', classIds: ['cleric'], levelRequired: 1, description: 'Strike with holy power, dealing damage and healing yourself slightly.', resourceType: 'mana', manaCost: 6, cooldownRounds: 0, effect: 'damage', buffStat: '', buffPercent: 0, target: 'enemy', scalingFactor: 1.0, scalingAttr: 'WIS', basePower: 4, duration: 0, hitCount: 0, ignoresDefense: false, secondaryEffect: 'heal' },
@@ -262,15 +340,61 @@ export const SKILL_CATALOG = [
   { id: 'druid_barkskin', name: 'Barkskin', classIds: ['druid'], levelRequired: 15, description: 'Coat yourself in bark, increasing defense by 60% for 3 rounds.', resourceType: 'mana', manaCost: 12, cooldownRounds: 0, effect: 'buff', buffStat: 'defense', buffPercent: 0.60, target: 'self', scalingFactor: 0, scalingAttr: '', basePower: 0, duration: 3, hitCount: 0, ignoresDefense: false },
 ];
 
-const SKILL_BY_ID = Object.fromEntries(SKILL_CATALOG.map((s) => [s.id, s]));
+/**
+ * Old warrior/rogue/mage seed. Kept so a saved hotbar id still shows a name
+ * and icon. skillsForClass never returns these for a kit class.
+ */
+const LEGACY_SKILL_CATALOG = [
+  { id: 'warrior_power_strike', name: 'Power Strike', classIds: ['warrior'], levelRequired: 1, description: 'A powerful strike dealing 150% weapon damage.', resourceType: 'cooldown', manaCost: 0, cooldownRounds: 3, effect: 'damage', buffStat: '', buffPercent: 0, target: 'enemy', scalingFactor: 1.5, scalingAttr: 'STR', basePower: 3, duration: 0, hitCount: 0, ignoresDefense: false },
+  { id: 'warrior_shield_bash', name: 'Shield Bash', classIds: ['warrior'], levelRequired: 5, description: 'Bash the target with your shield, dealing damage and stunning for 1 round.', resourceType: 'cooldown', manaCost: 0, cooldownRounds: 4, effect: 'damage', buffStat: 'stun', buffPercent: 0, target: 'enemy', scalingFactor: 1.0, scalingAttr: 'STR', basePower: 2, duration: 1, hitCount: 0, ignoresDefense: false },
+  { id: 'warrior_battle_cry', name: 'Battle Cry', classIds: ['warrior'], levelRequired: 10, description: 'Let out a battle cry, increasing attack power by 30% for 3 rounds.', resourceType: 'cooldown', manaCost: 0, cooldownRounds: 5, effect: 'buff', buffStat: 'attack', buffPercent: 0.30, target: 'self', scalingFactor: 0, scalingAttr: '', basePower: 0, duration: 3, hitCount: 0, ignoresDefense: false },
+  { id: 'warrior_cleave', name: 'Cleave', classIds: ['warrior'], levelRequired: 15, description: 'Swing your weapon in a wide arc, hitting all enemies for 80% damage.', resourceType: 'cooldown', manaCost: 0, cooldownRounds: 4, effect: 'damage', buffStat: '', buffPercent: 0, target: 'all_enemies', scalingFactor: 0.8, scalingAttr: 'STR', basePower: 2, duration: 0, hitCount: 0, ignoresDefense: false },
+  { id: 'warrior_berserker_rage', name: 'Berserker Rage', classIds: ['warrior'], levelRequired: 20, description: 'Enter a berserker rage: +50% attack but -25% defense for 3 rounds.', resourceType: 'cooldown', manaCost: 0, cooldownRounds: 6, effect: 'buff', buffStat: 'attack', buffPercent: 0.50, target: 'self', scalingFactor: 0, scalingAttr: '', basePower: 0, duration: 3, hitCount: 0, ignoresDefense: false },
+  { id: 'rogue_backstab', name: 'Backstab', classIds: ['rogue'], levelRequired: 1, description: 'Strike from the shadows for 200% DEX-scaled damage.', resourceType: 'cooldown', manaCost: 0, cooldownRounds: 3, effect: 'damage', buffStat: '', buffPercent: 0, target: 'enemy', scalingFactor: 2.0, scalingAttr: 'DEX', basePower: 4, duration: 0, hitCount: 0, ignoresDefense: false },
+  { id: 'rogue_poison_strike', name: 'Poison Strike', classIds: ['rogue'], levelRequired: 5, description: 'Coat your blade with poison. Target takes damage each round for 3 rounds.', resourceType: 'cooldown', manaCost: 0, cooldownRounds: 4, effect: 'dot', buffStat: '', buffPercent: 0, target: 'enemy', scalingFactor: 0.5, scalingAttr: 'DEX', basePower: 3, duration: 3, hitCount: 0, ignoresDefense: false },
+  { id: 'rogue_evasion', name: 'Evasion', classIds: ['rogue'], levelRequired: 10, description: 'Heighten your reflexes, gaining +75% dodge chance for 2 rounds.', resourceType: 'cooldown', manaCost: 0, cooldownRounds: 5, effect: 'buff', buffStat: 'dodge', buffPercent: 0.75, target: 'self', scalingFactor: 0, scalingAttr: '', basePower: 0, duration: 2, hitCount: 0, ignoresDefense: false },
+  { id: 'rogue_shadow_strike', name: 'Shadow Strike', classIds: ['rogue'], levelRequired: 15, description: "Strike from the shadows, ignoring the target's armor.", resourceType: 'cooldown', manaCost: 0, cooldownRounds: 5, effect: 'damage', buffStat: '', buffPercent: 0, target: 'enemy', scalingFactor: 1.5, scalingAttr: 'DEX', basePower: 5, duration: 0, hitCount: 0, ignoresDefense: true },
+  { id: 'rogue_flurry', name: 'Flurry', classIds: ['rogue'], levelRequired: 20, description: 'Unleash a flurry of 3 rapid strikes, each at 60% damage.', resourceType: 'cooldown', manaCost: 0, cooldownRounds: 6, effect: 'damage', buffStat: '', buffPercent: 0, target: 'enemy', scalingFactor: 0.6, scalingAttr: 'DEX', basePower: 2, duration: 0, hitCount: 3, ignoresDefense: false },
+  { id: 'mage_fireball', name: 'Fireball', classIds: ['mage'], levelRequired: 1, description: 'Hurl a ball of fire at the target.', resourceType: 'mana', manaCost: 8, cooldownRounds: 0, effect: 'damage', buffStat: '', buffPercent: 0, target: 'enemy', scalingFactor: 1.5, scalingAttr: 'INT', basePower: 6, duration: 0, hitCount: 0, ignoresDefense: false },
+  { id: 'mage_frost_shield', name: 'Frost Shield', classIds: ['mage'], levelRequired: 1, description: 'Surround yourself with a shield of ice, increasing defense by 50% for 2 rounds.', resourceType: 'mana', manaCost: 6, cooldownRounds: 0, effect: 'buff', buffStat: 'defense', buffPercent: 0.50, target: 'self', scalingFactor: 0, scalingAttr: '', basePower: 0, duration: 2, hitCount: 0, ignoresDefense: false },
+  { id: 'mage_lightning_bolt', name: 'Lightning Bolt', classIds: ['mage'], levelRequired: 5, description: 'Call down a bolt of lightning that ignores armor.', resourceType: 'mana', manaCost: 15, cooldownRounds: 0, effect: 'damage', buffStat: '', buffPercent: 0, target: 'enemy', scalingFactor: 2.0, scalingAttr: 'INT', basePower: 10, duration: 0, hitCount: 0, ignoresDefense: true },
+  { id: 'mage_arcane_burst', name: 'Arcane Burst', classIds: ['mage'], levelRequired: 10, description: 'Release a burst of arcane energy, damaging all enemies.', resourceType: 'mana', manaCost: 20, cooldownRounds: 0, effect: 'damage', buffStat: '', buffPercent: 0, target: 'all_enemies', scalingFactor: 1.2, scalingAttr: 'INT', basePower: 5, duration: 0, hitCount: 0, ignoresDefense: false },
+  { id: 'mage_mana_shield', name: 'Mana Shield', classIds: ['mage'], levelRequired: 15, description: 'Create a shield that absorbs damage by consuming mana.', resourceType: 'mana', manaCost: 12, cooldownRounds: 0, effect: 'buff', buffStat: 'mana_shield', buffPercent: 0, target: 'self', scalingFactor: 2.0, scalingAttr: 'INT', basePower: 20, duration: 3, hitCount: 0, ignoresDefense: false },
+];
 
-const CASTER_CLASS_IDS = new Set(['mage', 'cleric', 'druid']);
+const SKILL_BY_ID = Object.fromEntries(
+  [...SKILL_CATALOG, ...LEGACY_SKILL_CATALOG].map((s) => [s.id, s])
+);
 
-/** wizard (entity class) → mage (skill classIds). */
+/** Signed classes. Matches pkg/entities/skills.IsKitClass. */
+const KIT_CLASS_IDS = new Set(['warrior', 'rogue', 'mage', 'hitch', 'rigger']);
+/** HotbarCap in pkg/entities/skills/classkit.go. */
+const KIT_HOTBAR_CAP = 4;
+const CASTER_CLASS_IDS = new Set(['cleric', 'druid']);
+
+/** Matches pkg/entities/skills.normalizeClassID. */
 export function normalizeClassId(classId) {
   const lower = String(classId || '').trim().toLowerCase();
-  if (lower === 'wizard') return 'mage';
-  return lower;
+  switch (lower) {
+    case 'wizard':
+    case 'mage':
+    case 'runehand':
+    case 'rune_hand':
+    case 'rune hand':
+      return 'mage';
+    case 'rogue':
+    case 'alley':
+      return 'rogue';
+    case 'warrior':
+    case 'fenwatch':
+      return 'warrior';
+    case 'hitch':
+      return 'hitch';
+    case 'rigger':
+      return 'rigger';
+    default:
+      return lower;
+  }
 }
 
 export function characterClassId(character) {
@@ -280,24 +404,35 @@ export function characterClassId(character) {
   return String(c);
 }
 
+function findSkillByName(lower) {
+  return (
+    SKILL_CATALOG.find((s) => s.name.toLowerCase() === lower) ||
+    LEGACY_SKILL_CATALOG.find((s) => s.name.toLowerCase() === lower) ||
+    null
+  );
+}
+
 export function skillById(idOrName) {
   const raw = String(idOrName || '').trim();
   if (!raw) return null;
   if (SKILL_BY_ID[raw]) return SKILL_BY_ID[raw];
   const lower = raw.toLowerCase();
   if (SKILL_BY_ID[lower]) return SKILL_BY_ID[lower];
-  return SKILL_CATALOG.find((s) => s.name.toLowerCase() === lower) || null;
+  return findSkillByName(lower);
 }
 
 export function skillsForClass(classId) {
   const id = normalizeClassId(classId);
   if (!id) return [];
-  return SKILL_CATALOG.filter((s) => (s.classIds || []).includes(id));
+  const list = SKILL_CATALOG.filter((s) => (s.classIds || []).includes(id));
+  if (KIT_CLASS_IDS.has(id)) return list.filter((s) => s.kit);
+  return list;
 }
 
-/** Mirrors pkg/entities/skills.MaxSkillSlots. */
+/** Mirrors pkg/entities/skills.MaxSkillSlots. Kit classes are always HotbarCap. */
 export function maxSkillSlots(classId, level) {
   const id = normalizeClassId(classId);
+  if (KIT_CLASS_IDS.has(id)) return KIT_HOTBAR_CAP;
   const lvl = Number(level) || 0;
   if (CASTER_CLASS_IDS.has(id)) {
     if (lvl >= 30) return 4;
@@ -316,6 +451,7 @@ export function formatSkillCost(skill) {
     const cost = Number(skill.manaCost) || 0;
     return `${cost} mana`;
   }
+  if (skill.oncePerFight) return 'once / fight';
   const cd = Number(skill.cooldownRounds) || 0;
   return cd === 1 ? '1 round CD' : `${cd} round CD`;
 }
@@ -330,7 +466,10 @@ export function formatSkillEffects(skill) {
   const target = String(skill.target || '');
   const attr = skill.scalingAttr ? String(skill.scalingAttr) : '';
 
-  if (effect === 'damage' && factor > 0) {
+  if (skill.kit && Number(skill.swingMult) > 0) {
+    chips.push(`${Number(skill.swingMult).toFixed(2)}× swing`);
+  }
+  if (effect === 'damage' && factor > 0 && !skill.kit) {
     chips.push(`${Math.round(factor * 100)}%${attr ? ` ${attr}` : ''} dmg`);
   }
   if (effect === 'heal') {
