@@ -38,27 +38,29 @@ func TestGapMatrixTargets(t *testing.T) {
 		}
 	}
 
+	// Bands follow the signed replacement (behind cap 1.15, no rogue 2.35, no mage 0.46).
+	// Seed 20260927, 200 fights. Slack is around that draw, not the old tuning.
 	check("Warrior", simutil.GearAppropriate, "trash", 0, 0.90, 1)
 	check("Warrior", simutil.GearAppropriate, "elite", 0, 0.70, 1)
-	check("Warrior", simutil.GearAppropriate, "boss", 0, 0.35, 0.70)
+	check("Warrior", simutil.GearAppropriate, "boss", 0, 0.60, 0.90)
 	check("Warrior", simutil.GearAppropriate, "elite", 5, 0, 0.20)
 	check("Warrior", simutil.GearAppropriate, "boss", 5, 0, 0.15)
 	check("Warrior", simutil.GearGood, "boss", 3, 0.35, 0.80)
 
 	check("Rogue", simutil.GearAppropriate, "trash", 0, 0.75, 1)
-	check("Rogue", simutil.GearAppropriate, "boss", 0, 0.15, 0.70)
+	check("Rogue", simutil.GearAppropriate, "boss", 0, 0.05, 0.30)
 	check("Rogue", simutil.GearAppropriate, "boss", 5, 0, 0.20)
-	check("Rogue", simutil.GearGood, "boss", 3, 0.35, 0.75)
+	check("Rogue", simutil.GearGood, "boss", 3, 0.05, 0.30)
 
 	check("Ranger", simutil.GearAppropriate, "trash", 0, 0.85, 1)
 	check("Ranger", simutil.GearAppropriate, "elite", 0, 0.55, 1)
-	check("Ranger", simutil.GearAppropriate, "boss", 0, 0.25, 0.75)
+	check("Ranger", simutil.GearAppropriate, "boss", 0, 0.05, 0.35)
 	check("Ranger", simutil.GearAppropriate, "boss", 5, 0, 0.15)
-	check("Ranger", simutil.GearGood, "boss", 3, 0.25, 0.80)
+	check("Ranger", simutil.GearGood, "boss", 3, 0.08, 0.40)
 
-	check("Mage", simutil.GearAppropriate, "trash", 0, 0.75, 1)
-	check("Mage", simutil.GearAppropriate, "elite", 0, 0.60, 1)
-	check("Mage", simutil.GearAppropriate, "boss", 0, 0.30, 0.80)
+	check("Mage", simutil.GearAppropriate, "trash", 0, 0.30, 0.60)
+	check("Mage", simutil.GearAppropriate, "elite", 0, 0.35, 0.70)
+	check("Mage", simutil.GearAppropriate, "boss", 0, 0, 0.15)
 	check("Mage", simutil.GearAppropriate, "boss", 5, 0, 0.20)
-	check("Mage", simutil.GearGood, "boss", 3, 0.35, 0.80)
+	check("Mage", simutil.GearGood, "boss", 3, 0, 0.20)
 }

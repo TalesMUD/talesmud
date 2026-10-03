@@ -131,8 +131,8 @@ One 24-iteration run per cell (player level 10). Win% moves several points betwe
 `class_balance` in `config/combat_balance.yaml` scales damage after `level_gap` and before a crit. `behind_dealt` applies only when that class is the lower level, so an even boss and a fight three levels up can be tuned apart. The scaled boss body in `CreateScaledEnemy` is `220 + 23*level` hit points. Content bosses still use `CreateEnemy` and the duration bands.
 
 - Warrior even-fight damage is unchanged, so at-level trash duration stays in the old windows. The thicker boss is what pulls an appropriate-gear at-level boss into the 50–65% band. `behind_dealt` 1.20 keeps a good-gear boss at +3 near 60%.
-- Rogue even-fight damage is 1.35×. Uphill (`behind_dealt` 2.35) is what moves the good-gear +3 boss to about 50%. Appropriate-gear +5 stays at 0%.
-- Mage damage dealt is 2.65× and damage taken is 0.46×. Cloth still ends those wins on low HP. Trash at gap 0 is a clear. Elite and boss at gap 0, and a good-gear boss at +3, land in the same bands as the melee classes.
+- Class rows were replaced, not stacked. Fenwatch (warrior) 1.00 dealt / 0.90 taken, Alley (rogue, and ranger/hunter weapons) 0.55 dealt × 2 swings / 1.15 taken, Rune Hand (mage) 1.40 dealt / 1.25 taken, Hitch 0.90 dealt / 1.05 taken. `behind_dealt` is capped at 1.15 for every class. The old rogue 2.35 and mage 0.46 taken are gone.
+- Signatures: Brace (Fenwatch, once, halves the next hit), Slip (Alley, once, the next swing misses), Inscribe (Rune Hand basic, 4/round × 3, refresh, no stack; basic costs 0 mana), Pin (Hitch, once, cancels the next leave attempt). No new trash flee table.
 - Ranger damage dealt is 1.26× so an at-level boss is no longer a one-sided loss. Content boss fights still last at least 12 rounds.
 - Appropriate-gear elites and bosses at +5 stay under 15%.
 

@@ -117,14 +117,20 @@ type CombatantRef struct {
 
 	// On-hit weapon proc (snapshotted from equipped main-hand at combat start).
 	// Content-driven: engine applies generically; game-set names/numbers live in item attrs / Lua.
-	OnHitScriptID string    `json:"onHitScriptId,omitempty"`
-	OnHitDot      OnHitDot  `json:"onHitDot,omitempty"`
+	OnHitScriptID string   `json:"onHitScriptId,omitempty"`
+	OnHitDot      OnHitDot `json:"onHitDot,omitempty"`
 
 	// Skill cooldowns (skillID → rounds remaining)
 	SkillCooldowns map[string]int `json:"skillCooldowns,omitempty"`
 
 	// Equipped skills (copied from character at combat start)
 	EquippedSkills []string `json:"equippedSkills,omitempty"`
+
+	// Class signatures. Brace and Slip are once per fight. PinLeft arms Pinned on the target.
+	BraceLeft int  `json:"braceLeft,omitempty"`
+	SlipLeft  int  `json:"slipLeft,omitempty"`
+	PinLeft   int  `json:"pinLeft,omitempty"`
+	Pinned    bool `json:"pinned,omitempty"`
 
 	// Auto-attack system
 	AutoAttackTargetID string       `json:"autoAttackTargetId,omitempty"` // Persistent target for auto-attacks

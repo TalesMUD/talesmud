@@ -96,27 +96,34 @@ reward_scale:
   first_kill_bonus: 0.50
 
 # Per-class damage after defense and level_gap, before crit.
-# damage_dealt multiplies hits this class lands. damage_taken multiplies hits
-# this class receives. behind_dealt multiplies damage_dealt again when this
-# class is the lower level. 1 is unchanged. Class id "wizard" uses the mage row.
-# Tuned so the level-10 gap table shares one band: at-level bosses ~50–65%,
-# good-gear bosses at +3 ~50%, cloth included. Warrior trash duration stays
-# inside the existing at-level windows.
+# REPLACES the previous rows. Do not stack the old rogue 2.35 / mage 0.46 on top.
+# damage_dealt multiplies each swing. damage_taken multiplies hits received.
+# behind_dealt is capped at 1.15 for every class. swings is basic attacks per action.
+# wizard reads as mage. ranger and hunter read as rogue (Alley weapons, not classes).
+# HP percents are create-time only (warrior +20%, rogue -15%, mage -25%, hitch +5%).
+# Signatures are not damage rows: Brace, Slip, Inscribe (4/round x3), Pin.
+# Rune Hand basic attacks cost 0 mana.
 class_balance:
   warrior:
-    damage_dealt: 1
-    damage_taken: 1
-    behind_dealt: 1.20
+    damage_dealt: 1.00
+    damage_taken: 0.90
+    behind_dealt: 1.15
+    swings: 1
   rogue:
-    damage_dealt: 1.35
-    damage_taken: 1
-    behind_dealt: 2.35
-  ranger:
-    damage_dealt: 1.26
-    damage_taken: 1
+    damage_dealt: 0.55
+    damage_taken: 1.15
+    behind_dealt: 1.15
+    swings: 2
   mage:
-    damage_dealt: 2.65
-    damage_taken: 0.46
+    damage_dealt: 1.40
+    damage_taken: 1.25
+    behind_dealt: 1.15
+    swings: 1
+  hitch:
+    damage_dealt: 0.90
+    damage_taken: 1.05
+    behind_dealt: 1.15
+    swings: 1
 
 # Boss wind-up and late-fight spike. telegraph_turns is how many of this
 # enemy's actions are a warning before the hit. telegraph_ms is the pulse

@@ -9,7 +9,7 @@ type Class struct {
 	//Spells Spells[]
 }
 
-//ArmorType type
+// ArmorType type
 type ArmorType string
 
 // armor types
@@ -29,12 +29,12 @@ const (
 	CombatTypeMagic            = "Magic"
 )
 
-//TODO: Move this to Database or YML files
+// TODO: Move this to Database or YML files
 var (
 	ClassWarrior Class = Class{
 		ID:          "warrior",
-		Name:        "Warrior",
-		Description: "Strong plate wearing melee warrior",
+		Name:        "Fenwatch",
+		Description: "One swing, and you mean it. Extra health, hits land lighter. Brace once when a blow comes in.",
 		ArmorType:   ArmorTypePlate,
 		CombatType:  CombatTypeMelee,
 	}
@@ -54,16 +54,23 @@ var (
 	}
 	ClassRogue Class = Class{
 		ID:          "rogue",
-		Name:        "Rogue",
-		Description: "Agile skirmisher who relies on speed, precision and tricks",
+		Name:        "Alley",
+		Description: "Two short swings, dagger or bow. Less health, you feel hits more. Slip the first one.",
 		ArmorType:   ArmorTypeLeather,
 		CombatType:  CombatTypeMelee,
 	}
 	ClassWizard Class = Class{
 		ID:          "wizard",
-		Name:        "Wizard",
-		Description: "Master of the elements wielder of magic spells",
+		Name:        "Rune Hand",
+		Description: "One heavy swing, then the rune burns for three rounds. Thin on health. The basic costs no mana.",
 		ArmorType:   ArmorTypeCloth,
 		CombatType:  CombatTypeMagic,
+	}
+	ClassHitch Class = Class{
+		ID:          "hitch",
+		Name:        "Hitch",
+		Description: "One careful swing. A bit more health. Pin once: the next time they try to leave, they stay.",
+		ArmorType:   ArmorTypeLeather,
+		CombatType:  CombatTypeMelee,
 	}
 )

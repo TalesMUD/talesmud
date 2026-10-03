@@ -13,7 +13,7 @@ import (
 
 //--- Interface Definitions
 
-//CharactersService delives logical functions on top of the charactersheets Repo
+// CharactersService delives logical functions on top of the charactersheets Repo
 type CharactersService interface {
 	r.CharactersRepository
 
@@ -36,7 +36,7 @@ type charactersService struct {
 	locks         sync.Map
 }
 
-//NewCharactersService creates a new item service
+// NewCharactersService creates a new item service
 func NewCharactersService(charactersRepo r.CharactersRepository, templatesRepo r.CharacterTemplatesRepository, settings ServerSettingsService, rooms RoomsService) CharactersService {
 	return &charactersService{
 		CharactersRepository: charactersRepo,
@@ -52,10 +52,14 @@ func (srv *charactersService) CreateNewCharacter(dto *dto.CreateCharacterDTO) (*
 		return nil, errors.New("character name already taken")
 	}
 
-	// get template from DB
-	template, err := srv.templatesRepo.FindByID(dto.TemplateID)
-	if err != nil {
-		return nil, fmt.Errorf("could not find template: %v", err)
+	// Signed roster first. DB is only a fallback for an older saved id.
+	template := characters.PresetByID(dto.TemplateID)
+	if template == nil {
+		var err error
+		template, err = srv.templatesRepo.FindByID(dto.TemplateID)
+		if err != nil || template == nil {
+			return nil, fmt.Errorf("could not find template: %v", err)
+		}
 	}
 
 	character := characterFromTemplate(template)
@@ -94,7 +98,7 @@ func characterFromTemplate(template *characters.CharacterTemplate) *characters.C
 	return ch
 }
 
-//IsCharacterNameTaken ...
+// IsCharacterNameTaken ...
 func (srv *charactersService) IsCharacterNameTaken(name string) bool {
 	// check if charactername already exists
 	if chars, err := srv.FindByName(name); err == nil {
@@ -105,7 +109,7 @@ func (srv *charactersService) IsCharacterNameTaken(name string) bool {
 	return false
 }
 
-//Store ...
+// Store ...
 func (srv *charactersService) Store(character *characters.Character) (*characters.Character, error) {
 
 	// check if charactername already exists
@@ -138,10 +142,7 @@ func (srv *charactersService) Modify(id string, fn func(*characters.Character) e
 }
 
 func (srv *charactersService) GetCharacterTemplates() []*characters.CharacterTemplate {
-	templates, err := srv.templatesRepo.FindAll()
-	if err != nil {
-		log.WithError(err).Error("Failed to fetch character templates from DB")
-		return []*characters.CharacterTemplate{}
-	}
-	return templates
+	// Create screen is the signed four. Empty or stale DB rows must not put
+	// Warrior / Rogue / Mage / Ranger back under those names.
+	return characters.SystemCharacterTemplatePresets()
 }

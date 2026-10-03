@@ -1,149 +1,120 @@
 package characters
 
-import "github.com/talesmud/talesmud/pkg/entities/items"
+import (
+	"github.com/talesmud/talesmud/pkg/entities"
+	"github.com/talesmud/talesmud/pkg/entities/items"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/balance"
+)
 
-// SystemCharacterTemplatePresets returns a hardcoded list of templates that can be seeded into the database.
-// These are intended as "starter defaults" and can be modified after import.
+// Playable roster. HP uses balance.ScaleClassHP once off a shared base of 25.
+// Ranger and hunter are not classes here; Alley uses those weapons.
+const classHPBase int32 = 25
+
+func presetEntity(id string) *entities.Entity {
+	return &entities.Entity{ID: id}
+}
+
+// SystemCharacterTemplatePresets is the signed create roster: Fenwatch, Alley, Rune Hand, Hitch.
 func SystemCharacterTemplatePresets() []*CharacterTemplate {
+	fenHP := balance.ScaleClassHP("warrior", classHPBase)
+	alleyHP := balance.ScaleClassHP("rogue", classHPBase)
+	runeHP := balance.ScaleClassHP("wizard", classHPBase)
+	hitchHP := balance.ScaleClassHP("hitch", classHPBase)
 	return []*CharacterTemplate{
 		{
-			Entity:            nil, // assigned when stored
-			Name:              "Warrior",
-			Description:       "Frontline fighter with high durability",
-			Backstory:         "Trained for battle and hardened by countless skirmishes.",
-			OriginArea:        "Oldtown",
-			Archetype:         "warrior",
-			Race:              RaceHuman,
-			Class:             ClassWarrior,
-			Level:             1,
-			CurrentHitPoints:  25,
-			MaxHitPoints:      25,
-			Attributes:        createBaseAttributes(14, 7, 4, 5, 20),
+			Entity:           presetEntity("tpl-fenwatch"),
+			Name:             "Fenwatch",
+			Description:      "One swing, and you mean it. Extra health, hits land lighter. Brace once when a blow comes in.",
+			Backstory:        "You held a wet road until the wagons were through.",
+			OriginArea:       "Oldtown",
+			Archetype:        "fenwatch",
+			Race:             RaceHuman,
+			Class:            ClassWarrior,
+			Level:            1,
+			CurrentHitPoints: fenHP,
+			MaxHitPoints:     fenHP,
+			Attributes:       createBaseAttributes(14, 7, 4, 5, 20),
 			StartingItems: []StartingItem{
 				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Rusty Sword"},
 				{Slot: items.ItemSlotChest, ItemTemplateName: "Leather Armor"},
 			},
 			DefaultSkills: []string{"warrior_power_strike"},
-			Source:         "system",
+			Source:        "system",
 		},
 		{
-			Entity:            nil,
-			Name:              "Rogue",
-			Description:       "Agile skirmisher focused on dexterity and precision",
-			Backstory:         "Quick hands, quicker feet—surviving by wit and stealth.",
-			OriginArea:        "Dockside",
-			Archetype:         "rogue",
-			Race:              RaceHuman,
-			Class:             ClassRogue,
-			Level:             1,
-			CurrentHitPoints:  19,
-			MaxHitPoints:      19,
-			Attributes:        createBaseAttributes(10, 18, 6, 5, 11),
+			Entity:           presetEntity("tpl-alley"),
+			Name:             "Alley",
+			Description:      "Two short swings, dagger or bow. Less health, you feel hits more. Slip the first one.",
+			Backstory:        "You learned the lanes with a knife, and the tree line with a bow.",
+			OriginArea:       "Dockside",
+			Archetype:        "alley",
+			Race:             RaceHuman,
+			Class:            ClassRogue,
+			Level:            1,
+			CurrentHitPoints: alleyHP,
+			MaxHitPoints:     alleyHP,
+			Attributes:       createBaseAttributes(10, 18, 6, 5, 11),
 			StartingItems: []StartingItem{
 				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Worn Dagger"},
 				{Slot: items.ItemSlotChest, ItemTemplateName: "Leather Armor"},
 			},
 			DefaultSkills: []string{"rogue_backstab"},
-			Source:         "system",
+			Source:        "system",
 		},
 		{
-			Entity:            nil,
-			Name:              "Mage",
-			Description:       "Arcane spellcaster with high intelligence and wisdom",
-			Backstory:         "A student of forgotten tomes, seeking mastery of the arcane.",
-			OriginArea:        "Arcane Tower",
-			Archetype:         "mage",
-			Race:              RaceDwarf,
-			Class:             ClassWizard,
-			Level:             1,
-			CurrentHitPoints:  17,
-			MaxHitPoints:      17,
-			CurrentMana:       41,
-			MaxMana:           41, // 20 + (1*5) + (4*4) = 41 (INT=18, mod=4)
-			Attributes:        createBaseAttributes(4, 6, 18, 14, 8),
+			Entity:           presetEntity("tpl-runehand"),
+			Name:             "Rune Hand",
+			Description:      "One heavy swing, then the rune burns for three rounds. Thin on health. The basic costs no mana.",
+			Backstory:        "You scratch a mark and it keeps burning after the staff goes still.",
+			OriginArea:       "Arcane Tower",
+			Archetype:        "runehand",
+			Race:             RaceDwarf,
+			Class:            ClassWizard,
+			Level:            1,
+			CurrentHitPoints: runeHP,
+			MaxHitPoints:     runeHP,
+			CurrentMana:      41,
+			MaxMana:          41,
+			Attributes:       createBaseAttributes(4, 6, 18, 14, 8),
 			StartingItems: []StartingItem{
 				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Apprentice Staff"},
 				{Slot: items.ItemSlotChest, ItemTemplateName: "Cloth Robe"},
 			},
 			DefaultSkills: []string{"mage_fireball", "mage_frost_shield"},
-			Source:         "system",
+			Source:        "system",
 		},
 		{
-			Entity:            nil,
-			Name:              "Cleric",
-			Description:       "Supportive holy caster with strong wisdom and stamina",
-			Backstory:         "Bound by oath to heal the wounded and smite the wicked.",
-			OriginArea:        "Temple District",
-			Archetype:         "cleric",
-			Race:              RaceHuman,
-			Class: Class{
-				ID:          "cleric",
-				Name:        "Cleric",
-				Description: "Holy spellcaster and protector",
-				ArmorType:   ArmorTypeLeather,
-				CombatType:  CombatTypeMagic,
-			},
+			Entity:           presetEntity("tpl-hitch"),
+			Name:             "Hitch",
+			Description:      "One careful swing. A bit more health. Pin once: the next time they try to leave, they stay.",
+			Backstory:        "You set the snare and wait. When they turn to run, the line is already tight.",
+			OriginArea:       "Forest Edge",
+			Archetype:        "hitch",
+			Race:             RaceHuman,
+			Class:            ClassHitch,
 			Level:            1,
-			CurrentHitPoints: 22,
-			MaxHitPoints:     22,
-			CurrentMana:       25,
-			MaxMana:           25, // 20 + (1*5) + (0*4) = 25 (INT=10, mod=0)
-			Attributes:       createBaseAttributes(6, 7, 10, 18, 9),
+			CurrentHitPoints: hitchHP,
+			MaxHitPoints:     hitchHP,
+			Attributes:       createBaseAttributes(12, 12, 6, 8, 12),
 			StartingItems: []StartingItem{
-				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Simple Mace"},
-				{Slot: items.ItemSlotChest, ItemTemplateName: "Cloth Robe"},
-			},
-			DefaultSkills: []string{"cleric_heal", "cleric_holy_strike"},
-			Source:         "system",
-		},
-		{
-			Entity:            nil,
-			Name:              "Ranger",
-			Description:       "Ranged specialist with great mobility",
-			Backstory:         "A hunter of the wilds, reading tracks like an open book.",
-			OriginArea:        "Forest Edge",
-			Archetype:         "ranger",
-			Race:              RaceElve,
-			Class:             ClassRanger,
-			Level:             1,
-			CurrentHitPoints:  20,
-			MaxHitPoints:      20,
-			Attributes:        createBaseAttributes(8, 18, 6, 6, 12),
-			StartingItems: []StartingItem{
-				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Short Bow"},
+				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Worn Dagger"},
 				{Slot: items.ItemSlotChest, ItemTemplateName: "Leather Armor"},
 			},
-			DefaultSkills: []string{"ranger_aimed_shot"},
-			Source:         "system",
-		},
-		{
-			Entity:            nil,
-			Name:              "Druid",
-			Description:       "Nature caster balanced between wisdom and intellect",
-			Backstory:         "A guardian of the natural order, attuned to the spirits of the grove.",
-			OriginArea:        "Sacred Grove",
-			Archetype:         "druid",
-			Race:              RaceElve,
-			Class: Class{
-				ID:          "druid",
-				Name:        "Druid",
-				Description: "Nature spellcaster and shapeshifter",
-				ArmorType:   ArmorTypeLeather,
-				CombatType:  CombatTypeMagic,
-			},
-			Level:            1,
-			CurrentHitPoints: 20,
-			MaxHitPoints:     20,
-			CurrentMana:       33,
-			MaxMana:           33, // 20 + (1*5) + (2*4) = 33 (INT=14, mod=2)
-			Attributes:       createBaseAttributes(5, 8, 14, 18, 5),
-			StartingItems: []StartingItem{
-				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Wooden Staff"},
-				{Slot: items.ItemSlotChest, ItemTemplateName: "Cloth Robe"},
-			},
-			DefaultSkills: []string{"druid_wrath", "druid_rejuvenation"},
-			Source:         "system",
+			DefaultSkills: []string{},
+			Source:        "system",
 		},
 	}
 }
 
+// PresetByID finds a signed create template by its stable id.
+func PresetByID(id string) *CharacterTemplate {
+	if id == "" {
+		return nil
+	}
+	for _, preset := range SystemCharacterTemplatePresets() {
+		if preset != nil && preset.Entity != nil && preset.Entity.ID == id {
+			return preset
+		}
+	}
+	return nil
+}

@@ -21,37 +21,37 @@ import (
 
 // CombatConfig holds global combat configuration
 type CombatConfig struct {
-	TurnTimeoutSeconds    int     // Legacy absolute turn timeout (Default: 60); prefer DecisionWindowSeconds for player action wait
-	DecisionWindowSeconds int     // Player decision window before auto-attack (Default: 5)
-	TurnBeatMs            int     // Authored windup/beat before next turn may resolve (Default: 1000)
-	ReactionMs            int     // Post-resolve reaction pause (Default: 400)
-	AFKAutoFleeAfterTurns int     // Default: 3
-	DeathGoldLossPercent  float64 // Default: 0.10 (10%)
-	DeathRespawnHPPercent float64 // Default: 0.50 (50%)
-	FleeBaseChance        float64 // Default: 0.50 (50%)
-	FleeDEXBonus          float64 // Per DEX point bonus (Default: 0.02)
-	DefendBonusPercent    float64 // Default: 0.50 (50% defense boost)
-	CriticalHitChance     float64 // Default: 0.05 (5%)
-	CriticalHitMultiplier float64 // Default: 2.0
-	CombatTimeoutMinutes     int // Absolute max combat length (Default: 15)
-	IdleCombatTimeoutMinutes int // Soft release after no action (Default: 5)
+	TurnTimeoutSeconds       int     // Legacy absolute turn timeout (Default: 60); prefer DecisionWindowSeconds for player action wait
+	DecisionWindowSeconds    int     // Player decision window before auto-attack (Default: 5)
+	TurnBeatMs               int     // Authored windup/beat before next turn may resolve (Default: 1000)
+	ReactionMs               int     // Post-resolve reaction pause (Default: 400)
+	AFKAutoFleeAfterTurns    int     // Default: 3
+	DeathGoldLossPercent     float64 // Default: 0.10 (10%)
+	DeathRespawnHPPercent    float64 // Default: 0.50 (50%)
+	FleeBaseChance           float64 // Default: 0.50 (50%)
+	FleeDEXBonus             float64 // Per DEX point bonus (Default: 0.02)
+	DefendBonusPercent       float64 // Default: 0.50 (50% defense boost)
+	CriticalHitChance        float64 // Default: 0.05 (5%)
+	CriticalHitMultiplier    float64 // Default: 2.0
+	CombatTimeoutMinutes     int     // Absolute max combat length (Default: 15)
+	IdleCombatTimeoutMinutes int     // Soft release after no action (Default: 5)
 }
 
 // DefaultConfig returns the default combat configuration
 func DefaultConfig() *CombatConfig {
 	return &CombatConfig{
-		TurnTimeoutSeconds:    60,
-		DecisionWindowSeconds: 5,
-		TurnBeatMs:            1000,
-		ReactionMs:            400,
-		AFKAutoFleeAfterTurns: 3,
-		DeathGoldLossPercent:  0.10,
-		DeathRespawnHPPercent: 0.50,
-		FleeBaseChance:        0.50,
-		FleeDEXBonus:          0.02,
-		DefendBonusPercent:    0.50,
-		CriticalHitChance:     0.05,
-		CriticalHitMultiplier: 2.0,
+		TurnTimeoutSeconds:       60,
+		DecisionWindowSeconds:    5,
+		TurnBeatMs:               1000,
+		ReactionMs:               400,
+		AFKAutoFleeAfterTurns:    3,
+		DeathGoldLossPercent:     0.10,
+		DeathRespawnHPPercent:    0.50,
+		FleeBaseChance:           0.50,
+		FleeDEXBonus:             0.02,
+		DefendBonusPercent:       0.50,
+		CriticalHitChance:        0.05,
+		CriticalHitMultiplier:    2.0,
 		CombatTimeoutMinutes:     15,
 		IdleCombatTimeoutMinutes: 5,
 	}
@@ -128,6 +128,10 @@ func (e *Engine) CreateCombatantFromCharacter(char *characters.Character) combat
 		CurrentMana: char.CurrentMana,
 		ManaRegen:   char.CalculateManaRegen(),
 	}
+	brace, slip, pin := balance.SignatureCharges(char.Class.ID)
+	ref.BraceLeft = brace
+	ref.SlipLeft = slip
+	ref.PinLeft = pin
 	if len(char.EquippedSkills) > 0 {
 		ref.EquippedSkills = make([]string, len(char.EquippedSkills))
 		copy(ref.EquippedSkills, char.EquippedSkills)
@@ -327,6 +331,46 @@ type AttackResult struct {
 // ProcessAttack handles an attack from attacker to target
 func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targetID string) AttackResult {
 	attacker := instance.GetCombatantByID(attackerID)
+	if attacker == nil {
+		return AttackResult{Miss: true, Message: "Invalid attacker or target"}
+	}
+	e.armPin(instance, attacker, targetID)
+	swings := balance.ClassSwings(attacker.ClassID)
+	if swings < 1 {
+		swings = 1
+	}
+	var last AttackResult
+	var parts []string
+	var total int32
+	anyHit := false
+	for i := 0; i < swings; i++ {
+		last = e.processAttackSwing(instance, attackerID, targetID)
+		if last.Message != "" {
+			parts = append(parts, last.Message)
+		}
+		total += last.Damage
+		if last.Hit {
+			anyHit = true
+		}
+		if last.TargetDied {
+			break
+		}
+		target := instance.GetCombatantByID(targetID)
+		if target == nil || !target.IsAlive {
+			break
+		}
+	}
+	last.Damage = total
+	last.Hit = anyHit
+	last.Miss = !anyHit
+	if len(parts) > 0 {
+		last.Message = strings.Join(parts, " ")
+	}
+	return last
+}
+
+func (e *Engine) processAttackSwing(instance *combat.CombatInstance, attackerID, targetID string) AttackResult {
+	attacker := instance.GetCombatantByID(attackerID)
 	target := instance.GetCombatantByID(targetID)
 
 	if attacker == nil || target == nil {
@@ -339,6 +383,23 @@ func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targ
 
 	if !target.IsAlive {
 		return AttackResult{Miss: true, Message: "Target is already dead"}
+	}
+
+	// Alley Slip: once per fight, the next incoming swing misses.
+	if target.SlipLeft > 0 {
+		target.SlipLeft--
+		e.UpdateCombatant(instance, target)
+		slip := AttackResult{Miss: true, Message: "You slip the blow."}
+		instance.AddLogEntry(combat.CombatLogEntry{
+			ActorID:    attacker.ID,
+			ActorName:  attacker.Name,
+			Action:     combat.CombatActionAttack,
+			TargetID:   target.ID,
+			TargetName: target.Name,
+			Result:     "slipped",
+			Message:    slip.Message,
+		})
+		return slip
 	}
 
 	// Check dodge from status effects (e.g. Evasion)
@@ -406,6 +467,19 @@ func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targ
 	// Calculate damage
 	result.Damage = e.CalculateDamage(attacker, target, result.Critical)
 
+	// Fenwatch Brace: once per fight, the next landed blow is halved.
+	braced := false
+	if target.BraceLeft > 0 && result.Damage > 0 {
+		target.BraceLeft--
+		halved := int32(math.Round(float64(result.Damage) * 0.5))
+		if halved < 1 {
+			halved = 1
+		}
+		result.Damage = halved
+		braced = true
+		e.UpdateCombatant(instance, target)
+	}
+
 	// Mana shield absorption
 	if shield := hasManaShield(target); shield != nil && shield.Value > 0 {
 		absorbed := result.Damage
@@ -442,6 +516,9 @@ func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targ
 			attacker.Name, target.Name, result.Damage, roll, attacker.STRMod, toHit, targetAC)
 	}
 
+	if braced {
+		result.Message = "You brace. " + result.Message
+	}
 	if attacker.Enraged {
 		result.Message = "Enraged! " + result.Message
 	}
@@ -454,6 +531,10 @@ func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targ
 
 	// Content-authored weapon on-hit DoT (refresh duration; no stack spam).
 	if msg := e.applyWeaponOnHitDot(instance, attacker, target); msg != "" {
+		result.Message += " " + msg
+	}
+	// Rune Hand Inscribe: 4 per round for 3 rounds, refresh, no stack. Basic costs no mana.
+	if msg := e.applyInscribe(instance, attacker, target); msg != "" {
 		result.Message += " " + msg
 	}
 
@@ -638,6 +719,21 @@ func (e *Engine) ProcessFlee(instance *combat.CombatInstance, fleeingID string) 
 	fleeing := instance.GetCombatantByID(fleeingID)
 	if fleeing == nil {
 		return FleeResult{Success: false, Message: "Invalid combatant"}
+	}
+
+	// Hitch Pin cancels the next leave attempt. No new flee table; this only hooks the one that already exists.
+	if fleeing.Pinned {
+		fleeing.Pinned = false
+		e.UpdateCombatant(instance, fleeing)
+		result := FleeResult{Success: false, Message: "You hitch them. They stay."}
+		instance.AddLogEntry(combat.CombatLogEntry{
+			ActorID:   fleeing.ID,
+			ActorName: fleeing.Name,
+			Action:    combat.CombatActionFlee,
+			Result:    "hitched",
+			Message:   result.Message,
+		})
+		return result
 	}
 
 	// Calculate flee chance: base + DEX bonus
@@ -1048,6 +1144,54 @@ func attrInt32(v interface{}) int32 {
 }
 
 // applyWeaponOnHitDot applies a snapshotted on-hit DoT, refreshing duration on reapply.
+// ArmPin marks target so their next leave attempt is cancelled. Hitch only, once per fight.
+func (e *Engine) ArmPin(instance *combat.CombatInstance, hitchID, targetID string) bool {
+	if instance == nil {
+		return false
+	}
+	hitch := instance.GetCombatantByID(hitchID)
+	if hitch == nil || hitch.PinLeft <= 0 {
+		return false
+	}
+	e.armPin(instance, hitch, targetID)
+	return hitch.PinLeft <= 0 && instance.GetCombatantByID(targetID) != nil && instance.GetCombatantByID(targetID).Pinned
+}
+
+func (e *Engine) armPin(instance *combat.CombatInstance, hitch *combat.CombatantRef, targetID string) {
+	if hitch == nil || hitch.PinLeft <= 0 || targetID == "" || targetID == hitch.ID {
+		return
+	}
+	target := instance.GetCombatantByID(targetID)
+	if target == nil || !target.IsAlive {
+		return
+	}
+	hitch.PinLeft = 0
+	target.Pinned = true
+	e.UpdateCombatant(instance, hitch)
+	e.UpdateCombatant(instance, target)
+}
+
+func (e *Engine) applyInscribe(instance *combat.CombatInstance, attacker, target *combat.CombatantRef) string {
+	if e == nil || instance == nil || attacker == nil || target == nil || !target.IsAlive {
+		return ""
+	}
+	if !balance.IsRuneHand(attacker.ClassID) {
+		return ""
+	}
+	se := combat.StatusEffect{
+		ID:       uuid.New().String(),
+		SkillID:  "inscribe",
+		Name:     "Inscribe",
+		Type:     "dot",
+		Value:    4,
+		Duration: 3,
+		SourceID: attacker.ID,
+	}
+	e.applyStatusEffect(instance, target, se)
+	e.UpdateCombatant(instance, target)
+	return "You inscribe them. The rune burns (4/round, 3 rounds)."
+}
+
 func (e *Engine) applyWeaponOnHitDot(instance *combat.CombatInstance, attacker, target *combat.CombatantRef) string {
 	if e == nil || instance == nil || attacker == nil || target == nil || !target.IsAlive {
 		return ""
