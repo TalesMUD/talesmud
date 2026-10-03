@@ -113,23 +113,24 @@ func (c *YAMLCoords) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 // YAMLItem represents an item in YAML format
 type YAMLItem struct {
-	ID           string                 `yaml:"id"`
-	Name         string                 `yaml:"name"`
-	Description  string                 `yaml:"description"`
-	Detail       string                 `yaml:"detail"`
-	Type         string                 `yaml:"type"`
-	SubType      string                 `yaml:"subType"`
-	Slot         string                 `yaml:"slot"`
-	Quality      string                 `yaml:"quality"`
-	Level        int32                  `yaml:"level"`
-	BasePrice    int64                  `yaml:"basePrice"`
-	Stackable    bool                   `yaml:"stackable"`
-	MaxStack     int32                  `yaml:"maxStack"`
-	Consumable   bool                   `yaml:"consumable"`
-	CopyOnPickup bool                   `yaml:"copyOnPickup"`
-	Tags         []string               `yaml:"tags"`
-	Attributes   map[string]interface{} `yaml:"attributes"`
-	Properties   map[string]interface{} `yaml:"properties"`
+	ID            string                 `yaml:"id"`
+	Name          string                 `yaml:"name"`
+	Description   string                 `yaml:"description"`
+	Detail        string                 `yaml:"detail"`
+	Type          string                 `yaml:"type"`
+	SubType       string                 `yaml:"subType"`
+	Slot          string                 `yaml:"slot"`
+	Quality       string                 `yaml:"quality"`
+	Level         int32                  `yaml:"level"`
+	BasePrice     int64                  `yaml:"basePrice"`
+	Stackable     bool                   `yaml:"stackable"`
+	MaxStack      int32                  `yaml:"maxStack"`
+	Unique        bool                   `yaml:"unique"`
+	Consumable    bool                   `yaml:"consumable"`
+	CopyOnPickup  bool                   `yaml:"copyOnPickup"`
+	Tags          []string               `yaml:"tags"`
+	Attributes    map[string]interface{} `yaml:"attributes"`
+	Properties    map[string]interface{} `yaml:"properties"`
 	Meta          YAMLItemMeta           `yaml:"meta"`
 	OnUseScript   string                 `yaml:"onUseScript"`
 	OnUseScriptID string                 `yaml:"onUseScriptId"` // alias used by content packs

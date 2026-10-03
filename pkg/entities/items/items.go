@@ -124,6 +124,10 @@ type Item struct {
 	Stackable bool  `bson:"stackable,omitempty" json:"stackable,omitempty"`
 	Quantity  int32 `bson:"quantity,omitempty" json:"quantity,omitempty"`
 	MaxStack  int32 `bson:"maxStack,omitempty" json:"maxStack,omitempty"`
+	// Unique: a character may hold at most one of this template (quest trophies).
+	// Loot instances inherit the flag; pickup also checks the template so older
+	// copies created before the flag still refuse a second take.
+	Unique    bool  `bson:"unique,omitempty" json:"unique,omitempty"`
 	BasePrice int64 `bson:"basePrice,omitempty" json:"basePrice,omitempty"`
 
 	// Armor wear. Dying chips durability; repair restores it. Items are never deleted.
