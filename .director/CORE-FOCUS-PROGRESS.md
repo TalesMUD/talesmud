@@ -1,3 +1,31 @@
+## HK/S0 boss pass — The Hollow Knight (2026-10-03)
+
+- **No change — already in band.** No engine, client, or content lever. No `:8010` deploy. Door untouched. Live play client remains `?v=hotbarchar1`.
+- Engine code: `3704d0b` (`engine-june`). Content: `f7dabfa` (`talesmud-rpg-1` main) — ENM0009, LT0204, ITM0265 left as shipped.
+- Boss: ENM0009 The Hollow Knight, R0228, level 6, base 150/13/6, `difficulty: boss`. Named override in `config/combat_balance.yaml` bakes finals **HP 150 / ATK 11 / DEF 5** (`13*0.85` truncates to 11, `6*0.9` truncates to 5). A9 phases kept: Opening / Escalation (≤66%, Shattering Blow) / Last Stand (≤33%, Desperate Crush). Enrage at round 16 or ≤30% HP, ×1.20, skips further wind-ups.
+- Playtest: 200 seeded fights per cell (seed 20261003) on the real combat engine, skill AI on, solo. Starter is the class kit (Rusty Sword 5 + Leather 8, or Apprentice Staff 2 + Cloth 3) with attributes spent. Geared is **2× that weapon and armor** — Watchblade 10 and a full Watchman set (armor 16) versus starter leather 8. Levels 5, 6, and 7. Warrior and mage.
+
+| Class | Lv | Gear | Win | Rounds | HP left on wins | Opening / Escalation / Last Stand | Enrage |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Warrior | 5 | starter | 98.5% | 23.9 | 59% | 200 / 200 / 199 | 200/200 |
+| Warrior | 5 | geared | 100% | 17.0 | 96% | 200 / 200 / 200 | 200/200 |
+| Warrior | 6 | starter | 100% | 21.4 | 74% | 200 / 200 / 200 | 200/200 |
+| Warrior | 6 | geared | 100% | 14.6 | 97% | 200 / 200 / 200 | 200/200 |
+| Warrior | 7 | starter | 100% | 15.9 | 88% | 200 / 200 / 200 | 200/200 |
+| Warrior | 7 | geared | 100% | 11.0 | 98% | 200 / 200 / 200 | 200/200 |
+| Mage | 5 | starter | 72% | 10.9 | 34% | 200 / 200 / 199 | 199/200 |
+| Mage | 5 | geared | 99% | 10.1 | 65% | 200 / 200 / 200 | 200/200 |
+| Mage | 6 | starter | 96.5% | 8.7 | 59% | 200 / 200 / 200 | 200/200 |
+| Mage | 6 | geared | 100% | 7.5 | 77% | 200 / 200 / 200 | 200/200 |
+| Mage | 7 | starter | 100% | 6.6 | 78% | 200 / 200 / 200 | 200/200 |
+| Mage | 7 | geared | 100% | 5.5 | 90% | 200 / 200 / 200 | 186/200 |
+
+- Feel: undergeared is a kill, not a wall. Warrior L6 starter is the C6 boss band (21 rounds, 74% HP). The three warrior L5 losses left the knight around 22% HP. Mage L5 starter is the tense cell (72%, 34% HP); its losses left the knight around 12% HP. Geared warrior is a clearer win at 11–17 rounds, above the ~8-round stomp line, with almost full HP because DEF 16 against ATK 11. Geared mage at L6 is 7.5 rounds. That is class_balance (`mage.damage_dealt` 2.65, `damage_taken` 0.46), not a thin knight: a what-if at 170 HP did not move that cell, and 200 HP only reached ~8.6 rounds while warrior L6 starter climbed to 29. No shared HP/ATK/DEF lever fixes mage without parking the warrior reference on the 30-round ceiling.
+- Phases: Opening is set at pull. Escalation and Last Stand `phase-enter` lines fired on essentially every fight. Crushing Blow and Shattering Blow wind-ups fired in every cell. Desperate Crush showed up as a wind-up mainly on L7 geared, because Last Stand (≤33%) and enrage (≤30%) land together and enrage skips new telegraphs. Sample warrior L6 starter: Escalation round 11, enrage round 16 (round trigger), Last Stand round 17, victory round 24 at 63/100. Sample mage L6 geared: Escalation round 2, Last Stand and enrage round 5 (HP trigger), victory round 7 at 22/32.
+- Loot: 2000 rolls of the LT0204 gate (`guaranteed` always, else `dropChance`). ITM0020, ITM0017, ITM0015, and ITM0012 landed 2000/2000. One sample kill was those four plus ITM0016 and ITM0085, no Vigil Blade. ITM0265 was 203/2000 (10.2%). Vigil Burn still applies only from an equipped main hand (`TestWeaponOnHitDotAppliesAndRefreshes`; Lua `SCR0265` resolves from equipped weapon / template).
+- Tests: `go test ./pkg/mudserver/game/combat/ -count=1 -run 'TestBoss|TestWeaponOnHit|TestCombatDurationTargets|TestHollow'` and `go test ./pkg/mudserver/game/balance/ -count=1` passed. No screenshot; no UI change.
+- Residuals for Quest Master: mage L6 geared ~7.5 rounds and mage L7 starter/geared 6.6/5.5 are the class row, not ENM0009. Pathwalker (meadows) is only about 9 armor versus leather 8, so the 2× kit is the Watchman vendor set, not the meadow set. First-kill players will usually be closer to starter than to that full set. Desperate Crush will keep getting skipped when enrage starts with Last Stand. Vigil Blade stays 10%.
+
 ## Cartographer cream-timber settlement restyle (?v=creamtimber1) (2026-10-02)
 
 - Content SHA: `d96c98b` (`talesmud-rpg-1` main). Sheet version `c8169d17ef81` → `5caee700810a`.
