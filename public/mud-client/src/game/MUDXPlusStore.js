@@ -548,7 +548,7 @@ function createStore() {
     friendsOverlayOpen: false,
     friends: [],
     partyOverlayOpen: false,
-    party: { inParty: false, partyId: '', partyName: '', leaderId: '', maxMembers: 5, members: [] },
+    party: { inParty: false, partyId: '', partyName: '', leaderId: '', maxMembers: 5, members: [], following: false },
     partyChat: [],
     partyInvite: null,
   });
@@ -1421,6 +1421,7 @@ function createStore() {
           leaderId: String(next.leaderId || next.leaderCharacterId || ''),
           maxMembers: Number(next.maxMembers) > 0 ? Number(next.maxMembers) : 5,
           members,
+          following: !!next.following,
         };
         if (wasIn && !nowIn) {
           state.partyChat = [];

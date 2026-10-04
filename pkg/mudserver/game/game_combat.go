@@ -1010,8 +1010,14 @@ func (c *CombatController) cleanupCombatInstance(instance *combat.CombatInstance
 		}
 	}
 
-	// Remove the instance
+	// Remove the instance before catch-up so IsPlayerInCombat is clear.
 	c.manager.RemoveInstance(instance.ID)
+	for _, player := range instance.Players {
+		if player.ID == "" || c.game == nil {
+			continue
+		}
+		c.game.CatchUpPartyFollow(player.ID)
+	}
 
 	log.WithFields(log.Fields{
 		"instanceID": instance.ID,

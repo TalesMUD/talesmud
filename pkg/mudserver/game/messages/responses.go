@@ -892,6 +892,8 @@ type PartyMessage struct {
 	LeaderID   string             `json:"leaderId,omitempty"`
 	MaxMembers int                `json:"maxMembers,omitempty"`
 	Members    []PartyMemberEntry `json:"members"`
+	// Following is true when this recipient is trailing the party leader.
+	Following bool `json:"following,omitempty"`
 }
 
 // NewPartyMessage creates a structured party payload for the client overlay.

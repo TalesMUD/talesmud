@@ -230,3 +230,124 @@ func TestPartyLeaderCannotFollowSelf(t *testing.T) {
 		t.Fatalf("expected leader refusal, got %q", blob)
 	}
 }
+
+func TestPartyFollowChasesAcrossRooms(t *testing.T) {
+	g, facade := newSocialTestGame(t)
+	emberUser, ember := storeSocialPlayer(t, facade, "user-ember4", "ref-ember4", "char-ember4", "Ember", "room-c")
+	thornUser, thorn := storeSocialPlayer(t, facade, "user-thorn4", "ref-thorn4", "char-thorn4", "Thorn", "room-a")
+	importFollowRooms(t, facade,
+		rooms.Room{Entity: &entities.Entity{ID: "room-a"}, Name: "Nest", Exits: &rooms.Exits{{Name: "north", Target: "room-b", Type: rooms.RoomExitTypeDirection}}, Characters: &rooms.Characters{thorn.ID}},
+		rooms.Room{Entity: &entities.Entity{ID: "room-b"}, Name: "Corridor", Exits: &rooms.Exits{{Name: "north", Target: "room-c"}}, Characters: &rooms.Characters{}},
+		rooms.Room{Entity: &entities.Entity{ID: "room-c"}, Name: "Alcove", Characters: &rooms.Characters{ember.ID}},
+	)
+	g.ConnectUserSession(emberUser)
+	g.SetUserSessionCharacter(emberUser, ember)
+	g.ConnectUserSession(thornUser)
+	g.SetUserSessionCharacter(thornUser, thorn)
+	followParty(t, facade, ember.ID, ember.ID, thorn.ID)
+	_ = drainSocialMessages(g.SendMessage())
+
+	if !(&commands.PartyCommand{}).Execute(g, &messages.Message{FromUser: thornUser, Character: thorn, Data: "party follow"}) {
+		t.Fatal("party follow was not handled")
+	}
+	gotThorn, _ := facade.CharactersService().FindByID(thorn.ID)
+	if gotThorn.CurrentRoomID != "room-c" {
+		t.Fatalf("chase should land thorn in room-c, got %s", gotThorn.CurrentRoomID)
+	}
+	if blob := replyBlob(drainSocialMessages(g.SendMessage())); !strings.Contains(blob, "You follow Ember into Corridor") || !strings.Contains(blob, "You follow Ember into Alcove") {
+		t.Fatalf("chase text = %q", blob)
+	}
+}
+
+func TestPartyFollowLeaveClearsFlag(t *testing.T) {
+	g, facade := newSocialTestGame(t)
+	emberUser, ember := storeSocialPlayer(t, facade, "user-ember5", "ref-ember5", "char-ember5", "Ember", "room-a")
+	thornUser, thorn := storeSocialPlayer(t, facade, "user-thorn5", "ref-thorn5", "char-thorn5", "Thorn", "room-a")
+	importFollowRooms(t, facade, rooms.Room{Entity: &entities.Entity{ID: "room-a"}, Name: "Nest", Characters: &rooms.Characters{ember.ID, thorn.ID}})
+	g.ConnectUserSession(emberUser)
+	g.SetUserSessionCharacter(emberUser, ember)
+	g.ConnectUserSession(thornUser)
+	g.SetUserSessionCharacter(thornUser, thorn)
+	followParty(t, facade, ember.ID, ember.ID, thorn.ID)
+	g.SetPartyFollow(thorn.ID, ember.ID)
+
+	if !(&commands.PartyCommand{}).Execute(g, &messages.Message{FromUser: thornUser, Character: thorn, Data: "party leave"}) {
+		t.Fatal("party leave was not handled")
+	}
+	if _, ok := g.PartyFollowTarget(thorn.ID); ok {
+		t.Fatal("leave party should clear follow")
+	}
+}
+
+func TestPartyFollowDisconnectKeepsFlagAndCatchesUp(t *testing.T) {
+	g, facade := newSocialTestGame(t)
+	emberUser, ember := storeSocialPlayer(t, facade, "user-ember6", "ref-ember6", "char-ember6", "Ember", "room-a")
+	thornUser, thorn := storeSocialPlayer(t, facade, "user-thorn6", "ref-thorn6", "char-thorn6", "Thorn", "room-a")
+	importFollowRooms(t, facade,
+		rooms.Room{Entity: &entities.Entity{ID: "room-a"}, Name: "Nest", Exits: &rooms.Exits{{Name: "north", Target: "room-b"}}, Characters: &rooms.Characters{ember.ID, thorn.ID}},
+		rooms.Room{Entity: &entities.Entity{ID: "room-b"}, Name: "Corridor"},
+	)
+	g.ConnectUserSession(emberUser)
+	g.SetUserSessionCharacter(emberUser, ember)
+	g.ConnectUserSession(thornUser)
+	g.SetUserSessionCharacter(thornUser, thorn)
+	followParty(t, facade, ember.ID, ember.ID, thorn.ID)
+	g.SetPartyFollow(thorn.ID, ember.ID)
+
+	g.DisconnectUserSession(thornUser.ID)
+	if _, ok := g.PartyFollowTarget(thorn.ID); !ok {
+		t.Fatal("disconnect should keep the follow flag")
+	}
+	roomA, _ := facade.RoomsService().FindByID("room-a")
+	if !commands.TakeExit("north")(roomA, g, &messages.Message{FromUser: emberUser, Character: ember, Data: "north"}) {
+		t.Fatal("leader exit was not handled")
+	}
+	gotThorn, _ := facade.CharactersService().FindByID(thorn.ID)
+	if gotThorn.CurrentRoomID != "room-a" {
+		t.Fatalf("offline follower moved to %s", gotThorn.CurrentRoomID)
+	}
+
+	g.ConnectUserSession(thornUser)
+	g.SetUserSessionCharacter(thornUser, gotThorn)
+	g.CatchUpPartyFollow(thorn.ID)
+	gotThorn, _ = facade.CharactersService().FindByID(thorn.ID)
+	if gotThorn.CurrentRoomID != "room-b" {
+		t.Fatalf("reconnect should catch up to room-b, got %s", gotThorn.CurrentRoomID)
+	}
+}
+
+func TestPartyFollowCombatCatchUp(t *testing.T) {
+	g, facade := newSocialTestGame(t)
+	emberUser, ember := storeSocialPlayer(t, facade, "user-ember7", "ref-ember7", "char-ember7", "Ember", "room-a")
+	thornUser, thorn := storeSocialPlayer(t, facade, "user-thorn7", "ref-thorn7", "char-thorn7", "Thorn", "room-a")
+	importFollowRooms(t, facade,
+		rooms.Room{Entity: &entities.Entity{ID: "room-a"}, Name: "Nest", Exits: &rooms.Exits{{Name: "north", Target: "room-b"}}, Characters: &rooms.Characters{ember.ID, thorn.ID}},
+		rooms.Room{Entity: &entities.Entity{ID: "room-b"}, Name: "Corridor"},
+	)
+	g.ConnectUserSession(emberUser)
+	g.SetUserSessionCharacter(emberUser, ember)
+	g.ConnectUserSession(thornUser)
+	g.SetUserSessionCharacter(thornUser, thorn)
+	followParty(t, facade, ember.ID, ember.ID, thorn.ID)
+	g.SetPartyFollow(thorn.ID, ember.ID)
+	enemy := &npc.NPC{Entity: &entities.Entity{ID: "rat-chase"}, Name: "Cellar Rat", CurrentHitPoints: 8, MaxHitPoints: 8}
+	if g.GetCombatEngine().InitiateCombat("room-a", []*characters.Character{thorn}, []*npc.NPC{enemy}) == nil {
+		t.Fatal("failed to start combat")
+	}
+	roomA, _ := facade.RoomsService().FindByID("room-a")
+	if !commands.TakeExit("north")(roomA, g, &messages.Message{FromUser: emberUser, Character: ember, Data: "north"}) {
+		t.Fatal("leader exit was not handled")
+	}
+	gotThorn, _ := facade.CharactersService().FindByID(thorn.ID)
+	if gotThorn.CurrentRoomID != "room-a" {
+		t.Fatalf("combat should hold thorn in room-a, got %s", gotThorn.CurrentRoomID)
+	}
+	g.GetCombatEngine().EndCombatForPlayer(thorn.ID)
+	gotThorn, _ = facade.CharactersService().FindByID(thorn.ID)
+	if gotThorn.CurrentRoomID != "room-b" {
+		t.Fatalf("combat end should catch up to room-b, got %s", gotThorn.CurrentRoomID)
+	}
+	if _, ok := g.PartyFollowTarget(thorn.ID); !ok {
+		t.Fatal("combat catch-up should keep following")
+	}
+}

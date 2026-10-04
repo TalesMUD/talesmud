@@ -225,6 +225,7 @@ function createClient(renderer, characterCreator, muxStore) {
         leaderId: msg.leaderId || msg.leaderCharacterId || '',
         maxMembers: msg.maxMembers || 5,
         members: msg.members || [],
+        following: !!msg.following,
       });
     }
   };
