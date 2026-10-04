@@ -103,7 +103,7 @@ export function playerPortraitSrc(entity) {
   if (race === 'elve' || race === 'elves') race = 'elf';
   if (cls === 'wizard') cls = 'mage';
   if (cls === 'hunter') cls = 'ranger';
-  if (!['human', 'dwarf', 'elf'].includes(race) || !['warrior', 'rogue', 'mage', 'ranger', 'cleric', 'druid'].includes(cls)) return '';
+  if (!['human', 'dwarf', 'elf'].includes(race) || !['warrior', 'rogue', 'mage', 'ranger', 'cleric', 'druid', 'ward'].includes(cls)) return '';
   return `/api/portraits/player-${race}-${cls}.png`;
 }
 

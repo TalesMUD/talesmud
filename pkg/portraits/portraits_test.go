@@ -41,6 +41,8 @@ func TestForPlayer(t *testing.T) {
 		{"human", "warrior", "/api/portraits/player-human-warrior.png"},
 		{"elve", "wizard", "/api/portraits/player-elf-mage.png"},
 		{"dwarf", "hunter", "/api/portraits/player-dwarf-ranger.png"},
+		{"human", "ward", "/api/portraits/player-human-ward.png"},
+		{"dwarf", "Ward", "/api/portraits/player-dwarf-ward.png"},
 		{"orc", "warrior", ""},
 	}
 	for _, tt := range tests {

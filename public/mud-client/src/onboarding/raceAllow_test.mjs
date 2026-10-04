@@ -6,6 +6,7 @@ import {
   raceAllowed,
   guestPickerEnabled,
   guestCreateBody,
+  originPortraitSrc,
 } from "./raceAllow.js";
 
 const ids = (template) => racesForTemplate(template).map((race) => race.id);
@@ -61,6 +62,17 @@ const ids = (template) => racesForTemplate(template).map((race) => race.id);
   const construct = racesForTemplate({ id: "tpl-rigger" })[0];
   assert.equal(construct.name, "Construct");
   assert.equal(construct.blurb.includes("Poison never sticks"), true);
+}
+
+{
+  assert.equal(originPortraitSrc({ id: "tpl-ward" }, "human"), "/api/portraits/player-human-ward.png");
+  assert.equal(originPortraitSrc({ id: "tpl-ward", class: { id: "ward" } }, "Dwarf"), "/api/portraits/player-dwarf-ward.png");
+  assert.equal(originPortraitSrc({ id: "tpl-ward" }, ""), "/api/portraits/player-human-ward.png");
+  assert.equal(originPortraitSrc({ id: "tpl-ward" }, "elf"), "");
+  assert.equal(originPortraitSrc({ id: "tpl-rigger" }, "construct"), "");
+  assert.equal(originPortraitSrc({ id: "tpl-fenwatch" }, "dwarf"), "/api/portraits/player-dwarf-warrior.png");
+  assert.equal(originPortraitSrc({ id: "tpl-runehand" }, ""), "/api/portraits/player-human-mage.png");
+  assert.equal(originPortraitSrc({ id: "tpl-alley" }, "elve"), "/api/portraits/player-elf-rogue.png");
 }
 
 console.log("raceAllow_test ok");

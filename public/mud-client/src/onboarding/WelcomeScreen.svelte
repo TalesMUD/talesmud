@@ -199,6 +199,18 @@
     gap: 0.4rem;
   }
 
+  .guest-portrait {
+    width: 72px;
+    height: 88px;
+    object-fit: cover;
+    object-position: center 12%;
+    image-rendering: pixelated;
+    border-radius: 4px;
+    display: block;
+    margin-bottom: 0.35rem;
+    background: #0c1016;
+  }
+
   .guest-choice {
     text-align: left;
     background: rgba(255, 255, 255, 0.03);
@@ -248,7 +260,7 @@
 <script>
   import { onMount } from "svelte";
   import { getCharacterTemplates } from "../api/characters.js";
-  import { FALLBACK_TEMPLATES, guestPickerEnabled, racesForTemplate } from "./raceAllow.js";
+  import { FALLBACK_TEMPLATES, guestPickerEnabled, originPortraitSrc, racesForTemplate } from "./raceAllow.js";
 
   export let login;
   export let serverName = "Tales";
@@ -376,6 +388,13 @@
               class:selected={guestTemplate && guestTemplate.id === template.id}
               on:click={() => chooseGuestTemplate(template)}
             >
+              {#if originPortraitSrc(template, guestTemplate && guestTemplate.id === template.id ? guestRaceId : "")}
+                <img
+                  class="guest-portrait"
+                  alt=""
+                  src={originPortraitSrc(template, guestTemplate && guestTemplate.id === template.id ? guestRaceId : "")}
+                />
+              {/if}
               <strong>{template.name}</strong>
               <span>{template.description}</span>
             </button>

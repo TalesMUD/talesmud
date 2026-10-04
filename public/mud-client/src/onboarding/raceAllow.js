@@ -63,6 +63,46 @@ function templateKeys(template) {
   return keys;
 }
 
+const PORTRAIT_CLASS = {
+  "tpl-fenwatch": "warrior",
+  fenwatch: "warrior",
+  warrior: "warrior",
+  "tpl-alley": "rogue",
+  alley: "rogue",
+  rogue: "rogue",
+  "tpl-runehand": "mage",
+  runehand: "mage",
+  "rune hand": "mage",
+  wizard: "mage",
+  mage: "mage",
+  ranger: "ranger",
+  hunter: "ranger",
+  cleric: "cleric",
+  druid: "druid",
+  "tpl-ward": "ward",
+  ward: "ward",
+};
+
+/** Painted player portrait for a create card. Empty when that race/class has no file. */
+export function originPortraitSrc(template, raceId) {
+  let cls = "";
+  for (const key of templateKeys(template)) {
+    if (PORTRAIT_CLASS[key]) {
+      cls = PORTRAIT_CLASS[key];
+      break;
+    }
+  }
+  if (!cls) return "";
+  let race = canonicalRace(raceId);
+  if (!["human", "dwarf", "elf"].includes(race)) {
+    const races = racesForTemplate(template);
+    race = (races[0] && races[0].id) || "";
+  }
+  if (!["human", "dwarf", "elf"].includes(race)) return "";
+  if (cls === "ward" && race === "elf") return "";
+  return `/api/portraits/player-${race}-${cls}.png`;
+}
+
 /** Races the selected class card may offer. Empty when the class is unknown. */
 export function racesForTemplate(template) {
   let ids = null;

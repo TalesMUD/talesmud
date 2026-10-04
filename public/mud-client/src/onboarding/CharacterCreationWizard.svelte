@@ -156,9 +156,12 @@
   .template-avatar {
     width: 77px;
     height: 77px;
+    object-fit: cover;
+    object-position: center 14%;
     image-rendering: pixelated;
     border-radius: 50%;
     border: 2px solid rgba(255, 255, 255, 0.08);
+    background: #0c1016;
   }
 
   .template-card.selected .template-avatar {
@@ -606,7 +609,7 @@
 <script>
   import { onMount } from "svelte";
   import { getCharacterTemplates, createNewCharacter, generateCharacter } from "../api/characters.js";
-  import { FALLBACK_TEMPLATES, racesForTemplate } from "./raceAllow.js";
+  import { FALLBACK_TEMPLATES, originPortraitSrc, racesForTemplate } from "./raceAllow.js";
 
   export let authToken;
   export let onComplete;
@@ -661,6 +664,10 @@
     }
     const num = 1 + Math.abs(hash % 12);
     return "img/avatars/" + num + "p.png";
+  }
+
+  function cardArt(template, raceId) {
+    return originPortraitSrc(template, raceId) || getAvatar(template && template.name);
   }
 
   function selectTemplate(template) {
@@ -823,7 +830,7 @@
             role="button"
             tabindex="0"
           >
-            <img src={getAvatar(template.name)} alt="" class="template-avatar" />
+            <img src={cardArt(template, selectedTemplate && selectedTemplate.id === template.id ? selectedRaceId : "")} alt="" class="template-avatar" />
             <span class="template-name">{template.name}</span>
             {#if template.description}
               <span class="template-desc">{template.description}</span>
@@ -883,7 +890,7 @@
 
       <div class="customize-layout">
         <div class="preview-card">
-          <img src={getAvatar(characterName)} alt="" class="template-avatar" />
+          <img src={cardArt(selectedTemplate, selectedRaceId)} alt="" class="template-avatar" />
           <span class="preview-name">{characterName || "..."}</span>
           <span class="preview-template">{selectedTemplate.name}</span>
           {#if selectedTemplate.attributes}
@@ -975,7 +982,7 @@
       </p>
 
       <div class="confirm-card">
-        <img src={getAvatar(characterName)} alt="" class="confirm-avatar" />
+        <img src={cardArt(selectedTemplate, selectedRaceId)} alt="" class="confirm-avatar" />
         <span class="confirm-name">{characterName}</span>
         <span class="confirm-template">{selectedTemplate.name}{selectedRace ? ` · ${selectedRace.name}` : ""}</span>
         {#if characterDescription}

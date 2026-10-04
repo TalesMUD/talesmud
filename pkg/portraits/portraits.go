@@ -62,7 +62,7 @@ func ForPlayer(ch *characters.Character) string {
 		return ""
 	}
 	switch class {
-	case "warrior", "rogue", "mage", "ranger", "cleric", "druid":
+	case "warrior", "rogue", "mage", "ranger", "cleric", "druid", "ward":
 	default:
 		return ""
 	}
