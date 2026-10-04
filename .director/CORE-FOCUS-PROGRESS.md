@@ -1,3 +1,21 @@
+## Z04 Ashenveil density (2026-10-04)
+
+- SHIPPED content `48e8da7` (`feat: [grokbot] Z04 Ashenveil density on the west road and dwarven climb`) on `talesmud-rpg-1` main. Pulled from `5c400e2` first (HK trophy unique flags ITM0016/17/20/22–24 already on that tip).
+- Quota: `/usage` billing before work. Weekly period through 2026-10-07, credit use about 17%, Grok Build about 16%. Stayed on Grok 4.7 xhigh. Codex not used.
+- Import: VPS content ff to `48e8da7`, staged `import/mvp-rpg-1/data`, dry-run then SIGTERM talesmud MainPID `947837` only. `./bin/tales --import mvp-rpg-1` wrote `./talesmud.db` (133 spawners, 351 rooms, 0 characters relocated). systemd Restart=always brought tales back. New MainPID `956190` on `:8010`, active. Door `:8020` pid `758959` unchanged. Public `GET /` 200, `GET /play/` 200, `/api/server-info` Veilspan Chapter I.
+- Why not `spawnRoomId` on ENM0020–22: the importer treats a set spawn room as a unique resident and an empty one as a template. Spawners call `SpawnFromTemplate` and refuse non-templates. Meadows/Oldtown trash uses room encounters → `data/npc_spawners`. Templates stay `isTemplate=1` with empty `spawnRoomId`. Live log at 08:27:52Z spawned the instances below.
+- Spawn map (initial counts, live):
+  - ENM0020 Ashenveil Bandit L13 LT0403: R0402×2, R0403×1, R0415×2, R0416×2, R0417×2, R0419×1 (10). QST0401 needs 6.
+  - ENM0021 Ashenveil Archer L14 LT0404: R0415×1, R0416×1, R0417×1 (3).
+  - ENM0022 Ashenveil Brute L16 LT0405: R0417×1, R0419×1 (2).
+  - ENM0018 Timber Wolf: R0403×1, R0410×2, R0411×2, R0412×3, R0421×1, R0422×1, R0423×1 (11). QST0402 needs 6.
+  - ENM0019 Forest Stalker: R0413×2, R0425×1 (pelt ITM0088 guaranteed). QST0403 needs 3.
+  - ENM0023 Ancient Treant: R0414×1. ENM0024 Bandit Captain Rask: R0420×1. QST0401 second objective.
+  - R0418 Ruined Great Hall: no hostile spawner. Scout Halvik NPC0025 resident. QST0404 talk target.
+- Examines: 26/26 rooms R0401–R0426 already had 3+ `EXAMINE` actions in live data before this pass (the empty-`examines:` grep does not match room `actions`). This ship added 5 tells on the newly filled rooms (boot print, twine, fletching, tracks, pads). Coverage now 98 EXAMINE actions, minimum 3 per room, no room under 2.
+- Quest smoke from authored ids: QST0401 kill ENM0020 + ENM0024, giver NPC0022 R0408 DLG0033. QST0402 ENM0018 via NPC0023. QST0403 ITM0088 via NPC0024. QST0404 talk NPC0025. QST0405 visit R0421 and R0424. No targetId fixes required.
+- Residuals: R0401 and R0404 stay safe (examines only). R0424 overlook and R0426 boundary stay quiet. Pre-existing import warnings for R1910 `ITM_architect_data_crystal` and R1934 `ITM_legendary_architects_seal`. No guest walked Oldtown → Timberhold in a client. clawdbot local `:8010` was not reimported. Engine-june portrait deletes were not committed. Door untouched.
+
 ## Borderless MTG room entity cards (?v=mtgcard1) (2026-10-04)
 
 - Web SHA: `87a373a` (`[grokbot]`). Flutter SHA: `1adb986` (`[grokbot]`). Landing follow-up tip includes this section's commit.
@@ -659,3 +677,11 @@ Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated bl
 - Client SHA: `c4ebc63` (`veilspan-client` main). APK https://veilspan.com/app/downloads/veilspan-c4ebc63.apk sha256 `37123c56c50b4f8da162940fe3970905a1feb2deab9010c7e8899c2244e3e868`.
 - Turn In already present via WS questLog; added guest reconnect `sc` memory + gold Turn In button.
 - Door :8020 untouched. Live play still `?v=creamtimber1` (guestturnin1 committed, not this ship).
+
+## ACCEPT — 2026-10-04 daily director (~10:12 Europe/Berlin)
+- Live healthy: HTTPS 200; `/play/` → `?v=mtgcard1` 200; `POST /api/guest` 200; `/api/server-info` Veilspan Chapter I; `/app` 200. clawdbot up (`acb32219`). Door FYI only (`door.veilspan.com` untouched).
+- ACCEPTED yesterday crown **HK/S0 boss pass** (docs `c5175ad`): ENM0009 playtest **in band — no lever**; LT0204 guaranteed lines + Vigil Blade ~10%; residuals for Quest Master (mage row / Pathwalker armor / Desperate Crush vs enrage). Live tip was later advanced by overnight ships.
+- ACCEPTED overnight EXTRA stack now live: borderless MTG-style room entity cards (`87a373a` / `?v=mtgcard1`), Fenwatch/Alley/Rune Hand/Hitch (+Rigger) class kit + Skills panel, unique second-copy refuse (`af94def`), Flutter tablet Layout B + room sprites / entity cards (`1adb986` APK on `/app`). Door untouched.
+- Marcus-signed backlog **#1–#8 / #10 / #11** treated complete for director purposes; **#9 Z04 Ashenveil density** remains open (26 rooms, zero examines, Ashenveil Bandit/Archer/Brute lack `spawnRoomId`).
+- Crown today: **Z04 Ashenveil density** (CONTENT). Task: `.director/Z04-ASHENVEIL-DENSITY-TASK.md` on `talesmud-rpg-1`. Worker: Grok 4.7 xhigh tmux `grok-z02`.
+
