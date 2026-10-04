@@ -128,6 +128,9 @@ func (e *Engine) CreateCombatantFromCharacter(char *characters.Character) combat
 		CurrentMana: char.CurrentMana,
 		ManaRegen:   char.CalculateManaRegen(),
 	}
+	if balance.IsWard(ref.ClassID) {
+		ref.ClassID = "ward"
+	}
 	// Kit charges are armed by the skill button, not at combat start.
 	bolt, rig := balance.RiggerCharges(char.Class.ID)
 	ref.BoltLeft = bolt
@@ -393,7 +396,12 @@ func (e *Engine) processAttackSwingMult(instance *combat.CombatInstance, attacke
 		return AttackResult{Miss: true, Message: "Target is already dead"}
 	}
 
-	if stand := e.standRedirect(instance, attacker, target); stand != nil {
+	redirected := false
+	if guard := e.guardRedirect(instance, attacker, target); guard != nil {
+		target = guard
+		targetID = guard.ID
+		redirected = true
+	} else if stand := e.standRedirect(instance, attacker, target); stand != nil {
 		target = stand
 		targetID = stand.ID
 	}
@@ -525,6 +533,7 @@ func (e *Engine) processAttackSwingMult(instance *combat.CombatInstance, attacke
 
 	// Update the target in the instance
 	e.UpdateCombatant(instance, target)
+	wardNote := e.applyWardSoak(instance, attacker, target, result.Damage, redirected, true)
 
 	// Build message
 	if result.Critical {
@@ -549,6 +558,9 @@ func (e *Engine) processAttackSwingMult(instance *combat.CombatInstance, attacke
 
 	if braced {
 		result.Message = "You brace. " + result.Message
+	}
+	if wardNote != "" {
+		result.Message += " " + wardNote
 	}
 	if attacker.Enraged {
 		result.Message = "Enraged! " + result.Message
@@ -756,21 +768,6 @@ func (e *Engine) ProcessFlee(instance *combat.CombatInstance, fleeingID string) 
 	fleeing := instance.GetCombatantByID(fleeingID)
 	if fleeing == nil {
 		return FleeResult{Success: false, Message: "Invalid combatant"}
-	}
-
-	// Hitch Pin cancels the next leave attempt. No new flee table; this only hooks the one that already exists.
-	if fleeing.Pinned {
-		fleeing.Pinned = false
-		e.UpdateCombatant(instance, fleeing)
-		result := FleeResult{Success: false, Message: "You hitch them. They stay."}
-		instance.AddLogEntry(combat.CombatLogEntry{
-			ActorID:   fleeing.ID,
-			ActorName: fleeing.Name,
-			Action:    combat.CombatActionFlee,
-			Result:    "hitched",
-			Message:   result.Message,
-		})
-		return result
 	}
 
 	// Calculate flee chance: base + DEX bonus
@@ -1179,34 +1176,6 @@ func attrInt32(v interface{}) int32 {
 	default:
 		return 0
 	}
-}
-
-// applyWeaponOnHitDot applies a snapshotted on-hit DoT, refreshing duration on reapply.
-// ArmPin marks target so their next leave attempt is cancelled. Hitch only, once per fight.
-func (e *Engine) ArmPin(instance *combat.CombatInstance, hitchID, targetID string) bool {
-	if instance == nil {
-		return false
-	}
-	hitch := instance.GetCombatantByID(hitchID)
-	if hitch == nil || hitch.PinLeft <= 0 {
-		return false
-	}
-	e.armPin(instance, hitch, targetID)
-	return hitch.PinLeft <= 0 && instance.GetCombatantByID(targetID) != nil && instance.GetCombatantByID(targetID).Pinned
-}
-
-func (e *Engine) armPin(instance *combat.CombatInstance, hitch *combat.CombatantRef, targetID string) {
-	if hitch == nil || hitch.PinLeft <= 0 || targetID == "" || targetID == hitch.ID {
-		return
-	}
-	target := instance.GetCombatantByID(targetID)
-	if target == nil || !target.IsAlive {
-		return
-	}
-	hitch.PinLeft = 0
-	target.Pinned = true
-	e.UpdateCombatant(instance, hitch)
-	e.UpdateCombatant(instance, target)
 }
 
 func (e *Engine) applyInscribe(instance *combat.CombatInstance, attacker, target *combat.CombatantRef) string {

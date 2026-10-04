@@ -138,8 +138,8 @@ func classByID(id string) (characters.Class, bool) {
 		return characters.ClassRanger, true
 	case "hunter":
 		return characters.ClassHunter, true
-	case "hitch":
-		return characters.ClassHitch, true
+	case "hitch", "ward":
+		return characters.ClassWard, true
 	case "rigger":
 		return characters.ClassRigger, true
 	default:

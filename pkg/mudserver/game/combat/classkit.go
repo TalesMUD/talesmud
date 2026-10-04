@@ -18,6 +18,9 @@ func (e *Engine) tickKitRounds(instance *entcombat.CombatInstance, c *entcombat.
 		c.StandRounds--
 		changed = true
 	}
+	if e.tickWardGuard(c) {
+		changed = true
+	}
 	if c.HobbleRounds > 0 {
 		c.HobbleRounds--
 		changed = true
@@ -118,23 +121,30 @@ func (e *Engine) processClassKit(instance *entcombat.CombatInstance, caster *ent
 		e.kitLog(instance, caster, caster, msg, 0)
 		return SkillResult{Success: true, SkillName: skill.Name, KeepsSwing: true, Messages: []string{msg}}
 
-	case skills.KitPin:
-		target := livingKitTarget(instance, caster, targetID)
-		if target == nil {
-			return kitFail(skill.Name, "Nobody to pin.")
-		}
-		caster.PinLeft = 1
-		e.UpdateCombatant(instance, caster)
-		if !e.ArmPin(instance, caster.ID, target.ID) {
-			caster = instance.GetCombatantByID(caster.ID)
-			caster.PinLeft = 0
-			e.UpdateCombatant(instance, caster)
-			return kitFail(skill.Name, "The pin does not catch.")
+	case skills.KitGuard:
+		ally, selfSoak, ok := resolveWardGuard(instance, caster, targetID)
+		if !ok {
+			return kitFail(skill.Name, "Nobody to guard.")
 		}
 		pay()
 		caster = instance.GetCombatantByID(caster.ID)
-		msg := fmt.Sprintf("You pin %s. The next time they leave, they stay.", target.Name)
-		e.kitLog(instance, caster, target, msg, 0)
+		caster.GuardRounds = 2
+		caster.GuardCharges = 1
+		var msg string
+		var logged *entcombat.CombatantRef
+		if selfSoak {
+			caster.GuardSelf = true
+			caster.GuardTargetID = caster.ID
+			logged = caster
+			msg = "You guard yourself. The next hit stacks two Grit."
+		} else {
+			caster.GuardSelf = false
+			caster.GuardTargetID = ally.ID
+			logged = ally
+			msg = fmt.Sprintf("You guard %s. The next hit aimed at them hits you.", ally.Name)
+		}
+		e.UpdateCombatant(instance, caster)
+		e.kitLog(instance, caster, logged, msg, 0)
 		return SkillResult{Success: true, SkillName: skill.Name, KeepsSwing: true, Messages: []string{msg}}
 
 	case skills.KitSlip:
@@ -178,20 +188,6 @@ func (e *Engine) processClassKit(instance *entcombat.CombatInstance, caster *ent
 		e.kitLog(instance, caster, caster, msg, 0)
 		return SkillResult{Success: true, SkillName: skill.Name, Messages: []string{msg}}
 
-	case skills.KitHobble:
-		target := livingKitTarget(instance, caster, targetID)
-		if target == nil {
-			return kitFail(skill.Name, "Nobody to hobble.")
-		}
-		pay()
-		target = instance.GetCombatantByID(target.ID)
-		target.HobbleRounds = 2
-		e.UpdateCombatant(instance, target)
-		caster = instance.GetCombatantByID(caster.ID)
-		msg := fmt.Sprintf("You hobble %s. Their hits are lighter for two rounds.", target.Name)
-		e.kitLog(instance, caster, target, msg, 0)
-		return SkillResult{Success: true, SkillName: skill.Name, Messages: []string{msg}}
-
 	case skills.KitInscribe:
 		target := livingKitTarget(instance, caster, targetID)
 		if target == nil {
@@ -212,13 +208,22 @@ func (e *Engine) processClassKit(instance *entcombat.CombatInstance, caster *ent
 			return kitFail(skill.Name, "Nobody to slam.")
 		}
 		pay()
-		swing := e.processAttackSwingMult(instance, caster.ID, target.ID, skill.SwingMult, false)
+		mult := skill.SwingMult
+		grit := 0
+		if balance.IsWard(caster.ClassID) {
+			grit = caster.Grit
+			mult = balance.WardSlamSwingMult(grit)
+		}
+		swing := e.processAttackSwingMult(instance, caster.ID, target.ID, mult, false)
 		target = instance.GetCombatantByID(target.ID)
 		name := targetID
 		if target != nil {
 			name = target.Name
 		}
 		msg := fmt.Sprintf("You slam %s for %d.", name, swing.Damage)
+		if balance.IsWard(caster.ClassID) {
+			msg = fmt.Sprintf("You slam %s for %d. Grit %d.", name, swing.Damage, grit)
+		}
 		if swing.TargetDied {
 			msg += fmt.Sprintf(" %s has been defeated!", name)
 		}
@@ -307,6 +312,9 @@ func (e *Engine) processClassKit(instance *entcombat.CombatInstance, caster *ent
 		}
 		e.UpdateCombatant(instance, target)
 		msg := fmt.Sprintf("You sear %s for %d.", target.Name, dmg)
+		if note := e.applyWardSoak(instance, caster, target, dmg, false, true); note != "" {
+			msg += " " + note
+		}
 		if died {
 			msg += fmt.Sprintf(" %s has been defeated!", target.Name)
 		}
@@ -316,22 +324,6 @@ func (e *Engine) processClassKit(instance *entcombat.CombatInstance, caster *ent
 			res.TargetsDied = []string{target.ID}
 		}
 		return res
-
-	case skills.KitReel:
-		target := fledKitTarget(instance, caster, targetID)
-		if target == nil {
-			if explicitStillHere(instance, targetID) {
-				return kitFail(skill.Name, "They have not left.")
-			}
-			return kitFail(skill.Name, "Nobody has left.")
-		}
-		pay()
-		target.HasFled = false
-		e.UpdateCombatant(instance, target)
-		caster = instance.GetCombatantByID(caster.ID)
-		msg := fmt.Sprintf("You reel %s back into the fight.", target.Name)
-		e.kitLog(instance, caster, target, msg, 0)
-		return SkillResult{Success: true, SkillName: skill.Name, ReelID: target.ID, Messages: []string{msg}}
 
 	case skills.KitBolt:
 		if caster.BoltLeft <= 0 {

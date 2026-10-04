@@ -132,6 +132,10 @@ func (command *CastCommand) Execute(game def.GameCtrl, message *messages.Message
 		}
 	}
 
+	if skill.Kit == skills.KitGuard {
+		targetID = targetName
+	}
+
 	// Queue the skill
 	combatEngine.QueuePlayerSkill(message.Character.Entity.ID, skillName, targetID)
 

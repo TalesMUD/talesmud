@@ -256,15 +256,16 @@ assert.strictEqual(already[DEFAULT_REST_SLOT]?.id, 'rest');
 console.log('hudPrefs: Option C (room + chrome INV/MAP/SAY, Rest seeded on empty bar) OK');
 
 // --- Skill catalog / slots (Character → Skills) ---
-assert.strictEqual(SKILL_CATALOG.length, 15 + 5 + 4 + 5, 'kit + cleric + ranger + druid');
-assert.ok(SKILL_CATALOG.every((s) => s.kit || !['warrior', 'rogue', 'mage', 'hitch', 'rigger'].includes(s.classIds[0])));
+assert.strictEqual(SKILL_CATALOG.length, 14 + 5 + 4 + 5, 'kit + cleric + ranger + druid');
+assert.ok(SKILL_CATALOG.every((s) => s.kit || !['warrior', 'rogue', 'mage', 'ward', 'rigger'].includes(s.classIds[0])));
 assert.strictEqual(normalizeClassId('wizard'), 'mage');
 assert.strictEqual(normalizeClassId('runehand'), 'mage');
 assert.strictEqual(normalizeClassId('rune_hand'), 'mage');
 assert.strictEqual(normalizeClassId('Rune Hand'), 'mage');
 assert.strictEqual(normalizeClassId('alley'), 'rogue');
 assert.strictEqual(normalizeClassId('fenwatch'), 'warrior');
-assert.strictEqual(normalizeClassId('hitch'), 'hitch');
+assert.strictEqual(normalizeClassId('hitch'), 'ward');
+assert.strictEqual(normalizeClassId('ward'), 'ward');
 assert.strictEqual(normalizeClassId('rigger'), 'rigger');
 assert.strictEqual(normalizeClassId('Warrior'), 'warrior');
 
@@ -277,7 +278,12 @@ assert.ok(!skillsForClass('wizard').some((s) => s.id === 'mage_fireball' || s.id
 assert.ok(!skillsForClass('rune hand').some((s) => /fireball|frost/i.test(s.id + s.name)));
 assert.strictEqual(skillsForClass('alley').length, 3);
 assert.ok(!skillsForClass('alley').some((s) => s.id === 'rogue_backstab'));
-assert.strictEqual(skillsForClass('hitch').map((s) => s.id).join(','), 'hitch_pin,hitch_hobble,hitch_reel');
+assert.strictEqual(skillsForClass('hitch').map((s) => s.id).join(','), 'ward_guard,ward_slam');
+assert.strictEqual(skillsForClass('ward').map((s) => s.id).join(','), 'ward_guard,ward_slam');
+assert.strictEqual(skillById('ward_guard').target, 'ally');
+assert.strictEqual(formatSkillCost(skillById('ward_guard')), 'once / fight');
+assert.strictEqual(formatSkillCost(skillById('ward_slam')), '4 round CD');
+assert.ok(!SKILL_CATALOG.some((s) => /hitch|Hitch/.test(s.id + s.name + s.classIds.join(','))));
 assert.strictEqual(skillsForClass('rigger').find((s) => s.id === 'rigger_overload')?.levelRequired, 6);
 
 assert.strictEqual(maxSkillSlots('warrior', 1), 4);

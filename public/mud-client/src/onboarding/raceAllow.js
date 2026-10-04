@@ -4,7 +4,7 @@ export const CLASS_BLURBS = {
   fenwatch: "The door. You stand in it until they don't. Brace once when a blow comes in.",
   alley: "Back street. Two cuts, then you Slip the first one that comes back.",
   runehand: "Vault runes. One heavy swing, then you Inscribe. The mark burns for three rounds.",
-  hitch: "Fen rope. One careful swing. Pin once: the next time they try to leave, they stay.",
+  ward: "Heavy plate. You start slow. Hits you take stack Grit, and Slam and the hit you throw back get heavier.",
   rigger: "Constructs. Bolt scrap onto someone in the room; the next hit still lands, and the attacker takes the same amount back. Rig drops a turret that does not chase.",
 };
 
@@ -29,6 +29,8 @@ const ALLOW = {
   mage: ["human", "elf"],
   runehand: ["human", "elf"],
   "rune hand": ["human", "elf"],
+  "tpl-ward": ["human", "dwarf"],
+  ward: ["human", "dwarf"],
   "tpl-hitch": ["human", "dwarf"],
   hitch: ["human", "dwarf"],
   "tpl-rigger": ["construct"],
@@ -39,7 +41,7 @@ export const FALLBACK_TEMPLATES = [
   { id: "tpl-fenwatch", name: "Fenwatch", description: CLASS_BLURBS.fenwatch, class: { id: "warrior", name: "Fenwatch" } },
   { id: "tpl-alley", name: "Alley", description: CLASS_BLURBS.alley, class: { id: "rogue", name: "Alley" } },
   { id: "tpl-runehand", name: "Rune Hand", description: CLASS_BLURBS.runehand, class: { id: "wizard", name: "Rune Hand" } },
-  { id: "tpl-hitch", name: "Hitch", description: CLASS_BLURBS.hitch, class: { id: "hitch", name: "Hitch" } },
+  { id: "tpl-ward", name: "Ward", description: CLASS_BLURBS.ward, class: { id: "ward", name: "Ward" } },
   { id: "tpl-rigger", name: "Rigger", description: CLASS_BLURBS.rigger, class: { id: "rigger", name: "Rigger" } },
 ];
 

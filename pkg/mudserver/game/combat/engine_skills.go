@@ -108,7 +108,7 @@ type SkillResult struct {
 	TotalHeal   int32
 	TargetsDied []string
 	HitsLanded  int
-	// KeepsSwing: Brace and Pin. The round still autoattacks.
+	// KeepsSwing: Brace and Guard. The round still autoattacks.
 	KeepsSwing bool
 	// SlipMove: drop combat and take one exit.
 	SlipMove bool
@@ -336,6 +336,9 @@ func (e *Engine) resolveSkillDamage(instance *combat.CombatInstance, caster *com
 			target.CurrentHP -= damage
 			totalDmg += damage
 			result.TotalDamage += damage
+			if note := e.applyWardSoak(instance, caster, target, damage, false, true); note != "" {
+				result.Messages = append(result.Messages, note)
+			}
 		}
 		result.HitsLanded += landed
 
@@ -661,6 +664,8 @@ func (e *Engine) ProcessStatusEffects(instance *combat.CombatInstance, combatant
 				combatant.CurrentHP = 0
 				combatant.IsAlive = false
 			}
+			// A burn is damage taken, so it grants Grit. It is not a hit, so it does not throw back.
+			_ = e.applyWardSoak(instance, nil, combatant, se.Value, false, false)
 			instance.AddLogEntry(combat.CombatLogEntry{
 				ActorID:   combatant.ID,
 				ActorName: combatant.Name,

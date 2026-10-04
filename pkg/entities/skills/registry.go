@@ -15,8 +15,8 @@ func normalizeClassID(classID string) string {
 		return "rogue"
 	case "warrior", "fenwatch":
 		return "warrior"
-	case "hitch":
-		return "hitch"
+	case "hitch", "ward":
+		return "ward"
 	case "rigger":
 		return "rigger"
 	default:

@@ -8,6 +8,7 @@ import (
 
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/items"
+	"github.com/talesmud/talesmud/pkg/entities/skills"
 	"github.com/talesmud/talesmud/pkg/entities/traits"
 )
 
@@ -47,6 +48,20 @@ func (c *Character) NormalizeAttributeShorts() {
 	for i := range c.Attributes {
 		c.Attributes[i].Short = strings.ToUpper(c.Attributes[i].Short)
 	}
+}
+
+// NormalizeClass maps a stored hitch id onto Ward and replaces the old hotbar.
+// The class id hitch still resolves to this kit. The name shown is Ward.
+func (c *Character) NormalizeClass() {
+	if c == nil {
+		return
+	}
+	id := strings.ToLower(strings.TrimSpace(c.Class.ID))
+	if id != "hitch" && id != "ward" {
+		return
+	}
+	c.Class = ClassWard
+	c.EquippedSkills = skills.FillHotbar(c.Class.ID, c.Level, c.EquippedSkills)
 }
 
 // Attribute data
@@ -172,7 +187,7 @@ func (c *Character) GetAttributeModifier(short string) int {
 // Each class uses a different primary attribute for auto-attacks.
 func (c *Character) GetPrimaryAttackAttribute() string {
 	switch strings.ToLower(c.Class.ID) {
-	case "warrior":
+	case "warrior", "ward", "hitch":
 		return "STR"
 	case "rogue":
 		return "DEX"

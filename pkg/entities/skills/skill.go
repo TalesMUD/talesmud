@@ -8,6 +8,7 @@ type TargetType string
 const (
 	TargetEnemy      TargetType = "enemy"
 	TargetSelf       TargetType = "self"
+	TargetAlly       TargetType = "ally"
 	TargetAllEnemies TargetType = "all_enemies"
 )
 

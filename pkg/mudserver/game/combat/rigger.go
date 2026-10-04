@@ -188,6 +188,9 @@ func (e *Engine) tickRig(instance *entcombat.CombatInstance) string {
 			target.IsAlive = false
 		}
 		e.UpdateCombatant(instance, target)
+		if owner != nil {
+			_ = e.applyWardSoak(instance, owner, target, dmg, false, true)
+		}
 		targetID = target.ID
 		targetName = target.Name
 		if last {

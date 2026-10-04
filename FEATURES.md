@@ -1011,10 +1011,10 @@ IsCasterClass(classID) bool               // Uses mana
 ```
 
 ### Skill Slot Progression
-Fenwatch, Alley, Rune Hand, Hitch, and Rigger (aliases warrior/fenwatch, rogue/alley, mage/wizard/runehand) always have 4 slots (`HotbarCap`). Cleric and druid stay on the caster curve (L1=2, L15=3, L30=4). Ranger stays on the physical curve (L1=1, L10=2, L20=3, L30=4).
+Fenwatch, Alley, Rune Hand, Ward, and Rigger (aliases warrior/fenwatch, rogue/alley, mage/wizard/runehand, hitch/ward) always have 4 slots (`HotbarCap`). Cleric and druid stay on the caster curve (L1=2, L15=3, L30=4). Ranger stays on the physical curve (L1=1, L10=2, L20=3, L30=4).
 
 ### Class kit
-The five signed classes learn only `ClassKit` in `pkg/entities/skills/classkit.go`: Brace/Slam/Stand, Slip/Nick/Smoke, Inscribe/Sear/Glyph, Pin/Hobble/Reel, and Bolt/Rig plus Overload at level 6. `SkillsForClass` drops legacy seed rows for those classes. The play client Character → Skills list is `SKILL_CATALOG` in `public/mud-client/src/game/hudPrefs.js`, which mirrors that kit. Old ids such as Fireball and Power Strike remain display fallbacks for a saved hotbar and are not offered as Available.
+The five signed classes learn only `ClassKit` in `pkg/entities/skills/classkit.go`: Brace/Slam/Stand, Slip/Nick/Smoke, Inscribe/Sear/Glyph, Guard/Slam, and Bolt/Rig plus Overload at level 6. `SkillsForClass` drops legacy seed rows for those classes. The play client Character → Skills list is `SKILL_CATALOG` in `public/mud-client/src/game/hudPrefs.js`, which mirrors that kit. Old ids such as Fireball and Power Strike remain display fallbacks for a saved hotbar and are not offered as Available.
 
 ### Skill Management Commands
 ```bash

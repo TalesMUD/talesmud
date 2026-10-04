@@ -154,35 +154,3 @@ func TestRuneHandInscribeRefreshNoMana(t *testing.T) {
 		t.Fatalf("inscribe stacked: %d", dots)
 	}
 }
-
-func TestHitchPinCancelsNextLeave(t *testing.T) {
-	e, inst, heroID, enemyID := newFight(characters.ClassHitch, 0)
-	equipKit(inst, heroID, "hitch_pin", "hitch_reel")
-	if got := e.ProcessSkill(inst, heroID, "hitch_pin", enemyID); !got.Success || !got.KeepsSwing {
-		t.Fatalf("pin %+v", got)
-	}
-	if again := e.ProcessSkill(inst, heroID, "hitch_pin", enemyID); again.Success {
-		t.Fatal("Pin armed twice")
-	}
-	flee := e.ProcessFlee(inst, enemyID)
-	if flee.Success || flee.Message != "You hitch them. They stay." {
-		t.Fatalf("pin flee %+v", flee)
-	}
-	flee = e.ProcessFlee(inst, enemyID)
-	if flee.Message == "You hitch them. They stay." {
-		t.Fatal("pin consumed but still cancelled the next leave")
-	}
-	enemy := inst.GetCombatantByID(enemyID)
-	enemy.HasFled = true
-	e.UpdateCombatant(inst, enemy)
-	if reel := e.ProcessSkill(inst, heroID, "hitch_reel", enemyID); !reel.Success || reel.ReelID != enemyID {
-		t.Fatalf("reel %+v", reel)
-	}
-	enemy = inst.GetCombatantByID(enemyID)
-	if enemy.HasFled {
-		t.Fatal("reel did not resume combat")
-	}
-	if early := e.ProcessSkill(inst, heroID, "hitch_reel", enemyID); early.Success {
-		t.Fatal("reel should not fire when they have not left, or twice")
-	}
-}

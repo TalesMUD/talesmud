@@ -1,6 +1,7 @@
 import assert from "assert";
 import {
   CLASS_BLURBS,
+  FALLBACK_TEMPLATES,
   racesForTemplate,
   raceAllowed,
   guestPickerEnabled,
@@ -27,6 +28,13 @@ const ids = (template) => racesForTemplate(template).map((race) => race.id);
   assert.equal(raceAllowed({ id: "tpl-rigger" }, "human"), false);
   assert.equal(raceAllowed({ class: { id: "rigger" } }, "construct"), true);
   assert.equal(raceAllowed({ id: "tpl-hitch" }, "elf"), false);
+  assert.equal(raceAllowed({ id: "tpl-hitch" }, "human"), true);
+  assert.deepEqual(ids({ id: "tpl-ward" }), ["human", "dwarf"]);
+  assert.equal(raceAllowed({ id: "tpl-ward" }, "elf"), false);
+  assert.ok(FALLBACK_TEMPLATES.some((t) => t.id === "tpl-ward" && t.name === "Ward"));
+  assert.ok(!FALLBACK_TEMPLATES.some((t) => /hitch/i.test(`${t.id} ${t.name}`)));
+  assert.equal(CLASS_BLURBS.ward.includes("Warrior"), false);
+  assert.equal(CLASS_BLURBS.ward, "Heavy plate. You start slow. Hits you take stack Grit, and Slam and the hit you throw back get heavier.");
   assert.equal(raceAllowed({ id: "tpl-alley" }, "elf"), true);
 }
 

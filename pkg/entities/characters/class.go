@@ -66,11 +66,11 @@ var (
 		ArmorType:   ArmorTypeCloth,
 		CombatType:  CombatTypeMagic,
 	}
-	ClassHitch Class = Class{
-		ID:          "hitch",
-		Name:        "Hitch",
-		Description: "Fen rope. One careful swing. Pin once: the next time they try to leave, they stay.",
-		ArmorType:   ArmorTypeLeather,
+	ClassWard Class = Class{
+		ID:          "ward",
+		Name:        "Ward",
+		Description: "Heavy plate. You start slow. Hits you take stack Grit, and Slam and the hit you throw back get heavier.",
+		ArmorType:   ArmorTypePlate,
 		CombatType:  CombatTypeMelee,
 	}
 	ClassRigger Class = Class{

@@ -52,7 +52,11 @@ func (command *SkillShortcutCommand) Execute(game def.GameCtrl, message *message
 
 	// Resolve target
 	targetID := ""
-	if skill.Target == skills.TargetEnemy || skill.Target == skills.TargetAllEnemies {
+	if skill.Kit == skills.KitGuard {
+		if len(parts) > 1 {
+			targetID = strings.Join(parts[1:], " ")
+		}
+	} else if skill.Target == skills.TargetEnemy || skill.Target == skills.TargetAllEnemies {
 		instance := combatEngine.GetCombatInstance(message.Character.Entity.ID)
 		if instance != nil {
 			// Check if a target name was provided after the number

@@ -14,12 +14,12 @@ func presetEntity(id string) *entities.Entity {
 	return &entities.Entity{ID: id}
 }
 
-// SystemCharacterTemplatePresets is the signed create roster: Fenwatch, Alley, Rune Hand, Hitch, Rigger.
+// SystemCharacterTemplatePresets is the signed create roster: Fenwatch, Alley, Rune Hand, Ward, Rigger.
 func SystemCharacterTemplatePresets() []*CharacterTemplate {
 	fenHP := balance.ScaleClassHP("warrior", classHPBase)
 	alleyHP := balance.ScaleClassHP("rogue", classHPBase)
 	runeHP := balance.ScaleClassHP("wizard", classHPBase)
-	hitchHP := balance.ScaleClassHP("hitch", classHPBase)
+	wardHP := balance.ScaleClassHP("ward", classHPBase)
 	riggerHP := balance.ScaleClassHP("rigger", classHPBase)
 	return []*CharacterTemplate{
 		{
@@ -85,23 +85,23 @@ func SystemCharacterTemplatePresets() []*CharacterTemplate {
 			Source:        "system",
 		},
 		{
-			Entity:           presetEntity("tpl-hitch"),
-			Name:             "Hitch",
-			Description:      "Fen rope. One careful swing. Pin once: the next time they try to leave, they stay.",
-			Backstory:        "You set the snare and wait. When they turn to run, the line is already tight.",
-			OriginArea:       "Forest Edge",
-			Archetype:        "hitch",
+			Entity:           presetEntity("tpl-ward"),
+			Name:             "Ward",
+			Description:      "Heavy plate. You start slow. Hits you take stack Grit, and Slam and the hit you throw back get heavier.",
+			Backstory:        "You let the first blows land. The plate holds, and the answer gets heavier.",
+			OriginArea:       "Gatehouse",
+			Archetype:        "ward",
 			Race:             RaceHuman,
-			Class:            ClassHitch,
+			Class:            ClassWard,
 			Level:            1,
-			CurrentHitPoints: hitchHP,
-			MaxHitPoints:     hitchHP,
+			CurrentHitPoints: wardHP,
+			MaxHitPoints:     wardHP,
 			Attributes:       createBaseAttributes(12, 12, 6, 8, 12),
 			StartingItems: []StartingItem{
-				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Worn Dagger"},
+				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Rusty Sword"},
 				{Slot: items.ItemSlotChest, ItemTemplateName: "Leather Armor"},
 			},
-			DefaultSkills: []string{"hitch_pin"},
+			DefaultSkills: []string{"ward_guard"},
 			Source:        "system",
 		},
 		{

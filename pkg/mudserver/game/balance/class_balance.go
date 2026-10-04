@@ -31,8 +31,9 @@ func defaultClassBalance() map[string]ClassBalance {
 		"rogue": {DamageDealt: 0.55, DamageTaken: 1.15, BehindDealt: BehindDealtCap, Swings: 2},
 		// Rune Hand. One heavy swing. Cloth takes more. Inscribe is applied in combat, not here.
 		"mage": {DamageDealt: 1.40, DamageTaken: 1.25, BehindDealt: BehindDealtCap, Swings: 1},
-		// Hitch. One slightly light swing. Pin is applied in combat, not here.
-		"hitch": {DamageDealt: 0.90, DamageTaken: 1.05, BehindDealt: BehindDealtCap, Swings: 1},
+		// Ward. One slow swing until Grit stacks. Guard and Slam are applied in combat.
+		// hitch is the stored id from before this kit and uses the same row.
+		"ward": {DamageDealt: 0.85, DamageTaken: 1.05, BehindDealt: BehindDealtCap, Swings: 1},
 		// Rigger. One light swing. Bolt and Rig are applied in combat, not here.
 		"rigger": {DamageDealt: 0.85, DamageTaken: 1.00, BehindDealt: BehindDealtCap, Swings: 1},
 	}
@@ -47,8 +48,8 @@ func classKey(id string) string {
 		return "rogue"
 	case "warrior", "fenwatch":
 		return "warrior"
-	case "hitch":
-		return "hitch"
+	case "hitch", "ward":
+		return "ward"
 	case "rigger":
 		return "rigger"
 	default:
@@ -65,6 +66,12 @@ func lookupClass(id string) (ClassBalance, bool) {
 	if cfg != nil && cfg.ClassBalance != nil {
 		if row, ok := cfg.ClassBalance[key]; ok {
 			return row, true
+		}
+		// A config written before Ward still has the hitch row.
+		if key == "ward" {
+			if row, ok := cfg.ClassBalance["hitch"]; ok {
+				return row, true
+			}
 		}
 	}
 	row, ok := defaultClassBalance()[key]
@@ -108,7 +115,7 @@ func ClassHPMultiplier(id string) float64 {
 		return 0.85
 	case "mage":
 		return 0.75
-	case "hitch":
+	case "ward":
 		return 1.05
 	case "rigger":
 		return 1
@@ -129,19 +136,73 @@ func ScaleClassHP(id string, base int32) int32 {
 	return out
 }
 
-// SignatureCharges is Brace, Slip, Pin uses granted at combat start.
-// Ranger and hunter fold into Alley's Slip.
+// SignatureCharges is Brace and Slip uses granted at combat start.
+// Ranger and hunter fold into Alley's Slip. Ward's Guard is a hotbar skill, not a charge.
 func SignatureCharges(id string) (brace, slip, pin int) {
 	switch classKey(id) {
 	case "warrior":
 		return 1, 0, 0
 	case "rogue":
 		return 0, 1, 0
-	case "hitch":
-		return 0, 0, 1
 	default:
 		return 0, 0, 0
 	}
+}
+
+// GritCap is the Ward soak stack. It lasts the current fight and clears when combat ends.
+const GritCap = 5
+
+// IsWard reports Ward, including characters still stored as hitch.
+func IsWard(id string) bool {
+	return classKey(id) == "ward"
+}
+
+func clampGrit(grit int) int {
+	if grit < 0 {
+		return 0
+	}
+	if grit > GritCap {
+		return GritCap
+	}
+	return grit
+}
+
+// WardSlamAbsolute is the swing multiplier versus a 1.00 baseline.
+// 0 Grit is 1.00×. 2 Grit is 1.40×. 5 Grit is 2.00×.
+func WardSlamAbsolute(grit int) float64 {
+	return 1.0 + 0.20*float64(clampGrit(grit))
+}
+
+// WardSlamSwingMult undoes the 0.85 class swing so Slam lands on WardSlamAbsolute.
+func WardSlamSwingMult(grit int) float64 {
+	dealt := 0.85
+	if row, ok := lookupClass("ward"); ok && row.DamageDealt > 0 {
+		dealt = row.DamageDealt
+	}
+	return WardSlamAbsolute(grit) / dealt
+}
+
+// WardRetaliateDamage is 10% × Grit of the hit, using Grit from before this hit.
+// 0 Grit throws nothing back. 5 Grit throws half the hit back.
+func WardRetaliateDamage(hit int32, grit int) int32 {
+	grit = clampGrit(grit)
+	if hit <= 0 || grit <= 0 {
+		return 0
+	}
+	back := int32(math.Round(float64(hit) * 0.10 * float64(grit)))
+	if back < 0 {
+		return 0
+	}
+	return back
+}
+
+// WardGritAfter adds one stack, or two when the hit was a self-guard soak. Cap is GritCap.
+func WardGritAfter(grit int, selfSoak bool) int {
+	gain := 1
+	if selfSoak {
+		gain = 2
+	}
+	return clampGrit(grit + gain)
 }
 
 // RiggerCharges is Bolt and Rig uses granted at combat start. Once each.

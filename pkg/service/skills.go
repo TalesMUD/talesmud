@@ -103,6 +103,16 @@ func ensureClassKit(repo r.SkillsRepository, all []*skills.Skill) []*skills.Skil
 		}
 	}
 	changed := false
+	for _, id := range []string{"hitch_pin", "hitch_hobble", "hitch_reel"} {
+		if !have[id] {
+			continue
+		}
+		if err := repo.Delete(id); err != nil {
+			log.WithError(err).WithField("skill", id).Error("SkillsService: failed to retire class kit skill")
+			continue
+		}
+		changed = true
+	}
 	for _, kit := range skills.ClassKit() {
 		if kit == nil || kit.Entity == nil {
 			continue

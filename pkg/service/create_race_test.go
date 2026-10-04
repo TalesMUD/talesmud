@@ -56,8 +56,8 @@ func TestApplyCreateRaceCopiesRaceAndGold(t *testing.T) {
 	if err := applyCreateRace(characters.PresetByID("tpl-runehand"), ch, "dwarf"); !errors.Is(err, characters.ErrRaceNotAllowed) {
 		t.Fatalf("rune hand dwarf %v", err)
 	}
-	if err := applyCreateRace(characters.PresetByID("tpl-hitch"), ch, "elf"); !errors.Is(err, characters.ErrRaceNotAllowed) {
-		t.Fatalf("hitch elf %v", err)
+	if err := applyCreateRace(characters.PresetByID("tpl-ward"), ch, "elf"); !errors.Is(err, characters.ErrRaceNotAllowed) {
+		t.Fatalf("ward elf %v", err)
 	}
 	if err := applyCreateRace(characters.PresetByID("tpl-rigger"), ch, "human"); !errors.Is(err, characters.ErrRaceNotAllowed) {
 		t.Fatalf("rigger human %v", err)

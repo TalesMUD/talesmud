@@ -150,6 +150,14 @@ type CombatantRef struct {
 	RigLeft    int  `json:"rigLeft,omitempty"`
 	ScrapArmed bool `json:"scrapArmed,omitempty"`
 
+	// Ward. Grit stacks when a damaging hit lands, cap 5, for this fight only.
+	// GuardCharges is the next hit inside GuardRounds. GuardSelf makes that hit grant two Grit.
+	Grit          int    `json:"grit,omitempty"`
+	GuardTargetID string `json:"guardTargetId,omitempty"`
+	GuardRounds   int    `json:"guardRounds,omitempty"`
+	GuardCharges  int    `json:"guardCharges,omitempty"`
+	GuardSelf     bool   `json:"guardSelf,omitempty"`
+
 	// Auto-attack system
 	AutoAttackTargetID string       `json:"autoAttackTargetId,omitempty"` // Persistent target for auto-attacks
 	QueuedAction       CombatAction `json:"queuedAction,omitempty"`       // Next action override (flee, defend, attack, skill)

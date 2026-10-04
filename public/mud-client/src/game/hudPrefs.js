@@ -37,6 +37,8 @@ export const SKILL_LABELS = {
   mage_inscribe: 'Inscribe',
   mage_sear: 'Sear',
   mage_glyph: 'Glyph',
+  ward_guard: 'Guard',
+  ward_slam: 'Slam',
   hitch_pin: 'Pin',
   hitch_hobble: 'Hobble',
   hitch_reel: 'Reel',
@@ -213,6 +215,8 @@ export const SKILL_GENERIC_ART = {
   mage_inscribe: 'generic-spell-arcane',
   mage_sear: 'generic-spell-arcane',
   mage_glyph: 'generic-spell-shield',
+  ward_guard: 'generic-spell-shield',
+  ward_slam: 'generic-action-melee',
   hitch_pin: 'generic-spell-stun',
   hitch_hobble: 'generic-spell-curse',
   hitch_reel: 'generic-action-melee',
@@ -280,7 +284,7 @@ function kitSkill(id, name, classId, levelRequired, kit, keepsSwing, oncePerFigh
 
 /**
  * Skills the Character → Skills panel may offer.
- * Fenwatch / Alley / Rune Hand / Hitch / Rigger are the v1 class kit only
+ * Fenwatch / Alley / Rune Hand / Ward / Rigger are the v1 class kit only
  * (pkg/entities/skills/classkit.go). Cleric, ranger, and druid keep the old seed.
  * Legacy warrior/rogue/mage rows live in LEGACY_SKILL_CATALOG for hotbar labels
  * and never appear as Available.
@@ -307,12 +311,10 @@ export const SKILL_CATALOG = [
   kitSkill('mage_glyph', 'Glyph', 'mage', 8, 'glyph', false, true, 0, 0,
     'Once a fight. The next hit on you is reduced by 4.'),
 
-  kitSkill('hitch_pin', 'Pin', 'hitch', 1, 'pin', true, true, 0, 0,
-    'Once a fight. Their next leave is cancelled. You still swing.'),
-  kitSkill('hitch_hobble', 'Hobble', 'hitch', 4, 'hobble', false, false, 4, 0.8,
-    'Their hits deal 0.80× for two rounds.'),
-  kitSkill('hitch_reel', 'Reel', 'hitch', 8, 'reel', false, true, 0, 0,
-    'Once a fight. If they left, pull them one room back and resume the fight.'),
+  Object.assign(kitSkill('ward_guard', 'Guard', 'ward', 1, 'guard', true, true, 0, 0,
+    'Once a fight. The next hit aimed at an ally hits you. Guarding yourself, that hit stacks two Grit. You still swing.'), { target: 'ally' }),
+  kitSkill('ward_slam', 'Slam', 'ward', 4, 'slam', false, false, 4, 1,
+    'Replaces your swing. 1.00×, plus 0.20× for each Grit, up to 2.00×.'),
 
   kitSkill('rigger_bolt', 'Bolt', 'rigger', 1, 'bolt', false, true, 0, 0,
     'Once a fight. Spend your swing. The next hit still lands, and the attacker takes it back.'),
@@ -367,7 +369,7 @@ const SKILL_BY_ID = Object.fromEntries(
 );
 
 /** Signed classes. Matches pkg/entities/skills.IsKitClass. */
-const KIT_CLASS_IDS = new Set(['warrior', 'rogue', 'mage', 'hitch', 'rigger']);
+const KIT_CLASS_IDS = new Set(['warrior', 'rogue', 'mage', 'ward', 'rigger']);
 /** HotbarCap in pkg/entities/skills/classkit.go. */
 const KIT_HOTBAR_CAP = 4;
 const CASTER_CLASS_IDS = new Set(['cleric', 'druid']);
@@ -389,7 +391,8 @@ export function normalizeClassId(classId) {
     case 'fenwatch':
       return 'warrior';
     case 'hitch':
-      return 'hitch';
+    case 'ward':
+      return 'ward';
     case 'rigger':
       return 'rigger';
     default:

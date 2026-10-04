@@ -49,8 +49,8 @@ func rosterKey(id string) string {
 		return "rogue"
 	case "wizard", "mage", "runehand", "rune_hand", "rune hand", "tpl-runehand":
 		return "mage"
-	case "hitch", "tpl-hitch":
-		return "hitch"
+	case "ward", "tpl-ward", "hitch", "tpl-hitch":
+		return "ward"
 	case "rigger", "tpl-rigger":
 		return "rigger"
 	default:
@@ -67,7 +67,7 @@ func AllowedRaceIDs(classOrTemplate string) []string {
 		return []string{"human", "dwarf", "elf"}
 	case "mage":
 		return []string{"human", "elf"}
-	case "hitch":
+	case "ward":
 		return []string{"human", "dwarf"}
 	case "rigger":
 		return []string{"construct"}

@@ -1,6 +1,9 @@
 package balance
 
-import "testing"
+import (
+	"math"
+	"testing"
+)
 
 func TestScaleClassDamageRoster(t *testing.T) {
 	cfg := &CombatBalanceConfig{ClassBalance: defaultClassBalance()}
@@ -44,11 +47,17 @@ func TestScaleClassDamageRoster(t *testing.T) {
 	if got := ScaleClassDamage("mage", "", 10, 10, 10); got != 14 {
 		t.Fatalf("rune hand dealt 10 * 1.40 = %d, want 14", got)
 	}
-	if got := ScaleClassDamage("hitch", "", 10, 10, 10); got != 9 {
-		t.Fatalf("hitch dealt 10 * 0.90 = %d, want 9", got)
+	if got := ScaleClassDamage("hitch", "", 20, 20, 20); got != 17 {
+		t.Fatalf("ward dealt 20 * 0.85 = %d, want 17", got)
+	}
+	if got := ScaleClassDamage("ward", "", 20, 20, 20); got != 17 {
+		t.Fatalf("ward id dealt 20 * 0.85 = %d, want 17", got)
 	}
 	if got := ScaleClassDamage("", "hitch", 10, 10, 20); got != 21 {
-		t.Fatalf("hitch taken 20 * 1.05 = %d, want 21", got)
+		t.Fatalf("ward taken 20 * 1.05 = %d, want 21", got)
+	}
+	if got := ScaleClassDamage("", "ward", 10, 10, 20); got != 21 {
+		t.Fatalf("ward id taken 20 * 1.05 = %d, want 21", got)
 	}
 	if got := ScaleClassDamage("warrior", "rogue", 10, 10, 10); got != 12 {
 		t.Fatalf("fenwatch into alley 10 * 1.00 * 1.15 = %d, want 12", got)
@@ -78,8 +87,8 @@ func TestScaleClassDamageRoster(t *testing.T) {
 }
 
 func TestClassRosterShape(t *testing.T) {
-	if ClassSwings("rogue") != 2 || ClassSwings("warrior") != 1 || ClassSwings("hitch") != 1 || ClassSwings("wizard") != 1 {
-		t.Fatalf("swings rogue=%d warrior=%d hitch=%d wizard=%d", ClassSwings("rogue"), ClassSwings("warrior"), ClassSwings("hitch"), ClassSwings("wizard"))
+	if ClassSwings("rogue") != 2 || ClassSwings("warrior") != 1 || ClassSwings("hitch") != 1 || ClassSwings("ward") != 1 || ClassSwings("wizard") != 1 {
+		t.Fatalf("swings rogue=%d warrior=%d hitch=%d ward=%d wizard=%d", ClassSwings("rogue"), ClassSwings("warrior"), ClassSwings("hitch"), ClassSwings("ward"), ClassSwings("wizard"))
 	}
 	if got := ScaleClassHP("warrior", 25); got != 30 {
 		t.Fatalf("fenwatch hp %d", got)
@@ -91,7 +100,10 @@ func TestClassRosterShape(t *testing.T) {
 		t.Fatalf("rune hand hp %d", got)
 	}
 	if got := ScaleClassHP("hitch", 25); got != 26 {
-		t.Fatalf("hitch hp %d", got)
+		t.Fatalf("ward hp via hitch %d", got)
+	}
+	if got := ScaleClassHP("ward", 25); got != 26 {
+		t.Fatalf("ward hp %d", got)
 	}
 	if ClassSwings("rigger") != 1 {
 		t.Fatalf("rigger swings %d", ClassSwings("rigger"))
@@ -125,8 +137,12 @@ func TestClassRosterShape(t *testing.T) {
 		t.Fatalf("hunter should slip with alley, got %d %d %d", b, s, p)
 	}
 	b, s, p = SignatureCharges("hitch")
-	if b != 0 || s != 0 || p != 1 {
-		t.Fatalf("pin charges %d %d %d", b, s, p)
+	if b != 0 || s != 0 || p != 0 {
+		t.Fatalf("ward has no brace/slip/pin charges, got %d %d %d", b, s, p)
+	}
+	b, s, p = SignatureCharges("ward")
+	if b != 0 || s != 0 || p != 0 {
+		t.Fatalf("ward id charges %d %d %d", b, s, p)
 	}
 	if !IsRuneHand("wizard") || IsRuneHand("hitch") {
 		t.Fatal("rune hand detect")
@@ -144,5 +160,35 @@ func TestClassRosterShape(t *testing.T) {
 		if id == "rigger" && (row.DamageDealt != 0.85 || row.DamageTaken != 1 || row.Swings != 1 || row.BehindDealt != BehindDealtCap) {
 			t.Fatalf("rigger row %+v", row)
 		}
+		if id == "ward" && (row.DamageDealt != 0.85 || row.DamageTaken != 1.05 || row.Swings != 1 || row.BehindDealt != BehindDealtCap) {
+			t.Fatalf("ward row %+v", row)
+		}
+	}
+	if _, ok := defaultClassBalance()["hitch"]; ok {
+		t.Fatal("default balance still has a hitch row")
+	}
+}
+
+func TestWardSoakNumbers(t *testing.T) {
+	if WardSlamAbsolute(0) != 1 || WardSlamAbsolute(2) != 1.4 || WardSlamAbsolute(5) != 2 || WardSlamAbsolute(9) != 2 {
+		t.Fatalf("slam absolute %v %v %v %v", WardSlamAbsolute(0), WardSlamAbsolute(2), WardSlamAbsolute(5), WardSlamAbsolute(9))
+	}
+	near := func(got, want float64) {
+		t.Helper()
+		if math.Abs(got-want) > 1e-9 {
+			t.Fatalf("got %v want %v", got, want)
+		}
+	}
+	near(WardSlamSwingMult(0), 1.0/0.85)
+	near(WardSlamSwingMult(2), 1.4/0.85)
+	near(WardSlamSwingMult(5), 2.0/0.85)
+	if WardRetaliateDamage(20, 0) != 0 || WardRetaliateDamage(1, 1) != 0 || WardRetaliateDamage(20, 1) != 2 || WardRetaliateDamage(20, 5) != 10 {
+		t.Fatalf("retaliate %d %d %d %d", WardRetaliateDamage(20, 0), WardRetaliateDamage(1, 1), WardRetaliateDamage(20, 1), WardRetaliateDamage(20, 5))
+	}
+	if WardGritAfter(0, false) != 1 || WardGritAfter(0, true) != 2 || WardGritAfter(5, false) != 5 || WardGritAfter(4, true) != 5 {
+		t.Fatalf("grit %d %d %d %d", WardGritAfter(0, false), WardGritAfter(0, true), WardGritAfter(5, false), WardGritAfter(4, true))
+	}
+	if !IsWard("hitch") || !IsWard("ward") || IsWard("warrior") {
+		t.Fatal("ward detect")
 	}
 }

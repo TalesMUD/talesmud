@@ -88,8 +88,15 @@ func TestStartingGoldAndCreateRace(t *testing.T) {
 	if _, err := ResolveCreateRace(PresetByID("tpl-runehand"), "dwarf"); err != ErrRaceNotAllowed {
 		t.Fatalf("rune hand dwarf %v", err)
 	}
-	if _, err := ResolveCreateRace(PresetByID("tpl-hitch"), "elf"); err != ErrRaceNotAllowed {
-		t.Fatalf("hitch elf %v", err)
+	if _, err := ResolveCreateRace(PresetByID("tpl-ward"), "elf"); err != ErrRaceNotAllowed {
+		t.Fatalf("ward elf %v", err)
+	}
+	if !RaceAllowed("hitch", "human") || !RaceAllowed("tpl-hitch", "dwarf") || !RaceAllowed("ward", "dwarf") || !RaceAllowed("tpl-ward", "human") {
+		t.Fatal("ward races")
+	}
+	gotRace, err := ResolveCreateRace(PresetByID("tpl-ward"), "dwarf")
+	if err != nil || gotRace.ID != "dwarf" {
+		t.Fatalf("ward dwarf %+v %v", gotRace, err)
 	}
 	if _, err := ResolveCreateRace(PresetByID("tpl-rigger"), "human"); err != ErrRaceNotAllowed {
 		t.Fatalf("rigger human %v", err)

@@ -17,9 +17,7 @@ const (
 	KitInscribe = "inscribe"
 	KitSear     = "sear"
 	KitGlyph    = "glyph"
-	KitPin      = "pin"
-	KitHobble   = "hobble"
-	KitReel     = "reel"
+	KitGuard    = "guard"
 	KitBolt     = "bolt"
 	KitRig      = "rig"
 	KitOverload = "overload"
@@ -27,10 +25,11 @@ const (
 
 const HotbarCap = 4
 
-// IsKitClass reports Fenwatch, Alley, Rune Hand, Hitch, and Rigger.
+// IsKitClass reports Fenwatch, Alley, Rune Hand, Ward, and Rigger.
+// The stored class id hitch is Ward.
 func IsKitClass(classID string) bool {
 	switch normalizeClassID(classID) {
-	case "warrior", "rogue", "mage", "hitch", "rigger":
+	case "warrior", "rogue", "mage", "ward", "rigger":
 		return true
 	default:
 		return false
@@ -61,12 +60,9 @@ func ClassKit() []*Skill {
 		kit("mage_glyph", "Glyph", "mage", 8, KitGlyph, false, true, 0, 0,
 			"Once a fight. The next hit on you is reduced by 4."),
 
-		kit("hitch_pin", "Pin", "hitch", 1, KitPin, true, true, 0, 0,
-			"Once a fight. Their next leave is cancelled. You still swing."),
-		kit("hitch_hobble", "Hobble", "hitch", 4, KitHobble, false, false, 4, 0.80,
-			"Their hits deal 0.80× for two rounds."),
-		kit("hitch_reel", "Reel", "hitch", 8, KitReel, false, true, 0, 0,
-			"Once a fight. If they left, pull them one room back and resume the fight."),
+		wardGuard(),
+		kit("ward_slam", "Slam", "ward", 4, KitSlam, false, false, 4, 1.00,
+			"Replaces your swing. 1.00×, plus 0.20× for each Grit, up to 2.00×."),
 
 		kit("rigger_bolt", "Bolt", "rigger", 1, KitBolt, false, true, 0, 0,
 			"Once a fight. Spend your swing. The next hit still lands, and the attacker takes it back."),
@@ -75,6 +71,13 @@ func ClassKit() []*Skill {
 		kit("rigger_overload", "Overload", "rigger", 6, KitOverload, false, true, 0, 0.80,
 			"Once a fight, while the turret is up. Its remaining hits deal 0.80×."),
 	}
+}
+
+func wardGuard() *Skill {
+	s := kit("ward_guard", "Guard", "ward", 1, KitGuard, true, true, 0, 0,
+		"Once a fight. The next hit aimed at an ally hits you. Guarding yourself, that hit stacks two Grit. You still swing.")
+	s.Target = TargetAlly
+	return s
 }
 
 func kit(id, name, classID string, level int32, kind string, keeps, once bool, cd int, mult float64, desc string) *Skill {
@@ -102,6 +105,9 @@ func FillHotbar(classID string, level int32, equipped []string) []string {
 	if !IsKitClass(classID) {
 		return equipped
 	}
+	if normalizeClassID(classID) == "ward" {
+		equipped = migrateWardHotbar(level, equipped)
+	}
 	out := make([]string, 0, HotbarCap)
 	seen := map[string]bool{}
 	for _, id := range equipped {
@@ -120,6 +126,35 @@ func FillHotbar(classID string, level int32, equipped []string) []string {
 	})
 	for _, s := range known {
 		if s == nil || s.Kit == "" || s.Entity == nil {
+			continue
+		}
+		if seen[s.Entity.ID] || len(out) >= HotbarCap {
+			continue
+		}
+		seen[s.Entity.ID] = true
+		out = append(out, s.Entity.ID)
+	}
+	return out
+}
+
+// migrateWardHotbar drops Pin, Hobble, and Reel and keeps Guard and Slam in unlock order.
+// It reads ClassKit directly so a character loaded before the skill cache still keeps a bar.
+func migrateWardHotbar(level int32, equipped []string) []string {
+	out := make([]string, 0, HotbarCap)
+	seen := map[string]bool{}
+	for _, id := range equipped {
+		switch id {
+		case "", "hitch_pin", "hitch_hobble", "hitch_reel":
+			continue
+		}
+		if seen[id] || len(out) >= HotbarCap {
+			continue
+		}
+		seen[id] = true
+		out = append(out, id)
+	}
+	for _, s := range ClassKit() {
+		if s == nil || s.Entity == nil || !s.HasClass("ward") || s.LevelRequired > level {
 			continue
 		}
 		if seen[s.Entity.ID] || len(out) >= HotbarCap {
