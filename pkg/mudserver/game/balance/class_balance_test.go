@@ -47,11 +47,11 @@ func TestScaleClassDamageRoster(t *testing.T) {
 	if got := ScaleClassDamage("mage", "", 10, 10, 10); got != 14 {
 		t.Fatalf("rune hand dealt 10 * 1.40 = %d, want 14", got)
 	}
-	if got := ScaleClassDamage("hitch", "", 20, 20, 20); got != 17 {
-		t.Fatalf("ward dealt 20 * 0.85 = %d, want 17", got)
+	if got := ScaleClassDamage("hitch", "", 20, 20, 20); got != 19 {
+		t.Fatalf("ward dealt 20 * 0.95 = %d, want 19", got)
 	}
-	if got := ScaleClassDamage("ward", "", 20, 20, 20); got != 17 {
-		t.Fatalf("ward id dealt 20 * 0.85 = %d, want 17", got)
+	if got := ScaleClassDamage("ward", "", 20, 20, 20); got != 19 {
+		t.Fatalf("ward id dealt 20 * 0.95 = %d, want 19", got)
 	}
 	if got := ScaleClassDamage("", "hitch", 10, 10, 20); got != 21 {
 		t.Fatalf("ward taken 20 * 1.05 = %d, want 21", got)
@@ -160,7 +160,7 @@ func TestClassRosterShape(t *testing.T) {
 		if id == "rigger" && (row.DamageDealt != 0.85 || row.DamageTaken != 1 || row.Swings != 1 || row.BehindDealt != BehindDealtCap) {
 			t.Fatalf("rigger row %+v", row)
 		}
-		if id == "ward" && (row.DamageDealt != 0.85 || row.DamageTaken != 1.05 || row.Swings != 1 || row.BehindDealt != BehindDealtCap) {
+		if id == "ward" && (row.DamageDealt != 0.95 || row.DamageTaken != 1.05 || row.Swings != 1 || row.BehindDealt != BehindDealtCap) {
 			t.Fatalf("ward row %+v", row)
 		}
 	}
@@ -170,6 +170,9 @@ func TestClassRosterShape(t *testing.T) {
 }
 
 func TestWardSoakNumbers(t *testing.T) {
+	if WardOpeningGrit != 1 || WardOpeningGrit >= GritCap || WardStarterSwing != 1 {
+		t.Fatalf("opening grit %d starter %d", WardOpeningGrit, WardStarterSwing)
+	}
 	if WardSlamAbsolute(0) != 1 || WardSlamAbsolute(2) != 1.4 || WardSlamAbsolute(5) != 2 || WardSlamAbsolute(9) != 2 {
 		t.Fatalf("slam absolute %v %v %v %v", WardSlamAbsolute(0), WardSlamAbsolute(2), WardSlamAbsolute(5), WardSlamAbsolute(9))
 	}
@@ -179,9 +182,9 @@ func TestWardSoakNumbers(t *testing.T) {
 			t.Fatalf("got %v want %v", got, want)
 		}
 	}
-	near(WardSlamSwingMult(0), 1.0/0.85)
-	near(WardSlamSwingMult(2), 1.4/0.85)
-	near(WardSlamSwingMult(5), 2.0/0.85)
+	near(WardSlamSwingMult(0), 1.0/0.95)
+	near(WardSlamSwingMult(2), 1.4/0.95)
+	near(WardSlamSwingMult(5), 2.0/0.95)
 	if WardRetaliateDamage(20, 0) != 0 || WardRetaliateDamage(1, 1) != 0 || WardRetaliateDamage(20, 1) != 2 || WardRetaliateDamage(20, 5) != 10 {
 		t.Fatalf("retaliate %d %d %d %d", WardRetaliateDamage(20, 0), WardRetaliateDamage(1, 1), WardRetaliateDamage(20, 1), WardRetaliateDamage(20, 5))
 	}

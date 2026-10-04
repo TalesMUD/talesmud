@@ -61,30 +61,34 @@ func TestWardGritAndRetaliate(t *testing.T) {
 	boost(inst, aID, 100)
 	boost(inst, bID, 100)
 
-	first := hitUntil(t, e, inst, aID, bID)
-	if strings.Contains(first.Message, "Grit throws") {
-		t.Fatalf("open grit threw back: %q", first.Message)
+	if inst.GetCombatantByID(aID).Grit != balance.WardOpeningGrit || inst.GetCombatantByID(bID).Grit != balance.WardOpeningGrit {
+		t.Fatalf("opening grit a=%d b=%d", inst.GetCombatantByID(aID).Grit, inst.GetCombatantByID(bID).Grit)
 	}
-	if inst.GetCombatantByID(bID).Grit != 1 {
+	first := hitUntil(t, e, inst, aID, bID)
+	openBack := balance.WardRetaliateDamage(first.Damage, balance.WardOpeningGrit)
+	if openBack < 1 || !strings.Contains(first.Message, "Grit throws") {
+		t.Fatalf("opening grit did not throw: back=%d %q", openBack, first.Message)
+	}
+	if inst.GetCombatantByID(bID).Grit != balance.WardOpeningGrit+1 {
 		t.Fatalf("grit after first hit %d", inst.GetCombatantByID(bID).Grit)
 	}
-	if inst.GetCombatantByID(aID).Grit != 0 || inst.GetCombatantByID(aID).CurrentHP != 800 {
-		t.Fatalf("retaliate touched the attacker %+v", inst.GetCombatantByID(aID))
+	if inst.GetCombatantByID(aID).Grit != balance.WardOpeningGrit || inst.GetCombatantByID(aID).CurrentHP != 800-openBack {
+		t.Fatalf("retaliate on the attacker grit %d hp %d", inst.GetCombatantByID(aID).Grit, inst.GetCombatantByID(aID).CurrentHP)
 	}
 
 	before := inst.GetCombatantByID(aID).CurrentHP
 	second := hitUntil(t, e, inst, aID, bID)
-	back := balance.WardRetaliateDamage(second.Damage, 1)
+	back := balance.WardRetaliateDamage(second.Damage, balance.WardOpeningGrit+1)
 	if back < 1 || !strings.Contains(second.Message, "Grit throws") {
 		t.Fatalf("second hit back=%d msg=%q", back, second.Message)
 	}
 	if inst.GetCombatantByID(aID).CurrentHP != before-back {
 		t.Fatalf("throwback hp %d want %d", inst.GetCombatantByID(aID).CurrentHP, before-back)
 	}
-	if inst.GetCombatantByID(aID).Grit != 0 {
+	if inst.GetCombatantByID(aID).Grit != balance.WardOpeningGrit {
 		t.Fatal("retaliate granted grit")
 	}
-	if inst.GetCombatantByID(bID).Grit != 2 {
+	if inst.GetCombatantByID(bID).Grit != balance.WardOpeningGrit+2 {
 		t.Fatalf("grit %d", inst.GetCombatantByID(bID).Grit)
 	}
 
@@ -95,7 +99,7 @@ func TestWardGritAndRetaliate(t *testing.T) {
 	if gotBack != want || want < 1 {
 		t.Fatalf("cap throw %d want %d (hit %d)", gotBack, want, capped.Damage)
 	}
-	if inst.GetCombatantByID(bID).Grit != 5 || inst.GetCombatantByID(aID).Grit != 0 {
+	if inst.GetCombatantByID(bID).Grit != 5 || inst.GetCombatantByID(aID).Grit != balance.WardOpeningGrit {
 		t.Fatalf("cap grit b=%d a=%d", inst.GetCombatantByID(bID).Grit, inst.GetCombatantByID(aID).Grit)
 	}
 
@@ -211,7 +215,7 @@ func TestWardGuardRedirectAndSelf(t *testing.T) {
 
 	direct := hitUntil(t, e, inst, enemyID, heroID)
 	hero = inst.GetCombatantByID(heroID)
-	if hero.GuardCharges != 1 || hero.Grit != 1 {
+	if hero.GuardCharges != 1 || hero.Grit != balance.WardOpeningGrit+1 {
 		t.Fatalf("direct hit spent the ally guard: charges %d grit %d msg %q", hero.GuardCharges, hero.Grit, direct.Message)
 	}
 	allyHP := inst.GetCombatantByID(allyID).CurrentHP
@@ -221,7 +225,7 @@ func TestWardGuardRedirectAndSelf(t *testing.T) {
 		t.Fatalf("ally took the hit %d -> %d (%q)", allyHP, inst.GetCombatantByID(allyID).CurrentHP, redirected.Message)
 	}
 	hero = inst.GetCombatantByID(heroID)
-	if hero.CurrentHP >= wardHP || hero.GuardCharges != 0 || hero.Grit != 2 {
+	if hero.CurrentHP >= wardHP || hero.GuardCharges != 0 || hero.Grit != balance.WardOpeningGrit+2 {
 		t.Fatalf("redirect ward hp %d charges %d grit %d", hero.CurrentHP, hero.GuardCharges, hero.Grit)
 	}
 }
@@ -241,16 +245,16 @@ func TestWardSelfGuardAndMiss(t *testing.T) {
 		t.Fatalf("smoke should miss: %q", smoked.Message)
 	}
 	hero = inst.GetCombatantByID(heroID)
-	if hero.GuardCharges != 1 || !hero.GuardSelf || hero.Grit != 0 {
+	if hero.GuardCharges != 1 || !hero.GuardSelf || hero.Grit != balance.WardOpeningGrit {
 		t.Fatalf("miss spent self guard %+v", hero)
 	}
 	hitUntil(t, e, inst, enemyID, heroID)
 	hero = inst.GetCombatantByID(heroID)
-	if hero.Grit != 2 || hero.GuardCharges != 0 || hero.GuardSelf {
+	if hero.Grit != balance.WardOpeningGrit+2 || hero.GuardCharges != 0 || hero.GuardSelf {
 		t.Fatalf("self soak grit %d charges %d self %v", hero.Grit, hero.GuardCharges, hero.GuardSelf)
 	}
 	hitUntil(t, e, inst, enemyID, heroID)
-	if inst.GetCombatantByID(heroID).Grit != 3 {
+	if inst.GetCombatantByID(heroID).Grit != balance.WardOpeningGrit+3 {
 		t.Fatalf("next hit grit %d", inst.GetCombatantByID(heroID).Grit)
 	}
 }
@@ -274,7 +278,55 @@ func TestWardGuardWindowExpires(t *testing.T) {
 	}
 	boost(inst, enemyID, 40)
 	hitUntil(t, e, inst, enemyID, heroID)
-	if inst.GetCombatantByID(heroID).Grit != 1 {
+	if inst.GetCombatantByID(heroID).Grit != balance.WardOpeningGrit+1 {
 		t.Fatalf("expired self guard still doubled grit: %d", inst.GetCombatantByID(heroID).Grit)
+	}
+}
+
+func TestWardLevel1BasicSwingClearsRatBreakpoint(t *testing.T) {
+	hitFor := func(level int32, class characters.Class, power int32) AttackResult {
+		t.Helper()
+		e := NewEngine(NewManager(), DefaultConfig())
+		hero := &characters.Character{
+			Entity:           entities.NewEntity(),
+			Name:             "Hero",
+			Level:            level,
+			Class:            class,
+			MaxHitPoints:     40,
+			CurrentHitPoints: 40,
+		}
+		enemy := &npc.NPC{
+			Entity:           entities.NewEntity(),
+			Name:             "Catacomb Rat",
+			Level:            level,
+			MaxHitPoints:     20,
+			CurrentHitPoints: 20,
+			EnemyTrait:       &npc.EnemyTrait{AttackPower: 3, Defense: 0, Difficulty: "trivial"},
+		}
+		inst := e.InitiateCombat("R0005", []*characters.Character{hero}, []*npc.NPC{enemy})
+		inst.GetCombatantByID(hero.Entity.ID).AttackPower = power
+		for i := 0; i < 80; i++ {
+			res := e.ProcessAttack(inst, hero.Entity.ID, enemy.Entity.ID)
+			if res.Hit && !res.Critical {
+				return res
+			}
+			if !inst.GetCombatantByID(enemy.Entity.ID).IsAlive {
+				inst.GetCombatantByID(enemy.Entity.ID).CurrentHP = 20
+				inst.GetCombatantByID(enemy.Entity.ID).IsAlive = true
+			}
+		}
+		t.Fatal("no non-crit hit")
+		return AttackResult{}
+	}
+	// Sword 5 + STR 12 is 6. 0.95 rounds to 6, and the level-1 chip makes 7.
+	// Three of those clear a 20 HP rat. Fenwatch starter (7) is not beaten.
+	if got := hitFor(1, characters.ClassWard, 6); got.Damage != 7 {
+		t.Fatalf("level-1 ward swing %d", got.Damage)
+	}
+	if got := hitFor(5, characters.ClassWard, 6); got.Damage != 6 {
+		t.Fatalf("later ward swing %d, starter chip leaked", got.Damage)
+	}
+	if got := hitFor(1, characters.ClassWarrior, 7); got.Damage != 7 {
+		t.Fatalf("fenwatch starter %d", got.Damage)
 	}
 }

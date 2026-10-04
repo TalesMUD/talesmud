@@ -61,7 +61,7 @@ func ClassKit() []*Skill {
 			"Once a fight. The next hit on you is reduced by 4."),
 
 		wardGuard(),
-		kit("ward_slam", "Slam", "ward", 4, KitSlam, false, false, 4, 1.00,
+		kit("ward_slam", "Slam", "ward", 1, KitSlam, false, false, 4, 1.00,
 			"Replaces your swing. 1.00×, plus 0.20× for each Grit, up to 2.00×."),
 
 		kit("rigger_bolt", "Bolt", "rigger", 1, KitBolt, false, true, 0, 0,

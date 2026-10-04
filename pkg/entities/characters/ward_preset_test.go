@@ -59,7 +59,7 @@ func TestNormalizeClassRewritesHitch(t *testing.T) {
 	if strings.Contains(ch.Class.Description, "Hitch") || strings.Contains(ch.Class.Description, "Warrior") {
 		t.Fatal(ch.Class.Description)
 	}
-	if len(ch.EquippedSkills) != 1 || ch.EquippedSkills[0] != "ward_guard" {
+	if len(ch.EquippedSkills) != 2 || ch.EquippedSkills[0] != "ward_guard" || ch.EquippedSkills[1] != "ward_slam" {
 		t.Fatalf("level 1 bar %v", ch.EquippedSkills)
 	}
 

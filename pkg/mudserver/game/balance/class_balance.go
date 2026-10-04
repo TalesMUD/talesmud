@@ -32,8 +32,9 @@ func defaultClassBalance() map[string]ClassBalance {
 		// Rune Hand. One heavy swing. Cloth takes more. Inscribe is applied in combat, not here.
 		"mage": {DamageDealt: 1.40, DamageTaken: 1.25, BehindDealt: BehindDealtCap, Swings: 1},
 		// Ward. One slow swing until Grit stacks. Guard and Slam are applied in combat.
+		// 0.95 keeps the opener under Fenwatch (starter sword is 6 vs 7) and off the old 5.
 		// hitch is the stored id from before this kit and uses the same row.
-		"ward": {DamageDealt: 0.85, DamageTaken: 1.05, BehindDealt: BehindDealtCap, Swings: 1},
+		"ward": {DamageDealt: 0.95, DamageTaken: 1.05, BehindDealt: BehindDealtCap, Swings: 1},
 		// Rigger. One light swing. Bolt and Rig are applied in combat, not here.
 		"rigger": {DamageDealt: 0.85, DamageTaken: 1.00, BehindDealt: BehindDealtCap, Swings: 1},
 	}
@@ -152,6 +153,15 @@ func SignatureCharges(id string) (brace, slip, pin int) {
 // GritCap is the Ward soak stack. It lasts the current fight and clears when combat ends.
 const GritCap = 5
 
+// WardOpeningGrit is granted on entering combat so the first Slam and the first
+// bite are not the empty 0 stack. The cap, and the peak, are still GritCap.
+const WardOpeningGrit = 1
+
+// WardStarterSwing is added to a level-1 basic swing only.
+// Sword 5 + STR 12 at 0.95 rounds to 6, and 6 still takes four hits to kill a 20 HP rat.
+// +1 makes that swing 7, tying Fenwatch's starter hit without putting the coefficient over 1.
+const WardStarterSwing int32 = 1
+
 // IsWard reports Ward, including characters still stored as hitch.
 func IsWard(id string) bool {
 	return classKey(id) == "ward"
@@ -173,9 +183,9 @@ func WardSlamAbsolute(grit int) float64 {
 	return 1.0 + 0.20*float64(clampGrit(grit))
 }
 
-// WardSlamSwingMult undoes the 0.85 class swing so Slam lands on WardSlamAbsolute.
+// WardSlamSwingMult undoes the class swing so Slam lands on WardSlamAbsolute.
 func WardSlamSwingMult(grit int) float64 {
-	dealt := 0.85
+	dealt := 0.95
 	if row, ok := lookupClass("ward"); ok && row.DamageDealt > 0 {
 		dealt = row.DamageDealt
 	}
