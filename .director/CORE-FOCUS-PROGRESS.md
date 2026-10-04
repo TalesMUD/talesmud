@@ -1,3 +1,10 @@
+## /app Ward APK 641c5a1 + Fenbone Needle (2026-10-04)
+
+- Flutter SHA: `641c5a1` (`[grokbot]`). GitHub release `dev-64`. Public file `veilspan-641c5a1.apk`, sha256 `e50ec190a13ed54cb05ef28fef35ff725bcc3c940509409d809f9d90c5df8fdd`, 58915583 bytes. CTA and version history on `/app` point at it. Prior latest `1adb986` stays in history.
+- Engine landing SHA: `f0a9616` on `engine-june` (this note's commit follows it).
+- Content SHA: `ee10635` (`talesmud-rpg-1` main). ITM0266 Fenbone Needle, rare, level 14 dagger, damage 18, 10% on LT0305 (ENM0017 Mire Hag, R0315). Not guaranteed. SCR0266 Fen Rot: 2 damage/tick, 3 rounds, refresh, no stacks. Gemini icon 128px. Chosen as the next Chapter I boss after the Hollow Knight, not Bandit Captain Rask or Lord Vayne. Loremaster not asked — ENM0017 text already covers bone fetishes and poison mist; the needle is distinct from guaranteed ITM0053 Hag's Fetish.
+- Quota: `grok usage` on Ward session `01a107cc-8328-7740-a71b-cdd982d5674a` before this pass (19.6M tokens, about $4.18, grok-4.7-build). Account `/usage` modal was not opened headlessly.
+
 ## Z04 Ashenveil density (2026-10-04)
 
 - SHIPPED content `48e8da7` (`feat: [grokbot] Z04 Ashenveil density on the west road and dwarven climb`) on `talesmud-rpg-1` main. Pulled from `5c400e2` first (HK trophy unique flags ITM0016/17/20/22–24 already on that tip).
