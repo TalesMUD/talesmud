@@ -23,5 +23,5 @@ scp -i ~/.ssh/veilspan_vps \
   atla@100.83.205.104:/home/atla/dev/talesmud/public/landing/app/downloads/veilspan-<sha>.apk
 ```
 
-Current playtest build: `veilspan-1adb986.apk`
-sha256 `c40a7f105f468153b5f42666032afebf8db4bf7ab80e6531727b39bae4d03d77`
+Current playtest build: `veilspan-641c5a1.apk`
+sha256 `e50ec190a13ed54cb05ef28fef35ff725bcc3c940509409d809f9d90c5df8fdd`
