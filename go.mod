@@ -1,6 +1,6 @@
 module github.com/talesmud/talesmud
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/asaskevich/EventBus v0.0.0-20200907212545-49d423059eef
@@ -18,11 +18,11 @@ require (
 	github.com/sirupsen/logrus v1.10.2
 	github.com/stretchr/testify v1.12.1
 	github.com/yuin/gopher-lua v1.1.2
-	golang.org/x/crypto v0.54.0
+	golang.org/x/crypto v0.57.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
 	layeh.com/gopher-luar v1.0.11
-	modernc.org/sqlite v1.58.0
+	modernc.org/sqlite v1.60.1
 )
 
 require (
@@ -56,12 +56,12 @@ require (
 	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/arch v0.22.0 // indirect
-	golang.org/x/net v0.57.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.40.0 // indirect
+	golang.org/x/net v0.58.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 	gopkg.in/sourcemap.v1 v1.0.5 // indirect
-	modernc.org/libc v1.75.6 // indirect
+	modernc.org/libc v1.77.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
 )
