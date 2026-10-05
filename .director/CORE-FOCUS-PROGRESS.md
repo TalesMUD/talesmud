@@ -1,3 +1,18 @@
+## Z06 Orc camp density (2026-10-05)
+
+- SHIPPED content `8fa4438` (`feat: [grokbot] Z06 orc camp roles, banner tent, and examines`) on `talesmud-rpg-1` main. Built on `d016d3e`. Earlier `47cee52` had already placed six ENM0035 across R0618, R0625, and R0626. This pass adds the mixed roles, the banner tent, and the thin examines.
+- Camp map (z=3, both ways): R0618 Orc Raid Camp (1,-7) west R0627 Palisade Gap (0,-7), east R0625 Raider Tent Line (2,-7), southeast R0626 Supply Cut (2,-8). R0625 north R0628 War-Banner Tent (2,-6). Existing southwest R0617 and northwest R0619 stay. Cartographer uses room coords. No new map-geometry row.
+- Spawn map (initial, live log 2026-10-05T08:25:31Z):
+  - ENM0035 Orc Raider L27 LT0603: R0618×2, R0625×2, R0626×2 (6). QST0604 still kill 5 ENM0035, one objective. Giver NPC0034.
+  - ENM0073 Orc Skirmisher L25 LT0605: R0627×2, R0625×1 (3). `difficulty: normal` so no telegraph. `fleeThreshold: 0.3`. Live after multipliers: HP 91, ATK 10, DEF 3.
+  - ENM0074 Orc War-Chanter L27 LT0606: R0628×1. Hard telegraph, softer hit. Live HP 99, ATK 11, DEF 4.
+  - ENM0075 Grask Banner-Captain L29 LT0607: R0628×1, 20m. Live HP 171, ATK 20, DEF 8. Not a quest gate. Ironjaw ENM0036 stays HP 592 / ATK 27 / DEF 16.
+- Templates have empty `spawnRoomId` (`isTemplate` true). `export_to_data.py` now writes `fleeThreshold` from `flee_threshold`.
+- Examines: every camp room has 4 (R0618, R0625, R0626, R0627, R0628). Nine rooms that had 1 examine now have 3 (R0603, R0611–R0615, R0617, R0621, R0622). Z06 is 28 rooms, 75 EXAMINE actions, minimum 2. Rooms that were already at 2 were left there.
+- Import: VPS content ff `d016d3e..8fa4438`, `deploy.sh --dry-run --skip-export --no-assets`, then SIGTERM talesmud MainPID `990078` only. `./bin/tales --import mvp-rpg-1` wrote `./talesmud.db` (141 spawners, 357 rooms, 141 NPCs, 0 characters relocated) in 1.37s. Backup `backups/world_backup_2026-10-05_08-25-27.json`. systemd brought tales back. New MainPID `1006672` on `:8010`, active. Door `:8020` pid `758959` unchanged. Public `GET /play/` 200, `/api/server-info` Veilspan Chapter I.
+- Warnings unchanged: R1910 `ITM_architect_data_crystal`, R1934 `ITM_legendary_architects_seal`, and one `Unknown difficulty tier` for pre-existing ENM0065 `difficulty: elite`.
+- Residuals: no room plates for R0625–R0628 (name prompts only; Gemini pipeline not run). No heal or buff script. `onAggroScript` is stored and not executed, dodge is a status effect, and `attackSpeed` is not read, so the chanter's "heal" is a Weak Health Potion on LT0606. Captain's guaranteed drop is LT0607 `guaranteed: true` on ITM0142 ×2–3, because the importer does not copy `enemyTrait.guaranteedLoot`. No guest walked the ridge. Local clawdbot `:8010` was not reimported. Engine-june portrait deletes were not committed. Door untouched. Next free enemy id is ENM0076.
+
 ## /app Ward APK 641c5a1 + Fenbone Needle (2026-10-04)
 
 - Flutter SHA: `641c5a1` (`[grokbot]`). GitHub release `dev-64`. Public file `veilspan-641c5a1.apk`, sha256 `e50ec190a13ed54cb05ef28fef35ff725bcc3c940509409d809f9d90c5df8fdd`, 58915583 bytes. CTA and version history on `/app` point at it. Prior latest `1adb986` stays in history.
@@ -692,3 +707,10 @@ Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated bl
 - Marcus-signed backlog **#1–#8 / #10 / #11** treated complete for director purposes; **#9 Z04 Ashenveil density** remains open (26 rooms, zero examines, Ashenveil Bandit/Archer/Brute lack `spawnRoomId`).
 - Crown today: **Z04 Ashenveil density** (CONTENT). Task: `.director/Z04-ASHENVEIL-DENSITY-TASK.md` on `talesmud-rpg-1`. Worker: Grok 4.7 xhigh tmux `grok-z02`.
 
+
+## ACCEPT — 2026-10-05 daily director (~10:15 Europe/Berlin)
+- Live healthy: veilspan.com 200; `/play/` 200 with `?v=ward1`; `POST /api/guest` 200; `/app/` 200. clawdbot up (`acb32219`). Door FYI only, untouched.
+- ACCEPTED yesterday's crown **Z04 Ashenveil density** (content `48e8da7`, live on VPS :8010): ENM0020–22 spawns placed, examines across R0401–R0426 (R0401/R0404 safe, R0424/R0426 quiet vistas). Residual: no in-client guest walk Oldtown→Timberhold; pre-existing R1910/R1934 unknown-item import warnings.
+- ACCEPTED overnight EXTRA: Ward replaces Hitch (`444c5b8`, `?v=ward1`; Flutter APK `641c5a1`), Fenbone Needle ITM0266 10% Mire Hag (`ee10635`), Z05–Z12 kill-quest mobs as template spawners (`8d7fb8b`). Open note: Marcus found Ward opener weak vs L1 Catacomb Rats (Quest Master balance, not today's crown).
+- CozyTown devlog prepended "Meet the Ward + a busier Ashenveil road" (updated 2026-10-05, mycozy.town/veilspan).
+- Crown today: **Z06 Orc camp density** (Marcus-signed next-five #1). Task `~/dev/talesmud-rpg-1/.director/Z06-ORC-CAMP-DENSITY-TASK.md`. Worker Grok 4.7 xhigh tmux `grok-z02` (weekly 35% used at lock).
