@@ -127,17 +127,20 @@ func (h *QuestsHandler) DeleteQuestByID(c *gin.Context) {
 
 // QuestLogEntry combines quest progress with quest definition for frontend
 type QuestLogEntry struct {
-	QuestID     string                   `json:"questId"`
-	QuestName   string                   `json:"questName"`
-	Status      string                   `json:"status"`
-	Description string                   `json:"description"`
-	Category    string                   `json:"category,omitempty"`
-	Area        string                   `json:"area,omitempty"`
-	Level       int32                    `json:"level,omitempty"`
-	Objectives  []QuestObjectiveProgress `json:"objectives"`
-	Rewards     *quests.Reward           `json:"rewards,omitempty"`
-	AcceptedAt  string                   `json:"acceptedAt,omitempty"`
-	CompletedAt string                   `json:"completedAt,omitempty"`
+	QuestID        string                   `json:"questId"`
+	QuestName      string                   `json:"questName"`
+	Status         string                   `json:"status"`
+	Description    string                   `json:"description"`
+	Category       string                   `json:"category,omitempty"`
+	Area           string                   `json:"area,omitempty"`
+	Level          int32                    `json:"level,omitempty"`
+	ReadyToTurnIn  bool                     `json:"readyToTurnIn,omitempty"`
+	TurnInAnywhere bool                     `json:"turnInAnywhere,omitempty"`
+	TurnInNpcID    string                   `json:"turnInNpcId,omitempty"`
+	Objectives     []QuestObjectiveProgress `json:"objectives"`
+	Rewards        *quests.Reward           `json:"rewards,omitempty"`
+	AcceptedAt     string                   `json:"acceptedAt,omitempty"`
+	CompletedAt    string                   `json:"completedAt,omitempty"`
 }
 
 // QuestObjectiveProgress combines objective progress with definition text.
@@ -171,16 +174,28 @@ func (h *QuestsHandler) GetQuestLog(c *gin.Context) {
 			continue
 		}
 
+		objectives := buildQuestLogObjectives(quest, progress)
+		allDone := len(objectives) > 0
+		for _, op := range objectives {
+			if !op.Completed {
+				allDone = false
+				break
+			}
+		}
+		anywhere, npcID := quest.ResolveTurnIn()
 		entry := QuestLogEntry{
-			QuestID:     progress.QuestID,
-			QuestName:   quest.Name,
-			Status:      string(progress.Status),
-			Description: quest.Description,
-			Category:    quest.Category,
-			Area:        quest.DisplayArea(),
-			Level:       quest.Level,
-			Objectives:  buildQuestLogObjectives(quest, progress),
-			Rewards:     &quest.Rewards,
+			QuestID:        progress.QuestID,
+			QuestName:      quest.Name,
+			Status:         string(progress.Status),
+			Description:    quest.Description,
+			Category:       quest.Category,
+			Area:           quest.DisplayArea(),
+			Level:          quest.Level,
+			ReadyToTurnIn:  progress.Status == quests.QuestStatusActive && allDone,
+			TurnInAnywhere: anywhere,
+			TurnInNpcID:    npcID,
+			Objectives:     objectives,
+			Rewards:        &quest.Rewards,
 		}
 
 		if !progress.AcceptedAt.IsZero() {

@@ -482,7 +482,7 @@ If the game supports multiplayer combat:
 **Fighting Together:**
 - Combined damage when you join the same fight (`attack` the enemy)
 - Gold and XP from a kill split equally with online party members in the same room. Anyone in another room, or offline, does not get a share. Leftover gold and XP go to the character who started the fight. Items still drop on the ground for anyone to pick up.
-- `party follow` walks you with the party leader through ordinary exits. `party unfollow` stops. You are not pulled through portals, and a fight keeps you where you are.
+- `party follow` walks you with the party leader through ordinary exits, and catches up across a few rooms after a fight or a reconnect. `party unfollow` stops. You are not pulled through portals. A fight keeps you where you are until it ends. Disconnecting does not cancel follow.
 - Coordinated tactics (tank, healer, DPS roles)
 - Communication essential
 

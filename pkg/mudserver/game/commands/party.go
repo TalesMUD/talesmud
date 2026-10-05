@@ -404,10 +404,14 @@ func (command *PartyCommand) followLeader(game def.GameCtrl, message *messages.M
 	leaderName := leaderNameByID(game, party.LeaderCharacterID)
 	if current, ok := game.PartyFollowTarget(message.Character.ID); ok && current == party.LeaderCharacterID {
 		game.SendMessage() <- messages.Reply(message.FromUser.ID, "[Party] You are already following "+leaderName+".")
+		game.CatchUpPartyFollow(message.Character.ID)
+		command.pushParty(game, message)
 		return
 	}
 	game.SetPartyFollow(message.Character.ID, party.LeaderCharacterID)
 	game.SendMessage() <- messages.Reply(message.FromUser.ID, "[Party] You are following "+leaderName+".")
+	game.CatchUpPartyFollow(message.Character.ID)
+	command.pushParty(game, message)
 }
 
 func (command *PartyCommand) unfollowLeader(game def.GameCtrl, message *messages.Message) {
@@ -417,6 +421,7 @@ func (command *PartyCommand) unfollowLeader(game def.GameCtrl, message *messages
 		return
 	}
 	game.SendMessage() <- messages.Reply(message.FromUser.ID, "[Party] You stop following "+leaderNameByID(game, leaderID)+".")
+	command.pushParty(game, message)
 }
 
 func leaderNameByID(game def.GameCtrl, characterID string) string {
@@ -491,13 +496,7 @@ func (command *PartyCommand) pushParty(game def.GameCtrl, message *messages.Mess
 		command.pushEmptyParty(game, message.FromUser.ID)
 		return
 	}
-	game.SendMessage() <- messages.NewPartyMessage(
-		message.FromUser.ID,
-		true,
-		party.ID,
-		party.Name,
-		collectPartyMembers(game, party),
-	).AttachPartyMeta(party)
+	game.SendMessage() <- command.partyView(game, message.FromUser.ID, message.Character.ID, party, collectPartyMembers(game, party))
 }
 
 func (command *PartyCommand) pushEmptyParty(game def.GameCtrl, userID string) {
@@ -526,7 +525,7 @@ func (command *PartyCommand) pushPartyToMembers(game def.GameCtrl, party *entiti
 			continue
 		}
 		sent[userID] = true
-		game.SendMessage() <- messages.NewPartyMessage(userID, true, party.ID, party.Name, members).AttachPartyMeta(party)
+		game.SendMessage() <- command.partyView(game, userID, memberID, party, members)
 	}
 }
 
@@ -546,7 +545,19 @@ func (command *PartyCommand) pushPartyForCharacterID(game def.GameCtrl, characte
 		command.pushEmptyParty(game, userID)
 		return
 	}
-	game.SendMessage() <- messages.NewPartyMessage(userID, true, party.ID, party.Name, collectPartyMembers(game, party)).AttachPartyMeta(party)
+	game.SendMessage() <- command.partyView(game, userID, characterID, party, collectPartyMembers(game, party))
+}
+
+func (command *PartyCommand) partyView(game def.GameCtrl, userID, characterID string, party *entities.Party, members []messages.PartyMemberEntry) *messages.PartyMessage {
+	msg := messages.NewPartyMessage(userID, true, party.ID, party.Name, members).AttachPartyMeta(party)
+	if msg == nil || party == nil || characterID == "" {
+		return msg
+	}
+	party.EnsureLeader()
+	if leaderID, ok := game.PartyFollowTarget(characterID); ok && leaderID == party.LeaderCharacterID {
+		msg.Following = true
+	}
+	return msg
 }
 
 func collectPartyMembers(game def.GameCtrl, party *entities.Party) []messages.PartyMemberEntry {

@@ -142,7 +142,7 @@
   import { get } from "svelte/store";
   import { settingsStore } from "./SettingsStore.js";
   import { overlayStore } from "./ui/overlayStore.js";
-  import { normalizeHotbarBinds, resolveHotbarActivation } from "./hudPrefs.js";
+  import { characterClassId, normalizeHotbarBinds, resolveHotbarActivation } from "./hudPrefs.js";
   import { hotbarSlotFromKey, isTextEntry, topOpenPanel } from "./keyboardShortcuts.js";
   import {
     accountMenuOpen,
@@ -404,6 +404,34 @@
     else if (id === "accountMenu") accountMenuOpen.set(false);
     else if (id === "widgetFocus") layoutStore.toggleFocus(get(layoutStore).focusId);
     else if (id === "editMode") layoutStore.exitEditMode(false);
+  }
+
+  // Hotbar binds live in localStorage and used to be account-global, so a
+  // class change kept the previous character's spells. Rebind per character id.
+  let hotbarSyncKey = "";
+  $: {
+    const character = $muxStore.character;
+    const stats = $muxStore.characterStats;
+    const id = character?.id || "";
+    if (!id) {
+      hotbarSyncKey = "";
+    } else {
+      const classId = characterClassId(character);
+      const level = Number(stats?.level || character.level || 0);
+      const equipped = Array.isArray(stats?.equippedSkills)
+        ? stats.equippedSkills
+        : (Array.isArray(character.equippedSkills) ? character.equippedSkills : []);
+      const key = `${id}|${classId}|${level}|${equipped.join("\u0001")}`;
+      if (key !== hotbarSyncKey) {
+        hotbarSyncKey = key;
+        settingsStore.syncHotbarForCharacter({
+          characterId: id,
+          classId,
+          level,
+          equippedIds: equipped,
+        });
+      }
+    }
   }
 
   function fireHotbarSlot(index) {

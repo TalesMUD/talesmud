@@ -15,7 +15,7 @@
 
   $: open = !!(store && $store && $store.partyOverlayOpen);
   $: party = (store && $store && $store.party) || {
-    inParty: false, partyId: '', partyName: '', leaderId: '', maxMembers: 5, members: [],
+    inParty: false, partyId: '', partyName: '', leaderId: '', maxMembers: 5, members: [], following: false,
   };
   $: members = Array.isArray(party.members) ? party.members : [];
   $: invite = (store && $store && $store.partyInvite) || null;
@@ -113,6 +113,11 @@
     if (!name || !sendMessage) return;
     sendMessage(`party invite ${name}`);
     inviteName = '';
+  }
+
+  function toggleFollow() {
+    if (!sendMessage || iAmLeader) return;
+    sendMessage(party.following ? 'party unfollow' : 'party follow');
   }
 
   function leaveParty() {
@@ -560,6 +565,11 @@
                 </div>
               {/each}
             </div>
+          {/if}
+          {#if party.inParty && !iAmLeader}
+            <button class="act secondary follow" type="button" on:click={toggleFollow}>
+              {party.following ? 'Unfollow' : 'Follow'}
+            </button>
           {/if}
           <form class="compose say" on:submit|preventDefault={sendSay}>
             <input

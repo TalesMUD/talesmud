@@ -513,28 +513,22 @@ func (command *AttackCommand) handleInCombatAttack(game def.GameCtrl, message *m
 		return true
 	}
 
-	// Search for target by name
-	var targetID string
-	targetNameLower := strings.ToLower(targetName)
-	for _, enemy := range livingEnemies {
-		if strings.EqualFold(enemy.id, targetName) {
-			targetID = enemy.id
-			break
-		}
+	// Resolve by ID, UI label (Name#N), or partial name — same rules as initiate.
+	roomID := ""
+	if message.Character != nil {
+		roomID = message.Character.CurrentRoomID
 	}
-	if targetID == "" {
-		for _, enemy := range livingEnemies {
-			if strings.Contains(strings.ToLower(enemy.name), targetNameLower) {
-				targetID = enemy.id
-				break
-			}
-		}
-	}
+	targetID, _ := resolveInCombatTarget(game, roomID, instance.Enemies, targetName)
 
 	if targetID == "" {
+		labels := livingEnemyDisplayLabels(instance.Enemies)
 		var targets []string
 		for _, e := range livingEnemies {
-			targets = append(targets, fmt.Sprintf("%s (%d/%d HP)", e.name, e.hp, e.maxHP))
+			label := labels[e.id]
+			if label == "" {
+				label = e.name
+			}
+			targets = append(targets, fmt.Sprintf("%s (%d/%d HP)", label, e.hp, e.maxHP))
 		}
 		game.SendMessage() <- message.Reply(fmt.Sprintf("Invalid target '%s'. Available targets: %s", targetName, strings.Join(targets, ", ")))
 		return true

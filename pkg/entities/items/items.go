@@ -124,6 +124,10 @@ type Item struct {
 	Stackable bool  `bson:"stackable,omitempty" json:"stackable,omitempty"`
 	Quantity  int32 `bson:"quantity,omitempty" json:"quantity,omitempty"`
 	MaxStack  int32 `bson:"maxStack,omitempty" json:"maxStack,omitempty"`
+	// Unique: a character may hold at most one of this template (quest trophies).
+	// Loot instances inherit the flag; pickup also checks the template so older
+	// copies created before the flag still refuse a second take.
+	Unique    bool  `bson:"unique,omitempty" json:"unique,omitempty"`
 	BasePrice int64 `bson:"basePrice,omitempty" json:"basePrice,omitempty"`
 
 	// Armor wear. Dying chips durability; repair restores it. Items are never deleted.
@@ -134,6 +138,11 @@ type Item struct {
 	// OnUseScriptID is a Lua script executed when item is used
 	// Script context: ctx.item, ctx.character, ctx.room
 	OnUseScriptID string `bson:"onUseScriptId,omitempty" json:"onUseScriptId,omitempty"`
+	// OnHitScriptID is a Lua script executed after a successful basic-attack hit
+	// while this item is equipped in main_hand. Script context: ctx.item, ctx.character,
+	// ctx.targetID, ctx.targetName, ctx.damage, ctx.critical. Prefer tales.combat.applyDot
+	// for content-authored weapon procs (Maintainer-neutral).
+	OnHitScriptID string `bson:"onHitScriptId,omitempty" json:"onHitScriptId,omitempty"`
 
 	// Consumable indicates item is consumed on use (removed or quantity decremented)
 	Consumable bool `bson:"consumable,omitempty" json:"consumable,omitempty"`

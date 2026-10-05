@@ -237,6 +237,8 @@ type Item struct {
 ### Item Types & Slots
 Stackable item quantities are kept consistent when consumed or partially dropped: the character inventory and backing item instance are both updated.
 
+`unique: true` on an item template means a character can hold at most one copy. Pickup of another (including a boss loot instance) is refused with "You already have the <name>." Extra copies already in the bag are trimmed to one on that attempt. The ground drop is left for someone else.
+
 **Item Types**:
 - `currency` - Gold, tokens
 - `consumable` - Potions, food, scrolls
@@ -551,17 +553,21 @@ lists each recipient (`PARTY SHARE`), and every recipient gets a one-line
 `[Party] Equal split…` toast. Item drops stay on the ground (no need/greed).
 Quest kill credit stays with living combatants only.
 
-### Party Follow (v1)
+### Party Follow
 `party follow` starts following the current party leader. `party unfollow` stops.
 While following, a normal exit walk by the leader (`TakeExit`, exit type empty /
-`normal` / `direction`, arriving at the authored target) relocates each online
-follower with `RelocateCharacter`, including leave/enter presence. Followers in
-combat stay behind. Offline followers are skipped until a later step. Teleports,
-portals, bindstones, script relocations, and private-instance crossings do not
-pull anyone. Guests, characters who are not in a party, the leader, and anyone
-already in combat cannot start following. Leaving the party, being kicked, the
-leader leaving, or a leadership change clears the follow flag. The flag is
-in-memory on the game server. The reply is a `[Party] You are following <leader>`
+`normal` / `direction`, arriving at the authored target) moves followers who are
+standing in the room the leader just left. Anyone left behind walks a path of
+those same ordinary exits (up to 12 rooms) toward the leader: a late `party follow`,
+the end of combat, or a reconnect. Followers in combat stay put until the fight
+ends, then catch up. A disconnect keeps the flag; an offline body is not moved,
+and the other side is told the follow is still on. Teleports, portals, bindstones,
+script relocations, hidden exits (except the step just taken with the leader),
+and private-instance crossings are not used for the chase. Guests, characters who
+are not in a party, the leader, and anyone already in combat cannot start following.
+Leaving the party, being kicked, the leader leaving, or a leadership change clears
+the follow flag. The flag is in-memory on the game server. The party payload
+includes `following` for the recipient. The reply is a `[Party] You are following <leader>`
 line (party strip and room toast). Still out of scope: auto-join combat without
 `attack`, item need/greed, and following a member who is not the leader.
 

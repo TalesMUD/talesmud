@@ -1079,6 +1079,24 @@ func (s *questsService) GrantQuestRewards(characterID, questID string) ([]string
 	// 5. Award Items (create instances from templates)
 	grantedItems := []string{}
 	for _, templateID := range quest.Rewards.ItemTemplateIDs {
+		if tpl, terr := s.facade.ItemsService().FindByID(templateID); terr == nil && tpl != nil && tpl.Unique {
+			blocked, trimmed := char.PrepareUniquePickup(templateID, true)
+			if trimmed > 0 {
+				log.WithFields(log.Fields{
+					"characterID": characterID,
+					"template":    templateID,
+					"removed":     trimmed,
+				}).Info("trimmed duplicate unique items")
+			}
+			if blocked {
+				log.WithFields(log.Fields{
+					"characterID": characterID,
+					"questID":     questID,
+					"template":    templateID,
+				}).Info("unique quest reward skipped")
+				continue
+			}
+		}
 		instance, err := s.facade.ItemsService().CreateInstanceFromTemplate(templateID)
 		if err != nil {
 			log.WithError(err).WithField("templateID", templateID).Error("Failed to create item instance from template")

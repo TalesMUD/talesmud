@@ -71,6 +71,8 @@ type CombatEngineCtrl interface {
 	SetAutoAttackTarget(characterID string, targetID string)
 	// ProcessPlayerSkill handles a player using a skill in combat
 	ProcessPlayerSkill(characterID, skillID, targetID string) (message string, combatEnded bool, endState combat.CombatState)
+	// ApplyCombatDot applies a content-authored DoT during an active fight (Lua on-hit procs)
+	ApplyCombatDot(attackerID, targetID, effectID, name string, damage int32, duration int) bool
 	// QueuePlayerSkill queues a skill for a player's next turn
 	QueuePlayerSkill(characterID, skillID, targetID string)
 }
@@ -160,7 +162,12 @@ type GameCtrl interface {
 	DropPartyFollowers(leaderID string) []string
 	// PartyFollowTarget returns the leader a character is following, if any.
 	PartyFollowTarget(followerID string) (leaderID string, ok bool)
-	// PullPartyFollowers relocates online followers into destRoomID after a normal exit walk.
+	// PullPartyFollowers relocates online followers after a normal exit walk.
+	// Followers in fromRoomID take that step. Others chase along ordinary exits.
 	// allow is false for teleports, portals, and private-instance crossings.
-	PullPartyFollowers(leader *characters.Character, destRoomID string, allow bool)
+	PullPartyFollowers(leader *characters.Character, fromRoomID, destRoomID string, allow bool)
+	// CatchUpPartyFollow walks a follower toward their leader, and walks anyone
+	// following characterID toward that character. The follow flag is kept when
+	// the path is blocked or someone is offline or in combat.
+	CatchUpPartyFollow(characterID string)
 }

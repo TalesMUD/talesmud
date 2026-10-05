@@ -113,12 +113,14 @@ func (y *YAMLItem) ToEntity() *items.Item {
 		BasePrice:     y.BasePrice,
 		Stackable:     y.Stackable,
 		MaxStack:      y.MaxStack,
+		Unique:        y.Unique,
 		Consumable:    y.Consumable,
 		CopyOnPickup:  y.CopyOnPickup,
 		Tags:          y.Tags,
 		Attributes:    y.Attributes,
 		Properties:    y.Properties,
 		OnUseScriptID: firstNonEmpty(y.OnUseScript, y.OnUseScriptID),
+		OnHitScriptID: firstNonEmpty(y.OnHitScript, y.OnHitScriptID),
 	}
 
 	// Set meta if img is provided

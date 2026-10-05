@@ -2,22 +2,27 @@
   .entity-panel {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5em;
+    gap: 0.55em;
     justify-content: flex-start;
     align-items: flex-end;
   }
 
+  /* Borderless MTG full-art: portrait fills the card; soft nameplate; thin type accent. */
   .entity-card {
+    --entity-accent: rgba(255, 255, 255, 0.28);
     position: relative;
     width: clamp(88px, 22cqw, 128px);
     aspect-ratio: 2 / 3;
-    border-radius: 8px;
+    border-radius: 10px;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.18);
+    border: none;
     /* No slideUp — roomUpdate refresh was replaying entrance animation (flicker). */
     animation: none;
     flex-shrink: 0;
-    background: #111;
+    background: #0a0a0c;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.06),
+      0 8px 22px rgba(0, 0, 0, 0.55);
   }
 
   .entity-card.clickable {
@@ -30,22 +35,35 @@
   }
 
   .entity-card.enemy {
-    border-color: rgba(239, 68, 68, 0.45);
-    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.2);
+    --entity-accent: rgba(239, 68, 68, 0.9);
+    box-shadow:
+      0 0 0 1px rgba(239, 68, 68, 0.32),
+      0 0 16px rgba(239, 68, 68, 0.16),
+      0 8px 22px rgba(0, 0, 0, 0.55);
   }
 
   .entity-card.merchant {
-    border-color: rgba(34, 197, 94, 0.45);
-    box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.2);
+    --entity-accent: rgba(34, 197, 94, 0.9);
+    box-shadow:
+      0 0 0 1px rgba(34, 197, 94, 0.32),
+      0 0 16px rgba(34, 197, 94, 0.14),
+      0 8px 22px rgba(0, 0, 0, 0.55);
   }
 
   .entity-card.quest {
-    border-color: rgba(245, 158, 11, 0.45);
-    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.2);
+    --entity-accent: rgba(245, 158, 11, 0.95);
+    box-shadow:
+      0 0 0 1px rgba(245, 158, 11, 0.34),
+      0 0 16px rgba(245, 158, 11, 0.16),
+      0 8px 22px rgba(0, 0, 0, 0.55);
   }
 
   .entity-card.friendly {
-    border-color: rgba(59, 130, 246, 0.4);
+    --entity-accent: rgba(59, 130, 246, 0.9);
+    box-shadow:
+      0 0 0 1px rgba(59, 130, 246, 0.28),
+      0 0 14px rgba(59, 130, 246, 0.12),
+      0 8px 22px rgba(0, 0, 0, 0.55);
   }
 
   .entity-bg {
@@ -58,9 +76,8 @@
     image-rendering: pixelated;
     display: block;
     z-index: 0;
-    /* ~10% padding each side — scale after fit so view-box still uses full card */
-    transform: scale(0.8);
-    transform-origin: center center;
+    /* Full-bleed art — no inset scale. */
+    transform: none;
   }
 
   /* Wide sprite content (animals): show whole figure, letterbox */
@@ -81,7 +98,7 @@
     left: 0;
     right: 0;
     height: 3px;
-    background: rgba(0, 0, 0, 0.45);
+    background: rgba(0, 0, 0, 0.4);
     z-index: 3;
   }
 
@@ -101,52 +118,50 @@
 
   .entity-badges {
     position: absolute;
-    top: 5px;
-    left: 5px;
+    top: 6px;
+    left: 6px;
     z-index: 2;
     display: flex;
     flex-wrap: wrap;
     gap: 3px;
-    max-width: calc(100% - 10px);
+    max-width: calc(100% - 12px);
   }
 
   .state-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    width: 18px;
+    height: 18px;
     padding: 0;
-    border-radius: 4px;
-    background: rgba(0, 0, 0, 0.72);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.42);
+    border: none;
     color: #e5e7eb;
     line-height: 1;
     flex-shrink: 0;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
   }
 
   .state-badge i {
-    font-size: 15px;
+    font-size: 12px;
   }
 
   .state-badge.enemy {
     color: #fca5a5;
-    border-color: rgba(239, 68, 68, 0.45);
   }
 
   .state-badge.merchant {
     color: #86efac;
-    border-color: rgba(34, 197, 94, 0.45);
   }
 
   .state-badge.quest {
     color: #fcd34d;
-    border-color: rgba(245, 158, 11, 0.5);
   }
 
   .state-badge.dialog {
     color: #93c5fd;
-    border-color: rgba(59, 130, 246, 0.45);
   }
 
   .entity-footer {
@@ -155,25 +170,40 @@
     left: 0;
     right: 0;
     z-index: 2;
-    padding: 0.45em 0.35em 0.4em;
+    padding: 0.55em 0.4em 0.45em;
     display: flex;
     flex-direction: column;
-    gap: 0.3em;
+    gap: 0.22em;
     pointer-events: none;
   }
 
+  /* Soft MTG-style nameplate wash */
   .entity-footer::before {
     content: '';
     position: absolute;
-    inset: -12px 0 0;
+    inset: -32px 0 0;
     background: linear-gradient(
       to top,
-      rgba(0, 0, 0, 0.94) 0%,
-      rgba(0, 0, 0, 0.72) 45%,
-      rgba(0, 0, 0, 0.2) 75%,
+      rgba(0, 0, 0, 0.9) 0%,
+      rgba(0, 0, 0, 0.62) 38%,
+      rgba(0, 0, 0, 0.22) 68%,
       transparent 100%
     );
     z-index: -1;
+    pointer-events: none;
+  }
+
+  /* Thin type accent hairline above the name */
+  .entity-footer::after {
+    content: '';
+    position: absolute;
+    left: 14%;
+    right: 14%;
+    top: 2px;
+    height: 1px;
+    background: var(--entity-accent);
+    opacity: 0.7;
+    box-shadow: 0 0 6px var(--entity-accent);
     pointer-events: none;
   }
 

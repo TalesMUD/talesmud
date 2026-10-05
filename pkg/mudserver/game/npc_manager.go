@@ -1,6 +1,7 @@
 package game
 
 import (
+	"sort"
 	"sync"
 	"time"
 
@@ -232,7 +233,8 @@ func (m *NPCInstanceManager) GetInstance(id string) *npc.NPC {
 	return m.instances[id]
 }
 
-// GetInstancesInRoom returns all alive instances in a room
+// GetInstancesInRoom returns all alive instances in a room.
+// Order is stable by entity ID so BuildNPCDisplayNames Name#N labels stay consistent.
 func (m *NPCInstanceManager) GetInstancesInRoom(roomID string) []*npc.NPC {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -243,6 +245,16 @@ func (m *NPCInstanceManager) GetInstancesInRoom(roomID string) []*npc.NPC {
 			result = append(result, inst)
 		}
 	}
+	sort.Slice(result, func(i, j int) bool {
+		idi, idj := "", ""
+		if result[i].Entity != nil {
+			idi = result[i].Entity.ID
+		}
+		if result[j].Entity != nil {
+			idj = result[j].Entity.ID
+		}
+		return idi < idj
+	})
 	return result
 }
 
@@ -482,13 +494,23 @@ func (m *NPCInstanceManager) FindInstanceByNameInRoom(roomID, name string) *npc.
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	// Get all alive instances in the room
+	// Get all alive instances in the room (stable ID order matches GetInstancesInRoom / UI #N)
 	var roomInstances []*npc.NPC
 	for _, inst := range m.instances {
 		if inst.CurrentRoomID == roomID && !inst.IsDead {
 			roomInstances = append(roomInstances, inst)
 		}
 	}
+	sort.Slice(roomInstances, func(i, j int) bool {
+		idi, idj := "", ""
+		if roomInstances[i].Entity != nil {
+			idi = roomInstances[i].Entity.ID
+		}
+		if roomInstances[j].Entity != nil {
+			idj = roomInstances[j].Entity.ID
+		}
+		return idi < idj
+	})
 
 	if len(roomInstances) == 0 {
 		return nil
