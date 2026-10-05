@@ -8,9 +8,9 @@ import (
 
 func TestPrepareUniquePickupTrimsThenBlocks(t *testing.T) {
 	c := &Character{Inventory: items.Inventory{Items: []*items.Item{
-		{TemplateID: "ITM0020", Name: "Hollow Knight Shard"},
-		{TemplateID: "ITM0020", Name: "Hollow Knight Shard"},
-		{TemplateID: "ITM0020", Name: "Hollow Knight Shard"},
+		{TemplateID: "ITM0020", Name: "Sample Relic Shard"},
+		{TemplateID: "ITM0020", Name: "Sample Relic Shard"},
+		{TemplateID: "ITM0020", Name: "Sample Relic Shard"},
 	}}}
 	blocked, trimmed := c.PrepareUniquePickup("ITM0020", true)
 	if !blocked || trimmed != 2 {

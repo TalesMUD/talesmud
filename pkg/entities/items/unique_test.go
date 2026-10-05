@@ -4,8 +4,8 @@ import "testing"
 
 func TestTrimMatchingTemplateKeepsOne(t *testing.T) {
 	inv := &Inventory{Items: []*Item{
-		{TemplateID: "ITM0020", Name: "Hollow Knight Shard"},
-		{TemplateID: "ITM0020", Name: "Hollow Knight Shard"},
+		{TemplateID: "ITM0020", Name: "Sample Relic Shard"},
+		{TemplateID: "ITM0020", Name: "Sample Relic Shard"},
 		{TemplateID: "ITM0012", Name: "Weak Health Potion", Quantity: 2, Stackable: true},
 	}}
 	if n := inv.TrimMatchingTemplate("ITM0020"); n != 1 {
@@ -26,7 +26,7 @@ func TestTrimMatchingTemplateKeepsOne(t *testing.T) {
 }
 
 func TestTemplateKeyPrefersTemplateID(t *testing.T) {
-	item := &Item{TemplateID: "ITM0020", Name: "Hollow Knight Shard"}
+	item := &Item{TemplateID: "ITM0020", Name: "Sample Relic Shard"}
 	if TemplateKey(item) != "ITM0020" {
 		t.Fatal(TemplateKey(item))
 	}

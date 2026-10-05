@@ -237,7 +237,7 @@ type Item struct {
 ### Item Types & Slots
 Stackable item quantities are kept consistent when consumed or partially dropped: the character inventory and backing item instance are both updated.
 
-`unique: true` on an item template means a character can hold at most one copy. Pickup of another (including a Hollow Knight loot instance) is refused with "You already have the <name>." Extra copies already in the bag are trimmed to one on that attempt. The ground drop is left for someone else.
+`unique: true` on an item template means a character can hold at most one copy. Pickup of another (including a boss loot instance) is refused with "You already have the <name>." Extra copies already in the bag are trimmed to one on that attempt. The ground drop is left for someone else.
 
 **Item Types**:
 - `currency` - Gold, tokens
