@@ -65,6 +65,7 @@ Each row is one system. The first number is the tier that owns it. Later numbers
 | Bank | **2**, plus **3** `addGold` and existing **1** `setFlag` | Death percent reads on-hand `Gold` only. The script moves coin into a character flag. No `BankGold` field. | No script. Flag absent. |
 | Weapon and armor shops | **1** | `MerchantTrait` buy and sell. | Unchanged. |
 | Inn | **2**, plus **3** `setBind` | The script calls `setFlag(id, "resting", true)`, which is what `rest` already stores, and `setBind` for the room id defeat already reads. | `rest` unchanged. Nothing binds unless a script calls `setBind`. |
+| Out-of-combat regen | **1** | Passive HP and mana while the character is not fighting and not resting. The rates live in `regen.out_of_combat`. Resting and in-combat regen stay fixed on a 10 second cadence. | 2% HP and 5% mana every 10 seconds. `enabled: false` stops that pool. |
 | Gems | **2** | A character flag or a normal item. A counter does not need a column. | Unchanged. |
 | News and ledger | **2** | A room-action `response` or script. Lines are content. | No new command. |
 | Player list | **1** | `who`. The Door view renders that reply. | Unchanged. |
@@ -115,9 +116,24 @@ resources: {}
 
 combat:
   pacing: auto               # auto | turn_based
+
+regen:
+  out_of_combat:
+    hp:
+      enabled: true          # false = no passive HP regen out of combat
+      percent: 2             # percent of max HP per tick
+      flat: 0                # flat HP added per tick
+      interval_seconds: 10   # seconds between passive HP ticks
+    mana:
+      enabled: true
+      percent: 5
+      flat: 0
+      interval_seconds: 10
 ```
 
 Rejected keys if present: `difficulty_multipliers`, `named_overrides`, `level_gap`, `threat`, `reward_scale`, `class_balance`, `first_kill_bonus`.
+
+A world game-mode file may carry the same `regen` block. Missing keys stay at 2% HP and 5% mana every 10 seconds, with a minimum of 1 point when the percent or the flat amount is positive. `enabled: false` turns that pool off. A slow pool is `percent: 0.5` and `interval_seconds: 60`. Resting (10% HP and 15% mana) and in-combat (0.5% HP and 1% mana) stay on a 10 second cadence and ignore this block. An explicit `interval_seconds: 0` is rejected.
 
 ### How XP meets reward_scale
 

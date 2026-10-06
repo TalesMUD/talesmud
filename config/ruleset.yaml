@@ -32,3 +32,18 @@ combat:
   safe_room: stay       # stay | bind | start — used only when disconnect is release
   disconnect: continue  # continue | release — continue leaves the fight running
   bare_attack: ask      # ask | first_hostile — ask is "Attack whom?" outside combat
+
+# Passive regen while not fighting and not resting.
+# Resting and in-combat rates ignore this block.
+regen:
+  out_of_combat:
+    hp:
+      enabled: true         # false = no passive HP regen out of combat
+      percent: 2            # percent of max HP per tick
+      flat: 0               # flat HP added per tick
+      interval_seconds: 10  # seconds between passive HP ticks
+    mana:
+      enabled: true
+      percent: 5
+      flat: 0
+      interval_seconds: 10

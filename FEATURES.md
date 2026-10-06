@@ -440,6 +440,8 @@ Death math is `ruleset.ApplyDeath`, called from defeat only.
 
 `combat.disconnect: continue` (the default) leaves a dropped connection in the fight and does not move the character. `release` ends that fight as a flee: no gold loss, no XP loss, and no death flag. `combat.safe_room` is `stay` (default), `bind`, or `start`, and applies only when disconnect is `release`. `stay` leaves the character in a real room. `bind` and `start` move them. A generated instance that times out still moves its occupant to the return room and ends the fight without a defeat. On the next enter, a saved room that no longer exists is replaced by the bind room, then the start room.
 
+Out-of-combat regeneration is `regen.out_of_combat` in the ruleset, and a world game-mode file may carry the same block. HP and mana each have `enabled`, `percent`, `flat`, and `interval_seconds`. Missing keys keep 2% HP and 5% mana every 10 seconds. `enabled: false` stops that pool. A slow pool is `percent: 0.5` with `interval_seconds: 60`. Resting and in-combat rates are unchanged and ignore this block.
+
 ### Refilling resources
 
 Per-character balances live in the `character_resources` table. A key grants uses only after something configures an allowance (calendar day in a timezone, or a fixed interval). Inside a period, raising the allowance or a modifier does not give the extra uses back; the next period refills to the new amount. An empty catalog, which is the process default, answers every key as not configured and writes no row.

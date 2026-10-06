@@ -220,6 +220,7 @@ func documentHasRuleset(raw []byte) bool {
 		"new_day":     true,
 		"resources":   true,
 		"combat":      true,
+		"regen":       true,
 	}
 	for i := 0; i+1 < len(root.Content); i += 2 {
 		if want[root.Content[i].Value] {

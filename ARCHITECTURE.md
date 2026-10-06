@@ -215,7 +215,7 @@ registry maps connected user IDs to their currently selected character, room,
 and last-seen timestamp. WebSocket connect/read/disconnect paths update this
 registry and persist `User.IsOnline` as a secondary status field. `combat.disconnect: continue` (the default) leaves that fight running. `release` ends it without a defeat penalty and, when `combat.safe_room` says so, moves the character before an instance copy is deleted. A generated instance that times out still does that move. A text-client connect runs the new-day pass and refills configured resources without requiring another character select. Player-directed replies are recorded by the text client and drawn back into its frame off the message-drain goroutine.
 
-Room message fan-out, `who`, private tells, friends online flags, regeneration ticks, and room player
+Room message fan-out, `who`, private tells, friends online flags, regeneration ticks (1s clock; combat and resting still every 10s; passive rates from the ruleset), and room player
 payloads use the live session registry instead of scanning all users with
 stale `IsOnline` flags. Persisted `Room.Characters` still records character
 location and is periodically cleaned, but it is no longer the source of truth
@@ -1564,7 +1564,7 @@ pkg/
 ├── repository/        # Data access
 ├── db/                # Database client
 ├── resources/         # Per-character refilling balances
-├── ruleset/           # Level cap, level-up mode, death, new day, resource catalog
+├── ruleset/           # Level cap, level-up mode, death, new day, resource catalog, out-of-combat regen
 ├── gamemode/          # Process presentation and auth mode
 ├── authlocal/         # Optional Argon2id username/password sessions
 ├── presentation/      # Text-client frame renderer and view

@@ -5,18 +5,37 @@ import (
 
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/ruleset"
 )
 
 const (
-	passiveRegenPercent    = 0.02  // 2% per tick (out of combat)
-	restingRegenPercent    = 0.10  // 10% per tick (resting)
-	combatHPRegenPercent   = 0.005 // 0.5% per tick (in combat) — 1/4 of passive
-	combatManaRegenPercent = 0.01  // 1% per tick (in combat) — 1/5 of passive
+	// Combat and resting regeneration stay on a 10 second cadence.
+	combatRestRegenInterval = 10
+
+	restingRegenPercent     = 0.10  // 10% HP per tick while resting
+	restingManaRegenPercent = 0.15  // 15% mana per tick while resting
+	combatHPRegenPercent    = 0.005 // 0.5% HP per tick in combat
+	combatManaRegenPercent  = 0.01  // 1% mana per tick in combat
 )
 
-// handleRegenerationUpdates processes HP regeneration for all online players.
-// Called every 10 seconds by the regeneration ticker.
+// handleRegenerationUpdates processes regeneration for online players.
+// The ticker fires once a second. Combat, resting, and the fully-rested
+// message run every 10th tick. Passive rates use the ruleset intervals.
+// A tick with nothing due returns before any character is loaded.
 func (g *Game) handleRegenerationUpdates() {
+	if g == nil {
+		return
+	}
+	g.regenTick++
+	tick := g.regenTick
+	hpPolicy, manaPolicy := ruleset.OutOfCombatRegen()
+	combatOrRestDue := cadenceDue(tick, combatRestRegenInterval)
+	passiveHPDue := cadenceDue(tick, hpPolicy.IntervalSeconds)
+	passiveManaDue := cadenceDue(tick, manaPolicy.IntervalSeconds)
+	if !combatOrRestDue && !passiveHPDue && !passiveManaDue {
+		return
+	}
+
 	onlinePlayers := g.GetOnlinePlayers()
 	if len(onlinePlayers) == 0 {
 		return
@@ -27,81 +46,101 @@ func (g *Game) handleRegenerationUpdates() {
 			continue
 		}
 
-		// Load character
 		char, err := g.GetFacade().CharactersService().FindByID(player.CharacterID)
 		if err != nil || char == nil {
 			continue
 		}
 
-		// Check if fully recovered (HP and mana)
-		hpFull := char.CurrentHitPoints >= char.MaxHitPoints
-		manaFull := char.MaxMana <= 0 || char.CurrentMana >= char.MaxMana
-		if char.CurrentHitPoints <= 0 || (hpFull && manaFull) {
-			if hpFull && manaFull && isResting(char) {
-				g.clearRestingState(char, player.UserID)
-				g.SendMessage() <- messages.Reply(player.UserID, "You are now fully rested and recovered.")
+		if combatOrRestDue {
+			hpFull := char.CurrentHitPoints >= char.MaxHitPoints
+			manaFull := char.MaxMana <= 0 || char.CurrentMana >= char.MaxMana
+			if char.CurrentHitPoints <= 0 || (hpFull && manaFull) {
+				if hpFull && manaFull && isResting(char) {
+					g.clearRestingState(char, player.UserID)
+					g.SendMessage() <- messages.Reply(player.UserID, "You are now fully rested and recovered.")
+				}
+				continue
 			}
+			if char.InCombat && isResting(char) {
+				g.clearRestingState(char, player.UserID)
+			}
+		} else if char.CurrentHitPoints <= 0 || char.InCombat || isResting(char) {
 			continue
+		} else {
+			hpFull := char.CurrentHitPoints >= char.MaxHitPoints
+			manaFull := char.MaxMana <= 0 || char.CurrentMana >= char.MaxMana
+			if hpFull && manaFull {
+				continue
+			}
 		}
 
-		// Clear resting state if in combat
-		if char.InCombat && isResting(char) {
-			g.clearRestingState(char, player.UserID)
-		}
-
-		// Calculate and apply HP regeneration (reduced in combat)
-		regenAmount := g.calculateRegenAmount(char)
-
-		// Calculate mana regeneration (reduced in combat)
-		manaRegenAmount := g.calculateManaRegenAmount(char)
-
-		if regenAmount > 0 || manaRegenAmount > 0 {
-			g.applyRegeneration(char, player.UserID, regenAmount, manaRegenAmount)
+		hpAmount, manaAmount := regenAmounts(char, tick, hpPolicy, manaPolicy)
+		if hpAmount > 0 || manaAmount > 0 {
+			g.applyRegeneration(char, player.UserID, hpAmount, manaAmount)
 		}
 	}
 }
 
-// calculateRegenAmount determines how much HP to regenerate based on character state.
-func (g *Game) calculateRegenAmount(char *characters.Character) int32 {
-	var regenPercent float64
-
-	if char.InCombat {
-		regenPercent = combatHPRegenPercent
-	} else if isResting(char) {
-		regenPercent = restingRegenPercent
-	} else {
-		regenPercent = passiveRegenPercent
+func cadenceDue(tick uint64, intervalSeconds int) bool {
+	if intervalSeconds < 1 {
+		return false
 	}
+	return tick%uint64(intervalSeconds) == 0
+}
 
-	// Calculate amount (minimum 1 HP per tick)
-	amount := int32(float64(char.MaxHitPoints) * regenPercent)
-	if amount < 1 {
+// regenAmounts is the HP and mana gained on this tick.
+// Out of combat and not resting, the policies apply on their own intervals.
+// In combat and while resting, the fixed 10 second rates apply and the policies do not.
+func regenAmounts(char *characters.Character, tick uint64, hpPolicy, manaPolicy ruleset.RegenPolicy) (hp, mana int32) {
+	if char == nil {
+		return 0, 0
+	}
+	switch {
+	case char.InCombat:
+		if !cadenceDue(tick, combatRestRegenInterval) {
+			return 0, 0
+		}
+		return scaledAmount(char.MaxHitPoints, combatHPRegenPercent), manaScaled(char, combatManaRegenPercent)
+	case isResting(char):
+		if !cadenceDue(tick, combatRestRegenInterval) {
+			return 0, 0
+		}
+		return scaledAmount(char.MaxHitPoints, restingRegenPercent), manaScaled(char, restingManaRegenPercent)
+	default:
+		if cadenceDue(tick, hpPolicy.IntervalSeconds) {
+			hp = policyAmount(char.MaxHitPoints, hpPolicy)
+		}
+		if cadenceDue(tick, manaPolicy.IntervalSeconds) && char.MaxMana > 0 && char.CurrentMana < char.MaxMana {
+			mana = policyAmount(char.MaxMana, manaPolicy)
+		}
+		return hp, mana
+	}
+}
+
+func policyAmount(max int32, policy ruleset.RegenPolicy) int32 {
+	if !policy.Enabled || (policy.Percent == 0 && policy.Flat == 0) {
+		return 0
+	}
+	amount := int32(float64(max)*(policy.Percent/100)) + policy.Flat
+	if (policy.Percent > 0 || policy.Flat > 0) && amount < 1 {
 		amount = 1
 	}
-
 	return amount
 }
 
-// calculateManaRegenAmount determines how much mana to regenerate based on character state.
-func (g *Game) calculateManaRegenAmount(char *characters.Character) int32 {
+func scaledAmount(max int32, rate float64) int32 {
+	amount := int32(float64(max) * rate)
+	if amount < 1 {
+		amount = 1
+	}
+	return amount
+}
+
+func manaScaled(char *characters.Character, rate float64) int32 {
 	if char.MaxMana <= 0 || char.CurrentMana >= char.MaxMana {
 		return 0
 	}
-
-	var regenPercent float64
-	if char.InCombat {
-		regenPercent = combatManaRegenPercent
-	} else if isResting(char) {
-		regenPercent = 0.15 // 15% per tick while resting
-	} else {
-		regenPercent = 0.05 // 5% per tick out of combat
-	}
-
-	amount := int32(float64(char.MaxMana) * regenPercent)
-	if amount < 1 {
-		amount = 1
-	}
-	return amount
+	return scaledAmount(char.MaxMana, rate)
 }
 
 // applyRegeneration applies HP and mana regeneration to a character.
