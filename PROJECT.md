@@ -158,6 +158,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - A signed-in player with more than one character sees that picker once per login (the server still enters on `lastCharacter`)
   - First-time users prompted to choose a display name/nickname
   - Three-step character creation wizard: Choose Template, Name Character, Confirm & Create
+  - Signed-in create equips that template's starting items: a fresh copy of each named starter, not the template itself. Guests use the same equip path. Characters already in the world are left unchanged.
   - Automatic phase detection from user profile and character data
   - Guest users skip onboarding (character auto-created server-side)
 

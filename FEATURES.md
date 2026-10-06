@@ -2387,7 +2387,7 @@ type GuestService interface {
 1. Client calls `POST /api/guest` (public endpoint)
 2. Server checks `ServerSettings.GuestsAllowed` and `MaxGuestAccounts`
 3. IP rate limit checked (10 per hour per IP)
-4. Random character created from system template presets with full starter items
+4. Random character created from system template presets with full starter items. Signed-in create uses the same equip path: each `StartingItems` name becomes a new item copy (`IsTemplate` false) in the listed slot. Presets take those names from the class catalog `starting_items`. An id that is not on the roster falls back to the stored template's names. Existing characters are not updated.
 5. Character spawned in `ServerSettings.StartRoomID` (default `R0001` if that room exists); auto quests for that zone are granted
 5a. Entering a room grants auto-source quests for that room's area (Z01 meadows: QST010*) so they fire after leaving Z00
 5b. Lua `tales.game.giveItem` notifies collect-quest progress (foraging, script rewards)

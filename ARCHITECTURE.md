@@ -1501,7 +1501,7 @@ HTTP/WS Request with Token → AuthMiddleware
 
 Guest sessions use HMAC-SHA256 tokens (not Auth0 JWTs):
 1. Client calls `POST /api/guest` (public, no auth)
-2. Server creates temporary User + Character, signs HMAC token with `GUEST_SECRET`
+2. Server creates temporary User + Character, equips the template's starting items, and signs an HMAC token with `GUEST_SECRET`. Signed-in `CreateNewCharacter` uses that same equip step.
 3. Client stores token in `sessionStorage` (dies with browser tab)
 4. Auth middleware validates HMAC token before trying Auth0 JWT
 5. Guest sessions expire after 30 minutes; cleanup goroutine deletes stale data

@@ -3,6 +3,8 @@ package classkit
 import (
 	"strings"
 	"testing"
+
+	"github.com/talesmud/talesmud/pkg/entities/items"
 )
 
 func TestPackLoadedClasses(t *testing.T) {
@@ -41,6 +43,7 @@ func TestPackLoadedClasses(t *testing.T) {
 		if d.Balance.DamageDealt != w.dealt {
 			t.Fatalf("%s dealt %v", w.id, d.Balance.DamageDealt)
 		}
+		requireStartingItems(t, d)
 	}
 
 	hitch := Lookup("hitch")
@@ -97,6 +100,23 @@ func TestNoPackFallback(t *testing.T) {
 		blob := d.Name + " " + d.Description
 		if strings.Contains(blob, "Fenwatch") || strings.Contains(blob, "Alley") || strings.Contains(blob, "Rune Hand") || strings.Contains(blob, "Rigger") {
 			t.Fatalf("sample leaked a pack name: %s", blob)
+		}
+		requireStartingItems(t, d)
+	}
+}
+
+func requireStartingItems(t *testing.T, d *Def) {
+	t.Helper()
+	if d == nil || d.Template == nil || len(d.Template.Items) == 0 {
+		id := ""
+		if d != nil {
+			id = d.ID
+		}
+		t.Fatalf("%s has no starting items", id)
+	}
+	for _, it := range d.Template.Items {
+		if it.Slot == "" || items.StarterItemTemplateByName(it.Name) == nil {
+			t.Fatalf("%s starter %+v", d.ID, it)
 		}
 	}
 }
