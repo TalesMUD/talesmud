@@ -60,8 +60,8 @@ type Game struct {
 
 	Sessions *sessionRegistry
 
-	// regenTick counts one-second regeneration passes.
-	// Combat and resting regen run when it is a multiple of 10.
+	// regenTick counts one-second regeneration passes on the server clock.
+	// Each active pool is due when its interval divides this counter.
 	regenTick uint64
 
 	//world *World
@@ -185,7 +185,7 @@ const roomUpdateInterval = 10
 const npcUpdateInterval = 10
 const spawnerUpdateInterval = 5
 const combatUpdateInterval = 1 // Combat pacing tick (C1 authored beats + 5s player window)
-const regenUpdateInterval = 1  // base tick; combat and resting regen stay on every 10th
+const regenUpdateInterval = 1  // one-second clock; each regen pool has its own interval
 
 func (g *Game) handleGameUpdates() {
 

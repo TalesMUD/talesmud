@@ -411,7 +411,7 @@ GetINTMod(), GetWISMod() int
 GetWeaponDamage() int32        // Main hand damage (1 if unarmed)
 GetArmorDefense() int32        // Total from equipped armor
 CalculateMaxMana() int32       // Caster: 20 + Level*5 + INTMod*4
-CalculateManaRegen() int32     // In-combat: 1 + WISMod (min 1)
+CalculateManaRegen() int32     // Per combat round: 1 + WISMod (min 1). Separate from regen.in_combat.
 ```
 
 ### Character Flags System
@@ -440,7 +440,13 @@ Death math is `ruleset.ApplyDeath`, called from defeat only.
 
 `combat.disconnect: continue` (the default) leaves a dropped connection in the fight and does not move the character. `release` ends that fight as a flee: no gold loss, no XP loss, and no death flag. `combat.safe_room` is `stay` (default), `bind`, or `start`, and applies only when disconnect is `release`. `stay` leaves the character in a real room. `bind` and `start` move them. A generated instance that times out still moves its occupant to the return room and ends the fight without a defeat. On the next enter, a saved room that no longer exists is replaced by the bind room, then the start room.
 
-Out-of-combat regeneration is `regen.out_of_combat` in the ruleset, and a world game-mode file may carry the same block. HP and mana each have `enabled`, `percent`, `flat`, and `interval_seconds`. Missing keys keep 2% HP and 5% mana every 10 seconds. `enabled: false` stops that pool. A slow pool is `percent: 0.5` with `interval_seconds: 60`. Resting and in-combat rates are unchanged and ignore this block.
+Passive regeneration is the `regen` block in the ruleset, and a world game-mode file may carry the same block. `out_of_combat`, `resting`, and `in_combat` each have HP and mana pools with `enabled`, `percent`, `flat`, and `interval_seconds`. Missing keys keep out of combat at 2% HP and 5% mana, resting at 10% HP and 15% mana, and in combat at 0.5% HP and 1% mana, every 10 seconds, flat 0. The gain is `int(max * percent / 100) + flat`, at least 1 when the pool is active. A pool is active when `enabled` is true and percent or flat is positive. `enabled: false`, or percent and flat both 0, grants nothing and is not due. An explicit `interval_seconds` below 1 is rejected.
+
+Intervals follow one server clock, not the character. The first tick after login lands anywhere from 0 to interval−1 seconds in. A very small enabled interval saves the character and sends one websocket update per regenerating player per interval. Turning every pool off also skips the fully-rested and in-combat resting cleanup on that clock. `applyRegeneration` and `InterruptRest` still clear the resting flag.
+
+Off: `enabled: false` on that pool (`regen.out_of_combat.hp`, `regen.resting.hp`, `regen.in_combat.hp`, and the matching mana pool). Slow: `percent: 0.5` and `interval_seconds: 60` out of combat, `percent: 1` and `interval_seconds: 60` while resting, `percent: 0.1` and `interval_seconds: 30` in combat.
+
+`CalculateManaRegen` (1 + WISMod per combat round, minimum 1) is separate from `regen.in_combat`.
 
 ### Refilling resources
 
