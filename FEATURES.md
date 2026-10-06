@@ -406,13 +406,13 @@ An enemy's authored XP reward is the base. When that reward is 0, `progression.b
 
 Death math is `ruleset.ApplyDeath`, called from defeat only.
 
-`combat.pacing: auto` keeps the 5 second decision window and resolves a queued action on the next beat. `turn_based` leaves that window open until the player sends a command. NPCs still take their own turns afterward. The default file is `auto`. During a fight, a bare `attack` queues a swing on the current target or the first living enemy so a turn-based round advances. Outside combat, `combat.bare_attack: ask` (the default) still answers "Attack whom?". `first_hostile` starts the fight against the first hostile in the room.
+`combat.pacing: auto` keeps the 5 second decision window and resolves a queued action on the next beat. `turn_based` leaves that window open until the player sends a command. NPCs still take their own turns afterward. The default file is `auto`. During a fight, a bare `attack` queues a swing on the current target or the first living enemy so a turn-based round advances. Outside combat, `combat.bare_attack: ask` (the default) still answers "Attack whom?". `first_hostile` starts the fight against the first hostile in the room, and says nobody is there when none is.
 
 `combat.disconnect: continue` (the default) leaves a dropped connection in the fight and does not move the character. `release` ends that fight as a flee: no gold loss, no XP loss, and no death flag. `combat.safe_room` is `stay` (default), `bind`, or `start`, and applies only when disconnect is `release`. `stay` leaves the character in a real room. `bind` and `start` move them. A generated instance that times out still moves its occupant to the return room and ends the fight without a defeat. On the next enter, a saved room that no longer exists is replaced by the bind room, then the start room.
 
 ### Refilling resources
 
-Per-character balances live in the `character_resources` table. A key grants uses only after something configures an allowance (calendar day in a timezone, or a fixed interval). Inside a period, raising the allowance or a modifier does not give the extra uses back; the next period refills to the new amount. An empty catalog, which is the process default, answers every key as not configured and writes no row.
+Per-character balances live in the `character_resources` table. A key grants uses only after something configures an allowance (calendar day in a timezone, or a fixed interval). An optional `label` is a display name; an empty label leaves the key as the name. Inside a period, raising the allowance or a modifier does not give the extra uses back; the next period refills to the new amount. An empty catalog, which is the process default, answers every key as not configured and writes no row.
 
 Another world can use a key for a daily gathering node or a delve ticket, spent from a room-action script. No content ships a key, so play is unchanged. Entering play calls `Get` for each configured key, so a new period is refilled even before a script reads it. A one-word room action accepts a trailing argument (`deposit 20`); the script sees it as `ctx.args`. Multi-word action names stay exact.
 
@@ -688,7 +688,7 @@ type MerchantItem struct {
 
 Merchant commands are available in rooms with merchant NPCs:
 - `list`, `shop`, or `trade` (exact key — no NPC name) opens a structured `shop` WS payload for the client overlay and refreshes after buy/sell
-- `buy <item> [quantity]` purchases stock; stackable quantities can fit in one inventory stack
+- `buy <item|number> [quantity]` purchases stock. A bare number is the 1-based catalog row. Stackable quantities can fit in one inventory stack. `sell` accepts the same number for items that merchant will take.
 - `sell <item> [quantity]` sells accepted, unbound inventory items
 - `value <item>` / `price <item>` checks the merchant's sell price
 
@@ -2378,7 +2378,7 @@ The leveling system (`CheckLevelUp`, `ApplyLevelUp`) respects `MaxLevelCap` auto
 - Token claims: `sub` (RefID), `uid` (user entity ID), `exp` (30min), `guest: true`
 - If `GUEST_SECRET` is not set, a random key is generated at startup
 - Optional local username/password sessions (Argon2id) when a game-mode file sets `auth: local`. Classic servers leave this off. API responses omit the password hash. Login attempts are limited per client address. `X-Forwarded-For` is trusted only from loopback unless `trusted_proxies` or `TRUSTED_PROXIES` says otherwise.
-- `presentation: door_tui` serves `public/door` and `GET /api/door/config` (title, subtitle, token key). Classic mode does not mount `/door`. The page paints live rooms, exits, actions, NPCs, resources, and combat status, plus the last few command replies. Keys and typed lines become engine commands. A world pack may add `keymap.yaml` (per room, per area, and a combat overlay) and `character_paths.yaml`. `d` stays down. With no character selected, the page asks for a name, then a numbered path, then sex. An existing name is selected. A new character uses the pack path when that file is present, and otherwise a numbered system template. Reconnect runs the new-day pass without another select.
+- `presentation: door_tui` serves `public/door` and `GET /api/door/config` (title, subtitle, token key). Classic mode does not mount `/door`. The page paints live rooms, exits, actions, NPCs, resource labels, and combat status. The header uses live combat hit points. A merchant room shows a numbered catalog, six rows at a time. `buy` and `sell` accept that number or a name. Keys and typed lines become engine commands. `:` starts a command line in the browser before later letters can hit hotkeys. A pack key whose command is `logout` tells the page to drop the session and return to the sign-in form. A world pack may add `keymap.yaml` (per room, per area, and a combat overlay) and `character_paths.yaml`. `d` stays down. With no character selected, the page asks for a name, then a numbered path, then sex, and the movement legend stays off that prompt. An existing name is selected. A new character uses the pack path when that file is present, and otherwise a numbered system template. The path name is stored on the `path` flag and the stats screen shows it. Reconnect runs the new-day pass without another select.
 
 ---
 

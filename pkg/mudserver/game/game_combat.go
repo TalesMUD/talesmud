@@ -258,6 +258,23 @@ func (c *CombatController) ProcessPlayerSkill(characterID, skillID, targetID str
 	return
 }
 
+// PlayerHP is the live combat hit-point pair. ok is false when this character
+// is not in a fight, so callers keep the stored character values.
+func (c *CombatController) PlayerHP(characterID string) (current, max int32, ok bool) {
+	if c == nil || c.manager == nil || characterID == "" {
+		return 0, 0, false
+	}
+	instance := c.manager.GetInstanceByPlayerID(characterID)
+	if instance == nil {
+		return 0, 0, false
+	}
+	player := instance.GetPlayerByID(characterID)
+	if player == nil {
+		return 0, 0, false
+	}
+	return player.CurrentHP, player.MaxHP, true
+}
+
 // BriefStatus is one line of live hit points for the text client.
 func (c *CombatController) BriefStatus(characterID string) string {
 	if c == nil || c.manager == nil || characterID == "" {

@@ -14,6 +14,7 @@ import (
 
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
+	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/entities/traits"
 	"github.com/talesmud/talesmud/pkg/gamemode"
@@ -29,12 +30,13 @@ type View struct {
 	Game  *game.Game
 	Title string
 
-	mu     sync.Mutex
-	line   map[string]bool
-	phase  map[string]string
-	drafts map[string]*draft
-	notice map[string]string
-	recent map[string][]string
+	mu       sync.Mutex
+	line     map[string]bool
+	phase    map[string]string
+	drafts   map[string]*draft
+	notice   map[string]string
+	recent   map[string][]string
+	shopPage map[string]int
 }
 
 type draft struct {
@@ -97,19 +99,40 @@ func (v *View) OnInput(user *entities.User, text string, send func(any)) bool {
 		v.paint(user, send)
 		return true
 	}
-	if cmd, handled := v.commandFor(user, text); handled {
+	cmd, handled := v.commandFor(user, text)
+	if handled {
 		v.paint(user, send)
 		return true
-	} else {
-		v.Game.DispatchCommand(user, cmd)
 	}
+	if cmd == "logout" {
+		send(ansi.Frame{
+			Type:      "door_frame",
+			Logout:    true,
+			InputMode: "hotkey",
+			Cols:      ansi.Cols,
+			Rows:      ansi.Rows,
+			ANSI:      "\x1b[2J\x1b[H",
+		})
+		return true
+	}
+	if cmd == "shopnext" || cmd == "shopprev" {
+		v.bumpPage(user.ID, cmd == "shopnext")
+		v.paint(user, send)
+		return true
+	}
+	v.Game.DispatchCommand(user, cmd)
 	v.paint(user, send)
 	return true
 }
 
 // OnNotice keeps a short line of command output and redraws the frame.
 func (v *View) OnNotice(user *entities.User, text string, send func(any)) {
-	if v == nil || user == nil || strings.TrimSpace(text) == "" {
+	if v == nil || user == nil {
+		return
+	}
+	text = strings.TrimSpace(text)
+	if text == "" || skipNotice(text) || v.isRoomEcho(user, text) {
+		v.paint(user, send)
 		return
 	}
 	v.pushRecent(user.ID, condense(text))
@@ -137,6 +160,7 @@ func (v *View) handleLine(user *entities.User, text string) {
 		d := v.draftOf(user.ID)
 		v.setPhase(user.ID, "")
 		v.setLine(user.ID, false)
+		v.clearNotice(user.ID)
 		if d == nil || strings.EqualFold(text, "x") || text == "" {
 			v.setNotice(user.ID, "Cancelled.")
 			return
@@ -246,7 +270,7 @@ func (v *View) createCharacter(user *entities.User, name string, path pathChoice
 		Gold:             path.Gold,
 		Attributes:       append(characters.Attributes(nil), path.Attrs...),
 		BelongsUser:      *traits.BelongsToUser(user.ID),
-		Flags:            map[string]interface{}{"sex": sex},
+		Flags:            map[string]interface{}{"sex": sex, "path": path.Name},
 	}
 	created, err := facade.CharactersService().Store(ch)
 	if err != nil || created == nil {
@@ -311,7 +335,6 @@ func (v *View) paint(user *entities.User, send func(any)) {
 	}
 	page := ansi.Page{
 		Title:     title,
-		Footer:    "n s e w u d   l look   a attack   i inventory   : command",
 		InputMode: "hotkey",
 		Prompt:    ">",
 	}
@@ -335,6 +358,7 @@ func (v *View) paint(user *entities.User, send func(any)) {
 		}
 		page.Location = "Characters"
 		page.ScreenID = "select"
+		page.Footer = ""
 		page.Body = v.characterLines(user)
 		send(ansi.Render(page))
 		return
@@ -346,28 +370,23 @@ func (v *View) paint(user *entities.User, send func(any)) {
 		page.ScreenID = "select"
 		page.InputMode = "line"
 		page.Prompt = "Character name:"
+		page.Footer = ""
 		page.Body = v.characterLines(user)
 		send(ansi.Render(page))
 		return
 	}
 	page.Location = char.Name
 	page.ScreenID = char.CurrentRoomID
-	body := []string{
-		fmt.Sprintf("Level %d   HP %d/%d   Gold %d", char.Level, char.CurrentHitPoints, char.MaxHitPoints, char.Gold),
-	}
-	if v.Game.Resources != nil {
-		shown := 0
-		for _, allowance := range ruleset.ResourceAllowances() {
-			res, ok, err := v.Game.Resources.Get(char.ID, allowance.Key)
-			if err == nil && ok {
-				body = append(body, fmt.Sprintf("%s %d/%d", allowance.Key, res.Remaining, res.Allowance))
-				shown++
-				if shown >= 4 {
-					break
-				}
-			}
+	hp, maxHP := char.CurrentHitPoints, char.MaxHitPoints
+	if v.Game.CombatController != nil {
+		if cur, mx, ok := v.Game.CombatController.PlayerHP(char.ID); ok {
+			hp, maxHP = cur, mx
 		}
 	}
+	body := []string{
+		fmt.Sprintf("Level %d   HP %d/%d   Gold %d", char.Level, hp, maxHP, char.Gold),
+	}
+	body = append(body, v.resourceLines(char.ID)...)
 	var room *rooms.Room
 	if found, ferr := facade.RoomsService().FindByID(char.CurrentRoomID); ferr == nil {
 		room = found
@@ -376,44 +395,41 @@ func (v *View) paint(user *entities.User, send func(any)) {
 	var brief string
 	if inCombat {
 		brief = v.Game.CombatController.BriefStatus(char.ID)
-		if brief != "" {
-			body = append(body, brief)
+	}
+	selling := false
+	if phase == "amount" {
+		if d := v.draftOf(user.ID); d != nil && d.command == "sell" {
+			selling = true
+		}
+	}
+	binds := keysFor(room, inCombat || brief != "")
+	catalog := v.catalogLines(user.ID, char, room, selling)
+	if brief != "" {
+		body = append(body, brief)
+	} else if len(catalog) > 0 {
+		body = append(body, catalog...)
+	} else if room != nil {
+		if art := screenArt(room.ID); art != "" {
+			body = append(body, strings.Split(art, "\n")...)
 		}
 	}
 	if note := v.peekNotice(user.ID); note != "" {
-		body = append(body, wrapPlain(note, 78)...)
-	}
-	recent := v.peekRecent(user.ID)
-	if len(recent) > 0 {
-		body = append(body, "Recent:")
-		body = append(body, recent...)
-	}
-	binds := keysFor(room, inCombat || brief != "")
-	if len(binds) > 0 {
-		page.Footer = "d down   : command"
-		page.Keys = map[string]string{}
-		body = append(body, legendLines(binds)...)
-		for key, b := range binds {
-			if b.Command != "" {
-				page.Keys[key] = b.Command
-			}
+		lines := wrapPlain(note, 78)
+		if len(lines) > 2 {
+			lines = lines[:2]
 		}
+		body = append(body, lines...)
 	}
 	if room == nil {
 		body = append(body, "You are nowhere.")
 	} else {
 		page.Location = room.Name
-		if len(recent) == 0 && brief == "" {
-			if art := screenArt(room.ID); art != "" {
-				body = append(body, strings.Split(art, "\n")...)
-			}
-		}
-		limit := 6
-		if len(recent) > 0 || brief != "" {
-			limit = 3
-		}
-		if room.Description != "" {
+		if len(catalog) == 0 && room.Description != "" {
 			lines := wrapPlain(room.Description, 78)
+			limit := 2
+			if brief != "" {
+				limit = 1
+			}
 			if len(lines) > limit {
 				lines = lines[:limit]
 			}
@@ -431,7 +447,7 @@ func (v *View) paint(user *entities.User, send func(any)) {
 				body = append(body, "Exits: "+strings.Join(names, ", "))
 			}
 		}
-		if len(binds) == 0 && room.Actions != nil && len(*room.Actions) > 0 {
+		if len(binds) == 0 && len(catalog) == 0 && room.Actions != nil && len(*room.Actions) > 0 {
 			names := make([]string, 0, len(*room.Actions))
 			for _, action := range *room.Actions {
 				if action.Name != "" {
@@ -442,10 +458,10 @@ func (v *View) paint(user *entities.User, send func(any)) {
 				body = append(body, "Actions: "+strings.Join(names, ", "))
 			}
 		}
-		if v.Game.NPCManager != nil {
+		if len(catalog) == 0 && v.Game.NPCManager != nil {
 			var npcs []string
 			for _, n := range v.Game.NPCManager.GetInstancesInRoom(room.ID) {
-				if n != nil {
+				if n != nil && (n.MerchantTrait == nil || len(n.MerchantTrait.Inventory) == 0) {
 					npcs = append(npcs, n.Name)
 				}
 			}
@@ -453,6 +469,28 @@ func (v *View) paint(user *entities.User, send func(any)) {
 				body = append(body, "Here: "+strings.Join(npcs, ", "))
 			}
 		}
+	}
+	if len(binds) > 0 {
+		page.Footer = "d down   : command"
+		page.Keys = map[string]string{}
+		body = append(body, legendLines(binds)...)
+		for key, b := range binds {
+			if b.Command != "" {
+				page.Keys[key] = b.Command
+			}
+		}
+	} else {
+		page.Footer = "n s e w u d   l look   a attack   i inventory   : command"
+	}
+	recent := v.peekRecent(user.ID)
+	if len(recent) > 4 {
+		recent = recent[len(recent)-4:]
+	}
+	if len(recent) > 0 {
+		body = append(body, recent...)
+	}
+	if len(body) > 19 {
+		body = body[:19]
 	}
 	page.Body = body
 	send(ansi.Render(page))
@@ -537,8 +575,11 @@ func screenArt(roomID string) string {
 	}
 	text := strings.ReplaceAll(string(raw), "\r\n", "\n")
 	lines := strings.Split(text, "\n")
-	if len(lines) > 4 {
-		lines = lines[:4]
+	if len(lines) > 8 {
+		lines = lines[:8]
+	}
+	for len(lines) > 0 && strings.TrimSpace(stripANSI(lines[len(lines)-1])) == "" {
+		lines = lines[:len(lines)-1]
 	}
 	return strings.Join(lines, "\n")
 }
@@ -578,9 +619,266 @@ func wrapPlain(s string, width int) []string {
 func condense(text string) []string {
 	lines := wrapPlain(text, 78)
 	if len(lines) > 3 {
-		lines = append(lines[:3], "...")
+		lines = lines[:3]
 	}
 	return lines
+}
+
+func skipNotice(text string) bool {
+	if text == "Quest Log" || text == "..." {
+		return true
+	}
+	if strings.HasPrefix(text, "Queued:") || strings.HasPrefix(text, "Attack whom?") {
+		return true
+	}
+	return false
+}
+
+func (v *View) isRoomEcho(user *entities.User, text string) bool {
+	ch := v.character(user)
+	if ch == nil || v.Game == nil || v.Game.GetFacade() == nil || ch.CurrentRoomID == "" {
+		return false
+	}
+	room, err := v.Game.GetFacade().RoomsService().FindByID(ch.CurrentRoomID)
+	if err != nil || room == nil || room.Name == "" {
+		return false
+	}
+	return strings.Contains(text, "["+room.Name+"]")
+}
+
+func (v *View) resourceLines(charID string) []string {
+	if v.Game == nil || v.Game.Resources == nil || charID == "" {
+		return nil
+	}
+	var parts []string
+	for _, allowance := range ruleset.ResourceAllowances() {
+		res, ok, err := v.Game.Resources.Get(charID, allowance.Key)
+		if err != nil || !ok {
+			continue
+		}
+		parts = append(parts, resourceText(allowance.Key, res.Remaining, res.Allowance))
+	}
+	if len(parts) == 0 {
+		return nil
+	}
+	var lines []string
+	line := ""
+	for _, part := range parts {
+		if line == "" {
+			line = part
+			continue
+		}
+		if len(line)+3+len(part) > 78 {
+			lines = append(lines, line)
+			line = part
+			continue
+		}
+		line += "   " + part
+	}
+	if line != "" {
+		lines = append(lines, line)
+	}
+	if len(lines) > 2 {
+		lines = lines[:2]
+	}
+	return lines
+}
+
+func resourceText(key string, remaining, allowance int) string {
+	name := ruleset.ResourceLabel(key)
+	if name == "" {
+		name = key
+	}
+	if allowance <= 1 {
+		if remaining > 0 {
+			return name + ": ready"
+		}
+		return name + ": used"
+	}
+	return fmt.Sprintf("%s %d/%d", name, remaining, allowance)
+}
+
+const shopPageSize = 6
+
+type rackRow struct {
+	n    int
+	line string
+}
+
+func (v *View) catalogLines(userID string, char *characters.Character, room *rooms.Room, selling bool) []string {
+	if room == nil || v.Game == nil || v.Game.NPCManager == nil || v.Game.GetFacade() == nil {
+		return nil
+	}
+	for _, n := range v.Game.NPCManager.GetInstancesInRoom(room.ID) {
+		if n == nil || n.MerchantTrait == nil || len(n.MerchantTrait.Inventory) == 0 {
+			continue
+		}
+		var rows []rackRow
+		if selling {
+			rows = sellRack(char, n)
+		} else {
+			rows = v.buyRack(n)
+		}
+		if len(rows) == 0 {
+			if selling {
+				return []string{n.Name + " will take nothing you carry."}
+			}
+			return []string{n.Name + " has nothing on the rack."}
+		}
+		pages := (len(rows) + shopPageSize - 1) / shopPageSize
+		page := v.pageOf(userID)
+		if page >= pages {
+			page = pages - 1
+		}
+		if page < 0 {
+			page = 0
+		}
+		start := page * shopPageSize
+		end := start + shopPageSize
+		if end > len(rows) {
+			end = len(rows)
+		}
+		head := fmt.Sprintf("%s  %d-%d of %d", n.Name, rows[start].n, rows[end-1].n, len(rows))
+		if pages > 1 {
+			head += "   N next  P prev"
+		}
+		out := []string{clipWidth(head, 78)}
+		for _, row := range rows[start:end] {
+			out = append(out, clipWidth(row.line, 78))
+		}
+		return out
+	}
+	return nil
+}
+
+func (v *View) buyRack(n *npc.NPC) []rackRow {
+	var rows []rackRow
+	for i := range n.MerchantTrait.Inventory {
+		inv := &n.MerchantTrait.Inventory[i]
+		tpl, err := v.Game.GetFacade().ItemsService().FindByID(inv.ItemTemplateID)
+		if err != nil || tpl == nil {
+			continue
+		}
+		price := n.MerchantTrait.GetBuyPrice(inv, tpl.BasePrice)
+		num := len(rows) + 1
+		rows = append(rows, rackRow{n: num, line: formatRack(num, tpl.Name, statLabel(tpl.Attributes), price)})
+	}
+	return rows
+}
+
+func sellRack(char *characters.Character, n *npc.NPC) []rackRow {
+	if char == nil || n == nil || n.MerchantTrait == nil {
+		return nil
+	}
+	var rows []rackRow
+	for _, item := range char.Inventory.Items {
+		if item == nil || item.IsBound() {
+			continue
+		}
+		if !n.MerchantTrait.CanBuyItem(string(item.Type), item.Tags) {
+			continue
+		}
+		price := n.MerchantTrait.GetSellPrice(item.BasePrice)
+		if price < 1 {
+			price = 1
+		}
+		num := len(rows) + 1
+		rows = append(rows, rackRow{n: num, line: formatRack(num, item.Name, statLabel(item.Attributes), price)})
+	}
+	return rows
+}
+
+func formatRack(n int, name, stat string, price int64) string {
+	name = clipWidth(name, 22)
+	if stat == "" {
+		stat = "-"
+	}
+	return fmt.Sprintf("%2d %-22s %-8s %7d", n, name, clipWidth(stat, 8), price)
+}
+
+func statLabel(attrs map[string]interface{}) string {
+	if d, ok := numberAttr(attrs, "damage"); ok {
+		return fmt.Sprintf("dmg %d", d)
+	}
+	if d, ok := numberAttr(attrs, "defense"); ok {
+		return fmt.Sprintf("def %d", d)
+	}
+	return ""
+}
+
+func numberAttr(attrs map[string]interface{}, key string) (int, bool) {
+	if attrs == nil {
+		return 0, false
+	}
+	switch v := attrs[key].(type) {
+	case int:
+		return v, true
+	case int32:
+		return int(v), true
+	case int64:
+		return int(v), true
+	case float64:
+		return int(v), true
+	case string:
+		n, err := strconv.Atoi(strings.TrimSpace(v))
+		return n, err == nil
+	default:
+		return 0, false
+	}
+}
+
+func (v *View) bumpPage(id string, next bool) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	if v.shopPage == nil {
+		v.shopPage = map[string]int{}
+	}
+	if next {
+		if v.shopPage[id] < 8 {
+			v.shopPage[id]++
+		}
+		return
+	}
+	if v.shopPage[id] > 0 {
+		v.shopPage[id]--
+	}
+}
+
+func (v *View) pageOf(id string) int {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	if v.shopPage == nil {
+		return 0
+	}
+	return v.shopPage[id]
+}
+
+func clipWidth(s string, width int) string {
+	r := []rune(s)
+	if len(r) <= width {
+		return s
+	}
+	return string(r[:width])
+}
+
+func stripANSI(s string) string {
+	var b strings.Builder
+	for i := 0; i < len(s); {
+		if s[i] == 0x1b && i+1 < len(s) && s[i+1] == '[' {
+			j := i + 2
+			for j < len(s) && !((s[j] >= 'A' && s[j] <= 'Z') || (s[j] >= 'a' && s[j] <= 'z')) {
+				j++
+			}
+			if j < len(s) {
+				j++
+			}
+			i = j
+			continue
+		}
+		b.WriteByte(s[i])
+		i++
+	}
+	return b.String()
 }
 
 func (v *View) ensureReturning(user *entities.User) {

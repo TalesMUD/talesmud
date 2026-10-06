@@ -158,7 +158,7 @@ The orange attack warning in `attack.go` stays. Death does not consult threat co
 - `Consume` fails with `ErrExhausted` and does not write when `n` exceeds `remaining`.
 - `Modifier` is `func(characterID, key string, allowance int) int`. Zero modifiers means the config allowance. A content script can register one to add a boon. Modifiers run before the period check so a changed allowance still does not refill mid-period; they only affect the next refill and the displayed allowance.
 
-No game command calls the store. A pack script calls `tales.resources.consume` (slice 1a exposes it; with no configured key the call returns exhausted and changes nothing). An empty `resources` map is the unconfigured state. The Go modifier hook stays for tests and for a boon registered by engine code; content uses the YAML allowance.
+No game command calls the store. A pack script calls `tales.resources.consume` (slice 1a exposes it; with no configured key the call returns exhausted and changes nothing). An empty `resources` map is the unconfigured state. Each key may set `label`, a display name. An empty label leaves the key itself as the name. The Go modifier hook stays for tests and for a boon registered by engine code; content uses the YAML allowance.
 
 ### Combat pacing
 
@@ -166,7 +166,7 @@ Read by the combat controller only as a branch around the existing decision wind
 
 `auto` (default): the block in `processAllTurnsLocked` is unchanged. Five-second window, then auto-attack. A queued action still kicks the waiting turn. Balance tests (`TestGapMatrixTargets`, `TestCombatDuration`, `TestLevel1*`, `TestBosses`) do not go through this branch; formulas stay put.
 
-`turn_based`: a living player's turn sets the phase to waiting and does not arm a deadline. The ticker does not auto-attack and does not resolve that turn. Queueing an action still kicks, the player's turn resolves, and later combatants (including NPCs) take their turns under the existing beat. NPC turns that are already current still resolve; the mode does not reorder initiative. It only refuses to invent a player action. A bare `attack` during a fight queues that kick against the current target, or the first living enemy. Outside combat, `combat.bare_attack` defaults to `ask` ("Attack whom?"). `first_hostile` starts the fight against the first hostile in the room.
+`turn_based`: a living player's turn sets the phase to waiting and does not arm a deadline. The ticker does not auto-attack and does not resolve that turn. Queueing an action still kicks, the player's turn resolves, and later combatants (including NPCs) take their turns under the existing beat. NPC turns that are already current still resolve; the mode does not reorder initiative. It only refuses to invent a player action. A bare `attack` during a fight queues that kick against the current target, or the first living enemy. Outside combat, `combat.bare_attack` defaults to `ask` ("Attack whom?"). `first_hostile` starts the fight against the first hostile in the room, and says nobody is there when the room has no living hostile.
 
 `combat.disconnect` defaults to `continue`: closing the session does not end the fight and does not move the character. `release` ends it as a flee, so gold, XP, and the death flag are untouched. `combat.safe_room` (`stay` by default, or `bind` or `start`) applies only in that release path. A generated instance that times out still moves its occupant to the return room before the copy is deleted. A missing room on the next enter uses the bind room, then the start room.
 

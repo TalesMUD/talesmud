@@ -577,7 +577,7 @@ Execute matched command
 | Command | Aliases | Description |
 |---------|---------|-------------|
 | `list` | `shop`, `trade` | Show merchant inventory |
-| `buy <item> [qty]` | - | Purchase from merchant; stackable quantities can occupy one inventory stack |
+| `buy <item|number> [qty]` | - | Purchase from merchant. A number is the catalog row. Stackable quantities can occupy one inventory stack |
 | `sell <item> [qty]` | - | Sell to merchant if accepted and not bound |
 | `value <item>` | `price` | Check sell price |
 
@@ -1559,7 +1559,7 @@ pkg/
 
 The scripting system uses Lua (via gopher-lua) for dynamic game content. JavaScript support is deprecated but maintained for backward compatibility.
 
-Refilling resources are a SQLite table (`character_resources`) owned by `pkg/resources`. The HTTP startup attaches one empty store to the game and to the Lua runner. Callers configure allowances later. Until then, `tales.resources.get` and `consume` report the key as missing.
+Refilling resources are a SQLite table (`character_resources`) owned by `pkg/resources`. The HTTP startup attaches one empty store to the game and to the Lua runner. Callers configure allowances later. A configured key may carry a display `label`. Until then, `tales.resources.get` and `consume` report the key as missing.
 
 ### Script Runner Architecture
 
