@@ -198,6 +198,10 @@
     document.getElementById("stage").hidden = true;
     document.getElementById("auth").hidden = false;
     setMode("login");
+    ["username", "password"].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el) el.value = "";
+    });
     const username = document.getElementById("username");
     if (username) username.focus();
   }

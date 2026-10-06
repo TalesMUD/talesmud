@@ -252,6 +252,32 @@ func TestKeyMapBindsRoomAndLeavesDownAlone(t *testing.T) {
 	}
 }
 
+func TestFitBodyKeepsTheLatestLine(t *testing.T) {
+	body := []string{"Level 1   HP 25/25   Gold 50"}
+	for i := 0; i < 24; i++ {
+		body = append(body, "picture")
+	}
+	out := fitBody(body, []string{"Vault 0 coin. On hand 50."}, 19)
+	if len(out) != 19 {
+		t.Fatalf("len %d", len(out))
+	}
+	if out[0] != "Level 1   HP 25/25   Gold 50" {
+		t.Fatalf("status dropped: %q", out[0])
+	}
+	if out[len(out)-1] != "Vault 0 coin. On hand 50." {
+		t.Fatalf("service line dropped: %q", out[len(out)-1])
+	}
+}
+
+func TestClearRecentDropsTheCombatLog(t *testing.T) {
+	v := &View{}
+	v.pushRecent("user", []string{"VICTORY!", "You attack Wolf."})
+	v.clearRecent("user")
+	if got := v.peekRecent("user"); len(got) != 0 {
+		t.Fatalf("recent survived: %v", got)
+	}
+}
+
 func drainDoor(g *game.Game) []any {
 	var out []any
 	for {

@@ -1,10 +1,15 @@
 package modules
 
 import (
+	"fmt"
+	"strings"
+
 	lua "github.com/yuin/gopher-lua"
 	luar "layeh.com/gopher-luar"
 
+	"github.com/talesmud/talesmud/pkg/entities/characters"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	luarunner "github.com/talesmud/talesmud/pkg/scripts/runner/lua"
 )
 
@@ -229,6 +234,11 @@ func RegisterNPCsModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 		}
 
 		err := facade.NPCsService().Delete(id)
+		if game := runner.GetGame(); game != nil {
+			if mgr := game.GetNPCInstanceManager(); mgr != nil {
+				mgr.RemoveInstance(id)
+			}
+		}
 		L.Push(lua.LBool(err == nil))
 		return 1
 	}))
@@ -296,6 +306,16 @@ func RegisterNPCsModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 		}
 
 		L.Push(luar.New(L, instance))
+		return 1
+	}))
+
+	// tales.npcs.beginFight(characterId, instanceId) - start a real fight against one hostile instance.
+	// Returns false when the two are not in the same room, the target is not hostile, or a fight cannot start.
+	mod.RawSetString("beginFight", L.NewFunction(func(L *lua.LState) int {
+		characterID := L.CheckString(1)
+		instanceID := L.CheckString(2)
+		ok := beginFight(runner, characterID, instanceID)
+		L.Push(lua.LBool(ok))
 		return 1
 	}))
 
@@ -490,4 +510,80 @@ func RegisterNPCsModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 
 	L.Push(mod)
 	return 1
+}
+
+func beginFight(runner *luarunner.LuaRunner, characterID, instanceID string) bool {
+	game := runner.GetGame()
+	facade := runner.GetFacade()
+	if game == nil || facade == nil {
+		return false
+	}
+	combatEngine := game.GetCombatEngine()
+	npcMgr := game.GetNPCInstanceManager()
+	if combatEngine == nil || npcMgr == nil {
+		return false
+	}
+	char, err := facade.CharactersService().FindByID(characterID)
+	if err != nil || char == nil || char.Entity == nil {
+		return false
+	}
+	target := npcMgr.GetInstance(instanceID)
+	if target == nil || target.Entity == nil || target.IsDead || !target.IsEnemy() {
+		return false
+	}
+	if target.CurrentRoomID == "" || target.CurrentRoomID != char.CurrentRoomID {
+		return false
+	}
+	if combatEngine.IsPlayerInCombat(char.ID) || combatEngine.IsNPCInCombat(target.Entity.ID) {
+		return false
+	}
+	if combatEngine.CombatGraceActive(char.ID) {
+		return false
+	}
+	instance := combatEngine.InitiateCombat(char.CurrentRoomID, []*characters.Character{char}, []*npc.NPC{target})
+	if instance == nil {
+		return false
+	}
+	char.InCombat = true
+	char.CombatInstanceID = instance.ID
+	if err := facade.CharactersService().Update(char.ID, char); err != nil {
+		return false
+	}
+	npcMgr.UpdateInstance(target.Entity.ID, func(n *npc.NPC) {
+		n.InCombat = true
+		n.CombatInstanceID = instance.ID
+		n.State = "combat"
+	})
+	combatEngine.SetAutoAttackTarget(char.ID, target.Entity.ID)
+
+	var b strings.Builder
+	b.WriteString("\n═══════════════════════════════════════════════════\n")
+	b.WriteString("              COMBAT INITIATED!\n\n")
+	b.WriteString(fmt.Sprintf("You attack %s!\n\n", target.Name))
+	b.WriteString("Turn Order:\n")
+	for i, combatant := range instance.TurnOrder {
+		marker := "  "
+		if i == instance.CurrentTurnIdx {
+			marker = "► "
+		}
+		b.WriteString(fmt.Sprintf("%s%d. %s (Initiative: %d)\n", marker, i+1, combatant.Name, combatant.Initiative))
+	}
+	b.WriteString("\n")
+	b.WriteString(combatEngine.GetCombatStatus(char.ID))
+	b.WriteString("\n═══════════════════════════════════════════════════")
+
+	enemies := make([]messages.CombatantView, 0, len(instance.Enemies))
+	for _, ref := range instance.Enemies {
+		enemies = append(enemies, messages.CombatantView{
+			ID: ref.ID, Name: ref.Name, Portrait: ref.Portrait, HP: ref.CurrentHP, MaxHP: ref.MaxHP, Level: ref.Level,
+		})
+	}
+	players := make([]messages.CombatantView, 0, len(instance.Players))
+	for _, ref := range instance.Players {
+		players = append(players, messages.CombatantView{
+			ID: ref.ID, Name: ref.Name, HP: ref.CurrentHP, MaxHP: ref.MaxHP, Level: ref.Level,
+		})
+	}
+	game.SendMessage() <- messages.NewCombatStartMessage(char.BelongsUserID, b.String(), enemies, players)
+	return true
 }

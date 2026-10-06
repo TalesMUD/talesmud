@@ -434,6 +434,16 @@ func combatViews(refs []combat.CombatantRef, viewerLevel int32) []messages.Comba
 	return out
 }
 
+// attackAlreadyQueued is true when this swing is already waiting.
+// Extra presses must not print another "You attack" line for the same swing.
+func attackAlreadyQueued(instance *combat.CombatInstance, characterID, targetID string) bool {
+	if instance == nil || characterID == "" || targetID == "" {
+		return false
+	}
+	player := instance.GetPlayerByID(characterID)
+	return player != nil && player.QueuedAction == combat.CombatActionAttack && player.QueuedTargetID == targetID
+}
+
 // handleInCombatAttack handles an attack action during combat (queues target switch)
 func (command *AttackCommand) handleInCombatAttack(game def.GameCtrl, message *messages.Message, combatEngine def.CombatEngineCtrl, targetName string) bool {
 	instance := combatEngine.GetCombatInstance(message.Character.Entity.ID)
@@ -481,6 +491,9 @@ func (command *AttackCommand) handleInCombatAttack(game def.GameCtrl, message *m
 			game.SendMessage() <- message.Reply("No enemies to attack!")
 			return true
 		}
+		if attackAlreadyQueued(instance, message.Character.Entity.ID, targetID) {
+			return true
+		}
 		combatEngine.SetAutoAttackTarget(message.Character.Entity.ID, targetID)
 		combatEngine.QueuePlayerAction(message.Character.Entity.ID, combat.CombatActionAttack, targetID)
 		name := targetID
@@ -513,7 +526,10 @@ func (command *AttackCommand) handleInCombatAttack(game def.GameCtrl, message *m
 		return true
 	}
 
-	// Queue the target switch - it will take effect on the player's next turn
+	// A second press of the same attack, before the queued swing resolves, does not echo again.
+	if attackAlreadyQueued(instance, message.Character.Entity.ID, targetID) {
+		return true
+	}
 	combatEngine.SetAutoAttackTarget(message.Character.Entity.ID, targetID)
 	combatEngine.QueuePlayerAction(message.Character.Entity.ID, combat.CombatActionAttack, targetID)
 

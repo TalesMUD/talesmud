@@ -90,11 +90,14 @@ func NewEngine(manager *Manager, config *CombatConfig) *Engine {
 
 // CreateCombatantFromCharacter creates a CombatantRef from a Character
 func (e *Engine) CreateCombatantFromCharacter(char *characters.Character) combat.CombatantRef {
-	// Calculate defense from equipment
-	defense := char.GetArmorDefense()
+	// Calculate defense from equipment plus a script grant.
+	defense := char.GetArmorDefense() + char.BonusDefense
+	if defense < 0 {
+		defense = 0
+	}
 
-	// Calculate attack power from weapon + class primary attribute modifier
-	attackPower := char.GetWeaponDamage() + int32(char.GetPrimaryAttackMod())
+	// Calculate attack power from weapon + class primary attribute modifier plus a script grant.
+	attackPower := char.GetWeaponDamage() + int32(char.GetPrimaryAttackMod()) + char.BonusAttack
 	if attackPower < 1 {
 		attackPower = 1
 	}

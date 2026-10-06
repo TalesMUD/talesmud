@@ -1596,6 +1596,12 @@ tales.game.setFlag(characterID, flagName, value)
 -- characterID: string
 -- flagName: string
 -- value: bool, number, string, or nil (nil deletes the flag)
+
+tales.game.clearGear(characterID)
+-- Deletes worn items and bagged weapons and armor. Other bag items stay. Returns how many were removed.
+
+tales.game.equipFromTemplate(characterID, templateID)
+-- Creates an instance of a template and wears it in that template's slot, replacing the piece already there.
 ```
 
 #### Hidden Exit Reveals (Per-Character)
@@ -1710,6 +1716,12 @@ tales.characters.applyLevels(characterID)
 -- Class, skills, inventory, gold, and flags are left alone.
 tales.characters.setProgress(characterID, level, xp, maxHP)
 
+-- Permanent combat grant. kind is "attack", "defense", or "maxHP".
+-- One call changes that stat by at most 10. Attack and defense grants stay in 0..40.
+-- Max hit points stay in 1..5000. A positive maxHP grant also raises current hit points.
+-- Zero leaves a classic character unchanged. Returns false for an unknown kind or a zero delta.
+tales.characters.grant(characterID, kind, delta)
+
 -- Read-only top list. n defaults to 12 and is capped at 50.
 -- sortKey "xp" orders by experience. Any other key orders by level, then experience.
 local rows = tales.characters.top(n, sortKey) -- rows[i].name, .level, .xp
@@ -1750,6 +1762,10 @@ local isMerchant = tales.npcs.isMerchant(npcID)
 local templates = tales.npcs.getTemplates()
 local isTemplate = tales.npcs.isTemplate(npcID)
 local instance = tales.npcs.spawnFromTemplate(templateID, roomID)
+local started = tales.npcs.beginFight(characterID, instanceID)
+-- Starts a real fight when both are in the same room, the target is a living enemy,
+-- and neither is already fighting. Returns false during the post-combat breath window.
+-- The caller chose the target, so this does not print an over-level warning.
 local inst = tales.npcs.getInstance(instanceID)
 local instances = tales.npcs.getInstancesInRoom(roomID)
 
@@ -1761,7 +1777,7 @@ local died = tales.npcs.damageInstance(instanceID, amount)
 tales.npcs.healInstance(instanceID, amount)
 tales.npcs.moveInstance(instanceID, roomID)
 
--- Delete
+-- Delete the saved row and, when a game is running, the live instance.
 tales.npcs.delete(npcID)
 ```
 

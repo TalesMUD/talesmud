@@ -73,6 +73,9 @@ func (v *View) OnInput(user *entities.User, text string, send func(any)) bool {
 	if text == "" {
 		return true
 	}
+	// A new key starts a new screen. Combat lines from the last fight stay
+	// until this press, then the frame shows only what this command prints.
+	v.clearRecent(user.ID)
 	phase := v.phaseOf(user.ID)
 	if phase == "name" || phase == "amount" || v.takeLine(user.ID) {
 		v.handleLine(user, text)
@@ -482,17 +485,7 @@ func (v *View) paint(user *entities.User, send func(any)) {
 	} else {
 		page.Footer = "n s e w u d   l look   a attack   i inventory   : command"
 	}
-	recent := v.peekRecent(user.ID)
-	if len(recent) > 4 {
-		recent = recent[len(recent)-4:]
-	}
-	if len(recent) > 0 {
-		body = append(body, recent...)
-	}
-	if len(body) > 19 {
-		body = body[:19]
-	}
-	page.Body = body
+	page.Body = fitBody(body, v.peekRecent(user.ID), 19)
 	send(ansi.Render(page))
 }
 
@@ -1035,6 +1028,35 @@ func (v *View) clearNotice(id string) {
 	v.mu.Lock()
 	defer v.mu.Unlock()
 	delete(v.notice, id)
+}
+
+// fitBody keeps the latest command lines when the picture would otherwise
+// push them past the 19-line body. Art drops first. The status line stays.
+func fitBody(body, recent []string, limit int) []string {
+	if limit < 1 {
+		limit = 1
+	}
+	if len(recent) > 4 {
+		recent = recent[len(recent)-4:]
+	}
+	room := append([]string{}, body...)
+	for len(room)+len(recent) > limit && len(room) > 1 {
+		room = append(room[:1], room[2:]...)
+	}
+	out := append(room, recent...)
+	if len(out) > limit {
+		out = out[len(out)-limit:]
+	}
+	return out
+}
+
+func (v *View) clearRecent(id string) {
+	if v == nil || id == "" {
+		return
+	}
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	delete(v.recent, id)
 }
 
 func (v *View) pushRecent(id string, lines []string) {

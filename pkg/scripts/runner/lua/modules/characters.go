@@ -17,6 +17,7 @@ import (
 )
 
 var errNotEnoughGold = errors.New("not enough gold")
+var errUnknownGrant = errors.New("unknown grant")
 
 // RegisterCharactersModule registers the tales.characters module
 func RegisterCharactersModule(L *lua.LState, runner *luarunner.LuaRunner) int {
@@ -417,6 +418,77 @@ func RegisterCharactersModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 		})
 		if err != nil {
 			log.WithError(err).WithField("characterID", id).Warn("setProgress failed")
+			L.Push(lua.LBool(false))
+			return 1
+		}
+		pushGoldUpdate(runner, id)
+		L.Push(lua.LBool(true))
+		return 1
+	}))
+
+	// tales.characters.grant(id, "attack"|"defense"|"maxHP", delta)
+	// Adds a small permanent bonus. One call may change the stat by at most 10.
+	// Attack and defense grants stay between 0 and 40. Max hit points stay between 1 and 5000.
+	mod.RawSetString("grant", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+		kind := strings.ToLower(strings.TrimSpace(L.CheckString(2)))
+		delta := int32(L.CheckInt(3))
+		if delta > 10 {
+			delta = 10
+		}
+		if delta < -10 {
+			delta = -10
+		}
+		facade := runner.GetFacade()
+		if facade == nil || delta == 0 {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+		var applied bool
+		err := facade.CharactersService().Modify(id, func(character *characters.Character) error {
+			switch kind {
+			case "attack":
+				character.BonusAttack += delta
+				if character.BonusAttack < 0 {
+					character.BonusAttack = 0
+				}
+				if character.BonusAttack > 40 {
+					character.BonusAttack = 40
+				}
+				applied = true
+			case "defense":
+				character.BonusDefense += delta
+				if character.BonusDefense < 0 {
+					character.BonusDefense = 0
+				}
+				if character.BonusDefense > 40 {
+					character.BonusDefense = 40
+				}
+				applied = true
+			case "maxhp":
+				character.MaxHitPoints += delta
+				if character.MaxHitPoints < 1 {
+					character.MaxHitPoints = 1
+				}
+				if character.MaxHitPoints > 5000 {
+					character.MaxHitPoints = 5000
+				}
+				if character.CurrentHitPoints > character.MaxHitPoints {
+					character.CurrentHitPoints = character.MaxHitPoints
+				}
+				if delta > 0 {
+					character.CurrentHitPoints += delta
+					if character.CurrentHitPoints > character.MaxHitPoints {
+						character.CurrentHitPoints = character.MaxHitPoints
+					}
+				}
+				applied = true
+			default:
+				return errUnknownGrant
+			}
+			return nil
+		})
+		if err != nil || !applied {
 			L.Push(lua.LBool(false))
 			return 1
 		}

@@ -59,18 +59,18 @@ Each row is one system. The first number is the tier that owns it. Later numbers
 | Level-scaled monsters | **1** | Authored `EnemyTrait`, `level_gap`, and threat already scale a fight. The generator's level filter is part of the procedural row. | Authored rooms and spawners unchanged. |
 | Forest random events | **2** | An on-enter or room-action script. The generator does not roll story events. | No script, no event. |
 | 12 levels and trainer gate | **4**, then **1** `level_cap` / `level_up_mode`, **3** `applyLevels`, **2** the trainer script | Combat victory and quest turn-in apply levels in Go today. The mode has to intercept those sites or XP never banks. Price and speech are the script. | `auto`, cap 50. Levels still apply immediately. |
-| Master challenges | **2**, on top of **1** | A normal `attack` on a boss NPC. `first_kill_bonus` in `combat_balance.yaml` already pays the first kill. No duel command. | Bosses stay authored content. |
-| Death | **4**, then **1** the percents and respawn mode | Defeat has no script hook, and the default path must match today's losses with no content installed. `ApplyDeath` is called only from `processCombatDefeat`. It is not wired through victory or `reward_scale`. The orange attack warning stays in `attack.go`. | 10% XP, 1 on-hand gold, bindpoint, 50% HP, armor damage. |
+| Master challenges | **3** `beginFight`, then **2** the pack script | A script can start one hostile fight in the same room. The orange attack warning stays on a typed `attack`. A character flag `spar` makes that one defeat restore hit points and skip `ApplyDeath`. | No flag, no script. A normal attack still warns and a defeat still applies the death rules. |
+| Death | **4**, then **1** the percents and respawn mode | `ApplyDeath` is called only from `processCombatDefeat`, and only when `spar` is absent. It is not wired through victory or `reward_scale`. The orange attack warning stays in `attack.go`. An optional `after_combat` flag names a script that runs when the fight ends. | 10% XP, 1 on-hand gold, bindpoint, 50% HP, armor damage. No script. |
 | Healer | **2**, plus **3** `addGold` | `tales.characters.heal` already fills HP. The script checks coin and debits with `addGold`. No healer command. | No script, no charge. |
 | Bank | **2**, plus **3** `addGold` and existing **1** `setFlag` | Death percent reads on-hand `Gold` only. The script moves coin into a character flag. No `BankGold` field. | No script. Flag absent. |
 | Weapon and armor shops | **1** | `MerchantTrait` buy and sell. | Unchanged. |
 | Inn | **2**, plus **3** `setBind` | The script calls `setFlag(id, "resting", true)`, which is what `rest` already stores, and `setBind` for the room id defeat already reads. | `rest` unchanged. Nothing binds unless a script calls `setBind`. |
-| Gems | **2** | A character flag or a normal item. A counter does not need a column. | Unchanged. |
+| Gems | **2**, plus **3** `tales.characters.grant` | A character flag counts the shards. `grant` adds a small attack, defense, or max-hit-point bonus on top of gear. Classic characters leave the bonus at zero. | Unchanged. Bonus stays 0. |
 | News and ledger | **2** | A room-action `response` or script. Lines are content. | No new command. |
 | Player list | **1** | `who`. The Door view renders that reply. | Unchanged. |
 | New-day full heal | **1** | `new_day.full_heal` on character select. Select has no script event, so a YAML switch has to work with no pack script. Resource refill stays on the store's clock. | `false`. Select does not heal. |
-| Dragon endgame | **2** | A later pack script. No engine type until a script is actually short of an API. Not written in Phase 1. | Off. |
-| Prestige reset | **3** `setProgress`, then **2** the pack script | Level and XP have to change without a combat victory. `setProgress` does only that. The script decides when a win earns the reset and what hit points to keep. | The call is unused. Level still comes from XP. |
+| Dragon endgame | **3** `beginFight`, then **2** the pack script | The fight is an ordinary hostile. The script decides the level gate, the daily try, and that a loss is a real defeat. | Off. No script, no fight. |
+| Prestige reset | **3** `setProgress`, `clearGear`, `equipFromTemplate`, then **2** the pack script | Level and XP have to change without a combat victory. `setProgress` does only that. The script also clears on-hand coin, a bank flag, worn gear, and script attack or defense bonuses, then equips starter pieces. | The calls are unused. Level still comes from XP. Gear stays. |
 | PvP | **4**, not built | Hits are the combat core. Lua cannot resolve them. No flag was added that pretends a duel exists. | Impossible, as today. |
 | Global event dispatch | **2** | Room and on-enter scripts already carry a flavor event. The registry still has no `Dispatch` callers, and OnDeath / OnAggro / OnFlee stay unexecuted. Calling that registry would be tier 4 and was not done. | Unchanged. |
 | Turn-based fights | **4**, then **1** `combat.pacing` | This is the combat core. `auto` must stay the current 5s window and manual kick. | `auto`. |
@@ -138,7 +138,7 @@ Call sites, all of them: combat victory, `GrantQuestRewards`, `commands/xp_grant
 
 ### Death hook
 
-`ApplyDeath(policy, char) Outcome` computes XP lost, gold lost, respawn room (empty when `next_reset` or unbound), and the HP to set. `processCombatDefeat` applies the outcome, optionally damages armor, calls the existing `RelocateCharacter` when a room is returned, and sends the defeat message.
+`ApplyDeath(policy, char) Outcome` computes XP lost, gold lost, respawn room (empty when `next_reset` or unbound), and the HP to set. `processCombatDefeat` applies the outcome, optionally damages armor, calls the existing `RelocateCharacter` when a room is returned, and sends the defeat message. A character flag `spar` set to true skips that call for the defeat, restores hit points, and clears the flag. Any other ending clears `spar` without restoring hit points. An `after_combat` flag naming a script id runs after the character is saved. Neither flag exists until a script sets it.
 
 `next_reset` sets `Character.AwaitingReset`, leaves the character in the death room at the policy HP (0 unless `respawn_hp_percent` says otherwise), and does not relocate. The new-day pass clears `AwaitingReset` when it runs. With the default policy this path never runs.
 
@@ -195,6 +195,10 @@ Small, generic, no world names. Each is a no-op or a pure read when the caller p
 | `tales.characters.setBind(id, roomID)` | Sets `BoundRoomID` when the room exists. Empty room id clears it. |
 | `tales.characters.applyLevels(id)` | Applies every level the current XP can buy and returns how many were gained. Trainer mode banks XP until this call. Auto mode returns 0 when nothing is pending. |
 | `tales.characters.setProgress(id, level, xp [, maxHP])` | Sets level and XP. Level clamps to 1..the effective cap. Negative XP becomes 0. A positive maxHP replaces max and current hit points. Class, skills, inventory, gold, and flags stay. |
+| `tales.characters.grant(id, kind, delta)` | `kind` is `attack`, `defense`, or `maxHP`. Each call clamps `delta` to -10..10. Attack and defense bonuses clamp to 0..40. Max hit points clamp to 1..5000. A positive max-hit-point grant also raises current hit points. Unknown kind or a zero delta returns false and saves nothing. |
+| `tales.game.clearGear(id)` | Deletes worn items and bagged weapons and armor. Other bag items stay. Returns how many were removed. |
+| `tales.game.equipFromTemplate(id, templateId)` | Creates an instance and equips it in the template's slot, replacing that slot. |
+| `tales.npcs.beginFight(characterId, instanceId)` | Starts a fight when both are in the same room, the instance is a living hostile, and neither is already fighting. Returns false otherwise. It does not print the orange over-level warning. |
 | `tales.characters.top(n, sortKey)` | Read-only rows of name, level, and XP. `n` defaults to 12 and caps at 50. `sortKey` `"xp"` orders by experience. Any other key orders by level, then experience. |
 | `tales.resources.get(characterID, key)` | Returns allowance and remaining for a configured key. Unknown key returns remaining 0 and `ok=false`. |
 | `tales.resources.consume(characterID, key, n)` | Spends `n` against the configured allowance. Returns remaining, or `ok=false` when the key is missing or the balance is short. |

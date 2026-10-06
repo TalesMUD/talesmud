@@ -1561,6 +1561,8 @@ The scripting system uses Lua (via gopher-lua) for dynamic game content. JavaScr
 
 Refilling resources are a SQLite table (`character_resources`) owned by `pkg/resources`. The HTTP startup attaches one empty store to the game and to the Lua runner. Callers configure allowances later. A configured key may carry a display `label`. Until then, `tales.resources.get` and `consume` report the key as missing.
 
+A character flag `spar` (boolean) makes one defeat skip death penalties and restore hit points. A flag `after_combat` (script id) runs after the fight is saved, with `last_combat` set to victory, defeat, fled, or timeout. Both flags are absent by default, so a classic defeat is unchanged. `tales.npcs.beginFight` starts one fight the script already chose. `tales.characters.grant` adds a small attack, defense, or max-hit-point bonus that is zero unless a script sets it. `tales.game.clearGear` and `equipFromTemplate` replace worn gear.
+
 ### Script Runner Architecture
 
 ```

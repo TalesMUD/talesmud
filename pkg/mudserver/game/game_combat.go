@@ -19,6 +19,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
 	"github.com/talesmud/talesmud/pkg/ruleset"
+	"github.com/talesmud/talesmud/pkg/scripts"
 )
 
 const combatBreathGrace = 3 * time.Second
@@ -957,11 +958,22 @@ func (c *CombatController) cleanupCombatInstance(instance *combat.CombatInstance
 		char.CurrentHitPoints = player.CurrentHP
 		char.CurrentMana = player.CurrentMana
 
+		// A spar only restores hit points when the bout is a defeat.
+		// Any other ending drops the flag so a later fight stays real.
+		if endState != combat.CombatStateDefeat && char.Flags != nil {
+			delete(char.Flags, "spar")
+		}
+
 		c.game.Facade.CharactersService().Update(player.ID, char)
 		c.markCombatGrace(player.ID)
+		c.runAfterCombat(char, string(endState))
 
 		// Send updated stats to client (combat ended, final HP/XP/Gold)
-		update := messages.NewCharacterUpdateMessage(char.BelongsUserID, char)
+		fresh, ferr := c.game.Facade.CharactersService().FindByID(player.ID)
+		if ferr != nil || fresh == nil {
+			fresh = char
+		}
+		update := messages.NewCharacterUpdateMessage(fresh.BelongsUserID, fresh)
 		if update != nil {
 			c.game.sendMessage <- update
 		}
@@ -1220,11 +1232,103 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 	}
 }
 
+func flagBool(flags map[string]interface{}, key string) bool {
+	if flags == nil {
+		return false
+	}
+	switch v := flags[key].(type) {
+	case bool:
+		return v
+	case string:
+		return strings.EqualFold(v, "true") || v == "1"
+	case float64:
+		return v != 0
+	case int:
+		return v != 0
+	default:
+		return false
+	}
+}
+
+func combatFlagString(flags map[string]interface{}, key string) string {
+	if flags == nil {
+		return ""
+	}
+	s, ok := flags[key].(string)
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(s)
+}
+
+// runAfterCombat runs the script id stored in the after_combat flag, then clears it.
+// last_combat is set to the outcome so the script can tell a win from a loss.
+// Classic characters have neither flag, so this does nothing.
+func (c *CombatController) runAfterCombat(char *characters.Character, outcome string) {
+	if c == nil || char == nil || char.Flags == nil || c.game == nil || c.game.Facade == nil {
+		return
+	}
+	scriptID := combatFlagString(char.Flags, "after_combat")
+	if scriptID == "" {
+		return
+	}
+	delete(char.Flags, "after_combat")
+	char.Flags["last_combat"] = outcome
+	if err := c.game.Facade.CharactersService().Update(char.ID, char); err != nil {
+		log.WithError(err).WithField("characterID", char.ID).Warn("after_combat flag save failed")
+		return
+	}
+	runner := c.game.Facade.Runner()
+	if runner == nil {
+		return
+	}
+	script, err := c.game.Facade.ScriptsService().FindByID(scriptID)
+	if err != nil || script == nil {
+		log.WithError(err).WithField("scriptID", scriptID).Warn("after_combat script not found")
+		return
+	}
+	fresh, ferr := c.game.Facade.CharactersService().FindByID(char.ID)
+	if ferr != nil || fresh == nil {
+		fresh = char
+	}
+	ctx := scripts.NewScriptContext()
+	ctx.Set("eventType", "combat.end")
+	ctx.Set("character", fresh)
+	ctx.Set("characterID", fresh.ID)
+	ctx.Set("outcome", outcome)
+	result := runner.RunWithResult(*script, ctx)
+	if result != nil && !result.Success {
+		log.WithField("script", scriptID).WithField("error", result.Error).Warn("after_combat script failed")
+	}
+}
+
 // processCombatDefeat handles death penalties and sends the defeat message
 func (c *CombatController) processCombatDefeat(instance *combat.CombatInstance) {
 	for _, player := range instance.Players {
 		char, err := c.game.Facade.CharactersService().FindByID(player.ID)
 		if err != nil {
+			continue
+		}
+
+		if flagBool(char.Flags, "spar") {
+			if char.MaxHitPoints < 1 {
+				char.MaxHitPoints = 1
+			}
+			char.CurrentHitPoints = char.MaxHitPoints
+			char.AwaitingReset = false
+			delete(char.Flags, "spar")
+			for i := range instance.Players {
+				if instance.Players[i].ID == player.ID {
+					instance.Players[i].CurrentHP = char.CurrentHitPoints
+					instance.Players[i].IsAlive = true
+					break
+				}
+			}
+			_ = c.game.Facade.CharactersService().Update(player.ID, char)
+			c.game.sendMessage <- messages.NewCombatEndMessage(char.BelongsUserID,
+				fmt.Sprintf("\n═══════════════════════════════════════════════════\n              THE BOUT ENDS\n═══════════════════════════════════════════════════\n\nYou are still standing.\n\nYou awaken with %d/%d HP.\n═══════════════════════════════════════════════════",
+					char.CurrentHitPoints, char.MaxHitPoints),
+				string(combat.CombatStateDefeat))
 			continue
 		}
 
