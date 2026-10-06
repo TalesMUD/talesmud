@@ -460,6 +460,7 @@ type StatusEffect struct {
        │   │     Gap 0 matches the pre-gap formulas.
        │   │     class_balance then scales damage dealt and taken per class.
        │   │     The pack catalog wins. The YAML row is the fallback.
+       │   │     A soak class's Slam starts its cooldown only when the swing hits.
        │   │     wizard uses the mage row; behind_dealt applies when lower level.
        │   │     boss_mechanics: bosses and hard elites wind up one action before
        │   │     the hit; bosses enrage on round 16 or at 30% HP (1.20× damage).

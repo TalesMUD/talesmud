@@ -283,6 +283,95 @@ func TestWardGuardWindowExpires(t *testing.T) {
 	}
 }
 
+func TestWardSlamMissRefundsCooldown(t *testing.T) {
+	e, inst, heroID, enemyID := newFight(characters.ClassWard, 0)
+	equipKit(inst, heroID, "ward_slam")
+	enemy := inst.GetCombatantByID(enemyID)
+	enemy.Defense = 80
+	hero := inst.GetCombatantByID(heroID)
+	hero.STRMod = 0
+	var missed SkillResult
+	for i := 0; i < 40; i++ {
+		hero = inst.GetCombatantByID(heroID)
+		if hero.SkillCooldowns == nil {
+			hero.SkillCooldowns = map[string]int{}
+		}
+		hero.SkillCooldowns["ward_slam"] = 0
+		got := e.ProcessSkill(inst, heroID, "ward_slam", enemyID)
+		if !got.Success {
+			t.Fatalf("slam %+v", got)
+		}
+		if got.HitsLanded == 0 {
+			missed = got
+			break
+		}
+	}
+	text := skillText(missed)
+	if missed.HitsLanded != 0 || !strings.Contains(text, "and miss") || strings.Contains(text, "for ") {
+		t.Fatalf("slam miss %+v", missed)
+	}
+	hero = inst.GetCombatantByID(heroID)
+	if cd := hero.SkillCooldowns["ward_slam"]; cd != 0 {
+		t.Fatalf("miss left cooldown %d", cd)
+	}
+	again := e.ProcessSkill(inst, heroID, "ward_slam", enemyID)
+	if !again.Success {
+		t.Fatalf("refund did not allow another slam %+v", again)
+	}
+
+	boost(inst, heroID, 200)
+	inst.GetCombatantByID(enemyID).Defense = 0
+	var landed bool
+	for i := 0; i < 40; i++ {
+		hero = inst.GetCombatantByID(heroID)
+		hero.SkillCooldowns["ward_slam"] = 0
+		got := e.ProcessSkill(inst, heroID, "ward_slam", enemyID)
+		if got.HitsLanded == 1 {
+			landed = true
+			if !strings.Contains(skillText(got), "for ") || !strings.Contains(skillText(got), "Grit ") {
+				t.Fatalf("hit text %q", skillText(got))
+			}
+			break
+		}
+	}
+	if !landed {
+		t.Fatal("no slam hit")
+	}
+	if cd := inst.GetCombatantByID(heroID).SkillCooldowns["ward_slam"]; cd != 4 {
+		t.Fatalf("hit cooldown %d", cd)
+	}
+	if blocked := e.ProcessSkill(inst, heroID, "ward_slam", enemyID); blocked.Success {
+		t.Fatal("hit ignored cooldown")
+	}
+}
+
+func TestWarriorSlamMissKeepsCooldown(t *testing.T) {
+	e, inst, heroID, enemyID := newFight(characters.ClassWarrior, 0)
+	equipKit(inst, heroID, "warrior_slam")
+	inst.GetCombatantByID(enemyID).Defense = 80
+	inst.GetCombatantByID(heroID).STRMod = 0
+	var missed SkillResult
+	for i := 0; i < 40; i++ {
+		hero := inst.GetCombatantByID(heroID)
+		hero.SkillCooldowns["warrior_slam"] = 0
+		got := e.ProcessSkill(inst, heroID, "warrior_slam", enemyID)
+		if !got.Success {
+			t.Fatalf("slam %+v", got)
+		}
+		if got.HitsLanded == 0 {
+			missed = got
+			break
+		}
+	}
+	text := skillText(missed)
+	if !strings.Contains(text, "and miss") || strings.Contains(text, "for ") {
+		t.Fatalf("warrior miss text %q", text)
+	}
+	if cd := inst.GetCombatantByID(heroID).SkillCooldowns["warrior_slam"]; cd != 4 {
+		t.Fatalf("warrior miss cooldown %d", cd)
+	}
+}
+
 func TestWardLevel1BasicSwingClearsRatBreakpoint(t *testing.T) {
 	hitFor := func(level int32, class characters.Class, power int32) AttackResult {
 		t.Helper()

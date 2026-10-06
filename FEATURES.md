@@ -938,7 +938,7 @@ Players and NPCs both use `CombatantRef.Level`, copied from the character or NPC
 ### Class balance
 **Config**: `class_balance` in `config/combat_balance.yaml` (defaults in `pkg/mudserver/game/balance/class_balance.go`).
 
-After the level-gap multiplier and before a crit, `damage_dealt` scales hits that class lands and `damage_taken` scales hits that class receives. `behind_dealt` multiplies `damage_dealt` again when that class is the lower level. Class id `wizard` uses the `mage` row. A missing class or a multiplier of 1 leaves that side unchanged. The level-10 gap table uses this so warrior, rogue, ranger, and mage share one band: at-level bosses about 50–65%, and a good-gear boss three levels up about 50%.
+After the level-gap multiplier and before a crit, `damage_dealt` scales hits that class lands and `damage_taken` scales hits that class receives. `behind_dealt` multiplies `damage_dealt` again when that class is the lower level. Class id `wizard` uses the `mage` row. A missing class or a multiplier of 1 leaves that side unchanged. A loaded class pack overrides this file. Ward's pack row takes damage at 1.00, so a soak hit is not larger than the unscaled blow, and the template's stamina is what grows the later hit-point pool. Grit is still gained from a connecting hit. A soak class's Slam prints a miss and starts its cooldown only when the swing hits. The level-10 gap table uses this so warrior, rogue, ranger, and mage share one band: at-level bosses about 50–65%, and a good-gear boss three levels up about 50%.
 
 ### Boss telegraph and enrage
 **Config**: `boss_mechanics` in `config/combat_balance.yaml`.
