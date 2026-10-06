@@ -1,4 +1,5 @@
 import { writable, derived } from "svelte/store";
+import { changeFocus, livingFocus } from './combatFocus.js';
 
 // Cardinal direction names for compass filtering
 const CARDINAL_DIRECTIONS = ["north", "south", "east", "west"];
@@ -59,6 +60,12 @@ function mergeAtlas(existing, incoming) {
       ...prev,
       ...place,
       discovered: prev.discovered || place.discovered,
+      terrain: prev.discovered && !place.discovered ? prev.terrain : place.terrain,
+      kind: prev.discovered && !place.discovered ? prev.kind : place.kind,
+      mapFeatures: prev.discovered && !place.discovered ? prev.mapFeatures : place.mapFeatures,
+      artSeed: prev.discovered && !place.discovered ? prev.artSeed : place.artSeed,
+      undergroundStyle: prev.discovered && !place.discovered ? prev.undergroundStyle : place.undergroundStyle,
+      entrances: prev.discovered && !place.discovered ? prev.entrances : place.entrances,
       name: place.name || prev.name,
       landmark: prev.landmark || place.landmark,
     });
@@ -83,6 +90,7 @@ function mergeAtlas(existing, incoming) {
     regionMap.set(region.id, region);
   }
 
+  const groundByCell = new Map((base.landscape || []).map(p => [`${p.x}:${p.y}`, p]));
   const characterId = incoming.characterId || base.characterId;
   const currentRoomId = incoming.currentRoomId || base.currentRoomId;
   const currentLayer = incoming.currentLayer || base.currentLayer;
@@ -116,6 +124,10 @@ function mergeAtlas(existing, incoming) {
     places,
     paths,
     regions: Array.from(regionMap.values()),
+    landscape: (incoming.landscape || base.landscape || []).map(cell => {
+      const previous = groundByCell.get(`${cell.x}:${cell.y}`);
+      return cell.terrain === 'fog' && previous && previous.terrain !== 'fog' ? previous : cell;
+    }),
   };
 }
 
@@ -192,13 +204,45 @@ function normalizeCombatant(raw) {
   if (!raw) return null;
   return {
     id: raw.id || raw.ID || "",
+    type: raw.type || raw.Type || "",
     name: raw.name || raw.Name || "?",
     portrait: raw.portrait || raw.Portrait || "",
     hp: raw.hp ?? raw.HP ?? raw.currentHp ?? 0,
     maxHp: raw.maxHp ?? raw.MaxHP ?? raw.maxHP ?? 1,
+    mana: raw.mana ?? raw.Mana ?? raw.currentMana ?? 0,
+    maxMana: raw.maxMana ?? raw.MaxMana ?? 0,
+    classId: raw.classId || raw.ClassID || "",
+    isAlive: raw.isAlive ?? raw.IsAlive ?? ((raw.hp ?? raw.HP ?? raw.currentHp ?? 0) > 0),
+    hasFled: !!(raw.hasFled || raw.HasFled),
     level: raw.level ?? raw.Level ?? 0,
     threat: raw.threat || raw.Threat || '',
+    telegraph: raw.telegraph || raw.Telegraph || '',
+    enraged: !!(raw.enraged || raw.Enraged),
+    bossPhase: raw.bossPhase ?? raw.BossPhase ?? 0,
+    bossPhaseLabel: raw.bossPhaseLabel || raw.BossPhaseLabel || '',
+    bossPhaseCount: raw.bossPhaseCount ?? raw.BossPhaseCount ?? 0,
+    statusEffects: normalizeStatusEffects(raw.statusEffects || raw.StatusEffects),
   };
+}
+
+function normalizeStatusEffects(list) {
+  if (!Array.isArray(list)) return [];
+  return list.map((se) => {
+    if (!se || typeof se !== 'object') return null;
+    const duration = se.duration ?? se.Duration ?? 0;
+    const name = se.name || se.Name || se.id || se.ID || 'Effect';
+    return {
+      id: se.id || se.ID || '',
+      skillId: se.skillId || se.SkillID || '',
+      name,
+      type: String(se.type || se.Type || 'buff').toLowerCase(),
+      stat: se.stat || se.Stat || '',
+      value: se.value ?? se.Value ?? 0,
+      percent: se.percent ?? se.Percent ?? 0,
+      duration: Number(duration) || 0,
+      sourceId: se.sourceId || se.SourceID || '',
+    };
+  }).filter(Boolean);
 }
 
 function normalizeCombatantList(list) {
@@ -279,6 +323,10 @@ function mergeCombatantSnapshots(enemies, players, snapshots) {
       enemyMap.set(snap.id, { ...enemyMap.get(snap.id), ...snap });
     } else if (playerMap.has(snap.id)) {
       playerMap.set(snap.id, { ...playerMap.get(snap.id), ...snap });
+    } else if (snap.type === 'player') {
+      playerMap.set(snap.id, snap);
+    } else if (snap.type === 'npc') {
+      enemyMap.set(snap.id, snap);
     } else if ((enemies || []).length && !(players || []).some((p) => p.id === snap.id)) {
       // Unknown id after start — treat as enemy refresh
       enemyMap.set(snap.id, snap);
@@ -378,13 +426,22 @@ function sameAtlasSnapshot(a, b) {
   if ((a.places || []).length !== (b.places || []).length) return false;
   if ((a.paths || []).length !== (b.paths || []).length) return false;
   if ((a.layers || []).length !== (b.layers || []).length) return false;
-  // Cheap place fingerprint — id/current/discovered/layer/name
+  if ((a.landscape || []).length !== (b.landscape || []).length) return false;
+  for (let i = 0; i < (a.landscape || []).length; i++) {
+    const x = a.landscape[i], y = b.landscape[i];
+    if (!y || x.x !== y.x || x.y !== y.y || x.terrain !== y.terrain) return false;
+  }
+  // Cheap place fingerprint — includes terrain and presentation updates.
   for (let i = 0; i < (a.places || []).length; i++) {
     const p = a.places[i];
     const q = b.places[i];
     if (!p || !q) return false;
     if (p.id !== q.id || !!p.current !== !!q.current || !!p.discovered !== !!q.discovered) return false;
     if ((p.layer || "") !== (q.layer || "") || (p.name || "") !== (q.name || "")) return false;
+    if ((p.terrain || "") !== (q.terrain || "")) return false;
+    if (p.x !== q.x || p.y !== q.y || p.z !== q.z || p.mapRole !== q.mapRole || p.surfaceRoomId !== q.surfaceRoomId || p.town !== q.town) return false;
+    if (p.artSeed !== q.artSeed || p.undergroundStyle !== q.undergroundStyle || JSON.stringify(p.mapFeatures || []) !== JSON.stringify(q.mapFeatures || [])) return false;
+    if (JSON.stringify(p.entrances || []) !== JSON.stringify(q.entrances || [])) return false;
   }
   return true;
 }
@@ -426,6 +483,7 @@ function createStore() {
     combatEnemies: [],
     combatPlayers: [],
     combatTargetId: null,
+    combatThreatWarning: null,
     combatTurn: null, // { actorId, actorName, round, deadlineMs }
     combatQueuedAction: "", // attack|defend|flee|skill|item
     combatQueuedSkillId: "",
@@ -433,9 +491,11 @@ function createStore() {
     combatSkillCooldowns: {}, // { skillId: roundsRemaining }
     combatNextActionAtMs: 0,
     combatDecisionDeadlineMs: 0,
+    combatPhaseEnter: null,
     combatLog: [], // thin optional log [{id,text}]
     combatOutcome: null, // victory | defeat | fled | timeout
     combatFx: null, // { fxId, at, targetId, actorId, damage, heal, result, action }
+    combatJoin: null, // { actorId, actorName, at }
     combatEndMessage: "",
     combatRewards: null,
     hasItems: false,
@@ -488,7 +548,7 @@ function createStore() {
     friendsOverlayOpen: false,
     friends: [],
     partyOverlayOpen: false,
-    party: { inParty: false, partyId: '', partyName: '', leaderId: '', maxMembers: 5, members: [] },
+    party: { inParty: false, partyId: '', partyName: '', leaderId: '', maxMembers: 5, members: [], following: false },
     partyChat: [],
     partyInvite: null,
   });
@@ -858,21 +918,32 @@ function createStore() {
       update((state) => {
         state.combatEnemies = enemies || [];
         state.combatPlayers = players || [];
-        if (!state.combatTargetId && (enemies || []).length) {
-          state.combatTargetId = enemies[0].id;
-        }
+        state.combatTargetId = livingFocus(state.combatEnemies, state.combatTargetId)?.id || null;
         return state;
       });
     },
 
     setCombatTarget: (targetId) => {
       update((state) => {
-        state.combatTargetId = targetId || null;
+        changeFocus(state, targetId);
         return state;
       });
     },
 
-    beginCombat: (enemies, players, message) => {
+    cycleCombatTarget: (dir = 1) => {
+      update((state) => {
+        const living = (state.combatEnemies || []).filter((e) => (e.hp ?? 0) > 0);
+        if (!living.length) return state;
+        const step = dir < 0 ? -1 : 1;
+        let idx = living.findIndex((e) => e.id === state.combatTargetId);
+        if (idx < 0) idx = step > 0 ? -1 : 0;
+        idx = (idx + step + living.length) % living.length;
+        changeFocus(state, living[idx].id);
+        return state;
+      });
+    },
+
+    beginCombat: (enemies, players, message, initialTargetId) => {
       update((state) => {
         const nextEnemies = normalizeCombatantList(enemies);
         const nextPlayers = normalizeCombatantList(players);
@@ -881,14 +952,17 @@ function createStore() {
         if (state.characterStats) {
           state.characterStats = { ...state.characterStats, inCombat: true, resting: false };
         }
+        state.combatPhaseEnter = null;
         state.combatOutcome = null;
         state.combatEndMessage = "";
         state.combatRewards = null;
         state.combatEnemies = nextEnemies;
         state.combatPlayers = nextPlayers;
-        state.combatTargetId = nextEnemies[0]?.id || null;
+        state.combatTargetId = livingFocus(nextEnemies, initialTargetId)?.id || null;
+        state.combatThreatWarning = null;
         state.combatTurn = null;
         state.combatFx = null;
+        state.combatJoin = null;
         clearCombatQueueFields(state);
         {
           const lines = proseCombatLogLines(message);
@@ -940,6 +1014,7 @@ function createStore() {
         if (state.characterStats?.resting) {
           state.characterStats = { ...state.characterStats, inCombat: true, resting: false };
         }
+        if (msg?.action === 'focus' && msg.targetId) changeFocus(state, msg.targetId);
 
         const snapshots = normalizeCombatantList(msg?.combatants);
         if (snapshots.length) {
@@ -959,6 +1034,7 @@ function createStore() {
         const living = state.combatEnemies.filter((e) => (e.hp ?? 0) > 0);
         if (state.combatTargetId && !living.some((e) => e.id === state.combatTargetId)) {
           state.combatTargetId = living[0]?.id || null;
+          state.combatThreatWarning = null;
         }
 
         // Sync local character HP from player snapshot when present
@@ -974,6 +1050,10 @@ function createStore() {
           }
         }
 
+        if (msg?.action === 'phase-enter') {
+          state.combatPhaseEnter = { actorId: msg.actorId, text: msg.message || '', at: Date.now() };
+        }
+
         // Always pulse FX when structured action arrives (fxId preferred; result fallback).
         if (msg?.fxId || msg?.result || msg?.damage || msg?.heal) {
           state.combatFx = {
@@ -985,7 +1065,12 @@ function createStore() {
             heal: msg.heal || 0,
             result: msg.result || "",
             action: msg.action || "",
+            ability: msg.ability || "",
           };
+        }
+
+        if (msg?.action === 'join' && msg.actorId) {
+          state.combatJoin = { actorId: msg.actorId, actorName: msg.actorName || 'An ally', at: Date.now() };
         }
 
         if (msg?.message) {
@@ -993,7 +1078,7 @@ function createStore() {
         }
         applyCombatQueueFields(state, msg);
         // Action resolve clears the chip when server omits queuedAction
-        if (msg && msg.queuedAction === undefined && msg.action) {
+        if (msg && msg.queuedAction === undefined && msg.action && msg.action !== 'focus') {
           state.combatQueuedAction = "";
           state.combatQueuedSkillId = "";
           state.combatQueuedTargetId = "";
@@ -1006,6 +1091,8 @@ function createStore() {
       update((state) => {
         state.inCombat = false;
         state.combatPhase = "ending";
+        state.combatTargetId = null;
+        state.combatThreatWarning = null;
         state.combatOutcome = outcome || "victory";
         state.combatEndMessage = message || "";
         state.combatRewards = rewards || null;
@@ -1023,14 +1110,17 @@ function createStore() {
         update((state) => {
           if (state.combatPhase !== "ending") return state;
           state.combatPhase = "idle";
+          state.combatPhaseEnter = null;
           state.combatOutcome = null;
           state.combatEndMessage = "";
           state.combatRewards = null;
           state.combatEnemies = [];
           state.combatPlayers = [];
           state.combatTargetId = null;
+          state.combatThreatWarning = null;
           state.combatTurn = null;
           state.combatFx = null;
+          state.combatJoin = null;
           state.combatLog = [];
           clearCombatQueueFields(state);
           return state;
@@ -1042,14 +1132,17 @@ function createStore() {
       update((state) => {
         state.inCombat = false;
         state.combatPhase = "idle";
+        state.combatPhaseEnter = null;
         state.combatOutcome = null;
         state.combatEndMessage = "";
         state.combatRewards = null;
         state.combatEnemies = [];
         state.combatPlayers = [];
         state.combatTargetId = null;
+        state.combatThreatWarning = null;
         state.combatTurn = null;
         state.combatFx = null;
+        state.combatJoin = null;
         state.combatLog = [];
         clearCombatQueueFields(state);
         state.characterStats = { ...state.characterStats, inCombat: false };
@@ -1061,14 +1154,17 @@ function createStore() {
       update((state) => {
         state.inCombat = false;
         state.combatPhase = "idle";
+        state.combatPhaseEnter = null;
         state.combatOutcome = null;
         state.combatEndMessage = "";
         state.combatRewards = null;
         state.combatEnemies = [];
         state.combatPlayers = [];
         state.combatTargetId = null;
+        state.combatThreatWarning = null;
         state.combatTurn = null;
         state.combatFx = null;
+        state.combatJoin = null;
         state.combatLog = [];
         clearCombatQueueFields(state);
         state.characterStats = { ...state.characterStats, inCombat: false };
@@ -1104,7 +1200,7 @@ function createStore() {
       });
 
       // Accepted banner stays longer; corner toasts dismiss sooner
-      const ttl = (notification?.type === 'accepted' || notification?.type === 'completed') ? 10000 : 5000;
+      const ttl = (notification?.type === 'accepted' || notification?.type === 'completed' || notification?.type === 'levelup') ? 16000 : 5000;
       setTimeout(() => {
         update((state) => {
           state.questNotifications = state.questNotifications.filter(n => n.id !== notification.id && n !== notification);
@@ -1325,6 +1421,7 @@ function createStore() {
           leaderId: String(next.leaderId || next.leaderCharacterId || ''),
           maxMembers: Number(next.maxMembers) > 0 ? Number(next.maxMembers) : 5,
           members,
+          following: !!next.following,
         };
         if (wasIn && !nowIn) {
           state.partyChat = [];
@@ -1438,6 +1535,8 @@ function findNpcByName(npcs, npcName) {
 
 export {
   createStore,
+  normalizeCombatant,
+  mergeCombatantSnapshots,
   getCardinalExits,
   getSpecialExits,
   getVerticalExits,

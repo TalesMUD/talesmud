@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/combat"
 	"github.com/talesmud/talesmud/pkg/entities/skills"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/balance"
@@ -107,6 +108,12 @@ type SkillResult struct {
 	TotalHeal   int32
 	TargetsDied []string
 	HitsLanded  int
+	// KeepsSwing: Brace and Guard. The round still autoattacks.
+	KeepsSwing bool
+	// SlipMove: drop combat and take one exit.
+	SlipMove bool
+	// ReelID: target to pull one room back into the fight.
+	ReelID string
 }
 
 // ProcessSkill handles a combatant using a skill in combat
@@ -131,6 +138,9 @@ func (e *Engine) ProcessSkill(instance *combat.CombatInstance, casterID, skillID
 	}
 	if !equipped {
 		return SkillResult{Success: false, Messages: []string{fmt.Sprintf("%s is not equipped", skill.Name)}}
+	}
+	if skill.Kit != "" {
+		return e.processClassKit(instance, caster, skill, targetID)
 	}
 
 	// Check resource availability
@@ -326,6 +336,9 @@ func (e *Engine) resolveSkillDamage(instance *combat.CombatInstance, caster *com
 			target.CurrentHP -= damage
 			totalDmg += damage
 			result.TotalDamage += damage
+			if note := e.applyWardSoak(instance, caster, target, damage, false, true); note != "" {
+				result.Messages = append(result.Messages, note)
+			}
 		}
 		result.HitsLanded += landed
 
@@ -575,6 +588,13 @@ func (e *Engine) resolveSecondaryEffect(instance *combat.CombatInstance, caster 
 
 // applyStatusEffect adds a status effect to a combatant, refreshing if the same skill+stat already exists
 func (e *Engine) applyStatusEffect(instance *combat.CombatInstance, target *combat.CombatantRef, se combat.StatusEffect) {
+	if target == nil {
+		return
+	}
+	// Construct: poison never applies. Do not add the status.
+	if isPoisonStatus(se) && characters.CanonicalRaceID(target.RaceID) == "construct" {
+		return
+	}
 	// Remove existing effect from same skill+stat (refresh)
 	effects := make([]combat.StatusEffect, 0, len(target.StatusEffects))
 	for _, existing := range target.StatusEffects {
@@ -644,6 +664,8 @@ func (e *Engine) ProcessStatusEffects(instance *combat.CombatInstance, combatant
 				combatant.CurrentHP = 0
 				combatant.IsAlive = false
 			}
+			// A burn is damage taken, so it grants Grit. It is not a hit, so it does not throw back.
+			_ = e.applyWardSoak(instance, nil, combatant, se.Value, false, false)
 			instance.AddLogEntry(combat.CombatLogEntry{
 				ActorID:   combatant.ID,
 				ActorName: combatant.Name,
@@ -733,6 +755,7 @@ func (e *Engine) ProcessRoundStart(instance *combat.CombatInstance) {
 		if p.IsAlive && !p.HasFled {
 			e.TickCooldowns(instance, p)
 			e.ProcessManaRegen(instance, p)
+			e.tickKitRounds(instance, p)
 		}
 	}
 	for i := range instance.Enemies {
@@ -740,8 +763,10 @@ func (e *Engine) ProcessRoundStart(instance *combat.CombatInstance) {
 		if en.IsAlive {
 			e.TickCooldowns(instance, en)
 			e.ProcessManaRegen(instance, en)
+			e.tickKitRounds(instance, en)
 		}
 	}
+	e.tickRig(instance)
 }
 
 // IsStunned returns true if the combatant has a stun status effect (public method)

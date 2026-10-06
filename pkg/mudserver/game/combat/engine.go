@@ -5,11 +5,15 @@ import (
 	"math"
 	"math/rand"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/combat"
+	"github.com/talesmud/talesmud/pkg/entities/items"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/balance"
 	"github.com/talesmud/talesmud/pkg/portraits"
@@ -17,37 +21,39 @@ import (
 
 // CombatConfig holds global combat configuration
 type CombatConfig struct {
-	TurnTimeoutSeconds    int     // Legacy absolute turn timeout (Default: 60); prefer DecisionWindowSeconds for player action wait
-	DecisionWindowSeconds int     // Player decision window before auto-attack (Default: 5)
-	TurnBeatMs            int     // Authored windup/beat before next turn may resolve (Default: 1000)
-	ReactionMs            int     // Post-resolve reaction pause (Default: 400)
-	AFKAutoFleeAfterTurns int     // Default: 3
-	DeathGoldLossPercent  float64 // Default: 0.10 (10%)
-	DeathRespawnHPPercent float64 // Default: 0.50 (50%)
-	FleeBaseChance        float64 // Default: 0.50 (50%)
-	FleeDEXBonus          float64 // Per DEX point bonus (Default: 0.02)
-	DefendBonusPercent    float64 // Default: 0.50 (50% defense boost)
-	CriticalHitChance     float64 // Default: 0.05 (5%)
-	CriticalHitMultiplier float64 // Default: 2.0
-	CombatTimeoutMinutes  int     // Default: 30
+	TurnTimeoutSeconds       int     // Legacy absolute turn timeout (Default: 60); prefer DecisionWindowSeconds for player action wait
+	DecisionWindowSeconds    int     // Player decision window before auto-attack (Default: 5)
+	TurnBeatMs               int     // Authored windup/beat before next turn may resolve (Default: 1000)
+	ReactionMs               int     // Post-resolve reaction pause (Default: 400)
+	AFKAutoFleeAfterTurns    int     // Default: 3
+	DeathGoldLossPercent     float64 // Default: 0.10 (10%)
+	DeathRespawnHPPercent    float64 // Default: 0.50 (50%)
+	FleeBaseChance           float64 // Default: 0.50 (50%)
+	FleeDEXBonus             float64 // Per DEX point bonus (Default: 0.02)
+	DefendBonusPercent       float64 // Default: 0.50 (50% defense boost)
+	CriticalHitChance        float64 // Default: 0.05 (5%)
+	CriticalHitMultiplier    float64 // Default: 2.0
+	CombatTimeoutMinutes     int     // Absolute max combat length (Default: 15)
+	IdleCombatTimeoutMinutes int     // Soft release after no action (Default: 5)
 }
 
 // DefaultConfig returns the default combat configuration
 func DefaultConfig() *CombatConfig {
 	return &CombatConfig{
-		TurnTimeoutSeconds:    60,
-		DecisionWindowSeconds: 5,
-		TurnBeatMs:            1000,
-		ReactionMs:            400,
-		AFKAutoFleeAfterTurns: 3,
-		DeathGoldLossPercent:  0.10,
-		DeathRespawnHPPercent: 0.50,
-		FleeBaseChance:        0.50,
-		FleeDEXBonus:          0.02,
-		DefendBonusPercent:    0.50,
-		CriticalHitChance:     0.05,
-		CriticalHitMultiplier: 2.0,
-		CombatTimeoutMinutes:  30,
+		TurnTimeoutSeconds:       60,
+		DecisionWindowSeconds:    5,
+		TurnBeatMs:               1000,
+		ReactionMs:               400,
+		AFKAutoFleeAfterTurns:    3,
+		DeathGoldLossPercent:     0.10,
+		DeathRespawnHPPercent:    0.50,
+		FleeBaseChance:           0.50,
+		FleeDEXBonus:             0.02,
+		DefendBonusPercent:       0.50,
+		CriticalHitChance:        0.05,
+		CriticalHitMultiplier:    2.0,
+		CombatTimeoutMinutes:     15,
+		IdleCombatTimeoutMinutes: 5,
 	}
 }
 
@@ -111,6 +117,7 @@ func (e *Engine) CreateCombatantFromCharacter(char *characters.Character) combat
 		HasFled:     false,
 		Level:       char.Level,
 		ClassID:     char.Class.ID,
+		Portrait:    portraits.ForPlayer(char),
 		MaxHP:       char.MaxHitPoints,
 		CurrentHP:   char.CurrentHitPoints,
 		AttackPower: attackPower,
@@ -124,11 +131,21 @@ func (e *Engine) CreateCombatantFromCharacter(char *characters.Character) combat
 		CurrentMana: char.CurrentMana,
 		ManaRegen:   char.CalculateManaRegen(),
 	}
+	if balance.IsWard(ref.ClassID) {
+		ref.Grit = balance.OpeningGrit(ref.ClassID)
+		ref.ClassID = "ward"
+	}
+	// Kit charges are armed by the skill button, not at combat start.
+	bolt, rig := balance.BoltRigCharges(char.Class.ID)
+	ref.BoltLeft = bolt
+	ref.RigLeft = rig
+	ref.RaceID = characters.CanonicalRaceID(char.Race.ID)
 	if len(char.EquippedSkills) > 0 {
 		ref.EquippedSkills = make([]string, len(char.EquippedSkills))
 		copy(ref.EquippedSkills, char.EquippedSkills)
 		ref.SkillCooldowns = make(map[string]int)
 	}
+	snapshotWeaponOnHit(&ref, char)
 	return ref
 }
 
@@ -138,15 +155,17 @@ func (e *Engine) CreateCombatantFromNPC(n *npc.NPC) combat.CombatantRef {
 	var defense int32 = 0
 	var dexMod int = 0
 
+	difficulty := ""
 	if n.EnemyTrait != nil {
 		attackPower = n.EnemyTrait.AttackPower
 		defense = n.EnemyTrait.Defense
+		difficulty = n.EnemyTrait.Difficulty
 	}
 
 	// Use level as a rough approximation for DEX modifier if not specified
 	dexMod = int(n.Level) / 4
 
-	return combat.CombatantRef{
+	ref := combat.CombatantRef{
 		ID:          n.Entity.ID,
 		Type:        combat.CombatantTypeNPC,
 		Name:        n.GetDisplayName(),
@@ -156,6 +175,7 @@ func (e *Engine) CreateCombatantFromNPC(n *npc.NPC) combat.CombatantRef {
 		IsAlive:     true,
 		HasFled:     false,
 		Level:       n.Level,
+		Difficulty:  difficulty,
 		MaxHP:       n.MaxHitPoints,
 		CurrentHP:   n.CurrentHitPoints,
 		AttackPower: attackPower,
@@ -164,6 +184,11 @@ func (e *Engine) CreateCombatantFromNPC(n *npc.NPC) combat.CombatantRef {
 		DEXMod:      dexMod,
 		CONMod:      int(n.Level) / 4, // Approximation
 	}
+	phases := balance.BossPhases(difficulty)
+	if len(phases) > 0 {
+		ref.BossPhase, ref.BossPhaseLabel, ref.BossPhaseCount = 1, phases[0].Label, len(phases)
+	}
+	return ref
 }
 
 // RollInitiative rolls initiative (1d20 + DEX modifier) for a combatant
@@ -314,6 +339,53 @@ type AttackResult struct {
 // ProcessAttack handles an attack from attacker to target
 func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targetID string) AttackResult {
 	attacker := instance.GetCombatantByID(attackerID)
+	if attacker == nil {
+		return AttackResult{Miss: true, Message: "Invalid attacker or target"}
+	}
+	swings := balance.ClassSwings(attacker.ClassID)
+	if swings < 1 {
+		swings = 1
+	}
+	var last AttackResult
+	var parts []string
+	var total int32
+	anyHit := false
+	for i := 0; i < swings; i++ {
+		last = e.processAttackSwingMult(instance, attackerID, targetID, 1, true)
+		if last.Message != "" {
+			parts = append(parts, last.Message)
+		}
+		total += last.Damage
+		if last.Hit {
+			anyHit = true
+		}
+		if last.TargetDied {
+			break
+		}
+		attacker = instance.GetCombatantByID(attackerID)
+		if attacker == nil || !attacker.IsAlive {
+			break
+		}
+		target := instance.GetCombatantByID(targetID)
+		if target == nil || !target.IsAlive {
+			break
+		}
+	}
+	last.Damage = total
+	last.Hit = anyHit
+	last.Miss = !anyHit
+	if len(parts) > 0 {
+		last.Message = strings.Join(parts, " ")
+	}
+	return last
+}
+
+func (e *Engine) processAttackSwing(instance *combat.CombatInstance, attackerID, targetID string) AttackResult {
+	return e.processAttackSwingMult(instance, attackerID, targetID, 1, true)
+}
+
+func (e *Engine) processAttackSwingMult(instance *combat.CombatInstance, attackerID, targetID string, mult float64, logIt bool) AttackResult {
+	attacker := instance.GetCombatantByID(attackerID)
 	target := instance.GetCombatantByID(targetID)
 
 	if attacker == nil || target == nil {
@@ -326,6 +398,35 @@ func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targ
 
 	if !target.IsAlive {
 		return AttackResult{Miss: true, Message: "Target is already dead"}
+	}
+
+	redirected := false
+	if guard := e.guardRedirect(instance, attacker, target); guard != nil {
+		target = guard
+		targetID = guard.ID
+		redirected = true
+	} else if stand := e.standRedirect(instance, attacker, target); stand != nil {
+		target = stand
+		targetID = stand.ID
+	}
+
+	// Smoke: the target misses their next swing. One swing, then it is gone.
+	if target.SmokeMiss {
+		target.SmokeMiss = false
+		e.UpdateCombatant(instance, target)
+		smoked := AttackResult{Miss: true, Message: fmt.Sprintf("%s swings at %s and misses. The smoke holds.", attacker.Name, target.Name)}
+		if logIt {
+			instance.AddLogEntry(combat.CombatLogEntry{
+				ActorID:    attacker.ID,
+				ActorName:  attacker.Name,
+				Action:     combat.CombatActionAttack,
+				TargetID:   target.ID,
+				TargetName: target.Name,
+				Result:     "miss",
+				Message:    smoked.Message,
+			})
+		}
+		return smoked
 	}
 
 	// Check dodge from status effects (e.g. Evasion)
@@ -392,6 +493,28 @@ func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targ
 
 	// Calculate damage
 	result.Damage = e.CalculateDamage(attacker, target, result.Critical)
+	if mult > 0 && mult != 1 {
+		scaled := int32(math.Round(float64(result.Damage) * mult))
+		if scaled < 1 {
+			scaled = 1
+		}
+		result.Damage = scaled
+	} else if result.Hit && attacker.Level <= 1 && balance.IsWard(attacker.ClassID) && result.Damage > 0 {
+		result.Damage += balance.StarterSwing(attacker.ClassID)
+	}
+
+	// Once per fight, the next landed blow is halved.
+	braced := false
+	if target.BraceLeft > 0 && result.Damage > 0 {
+		target.BraceLeft--
+		halved := int32(math.Round(float64(result.Damage) * 0.5))
+		if halved < 1 {
+			halved = 1
+		}
+		result.Damage = halved
+		braced = true
+		e.UpdateCombatant(instance, target)
+	}
 
 	// Mana shield absorption
 	if shield := hasManaShield(target); shield != nil && shield.Value > 0 {
@@ -416,6 +539,7 @@ func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targ
 
 	// Update the target in the instance
 	e.UpdateCombatant(instance, target)
+	wardNote := e.applyWardSoak(instance, attacker, target, result.Damage, redirected, true)
 
 	// Build message
 	if result.Critical {
@@ -429,28 +553,54 @@ func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targ
 			attacker.Name, target.Name, result.Damage, roll, attacker.STRMod, toHit, targetAC)
 	}
 
+	if target.GlyphCut > 0 && result.Damage > 0 {
+		result.Damage -= target.GlyphCut
+		if result.Damage < 0 {
+			result.Damage = 0
+		}
+		target.GlyphCut = 0
+		e.UpdateCombatant(instance, target)
+	}
+
+	if braced {
+		result.Message = "You brace. " + result.Message
+	}
+	if wardNote != "" {
+		result.Message += " " + wardNote
+	}
+	if attacker.Enraged {
+		result.Message = "Enraged! " + result.Message
+	}
 	if result.TargetDied {
 		result.Message += fmt.Sprintf(" %s has been defeated!", target.Name)
 	} else {
 		result.Message += fmt.Sprintf(" (%d/%d HP)", target.CurrentHP, target.MaxHP)
 	}
+	e.refreshEnrage(instance, target)
 
+	// Content-authored weapon on-hit DoT (refresh duration; no stack spam).
+	if msg := e.applyWeaponOnHitDot(instance, attacker, target); msg != "" {
+		result.Message += " " + msg
+	}
 	// Add to combat log
 	logResult := "hit"
 	if result.Critical {
 		logResult = "critical"
 	}
-	instance.AddLogEntry(combat.CombatLogEntry{
-		ActorID:    attacker.ID,
-		ActorName:  attacker.Name,
-		Action:     combat.CombatActionAttack,
-		TargetID:   target.ID,
-		TargetName: target.Name,
-		Result:     logResult,
-		Damage:     result.Damage,
-		Message:    result.Message,
-	})
+	if logIt {
+		instance.AddLogEntry(combat.CombatLogEntry{
+			ActorID:    attacker.ID,
+			ActorName:  attacker.Name,
+			Action:     combat.CombatActionAttack,
+			TargetID:   target.ID,
+			TargetName: target.Name,
+			Result:     logResult,
+			Damage:     result.Damage,
+			Message:    result.Message,
+		})
+	}
 
+	e.applyScrapReturn(instance, attacker, target, result.Damage, result.Hit)
 	return result
 }
 
@@ -487,6 +637,17 @@ func (e *Engine) CalculateDamage(attacker, target *combat.CombatantRef, critical
 	// Equal levels leave the pre-gap number unchanged.
 	damage = balance.ScaleDamage(attacker.Level, target.Level, damage)
 	damage = balance.ScaleClassDamage(attacker.ClassID, target.ClassID, attacker.Level, target.Level, damage)
+	damage = balance.ApplyRacialWeaponBonus(attacker.RaceID, attacker.WeaponSubType, damage)
+	if attacker.HobbleRounds > 0 {
+		hobbled := int32(math.Round(float64(damage) * 0.80))
+		if hobbled < 1 {
+			hobbled = 1
+		}
+		damage = hobbled
+	}
+	if attacker.Type == combat.CombatantTypeNPC {
+		damage = balance.ScaleBossPhaseDamage(damage, attacker.Difficulty, attacker.BossPhase, attacker.Enraged)
+	}
 
 	// Critical hit doubles damage (or uses CriticalHitMultiplier when it is not 2).
 	if critical {
@@ -543,6 +704,7 @@ func ResolveAttackRoll(roll, strMod, hitBonus, targetAC int, critChance, baseCri
 
 // UpdateCombatant updates a combatant's data in both the player/enemy list and turn order
 func (e *Engine) UpdateCombatant(instance *combat.CombatInstance, updated *combat.CombatantRef) {
+	e.refreshBossPhase(instance, updated)
 	// Update in players or enemies list
 	for i := range instance.Players {
 		if instance.Players[i].ID == updated.ID {
@@ -722,12 +884,36 @@ func (e *Engine) CheckCombatEnd(instance *combat.CombatInstance) combat.CombatSt
 		return combat.CombatStateFled
 	}
 
-	// Check for global timeout
+	// Idle soft-release (no resolved action for N minutes)
+	if e.idleTimedOut(instance) {
+		return combat.CombatStateTimeout
+	}
+
+	// Absolute max combat length backstop
 	if time.Since(instance.CreatedAt).Minutes() >= float64(e.Config.CombatTimeoutMinutes) {
 		return combat.CombatStateTimeout
 	}
 
 	return combat.CombatStateActive
+}
+
+// idleTimedOut reports whether combat has had no resolved action for IdleCombatTimeoutMinutes.
+func (e *Engine) idleTimedOut(instance *combat.CombatInstance) bool {
+	if e == nil || e.Config == nil || instance == nil {
+		return false
+	}
+	mins := e.Config.IdleCombatTimeoutMinutes
+	if mins <= 0 {
+		return false
+	}
+	anchor := instance.LastActionAt
+	if anchor.IsZero() {
+		anchor = instance.CreatedAt
+	}
+	if anchor.IsZero() {
+		return false
+	}
+	return time.Since(anchor).Minutes() >= float64(mins)
 }
 
 // EndCombat finalizes a combat instance with the given result
@@ -743,6 +929,122 @@ func (e *Engine) EndCombat(instance *combat.CombatInstance, result combat.Combat
 		"result":     result,
 		"rounds":     instance.Round,
 	}).Info("Combat ended")
+}
+
+// NPCAttackStep is one enemy attack action: a wind-up, or the hit that follows it.
+type NPCAttackStep struct {
+	Telegraph bool
+	Ability   string
+	Message   string
+	Attack    AttackResult
+}
+
+// StepNPCAttack spends a boss or elite action on a telegraph, or resolves the hit.
+// A stored wind-up counts down and lands when it reaches zero. Enrage skips new wind-ups.
+func (e *Engine) StepNPCAttack(instance *combat.CombatInstance, actorID, targetID string) NPCAttackStep {
+	if instance == nil {
+		return NPCAttackStep{Message: "Invalid combat"}
+	}
+	actor := instance.GetCombatantByID(actorID)
+	if actor == nil {
+		return NPCAttackStep{Message: "Invalid attacker"}
+	}
+	e.UpdateCombatant(instance, actor)
+	e.refreshEnrage(instance, actor)
+
+	if actor.TelegraphTurns > 0 {
+		actor.TelegraphTurns--
+		ability := actor.TelegraphAbility
+		if actor.TelegraphTurns > 0 {
+			e.UpdateCombatant(instance, actor)
+			msg := fmt.Sprintf("%s is still winding up %s!", actor.Name, ability)
+			instance.AddLogEntry(combat.CombatLogEntry{
+				ActorID:   actor.ID,
+				ActorName: actor.Name,
+				Action:    combat.CombatActionAttack,
+				Result:    "telegraph",
+				Message:   msg,
+			})
+			return NPCAttackStep{Telegraph: true, Ability: ability, Message: msg}
+		}
+		actor.TelegraphAbility = ""
+		e.UpdateCombatant(instance, actor)
+		result := e.ProcessAttack(instance, actorID, targetID)
+		if ability != "" && result.Message != "" {
+			result.Message = ability + " lands! " + result.Message
+		}
+		return NPCAttackStep{Ability: ability, Message: result.Message, Attack: result}
+	}
+
+	turns := balance.BossTelegraphTurns(actor.Difficulty, actor.Enraged)
+	if turns > 0 && targetID != "" {
+		label := balance.BossPhaseTelegraphLabel(actor.Difficulty, actor.BossPhase)
+		actor.TelegraphTurns = turns
+		actor.TelegraphAbility = label
+		e.UpdateCombatant(instance, actor)
+		msg := fmt.Sprintf("%s is winding up %s!", actor.Name, label)
+		instance.AddLogEntry(combat.CombatLogEntry{
+			ActorID:   actor.ID,
+			ActorName: actor.Name,
+			Action:    combat.CombatActionAttack,
+			Result:    "telegraph",
+			Message:   msg,
+		})
+		return NPCAttackStep{Telegraph: true, Ability: label, Message: msg}
+	}
+
+	result := e.ProcessAttack(instance, actorID, targetID)
+	return NPCAttackStep{Message: result.Message, Attack: result}
+}
+
+// refreshBossPhase runs on every stat update, including skills and status effects.
+// Healing never reverses a phase; lethal hits do not announce a new chapter.
+func (e *Engine) refreshBossPhase(instance *combat.CombatInstance, actor *combat.CombatantRef) {
+	if instance == nil || actor == nil || actor.Type != combat.CombatantTypeNPC || !actor.IsAlive || actor.HasFled || actor.CurrentHP <= 0 || actor.MaxHP <= 0 {
+		return
+	}
+	phases := balance.BossPhases(actor.Difficulty)
+	if len(phases) == 0 {
+		return
+	}
+	actor.BossPhaseCount = len(phases)
+	if actor.BossPhase == 0 {
+		actor.BossPhase, actor.BossPhaseLabel = 1, phases[0].Label
+	}
+	for actor.BossPhase < len(phases) {
+		next := phases[actor.BossPhase]
+		if float64(actor.CurrentHP)/float64(actor.MaxHP) > next.BelowHP {
+			break
+		}
+		actor.BossPhase++
+		actor.BossPhaseLabel = next.Label
+		instance.AddLogEntry(combat.CombatLogEntry{
+			ActorID: actor.ID, ActorName: actor.Name, Action: combat.CombatActionAttack,
+			Result: "phase-enter", Message: fmt.Sprintf("%s enters phase %d: %s!", actor.Name, actor.BossPhase, next.Label),
+		})
+	}
+}
+
+func (e *Engine) refreshEnrage(instance *combat.CombatInstance, actor *combat.CombatantRef) {
+	if e == nil || instance == nil || actor == nil || actor.Type != combat.CombatantTypeNPC || !actor.IsAlive || actor.CurrentHP <= 0 {
+		return
+	}
+	if !balance.ShouldEnrage(actor.Difficulty, instance.Round, actor.CurrentHP, actor.MaxHP, actor.Enraged) {
+		return
+	}
+	actor.Enraged = true
+	if balance.BossTelegraphTurns(actor.Difficulty, true) == 0 {
+		actor.TelegraphTurns = 0
+		actor.TelegraphAbility = ""
+	}
+	e.UpdateCombatant(instance, actor)
+	instance.AddLogEntry(combat.CombatLogEntry{
+		ActorID:   actor.ID,
+		ActorName: actor.Name,
+		Action:    combat.CombatActionAttack,
+		Result:    "enrage",
+		Message:   fmt.Sprintf("%s becomes enraged!", actor.Name),
+	})
 }
 
 // GetNPCAIAction determines what action an NPC should take
@@ -776,4 +1078,171 @@ func (e *Engine) GetNPCAIAction(instance *combat.CombatInstance, npcCombatant *c
 
 	// No valid target (shouldn't happen in active combat)
 	return combat.CombatActionDefend, ""
+}
+
+// snapshotWeaponOnHit copies main-hand on-hit script id and optional attribute DoT
+// onto the combatant. Game-set names/numbers stay in content attrs / Lua scripts.
+func snapshotWeaponOnHit(ref *combat.CombatantRef, char *characters.Character) {
+	if ref == nil || char == nil || char.EquippedItems == nil {
+		return
+	}
+	weapon := char.EquippedItems[items.ItemSlotMainHand]
+	if weapon == nil {
+		return
+	}
+	ref.WeaponSubType = string(weapon.SubType)
+	ref.OnHitScriptID = weapon.OnHitScriptID
+	if ref.OnHitScriptID == "" && weapon.TemplateID != "" {
+		// Instance may have dropped script id; TemplateID alone is not enough here
+		// without a service lookup — content should stamp onHitScriptId onto templates
+		// so CreateInstanceFromTemplate copies it. Attributes still drive the DoT.
+	}
+	dot := parseOnHitDotAttrs(weapon.Attributes)
+	if dot.Active {
+		ref.OnHitDot = dot
+	}
+}
+
+func parseOnHitDotAttrs(attrs map[string]interface{}) combat.OnHitDot {
+	var out combat.OnHitDot
+	if attrs == nil {
+		return out
+	}
+	// Nested map form: on_hit_dot: {id, name, damage, duration, message}
+	if raw, ok := attrs["on_hit_dot"]; ok {
+		if m, ok := raw.(map[string]interface{}); ok {
+			out.ID = attrString(m["id"])
+			out.Name = attrString(m["name"])
+			out.Damage = attrInt32(m["damage"])
+			out.Duration = int(attrInt32(m["duration"]))
+			out.Message = attrString(m["message"])
+		}
+	}
+	// Flat form fallback
+	if out.ID == "" {
+		out.ID = attrString(attrs["on_hit_dot_id"])
+	}
+	if out.Name == "" {
+		out.Name = attrString(attrs["on_hit_dot_name"])
+	}
+	if out.Damage == 0 {
+		out.Damage = attrInt32(attrs["on_hit_dot_damage"])
+	}
+	if out.Duration == 0 {
+		out.Duration = int(attrInt32(attrs["on_hit_dot_duration"]))
+	}
+	if out.Message == "" {
+		out.Message = attrString(attrs["on_hit_dot_message"])
+	}
+	if out.ID == "" && out.Name != "" {
+		out.ID = strings.ToLower(strings.ReplaceAll(out.Name, " ", "_"))
+	}
+	if out.Name == "" {
+		out.Name = out.ID
+	}
+	if out.Damage > 0 && out.Duration > 0 && out.ID != "" {
+		out.Active = true
+	}
+	return out
+}
+
+func attrString(v interface{}) string {
+	if v == nil {
+		return ""
+	}
+	switch t := v.(type) {
+	case string:
+		return t
+	default:
+		return fmt.Sprintf("%v", t)
+	}
+}
+
+func attrInt32(v interface{}) int32 {
+	if v == nil {
+		return 0
+	}
+	switch t := v.(type) {
+	case int32:
+		return t
+	case int:
+		return int32(t)
+	case int64:
+		return int32(t)
+	case float64:
+		return int32(t)
+	case float32:
+		return int32(t)
+	case string:
+		n, err := strconv.ParseFloat(t, 64)
+		if err != nil {
+			return 0
+		}
+		return int32(n)
+	default:
+		return 0
+	}
+}
+
+func (e *Engine) applyInscribe(instance *combat.CombatInstance, attacker, target *combat.CombatantRef) string {
+	if e == nil || instance == nil || attacker == nil || target == nil || !target.IsAlive {
+		return ""
+	}
+	if !balance.IsRuneHand(attacker.ClassID) {
+		return ""
+	}
+	se := combat.StatusEffect{
+		ID:       uuid.New().String(),
+		SkillID:  "inscribe",
+		Name:     "Inscribe",
+		Type:     "dot",
+		Value:    4,
+		Duration: 3,
+		SourceID: attacker.ID,
+	}
+	e.applyStatusEffect(instance, target, se)
+	e.UpdateCombatant(instance, target)
+	return "You inscribe them. The rune burns (4/round, 3 rounds)."
+}
+
+func (e *Engine) applyWeaponOnHitDot(instance *combat.CombatInstance, attacker, target *combat.CombatantRef) string {
+	if e == nil || instance == nil || attacker == nil || target == nil || !target.IsAlive {
+		return ""
+	}
+	dot := attacker.OnHitDot
+	if !dot.Active || dot.Damage < 1 || dot.Duration < 1 {
+		return ""
+	}
+	se := combat.StatusEffect{
+		ID:       uuid.New().String(),
+		SkillID:  "onhit:" + dot.ID,
+		Name:     dot.Name,
+		Type:     "dot",
+		Value:    dot.Damage,
+		Duration: dot.Duration,
+		SourceID: attacker.ID,
+	}
+	e.applyStatusEffect(instance, target, se)
+	e.UpdateCombatant(instance, target)
+	if dot.Message != "" {
+		return dot.Message
+	}
+	return fmt.Sprintf("%s sears %s (%d/tick, %d rounds).", dot.Name, target.Name, dot.Damage, dot.Duration)
+}
+
+// ApplyStatusEffectFromScript exposes status-effect application for Lua on-hit scripts.
+func (e *Engine) ApplyStatusEffectFromScript(instance *combat.CombatInstance, targetID string, se combat.StatusEffect) bool {
+	if e == nil || instance == nil || targetID == "" {
+		return false
+	}
+	target := instance.GetCombatantByID(targetID)
+	if target == nil || !target.IsAlive {
+		return false
+	}
+	if se.ID == "" {
+		se.ID = uuid.New().String()
+	}
+	e.applyStatusEffect(instance, target, se)
+	e.UpdateCombatant(instance, target)
+	return true
 }

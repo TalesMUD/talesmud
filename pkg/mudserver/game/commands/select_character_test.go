@@ -274,6 +274,12 @@ func TestSelectCharacterAppliesBankedXPLevelCatchUp(t *testing.T) {
 				t.Fatal("level-up message empty")
 			}
 		}
+		if lu, ok := out.(*messages.LevelUpMessage); ok {
+			sawLevelUp = true
+			if lu.Message == "" || lu.NewLevel <= 0 {
+				t.Fatal("structured level-up message incomplete")
+			}
+		}
 		if cs, ok := out.(*messages.CharacterSelected); ok {
 			selected = cs
 		}

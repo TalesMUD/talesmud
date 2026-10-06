@@ -1,553 +1,161 @@
 <script>
   import { settingsStore } from '../SettingsStore.js';
 
-  let activeTab = 'general';
-
+  let activeTab = 'interface';
   const tabs = [
+    { id: 'interface', label: 'Interface', icon: 'tune' },
     { id: 'general', label: 'General', icon: 'settings' },
-    { id: 'interface', label: 'Interface', icon: 'palette' }
   ];
-
-  function closeModal() {
-    settingsStore.closeModal();
-  }
-
-  function handleBackdropClick(e) {
-    if (e.target === e.currentTarget) {
-      closeModal();
-    }
-  }
-
-  function toggleSetting(category, key) {
-    const currentValue = $settingsStore[category]?.[key];
-    settingsStore.setSetting(category, key, !currentValue);
-  }
-
-  function setTheme(theme) {
-    settingsStore.setSetting('interface', 'theme', theme);
+  const set = (key, value) => settingsStore.setSetting('interface', key, value);
+  const toggle = (key) => set(key, !$settingsStore.interface?.[key]);
+  function closeModal() { settingsStore.closeModal(); }
+  function handleBackdropClick(event) {
+    if (event.target === event.currentTarget) closeModal();
   }
 </script>
 
 <style>
   .modal-backdrop {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: fadeIn 0.2s ease-out;
+    inset: 0;
+    z-index: 1100;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    background: rgba(5, 4, 3, 0.82);
+    backdrop-filter: blur(5px);
+    box-sizing: border-box;
   }
-
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-
   .modal-container {
-    background: #1a1a1a;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    width: 90%;
-    max-width: 600px;
-    max-height: 80vh;
+    width: min(100%, 720px);
+    max-height: calc(100dvh - 2rem);
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    animation: slideIn 0.2s ease-out;
-  }
-
-  @keyframes slideIn {
-    from {
-      opacity: 0;
-      transform: translateY(-20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .modal-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1em 1.25em;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  .modal-title {
-    font-size: 1.25em;
-    font-weight: 600;
-    color: #e5e7eb;
-    display: flex;
-    align-items: center;
-    gap: 0.5em;
-  }
-
-  .modal-title i {
-    font-size: 1.2em;
-    color: #9ca3af;
-  }
-
-  .close-btn {
-    background: transparent;
-    border: none;
-    color: #9ca3af;
-    cursor: pointer;
-    padding: 0.5em;
-    border-radius: 6px;
-    transition: all 0.15s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .close-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #e5e7eb;
-  }
-
-  .modal-body {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-  }
-
-  .tabs-sidebar {
-    width: 160px;
-    background: rgba(0, 0, 0, 0.3);
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 0.75em;
-    flex-shrink: 0;
-  }
-
-  .tab-btn {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    gap: 0.6em;
-    padding: 0.75em 1em;
-    background: transparent;
-    border: none;
-    border-radius: 8px;
-    color: #9ca3af;
-    font-size: 0.95em;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    text-align: left;
-  }
-
-  .tab-btn:hover {
-    background: rgba(255, 255, 255, 0.05);
-    color: #d1d5db;
-  }
-
-  .tab-btn.active {
-    background: rgba(59, 130, 246, 0.2);
-    color: #93c5fd;
-  }
-
-  .tab-btn i {
-    font-size: 1.2em;
-  }
-
-  .tab-content {
-    flex: 1;
-    padding: 1.25em;
-    overflow-y: auto;
-  }
-
-  .settings-section {
-    margin-bottom: 1.5em;
-  }
-
-  .section-title {
-    font-size: 0.85em;
-    font-weight: 600;
-    color: #6b7280;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 1em;
-  }
-
-  .setting-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.85em 1em;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 8px;
-    margin-bottom: 0.5em;
-  }
-
-  .setting-info {
-    flex: 1;
-  }
-
-  .setting-label {
-    font-size: 1em;
-    color: #e5e7eb;
-    margin-bottom: 0.2em;
-  }
-
-  .setting-desc {
-    font-size: 0.85em;
-    color: #6b7280;
-  }
-
-  /* Toggle switch */
-  .toggle-switch {
-    position: relative;
-    width: 44px;
-    height: 24px;
-    flex-shrink: 0;
-    margin-left: 1em;
-  }
-
-  .toggle-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
-
-  .toggle-slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #374151;
-    transition: 0.2s;
-    border-radius: 24px;
-  }
-
-  .toggle-slider:before {
-    position: absolute;
-    content: "";
-    height: 18px;
-    width: 18px;
-    left: 3px;
-    bottom: 3px;
-    background-color: #9ca3af;
-    transition: 0.2s;
-    border-radius: 50%;
-  }
-
-  input:checked + .toggle-slider {
-    background-color: rgba(59, 130, 246, 0.6);
-  }
-
-  input:checked + .toggle-slider:before {
-    transform: translateX(20px);
-    background-color: #93c5fd;
-  }
-
-  /* Theme selector */
-  .theme-options {
-    display: flex;
-    gap: 0.75em;
-  }
-
-  .theme-option {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5em;
-    padding: 1em 0.75em;
-    background: rgba(255, 255, 255, 0.03);
-    border: 2px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid #9b7435;
     border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    color: #9ca3af;
+    background: linear-gradient(150deg, #211b13, #12110e 65%);
+    color: #e8dfca;
+    box-shadow: 0 20px 80px #000c, inset 0 0 0 1px #e8c87822;
   }
-
-  .theme-option:hover {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.15);
-  }
-
-  .theme-option.active-dark-fantasy {
-    border-color: #d4a44a;
-    background: rgba(212, 164, 74, 0.1);
-    color: #d4a44a;
-  }
-
-  .theme-option.active-clean-hud {
-    border-color: #5b8def;
-    background: rgba(91, 141, 239, 0.1);
-    color: #5b8def;
-  }
-
-  .theme-preview {
-    width: 100%;
-    height: 48px;
-    border-radius: 6px;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .theme-preview.dark-fantasy {
-    background: linear-gradient(135deg, rgba(15, 10, 5, 0.95), rgba(40, 25, 10, 0.9));
-    border: 1px solid rgba(180, 130, 60, 0.4);
-  }
-
-  .theme-preview.dark-fantasy::before {
-    content: '';
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 8px;
-    height: 8px;
-    border-top: 2px solid rgba(212, 164, 74, 0.6);
-    border-left: 2px solid rgba(212, 164, 74, 0.6);
-  }
-
-  .theme-preview.dark-fantasy::after {
-    content: '';
-    position: absolute;
-    top: 3px;
-    right: 3px;
-    width: 8px;
-    height: 8px;
-    border-top: 2px solid rgba(212, 164, 74, 0.6);
-    border-right: 2px solid rgba(212, 164, 74, 0.6);
-  }
-
-  .theme-preview.clean-hud {
-    background: linear-gradient(180deg, rgba(8, 12, 24, 0.95), rgba(15, 20, 40, 0.9));
-    border: 1px solid rgba(60, 100, 180, 0.3);
-    box-shadow: inset 0 1px 0 rgba(91, 141, 239, 0.3);
-  }
-
-  .theme-preview-bars {
-    position: absolute;
-    bottom: 6px;
-    left: 8px;
-    right: 8px;
+  .modal-header {
+    flex: none;
     display: flex;
-    flex-direction: column;
-    gap: 3px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.8rem 1.1rem;
+    border-bottom: 1px solid #8b692f88;
+    background: linear-gradient(90deg, #392a16, #1b1813);
   }
-
-  .theme-preview-bar {
-    height: 4px;
-    border-radius: 2px;
-  }
-
-  .dark-fantasy .theme-preview-bar:nth-child(1) {
-    background: rgba(180, 130, 60, 0.5);
-    width: 70%;
-  }
-  .dark-fantasy .theme-preview-bar:nth-child(2) {
-    background: rgba(180, 130, 60, 0.3);
-    width: 45%;
-  }
-
-  .clean-hud .theme-preview-bar:nth-child(1) {
-    background: rgba(91, 141, 239, 0.5);
-    width: 70%;
-  }
-  .clean-hud .theme-preview-bar:nth-child(2) {
-    background: rgba(91, 141, 239, 0.3);
-    width: 45%;
-  }
-
-  .theme-name {
-    font-size: 0.9em;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-  }
-
-  .theme-check {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    font-size: 16px;
-  }
-
-  .active-dark-fantasy .theme-check {
-    color: #d4a44a;
-  }
-
-  .active-clean-hud .theme-check {
-    color: #5b8def;
-  }
-
-  /* Responsive */
-  @media screen and (max-width: 500px) {
-    .modal-container {
-      width: 95%;
-      max-height: 90vh;
-    }
-
-    .tabs-sidebar {
-      width: 56px;
-      padding: 0.5em;
-    }
-
-    .tab-btn {
-      padding: 0.75em;
-      justify-content: center;
-    }
-
-    .tab-btn span {
-      display: none;
-    }
-
-    .tab-btn i {
-      margin: 0;
-    }
+  .modal-title { display: flex; align-items: center; gap: 0.5rem; color: #f5d78c; font: 700 1.25rem Georgia, serif; letter-spacing: 0.04em; }
+  .modal-title i { font-size: 1.2rem; }
+  .close-btn { display: grid; place-items: center; border: 1px solid #8b692f88; border-radius: 5px; padding: 0.3rem; background: #1c1812; color: #e8d5a7; cursor: pointer; }
+  .close-btn:hover, .close-btn:focus-visible { border-color: #f5d78c; color: #fff2c8; }
+  .modal-body { display: flex; min-height: 0; }
+  .tabs-sidebar { flex: 0 0 145px; padding: 0.7rem; border-right: 1px solid #8b692f55; background: #100f0c88; }
+  .tab-btn { width: 100%; display: flex; align-items: center; gap: 0.55rem; padding: 0.65rem; margin-bottom: 0.25rem; border: 1px solid transparent; border-radius: 5px; background: transparent; color: #bdb19b; text-align: left; cursor: pointer; }
+  .tab-btn:hover, .tab-btn:focus-visible { color: #f5d78c; background: #d4a44a16; }
+  .tab-btn.active { color: #f5d78c; border-color: #d4a44a77; background: #d4a44a25; }
+  .tab-btn i { font-size: 1.15rem; }
+  .tab-content { flex: 1; min-width: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0.9rem 1.1rem 1.1rem; }
+  .settings-section { margin-bottom: 1rem; }
+  .section-title { margin: 0 0 0.5rem; color: #d4a44a; font: 700 0.78rem system-ui, sans-serif; letter-spacing: 0.12em; text-transform: uppercase; }
+  .setting-item { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; padding: 0.65rem 0.8rem; margin-bottom: 0.4rem; border: 1px solid #ae8b5033; border-radius: 6px; background: #ffffff08; }
+  .setting-info { min-width: 0; }
+  .setting-label { color: #eee4ce; font-size: 0.92rem; font-weight: 600; }
+  .setting-desc { color: #b6aa92; font-size: 0.78rem; line-height: 1.35; }
+  .setting-desc { margin-top: 0.12rem; }
+  .toggle-switch { position: relative; flex: none; width: 44px; height: 24px; cursor: pointer; }
+  .toggle-switch input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .toggle-slider { display: block; width: 100%; height: 100%; border-radius: 20px; background: #51493d; box-shadow: inset 0 0 0 1px #c8b17a55; }
+  .toggle-slider:before { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #c4bba8; transition: transform 0.15s ease; }
+  input:checked + .toggle-slider { background: #9a7131; box-shadow: inset 0 0 0 1px #e8c878; }
+  input:checked + .toggle-slider:before { transform: translateX(20px); background: #fff0bb; }
+  input:focus-visible + .toggle-slider { outline: 2px solid #f5d78c; outline-offset: 2px; }
+  .choice-group { display: flex; gap: 0.35rem; flex-wrap: wrap; justify-content: flex-end; }
+  .choice { border: 1px solid #8b692f88; border-radius: 5px; padding: 0.35rem 0.55rem; background: #18150f; color: #c5b89b; font-size: 0.8rem; cursor: pointer; white-space: nowrap; }
+  .choice:hover, .choice:focus-visible { border-color: #e8c878; color: #fff0bb; }
+  .choice.active { border-color: #d4a44a; background: #66491f; color: #fff0bb; }
+  .theme-options { display: flex; gap: 0.5rem; }
+  .theme-option { flex: 1; padding: 0.55rem; border: 1px solid #8b692f88; border-radius: 6px; background: #17140f; color: #c5b89b; cursor: pointer; text-align: left; }
+  .theme-option.active { border-color: #d4a44a; color: #fff0bb; box-shadow: inset 0 0 0 1px #d4a44a55; }
+  .theme-preview { display: block; height: 20px; margin-bottom: 0.35rem; border-radius: 3px; }
+  .theme-preview.dark-fantasy { background: linear-gradient(90deg, #0e0b08, #8e6126); }
+  .theme-preview.clean-hud { background: linear-gradient(90deg, #0c101b, #495671); }
+  .note { padding: 0.8rem; border: 1px solid #ae8b5033; border-radius: 6px; background: #ffffff08; }
+  @media (max-width: 600px) {
+    .modal-backdrop { padding: 0.5rem; align-items: center; }
+    .modal-container { max-height: calc(100dvh - 1rem); }
+    .modal-header { padding: 0.6rem 0.8rem; }
+    .modal-body { flex-direction: column; }
+    .tabs-sidebar { flex: none; display: flex; gap: 0.4rem; padding: 0.45rem; border-right: 0; border-bottom: 1px solid #8b692f55; }
+    .tab-btn { width: auto; margin: 0; padding: 0.45rem 0.65rem; }
+    .tab-content { padding: 0.65rem; }
+    .setting-item { align-items: flex-start; flex-wrap: wrap; }
+    .choice-group { width: 100%; justify-content: flex-start; }
   }
 </style>
 
 {#if $settingsStore.modalOpen}
   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
   <div class="modal-backdrop" on:click={handleBackdropClick}>
-    <div class="modal-container">
+    <div class="modal-container" role="dialog" aria-modal="true" aria-label="Settings">
       <div class="modal-header">
-        <div class="modal-title">
-          <i class="material-icons">settings</i>
-          Settings
-        </div>
-        <button class="close-btn" on:click={closeModal}>
-          <i class="material-icons">close</i>
-        </button>
+        <div class="modal-title"><i class="material-icons" aria-hidden="true">settings</i> Settings</div>
+        <button class="close-btn" aria-label="Close Settings" on:click={closeModal}><i class="material-icons" aria-hidden="true">close</i></button>
       </div>
-
       <div class="modal-body">
-        <div class="tabs-sidebar">
+        <div class="tabs-sidebar" role="tablist" aria-label="Settings sections">
           {#each tabs as tab}
-            <button
-              class="tab-btn"
-              class:active={activeTab === tab.id}
-              on:click={() => activeTab = tab.id}
-            >
-              <i class="material-icons">{tab.icon}</i>
-              <span>{tab.label}</span>
+            <button class="tab-btn" class:active={activeTab === tab.id} role="tab" aria-selected={activeTab === tab.id} on:click={() => activeTab = tab.id}>
+              <i class="material-icons" aria-hidden="true">{tab.icon}</i><span>{tab.label}</span>
             </button>
           {/each}
         </div>
-
         <div class="tab-content">
-          {#if activeTab === 'general'}
-            <div class="settings-section">
-              <div class="section-title">Audio</div>
-
-              <div class="setting-item">
-                <div class="setting-info">
-                  <div class="setting-label">Sound Effects</div>
-                  <div class="setting-desc">Enable game sound effects</div>
-                </div>
-                <label class="toggle-switch">
-                  <input
-                    type="checkbox"
-                    checked={$settingsStore.general?.soundEnabled}
-                    on:change={() => toggleSetting('general', 'soundEnabled')}
-                  />
-                  <span class="toggle-slider"></span>
-                </label>
-              </div>
-            </div>
-          {/if}
-
           {#if activeTab === 'interface'}
-            <div class="settings-section">
-              <div class="section-title">Theme</div>
+            <section class="settings-section">
+              <h2 class="section-title">Appearance</h2>
               <div class="theme-options">
-                <button
-                  class="theme-option"
-                  class:active-dark-fantasy={$settingsStore.interface?.theme === 'dark-fantasy'}
-                  on:click={() => setTheme('dark-fantasy')}
-                >
-                  <div class="theme-preview dark-fantasy">
-                    <div class="theme-preview-bars">
-                      <div class="theme-preview-bar"></div>
-                      <div class="theme-preview-bar"></div>
-                    </div>
-                    {#if $settingsStore.interface?.theme === 'dark-fantasy'}
-                      <i class="material-icons theme-check">check_circle</i>
-                    {/if}
-                  </div>
-                  <span class="theme-name">Dark Fantasy</span>
-                </button>
-                <button
-                  class="theme-option"
-                  class:active-clean-hud={$settingsStore.interface?.theme === 'clean-hud'}
-                  on:click={() => setTheme('clean-hud')}
-                >
-                  <div class="theme-preview clean-hud">
-                    <div class="theme-preview-bars">
-                      <div class="theme-preview-bar"></div>
-                      <div class="theme-preview-bar"></div>
-                    </div>
-                    {#if $settingsStore.interface?.theme === 'clean-hud'}
-                      <i class="material-icons theme-check">check_circle</i>
-                    {/if}
-                  </div>
-                  <span class="theme-name">Clean HUD</span>
-                </button>
+                <button class="theme-option" class:active={$settingsStore.interface?.theme === 'dark-fantasy'} aria-pressed={$settingsStore.interface?.theme === 'dark-fantasy'} on:click={() => set('theme', 'dark-fantasy')}><span class="theme-preview dark-fantasy"></span>Dark Fantasy</button>
+                <button class="theme-option" class:active={$settingsStore.interface?.theme === 'clean-hud'} aria-pressed={$settingsStore.interface?.theme === 'clean-hud'} on:click={() => set('theme', 'clean-hud')}><span class="theme-preview clean-hud"></span>Clean HUD</button>
               </div>
-            </div>
-
-            <div class="settings-section">
-              <div class="section-title">Room Display</div>
-
+            </section>
+            <section class="settings-section">
+              <h2 class="section-title">Accessibility</h2>
               <div class="setting-item">
-                <div class="setting-info">
-                  <div class="setting-label">Parchment Style</div>
-                  <div class="setting-desc">Use textured parchment background for room descriptions</div>
+                <div class="setting-info"><div class="setting-label">Reduced motion</div><div class="setting-desc">Control combat effects and map ambience.</div></div>
+                <div class="choice-group" role="group" aria-label="Reduced motion">
+                  {#each [{value:'system',label:'System'}, {value:'on',label:'On'}, {value:'off',label:'Off'}] as option}
+                    <button class="choice" class:active={$settingsStore.interface?.reducedMotion === option.value} aria-pressed={$settingsStore.interface?.reducedMotion === option.value} on:click={() => set('reducedMotion', option.value)}>{option.label}</button>
+                  {/each}
                 </div>
-                <label class="toggle-switch">
-                  <input
-                    type="checkbox"
-                    checked={$settingsStore.interface?.parchmentBackground}
-                    on:change={() => toggleSetting('interface', 'parchmentBackground')}
-                  />
-                  <span class="toggle-slider"></span>
-                </label>
               </div>
-
+            </section>
+            <section class="settings-section">
+              <h2 class="section-title">Gameplay</h2>
               <div class="setting-item">
-                <div class="setting-info">
-                  <div class="setting-label">Compact Mode</div>
-                  <div class="setting-desc">Reduce padding and spacing for smaller screens</div>
-                </div>
-                <label class="toggle-switch">
-                  <input
-                    type="checkbox"
-                    checked={$settingsStore.interface?.compactMode}
-                    on:change={() => toggleSetting('interface', 'compactMode')}
-                  />
-                  <span class="toggle-slider"></span>
-                </label>
+                <div class="setting-info"><div class="setting-label">Auto-focus BattleStage</div><div class="setting-desc">Open the combat view when a fight starts or you join one.</div></div>
+                <label class="toggle-switch"><input type="checkbox" aria-label="Auto-focus BattleStage" checked={$settingsStore.interface?.combatAutoFocus !== false} on:change={() => toggle('combatAutoFocus')} /><span class="toggle-slider"></span></label>
               </div>
-
               <div class="setting-item">
-                <div class="setting-info">
-                  <div class="setting-label">Room Text Overlay</div>
-                  <div class="setting-desc">Show game text as an overlay on the room image (always on for mobile)</div>
-                </div>
-                <label class="toggle-switch">
-                  <input
-                    type="checkbox"
-                    checked={$settingsStore.interface?.roomTextOverlay}
-                    on:change={() => toggleSetting('interface', 'roomTextOverlay')}
-                  />
-                  <span class="toggle-slider"></span>
-                </label>
+                <div class="setting-info"><div class="setting-label">Battle layout B</div><div class="setting-desc">Default fight view: party on the left, enemies on the right. Turn off for Classic cards. ?battleLayout=classic or localStorage talesmud_battle_layout_b=0 also opts out.</div></div>
+                <label class="toggle-switch"><input type="checkbox" aria-label="Battle layout B" checked={!!$settingsStore.interface?.battleLayoutB} on:change={() => toggle('battleLayoutB')} /><span class="toggle-slider"></span></label>
               </div>
-            </div>
+              <div class="setting-item">
+                <div class="setting-info"><div class="setting-label">Inventory opens as</div><div class="setting-desc">Choose a full overlay or a layout widget.</div></div>
+                <div class="choice-group" role="group" aria-label="Inventory opens as">
+                  <button class="choice" class:active={$settingsStore.interface?.inventoryOpenMode === 'overlay'} aria-pressed={$settingsStore.interface?.inventoryOpenMode === 'overlay'} on:click={() => set('inventoryOpenMode', 'overlay')}>Overlay</button>
+                  <button class="choice" class:active={$settingsStore.interface?.inventoryOpenMode === 'widget'} aria-pressed={$settingsStore.interface?.inventoryOpenMode === 'widget'} on:click={() => set('inventoryOpenMode', 'widget')}>Layout widget</button>
+                </div>
+              </div>
+            </section>
+            <section class="settings-section">
+              <h2 class="section-title">Room display</h2>
+              <div class="setting-item"><div class="setting-info"><div class="setting-label">Parchment style</div><div class="setting-desc">Textured room descriptions</div></div><label class="toggle-switch"><input type="checkbox" aria-label="Parchment style" checked={$settingsStore.interface?.parchmentBackground} on:change={() => toggle('parchmentBackground')} /><span class="toggle-slider"></span></label></div>
+            </section>
+          {:else}
+            <section class="settings-section"><h2 class="section-title">Audio</h2><div class="note"><div class="setting-label">Game audio is coming soon</div><div class="setting-desc">There are no active sound effects or music controls yet.</div></div></section>
           {/if}
         </div>
       </div>

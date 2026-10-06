@@ -28,6 +28,7 @@ out/
 *.tsbuildinfo
 pkg/webui/dist/index.html
 public/mud-client/public/bundle.js.map
+public/mud-client/public/worldmap-worker.js.map
 
 # Vite/bundler cache
 .vite/
@@ -70,3 +71,7 @@ backups/*
 
 public/landing/*.png
 tales
+
+# Flutter APK playtest builds (rsync to VPS; do not commit)
+public/landing/app/downloads/*.apk
+public/landing/app/downloads/*.apk.sha256

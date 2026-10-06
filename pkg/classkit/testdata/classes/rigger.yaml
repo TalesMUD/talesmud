@@ -1,0 +1,67 @@
+id: rigger
+name: Rigger
+description: "Constructs. Bolt scrap onto someone in the room; the next hit still lands, and the attacker takes the same amount back. Rig drops a turret that does not chase."
+armor_type: Leather
+combat_type: Melee
+primary: STR
+skill_class: rigger
+order: 5
+aliases: [tpl-rigger]
+races: [construct]
+hp_multiplier: 1.0
+hotbar_cap: 4
+bolt_charges: 1
+rig_charges: 1
+race_blurbs:
+  construct: "Rigger only. Poison never sticks. No weapon bonus."
+balance:
+  damage_dealt: 0.85
+  damage_taken: 1.00
+  behind_dealt: 1.15
+  swings: 1
+template:
+  id: tpl-rigger
+  backstory: "You bolt scrap onto a target and leave a turret where you stood."
+  origin_area: Gear Yard
+  archetype: rigger
+  race: construct
+  str: 12
+  dex: 10
+  int: 8
+  wis: 6
+  sta: 14
+  starting_items:
+    - {slot: main_hand, name: Rusty Sword}
+    - {slot: chest, name: Leather Armor}
+  default_skills: [rigger_bolt, rigger_rig]
+skills:
+  - id: rigger_bolt
+    name: Bolt
+    effect: bolt
+    level: 1
+    once_per_fight: true
+    keeps_swing: false
+    cooldown: 0
+    multiplier: 0
+    target: enemy
+    tooltip: "Once a fight. Spend your swing. The next hit still lands, and the attacker takes it back."
+  - id: rigger_rig
+    name: Rig
+    effect: rig
+    level: 1
+    once_per_fight: true
+    keeps_swing: false
+    cooldown: 0
+    multiplier: 0.50
+    target: enemy
+    tooltip: "Once a fight. Drop a turret. It hits twice at 0.50×, then falls apart."
+  - id: rigger_overload
+    name: Overload
+    effect: overload
+    level: 6
+    once_per_fight: true
+    keeps_swing: false
+    cooldown: 0
+    multiplier: 0.80
+    target: enemy
+    tooltip: "Once a fight, while the turret is up. Its remaining hits deal 0.80×."

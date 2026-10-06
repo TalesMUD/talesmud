@@ -235,6 +235,33 @@ func minAreaChebyshev(w *World, a, b string) int {
 	return min
 }
 
+
+func TestCompileFlipsInvertedAuthoredY(t *testing.T) {
+	// Aelindor-style authored coords: north increases Y (screen convention).
+	gate := withCoords(testRoom("R1101", "Moongate", "Z11_aelindor", []string{"outdoor", "entry_point"},
+		exit("north", "R1102", false)), 0, 0, 0)
+	plaza := withCoords(testRoom("R1102", "Outer Ring Plaza", "Z11_aelindor", []string{"outdoor"},
+		exit("south", "R1101", false), exit("north", "R1114", false)), 0, 1, 0)
+	garden := withCoords(testRoom("R1114", "Garden of Dawn", "Z11_aelindor", []string{"outdoor"},
+		exit("south", "R1102", false)), 0, 3, 0)
+	w := Compile([]*rooms.Room{gate, plaza, garden})
+	if w.rooms["R1102"].y >= w.rooms["R1101"].y {
+		t.Fatalf("north of moongate should decrease Y: gate=%d plaza=%d", w.rooms["R1101"].y, w.rooms["R1102"].y)
+	}
+	if w.rooms["R1114"].y >= w.rooms["R1102"].y {
+		t.Fatalf("north of plaza should decrease Y: plaza=%d garden=%d", w.rooms["R1102"].y, w.rooms["R1114"].y)
+	}
+	// Correctly authored zones must stay unflipped.
+	meadow := withCoords(testRoom("R0101", "Meadow", "Z01_meadows_forest_path", []string{"outdoor", "starting_room"},
+		exit("north", "R0102", false)), 0, 11, 0)
+	field := withCoords(testRoom("R0102", "Field", "Z01_meadows_forest_path", []string{"outdoor"},
+		exit("south", "R0101", false)), 0, 10, 0)
+	w2 := Compile([]*rooms.Room{meadow, field})
+	if w2.rooms["R0101"].y != 11 || w2.rooms["R0102"].y != 10 {
+		t.Fatalf("correct meadows Y flipped wrongly: meadow=%d field=%d", w2.rooms["R0101"].y, w2.rooms["R0102"].y)
+	}
+}
+
 func TestCompilePrefersAuthoredCoords(t *testing.T) {
 	meadow := withCoords(testRoom("R0101", "Meadow", "Z01_meadows_forest_path", []string{"outdoor", "starting_room"},
 		exit("north", "R0102", false)), 12, -4, 0)
@@ -249,7 +276,7 @@ func TestCompilePrefersAuthoredCoords(t *testing.T) {
 	}
 }
 
-func TestCompileSeparatesAreas(t *testing.T) {
+func TestCompilePacksAreasWithoutOverlap(t *testing.T) {
 	w := Compile([]*rooms.Room{
 		testRoom("R0101", "Meadow", "Z01_meadows_forest_path", []string{"starting_room", "outdoor"},
 			exit("north", "R0102", false), exit("west", "R0201", false)),
@@ -272,14 +299,14 @@ func TestCompileSeparatesAreas(t *testing.T) {
 		t.Fatalf("intra-oldtown west broken: gate (%d,%d) street (%d,%d)",
 			w.rooms["R0201"].x, w.rooms["R0201"].y, w.rooms["R0202"].x, w.rooms["R0202"].y)
 	}
-	if g := minAreaChebyshev(w, "Z01_meadows_forest_path", "Z02_oldtown"); g < 4 {
-		t.Fatalf("meadow/oldtown gap %d want >= 4", g)
+	if g := minAreaChebyshev(w, "Z01_meadows_forest_path", "Z02_oldtown"); g < 2 {
+		t.Fatalf("meadow/oldtown gap %d want >= 2", g)
 	}
-	if g := minAreaChebyshev(w, "Z02_oldtown", "Z03_ashenveil"); g < 4 {
-		t.Fatalf("oldtown/ashenveil gap %d want >= 4", g)
+	if g := minAreaChebyshev(w, "Z02_oldtown", "Z03_ashenveil"); g < 2 {
+		t.Fatalf("oldtown/ashenveil gap %d want >= 2", g)
 	}
-	if g := minAreaChebyshev(w, "Z01_meadows_forest_path", "Z03_ashenveil"); g < 4 {
-		t.Fatalf("meadow/ashenveil gap %d want >= 4", g)
+	if g := minAreaChebyshev(w, "Z01_meadows_forest_path", "Z03_ashenveil"); g < 2 {
+		t.Fatalf("meadow/ashenveil gap %d want >= 2", g)
 	}
 }
 

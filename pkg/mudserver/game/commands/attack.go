@@ -254,12 +254,14 @@ func (command *AttackCommand) handleInitiateCombat(game def.GameCtrl, message *m
 	startMsg += "\n" + combatEngine.GetCombatStatus(message.Character.Entity.ID)
 	startMsg += "\n═══════════════════════════════════════════════════"
 
-	game.SendMessage() <- messages.NewCombatStartMessage(
+	start := messages.NewCombatStartMessage(
 		message.FromUser.ID,
 		startMsg,
 		combatViews(instance.Enemies, message.Character.Level),
 		combatViews(instance.Players, message.Character.Level),
 	)
+	start.TargetID = target.Entity.ID
+	game.SendMessage() <- start
 
 	// Set auto-attack target to the initial target
 	combatEngine.SetAutoAttackTarget(message.Character.Entity.ID, target.Entity.ID)
@@ -354,12 +356,29 @@ func (command *AttackCommand) handleJoinCombat(game def.GameCtrl, message *messa
 	startMsg += "\n" + combatEngine.GetCombatStatus(message.Character.Entity.ID)
 	startMsg += "\n═══════════════════════════════════════════════════"
 
-	game.SendMessage() <- messages.NewCombatStartMessage(
+	start := messages.NewCombatStartMessage(
 		message.FromUser.ID,
 		startMsg,
 		combatViews(instance.Enemies, message.Character.Level),
 		combatViews(instance.Players, message.Character.Level),
 	)
+	start.TargetID = target.Entity.ID
+	game.SendMessage() <- start
+
+	// Existing fighters need the new roster before the next action resolves.
+	for _, fighter := range instance.Players {
+		if fighter.ID == message.Character.ID || !fighter.IsAlive || fighter.HasFled {
+			continue
+		}
+		ch, err := game.GetFacade().CharactersService().FindByID(fighter.ID)
+		if err != nil || ch == nil || ch.BelongsUserID == "" {
+			continue
+		}
+		roster := append(combatViews(instance.Players, fighter.Level), combatViews(instance.Enemies, fighter.Level)...)
+		game.SendMessage() <- messages.NewCombatActionMessage(ch.BelongsUserID,
+			fmt.Sprintf("%s joins the fight!", message.Character.Name),
+			messages.CombatActionMessage{ActorID: message.Character.ID, ActorName: message.Character.Name, Action: "join", Combatants: roster})
+	}
 
 	combatEngine.SetAutoAttackTarget(message.Character.Entity.ID, target.Entity.ID)
 	game.SendMessage() <- message.Reply("\nCombat is automatic. Commands: attack <target> (switch target) | defend | flee | status")
@@ -424,7 +443,10 @@ func combatViews(refs []combat.CombatantRef, viewerLevel int32) []messages.Comba
 	out := make([]messages.CombatantView, 0, len(refs))
 	for _, r := range refs {
 		view := messages.CombatantView{
-			ID: r.ID, Name: r.Name, Portrait: r.Portrait, HP: r.CurrentHP, MaxHP: r.MaxHP, Level: r.Level,
+			ID: r.ID, Type: string(r.Type), Name: r.Name, Portrait: r.Portrait, HP: r.CurrentHP, MaxHP: r.MaxHP,
+			Mana: r.CurrentMana, MaxMana: r.MaxMana, ClassID: r.ClassID, IsAlive: r.IsAlive, HasFled: r.HasFled, Level: r.Level,
+			Telegraph: r.TelegraphAbility, Enraged: r.Enraged,
+			BossPhase: r.BossPhase, BossPhaseLabel: r.BossPhaseLabel, BossPhaseCount: r.BossPhaseCount,
 		}
 		if r.Type == combat.CombatantTypeNPC {
 			view.Threat = balance.ThreatTier(viewerLevel, r.Level)
@@ -507,20 +529,22 @@ func (command *AttackCommand) handleInCombatAttack(game def.GameCtrl, message *m
 		return true
 	}
 
-	// Search for target by name
-	var targetID string
-	targetNameLower := strings.ToLower(targetName)
-	for _, enemy := range livingEnemies {
-		if strings.Contains(strings.ToLower(enemy.name), targetNameLower) {
-			targetID = enemy.id
-			break
-		}
+	// Resolve by ID, UI label (Name#N), or partial name — same rules as initiate.
+	roomID := ""
+	if message.Character != nil {
+		roomID = message.Character.CurrentRoomID
 	}
+	targetID, _ := resolveInCombatTarget(game, roomID, instance.Enemies, targetName)
 
 	if targetID == "" {
+		labels := livingEnemyDisplayLabels(instance.Enemies)
 		var targets []string
 		for _, e := range livingEnemies {
-			targets = append(targets, fmt.Sprintf("%s (%d/%d HP)", e.name, e.hp, e.maxHP))
+			label := labels[e.id]
+			if label == "" {
+				label = e.name
+			}
+			targets = append(targets, fmt.Sprintf("%s (%d/%d HP)", label, e.hp, e.maxHP))
 		}
 		game.SendMessage() <- message.Reply(fmt.Sprintf("Invalid target '%s'. Available targets: %s", targetName, strings.Join(targets, ", ")))
 		return true
@@ -542,6 +566,9 @@ func (command *AttackCommand) handleInCombatAttack(game def.GameCtrl, message *m
 		}
 	}
 	game.SendMessage() <- message.Reply(fmt.Sprintf("You switch your focus to %s.", targetDisplayName))
+	game.SendMessage() <- messages.NewCombatActionMessage(message.FromUser.ID, "", messages.CombatActionMessage{
+		ActorID: message.Character.ID, TargetID: targetID, Action: "focus",
+	})
 
 	return true
 }

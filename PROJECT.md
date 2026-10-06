@@ -12,7 +12,7 @@ TalesMUD is a browser-based Multi-User Dungeon (MUD) framework built with Go and
 - **Core Systems & Features:** `FEATURES.md` (comprehensive reference for all systems, data structures, and APIs)
 - **Game design + MVP backlog:** `docs/design/GAME_DESIGN.md`
 - **Door on the shared engine:** `docs/DOOR-ON-MUD.md`
-- **Ruleset profile:** `config/ruleset.yaml` (level cap, level-up mode, death, new day, resource keys, combat pacing). Combat math stays in `config/combat_balance.yaml`.
+- **Ruleset profile:** `config/ruleset.yaml` (level cap, level-up mode, death, new day, resource keys, combat pacing, regen for out of combat, resting, and in combat). Combat math stays in `config/combat_balance.yaml`.
 - **Scripting system:** `docs/design/SCRIPTING.md`
 - **World map implementation:** `docs/design/WORLD_MAP_IMPLEMENTATION.md`
 - **Quest authoring guide:** `docs/design/QUEST_AUTHORING.md`
@@ -42,24 +42,31 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Response actions send the narrative `response` text, not the help `description`
   - Action descriptions shown in room text ("You can:" section)
   - Visual backgrounds and mood settings
-  - Coordinate-based world mapping (X, Y, Z grid) plus a compiled atlas: authored coords pin rooms, remaining rooms cluster by area from compass exits, zones pack with a gap (Oldtown / Meadows / Ashenveil read apart); per-character fog of war at `GET /api/characters/:id/map`
+  - Coordinate-based world mapping (X, Y, Z grid) plus a compiled atlas: authored area-local coords and compass exits preserve room geometry; compact configurable zone centers form one continent with decorative biome ground; per-character fog of war at `GET /api/characters/:id/map`
   - Dynamic item and NPC spawning
   - Unique NPCs auto-spawn into their assigned room on server start via `CurrentRoomID`
   - Per-character friends list (`friend add/remove/list`); HUD overlay with online flags + whisper; guests refused
-  - Guest-public NPC/enemy portraits (`/api/portraits/:filename`, hashed avatar fallback)
+  - Guest-public NPC, enemy, and player portraits (`/api/portraits/:filename`). Player art covers Human, Dwarf, and Elf across Warrior, Rogue, Mage/Wizard, Ranger/Hunter, Cleric, and Druid; missing art falls back to a class silhouette.
   - Merchant shop overlay in the room widget (structured `shop` WS message with item stats/description; click inspects, explicit Buy/Sell confirm; WoW-style compare-to-equipped deltas on buy inspect; dialog Trade inject)
-  - Player chrome Map: Cartographer overlay (desktop ~80% + intel rail; phone full-bleed + bottom intel sheet); tap inspect, Travel button; biome tiles; gold you-icon; Overworld z==0; Oldtown north of Meadows
+  - Player chrome Map: Cartographer overlay (desktop ~80% + intel rail; phone full-bleed + bottom intel sheet); tap select with Travel primary (Inspect optional); compact Map tab has no duplicate Map/Open Map header; 14 terrain types with six native 48px pixel-art variants plus room-driven roof/keep/service/landmark stamps and four underground floor styles on one sprite sheet; dithered biomes, smooth organic beaches/foam/depth bands and offshore rocks/coastal cliffs, mixed foothills and central peaks, biome-specific oaks/pines/marsh trees, crisp town glyphs, quiet dirt roads batched beneath relief, canopies, buildings and opaque town paving, water bridges along charted outdoor exits, street-shaped town paving with angular footprint walls, corner towers and road gates, roofs and town/farm props with filterable interior selection, parchment fog, textured sea, glowing you-marker, Fit world / recenter and zoom/pan, with up to 10× fit scale and 220px tiles (twice the previous closest view), using crisp nearest-neighbor sampling. World fit and minimum zoom share a continent frame at roughly 70–80% of the map height on desktop. The minimap shares cached overview/close landscapes and the underground renderer; 48px close detail bakes on demand in an OffscreenCanvas worker where supported, with a synchronous fallback. The distant overview retains a compact 32px cache; finer leaves, bark, timber lookout towers, roof tiles, masonry, bridge planks, crop rows and props remain crisp at maximum zoom. Lower uses 48px themed floors, bones/barrels and dim cluster light, with no long void-crossing connectors. The full map has low-rate water/smoke accents that respect reduced motion; trees and buildings have no drop shadows. Outdoor elevations stay on Overworld, interiors share exterior anchors, underground rooms stay on Lower. Terrain rules/defaults live in `pkg/worldmap/map_terrain.json`; compact centers/ground/town flags in `pkg/worldmap/map_layout.json`; read-only preview instructions are in `tools/WORLDMAP-PREVIEW.md`
   - Play client WS: single-flight socket gate; close 4001 (session replaced) does not auto-reconnect; `/play` JS/CSS served no-cache
   - Action bar Option C: room dirs + room actions + Shop; fixed INV/MAP/SAY chrome; **Recipes** pin seeded by default; optional Look/Rest/… via ⋯
   - Gathering & crafting v1 (no professions): room GATHER chips + recipes/craft; R0209 CRAFT/RECIPES chips; R0102 first-gather hint
-  - Spell Bar / Hotbar: docked on the desktop action bar (a moved hotbar widget stays separate); skills + consumables; Rest seeded on empty/default bar (slot 7); Look/Talk/Flee bindable; no Search=look
+  - Spell Bar / Hotbar: docked on the desktop action bar (a moved hotbar widget stays separate); nine slots; skills + consumables; Rest seeded on empty/default bar (slot 7); Look/Talk/Flee bindable; no Search=look. Keys 1–9 fire those slots, Tab cycles combat targets, Escape closes the top panel, and `?` opens the shortcut list. None of those fire while a command or other text field is focused.
+  - Desktop and wide presets keep the room on the left. Character and Equipment share one tab (Character open), Terminal, Quest Log, and Map share another (Terminal open), and Inventory sits under those tabs. The play shell is the window height, and a saved layout taller than the window is scaled so the action bar stays on screen. Invalid saved layouts fall back to the viewport preset. Saving a layout while a widget is focused stores the arrangement from before that expansion.
   - Play terminal wraps room lines on word boundaries and reflows that scrollback when the panel is resized
   - Play header: one row for Edit Layout, Party, Friends, and the account chip, with a gold menu aligned to the chip
+  - Material Icons are served locally and preloaded; icon ligatures remain hidden until the font loads, so a font failure leaves empty icons.
   - OOC Resting chip on character HP / mobile header while `Flags.resting`; clears on combat or rest end
-  - BattleStage: arena art clipped to the fight band; Attack/Defend/Items/Flee + hotbar share one dock strip; FF-style plates; queue chip centered in the dock
+  - BattleStage: arena art clipped to the fight band; Attack/Defend/Items/Flee + hotbar share one dock strip; FF-style plates; queue chip centered in the dock. Layout B is the default fight view (party left, enemies right, corner detail frames, slim over-sprite HP, existing race/class and enemy portraits). Other players show on a compact left ally strip. Classic cards remain a Settings opt-out (`?battleLayout=classic`). Every fighter in a group appears: the player's large card and up to four compact ally cards with live HP/MP, turn, down/fled, hit FX, and join banner. Damage numbers float over the struck sprite in white with a dark outline, holding full opacity before fading. A missing portrait or item icon swaps once to a class, enemy, or generic silhouette instead of a broken image.
+  - Combat start/join focuses the existing BattleStage cover by default. The local Settings panel can turn auto-focus off; a manual Open BattleStage button remains available during combat. Dismissing victory/defeat, outcome timeout, or leaving combat restores the previous panel focus. Layout and template saves keep the normal arrangement; command input and text fields keep their typing focus.
+  - Settings persist locally: theme, parchment room descriptions, reduced motion (system/on/off), combat auto-focus, Battle layout B (default on; off selects Classic), and inventory opening as an overlay or layout widget. Audio controls are held until game sound exists; inactive Compact Mode and Room Text Overlay controls are hidden.
+  - Combat self and allies share one row on desktop and a stacked section on phones. Joins show one banner; combat prose stays in the log. Defeated enemy sprites remain visible in grey with a Defeated label.
+  - In multi-enemy combat, clicking a BattleStage enemy or pressing Tab changes the gold focus highlight and server aim without spending a turn. Basic attacks and hostile skills use that living target; switching to an orange, red, or skull foe repeats the level-gap warning once per change. A dead target falls back to a living foe.
   - Say chrome opens a message popup, then sends `say <text>`
   - Inventory chrome opens overlay by default (preference: overlay | on-screen widget)
   - Equipment paper-doll: square slots around portrait (head/neck/chest/hands | legs/boots/ring1/ring2; main_hand + off_hand under); compact ATK/DEF strip
+  - Clicking equipped gear opens a detail card; Unequip is an explicit action. Inventory item cards show stats, value, available weight, usability requirements, and differences from worn gear. Clear class-relevant upgrades get a green badge. Equip, Use, Sell, and Drop remain explicit buttons.
   - Room action/system reaction toast: centered on room hero art; LOOK-sized padding (no half-cut last line)
   - Quest Accepted / Complete: Veilspan moment cards (centered); open Talk dialog refreshes `[Quest]` → `[In Progress]`
   - Quest log Turn In for anywhere-ready quests; otherwise Turn in: NPC hint
@@ -82,7 +89,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Server-side room/area discovery tracking per character, used by the discovered-world atlas (web + mobile JSON)
   - All-time statistics tracking (including rooms discovered)
   - Mana system for caster classes (Mage, Cleric, Druid) with level and INT scaling
-  - Mana regeneration: out-of-combat (5%/tick passive, 15%/tick resting), in-combat (1+WISMod per round)
+  - Mana regeneration: `regen.out_of_combat` defaults to 2% HP and 5% mana every 10s, `regen.resting` to 10% HP and 15% mana every 10s, and `regen.in_combat` to 0.5% HP and 1% mana every 10s. Intervals follow the server clock. Per-round combat mana stays `CalculateManaRegen` (1+WISMod) and is separate from `regen.in_combat`.
   - Mana potions (Small/Medium/Large) as consumable items
 
 - **Skills & Spells System**
@@ -128,7 +135,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
 
 - **Guest Mode (Play as Guest)**
   - Anonymous 30-minute demo sessions without Auth0 registration
-  - "Play as guest" button on the logged-out welcome screen, next to "Log in / Sign up"
+  - "Play as guest" button on the logged-out welcome screen, under Continue with X, Continue with Google, and Email and password
   - Random character with random class from system templates
   - Spawns in `ServerSettings.StartRoomID` (default `R0001` when that room exists)
   - Auto-grants `source.type: auto` quests for the start room's zone (Z00 catacombs: QST0001–QST0004)
@@ -145,9 +152,9 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
 
 - **New Player Onboarding**
   - Phase-based flow: Welcome Screen, Nickname Setup, Character Creation Wizard, Game
-  - Logged-out players see a welcome choice: **Log in / Sign up** (Auth0 universal login, which offers X, Google, and email) and **Play as guest**
+  - Logged-out players see **Continue with X**, **Continue with Google**, **Email and password**, and **Play as guest**. X and Google pass `connection` (`twitter`, `google-oauth2`) so Auth0 skips the universal login password form. Email is the only button that opens that form
   - Logout clears the Auth0 session and this tab's guest token, then returns to that choice. A guest reload still resumes the guest session
-  - The account menu has **Switch character**, which opens a picker of every character from `/api/my-characters` and sends `sc <name>`. Guests also get **Log in / Save progress**. Signed-in players get **Log out**
+  - The account menu has **Switch character**, which opens a picker of every character from `/api/my-characters` and sends `sc <name>`. Guests get the same X, Google, and email choices. Signed-in players get **Log out**
   - A signed-in player with more than one character sees that picker once per login (the server still enters on `lastCharacter`)
   - First-time users prompted to choose a display name/nickname
   - Three-step character creation wizard: Choose Template, Name Character, Confirm & Create
@@ -345,7 +352,7 @@ talesmud/
 | `drop` | - | Drop an item to the room (blocked for bound items) |
 | `destroy` | `discard` | Destroy an item from inventory |
 | `examine` | `inspect` | Examine an item in detail |
-| `use` | `eat`, `drink`, `consume` | Use a consumable item |
+| `use` | `eat`, `drink`, `consume` | Use an item (`use flint on torch` for item-on-item); Inventory Use on… picks a target |
 | `equip` | `wear` | Equip an item |
 | `unequip` | `remove` | Unequip an item |
 | `equipment` | `eq`, `gear` | Show equipped items |
@@ -392,9 +399,10 @@ The NPCs branch represents the latest development work, focusing on NPC systems 
    - Players can queue special actions between auto-attacks: target switch, defend, flee
    - Combat starts with `attack`/`kill` and proceeds automatically
    - Level-gap modifiers (`config/combat_balance.yaml` `level_gap`): hit, crit, and damage dealt/taken scale with attacker level minus defender level, clamped (default ±6). Equal levels are unchanged. Applies to basic attacks and skills for players and NPCs.
-   - Class balance (`class_balance`): per-class damage dealt and taken, plus an uphill `behind_dealt` multiplier, so warrior, rogue, ranger, and mage share the same win-rate bands. `wizard` uses the mage row.
+   - Class balance (`class_balance`): per-class damage dealt and taken, plus an uphill `behind_dealt` multiplier capped at 1.15. The world-pack class catalog wins when it has a row. `config/combat_balance.yaml` is the fallback. `wizard` uses the mage row. Ranger and hunter share the rogue row.
+   - Boss mechanics (`boss_mechanics`): bosses and elites telegraph blows; bosses enrage on a round count or HP percent. Bosses also progress through Opening, Escalation (66% HP), and Last Stand (33% HP), with a transition banner and persistent BattleStage phase label. YAML controls tiers, bands, labels, and optional damage/enrage overrides.
    - Threat colors from the same gap (grey through skull) on room enemy names and battle nameplates. Orange or worse asks once before `attack`; `attack!` or a second `attack` engages.
-   - Victory XP and gold scale by that tier against the highest level in the reward split. Bosses pay a one-time first-kill bonus per character. The battle victory screen shows base, level modifier, first-kill bonus, and party split.
+   - Victory XP and gold scale by that tier against the highest level in the reward split. Bosses pay a one-time first-kill bonus per character. The battle victory panel shows base, level modifier, and a first-kill bonus when one was paid, then reveals each drop in its rarity color and calls out a level-up. Defeat lists XP, gold, battered armor, and the room you wake in. The panel dismisses on click, Enter, or Escape and leaves the terminal usable. Hits float a number over the struck nameplate (a crit is larger, a miss reads "miss"); crits and Crushing Blow flash harder. `prefers-reduced-motion` turns those animations off.
    - No turn timeouts or AFK mechanics needed
 
 5. **NPC Behavior and Quest Interaction**

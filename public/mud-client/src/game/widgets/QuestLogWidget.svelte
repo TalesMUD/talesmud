@@ -68,6 +68,9 @@
   }
 
   // Subscribe to store for reactive updates
+  let currentAreaLabel = '';
+  let collapsedAreas = {}; // area -> true when collapsed
+
   $: if (store) {
     quests = $store.quests || [];
     // Load pinned quests from localStorage
@@ -75,6 +78,63 @@
       const saved = localStorage.getItem('pinnedQuests');
       pinnedQuests = saved ? JSON.parse(saved) : [];
     }
+    const here = ($store.atlas && ($store.atlas.places || []).find((pl) => pl.id === $store.currentRoomId)) || null;
+    currentAreaLabel = normalizeAreaLabel(here?.areaName || here?.area || '') || deriveAreaFromRoomId($store.currentRoomId);
+  }
+
+  function deriveAreaFromQuestId(questId) {
+    const id = String(questId || '').toUpperCase();
+    if (id.startsWith('QST00')) return 'Catacombs';
+    if (id.startsWith('QST01')) return 'Meadows';
+    if (id.startsWith('QST02')) return 'Oldtown';
+    if (id.startsWith('QST03')) return 'Gloomfen';
+    if (id.startsWith('QST04')) return 'Ashenvale';
+    if (id.startsWith('QST05')) return 'Silver Vale';
+    if (id.startsWith('QST06')) return 'Kazgrath';
+    if (id.startsWith('QST07')) return 'Mirrordeep';
+    if (id.startsWith('QST08')) return 'Highlands';
+    if (id.startsWith('QST09')) return 'Daily';
+    if (id.startsWith('QST10')) return 'Frontier';
+    if (id.startsWith('QST11') || id.startsWith('QST12')) return 'Far Reaches';
+    return 'Other';
+  }
+
+  function normalizeAreaLabel(raw) {
+    let s = String(raw || '').trim();
+    if (!s) return '';
+    if (/^Z\d/i.test(s) && s.includes('_')) s = s.slice(s.indexOf('_') + 1);
+    s = s.replace(/_/g, ' ').toLowerCase();
+    return s.replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  function deriveAreaFromRoomId(roomId) {
+    const id = String(roomId || '').toUpperCase();
+    if (id.startsWith('R00')) return 'Catacombs';
+    if (id.startsWith('R01')) return 'Meadows';
+    if (id.startsWith('R02')) return 'Oldtown';
+    if (id.startsWith('R03')) return 'Gloomfen';
+    if (id.startsWith('R04')) return 'Ashenvale';
+    if (id.startsWith('R05')) return 'Silver Vale';
+    return '';
+  }
+
+  function questArea(q) {
+    return normalizeAreaLabel(q?.area) || deriveAreaFromQuestId(q?.questId);
+  }
+
+  function isAreaExpanded(area) {
+    if (collapsedAreas[area] === true) return false;
+    if (collapsedAreas[area] === false) return true;
+    if (currentAreaLabel && area === currentAreaLabel) return true;
+    if (!currentAreaLabel || !(typeof activeAreaGroups !== 'undefined' && activeAreaGroups.some((g) => g.area === currentAreaLabel))) {
+      return !!(activeAreaGroups && activeAreaGroups[0] && activeAreaGroups[0].area === area);
+    }
+    return false;
+  }
+
+  function toggleAreaGroup(area) {
+    const open = isAreaExpanded(area);
+    collapsedAreas = { ...collapsedAreas, [area]: open };
   }
 
   $: toolsActive = !!(searchQuery || selectedTypes.length > 0 || filterCategory !== 'all' || sortBy !== 'status' || !showCompleted || showAbandoned);
@@ -131,6 +191,23 @@
   // Separate by pinned status
   $: pinnedQuestList = sortedQuests.filter((q) => pinnedQuests.includes(q.questId) && q.status === 'active');
   $: unpinnedActiveQuests = sortedQuests.filter((q) => !pinnedQuests.includes(q.questId) && q.status === 'active');
+  $: activeAreaGroups = (() => {
+    const map = new Map();
+    for (const q of unpinnedActiveQuests) {
+      const area = questArea(q);
+      if (!map.has(area)) map.set(area, []);
+      map.get(area).push(q);
+    }
+    const groups = Array.from(map.entries()).map(([area, items]) => ({ area, items, count: items.length }));
+    groups.sort((a, b) => {
+      if (currentAreaLabel) {
+        if (a.area === currentAreaLabel && b.area !== currentAreaLabel) return -1;
+        if (b.area === currentAreaLabel && a.area !== currentAreaLabel) return 1;
+      }
+      return a.area.localeCompare(b.area);
+    });
+    return groups;
+  })();
   $: completedQuests = sortedQuests.filter((q) => q.status === "completed");
   $: abandonedQuests = sortedQuests.filter((q) => q.status === "abandoned");
   $: failedQuests = sortedQuests.filter((q) => q.status === "failed");
@@ -236,24 +313,45 @@
 <div class="questlog-widget game-panel">
   <div class="questlog-header">
     <div class="header-title-row">
-      <h2>Quest Log</h2>
+      <h2 class="widget-chrome-title">Quest Log</h2>
+    </div>
+    <div class="quest-toolbar" role="toolbar" aria-label="Quest filters and tools">
+      <div class="type-filter-chips" role="group" aria-label="Filter by quest type">
+        {#each QUEST_TYPE_OPTIONS as chip}
+          <button
+            type="button"
+            class="type-chip"
+            class:active={selectedTypes.includes(chip.id)}
+            style="--chip-color: {chip.color}"
+            on:click={() => toggleTypeFilter(chip.id)}
+            aria-pressed={selectedTypes.includes(chip.id)}
+          >{chip.label}</button>
+        {/each}
+      </div>
       <div class="header-actions">
         <button
+          type="button"
           class="history-btn"
+          class:active={showHistory}
           on:click={() => { showHistory = !showHistory; showToolsMenu = false; }}
-          title="View Quest History"
+          title="Quest statistics"
+          aria-label="Quest statistics"
+          aria-pressed={showHistory}
         >
-          📊
+          <i class="material-icons" aria-hidden="true">bar_chart</i>
+          <span class="action-label">Stats</span>
         </button>
         <button
+          type="button"
           class="tools-btn"
           class:active={showToolsMenu || toolsActive}
           on:click={toggleToolsMenu}
-          title="Search and filters"
-          aria-label="Search and filters"
+          title="Search and more filters"
+          aria-label="Search and more filters"
           aria-expanded={showToolsMenu}
         >
-          <i class="material-icons">more_horiz</i>
+          <i class="material-icons" aria-hidden="true">tune</i>
+          <span class="action-label">More</span>
         </button>
       </div>
     </div>
@@ -299,18 +397,6 @@
         </div>
       </div>
     {/if}
-    <div class="type-filter-chips" role="group" aria-label="Filter by quest type">
-      {#each QUEST_TYPE_OPTIONS as chip}
-        <button
-          type="button"
-          class="type-chip"
-          class:active={selectedTypes.includes(chip.id)}
-          style="--chip-color: {chip.color}"
-          on:click={() => toggleTypeFilter(chip.id)}
-          aria-pressed={selectedTypes.includes(chip.id)}
-        >{chip.label}</button>
-      {/each}
-    </div>
   </div>
 
   <div class="questlog-content">
@@ -516,7 +602,19 @@
     {#if unpinnedActiveQuests.length > 0}
       <div class="quest-section">
         <h3 class="section-title">Active ({unpinnedActiveQuests.length})</h3>
-        {#each unpinnedActiveQuests as quest}
+        {#each activeAreaGroups as group}
+          <div class="area-group" class:current={currentAreaLabel && group.area === currentAreaLabel} class:collapsed={!isAreaExpanded(group.area)}>
+            <button type="button" class="area-group-header" on:click={() => toggleAreaGroup(group.area)} aria-expanded={isAreaExpanded(group.area)}>
+              <span class="area-chevron">{isAreaExpanded(group.area) ? '▾' : '▸'}</span>
+              <span class="area-name">{group.area}</span>
+              <span class="area-count">{group.count}</span>
+              {#if currentAreaLabel && group.area === currentAreaLabel}
+                <span class="area-here">Here</span>
+              {/if}
+            </button>
+            {#if isAreaExpanded(group.area)}
+              <div class="area-group-body">
+                {#each group.items as quest}
           <div class="quest-entry" class:ready={isQuestReady(quest)} class:expanded={expandedQuest === quest.questId}>
             <button
               class="quest-name"
@@ -607,6 +705,10 @@
                     Abandon Quest
                   </button>
                 </div>
+              </div>
+            {/if}
+          </div>
+                        {/each}
               </div>
             {/if}
           </div>
@@ -748,12 +850,12 @@
 
   .questlog-header {
     position: relative;
-    padding: 0.45em 0.75em;
+    padding: 0.35em 0.65em 0.4em;
     background: var(--panel-header-bg);
     border-bottom: 1px solid var(--panel-header-border);
     display: flex;
     flex-direction: column;
-    gap: 0;
+    gap: 0.3em;
     flex-shrink: 0;
   }
 
@@ -762,6 +864,14 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.5em;
+    min-height: 0;
+  }
+
+  .quest-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.45em;
     min-height: 28px;
   }
 
@@ -770,6 +880,7 @@
     align-items: center;
     gap: 0.3em;
     flex-shrink: 0;
+    margin-left: auto;
   }
 
   .questlog-header h2 {
@@ -788,28 +899,41 @@
     background: var(--btn-bg);
     border: 1px solid var(--btn-border);
     color: var(--accent-primary);
-    padding: 4px 8px;
-    border-radius: 4px;
+    padding: 3px 8px;
+    border-radius: 999px;
     cursor: pointer;
-    font-size: 14px;
-    transition: all 0.2s;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    transition: all 0.15s ease;
     line-height: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 28px;
-    min-height: 28px;
+    gap: 3px;
+    min-height: 26px;
+    font-family: inherit;
   }
 
+  .history-btn i,
   .tools-btn i {
-    font-size: 18px;
+    font-size: 15px;
+    line-height: 1;
+  }
+
+  .action-label {
+    font-size: 0.68rem;
+    line-height: 1;
   }
 
   .history-btn:hover,
   .tools-btn:hover,
+  .history-btn.active,
   .tools-btn.active {
     background: var(--btn-hover-bg);
     border-color: var(--btn-hover-border);
+    color: var(--text-primary, #f8fafc);
   }
 
   .tools-backdrop {
@@ -821,9 +945,9 @@
 
   .tools-menu {
     position: absolute;
-    top: calc(100% - 1px);
-    right: 0.5em;
-    left: 0.5em;
+    top: calc(100% - 2px);
+    right: 0.4em;
+    left: 0.4em;
     z-index: 45;
     display: flex;
     flex-direction: column;
@@ -970,6 +1094,56 @@
     margin-bottom: 1em;
     flex-shrink: 0;
   }
+
+  
+  .area-group {
+    margin: 0.45em 0 0.65em;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 8px;
+    background: rgba(8, 12, 18, 0.45);
+    overflow: hidden;
+  }
+  .area-group.current {
+    border-color: rgba(232, 168, 73, 0.45);
+    box-shadow: inset 0 0 0 1px rgba(232, 168, 73, 0.12);
+  }
+  .area-group-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.45em;
+    padding: 0.45em 0.65em;
+    background: rgba(180, 130, 60, 0.08);
+    border: 0;
+    color: #e8dcc8;
+    cursor: pointer;
+    font-family: var(--font-display, Cinzel, serif);
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: left;
+  }
+  .area-group-header:hover { background: rgba(180, 130, 60, 0.16); }
+  .area-chevron { color: #c8a84e; width: 0.9em; }
+  .area-name { font-weight: 700; flex: 1; min-width: 0; }
+  .area-count {
+    font-size: 0.68rem;
+    color: #94a3b8;
+    background: rgba(0,0,0,0.35);
+    border-radius: 999px;
+    padding: 0.1em 0.5em;
+  }
+  .area-here {
+    font-size: 0.62rem;
+    color: #0b1119;
+    background: #e8a849;
+    border-radius: 4px;
+    padding: 0.12em 0.4em;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+  .area-group-body { padding: 0.25em 0.35em 0.45em; }
+  .area-group.collapsed .area-group-header { opacity: 0.92; }
 
   .section-title {
     font-family: var(--font-display);
@@ -1539,13 +1713,16 @@
 
   .type-filter-chips {
     display: flex;
-    gap: 6px;
+    gap: 5px;
     flex-wrap: wrap;
-    padding: 0.4em 0 0.1em;
+    align-items: center;
+    min-width: 0;
+    flex: 1;
+    padding: 0;
   }
 
   .type-chip {
-    padding: 3px 10px;
+    padding: 4px 11px;
     border-radius: 999px;
     font-size: var(--text-xs);
     font-weight: bold;
@@ -1553,24 +1730,37 @@
     letter-spacing: 0.06em;
     cursor: pointer;
     font-family: inherit;
-    border: 1px solid var(--chip-color);
-    color: var(--chip-color);
-    background: transparent;
-    opacity: 0.5;
+    border: 1px solid color-mix(in srgb, var(--chip-color) 35%, transparent);
+    color: color-mix(in srgb, var(--chip-color) 72%, #94a3b8);
+    background: color-mix(in srgb, var(--chip-color) 8%, transparent);
+    opacity: 1;
     transition: all 0.15s ease;
-    line-height: 1.3;
+    line-height: 1.25;
+    min-height: 26px;
   }
 
   .type-chip:hover {
-    opacity: 0.85;
+    color: var(--chip-color);
+    border-color: color-mix(in srgb, var(--chip-color) 70%, transparent);
     background: color-mix(in srgb, var(--chip-color) 18%, transparent);
   }
 
   .type-chip.active {
-    opacity: 1;
     color: #ffffff;
     background: var(--chip-color);
     border-color: var(--chip-color);
-    box-shadow: 0 0 8px color-mix(in srgb, var(--chip-color) 45%, transparent);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--chip-color) 40%, transparent);
+  }
+
+  @media (max-width: 420px) {
+    .action-label {
+      display: none;
+    }
+
+    .history-btn,
+    .tools-btn {
+      padding: 3px 6px;
+      min-width: 26px;
+    }
   }
 </style>

@@ -144,6 +144,12 @@ damage *= dealt * defender.damage_taken
 
 A multiplier of 0 or a missing class is 1. The scaled boss body used by the gap table (`CreateScaledEnemy`, difficulty `boss`) is `220 + 23*level` hit points. Content bosses still go through `CreateEnemy` and `difficulty_multipliers`.
 
+## Boss telegraph and enrage
+
+`boss_mechanics` keys: `telegraph_turns`, `telegraph_ms`, `telegraph_label`, `telegraph_tiers`, `enrage_after_rounds`, `enrage_below_hp`, `enrage_damage`, `enrage_tiers`, `enrage_skips_telegraph`.
+
+A listed tier spends `telegraph_turns` of its own actions on a warning (`TelegraphAbility` on the combatant, `telegraph` on the client view). The hit resolves when that count reaches zero. Enrage sets `Enraged`, multiplies later hits by `enrage_damage`, and skips new wind-ups when `enrage_skips_telegraph` is true. Defaults: bosses and `hard` elites telegraph one turn; only bosses enrage, at round 16 or at 30% HP, for 1.20× damage.
+
 ## Threat colors
 
 `threat` cutoffs use `enemyLevel - playerLevel` (not the attacker's advantage). Defaults: ≤ −3 grey, −2..−1 green, 0..+1 yellow, +2 orange, +3..+4 red, ≥ +5 skull. Room NPC payloads and combat enemy views include `threat` for the viewer. Orange, red, and skull require `attack!` or a second `attack` before combat starts.

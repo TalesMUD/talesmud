@@ -396,6 +396,35 @@ func RegisterGameModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 			return 1
 		}
 
+		if tpl, terr := facade.ItemsService().FindByID(templateID); terr == nil && tpl != nil && tpl.Unique {
+			var blocked bool
+			err := facade.CharactersService().Modify(characterID, func(character *characters.Character) error {
+				held, trimmed := character.PrepareUniquePickup(templateID, true)
+				if trimmed > 0 {
+					logrus.WithFields(logrus.Fields{
+						"character": characterID,
+						"template":  templateID,
+						"removed":   trimmed,
+					}).Info("trimmed duplicate unique items")
+				}
+				blocked = held
+				return nil
+			})
+			if err != nil {
+				logrus.WithField("characterID", characterID).WithField("item", templateID).WithError(err).Warn("[Script] giveItem: failed to persist character")
+				L.Push(lua.LBool(false))
+				return 1
+			}
+			if blocked {
+				logrus.WithFields(logrus.Fields{
+					"character": characterID,
+					"template":  templateID,
+				}).Info("unique item give blocked")
+				L.Push(lua.LBool(true))
+				return 1
+			}
+		}
+
 		item, err := facade.ItemsService().CreateInstanceFromTemplate(templateID)
 		if err != nil || item == nil {
 			logrus.WithField("templateID", templateID).WithError(err).Warn("[Script] giveItem: failed to create item from template")
@@ -404,6 +433,21 @@ func RegisterGameModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 		}
 
 		err = facade.CharactersService().Modify(characterID, func(character *characters.Character) error {
+			held, trimmed := character.PrepareUniquePickup(templateID, item.Unique)
+			if trimmed > 0 {
+				logrus.WithFields(logrus.Fields{
+					"character": characterID,
+					"template":  templateID,
+					"removed":   trimmed,
+				}).Info("trimmed duplicate unique items")
+			}
+			if held {
+				logrus.WithFields(logrus.Fields{
+					"character": characterID,
+					"template":  templateID,
+				}).Info("unique item give blocked")
+				return nil
+			}
 			return character.Inventory.AddItem(item)
 		})
 		if err != nil {

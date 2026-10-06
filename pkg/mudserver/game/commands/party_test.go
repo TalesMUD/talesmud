@@ -61,6 +61,7 @@ func TestPartyCreateStoresPartyForCurrentCharacter(t *testing.T) {
 	character := &characters.Character{
 		Entity:      &entities.Entity{ID: "char-1"},
 		Name:        "Aster",
+		Race:        characters.RaceHuman,
 		BelongsUser: *traits.BelongsToUser("user-1"),
 	}
 	if _, err := facade.CharactersService().Import(character); err != nil {
@@ -239,6 +240,7 @@ func TestPartyCreateSetsLeaderAndRichMembers(t *testing.T) {
 	character := &characters.Character{
 		Entity:      &entities.Entity{ID: "char-1"},
 		Name:        "Aster",
+		Race:        characters.RaceHuman,
 		Class:       characters.ClassWarrior,
 		Level:       3,
 		BelongsUser: *traits.BelongsToUser("user-1"),
@@ -274,7 +276,7 @@ func TestPartyCreateSetsLeaderAndRichMembers(t *testing.T) {
 		t.Fatalf("expected roster with one member, got %#v", roster)
 	}
 	m := roster.Members[0]
-	if m.Level != 3 || m.Class != "Warrior" || !m.IsLeader || m.Portrait != "https://example.com/a.png" {
+	if m.Level != 3 || m.Class != characters.ClassWarrior.Name || !m.IsLeader || m.Portrait != "/api/portraits/player-human-warrior.png" {
 		t.Fatalf("expected rich member fields, got %#v", m)
 	}
 	if roster.MaxMembers != entities.MaxPartySize || roster.LeaderID != "char-1" {

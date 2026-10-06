@@ -17,6 +17,7 @@
   import axios from "axios";
   import { onInterval } from "../utils.js";
   import { getCharacterTemplates, createNewCharacter } from "../api/characters";
+  import { racesForTemplate } from "../onboarding/raceAllow.js";
 
   let data = [];
   let topTen = [];
@@ -27,6 +28,7 @@
     character: {},
     name: "unnamed",
     description: "Describe your new character",
+    race: "",
   });
 
   const {
@@ -48,10 +50,13 @@
   };
 
   const create = () => {
+    const races = racesForTemplate($store.character);
+    const race = races.some((item) => item.id === $store.race) ? $store.race : (races[0]?.id || "");
     const createDTO = {
       name: $store.name,
       description: $store.description,
       templateId: $store.selectedTemplate,
+      race,
     };
 
     createNewCharacter(
@@ -107,6 +112,8 @@
                   state.character = character;
                   state.name = character.name;
                   state.description = character.description;
+                  const allowed = racesForTemplate(character);
+                  state.race = allowed[0]?.id || "";
                   return state;
                 });
               }}"
@@ -147,6 +154,17 @@
           />
           <label for="description" class="active">Description</label>
         </div>
+
+        {#if racesForTemplate($store.character).length}
+          <div class="input-field">
+            <select bind:value="{$store.race}" id="race">
+              {#each racesForTemplate($store.character) as race}
+                <option value="{race.id}">{race.name} — {race.blurb}</option>
+              {/each}
+            </select>
+            <label for="race" class="active">Race</label>
+          </div>
+        {/if}
       </div>
     </div>
   </div>

@@ -63,6 +63,7 @@ func TestAttackJoinsExistingSameRoomCombat(t *testing.T) {
 	}
 
 	var sawCombatStart bool
+	var sawRoster bool
 	var sawRefuse bool
 	for _, out := range drainSocialMessages(g.SendMessage()) {
 		switch msg := out.(type) {
@@ -74,6 +75,10 @@ func TestAttackJoinsExistingSameRoomCombat(t *testing.T) {
 			if msg.AudienceID == userB.ID {
 				sawCombatStart = true
 			}
+		case *messages.CombatActionMessage:
+			if msg.AudienceID == userA.ID && msg.Action == "join" {
+				sawRoster = len(msg.Combatants) == 3 && msg.Combatants[1].ID == charB.ID && msg.Combatants[1].Type == "player"
+			}
 		}
 	}
 	if sawRefuse {
@@ -81,6 +86,9 @@ func TestAttackJoinsExistingSameRoomCombat(t *testing.T) {
 	}
 	if !sawCombatStart {
 		t.Fatal("expected combatStart for joining player B")
+	}
+	if !sawRoster {
+		t.Fatal("existing fighter did not receive a typed roster with the joining player")
 	}
 
 	inst = g.GetCombatEngine().GetCombatInstance(charB.ID)

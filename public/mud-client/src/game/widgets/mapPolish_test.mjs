@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {knownFeatures,roofKind,roadWaterCrossings,roundedHull} from './mapArt.js';
+import {undergroundModel} from './undergroundRenderer.js';
+const known={id:'a',x:0,y:0,area:'town',discovered:true,mapFeatures:['forge']};
+const unknown={...known,id:'b',discovered:false,mapFeatures:['magic']};
+assert.deepEqual(knownFeatures({members:[known,unknown]}),['forge']);
+assert.equal(roofKind(known),'forge');assert.equal(roofKind({mapFeatures:['shop','shrine']}),'shrine');
+const b={...known,id:'b',x:4};
+const cells=new Map([['2:0',{x:2,y:0,terrain:'water'}],['3:0',{x:3,y:0,terrain:'fog'}]]);
+const bridges=roadWaterCrossings([{a:known,b},{a:b,b:known}],cells);
+assert.equal(bridges.length,1,'one bridge per charted water cell; never over fog');assert.equal(bridges[0].x,2);
+const hull=roundedHull([{x:0,y:0},{x:0,y:100}],20);
+assert.equal(hull.length,4);assert.ok(hull.some(p=>p.y===-20)&&hull.some(p=>p.y===120),'wall envelope follows the street extent');
+const lower=[{...known,layer:'lower',undergroundStyle:'crypt'},{...b,x:1,layer:'lower',undergroundStyle:'sewer'}, {...unknown,id:'fog',layer:'lower'}];
+const atlas={places:lower,paths:[{from:'a',to:'b',dir:'east'},{from:'a',to:'fog',dir:'west'}]};
+const model=undergroundModel(atlas);assert.equal(model.corridors.length,1,'unknown underground rooms never expose corridors');
+assert.equal(undergroundModel({places:[],paths:[]}),null);
+console.log('mapPolish: disclosed art, service roof choice, water bridges, street walls, underground fog/topology OK');

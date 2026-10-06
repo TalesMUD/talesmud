@@ -11,6 +11,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/combat"
+	"github.com/talesmud/talesmud/pkg/entities/items"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/balance"
 	combatpkg "github.com/talesmud/talesmud/pkg/mudserver/game/combat"
@@ -97,6 +98,7 @@ func (c *CombatController) GetCombatInstance(characterID string) *combat.CombatI
 
 // InitiateCombat starts combat between players and enemies
 func (c *CombatController) InitiateCombat(roomID string, players []*characters.Character, enemies []*npc.NPC) *combat.CombatInstance {
+	c.fillKitHotbars(players)
 	return c.engine.InitiateCombat(roomID, players, enemies)
 }
 
@@ -118,6 +120,7 @@ func (c *CombatController) ProcessPlayerAttack(characterID, targetID string) (me
 	}
 
 	result := c.engine.ProcessAttack(instance, characterID, targetID)
+	c.applyWeaponOnHitScript(instance, characterID, targetID, &result)
 	message = result.Message
 
 	// Advance turn
@@ -578,13 +581,23 @@ func (c *CombatController) emitCombatTurn(instance *combat.CombatInstance, actor
 	}
 }
 
+func combatantView(r combat.CombatantRef) messages.CombatantView {
+	return messages.CombatantView{
+		ID: r.ID, Type: string(r.Type), Name: r.Name, Portrait: r.Portrait,
+		HP: r.CurrentHP, MaxHP: r.MaxHP, Mana: r.CurrentMana, MaxMana: r.MaxMana,
+		ClassID: r.ClassID, IsAlive: r.IsAlive, HasFled: r.HasFled, Level: r.Level,
+		Telegraph: r.TelegraphAbility, Enraged: r.Enraged,
+		BossPhase: r.BossPhase, BossPhaseLabel: r.BossPhaseLabel, BossPhaseCount: r.BossPhaseCount,
+	}
+}
+
 func combatantViewsFromInstance(instance *combat.CombatInstance) []messages.CombatantView {
 	out := make([]messages.CombatantView, 0, len(instance.Players)+len(instance.Enemies))
 	for _, p := range instance.Players {
-		out = append(out, messages.CombatantView{ID: p.ID, Name: p.Name, Portrait: p.Portrait, HP: p.CurrentHP, MaxHP: p.MaxHP, Level: p.Level})
+		out = append(out, combatantView(p))
 	}
 	for _, e := range instance.Enemies {
-		out = append(out, messages.CombatantView{ID: e.ID, Name: e.Name, Portrait: e.Portrait, HP: e.CurrentHP, MaxHP: e.MaxHP, Level: e.Level})
+		out = append(out, combatantView(e))
 	}
 	return out
 }
@@ -737,8 +750,8 @@ func (c *CombatController) Update() {
 		// Process all turns continuously (both NPC and player)
 		c.processAllTurns(instance)
 
-		// Check for global combat timeout
-		if time.Since(instance.CreatedAt).Minutes() >= float64(c.engine.Config.CombatTimeoutMinutes) {
+		// Idle soft-release or absolute combat timeout → Timeout (no death/gold/XP loss)
+		if c.engine.CheckCombatEnd(instance) == combat.CombatStateTimeout {
 			c.engine.EndCombat(instance, combat.CombatStateTimeout)
 			c.cleanupCombatInstance(instance, combat.CombatStateTimeout)
 		}
@@ -799,11 +812,15 @@ func (c *CombatController) processAllTurnsLocked(instance *combat.CombatInstance
 	logLenBefore := len(instance.Log)
 	stunned := c.engine.ProcessStatusEffects(instance, current)
 	for j := logLenBefore; j < len(instance.Log); j++ {
-		if instance.Log[j].Message != "" {
-			c.notifyPlayersInCombat(instance, instance.Log[j].Message)
+		entry := instance.Log[j]
+		if entry.Result == "phase-enter" {
+			c.notifyBossPhaseEntry(instance, entry)
+		} else if entry.Message != "" {
+			c.notifyPlayersInCombat(instance, entry.Message)
 		}
 	}
 
+	logLenBefore = len(instance.Log)
 	current = instance.GetCurrentTurnCombatant()
 	if current == nil || !current.IsAlive {
 		endState := c.engine.CheckCombatEnd(instance)
@@ -828,6 +845,13 @@ func (c *CombatController) processAllTurnsLocked(instance *combat.CombatInstance
 		c.processPlayerAutoAttack(instance, current)
 	}
 
+	// Phase entries are emitted after the action with live roster snapshots.
+	// All HP paths (attack, skill, DoT) share this turn boundary.
+	for _, entry := range instance.Log[logLenBefore:] {
+		if entry.Result == "phase-enter" {
+			c.notifyBossPhaseEntry(instance, entry)
+		}
+	}
 	c.sendPlayerCharacterUpdate(instance)
 
 	endState := c.engine.CheckCombatEnd(instance)
@@ -840,9 +864,31 @@ func (c *CombatController) processAllTurnsLocked(instance *combat.CombatInstance
 	c.finishTurnBeat(instance)
 }
 
+func (c *CombatController) notifyBossPhaseEntry(instance *combat.CombatInstance, entry combat.CombatLogEntry) {
+	c.notifyCombatAction(instance, messages.CombatActionMessage{
+		ActorID: entry.ActorID, ActorName: entry.ActorName,
+		Action: "phase-enter", Result: "phase-enter", FxID: "phase-enter",
+	}, entry.Message)
+}
+
 // finishTurnBeat advances to the next combatant and applies the authored beat budget gate.
 func (c *CombatController) finishTurnBeat(instance *combat.CombatInstance) {
+	before := 0
+	if instance != nil {
+		before = len(instance.Log)
+	}
 	c.engine.NextTurn(instance)
+	if instance != nil {
+		for _, entry := range instance.Log[before:] {
+			if entry.Action == combat.CombatActionRig && entry.Message != "" {
+				c.notifyCombatAction(instance, messages.CombatActionMessage{
+					ActorID: entry.ActorID, ActorName: entry.ActorName,
+					TargetID: entry.TargetID, Action: string(combat.CombatActionRig),
+					Result: entry.Result, Damage: entry.Damage, FxID: "attack",
+				}, entry.Message)
+			}
+		}
+	}
 	instance.Phase = combat.CombatPhasePlayingBeat
 	instance.NextActionAt = time.Now().Add(c.engine.Config.BeatBudget())
 	instance.DecisionDeadline = time.Time{}
@@ -862,7 +908,19 @@ func (c *CombatController) resolveNPCTurn(instance *combat.CombatInstance, curre
 	switch action {
 	case combat.CombatActionAttack:
 		if targetID != "" {
-			result := c.engine.ProcessAttack(instance, current.ID, targetID)
+			step := c.engine.StepNPCAttack(instance, current.ID, targetID)
+			if step.Telegraph {
+				c.notifyCombatAction(instance, messages.CombatActionMessage{
+					ActorID:   current.ID,
+					ActorName: current.Name,
+					TargetID:  targetID,
+					Action:    "telegraph",
+					Result:    "telegraph",
+					FxID:      "telegraph",
+				}, step.Message)
+				break
+			}
+			result := step.Attack
 			target := instance.GetCombatantByID(targetID)
 			remaining, maxHP := int32(0), int32(0)
 			if target != nil {
@@ -873,6 +931,7 @@ func (c *CombatController) resolveNPCTurn(instance *combat.CombatInstance, curre
 				ActorName:   current.Name,
 				TargetID:    targetID,
 				Action:      string(combat.CombatActionAttack),
+				Ability:     step.Ability,
 				Result:      resultStringForAttack(result),
 				Damage:      result.Damage,
 				RemainingHP: remaining,
@@ -942,7 +1001,7 @@ func (c *CombatController) cleanupCombatInstance(instance *combat.CombatInstance
 	case combat.CombatStateFled:
 		c.notifyAllPlayersInInstance(instance, "\n═══════════════════════════════════════════════════\n              ESCAPED\n═══════════════════════════════════════════════════\n\nYou have fled from combat!\n═══════════════════════════════════════════════════", string(combat.CombatStateFled))
 	case combat.CombatStateTimeout:
-		c.notifyAllPlayersInInstance(instance, "Combat has timed out due to inactivity.", string(combat.CombatStateTimeout))
+		c.notifyAllPlayersInInstance(instance, "\n═══════════════════════════════════════════════════\n         COMBAT RELEASED\n═══════════════════════════════════════════════════\n\nCombat timed out — you are free to move again.\n(No death penalty.)\n═══════════════════════════════════════════════════", string(combat.CombatStateTimeout))
 	}
 
 	// Clear combat state from players
@@ -979,8 +1038,14 @@ func (c *CombatController) cleanupCombatInstance(instance *combat.CombatInstance
 		}
 	}
 
-	// Remove the instance
+	// Remove the instance before catch-up so IsPlayerInCombat is clear.
 	c.manager.RemoveInstance(instance.ID)
+	for _, player := range instance.Players {
+		if player.ID == "" || c.game == nil {
+			continue
+		}
+		c.game.CatchUpPartyFollow(player.ID)
+	}
 
 	log.WithFields(log.Fields{
 		"instanceID": instance.ID,
@@ -1020,6 +1085,7 @@ func (c *CombatController) refreshOriginRoomAfterCombat(instance *combat.CombatI
 func (c *CombatController) processCombatVictory(instance *combat.CombatInstance) {
 	var rawRewards []rawEnemyReward
 	var allLootItems []string
+	var allLoot []messages.LootReveal
 	var enemyNames []string
 
 	// Get the room for loot drops
@@ -1076,11 +1142,12 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 
 			lootResult, err := DropLootFromNPC(c.game.Facade, npcData, room, killerLevel)
 			if err == nil && lootResult != nil {
-				for _, item := range lootResult.Items {
-					if item.Stackable && item.Quantity > 1 {
-						allLootItems = append(allLootItems, fmt.Sprintf("%s (x%d)", item.Name, item.Quantity))
+				for _, reveal := range lootReveals(lootResult.Items) {
+					allLoot = append(allLoot, reveal)
+					if reveal.Quantity > 1 {
+						allLootItems = append(allLootItems, fmt.Sprintf("%s (x%d)", reveal.Name, reveal.Quantity))
 					} else {
-						allLootItems = append(allLootItems, item.Name)
+						allLootItems = append(allLootItems, reveal.Name)
 					}
 				}
 			}
@@ -1177,9 +1244,15 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 		char.XP += int32(awardedXP)
 		char.Gold += awardedGold
 
-		var levelMsg string
+		var levelUpResult *leveling.LevelUpResult
+		var callout *messages.LevelUpCallout
 		if result := leveling.MaybeLevelUp(char); result != nil {
-			levelMsg = result.Message
+			levelUpResult = result
+			callout = &messages.LevelUpCallout{
+				OldLevel: result.OldLevel,
+				NewLevel: result.NewLevel,
+				Message:  result.Message,
+			}
 		}
 		_ = c.game.Facade.CharactersService().Update(share.ID, char)
 
@@ -1188,6 +1261,10 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 			victoryText := formatCombatVictoryText(enemyNames, allLootItems, awardedXP, awardedGold, shareBlock, formatRewardLines(breakdown))
 			end := messages.NewCombatEndMessage(userID, victoryText, string(combat.CombatStateVictory))
 			end.Rewards = &breakdown
+			if len(allLoot) > 0 {
+				end.Loot = append([]messages.LootReveal(nil), allLoot...)
+			}
+			end.LevelUp = callout
 			c.game.sendMessage <- end
 		}
 		if toast != "" {
@@ -1198,13 +1275,8 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 				Message:    toast,
 			}
 		}
-		if levelMsg != "" {
-			c.game.sendMessage <- messages.MessageResponse{
-				Audience:   messages.MessageAudienceUser,
-				AudienceID: userID,
-				Type:       messages.MessageTypeLevelUp,
-				Message:    levelMsg,
-			}
+		if msg := messages.NewLevelUpMessage(userID, levelUpResult); msg != nil {
+			c.game.sendMessage <- msg
 		}
 
 		// Character update carries the new XP. Inventory update carries gold.
@@ -1333,6 +1405,10 @@ func (c *CombatController) processCombatDefeat(instance *combat.CombatInstance) 
 		}
 
 		outcome := ruleset.ApplyDeath(char)
+		summary := &messages.DefeatSummary{
+			XPLost:   outcome.XPLost,
+			GoldLost: outcome.GoldLost,
+		}
 
 		var sb strings.Builder
 		sb.WriteString("\n═══════════════════════════════════════════════════\n")
@@ -1349,6 +1425,7 @@ func (c *CombatController) processCombatDefeat(instance *combat.CombatInstance) 
 
 		if outcome.DamageArmor {
 			if damaged := char.DamageEquippedArmor(); len(damaged) > 0 {
+				summary.Armor = damaged
 				sb.WriteString("Your armor is battered:\n")
 				for _, name := range damaged {
 					sb.WriteString("  - ")
@@ -1361,6 +1438,8 @@ func (c *CombatController) processCombatDefeat(instance *combat.CombatInstance) 
 
 		if outcome.RespawnRoomID != "" && outcome.RespawnRoomID != char.CurrentRoomID {
 			if boundRoom, ok := c.game.RelocateCharacter(char, char.BelongsUserID, outcome.RespawnRoomID); ok {
+				summary.RespawnRoom = boundRoom.Name
+				summary.RespawnRoomID = boundRoom.ID
 				sb.WriteString(fmt.Sprintf("\nYou find yourself back at %s.\n", boundRoom.Name))
 			}
 		}
@@ -1375,10 +1454,14 @@ func (c *CombatController) processCombatDefeat(instance *combat.CombatInstance) 
 
 		sb.WriteString(fmt.Sprintf("\nYou awaken with %d/%d HP.\n", char.CurrentHitPoints, char.MaxHitPoints))
 		sb.WriteString("═══════════════════════════════════════════════════")
+		summary.HP = char.CurrentHitPoints
+		summary.MaxHP = char.MaxHitPoints
 
 		c.game.Facade.CharactersService().Update(player.ID, char)
 
-		c.game.sendMessage <- messages.NewCombatEndMessage(char.BelongsUserID, sb.String(), string(combat.CombatStateDefeat))
+		end := messages.NewCombatEndMessage(char.BelongsUserID, sb.String(), string(combat.CombatStateDefeat))
+		end.Defeat = summary
+		c.game.sendMessage <- end
 	}
 }
 
@@ -1536,6 +1619,38 @@ func (c *CombatController) processPlayerAutoAttack(instance *combat.CombatInstan
 					c.syncPlayerHP(diedID, 0)
 				}
 			}
+			if skillResult.Success && skillResult.KeepsSwing {
+				if again := instance.GetPlayerByID(player.ID); again != nil && again.IsAlive && !again.HasFled {
+					c.doAutoAttack(instance, again)
+				}
+			}
+			if skillResult.Success && skillResult.SlipMove {
+				c.slipOneExit(instance, player.ID)
+			}
+			if skillResult.Success && skillResult.ReelID != "" {
+				c.reelOneRoom(instance, skillResult.ReelID)
+			}
+
+		case combat.CombatActionBolt:
+			msg := c.engine.ProcessBolt(instance, player.ID, player.QueuedTargetID)
+			if msg == "" {
+				msg = "The scrap does nothing."
+			}
+			c.notifyCombatAction(instance, messages.CombatActionMessage{
+				ActorID: player.ID, ActorName: player.Name,
+				TargetID: player.QueuedTargetID, Action: string(combat.CombatActionBolt),
+				Result: "bolt", FxID: "attack",
+			}, msg)
+
+		case combat.CombatActionRig:
+			msg := c.engine.ProcessRig(instance, player.ID)
+			if msg == "" {
+				msg = "The rig does nothing."
+			}
+			c.notifyCombatAction(instance, messages.CombatActionMessage{
+				ActorID: player.ID, ActorName: player.Name,
+				Action: string(combat.CombatActionRig), Result: "rig", FxID: "attack",
+			}, msg)
 
 		case combat.CombatActionAttack:
 			targetID := player.QueuedTargetID
@@ -1544,6 +1659,7 @@ func (c *CombatController) processPlayerAutoAttack(instance *combat.CombatInstan
 				target := instance.GetCombatantByID(targetID)
 				if target != nil && target.IsAlive {
 					result := c.engine.ProcessAttack(instance, player.ID, targetID)
+					c.applyWeaponOnHitScript(instance, player.ID, targetID, &result)
 					c.notifyCombatAction(instance, messages.CombatActionMessage{
 						ActorID: player.ID, ActorName: player.Name, TargetID: targetID,
 						Action: string(combat.CombatActionAttack), Result: resultStringForAttack(result),
@@ -1610,6 +1726,7 @@ func (c *CombatController) doAutoAttack(instance *combat.CombatInstance, player 
 	}
 
 	result := c.engine.ProcessAttack(instance, player.ID, targetID)
+	c.applyWeaponOnHitScript(instance, player.ID, targetID, &result)
 	target := instance.GetCombatantByID(targetID)
 	remaining, maxHP := int32(0), int32(0)
 	if target != nil {
@@ -1637,5 +1754,91 @@ func npcFromCombatant(enemy combat.CombatantRef) *npc.NPC {
 		Entity:     &entities.Entity{ID: enemy.ID},
 		Name:       enemy.Name,
 		TemplateID: enemy.TemplateID,
+	}
+}
+
+// ApplyCombatDot applies a named DoT to a combatant in the attacker's active fight.
+// Used by Lua on-hit scripts (content-authored weapon procs). Refresh-on-reapply via effectID.
+func (c *CombatController) ApplyCombatDot(attackerID, targetID, effectID, name string, damage int32, duration int) bool {
+	if c == nil || c.engine == nil || attackerID == "" || targetID == "" || effectID == "" || damage < 1 || duration < 1 {
+		return false
+	}
+	instance := c.manager.GetInstanceByPlayerID(attackerID)
+	if instance == nil {
+		instance = c.manager.GetInstanceByNPCID(attackerID)
+	}
+	if instance == nil {
+		return false
+	}
+	se := combat.StatusEffect{
+		SkillID:  "onhit:" + effectID,
+		Name:     name,
+		Type:     "dot",
+		Value:    damage,
+		Duration: duration,
+		SourceID: attackerID,
+	}
+	if se.Name == "" {
+		se.Name = effectID
+	}
+	return c.engine.ApplyStatusEffectFromScript(instance, targetID, se)
+}
+
+// applyWeaponOnHitScript runs the equipped weapon's onHit Lua script after a successful hit.
+func (c *CombatController) applyWeaponOnHitScript(instance *combat.CombatInstance, attackerID, targetID string, result *combatpkg.AttackResult) {
+	if c == nil || c.game == nil || instance == nil || result == nil || !result.Hit || result.Miss {
+		return
+	}
+	attacker := instance.GetCombatantByID(attackerID)
+	if attacker == nil || attacker.Type != combat.CombatantTypePlayer {
+		return
+	}
+	facade := c.game.GetFacade()
+	if facade == nil {
+		return
+	}
+	scriptID := attacker.OnHitScriptID
+	if scriptID == "" {
+		// Resolve from live equipment / template (instances may drop script ids).
+		if char, err := facade.CharactersService().FindByID(attackerID); err == nil && char != nil && char.EquippedItems != nil {
+			if w := char.EquippedItems[items.ItemSlotMainHand]; w != nil {
+				scriptID = w.OnHitScriptID
+				if scriptID == "" && w.TemplateID != "" {
+					if tmpl, err := facade.ItemsService().FindByID(w.TemplateID); err == nil && tmpl != nil {
+						scriptID = tmpl.OnHitScriptID
+					}
+				}
+			}
+		}
+	}
+	if scriptID == "" {
+		return
+	}
+	script, err := facade.ScriptsService().FindByID(scriptID)
+	if err != nil || script == nil {
+		log.WithField("scriptID", scriptID).WithError(err).Warn("Weapon OnHit script not found")
+		return
+	}
+	target := instance.GetCombatantByID(targetID)
+	ctx := scripts.NewScriptContext()
+	if char, err := facade.CharactersService().FindByID(attackerID); err == nil && char != nil {
+		ctx.Set("character", char)
+		if char.EquippedItems != nil {
+			if w := char.EquippedItems[items.ItemSlotMainHand]; w != nil {
+				ctx.Set("item", w)
+			}
+		}
+	}
+	ctx.Set("attackerID", attackerID)
+	ctx.Set("targetID", targetID)
+	if target != nil {
+		ctx.Set("targetName", target.Name)
+	}
+	ctx.Set("damage", result.Damage)
+	ctx.Set("critical", result.Critical)
+	ctx.Set("combatInstanceID", instance.ID)
+	run := facade.Runner().RunWithResult(*script, ctx)
+	if !run.Success {
+		log.WithField("script", script.Name).WithField("error", run.Error).Warn("Weapon OnHit script failed")
 	}
 }

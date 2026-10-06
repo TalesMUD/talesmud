@@ -1,6 +1,6 @@
 <script>
   import { onDestroy, tick } from 'svelte';
-  import { hashedAvatar } from '../portraitSrc.js';
+  import { playerSilhouette } from '../portraitSrc.js';
   import { parsePartyChatLine } from '../partyState.js';
 
   export let store = null;
@@ -15,7 +15,7 @@
 
   $: open = !!(store && $store && $store.partyOverlayOpen);
   $: party = (store && $store && $store.party) || {
-    inParty: false, partyId: '', partyName: '', leaderId: '', maxMembers: 5, members: [],
+    inParty: false, partyId: '', partyName: '', leaderId: '', maxMembers: 5, members: [], following: false,
   };
   $: members = Array.isArray(party.members) ? party.members : [];
   $: invite = (store && $store && $store.partyInvite) || null;
@@ -62,12 +62,7 @@
 
   function avatarSrc(member) {
     if (member && member.portrait) return member.portrait;
-    return hashedAvatar((member && (member.id || member.name)) || 'party');
-  }
-
-  function initialOf(member) {
-    const n = (member && member.name) || '?';
-    return n.charAt(0).toUpperCase();
+    return playerSilhouette(member && member.class);
   }
 
   function classLevelLine(member) {
@@ -120,6 +115,11 @@
     inviteName = '';
   }
 
+  function toggleFollow() {
+    if (!sendMessage || iAmLeader) return;
+    sendMessage(party.following ? 'party unfollow' : 'party follow');
+  }
+
   function leaveParty() {
     if (!sendMessage) return;
     if (typeof window !== 'undefined' && !window.confirm('Leave this party?')) return;
@@ -160,7 +160,7 @@
       return;
     }
     img.dataset.fallback = '1';
-    img.src = hashedAvatar((member && (member.id || member.name)) || 'party');
+    img.src = playerSilhouette(member && member.class);
   }
 
   onDestroy(() => {
@@ -263,21 +263,13 @@
     height: 40px;
     flex-shrink: 0;
   }
-  .avatar, .avatar-fallback {
+  .avatar {
     width: 40px;
     height: 40px;
     border-radius: 50%;
     object-fit: cover;
     border: 1px solid rgba(212, 175, 55, 0.35);
     background: rgba(0,0,0,0.35);
-  }
-  .avatar-fallback {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fbbf24;
-    font-weight: 700;
-    font-size: 16px;
   }
   .who {
     flex: 1;
@@ -533,16 +525,12 @@
             {#each members as member (member.id || member.name)}
               <div class="row">
                 <div class="avatar-wrap">
-                  {#if member.portrait}
-                    <img
-                      class="avatar"
-                      src={avatarSrc(member)}
-                      alt=""
-                      on:error={(e) => onAvatarError(e, member)}
-                    />
-                  {:else}
-                    <div class="avatar-fallback" aria-hidden="true">{initialOf(member)}</div>
-                  {/if}
+                  <img
+                    class="avatar"
+                    src={avatarSrc(member)}
+                    alt=""
+                    on:error={(e) => onAvatarError(e, member)}
+                  />
                 </div>
                 <div class="who">
                   <div class="who-top">
@@ -577,6 +565,11 @@
                 </div>
               {/each}
             </div>
+          {/if}
+          {#if party.inParty && !iAmLeader}
+            <button class="act secondary follow" type="button" on:click={toggleFollow}>
+              {party.following ? 'Unfollow' : 'Follow'}
+            </button>
           {/if}
           <form class="compose say" on:submit|preventDefault={sendSay}>
             <input

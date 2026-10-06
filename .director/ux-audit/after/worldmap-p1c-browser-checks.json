@@ -1,0 +1,127 @@
+{
+  "source": "Local read-only 351-room content snapshot in production Svelte overlay; no VPS or game session.",
+  "sheets": [
+    {
+      "url": "http://127.0.0.1:8139/api/map-tiles/terrain-sheet.png?v=bdd10ee48a12",
+      "status": 200
+    }
+  ],
+  "errors": [],
+  "interiorCount": 14,
+  "marker": {
+    "ids": [
+      "R0203"
+    ],
+    "anchor": "R0201"
+  },
+  "cache": {
+    "markerReusesCanvas": true,
+    "fogReusesCanvas": false,
+    "knownPixel": [
+      100,
+      156,
+      72,
+      255
+    ],
+    "fogPixel": [
+      116,
+      106,
+      81,
+      255
+    ]
+  },
+  "polish": {
+    "surfaceRoomCentersClipped": [],
+    "features": {
+      "ruins": 18,
+      "flowers": 2,
+      "reeds": 7,
+      "cave": 12,
+      "tower": 41,
+      "tavern": 15,
+      "gatehouse": 15,
+      "shrine": 4,
+      "shop": 16,
+      "forge": 12,
+      "roof": 55,
+      "dock": 6,
+      "magic": 6,
+      "stump": 3,
+      "keep": 15,
+      "farm": 7,
+      "graveyard": 1,
+      "mine": 1
+    },
+    "bridges": 2,
+    "ridges": 45,
+    "canopyClumps": 110,
+    "townGlyphs": 6,
+    "farTileStep": 3,
+    "lower": {
+      "rooms": 106,
+      "styles": [
+        "cave",
+        "cellar",
+        "sewer",
+        "crypt"
+      ],
+      "torches": 82,
+      "stairs": 37
+    },
+    "fogHints": []
+  },
+  "coastFixture": {
+    "landCenterAlpha": 255,
+    "singleCellSpurTipAlpha": 0
+  },
+  "performance": {
+    "rooms": 351,
+    "landCells": 1448,
+    "firstSceneBakeMs": 375.2000002861023,
+    "changedSceneBakeMs": 199.69999980926514,
+    "markerOnlySnapshotMs": 5.599999904632568,
+    "closeZoom": {
+      "frames": 80,
+      "medianMs": 1.700000286102295,
+      "p95Ms": 2.200000286102295,
+      "maxMs": 2.6000003814697266
+    },
+    "overworld": {
+      "frames": 80,
+      "medianMs": 1.6999998092651367,
+      "p95Ms": 2.299999713897705,
+      "maxMs": 2.5
+    },
+    "lower": {
+      "frames": 80,
+      "medianMs": 1.4000000953674316,
+      "p95Ms": 1.9000000953674316,
+      "maxMs": 2.1999998092651367
+    }
+  },
+  "phone": {
+    "w": 390,
+    "h": 844,
+    "scroll": 844
+  },
+  "checks": [
+    "fonts/images loaded",
+    "smooth coast retains all surface rooms",
+    "room-driven stamp variation",
+    "four underground floor styles",
+    "torch/stair markers",
+    "minimum zoom town glyphs",
+    "continent overview",
+    "Oldtown + Silverbrook zoom/pan",
+    "exterior hit selection",
+    "decorative ground not clickable",
+    "recenter preserves selection",
+    "Fit world",
+    "town filter",
+    "interior selection",
+    "entrance switches Lower",
+    "instance marker on surface anchor",
+    "phone bounds",
+    "Escape"
+  ]
+}

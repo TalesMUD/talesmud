@@ -100,7 +100,7 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
     ├── quests/            # Quest CRUD (creator for writes)
     ├── quest-progress/    # Quest log per character (owner/admin)
     ├── characters/:id/map # Per-character discovered-world atlas (owner/admin)
-    ├── portraits/:filename # Public NPC/enemy portrait images (no auth, guest-ok)
+    ├── portraits/:filename # Public NPC/enemy/player portrait images (no auth, guest-ok)
     ├── world/validation   # Creator world health diagnostics
     ├── diagnostics/world  # Creator world health diagnostics
     ├── validate/:entityType # Draft Creator entity validation
@@ -117,11 +117,25 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
 
 `GET /api/quest-progress/:characterId` returns quest progress merged with quest definition fields for the player UI. Objective rows include `objectiveId`, definition `description`, current/required counts, and completion state so REST refreshes and WebSocket quest log messages have matching player-facing text.
 
-`GET /api/portraits/:filename` is public (no Auth0), same pattern as room backgrounds. The importer copies `assets/images/npcs/` and `assets/images/sprites/{npcs,enemies}/` into `uploads/portraits/` (flat `{id}.png`). Room NPC payloads include `portrait` URLs; the web client falls back to hashed `img/avatars` so faces always render.
+`GET /api/portraits/:filename` is public (no Auth0), same pattern as room backgrounds. The importer copies NPC/enemy sprites into `uploads/portraits/` (flat `{id}.png`); player race/class sprites are published there as `player-<race>-<class>.png`. Room NPC, combatant, and party roster payloads include portrait URLs. The client maps player race/class for the paper doll and uses a built-in class silhouette if a file fails to load.
+
+Combat start and action `CombatantView` snapshots include participant type, class ID, HP/MP, alive/fled state, level, and portrait. When a player joins an existing fight, the joining client gets `combatStart` and existing fighters get a `combatAction` with `action: "join"` and the full roster. The client merges snapshots by participant type so new players enter the ally list without waiting for the next attack.
+
+The play embed includes `fonts/MaterialIcons-Regular.woff2` and its Apache license. `icons.css` declares the font with `font-display: block`, and the initial HTML preloads it. The client enables icon visibility after the local FontFace loads; failed loads leave the ligatures hidden. Icon rendering no longer depends on a Google Fonts request.
 
 Private cellars: an exit with `type: instance` or `instance: true`, or a normal exit from a non-instance room into a room tagged `instance`/`instanced`, clones the dest room plus rooms reachable without returning to the hub. Each character gets their own copy; the hub stays shared. Empty instances are deleted.
 
-`GET /api/characters/:id/map` returns that character's fog-of-war atlas. `pkg/worldmap` pins authored `coords`, layouts each area from compass exits, then packs zones with a gap so they read as separate clusters. Reveal then applies discovered rooms, uncharted neighbors through visible exits, area hulls, and overworld/lower/upper layers. Discovered places include exits, danger, a short summary, and optional NPC/enemy residents. Hidden exits stay off the map until revealed. The JSON is the contract for both the web atlas widget and a future mobile renderer.
+`GET /api/characters/:id/map` returns that character's fog-of-war atlas. `pkg/worldmap` lays out authored area-local coordinates and compass exits deterministically, then translates zones onto compact centers from embedded `map_layout.json` (unknown zones attach through inter-zone compass exits). Anonymous biome ground and broad land bridges form a connected continent without inventing rooms/exits. Above-ground interiors project onto graph-nearest exterior anchors, including upstairs rooms; outdoor positive Z is elevation on Overworld, while explicit depth and underground context use Lower. Reveal applies discovered rooms, unnamed neighbors through visible exits, area hulls, semantic layers, and fog-masked ground. Discovered places include exits, danger, a short summary, and optional NPC/enemy residents. Hidden exits and entrance stamps stay hidden until revealed. The JSON is the contract for both the web atlas widget and a future mobile renderer.
+
+Terrain classification happens once per room during `worldmap.Compile`, using embedded `pkg/worldmap/map_terrain.json`. `Place.terrain` is a derived JSON field, supplied to both WebSocket and HTTP atlas consumers; Reveal replaces it with `fog` for unexplored neighbors. Additional derived fields are `mapRole` (surface/interior/underground), `surfaceRoomId`, `town`, visible `entrances` room IDs, disclosed `mapFeatures`/`artSeed`, and `undergroundStyle`; `PlayerMap.landscape` is anonymous `{x,y,terrain}` ground. These presentation fields do not change room storage, discovery storage, gameplay coordinates, or travel topology. `art.go` derives ordered feature hints from tags, room/area types, names, service action names, descriptive fallbacks, and bind context; an FNV seed varies artwork deterministically with room customization. Underground style uses local room context. Reveal emits these only for discovered rooms; it never exports descriptions, service scripts, or action parameters as art data. Client merging preserves charted art against stale fog and fingerprints feature/seed/style updates. Exact outdoor water and biome cells take precedence over nearby vegetation, keeping bridge locations intact. The separate content `build_public_map_data.py` still produces public lore/zone map data, not the in-game room atlas.
+
+Both map views share the canvas renderer and one 288×9024 RGBA sprite sheet with native 48px cells: six variants each for 14 terrains, fog/sea, 40 decoration rows, four underground floor rows, and 128 precomposed directional dither rows. Production sheet is the P1j imagegen craft atlas (`c8169d17ef81`); the Pillow path (`generate_map_tiles.py` / `map_hires_art.py`) remains available to rebuild the older P1g look. `tools/sync_map_tiles.py` verifies rows, dimensions and content hash before copying the runtime sheet and generating metadata. `GET/HEAD /api/map-tiles/terrain-sheet.png` exposes only that file from the play embed with cache headers/versioned URL. Client assets must be copied before the local Go embed build.
+
+`surfaceAtlas.js` groups interiors under exterior anchors and filters charted outdoor roads. `mapArt.js` shares deterministic sprite choice and canvas/bitmap helpers. Sprite source rectangles follow the sheet manifest. World geometry retains 32 logical units per cell, while detailed/town/Lower canvases allocate 48 pixels per cell through a scaled context. The far overview keeps 32 pixels per cell to avoid repeated large bitmap downscales; the painter derives each bitmap’s cell size from its width and world bounds, keeping projections/hits and the 1–10/220px zoom caps unchanged. Lower scenes freeze to reusable ImageBitmaps where supported. `mapDetails.js` traces angular walls around the union of disclosed courtyards/streets, puts towers at corners and gates at incoming road intersections, derives mountain relief from biome-edge distance, and chooses biome tree species. `coastline.js` blurs a sampled binary land field, builds sand/foam/depth bands with twelve samples per cell and shared RGBA lookup tables, and traces a compact vector contour for clipping; its most recent geometry/fog mask is cached. A dedicated `worldmapWorker.js` builds scenes with OffscreenCanvas and transfers completed ImageBitmaps plus overview/close cell sizes and coast sample scale. `worldmapSceneStore.js` matches results by disclosed scene signature, ignores marker-only differences, and keeps one running job plus one replaceable queued job. The main thread holds a bounded four-scene cache; worker scene/town caches are bounded separately. Close LOD is requested lazily and keeps the matching overview visible until ready. Worker completion schedules a repaint through the shared scene-ready listener. Browser capability/load failures use the synchronous canvas fallback. Rollup emits the same-origin versioned `worldmap-worker.js` alongside the client bundle; it is included in the normal local play-asset embed copy.
+
+`continentRenderer.js` bakes an overview and lazily builds close detail. Dither overlays are authored into the sheet, avoiding runtime tiny-canvas blending. A separate bounded town/road/prop overlay cache reuses unchanged room art when ground changes; keys include disclosure, room customization, geometry and water crossings. The final scene cache includes every art/fog input and excludes marker-only flags. Both scenes retain varied foothills/central peaks, biome species, street paving, angular walls/towers/gates, room-driven roofs/props, roads, bridges, offshore rocks and coastal cliffs. Roads batch each unique exit into one compound stroke under mountain and canopy stamps; the later town, prop and building overlay covers them, while opaque town paving hides dirt inside streets. Painting crops cached scenes to the viewport; charted and fog terrain both come from cached pixels. Real room centers and the current marker have hit priority over nearby decorative props. Minimum scale and Fit world share the continent frame at 78% of map height when width permits; minimap/recenter retain exterior groups.
+
+`undergroundRenderer.js` caches rock/floor scenes with disclosed cave/crypt/cellar/sewer styles, torches, stairs, bones/barrels and dim cluster light in dark void. Only short correctly aligned compass exits become visible tunnels; long/misaligned/vertical links remain navigation exits without lines across void. Tree/building drop shadows are removed; mountain faces retain restrained shading. The full overlay schedules 650 ms water/smoke accents only while open/visible, respects reduced motion, and disposes its timer. Real rooms/roof/glyph stamps provide hit targets; filler and offshore decoration do not. Development snapshot/preview tools use local read-only inputs and an in-memory character, without gameplay or database writes.
 
 #### Landing Page Middleware
 
@@ -201,7 +215,7 @@ registry maps connected user IDs to their currently selected character, room,
 and last-seen timestamp. WebSocket connect/read/disconnect paths update this
 registry and persist `User.IsOnline` as a secondary status field. `combat.disconnect: continue` (the default) leaves that fight running. `release` ends it without a defeat penalty and, when `combat.safe_room` says so, moves the character before an instance copy is deleted. A generated instance that times out still does that move. A text-client connect runs the new-day pass and refills configured resources without requiring another character select. Player-directed replies are recorded by the text client and drawn back into its frame off the message-drain goroutine.
 
-Room message fan-out, `who`, private tells, friends online flags, regeneration ticks, and room player
+Room message fan-out, `who`, private tells, friends online flags, regeneration ticks (1s clock; out-of-combat, resting, and in-combat pools each use their ruleset interval, default 10s), and room player
 payloads use the live session registry instead of scanning all users with
 stale `IsOnline` flags. Persisted `Room.Characters` still records character
 location and is periodically cleaned, but it is no longer the source of truth
@@ -444,8 +458,11 @@ type StatusEffect struct {
        │   │     Level gap (config/combat_balance.yaml level_gap) shifts hit, crit, and damage
        │   │     for attacks and skills. Gap = attacker level − defender level, clamped ±6.
        │   │     Gap 0 matches the pre-gap formulas.
-       │   │     class_balance then scales damage dealt and taken per class
-       │   │     (wizard uses the mage row; behind_dealt applies when lower level).
+       │   │     class_balance then scales damage dealt and taken per class.
+       │   │     The pack catalog wins. The YAML row is the fallback.
+       │   │     wizard uses the mage row; behind_dealt applies when lower level.
+       │   │     boss_mechanics: bosses and hard elites wind up one action before
+       │   │     the hit; bosses enrage on round 16 or at 30% HP (1.20× damage).
        │   │     Room NPC and combat payloads include a viewer-relative threat tier
        │   │     (grey..skull). Orange+ blocks the first attack until attack! or a repeat.
        │   ├── cast <skill> [target] - Use skill (mana/cooldown cost)
@@ -779,7 +796,7 @@ Helper methods for combat:
 - `GetWeaponDamage()` - Main hand weapon damage (1 if unarmed)
 - `GetArmorDefense()` - Total defense from equipped armor
 - `CalculateMaxMana()` - Max mana based on class, level, and INT (casters: `20 + Level*5 + INTMod*4`)
-- `CalculateManaRegen()` - In-combat mana regen (`1 + WISMod`, minimum 1)
+- `CalculateManaRegen()` - Per-round combat mana (`1 + WISMod`, minimum 1). Separate from the `regen.in_combat` tick pools.
 
 ### Room Entity
 
@@ -1047,6 +1064,8 @@ type Item struct {
 }
 ```
 
+`equip <item>` validates `class:*` tags, minimum `Item.Level`, and explicit armor weight (`Properties.armorWeight` or an `armor:cloth|leather|plate` tag) against the character class before moving an item from inventory. The play client mirrors these checks in its shared item card and computes class-weighted comparison deltas from `Attributes`. Optional item weight is read from `Properties.weight` when present; current item data need not supply it.
+
 **Template/Instance Lifecycle:**
 - Templates (`IsTemplate=true`) are blueprints stored in the database
 - Instances (`IsTemplate=false`, `TemplateID` set) are created from templates
@@ -1238,7 +1257,17 @@ type MessageResponse struct {
 }
 ```
 
+`combatEnd` keeps `outcome` and `message`. Optional `rewards`, `loot`, `levelUp`, and `defeat` objects ride on the same message. `combatAction` may include `ability` when a named blow lands. Clients that only read `message` still work.
+
+### Boss phase data flow
+
+`BossMechanicsConfig.Phases` validates descending HP bands with an opening threshold of 1.0. `phase_tiers` defaults to `boss`; an absent `phases` list disables phases. `CombatantRef` holds encounter-local `BossPhase`, `BossPhaseLabel`, and `BossPhaseCount`, separately from the combat instance's turn-pacing `Phase`. Every engine `UpdateCombatant` checks live NPC HP and records monotonic `phase-enter` log entries, including skill and DoT changes. The controller publishes those entries as structured combat actions at resolution boundaries; start/join/action `CombatantView` snapshots include `bossPhase`, `bossPhaseLabel`, and `bossPhaseCount`. The play store preserves the snapshots and retains a short-lived phase notice independently of hit FX. BattleStage renders the notice and persistent labels without changing the layout focus or party contracts. Configuration optionally replaces telegraph labels and enrage multipliers or scales outgoing damage; existing global enrage timing and wind-up cancellation still apply.
+
 ## Frontend Architecture
+
+The play client observes `combatPhase` in `Game.svelte` and calls `LayoutStore.syncCombatFocus`: active starts the existing BattleStage cover, ending retains it, and idle restores prior focus. The cover uses `focusId`/`focusSnapshot` for normal-layout persistence and a transient `combatFocusReturn` for prior manual focus; it does not change grid geometry or remount terminals. The stage keyboard-focus action guards text entry and restores the prior DOM control on removal.
+
+`SettingsStore` persists `interface.reducedMotion` (`system`/`on`/`off`) and `interface.combatAutoFocus` (default true) alongside the existing inventory mode. `Game.svelte` passes the auto-focus or manual-stage choice into `LayoutStore.syncCombatFocus` and gates Stage rendering; switching the preference during combat restores or opens the transient cover immediately. The shared `prefersReducedMotion()` helper resolves the stored override before the OS media query, and BattleStage CSS uses that resolved state. Map ambience uses the same helper.
 
 ### MUD Client — Onboarding Flow
 
@@ -1248,11 +1277,13 @@ The MUD client (`/play`) uses a phase-based routing system in `App.svelte` to gu
 App.svelte (phase-based routing)
 ├── LoadingScreen           (phase: "loading" — Auth0 initializing)
 ├── WelcomeScreen           (phase: "welcome" — unauthenticated)
-│   ├── Login / Signup (Auth0)
+│   ├── Continue with X / Google (Auth0 connection) or Email and password
 │   └── Play as Guest (POST /api/guest → skip onboarding, go to "ready")
 ├── NicknameSetup           (phase: "nickname" — new user, needs display name)
 ├── CharacterCreationWizard (phase: "character" — no characters yet)
 │   ├── Step 1: Choose Template (from GET /api/templates/characters)
+│   │     Class cards, blurbs, and race lists come from GET /api/classes
+│   │     (pkg/classkit, loaded from data/classes). No pack means the sample trio.
 │   ├── Step 2: Name & Describe Character
 │   └── Step 3: Confirm & Create (POST /api/newcharacter)
 └── Game + UserMenu + SettingsModal (phase: "ready" — normal gameplay)
@@ -1265,7 +1296,7 @@ Phase detection:
 
 Onboarding components are in `src/onboarding/`:
 - `LoadingScreen.svelte` — Minimal dark loading screen
-- `WelcomeScreen.svelte` — Cinematic landing with Login/Signup CTAs
+- `WelcomeScreen.svelte` — Cinematic landing. X and Google log in through a named Auth0 connection. Email opens universal login. Guest play stays on the card
 - `NicknameSetup.svelte` — Glass-morphism card for nickname entry
 - `CharacterCreationWizard.svelte` — Three-step full-page wizard
 
@@ -1533,7 +1564,7 @@ pkg/
 ├── repository/        # Data access
 ├── db/                # Database client
 ├── resources/         # Per-character refilling balances
-├── ruleset/           # Level cap, level-up mode, death, new day, resource catalog
+├── ruleset/           # Level cap, level-up mode, death, new day, resource catalog, passive regen
 ├── gamemode/          # Process presentation and auth mode
 ├── authlocal/         # Optional Argon2id username/password sessions
 ├── presentation/      # Text-client frame renderer and view
@@ -1663,3 +1694,6 @@ Event types include:
 - Quest events: `quest.start`, `quest.complete`, `quest.progress`
 
 See [SCRIPTING.md](SCRIPTING.md) for full documentation.
+# A10 combat focus
+
+`combatStart.targetId` names the enemy engaged by the initiating or joining player. The web client keeps the local focus ID and short lived threat warning in `MUDXPlusStore`; BattleStage and Tab send `focus <enemy ID>` when the selection changes. The command validates a living enemy in the player's combat instance and updates `CombatantRef.AutoAttackTargetID` without queuing an action. It sends a `combatAction` with `action: "focus"` to synchronize the client. An in-combat `attack <name>` still queues the hit and now sends the same focus action. Existing attack and hostile skill commands read the server target, then fall back to a living enemy.

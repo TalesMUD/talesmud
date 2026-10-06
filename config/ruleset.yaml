@@ -32,3 +32,43 @@ combat:
   safe_room: stay       # stay | bind | start — used only when disconnect is release
   disconnect: continue  # continue | release — continue leaves the fight running
   bare_attack: ask      # ask | first_hostile — ask is "Attack whom?" outside combat
+
+# Passive HP and mana. Each block has an hp pool and a mana pool.
+# A pool is off when enabled is false, or when percent and flat are both 0.
+# Intervals use the server clock. The first tick after login is 0 to interval-1 seconds in.
+# A very small interval saves the character and pushes one websocket update per regenerating player.
+# Per-round mana (1 + wisdom modifier) is separate from in_combat.
+regen:
+  out_of_combat:
+    hp:
+      enabled: true         # false = no passive HP while not fighting and not resting
+      percent: 2            # percent of max HP per tick
+      flat: 0               # flat HP added per tick
+      interval_seconds: 10  # seconds between ticks
+    mana:
+      enabled: true
+      percent: 5
+      flat: 0
+      interval_seconds: 10
+  resting:
+    hp:
+      enabled: true         # false = no HP while resting
+      percent: 10
+      flat: 0
+      interval_seconds: 10
+    mana:
+      enabled: true
+      percent: 15
+      flat: 0
+      interval_seconds: 10
+  in_combat:
+    hp:
+      enabled: true         # false = no HP on the combat regen tick
+      percent: 0.5
+      flat: 0
+      interval_seconds: 10
+    mana:
+      enabled: true
+      percent: 1
+      flat: 0
+      interval_seconds: 10

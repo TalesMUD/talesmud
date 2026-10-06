@@ -1,6 +1,7 @@
 <script>
   import { itemArtSrc, onItemArtError } from '../itemArtSrc.js';
   import { portraitSrc, onPortraitError } from '../portraitSrc.js';
+  import ItemDetailCard from './ItemDetailCard.svelte';
 
   export let store = null;
   export let sendMessage = null;
@@ -10,6 +11,7 @@
   let equippedItems = {};
   let character = null;
   let stats = {};
+  let detailItem = null;
 
   $: if (store) {
     equippedItems = $store.equippedItems || {};
@@ -81,7 +83,6 @@
       tip += ' [' + item.quality.toUpperCase() + ']';
     }
     if (item.type) tip += ' (' + item.type + ')';
-    tip += '\nClick to unequip';
     if (item.attributes) {
       const parts = [];
       if (item.attributes.damage != null) parts.push('Dmg: ' + item.attributes.damage);
@@ -100,13 +101,20 @@
     const name = item.instanceSuffix ? item.name + '-' + item.instanceSuffix : item.name;
     sendMessage('unequip ' + name);
   }
+
+  function onItemAction(event) {
+    if (event.detail.verb === 'unequip') handleUnequip(event.detail.item);
+    detailItem = null;
+  }
 </script>
 
 <style>
   .equipment-widget {
     display: flex;
     flex-direction: column;
+    height: 100%;
     min-height: 0;
+    overflow: auto;
   }
 
   .widget-title {
@@ -115,18 +123,22 @@
 
   .doll {
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: max-content minmax(168px, 1.15fr) max-content;
     grid-template-rows: auto auto;
-    gap: 0.45em 0.55em;
-    padding: 0.55em 0.65em 0.35em;
-    align-items: start;
+    gap: 0.28em 0.38em;
+    padding: 0.4em 0.45em 0.25em;
+    align-items: stretch;
+    justify-content: center;
     justify-items: center;
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
   .slot-col {
     display: flex;
     flex-direction: column;
-    gap: 0.4em;
+    gap: 0.28em;
+    justify-content: space-evenly;
   }
 
   .slot-col.left { grid-column: 1; grid-row: 1; }
@@ -139,17 +151,18 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.35em;
+    gap: 0.3em;
     min-width: 0;
     width: 100%;
-    max-width: 140px;
+    max-width: 220px;
     align-self: stretch;
   }
 
   .portrait-frame {
     width: 100%;
     aspect-ratio: 2 / 3;
-    max-height: 210px;
+    max-height: 280px;
+    flex: 1 1 auto;
     border-radius: 8px;
     border: 1px solid rgba(148, 163, 184, 0.3);
     background: rgba(0, 0, 0, 0.35);
@@ -192,12 +205,13 @@
     grid-row: 2;
     display: flex;
     justify-content: center;
-    gap: 0.55em;
+    gap: 0.4em;
+    padding-top: 0.15em;
   }
 
   .equip-slot {
-    width: 72px;
-    height: 72px;
+    width: 88px;
+    height: 88px;
     border-radius: 6px;
     border: 1.5px solid rgba(148, 163, 184, 0.35);
     background: rgba(0, 0, 0, 0.4);
@@ -224,14 +238,14 @@
   }
 
   .equip-slot img {
-    width: 64px;
-    height: 64px;
+    width: 76px;
+    height: 76px;
     object-fit: contain;
     image-rendering: pixelated;
   }
 
   .equip-slot .slot-glyph {
-    font-size: 26px;
+    font-size: 30px;
     color: #4b5563;
   }
 
@@ -251,30 +265,42 @@
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 0.35em 0.75em;
-    padding: 0.35em 0.65em 0.65em;
-    border-top: 1px solid rgba(148, 163, 184, 0.15);
-    font-size: 0.72rem;
-    color: var(--text-dim, #94a3b8);
+    gap: 0.4em 0.9em;
+    padding: 0.45em 0.7em 0.7em;
+    border-top: 1px solid rgba(212, 175, 55, 0.28);
+    font-size: 0.92rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: #d7dee8;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
   }
 
   .compact-stats span strong {
-    color: var(--text-primary, #e5e7eb);
-    font-weight: 600;
+    color: #f5e6c0;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
   }
 
   @media (max-width: 420px) {
     .equip-slot {
+      width: 74px;
+      height: 74px;
+    }
+    .equip-slot img {
       width: 64px;
       height: 64px;
     }
-    .equip-slot img {
-      width: 56px;
-      height: 56px;
-    }
     .portrait-col {
-      max-width: 110px;
+      max-width: 150px;
     }
+    .portrait-frame { max-height: 220px; }
+  }
+
+  @media (min-width: 900px) {
+    .equip-slot { width: 96px; height: 96px; }
+    .equip-slot img { width: 84px; height: 84px; }
+    .portrait-col { max-width: 260px; }
+    .portrait-frame { max-height: 320px; }
   }
 </style>
 
@@ -290,14 +316,17 @@
     <div class="slot-col left">
       {#each leftSlots as slot}
         {@const item = equippedItems[slot.key]}
-        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
         <div
           class="equip-slot"
           class:empty={!item}
           class:filled={!!item}
           style="border-color: {item ? getQualityColor(item.quality) : 'rgba(148, 163, 184, 0.35)'}"
           title={getItemTooltip(item, slot.label)}
-          on:click={() => item && handleUnequip(item)}
+          role={item ? 'button' : undefined}
+          tabindex={item ? 0 : undefined}
+          on:click={() => { if (item) detailItem = item; }}
+          on:contextmenu={(event) => { if (item) { event.preventDefault(); detailItem = item; } }}
+          on:keydown={(event) => { if (item && event.key === 'Enter') { event.preventDefault(); detailItem = item; } }}
         >
           <span class="slot-tag">{slot.label}</span>
           {#if item}
@@ -330,14 +359,17 @@
     <div class="slot-col right">
       {#each rightSlots as slot}
         {@const item = equippedItems[slot.key]}
-        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
         <div
           class="equip-slot"
           class:empty={!item}
           class:filled={!!item}
           style="border-color: {item ? getQualityColor(item.quality) : 'rgba(148, 163, 184, 0.35)'}"
           title={getItemTooltip(item, slot.label)}
-          on:click={() => item && handleUnequip(item)}
+          role={item ? 'button' : undefined}
+          tabindex={item ? 0 : undefined}
+          on:click={() => { if (item) detailItem = item; }}
+          on:contextmenu={(event) => { if (item) { event.preventDefault(); detailItem = item; } }}
+          on:keydown={(event) => { if (item && event.key === 'Enter') { event.preventDefault(); detailItem = item; } }}
         >
           <span class="slot-tag">{slot.label}</span>
           {#if item}
@@ -352,14 +384,17 @@
     <div class="weapon-row">
       {#each weaponSlots as slot}
         {@const item = equippedItems[slot.key]}
-        <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
         <div
           class="equip-slot"
           class:empty={!item}
           class:filled={!!item}
           style="border-color: {item ? getQualityColor(item.quality) : 'rgba(148, 163, 184, 0.35)'}"
           title={getItemTooltip(item, slot.label)}
-          on:click={() => item && handleUnequip(item)}
+          role={item ? 'button' : undefined}
+          tabindex={item ? 0 : undefined}
+          on:click={() => { if (item) detailItem = item; }}
+          on:contextmenu={(event) => { if (item) { event.preventDefault(); detailItem = item; } }}
+          on:keydown={(event) => { if (item && event.key === 'Enter') { event.preventDefault(); detailItem = item; } }}
         >
           <span class="slot-tag">{slot.label}</span>
           {#if item}
@@ -381,3 +416,7 @@
     <span>DEF <strong>{defense}</strong></span>
   </div>
 </div>
+
+{#if detailItem}
+  <ItemDetailCard item={detailItem} source="equipment" {character} on:close={() => detailItem = null} on:action={onItemAction} />
+{/if}

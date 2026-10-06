@@ -30,6 +30,7 @@ export function normalizePartyState(raw) {
     leaderId: String(next.leaderId || next.leaderCharacterId || next.LeaderCharacterID || ''),
     maxMembers,
     members,
+    following: !!next.following,
   };
 }
 

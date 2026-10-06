@@ -53,35 +53,68 @@ func (command *UseCommand) Execute(game def.GameCtrl, message *messages.Message)
 		room, _ = game.GetFacade().RoomsService().FindByID(message.Character.CurrentRoomID)
 	}
 
+	// Prefer template OnUse when an inventory copy lost the script id.
+	resolveOnUseScriptID(game, item)
+
 	var targetItem *items.Item
+	explicitTarget := targetName != ""
 	if targetName != "" {
 		targetItem = findUseTarget(message, game, room, targetName)
 		if targetItem == nil {
 			game.SendMessage() <- message.Reply("You don't see a '" + targetName + "' to use that on.")
 			return true
 		}
+	} else if isFireStarter(item) && item.OnUseScriptID == "" {
+		// Bare "use flint" while carrying a torch — built-in fallback when no OnUse script.
+		if auto := findCarriedLightSource(message); auto != nil {
+			targetItem = auto
+			targetName = auto.Name
+		}
 	}
 
 	// Must have a real effect path — never treat consumable:true alone as usable.
 	if !isUsable(item) && !canLightTarget(item, targetItem) {
+		if isFireStarter(item) {
+			game.SendMessage() <- message.Reply(
+				"You strike sparks, but need something to light. Try: use " + shortUseName(item) + " on <torch> — or Use on… in Inventory.")
+			return true
+		}
+		if itemNeedsUseTargetHint(item) {
+			game.SendMessage() <- message.Reply(
+				"You can't use " + item.Name + " alone. Try: use " + shortUseName(item) + " on <item>.")
+			return true
+		}
 		game.SendMessage() <- message.Reply("You can't use " + item.Name + ".")
 		return true
 	}
 
 	effectApplied := applyBuiltInEffects(game, message, item)
-	if !effectApplied {
-		effectApplied = applyLightSourceUse(game, message, item, targetItem)
-	}
 
 	scriptExecuted := false
 	if item.OnUseScriptID != "" {
-		scriptExecuted = executeItemScript(game, message, item, room, targetItem, targetName)
+		// Scripts like SCR0008 handle bare use via inventory checks; only pass
+		// explicit target context when the player typed "on <target>".
+		scriptTarget := targetItem
+		scriptTargetName := targetName
+		if !explicitTarget {
+			scriptTarget = nil
+			scriptTargetName = ""
+		}
+		scriptExecuted = executeItemScript(game, message, item, room, scriptTarget, scriptTargetName)
+	}
+
+	// Built-in torch lighting is a fallback when no OnUse script handled the use.
+	if !effectApplied && !scriptExecuted {
+		effectApplied = applyLightSourceUse(game, message, item, targetItem)
 	}
 
 	if !effectApplied && !scriptExecuted {
 		// Refuse no-op: do NOT print "You use X" and do NOT consume.
-		if targetName != "" {
+		if explicitTarget && targetItem != nil {
 			game.SendMessage() <- message.Reply("Nothing happens when you use " + item.Name + " on " + targetItem.Name + ".")
+		} else if isFireStarter(item) {
+			game.SendMessage() <- message.Reply(
+				"You strike sparks, but need something to light. Try: use " + shortUseName(item) + " on <torch>.")
 		} else {
 			game.SendMessage() <- message.Reply("Nothing happens when you use " + item.Name + ".")
 		}
@@ -342,6 +375,66 @@ func executeItemScript(game def.GameCtrl, message *messages.Message, item *items
 	}
 
 	return true
+}
+
+
+// resolveOnUseScriptID copies template OnUseScriptID onto instances that lost it.
+func resolveOnUseScriptID(game def.GameCtrl, item *items.Item) {
+	if item == nil || item.OnUseScriptID != "" || game == nil || game.GetFacade() == nil {
+		return
+	}
+	tid := item.TemplateID
+	if tid == "" {
+		return
+	}
+	tmpl, err := game.GetFacade().ItemsService().FindByID(tid)
+	if err != nil || tmpl == nil || tmpl.OnUseScriptID == "" {
+		return
+	}
+	item.OnUseScriptID = tmpl.OnUseScriptID
+}
+
+func findCarriedLightSource(message *messages.Message) *items.Item {
+	if message == nil || message.Character == nil {
+		return nil
+	}
+	for _, inv := range message.Character.Inventory.Items {
+		if isLightSource(inv) {
+			return inv
+		}
+	}
+	for _, eq := range message.Character.EquippedItems {
+		if isLightSource(eq) {
+			return eq
+		}
+	}
+	return nil
+}
+
+func shortUseName(item *items.Item) string {
+	if item == nil || item.Name == "" {
+		return "item"
+	}
+	parts := strings.Fields(item.Name)
+	if len(parts) == 0 {
+		return item.Name
+	}
+	return strings.ToLower(parts[0])
+}
+
+func itemNeedsUseTargetHint(item *items.Item) bool {
+	if item == nil {
+		return false
+	}
+	if string(item.SubType) == "tool" {
+		return true
+	}
+	for _, tag := range item.Tags {
+		if strings.EqualFold(tag, "tool") || strings.EqualFold(tag, "utility") {
+			return true
+		}
+	}
+	return false
 }
 
 // consumeItem decrements quantity or removes the item from inventory

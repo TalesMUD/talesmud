@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store';
+import { parseExamineText } from './parseExamineOverlay.js';
 
 const MAX_MESSAGES = 4;
 
@@ -12,9 +13,10 @@ function createOverlayStore() {
 
     /**
      * Push a room-hero toast.
-     * @param {string|{text:string, kind?:'ambiance'|'chat'}} payload
-     *   string → kind 'chat' (default alert chrome)
-     *   { text, kind: 'ambiance' } → mood toast (no System: prefix; soft style)
+     * @param {string|{text:string, kind?:'ambiance'|'chat'|'examine'}} payload
+     *   string → auto-detect examine dumps; else kind 'chat'
+     *   { text, kind: 'ambiance' } → mood toast (soft style)
+     *   examine dumps → kind 'examine' (item card chrome)
      */
     pushMessage(payload) {
       let text;
@@ -22,7 +24,7 @@ function createOverlayStore() {
 
       if (payload && typeof payload === 'object') {
         text = payload.text;
-        if (payload.kind === 'ambiance' || payload.kind === 'chat') {
+        if (payload.kind === 'ambiance' || payload.kind === 'chat' || payload.kind === 'examine') {
           kind = payload.kind;
         }
       } else {
@@ -33,13 +35,18 @@ function createOverlayStore() {
 
       const id = ++messageId;
       const cleanText = String(text).trim();
+      const examine = parseExamineText(cleanText);
+      if (examine && kind !== 'ambiance') {
+        kind = 'examine';
+      }
 
-      // Give longer reactions enough on-screen time to be read (not a blink).
-      // Ambiance mood lines get a touch more dwell so flavor sinks in.
-      const base = kind === 'ambiance' ? 3200 : 2800;
+      // Examine cards linger so lore can be read; ambiance a touch longer than chat.
+      let base = 2800;
+      if (kind === 'ambiance') base = 3200;
+      if (kind === 'examine') base = 8000;
       const displayDuration = Math.min(
-        base + Math.floor(cleanText.length / 40) * 700,
-        9000
+        base + Math.floor(cleanText.length / 40) * (kind === 'examine' ? 900 : 700),
+        kind === 'examine' ? 22000 : 9000
       );
       const fadeOutDuration = Math.min(
         900 + Math.floor(cleanText.length / 50) * 250,
@@ -47,10 +54,16 @@ function createOverlayStore() {
       );
 
       update(messages => {
-        const updated = [...messages, {
+        // Replace any existing examine card so only one item card shows.
+        let next = messages;
+        if (kind === 'examine') {
+          next = messages.filter(m => m.kind !== 'examine');
+        }
+        const updated = [...next, {
           id,
           text: cleanText,
           kind,
+          examine: examine || null,
           displayDuration,
           fadeOutDuration,
           fading: false

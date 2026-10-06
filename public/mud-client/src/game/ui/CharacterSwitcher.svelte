@@ -7,16 +7,17 @@
   import { layoutStore } from "../layout/LayoutStore.js";
   import { settingsStore } from "../SettingsStore.js";
   import { openCharacterPicker } from "./characterPickerStore.js";
+  import { accountMenuOpen } from "../uiChrome.js";
 
   export let store;
   export let authToken;
 
   const { login, logout } = getAuth();
 
-  let open = false;
   let narrow = false;
   let root;
 
+  $: open = $accountMenuOpen;
   $: activeCharacter = $store.character;
   $: connectionStatus = $store.connectionStatus;
 
@@ -27,13 +28,11 @@
   onMount(() => {
     measure();
     window.addEventListener("resize", measure);
-    window.addEventListener("keydown", onKey);
     window.addEventListener("pointerdown", onPointerDown, true);
   });
 
   onDestroy(() => {
     window.removeEventListener("resize", measure);
-    window.removeEventListener("keydown", onKey);
     window.removeEventListener("pointerdown", onPointerDown, true);
   });
 
@@ -41,16 +40,14 @@
     narrow = window.innerWidth < 1100;
   }
 
-  function onKey(event) {
-    if (event.key === "Escape" && open) {
-      open = false;
-    }
+  function closeMenu() {
+    accountMenuOpen.set(false);
   }
 
   function onPointerDown(event) {
-    if (!open || !root) return;
+    if (!$accountMenuOpen || !root) return;
     if (root.contains(event.target)) return;
-    open = false;
+    closeMenu();
   }
 
   $: guest = isGuestSession(authToken);
@@ -69,38 +66,38 @@
   }
 
   function toggleOpen() {
-    open = !open;
+    accountMenuOpen.update((v) => !v);
   }
 
   function switchCharacter() {
-    open = false;
+    closeMenu();
     openCharacterPicker();
   }
 
   function openFriends() {
     if (!showFriends) return;
-    open = false;
+    closeMenu();
     if (store && store.openFriendsOverlay) store.openFriendsOverlay();
   }
 
   function openParty() {
     if (!showParty) return;
-    open = false;
+    closeMenu();
     if (store && store.openPartyOverlay) store.openPartyOverlay();
   }
 
   function editLayout() {
-    open = false;
+    closeMenu();
     layoutStore.enterEditMode();
   }
 
   function openSettings() {
-    open = false;
+    closeMenu();
     settingsStore.openModal();
   }
 
   function endSession() {
-    open = false;
+    closeMenu();
     if (guest) {
       clearGuestToken();
       window.location.reload();
@@ -109,9 +106,11 @@
     logout();
   }
 
-  function loginToSave() {
-    open = false;
-    if (login) login();
+  function loginWith(connection) {
+    closeMenu();
+    if (!login) return;
+    if (connection) login(undefined, { connection });
+    else login();
   }
 </script>
 
@@ -173,9 +172,17 @@
         Settings
       </button>
       {#if guest}
-        <button class="menu-item" type="button" role="menuitem" on:click={loginToSave}>
+        <button class="menu-item" type="button" role="menuitem" on:click={() => loginWith("twitter")}>
           <i class="material-icons">login</i>
-          Log in / Save progress
+          Continue with X
+        </button>
+        <button class="menu-item" type="button" role="menuitem" on:click={() => loginWith("google-oauth2")}>
+          <i class="material-icons">login</i>
+          Continue with Google
+        </button>
+        <button class="menu-item subtle" type="button" role="menuitem" on:click={() => loginWith()}>
+          <i class="material-icons">mail</i>
+          Email and password
         </button>
       {:else if $user && ($user.role === "creator" || $user.role === "admin")}
         <a class="menu-item" role="menuitem" href="/creator" target="_blank" rel="noreferrer">
@@ -365,6 +372,11 @@
   .menu-item:hover {
     background: rgba(251, 191, 36, 0.2);
     color: #fbbf24;
+  }
+
+  .menu-item.subtle {
+    font-size: 0.74rem;
+    color: rgba(240, 230, 211, 0.72);
   }
 
   .menu-rule {

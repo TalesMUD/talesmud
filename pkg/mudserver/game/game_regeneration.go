@@ -5,18 +5,27 @@ import (
 
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/ruleset"
 )
 
-const (
-	passiveRegenPercent    = 0.02  // 2% per tick (out of combat)
-	restingRegenPercent    = 0.10  // 10% per tick (resting)
-	combatHPRegenPercent   = 0.005 // 0.5% per tick (in combat) — 1/4 of passive
-	combatManaRegenPercent = 0.01  // 1% per tick (in combat) — 1/5 of passive
-)
-
-// handleRegenerationUpdates processes HP regeneration for all online players.
-// Called every 10 seconds by the regeneration ticker.
+// handleRegenerationUpdates processes regeneration for online players.
+// The ticker fires once a second on the server clock, not per character.
+// A tick where no pool is due returns before any character is loaded.
+// Housekeeping (skip the dead, clear a full rest, clear rest in a fight)
+// runs on the ticks that do load characters. With the default 10 second
+// intervals that is the same cadence as before. Disabling every pool also
+// skips that pass. applyRegeneration and InterruptRest still clear the flag.
 func (g *Game) handleRegenerationUpdates() {
+	if g == nil {
+		return
+	}
+	g.regenTick++
+	tick := g.regenTick
+	profile := ruleset.Regen()
+	if !anyPoolDue(tick, profile) {
+		return
+	}
+
 	onlinePlayers := g.GetOnlinePlayers()
 	if len(onlinePlayers) == 0 {
 		return
@@ -27,13 +36,11 @@ func (g *Game) handleRegenerationUpdates() {
 			continue
 		}
 
-		// Load character
 		char, err := g.GetFacade().CharactersService().FindByID(player.CharacterID)
 		if err != nil || char == nil {
 			continue
 		}
 
-		// Check if fully recovered (HP and mana)
 		hpFull := char.CurrentHitPoints >= char.MaxHitPoints
 		manaFull := char.MaxMana <= 0 || char.CurrentMana >= char.MaxMana
 		if char.CurrentHitPoints <= 0 || (hpFull && manaFull) {
@@ -43,61 +50,68 @@ func (g *Game) handleRegenerationUpdates() {
 			}
 			continue
 		}
-
-		// Clear resting state if in combat
 		if char.InCombat && isResting(char) {
 			g.clearRestingState(char, player.UserID)
 		}
 
-		// Calculate and apply HP regeneration (reduced in combat)
-		regenAmount := g.calculateRegenAmount(char)
-
-		// Calculate mana regeneration (reduced in combat)
-		manaRegenAmount := g.calculateManaRegenAmount(char)
-
-		if regenAmount > 0 || manaRegenAmount > 0 {
-			g.applyRegeneration(char, player.UserID, regenAmount, manaRegenAmount)
+		hpAmount, manaAmount := regenAmounts(char, tick, profile)
+		if hpAmount > 0 || manaAmount > 0 {
+			g.applyRegeneration(char, player.UserID, hpAmount, manaAmount)
 		}
 	}
 }
 
-// calculateRegenAmount determines how much HP to regenerate based on character state.
-func (g *Game) calculateRegenAmount(char *characters.Character) int32 {
-	var regenPercent float64
-
-	if char.InCombat {
-		regenPercent = combatHPRegenPercent
-	} else if isResting(char) {
-		regenPercent = restingRegenPercent
-	} else {
-		regenPercent = passiveRegenPercent
+// poolDue reports whether this pool grants points on tick.
+// Inactive pools are never due, even when the interval is 1.
+func poolDue(tick uint64, p ruleset.RegenPolicy) bool {
+	if !p.Active() || p.IntervalSeconds < 1 {
+		return false
 	}
-
-	// Calculate amount (minimum 1 HP per tick)
-	amount := int32(float64(char.MaxHitPoints) * regenPercent)
-	if amount < 1 {
-		amount = 1
-	}
-
-	return amount
+	return tick%uint64(p.IntervalSeconds) == 0
 }
 
-// calculateManaRegenAmount determines how much mana to regenerate based on character state.
-func (g *Game) calculateManaRegenAmount(char *characters.Character) int32 {
-	if char.MaxMana <= 0 || char.CurrentMana >= char.MaxMana {
+// anyPoolDue is false when none of the six pools grant points on tick.
+func anyPoolDue(tick uint64, profile ruleset.RegenProfile) bool {
+	pairs := []ruleset.RegenPair{profile.OutOfCombat, profile.Resting, profile.InCombat}
+	for _, pair := range pairs {
+		if poolDue(tick, pair.HP) || poolDue(tick, pair.Mana) {
+			return true
+		}
+	}
+	return false
+}
+
+// regenAmounts is the HP and mana gained on this tick.
+// In combat uses the in-combat pools, even when the resting flag is set.
+// Otherwise the resting flag selects the resting pools, and the rest use
+// the out-of-combat pools. A full HP pool contributes nothing.
+func regenAmounts(char *characters.Character, tick uint64, profile ruleset.RegenProfile) (hp, mana int32) {
+	if char == nil {
+		return 0, 0
+	}
+	var pair ruleset.RegenPair
+	switch {
+	case char.InCombat:
+		pair = profile.InCombat
+	case isResting(char):
+		pair = profile.Resting
+	default:
+		pair = profile.OutOfCombat
+	}
+	if poolDue(tick, pair.HP) && char.CurrentHitPoints < char.MaxHitPoints {
+		hp = policyAmount(char.MaxHitPoints, pair.HP)
+	}
+	if poolDue(tick, pair.Mana) && char.MaxMana > 0 && char.CurrentMana < char.MaxMana {
+		mana = policyAmount(char.MaxMana, pair.Mana)
+	}
+	return hp, mana
+}
+
+func policyAmount(max int32, policy ruleset.RegenPolicy) int32 {
+	if !policy.Active() {
 		return 0
 	}
-
-	var regenPercent float64
-	if char.InCombat {
-		regenPercent = combatManaRegenPercent
-	} else if isResting(char) {
-		regenPercent = 0.15 // 15% per tick while resting
-	} else {
-		regenPercent = 0.05 // 5% per tick out of combat
-	}
-
-	amount := int32(float64(char.MaxMana) * regenPercent)
+	amount := int32(float64(max)*(policy.Percent/100)) + policy.Flat
 	if amount < 1 {
 		amount = 1
 	}

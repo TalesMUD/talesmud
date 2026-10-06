@@ -9,6 +9,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/combat"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/entities/traits"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/balance"
 	combatengine "github.com/talesmud/talesmud/pkg/mudserver/game/combat"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	"github.com/talesmud/talesmud/pkg/ruleset"
@@ -503,5 +504,71 @@ func TestQueuedActionDuringWaitingPlayerResolvesImmediately(t *testing.T) {
 	}
 	if saw.ActorID != char.ID {
 		t.Fatalf("actorId=%s want %s", saw.ActorID, char.ID)
+	}
+}
+
+// A DoT transition must reach every participant even if stun skips the NPC action.
+func TestBossPhaseEventDuringStunnedTurnReachesGroup(t *testing.T) {
+	if _, err := balance.ReloadConfig(); err != nil {
+		t.Fatal(err)
+	}
+	g, facade := newNPCTestGame(t)
+	storeTestRoom(t, facade, "R-pace", nil)
+	charIDs := []string{}
+	for _, id := range []string{"phase-hero", "phase-ally"} {
+		char, err := facade.CharactersService().Store(&characters.Character{
+			Entity: &entities.Entity{ID: id}, Name: id,
+			BelongsUser:  *traits.BelongsToUser("user-" + id),
+			CurrentRoom:  traits.CurrentRoom{CurrentRoomID: "R-pace"},
+			MaxHitPoints: 50, CurrentHitPoints: 50,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		charIDs = append(charIDs, char.ID)
+	}
+	inst := seedPacedCombat(t, g, charIDs[0], "phase-boss", false)
+	inst.Players = append(inst.Players, combat.CombatantRef{ID: charIDs[1], Name: "Ally", Type: combat.CombatantTypePlayer, IsAlive: true, MaxHP: 50, CurrentHP: 50})
+	boss := &inst.Enemies[0]
+	boss.Difficulty = "boss"
+	boss.StatusEffects = []combat.StatusEffect{
+		{ID: "burn", Name: "Burn", Type: "dot", Value: 11, Duration: 1},
+		{ID: "stun", Name: "Stun", Type: "stun", Duration: 2},
+	}
+	g.CombatController.engine.UpdateCombatant(inst, boss)
+	_ = drainGameMessages(g.SendMessage())
+	g.CombatController.processAllTurns(inst)
+	count := 0
+	for _, out := range drainGameMessages(g.SendMessage()) {
+		msg, ok := out.(*messages.CombatActionMessage)
+		if !ok || msg.Action != "phase-enter" {
+			continue
+		}
+		count++
+		if msg.Message != "Rat enters phase 2: Escalation!" || msg.Result != "phase-enter" {
+			t.Fatalf("phase event: %+v", msg)
+		}
+		found := false
+		for _, view := range msg.Combatants {
+			if view.ID == boss.ID {
+				found = true
+				if view.BossPhase != 2 || view.BossPhaseLabel != "Escalation" || view.BossPhaseCount != 3 || view.HP != 19 {
+					t.Fatalf("phase snapshot: %+v", view)
+				}
+			}
+		}
+		if !found {
+			t.Fatal("phase event missing boss snapshot")
+		}
+	}
+	if count != 2 {
+		t.Fatalf("wanted one event per fighter, got %d", count)
+	}
+	inst.NextActionAt = time.Time{}
+	g.CombatController.processAllTurns(inst)
+	for _, out := range drainGameMessages(g.SendMessage()) {
+		if msg, ok := out.(*messages.CombatActionMessage); ok && msg.Action == "phase-enter" {
+			t.Fatal("phase event replayed on next tick")
+		}
 	}
 }

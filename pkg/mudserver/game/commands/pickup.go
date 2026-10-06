@@ -142,6 +142,10 @@ func (command *PickupCommand) Execute(game def.GameCtrl, message *messages.Messa
 			return true
 		}
 
+		if refuseUniquePickup(game, message, item) {
+			return true
+		}
+
 		// Check inventory capacity
 		if message.Character.Inventory.IsFull() {
 			game.SendMessage() <- message.Reply("Your inventory is full.")
@@ -206,6 +210,10 @@ func (command *PickupCommand) Execute(game def.GameCtrl, message *messages.Messa
 		return true
 	}
 
+	if refuseUniquePickup(game, message, item) {
+		return true
+	}
+
 	// Check inventory capacity
 	if message.Character.Inventory.IsFull() {
 		game.SendMessage() <- message.Reply("Your inventory is full.")
@@ -256,6 +264,47 @@ func (command *PickupCommand) Execute(game def.GameCtrl, message *messages.Messa
 		game.SendMessage() <- inv
 	}
 
+	return true
+}
+
+// refuseUniquePickup blocks a second copy of a unique template (quest trophies).
+// Extra inventory copies are trimmed to one and persisted. The ground item stays
+// so another character can still take that drop.
+func refuseUniquePickup(game def.GameCtrl, message *messages.Message, item *items.Item) bool {
+	if item == nil || message == nil || message.Character == nil {
+		return false
+	}
+	templateID := items.TemplateKey(item)
+	unique := item.Unique
+	if !unique && item.TemplateID != "" {
+		if tpl, err := game.GetFacade().ItemsService().FindByID(item.TemplateID); err == nil && tpl != nil {
+			unique = tpl.Unique
+		}
+	}
+	blocked, trimmed := message.Character.PrepareUniquePickup(templateID, unique)
+	if trimmed > 0 {
+		if err := game.GetFacade().CharactersService().Update(message.Character.ID, message.Character); err != nil {
+			log.WithError(err).WithField("character", message.Character.ID).Warn("failed to persist unique item trim")
+		}
+		log.WithFields(log.Fields{
+			"character": message.Character.ID,
+			"template":  templateID,
+			"removed":   trimmed,
+		}).Info("trimmed duplicate unique items")
+	}
+	if !blocked {
+		return false
+	}
+	log.WithFields(log.Fields{
+		"character": message.Character.ID,
+		"template":  templateID,
+		"item":      item.Name,
+	}).Info("unique item pickup blocked")
+	reply := "You already have the " + item.Name + "."
+	if trimmed > 0 {
+		reply += " Extra copies were set aside."
+	}
+	game.SendMessage() <- message.Reply(reply)
 	return true
 }
 

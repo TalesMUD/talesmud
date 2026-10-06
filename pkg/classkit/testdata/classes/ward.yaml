@@ -1,0 +1,62 @@
+id: ward
+name: Ward
+description: "Heavy plate. You start slow. Hits you take stack Grit, and Slam and the hit you throw back get heavier."
+armor_type: Plate
+combat_type: Melee
+primary: STR
+skill_class: ward
+order: 4
+aliases: [hitch, tpl-ward, tpl-hitch]
+races: [human, dwarf]
+portrait_class: ward
+hp_multiplier: 1.05
+hotbar_cap: 4
+balance:
+  damage_dealt: 0.95
+  damage_taken: 1.05
+  behind_dealt: 1.15
+  swings: 1
+grit:
+  cap: 5
+  opening: 1
+  starter_swing: 1
+  slam_per_stack: 0.20
+  slam_cap: 2.0
+  retaliate_per_stack: 0.10
+  self_guard_gain: 2
+template:
+  id: tpl-ward
+  backstory: "You let the first blows land. The plate holds, and the answer gets heavier."
+  origin_area: Gatehouse
+  archetype: ward
+  race: human
+  str: 12
+  dex: 12
+  int: 6
+  wis: 8
+  sta: 12
+  starting_items:
+    - {slot: main_hand, name: Rusty Sword}
+    - {slot: chest, name: Leather Armor}
+  default_skills: [ward_guard]
+skills:
+  - id: ward_guard
+    name: Guard
+    effect: guard
+    level: 1
+    once_per_fight: true
+    keeps_swing: true
+    cooldown: 0
+    multiplier: 0
+    target: ally
+    tooltip: "Once a fight. The next hit aimed at an ally hits you. Guarding yourself, that hit stacks two Grit. You still swing."
+  - id: ward_slam
+    name: Slam
+    effect: slam
+    level: 1
+    once_per_fight: false
+    keeps_swing: false
+    cooldown: 4
+    multiplier: 1.00
+    target: enemy
+    tooltip: "Replaces your swing. 1.00×, plus 0.20× for each Grit, up to 2.00×."

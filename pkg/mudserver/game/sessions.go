@@ -183,6 +183,18 @@ func (g *Game) DisconnectUserSession(userID string) {
 			g.RoomInstances.DestroyCharacterInstance(charID)
 		}
 	}
+	if departed.CharacterID != "" {
+		name := departed.CharacterName
+		if name == "" {
+			name = "A party member"
+		}
+		if followers := g.Sessions.followersOf(departed.CharacterID); len(followers) > 0 {
+			g.tellPartyFollowers(followers, "[Party] "+name+" disconnected. You are still following.")
+		}
+		if leaderID, ok := g.Sessions.followTarget(departed.CharacterID); ok {
+			g.tellPartyFollowers([]string{leaderID}, "[Party] "+name+" disconnected. They are still following.")
+		}
+	}
 	g.Sessions.disconnect(userID)
 	if departed.CharacterID != "" {
 		g.notifyFriendsOfPresence(departed.CharacterID, departed.CharacterName, false)

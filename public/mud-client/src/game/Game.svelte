@@ -19,17 +19,20 @@
     flex-direction: column;
     box-sizing: border-box;
     /* Top band holds the account chip so it does not cover a panel corner. */
-    padding: 52px 12px 12px;
+    padding: 52px 12px 8px;
     margin: 0 auto;
     max-width: 100vw;
-    height: 100vh;
     height: 100dvh;
-    gap: var(--panel-gap);
+    max-height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    gap: 0;
   }
 
   .grid-container {
     flex: 1;
     min-height: 0;
+    overflow: hidden;
   }
 
   /* Animation for panel appearance */
@@ -51,17 +54,37 @@
   .gameContainer.mobile {
     padding: 0;
     max-width: 100vw;
-    height: 100vh;
     height: 100dvh;
+    max-height: 100dvh;
+    overflow: auto;
   }
 
   .gameContainer.mobile :global(.switcher) {
     display: none;
   }
 
+  /* Edit mode can scroll inside the shell so a new widget under the fold stays reachable. */
+  .gameContainer.edit-mode {
+    overflow: auto;
+  }
+
   .gameContainer.combat-dimmed {
     filter: brightness(0.35) saturate(0.7);
     pointer-events: none;
+  }
+
+  .manual-battle-button {
+    position: fixed;
+    right: max(1rem, env(safe-area-inset-right));
+    bottom: max(1rem, env(safe-area-inset-bottom));
+    z-index: 1002;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid #d4a44a;
+    border-radius: 6px;
+    background: #21180e;
+    color: #f5d78c;
+    font-weight: 700;
+    cursor: pointer;
   }
 
   /* Old pink combat action-bar / hotbars must not bleed through the stage */
@@ -116,6 +139,20 @@
   import PartyOverlay from "./ui/PartyOverlay.svelte";
 
   import { onMount, onDestroy } from "svelte";
+  import { get } from "svelte/store";
+  import { settingsStore } from "./SettingsStore.js";
+  import { overlayStore } from "./ui/overlayStore.js";
+  import { characterClassId, normalizeHotbarBinds, resolveHotbarActivation } from "./hudPrefs.js";
+  import { hotbarSlotFromKey, isTextEntry, topOpenPanel } from "./keyboardShortcuts.js";
+  import {
+    accountMenuOpen,
+    battleDockOpen,
+    cheatSheetOpen,
+    layoutDialogOpen,
+    requestCloseLayoutDialog,
+  } from "./uiChrome.js";
+  import ShortcutSheet from "./ui/ShortcutSheet.svelte";
+  import { ROOM_PLACEHOLDER } from "./portraitSrc.js";
   import { getAuth } from "../auth.js";
   import { showCharacterWizard } from "../onboarding/onboardingStore.js";
   import { createClient } from "./Client";
@@ -167,7 +204,7 @@
     const bgId = $muxStore.background;
     appliedBodyBackground = bgId;
     const bgUrl = backend + "/backgrounds/" + bgId + ".png";
-    const placeholderUrl = "img/placeholder.png";
+    const placeholderUrl = ROOM_PLACEHOLDER;
     const testImg = new Image();
     testImg.onload = () => {
       if (appliedBodyBackground === bgId) {
@@ -317,6 +354,128 @@
     }
   }
 
+  function shortcutFlags() {
+    const play = get(muxStore);
+    const layout = get(layoutStore);
+    return {
+      cheatSheet: get(cheatSheetOpen),
+      layoutDialog: get(layoutDialogOpen),
+      characterPicker: get(characterPickerOpen),
+      settings: !!get(settingsStore).modalOpen,
+      addWidget: showAddPanel,
+      map: !!play.mapOverviewOpen,
+      friends: !!play.friendsOverlayOpen,
+      party: !!play.partyOverlayOpen,
+      inventory: !!play.inventoryOverlayOpen,
+      battleOutcome: play.combatPhase === "ending",
+      battleDock: get(battleDockOpen),
+      accountMenu: get(accountMenuOpen),
+      widgetFocus: !!layout.focusId,
+      editMode: !!layout.editMode,
+    };
+  }
+
+  function closeTopPanel(id) {
+    if (id === "cheatSheet") cheatSheetOpen.set(false);
+    else if (id === "layoutDialog") requestCloseLayoutDialog();
+    else if (id === "characterPicker") closeCharacterPicker();
+    else if (id === "settings") settingsStore.closeModal();
+    else if (id === "addWidget") showAddPanel = false;
+    else if (id === "map") muxStore.closeMapOverview();
+    else if (id === "friends") muxStore.closeFriendsOverlay();
+    else if (id === "party") muxStore.closePartyOverlay();
+    else if (id === "inventory") muxStore.closeInventoryOverlay();
+    else if (id === "battleOutcome") muxStore.dismissCombat();
+    else if (id === "battleDock") battleDockOpen.set(false);
+    else if (id === "accountMenu") accountMenuOpen.set(false);
+    else if (id === "widgetFocus") layoutStore.toggleFocus(get(layoutStore).focusId);
+    else if (id === "editMode") layoutStore.exitEditMode(false);
+  }
+
+  // Hotbar binds live in localStorage and used to be account-global, so a
+  // class change kept the previous character's spells. Rebind per character id.
+  let hotbarSyncKey = "";
+  $: {
+    const character = $muxStore.character;
+    const stats = $muxStore.characterStats;
+    const id = character?.id || "";
+    if (!id) {
+      hotbarSyncKey = "";
+    } else {
+      const classId = characterClassId(character);
+      const level = Number(stats?.level || character.level || 0);
+      const equipped = Array.isArray(stats?.equippedSkills)
+        ? stats.equippedSkills
+        : (Array.isArray(character.equippedSkills) ? character.equippedSkills : []);
+      const key = `${id}|${classId}|${level}|${equipped.join("\u0001")}`;
+      if (key !== hotbarSyncKey) {
+        hotbarSyncKey = key;
+        settingsStore.syncHotbarForCharacter({
+          characterId: id,
+          classId,
+          level,
+          equippedIds: equipped,
+        });
+      }
+    }
+  }
+
+  function fireHotbarSlot(index) {
+    const binds = normalizeHotbarBinds(get(settingsStore).interface?.hotbarBinds);
+    const bind = binds[index];
+    if (!bind) return;
+    const play = get(muxStore);
+    const inCombat = play.combatPhase === "active" || !!play.inCombat;
+    const result = resolveHotbarActivation(bind, {
+      inCombat,
+      inventory: play.inventory || [],
+    });
+    if (!result.ok) {
+      if (result.reason && result.reason !== "empty" && overlayStore?.pushMessage) {
+        overlayStore.pushMessage(result.reason);
+      }
+      return;
+    }
+    if (result.command) sendMessage(result.command);
+  }
+
+  function onShortcutKey(event) {
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    if (isTextEntry(event.target)) return;
+    if (event.key === "?" || (event.key === "/" && event.shiftKey)) {
+      event.preventDefault();
+      cheatSheetOpen.update((open) => !open);
+      return;
+    }
+    if (event.key === "Escape") {
+      const top = topOpenPanel(shortcutFlags());
+      if (!top) return;
+      event.preventDefault();
+      closeTopPanel(top);
+      return;
+    }
+    if (event.key === "Tab") {
+      const play = get(muxStore);
+      if (play.combatPhase !== "active") return;
+      event.preventDefault();
+      if (muxStore.cycleCombatTarget) muxStore.cycleCombatTarget(event.shiftKey ? -1 : 1);
+      const focused = get(muxStore).combatTargetId;
+      if (focused && focused !== play.combatTargetId) sendMessage(`focus ${focused}`);
+      return;
+    }
+    const slot = hotbarSlotFromKey(event.key);
+    if (slot >= 0) {
+      event.preventDefault();
+      fireHotbarSlot(slot);
+    }
+  }
+
+  // The preference also applies mid-fight; an explicit manual cover uses the same restore contract.
+  let manualBattleOpen = false;
+  $: if ($muxStore.combatPhase === 'idle') manualBattleOpen = false;
+  $: showBattleStage = $settingsStore.interface?.combatAutoFocus !== false || manualBattleOpen;
+  $: layoutStore.syncCombatFocus($muxStore.combatPhase, showBattleStage);
+
   let pickerChecked = false;
   $: if ($authToken && $muxStore.connectionStatus === "connected" && !pickerChecked) {
     pickerChecked = true;
@@ -346,10 +505,13 @@
 
     // Initialize layout from storage
     layoutStore.loadFromStorage();
+    window.addEventListener("keydown", onShortcutKey);
   });
 
   onDestroy(async () => {
     destroyed = true;
+    layoutStore.syncCombatFocus("idle");
+    window.removeEventListener("keydown", onShortcutKey);
     clearTimeout(reconnectTimer);
     reconnectTimer = null;
     reconnectPending = false;
@@ -368,7 +530,7 @@
 
 <div class="bg-overlay"></div>
 
-<div class="gameContainer" class:mobile={$isMobile} class:combat-dimmed={($muxStore.combatPhase === "active" || $muxStore.combatPhase === "ending" || $muxStore.inCombat)}>
+<div class="gameContainer" class:mobile={$isMobile} class:edit-mode={editMode} class:combat-dimmed={showBattleStage && ($muxStore.combatPhase === "active" || ($muxStore.inCombat && $muxStore.combatPhase !== "ending"))}>
   <CharacterSwitcher
     store={muxStore}
     authToken={$authToken}
@@ -402,7 +564,7 @@
   {/if}
 
   <!-- Quest notifications - shown on all layouts -->
-  <QuestNotifications store={muxStore} />
+  <QuestNotifications store={muxStore} {sendMessage} />
 
   <!-- Inventory popup overlay (default inv open mode) -->
   <InventoryOverlay store={muxStore} {sendMessage} />
@@ -415,7 +577,13 @@
 <MapOverviewOverlay store={muxStore} {sendMessage} />
 
 <!-- C2: full-screen battle stage over dimmed room chrome -->
-<BattleStage store={muxStore} {sendMessage} />
+<BattleStage store={muxStore} {sendMessage} shown={showBattleStage} />
+{#if $muxStore.combatPhase === 'active' && $settingsStore.interface?.combatAutoFocus === false}
+  <button class="manual-battle-button" on:click={() => manualBattleOpen = !manualBattleOpen}>
+    {manualBattleOpen ? 'Return to layout' : 'Open BattleStage'}
+  </button>
+{/if}
+<ShortcutSheet />
 
 {#if $characterPickerOpen}
   <CharacterPicker

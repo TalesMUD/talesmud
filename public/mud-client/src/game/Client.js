@@ -225,6 +225,7 @@ function createClient(renderer, characterCreator, muxStore) {
         leaderId: msg.leaderId || msg.leaderCharacterId || '',
         maxMembers: msg.maxMembers || 5,
         members: msg.members || [],
+        following: !!msg.following,
       });
     }
   };
@@ -293,7 +294,7 @@ function createClient(renderer, characterCreator, muxStore) {
     if (mux) {
       mux.updateCharacterStats({ inCombat: true });
       if (mux.beginCombat) {
-        mux.beginCombat(msg.enemies || [], msg.players || [], msg.message);
+        mux.beginCombat(msg.enemies || [], msg.players || [], msg.message, msg.targetId);
       } else {
         mux.setGameContext({ inCombat: true });
         mux.setCombatants(msg.enemies || [], msg.players || []);
@@ -327,6 +328,7 @@ function createClient(renderer, characterCreator, muxStore) {
   messageHandlers["combatAction"] = (msg) => {
     renderer(msg.message);
     if (mux && mux.applyCombatAction) {
+      const priorTarget = msg.action === 'focus' ? get(mux).combatTargetId : null;
       mux.applyCombatAction({
         actorId: msg.actorId || "",
         actorName: msg.actorName || "",
@@ -335,6 +337,7 @@ function createClient(renderer, characterCreator, muxStore) {
         result: msg.result || "",
         damage: msg.damage || 0,
         heal: msg.heal || 0,
+        ability: msg.ability || "",
         remainingHp: msg.remainingHp,
         maxHp: msg.maxHp,
         fxId: msg.fxId || "",
@@ -347,6 +350,11 @@ function createClient(renderer, characterCreator, muxStore) {
         decisionDeadlineMs: msg.decisionDeadlineMs,
         message: msg.message,
       });
+      if (msg.action === 'focus' && priorTarget !== get(mux).combatTargetId &&
+          get(mux).combatThreatWarning && typeof document !== 'undefined' &&
+          !document.querySelector('.battle-stage')) {
+        overlayStore.pushMessage(get(mux).combatThreatWarning.text);
+      }
     }
   };
 
@@ -372,13 +380,64 @@ function createClient(renderer, characterCreator, muxStore) {
     renderer(msg.message);
     if (mux) {
       if (mux.endCombat) {
-        mux.endCombat(msg.outcome || "victory", msg.message, msg.rewards || null);
+        mux.endCombat(msg.outcome || "victory", msg.message, {
+          ...(msg.rewards || {}),
+          loot: Array.isArray(msg.loot) ? msg.loot : [],
+          levelUp: msg.levelUp || null,
+          defeat: msg.defeat || null,
+        });
       } else {
         mux.setGameContext({ inCombat: false });
         mux.updateCharacterStats({ inCombat: false });
         mux.setCombatants([], []);
       }
     }
+  };
+
+  // Explicit leave (for example a fled participant) has no outcome to dismiss.
+  messageHandlers["combatLeave"] = (msg) => {
+    if (msg.message) renderer(msg.message);
+    if (mux?.clearCombat) mux.clearCombat();
+  };
+
+  // Level-up celebration — structured card (not RoomTextOverlay ASCII).
+  messageHandlers["levelUp"] = (msg) => {
+    if (msg.message) renderer(msg.message);
+    if (!mux) return;
+    // Seed HUD immediately so spend buttons work before characterUpdate.
+    const seed = {};
+    if (msg.newLevel) seed.level = msg.newLevel;
+    if (msg.maxHitPoints) seed.maxHitPoints = msg.maxHitPoints;
+    if (msg.maxHitPoints) seed.currentHitPoints = msg.maxHitPoints;
+    if (msg.maxMana) seed.maxMana = msg.maxMana;
+    if (msg.maxMana) seed.currentMana = msg.maxMana;
+    if (msg.unspentAttributePoints != null) {
+      seed.unspentAttributePoints = msg.unspentAttributePoints;
+    }
+    if (Object.keys(seed).length && mux.updateCharacterStats) {
+      mux.updateCharacterStats(seed);
+    }
+    if (!mux.addQuestNotification) return;
+    const gains = msg.attributeGains && typeof msg.attributeGains === 'object'
+      ? msg.attributeGains
+      : {};
+    mux.addQuestNotification({
+      id: `level-up-${msg.newLevel || Date.now()}-${Date.now()}`,
+      type: 'levelup',
+      questId: null,
+      questName: msg.newLevel ? `Level ${msg.newLevel}` : 'Level Up',
+      message: msg.message || '',
+      oldLevel: msg.oldLevel || 0,
+      newLevel: msg.newLevel || 0,
+      levelsGained: msg.levelsGained || 0,
+      hpGained: msg.hpGained || 0,
+      manaGained: msg.manaGained || 0,
+      attributeGains: gains,
+      attributePointsGained: msg.attributePointsGained || 0,
+      unspentAttributePoints: msg.unspentAttributePoints || 0,
+      maxHitPoints: msg.maxHitPoints || 0,
+      maxMana: msg.maxMana || 0,
+    });
   };
 
   // Quest message handlers
@@ -508,7 +567,9 @@ function createClient(renderer, characterCreator, muxStore) {
   const requestQuestLog = () => {
     if (!currentCharacter || !currentCharacter.id) return;
 
-    const token = localStorage.getItem('token');
+    // Guests keep their JWT in sessionStorage (talesmud_guest_token), not localStorage.
+    // Use the same resolver as atlas/map fetches so quest-log refresh works for both.
+    const token = getAuthToken();
     if (!token) return;
 
     fetch(`/api/quest-progress/${currentCharacter.id}`, {
@@ -669,7 +730,9 @@ function createClient(renderer, characterCreator, muxStore) {
   };
 
   const handleInput = async (data) => {
-    return `${data}`;
+    // `spells` is a silent legacy alias for the skills command. Players see Skills.
+    const text = `${data ?? ""}`;
+    return text.replace(/^(\s*)spells\b/i, "$1skills");
   };
 
   const client = {

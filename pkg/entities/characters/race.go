@@ -1,6 +1,6 @@
 package characters
 
-//Race type
+// Race type
 type Race struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
@@ -8,24 +8,33 @@ type Race struct {
 	Heritage    string `json:"heritage"`
 }
 
-//TODO: Move this to DB or YML
+// TODO: Move this to DB or YML
 var (
 	RaceDwarf Race = Race{
 		ID:          "dwarf",
 		Name:        "Dwarf",
-		Description: "Small, but dont underestimate them",
+		Description: "Blunt weapons deal 10% more damage.",
 		Heritage:    "Deep below the mountains",
 	}
 	RaceHuman Race = Race{
 		ID:          "human",
 		Name:        "Human",
-		Description: "The common race",
+		Description: "No weapon bonus. A few extra coins when you start.",
 		Heritage:    "Big cities",
 	}
-	RaceElve Race = Race{
-		ID:          "elve",
-		Name:        "Elve",
-		Description: "Splendid forestwalkers, great sight during nights",
+	// RaceElf is the canonical elf. Saved rows and portraits may still say elve.
+	RaceElf Race = Race{
+		ID:          "elf",
+		Name:        "Elf",
+		Description: "Bows deal 10% more damage.",
 		Heritage:    "Near the forest",
+	}
+	// RaceElve is the old name for RaceElf. New creates store id elf.
+	RaceElve           = RaceElf
+	RaceConstruct Race = Race{
+		ID:          "construct",
+		Name:        "Construct",
+		Description: "Poison never sticks. No weapon bonus.",
+		Heritage:    "Workshops",
 	}
 )

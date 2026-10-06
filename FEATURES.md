@@ -137,10 +137,35 @@ DiscoveredAreas map[string]bool  // Area names
 - **5 XP** per new room discovered (grant path is currently gated; discovery itself still records)
 - **15 XP** for first room in a new area/zone
 
-**Atlas API**: `GET /api/characters/:id/map` returns the character's fog-of-war atlas (places, paths, area hulls, overworld/lower/upper layers). Layout pins authored `coords` when present, clusters remaining rooms by area using compass exits, then packs zones with a gap so Oldtown / Meadows / Ashenveil read as separate clusters. Hidden exits stay off the map until `revealExit`.
+**Atlas API**: `GET /api/characters/:id/map` returns the character's fog-of-war atlas (places, paths, area hulls, overworld/lower/upper layers). Layout preserves authored area-local geometry and compass exits, translates zones onto compact configurable centers, and fills anonymous ground between zones into one connected continent. Hidden exits stay off the map until `revealExit`.
+
+### Terrain atlas and continent (Worldmap P1/P1b/P1c/P1d/P1e/P1f/P1g/P1j)
+Discovered atlas places carry `terrain`: grassland, forest, farmland, city, castle, dungeon, swamp, mountain, snow, desert, water, shore, ruins, or interior. Unexplored neighbors carry `terrain: "fog"`; their art remains hidden. `pkg/worldmap/map_terrain.json` owns ordered aliases, area defaults, and the unknown-ground default (grassland). RoomType/areaType and specific tags take priority, followed by name, indoor/underground context, area, then descriptive/legacy fallbacks. Classification does not add persisted entity fields or scripting APIs.
+
+The overview and minimap share a compact cached 32px overview with precomposed directional dither sprites from the native 48px art sheet and 48px close detail baked on demand with six stable variants per terrain, nearest-neighbor sampling, ordered-dither edge/corner transitions, a smoothed organic contour with sand/foam/depth bands, mixed rock foothills/taller central peaks and biome-specific oak/pine/dead-tree clumps, and quieter dirt roads/bridges following charted outdoor compass exits. The road network batches unique exit segments into one path beneath mountains, tree canopies, town paving, walls, buildings and props; full-opacity town paving hides dirt inside streets and thinner strokes reduce far-zoom clutter. Towns render street-shaped paving, varied red/brown/blue roofs, angular wall polygons following courtyard/street footprints, corner towers, incoming road gatehouses, keeps, and small hamlet clusters. Crisp town/keep/village glyphs remain readable at far zoom and select their owning real room. P1g redrew all terrain and decoration rows at 48px. **P1j** ships the imagegen craft atlas at the same 48px / 288×9024 layout (seamless terrains, chroma/alpha stamps, recomposed dither blends). Shore bands use twelve samples per cell with broken foam glints; image scaling uses nearest-neighbor sampling. P1e roads-under-stamps, P1f zoom clamps (1–10, 220px cap), and A9 remain intact. Close zoom retains small pixel trees; overview uses larger biome-specific clumps and varied ridge chains, with snow caps only on the highest peak variants. Towns/farms add wells, carts, lanterns, fences and one windmill per farm zone; plateau/highland rooms add mesa edges/outcrops. Seas use varied wave texture, offshore rocks and highland coastal cliffs. World fit and minimum zoom share a frame filling roughly 70–80% of desktop map height (width permitting). Wheel and pinch share a 1–10 scale clamp; the tile-size cap is 220px, so the closest view is twice P1e’s maximum in both world-fit and local recenter frames. High zoom keeps nearest-neighbor pixel sampling. Visible underground passages have cave or mine entrances. Shops, taverns, houses, halls, and upstairs rooms share exterior anchors instead of separate overworld floor tiles. Selecting a town/building offers a filterable list of discovered interiors; the selected interior keeps its actual room ID, intel, exits, and Travel action. Visible entrance choices switch to Lower, without disclosing unexplored names or hidden exits.
+
+Derived presentation fields are `Place.mapRole` (`surface`, `interior`, `underground`), `surfaceRoomId` (interior anchor), `town`, and `entrances` (visible Lower target IDs). Discovered rooms additionally carry `mapFeatures` (derived decoration keys), `artSeed` (deterministic customization seed), and `undergroundStyle` (`cave`, `crypt`, `cellar`, `sewer` on Lower); fog rooms omit all three. `PlayerMap.landscape` contains decorative `{x,y,terrain}` cells: no room IDs, names, hit targets, or travel destinations. Ground reveals near discovered surface/interior rooms or across a fully charted surface area; other ground is fogged. Terrain/fog, coordinates, grouping, towns, entrances, features, art seeds, and underground style updates repaint; stale fog cannot replace charted ground. Outdoor positive Z represents elevation on Overworld; subterranean rooms stay Lower. Other untagged above-ground floors can still use Upper. Gold current-room glow (including instanced interiors), zone labels, selection/intel, travel, layer tabs, zoom/pan, Fit world, and local recenter remain available.
+
+Room art follows tags, room/area types, names, service action names, descriptions/detail fallbacks, and bind context. Forge roofs have chimney smoke; shrines spires; taverns/shops signs; farms fields/farmhouses; guards/gates towers; ruins broken walls; graveyards headstones; docks piers; mines timber entrances; magic sites glowing stones. Reeds, stumps, flowers, rocks, and tree species vary deterministically. Hints do not export source descriptions, script IDs, or service parameters. Outdoor water rooms retain their own terrain even beside forests/swamps. Art changes require no new authored entity fields or Lua API.
+
+Lower uses dedicated cave/crypt/cellar/sewer floors, merged adjacent rooms, actual-exit rock-sided corridors, perimeter stone walls, torch light, and disclosed stair/entrance marks against dark void. Unknown rooms keep fog and expose no art hints. The full overlay has low-rate water shimmer and smoke; hidden/closed views pause it, reduced motion fixes the phase and suppresses its timer, and teardown clears it. Cached overview/close/Lower scenes preserve marker-only reuse and fog isolation.
+
+P1d Lower uses rough cave rock, crypt paving/bones, sewer water channels, and wooden cellar floors/barrels with dim cluster light. Only short, aligned known compass exits get visible tunnels; longer/ambiguous links remain usable navigation exits without grey lines across void. Tree/building drop shadows are removed; only restrained mountain face shading remains. On supported browsers an OffscreenCanvas worker builds scene bitmaps while the main thread remains responsive; only one job runs and stale queued exploration work is replaced. Close LOD builds on demand; worker/canvas fallback preserves map behavior if unavailable. Unexplored overworld ground uses a soft volumetric fog overlay (blurred explore-boundary mask + cloud wash) instead of per-tile fog stamps; You / Turn-in / Selected markers paint above it. Authored room coords that treat +Y as north are flipped at compile so Cartographer north paints upward (`?v=mapnorth1`). Cached fog ground is painted once, and real room centers win hit testing over neighboring decorative props.
+
+`GET/HEAD /api/map-tiles/terrain-sheet.png` serves the 288×9024 RGBA sheet with a content-hash query version; live client JS/CSS uses `?v=creamtimber1` (sheet still content-hash busted). Production art is the P1j imagegen craft atlas (content `assets/map-tiles`, version `5caee700810a` (cream-timber settlement stamp remapper on P1j; prior `c8169d17ef81`)); Pillow generators (`tools/generate_map_tiles.py`, `tools/map_hires_art.py`) remain for regenerating the older P1g look only. `pkg/worldmap/map_layout.json` configures zone centers, natural ground, town flags, separation, and coast padding; unconfigured zones attach using exits. The layout does not mutate stored coordinates or gameplay topology. See `tools/WORLDMAP-PREVIEW.md`. Ornate banners and map framing ornaments remain later work.
 
 ### NPC / enemy portraits
 Room presence sends `portrait` URLs (`/api/portraits/{templateOrId}.png`). Import copies `assets/images/sprites/{npcs,enemies}/` into `uploads/portraits/`. Sprites are 512px full-figure art; the original NPC/enemy cards clip a 48px square around the body (`object-fit: cover` + zoom). Missing files fall back to hashed `img/avatars/{1-14}p.png`. Component CSS lives in `public/mud-client/public/extra.css` and must be deployed with `bundle.js`.
+
+### Player portraits
+The equipment paper doll, combat card, and party roster use 512px transparent sprites at `/api/portraits/player-<race>-<class>.png`. The set covers Human, Dwarf, Elf × Warrior, Rogue, Mage, Ranger, Cleric, Druid. Stored `elve` maps to `elf`, `wizard` to `mage`, and `hunter` to `ranger`. The server supplies combat and party portrait URLs; the client derives the equipment URL from character race/class. An unavailable combination or failed image uses a class silhouette.
+
+### Group combat cards
+BattleStage shows the local player and all other combat players (up to the five-player party cap). Compact ally cards display portrait, class, level, live HP/MP, current turn, and down/fled state. WoW-style buff/debuff icon rectangles sit above/beside combat portraits (self, allies, enemies) with remaining rounds from statusEffects. Combat action snapshots carry participant type, class, mana, and status; a join sends the roster to existing fighters immediately and triggers a short join banner. Healing and buffs currently target self or enemies only; ally-card clicks do not queue unsupported commands.
+
+**Battle layout B (default):** room-field combat for players with no saved preference. Party stands on the left — the player on a gold marker, and, when other players are in the fight, a compact left ally strip (existing portrait, name, slim HP). Enemies stand on the right. Detail frames stay top-left (you: name, HP/MP, buffs) and top-right (focused foe). Sprites use existing race/class and enemy portraits (`/api/portraits/player-<race>-<class>.png` and `/api/portraits/{template}.png`); a class or enemy silhouette is only the failed-load fallback. Over each sprite, only a slim HP bar. Mid-fight Resolving/Waiting pills and turn-name chips stay hidden; the round chip and your-turn countdown remain. Full hotbar 1–9 + Flee dock + room vignette unchanged. Classic cards remain in Settings → Gameplay (turn Battle layout B off), `localStorage.talesmud_battle_layout_b=0`, or `?battleLayout=classic` / `?battlepoc=0`. `?battleLayout=b` / `?battlepoc=1` forces layout B. URL wins over localStorage; an explicit `0`/`1` wins over Settings. Client cache `?v=battleb1`.
+
+The self card and ally cards share a desktop row and stack on phones, with horizontally scrollable phone allies. Only structured actions generate an action banner; join prose is not repeated in stage banners. Defeated enemies keep a grey sprite and Defeated label. Damage and healing numbers sit over player/enemy sprites with a dark outline and hold full opacity before fading; reduced motion disables their animation. Material Icons use a preloaded local WOFF2 font and remain hidden if it fails to load.
 
 WebSocket connects go through a process-wide gate (`websocketGate.js`): one CONNECTING/OPEN/CLOSING socket, no reactive `ws=null` reconnect, and close code 4001 (session replaced) does not auto-reconnect. The Map overview is an Inventory-style body-portal panel (`map-panel`, never Materialize's `.modal`) with explicit pixel size so the canvas fills the stage. `/play` JS/CSS/HTML is served `Cache-Control: no-cache` plus `?v=` on asset URLs so deploys are not stuck behind a cached `bundle.js`.
 
@@ -212,6 +237,8 @@ type Item struct {
 ### Item Types & Slots
 Stackable item quantities are kept consistent when consumed or partially dropped: the character inventory and backing item instance are both updated.
 
+`unique: true` on an item template means a character can hold at most one copy. Pickup of another (including a Hollow Knight loot instance) is refused with "You already have the <name>." Extra copies already in the bag are trimmed to one on that attempt. The ground drop is left for someone else.
+
 **Item Types**:
 - `currency` - Gold, tokens
 - `consumable` - Potions, food, scrolls
@@ -266,10 +293,13 @@ Attributes: {
 ```
 
 **Usage flow**:
-1. Player uses item: `use health potion`
+1. Player uses item: `use health potion` or `use flint on torch` (optional `on <target>`)
 2. System checks `Attributes` for built-in effects
-3. If `OnUseScriptID` is set, executes Lua script
-4. If `Consumable = true`, decrements quantity or removes item
+3. If `OnUseScriptID` is set, executes Lua script (preferred over built-in torch lighting)
+4. Fire-starters without a script auto-target a carried `light_source` on bare `use`; otherwise soft-hint `use <item> on <target>`
+5. If `Consumable = true`, decrements quantity or removes item
+
+World YAML may set `onUseScript` or `onUseScriptId` (importer accepts both). Inventory UI shows **Use** for usable items and **Use on…** for tools/fire-starters to pick a second inventory item without Terminal X.
 
 ### Item Template/Instance Pattern
 ```go
@@ -381,7 +411,7 @@ GetINTMod(), GetWISMod() int
 GetWeaponDamage() int32        // Main hand damage (1 if unarmed)
 GetArmorDefense() int32        // Total from equipped armor
 CalculateMaxMana() int32       // Caster: 20 + Level*5 + INTMod*4
-CalculateManaRegen() int32     // In-combat: 1 + WISMod (min 1)
+CalculateManaRegen() int32     // Per combat round: 1 + WISMod (min 1). Separate from regen.in_combat.
 ```
 
 ### Character Flags System
@@ -409,6 +439,14 @@ Death math is `ruleset.ApplyDeath`, called from defeat only.
 `combat.pacing: auto` keeps the 5 second decision window and resolves a queued action on the next beat. `turn_based` leaves that window open until the player sends a command. NPCs still take their own turns afterward. The default file is `auto`. During a fight, a bare `attack` queues a swing on the current target or the first living enemy so a turn-based round advances. Outside combat, `combat.bare_attack: ask` (the default) still answers "Attack whom?". `first_hostile` starts the fight against the first hostile in the room, and says nobody is there when none is.
 
 `combat.disconnect: continue` (the default) leaves a dropped connection in the fight and does not move the character. `release` ends that fight as a flee: no gold loss, no XP loss, and no death flag. `combat.safe_room` is `stay` (default), `bind`, or `start`, and applies only when disconnect is `release`. `stay` leaves the character in a real room. `bind` and `start` move them. A generated instance that times out still moves its occupant to the return room and ends the fight without a defeat. On the next enter, a saved room that no longer exists is replaced by the bind room, then the start room.
+
+Passive regeneration is the `regen` block in the ruleset, and a world game-mode file may carry the same block. `out_of_combat`, `resting`, and `in_combat` each have HP and mana pools with `enabled`, `percent`, `flat`, and `interval_seconds`. Missing keys keep out of combat at 2% HP and 5% mana, resting at 10% HP and 15% mana, and in combat at 0.5% HP and 1% mana, every 10 seconds, flat 0. The gain is `int(max * percent / 100) + flat`, at least 1 when the pool is active. A pool is active when `enabled` is true and percent or flat is positive. `enabled: false`, or percent and flat both 0, grants nothing and is not due. An explicit `interval_seconds` below 1 is rejected.
+
+Intervals follow one server clock, not the character. The first tick after login lands anywhere from 0 to interval−1 seconds in. A very small enabled interval saves the character and sends one websocket update per regenerating player per interval. Turning every pool off also skips the fully-rested and in-combat resting cleanup on that clock. `applyRegeneration` and `InterruptRest` still clear the resting flag.
+
+Off: `enabled: false` on that pool (`regen.out_of_combat.hp`, `regen.resting.hp`, `regen.in_combat.hp`, and the matching mana pool). Slow: `percent: 0.5` and `interval_seconds: 60` out of combat, `percent: 1` and `interval_seconds: 60` while resting, `percent: 0.1` and `interval_seconds: 30` in combat.
+
+`CalculateManaRegen` (1 + WISMod per combat round, minimum 1) is separate from `regen.in_combat`.
 
 ### Refilling resources
 
@@ -523,17 +561,21 @@ lists each recipient (`PARTY SHARE`), and every recipient gets a one-line
 `[Party] Equal split…` toast. Item drops stay on the ground (no need/greed).
 Quest kill credit stays with living combatants only.
 
-### Party Follow (v1)
+### Party Follow
 `party follow` starts following the current party leader. `party unfollow` stops.
 While following, a normal exit walk by the leader (`TakeExit`, exit type empty /
-`normal` / `direction`, arriving at the authored target) relocates each online
-follower with `RelocateCharacter`, including leave/enter presence. Followers in
-combat stay behind. Offline followers are skipped until a later step. Teleports,
-portals, bindstones, script relocations, and private-instance crossings do not
-pull anyone. Guests, characters who are not in a party, the leader, and anyone
-already in combat cannot start following. Leaving the party, being kicked, the
-leader leaving, or a leadership change clears the follow flag. The flag is
-in-memory on the game server. The reply is a `[Party] You are following <leader>`
+`normal` / `direction`, arriving at the authored target) moves followers who are
+standing in the room the leader just left. Anyone left behind walks a path of
+those same ordinary exits (up to 12 rooms) toward the leader: a late `party follow`,
+the end of combat, or a reconnect. Followers in combat stay put until the fight
+ends, then catch up. A disconnect keeps the flag; an offline body is not moved,
+and the other side is told the follow is still on. Teleports, portals, bindstones,
+script relocations, hidden exits (except the step just taken with the leader),
+and private-instance crossings are not used for the chase. Guests, characters who
+are not in a party, the leader, and anyone already in combat cannot start following.
+Leaving the party, being kicked, the leader leaving, or a leadership change clears
+the follow flag. The flag is in-memory on the game server. The party payload
+includes `following` for the recipient. The reply is a `[Party] You are following <leader>`
 line (party strip and room toast). Still out of scope: auto-join combat without
 `attack`, item need/greed, and following a member who is not the leader.
 
@@ -565,8 +607,9 @@ close. `CharacterSwitcher.svelte` shows the active character and connection stat
 `CharacterPicker.svelte`, which lists every character from `/api/my-characters`.
 Choosing one sends `sc <name>`. A signed-in player with more than one character
 sees that picker once per login; the server still enters on `lastCharacter`.
-Guests get **Log in / Save progress** (Auth0 `loginWithRedirect`, no signup-only
-hint). **Log out** clears the Auth0 session and this tab's guest token and
+Guests get **Continue with X**, **Continue with Google**, and **Email and password**
+(Auth0 `loginWithRedirect`; X and Google pass `connection` so the password form
+is not the default). **Log out** clears the Auth0 session and this tab's guest token and
 returns to the welcome choice instead of restoring a guest. `Client.js` handles `roomPresence` messages and
 updates `MUDXPlusStore.players` without changing the room description.
 
@@ -897,14 +940,33 @@ Players and NPCs both use `CombatantRef.Level`, copied from the character or NPC
 
 After the level-gap multiplier and before a crit, `damage_dealt` scales hits that class lands and `damage_taken` scales hits that class receives. `behind_dealt` multiplies `damage_dealt` again when that class is the lower level. Class id `wizard` uses the `mage` row. A missing class or a multiplier of 1 leaves that side unchanged. The level-10 gap table uses this so warrior, rogue, ranger, and mage share one band: at-level bosses about 50–65%, and a good-gear boss three levels up about 50%.
 
+### Boss telegraph and enrage
+**Config**: `boss_mechanics` in `config/combat_balance.yaml`.
+
+Bosses and elites (`hard`) spend `telegraph_turns` actions winding up `telegraph_label` before that hit lands. BattleStage shows a banner and pulses the nameplate for that window (`telegraph_ms`). The resolving hit carries `ability` (Crushing Blow) so the nameplate flash and the floating number are heavier than a normal crit. Bosses enrage after `enrage_after_rounds` or at `enrage_below_hp`, gain an Enraged badge, hit for `enrage_damage`, and stop starting new wind-ups. Trash does not wind up. Elites do not enrage. A miss floats the word "miss". `prefers-reduced-motion` leaves the number in place and skips the flash.
+
+Boss phases are configured by `boss_mechanics.phase_tiers` (defaults to bosses only) and `phases`, an ordered list of `label` / `below_hp` bands. The opening band must be 1.0; later thresholds must descend and remain above zero. Current defaults are Opening (100%), Escalation (66%), and Last Stand (33%). Omit the list to disable phases; explicitly add `hard` to opt elites in. Phase state is per enemy and per encounter (`bossPhase`, `bossPhaseLabel`, `bossPhaseCount`), advances once at or below each threshold on attacks, skills, or DoT, and never rolls back after healing. Large nonlethal hits emit every crossed threshold; lethal hits do not announce a phase.
+
+A phase can override `telegraph_label`, `damage_dealt`, and `enrage_damage`; omitted values inherit the global behavior (phase damage defaults to 1). Phase damage multiplies after class/level scaling and before crits. An enrage override replaces the global enrage multiplier. A6 enrage still triggers at round 16 or 30% HP in any phase and cancels/skips wind-ups. A wind-up already in progress retains its original ability label across a phase transition unless enrage cancels it. Each phase entry sends a structured `combatAction` with action/result/fxId `phase-enter`, human text, and current combatant snapshots to all living participants. BattleStage shows a four-second phase banner and a persistent phase number/name under each boss nameplate; reduced motion disables the arrival animation. Late joiners see the current phase without replaying a transition. Group roster and contextual focus/restore behavior are preserved.
+
 ### Threat colors
 `threat` in `config/combat_balance.yaml` maps `(enemyLevel - playerLevel)` to `grey / green / yellow / orange / red / skull` (defaults: ≤ −3 grey, −2..−1 green, 0..+1 yellow, +2 orange, +3..+4 red, ≥ +5 skull). The tier is on the room NPC payload (`threat`) and on combat enemy views, computed for the viewer. Room cards and BattleStage nameplates use that color; skull enemies also show ☠. `attack` on orange, red, or skull warns once ("X is much stronger than you") and does not engage. `attack!` or a second `attack` on that enemy does. The room Attack button confirms, then sends `attack!`.
 
+In combat, the gold nameplate and portrait ring mark the local player's focus target. Clicking a living enemy portrait/nameplate or cycling with Tab sends `focus <enemy ID>` to update the engine's auto attack aim without queuing an attack. `attack <name>` also changes focus and queues an attack; the BattleStage Attack button sends the exact enemy ID so duplicate names are unambiguous. The combat start payload identifies the engaged enemy, including for players joining an existing fight. Basic attacks and untargeted hostile skill commands use the focused living enemy; an invalid or defeated focus falls back to the first living enemy. Selecting a different orange, red, or skull foe shows "X is much stronger than you." in its threat color for 3.2 seconds; clicking the same foe does not repeat it. The only hostile is selected automatically, and ending combat clears focus. The warning banner has no motion.
+
+### Equipment and inventory item cards
+
+Clicking or pressing Enter on an equipped paper-doll slot opens the shared item card. Right-click opens it too. The item stays equipped until the Unequip button is pressed; Escape, Close, or clicking outside closes the card. Inventory tiles and rows open the same card with explicit Equip, Use, Use on… (tools/fire-starters), Examine, Sell, and Drop actions. Use on… picks another inventory item and sends `use A on B`; bare Use still works (flint lights a carried torch). The card shows art, rarity, slot, stats, description, value, and weight when the item supplies it. Inventory cards compare stat differences with equipped gear; rings use the weaker worn ring, an empty ring slot counts as a full gain, and two-handed weapons compare with both hand slots. A green arrow marks a clear class-relevant, usable upgrade. Class tags, item level, and explicit armor-weight metadata can block equipping; the card explains the requirement and disables Equip. The `equip` command enforces the same requirements, including when typed in the terminal.
+
 ### Viewport layout presets
-With no saved layout, the play client picks Compact (under 1100px wide, room stacked over the terminal), Desktop, or Wide from the window size, and sizes the grid so the room, terminal, and action bar fill the viewport height. The spell bar is docked in the top of the action bar instead of a separate row. Resize reflows that preset. A saved layout is kept and only clamped back onto the 24-column grid (minimum 2×2, nothing past the right edge). A saved full-width spell bar that sits directly on the action bar is folded into that dock on load; a spell bar placed somewhere else stays its own widget and can still be moved in edit mode. Edit mode can switch Compact / Desktop / Wide without deleting a saved layout until Save. Guests open the same editor from the account menu. The toolbar has multi-step Undo, Reset, and a Lock toggle that keeps edit mode open but stops dragging and resizing. Corner handles stay visible while the layout is unlocked, and a gold ghost shows where a widget will land. A guest token in this tab is restored after a reload, so crossing into a mobile-emulation reload does not dump the session back to the welcome screen. Panels share one header (title, collapse, focus) in the same type and padding; the inventory overlay keeps a single title. The account chip, Edit Layout, and the Party and Friends buttons share one header row in that top band: same height, gold border, and gold hover. Edit Layout is its own button until the window is under 1100px wide, where it moves into the account menu. The menu is gold, lines up with the chip's right edge, and closes on Escape or an outside click. On a phone the same menu hangs from the account button in the room header and includes Switch character, Log in / Save progress for guests, and Log out for a signed-in player. Terminal lines wrap on word boundaries inside the panel; a token longer than the row may still break. Resizing the terminal reflows that scrollback.
+Combat start/join promotes the existing full-screen BattleStage cover using the layout focus/save contract. The widgets and terminal remain mounted with their prior geometry and active tabs. Victory/defeat dismissal, outcome timeout, and combatLeave restore the previous arrangement, including a manually focused panel; viewport fitting resumes on restore. Save and Save as template retain the normal arrangement during combat. Keyboard focus moves to the stage only when no command input or other text field is active, and returns to the prior control when the stage closes unless the player has focused another field. The combat stage fits Compact and phone viewports without document scrolling.
+
+The Settings panel opens from the account chip and Escape closes it. `interface.battleLayoutB` defaults to true (Layout B). Turning it off selects Classic cards and stores `talesmud_battle_layout_b=0`; a missing key is not an opt-out. `interface.combatAutoFocus` defaults to true; turning it off keeps the room layout visible on combat start/join and provides an explicit Open BattleStage control during active combat. That control uses the same transient focus/restore behavior. `interface.reducedMotion` defaults to `system`; `on` suppresses BattleStage phase, hit, ally, and loot animations plus map ambience, while `off` permits them even when the OS requests reduced motion. `interface.inventoryOpenMode` chooses the existing overlay or layout widget and applies immediately. These choices persist in local storage, not server settings. The General tab labels audio as coming soon because no game audio path consumes the stored sound fields. The old Compact Mode and Room Text Overlay fields remain readable for existing local settings but their controls are hidden because they have no active presentation consumer.
+
+With no usable saved layout, the play client picks Compact (under 1100px wide, room stacked over the terminal), Desktop, or Wide from the window size, and sizes the grid so the widgets fit the viewport height with no page scroll. Empty, unknown, malformed, or wholly hidden saved grids fall back to that preset. Desktop and Wide put the room on the left. On the right, Character and Equipment share one tab container (Character open), Terminal, Quest Log, and Map share another (Terminal open), and Inventory sits under those tabs, with the action bar across the bottom. Nothing in that preset crosses the 24-column grid or another widget. The room scene shrinks to share the panel with the description, and a long description scrolls inside the room. Panel padding and the character sheet are tight enough that attributes and combat stats fit in the Character tab at 1080p. Compact stays a stack and does not add the sheet. A saved layout that is taller than the window is scaled down for display (the action bar stays on the bottom row); Save still writes the player's unscaled rows. Compact and phone may still scroll. The spell bar is docked in the top of the action bar instead of a separate row and has nine slots. Keys 1–9 fire those slots, Tab cycles living combat targets, Escape closes the top open panel (shortcut list, dialogs, map, inventory, the battle outcome, the account menu, a focused widget, then edit mode), and `?` opens the shortcut list. Those keys do nothing while the command line or any text field is focused. Focusing a widget still covers the grid, and Save stores the arrangement from before that cover. Resize reflows that preset. A saved layout is kept, clamped back onto the 24-column grid (minimum 2×2, nothing past the right edge), and scaled vertically when it is taller than the window. A saved full-width spell bar that sits directly on the action bar is folded into that dock on load; a spell bar placed somewhere else stays its own widget and can still be moved in edit mode. Edit mode can switch Compact / Desktop / Wide without deleting a saved layout until Save. Guests open the same editor from the account menu. The toolbar has multi-step Undo, Reset, and a Lock toggle that keeps edit mode open but stops dragging and resizing. Corner handles stay visible while the layout is unlocked, and a gold ghost shows where a widget will land. A guest token in this tab is restored after a reload, so crossing into a mobile-emulation reload does not dump the session back to the welcome screen. Panels share one header (title, collapse, focus) in the same type and padding; the inventory overlay keeps a single title. A tab container uses that same single row: the tabs sit on the left, and collapse and focus stay on the right. Extra tabs scroll sideways and, past three, also open from a More menu. There is no separate "Tab container" title. The account chip, Edit Layout, and the Party and Friends buttons share one header row in that top band: same height, gold border, and gold hover. Edit Layout is its own button until the window is under 1100px wide, where it moves into the account menu. The menu is gold, lines up with the chip's right edge, and closes on Escape or an outside click. On a phone the same menu hangs from the account button in the room header and includes Switch character, Log in / Save progress for guests, and Log out for a signed-in player. Terminal lines wrap on word boundaries inside the panel; a token longer than the row may still break. Resizing the terminal reflows that scrollback.
 
 ### Reward scaling
-`reward_scale` in `config/combat_balance.yaml` multiplies each enemy's base XP and gold by that threat tier. The reference level is the **highest** level among characters who receive the victory split (living fighters plus same-room online party), so a high-level member greys out the whole award. Defaults: grey 15%, green 60%, yellow 100%, orange 125%, red 150%, skull 200%. A boss's first kill for a character adds `first_kill_bonus` (default 50%) of that character's own share of the boss, once, stored on `Character.FirstBossKills` (`tpl:<templateId>` or `name:<lower name>`). BattleStage victory lists base, level modifier, first-kill bonus, and party split. The terminal victory text includes the same lines, then the final `+ N XP` / `+ N Gold`.
+`reward_scale` in `config/combat_balance.yaml` multiplies each enemy's base XP and gold by that threat tier. The reference level is the **highest** level among characters who receive the victory split (living fighters plus same-room online party), so a high-level member greys out the whole award. Defaults: grey 15%, green 60%, yellow 100%, orange 125%, red 150%, skull 200%. A boss's first kill for a character adds `first_kill_bonus` (default 50%) of that character's own share of the boss, once, stored on `Character.FirstBossKills` (`tpl:<templateId>` or `name:<lower name>`). A missing item icon swaps once to `/api/item-art/generic-<type>.png`, then the default generic, then a built-in silhouette. A missing enemy or NPC portrait swaps once to a built-in silhouette (enemies darker, friendly NPCs gold). A player with no portrait file, including a guest on the battle card, uses a class silhouette. Those stand-ins are data URIs, so a failed image cannot loop or stay as a broken icon. `combatEnd` still carries `outcome` and the human `message`. Victory adds `rewards` (base, level modifier, first-kill, share) plus `loot` (`name`, `quality`, `quantity`) and `levelUp` (`oldLevel`, `newLevel`) when a level was gained. Defeat adds `defeat` (`xpLost`, `goldLost`, `armor`, `respawnRoom`, `hp`, `maxHp`). Older clients ignore the extra fields. BattleStage shows that breakdown, reveals each drop one at a time in its rarity color, and calls out the new level. The terminal still gets the full text. The panel sits over the room, dismisses on click, Enter, or Escape, and does not take pointer events away from the terminal. Typing in the command line keeps Enter.
 
 ---
 
@@ -961,10 +1023,10 @@ IsCasterClass(classID) bool               // Uses mana
 ```
 
 ### Skill Slot Progression
-| Class | L1 | L10 | L15 | L20 | L30 |
-|-------|:--:|:---:|:---:|:---:|:---:|
-| Mage/Cleric/Druid | 2 | 2 | 3 | 3 | 4 |
-| Warrior/Rogue/Ranger | 1 | 2 | 2 | 3 | 4 |
+A class with `hotbar_cap` in the class catalog always has that many slots (the signed pack uses 4). Cleric and druid stay on the caster curve (L1=2, L15=3, L30=4). Ranger stays on the physical curve (L1=1, L10=2, L20=3, L30=4). Stored ids such as hitch still resolve through the catalog.
+
+### Class kit
+Class names, blurbs, race lists, portraits, and kit skills live in the world pack under `data/classes/*.yaml`. The engine loads them into `pkg/classkit` at startup and on import. `GET /api/classes` is the public payload the play client reads (`?v=classkit1`). With no pack, the catalog is the generic Warrior / Rogue / Mage sample. `ClassKit()` builds skill rows from that catalog. `SkillsForClass` drops legacy seed rows for a kit class. Cleric, ranger, and druid stay in the static client catalog. Old ids such as Fireball and Power Strike remain display fallbacks for a saved hotbar and are not offered as Available. `config/combat_balance.yaml` `class_balance` is only the numeric fallback when the catalog has no row.
 
 ### Skill Management Commands
 ```bash
@@ -976,13 +1038,7 @@ skills unequip <name>   # Remove skill from slots
 **Combat Restrictions**: Cannot equip/unequip during combat
 
 ### Default Skills Seeding
-29 default skills seeded on first run when DB is empty:
-- Warrior: Strike, Cleave, Berserker Rage, Shield Bash, Whirlwind
-- Rogue: Backstab, Poison Strike, Shadow Step, Eviscerate
-- Ranger: Aimed Shot, Multi-Shot, Hunter's Mark, Piercing Arrow
-- Mage: Fireball, Ice Lance, Lightning Bolt, Arcane Missiles, Meteor
-- Cleric: Heal, Holy Smite, Divine Shield, Prayer of Healing, Resurrection
-- Druid: Heal, Moonfire, Thorns, Regrowth, Starfall
+An empty database seeds `SeedSkills()` (legacy class rows plus `ClassKit`). An existing database upserts the class kit on startup. Kit classes only see kit skills. Cleric, ranger, and druid still use their seeded rows.
 
 ---
 
@@ -2232,15 +2288,15 @@ instance, err := service.CreateInstanceFromTemplate(templateID)
 ### Overview
 The atlas is a per-character fog-of-war map. The server compiles a **stable world layout** from room exits (and optional `coords`), then reveals only rooms this character has entered plus unnamed fog neighbors through visible exits. Web and mobile clients render the same JSON.
 
-This is not a grid of room rectangles. Nearby rooms stay next to each other because compass exits (`n/s/e/w` plus diagonals) are treated as geography. Areas get organic hulls. The client draws parchment, biome blobs, curved trails, and place glyphs (stars, houses, diamonds) instead of boxes.
+Area-local authored coordinates and compass exits define geography. Compact zone translations and anonymous filler ground make one overworld continent with blended biomes, coastal sea, dirt paths, and towns. Interiors remain real selectable rooms grouped under exterior anchors; decorative ground never becomes a room.
 
 ### Server
 - `Character.DiscoveredRooms` / `DiscoveredAreas` persist on enter (`worldmap.MarkOn` during `TakeExit` and character select)
 - `GET /api/characters/:id/map` (owner or admin) returns `PlayerMap`
 - Layout package: `pkg/worldmap` — `Compile(rooms)` then `Reveal(world, character)`
-- Layers: `overworld` (z=0), `lower` (z<0), `upper` (z>0), inferred from `up`/`down` and outdoor vs underground tags
+- Layers: semantic `overworld` for outdoors (including positive elevation) and anchored interiors, `lower` for subterranean context/negative depth, `upper` for other positive floors
 - Hidden exits do not appear until the character has revealed them
-- Optional room `coords` pin a room; everything else is inferred. No extra YAML required.
+- Optional room `coords` define area-local geometry. Embedded `map_layout.json` translates zones to compact centers; no room YAML migration is required.
 
 ### Payload
 ```json
@@ -2249,9 +2305,10 @@ This is not a grid of room rectangles. Nearby rooms stay next to each other beca
   "currentRoomId": "R0102",
   "currentLayer": "overworld",
   "layers": [{"id": "overworld", "name": "Overworld", "kind": "overworld"}],
-  "places": [{"id": "R0102", "name": "Wildflower Field", "x": 2, "y": -1, "layer": "overworld", "biome": "meadow", "kind": "wild", "discovered": true, "canTravel": true}],
+  "places": [{"id": "R0102", "name": "Wildflower Field", "x": 2, "y": -1, "layer": "overworld", "biome": "meadow", "terrain": "grassland", "mapRole": "surface", "kind": "wild", "discovered": true, "canTravel": true}],
   "paths": [{"from": "R0101", "to": "R0102", "dir": "north", "kind": "trail", "layer": "overworld"}],
-  "regions": [{"id": "Z01_meadows_forest_path:overworld", "name": "Meadows Forest Path", "hull": [[1.2, -1.8], ...], "biome": "meadow"}]
+  "regions": [{"id": "Z01_meadows_forest_path:overworld", "name": "Meadows Forest Path", "hull": [[1, -2], [3, -2], [3, 0]], "biome": "meadow"}],
+  "landscape": [{"x": 2, "y": -1, "terrain": "grassland"}]
 }
 ```
 Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "uncharted"`.
@@ -2259,11 +2316,11 @@ Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "unc
 ### Client
 - Map widget (player-facing name; same `minimap` widget slot / atlas protocol) receives the atlas over WebSocket on enter, and can also fetch `GET /api/characters/:id/map`
 - Action-bar **Map** chrome / Expand always opens a real fullscreen Map overlay (dimmed play surface, Esc/X close) via `MapOverviewOverlay` portaled to `document.body` — Inventory-style centered panel (`#map-overview-overlay` / `.map-panel`), not clipped to the Map widget and not Materialize `.modal`
-- Area names: always drawn on tinted region/area groups (gold/cream + dark stroke, font scales with zoom); uses `region.name` / `place.areaName` only — never invents labels. Room-name LOD unchanged: mid = current + adjacent; zoomed in = more room names (collision-aware). Compass/vertical exit words are never painted (exit ticks only)
-- Cartographer overlay fills ~80% of the viewport on desktop (side intel rail). On phone (≤768px) it is full-bleed / safe-area; intel is a bottom sheet (peek summary + Travel, expand for exits/residents). Tap selects; Travel is a thumb button (no double-tap). Pinch-zoom and pan keep scale. Compact map tap still inspects.
-- Atlas layers follow room Z: Overworld is z==0 only; up/down switches the map to Upper/Lower. Oldtown packs north of Meadows via the R0108→R0201 north exit.
+- Area names: drawn over landscape regions (gold/cream + dark stroke, font scales with zoom); uses `region.name` / `place.areaName` only — never invents labels. Room-name LOD unchanged: mid = current + adjacent; zoomed in = more room names (collision-aware). Compass/vertical exit words are never painted (exit ticks only)
+- Cartographer overlay fills ~80% of the viewport on desktop (side intel rail). On phone (≤768px) it is full-bleed / safe-area; intel is a bottom sheet (peek summary + Travel, expand for exits/residents). Tap selects; Travel is a primary button on select (no double-tap required; Inspect remains optional). Pinch-zoom and pan keep scale. Compact Map tab selection shows Travel immediately (Inspect optional); the inner Map title / Open Map chrome is removed so the MAP tab is the only header. During Travel the camera smoothly follows the player; when Travel completes in the Cartographer overlay, the overlay fades out and closes (compact Map tab stays open). Active quests in the Quest Log group by area with collapse/expand (current area expanded). Equipment paper-doll uses larger slots and a denser column layout. BattleStage shows WoW-style buff/debuff icon rows with remaining rounds from combatant `statusEffects`.
+- Exterior elevations and upstairs interiors stay on Overworld; dungeons, crypts, cellars, and sewers use Lower. Oldtown stays north of Meadows on the configured continent. Interior selection retains the actual room ID.
 - Title stays **Map**. Layer tabs (Overworld/Lower/Upper) only when `atlas.layers` has more than one entry. Compact optional widget opens fullscreen; Map chrome pin is primary
-- Each room paints as a 48px biome pixel tile (`public/img/map-tiles/`: meadow, forest, settlement, dungeon, water, wild, fog). Landmark/bind rooms overlay a bind-stone icon. Compact minimap and fullscreen MapOverviewOverlay share `atlasRenderer.paintAtlas`. Fog tiles are muted; one gold you-are-here pawn; paths/exits and label LOD unchanged.
+- Compact minimap and fullscreen MapOverviewOverlay share `atlasRenderer.paintAtlas`, surface grouping, and the cached blended continent. Lower has a dedicated torch-lit rock/floor/corridor scene; Upper retains terrain tiles. Fog hides uncharted art; one gold marker follows the current room or its exterior anchor.
 - The widget auto-fits discovered places into its panel and keeps that fit (canvas is out of flow so it cannot resize the widget)
 - Layer tabs, pan, wheel zoom, click-to-travel along discovered paths
 - Desktop/mobile action bars (Option C): room-only dirs + room actions + Shop when a merchant is present; fixed INV / MAP / SAY chrome; **Recipes** seeded by default for crafting discoverability; optional Look/Rest/… pins via ⋯; layout revision migrates legacy Look/pin clutter and seeds Recipes onto rev-2 bars
@@ -2274,10 +2331,12 @@ Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "unc
 ### Key Files
 - `pkg/worldmap/` — layout, biomes, hulls, discovery, reveal
 - `pkg/server/handler/charactermap.go` — REST endpoint
-- `public/mud-client/src/game/widgets/MinimapWidget.svelte` — parchment Map renderer + fullscreen overlay host
-- `public/mud-client/src/game/widgets/atlasRenderer.js` — biome tiles, label LOD, collision, single you-marker
-- `public/mud-client/public/img/map-tiles/` — 48px biome PNGs + landmark overlay
-- `public/mud-client/src/game/hudPrefs.js` — Option C action-bar chrome/pins + hotbar helpers
+- `public/mud-client/src/game/widgets/MinimapWidget.svelte` — local Map renderer + fullscreen overlay host
+- `public/mud-client/src/game/widgets/atlasRenderer.js` — layer framing, hit targets, label LOD, single you-marker
+- `public/mud-client/src/game/widgets/continentRenderer.js` / `coastline.js` / `mapArt.js` / `surfaceAtlas.js` — cached zoom scenes, organic shores, room art, town/interior grouping, roads/bridges
+- `public/mud-client/src/game/widgets/undergroundRenderer.js` — rock-sided corridors, themed floors, torches, stairs
+- `public/mud-client/public/map-tiles/terrain-sheet.png` — shared 48px terrain and transparent building sprites
+- `public/mud-client/src/game/hudPrefs.js` — Option C action-bar chrome/pins and hotbar helpers. Kit skills come from `GET /api/classes` (`?v=classkit1`)
 
 ---
 
@@ -2384,9 +2443,9 @@ func (c *Character) GetEffectiveMaxLevel(globalMax int32) int32
 The leveling system (`CheckLevelUp`, `ApplyLevelUp`) respects `MaxLevelCap` automatically.
 
 ### Frontend Guest Flow
-- `WelcomeScreen.svelte` — logged-out choice: "Log in / Sign up" and "Play as guest"
+- `WelcomeScreen.svelte` — logged-out choice: "Continue with X", "Continue with Google", "Email and password", and "Play as guest"
 - `App.svelte` — `handleGuestPlay()` stores token in sessionStorage, skips onboarding. Logout clears that token so the next load is the welcome choice
-- Account menu — guests see "Log in / Save progress" and "End Session"; a signed-in player sees "Switch character" and "Log out"
+- Account menu — guests see Continue with X, Continue with Google, Email and password, and End Session; a signed-in player sees "Switch character" and "Log out"
 - `api/guest.js` — `createGuestSession()` API client
 
 ### Authentication

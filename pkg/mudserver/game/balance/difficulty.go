@@ -25,6 +25,7 @@ type CombatBalanceConfig struct {
 	Threat                ThreatConfig                     `yaml:"threat"`
 	RewardScale           RewardScaleConfig                `yaml:"reward_scale"`
 	ClassBalance          map[string]ClassBalance          `yaml:"class_balance"`
+	BossMechanics         BossMechanicsConfig              `yaml:"boss_mechanics"`
 }
 
 var (
@@ -66,6 +67,9 @@ func loadConfigFromDisk() (*CombatBalanceConfig, error) {
 	cfg := &CombatBalanceConfig{}
 	if err = yaml.Unmarshal(data, cfg); err != nil {
 		log.WithError(err).Error("Failed to parse combat balance config, using defaults")
+		return getDefaultConfig(), err
+	}
+	if err := ValidateBossPhases(cfg.BossMechanics); err != nil {
 		return getDefaultConfig(), err
 	}
 	if cfg.DifficultyMultipliers == nil {
@@ -132,10 +136,11 @@ func getDefaultConfig() *CombatBalanceConfig {
 			"The Hollow Knight": {HP: 1.0, Attack: 0.85, Defense: 0.9},
 			"Hollow Knight":     {HP: 1.0, Attack: 0.85, Defense: 0.9},
 		},
-		LevelGap:     defaultLevelGap(),
-		Threat:       defaultThreat(),
-		RewardScale:  defaultRewardScale(),
-		ClassBalance: defaultClassBalance(),
+		LevelGap:      defaultLevelGap(),
+		Threat:        defaultThreat(),
+		RewardScale:   defaultRewardScale(),
+		ClassBalance:  defaultClassBalance(),
+		BossMechanics: defaultBossMechanics(),
 	}
 }
 

@@ -8,7 +8,7 @@ import {
 
 assert.deepStrictEqual(
   normalizePartyState(null),
-  { inParty: false, partyId: '', partyName: '', leaderId: '', maxMembers: DEFAULT_MAX_PARTY, members: [] },
+  { inParty: false, partyId: '', partyName: '', leaderId: '', maxMembers: DEFAULT_MAX_PARTY, members: [], following: false },
   'null party → empty'
 );
 
@@ -28,6 +28,7 @@ assert.deepStrictEqual(
     leaderId: 'c1',
     maxMembers: 5,
     members: [{ id: 'c1', name: 'Aster', online: true, level: 3, class: 'Warrior', portrait: '', isLeader: true }],
+    following: false,
   },
   'partyID alias + rich members preserved'
 );

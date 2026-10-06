@@ -91,6 +91,7 @@ type fileShape struct {
 		Disconnect string `yaml:"disconnect"`
 		BareAttack string `yaml:"bare_attack"`
 	} `yaml:"combat"`
+	Regen regenFile `yaml:"regen"`
 }
 
 type resourceSpec struct {
@@ -114,6 +115,7 @@ type state struct {
 	safeRoom    string
 	disconnect  string
 	bareAttack  string
+	regen       RegenProfile
 }
 
 var (
@@ -148,6 +150,7 @@ func builtin() state {
 		safeRoom:   SafeStay,
 		disconnect: DisconnectContinue,
 		bareAttack: BareAttackAsk,
+		regen:      defaultRegen(),
 	}
 }
 
@@ -329,6 +332,9 @@ func decode(raw []byte) (state, error) {
 			}
 			next.resources[key] = item
 		}
+	}
+	if err := applyRegen(&next, file.Regen); err != nil {
+		return state{}, err
 	}
 	return next, nil
 }

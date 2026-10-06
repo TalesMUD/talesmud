@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/items"
+	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/entities/quests"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
 	r "github.com/talesmud/talesmud/pkg/repository"
@@ -83,12 +84,14 @@ type QuestLogEntry struct {
 	QuestName      string                        `json:"questName"`
 	Description    string                        `json:"description,omitempty"`
 	Category       string                        `json:"category,omitempty"`
+	Area           string                        `json:"area,omitempty"`
 	Level          int32                         `json:"level,omitempty"`
 	Status         string                        `json:"status"`
 	ReadyToTurnIn  bool                          `json:"readyToTurnIn"`
 	TurnInAnywhere bool                          `json:"turnInAnywhere,omitempty"`
 	TurnInNpcID    string                        `json:"turnInNpcId,omitempty"`
 	TurnInNpcName  string                        `json:"turnInNpcName,omitempty"`
+	TurnInRoomID   string                        `json:"turnInRoomId,omitempty"`
 	Objectives     []QuestObjectiveProgressEntry `json:"objectives"`
 	Rewards        *QuestRewardEntry             `json:"rewards,omitempty"`
 	AcceptedAt     string                        `json:"acceptedAt,omitempty"`
@@ -403,6 +406,7 @@ func (s *questsService) BuildQuestLog(characterID string) ([]QuestLogEntry, erro
 			QuestName:     quest.Name,
 			Description:   quest.Description,
 			Category:      quest.Category,
+			Area:          quest.DisplayArea(),
 			Level:         quest.Level,
 			Status:        string(progress.Status),
 			ReadyToTurnIn: progress.Status == quests.QuestStatusActive && allObjectivesComplete(progress.Objectives),
@@ -984,11 +988,24 @@ func applyQuestLogTurnIn(entry *QuestLogEntry, quest *quests.Quest, facade Facad
 	anywhere, npcID := quest.ResolveTurnIn()
 	entry.TurnInAnywhere = anywhere
 	entry.TurnInNpcID = npcID
-	if npcID != "" && facade != nil && facade.NPCsService() != nil {
-		if npc, err := facade.NPCsService().FindByID(npcID); err == nil && npc != nil {
-			entry.TurnInNpcName = npc.Name
-		}
+	if npcID == "" || facade == nil || facade.NPCsService() == nil {
+		return
 	}
+	if npc, err := facade.NPCsService().FindByID(npcID); err == nil && npc != nil {
+		entry.TurnInNpcName = npc.Name
+		entry.TurnInRoomID = resolveNPCTurnInRoom(npc)
+	}
+}
+
+// resolveNPCTurnInRoom picks the best known haunt for a turn-in NPC template/unique.
+func resolveNPCTurnInRoom(n *npc.NPC) string {
+	if n == nil {
+		return ""
+	}
+	if room := strings.TrimSpace(n.CurrentRoomID); room != "" {
+		return room
+	}
+	return strings.TrimSpace(n.SpawnRoomID)
 }
 
 func (s *questsService) npcName(id string) string {
@@ -1058,6 +1075,24 @@ func (s *questsService) GrantQuestRewards(characterID, questID string) ([]string
 	// 5. Award Items (create instances from templates)
 	grantedItems := []string{}
 	for _, templateID := range quest.Rewards.ItemTemplateIDs {
+		if tpl, terr := s.facade.ItemsService().FindByID(templateID); terr == nil && tpl != nil && tpl.Unique {
+			blocked, trimmed := char.PrepareUniquePickup(templateID, true)
+			if trimmed > 0 {
+				log.WithFields(log.Fields{
+					"characterID": characterID,
+					"template":    templateID,
+					"removed":     trimmed,
+				}).Info("trimmed duplicate unique items")
+			}
+			if blocked {
+				log.WithFields(log.Fields{
+					"characterID": characterID,
+					"questID":     questID,
+					"template":    templateID,
+				}).Info("unique quest reward skipped")
+				continue
+			}
+		}
 		instance, err := s.facade.ItemsService().CreateInstanceFromTemplate(templateID)
 		if err != nil {
 			log.WithError(err).WithField("templateID", templateID).Error("Failed to create item instance from template")

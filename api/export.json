@@ -512,8 +512,8 @@
           "name": "Legolas",
           "description": "Legolas Longpants",
           "race": {
-              "id": "elve",
-              "name": "Elve",
+              "id": "elf",
+              "name": "Elf",
               "description": "Splendid forestwalkers, great sight during nights",
               "heritage": "Near the forest"
           },

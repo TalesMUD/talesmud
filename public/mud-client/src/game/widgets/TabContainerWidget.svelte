@@ -2,6 +2,7 @@
   import { layoutStore } from '../layout/LayoutStore.js';
   import { getWidgetConfig } from '../layout/WidgetRegistry.js';
   import { childWidgetComponents, getChildWidgetProps } from '../layout/WidgetComponents.js';
+  import WidgetChrome from '../layout/WidgetChrome.svelte';
 
   export let store;
   export let sendMessage;
@@ -23,6 +24,12 @@
 
   // Clamp activeTabIndex to valid range
   $: safeActiveIndex = tabs.length > 0 ? Math.min(activeTabIndex, tabs.length - 1) : 0;
+  $: collapsed = !!($layoutStore.widgets.find((w) => w.id === widget.id) || {}).collapsed;
+  let moreOpen = false;
+
+  function toggleMore() {
+    moreOpen = !moreOpen;
+  }
 
   // Props deps for child widgets
   $: propDeps = { store, sendMessage, onTerminalReady, onTerminalInput };
@@ -42,26 +49,73 @@
     flex-direction: column;
     width: 100%;
     height: 100%;
-    background: var(--panel-bg);
-    border-radius: var(--panel-radius);
+    background: transparent;
     overflow: hidden;
-    border: 1px solid var(--panel-border);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    box-shadow: var(--panel-shadow);
+    border: none;
+    box-shadow: none;
+  }
+
+  .more {
+    flex: 0 0 auto;
+    height: 36px;
+    border: none;
+    background: transparent;
+    color: #f5e6c0;
+    font-family: var(--font-display, 'Cinzel', serif);
+    cursor: pointer;
+  }
+
+  .more-menu {
+    position: absolute;
+    top: 36px;
+    right: 72px;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    min-width: 10rem;
+    background: rgba(16, 12, 8, 0.98);
+    border: 1px solid rgba(212, 164, 74, 0.55);
+    border-radius: 8px;
+  }
+
+  .more-menu button {
+    text-align: left;
+    background: transparent;
+    border: none;
+    color: #f5e6c0;
+    padding: 0.45rem 0.7rem;
+    cursor: pointer;
   }
 
   .tab-bar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    background: var(--panel-header-bg, rgba(0, 0, 0, 0.35));
+    border-bottom: 1px solid var(--panel-header-border, rgba(180, 130, 60, 0.22));
+    min-height: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    padding-right: 0.15rem;
+  }
+
+  .tab-bar :global(.widget-chrome.buttons-only) {
+    position: static;
+    height: 36px;
+    min-height: 36px;
+    margin-left: auto;
+    align-items: center;
+  }
+
+  .tab-scroll {
     display: flex;
     align-items: stretch;
-    background: var(--panel-header-bg);
-    border-bottom: 1px solid var(--panel-header-border);
-    min-height: 38px;
-    flex-shrink: 0;
+    flex: 1;
+    min-width: 0;
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) transparent;
   }
 
   .tab-bar::-webkit-scrollbar {
@@ -79,7 +133,9 @@
     display: flex;
     align-items: center;
     gap: 0.35em;
-    padding: 0.4em 0.8em;
+    flex: 0 0 auto;
+    height: 36px;
+    padding: 0 0.8em;
     background: transparent;
     border: none;
     border-bottom: 2px solid transparent;
@@ -131,13 +187,18 @@
     display: none !important;
   }
 
-  .tab-pane :global(.questlog-header .header-title-row),
+  /* Quest Log title lives in the tab bar; collapse the empty title row. */
+  .tab-pane :global(.questlog-header .header-title-row) {
+    display: none !important;
+  }
+
   .tab-pane :global(.tx-titlebar) {
     justify-content: flex-end;
   }
 
   .tab-pane :global(.questlog-header) {
-    padding: 0.25em 0.5em;
+    padding: 0.3em 0.5em 0.35em;
+    gap: 0;
   }
 
   .tab-pane {
@@ -176,22 +237,38 @@
   }
 </style>
 
-<div class="tab-container">
+<div class="tab-container" class:collapsed>
   <div class="tab-bar">
-    {#each tabs as tab, i}
-      <button
-        class="tab"
-        class:active={i === safeActiveIndex}
-        on:click={() => switchTab(i)}
-      >
-        {#if getWidgetConfig(tab.widgetType)?.icon}
-          <i class="material-icons tab-icon">{getWidgetConfig(tab.widgetType).icon}</i>
-        {/if}
-        <span>{getWidgetConfig(tab.widgetType)?.name || tab.widgetType}</span>
-      </button>
-    {/each}
+    <div class="tab-scroll">
+      {#each tabs as tab, i}
+        <button
+          class="tab"
+          class:active={i === safeActiveIndex}
+          on:click={() => { moreOpen = false; switchTab(i); }}
+        >
+          {#if getWidgetConfig(tab.widgetType)?.icon}
+            <i class="material-icons tab-icon">{getWidgetConfig(tab.widgetType).icon}</i>
+          {/if}
+          <span>{getWidgetConfig(tab.widgetType)?.name || tab.widgetType}</span>
+        </button>
+      {/each}
+    </div>
+    {#if tabs.length > 3}
+      <button type="button" class="tab more" aria-expanded={moreOpen} on:click={toggleMore}>More</button>
+      {#if moreOpen}
+        <div class="more-menu" role="menu">
+          {#each tabs as tab, i}
+            <button type="button" role="menuitem" on:click={() => { moreOpen = false; switchTab(i); }}>
+              {getWidgetConfig(tab.widgetType)?.name || tab.widgetType}
+            </button>
+          {/each}
+        </div>
+      {/if}
+    {/if}
+    <WidgetChrome widgetId={widget.id} {collapsed} showTitle={false} inline={true} />
   </div>
 
+  {#if !collapsed}
   <div class="tab-content">
     {#if tabs.length === 0}
       <div class="empty-state">
@@ -215,4 +292,5 @@
       {/each}
     {/if}
   </div>
+  {/if}
 </div>

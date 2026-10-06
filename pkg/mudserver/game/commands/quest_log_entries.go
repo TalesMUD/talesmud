@@ -4,6 +4,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/quests"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"strings"
 )
 
 func buildQuestLogEntries(game def.GameCtrl, progressList []*quests.QuestProgress) []messages.QuestLogEntry {
@@ -42,10 +43,8 @@ func buildQuestLogEntry(game def.GameCtrl, quest *quests.Quest, progress *quests
 		anywhere, npcID := quest.ResolveTurnIn()
 		entry.TurnInAnywhere = anywhere
 		entry.TurnInNpcID = npcID
-		if npcID != "" && game != nil && game.GetFacade() != nil && game.GetFacade().NPCsService() != nil {
-			if npc, err := game.GetFacade().NPCsService().FindByID(npcID); err == nil && npc != nil {
-				entry.TurnInNpcName = npc.Name
-			}
+		if npcID != "" {
+			entry.TurnInNpcName, entry.TurnInRoomID = resolveTurnInNPC(game, npcID)
 		}
 	}
 
@@ -97,4 +96,49 @@ func buildObjectiveProgress(progress *quests.QuestProgress, quest *quests.Quest)
 		}
 	}
 	return objectives
+}
+
+func resolveTurnInNPC(game def.GameCtrl, npcID string) (name, roomID string) {
+	npcID = strings.TrimSpace(npcID)
+	if npcID == "" {
+		return "", ""
+	}
+	// Prefer live instance location (unique NPC or spawned template instance).
+	if game != nil {
+		if mgr := game.GetNPCInstanceManager(); mgr != nil {
+			if inst := mgr.GetInstance(npcID); inst != nil && !inst.IsDead {
+				name = inst.Name
+				if room := strings.TrimSpace(inst.CurrentRoomID); room != "" {
+					return name, room
+				}
+				if room := strings.TrimSpace(inst.SpawnRoomID); room != "" {
+					return name, room
+				}
+			}
+			for _, inst := range mgr.GetAllInstances() {
+				if inst == nil || inst.IsDead || inst.Entity == nil {
+					continue
+				}
+				if inst.ID == npcID || inst.TemplateID == npcID {
+					name = inst.Name
+					if room := strings.TrimSpace(inst.CurrentRoomID); room != "" {
+						return name, room
+					}
+					if room := strings.TrimSpace(inst.SpawnRoomID); room != "" {
+						return name, room
+					}
+				}
+			}
+		}
+		if facade := game.GetFacade(); facade != nil && facade.NPCsService() != nil {
+			if n, err := facade.NPCsService().FindByID(npcID); err == nil && n != nil {
+				name = n.Name
+				if room := strings.TrimSpace(n.CurrentRoomID); room != "" {
+					return name, room
+				}
+				return name, strings.TrimSpace(n.SpawnRoomID)
+			}
+		}
+	}
+	return name, roomID
 }

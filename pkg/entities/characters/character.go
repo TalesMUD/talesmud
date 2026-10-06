@@ -6,8 +6,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/talesmud/talesmud/pkg/classkit"
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/items"
+	"github.com/talesmud/talesmud/pkg/entities/skills"
 	"github.com/talesmud/talesmud/pkg/entities/traits"
 )
 
@@ -47,6 +49,20 @@ func (c *Character) NormalizeAttributeShorts() {
 	for i := range c.Attributes {
 		c.Attributes[i].Short = strings.ToUpper(c.Attributes[i].Short)
 	}
+}
+
+// NormalizeClass maps a stored hitch id onto Ward and replaces the old hotbar.
+// The class id hitch still resolves to this kit. The name shown is Ward.
+func (c *Character) NormalizeClass() {
+	if c == nil {
+		return
+	}
+	id := strings.ToLower(strings.TrimSpace(c.Class.ID))
+	if id != "hitch" && id != "ward" {
+		return
+	}
+	c.Class = ClassWard
+	c.EquippedSkills = skills.FillHotbar(c.Class.ID, c.Level, c.EquippedSkills)
 }
 
 // Attribute data
@@ -176,12 +192,14 @@ func (c *Character) GetAttributeModifier(short string) int {
 // GetPrimaryAttackAttribute returns the attribute short name used for basic attack scaling.
 // Each class uses a different primary attribute for auto-attacks.
 func (c *Character) GetPrimaryAttackAttribute() string {
-	switch strings.ToLower(c.Class.ID) {
-	case "warrior":
+	if c == nil {
 		return "STR"
-	case "rogue":
-		return "DEX"
-	case "hunter", "ranger":
+	}
+	if p := classkit.Primary(c.Class.ID); p != "" {
+		return strings.ToUpper(p)
+	}
+	switch strings.ToLower(c.Class.ID) {
+	case "rogue", "hunter", "ranger":
 		return "DEX"
 	case "wizard", "mage":
 		return "INT"
@@ -226,18 +244,23 @@ func (c *Character) GetWISMod() int {
 
 // CalculateMaxMana returns the max mana for this character based on class, level, and INT
 func (c *Character) CalculateMaxMana() int32 {
-	classID := strings.ToLower(c.Class.ID)
-	switch classID {
-	case "mage", "wizard", "cleric", "druid":
-		intMod := c.GetINTMod()
-		mana := int32(20) + (c.Level * 5) + int32(intMod*4)
-		if mana < 10 {
-			mana = 10
+	classID := strings.ToLower(strings.TrimSpace(c.Class.ID))
+	caster := classkit.Caster(classID)
+	if !caster {
+		switch classID {
+		case "cleric", "druid":
+			caster = true
 		}
-		return mana
-	default:
-		return 0 // Physical classes don't use mana
 	}
+	if !caster {
+		return 0
+	}
+	intMod := c.GetINTMod()
+	mana := int32(20) + (c.Level * 5) + int32(intMod*4)
+	if mana < 10 {
+		mana = 10
+	}
+	return mana
 }
 
 // CalculateManaRegen returns in-combat mana regen per round
@@ -345,6 +368,36 @@ func (c *Character) HasCollectedCopyItem(templateID string) bool {
 		return b
 	}
 	return false
+}
+
+// CountOfTemplate counts inventory plus equipped copies of a catalog id.
+func (c *Character) CountOfTemplate(templateID string) int32 {
+	if c == nil || templateID == "" {
+		return 0
+	}
+	n := c.Inventory.CountMatchingTemplate(templateID)
+	for _, it := range c.EquippedItems {
+		if it == nil || !it.MatchesTemplate(templateID) {
+			continue
+		}
+		if it.Quantity > 0 {
+			n += it.Quantity
+		} else {
+			n++
+		}
+	}
+	return n
+}
+
+// PrepareUniquePickup drops extra inventory copies of a unique template down to one.
+// blocked is true when the character already holds one, so another pickup must fail.
+// Non-unique templates are left alone.
+func (c *Character) PrepareUniquePickup(templateID string, unique bool) (blocked bool, trimmed int) {
+	if c == nil || !unique || templateID == "" {
+		return false, 0
+	}
+	trimmed = c.Inventory.TrimMatchingTemplate(templateID)
+	return c.CountOfTemplate(templateID) >= 1, trimmed
 }
 
 // MarkCollectedCopyItem records that the character has collected a CopyOnPickup item

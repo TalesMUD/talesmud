@@ -5,9 +5,10 @@ import { backend } from "./base.js";
  * Creates a guest session by calling the backend API.
  * Returns { token, expiresIn } on success.
  */
-function createGuestSession(cb, errorCb) {
+function createGuestSession(cb, errorCb, body) {
+  const payload = body && typeof body === "object" ? body : {};
   axios
-    .post(`${backend}/guest`, {}, {
+    .post(`${backend}/guest`, payload, {
       mode: "no-cors",
       credentials: "same-origin",
     })

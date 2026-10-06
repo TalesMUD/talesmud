@@ -80,11 +80,8 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 				"newLevel":     result.NewLevel,
 				"levelsGained": result.LevelsGained,
 			}).Info("Applied banked XP level catch-up on character select")
-			game.SendMessage() <- messages.MessageResponse{
-				Audience:   messages.MessageAudienceUser,
-				AudienceID: user.ID,
-				Type:       messages.MessageTypeLevelUp,
-				Message:    result.Message,
+			if msg := messages.NewLevelUpMessage(user.ID, result); msg != nil {
+				game.SendMessage() <- msg
 			}
 		}
 	}
@@ -232,6 +229,8 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 	// Send initial quest log to the client
 	sendQuestLogToPlayer(game, user.ID, character.ID)
 
+	// Follow survives disconnect. Catch up once the character is in a room.
+	game.CatchUpPartyFollow(character.ID)
 }
 
 // sendQuestLogToPlayer sends the full quest log with enriched quest details

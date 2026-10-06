@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Veilspan for Android</title>
+  <meta name="description" content="Download the Veilspan Android APK — a mobile RPG with crossplay to the browser client. Playtest builds for Chapter I: Gloomfen Depths.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;500;600;700&family=Fira+Code:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-abyss: #06080c;
+      --bg-deep: #0a0e14;
+      --bg-surface: #111820;
+      --bg-card: #141c26;
+      --bg-card-hover: #1a2433;
+
+      --green-glow: #3ddc84;
+      --green-dim: #1a5c38;
+      --green-text: #7ae8a4;
+
+      --amber-glow: #e8a849;
+      --amber-dim: #5c4419;
+      --amber-text: #f0c674;
+      --gold: #c8a84e;
+
+      --text-bright: #e8e6e3;
+      --text-body: #b0aca6;
+      --text-dim: #6b6660;
+      --text-ghost: #3d3a36;
+
+      --border-subtle: rgba(232, 168, 73, 0.12);
+      --border-glow: rgba(232, 168, 73, 0.35);
+
+      --font-display: 'Cinzel Decorative', serif;
+      --font-heading: 'Cinzel', serif;
+      --font-body: 'Cormorant Garamond', serif;
+      --font-mono: 'Fira Code', monospace;
+
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      scrollbar-width: thin;
+      scrollbar-color: var(--amber-dim) var(--bg-abyss);
+    }
+
+    body {
+      background: var(--bg-abyss);
+      color: var(--text-body);
+      font-family: var(--font-body);
+      font-size: 18px;
+      line-height: 1.7;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 0, 0, 0.03) 2px,
+        rgba(0, 0, 0, 0.03) 4px
+      );
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 9998;
+      pointer-events: none;
+      background: radial-gradient(ellipse at 50% 0%, rgba(232,168,73,0.06) 0%, transparent 55%),
+                  radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.45) 100%);
+    }
+
+    a { color: var(--amber-text); text-decoration: none; transition: color 0.2s var(--ease-out); }
+    a:hover { color: var(--text-bright); }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 4rem;
+    }
+
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem 1.5rem;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .nav-brand {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      color: var(--amber-text);
+      letter-spacing: 0.06em;
+    }
+
+    .nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem 1.25rem;
+      font-family: var(--font-heading);
+      font-size: 0.85rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .nav-links a { color: var(--text-dim); }
+    .nav-links a:hover { color: var(--amber-text); }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--gold);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin-bottom: 0.85rem;
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 5vw, 3rem);
+      color: var(--text-bright);
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.75rem;
+      text-shadow: 0 0 40px rgba(232,168,73,0.25);
+    }
+
+    .pitch {
+      font-size: 1.25rem;
+      color: var(--text-body);
+      max-width: 36em;
+      margin: 0 auto 1.75rem;
+    }
+
+    .cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.65rem;
+      background: linear-gradient(180deg, #e8a849 0%, #c8922e 100%);
+      color: #1a1206 !important;
+      font-family: var(--font-heading);
+      font-weight: 600;
+      font-size: 1rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0.95rem 1.75rem;
+      border-radius: 4px;
+      border: 1px solid rgba(255,220,140,0.45);
+      box-shadow: 0 0 0 1px rgba(232,168,73,0.2), 0 8px 32px rgba(232,168,73,0.25);
+      transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+    }
+
+    .cta:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 0 1px rgba(232,168,73,0.35), 0 12px 40px rgba(232,168,73,0.35);
+      color: #0a0804 !important;
+    }
+
+    .cta-meta {
+      margin-top: 0.85rem;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-dim);
+    }
+
+    .warn {
+      margin: 2rem 0;
+      padding: 1rem 1.2rem;
+      background: rgba(232,168,73,0.06);
+      border: 1px solid var(--border-glow);
+      border-left: 3px solid var(--amber-glow);
+      border-radius: 4px;
+      font-size: 1.05rem;
+      color: var(--amber-text);
+    }
+
+    .warn strong {
+      font-family: var(--font-heading);
+      font-weight: 600;
+      color: var(--text-bright);
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 1.4rem 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .card h2 {
+      font-family: var(--font-heading);
+      font-size: 1.15rem;
+      color: var(--amber-text);
+      letter-spacing: 0.05em;
+      margin-bottom: 1rem;
+      padding-bottom: 0.55rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .version {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .version-head {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1rem;
+      align-items: baseline;
+      justify-content: space-between;
+    }
+
+    .version-tag {
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      color: var(--green-text);
+    }
+
+    .version-date {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-dim);
+    }
+
+    .badge {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #1a1206;
+      background: var(--amber-glow);
+      padding: 0.15rem 0.45rem;
+      border-radius: 3px;
+      margin-left: 0.4rem;
+      vertical-align: middle;
+    }
+
+    ul.changes {
+      list-style: none;
+      padding: 0;
+    }
+
+    ul.changes li {
+      position: relative;
+      padding-left: 1.1rem;
+      margin-bottom: 0.35rem;
+      color: var(--text-body);
+    }
+
+    ul.changes li::before {
+      content: '▸';
+      position: absolute;
+      left: 0;
+      color: var(--gold);
+      font-size: 0.85rem;
+    }
+
+    .dl-row {
+      margin-top: 0.9rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1.25rem;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+    }
+
+    .dl-row a.secondary {
+      color: var(--amber-text);
+      border-bottom: 1px solid rgba(232,168,73,0.35);
+    }
+
+    .hash {
+      color: var(--text-ghost);
+      word-break: break-all;
+      font-size: 0.68rem;
+    }
+
+    .links {
+      display: grid;
+      gap: 0.65rem;
+      font-size: 1.1rem;
+    }
+
+    .links a {
+      display: block;
+      padding: 0.65rem 0.9rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      color: var(--text-body);
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .links a:hover {
+      border-color: var(--border-glow);
+      background: var(--bg-card-hover);
+      color: var(--amber-text);
+    }
+
+    .links span {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      display: block;
+    }
+
+    footer {
+      margin-top: 2.5rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border-subtle);
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-ghost);
+    }
+
+    footer .brand {
+      font-family: var(--font-display);
+      color: var(--amber-text);
+      font-size: 0.95rem;
+      margin-bottom: 0.35rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="nav" aria-label="Site">
+      <a class="nav-brand" href="https://veilspan.com/">Veilspan</a>
+      <div class="nav-links">
+        <a href="https://veilspan.com/play">Play in browser</a>
+        <a href="https://play.veilspan.com/">play.veilspan.com</a>
+        <a href="https://veilspan.com/docs/">Docs</a>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <p class="eyebrow">Android playtest · Chapter I</p>
+      <h1>Veilspan for Android</h1>
+      <p class="pitch">
+        A mobile RPG client for Veilspan — explore Gloomfen Depths on your phone,
+        with full crossplay to the browser at
+        <a href="https://veilspan.com/play">veilspan.com/play</a>.
+      </p>
+      <a class="cta" href="/app/downloads/veilspan-d43d2d0.apk" download>
+        ↓ Download latest APK
+      </a>
+      <p class="cta-meta">build <strong style="color:var(--green-text)">d43d2d0</strong> · ~57&nbsp;MB · Android 7.0+</p>
+    </header>
+
+    <aside class="warn" role="note">
+      <strong>Play Protect may warn.</strong>
+      This is a debug / playtest-signed APK, not a Play Store release.
+      Android may show an “unknown app” or Play Protect warning — that is expected
+      until we ship a production-signed build. Install only if you trust this source
+      (<a href="https://veilspan.com/">veilspan.com</a>).
+    </aside>
+
+    <section class="card" aria-labelledby="history-h">
+      <h2 id="history-h">Version history</h2>
+            <article class="version">
+        <div class="version-head">
+          <div>
+            <span class="version-tag">d43d2d0</span>
+            <span class="badge">latest</span>
+          </div>
+          <span class="version-date">2026-10-04 · playtest</span>
+        </div>
+        <ul class="changes">
+          <li><strong>Quest item examine</strong> — examining a quest item opens a card with art, name, and the quest blurb.</li>
+          <li><strong>Level-up</strong> — a centered celebration shows the new level, gains, and attribute spends.</li>
+          <li><strong>Includes</strong> d297d52 painted Ward portraits on the create roster.</li>
+        </ul>
+        <div class="dl-row">
+          <a class="secondary" href="/app/downloads/veilspan-d43d2d0.apk" download>veilspan-d43d2d0.apk</a>
+          <span class="hash">sha256 19072d6678cd5326661522ba02033bd98462da25c47ece60fde7664b2cc76652</span>
+        </div>
+      </article>
+
+            <article class="version">
+        <div class="version-head">
+          <div>
+            <span class="version-tag">641c5a1</span>
+          </div>
+          <span class="version-date">2026-10-04 · playtest</span>
+        </div>
+        <ul class="changes">
+          <li><strong>Ward on the create roster</strong> — Hitch is replaced by Ward. Guard and Slam replace Pin, Hobble, and Reel.</li>
+          <li><strong>Existing characters</strong> — hitch and tpl-hitch stay as race aliases, so a saved Hitch can still pick human or dwarf.</li>
+          <li><strong>Includes</strong> 1adb986 borderless MTG-style room entity cards.</li>
+        </ul>
+        <div class="dl-row">
+          <a class="secondary" href="/app/downloads/veilspan-641c5a1.apk" download>veilspan-641c5a1.apk</a>
+          <span class="hash">sha256 e50ec190a13ed54cb05ef28fef35ff725bcc3c940509409d809f9d90c5df8fdd</span>
+        </div>
+      </article>
+
+            <article class="version">
+        <div class="version-head">
+          <div>
+            <span class="version-tag">1adb986</span>
+            
+          </div>
+          <span class="version-date">2026-10-04 · playtest</span>
+        </div>
+        <ul class="changes">
+          <li><strong>Borderless MTG cards</strong> — room entity cards are full-bleed art with a soft nameplate and thin type accent (enemy red / quest gold), not dark bordered boxes with tiny sprites.</li>
+          <li><strong>Includes</strong> 86e8338 web-style room enemy cards and HP bars.</li>
+        </ul>
+        <div class="dl-row">
+          <a class="secondary" href="/app/downloads/veilspan-1adb986.apk" download>veilspan-1adb986.apk</a>
+          <span class="hash">sha256 c40a7f105f468153b5f42666032afebf8db4bf7ab80e6531727b39bae4d03d77</span>
+        </div>
+      </article>
+
+            <article class="version">
+        <div class="version-head">
+          <div>
+            <span class="version-tag">c5255bb</span>
+            
+          </div>
+          <span class="version-date">2026-10-03 · playtest</span>
+        </div>
+        <ul class="changes">
+          <li><strong>Skills sheet</strong> — title is Skills. Spellbook copy is gone. Phone menu sheet from 8fb3e15 stays.</li>
+          <li><strong>Includes</strong> 8fb3e15 phone menu, quick-action pins, and the class kit hotbar</li>
+        </ul>
+        <div class="dl-row">
+          <a class="secondary" href="/app/downloads/veilspan-c5255bb.apk" download>veilspan-c5255bb.apk</a>
+          <span class="hash">sha256 6ddb4b8fbaf5bb5e9e55d84b5b940948951e72c8f364fc4ce6207250ae5ec6c9</span>
+        </div>
+      </article>
+
+            <article class="version">
+        <div class="version-head">
+          <div>
+            <span class="version-tag">8fb3e15</span>
+            
+          </div>
+          <span class="version-date">2026-10-03 · playtest</span>
+        </div>
+        <ul class="changes">
+          <li><strong>Phone menu</strong> — bottom sheet with large rows for Character, Quest Log, Equipment, Skills, and Settings. Room art stays visible. Tap outside or swipe the handle to close.</li>
+          <li><strong>Quick actions</strong> — pin chips live in Settings, not a checkbox wall. At most six show on the action bar; the rest stay in Settings.</li>
+          <li><strong>Chrome</strong> — Inv, Map, Actions, and Console stay on the bar. Guest badge in the header is unchanged.</li>
+          <li><strong>Includes</strong> d5ec995 create roster, race picker, and per-character hotbar</li>
+        </ul>
+        <div class="dl-row">
+          <a class="secondary" href="/app/downloads/veilspan-8fb3e15.apk" download>veilspan-8fb3e15.apk</a>
+          <span class="hash">sha256 3b679ff5a8b0ceb3337656499bf0a5c6a6efc6c9f68375b7652fecc157360a15</span>
+        </div>
+      </article>
+
+            <article class="version">
+        <div class="version-head">
+          <div>
+            <span class="version-tag">d5ec995</span>
+            
+          </div>
+          <span class="version-date">2026-10-03 · playtest</span>
+        </div>
+        <ul class="changes">
+          <li><strong>Create roster</strong> — Fenwatch, Alley, Rune Hand, Ward, Rigger with the signed blurbs. No Warrior/Rogue/Mage subtitles.</li>
+          <li><strong>Race picker</strong> — Fenwatch human/dwarf; Alley human/dwarf/elf; Rune Hand human/elf; Ward human/dwarf; Rigger construct only. Saved elve reads as elf.</li>
+          <li><strong>Guest</strong> — veilspan.com may pick class and race; other hosts stay a random guest. 400s from the server are shown, not swallowed.</li>
+          <li><strong>Hotbar</strong> — per character. Kit ids cast by name (Brace, Slip, Inscribe, Guard, Bolt, Rig). Empty slots fill from equipped skills, four skills max.</li>
+          <li><strong>Includes</strong> c4ebc63 guest reconnect and quest Turn In</li>
+        </ul>
+        <div class="dl-row">
+          <a class="secondary" href="/app/downloads/veilspan-d5ec995.apk" download>veilspan-d5ec995.apk</a>
+          <span class="hash">sha256 e3aa808b246b4130a0a1be22f2007760f50e778f8ab25c46e2951d56f009f25c</span>
+        </div>
+      </article>
+
+            <article class="version">
+        <div class="version-head">
+          <div>
+            <span class="version-tag">c4ebc63</span>
+            
+          </div>
+          <span class="version-date">2026-10-02 · playtest</span>
+        </div>
+        <ul class="changes">
+          <li><strong>Guest reconnect</strong> — remember characterSelected so app-resume re-sends <code>sc</code> (Meadows funnel)</li>
+          <li><strong>Quest log Turn In</strong> — gold filled thumb target for turnInAnywhere / readyToTurnIn (web guestturnin1 parity)</li>
+          <li><strong>Includes</strong> prior playtest UX through ae4412c buff chips + turn-in markers</li>
+        </ul>
+        <div class="dl-row">
+          <a class="secondary" href="/app/downloads/veilspan-c4ebc63.apk" download>veilspan-c4ebc63.apk</a>
+          <span class="hash">sha256 37123c56c50b4f8da162940fe3970905a1feb2deab9010c7e8899c2244e3e868</span>
+        </div>
+      </article>
+
+            <article class="version">
+        <div class="version-head">
+          <div>
+            <span class="version-tag">ae4412c</span>
+            
+          </div>
+          <span class="version-date">2026-10-01 · playtest</span>
+        </div>
+        <ul class="changes">
+          <li><strong>Combat buff chips</strong> — small buff/debuff rectangles above/beside portraits (statusEffects)</li>
+          <li><strong>Equipment stats</strong> — larger, higher-contrast HP/MP/ATK/DEF under the paper doll</li>
+          <li><strong>Web parity</strong> — live play <code>?v=buffport1</code>; Servitor chroma green keyed transparent</li>
+          <li><strong>Includes</strong> quest turn-in markers, map Travel follow, prior playtest UX</li>
+        </ul>
+        <div class="dl-row">
+          <a class="secondary" href="/app/downloads/veilspan-ae4412c.apk" download>veilspan-ae4412c.apk</a>
+          <span class="hash">sha256 c8a08cefd6c504847a35bb95632118394a83e1227d4764aad7d659ee201638d4</span>
+        </div>
+      </article>
+
+            <article class="version">
+        <div class="version-head">
+          <div>
+            <span class="version-tag">3de00bc</span>
+            
+            
+            
+          </div>
+          <span class="version-date">2026-10-01 · playtest</span>
+        </div>
+        <ul class="changes">
+          <li><strong>Quest turn-in markers</strong> — gold quest icons on Cartographer rooms where a ready quest turns in at an NPC</li>
+          <li><strong>Map legend</strong> — You / Turn in / Selected plus quest name in tooltip &amp; intel</li>
+          <li><strong>Protocol</strong> — questLog now includes <code>turnInRoomId</code> (web parity ?v=map-turnin1)</li>
+          <li><strong>Includes</strong> map Travel follow/fade-close, prior playtest UX</li>
+        </ul>
+        <div class="dl-row">
+          <a class="secondary" href="/app/downloads/veilspan-ae4412c.apk" download>veilspan-3de00bc.apk</a>
+          <span class="hash">sha256 1bbc35a1cadf6bc3ceabf4bc6920faf92d082d4bcf23c154bac5f6222e6612fb</span>
+        </div>
+      </article>
+
+            <article class="version">
+        <div class="version-head">
+          <div>
+            <span class="version-tag">5b4cfca</span>
+            
+            
+            
+          </div>
+          <span class="version-date">2026-10-01 · playtest</span>
+        </div>
+        <ul class="changes">
+          <li><strong>Map Travel</strong> — smooth camera follow while pathing; overlay fades closed on arrival</li>
+          <li><strong>Web parity note</strong> — live play also has Travel-on-select, quest area groups, denser equipment, combat buff bars</li>
+          <li><strong>Includes</strong> prior playtest UX (action banners, fullscreen menus, OAuth X fix)</li>
+        </ul>
+        <div class="dl-row">
+          <a class="secondary" href="/app/downloads/veilspan-5b4cfca.apk" download>veilspan-5b4cfca.apk</a>
+          <span class="hash">sha256 7730d2acf9b4cbe1d8f2703ea5b38f6b1621631908aa08339e0fab52e8ce5091</span>
+        </div>
+      </article>
+
+            <article class="version">
+        <div class="version-head">
+          <div>
+            <span class="version-tag">25fe7a8</span>
+            
+          </div>
+          <span class="version-date">2026-09-30 · playtest</span>
+        </div>
+        <ul class="changes">
+          <li><strong>Action feedback</strong> — larger SYSTEM toasts + distinct action-result banners</li>
+          <li><strong>Full-screen menus</strong> — Character / Quests / Equipment / Settings near full-screen like the shop</li>
+          <li><strong>Entity stacks</strong> — clearer stacked chrome + animated expand/collapse</li>
+          <li><strong>Battle polish p2</strong> — clearer hierarchy + latest-action banner</li>
+          <li><strong>Includes</strong> OAuth X fix, Actions sheet, boss phases, Settings, P1j map</li>
+        </ul>
+        <div class="dl-row">
+          <a class="secondary" href="/app/downloads/veilspan-25fe7a8.apk" download>veilspan-25fe7a8.apk</a>
+          <span class="hash">sha256 2e80ed58da6e21649f3b72dbd58f7dcf60a125b72da0583a93fd7e2473b03d28</span>
+        </div>
+      </article>
+
+<article class="version">
+        <div class="version-head">
+          <div>
+            <span class="version-tag">d3034db</span>
+            
+          </div>
+          <span class="version-date">2026-09-30 · playtest</span>
+        </div>
+        <ul class="changes">
+          <li><strong>Sign-with-X OAuth</strong> — fixed Android Auth0 redirect crash returning from X (AppCompat redirect theme, scheme intent-filters, taskAffinity)</li>
+          <li><strong>Mobile UX</strong> — room Actions sheet + collapsed combat log</li>
+          <li><strong>Includes</strong> A9 boss phases, Settings, P1j map from prior playtest</li>
+        </ul>
+        <div class="dl-row">
+          <a class="secondary" href="/app/downloads/veilspan-d3034db.apk" download>veilspan-d3034db.apk</a>
+          <span class="hash">sha256 c3a6221d407b4c1766c6d7001b82b37c0ed2b2f9fbf85fc422d799fcdb3c85d8</span>
+        </div>
+      </article>
+      <article class="version" style="margin-top:1.25rem;opacity:0.92">
+        <div class="version-head">
+          <div>
+            <span class="version-tag">7cbb5df</span>
+          </div>
+          <span class="version-date">2026-09-30 · playtest</span>
+        </div>
+        <ul class="changes">
+          <li><strong>A9 boss phases</strong> — multi-phase boss encounters wired for mobile</li>
+          <li><strong>Settings</strong> — in-app settings surface for playtest controls</li>
+          <li><strong>P1j map</strong> — worldmap craft atlas / tile updates</li>
+          <li><strong>Haptics</strong> — tactile feedback on key combat / UI events</li>
+        </ul>
+        <div class="dl-row">
+          <a class="secondary" href="/app/downloads/veilspan-7cbb5df.apk" download>veilspan-7cbb5df.apk</a>
+          <span class="hash">sha256 efa262db9d3ec469b96eea6b750842fcc7a424afd5a08b4e7e4b6215b5375aa2</span>
+        </div>
+      </article>
+    </section>
+
+    <section class="card" aria-labelledby="also-h">
+      <h2 id="also-h">Also play in the browser</h2>
+      <div class="links">
+        <a href="https://veilspan.com/play">
+          veilspan.com/play
+          <span>Primary web client</span>
+        </a>
+        <a href="https://play.veilspan.com/">
+          play.veilspan.com
+          <span>Play subdomain</span>
+        </a>
+        <a href="https://veilspan.com/">
+          veilspan.com
+          <span>Marketing / Chapter I landing</span>
+        </a>
+      </div>
+    </section>
+
+    <footer>
+      <div class="brand">Veilspan</div>
+      <div>Android playtest builds · not Play Store · &copy; 2026 Veilspan</div>
+    </footer>
+  </div>
+</body>
+</html>

@@ -48,7 +48,8 @@ func AllClassConfigs() []ClassConfig {
 		{"Rogue", characters.ClassRogue, characters.RaceHuman, 10, 18, 6, 5, 11, 19, "Worn Dagger", "Leather Armor"},
 		{"Mage", characters.ClassWizard, characters.RaceDwarf, 4, 6, 18, 14, 8, 17, "Apprentice Staff", "Cloth Robe"},
 		{"Cleric", ClassCleric, characters.RaceHuman, 6, 7, 10, 18, 9, 22, "Simple Mace", "Cloth Robe"},
-		{"Ranger", characters.ClassRanger, characters.RaceElve, 8, 18, 6, 6, 12, 20, "Short Bow", "Leather Armor"},
+		// Human so this duration harness stays a class measurement. Elf bow +10% is tested on the damage path.
+		{"Ranger", characters.ClassRanger, characters.RaceHuman, 8, 18, 6, 6, 12, 20, "Short Bow", "Leather Armor"},
 		{"Druid", ClassDruid, characters.RaceElve, 5, 8, 14, 18, 5, 20, "Wooden Staff", "Cloth Robe"},
 	}
 }

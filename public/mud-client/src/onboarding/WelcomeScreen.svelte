@@ -46,6 +46,12 @@
     animation-delay: 0.15s;
   }
 
+  .card.picker-open {
+    max-width: 760px;
+    max-height: calc(100vh - 2rem);
+    overflow: auto;
+  }
+
   @keyframes fadeSlideIn {
     from {
       opacity: 0;
@@ -120,6 +126,20 @@
     transform: translateY(-1px);
   }
 
+  .btn-welcome.secondary {
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #9ca3af;
+    background: transparent;
+    font-size: 0.75rem;
+    padding: 0.45rem 1rem;
+  }
+
+  .btn-welcome.secondary:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.28);
+    color: #e5e7eb;
+  }
+
   .btn-welcome.guest {
     border: 1px solid rgba(245, 158, 11, 0.3);
     color: #f59e0b;
@@ -155,9 +175,94 @@
     max-width: 280px;
     text-align: center;
   }
+
+  .guest-picker {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    text-align: left;
+  }
+
+  .guest-picker-title {
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #9ca3af;
+    text-align: center;
+  }
+
+  .guest-class-grid,
+  .guest-race-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.4rem;
+  }
+
+  .guest-portrait {
+    width: 72px;
+    height: 88px;
+    object-fit: cover;
+    object-position: center 12%;
+    image-rendering: pixelated;
+    border-radius: 4px;
+    display: block;
+    margin-bottom: 0.35rem;
+    background: #0c1016;
+  }
+
+  .guest-choice {
+    text-align: left;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    color: #e5e7eb;
+    padding: 0.45rem 0.55rem;
+    cursor: pointer;
+  }
+
+  .guest-choice.selected {
+    border-color: rgba(245, 158, 11, 0.55);
+    background: rgba(245, 158, 11, 0.1);
+  }
+
+  .guest-choice strong {
+    display: block;
+    font-size: 0.82rem;
+  }
+
+  .guest-choice span {
+    display: block;
+    margin-top: 0.15rem;
+    font-size: 0.72rem;
+    color: #9ca3af;
+    line-height: 1.3;
+  }
+
+  @media (max-width: 520px) {
+    .welcome-screen {
+      overflow-y: auto;
+      align-items: flex-start;
+      padding: 1.25rem 0 2rem;
+    }
+
+    .card {
+      padding: 1.75rem 1.25rem;
+      gap: 0.9rem;
+    }
+
+    .title {
+      font-size: 1.35rem;
+    }
+  }
 </style>
 
 <script>
+  import { onMount } from "svelte";
+  import { getCharacterTemplates } from "../api/characters.js";
+  import { ensureClassCatalog } from "./classCatalog.js";
+  import { catalogFallbackTemplates, guestPickerEnabled, originPortraitSrc, racesForTemplate } from "./raceAllow.js";
+
   export let login;
   export let serverName = "Tales";
   export let authError = null;
@@ -165,25 +270,61 @@
 
   let guestLoading = false;
   let guestError = null;
+  const showGuestPicker = guestPickerEnabled(typeof location !== "undefined" ? location.hostname : "");
+  let guestTemplates = [];
+  let guestTemplate = null;
+  let guestRaceId = "";
 
-  function handleLogin() {
-    // No screen_hint: Auth0 universal login offers X, Google, and email,
-    // and the hosted page has both log in and sign up.
-    login();
+  onMount(() => {
+    if (!showGuestPicker) return;
+    ensureClassCatalog().finally(() => {
+      getCharacterTemplates(
+        (result) => {
+          guestTemplates = (result && result.length) ? result : catalogFallbackTemplates();
+        },
+        () => { guestTemplates = catalogFallbackTemplates(); }
+      );
+    });
+  });
+
+  function chooseGuestTemplate(template) {
+    guestTemplate = template;
+    const races = racesForTemplate(template);
+    if (!races.some((race) => race.id === guestRaceId)) {
+      guestRaceId = races[0]?.id || "";
+    }
+  }
+
+  $: guestRaces = guestTemplate ? racesForTemplate(guestTemplate) : [];
+
+  // A named connection skips Auth0 universal login. Email is the only
+  // button that opens that page, where the browser can autofill a password.
+  function loginWith(connection) {
+    if (connection) login(undefined, { connection });
+    else login();
+  }
+
+  function startGuest(pick) {
+    if (!onGuestPlay) return;
+    guestLoading = true;
+    guestError = null;
+    onGuestPlay(
+      () => { guestLoading = false; },
+      (err) => {
+        guestLoading = false;
+        guestError = err;
+      },
+      pick
+    );
   }
 
   function handleGuest() {
-    if (onGuestPlay) {
-      guestLoading = true;
-      guestError = null;
-      onGuestPlay(
-        () => { guestLoading = false; },
-        (err) => {
-          guestLoading = false;
-          guestError = err;
-        }
-      );
-    }
+    startGuest();
+  }
+
+  function handleGuestChosen() {
+    if (!guestTemplate || !guestRaceId) return;
+    startGuest({ templateId: guestTemplate.id, race: guestRaceId });
   }
 </script>
 
@@ -191,7 +332,7 @@
   <div class="bg-image"></div>
   <div class="bg-gradient"></div>
 
-  <div class="card">
+  <div class="card" class:picker-open={showGuestPicker}>
     <i class="material-icons icon">auto_stories</i>
 
     <h1 class="title">{serverName}</h1>
@@ -215,8 +356,14 @@
     {/if}
 
     <div class="buttons">
-      <button class="btn-welcome primary" on:click={handleLogin}>
-        Log in / Sign up
+      <button class="btn-welcome primary" type="button" on:click={() => loginWith("twitter")}>
+        Continue with X
+      </button>
+      <button class="btn-welcome primary" type="button" on:click={() => loginWith("google-oauth2")}>
+        Continue with Google
+      </button>
+      <button class="btn-welcome secondary" type="button" on:click={() => loginWith()}>
+        Email and password
       </button>
 
       <div class="divider" style="width: 100%; margin: 0.25rem 0;"></div>
@@ -232,5 +379,57 @@
         30 min session, no login required
       </span>
     </div>
+
+    {#if showGuestPicker}
+      <div class="guest-picker">
+        <div class="guest-picker-title">Or pick a class and race</div>
+        {#if guestTemplates.length === 0}
+          <div class="guest-note">Loading classes...</div>
+        {/if}
+        <div class="guest-class-grid">
+          {#each guestTemplates as template}
+            <button
+              type="button"
+              class="guest-choice"
+              class:selected={guestTemplate && guestTemplate.id === template.id}
+              on:click={() => chooseGuestTemplate(template)}
+            >
+              {#if originPortraitSrc(template, guestTemplate && guestTemplate.id === template.id ? guestRaceId : "")}
+                <img
+                  class="guest-portrait"
+                  alt=""
+                  src={originPortraitSrc(template, guestTemplate && guestTemplate.id === template.id ? guestRaceId : "")}
+                />
+              {/if}
+              <strong>{template.name}</strong>
+              <span>{template.description}</span>
+            </button>
+          {/each}
+        </div>
+        {#if guestTemplate}
+          <div class="guest-race-grid">
+            {#each guestRaces as race}
+              <button
+                type="button"
+                class="guest-choice"
+                class:selected={guestRaceId === race.id}
+                on:click={() => guestRaceId = race.id}
+              >
+                <strong>{race.name}</strong>
+                <span>{race.blurb}</span>
+              </button>
+            {/each}
+          </div>
+          <button
+            class="btn-welcome guest"
+            type="button"
+            on:click={handleGuestChosen}
+            disabled={guestLoading || !guestRaceId}
+          >
+            Play this guest
+          </button>
+        {/if}
+      </div>
+    {/if}
   </div>
 </div>

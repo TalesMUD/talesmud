@@ -1,5 +1,11 @@
 import { writable, get } from 'svelte/store';
 import {
+  BATTLE_LAYOUT_STORAGE_KEY,
+  battleLayoutSettingsDefault,
+  normalizeBattleLayoutB,
+  writeBattleLayoutOverride,
+} from './battleLayout.js';
+import {
   ACTION_BAR_LAYOUT_REVISION,
   DEFAULT_ACTION_BAR_PINS,
   DEFAULT_HOTBAR_BINDS,
@@ -10,9 +16,16 @@ import {
   normalizeInventoryOpenMode,
   scrubLegacySearchBinds,
   seedRestOnEmptyHotbar,
+  HOTBAR_BY_CHARACTER_STORAGE_KEY,
+  parseHotbarByCharacter,
+  reconcileHotbarForCharacter,
 } from './hudPrefs.js';
 
 const STORAGE_KEY = 'talesmud_settings_v1';
+
+export function normalizeReducedMotion(value) {
+  return value === 'on' || value === 'off' ? value : 'system';
+}
 
 const DEFAULT_SETTINGS = {
   // General settings
@@ -25,14 +38,38 @@ const DEFAULT_SETTINGS = {
   interface: {
     theme: 'dark-fantasy',       // UI theme: 'dark-fantasy' or 'clean-hud'
     parchmentBackground: false,  // Room description parchment style (default off)
-    compactMode: false,
-    roomTextOverlay: false,      // Show game text overlay on room image (always on for mobile)
+    compactMode: false,          // Legacy stored field; no active UI consumer
+    roomTextOverlay: false,      // Legacy stored field; no active UI consumer
     actionBarPins: [...DEFAULT_ACTION_BAR_PINS],
     actionBarLayoutRevision: ACTION_BAR_LAYOUT_REVISION,
     inventoryOpenMode: DEFAULT_INVENTORY_OPEN_MODE, // 'overlay' | 'widget'
+    reducedMotion: 'system', // 'system' | 'on' | 'off'
+    combatAutoFocus: true,
+    battleLayoutB: true, // Layout B default; Classic is the Settings opt-out
     hotbarBinds: [...DEFAULT_HOTBAR_BINDS],
   }
 };
+
+let activeHotbarCharacterId = '';
+
+function readHotbarCharacterMap() {
+  if (typeof localStorage === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(HOTBAR_BY_CHARACTER_STORAGE_KEY);
+    return parseHotbarByCharacter(raw ? JSON.parse(raw) : {});
+  } catch (_) {
+    return {};
+  }
+}
+
+function writeHotbarCharacterMap(map) {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(HOTBAR_BY_CHARACTER_STORAGE_KEY, JSON.stringify(map || {}));
+  } catch (_) {
+    /* quota / private mode */
+  }
+}
 
 function createSettingsStore() {
   const { subscribe, set, update } = writable({
@@ -55,6 +92,7 @@ function createSettingsStore() {
 
     // Load settings from localStorage
     loadFromStorage() {
+      if (typeof localStorage === 'undefined') return false;
       try {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
@@ -65,6 +103,20 @@ function createSettingsStore() {
             iface.actionBarPins = migrateActionBarPins(iface.actionBarPins, prevRev);
             iface.actionBarLayoutRevision = ACTION_BAR_LAYOUT_REVISION;
             iface.inventoryOpenMode = normalizeInventoryOpenMode(iface.inventoryOpenMode);
+            iface.reducedMotion = normalizeReducedMotion(iface.reducedMotion);
+            iface.combatAutoFocus = iface.combatAutoFocus !== false;
+            // No talesmud_battle_layout_b key → Layout B, even if this blob
+            // still stores the old default false. Explicit 0/1 is the preference.
+            let layoutRaw = null;
+            try {
+              layoutRaw = localStorage.getItem(BATTLE_LAYOUT_STORAGE_KEY);
+            } catch (_) {
+              layoutRaw = null;
+            }
+            iface.battleLayoutB = battleLayoutSettingsDefault(
+              data.interface?.battleLayoutB,
+              layoutRaw
+            );
             const beforeSeed = scrubLegacySearchBinds(
               normalizeHotbarBinds(iface.hotbarBinds)
             );
@@ -103,6 +155,7 @@ function createSettingsStore() {
           actionBarPins: normalizeActionBarPins(state.interface.actionBarPins),
           actionBarLayoutRevision: ACTION_BAR_LAYOUT_REVISION,
           inventoryOpenMode: normalizeInventoryOpenMode(state.interface.inventoryOpenMode),
+          reducedMotion: normalizeReducedMotion(state.interface.reducedMotion),
           hotbarBinds: scrubLegacySearchBinds(
             normalizeHotbarBinds(state.interface.hotbarBinds)
           ),
@@ -110,6 +163,11 @@ function createSettingsStore() {
       };
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        if (activeHotbarCharacterId) {
+          const book = readHotbarCharacterMap();
+          book[activeHotbarCharacterId] = data.interface.hotbarBinds;
+          writeHotbarCharacterMap(book);
+        }
         return true;
       } catch (e) {
         console.error('Failed to save settings:', e);
@@ -133,6 +191,18 @@ function createSettingsStore() {
         }
         if (category === 'interface' && key === 'inventoryOpenMode') {
           nextValue = normalizeInventoryOpenMode(value);
+        }
+        if (category === 'interface' && key === 'reducedMotion') {
+          nextValue = normalizeReducedMotion(value);
+        }
+        if (category === 'interface' && key === 'combatAutoFocus') {
+          nextValue = value !== false;
+        }
+        if (category === 'interface' && key === 'battleLayoutB') {
+          nextValue = normalizeBattleLayoutB(value);
+          // Explicit 1 or 0. Clearing the key would look like "no preference"
+          // and snap back to the Layout B default.
+          writeBattleLayoutOverride(nextValue ? true : false);
         }
         if (category === 'interface' && key === 'hotbarBinds') {
           nextValue = scrubLegacySearchBinds(normalizeHotbarBinds(value));
@@ -171,7 +241,30 @@ function createSettingsStore() {
           hotbarBinds: [...DEFAULT_HOTBAR_BINDS],
         }
       }));
+      writeBattleLayoutOverride(null);
       this.saveToStorage();
+    },
+
+    /**
+     * On login / character switch: load this character's bar and drop skills
+     * that are not equipped or available for their class.
+     */
+    syncHotbarForCharacter({ characterId, classId, level, equippedIds } = {}) {
+      const state = get({ subscribe });
+      const result = reconcileHotbarForCharacter({
+        activeCharacterId: activeHotbarCharacterId,
+        map: readHotbarCharacterMap(),
+        activeBinds: state.interface?.hotbarBinds,
+        characterId,
+        classId,
+        level,
+        equippedIds,
+      });
+      activeHotbarCharacterId = result.activeCharacterId;
+      writeHotbarCharacterMap(result.map);
+      if (result.changed) {
+        this.setSetting('interface', 'hotbarBinds', result.binds);
+      }
     }
   };
 }

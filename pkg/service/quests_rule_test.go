@@ -910,3 +910,17 @@ func (s *unusedSkillsService) Import(skill *skills.Skill) (*skills.Skill, error)
 }
 func (s *unusedSkillsService) Update(id string, skill *skills.Skill) error { return nil }
 func (s *unusedSkillsService) Delete(id string) error                      { return nil }
+
+func TestResolveNPCTurnInRoomPrefersCurrentThenSpawn(t *testing.T) {
+	n := &npc.NPC{SpawnRoomID: "R0201"}
+	if got := resolveNPCTurnInRoom(n); got != "R0201" {
+		t.Fatalf("spawn only: got %q", got)
+	}
+	n.CurrentRoomID = "R0299"
+	if got := resolveNPCTurnInRoom(n); got != "R0299" {
+		t.Fatalf("current preferred: got %q", got)
+	}
+	if got := resolveNPCTurnInRoom(nil); got != "" {
+		t.Fatalf("nil: got %q", got)
+	}
+}

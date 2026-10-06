@@ -87,6 +87,24 @@ func TestDefeatRespawnsAtBoundRoomAndDamagesArmor(t *testing.T) {
 			if strings.Contains(msg.Message, "back at") {
 				sawBoundRoom = true
 			}
+			if msg.Defeat == nil {
+				t.Fatal("defeat payload missing")
+			}
+			if msg.Defeat.XPLost != 10 || msg.Defeat.GoldLost != 1 {
+				t.Fatalf("defeat losses %+v", msg.Defeat)
+			}
+			if msg.Defeat.RespawnRoomID != "R0203" || msg.Defeat.RespawnRoom == "" {
+				t.Fatalf("respawn %+v", msg.Defeat)
+			}
+			if msg.Defeat.HP != 10 || msg.Defeat.MaxHP != 20 {
+				t.Fatalf("awaken hp %+v", msg.Defeat)
+			}
+			if len(msg.Defeat.Armor) == 0 || !strings.Contains(msg.Defeat.Armor[0], "Leather Jerkin") {
+				t.Fatalf("armor %+v", msg.Defeat.Armor)
+			}
+			if msg.Rewards != nil {
+				t.Fatalf("defeat must not carry victory rewards: %+v", msg.Rewards)
+			}
 		case messages.MessageResponse:
 			if strings.Contains(msg.Message, "Your armor is battered") {
 				sawDefeat = true

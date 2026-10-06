@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/talesmud/talesmud/pkg/authlocal"
+	"github.com/talesmud/talesmud/pkg/classkit"
 	dbsqlite "github.com/talesmud/talesmud/pkg/db/sqlite"
 	"github.com/talesmud/talesmud/pkg/gamemode"
 	mud "github.com/talesmud/talesmud/pkg/mudserver"
@@ -86,6 +87,7 @@ func allowedCORSOrigins() []string {
 // NewApp returns an application instance
 // this is the primary stateless server providing an API interface
 func NewApp() App {
+	classkit.LoadWorld()
 	path := strings.TrimSpace(os.Getenv("SQLITE_PATH"))
 	if path == "" {
 		path = "talesmud.db"
@@ -452,8 +454,13 @@ func (app *app) setupRoutes() {
 		public.GET("item-art/:filename", itemsHandler.ServeBackground)
 		public.HEAD("item-art/:filename", itemsHandler.ServeBackground)
 
+		// Terrain art shares the embedded play assets; no upload or disk configuration.
+		public.GET("map-tiles/:filename", handler.MapTiles(webuiplay.FS()))
+		public.HEAD("map-tiles/:filename", handler.MapTiles(webuiplay.FS()))
+
 		// Legacy endpoint for old character creation flow (returns hardcoded templates)
 		public.GET("templates/characters", csh.GetCharacterTemplates)
+		public.GET("classes", handler.GetClasses)
 		public.GET("item-slots", items.GetItemSlots)
 		public.GET("item-qualities", items.GetItemQualities)
 		public.GET("item-types", items.GetItemTypes)
