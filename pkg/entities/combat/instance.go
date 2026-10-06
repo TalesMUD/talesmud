@@ -145,7 +145,7 @@ type CombatantRef struct {
 	RaceID        string `json:"raceId,omitempty"`
 	WeaponSubType string `json:"weaponSubType,omitempty"`
 
-	// Rigger. BoltLeft arms ScrapArmed on a target. RigLeft drops one turret.
+	// BoltLeft arms ScrapArmed on a target. RigLeft drops one turret.
 	BoltLeft   int  `json:"boltLeft,omitempty"`
 	RigLeft    int  `json:"rigLeft,omitempty"`
 	ScrapArmed bool `json:"scrapArmed,omitempty"`
@@ -210,7 +210,7 @@ type CombatInstance struct {
 	// Combat Log
 	Log []CombatLogEntry `json:"log"`
 
-	// Rig is the Rigger turret. It is not a pet, not a follower, and not in turn order.
+	// Rig is the room turret. It is not a pet, not a follower, and not in turn order.
 	Rig *RigTurret `json:"rig,omitempty"`
 }
 

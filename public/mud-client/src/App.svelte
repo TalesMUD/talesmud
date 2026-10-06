@@ -74,6 +74,7 @@
   import { BookOpenIcon } from "svelte-feather-icons";
   import Game from "./game/Game.svelte";
   import { onMount } from "svelte";
+  import { ensureClassCatalog } from "./onboarding/classCatalog.js";
   import UserMenu from "./UserMenu.svelte";
   import SettingsModal from "./game/ui/SettingsModal.svelte";
   import { createAuth } from "./auth.js";
@@ -112,6 +113,7 @@
   };
 
   onMount(async () => {
+    ensureClassCatalog();
     getServerInfo(
       (data) => {
         if (data.serverName) {

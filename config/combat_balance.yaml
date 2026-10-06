@@ -99,11 +99,10 @@ reward_scale:
 # REPLACES the previous rows. Do not stack the old rogue 2.35 / mage 0.46 on top.
 # damage_dealt multiplies each swing. damage_taken multiplies hits received.
 # behind_dealt is capped at 1.15 for every class. swings is basic attacks per action.
-# wizard reads as mage. ranger and hunter read as rogue (Alley weapons, not classes).
-# HP percents are create-time only (warrior +20%, rogue -15%, mage -25%, ward +5%, rigger +0%).
-# Signatures are not damage rows: Brace, Slip, Inscribe (4/round x3), Guard, Bolt, Rig.
-# hitch is the stored class id from before Ward and reads as ward.
-# Rune Hand basic attacks cost 0 mana.
+# Fallback rows used only when the class catalog has no row for that id.
+# wizard reads as mage. ranger and hunter read as rogue.
+# hitch is a stored id that reads as ward.
+# HP scales are create-time only and come from the catalog when a pack is loaded.
 class_balance:
   warrior:
     damage_dealt: 1.00

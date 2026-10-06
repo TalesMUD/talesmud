@@ -3,6 +3,8 @@ package balance
 import (
 	"math"
 	"testing"
+
+	"github.com/talesmud/talesmud/pkg/classkit"
 )
 
 func TestScaleClassDamageRoster(t *testing.T) {
@@ -76,11 +78,18 @@ func TestScaleClassDamageRoster(t *testing.T) {
 	}
 
 	// A stale overtuned behind value must clamp, not stack.
-	cfg.ClassBalance["rogue"] = ClassBalance{DamageDealt: 0.55, DamageTaken: 1.15, BehindDealt: 2.35, Swings: 2}
+	// The catalog wins over the config map, so the mutation goes on the catalog.
+	origRogue, _ := classkit.Balance("rogue")
+	origMage, _ := classkit.Balance("mage")
+	t.Cleanup(func() {
+		classkit.SetBalance("rogue", origRogue)
+		classkit.SetBalance("mage", origMage)
+	})
+	classkit.SetBalance("rogue", classkit.Row{DamageDealt: 0.55, DamageTaken: 1.15, BehindDealt: 2.35, Swings: 2})
 	if got := ScaleClassDamage("rogue", "", 10, 13, 10); got != 6 {
 		t.Fatalf("behind cap 10 * 0.55 * 1.15 = %d, want 6 (not 2.35)", got)
 	}
-	cfg.ClassBalance["mage"] = ClassBalance{DamageDealt: 1.40, DamageTaken: 0.46, BehindDealt: 1, Swings: 1}
+	classkit.SetBalance("mage", classkit.Row{DamageDealt: 1.40, DamageTaken: 0.46, BehindDealt: 1, Swings: 1})
 	if got := ScaleClassDamage("", "wizard", 12, 10, 20); got != 9 {
 		t.Fatalf("explicit 0.46 taken still applies when under the behind cap, got %d", got)
 	}
@@ -118,14 +127,14 @@ func TestClassRosterShape(t *testing.T) {
 	if b != 0 || s != 0 || p != 0 {
 		t.Fatalf("rigger is not brace/slip/pin, got %d %d %d", b, s, p)
 	}
-	bolt, rig := RiggerCharges("rigger")
+	bolt, rig := BoltRigCharges("rigger")
 	if bolt != 1 || rig != 1 {
 		t.Fatalf("rigger charges %d %d", bolt, rig)
 	}
-	if bolt, rig := RiggerCharges("hitch"); bolt != 0 || rig != 0 {
+	if bolt, rig := BoltRigCharges("hitch"); bolt != 0 || rig != 0 {
 		t.Fatalf("hitch rigger charges %d %d", bolt, rig)
 	}
-	if !IsRigger("rigger") || IsRigger("warrior") {
+	if !ArmsScrap("rigger") || ArmsScrap("warrior") {
 		t.Fatal("rigger detect")
 	}
 	b, s, p = SignatureCharges("warrior")

@@ -129,11 +129,11 @@ func (e *Engine) CreateCombatantFromCharacter(char *characters.Character) combat
 		ManaRegen:   char.CalculateManaRegen(),
 	}
 	if balance.IsWard(ref.ClassID) {
+		ref.Grit = balance.OpeningGrit(ref.ClassID)
 		ref.ClassID = "ward"
-		ref.Grit = balance.WardOpeningGrit
 	}
 	// Kit charges are armed by the skill button, not at combat start.
-	bolt, rig := balance.RiggerCharges(char.Class.ID)
+	bolt, rig := balance.BoltRigCharges(char.Class.ID)
 	ref.BoltLeft = bolt
 	ref.RigLeft = rig
 	ref.RaceID = characters.CanonicalRaceID(char.Race.ID)
@@ -497,10 +497,10 @@ func (e *Engine) processAttackSwingMult(instance *combat.CombatInstance, attacke
 		}
 		result.Damage = scaled
 	} else if result.Hit && attacker.Level <= 1 && balance.IsWard(attacker.ClassID) && result.Damage > 0 {
-		result.Damage += balance.WardStarterSwing
+		result.Damage += balance.StarterSwing(attacker.ClassID)
 	}
 
-	// Fenwatch Brace: once per fight, the next landed blow is halved.
+	// Once per fight, the next landed blow is halved.
 	braced := false
 	if target.BraceLeft > 0 && result.Damage > 0 {
 		target.BraceLeft--

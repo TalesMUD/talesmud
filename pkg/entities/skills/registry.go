@@ -3,22 +3,21 @@ package skills
 import (
 	"strings"
 	"sync"
+
+	"github.com/talesmud/talesmud/pkg/classkit"
 )
 
-// normalizeClassID maps class ID aliases to canonical IDs used in skill definitions.
-// e.g. "wizard" → "mage" (the entity class is ClassWizard with ID "wizard")
+// normalizeClassID maps a class id onto the skill-row id.
+// Lookup only: a shared row such as ranger stays ranger.
 func normalizeClassID(classID string) string {
+	if s := classkit.SkillClass(classID); s != "" {
+		return s
+	}
 	switch strings.ToLower(strings.TrimSpace(classID)) {
-	case "wizard", "mage", "runehand", "rune_hand", "rune hand":
+	case "wizard", "mage":
 		return "mage"
-	case "rogue", "alley":
-		return "rogue"
-	case "warrior", "fenwatch":
-		return "warrior"
-	case "hitch", "ward":
+	case "hitch":
 		return "ward"
-	case "rigger":
-		return "rigger"
 	default:
 		return strings.ToLower(strings.TrimSpace(classID))
 	}

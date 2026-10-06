@@ -366,8 +366,9 @@
     INVENTORY_OPEN_OVERLAY,
     INVENTORY_OPEN_WIDGET,
     characterClassId,
-    normalizeClassId,
+    armsScrap,
   } from '../hudPrefs.js';
+  import { classCatalog } from '../../onboarding/classCatalog.js';
 
   export let store;
   export let sendMessage;
@@ -406,11 +407,11 @@
       rigSpent = false;
     }
   }
-  $: isRigger = normalizeClassId(characterClassId($store.character) || $store.character?.classId) === "rigger";
+  $: scrapClass = ($classCatalog.source, armsScrap(characterClassId($store.character) || $store.character?.classId));
   $: combatCommands = [
     ...baseCombatCommands,
-    ...(isRigger && $store.inCombat && !boltSpent ? [{ id: "bolt", name: "bolt", icon: "build", label: "Bolt", kind: "command" }] : []),
-    ...(isRigger && $store.inCombat && !rigSpent ? [{ id: "rig", name: "rig", icon: "memory", label: "Rig", kind: "command" }] : []),
+    ...(scrapClass && $store.inCombat && !boltSpent ? [{ id: "bolt", name: "bolt", icon: "build", label: "Bolt", kind: "command" }] : []),
+    ...(scrapClass && $store.inCombat && !rigSpent ? [{ id: "rig", name: "rig", icon: "memory", label: "Rig", kind: "command" }] : []),
   ];
 
   $: pins = $settingsStore.interface?.actionBarPins;

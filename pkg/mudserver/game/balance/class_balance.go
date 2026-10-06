@@ -3,6 +3,8 @@ package balance
 import (
 	"math"
 	"strings"
+
+	"github.com/talesmud/talesmud/pkg/classkit"
 )
 
 // BehindDealtCap is the uphill damage cap. Live rows sit on it.
@@ -14,8 +16,9 @@ const BehindDealtCap = 1.15
 // BehindDealt is an extra multiplier on damage_dealt when this class is
 // the lower level. It is capped at BehindDealtCap.
 // Swings is how many basic attacks one action takes. 0 means 1.
-// Keys are class ids. "wizard" is read as "mage".
-// "ranger" and "hunter" are read as "rogue" (Alley weapons, not classes).
+// Keys are class ids. The catalog wins. The config file is the fallback
+// when a class is not in the catalog. "wizard" falls back as "mage".
+// "ranger" and "hunter" fall back as "rogue". "hitch" falls back as "ward".
 type ClassBalance struct {
 	DamageDealt float64 `yaml:"damage_dealt"`
 	DamageTaken float64 `yaml:"damage_taken"`
@@ -23,42 +26,42 @@ type ClassBalance struct {
 	Swings      int     `yaml:"swings"`
 }
 
-func defaultClassBalance() map[string]ClassBalance {
-	return map[string]ClassBalance{
-		// Fenwatch. One swing at full. Incoming is lighter.
-		"warrior": {DamageDealt: 1.00, DamageTaken: 0.90, BehindDealt: BehindDealtCap, Swings: 1},
-		// Alley. Two lighter swings. Incoming hurts more. Ranger and hunter use this row.
-		"rogue": {DamageDealt: 0.55, DamageTaken: 1.15, BehindDealt: BehindDealtCap, Swings: 2},
-		// Rune Hand. One heavy swing. Cloth takes more. Inscribe is applied in combat, not here.
-		"mage": {DamageDealt: 1.40, DamageTaken: 1.25, BehindDealt: BehindDealtCap, Swings: 1},
-		// Ward. One slow swing until Grit stacks. Guard and Slam are applied in combat.
-		// 0.95 keeps the opener under Fenwatch (starter sword is 6 vs 7) and off the old 5.
-		// hitch is the stored id from before this kit and uses the same row.
-		"ward": {DamageDealt: 0.95, DamageTaken: 1.05, BehindDealt: BehindDealtCap, Swings: 1},
-		// Rigger. One light swing. Bolt and Rig are applied in combat, not here.
-		"rigger": {DamageDealt: 0.85, DamageTaken: 1.00, BehindDealt: BehindDealtCap, Swings: 1},
+func fromKit(row classkit.Row) ClassBalance {
+	return ClassBalance{
+		DamageDealt: row.DamageDealt,
+		DamageTaken: row.DamageTaken,
+		BehindDealt: row.BehindDealt,
+		Swings:      row.Swings,
 	}
+}
+
+func defaultClassBalance() map[string]ClassBalance {
+	raw := classkit.BalanceMap()
+	out := make(map[string]ClassBalance, len(raw))
+	for id, row := range raw {
+		out[id] = fromKit(row)
+	}
+	return out
 }
 
 func classKey(id string) string {
 	id = strings.ToLower(strings.TrimSpace(id))
 	switch id {
-	case "wizard", "mage", "runehand", "rune_hand", "rune hand":
+	case "wizard", "mage":
 		return "mage"
-	case "rogue", "alley", "ranger", "hunter":
+	case "rogue", "ranger", "hunter":
 		return "rogue"
-	case "warrior", "fenwatch":
-		return "warrior"
-	case "hitch", "ward":
+	case "hitch":
 		return "ward"
-	case "rigger":
-		return "rigger"
 	default:
 		return id
 	}
 }
 
 func lookupClass(id string) (ClassBalance, bool) {
+	if row, ok := classkit.Balance(id); ok {
+		return fromKit(row), true
+	}
 	key := classKey(id)
 	if key == "" {
 		return ClassBalance{}, false
@@ -68,15 +71,14 @@ func lookupClass(id string) (ClassBalance, bool) {
 		if row, ok := cfg.ClassBalance[key]; ok {
 			return row, true
 		}
-		// A config written before Ward still has the hitch row.
+		// A config written before the plate class still has the hitch row.
 		if key == "ward" {
 			if row, ok := cfg.ClassBalance["hitch"]; ok {
 				return row, true
 			}
 		}
 	}
-	row, ok := defaultClassBalance()[key]
-	return row, ok
+	return ClassBalance{}, false
 }
 
 func multOrOne(v float64) float64 {
@@ -109,20 +111,7 @@ func ClassSwings(id string) int {
 // ClassHPMultiplier is the create-time max HP scale. 1 leaves the base alone.
 // Applied once when a template is built. Combat must not apply it again.
 func ClassHPMultiplier(id string) float64 {
-	switch classKey(id) {
-	case "warrior":
-		return 1.20
-	case "rogue":
-		return 0.85
-	case "mage":
-		return 0.75
-	case "ward":
-		return 1.05
-	case "rigger":
-		return 1
-	default:
-		return 1
-	}
+	return classkit.HPMultiplier(id)
 }
 
 // ScaleClassHP applies ClassHPMultiplier once. base <= 0 is unchanged.
@@ -138,16 +127,10 @@ func ScaleClassHP(id string, base int32) int32 {
 }
 
 // SignatureCharges is Brace and Slip uses granted at combat start.
-// Ranger and hunter fold into Alley's Slip. Ward's Guard is a hotbar skill, not a charge.
+// Ranger and hunter share the rogue slip. Guard is a hotbar skill, not a charge.
 func SignatureCharges(id string) (brace, slip, pin int) {
-	switch classKey(id) {
-	case "warrior":
-		return 1, 0, 0
-	case "rogue":
-		return 0, 1, 0
-	default:
-		return 0, 0, 0
-	}
+	brace, slip = classkit.Charges(id)
+	return brace, slip, 0
 }
 
 // GritCap is the Ward soak stack. It lasts the current fight and clears when combat ends.
@@ -159,20 +142,31 @@ const WardOpeningGrit = 1
 
 // WardStarterSwing is added to a level-1 basic swing only.
 // Sword 5 + STR 12 at 0.95 rounds to 6, and 6 still takes four hits to kill a 20 HP rat.
-// +1 makes that swing 7, tying Fenwatch's starter hit without putting the coefficient over 1.
+// +1 makes that swing 7, tying the plate opener without putting the coefficient over 1.
 const WardStarterSwing int32 = 1
 
-// IsWard reports Ward, including characters still stored as hitch.
+// IsWard reports a class that uses the soak primitive, including a stored hitch id.
 func IsWard(id string) bool {
-	return classKey(id) == "ward"
+	return classkit.HasGrit(id)
+}
+
+func gritBlock() *classkit.Grit {
+	if g := classkit.GritOf("ward"); g != nil {
+		return g
+	}
+	return classkit.GritOf("hitch")
 }
 
 func clampGrit(grit int) int {
+	cap := GritCap
+	if g := gritBlock(); g != nil {
+		cap = g.Cap
+	}
 	if grit < 0 {
 		return 0
 	}
-	if grit > GritCap {
-		return GritCap
+	if grit > cap {
+		return cap
 	}
 	return grit
 }
@@ -180,7 +174,19 @@ func clampGrit(grit int) int {
 // WardSlamAbsolute is the swing multiplier versus a 1.00 baseline.
 // 0 Grit is 1.00×. 2 Grit is 1.40×. 5 Grit is 2.00×.
 func WardSlamAbsolute(grit int) float64 {
-	return 1.0 + 0.20*float64(clampGrit(grit))
+	per := 0.20
+	var slamCap float64
+	hasCap := false
+	if g := gritBlock(); g != nil {
+		per = g.SlamPerStack
+		slamCap = g.SlamCap
+		hasCap = true
+	}
+	abs := 1.0 + per*float64(clampGrit(grit))
+	if hasCap && abs > slamCap {
+		abs = slamCap
+	}
+	return abs
 }
 
 // WardSlamSwingMult undoes the class swing so Slam lands on WardSlamAbsolute.
@@ -199,7 +205,11 @@ func WardRetaliateDamage(hit int32, grit int) int32 {
 	if hit <= 0 || grit <= 0 {
 		return 0
 	}
-	back := int32(math.Round(float64(hit) * 0.10 * float64(grit)))
+	per := 0.10
+	if g := gritBlock(); g != nil {
+		per = g.RetaliatePerStack
+	}
+	back := int32(math.Round(float64(hit) * per * float64(grit)))
 	if back < 0 {
 		return 0
 	}
@@ -211,26 +221,43 @@ func WardGritAfter(grit int, selfSoak bool) int {
 	gain := 1
 	if selfSoak {
 		gain = 2
+		if g := gritBlock(); g != nil {
+			gain = g.SelfGuardGain
+		}
 	}
 	return clampGrit(grit + gain)
 }
 
-// RiggerCharges is Bolt and Rig uses granted at combat start. Once each.
-func RiggerCharges(id string) (bolt, rig int) {
-	if classKey(id) == "rigger" {
-		return 1, 1
+// OpeningGrit is granted when a soak class enters combat.
+func OpeningGrit(id string) int {
+	if g := classkit.GritOf(id); g != nil {
+		return g.Opening
 	}
-	return 0, 0
+	return 0
 }
 
-// IsRigger reports the rigger class. It is not folded into another row.
-func IsRigger(id string) bool {
-	return classKey(id) == "rigger"
+// StarterSwing is added to a level-1 basic swing for a soak class.
+func StarterSwing(id string) int32 {
+	if g := classkit.GritOf(id); g != nil {
+		return g.StarterSwing
+	}
+	return 0
 }
 
-// IsRuneHand reports the wizard/mage class that inscribes on a basic hit.
+// BoltRigCharges is bolt and rig uses granted at combat start.
+func BoltRigCharges(id string) (bolt, rig int) {
+	return classkit.BoltRig(id)
+}
+
+// ArmsScrap reports a class that starts a fight with bolt or rig uses.
+func ArmsScrap(id string) bool {
+	bolt, rig := classkit.BoltRig(id)
+	return bolt > 0 || rig > 0
+}
+
+// IsRuneHand reports the class that inscribes on a basic hit.
 func IsRuneHand(id string) bool {
-	return classKey(id) == "mage"
+	return classkit.Inscribes(id)
 }
 
 // ScaleClassDamage applies the attacker's damage_dealt and the defender's

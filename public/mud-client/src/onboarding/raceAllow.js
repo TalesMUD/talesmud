@@ -1,49 +1,20 @@
-/** Signed class and race blurbs, and the create allow-list. */
+/** Create allow-list and portraits. Names and blurbs come from the class catalog. */
 
-export const CLASS_BLURBS = {
-  fenwatch: "The door. You stand in it until they don't. Brace once when a blow comes in.",
-  alley: "Back street. Two cuts, then you Slip the first one that comes back.",
-  runehand: "Vault runes. One heavy swing, then you Inscribe. The mark burns for three rounds.",
-  ward: "Heavy plate. You start slow. Hits you take stack Grit, and Slam and the hit you throw back get heavier.",
-  rigger: "Constructs. Bolt scrap onto someone in the room; the next hit still lands, and the attacker takes the same amount back. Rig drops a turret that does not chase.",
-};
-
-export const RACE_BLURBS = {
-  human: { id: "human", name: "Human", blurb: "No weapon bonus. A few extra coins when you start." },
-  dwarf: { id: "dwarf", name: "Dwarf", blurb: "Blunt weapons deal 10% more damage." },
-  elf: { id: "elf", name: "Elf", blurb: "Bows deal 10% more damage." },
-  construct: { id: "construct", name: "Construct", blurb: "Rigger only. Poison never sticks. No weapon bonus." },
-};
-
-const ALLOW = {
-  "tpl-fenwatch": ["human", "dwarf"],
-  warrior: ["human", "dwarf"],
-  fenwatch: ["human", "dwarf"],
-  "tpl-alley": ["human", "dwarf", "elf"],
-  rogue: ["human", "dwarf", "elf"],
-  alley: ["human", "dwarf", "elf"],
-  ranger: ["human", "dwarf", "elf"],
-  hunter: ["human", "dwarf", "elf"],
-  "tpl-runehand": ["human", "elf"],
-  wizard: ["human", "elf"],
-  mage: ["human", "elf"],
-  runehand: ["human", "elf"],
-  "rune hand": ["human", "elf"],
-  "tpl-ward": ["human", "dwarf"],
-  ward: ["human", "dwarf"],
-  "tpl-hitch": ["human", "dwarf"],
-  hitch: ["human", "dwarf"],
-  "tpl-rigger": ["construct"],
-  rigger: ["construct"],
-};
+import { get } from "svelte/store";
+import { catalogRaces, catalogTemplates, classCatalog, lookupClass } from "./classCatalog.js";
 
 export const FALLBACK_TEMPLATES = [
-  { id: "tpl-fenwatch", name: "Fenwatch", description: CLASS_BLURBS.fenwatch, class: { id: "warrior", name: "Fenwatch" } },
-  { id: "tpl-alley", name: "Alley", description: CLASS_BLURBS.alley, class: { id: "rogue", name: "Alley" } },
-  { id: "tpl-runehand", name: "Rune Hand", description: CLASS_BLURBS.runehand, class: { id: "wizard", name: "Rune Hand" } },
-  { id: "tpl-ward", name: "Ward", description: CLASS_BLURBS.ward, class: { id: "ward", name: "Ward" } },
-  { id: "tpl-rigger", name: "Rigger", description: CLASS_BLURBS.rigger, class: { id: "rigger", name: "Rigger" } },
+  { id: "tpl-warrior", name: "Warrior", description: "Sample warrior. Plate, one swing, and a brace that halves the next hit.", class: { id: "warrior", name: "Warrior" } },
+  { id: "tpl-rogue", name: "Rogue", description: "Sample rogue. Leather, two lighter swings, and one slip out of a fight.", class: { id: "rogue", name: "Rogue" } },
+  { id: "tpl-mage", name: "Mage", description: "Sample mage. Cloth, one heavy swing, then a mark that burns.", class: { id: "wizard", name: "Mage" } },
 ];
+
+const STATIC_PORTRAIT = {
+  ranger: "ranger",
+  hunter: "ranger",
+  cleric: "cleric",
+  druid: "druid",
+};
 
 function canonicalRace(id) {
   const race = String(id || "").trim().toLowerCase();
@@ -63,33 +34,51 @@ function templateKeys(template) {
   return keys;
 }
 
-const PORTRAIT_CLASS = {
-  "tpl-fenwatch": "warrior",
-  fenwatch: "warrior",
-  warrior: "warrior",
-  "tpl-alley": "rogue",
-  alley: "rogue",
-  rogue: "rogue",
-  "tpl-runehand": "mage",
-  runehand: "mage",
-  "rune hand": "mage",
-  wizard: "mage",
-  mage: "mage",
-  ranger: "ranger",
-  hunter: "ranger",
-  cleric: "cleric",
-  druid: "druid",
-  "tpl-ward": "ward",
-  ward: "ward",
-};
+function raceById(id) {
+  const key = canonicalRace(id);
+  return catalogRaces().find((race) => race.id === key) || null;
+}
+
+export function classBlurb(id) {
+  const hit = lookupClass(id);
+  return hit ? hit.description || "" : "";
+}
+
+/** Races the selected class card may offer. Empty when the class is unknown. */
+export function racesForTemplate(template) {
+  let ids = null;
+  for (const key of templateKeys(template)) {
+    const hit = lookupClass(key);
+    if (hit && Array.isArray(hit.races) && hit.races.length) {
+      ids = hit.races;
+      break;
+    }
+  }
+  if (!ids) return [];
+  return ids.map((id) => raceById(id)).filter(Boolean);
+}
+
+export function raceAllowed(template, raceId) {
+  const id = canonicalRace(raceId);
+  return racesForTemplate(template).some((race) => race.id === id);
+}
 
 /** Painted player portrait for a create card. Empty when that race/class has no file. */
 export function originPortraitSrc(template, raceId) {
   let cls = "";
   for (const key of templateKeys(template)) {
-    if (PORTRAIT_CLASS[key]) {
-      cls = PORTRAIT_CLASS[key];
+    const hit = lookupClass(key);
+    if (hit && hit.portraitClass) {
+      cls = hit.portraitClass;
       break;
+    }
+  }
+  if (!cls) {
+    for (const key of templateKeys(template)) {
+      if (STATIC_PORTRAIT[key]) {
+        cls = STATIC_PORTRAIT[key];
+        break;
+      }
     }
   }
   if (!cls) return "";
@@ -103,25 +92,7 @@ export function originPortraitSrc(template, raceId) {
   return `/api/portraits/player-${race}-${cls}.png`;
 }
 
-/** Races the selected class card may offer. Empty when the class is unknown. */
-export function racesForTemplate(template) {
-  let ids = null;
-  for (const key of templateKeys(template)) {
-    if (ALLOW[key]) {
-      ids = ALLOW[key];
-      break;
-    }
-  }
-  if (!ids) return [];
-  return ids.map((id) => RACE_BLURBS[id]).filter(Boolean);
-}
-
-export function raceAllowed(template, raceId) {
-  const id = canonicalRace(raceId);
-  return racesForTemplate(template).some((race) => race.id === id);
-}
-
-/** Veilspan may show the guest picker. talesmud.io stays a random button. */
+/** Veilspan may show the guest picker. Other hosts stay a random button. */
 export function guestPickerEnabled(hostname) {
   const host = String(hostname || "").trim().toLowerCase();
   return host === "veilspan.com" || host === "www.veilspan.com";
@@ -129,7 +100,7 @@ export function guestPickerEnabled(hostname) {
 
 /**
  * Body for POST /guest.
- * Non-veilspan hosts always send {} so class and race are never sent.
+ * Other hosts always send {} so class and race are never sent.
  * Both empty on veilspan is random ({}).
  * A legal pair is sent. Anything else is null and must not be posted.
  */
@@ -141,4 +112,11 @@ export function guestCreateBody(hostname, templateId, raceId) {
   if (!template || !race) return null;
   if (!raceAllowed({ id: template }, race)) return null;
   return { templateId: template, race };
+}
+
+/** Create cards from the catalog currently loaded. */
+export function catalogFallbackTemplates() {
+  const cards = catalogTemplates();
+  if (get(classCatalog).source === "pack" && cards.length) return cards;
+  return FALLBACK_TEMPLATES;
 }

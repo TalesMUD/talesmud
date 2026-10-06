@@ -34,7 +34,7 @@ var (
 	RaceConstruct Race = Race{
 		ID:          "construct",
 		Name:        "Construct",
-		Description: "Rigger only. Poison never sticks. No weapon bonus.",
+		Description: "Poison never sticks. No weapon bonus.",
 		Heritage:    "Workshops",
 	}
 )

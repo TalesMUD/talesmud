@@ -609,7 +609,8 @@
 <script>
   import { onMount } from "svelte";
   import { getCharacterTemplates, createNewCharacter, generateCharacter } from "../api/characters.js";
-  import { FALLBACK_TEMPLATES, originPortraitSrc, racesForTemplate } from "./raceAllow.js";
+  import { ensureClassCatalog } from "./classCatalog.js";
+  import { catalogFallbackTemplates, originPortraitSrc, racesForTemplate } from "./raceAllow.js";
 
   export let authToken;
   export let onComplete;
@@ -646,13 +647,15 @@
   }
 
   onMount(() => {
-    getCharacterTemplates(
-      (result) => { templates = (result && result.length) ? result : FALLBACK_TEMPLATES; },
-      (err) => {
-        console.error("Failed to load templates:", err);
-        templates = FALLBACK_TEMPLATES;
-      }
-    );
+    ensureClassCatalog().finally(() => {
+      getCharacterTemplates(
+        (result) => { templates = (result && result.length) ? result : catalogFallbackTemplates(); },
+        (err) => {
+          console.error("Failed to load templates:", err);
+          templates = catalogFallbackTemplates();
+        }
+      );
+    });
   });
 
   function getAvatar(name) {

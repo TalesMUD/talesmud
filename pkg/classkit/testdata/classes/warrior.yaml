@@ -1,0 +1,65 @@
+id: warrior
+name: Fenwatch
+description: "The door. You stand in it until they don't. Brace once when a blow comes in."
+armor_type: Plate
+combat_type: Melee
+primary: STR
+skill_class: warrior
+order: 1
+aliases: [fenwatch, tpl-fenwatch]
+races: [human, dwarf]
+portrait_class: warrior
+hp_multiplier: 1.20
+hotbar_cap: 4
+brace_charges: 1
+balance:
+  damage_dealt: 1.00
+  damage_taken: 0.90
+  behind_dealt: 1.15
+  swings: 1
+template:
+  id: tpl-fenwatch
+  backstory: "You held a wet road until the wagons were through."
+  origin_area: Oldtown
+  archetype: fenwatch
+  race: human
+  str: 14
+  dex: 7
+  int: 4
+  wis: 5
+  sta: 20
+  starting_items:
+    - {slot: main_hand, name: Rusty Sword}
+    - {slot: chest, name: Leather Armor}
+  default_skills: [warrior_brace]
+skills:
+  - id: warrior_brace
+    name: Brace
+    effect: brace
+    level: 1
+    once_per_fight: true
+    keeps_swing: true
+    cooldown: 0
+    multiplier: 0
+    target: enemy
+    tooltip: "Once a fight. The next hit on you is halved. You still swing."
+  - id: warrior_slam
+    name: Slam
+    effect: slam
+    level: 4
+    once_per_fight: false
+    keeps_swing: false
+    cooldown: 4
+    multiplier: 1.40
+    target: enemy
+    tooltip: "A heavy swing, 1.40×. Replaces your swing this round."
+  - id: warrior_stand
+    name: Stand
+    effect: stand
+    level: 8
+    once_per_fight: true
+    keeps_swing: false
+    cooldown: 0
+    multiplier: 0
+    target: enemy
+    tooltip: "Once a fight, for two rounds hits aimed at others hit you."

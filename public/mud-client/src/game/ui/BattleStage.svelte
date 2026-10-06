@@ -13,8 +13,9 @@
     skillGenericArtUrl,
     actionGenericArtUrl,
     characterClassId,
-    normalizeClassId,
+    armsScrap,
   } from '../hudPrefs.js';
+  import { classCatalog } from '../../onboarding/classCatalog.js';
   import { settingsStore } from '../SettingsStore.js';
   import { resolveBattleLayoutB } from '../battleLayout.js';
   import { overlayStore } from './overlayStore.js';
@@ -406,11 +407,10 @@
       rigSpent = false;
     }
   }
-  $: riggerId = normalizeClassId(characterClassId(character) || selfCombatant?.classId || selfClass);
-  $: isRigger = riggerId === 'rigger';
+  $: scrapClass = ($classCatalog.source, armsScrap(characterClassId(character) || selfCombatant?.classId || selfClass));
 
   function doBolt() {
-    if (boltSpent || !isRigger) return;
+    if (boltSpent || !scrapClass) return;
     boltSpent = true;
     const target = livingFocus(enemies, targetId);
     if (target?.id) cmd(`bolt ${target.id}`);
@@ -418,7 +418,7 @@
   }
 
   function doRig() {
-    if (rigSpent || !isRigger) return;
+    if (rigSpent || !scrapClass) return;
     rigSpent = true;
     cmd('rig');
   }
@@ -1195,14 +1195,14 @@
               <span class="rail-label">Items</span>
             </button>
           {/if}
-          {#if isRigger && !boltSpent}
-            <button type="button" class="rail-btn rigger" title="Bolt" aria-label="Bolt" on:click|stopPropagation={doBolt}>
+          {#if scrapClass && !boltSpent}
+            <button type="button" class="rail-btn scrap" title="Bolt" aria-label="Bolt" on:click|stopPropagation={doBolt}>
               <i class="material-icons">build</i>
               <span class="rail-label">Bolt</span>
             </button>
           {/if}
-          {#if isRigger && !rigSpent}
-            <button type="button" class="rail-btn rigger" title="Rig" aria-label="Rig" on:click|stopPropagation={doRig}>
+          {#if scrapClass && !rigSpent}
+            <button type="button" class="rail-btn scrap" title="Rig" aria-label="Rig" on:click|stopPropagation={doRig}>
               <i class="material-icons">memory</i>
               <span class="rail-label">Rig</span>
             </button>
@@ -1445,7 +1445,7 @@
     grid-area: log;
   }
 
-  /* Room arena art — dimmed cover like C0 mock alley/corridor */
+  /* Room arena art — dimmed cover like the C0 mock lane. */
   .arena-art {
     position: absolute;
     inset: 0;
@@ -2843,8 +2843,8 @@
   .rail-btn.primary i { color: #e8c878; }
   .rail-btn.flee { border-color: rgba(239, 68, 68, 0.5); }
   .rail-btn.flee i { color: #f87171; }
-  .rail-btn.rigger { border-color: rgba(56, 189, 248, 0.45); }
-  .rail-btn.rigger i { color: #7dd3fc; }
+  .rail-btn.scrap { border-color: rgba(56, 189, 248, 0.45); }
+  .rail-btn.scrap i { color: #7dd3fc; }
 
   .battle-rail.essential {
     gap: 0;

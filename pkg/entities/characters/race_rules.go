@@ -3,6 +3,8 @@ package characters
 import (
 	"errors"
 	"strings"
+
+	"github.com/talesmud/talesmud/pkg/classkit"
 )
 
 const HumanStartingGoldBonus int64 = 15
@@ -41,39 +43,17 @@ func RaceByID(id string) (Race, bool) {
 	}
 }
 
-func rosterKey(id string) string {
-	switch strings.ToLower(strings.TrimSpace(id)) {
-	case "warrior", "fenwatch", "tpl-fenwatch":
-		return "warrior"
-	case "rogue", "alley", "tpl-alley", "ranger", "hunter":
-		return "rogue"
-	case "wizard", "mage", "runehand", "rune_hand", "rune hand", "tpl-runehand":
-		return "mage"
-	case "ward", "tpl-ward", "hitch", "tpl-hitch":
-		return "ward"
-	case "rigger", "tpl-rigger":
-		return "rigger"
-	default:
-		return ""
-	}
-}
-
-// AllowedRaceIDs is the create allow-list for a class id or template id.
+// AllowedRaceIDs is the create allow-list for a class id, alias, or template id.
 func AllowedRaceIDs(classOrTemplate string) []string {
-	switch rosterKey(classOrTemplate) {
-	case "warrior":
-		return []string{"human", "dwarf"}
-	case "rogue":
-		return []string{"human", "dwarf", "elf"}
-	case "mage":
-		return []string{"human", "elf"}
-	case "ward":
-		return []string{"human", "dwarf"}
-	case "rigger":
-		return []string{"construct"}
-	default:
+	races := classkit.Races(classOrTemplate)
+	if len(races) == 0 {
 		return nil
 	}
+	out := make([]string, 0, len(races))
+	for _, id := range races {
+		out = append(out, CanonicalRaceID(id))
+	}
+	return out
 }
 
 // RaceAllowed reports whether raceID may be chosen for that class or template.

@@ -43,14 +43,14 @@ func (e *Engine) applyScrapReturn(instance *entcombat.CombatInstance, attacker, 
 	})
 }
 
-// ProcessBolt arms scrap on someone in this fight, including the rigger.
+// ProcessBolt arms scrap on someone in this fight, including the actor.
 // It does not swing. A second bolt in the same fight does not arm another charge.
 func (e *Engine) ProcessBolt(instance *entcombat.CombatInstance, actorID, targetID string) string {
 	if e == nil || instance == nil {
 		return ""
 	}
 	actor := instance.GetCombatantByID(actorID)
-	if actor == nil || !balance.IsRigger(actor.ClassID) || actor.BoltLeft <= 0 {
+	if actor == nil || !balance.ArmsScrap(actor.ClassID) || actor.BoltLeft <= 0 {
 		return ""
 	}
 	target := livingBoltTarget(instance, actor, targetID)
@@ -113,7 +113,7 @@ func (e *Engine) ProcessRig(instance *entcombat.CombatInstance, actorID string) 
 		return ""
 	}
 	actor := instance.GetCombatantByID(actorID)
-	if actor == nil || !balance.IsRigger(actor.ClassID) || actor.RigLeft <= 0 || instance.Rig != nil {
+	if actor == nil || !balance.ArmsScrap(actor.ClassID) || actor.RigLeft <= 0 || instance.Rig != nil {
 		return ""
 	}
 	actor.RigLeft = 0

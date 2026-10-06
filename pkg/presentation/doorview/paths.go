@@ -127,21 +127,14 @@ func presetForClass(id string) *characters.CharacterTemplate {
 }
 
 func classByID(id string) (characters.Class, bool) {
+	if c, ok := characters.ClassByID(id); ok {
+		return c, true
+	}
 	switch strings.ToLower(strings.TrimSpace(id)) {
-	case "warrior":
-		return characters.ClassWarrior, true
-	case "rogue":
-		return characters.ClassRogue, true
-	case "wizard", "mage":
-		return characters.ClassWizard, true
 	case "ranger":
 		return characters.ClassRanger, true
 	case "hunter":
 		return characters.ClassHunter, true
-	case "hitch", "ward":
-		return characters.ClassWard, true
-	case "rigger":
-		return characters.ClassRigger, true
 	default:
 		return characters.Class{}, false
 	}

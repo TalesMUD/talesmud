@@ -1,13 +1,20 @@
 import assert from "assert";
+import { installClassCatalog } from "./classCatalog.js";
+import { veilspanPayload } from "../../test/veilspanFixture.mjs";
 import {
-  CLASS_BLURBS,
   FALLBACK_TEMPLATES,
+  classBlurb,
   racesForTemplate,
   raceAllowed,
   guestPickerEnabled,
   guestCreateBody,
   originPortraitSrc,
 } from "./raceAllow.js";
+
+assert.ok(FALLBACK_TEMPLATES.some((t) => t.id === "tpl-warrior" && t.name === "Warrior"));
+assert.ok(!FALLBACK_TEMPLATES.some((t) => t.id === "tpl-ward" || t.name === "Ward"));
+assert.ok(!/fenwatch|alley|rune hand|rigger/i.test(JSON.stringify(FALLBACK_TEMPLATES)));
+installClassCatalog(veilspanPayload());
 
 const ids = (template) => racesForTemplate(template).map((race) => race.id);
 
@@ -32,10 +39,9 @@ const ids = (template) => racesForTemplate(template).map((race) => race.id);
   assert.equal(raceAllowed({ id: "tpl-hitch" }, "human"), true);
   assert.deepEqual(ids({ id: "tpl-ward" }), ["human", "dwarf"]);
   assert.equal(raceAllowed({ id: "tpl-ward" }, "elf"), false);
-  assert.ok(FALLBACK_TEMPLATES.some((t) => t.id === "tpl-ward" && t.name === "Ward"));
   assert.ok(!FALLBACK_TEMPLATES.some((t) => /hitch/i.test(`${t.id} ${t.name}`)));
-  assert.equal(CLASS_BLURBS.ward.includes("Warrior"), false);
-  assert.equal(CLASS_BLURBS.ward, "Heavy plate. You start slow. Hits you take stack Grit, and Slam and the hit you throw back get heavier.");
+  assert.equal(classBlurb("ward").includes("Warrior"), false);
+  assert.equal(classBlurb("ward"), "Heavy plate. You start slow. Hits you take stack Grit, and Slam and the hit you throw back get heavier.");
   assert.equal(raceAllowed({ id: "tpl-alley" }, "elf"), true);
 }
 
@@ -58,7 +64,7 @@ const ids = (template) => racesForTemplate(template).map((race) => race.id);
   assert.equal(guestCreateBody("www.veilspan.com", "tpl-rigger", "human"), null);
   assert.equal(guestCreateBody("veilspan.com", "tpl-fenwatch", "elf"), null);
   assert.equal(guestCreateBody("veilspan.com", "tpl-rigger", ""), null);
-  assert.equal(CLASS_BLURBS.rigger.includes("Rig drops a turret"), true);
+  assert.equal(classBlurb("rigger").includes("Rig drops a turret"), true);
   const construct = racesForTemplate({ id: "tpl-rigger" })[0];
   assert.equal(construct.name, "Construct");
   assert.equal(construct.blurb.includes("Poison never sticks"), true);

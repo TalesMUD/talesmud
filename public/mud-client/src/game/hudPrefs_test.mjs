@@ -28,6 +28,7 @@ import {
   skillGenericArtUrl,
   togglePin,
   SKILL_CATALOG,
+  skillCatalog,
   bindSkillToFirstEmptyHotbar,
   classifySkills,
   firstEmptyHotbarIndex,
@@ -41,6 +42,11 @@ import {
   filterHotbarSkillsForCharacter,
   reconcileHotbarForCharacter,
 } from './hudPrefs.js';
+import { installClassCatalog } from '../onboarding/classCatalog.js';
+import { veilspanPayload } from '../../test/veilspanFixture.mjs';
+
+assert.ok(!/fenwatch|alley|rune hand|rigger/i.test(JSON.stringify(skillCatalog())), 'sample catalog has no pack names');
+installClassCatalog(veilspanPayload());
 
 assert.deepStrictEqual(DEFAULT_ACTION_BAR_PINS, ['recipes'], 'Recipes seeded for crafting discoverability');
 assert.ok(ACTION_BAR_LAYOUT_REVISION >= 3, 'layout revision bumped for Recipes seed');
@@ -256,8 +262,9 @@ assert.strictEqual(already[DEFAULT_REST_SLOT]?.id, 'rest');
 console.log('hudPrefs: Option C (room + chrome INV/MAP/SAY, Rest seeded on empty bar) OK');
 
 // --- Skill catalog / slots (Character → Skills) ---
-assert.strictEqual(SKILL_CATALOG.length, 14 + 5 + 4 + 5, 'kit + cleric + ranger + druid');
-assert.ok(SKILL_CATALOG.every((s) => s.kit || !['warrior', 'rogue', 'mage', 'ward', 'rigger'].includes(s.classIds[0])));
+assert.strictEqual(SKILL_CATALOG.length, 14, 'cleric + ranger + druid stay in the static catalog');
+assert.strictEqual(skillCatalog().length, 14 + 14, 'kit rows plus the classic fourteen');
+assert.ok(skillCatalog().every((s) => s.kit || !['warrior', 'rogue', 'mage', 'ward'].includes(s.classIds[0])));
 assert.strictEqual(normalizeClassId('wizard'), 'mage');
 assert.strictEqual(normalizeClassId('runehand'), 'mage');
 assert.strictEqual(normalizeClassId('rune_hand'), 'mage');
@@ -283,7 +290,7 @@ assert.strictEqual(skillsForClass('ward').map((s) => s.id).join(','), 'ward_guar
 assert.strictEqual(skillById('ward_guard').target, 'ally');
 assert.strictEqual(formatSkillCost(skillById('ward_guard')), 'once / fight');
 assert.strictEqual(formatSkillCost(skillById('ward_slam')), '4 round CD');
-assert.ok(!SKILL_CATALOG.some((s) => /hitch|Hitch/.test(s.id + s.name + s.classIds.join(','))));
+assert.ok(!skillCatalog().some((s) => /hitch|Hitch/.test(s.id + s.name + s.classIds.join(','))));
 assert.strictEqual(skillsForClass('rigger').find((s) => s.id === 'rigger_overload')?.levelRequired, 6);
 
 assert.strictEqual(maxSkillSlots('warrior', 1), 4);
@@ -310,7 +317,7 @@ assert.ok(formatSkillEffects(cry).some((c) => /\+30% attack/.test(c)));
 
 const fireball = skillById('mage_fireball');
 assert.strictEqual(formatSkillCost(fireball), '8 mana');
-assert.ok(!SKILL_CATALOG.some((s) => s.id === 'mage_fireball'), 'fireball is display-only');
+assert.ok(!skillCatalog().some((s) => s.id === 'mage_fireball'), 'fireball is display-only');
 
 const runeOpen = classifySkills('runehand', 1, []);
 assert.deepStrictEqual(runeOpen.available.map((s) => s.id), ['mage_inscribe']);

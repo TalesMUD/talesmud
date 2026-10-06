@@ -9,6 +9,9 @@
  * - Search must never alias look
  */
 
+import { get } from 'svelte/store';
+import { classCatalog, lookupClass } from '../onboarding/classCatalog.js';
+
 /** Bump when default pin/chrome layout changes; migrates saved settings once. */
 export const ACTION_BAR_LAYOUT_REVISION = 3;
 
@@ -42,9 +45,6 @@ export const SKILL_LABELS = {
   hitch_pin: 'Pin',
   hitch_hobble: 'Hobble',
   hitch_reel: 'Reel',
-  rigger_bolt: 'Bolt',
-  rigger_rig: 'Rig',
-  rigger_overload: 'Overload',
   warrior_power_strike: 'Power Strike',
   warrior_shield_bash: 'Shield Bash',
   warrior_battle_cry: 'Battle Cry',
@@ -220,9 +220,6 @@ export const SKILL_GENERIC_ART = {
   hitch_pin: 'generic-spell-stun',
   hitch_hobble: 'generic-spell-curse',
   hitch_reel: 'generic-action-melee',
-  rigger_bolt: 'generic-spell-shield',
-  rigger_rig: 'generic-action-ranged',
-  rigger_overload: 'generic-spell-strength',
   warrior_power_strike: 'generic-action-melee',
   warrior_shield_bash: 'generic-spell-stun',
   warrior_battle_cry: 'generic-spell-strength',
@@ -254,75 +251,12 @@ export const SKILL_GENERIC_ART = {
   druid_barkskin: 'generic-spell-shield',
 };
 
-/** Mirrors pkg/entities/skills/classkit.go kit(). */
-function kitSkill(id, name, classId, levelRequired, kit, keepsSwing, oncePerFight, cooldownRounds, swingMult, description) {
-  return {
-    id,
-    name,
-    classIds: [classId],
-    levelRequired,
-    description,
-    resourceType: 'cooldown',
-    manaCost: 0,
-    cooldownRounds,
-    effect: 'damage',
-    buffStat: '',
-    buffPercent: 0,
-    target: 'enemy',
-    scalingFactor: 0,
-    scalingAttr: '',
-    basePower: 0,
-    duration: 0,
-    hitCount: 0,
-    ignoresDefense: false,
-    kit,
-    keepsSwing,
-    oncePerFight,
-    swingMult,
-  };
-}
-
 /**
- * Skills the Character → Skills panel may offer.
- * Fenwatch / Alley / Rune Hand / Ward / Rigger are the v1 class kit only
- * (pkg/entities/skills/classkit.go). Cleric, ranger, and druid keep the old seed.
+ * Cleric, ranger, and druid keep the old seed. Kit skills come from the class catalog.
  * Legacy warrior/rogue/mage rows live in LEGACY_SKILL_CATALOG for hotbar labels
  * and never appear as Available.
  */
-export const SKILL_CATALOG = [
-  kitSkill('warrior_brace', 'Brace', 'warrior', 1, 'brace', true, true, 0, 0,
-    'Once a fight. The next hit on you is halved. You still swing.'),
-  kitSkill('warrior_slam', 'Slam', 'warrior', 4, 'slam', false, false, 4, 1.4,
-    'A heavy swing, 1.40×. Replaces your swing this round.'),
-  kitSkill('warrior_stand', 'Stand', 'warrior', 8, 'stand', false, true, 0, 0,
-    'Once a fight, for two rounds hits aimed at others hit you.'),
-
-  kitSkill('rogue_slip', 'Slip', 'rogue', 1, 'slip', false, true, 0, 0,
-    'Once a fight. Drop the fight and take one exit.'),
-  kitSkill('rogue_nick', 'Nick', 'rogue', 4, 'nick', false, false, 3, 0.55,
-    'Extra 0.55× swing on top of your cadence. Replaces the autoattack this round.'),
-  kitSkill('rogue_smoke', 'Smoke', 'rogue', 8, 'smoke', false, true, 0, 0,
-    'Once a fight. The target misses their next swing.'),
-
-  kitSkill('mage_inscribe', 'Inscribe', 'mage', 1, 'inscribe', false, false, 4, 0,
-    'Mark them. 4 a round for 3 rounds. Refresh, no stack. Costs no mana.'),
-  kitSkill('mage_sear', 'Sear', 'mage', 4, 'sear', false, false, 4, 1.8,
-    'A cast at 1.80×. No burn. Replaces your swing this round.'),
-  kitSkill('mage_glyph', 'Glyph', 'mage', 8, 'glyph', false, true, 0, 0,
-    'Once a fight. The next hit on you is reduced by 4.'),
-
-  Object.assign(kitSkill('ward_guard', 'Guard', 'ward', 1, 'guard', true, true, 0, 0,
-    'Once a fight. The next hit aimed at an ally hits you. Guarding yourself, that hit stacks two Grit. You still swing.'), { target: 'ally' }),
-  kitSkill('ward_slam', 'Slam', 'ward', 4, 'slam', false, false, 4, 1,
-    'Replaces your swing. 1.00×, plus 0.20× for each Grit, up to 2.00×.'),
-
-  kitSkill('rigger_bolt', 'Bolt', 'rigger', 1, 'bolt', false, true, 0, 0,
-    'Once a fight. Spend your swing. The next hit still lands, and the attacker takes it back.'),
-  kitSkill('rigger_rig', 'Rig', 'rigger', 1, 'rig', false, true, 0, 0.5,
-    'Once a fight. Drop a turret. It hits twice at 0.50×, then falls apart.'),
-  kitSkill('rigger_overload', 'Overload', 'rigger', 6, 'overload', false, true, 0, 0.8,
-    'Once a fight, while the turret is up. Its remaining hits deal 0.80×.'),
-
+const CLASSIC_SKILL_CATALOG = [
   // Cleric
   { id: 'cleric_heal', name: 'Heal', classIds: ['cleric'], levelRequired: 1, description: 'Channel divine energy to heal yourself.', resourceType: 'mana', manaCost: 8, cooldownRounds: 0, effect: 'heal', buffStat: '', buffPercent: 0, target: 'self', scalingFactor: 1.5, scalingAttr: 'WIS', basePower: 8, duration: 0, hitCount: 0, ignoresDefense: false },
   { id: 'cleric_holy_strike', name: 'Holy Strike', classIds: ['cleric'], levelRequired: 1, description: 'Strike with holy power, dealing damage and healing yourself slightly.', resourceType: 'mana', manaCost: 6, cooldownRounds: 0, effect: 'damage', buffStat: '', buffPercent: 0, target: 'enemy', scalingFactor: 1.0, scalingAttr: 'WIS', basePower: 4, duration: 0, hitCount: 0, ignoresDefense: false, secondaryEffect: 'heal' },
@@ -364,40 +298,88 @@ const LEGACY_SKILL_CATALOG = [
   { id: 'mage_mana_shield', name: 'Mana Shield', classIds: ['mage'], levelRequired: 15, description: 'Create a shield that absorbs damage by consuming mana.', resourceType: 'mana', manaCost: 12, cooldownRounds: 0, effect: 'buff', buffStat: 'mana_shield', buffPercent: 0, target: 'self', scalingFactor: 2.0, scalingAttr: 'INT', basePower: 20, duration: 3, hitCount: 0, ignoresDefense: false },
 ];
 
-const SKILL_BY_ID = Object.fromEntries(
-  [...SKILL_CATALOG, ...LEGACY_SKILL_CATALOG].map((s) => [s.id, s])
-);
-
-/** Signed classes. Matches pkg/entities/skills.IsKitClass. */
-const KIT_CLASS_IDS = new Set(['warrior', 'rogue', 'mage', 'ward', 'rigger']);
-/** HotbarCap in pkg/entities/skills/classkit.go. */
-const KIT_HOTBAR_CAP = 4;
 const CASTER_CLASS_IDS = new Set(['cleric', 'druid']);
 
-/** Matches pkg/entities/skills.normalizeClassID. */
-export function normalizeClassId(classId) {
-  const lower = String(classId || '').trim().toLowerCase();
-  switch (lower) {
-    case 'wizard':
-    case 'mage':
-    case 'runehand':
-    case 'rune_hand':
-    case 'rune hand':
-      return 'mage';
-    case 'rogue':
-    case 'alley':
-      return 'rogue';
-    case 'warrior':
-    case 'fenwatch':
-      return 'warrior';
-    case 'hitch':
-    case 'ward':
-      return 'ward';
-    case 'rigger':
-      return 'rigger';
-    default:
-      return lower;
+const KIT_ART = {
+  brace: 'generic-spell-shield',
+  slam: 'generic-action-melee',
+  stand: 'generic-spell-shield',
+  slip: 'generic-action-flee',
+  nick: 'generic-action-melee',
+  smoke: 'generic-spell-curse',
+  inscribe: 'generic-spell-arcane',
+  sear: 'generic-spell-arcane',
+  glyph: 'generic-spell-shield',
+  guard: 'generic-spell-shield',
+  bolt: 'generic-spell-shield',
+  rig: 'generic-action-ranged',
+  overload: 'generic-spell-strength',
+};
+
+function kitSkillsFromCatalog() {
+  const classes = get(classCatalog).classes || [];
+  const out = [];
+  for (const cls of classes) {
+    for (const spec of cls.skills || []) {
+      out.push({
+        id: spec.id,
+        name: spec.name,
+        classIds: spec.classIds || [cls.skillClass || cls.id],
+        levelRequired: spec.levelRequired,
+        description: spec.description || '',
+        resourceType: spec.resourceType || 'cooldown',
+        manaCost: spec.manaCost || 0,
+        cooldownRounds: spec.cooldownRounds || 0,
+        effect: spec.effect || 'damage',
+        buffStat: '',
+        buffPercent: 0,
+        target: spec.target || 'enemy',
+        scalingFactor: 0,
+        scalingAttr: '',
+        basePower: 0,
+        duration: 0,
+        hitCount: 0,
+        ignoresDefense: false,
+        kit: spec.kit,
+        keepsSwing: !!spec.keepsSwing,
+        oncePerFight: !!spec.oncePerFight,
+        swingMult: spec.swingMult || 0,
+      });
+    }
   }
+  return out;
+}
+
+/** Skills the panel may offer: catalog kit rows, then cleric, ranger, and druid. */
+export function skillCatalog() {
+  return [...kitSkillsFromCatalog(), ...CLASSIC_SKILL_CATALOG];
+}
+
+/** Classic rows only. Kit rows are skillCatalog(). */
+export const SKILL_CATALOG = CLASSIC_SKILL_CATALOG;
+
+function knownSkills() {
+  return [...skillCatalog(), ...LEGACY_SKILL_CATALOG];
+}
+
+function isKitClass(classId) {
+  const hit = lookupClass(classId) || lookupClass(normalizeClassId(classId));
+  return !!(hit && Number(hit.hotbarCap) > 0);
+}
+
+/** Bolt or rig kit. The button follows the catalog, not a class name. */
+export function armsScrap(classId) {
+  return skillsForClass(classId).some((s) => s.kit === 'bolt' || s.kit === 'rig');
+}
+
+/** Skill-row id from the catalog. Shared rows such as ranger stay themselves. */
+export function normalizeClassId(classId) {
+  const hit = lookupClass(classId);
+  if (hit) return String(hit.skillClass || hit.id || '').trim().toLowerCase();
+  const lower = String(classId || '').trim().toLowerCase();
+  if (lower === 'wizard' || lower === 'mage') return 'mage';
+  if (lower === 'hitch') return 'ward';
+  return lower;
 }
 
 export function characterClassId(character) {
@@ -408,34 +390,31 @@ export function characterClassId(character) {
 }
 
 function findSkillByName(lower) {
-  return (
-    SKILL_CATALOG.find((s) => s.name.toLowerCase() === lower) ||
-    LEGACY_SKILL_CATALOG.find((s) => s.name.toLowerCase() === lower) ||
-    null
-  );
+  return knownSkills().find((s) => s.name.toLowerCase() === lower) || null;
 }
 
 export function skillById(idOrName) {
   const raw = String(idOrName || '').trim();
   if (!raw) return null;
-  if (SKILL_BY_ID[raw]) return SKILL_BY_ID[raw];
   const lower = raw.toLowerCase();
-  if (SKILL_BY_ID[lower]) return SKILL_BY_ID[lower];
+  const found = knownSkills().find((s) => s.id === raw || s.id === lower);
+  if (found) return found;
   return findSkillByName(lower);
 }
 
 export function skillsForClass(classId) {
   const id = normalizeClassId(classId);
   if (!id) return [];
-  const list = SKILL_CATALOG.filter((s) => (s.classIds || []).includes(id));
-  if (KIT_CLASS_IDS.has(id)) return list.filter((s) => s.kit);
+  const list = skillCatalog().filter((s) => (s.classIds || []).includes(id));
+  if (isKitClass(classId)) return list.filter((s) => s.kit);
   return list;
 }
 
-/** Mirrors pkg/entities/skills.MaxSkillSlots. Kit classes are always HotbarCap. */
+/** Kit classes use the catalog hotbar cap. Casters and everyone else keep their curves. */
 export function maxSkillSlots(classId, level) {
+  const hit = lookupClass(classId);
+  if (hit && Number(hit.hotbarCap) > 0) return Number(hit.hotbarCap);
   const id = normalizeClassId(classId);
-  if (KIT_CLASS_IDS.has(id)) return KIT_HOTBAR_CAP;
   const lvl = Number(level) || 0;
   if (CASTER_CLASS_IDS.has(id)) {
     if (lvl >= 30) return 4;
@@ -541,6 +520,8 @@ export function skillGenericArtStem(idOrName) {
   if (SKILL_GENERIC_ART[raw] || SKILL_GENERIC_ART[lower]) {
     return SKILL_GENERIC_ART[raw] || SKILL_GENERIC_ART[lower];
   }
+  const known = skillById(raw) || skillById(lower);
+  if (known && known.kit && KIT_ART[known.kit]) return KIT_ART[known.kit];
   for (const [id, stem] of Object.entries(SKILL_GENERIC_ART)) {
     if (SKILL_LABELS[id] && SKILL_LABELS[id].toLowerCase() === lower) return stem;
   }

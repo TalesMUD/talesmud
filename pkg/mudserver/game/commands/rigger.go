@@ -8,7 +8,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 )
 
-// BoltCommand arms scrap. It forfeits the swing. Rigger only, once per fight.
+// BoltCommand arms scrap. It forfeits the swing. Once per fight.
 type BoltCommand struct{}
 
 func (command *BoltCommand) Key() CommandKey { return &StartsWithCommandKey{} }
@@ -58,7 +58,7 @@ func resolveBoltCommandTarget(game def.GameCtrl, message *messages.Message, comb
 	return ""
 }
 
-// RigCommand drops a turret. It forfeits the swing. Rigger only, once per fight.
+// RigCommand drops a turret. It forfeits the swing. Once per fight.
 type RigCommand struct{}
 
 func (command *RigCommand) Key() CommandKey { return &StartsWithCommandKey{} }

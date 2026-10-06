@@ -1,130 +1,63 @@
 package characters
 
 import (
+	"github.com/talesmud/talesmud/pkg/classkit"
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/items"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/balance"
 )
 
 // Playable roster. HP uses balance.ScaleClassHP once off a shared base of 25.
-// Ranger and hunter are not classes here; Alley uses those weapons.
 const classHPBase int32 = 25
 
 func presetEntity(id string) *entities.Entity {
 	return &entities.Entity{ID: id}
 }
 
-// SystemCharacterTemplatePresets is the signed create roster: Fenwatch, Alley, Rune Hand, Ward, Rigger.
+// SystemCharacterTemplatePresets is the create roster from the class catalog.
 func SystemCharacterTemplatePresets() []*CharacterTemplate {
-	fenHP := balance.ScaleClassHP("warrior", classHPBase)
-	alleyHP := balance.ScaleClassHP("rogue", classHPBase)
-	runeHP := balance.ScaleClassHP("wizard", classHPBase)
-	wardHP := balance.ScaleClassHP("ward", classHPBase)
-	riggerHP := balance.ScaleClassHP("rigger", classHPBase)
-	return []*CharacterTemplate{
-		{
-			Entity:           presetEntity("tpl-fenwatch"),
-			Name:             "Fenwatch",
-			Description:      "The door. You stand in it until they don't. Brace once when a blow comes in.",
-			Backstory:        "You held a wet road until the wagons were through.",
-			OriginArea:       "Oldtown",
-			Archetype:        "fenwatch",
-			Race:             RaceHuman,
-			Class:            ClassWarrior,
+	out := make([]*CharacterTemplate, 0)
+	for _, d := range classkit.Playable() {
+		if d == nil || d.Template == nil || d.Template.ID == "" {
+			continue
+		}
+		t := d.Template
+		hp := balance.ScaleClassHP(d.ID, classHPBase)
+		race, ok := RaceByID(t.Race)
+		if !ok {
+			race = RaceHuman
+		}
+		starting := make([]StartingItem, 0, len(t.Items))
+		for _, it := range t.Items {
+			starting = append(starting, StartingItem{
+				Slot:             items.ItemSlot(it.Slot),
+				ItemTemplateName: it.Name,
+			})
+		}
+		tpl := &CharacterTemplate{
+			Entity:           presetEntity(t.ID),
+			Name:             d.Name,
+			Description:      d.Description,
+			Backstory:        t.Backstory,
+			OriginArea:       t.Origin,
+			Archetype:        t.Archetype,
+			Race:             race,
+			Class:            classFromDef(d),
 			Level:            1,
-			CurrentHitPoints: fenHP,
-			MaxHitPoints:     fenHP,
-			Attributes:       createBaseAttributes(14, 7, 4, 5, 20),
-			StartingItems: []StartingItem{
-				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Rusty Sword"},
-				{Slot: items.ItemSlotChest, ItemTemplateName: "Leather Armor"},
-			},
-			DefaultSkills: []string{"warrior_brace"},
-			Source:        "system",
-		},
-		{
-			Entity:           presetEntity("tpl-alley"),
-			Name:             "Alley",
-			Description:      "Back street. Two cuts, then you Slip the first one that comes back.",
-			Backstory:        "You learned the lanes with a knife, and the tree line with a bow.",
-			OriginArea:       "Dockside",
-			Archetype:        "alley",
-			Race:             RaceHuman,
-			Class:            ClassRogue,
-			Level:            1,
-			CurrentHitPoints: alleyHP,
-			MaxHitPoints:     alleyHP,
-			Attributes:       createBaseAttributes(10, 18, 6, 5, 11),
-			StartingItems: []StartingItem{
-				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Worn Dagger"},
-				{Slot: items.ItemSlotChest, ItemTemplateName: "Leather Armor"},
-			},
-			DefaultSkills: []string{"rogue_slip"},
-			Source:        "system",
-		},
-		{
-			Entity:           presetEntity("tpl-runehand"),
-			Name:             "Rune Hand",
-			Description:      "Vault runes. One heavy swing, then you Inscribe. The mark burns for three rounds.",
-			Backstory:        "You scratch a mark and it keeps burning after the staff goes still.",
-			OriginArea:       "Arcane Tower",
-			Archetype:        "runehand",
-			Race:             RaceHuman,
-			Class:            ClassWizard,
-			Level:            1,
-			CurrentHitPoints: runeHP,
-			MaxHitPoints:     runeHP,
-			CurrentMana:      41,
-			MaxMana:          41,
-			Attributes:       createBaseAttributes(4, 6, 18, 14, 8),
-			StartingItems: []StartingItem{
-				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Apprentice Staff"},
-				{Slot: items.ItemSlotChest, ItemTemplateName: "Cloth Robe"},
-			},
-			DefaultSkills: []string{"mage_inscribe"},
-			Source:        "system",
-		},
-		{
-			Entity:           presetEntity("tpl-ward"),
-			Name:             "Ward",
-			Description:      "Heavy plate. You start slow. Hits you take stack Grit, and Slam and the hit you throw back get heavier.",
-			Backstory:        "You let the first blows land. The plate holds, and the answer gets heavier.",
-			OriginArea:       "Gatehouse",
-			Archetype:        "ward",
-			Race:             RaceHuman,
-			Class:            ClassWard,
-			Level:            1,
-			CurrentHitPoints: wardHP,
-			MaxHitPoints:     wardHP,
-			Attributes:       createBaseAttributes(12, 12, 6, 8, 12),
-			StartingItems: []StartingItem{
-				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Rusty Sword"},
-				{Slot: items.ItemSlotChest, ItemTemplateName: "Leather Armor"},
-			},
-			DefaultSkills: []string{"ward_guard"},
-			Source:        "system",
-		},
-		{
-			Entity:           presetEntity("tpl-rigger"),
-			Name:             "Rigger",
-			Description:      "Constructs. Bolt scrap onto someone in the room; the next hit still lands, and the attacker takes the same amount back. Rig drops a turret that does not chase.",
-			Backstory:        "You bolt scrap onto a target and leave a turret where you stood.",
-			OriginArea:       "Gear Yard",
-			Archetype:        "rigger",
-			Race:             RaceConstruct,
-			Class:            ClassRigger,
-			Level:            1,
-			CurrentHitPoints: riggerHP,
-			MaxHitPoints:     riggerHP,
-			Attributes:       createBaseAttributes(12, 10, 8, 6, 14),
-			StartingItems: []StartingItem{
-				{Slot: items.ItemSlotMainHand, ItemTemplateName: "Rusty Sword"},
-				{Slot: items.ItemSlotChest, ItemTemplateName: "Leather Armor"},
-			},
-			DefaultSkills: []string{"rigger_bolt", "rigger_rig"},
-			Source:        "system",
-		},
+			CurrentHitPoints: hp,
+			MaxHitPoints:     hp,
+			Attributes:       createBaseAttributes(t.Str, t.Dex, t.Int, t.Wis, t.Sta),
+			StartingItems:    starting,
+			DefaultSkills:    append([]string(nil), t.DefaultSkills...),
+			Source:           "system",
+		}
+		if t.Mana > 0 {
+			tpl.CurrentMana = t.Mana
+			tpl.MaxMana = t.Mana
+		}
+		out = append(out, tpl)
 	}
+	return out
 }
 
 // PresetByID finds a signed create template by its stable id.

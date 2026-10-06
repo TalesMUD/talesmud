@@ -1015,10 +1015,10 @@ IsCasterClass(classID) bool               // Uses mana
 ```
 
 ### Skill Slot Progression
-Fenwatch, Alley, Rune Hand, Ward, and Rigger (aliases warrior/fenwatch, rogue/alley, mage/wizard/runehand, hitch/ward) always have 4 slots (`HotbarCap`). Cleric and druid stay on the caster curve (L1=2, L15=3, L30=4). Ranger stays on the physical curve (L1=1, L10=2, L20=3, L30=4).
+A class with `hotbar_cap` in the class catalog always has that many slots (the signed pack uses 4). Cleric and druid stay on the caster curve (L1=2, L15=3, L30=4). Ranger stays on the physical curve (L1=1, L10=2, L20=3, L30=4). Stored ids such as hitch still resolve through the catalog.
 
 ### Class kit
-The five signed classes learn only `ClassKit` in `pkg/entities/skills/classkit.go`: Brace/Slam/Stand, Slip/Nick/Smoke, Inscribe/Sear/Glyph, Guard/Slam, and Bolt/Rig plus Overload at level 6. `SkillsForClass` drops legacy seed rows for those classes. The play client Character → Skills list is `SKILL_CATALOG` in `public/mud-client/src/game/hudPrefs.js`, which mirrors that kit. Old ids such as Fireball and Power Strike remain display fallbacks for a saved hotbar and are not offered as Available.
+Class names, blurbs, race lists, portraits, and kit skills live in the world pack under `data/classes/*.yaml`. The engine loads them into `pkg/classkit` at startup and on import. `GET /api/classes` is the public payload the play client reads (`?v=classkit1`). With no pack, the catalog is the generic Warrior / Rogue / Mage sample. `ClassKit()` builds skill rows from that catalog. `SkillsForClass` drops legacy seed rows for a kit class. Cleric, ranger, and druid stay in the static client catalog. Old ids such as Fireball and Power Strike remain display fallbacks for a saved hotbar and are not offered as Available. `config/combat_balance.yaml` `class_balance` is only the numeric fallback when the catalog has no row.
 
 ### Skill Management Commands
 ```bash
@@ -2312,7 +2312,7 @@ Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "unc
 - `public/mud-client/src/game/widgets/continentRenderer.js` / `coastline.js` / `mapArt.js` / `surfaceAtlas.js` — cached zoom scenes, organic shores, room art, town/interior grouping, roads/bridges
 - `public/mud-client/src/game/widgets/undergroundRenderer.js` — rock-sided corridors, themed floors, torches, stairs
 - `public/mud-client/public/map-tiles/terrain-sheet.png` — shared 48px terrain and transparent building sprites
-- `public/mud-client/src/game/hudPrefs.js` — Option C action-bar chrome/pins, hotbar helpers, and the class-kit skill catalog (`?v=classkit1`)
+- `public/mud-client/src/game/hudPrefs.js` — Option C action-bar chrome/pins and hotbar helpers. Kit skills come from `GET /api/classes` (`?v=classkit1`)
 
 ---
 

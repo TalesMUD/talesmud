@@ -9,6 +9,15 @@ import (
 	entcombat "github.com/talesmud/talesmud/pkg/entities/combat"
 )
 
+func scrapClass(t *testing.T) characters.Class {
+	t.Helper()
+	c, ok := characters.ClassByID("rigger")
+	if !ok {
+		t.Fatal("scrap class missing from catalog")
+	}
+	return c
+}
+
 func logText(inst *entcombat.CombatInstance) string {
 	var b strings.Builder
 	for _, entry := range inst.Log {
@@ -19,7 +28,7 @@ func logText(inst *entcombat.CombatInstance) string {
 }
 
 func TestBoltReturnsDamageAndBreaks(t *testing.T) {
-	e, inst, heroID, enemyID := newFight(characters.ClassRigger, 0)
+	e, inst, heroID, enemyID := newFight(scrapClass(t), 0)
 	hero := inst.GetCombatantByID(heroID)
 	if hero.BoltLeft != 1 || hero.RigLeft != 1 {
 		t.Fatalf("charges bolt=%d rig=%d", hero.BoltLeft, hero.RigLeft)
@@ -91,7 +100,7 @@ func TestBoltReturnsDamageAndBreaks(t *testing.T) {
 }
 
 func TestRigTwoRoundsThenDespawns(t *testing.T) {
-	e, inst, heroID, enemyID := newFight(characters.ClassRigger, 0)
+	e, inst, heroID, enemyID := newFight(scrapClass(t), 0)
 	inst.OriginRoomID = "gear-yard"
 	hero := inst.GetCombatantByID(heroID)
 	hero.AttackPower = 40
@@ -172,7 +181,7 @@ func TestRigTwoRoundsThenDespawns(t *testing.T) {
 }
 
 func TestConstructPoisonNeverApplies(t *testing.T) {
-	e, inst, heroID, enemyID := newFight(characters.ClassRigger, 0)
+	e, inst, heroID, enemyID := newFight(scrapClass(t), 0)
 	enemy := inst.GetCombatantByID(enemyID)
 	enemy.RaceID = "construct"
 	e.ApplyStatusEffectFromScript(inst, enemyID, entcombat.StatusEffect{

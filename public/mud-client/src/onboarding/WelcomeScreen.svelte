@@ -260,7 +260,8 @@
 <script>
   import { onMount } from "svelte";
   import { getCharacterTemplates } from "../api/characters.js";
-  import { FALLBACK_TEMPLATES, guestPickerEnabled, originPortraitSrc, racesForTemplate } from "./raceAllow.js";
+  import { ensureClassCatalog } from "./classCatalog.js";
+  import { catalogFallbackTemplates, guestPickerEnabled, originPortraitSrc, racesForTemplate } from "./raceAllow.js";
 
   export let login;
   export let serverName = "Tales";
@@ -270,18 +271,20 @@
   let guestLoading = false;
   let guestError = null;
   const showGuestPicker = guestPickerEnabled(typeof location !== "undefined" ? location.hostname : "");
-  let guestTemplates = FALLBACK_TEMPLATES;
+  let guestTemplates = [];
   let guestTemplate = null;
   let guestRaceId = "";
 
   onMount(() => {
     if (!showGuestPicker) return;
-    getCharacterTemplates(
-      (result) => {
-        if (result && result.length) guestTemplates = result;
-      },
-      () => { guestTemplates = FALLBACK_TEMPLATES; }
-    );
+    ensureClassCatalog().finally(() => {
+      getCharacterTemplates(
+        (result) => {
+          guestTemplates = (result && result.length) ? result : catalogFallbackTemplates();
+        },
+        () => { guestTemplates = catalogFallbackTemplates(); }
+      );
+    });
   });
 
   function chooseGuestTemplate(template) {
@@ -380,6 +383,9 @@
     {#if showGuestPicker}
       <div class="guest-picker">
         <div class="guest-picker-title">Or pick a class and race</div>
+        {#if guestTemplates.length === 0}
+          <div class="guest-note">Loading classes...</div>
+        {/if}
         <div class="guest-class-grid">
           {#each guestTemplates as template}
             <button

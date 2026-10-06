@@ -12,6 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 
+	"github.com/talesmud/talesmud/pkg/classkit"
 	"github.com/talesmud/talesmud/pkg/entities/dialogs"
 	"github.com/talesmud/talesmud/pkg/entities/items"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
@@ -43,6 +44,7 @@ type ImportResult struct {
 	LootTablesImported  int
 	QuestsImported      int
 	SkillsImported      int
+	ClassesLoaded       int
 	CharactersRelocated int
 	AssetsImported      int
 	ValidationWarnings  int
@@ -78,6 +80,13 @@ func (w *WorldImporter) Import() (*ImportResult, error) {
 	if err := w.validateImportFolder(); err != nil {
 		return nil, fmt.Errorf("invalid import folder: %w", err)
 	}
+
+	// Classes are optional. Bad YAML fails the import before the world is cleared.
+	n, err := classkit.LoadDir(filepath.Join(w.importPath, "data", "classes"))
+	if err != nil {
+		return nil, fmt.Errorf("class kit: %w", err)
+	}
+	result.ClassesLoaded = n
 
 	// Load all data from YAML files
 	log.Info("Loading YAML files...")
