@@ -65,6 +65,7 @@ Each row is one system. The first number is the tier that owns it. Later numbers
 | Bank | **2**, plus **3** `addGold` and existing **1** `setFlag` | Death percent reads on-hand `Gold` only. The script moves coin into a character flag. No `BankGold` field. | No script. Flag absent. |
 | Weapon and armor shops | **1** | `MerchantTrait` buy and sell. | Unchanged. |
 | Inn | **2**, plus **3** `setBind` | The script calls `setFlag(id, "resting", true)`, which is what `rest` already stores, and `setBind` for the room id defeat already reads. | `rest` unchanged. Nothing binds unless a script calls `setBind`. |
+| Passive regen | **1** | HP and mana while out of combat, resting, or in combat. The pools are `regen.out_of_combat`, `regen.resting`, and `regen.in_combat`. A pool is due only when it is enabled and its percent or flat amount is positive, on the server clock. | Out of combat: 2% HP and 5% mana. Resting: 10% HP and 15% mana. In combat: 0.5% HP and 1% mana. All every 10 seconds. `enabled: false` stops that pool. |
 | Gems | **2** | A character flag or a normal item. A counter does not need a column. | Unchanged. |
 | News and ledger | **2** | A room-action `response` or script. Lines are content. | No new command. |
 | Player list | **1** | `who`. The Door view renders that reply. | Unchanged. |
@@ -115,9 +116,58 @@ resources: {}
 
 combat:
   pacing: auto               # auto | turn_based
+
+regen:
+  out_of_combat:
+    hp:
+      enabled: true          # false = no passive HP while not fighting and not resting
+      percent: 2             # percent of max HP per tick
+      flat: 0                # flat HP added per tick
+      interval_seconds: 10   # seconds between ticks, on the server clock
+    mana:
+      enabled: true
+      percent: 5
+      flat: 0
+      interval_seconds: 10
+  resting:
+    hp:
+      enabled: true
+      percent: 10
+      flat: 0
+      interval_seconds: 10
+    mana:
+      enabled: true
+      percent: 15
+      flat: 0
+      interval_seconds: 10
+  in_combat:
+    hp:
+      enabled: true          # tick regen during a fight; not per-round mana
+      percent: 0.5
+      flat: 0
+      interval_seconds: 10
+    mana:
+      enabled: true
+      percent: 1
+      flat: 0
+      interval_seconds: 10
 ```
 
 Rejected keys if present: `difficulty_multipliers`, `named_overrides`, `level_gap`, `threat`, `reward_scale`, `class_balance`, `first_kill_bonus`.
+
+A world game-mode file may carry the same `regen` block. Each of `out_of_combat`, `resting`, and `in_combat` has an HP pool and a mana pool (`enabled`, `percent`, `flat`, `interval_seconds`). Missing keys stay at the defaults: out of combat 2% HP and 5% mana, resting 10% HP and 15% mana, in combat 0.5% HP and 1% mana, every 10 seconds, flat 0, enabled. The gain is `int(max * percent / 100) + flat`, and at least 1 when the pool is active. A pool is active when `enabled` is true and percent or flat is positive. `enabled: false`, or percent and flat both 0, grants nothing and is not due. An explicit `interval_seconds` below 1 is rejected (`regen resting.hp.interval_seconds must be >= 1`, and the same form for the other pools).
+
+Intervals share one server clock. They are not timed from login. The first passive tick after login lands anywhere from 0 to interval−1 seconds in. A very small enabled interval saves the character and pushes one websocket update per regenerating player per interval.
+
+Off and slow examples:
+
+- Out of combat off: `regen.out_of_combat.hp.enabled: false` and the same for `mana`. Slow: `percent: 0.5` and `interval_seconds: 60`.
+- Resting off: `regen.resting.hp.enabled: false` and the same for `mana`. Slow: `percent: 1` and `interval_seconds: 60`.
+- In combat off: `regen.in_combat.hp.enabled: false` and the same for `mana`. Slow: `percent: 0.1` and `interval_seconds: 30`.
+
+`Character.CalculateManaRegen` (1 + wisdom modifier per combat round, minimum 1) is separate from `regen.in_combat`.
+
+Housekeeping runs on a tick where at least one pool is due: a dead character is skipped, a resting character who is already full is cleared with "You are now fully rested and recovered.", and a resting character who is in combat has the flag cleared. With the defaults that is every 10 seconds. A profile that disables every pool also skips this pass, because no character is loaded. `applyRegeneration` and `InterruptRest` still clear the resting flag.
 
 ### How XP meets reward_scale
 

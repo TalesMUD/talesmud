@@ -216,7 +216,7 @@ registry maps connected user IDs to their currently selected character, room,
 and last-seen timestamp. WebSocket connect/read/disconnect paths update this
 registry and persist `User.IsOnline` as a secondary status field. `combat.disconnect: continue` (the default) leaves that fight running. `release` ends it without a defeat penalty and, when `combat.safe_room` says so, moves the character before an instance copy is deleted. A generated instance that times out still does that move. A text-client connect runs the new-day pass and refills configured resources without requiring another character select. Player-directed replies are recorded by the text client and drawn back into its frame off the message-drain goroutine.
 
-Room message fan-out, `who`, private tells, friends online flags, regeneration ticks, and room player
+Room message fan-out, `who`, private tells, friends online flags, regeneration ticks (1s clock; out-of-combat, resting, and in-combat pools each use their ruleset interval, default 10s), and room player
 payloads use the live session registry instead of scanning all users with
 stale `IsOnline` flags. Persisted `Room.Characters` still records character
 location and is periodically cleaned, but it is no longer the source of truth
@@ -796,7 +796,7 @@ Helper methods for combat:
 - `GetWeaponDamage()` - Main hand weapon damage (1 if unarmed)
 - `GetArmorDefense()` - Total defense from equipped armor
 - `CalculateMaxMana()` - Max mana based on class, level, and INT (casters: `20 + Level*5 + INTMod*4`)
-- `CalculateManaRegen()` - In-combat mana regen (`1 + WISMod`, minimum 1)
+- `CalculateManaRegen()` - Per-round combat mana (`1 + WISMod`, minimum 1). Separate from the `regen.in_combat` tick pools.
 
 ### Room Entity
 
@@ -1562,7 +1562,7 @@ pkg/
 ├── repository/        # Data access
 ├── db/                # Database client
 ├── resources/         # Per-character refilling balances
-├── ruleset/           # Level cap, level-up mode, death, new day, resource catalog
+├── ruleset/           # Level cap, level-up mode, death, new day, resource catalog, passive regen
 ├── gamemode/          # Process presentation and auth mode
 ├── authlocal/         # Optional Argon2id username/password sessions
 ├── presentation/      # Text-client frame renderer and view
