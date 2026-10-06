@@ -3,6 +3,7 @@ package ansi
 import (
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 func TestRenderIncludesLocationAndFixedSize(t *testing.T) {
@@ -30,4 +31,22 @@ func TestRenderIncludesLocationAndFixedSize(t *testing.T) {
 	}
 }
 
-
+func TestClipKeepsMultibyteBarsIntact(t *testing.T) {
+	line := strings.Repeat("═", 90)
+	frame := Render(Page{
+		Title:    "Sample",
+		Location: "Market",
+		Body:     []string{line},
+		Prompt:   ">",
+		Footer:   "n north",
+	})
+	if !utf8.ValidString(frame.ANSI) {
+		t.Fatal("frame split a multibyte character")
+	}
+	if strings.Contains(frame.ANSI, "\uFFFD") {
+		t.Fatal("frame inserted a replacement character")
+	}
+	if strings.Count(frame.ANSI, "═") != 80 {
+		t.Fatalf("bar runes = %d", strings.Count(frame.ANSI, "═"))
+	}
+}
