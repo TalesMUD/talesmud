@@ -83,6 +83,7 @@ type fileShape struct {
 		Reset     string `yaml:"reset"`
 		Timezone  string `yaml:"timezone"`
 		Interval  string `yaml:"interval"`
+		Label     string `yaml:"label"`
 	} `yaml:"resources"`
 	Combat struct {
 		Pacing     string `yaml:"pacing"`
@@ -97,6 +98,7 @@ type resourceSpec struct {
 	reset     string
 	timezone  string
 	interval  time.Duration
+	label     string
 }
 
 type state struct {
@@ -310,6 +312,7 @@ func decode(raw []byte) (state, error) {
 				allowance: spec.Allowance,
 				reset:     strings.TrimSpace(spec.Reset),
 				timezone:  strings.TrimSpace(spec.Timezone),
+				label:     strings.TrimSpace(spec.Label),
 			}
 			if item.reset == "" {
 				item.reset = resources.ResetCalendar
@@ -475,6 +478,17 @@ func BaseXPForEnemyLevel(level int32) (int64, bool) {
 	}
 	xp, ok := current.baseXP[level]
 	return xp, ok
+}
+
+// ResourceLabel is the pack-provided name for a key. Empty means show the key.
+func ResourceLabel(key string) string {
+	mu.RLock()
+	defer mu.RUnlock()
+	spec, ok := current.resources[key]
+	if !ok {
+		return ""
+	}
+	return spec.label
 }
 
 // ResourceAllowances is the catalog for the refilling store. Empty by default.
