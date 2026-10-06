@@ -114,12 +114,18 @@ func (commandProcessor *CommandProcessor) registerCommands() {
 
 	// Combat commands
 	commandProcessor.RegisterCommand(&AttackCommand{}, "Attack a target: attack [target]. attack! confirms a much stronger foe", "attack", "a", "hit", "attack!", "a!", "hit!")
+	commandProcessor.RegisterCommand(&BoltCommand{}, "Bolt scrap onto someone in the fight, including yourself. Once per fight. Forfeits the swing.", "bolt")
+	commandProcessor.RegisterCommand(&RigCommand{}, "Drop a turret that stays in the room. Once per fight. Forfeits the swing.", "rig")
 	commandProcessor.RegisterCommand(&FocusCommand{}, "Focus a living combat enemy without attacking: focus <enemy ID or name>", "focus")
 	commandProcessor.RegisterCommand(&DefendCommand{}, "Take defensive stance in combat", "defend", "d", "guard")
 	commandProcessor.RegisterCommand(&FleeCommand{}, "Attempt to flee from combat", "flee", "run", "escape")
 	commandProcessor.RegisterCommand(&CombatStatusCommand{}, "Show combat status", "status", "cs", "combat")
-	commandProcessor.RegisterCommand(&CastCommand{}, "Use a skill in combat: cast <skill> [target]", "cast", "spell")
-	commandProcessor.RegisterCommand(&SkillsCommand{}, "Manage skills: skills [equip|unequip] [name]", "skills", "spells", "abilities")
+	castCmd := &CastCommand{}
+	commandProcessor.RegisterCommand(castCmd, "Use a skill in combat: cast <skill> [target]", "cast")
+	commandProcessor.commands["spell"] = castCmd // silent legacy alias
+	skillsCmd := &SkillsCommand{}
+	commandProcessor.RegisterCommand(skillsCmd, "Manage skills: skills [equip|unequip] [name] (also: spells)", "skills", "abilities")
+	commandProcessor.commands["spells"] = skillsCmd // silent legacy alias
 	commandProcessor.RegisterCommand(&SkillShortcutCommand{}, "Quick-cast skill by slot number (in combat): 1, 2, 3, 4", "1", "2", "3", "4")
 
 	// Quest commands

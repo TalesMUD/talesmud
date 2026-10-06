@@ -249,5 +249,5 @@ export const TERRAIN_SHEET = {
     "sea": "#14323e"
   },
   "default": "grassland",
-  "version": "c8169d17ef81"
+  "version": "5caee700810a"
 };

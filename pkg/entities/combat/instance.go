@@ -36,6 +36,8 @@ const (
 	CombatActionSkill   CombatAction = "skill"
 	CombatActionFlee    CombatAction = "flee"
 	CombatActionTimeout CombatAction = "timeout" // Forced defend due to timeout
+	CombatActionBolt    CombatAction = "bolt"
+	CombatActionRig     CombatAction = "rig"
 )
 
 // CombatPhase tracks authored turn pacing for a combat instance (C1).
@@ -117,14 +119,44 @@ type CombatantRef struct {
 
 	// On-hit weapon proc (snapshotted from equipped main-hand at combat start).
 	// Content-driven: engine applies generically; game-set names/numbers live in item attrs / Lua.
-	OnHitScriptID string    `json:"onHitScriptId,omitempty"`
-	OnHitDot      OnHitDot  `json:"onHitDot,omitempty"`
+	OnHitScriptID string   `json:"onHitScriptId,omitempty"`
+	OnHitDot      OnHitDot `json:"onHitDot,omitempty"`
 
 	// Skill cooldowns (skillID → rounds remaining)
 	SkillCooldowns map[string]int `json:"skillCooldowns,omitempty"`
 
 	// Equipped skills (copied from character at combat start)
 	EquippedSkills []string `json:"equippedSkills,omitempty"`
+
+	// Class kit state for this fight. Charges start empty; the skill button arms them.
+	// BraceLeft halves the next landed hit. PinLeft arms Pinned. SmokeMiss misses the next swing.
+	BraceLeft    int             `json:"braceLeft,omitempty"`
+	SlipLeft     int             `json:"slipLeft,omitempty"`
+	PinLeft      int             `json:"pinLeft,omitempty"`
+	Pinned       bool            `json:"pinned,omitempty"`
+	SmokeMiss    bool            `json:"smokeMiss,omitempty"`
+	StandRounds  int             `json:"standRounds,omitempty"`
+	HobbleRounds int             `json:"hobbleRounds,omitempty"`
+	GlyphCut     int32           `json:"glyphCut,omitempty"`
+	KitSpent     map[string]bool `json:"kitSpent,omitempty"`
+	SlipTo       string          `json:"slipTo,omitempty"`
+
+	// Race and weapon kind, snapshotted so racial bonuses apply once per swing.
+	RaceID        string `json:"raceId,omitempty"`
+	WeaponSubType string `json:"weaponSubType,omitempty"`
+
+	// BoltLeft arms ScrapArmed on a target. RigLeft drops one turret.
+	BoltLeft   int  `json:"boltLeft,omitempty"`
+	RigLeft    int  `json:"rigLeft,omitempty"`
+	ScrapArmed bool `json:"scrapArmed,omitempty"`
+
+	// Ward. Grit stacks when a damaging hit lands, cap 5, for this fight only.
+	// GuardCharges is the next hit inside GuardRounds. GuardSelf makes that hit grant two Grit.
+	Grit          int    `json:"grit,omitempty"`
+	GuardTargetID string `json:"guardTargetId,omitempty"`
+	GuardRounds   int    `json:"guardRounds,omitempty"`
+	GuardCharges  int    `json:"guardCharges,omitempty"`
+	GuardSelf     bool   `json:"guardSelf,omitempty"`
 
 	// Auto-attack system
 	AutoAttackTargetID string       `json:"autoAttackTargetId,omitempty"` // Persistent target for auto-attacks
@@ -177,6 +209,20 @@ type CombatInstance struct {
 
 	// Combat Log
 	Log []CombatLogEntry `json:"log"`
+
+	// Rig is the room turret. It is not a pet, not a follower, and not in turn order.
+	Rig *RigTurret `json:"rig,omitempty"`
+}
+
+// RigTurret is a construct dropped in the fight's room. It does not move or follow.
+type RigTurret struct {
+	ID         string  `json:"id"`
+	OwnerID    string  `json:"ownerId"`
+	Name       string  `json:"name"`
+	RoomID     string  `json:"roomId"`
+	RoundsLeft int     `json:"roundsLeft"`
+	Follows    bool    `json:"follows"`
+	Mult       float64 `json:"mult,omitempty"`
 }
 
 // NewCombatInstance creates a new combat instance with a generated UUID

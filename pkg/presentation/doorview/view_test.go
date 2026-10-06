@@ -103,7 +103,7 @@ func TestViewNamePromptCreatesAndSelects(t *testing.T) {
 			frame = f
 		}
 	})
-	if !strings.Contains(frame.ANSI, "Choose a path") || !strings.Contains(frame.ANSI, "1 Warrior") {
+	if !strings.Contains(frame.ANSI, "Choose a path") || !strings.Contains(frame.ANSI, "1 Sentinel") {
 		t.Fatalf("name did not offer a path:\n%s", frame.ANSI)
 	}
 	view.OnInput(user, "1", func(msg any) {

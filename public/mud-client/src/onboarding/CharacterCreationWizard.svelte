@@ -156,9 +156,12 @@
   .template-avatar {
     width: 77px;
     height: 77px;
+    object-fit: cover;
+    object-position: center 14%;
     image-rendering: pixelated;
     border-radius: 50%;
     border: 2px solid rgba(255, 255, 255, 0.08);
+    background: #0c1016;
   }
 
   .template-card.selected .template-avatar {
@@ -174,10 +177,59 @@
 
   .template-desc {
     font-size: 0.96rem;
-    color: #6b7280;
+    color: #9ca3af;
     line-height: 1.4;
-    max-height: 2.8em;
-    overflow: hidden;
+  }
+
+  .race-picker {
+    width: 100%;
+    max-width: 1080px;
+    margin-top: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+
+  .race-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1.05rem;
+    color: #e5e7eb;
+    text-align: center;
+    margin: 0;
+  }
+
+  .race-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 0.6rem;
+  }
+
+  .race-card {
+    text-align: left;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 0.8rem 0.9rem;
+    color: #e5e7eb;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .race-card.selected {
+    border-color: rgba(22, 163, 74, 0.55);
+    background: rgba(22, 163, 74, 0.1);
+  }
+
+  .race-name {
+    font-weight: 600;
+  }
+
+  .race-blurb {
+    font-size: 0.88rem;
+    color: #9ca3af;
+    line-height: 1.35;
   }
 
   .template-attrs {
@@ -557,6 +609,8 @@
 <script>
   import { onMount } from "svelte";
   import { getCharacterTemplates, createNewCharacter, generateCharacter } from "../api/characters.js";
+  import { ensureClassCatalog } from "./classCatalog.js";
+  import { catalogFallbackTemplates, originPortraitSrc, racesForTemplate } from "./raceAllow.js";
 
   export let authToken;
   export let onComplete;
@@ -565,6 +619,7 @@
   let step = 1;
   let templates = [];
   let selectedTemplate = null;
+  let selectedRaceId = "";
   let characterName = "";
   let characterDescription = "";
   let creating = false;
@@ -581,7 +636,9 @@
   ];
 
   $: currentBg = backgrounds[step - 1] || backgrounds[0];
-  $: canProceedStep1 = selectedTemplate !== null;
+  $: raceChoices = selectedTemplate ? racesForTemplate(selectedTemplate) : [];
+  $: selectedRace = raceChoices.find((race) => race.id === selectedRaceId) || null;
+  $: canProceedStep1 = selectedTemplate !== null && selectedRace !== null;
   $: canProceedStep2 = characterName.trim().length >= 2;
 
   // Focus name input when reaching step 2
@@ -590,13 +647,15 @@
   }
 
   onMount(() => {
-    getCharacterTemplates(
-      (result) => { templates = result || []; },
-      (err) => {
-        console.error("Failed to load templates:", err);
-        error = "Failed to load character templates.";
-      }
-    );
+    ensureClassCatalog().finally(() => {
+      getCharacterTemplates(
+        (result) => { templates = (result && result.length) ? result : catalogFallbackTemplates(); },
+        (err) => {
+          console.error("Failed to load templates:", err);
+          templates = catalogFallbackTemplates();
+        }
+      );
+    });
   });
 
   function getAvatar(name) {
@@ -610,10 +669,19 @@
     return "img/avatars/" + num + "p.png";
   }
 
+  function cardArt(template, raceId) {
+    return originPortraitSrc(template, raceId) || getAvatar(template && template.name);
+  }
+
   function selectTemplate(template) {
     selectedTemplate = template;
     characterName = template.name || "";
     characterDescription = template.description || "";
+    const races = racesForTemplate(template);
+    if (!races.some((race) => race.id === selectedRaceId)) {
+      const preset = String(template?.race?.id || "").toLowerCase();
+      selectedRaceId = races.some((race) => race.id === preset) ? preset : (races[0]?.id || "");
+    }
   }
 
   function nextStep() {
@@ -634,6 +702,7 @@
       name: characterName.trim(),
       description: characterDescription.trim(),
       templateId: selectedTemplate.id,
+      race: selectedRaceId,
     };
 
     createNewCharacter(
@@ -665,7 +734,7 @@
       generate: generateType,
       templateName: selectedTemplate?.name || "",
       archetype: selectedTemplate?.archetype || "",
-      race: selectedTemplate?.race?.name || "",
+      race: selectedRace?.name || selectedTemplate?.race?.name || "",
       class: selectedTemplate?.class?.name || "",
       description: selectedTemplate?.description || "",
       backstory: selectedTemplate?.backstory || "",
@@ -764,7 +833,7 @@
             role="button"
             tabindex="0"
           >
-            <img src={getAvatar(template.name)} alt="" class="template-avatar" />
+            <img src={cardArt(template, selectedTemplate && selectedTemplate.id === template.id ? selectedRaceId : "")} alt="" class="template-avatar" />
             <span class="template-name">{template.name}</span>
             {#if template.description}
               <span class="template-desc">{template.description}</span>
@@ -781,6 +850,25 @@
           </div>
         {/each}
       </div>
+
+      {#if selectedTemplate}
+        <div class="race-picker">
+          <h3 class="race-title">Race</h3>
+          <div class="race-grid">
+            {#each raceChoices as race}
+              <button
+                type="button"
+                class="race-card"
+                class:selected={selectedRaceId === race.id}
+                on:click={() => selectedRaceId = race.id}
+              >
+                <span class="race-name">{race.name}</span>
+                <span class="race-blurb">{race.blurb}</span>
+              </button>
+            {/each}
+          </div>
+        </div>
+      {/if}
 
       {#if error}
         <div class="error-banner">{error}</div>
@@ -805,7 +893,7 @@
 
       <div class="customize-layout">
         <div class="preview-card">
-          <img src={getAvatar(characterName)} alt="" class="template-avatar" />
+          <img src={cardArt(selectedTemplate, selectedRaceId)} alt="" class="template-avatar" />
           <span class="preview-name">{characterName || "..."}</span>
           <span class="preview-template">{selectedTemplate.name}</span>
           {#if selectedTemplate.attributes}
@@ -897,9 +985,9 @@
       </p>
 
       <div class="confirm-card">
-        <img src={getAvatar(characterName)} alt="" class="confirm-avatar" />
+        <img src={cardArt(selectedTemplate, selectedRaceId)} alt="" class="confirm-avatar" />
         <span class="confirm-name">{characterName}</span>
-        <span class="confirm-template">{selectedTemplate.name}</span>
+        <span class="confirm-template">{selectedTemplate.name}{selectedRace ? ` · ${selectedRace.name}` : ""}</span>
         {#if characterDescription}
           <span class="confirm-desc">{characterDescription}</span>
         {/if}

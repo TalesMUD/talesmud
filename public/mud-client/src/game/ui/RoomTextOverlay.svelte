@@ -75,7 +75,7 @@
 </script>
 
 <style>
-  /* Centered on the room hero art — leave bottom alley for Pip / hotbar. */
+  /* Centered on the room hero art — leave the bottom lane for Pip / hotbar. */
   .room-text-overlay {
     position: absolute;
     inset: 0;

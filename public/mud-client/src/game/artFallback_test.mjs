@@ -20,6 +20,8 @@ assert.equal(portraitSrc({ ...guest, race: { id: 'human' }, class: { id: 'warrio
 assert.equal(playerPortraitSrc({ race: { id: 'elve' }, class: { id: 'wizard' } }), '/api/portraits/player-elf-mage.png');
 assert.equal(playerPortraitSrc({ race: 'Dwarf', class: 'Hunter' }), '/api/portraits/player-dwarf-ranger.png');
 assert.equal(playerPortraitSrc({ race: 'Orc', class: 'Warrior' }), '');
+assert.equal(playerPortraitSrc({ race: 'human', class: 'ward' }), '/api/portraits/player-human-ward.png');
+assert.equal(playerPortraitSrc({ race: 'Dwarf', class: 'Ward' }), '/api/portraits/player-dwarf-ward.png');
 assert.equal(figureFallback({ name: 'Elder' }), SILHOUETTE.npc);
 
 assert.equal(
@@ -33,6 +35,10 @@ assert.equal(
 assert.equal(
   battleSpriteSrc({ id: 'p1', type: 'player', classId: 'warrior', race: 'human' }),
   '/api/portraits/player-human-warrior.png'
+);
+assert.equal(
+  battleSpriteSrc({ id: 'p2', type: 'player', classId: 'ward', race: 'dwarf' }),
+  '/api/portraits/player-dwarf-ward.png'
 );
 assert.equal(
   battleSpriteSrc({ id: 'p1', type: 'player', portrait: '/api/portraits/player-elf-mage.png' }),

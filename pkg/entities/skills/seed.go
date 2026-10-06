@@ -5,7 +5,7 @@ import "github.com/talesmud/talesmud/pkg/entities"
 // SeedSkills returns an optional sample fantasy skill pack used when the
 // database has no skills yet. Content packs replace these with their own.
 func SeedSkills() []*Skill {
-	return []*Skill{
+	skills := []*Skill{
 		// ============================================================
 		// WARRIOR — Cooldown-based, STR scaling
 		// ============================================================
@@ -285,4 +285,5 @@ func SeedSkills() []*Skill {
 			Duration: 3,
 		},
 	}
+	return append(skills, ClassKit()...)
 }

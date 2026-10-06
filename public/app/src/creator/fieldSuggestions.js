@@ -29,7 +29,7 @@ export const knownCharacterAttributes = [
 
 /** Known NPC races — display names matching accessor output */
 export const knownRaces = [
-  "Human", "Elve", "Dwarf", "Halfling", "Orc", "Goblin", "Undead", "Demon", "Beast",
+  "Human", "Elf", "Dwarf", "Construct", "Halfling", "Orc", "Goblin", "Undead", "Demon", "Beast",
 ];
 
 /** Known NPC classes — display names matching accessor output */

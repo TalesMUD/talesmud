@@ -21,37 +21,37 @@ import (
 
 // CombatConfig holds global combat configuration
 type CombatConfig struct {
-	TurnTimeoutSeconds    int     // Legacy absolute turn timeout (Default: 60); prefer DecisionWindowSeconds for player action wait
-	DecisionWindowSeconds int     // Player decision window before auto-attack (Default: 5)
-	TurnBeatMs            int     // Authored windup/beat before next turn may resolve (Default: 1000)
-	ReactionMs            int     // Post-resolve reaction pause (Default: 400)
-	AFKAutoFleeAfterTurns int     // Default: 3
-	DeathGoldLossPercent  float64 // Default: 0.10 (10%)
-	DeathRespawnHPPercent float64 // Default: 0.50 (50%)
-	FleeBaseChance        float64 // Default: 0.50 (50%)
-	FleeDEXBonus          float64 // Per DEX point bonus (Default: 0.02)
-	DefendBonusPercent    float64 // Default: 0.50 (50% defense boost)
-	CriticalHitChance     float64 // Default: 0.05 (5%)
-	CriticalHitMultiplier float64 // Default: 2.0
-	CombatTimeoutMinutes     int // Absolute max combat length (Default: 15)
-	IdleCombatTimeoutMinutes int // Soft release after no action (Default: 5)
+	TurnTimeoutSeconds       int     // Legacy absolute turn timeout (Default: 60); prefer DecisionWindowSeconds for player action wait
+	DecisionWindowSeconds    int     // Player decision window before auto-attack (Default: 5)
+	TurnBeatMs               int     // Authored windup/beat before next turn may resolve (Default: 1000)
+	ReactionMs               int     // Post-resolve reaction pause (Default: 400)
+	AFKAutoFleeAfterTurns    int     // Default: 3
+	DeathGoldLossPercent     float64 // Default: 0.10 (10%)
+	DeathRespawnHPPercent    float64 // Default: 0.50 (50%)
+	FleeBaseChance           float64 // Default: 0.50 (50%)
+	FleeDEXBonus             float64 // Per DEX point bonus (Default: 0.02)
+	DefendBonusPercent       float64 // Default: 0.50 (50% defense boost)
+	CriticalHitChance        float64 // Default: 0.05 (5%)
+	CriticalHitMultiplier    float64 // Default: 2.0
+	CombatTimeoutMinutes     int     // Absolute max combat length (Default: 15)
+	IdleCombatTimeoutMinutes int     // Soft release after no action (Default: 5)
 }
 
 // DefaultConfig returns the default combat configuration
 func DefaultConfig() *CombatConfig {
 	return &CombatConfig{
-		TurnTimeoutSeconds:    60,
-		DecisionWindowSeconds: 5,
-		TurnBeatMs:            1000,
-		ReactionMs:            400,
-		AFKAutoFleeAfterTurns: 3,
-		DeathGoldLossPercent:  0.10,
-		DeathRespawnHPPercent: 0.50,
-		FleeBaseChance:        0.50,
-		FleeDEXBonus:          0.02,
-		DefendBonusPercent:    0.50,
-		CriticalHitChance:     0.05,
-		CriticalHitMultiplier: 2.0,
+		TurnTimeoutSeconds:       60,
+		DecisionWindowSeconds:    5,
+		TurnBeatMs:               1000,
+		ReactionMs:               400,
+		AFKAutoFleeAfterTurns:    3,
+		DeathGoldLossPercent:     0.10,
+		DeathRespawnHPPercent:    0.50,
+		FleeBaseChance:           0.50,
+		FleeDEXBonus:             0.02,
+		DefendBonusPercent:       0.50,
+		CriticalHitChance:        0.05,
+		CriticalHitMultiplier:    2.0,
 		CombatTimeoutMinutes:     15,
 		IdleCombatTimeoutMinutes: 5,
 	}
@@ -128,6 +128,15 @@ func (e *Engine) CreateCombatantFromCharacter(char *characters.Character) combat
 		CurrentMana: char.CurrentMana,
 		ManaRegen:   char.CalculateManaRegen(),
 	}
+	if balance.IsWard(ref.ClassID) {
+		ref.Grit = balance.OpeningGrit(ref.ClassID)
+		ref.ClassID = "ward"
+	}
+	// Kit charges are armed by the skill button, not at combat start.
+	bolt, rig := balance.BoltRigCharges(char.Class.ID)
+	ref.BoltLeft = bolt
+	ref.RigLeft = rig
+	ref.RaceID = characters.CanonicalRaceID(char.Race.ID)
 	if len(char.EquippedSkills) > 0 {
 		ref.EquippedSkills = make([]string, len(char.EquippedSkills))
 		copy(ref.EquippedSkills, char.EquippedSkills)
@@ -327,6 +336,53 @@ type AttackResult struct {
 // ProcessAttack handles an attack from attacker to target
 func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targetID string) AttackResult {
 	attacker := instance.GetCombatantByID(attackerID)
+	if attacker == nil {
+		return AttackResult{Miss: true, Message: "Invalid attacker or target"}
+	}
+	swings := balance.ClassSwings(attacker.ClassID)
+	if swings < 1 {
+		swings = 1
+	}
+	var last AttackResult
+	var parts []string
+	var total int32
+	anyHit := false
+	for i := 0; i < swings; i++ {
+		last = e.processAttackSwingMult(instance, attackerID, targetID, 1, true)
+		if last.Message != "" {
+			parts = append(parts, last.Message)
+		}
+		total += last.Damage
+		if last.Hit {
+			anyHit = true
+		}
+		if last.TargetDied {
+			break
+		}
+		attacker = instance.GetCombatantByID(attackerID)
+		if attacker == nil || !attacker.IsAlive {
+			break
+		}
+		target := instance.GetCombatantByID(targetID)
+		if target == nil || !target.IsAlive {
+			break
+		}
+	}
+	last.Damage = total
+	last.Hit = anyHit
+	last.Miss = !anyHit
+	if len(parts) > 0 {
+		last.Message = strings.Join(parts, " ")
+	}
+	return last
+}
+
+func (e *Engine) processAttackSwing(instance *combat.CombatInstance, attackerID, targetID string) AttackResult {
+	return e.processAttackSwingMult(instance, attackerID, targetID, 1, true)
+}
+
+func (e *Engine) processAttackSwingMult(instance *combat.CombatInstance, attackerID, targetID string, mult float64, logIt bool) AttackResult {
+	attacker := instance.GetCombatantByID(attackerID)
 	target := instance.GetCombatantByID(targetID)
 
 	if attacker == nil || target == nil {
@@ -339,6 +395,35 @@ func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targ
 
 	if !target.IsAlive {
 		return AttackResult{Miss: true, Message: "Target is already dead"}
+	}
+
+	redirected := false
+	if guard := e.guardRedirect(instance, attacker, target); guard != nil {
+		target = guard
+		targetID = guard.ID
+		redirected = true
+	} else if stand := e.standRedirect(instance, attacker, target); stand != nil {
+		target = stand
+		targetID = stand.ID
+	}
+
+	// Smoke: the target misses their next swing. One swing, then it is gone.
+	if target.SmokeMiss {
+		target.SmokeMiss = false
+		e.UpdateCombatant(instance, target)
+		smoked := AttackResult{Miss: true, Message: fmt.Sprintf("%s swings at %s and misses. The smoke holds.", attacker.Name, target.Name)}
+		if logIt {
+			instance.AddLogEntry(combat.CombatLogEntry{
+				ActorID:    attacker.ID,
+				ActorName:  attacker.Name,
+				Action:     combat.CombatActionAttack,
+				TargetID:   target.ID,
+				TargetName: target.Name,
+				Result:     "miss",
+				Message:    smoked.Message,
+			})
+		}
+		return smoked
 	}
 
 	// Check dodge from status effects (e.g. Evasion)
@@ -405,6 +490,28 @@ func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targ
 
 	// Calculate damage
 	result.Damage = e.CalculateDamage(attacker, target, result.Critical)
+	if mult > 0 && mult != 1 {
+		scaled := int32(math.Round(float64(result.Damage) * mult))
+		if scaled < 1 {
+			scaled = 1
+		}
+		result.Damage = scaled
+	} else if result.Hit && attacker.Level <= 1 && balance.IsWard(attacker.ClassID) && result.Damage > 0 {
+		result.Damage += balance.StarterSwing(attacker.ClassID)
+	}
+
+	// Once per fight, the next landed blow is halved.
+	braced := false
+	if target.BraceLeft > 0 && result.Damage > 0 {
+		target.BraceLeft--
+		halved := int32(math.Round(float64(result.Damage) * 0.5))
+		if halved < 1 {
+			halved = 1
+		}
+		result.Damage = halved
+		braced = true
+		e.UpdateCombatant(instance, target)
+	}
 
 	// Mana shield absorption
 	if shield := hasManaShield(target); shield != nil && shield.Value > 0 {
@@ -429,6 +536,7 @@ func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targ
 
 	// Update the target in the instance
 	e.UpdateCombatant(instance, target)
+	wardNote := e.applyWardSoak(instance, attacker, target, result.Damage, redirected, true)
 
 	// Build message
 	if result.Critical {
@@ -442,6 +550,21 @@ func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targ
 			attacker.Name, target.Name, result.Damage, roll, attacker.STRMod, toHit, targetAC)
 	}
 
+	if target.GlyphCut > 0 && result.Damage > 0 {
+		result.Damage -= target.GlyphCut
+		if result.Damage < 0 {
+			result.Damage = 0
+		}
+		target.GlyphCut = 0
+		e.UpdateCombatant(instance, target)
+	}
+
+	if braced {
+		result.Message = "You brace. " + result.Message
+	}
+	if wardNote != "" {
+		result.Message += " " + wardNote
+	}
 	if attacker.Enraged {
 		result.Message = "Enraged! " + result.Message
 	}
@@ -456,23 +579,25 @@ func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targ
 	if msg := e.applyWeaponOnHitDot(instance, attacker, target); msg != "" {
 		result.Message += " " + msg
 	}
-
 	// Add to combat log
 	logResult := "hit"
 	if result.Critical {
 		logResult = "critical"
 	}
-	instance.AddLogEntry(combat.CombatLogEntry{
-		ActorID:    attacker.ID,
-		ActorName:  attacker.Name,
-		Action:     combat.CombatActionAttack,
-		TargetID:   target.ID,
-		TargetName: target.Name,
-		Result:     logResult,
-		Damage:     result.Damage,
-		Message:    result.Message,
-	})
+	if logIt {
+		instance.AddLogEntry(combat.CombatLogEntry{
+			ActorID:    attacker.ID,
+			ActorName:  attacker.Name,
+			Action:     combat.CombatActionAttack,
+			TargetID:   target.ID,
+			TargetName: target.Name,
+			Result:     logResult,
+			Damage:     result.Damage,
+			Message:    result.Message,
+		})
+	}
 
+	e.applyScrapReturn(instance, attacker, target, result.Damage, result.Hit)
 	return result
 }
 
@@ -509,6 +634,14 @@ func (e *Engine) CalculateDamage(attacker, target *combat.CombatantRef, critical
 	// Equal levels leave the pre-gap number unchanged.
 	damage = balance.ScaleDamage(attacker.Level, target.Level, damage)
 	damage = balance.ScaleClassDamage(attacker.ClassID, target.ClassID, attacker.Level, target.Level, damage)
+	damage = balance.ApplyRacialWeaponBonus(attacker.RaceID, attacker.WeaponSubType, damage)
+	if attacker.HobbleRounds > 0 {
+		hobbled := int32(math.Round(float64(damage) * 0.80))
+		if hobbled < 1 {
+			hobbled = 1
+		}
+		damage = hobbled
+	}
 	if attacker.Type == combat.CombatantTypeNPC {
 		damage = balance.ScaleBossPhaseDamage(damage, attacker.Difficulty, attacker.BossPhase, attacker.Enraged)
 	}
@@ -954,6 +1087,7 @@ func snapshotWeaponOnHit(ref *combat.CombatantRef, char *characters.Character) {
 	if weapon == nil {
 		return
 	}
+	ref.WeaponSubType = string(weapon.SubType)
 	ref.OnHitScriptID = weapon.OnHitScriptID
 	if ref.OnHitScriptID == "" && weapon.TemplateID != "" {
 		// Instance may have dropped script id; TemplateID alone is not enough here
@@ -1047,7 +1181,27 @@ func attrInt32(v interface{}) int32 {
 	}
 }
 
-// applyWeaponOnHitDot applies a snapshotted on-hit DoT, refreshing duration on reapply.
+func (e *Engine) applyInscribe(instance *combat.CombatInstance, attacker, target *combat.CombatantRef) string {
+	if e == nil || instance == nil || attacker == nil || target == nil || !target.IsAlive {
+		return ""
+	}
+	if !balance.IsRunecaster(attacker.ClassID) {
+		return ""
+	}
+	se := combat.StatusEffect{
+		ID:       uuid.New().String(),
+		SkillID:  "inscribe",
+		Name:     "Inscribe",
+		Type:     "dot",
+		Value:    4,
+		Duration: 3,
+		SourceID: attacker.ID,
+	}
+	e.applyStatusEffect(instance, target, se)
+	e.UpdateCombatant(instance, target)
+	return "You inscribe them. The rune burns (4/round, 3 rounds)."
+}
+
 func (e *Engine) applyWeaponOnHitDot(instance *combat.CombatInstance, attacker, target *combat.CombatantRef) string {
 	if e == nil || instance == nil || attacker == nil || target == nil || !target.IsAlive {
 		return ""

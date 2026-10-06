@@ -28,6 +28,7 @@ import {
   skillGenericArtUrl,
   togglePin,
   SKILL_CATALOG,
+  skillCatalog,
   bindSkillToFirstEmptyHotbar,
   classifySkills,
   firstEmptyHotbarIndex,
@@ -41,6 +42,11 @@ import {
   filterHotbarSkillsForCharacter,
   reconcileHotbarForCharacter,
 } from './hudPrefs.js';
+import { installClassCatalog } from '../onboarding/classCatalog.js';
+import { packPayload } from '../../test/packFixture.mjs';
+
+assert.ok(!/sentinel|cutpurse|runecaster|rigger/i.test(JSON.stringify(skillCatalog())), 'sample catalog has no pack names');
+installClassCatalog(packPayload());
 
 assert.deepStrictEqual(DEFAULT_ACTION_BAR_PINS, ['recipes'], 'Recipes seeded for crafting discoverability');
 assert.ok(ACTION_BAR_LAYOUT_REVISION >= 3, 'layout revision bumped for Recipes seed');
@@ -181,6 +187,8 @@ assert.ok(normalized.slice(6).every((b) => b === null), 'pad to 8 slots');
 
 assert.strictEqual(skillDisplayName('mage_fireball'), 'Fireball');
 assert.strictEqual(skillDisplayName('warrior_power_strike'), 'Power Strike');
+assert.strictEqual(skillDisplayName('mage_inscribe'), 'Inscribe');
+assert.strictEqual(skillDisplayName('rigger_overload'), 'Overload');
 
 const skillBind = makeSkillBind('mage_fireball');
 const outOfCombat = resolveHotbarActivation(skillBind, { inCombat: false, inventory: [] });
@@ -211,6 +219,8 @@ console.log('hudPrefs: pins + chrome + hotbar binds/combat gate OK');
 
 assert.strictEqual(skillGenericArtUrl('mage_fireball'), '/api/item-art/generic-spell-fire.png');
 assert.strictEqual(skillGenericArtUrl('Fireball'), '/api/item-art/generic-spell-fire.png');
+assert.strictEqual(skillGenericArtUrl('mage_inscribe'), '/api/item-art/generic-spell-arcane.png');
+assert.strictEqual(skillGenericArtUrl('Inscribe'), '/api/item-art/generic-spell-arcane.png');
 assert.strictEqual(skillGenericArtUrl('cleric_heal'), '/api/item-art/generic-spell-heal.png');
 assert.strictEqual(skillGenericArtUrl('ranger_aimed_shot'), '/api/item-art/generic-action-ranged.png');
 
@@ -252,22 +262,46 @@ assert.strictEqual(already[DEFAULT_REST_SLOT]?.id, 'rest');
 console.log('hudPrefs: Option C (room + chrome INV/MAP/SAY, Rest seeded on empty bar) OK');
 
 // --- Skill catalog / slots (Character → Skills) ---
-assert.ok(SKILL_CATALOG.length >= 24, 'catalog covers seeded class skills');
+assert.strictEqual(SKILL_CATALOG.length, 14, 'cleric + ranger + druid stay in the static catalog');
+assert.strictEqual(skillCatalog().length, 14 + 14, 'kit rows plus the classic fourteen');
+assert.ok(skillCatalog().every((s) => s.kit || !['warrior', 'rogue', 'mage', 'ward'].includes(s.classIds[0])));
 assert.strictEqual(normalizeClassId('wizard'), 'mage');
+assert.strictEqual(normalizeClassId('runecaster'), 'mage');
+assert.strictEqual(normalizeClassId('rune_caster'), 'mage');
+assert.strictEqual(normalizeClassId('Runecaster'), 'mage');
+assert.strictEqual(normalizeClassId('cutpurse'), 'rogue');
+assert.strictEqual(normalizeClassId('sentinel'), 'warrior');
+assert.strictEqual(normalizeClassId('hitch'), 'ward');
+assert.strictEqual(normalizeClassId('ward'), 'ward');
+assert.strictEqual(normalizeClassId('rigger'), 'rigger');
 assert.strictEqual(normalizeClassId('Warrior'), 'warrior');
 
 const warriorSkills = skillsForClass('warrior');
-assert.strictEqual(warriorSkills.length, 5, 'warrior has 5 skills');
-assert.ok(warriorSkills.some((s) => s.id === 'warrior_power_strike'));
-assert.ok(warriorSkills.some((s) => s.id === 'warrior_cleave'));
-assert.ok(warriorSkills.some((s) => s.id === 'warrior_berserker_rage'));
-assert.strictEqual(skillsForClass('wizard').length, 5, 'wizard aliases to mage skills');
+assert.strictEqual(warriorSkills.length, 3, 'sentinel kit is Brace/Slam/Stand');
+assert.deepStrictEqual(warriorSkills.map((s) => s.id), ['warrior_brace', 'warrior_slam', 'warrior_stand']);
+assert.ok(!warriorSkills.some((s) => s.id === 'warrior_power_strike'));
+assert.strictEqual(skillsForClass('wizard').length, 3, 'wizard aliases to runecaster kit');
+assert.ok(!skillsForClass('wizard').some((s) => s.id === 'mage_fireball' || s.id === 'mage_frost_shield'));
+assert.ok(!skillsForClass('runecaster').some((s) => /fireball|frost/i.test(s.id + s.name)));
+assert.strictEqual(skillsForClass('cutpurse').length, 3);
+assert.ok(!skillsForClass('cutpurse').some((s) => s.id === 'rogue_backstab'));
+assert.strictEqual(skillsForClass('hitch').map((s) => s.id).join(','), 'ward_guard,ward_slam');
+assert.strictEqual(skillsForClass('ward').map((s) => s.id).join(','), 'ward_guard,ward_slam');
+assert.strictEqual(skillById('ward_guard').target, 'ally');
+assert.strictEqual(formatSkillCost(skillById('ward_guard')), 'once / fight');
+assert.strictEqual(formatSkillCost(skillById('ward_slam')), '4 round CD');
+assert.ok(!skillCatalog().some((s) => /hitch|Hitch/.test(s.id + s.name + s.classIds.join(','))));
+assert.strictEqual(skillsForClass('rigger').find((s) => s.id === 'rigger_overload')?.levelRequired, 6);
 
-assert.strictEqual(maxSkillSlots('warrior', 1), 1);
-assert.strictEqual(maxSkillSlots('warrior', 13), 2, 'warrior L13 → 2 slots');
-assert.strictEqual(maxSkillSlots('warrior', 20), 3);
-assert.strictEqual(maxSkillSlots('mage', 1), 2);
-assert.strictEqual(maxSkillSlots('wizard', 15), 3);
+assert.strictEqual(maxSkillSlots('warrior', 1), 4);
+assert.strictEqual(maxSkillSlots('sentinel', 13), 4);
+assert.strictEqual(maxSkillSlots('mage', 1), 4);
+assert.strictEqual(maxSkillSlots('wizard', 15), 4);
+assert.strictEqual(maxSkillSlots('runecaster', 1), 4);
+assert.strictEqual(maxSkillSlots('hitch', 1), 4);
+assert.strictEqual(maxSkillSlots('rigger', 30), 4);
+assert.strictEqual(maxSkillSlots('cleric', 1), 2, 'non-kit casters keep the old curve');
+assert.strictEqual(maxSkillSlots('ranger', 1), 1);
 
 const power = skillById('warrior_power_strike');
 assert.strictEqual(power.name, 'Power Strike');
@@ -283,26 +317,42 @@ assert.ok(formatSkillEffects(cry).some((c) => /\+30% attack/.test(c)));
 
 const fireball = skillById('mage_fireball');
 assert.strictEqual(formatSkillCost(fireball), '8 mana');
+assert.ok(!skillCatalog().some((s) => s.id === 'mage_fireball'), 'fireball is display-only');
 
-const classified = classifySkills('warrior', 13, ['warrior_power_strike']);
+const runeOpen = classifySkills('runecaster', 1, []);
+assert.deepStrictEqual(runeOpen.available.map((s) => s.id), ['mage_inscribe']);
+assert.deepStrictEqual(runeOpen.locked.map((s) => s.id), ['mage_sear', 'mage_glyph']);
+assert.strictEqual(runeOpen.locked[0].levelRequired, 4);
+assert.strictEqual(runeOpen.locked[1].levelRequired, 8);
+assert.ok(![...runeOpen.available, ...runeOpen.locked].some((s) => /fireball|frost shield/i.test(s.name)));
+
+const runeEquipped = classifySkills('Runecaster', 1, ['mage_inscribe']);
+assert.strictEqual(runeEquipped.equipped[0]?.name, 'Inscribe');
+assert.strictEqual(runeEquipped.available.length, 0, 'equipped Inscribe leaves Available empty');
+assert.deepStrictEqual(runeEquipped.locked.map((s) => s.name), ['Sear', 'Glyph']);
+assert.strictEqual(formatSkillCost(runeEquipped.equipped[0]), '4 round CD');
+assert.strictEqual(formatSkillCost(skillById('mage_glyph')), 'once / fight');
+assert.ok(formatSkillEffects(skillById('mage_sear')).some((c) => c === '1.80× swing'));
+
+const classified = classifySkills('sentinel', 4, ['warrior_brace']);
 assert.strictEqual(classified.equipped.length, 1);
-assert.ok(classified.available.some((s) => s.name === 'Shield Bash'));
-assert.ok(classified.available.some((s) => s.name === 'Battle Cry'));
-assert.ok(!classified.available.some((s) => s.id === 'warrior_power_strike'));
-assert.ok(classified.locked.some((s) => s.name === 'Cleave'));
-assert.ok(classified.locked.some((s) => s.name === 'Berserker Rage'));
-assert.ok(classified.locked.every((s) => s.levelRequired > 13));
+assert.strictEqual(classified.equipped[0].name, 'Brace');
+assert.ok(classified.available.some((s) => s.id === 'warrior_slam'));
+assert.ok(!classified.available.some((s) => s.id === 'warrior_power_strike' || s.id === 'warrior_brace'));
+assert.ok(classified.locked.some((s) => s.id === 'warrior_stand' && s.levelRequired === 8));
+assert.ok(classified.locked.every((s) => s.levelRequired > 4));
 
 const emptyIdx = firstEmptyHotbarIndex(DEFAULT_HOTBAR_BINDS);
 assert.strictEqual(emptyIdx, 0, 'default bar first empty is slot 1');
-const boundOnce = bindSkillToFirstEmptyHotbar(DEFAULT_HOTBAR_BINDS, 'warrior_power_strike');
+const boundOnce = bindSkillToFirstEmptyHotbar(DEFAULT_HOTBAR_BINDS, 'mage_inscribe');
 assert.strictEqual(boundOnce.status, 'bound');
 assert.strictEqual(boundOnce.index, 0);
-assert.strictEqual(boundOnce.binds[0].id, 'warrior_power_strike');
-assert.ok(isSkillOnHotbar(boundOnce.binds, 'warrior_power_strike'));
-const boundAgain = bindSkillToFirstEmptyHotbar(boundOnce.binds, 'warrior_power_strike');
+assert.strictEqual(boundOnce.binds[0].id, 'mage_inscribe');
+assert.strictEqual(boundOnce.binds[0].name, 'Inscribe');
+assert.ok(isSkillOnHotbar(boundOnce.binds, 'mage_inscribe'));
+const boundAgain = bindSkillToFirstEmptyHotbar(boundOnce.binds, 'mage_inscribe');
 assert.strictEqual(boundAgain.status, 'already');
-const boundSecond = bindSkillToFirstEmptyHotbar(boundOnce.binds, 'warrior_shield_bash');
+const boundSecond = bindSkillToFirstEmptyHotbar(boundOnce.binds, 'warrior_brace');
 assert.strictEqual(boundSecond.status, 'bound');
 assert.strictEqual(boundSecond.index, 1);
 console.log('hudPrefs: skill catalog + slot helpers OK');
@@ -370,7 +420,15 @@ console.log('hudPrefs: skill catalog + slot helpers OK');
     level: 10,
     equippedIds: null,
   });
-  assert.strictEqual(classOnly[0]?.id, 'mage_fireball', 'class catalog keeps available skills when equipped list is unknown');
+  assert.strictEqual(classOnly[0], null, 'legacy Fireball is not in the runecaster kit');
+  assert.strictEqual(classOnly[1], null, 'legacy Frost Shield is not in the runecaster kit');
+  const kitBar = filterHotbarSkillsForCharacter(
+    [makeSkillBind('mage_inscribe'), makeSkillBind('mage_fireball'), makeSkillBind('mage_glyph')],
+    { classId: 'runecaster', level: 1, equippedIds: null }
+  );
+  assert.strictEqual(kitBar[0]?.id, 'mage_inscribe', 'level-available kit skill stays when equipped list is unknown');
+  assert.strictEqual(kitBar[1], null, 'fireball dropped for runecaster');
+  assert.strictEqual(kitBar[2], null, 'glyph is locked at L1');
   const wiped = filterHotbarSkillsForCharacter(mageBar, {
     classId: 'warrior',
     level: 10,

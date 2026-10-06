@@ -459,8 +459,9 @@ type StatusEffect struct {
        │   │     Level gap (config/combat_balance.yaml level_gap) shifts hit, crit, and damage
        │   │     for attacks and skills. Gap = attacker level − defender level, clamped ±6.
        │   │     Gap 0 matches the pre-gap formulas.
-       │   │     class_balance then scales damage dealt and taken per class
-       │   │     (wizard uses the mage row; behind_dealt applies when lower level).
+       │   │     class_balance then scales damage dealt and taken per class.
+       │   │     The pack catalog wins. The YAML row is the fallback.
+       │   │     wizard uses the mage row; behind_dealt applies when lower level.
        │   │     boss_mechanics: bosses and hard elites wind up one action before
        │   │     the hit; bosses enrage on round 16 or at 30% HP (1.20× damage).
        │   │     Room NPC and combat payloads include a viewer-relative threat tier
@@ -1282,6 +1283,8 @@ App.svelte (phase-based routing)
 ├── NicknameSetup           (phase: "nickname" — new user, needs display name)
 ├── CharacterCreationWizard (phase: "character" — no characters yet)
 │   ├── Step 1: Choose Template (from GET /api/templates/characters)
+│   │     Class cards, blurbs, and race lists come from GET /api/classes
+│   │     (pkg/classkit, loaded from data/classes). No pack means the sample trio.
 │   ├── Step 2: Name & Describe Character
 │   └── Step 3: Confirm & Create (POST /api/newcharacter)
 └── Game + UserMenu + SettingsModal (phase: "ready" — normal gameplay)

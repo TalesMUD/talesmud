@@ -1,0 +1,67 @@
+id: wizard
+name: Runecaster
+description: "Vault runes. One heavy swing, then you Inscribe. The mark burns for three rounds."
+armor_type: Cloth
+combat_type: Magic
+primary: INT
+skill_class: mage
+order: 3
+aliases: [mage, runecaster, rune_caster, "runecaster", tpl-runecaster]
+races: [human, elf]
+portrait_class: mage
+hp_multiplier: 0.75
+caster: true
+hotbar_cap: 4
+inscribe_basic: true
+balance:
+  damage_dealt: 1.40
+  damage_taken: 1.25
+  behind_dealt: 1.15
+  swings: 1
+template:
+  id: tpl-runecaster
+  backstory: "You scratch a mark and it keeps burning after the staff goes still."
+  origin_area: Arcane Tower
+  archetype: runecaster
+  race: human
+  str: 4
+  dex: 6
+  int: 18
+  wis: 14
+  sta: 8
+  mana: 41
+  starting_items:
+    - {slot: main_hand, name: Apprentice Staff}
+    - {slot: chest, name: Cloth Robe}
+  default_skills: [mage_inscribe]
+skills:
+  - id: mage_inscribe
+    name: Inscribe
+    effect: inscribe
+    level: 1
+    once_per_fight: false
+    keeps_swing: false
+    cooldown: 4
+    multiplier: 0
+    target: enemy
+    tooltip: "Mark them. 4 a round for 3 rounds. Refresh, no stack. Costs no mana."
+  - id: mage_sear
+    name: Sear
+    effect: sear
+    level: 4
+    once_per_fight: false
+    keeps_swing: false
+    cooldown: 4
+    multiplier: 1.80
+    target: enemy
+    tooltip: "A cast at 1.80×. No burn. Replaces your swing this round."
+  - id: mage_glyph
+    name: Glyph
+    effect: glyph
+    level: 8
+    once_per_fight: true
+    keeps_swing: false
+    cooldown: 0
+    multiplier: 0
+    target: enemy
+    tooltip: "Once a fight. The next hit on you is reduced by 4."

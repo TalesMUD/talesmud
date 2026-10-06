@@ -11,6 +11,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/combat"
+	"github.com/talesmud/talesmud/pkg/entities/items"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/balance"
 	combatpkg "github.com/talesmud/talesmud/pkg/mudserver/game/combat"
@@ -18,7 +19,6 @@ import (
 	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/util"
-	"github.com/talesmud/talesmud/pkg/entities/items"
 	"github.com/talesmud/talesmud/pkg/ruleset"
 	"github.com/talesmud/talesmud/pkg/scripts"
 )
@@ -98,6 +98,7 @@ func (c *CombatController) GetCombatInstance(characterID string) *combat.CombatI
 
 // InitiateCombat starts combat between players and enemies
 func (c *CombatController) InitiateCombat(roomID string, players []*characters.Character, enemies []*npc.NPC) *combat.CombatInstance {
+	c.fillKitHotbars(players)
 	return c.engine.InitiateCombat(roomID, players, enemies)
 }
 
@@ -855,7 +856,22 @@ func (c *CombatController) notifyBossPhaseEntry(instance *combat.CombatInstance,
 
 // finishTurnBeat advances to the next combatant and applies the authored beat budget gate.
 func (c *CombatController) finishTurnBeat(instance *combat.CombatInstance) {
+	before := 0
+	if instance != nil {
+		before = len(instance.Log)
+	}
 	c.engine.NextTurn(instance)
+	if instance != nil {
+		for _, entry := range instance.Log[before:] {
+			if entry.Action == combat.CombatActionRig && entry.Message != "" {
+				c.notifyCombatAction(instance, messages.CombatActionMessage{
+					ActorID: entry.ActorID, ActorName: entry.ActorName,
+					TargetID: entry.TargetID, Action: string(combat.CombatActionRig),
+					Result: entry.Result, Damage: entry.Damage, FxID: "attack",
+				}, entry.Message)
+			}
+		}
+	}
 	instance.Phase = combat.CombatPhasePlayingBeat
 	instance.NextActionAt = time.Now().Add(c.engine.Config.BeatBudget())
 	instance.DecisionDeadline = time.Time{}
@@ -1483,6 +1499,38 @@ func (c *CombatController) processPlayerAutoAttack(instance *combat.CombatInstan
 					c.syncPlayerHP(diedID, 0)
 				}
 			}
+			if skillResult.Success && skillResult.KeepsSwing {
+				if again := instance.GetPlayerByID(player.ID); again != nil && again.IsAlive && !again.HasFled {
+					c.doAutoAttack(instance, again)
+				}
+			}
+			if skillResult.Success && skillResult.SlipMove {
+				c.slipOneExit(instance, player.ID)
+			}
+			if skillResult.Success && skillResult.ReelID != "" {
+				c.reelOneRoom(instance, skillResult.ReelID)
+			}
+
+		case combat.CombatActionBolt:
+			msg := c.engine.ProcessBolt(instance, player.ID, player.QueuedTargetID)
+			if msg == "" {
+				msg = "The scrap does nothing."
+			}
+			c.notifyCombatAction(instance, messages.CombatActionMessage{
+				ActorID: player.ID, ActorName: player.Name,
+				TargetID: player.QueuedTargetID, Action: string(combat.CombatActionBolt),
+				Result: "bolt", FxID: "attack",
+			}, msg)
+
+		case combat.CombatActionRig:
+			msg := c.engine.ProcessRig(instance, player.ID)
+			if msg == "" {
+				msg = "The rig does nothing."
+			}
+			c.notifyCombatAction(instance, messages.CombatActionMessage{
+				ActorID: player.ID, ActorName: player.Name,
+				Action: string(combat.CombatActionRig), Result: "rig", FxID: "attack",
+			}, msg)
 
 		case combat.CombatActionAttack:
 			targetID := player.QueuedTargetID
@@ -1674,4 +1722,3 @@ func (c *CombatController) applyWeaponOnHitScript(instance *combat.CombatInstanc
 		log.WithField("script", script.Name).WithField("error", run.Error).Warn("Weapon OnHit script failed")
 	}
 }
-

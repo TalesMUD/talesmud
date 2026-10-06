@@ -7,13 +7,14 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
+	"github.com/talesmud/talesmud/pkg/entities/skills"
 	r "github.com/talesmud/talesmud/pkg/repository"
 	"github.com/talesmud/talesmud/pkg/server/dto"
 )
 
 //--- Interface Definitions
 
-//CharactersService delives logical functions on top of the charactersheets Repo
+// CharactersService delives logical functions on top of the charactersheets Repo
 type CharactersService interface {
 	r.CharactersRepository
 
@@ -36,7 +37,7 @@ type charactersService struct {
 	locks         sync.Map
 }
 
-//NewCharactersService creates a new item service
+// NewCharactersService creates a new item service
 func NewCharactersService(charactersRepo r.CharactersRepository, templatesRepo r.CharacterTemplatesRepository, settings ServerSettingsService, rooms RoomsService) CharactersService {
 	return &charactersService{
 		CharactersRepository: charactersRepo,
@@ -52,13 +53,20 @@ func (srv *charactersService) CreateNewCharacter(dto *dto.CreateCharacterDTO) (*
 		return nil, errors.New("character name already taken")
 	}
 
-	// get template from DB
-	template, err := srv.templatesRepo.FindByID(dto.TemplateID)
-	if err != nil {
-		return nil, fmt.Errorf("could not find template: %v", err)
+	// Signed roster first. DB is only a fallback for an older saved id.
+	template := characters.PresetByID(dto.TemplateID)
+	if template == nil {
+		var err error
+		template, err = srv.templatesRepo.FindByID(dto.TemplateID)
+		if err != nil || template == nil {
+			return nil, fmt.Errorf("could not find template: %v", err)
+		}
 	}
 
 	character := characterFromTemplate(template)
+	if err := applyCreateRace(template, character, dto.Race); err != nil {
+		return nil, err
+	}
 	character.Name = dto.Name
 	character.Description = dto.Description
 	character.BelongsUserID = dto.UserID
@@ -73,6 +81,20 @@ func (srv *charactersService) CreateNewCharacter(dto *dto.CreateCharacterDTO) (*
 	}
 
 	return nil, errors.New("could not create new character")
+}
+
+func applyCreateRace(template *characters.CharacterTemplate, character *characters.Character, raceID string) error {
+	race, err := characters.ResolveCreateRace(template, raceID)
+	if err != nil {
+		return err
+	}
+	character.Race = race
+	baseline := int64(0)
+	if template != nil {
+		baseline = template.Gold
+	}
+	character.Gold = characters.StartingGold(baseline, race.ID)
+	return nil
 }
 
 func characterFromTemplate(template *characters.CharacterTemplate) *characters.Character {
@@ -91,10 +113,11 @@ func characterFromTemplate(template *characters.CharacterTemplate) *characters.C
 		ch.EquippedSkills = make([]string, len(template.DefaultSkills))
 		copy(ch.EquippedSkills, template.DefaultSkills)
 	}
+	ch.EquippedSkills = skills.FillHotbar(ch.Class.ID, ch.Level, ch.EquippedSkills)
 	return ch
 }
 
-//IsCharacterNameTaken ...
+// IsCharacterNameTaken ...
 func (srv *charactersService) IsCharacterNameTaken(name string) bool {
 	// check if charactername already exists
 	if chars, err := srv.FindByName(name); err == nil {
@@ -105,7 +128,7 @@ func (srv *charactersService) IsCharacterNameTaken(name string) bool {
 	return false
 }
 
-//Store ...
+// Store ...
 func (srv *charactersService) Store(character *characters.Character) (*characters.Character, error) {
 
 	// check if charactername already exists
@@ -138,10 +161,7 @@ func (srv *charactersService) Modify(id string, fn func(*characters.Character) e
 }
 
 func (srv *charactersService) GetCharacterTemplates() []*characters.CharacterTemplate {
-	templates, err := srv.templatesRepo.FindAll()
-	if err != nil {
-		log.WithError(err).Error("Failed to fetch character templates from DB")
-		return []*characters.CharacterTemplate{}
-	}
-	return templates
+	// Create screen is the signed four. Empty or stale DB rows must not put
+	// Warrior / Rogue / Mage / Ranger back under those names.
+	return characters.SystemCharacterTemplatePresets()
 }

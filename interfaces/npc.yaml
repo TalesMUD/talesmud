@@ -218,12 +218,12 @@ Race:
       type: string
       required: true
       # Machine-readable identifier. Must match a known race ID.
-      # Built-in races: "dwarf", "human", "elve"
+      # Built-in races: "dwarf", "human", "elf", "construct"
 
     name:
       type: string
       required: true
-      # Display name (e.g., "Dwarf", "Human", "Elve")
+      # Display name (e.g., "Dwarf", "Human", "Elf", "Construct")
 
     description:
       type: string
