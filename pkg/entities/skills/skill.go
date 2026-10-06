@@ -8,6 +8,7 @@ type TargetType string
 const (
 	TargetEnemy      TargetType = "enemy"
 	TargetSelf       TargetType = "self"
+	TargetAlly       TargetType = "ally"
 	TargetAllEnemies TargetType = "all_enemies"
 )
 
@@ -70,6 +71,14 @@ type Skill struct {
 	SecondaryBasePower int32      `bson:"secondaryBasePower,omitempty" json:"secondaryBasePower,omitempty"`
 	SecondaryScaling   float64    `bson:"secondaryScaling,omitempty" json:"secondaryScaling,omitempty"`
 	SecondaryTarget    TargetType `bson:"secondaryTarget,omitempty" json:"secondaryTarget,omitempty"`
+
+	// Class kit. Non-empty means this is a v1 class skill, not a generic effect.
+	// KeepsSwing: Brace and Pin do not replace the round's autoattack.
+	// OncePerFight: one use until the next fight. SwingMult scales one swing.
+	Kit          string  `bson:"kit,omitempty" json:"kit,omitempty"`
+	KeepsSwing   bool    `bson:"keepsSwing,omitempty" json:"keepsSwing,omitempty"`
+	OncePerFight bool    `bson:"oncePerFight,omitempty" json:"oncePerFight,omitempty"`
+	SwingMult    float64 `bson:"swingMult,omitempty" json:"swingMult,omitempty"`
 }
 
 // HasClass returns true if this skill is available to the given class ID

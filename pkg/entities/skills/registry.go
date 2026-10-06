@@ -3,16 +3,37 @@ package skills
 import (
 	"strings"
 	"sync"
+
+	"github.com/talesmud/talesmud/pkg/classkit"
 )
 
-// normalizeClassID maps class ID aliases to canonical IDs used in skill definitions.
-// e.g. "wizard" → "mage" (the entity class is ClassWizard with ID "wizard")
+// normalizeClassID maps a class id onto the skill-row id.
+// Lookup only: a shared row such as ranger stays ranger.
 func normalizeClassID(classID string) string {
-	classLower := strings.ToLower(classID)
-	if classLower == "wizard" {
-		return "mage"
+	if s := classkit.SkillClass(classID); s != "" {
+		return s
 	}
-	return classLower
+	switch strings.ToLower(strings.TrimSpace(classID)) {
+	case "wizard", "mage":
+		return "mage"
+	case "hitch":
+		return "ward"
+	default:
+		return strings.ToLower(strings.TrimSpace(classID))
+	}
+}
+
+func kitOnly(classID string, list []*Skill) []*Skill {
+	if !IsKitClass(classID) {
+		return list
+	}
+	out := make([]*Skill, 0, len(list))
+	for _, s := range list {
+		if s != nil && s.Kit != "" {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 var (
@@ -81,7 +102,7 @@ func SkillsForClass(classID string) []*Skill {
 			result = append(result, s)
 		}
 	}
-	return result
+	return kitOnly(classLower, result)
 }
 
 // AvailableSkills returns skills unlocked at the given class and level
@@ -95,12 +116,15 @@ func AvailableSkills(classID string, level int32) []*Skill {
 			result = append(result, s)
 		}
 	}
-	return result
+	return kitOnly(classLower, result)
 }
 
 // MaxSkillSlots returns the number of skill slots available for a class at a given level
 func MaxSkillSlots(classID string, level int32) int {
 	classLower := normalizeClassID(classID)
+	if IsKitClass(classLower) {
+		return HotbarCap
+	}
 
 	switch classLower {
 	case "mage", "cleric", "druid":

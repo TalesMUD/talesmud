@@ -283,6 +283,10 @@ func tryPlayerSkill(engine *combatengine.Engine, instance *combatentity.CombatIn
 		if skill == nil {
 			continue
 		}
+		// The duration harness measures autoattack. Class kit buttons are tested on their own.
+		if skill.Kit != "" {
+			continue
+		}
 
 		// Check cooldown
 		if cd, ok := player.SkillCooldowns[sid]; ok && cd > 0 {

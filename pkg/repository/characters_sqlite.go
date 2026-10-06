@@ -37,7 +37,9 @@ func (repo *sqliteCharactersRepository) FindByID(id string) (*e.Character, error
 	}
 	result, err := repo.sqliteGenericRepo.FindByID(id)
 	if err == nil {
-		return result.(*e.Character), nil
+		character := result.(*e.Character)
+		character.NormalizeClass()
+		return character, nil
 	}
 	return nil, err
 }
@@ -51,7 +53,9 @@ func (repo *sqliteCharactersRepository) FindAllForUser(userID string) ([]*e.Char
 	if err := repo.sqliteGenericRepo.FindAllWithParam(
 		db.NewQueryParams(db.QueryParam{Key: "belongsUser", Value: userID}),
 		func(elem interface{}) {
-			results = append(results, elem.(*e.Character))
+			character := elem.(*e.Character)
+			character.NormalizeClass()
+			results = append(results, character)
 		}); err != nil {
 		return nil, err
 	}
@@ -63,7 +67,9 @@ func (repo *sqliteCharactersRepository) FindByName(name string) ([]*e.Character,
 	_ = repo.sqliteGenericRepo.FindAllWithParam(
 		db.NewQueryParams(db.QueryParam{Key: "name", Value: name}),
 		func(elem interface{}) {
-			results = append(results, elem.(*e.Character))
+			character := elem.(*e.Character)
+			character.NormalizeClass()
+			results = append(results, character)
 		})
 	return results, nil
 }
@@ -71,7 +77,9 @@ func (repo *sqliteCharactersRepository) FindByName(name string) ([]*e.Character,
 func (repo *sqliteCharactersRepository) FindAll() ([]*e.Character, error) {
 	results := make([]*e.Character, 0)
 	if err := repo.sqliteGenericRepo.FindAll(func(elem interface{}) {
-		results = append(results, elem.(*e.Character))
+		character := elem.(*e.Character)
+		character.NormalizeClass()
+		results = append(results, character)
 	}); err != nil {
 		return nil, err
 	}

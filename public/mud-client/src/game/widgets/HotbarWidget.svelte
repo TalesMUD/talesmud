@@ -420,7 +420,7 @@
   }
 </style>
 
-<div class="hotbar-widget" class:compact class:docked aria-label="Spell bar">
+<div class="hotbar-widget" class:compact class:docked aria-label="Skills">
   <div class="slots">
     {#each binds as bind, index}
       {@const item = bind?.kind === 'item' ? findInventoryItem(inventory, bind) : null}

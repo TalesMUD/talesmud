@@ -15,18 +15,20 @@ import (
 	e "github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/items"
+	"github.com/talesmud/talesmud/pkg/entities/skills"
 )
 
 const (
 	GuestSessionDuration = 30 * time.Minute
 	GuestMaxLevel        = 5
 	GuestCleanupInterval = 5 * time.Minute
-	GuestRateLimitPerIP  = 10 // max guest creations per IP per hour
+	GuestRateLimitPerIP  = 60 // max successful guest creations per IP per hour
 )
 
 // GuestService handles temporary guest account creation, token management, and cleanup.
 type GuestService interface {
 	CreateGuestSession(remoteIP string) (token string, err error)
+	CreateGuestSessionPick(remoteIP, templateID, raceID string) (token string, err error)
 	ValidateGuestToken(tokenStr string) (userID string, err error)
 	CleanupExpiredGuests()
 	StartCleanupLoop()
@@ -76,8 +78,14 @@ func generateGuestRefID() string {
 	return "guest:" + hex.EncodeToString(b)
 }
 
-// CreateGuestSession creates a temporary guest user + character and returns a signed JWT.
+// CreateGuestSession creates a random guest. An empty body stays valid.
 func (gs *guestService) CreateGuestSession(remoteIP string) (string, error) {
+	return gs.CreateGuestSessionPick(remoteIP, "", "")
+}
+
+// CreateGuestSessionPick creates a guest. templateID and raceID are both optional.
+// When both are set they must be on the allow-list. One without the other is rejected.
+func (gs *guestService) CreateGuestSessionPick(remoteIP, templateID, raceID string) (string, error) {
 	// Check server settings
 	settings, err := gs.facade.ServerSettingsService().Get()
 	if err != nil {
@@ -95,7 +103,13 @@ func (gs *guestService) CreateGuestSession(remoteIP string) (string, error) {
 		}
 	}
 
-	// Check rate limit
+	// Reject a bad class/race pair before it spends the hourly budget.
+	pick, err := characters.ResolveGuestPick(templateID, raceID)
+	if err != nil {
+		return "", err
+	}
+
+	// Check rate limit (successful creates only; rejected picks returned above).
 	if !gs.checkRateLimit(remoteIP) {
 		return "", errors.New("rate limit exceeded")
 	}
@@ -134,17 +148,25 @@ func (gs *guestService) CreateGuestSession(remoteIP string) (string, error) {
 		return "", fmt.Errorf("could not create guest user: %v", err)
 	}
 
-	// Pick a random class template
-	templates := characters.SystemCharacterTemplatePresets()
-	template := templates[mathrand.Intn(len(templates))]
+	var template *characters.CharacterTemplate
+	var race characters.Race
+	if pick.Random {
+		templates := characters.SystemCharacterTemplatePresets()
+		template = templates[mathrand.Intn(len(templates))]
+		race = characters.RandomAllowedRace(template.Class.ID, mathrand.Intn)
+	} else {
+		template = pick.Template
+		race = pick.Race
+	}
 
 	// Create character from template
 	character := &characters.Character{
 		Entity:           e.NewEntity(),
 		Name:             guestName,
 		Description:      "A mysterious guest adventurer.",
-		Race:             template.Race,
+		Race:             race,
 		Class:            template.Class,
+		Gold:             characters.StartingGold(template.Gold, race.ID),
 		CurrentHitPoints: template.CurrentHitPoints,
 		MaxHitPoints:     template.MaxHitPoints,
 		CurrentMana:      template.CurrentMana,
@@ -165,6 +187,7 @@ func (gs *guestService) CreateGuestSession(remoteIP string) (string, error) {
 		character.EquippedSkills = make([]string, len(template.DefaultSkills))
 		copy(character.EquippedSkills, template.DefaultSkills)
 	}
+	character.EquippedSkills = skills.FillHotbar(character.Class.ID, character.Level, character.EquippedSkills)
 
 	// Equip starter items from template
 	if len(template.StartingItems) > 0 {

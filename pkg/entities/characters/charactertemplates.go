@@ -27,7 +27,7 @@ type CharacterTemplate struct {
 	Archetype   string `bson:"archetype,omitempty" json:"archetype,omitempty"` // e.g. warrior, rogue, mage
 
 	// Gameplay base
-	Race Race  `bson:"race,omitempty" json:"race"`
+	Race  Race  `bson:"race,omitempty" json:"race"`
 	Class Class `bson:"class,omitempty" json:"class"`
 
 	Level int32 `bson:"level,omitempty" json:"level"`
@@ -38,14 +38,16 @@ type CharacterTemplate struct {
 	CurrentMana int32 `bson:"currentMana,omitempty" json:"currentMana"`
 	MaxMana     int32 `bson:"maxMana,omitempty" json:"maxMana"`
 
+	// Gold is the create baseline. Humans add 15 on top. Other races do not.
+	Gold int64 `bson:"gold,omitempty" json:"gold,omitempty"`
+
 	Attributes Attributes `bson:"attributes,omitempty" json:"attributes,omitempty"`
 
-	StartingItems  []StartingItem `bson:"startingItems,omitempty" json:"startingItems,omitempty"`
-	DefaultSkills  []string       `bson:"defaultSkills,omitempty" json:"defaultSkills,omitempty"`
+	StartingItems []StartingItem `bson:"startingItems,omitempty" json:"startingItems,omitempty"`
+	DefaultSkills []string       `bson:"defaultSkills,omitempty" json:"defaultSkills,omitempty"`
 
 	// Meta
 	Source  string    `bson:"source,omitempty" json:"source,omitempty"` // "db" | "system"
 	Created time.Time `bson:"created,omitempty" json:"created,omitempty"`
 	Updated time.Time `bson:"updated,omitempty" json:"updated,omitempty"`
 }
-

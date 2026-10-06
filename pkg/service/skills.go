@@ -40,6 +40,8 @@ func NewSkillsService(repo r.SkillsRepository) SkillsService {
 		log.WithField("count", len(all)).Info("SkillsService: seeded skills")
 	}
 
+	all = ensureClassKit(repo, all)
+
 	// Populate the in-memory cache
 	skills.LoadFromDB(all)
 	log.WithField("count", len(all)).Info("SkillsService: loaded skills into cache")
@@ -90,4 +92,53 @@ func (svc *skillsService) refreshCache() {
 		return
 	}
 	skills.RefreshCache(all)
+}
+
+// ensureClassKit upserts the v1 class kit so an existing DB still learns Brace, Slip, and the rest.
+func ensureClassKit(repo r.SkillsRepository, all []*skills.Skill) []*skills.Skill {
+	have := map[string]bool{}
+	for _, s := range all {
+		if s != nil && s.Entity != nil && s.Entity.ID != "" {
+			have[s.Entity.ID] = true
+		}
+	}
+	changed := false
+	for _, id := range []string{"hitch_pin", "hitch_hobble", "hitch_reel"} {
+		if !have[id] {
+			continue
+		}
+		if err := repo.Delete(id); err != nil {
+			log.WithError(err).WithField("skill", id).Error("SkillsService: failed to retire class kit skill")
+			continue
+		}
+		changed = true
+	}
+	for _, kit := range skills.ClassKit() {
+		if kit == nil || kit.Entity == nil {
+			continue
+		}
+		id := kit.Entity.ID
+		if !have[id] {
+			if _, err := repo.Import(kit); err != nil {
+				log.WithError(err).WithField("skill", id).Error("SkillsService: failed to import class kit skill")
+				continue
+			}
+			changed = true
+			continue
+		}
+		if err := repo.Update(id, kit); err != nil {
+			log.WithError(err).WithField("skill", id).Error("SkillsService: failed to update class kit skill")
+			continue
+		}
+		changed = true
+	}
+	if !changed {
+		return all
+	}
+	reloaded, err := repo.FindAll()
+	if err != nil {
+		log.WithError(err).Error("SkillsService: failed to reload class kit")
+		return all
+	}
+	return reloaded
 }

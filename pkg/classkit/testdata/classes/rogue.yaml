@@ -1,0 +1,66 @@
+id: rogue
+name: Cutpurse
+description: "Back street. Two cuts, then you Slip the first one that comes back."
+armor_type: Leather
+combat_type: Melee
+primary: DEX
+skill_class: rogue
+order: 2
+aliases: [cutpurse, tpl-cutpurse]
+also: [ranger, hunter]
+races: [human, dwarf, elf]
+portrait_class: rogue
+hp_multiplier: 0.85
+hotbar_cap: 4
+slip_charges: 1
+balance:
+  damage_dealt: 0.55
+  damage_taken: 1.15
+  behind_dealt: 1.15
+  swings: 2
+template:
+  id: tpl-cutpurse
+  backstory: "You learned the lanes with a knife, and the tree line with a bow."
+  origin_area: Dockside
+  archetype: cutpurse
+  race: human
+  str: 10
+  dex: 18
+  int: 6
+  wis: 5
+  sta: 11
+  starting_items:
+    - {slot: main_hand, name: Worn Dagger}
+    - {slot: chest, name: Leather Armor}
+  default_skills: [rogue_slip]
+skills:
+  - id: rogue_slip
+    name: Slip
+    effect: slip
+    level: 1
+    once_per_fight: true
+    keeps_swing: false
+    cooldown: 0
+    multiplier: 0
+    target: enemy
+    tooltip: "Once a fight. Drop the fight and take one exit."
+  - id: rogue_nick
+    name: Nick
+    effect: nick
+    level: 4
+    once_per_fight: false
+    keeps_swing: false
+    cooldown: 3
+    multiplier: 0.55
+    target: enemy
+    tooltip: "Extra 0.55× swing on top of your cadence. Replaces the autoattack this round."
+  - id: rogue_smoke
+    name: Smoke
+    effect: smoke
+    level: 8
+    once_per_fight: true
+    keeps_swing: false
+    cooldown: 0
+    multiplier: 0
+    target: enemy
+    tooltip: "Once a fight. The target misses their next swing."
