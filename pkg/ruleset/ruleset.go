@@ -90,6 +90,12 @@ type fileShape struct {
 		Disconnect string `yaml:"disconnect"`
 		BareAttack string `yaml:"bare_attack"`
 	} `yaml:"combat"`
+	Regen struct {
+		OutOfCombat struct {
+			HP   regenPoolFile `yaml:"hp"`
+			Mana regenPoolFile `yaml:"mana"`
+		} `yaml:"out_of_combat"`
+	} `yaml:"regen"`
 }
 
 type resourceSpec struct {
@@ -112,6 +118,8 @@ type state struct {
 	safeRoom    string
 	disconnect  string
 	bareAttack  string
+	oocHP       RegenPolicy
+	oocMana     RegenPolicy
 }
 
 var (
@@ -129,6 +137,7 @@ func init() {
 }
 
 func builtin() state {
+	hp, mana := defaultOutOfCombatRegen()
 	return state{
 		levelCap:    50,
 		levelUpMode: ModeAuto,
@@ -146,6 +155,8 @@ func builtin() state {
 		safeRoom:   SafeStay,
 		disconnect: DisconnectContinue,
 		bareAttack: BareAttackAsk,
+		oocHP:      hp,
+		oocMana:    mana,
 	}
 }
 
@@ -326,6 +337,9 @@ func decode(raw []byte) (state, error) {
 			}
 			next.resources[key] = item
 		}
+	}
+	if err := applyRegen(&next, file); err != nil {
+		return state{}, err
 	}
 	return next, nil
 }

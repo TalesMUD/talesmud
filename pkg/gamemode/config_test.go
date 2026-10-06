@@ -70,6 +70,15 @@ func TestApplyFileAlsoLoadsRulesetSections(t *testing.T) {
 	}
 }
 
+func TestDocumentHasRulesetRegenOnly(t *testing.T) {
+	if !documentHasRuleset([]byte("regen:\n  out_of_combat:\n    hp:\n      enabled: false\n")) {
+		t.Fatal("regen-only document was not detected")
+	}
+	if documentHasRuleset([]byte("presentation: classic\nport: \"1\"\n")) {
+		t.Fatal("unrelated keys counted as a ruleset")
+	}
+}
+
 func TestTrustedProxiesDefaultToLoopback(t *testing.T) {
 	current = normalize(Config{})
 	t.Cleanup(func() { current = normalize(Config{}) })
