@@ -29,6 +29,9 @@ const (
 
 var (
 	ErrValidation  = errors.New("invalid registration")
+	ErrUsername    = errors.New("username must be 3-20 characters: lowercase letters, digits, and underscore. Hyphens are not allowed")
+	ErrEmail       = errors.New("email must be a full address, like name@example.com")
+	ErrPassword    = errors.New("password must be 8 to 128 characters")
 	ErrExists      = errors.New("account already exists")
 	ErrCredentials = errors.New("invalid username or password")
 	ErrBanned      = errors.New("account banned")
@@ -206,7 +209,7 @@ func (s *Service) Forgot(email string) error {
 func (s *Service) Reset(rawToken, newPassword string) error {
 	rawToken = strings.TrimSpace(rawToken)
 	if len(newPassword) < minPasswordLen || len(newPassword) > maxPasswordLen {
-		return ErrValidation
+		return ErrPassword
 	}
 	rec, err := s.loadToken(tokenHash(rawToken))
 	if err != nil || rec.Used || s.now().After(rec.ExpiresAt) {
@@ -317,13 +320,13 @@ func normalizeIdentity(username, email, password string) (string, string, error)
 	username = strings.ToLower(strings.TrimSpace(username))
 	email = strings.ToLower(strings.TrimSpace(email))
 	if !usernamePattern.MatchString(username) {
-		return "", "", ErrValidation
+		return "", "", ErrUsername
 	}
 	if _, err := mail.ParseAddress(email); err != nil || !strings.Contains(email, ".") {
-		return "", "", ErrValidation
+		return "", "", ErrEmail
 	}
 	if len(password) < minPasswordLen || len(password) > maxPasswordLen {
-		return "", "", ErrValidation
+		return "", "", ErrPassword
 	}
 	return username, email, nil
 }
