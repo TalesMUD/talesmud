@@ -124,8 +124,11 @@ func (command *AttackCommand) Execute(game def.GameCtrl, message *messages.Messa
 	if targetName == "" {
 		if ruleset.BareAttack() == ruleset.BareAttackFirst {
 			targetName = firstHostileName(game, message.Character.CurrentRoomID)
-		}
-		if targetName == "" {
+			if targetName == "" {
+				game.SendMessage() <- message.Reply("Nobody here to fight.")
+				return true
+			}
+		} else {
 			game.SendMessage() <- message.Reply("Attack whom? Usage: attack <target>")
 			return true
 		}
