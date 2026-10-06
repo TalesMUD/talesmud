@@ -867,7 +867,10 @@ func (e *Engine) NextTurn(instance *combat.CombatInstance) *combat.CombatantRef 
 	return instance.GetCurrentTurnCombatant()
 }
 
-// CheckCombatEnd checks if combat should end and returns the new state
+// CheckCombatEnd checks if combat should end and returns the new state.
+// Defeat requires at least one player actually dead and nobody still fighting.
+// A party that only fled or slipped is Fled. One fighter still up stays Active.
+// Mixed (some dead, some fled) is Defeat.
 func (e *Engine) CheckCombatEnd(instance *combat.CombatInstance) combat.CombatState {
 	if instance.AllEnemiesDead() {
 		return combat.CombatStateVictory

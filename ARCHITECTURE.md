@@ -476,8 +476,8 @@ type StatusEffect struct {
 
 3. RESOLUTION
    ├── Victory (all enemies dead) → XP/gold rewards scaled by threat tier against the highest level in the split (equal split: living combatants + online same-room party; leftover to the engager when it is a party share). Boss first-kill bonus is per character (`firstBossKills`). Loot drops stay in the room.
-   ├── Defeat (all players dead) → 10% XP loss, 1 gold loss, respawn at bind point
-   └── Fled (all players escaped) → NPCs reset to idle
+   ├── Defeat (nobody still fighting, and at least one player actually dead) → 10% XP loss, 1 gold loss, respawn at bind point, for the dead only. A player who fled or slipped keeps hit points, gold, and room.
+   └── Fled (every player fled or slipped, nobody dead) → no death penalty. NPCs reset to idle. A slip exit is left in place.
 ```
 
 #### Combat Commands
@@ -1258,7 +1258,7 @@ type MessageResponse struct {
 }
 ```
 
-`combatEnd` keeps `outcome` and `message`. Optional `rewards`, `loot`, `levelUp`, and `defeat` objects ride on the same message. `combatAction` may include `ability` when a named blow lands. Clients that only read `message` still work.
+`combatEnd` keeps `outcome` and `message`. Optional `rewards`, `loot`, `levelUp`, and `defeat` objects ride on the same message. `combatAction` may include `ability` when a named blow lands. Clients that only read `message` still work. Outcome `fled` is a successful flee or slip, with no `defeat` payload. In a mixed party, only the dead receive outcome `defeat`.
 
 ### Boss phase data flow
 

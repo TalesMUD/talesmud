@@ -13,8 +13,8 @@ const (
 	CombatStatePending CombatState = "pending" // Waiting for combat to begin
 	CombatStateActive  CombatState = "active"  // Combat in progress
 	CombatStateVictory CombatState = "victory" // All enemies defeated
-	CombatStateDefeat  CombatState = "defeat"  // All players dead
-	CombatStateFled    CombatState = "fled"    // All players fled
+	CombatStateDefeat  CombatState = "defeat"  // No one left fighting, and at least one player died
+	CombatStateFled    CombatState = "fled"    // No one left fighting, and every player fled
 	CombatStateTimeout CombatState = "timeout" // Combat timed out
 )
 
@@ -318,14 +318,20 @@ func (c *CombatInstance) GetLivingEnemies() []*CombatantRef {
 	return result
 }
 
-// AllPlayersDead returns true if all players are dead
+// AllPlayersDead reports a defeat: nobody is still fighting, and at least one
+// player is actually dead. A fled or slipped player is not dead. A party that
+// only escaped returns false so the fight can end as fled instead.
 func (c *CombatInstance) AllPlayersDead() bool {
+	anyDead := false
 	for _, p := range c.Players {
 		if p.IsAlive && !p.HasFled {
 			return false
 		}
+		if !p.IsAlive {
+			anyDead = true
+		}
 	}
-	return true
+	return anyDead
 }
 
 // AllEnemiesDead returns true if all enemies are dead
@@ -338,20 +344,18 @@ func (c *CombatInstance) AllEnemiesDead() bool {
 	return true
 }
 
-// AllPlayersFled returns true if all players have fled (none dead, all fled)
+// AllPlayersFled returns true when every player has fled or slipped and none
+// are dead. A mixed party (some dead, some fled) is not a flee.
 func (c *CombatInstance) AllPlayersFled() bool {
+	if len(c.Players) == 0 {
+		return false
+	}
 	for _, p := range c.Players {
-		if p.IsAlive && !p.HasFled {
+		if !p.IsAlive || !p.HasFled {
 			return false
 		}
 	}
-	// Make sure at least one fled (not all dead)
-	for _, p := range c.Players {
-		if p.HasFled {
-			return true
-		}
-	}
-	return false
+	return true
 }
 
 // AddLogEntry adds a new entry to the combat log

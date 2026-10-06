@@ -434,7 +434,7 @@ local solved = tales.game.getFlag(characterID, "puzzle_solved_statue")
 
 An enemy's authored XP reward is the base. When that reward is 0, `progression.base_xp_by_enemy_level` supplies the base, and otherwise the built-in `15*level+5` curve does. `reward_scale` multiplies that base afterward. `level_up_mode: trainer` banks combat, quest, exploration, and select catch-up until `tales.characters.applyLevels`. Quest XP is not multiplied by `reward_scale`.
 
-Death math is `ruleset.ApplyDeath`, called from defeat only.
+Death math is `ruleset.ApplyDeath`, called from defeat only. A fight is a defeat when nobody is still fighting and at least one player is actually dead. When every player has fled or slipped, the fight ends as fled: no XP loss, no gold loss, no armor damage, and no respawn move. A slip that already took one exit stays in that room. In a mixed party only the dead take the penalty. Anyone who fled gets the escaped notice and keeps their hit points, gold, and room. Post-combat cleanup still clears `InCombat` and syncs the escaper's combat hit points.
 
 `combat.pacing: auto` keeps the 5 second decision window and resolves a queued action on the next beat. `turn_based` leaves that window open until the player sends a command. NPCs still take their own turns afterward. The default file is `auto`. During a fight, a bare `attack` queues a swing on the current target or the first living enemy so a turn-based round advances. Outside combat, `combat.bare_attack: ask` (the default) still answers "Attack whom?". `first_hostile` starts the fight against the first hostile in the room.
 

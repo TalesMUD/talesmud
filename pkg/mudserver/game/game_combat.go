@@ -633,6 +633,9 @@ func resultStringForAttack(result combatpkg.AttackResult) string {
 	return "miss"
 }
 
+// escapedCombatText is the combatEnd copy for a player who fled or slipped.
+const escapedCombatText = "\n═══════════════════════════════════════════════════\n              ESCAPED\n═══════════════════════════════════════════════════\n\nYou have fled from combat!\n═══════════════════════════════════════════════════"
+
 // notifyAllPlayersInInstance sends a combatEnd to all players regardless of alive/fled status
 func (c *CombatController) notifyAllPlayersInInstance(instance *combat.CombatInstance, message, outcome string) {
 	for _, player := range instance.Players {
@@ -982,7 +985,7 @@ func (c *CombatController) cleanupCombatInstance(instance *combat.CombatInstance
 	case combat.CombatStateDefeat:
 		c.processCombatDefeat(instance)
 	case combat.CombatStateFled:
-		c.notifyAllPlayersInInstance(instance, "\n═══════════════════════════════════════════════════\n              ESCAPED\n═══════════════════════════════════════════════════\n\nYou have fled from combat!\n═══════════════════════════════════════════════════", string(combat.CombatStateFled))
+		c.notifyAllPlayersInInstance(instance, escapedCombatText, string(combat.CombatStateFled))
 	case combat.CombatStateTimeout:
 		c.notifyAllPlayersInInstance(instance, "\n═══════════════════════════════════════════════════\n         COMBAT RELEASED\n═══════════════════════════════════════════════════\n\nCombat timed out — you are free to move again.\n(No death penalty.)\n═══════════════════════════════════════════════════", string(combat.CombatStateTimeout))
 	}
@@ -1276,9 +1279,15 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 	}
 }
 
-// processCombatDefeat handles death penalties and sends the defeat message
+// processCombatDefeat handles death penalties and sends the defeat message.
+// Players who already fled or slipped are not dead: no penalty, no respawn
+// move, and the same escaped notice a full flee would send.
 func (c *CombatController) processCombatDefeat(instance *combat.CombatInstance) {
 	for _, player := range instance.Players {
+		if player.HasFled {
+			c.notifyPlayerCombatEnd(player.ID, escapedCombatText, string(combat.CombatStateFled))
+			continue
+		}
 		char, err := c.game.Facade.CharactersService().FindByID(player.ID)
 		if err != nil {
 			continue
@@ -1343,6 +1352,17 @@ func (c *CombatController) processCombatDefeat(instance *combat.CombatInstance) 
 		end.Defeat = summary
 		c.game.sendMessage <- end
 	}
+}
+
+func (c *CombatController) notifyPlayerCombatEnd(characterID, message, outcome string) {
+	if c == nil || c.game == nil || c.game.Facade == nil || characterID == "" {
+		return
+	}
+	char, err := c.game.Facade.CharactersService().FindByID(characterID)
+	if err != nil || char == nil {
+		return
+	}
+	c.game.sendMessage <- messages.NewCombatEndMessage(char.BelongsUserID, message, outcome)
 }
 
 // QueuePlayerAction queues an action for a player's next auto-attack turn
