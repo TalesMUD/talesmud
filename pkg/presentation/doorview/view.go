@@ -37,6 +37,7 @@ type View struct {
 	notice   map[string]string
 	recent   map[string][]string
 	flash    map[string][]string
+	sheet    map[string][]string
 	floor    map[string]uint64
 	hold     map[string]bool
 	shopPage map[string]int
@@ -74,6 +75,11 @@ func (v *View) OnInput(user *entities.User, text string, send func(any)) bool {
 	}
 	text = strings.TrimSpace(text)
 	if text == "" {
+		phase := v.phaseOf(user.ID)
+		if phase == "" && !v.peekLine(user.ID) && v.dropFightLog(user) {
+			v.prepareKey(user)
+			v.paint(user, send)
+		}
 		return true
 	}
 	phase := v.phaseOf(user.ID)
@@ -93,6 +99,7 @@ func (v *View) OnInput(user *entities.User, text string, send func(any)) bool {
 	}
 	if text == ":" {
 		v.prepareKey(user)
+		v.settleLog(user, "")
 		v.setLine(user.ID, true)
 		v.paint(user, send)
 		return true
@@ -105,8 +112,18 @@ func (v *View) OnInput(user *entities.User, text string, send func(any)) bool {
 	}
 	v.prepareKey(user)
 	cmd, handled := v.commandFor(user, text)
-	v.settleLog(user, cmd)
+	if v.settleLog(user, cmd) {
+		v.paint(user, send)
+		return true
+	}
 	if handled {
+		v.paint(user, send)
+		return true
+	}
+	if sheetCommand(cmd) {
+		if ch := v.character(user); ch != nil {
+			v.setSheet(user.ID, statsLines(ch))
+		}
 		v.paint(user, send)
 		return true
 	}
@@ -182,6 +199,7 @@ func (v *View) OnDisconnect(user *entities.User) {
 	delete(v.notice, user.ID)
 	delete(v.recent, user.ID)
 	delete(v.flash, user.ID)
+	delete(v.sheet, user.ID)
 	delete(v.floor, user.ID)
 	delete(v.hold, user.ID)
 	v.mu.Unlock()
@@ -201,14 +219,23 @@ func (v *View) handleLine(user *entities.User, text string) {
 			return
 		}
 		cmd := strings.TrimSpace(d.command + " " + text)
-		v.settleLog(user, cmd)
-		v.Game.DispatchCommand(user, cmd)
+		if !v.settleLog(user, cmd) {
+			v.Game.DispatchCommand(user, cmd)
+		}
 	case "name":
 		v.handleName(user, text)
 	default:
 		v.setLine(user.ID, false)
 		v.prepareKey(user)
-		v.settleLog(user, text)
+		if v.settleLog(user, text) {
+			return
+		}
+		if sheetCommand(text) {
+			if ch := v.character(user); ch != nil {
+				v.setSheet(user.ID, statsLines(ch))
+			}
+			return
+		}
 		v.Game.DispatchCommand(user, text)
 	}
 }
@@ -426,10 +453,11 @@ func (v *View) paint(user *entities.User, send func(any)) {
 			hp, maxHP = cur, mx
 		}
 	}
-	body := []string{
+	pinned := []string{
 		headerLine(char.Level, hp, maxHP, char.Gold, char.XP),
 	}
-	body = append(body, v.resourceLines(char.ID)...)
+	var chrome []string
+	chrome = append(chrome, v.resourceLines(char.ID)...)
 	var room *rooms.Room
 	if found, ferr := facade.RoomsService().FindByID(char.CurrentRoomID); ferr == nil {
 		room = found
@@ -445,15 +473,17 @@ func (v *View) paint(user *entities.User, send func(any)) {
 			selling = true
 		}
 	}
-	binds := applyOpenExits(keysFor(room, inCombat || brief != ""), room, char)
+	packBinds := keysFor(room, inCombat || brief != "")
+	packCount := len(packBinds)
+	binds := applyOpenExits(packBinds, room, char)
 	catalog := v.catalogLines(user.ID, char, room, selling)
 	if brief != "" {
-		body = append(body, brief)
+		pinned = append(pinned, brief)
 	} else if len(catalog) > 0 {
-		body = append(body, catalog...)
+		chrome = append(chrome, catalog...)
 	} else if room != nil {
 		if art := v.screenArtFor(room); art != "" {
-			body = append(body, strings.Split(art, "\n")...)
+			chrome = append(chrome, strings.Split(art, "\n")...)
 		}
 	}
 	if note := v.peekNotice(user.ID); note != "" {
@@ -461,10 +491,10 @@ func (v *View) paint(user *entities.User, send func(any)) {
 		if len(lines) > 2 {
 			lines = lines[:2]
 		}
-		body = append(body, lines...)
+		chrome = append(chrome, lines...)
 	}
 	if room == nil {
-		body = append(body, "You are nowhere.")
+		chrome = append(chrome, "You are nowhere.")
 	} else {
 		page.Location = room.Name
 		if len(catalog) == 0 && room.Description != "" {
@@ -476,7 +506,7 @@ func (v *View) paint(user *entities.User, send func(any)) {
 			if len(lines) > limit {
 				lines = lines[:limit]
 			}
-			body = append(body, lines...)
+			chrome = append(chrome, lines...)
 		}
 		if room.Exits != nil && len(*room.Exits) > 0 {
 			names := make([]string, 0, len(*room.Exits))
@@ -487,10 +517,10 @@ func (v *View) paint(user *entities.User, send func(any)) {
 				names = append(names, ex.Name)
 			}
 			if len(names) > 0 {
-				body = append(body, "Exits: "+strings.Join(names, ", "))
+				chrome = append(chrome, "Exits: "+strings.Join(names, ", "))
 			}
 		}
-		if len(binds) == 0 && len(catalog) == 0 && room.Actions != nil && len(*room.Actions) > 0 {
+		if packCount == 0 && len(catalog) == 0 && room.Actions != nil && len(*room.Actions) > 0 {
 			names := make([]string, 0, len(*room.Actions))
 			for _, action := range *room.Actions {
 				if action.Name != "" {
@@ -498,7 +528,7 @@ func (v *View) paint(user *entities.User, send func(any)) {
 				}
 			}
 			if len(names) > 0 {
-				body = append(body, "Actions: "+strings.Join(names, ", "))
+				chrome = append(chrome, "Actions: "+strings.Join(names, ", "))
 			}
 		}
 		if len(catalog) == 0 && v.Game.NPCManager != nil {
@@ -509,23 +539,27 @@ func (v *View) paint(user *entities.User, send func(any)) {
 				}
 			}
 			if len(npcs) > 0 {
-				body = append(body, "Here: "+strings.Join(npcs, ", "))
+				chrome = append(chrome, "Here: "+strings.Join(npcs, ", "))
 			}
 		}
 	}
 	if len(binds) > 0 {
-		page.Footer = "d down   : command"
+		page.Footer = commandFooter(room, char)
 		page.Keys = map[string]string{}
-		body = append(body, legendLines(binds)...)
+		chrome = append(chrome, legendLines(binds)...)
 		for key, b := range binds {
 			if b.Command != "" {
 				page.Keys[key] = b.Command
 			}
 		}
 	} else {
-		page.Footer = "n s e w u d   l look   a attack   i inventory   : command"
+		page.Footer = idleFooter(room, char)
 	}
-	page.Body = fitBody(body, append(v.peekRecent(user.ID), v.peekFlash(user.ID)...), 19)
+	if sheet := v.peekSheet(user.ID); len(sheet) > 0 {
+		page.Body = fitBody(pinned[:1], nil, sheet, 19)
+	} else {
+		page.Body = fitBody(pinned, chrome, append(v.peekRecent(user.ID), v.peekFlash(user.ID)...), 19)
+	}
 	send(ansi.Render(page))
 }
 
@@ -1070,24 +1104,29 @@ func (v *View) clearNotice(id string) {
 	delete(v.notice, id)
 }
 
-// fitBody keeps the latest command lines when the picture would otherwise
-// push them past the 19-line body. Art drops first. The status line stays.
-func fitBody(body, recent []string, limit int) []string {
+// fitBody pins the header and, during a fight, the status line. Room art and
+// the key list give up rows before those lines do. The log keeps its newest
+// rows and never grows past the body.
+func fitBody(pinned, chrome, log []string, limit int) []string {
 	if limit < 1 {
 		limit = 1
 	}
-	room := append([]string{}, body...)
-	for len(room)+len(recent) > limit && len(room) > 1 {
-		room = append(room[:1], room[2:]...)
+	pin := append([]string{}, pinned...)
+	if len(pin) > limit {
+		return pin[:limit]
 	}
-	out := append(room, recent...)
-	if len(out) <= limit {
-		return out
+	budget := limit - len(pin)
+	rest := append([]string{}, chrome...)
+	lines := append([]string{}, log...)
+	for len(rest)+len(lines) > budget && len(rest) > 0 {
+		rest = rest[1:]
 	}
-	if limit == 1 {
-		return []string{out[0]}
+	if len(lines) > budget {
+		lines = lines[len(lines)-budget:]
+		rest = nil
 	}
-	return append([]string{out[0]}, out[len(out)-(limit-1):]...)
+	out := append(pin, rest...)
+	return append(out, lines...)
 }
 
 func (v *View) clearRecent(id string) {

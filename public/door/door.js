@@ -244,6 +244,10 @@
       }
       return;
     }
+    if (data === "\r" || data === "\n") {
+      ws.send(JSON.stringify({ type: "door_key", key: "" }));
+      return;
+    }
     if (data === ":") {
       composing = true;
       line = "";
@@ -252,6 +256,10 @@
     }
     if (data.length === 1 && /[a-zA-Z0-9?]/.test(data)) {
       ws.send(JSON.stringify({ type: "door_key", key: data }));
+      return;
+    }
+    if (data.length === 1 && data >= " " && data <= "~") {
+      ws.send(JSON.stringify({ type: "door_key", key: "" }));
     }
   }
 

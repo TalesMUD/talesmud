@@ -6,6 +6,7 @@ import (
 
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
+	"github.com/talesmud/talesmud/pkg/entities/items"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
@@ -34,15 +35,28 @@ func combatKind(kind string) bool {
 	}
 }
 
-// keepsFight is a swing, a flee, or a combat status read. Anything else,
-// once the fight is over, is the key that drops the log.
-func keepsFight(cmd string) bool {
+// queuedAttack is a bare swing with no named target. After a fight, that key
+// is the extra press still in the queue, and it must not start another swing.
+func queuedAttack(cmd string) bool {
 	fields := strings.Fields(strings.ToLower(cmd))
-	if len(fields) == 0 {
+	if len(fields) != 1 {
 		return false
 	}
 	switch fields[0] {
-	case "attack", "a", "hit", "flee", "run", "escape", "defend", "cast", "focus", "status", "cs":
+	case "attack", "a", "hit":
+		return true
+	default:
+		return false
+	}
+}
+
+func sheetCommand(cmd string) bool {
+	fields := strings.Fields(strings.ToLower(cmd))
+	if len(fields) != 1 {
+		return false
+	}
+	switch fields[0] {
+	case "stats", "character", "char":
 		return true
 	default:
 		return false
@@ -136,21 +150,43 @@ func exitLabel(dir string) string {
 }
 
 // applyOpenExits lets a real exit win over a menu bind on the same letter,
-// so the legend and the key agree.
+// and lists an open way even when the pack never bound that letter.
 func applyOpenExits(binds map[string]keyBind, room *rooms.Room, ch *characters.Character) map[string]keyBind {
-	if len(binds) == 0 || room == nil {
+	if room == nil {
 		return binds
+	}
+	if binds == nil {
+		binds = map[string]keyBind{}
 	}
 	for letter, dir := range map[string]string{
 		"n": "north", "s": "south", "e": "east", "w": "west", "u": "up", "o": "out",
 	} {
-		b, ok := binds[letter]
-		if !ok || strings.EqualFold(b.Command, dir) || !roomHasExit(room, ch, dir) {
+		if !roomHasExit(room, ch, dir) {
+			continue
+		}
+		if b, ok := binds[letter]; ok && strings.EqualFold(b.Command, dir) {
 			continue
 		}
 		binds[letter] = keyBind{Key: letter, Command: dir, Label: exitLabel(dir)}
 	}
 	return binds
+}
+
+// commandFooter names down only when the room has that exit. Otherwise the
+// bottom row is just the command key.
+func commandFooter(room *rooms.Room, ch *characters.Character) string {
+	if roomHasExit(room, ch, "down") {
+		return "d down   : command"
+	}
+	return ": command"
+}
+
+func idleFooter(room *rooms.Room, ch *characters.Character) string {
+	ways := "n s e w u"
+	if roomHasExit(room, ch, "down") {
+		ways = "n s e w u d"
+	}
+	return ways + "   l look   a attack   i inventory   : command"
 }
 
 func (v *View) screenArtFor(room *rooms.Room) string {
@@ -185,17 +221,109 @@ func (v *View) prepareKey(user *entities.User) {
 	}
 	v.clearNotice(user.ID)
 	v.clearFlash(user.ID)
+	v.clearSheet(user.ID)
 	v.setFloor(user.ID, messages.LastNoticeGen(user.ID))
 }
 
-// settleLog keeps the fight transcript through every swing. The first key
-// that is not itself a fight action, after combat has ended, clears it.
-func (v *View) settleLog(user *entities.User, cmd string) {
-	if user == nil || v.characterInFight(user) || keepsFight(cmd) {
-		return
+// statsLines is the text-client character sheet: hit points, gold, worn
+// gear, and the optional gems flag. A missing flag shows as zero.
+func statsLines(ch *characters.Character) []string {
+	if ch == nil {
+		return nil
+	}
+	lines := []string{ch.Name}
+	if path := flagString(ch.Flags, "path"); path != "" {
+		lines = append(lines, path)
+	} else if ch.Race.Name != "" || ch.Class.Name != "" {
+		lines = append(lines, strings.TrimSpace(ch.Race.Name+" "+ch.Class.Name))
+	}
+	lines = append(lines, fmt.Sprintf("Level %d   HP %d/%d   Gold %d", ch.Level, ch.CurrentHitPoints, ch.MaxHitPoints, ch.Gold))
+	lines = append(lines, fmt.Sprintf("Gems %d", flagAmount(ch.Flags, "gems")))
+	lines = append(lines, fmt.Sprintf("Weapon %d   Armor %d", ch.GetWeaponDamage(), ch.GetArmorDefense()))
+	worn := wornLines(ch)
+	if len(worn) == 0 {
+		return append(lines, "Gear: none")
+	}
+	return append(lines, worn...)
+}
+
+func wornLines(ch *characters.Character) []string {
+	if ch == nil || len(ch.EquippedItems) == 0 {
+		return nil
+	}
+	slots := []struct {
+		slot  items.ItemSlot
+		label string
+	}{
+		{items.ItemSlotMainHand, "Main hand"},
+		{items.ItemSlotOffHand, "Off hand"},
+		{items.ItemSlotHead, "Head"},
+		{items.ItemSlotChest, "Chest"},
+		{items.ItemSlotHands, "Hands"},
+		{items.ItemSlotLegs, "Legs"},
+		{items.ItemSlotBoots, "Boots"},
+	}
+	var lines []string
+	for _, slot := range slots {
+		item := ch.EquippedItems[slot.slot]
+		if item == nil || strings.TrimSpace(item.Name) == "" {
+			continue
+		}
+		lines = append(lines, slot.label+": "+item.Name)
+	}
+	return lines
+}
+
+func flagString(flags map[string]interface{}, key string) string {
+	if flags == nil {
+		return ""
+	}
+	switch v := flags[key].(type) {
+	case string:
+		return strings.TrimSpace(v)
+	default:
+		return ""
+	}
+}
+
+func flagAmount(flags map[string]interface{}, key string) int64 {
+	if flags == nil {
+		return 0
+	}
+	switch n := flags[key].(type) {
+	case int:
+		return int64(n)
+	case int32:
+		return int64(n)
+	case int64:
+		return n
+	case float64:
+		return int64(n)
+	case float32:
+		return int64(n)
+	default:
+		return 0
+	}
+}
+
+// dropFightLog clears a finished fight. A swing that is still in progress
+// keeps the transcript.
+func (v *View) dropFightLog(user *entities.User) bool {
+	if user == nil || v.characterInFight(user) || !v.holdOf(user.ID) {
+		return false
 	}
 	v.clearRecent(user.ID)
 	v.clearHold(user.ID)
+	return true
+}
+
+// settleLog clears a finished fight on any following command. It reports
+// whether that command is a bare extra swing and should not be sent.
+func (v *View) settleLog(user *entities.User, cmd string) bool {
+	if !v.dropFightLog(user) {
+		return false
+	}
+	return queuedAttack(cmd)
 }
 
 func (v *View) setHold(id string, on bool) {
@@ -258,4 +386,28 @@ func (v *View) peekFlash(id string) []string {
 		return nil
 	}
 	return append([]string{}, v.flash[id]...)
+}
+
+func (v *View) setSheet(id string, lines []string) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	if v.sheet == nil {
+		v.sheet = map[string][]string{}
+	}
+	v.sheet[id] = append([]string{}, lines...)
+}
+
+func (v *View) clearSheet(id string) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	delete(v.sheet, id)
+}
+
+func (v *View) peekSheet(id string) []string {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	if v.sheet == nil {
+		return nil
+	}
+	return append([]string{}, v.sheet[id]...)
 }

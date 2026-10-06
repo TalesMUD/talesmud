@@ -503,7 +503,13 @@ func (app *app) setupRoutes() {
 
 	if gamemode.ANSI() {
 		if st, err := os.Stat("public/door"); err == nil && st.IsDir() {
-			r.Static("/door", "public/door")
+			dir := "public/door"
+			r.GET("/door", func(c *gin.Context) {
+				c.Redirect(http.StatusFound, "/door/")
+			})
+			r.GET("/door/*filepath", func(c *gin.Context) {
+				serveDoor(c, dir)
+			})
 		}
 		r.GET("/api/door/config", func(c *gin.Context) {
 			title, subtitle, tokenKey := gamemode.ClientPage()
