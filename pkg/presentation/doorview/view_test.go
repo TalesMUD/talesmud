@@ -1,6 +1,7 @@
 package doorview
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/traits"
 	"github.com/talesmud/talesmud/pkg/gamemode"
 	"github.com/talesmud/talesmud/pkg/mudserver/game"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	"github.com/talesmud/talesmud/pkg/presentation/ansi"
 	"github.com/talesmud/talesmud/pkg/repository"
 	"github.com/talesmud/talesmud/pkg/ruleset"
@@ -242,7 +244,7 @@ func TestKeyMapBindsRoomAndLeavesDownAlone(t *testing.T) {
 	if !saw {
 		t.Fatal("f did not run the news action")
 	}
-	view.OnNotice(user, "The healer asks 40 coin.", func(msg any) {
+	view.OnNotice(user, "The healer asks 40 coin.", "message", messages.LastNoticeGen(user.ID), func(msg any) {
 		if f, ok := msg.(ansi.Frame); ok {
 			frame = f
 		}
@@ -267,6 +269,15 @@ func TestFitBodyKeepsTheLatestLine(t *testing.T) {
 	if out[len(out)-1] != "Vault 0 coin. On hand 50." {
 		t.Fatalf("service line dropped: %q", out[len(out)-1])
 	}
+	log := make([]string, 0, 31)
+	for i := 0; i < 30; i++ {
+		log = append(log, fmt.Sprintf("hit %d", i))
+	}
+	log = append(log, "VICTORY!")
+	out = fitBody([]string{"Level 1   HP 25/25   Gold 50"}, log, 19)
+	if len(out) != 19 || out[0] != "Level 1   HP 25/25   Gold 50" || out[len(out)-1] != "VICTORY!" {
+		t.Fatalf("long fight log = %v", out)
+	}
 }
 
 func TestClearRecentDropsTheCombatLog(t *testing.T) {
@@ -275,6 +286,204 @@ func TestClearRecentDropsTheCombatLog(t *testing.T) {
 	v.clearRecent("user")
 	if got := v.peekRecent("user"); len(got) != 0 {
 		t.Fatalf("recent survived: %v", got)
+	}
+}
+
+func TestNotableLinesKeepTheVictory(t *testing.T) {
+	text := "\n═══════════════════════════════════════════════════\n              VICTORY!\n═══════════════════════════════════════════════════\n\nDefeated: Thorn Choir\n\nREWARDS:\n  + 12 XP\n  + 23 Gold\n"
+	lines := notableLines(text)
+	joined := strings.Join(lines, "\n")
+	if !strings.Contains(joined, "VICTORY!") || !strings.Contains(joined, "+ 12 XP") || !strings.Contains(joined, "+ 23 Gold") || !strings.Contains(joined, "Defeated: Thorn Choir") {
+		t.Fatalf("lines = %v", lines)
+	}
+	if strings.Contains(joined, "════") {
+		t.Fatalf("box rule kept: %v", lines)
+	}
+}
+
+func TestFightLogStaysUntilTheLeaveKey(t *testing.T) {
+	client, err := dbsqlite.Open(filepath.Join(t.TempDir(), "view.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	facade := service.NewFacade(repository.NewSQLiteFactory(client), nil)
+	if _, err := facade.RoomsService().Import(&rooms.Room{
+		Entity:      &entities.Entity{ID: "square"},
+		Name:        "Market Square",
+		Description: "Stalls and steam.",
+		Exits:       &rooms.Exits{{Name: "north", Target: "square"}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	created, err := facade.CharactersService().Store(&characters.Character{
+		Entity:           &entities.Entity{ID: "hero"},
+		Name:             "Hero",
+		BelongsUser:      *traits.BelongsToUser("user-1"),
+		CurrentRoom:      traits.CurrentRoom{CurrentRoomID: "square"},
+		Level:            1,
+		MaxHitPoints:     25,
+		CurrentHitPoints: 20,
+		InCombat:         true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	user := &entities.User{Entity: &entities.Entity{ID: "user-1"}, RefID: "user-1", LastCharacter: created.ID}
+	view := &View{Game: game.New(facade), Title: "Sample"}
+	var frame ansi.Frame
+	sink := func(msg any) {
+		if f, ok := msg.(ansi.Frame); ok {
+			frame = f
+		}
+	}
+	view.OnNotice(user, "Thorn Choir hits you for 4 damage.", "combatAction", 0, sink)
+	view.OnNotice(user, "\nVICTORY!\nDefeated: Thorn Choir\n  + 12 XP\n  + 23 Gold\n", "combatEnd", 0, sink)
+	if !strings.Contains(frame.ANSI, "VICTORY!") || !strings.Contains(frame.ANSI, "+ 12 XP") || !strings.Contains(frame.ANSI, "hits you") {
+		t.Fatalf("fight log missing:\n%s", frame.ANSI)
+	}
+	view.OnInput(user, "a", sink)
+	if !strings.Contains(frame.ANSI, "VICTORY!") || !strings.Contains(frame.ANSI, "hits you") {
+		t.Fatalf("in-combat key cleared the log:\n%s", frame.ANSI)
+	}
+	stored, err := facade.CharactersService().FindByID(created.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stored.InCombat = false
+	if err := facade.CharactersService().Update(stored.ID, stored); err != nil {
+		t.Fatal(err)
+	}
+	view.OnNotice(user, "Nobody here to fight.", "message", messages.LastNoticeGen(user.ID), sink)
+	if !strings.Contains(frame.ANSI, "VICTORY!") || !strings.Contains(frame.ANSI, "Nobody here to fight.") {
+		t.Fatalf("victory and the extra swing should share the screen:\n%s", frame.ANSI)
+	}
+	view.OnInput(user, "l", sink)
+	if strings.Contains(frame.ANSI, "VICTORY!") || strings.Contains(frame.ANSI, "Nobody here to fight.") || strings.Contains(frame.ANSI, "hits you") {
+		t.Fatalf("leave key kept the fight log:\n%s", frame.ANSI)
+	}
+}
+
+func TestStaleFlashIsDropped(t *testing.T) {
+	client, err := dbsqlite.Open(filepath.Join(t.TempDir(), "view.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	facade := service.NewFacade(repository.NewSQLiteFactory(client), nil)
+	if _, err := facade.RoomsService().Import(&rooms.Room{
+		Entity: &entities.Entity{ID: "square"},
+		Name:   "Market Square",
+		Exits:  &rooms.Exits{},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	created, err := facade.CharactersService().Store(&characters.Character{
+		Entity:      &entities.Entity{ID: "hero"},
+		Name:        "Hero",
+		BelongsUser: *traits.BelongsToUser("user-1"),
+		CurrentRoom: traits.CurrentRoom{CurrentRoomID: "square"},
+		Level:       1,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	user := &entities.User{Entity: &entities.Entity{ID: "user-1"}, RefID: "user-1", LastCharacter: created.ID}
+	view := &View{Game: game.New(facade), Title: "Sample"}
+	view.setFloor(user.ID, 5)
+	var frame ansi.Frame
+	sink := func(msg any) {
+		if f, ok := msg.(ansi.Frame); ok {
+			frame = f
+		}
+	}
+	view.OnConnect(user, sink)
+	frame = ansi.Frame{}
+	view.OnNotice(user, "old stats", "message", 5, sink)
+	if strings.Contains(frame.ANSI, "old stats") {
+		t.Fatalf("stale line painted:\n%s", frame.ANSI)
+	}
+	view.OnNotice(user, "new stats", "message", 6, sink)
+	if !strings.Contains(frame.ANSI, "new stats") {
+		t.Fatalf("fresh line missing:\n%s", frame.ANSI)
+	}
+}
+
+func TestCompassExitBeatsTheMenuBind(t *testing.T) {
+	root := t.TempDir()
+	body := []byte("areas:\n  market:\n    n:\n      command: news\n      label: News\n")
+	if err := os.WriteFile(filepath.Join(root, "keymap.yaml"), body, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := filepath.Join(t.TempDir(), "mode.yaml")
+	if err := os.WriteFile(cfg, []byte("world_pack: "+root+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	prev := gamemode.Current()
+	if err := gamemode.ApplyFile(cfg); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		restore := filepath.Join(t.TempDir(), "restore.yaml")
+		_ = os.WriteFile(restore, []byte("presentation: "+prev.Presentation+"\nworld_pack: \""+prev.WorldPack+"\"\n"), 0o644)
+		_ = gamemode.ApplyFile(restore)
+	})
+
+	client, err := dbsqlite.Open(filepath.Join(t.TempDir(), "view.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	facade := service.NewFacade(repository.NewSQLiteFactory(client), nil)
+	if _, err := facade.RoomsService().Import(&rooms.Room{
+		Entity:  &entities.Entity{ID: "square"},
+		Name:    "Market Square",
+		Area:    "market",
+		Exits:   &rooms.Exits{{Name: "north", Target: "lane"}},
+		Actions: &rooms.Actions{{Name: "news", Type: rooms.RoomActionTypeResponse, Response: "A notice on the board."}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := facade.RoomsService().Import(&rooms.Room{
+		Entity: &entities.Entity{ID: "lane"},
+		Name:   "North Lane",
+		Area:   "market",
+		Exits:  &rooms.Exits{{Name: "south", Target: "square"}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	created, err := facade.CharactersService().Store(&characters.Character{
+		Entity:      &entities.Entity{ID: "hero"},
+		Name:        "Hero",
+		BelongsUser: *traits.BelongsToUser("user-1"),
+		CurrentRoom: traits.CurrentRoom{CurrentRoomID: "square"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	user := &entities.User{Entity: &entities.Entity{ID: "user-1"}, RefID: "user-1", LastCharacter: created.ID}
+	view := &View{Game: game.New(facade), Title: "Sample"}
+	var frame ansi.Frame
+	view.OnInput(user, "n", func(msg any) {
+		if f, ok := msg.(ansi.Frame); ok {
+			frame = f
+		}
+	})
+	if !strings.Contains(frame.ANSI, "North Lane") {
+		t.Fatalf("n did not take the north exit:\n%s", frame.ANSI)
+	}
+	for _, msg := range drainDoor(view.Game) {
+		if rsp, ok := msg.(interface{ GetMessage() string }); ok && strings.Contains(rsp.GetMessage(), "notice") {
+			t.Fatalf("n ran news: %s", rsp.GetMessage())
+		}
+	}
+	view.OnInput(user, "e", func(msg any) {
+		if f, ok := msg.(ansi.Frame); ok {
+			frame = f
+		}
+	})
+	if !strings.Contains(frame.ANSI, "No exit that way.") {
+		t.Fatalf("missing east was silent:\n%s", frame.ANSI)
 	}
 }
 

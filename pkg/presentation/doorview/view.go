@@ -23,7 +23,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/ruleset"
 )
 
-const recentLimit = 8
+const recentLimit = 40
 
 // View paints one ANSI page from live engine state.
 type View struct {
@@ -36,6 +36,9 @@ type View struct {
 	drafts   map[string]*draft
 	notice   map[string]string
 	recent   map[string][]string
+	flash    map[string][]string
+	floor    map[string]uint64
+	hold     map[string]bool
 	shopPage map[string]int
 }
 
@@ -73,9 +76,6 @@ func (v *View) OnInput(user *entities.User, text string, send func(any)) bool {
 	if text == "" {
 		return true
 	}
-	// A new key starts a new screen. Combat lines from the last fight stay
-	// until this press, then the frame shows only what this command prints.
-	v.clearRecent(user.ID)
 	phase := v.phaseOf(user.ID)
 	if phase == "name" || phase == "amount" || v.takeLine(user.ID) {
 		v.handleLine(user, text)
@@ -92,6 +92,7 @@ func (v *View) OnInput(user *entities.User, text string, send func(any)) bool {
 		return true
 	}
 	if text == ":" {
+		v.prepareKey(user)
 		v.setLine(user.ID, true)
 		v.paint(user, send)
 		return true
@@ -102,7 +103,9 @@ func (v *View) OnInput(user *entities.User, text string, send func(any)) bool {
 		v.paint(user, send)
 		return true
 	}
+	v.prepareKey(user)
 	cmd, handled := v.commandFor(user, text)
+	v.settleLog(user, cmd)
 	if handled {
 		v.paint(user, send)
 		return true
@@ -128,17 +131,42 @@ func (v *View) OnInput(user *entities.User, text string, send func(any)) bool {
 	return true
 }
 
-// OnNotice keeps a short line of command output and redraws the frame.
-func (v *View) OnNotice(user *entities.User, text string, send func(any)) {
+// OnNotice keeps a line of command or combat output and redraws the frame.
+// kind is the message type. gen is the command generation, or zero when the
+// line is not command output. A one-shot at or below the floor is dropped.
+func (v *View) OnNotice(user *entities.User, text, kind string, gen uint64, send func(any)) {
 	if v == nil || user == nil {
 		return
 	}
 	text = strings.TrimSpace(text)
-	if text == "" || skipNotice(text) || v.isRoomEcho(user, text) {
+	if text == "" || skipNotice(text) {
 		v.paint(user, send)
 		return
 	}
-	v.pushRecent(user.ID, condense(text))
+	if combatKind(kind) {
+		lines := condense(text)
+		if kind == "combatEnd" {
+			lines = notableLines(text)
+		}
+		v.pushRecent(user.ID, lines)
+		v.setHold(user.ID, true)
+		v.paint(user, send)
+		return
+	}
+	if v.isRoomEcho(user, text) {
+		v.paint(user, send)
+		return
+	}
+	if gen > 0 && gen <= v.floorOf(user.ID) {
+		return
+	}
+	if v.characterInFight(user) {
+		v.pushRecent(user.ID, condense(text))
+		v.setHold(user.ID, true)
+		v.paint(user, send)
+		return
+	}
+	v.setFlash(user.ID, condense(text))
 	v.paint(user, send)
 }
 
@@ -153,6 +181,9 @@ func (v *View) OnDisconnect(user *entities.User) {
 	delete(v.drafts, user.ID)
 	delete(v.notice, user.ID)
 	delete(v.recent, user.ID)
+	delete(v.flash, user.ID)
+	delete(v.floor, user.ID)
+	delete(v.hold, user.ID)
 	v.mu.Unlock()
 }
 
@@ -164,16 +195,20 @@ func (v *View) handleLine(user *entities.User, text string) {
 		v.setPhase(user.ID, "")
 		v.setLine(user.ID, false)
 		v.clearNotice(user.ID)
+		v.prepareKey(user)
 		if d == nil || strings.EqualFold(text, "x") || text == "" {
 			v.setNotice(user.ID, "Cancelled.")
 			return
 		}
 		cmd := strings.TrimSpace(d.command + " " + text)
+		v.settleLog(user, cmd)
 		v.Game.DispatchCommand(user, cmd)
 	case "name":
 		v.handleName(user, text)
 	default:
 		v.setLine(user.ID, false)
+		v.prepareKey(user)
+		v.settleLog(user, text)
 		v.Game.DispatchCommand(user, text)
 	}
 }
@@ -291,19 +326,20 @@ func (v *View) createCharacter(user *entities.User, name string, path pathChoice
 func (v *View) commandFor(user *entities.User, text string) (string, bool) {
 	key := strings.ToLower(strings.TrimSpace(text))
 	ch := v.character(user)
-	var roomArea, roomID string
+	var room *rooms.Room
 	inCombat := false
 	if ch != nil {
 		inCombat = ch.InCombat
-		roomID = ch.CurrentRoomID
-		if v.Game.GetFacade() != nil && roomID != "" {
-			if room, err := v.Game.GetFacade().RoomsService().FindByID(roomID); err == nil && room != nil {
-				roomArea = room.Area
-				roomID = room.ID
+		if v.Game.GetFacade() != nil && ch.CurrentRoomID != "" {
+			if found, err := v.Game.GetFacade().RoomsService().FindByID(ch.CurrentRoomID); err == nil {
+				room = found
 			}
 		}
 	}
-	binds := keysFor(&rooms.Room{Entity: &entities.Entity{ID: roomID}, Area: roomArea}, inCombat)
+	if dir, ok := directionOf(key); ok && roomHasExit(room, ch, dir) {
+		return dir, false
+	}
+	binds := keysFor(room, inCombat)
 	if b, ok := binds[key]; ok {
 		if b.Prompt != "" && b.Command != "" {
 			v.mu.Lock()
@@ -324,6 +360,10 @@ func (v *View) commandFor(user *entities.User, text string) (string, bool) {
 			return "", true
 		}
 		return b.Command, false
+	}
+	if _, ok := directionOf(key); ok {
+		v.setNotice(user.ID, "No exit that way.")
+		return "", true
 	}
 	return mapKey(text), false
 }
@@ -387,7 +427,7 @@ func (v *View) paint(user *entities.User, send func(any)) {
 		}
 	}
 	body := []string{
-		fmt.Sprintf("Level %d   HP %d/%d   Gold %d", char.Level, hp, maxHP, char.Gold),
+		headerLine(char.Level, hp, maxHP, char.Gold, char.XP),
 	}
 	body = append(body, v.resourceLines(char.ID)...)
 	var room *rooms.Room
@@ -405,14 +445,14 @@ func (v *View) paint(user *entities.User, send func(any)) {
 			selling = true
 		}
 	}
-	binds := keysFor(room, inCombat || brief != "")
+	binds := applyOpenExits(keysFor(room, inCombat || brief != ""), room, char)
 	catalog := v.catalogLines(user.ID, char, room, selling)
 	if brief != "" {
 		body = append(body, brief)
 	} else if len(catalog) > 0 {
 		body = append(body, catalog...)
 	} else if room != nil {
-		if art := screenArt(room.ID); art != "" {
+		if art := v.screenArtFor(room); art != "" {
 			body = append(body, strings.Split(art, "\n")...)
 		}
 	}
@@ -485,7 +525,7 @@ func (v *View) paint(user *entities.User, send func(any)) {
 	} else {
 		page.Footer = "n s e w u d   l look   a attack   i inventory   : command"
 	}
-	page.Body = fitBody(body, v.peekRecent(user.ID), 19)
+	page.Body = fitBody(body, append(v.peekRecent(user.ID), v.peekFlash(user.ID)...), 19)
 	send(ansi.Render(page))
 }
 
@@ -1036,18 +1076,18 @@ func fitBody(body, recent []string, limit int) []string {
 	if limit < 1 {
 		limit = 1
 	}
-	if len(recent) > 4 {
-		recent = recent[len(recent)-4:]
-	}
 	room := append([]string{}, body...)
 	for len(room)+len(recent) > limit && len(room) > 1 {
 		room = append(room[:1], room[2:]...)
 	}
 	out := append(room, recent...)
-	if len(out) > limit {
-		out = out[len(out)-limit:]
+	if len(out) <= limit {
+		return out
 	}
-	return out
+	if limit == 1 {
+		return []string{out[0]}
+	}
+	return append([]string{out[0]}, out[len(out)-(limit-1):]...)
 }
 
 func (v *View) clearRecent(id string) {

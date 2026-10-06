@@ -284,6 +284,7 @@
       });
   }
 
+  setMode("login");
   fetch("/api/door/config").then(function (res) {
     if (!res.ok) return {};
     return res.json();

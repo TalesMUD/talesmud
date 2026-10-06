@@ -280,6 +280,7 @@ func (c *CombatController) PlayerHP(characterID string) (current, max int32, ok 
 }
 
 // BriefStatus is one line of live hit points for the text client.
+// Each enemy is named with its level so a fight screen can show who you face.
 func (c *CombatController) BriefStatus(characterID string) string {
 	if c == nil || c.manager == nil || characterID == "" {
 		return ""
@@ -294,7 +295,7 @@ func (c *CombatController) BriefStatus(characterID string) string {
 	}
 	for _, enemy := range instance.Enemies {
 		if enemy.IsAlive {
-			parts = append(parts, fmt.Sprintf("%s %d/%d", enemy.Name, enemy.CurrentHP, enemy.MaxHP))
+			parts = append(parts, fmt.Sprintf("%s L%d %d/%d", enemy.Name, enemy.Level, enemy.CurrentHP, enemy.MaxHP))
 		}
 	}
 	return strings.Join(parts, "   ")
@@ -926,6 +927,13 @@ func (c *CombatController) resolveNPCTurn(instance *combat.CombatInstance, curre
 			if target != nil {
 				remaining, maxHP = target.CurrentHP, target.MaxHP
 			}
+			prose := strings.TrimSpace(result.Message)
+			if prose == "" {
+				prose = strings.TrimSpace(step.Message)
+			}
+			if prose == "" {
+				prose = fmt.Sprintf("%s attacks.", current.Name)
+			}
 			c.notifyCombatAction(instance, messages.CombatActionMessage{
 				ActorID:     current.ID,
 				ActorName:   current.Name,
@@ -937,7 +945,7 @@ func (c *CombatController) resolveNPCTurn(instance *combat.CombatInstance, curre
 				RemainingHP: remaining,
 				MaxHP:       maxHP,
 				FxID:        fxIDForAttack(result, result.TargetDied),
-			}, result.Message)
+			}, prose)
 			if result.TargetDied {
 				if target != nil && target.Type == combat.CombatantTypePlayer {
 					c.syncPlayerHP(targetID, 0)

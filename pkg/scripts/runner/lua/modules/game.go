@@ -68,6 +68,7 @@ func RegisterGameModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 		msg := messages.NewRoomBasedMessage("SYSTEM", message)
 		msg.Audience = messages.MessageAudienceUser
 		msg.AudienceID = character.BelongsUserID
+		msg.NoticeGen = messages.StampNotice(character.BelongsUserID)
 		game.SendMessage() <- msg
 
 		L.Push(lua.LBool(true))
