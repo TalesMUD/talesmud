@@ -349,6 +349,28 @@ func TestAggroPartyNudgeMatchesManual(t *testing.T) {
 	}
 }
 
+func TestAggroCooldownCoversRoomBystander(t *testing.T) {
+	g, facade := newHookTestGame(t)
+	now := useAggroClock(t, g)
+	hero, _ := placeAggro(t, g, facade, "R-pair-cd", "wolf-fought", "Wolf", 2, &npc.EnemyTrait{AttackPower: 0})
+	bystander := aggroEnemy("wolf-bystander", "Other Wolf", 2, nil)
+	g.NPCManager.RegisterExistingNPC(bystander, "R-pair-cd")
+	online(g, facade, hero)
+	g.NotePlayerEntered(hero.ID, "R-pair-cd")
+	advanceAggro(now, g, 500*time.Millisecond)
+	if !g.CombatController.IsPlayerInCombat(hero.ID) {
+		t.Fatal("setup fight did not start")
+	}
+	g.CombatController.EndCombatForPlayer(hero.ID)
+	drainGameMessages(g.SendMessage())
+
+	g.NotePlayerEntered(hero.ID, "R-pair-cd")
+	advanceAggro(now, g, 500*time.Millisecond)
+	if g.CombatController.IsPlayerInCombat(hero.ID) || g.CombatController.IsNPCInCombat(bystander.ID) {
+		t.Fatal("room bystander re-aggroed during cooldown")
+	}
+}
+
 func TestAggroTwoNPCsOneFight(t *testing.T) {
 	g, facade := newHookTestGame(t)
 	now := useAggroClock(t, g)

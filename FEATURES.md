@@ -673,7 +673,7 @@ NPCs are processed by the game update loop every 10 seconds:
 - `patrol` NPCs follow `PatrolPath` as a looping ordered list of room IDs. If the current room is not in the path, the NPC moves to the first patrol room.
 - NPCs with `IdleDialogID` and `IdleDialogTimeout` broadcast ambient chatter to their current room when the cooldown has elapsed.
 - Dead spawned instances are removed for spawner replacement; dead unique NPCs respawn at `SpawnRoomID` after `RespawnTime`.
-- An enemy with `aggroOnSight` engages a player who enters its room, and engages players already there when it spawns, respawns, or walks in. `config/ruleset.yaml` `combat.aggro_on_sight` defaults to on, 2.5s grace, level gap 5, and 15s reaggro cooldown. `enabled: false` stops it. The sight line is ordinary text. The fight then uses the same path as `attack`.
+- An enemy with `aggroOnSight` engages a player who enters its room, and engages players already there when it spawns, respawns, or walks in. `config/ruleset.yaml` `combat.aggro_on_sight` defaults to on, 2.5s grace, level gap 5, and 15s reaggro cooldown. That quiet period also covers other aggressive NPCs still in the room. `enabled: false` stops it. The sight line is ordinary text. The fight then uses the same path as `attack`.
 - NPC movement sends silent room updates so clients refresh NPC presence without reprinting the room description.
 
 Room NPC payloads sent to the MUD client include `isEnemy`, `isMerchant`, `isQuestGiver`, `hasDialog`, `hasIdleDialog`, and `state` so the UI can show interaction badges without duplicating backend lookup rules.

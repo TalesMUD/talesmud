@@ -377,6 +377,26 @@ func (g *Game) stampFightAggroCooldown(instance *combat.CombatInstance) {
 	if cd <= 0 {
 		return
 	}
+	// The NPCs that fought, plus every other aggroOnSight NPC still standing in the
+	// room. A pair would otherwise hand the player to the wolf that never swung.
+	ids := map[string]struct{}{}
+	for _, enemy := range instance.Enemies {
+		if enemy.ID == "" || enemy.Summoned {
+			continue
+		}
+		ids[enemy.ID] = struct{}{}
+	}
+	if g.NPCManager != nil && instance.OriginRoomID != "" {
+		for _, inst := range g.NPCManager.GetInstancesInRoom(instance.OriginRoomID) {
+			if inst == nil || inst.Entity == nil || inst.Entity.ID == "" || inst.IsDead {
+				continue
+			}
+			if !inst.IsEnemy() || inst.EnemyTrait == nil || !inst.EnemyTrait.AggroOnSight {
+				continue
+			}
+			ids[inst.Entity.ID] = struct{}{}
+		}
+	}
 	g.aggro.mu.Lock()
 	defer g.aggro.mu.Unlock()
 	if g.aggro.cooldown == nil {
@@ -387,11 +407,8 @@ func (g *Game) stampFightAggroCooldown(instance *combat.CombatInstance) {
 		if player.ID == "" {
 			continue
 		}
-		for _, enemy := range instance.Enemies {
-			if enemy.ID == "" || enemy.Summoned {
-				continue
-			}
-			g.aggro.cooldown[aggroKey(player.ID, enemy.ID)] = until
+		for npcID := range ids {
+			g.aggro.cooldown[aggroKey(player.ID, npcID)] = until
 		}
 	}
 }
