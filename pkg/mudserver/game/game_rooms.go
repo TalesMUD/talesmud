@@ -71,6 +71,7 @@ func (g *Game) removeOfflineCharacters(room *rooms.Room) {
 
 func (g *Game) handleRoomUpdates() {
 	now := time.Now()
+	g.ExpirePartyInvites()
 	if g.RoomInstances != nil {
 		g.RoomInstances.Expire(now)
 	}

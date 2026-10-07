@@ -96,12 +96,16 @@ type OnlinePlayer struct {
 	LastSeen      time.Time
 }
 
+// PartyInviteTTL is how long a pending party invite stays valid.
+const PartyInviteTTL = 45 * time.Second
+
 // PartyInvite describes a pending invitation to join a party.
 type PartyInvite struct {
 	PartyID              string
 	InviterUserID        string
 	InviterCharacterID   string
 	InviterCharacterName string
+	TargetUserID         string
 	TargetCharacterID    string
 	TargetCharacterName  string
 	CreatedAt            time.Time

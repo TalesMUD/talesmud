@@ -1,6 +1,8 @@
 package messages
 
 import (
+	"time"
+
 	"github.com/talesmud/talesmud/pkg/entities"
 	e "github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
@@ -935,17 +937,18 @@ func (m *PartyMessage) AttachPartyMeta(party *e.Party) *PartyMessage {
 	return m
 }
 
-// PartyInviteMessage drives the Accept/Decline invite banner.
+// PartyInviteMessage drives the Accept/Decline invite popup.
 type PartyInviteMessage struct {
 	MessageResponse
-	Pending     bool   `json:"pending"`
+	Pending     bool  `json:"pending"`
 	InviterName string `json:"inviterName,omitempty"`
 	PartyID     string `json:"partyId,omitempty"`
+	ExpiresAt   int64 `json:"expiresAt,omitempty"` // unix seconds; 0 when cleared
 }
 
 // NewPartyInviteMessage creates a pending (or cleared) party invite payload.
 func NewPartyInviteMessage(userID string, pending bool, inviterName, partyID string) *PartyInviteMessage {
-	return &PartyInviteMessage{
+	msg := &PartyInviteMessage{
 		MessageResponse: MessageResponse{
 			Audience:   MessageAudienceOrigin,
 			AudienceID: userID,
@@ -956,6 +959,10 @@ func NewPartyInviteMessage(userID string, pending bool, inviterName, partyID str
 		InviterName: inviterName,
 		PartyID:     partyID,
 	}
+	if pending {
+		msg.ExpiresAt = time.Now().Add(def.PartyInviteTTL).Unix()
+	}
+	return msg
 }
 
 // NewShopMessage creates a structured shop payload for the client overlay.

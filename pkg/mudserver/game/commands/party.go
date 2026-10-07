@@ -22,10 +22,6 @@ func (command *PartyCommand) Execute(game def.GameCtrl, message *messages.Messag
 		game.SendMessage() <- messages.Reply(message.FromUser.ID, "You must select a character first.")
 		return true
 	}
-	if message.FromUser != nil && message.FromUser.IsGuest {
-		game.SendMessage() <- messages.Reply(message.FromUser.ID, "Parties are for lasting adventurers. Sign in to form a party.")
-		return true
-	}
 
 	args := strings.Fields(message.Data)
 	if len(args) == 1 {
@@ -126,12 +122,13 @@ func (command *PartyCommand) invite(game def.GameCtrl, message *messages.Message
 		InviterUserID:        message.FromUser.ID,
 		InviterCharacterID:   message.Character.ID,
 		InviterCharacterName: message.Character.Name,
+		TargetUserID:         target.UserID,
 		TargetCharacterID:    target.CharacterID,
 		TargetCharacterName:  target.CharacterName,
 	})
 
 	game.SendMessage() <- messages.Reply(message.FromUser.ID, "Party invite sent to "+target.CharacterName+".")
-	game.SendMessage() <- messages.Reply(target.UserID, message.Character.Name+" invited you to a party. Type 'party accept' or 'party decline'.")
+	game.SendMessage() <- messages.Reply(target.UserID, message.Character.Name+" invited you to a party.")
 	game.SendMessage() <- messages.NewPartyInviteMessage(target.UserID, true, message.Character.Name, party.ID)
 	command.pushParty(game, message)
 }

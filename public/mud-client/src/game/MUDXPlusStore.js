@@ -1453,6 +1453,7 @@ function createStore() {
           pending: true,
           inviterName: String(invite.inviterName || ''),
           partyId: String(invite.partyId || invite.partyID || ''),
+          expiresAt: Number(invite.expiresAt) || 0,
         };
         return state;
       });
