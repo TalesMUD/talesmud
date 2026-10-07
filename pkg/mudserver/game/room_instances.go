@@ -60,8 +60,13 @@ func (a *roomInstanceAdapter) Generate(characterID string, playerLevel int32, sp
 		return res, nil
 	}
 	for _, spawn := range res.Spawns {
-		if _, err := a.game.NPCManager.SpawnInstanceDirect(spawn.TemplateID, spawn.RoomID); err != nil {
+		inst, err := a.game.NPCManager.SpawnInstanceDirect(spawn.TemplateID, spawn.RoomID)
+		if err != nil {
 			log.WithError(err).WithField("template", spawn.TemplateID).Warn("procedural spawn failed")
+			continue
+		}
+		if inst != nil && inst.Entity != nil {
+			a.game.NoteNPCAppeared(inst.Entity.ID, spawn.RoomID)
 		}
 	}
 	return res, nil

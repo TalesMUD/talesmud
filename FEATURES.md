@@ -673,6 +673,7 @@ NPCs are processed by the game update loop every 10 seconds:
 - `patrol` NPCs follow `PatrolPath` as a looping ordered list of room IDs. If the current room is not in the path, the NPC moves to the first patrol room.
 - NPCs with `IdleDialogID` and `IdleDialogTimeout` broadcast ambient chatter to their current room when the cooldown has elapsed.
 - Dead spawned instances are removed for spawner replacement; dead unique NPCs respawn at `SpawnRoomID` after `RespawnTime`.
+- An enemy with `aggroOnSight` engages a player who enters its room, and engages players already there when it spawns, respawns, or walks in. `config/ruleset.yaml` `combat.aggro_on_sight` defaults to on, 2.5s grace, level gap 5, and 15s reaggro cooldown. `enabled: false` stops it. The sight line is ordinary text. The fight then uses the same path as `attack`.
 - NPC movement sends silent room updates so clients refresh NPC presence without reprinting the room description.
 
 Room NPC payloads sent to the MUD client include `isEnemy`, `isMerchant`, `isQuestGiver`, `hasDialog`, `hasIdleDialog`, and `state` so the UI can show interaction badges without duplicating backend lookup rules.
@@ -692,7 +693,7 @@ type EnemyTrait struct {
 
     // AI Behavior
     AggroRadius   int     // Detection range in rooms (0 = passive)
-    AggroOnSight  bool    // Auto-attack on detection
+    AggroOnSight  bool    // same-room engage after combat.aggro_on_sight grace
     CallForHelp   bool    // Alert nearby enemies
     FleeThreshold float64 // HP % to flee (e.g., 0.2 = flee at 20% HP)
 
@@ -844,7 +845,7 @@ type StatusEffect struct {
 ```
 1. INITIATION
    - Player: attack <npc>
-   - NPC: aggro detection (AggroRadius)
+   - NPC: aggroOnSight, same room, after combat.aggro_on_sight grace (AggroRadius is not a leash)
    - Create CombatInstance, roll initiative (1d20 + DEX mod)
 
 2. TURN ORDER

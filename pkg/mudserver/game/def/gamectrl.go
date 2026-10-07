@@ -79,6 +79,11 @@ type CombatEngineCtrl interface {
 	// Returns how many this call spawned. Unknown template, a non-enemy, no fight,
 	// or a full cap returns 0.
 	SummonCombatAllies(summonerNPCID, templateID string, count int) int
+	// BeginEngagement starts a fight the way attack does: swarm pack, onAggro once,
+	// combatStart, and the party assist nudge. npcAggro posts the sight line and
+	// uses the NPC as the aggressor. It does not apply the player's post-fight
+	// breath window or the overlevel warning.
+	BeginEngagement(roomID string, player *characters.Character, userID string, target *npc.NPC, npcAggro bool) *combat.CombatInstance
 	// ApplyCombatEffect applies an existing buff or debuff skill id to a combatant in the fight.
 	ApplyCombatEffect(targetID, effectID string) bool
 	// QueuePlayerSkill queues a skill for a player's next turn
@@ -182,4 +187,9 @@ type GameCtrl interface {
 	// following characterID toward that character. The follow flag is kept when
 	// the path is blocked or someone is offline or in combat.
 	CatchUpPartyFollow(characterID string)
+	// NotePlayerEntered schedules same-room aggro-on-sight against aggressive NPCs already there.
+	// Watches for any other room are cancelled and do not start the reaggro cooldown.
+	NotePlayerEntered(characterID, roomID string)
+	// NoteNPCAppeared schedules same-room aggro-on-sight for players already standing there.
+	NoteNPCAppeared(npcID, roomID string)
 }

@@ -59,7 +59,9 @@ type EnemyTrait struct {
 	// Behavior Configuration
 	// AggroRadius is how many rooms away the NPC can detect players (0 = passive, must be attacked first)
 	AggroRadius int `json:"aggroRadius"`
-	// AggroOnSight if true, NPC will auto-attack players on sight within aggro radius
+	// AggroOnSight starts a fight when a player enters this NPC's room, or when this
+	// NPC arrives in a room that already has players. Sight is that room only.
+	// AggroRadius is not a leash. Ruleset combat.aggro_on_sight can disable it.
 	AggroOnSight bool `json:"aggroOnSight"`
 	// CallForHelp if true, NPC will alert nearby enemies when attacked
 	CallForHelp bool `json:"callForHelp"`

@@ -390,6 +390,8 @@ Key methods:
 
 Turn-based combat occurs in isolated **Combat Instances** that manage fights between players and NPCs.
 
+Aggro on sight uses that same start. `combat.aggro_on_sight` (default on, 2.5s grace, level gap 5, 15s reaggro cooldown) schedules one watch per player and aggressive NPC when the player enters the room or the NPC arrives. The timer enqueues onto the command loop. The loop re-checks, posts `The <name> spots you.` as a normal message, and calls `BeginEngagement`, which calls `InitiateCombat`. Swarm pack, one `onAggro`, and the party assist nudge match a manual `attack`. Leaving during the grace cancels the watch. The cooldown starts when the fight ends.
+
 #### Combat Instance Model
 
 ```go
@@ -888,7 +890,7 @@ type EnemyTrait struct {
 
     // Behavior
     AggroRadius   int     // Detection range (0 = passive)
-    AggroOnSight  bool    // Auto-attack on detection
+    AggroOnSight  bool    // same-room engage after combat.aggro_on_sight grace
     CallForHelp   bool    // Alert nearby enemies
     FleeThreshold float64 // HP % to flee
 

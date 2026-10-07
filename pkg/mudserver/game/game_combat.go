@@ -99,8 +99,8 @@ func (c *CombatController) GetCombatInstance(characterID string) *combat.CombatI
 // InitiateCombat starts combat between players and enemies
 func (c *CombatController) InitiateCombat(roomID string, players []*characters.Character, enemies []*npc.NPC) *combat.CombatInstance {
 	c.fillKitHotbars(players)
-	// Any start that uses InitiateCombat, including a player attack, runs onAggro once per enemy.
-	// Aggro-on-sight does not start fights yet. When it does, it must call InitiateCombat so the hook stays once per fight.
+	// Any start that uses InitiateCombat, including a player attack and aggro-on-sight,
+	// runs onAggro once per enemy. Aggro-on-sight calls BeginEngagement, which calls this.
 	inst := c.engine.InitiateCombat(roomID, players, enemies)
 	c.runEnemyHooksOnEnter(inst)
 	return inst
@@ -1017,6 +1017,10 @@ func (c *CombatController) resolveNPCTurn(instance *combat.CombatInstance, curre
 
 // cleanupCombatInstance cleans up after combat ends, processes rewards, and notifies players
 func (c *CombatController) cleanupCombatInstance(instance *combat.CombatInstance, endState combat.CombatState) {
+	// Stamp before defeat relocation so a respawn into the same room does not schedule inside the quiet period.
+	if c.game != nil {
+		c.game.stampFightAggroCooldown(instance)
+	}
 	// Death scripts run before loot and XP. A second flush does not grant either.
 	c.flushEnemyLowHealthHooks(instance)
 	c.flushEnemyDeathHooks(instance)
