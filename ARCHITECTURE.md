@@ -884,7 +884,7 @@ type EnemyTrait struct {
     // Combat Stats
     AttackPower  int32
     Defense      int32
-    AttackSpeed  float64
+    AttackSpeed  float64 // attacks per round; 0 or omitted is one swing and the old beat
 
     // Behavior
     AggroRadius   int     // Detection range (0 = passive)
@@ -899,7 +899,7 @@ type EnemyTrait struct {
     GuaranteedLoot []string  // Item template IDs that always drop
     MaxDrops       int32     // Max items from loot table (0 = unlimited)
 
-    // Event Scripts
+    // Event Scripts (once per fight; heal an ally or apply an existing buff/debuff; no spawn)
     OnAggroScript string
     OnDeathScript string
     OnFleeScript  string

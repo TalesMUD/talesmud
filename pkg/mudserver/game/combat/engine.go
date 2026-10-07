@@ -153,33 +153,43 @@ func (e *Engine) CreateCombatantFromNPC(n *npc.NPC) combat.CombatantRef {
 	var dexMod int = 0
 
 	difficulty := ""
+	var attackSpeed float64
+	var onAggro, onDeath, onFlee string
 	if n.EnemyTrait != nil {
 		attackPower = n.EnemyTrait.AttackPower
 		defense = n.EnemyTrait.Defense
 		difficulty = n.EnemyTrait.Difficulty
+		attackSpeed = n.EnemyTrait.AttackSpeed
+		onAggro = n.EnemyTrait.OnAggroScript
+		onDeath = n.EnemyTrait.OnDeathScript
+		onFlee = n.EnemyTrait.OnFleeScript
 	}
 
 	// Use level as a rough approximation for DEX modifier if not specified
 	dexMod = int(n.Level) / 4
 
 	ref := combat.CombatantRef{
-		ID:          n.Entity.ID,
-		Type:        combat.CombatantTypeNPC,
-		Name:        n.GetDisplayName(),
-		Portrait:    portraits.ForNPC(n),
-		TemplateID:  n.TemplateID,
-		Initiative:  0, // Will be rolled
-		IsAlive:     true,
-		HasFled:     false,
-		Level:       n.Level,
-		Difficulty:  difficulty,
-		MaxHP:       n.MaxHitPoints,
-		CurrentHP:   n.CurrentHitPoints,
-		AttackPower: attackPower,
-		Defense:     defense,
-		STRMod:      int(n.Level) / 4, // Approximation
-		DEXMod:      dexMod,
-		CONMod:      int(n.Level) / 4, // Approximation
+		ID:            n.Entity.ID,
+		Type:          combat.CombatantTypeNPC,
+		Name:          n.GetDisplayName(),
+		Portrait:      portraits.ForNPC(n),
+		TemplateID:    n.TemplateID,
+		Initiative:    0, // Will be rolled
+		IsAlive:       true,
+		HasFled:       false,
+		Level:         n.Level,
+		Difficulty:    difficulty,
+		MaxHP:         n.MaxHitPoints,
+		CurrentHP:     n.CurrentHitPoints,
+		AttackPower:   attackPower,
+		Defense:       defense,
+		AttackSpeed:   attackSpeed,
+		OnAggroScript: onAggro,
+		OnDeathScript: onDeath,
+		OnFleeScript:  onFlee,
+		STRMod:        int(n.Level) / 4, // Approximation
+		DEXMod:        dexMod,
+		CONMod:        int(n.Level) / 4, // Approximation
 	}
 	phases := balance.BossPhases(difficulty)
 	if len(phases) > 0 {
@@ -340,6 +350,13 @@ func (e *Engine) ProcessAttack(instance *combat.CombatInstance, attackerID, targ
 		return AttackResult{Miss: true, Message: "Invalid attacker or target"}
 	}
 	swings := balance.ClassSwings(attacker.ClassID)
+	if attacker.Type == combat.CombatantTypeNPC {
+		// One action, N swings. Speed 0 stays one swing. The hold between
+		// slow actions is the controller's job, so a direct ProcessAttack still swings.
+		swings = EnemySwingCount(attacker.AttackSpeed)
+		attacker.AttackActions++
+		e.UpdateCombatant(instance, attacker)
+	}
 	if swings < 1 {
 		swings = 1
 	}

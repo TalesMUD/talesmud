@@ -100,6 +100,12 @@ type CombatantRef struct {
 	CurrentHP        int32  `json:"currentHp"`
 	AttackPower      int32  `json:"attackPower"`
 	Defense          int32  `json:"defense"`
+	// AttackSpeed is attacks per round. 0 matches one swing and never holds.
+	AttackSpeed   float64 `json:"attackSpeed,omitempty"`
+	AttackActions int     `json:"attackActions,omitempty"`
+	OnAggroScript string  `json:"onAggroScript,omitempty"`
+	OnDeathScript string  `json:"onDeathScript,omitempty"`
+	OnFleeScript  string  `json:"onFleeScript,omitempty"`
 
 	// Attribute modifiers (calculated from character attributes)
 	STRMod int `json:"strMod"`
@@ -212,6 +218,9 @@ type CombatInstance struct {
 
 	// Rig is the room turret. It is not a pet, not a follower, and not in turn order.
 	Rig *RigTurret `json:"rig,omitempty"`
+
+	// HookOnce records npcID|hook so onAggro, onDeath, and onFlee run once per fight.
+	HookOnce map[string]bool `json:"-"`
 }
 
 // RigTurret is a construct dropped in the fight's room. It does not move or follow.

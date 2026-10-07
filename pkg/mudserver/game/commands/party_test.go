@@ -14,6 +14,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/mudserver/game"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/commands"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/portraits"
 	"github.com/talesmud/talesmud/pkg/repository"
 	"github.com/talesmud/talesmud/pkg/service"
 )
@@ -238,11 +239,15 @@ func TestPartyCreateSetsLeaderAndRichMembers(t *testing.T) {
 	if _, err := facade.UsersService().Import(user); err != nil {
 		t.Fatalf("import user: %v", err)
 	}
+	class := characters.ClassWarrior
+	if loaded, ok := characters.ClassByID("warrior"); ok {
+		class = loaded
+	}
 	character := &characters.Character{
 		Entity:      &entities.Entity{ID: "char-1"},
 		Name:        "Aster",
 		Race:        characters.RaceHuman,
-		Class:       characters.ClassWarrior,
+		Class:       class,
 		Level:       3,
 		BelongsUser: *traits.BelongsToUser("user-1"),
 	}
@@ -277,7 +282,8 @@ func TestPartyCreateSetsLeaderAndRichMembers(t *testing.T) {
 		t.Fatalf("expected roster with one member, got %#v", roster)
 	}
 	m := roster.Members[0]
-	if m.Level != 3 || m.Class != characters.ClassWarrior.Name || !m.IsLeader || m.Portrait != "/api/portraits/player-human-warrior.png" {
+	wantPortrait := portraits.ForPlayer(character)
+	if m.Level != 3 || m.Class != class.Name || !m.IsLeader || m.Portrait != wantPortrait {
 		t.Fatalf("expected rich member fields, got %#v", m)
 	}
 	if roster.MaxMembers != entities.MaxPartySize || roster.LeaderID != "char-1" {

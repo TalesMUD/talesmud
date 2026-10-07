@@ -688,7 +688,7 @@ type EnemyTrait struct {
     // Combat Stats (base values, modified by difficulty multipliers)
     AttackPower  int32
     Defense      int32
-    AttackSpeed  float64
+    AttackSpeed  float64 // attacks per round; 0 or omitted is one swing and the old beat
 
     // AI Behavior
     AggroRadius   int     // Detection range in rooms (0 = passive)
@@ -703,10 +703,10 @@ type EnemyTrait struct {
     GuaranteedLoot []string  // Item template IDs that always drop
     MaxDrops       int32     // Max items from loot table (0 = unlimited)
 
-    // Event Scripts
-    OnAggroScript string  // Lua script on aggro
-    OnDeathScript string  // Lua script on death
-    OnFleeScript  string  // Lua script on flee
+    // Event Scripts (once per fight, sandboxed; errors are logged and swallowed)
+    OnAggroScript string  // when this NPC enters the fight
+    OnDeathScript string  // when this NPC dies, before loot and XP
+    OnFleeScript  string  // when this NPC first chooses to flee
 }
 ```
 

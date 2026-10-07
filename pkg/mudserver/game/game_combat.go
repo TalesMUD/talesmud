@@ -99,7 +99,11 @@ func (c *CombatController) GetCombatInstance(characterID string) *combat.CombatI
 // InitiateCombat starts combat between players and enemies
 func (c *CombatController) InitiateCombat(roomID string, players []*characters.Character, enemies []*npc.NPC) *combat.CombatInstance {
 	c.fillKitHotbars(players)
-	return c.engine.InitiateCombat(roomID, players, enemies)
+	// Any start that uses InitiateCombat, including a player attack, runs onAggro once per enemy.
+	// Aggro-on-sight does not start fights yet. When it does, it must call InitiateCombat so the hook stays once per fight.
+	inst := c.engine.InitiateCombat(roomID, players, enemies)
+	c.runEnemyHooksOnEnter(inst)
+	return inst
 }
 
 // GetCombatInstanceByNPC returns the combat instance an NPC is currently in
@@ -122,6 +126,7 @@ func (c *CombatController) ProcessPlayerAttack(characterID, targetID string) (me
 	result := c.engine.ProcessAttack(instance, characterID, targetID)
 	c.applyWeaponOnHitScript(instance, characterID, targetID, &result)
 	message = result.Message
+	c.flushEnemyDeathHooks(instance)
 
 	// Advance turn
 	c.engine.NextTurn(instance)
@@ -416,17 +421,22 @@ func (c *CombatController) processNPCTurns(instance *combat.CombatInstance) {
 		switch action {
 		case combat.CombatActionAttack:
 			if targetID != "" {
-				result := c.engine.ProcessAttack(instance, current.ID, targetID)
-				actionMsg = result.Message
+				if held, holdMsg := c.holdNPCAttack(instance, current.ID); held {
+					actionMsg = holdMsg
+					c.notifyPlayersInCombat(instance, actionMsg)
+				} else {
+					result := c.engine.ProcessAttack(instance, current.ID, targetID)
+					actionMsg = result.Message
 
-				// Send message to players in combat
-				c.notifyPlayersInCombat(instance, actionMsg)
+					// Send message to players in combat
+					c.notifyPlayersInCombat(instance, actionMsg)
 
-				// If a player died, sync their HP
-				if result.TargetDied {
-					target := instance.GetCombatantByID(targetID)
-					if target != nil && target.Type == combat.CombatantTypePlayer {
-						c.syncPlayerHP(targetID, 0)
+					// If a player died, sync their HP
+					if result.TargetDied {
+						target := instance.GetCombatantByID(targetID)
+						if target != nil && target.Type == combat.CombatantTypePlayer {
+							c.syncPlayerHP(targetID, 0)
+						}
 					}
 				}
 			}
@@ -437,10 +447,15 @@ func (c *CombatController) processNPCTurns(instance *combat.CombatInstance) {
 			c.notifyPlayersInCombat(instance, actionMsg)
 
 		case combat.CombatActionFlee:
+			if ref := instance.GetCombatantByID(current.ID); ref != nil {
+				c.runEnemyHook(instance, ref, "onFlee")
+			}
 			result := c.engine.ProcessFlee(instance, current.ID)
 			actionMsg = result.Message
 			c.notifyPlayersInCombat(instance, actionMsg)
 		}
+
+		c.flushEnemyDeathHooks(instance)
 
 		// Advance turn
 		c.engine.NextTurn(instance)
@@ -807,6 +822,7 @@ func (c *CombatController) processAllTurnsLocked(instance *combat.CombatInstance
 	}
 
 	logLenBefore = len(instance.Log)
+	c.flushEnemyDeathHooks(instance)
 	current = instance.GetCurrentTurnCombatant()
 	if current == nil || !current.IsAlive {
 		endState := c.engine.CheckCombatEnd(instance)
@@ -839,6 +855,7 @@ func (c *CombatController) processAllTurnsLocked(instance *combat.CombatInstance
 		}
 	}
 	c.sendPlayerCharacterUpdate(instance)
+	c.flushEnemyDeathHooks(instance)
 
 	endState := c.engine.CheckCombatEnd(instance)
 	if endState != combat.CombatStateActive {
@@ -894,6 +911,16 @@ func (c *CombatController) resolveNPCTurn(instance *combat.CombatInstance, curre
 	switch action {
 	case combat.CombatActionAttack:
 		if targetID != "" {
+			if held, holdMsg := c.holdNPCAttack(instance, current.ID); held {
+				c.notifyCombatAction(instance, messages.CombatActionMessage{
+					ActorID:   current.ID,
+					ActorName: current.Name,
+					TargetID:  targetID,
+					Action:    string(combat.CombatActionAttack),
+					Result:    "hold",
+				}, holdMsg)
+				break
+			}
 			step := c.engine.StepNPCAttack(instance, current.ID, targetID)
 			if step.Telegraph {
 				c.notifyCombatAction(instance, messages.CombatActionMessage{
@@ -940,6 +967,9 @@ func (c *CombatController) resolveNPCTurn(instance *combat.CombatInstance, curre
 			FxID:      "defend",
 		}, result.Message)
 	case combat.CombatActionFlee:
+		if ref := instance.GetCombatantByID(current.ID); ref != nil {
+			c.runEnemyHook(instance, ref, "onFlee")
+		}
 		result := c.engine.ProcessFlee(instance, current.ID)
 		res := "blocked"
 		fx := "flee"
@@ -958,6 +988,8 @@ func (c *CombatController) resolveNPCTurn(instance *combat.CombatInstance, curre
 
 // cleanupCombatInstance cleans up after combat ends, processes rewards, and notifies players
 func (c *CombatController) cleanupCombatInstance(instance *combat.CombatInstance, endState combat.CombatState) {
+	// Death scripts run before loot and XP. A second flush does not grant either.
+	c.flushEnemyDeathHooks(instance)
 
 	// Mark NPCs dead, then refresh the origin room, THEN send victory
 	// text. The room update must not be queued after combatEnd or a

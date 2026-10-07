@@ -137,3 +137,16 @@ One 24-iteration run per cell (player level 10). Win% moves several points betwe
 - Appropriate-gear elites and bosses at +5 stay under 15%.
 
 `level_gap` per level of attacker advantage is unchanged: hit +3.5%, crit +1%, damage dealt +3.5%, damage taken +2%, clamped at ±6. Gap 0 does not change the level-gap term.
+
+## Enemy attackSpeed
+
+`EnemyTrait.AttackSpeed` is attacks per round. It does not change the turn beat (`TurnBeatMs` 1000 + `ReactionMs` 400). Players still use class swing counts.
+
+- 0 or omitted: one swing when the enemy attacks, and the enemy never skips an attack action. Same tempo as before this field was honored.
+- Positive values clamp to 0.25–3.
+- 1.0 is one swing. Same count as 0.
+- 2.0 is two swings on that attack action. 3 is three. The value is rounded, then clamped to 1–3 swings.
+- Below 1 the enemy still has one swing, then holds. Period N is `round(1/speed)`, clamped to 2–4. The enemy swings when its attack-action index mod N is 0, and otherwise the log says it is slow to swing. 0.5 swings, holds, swings. 0.25 swings every fourth attack action. 0.8 uses a period of 2.
+- A boss or hard telegraph is not an attack action. Extra swings apply when the blow lands.
+
+`onAggroScript` runs once when that NPC enters a fight through `CombatController.InitiateCombat` (a player attack, or a later aggro-on-sight start that uses the same call). `onDeathScript` runs once when that NPC dies, before loot and XP. `onFleeScript` runs once when it first chooses to flee. Each call uses the existing Lua sandbox and its timeout. A script error is logged and swallowed. Helpers are `tales.combat.healNpc` and `tales.combat.applyEffect` (an existing buff or debuff id). v1 does not spawn.

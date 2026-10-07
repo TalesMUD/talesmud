@@ -742,3 +742,10 @@ Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated bl
 - ACCEPTED overnight EXTRA: Ward replaces Hitch (`444c5b8`, `?v=ward1`; Flutter APK `641c5a1`), Fenbone Needle ITM0266 10% Mire Hag (`ee10635`), Z05–Z12 kill-quest mobs as template spawners (`8d7fb8b`). Open note: Marcus found Ward opener weak vs L1 Catacomb Rats (Quest Master balance, not today's crown).
 - CozyTown devlog prepended "Meet the Ward + a busier Ashenveil road" (updated 2026-10-05, mycozy.town/veilspan).
 - Crown today: **Z06 Orc camp density** (Marcus-signed next-five #1). Task `~/dev/talesmud-rpg-1/.director/Z06-ORC-CAMP-DENSITY-TASK.md`. Worker Grok 4.7 xhigh tmux `grok-z02` (weekly 35% used at lock).
+
+## ACCEPT — 2026-10-07 daily director (~10:05 Europe/Berlin)
+- Live healthy: veilspan.com 200; `/play/` 200 with `?v=partyinvite1`; `POST /api/guest` 200; `/app/` 200. clawdbot up (`acb32219`). Door FYI only, untouched.
+- ACCEPTED yesterday's crown **Data-driven class kit** (engine `2a9cd5d` + record `1405439`; content `f6edf1d`): classes load from the pack, generic sample classes in engine. Residual: stale `TestPartyCreateSetsLeaderAndRichMembers` expects Warrior (folded into today's crown).
+- ACCEPTED overnight/yesterday EXTRA: configurable out-of-combat regen (`79cc485`/`54c102b`), flee-is-not-defeat + starter gear on signed-in create (`e85c403`/`271f7fd`), Ward L1 tune (`54103f8`, content `78ec834`), Z06/Z03 room art (`3b102c9`).
+- ACCEPTED Marcus-signed party slice (2026-10-06) shipped by cursor-june this morning: invite Accept/Decline popup with 45s timeout (`25a5e18`), guests can invite/join/follow (`adeb4b8`), faster overlay fades (`f5c661a`), larger desktop overflow icons/grid (`d6d54fe`, `?v=partyinvite1`). Two-guest smoke OK.
+- Crown today: **Enemy combat hooks v1** (SYSTEM) — onAggro/onDeath/onFlee Lua scripts fire, attackSpeed honored (0 = unchanged), Z06 chanter war-chant showcase. Task `.director/ENEMY-COMBAT-HOOKS-v1-TASK.md`. Worker Grok 4.7 xhigh tmux `grok-hooks` (weekly 70% used at lock, resets Oct 8 01:21).
