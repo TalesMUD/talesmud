@@ -2,6 +2,7 @@ package lua
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -327,6 +328,16 @@ func (r *LuaRunner) executeWithTimeout(L *lua.LState, code string, ctx context.C
 	done := make(chan *scripts.ScriptResult, 1)
 
 	go func() {
+		// A cancelled context raises inside the VM; never let that (or any
+		// other VM panic) take the whole server down.
+		defer func() {
+			if rec := recover(); rec != nil {
+				done <- &scripts.ScriptResult{
+					Success: false,
+					Error:   fmt.Sprintf("script panic: %v", rec),
+				}
+			}
+		}()
 		err := L.DoString(code)
 		if err != nil {
 			done <- &scripts.ScriptResult{
@@ -348,7 +359,13 @@ func (r *LuaRunner) executeWithTimeout(L *lua.LState, code string, ctx context.C
 	case result := <-done:
 		return result
 	case <-ctx.Done():
-		// Timeout - the context cancellation will interrupt the Lua state
+		// Timeout - the context cancellation interrupts the Lua state. Wait
+		// briefly for the VM goroutine to unwind so the caller does not close
+		// the state while it is still running.
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+		}
 		return &scripts.ScriptResult{
 			Success: false,
 			Error:   "script execution timeout exceeded",
