@@ -11,7 +11,20 @@
 
   function scheduleTimers(messages) {
     for (const msg of messages) {
-      if (timers.has(msg.id) || msg.fading) continue;
+      // Stack accel (or an early startFade) may mark fading before our display timer fires.
+      if (msg.fading) {
+        const existing = timers.get(msg.id);
+        if (existing && existing.removeTimer) continue;
+        if (existing && existing.displayTimer) clearTimeout(existing.displayTimer);
+        const removeTimer = setTimeout(() => {
+          overlayStore.removeMessage(msg.id);
+          timers.delete(msg.id);
+        }, msg.fadeOutDuration || 350);
+        timers.set(msg.id, { displayTimer: null, removeTimer });
+        continue;
+      }
+
+      if (timers.has(msg.id)) continue;
 
       const displayTimer = setTimeout(() => {
         overlayStore.startFade(msg.id);
@@ -33,7 +46,7 @@
       if (!messages.some(m => m.id === id)) {
         const t = timers.get(id);
         if (t) {
-          clearTimeout(t.displayTimer);
+          if (t.displayTimer) clearTimeout(t.displayTimer);
           if (t.removeTimer) clearTimeout(t.removeTimer);
         }
         timers.delete(id);

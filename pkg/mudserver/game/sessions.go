@@ -132,16 +132,25 @@ func (r *sessionRegistry) setInvite(invite def.PartyInvite) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	invite.CreatedAt = time.Now()
+	if invite.CreatedAt.IsZero() {
+		invite.CreatedAt = time.Now()
+	}
 	r.invites[invite.TargetCharacterID] = invite
 }
 
 func (r *sessionRegistry) getInvite(targetCharacterID string) (def.PartyInvite, bool) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
 	invite, ok := r.invites[targetCharacterID]
-	return invite, ok
+	if !ok {
+		return def.PartyInvite{}, false
+	}
+	if inviteExpired(invite, time.Now()) {
+		delete(r.invites, targetCharacterID)
+		return def.PartyInvite{}, false
+	}
+	return invite, true
 }
 
 func (r *sessionRegistry) clearInvite(targetCharacterID string) {
@@ -149,6 +158,28 @@ func (r *sessionRegistry) clearInvite(targetCharacterID string) {
 	defer r.mu.Unlock()
 
 	delete(r.invites, targetCharacterID)
+}
+
+func inviteExpired(invite def.PartyInvite, now time.Time) bool {
+	if invite.CreatedAt.IsZero() {
+		return false
+	}
+	return now.Sub(invite.CreatedAt) >= def.PartyInviteTTL
+}
+
+// takeExpiredInvites removes and returns invites past PartyInviteTTL.
+func (r *sessionRegistry) takeExpiredInvites(now time.Time) []def.PartyInvite {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	expired := make([]def.PartyInvite, 0)
+	for targetID, invite := range r.invites {
+		if inviteExpired(invite, now) {
+			expired = append(expired, invite)
+			delete(r.invites, targetID)
+		}
+	}
+	return expired
 }
 
 func (g *Game) ConnectUserSession(user *entities.User) {
@@ -257,6 +288,37 @@ func (g *Game) GetPartyInvite(targetCharacterID string) (def.PartyInvite, bool) 
 
 func (g *Game) ClearPartyInvite(targetCharacterID string) {
 	g.Sessions.clearInvite(targetCharacterID)
+}
+
+// ExpirePartyInvites clears timed-out invites and notifies both sides.
+func (g *Game) ExpirePartyInvites() {
+	expired := g.Sessions.takeExpiredInvites(time.Now())
+	for _, invite := range expired {
+		targetUserID := invite.TargetUserID
+		if targetUserID == "" {
+			for _, player := range g.GetOnlinePlayers() {
+				if player.CharacterID == invite.TargetCharacterID {
+					targetUserID = player.UserID
+					break
+				}
+			}
+		}
+		inviterName := invite.InviterCharacterName
+		if inviterName == "" {
+			inviterName = "Someone"
+		}
+		targetName := invite.TargetCharacterName
+		if targetName == "" {
+			targetName = "That player"
+		}
+		if targetUserID != "" {
+			g.SendMessage() <- messages.Reply(targetUserID, "Party invite from "+inviterName+" expired.")
+			g.SendMessage() <- messages.NewPartyInviteMessage(targetUserID, false, "", "")
+		}
+		if invite.InviterUserID != "" {
+			g.SendMessage() <- messages.Reply(invite.InviterUserID, targetName+" did not respond to your party invite.")
+		}
+	}
 }
 
 func (r *sessionRegistry) setFollow(followerID, leaderID string) {

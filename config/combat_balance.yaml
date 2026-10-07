@@ -119,7 +119,7 @@ class_balance:
     swings: 1
   ward:
     damage_dealt: 0.95
-    damage_taken: 1.05
+    damage_taken: 1.00
     behind_dealt: 1.15
     swings: 1
   rigger:

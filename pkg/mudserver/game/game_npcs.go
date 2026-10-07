@@ -74,7 +74,8 @@ func (g *Game) respawnNPC(inst *npc.NPC) {
 
 // updateIdleNPC handles idle state behavior
 func (g *Game) updateIdleNPC(inst *npc.NPC) (npcMovementEvent, bool) {
-	// Future: check aggro radius for nearby players.
+	// Future: check aggro radius for nearby players. A fight started that way
+	// must call CombatController.InitiateCombat so onAggro stays once per fight.
 	g.triggerIdleDialog(inst)
 
 	if inst.WanderRadius > 0 {

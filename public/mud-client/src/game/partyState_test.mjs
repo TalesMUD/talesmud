@@ -36,8 +36,8 @@ assert.deepStrictEqual(
 assert.strictEqual(normalizePartyInvite(null), null);
 assert.strictEqual(normalizePartyInvite({ pending: false }), null);
 assert.deepStrictEqual(
-  normalizePartyInvite({ pending: true, inviterName: 'Aster', partyId: 'p1' }),
-  { pending: true, inviterName: 'Aster', partyId: 'p1' },
+  normalizePartyInvite({ pending: true, inviterName: 'Aster', partyId: 'p1', expiresAt: 1700000045 }),
+  { pending: true, inviterName: 'Aster', partyId: 'p1', expiresAt: 1700000045 },
   'pending invite normalized'
 );
 

@@ -180,15 +180,21 @@
 
   .pin-toggle {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0.45em;
-    padding: 0.45em 0.55em;
-    border-radius: 8px;
+    justify-content: center;
+    gap: 0.35em;
+    padding: 0.75em 0.5em;
+    min-height: 72px;
+    border-radius: 10px;
     border: 1px solid rgba(148, 163, 184, 0.25);
     background: rgba(255, 255, 255, 0.04);
     color: #cbd5e1;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-align: center;
   }
   .pin-toggle.pinned {
     border-color: rgba(59, 130, 246, 0.55);
@@ -196,7 +202,7 @@
     color: #bfdbfe;
   }
   .pin-toggle i {
-    font-size: 16px;
+    font-size: 24px;
   }
   .pref-row {
     grid-column: 1 / -1;
@@ -256,7 +262,19 @@
   }
 
   .popup-btn i {
-    font-size: 16px;
+    font-size: 22px;
+  }
+
+  .dialog-more .popup-btn {
+    flex-direction: column;
+    gap: 0.35em;
+    min-height: 72px;
+    padding: 0.75em 0.5em;
+    font-size: 11px;
+  }
+
+  .dialog-more .popup-btn i {
+    font-size: 24px;
   }
 
   /* Purple popup buttons for room actions */
@@ -350,6 +368,7 @@
   .dialog.dialog-more {
     border-color: rgba(255, 255, 255, 0.2);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    max-width: 480px;
   }
 
   .dialog-more .dialog-title {
@@ -468,8 +487,12 @@
 
   .dialog-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 0.5em;
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 0.65em;
+  }
+
+  .dialog-more .dialog-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   /* Badge for action count */
@@ -508,6 +531,10 @@
       grid-template-columns: repeat(2, 1fr);
     }
 
+    .dialog-more .dialog-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .popup-btn {
       font-size: 11px;
       padding: 0.4em 0.6em;
@@ -515,6 +542,16 @@
 
     .popup-btn i {
       font-size: 14px;
+    }
+
+    .dialog-more .popup-btn {
+      min-height: 68px;
+      padding: 0.65em 0.45em;
+    }
+
+    .dialog-more .popup-btn i,
+    .dialog-more .pin-toggle i {
+      font-size: 22px;
     }
   }
 </style>

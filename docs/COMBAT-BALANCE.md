@@ -131,9 +131,22 @@ One 24-iteration run per cell (player level 10). Win% moves several points betwe
 `class_balance` in `config/combat_balance.yaml` scales damage after `level_gap` and before a crit. `behind_dealt` applies only when that class is the lower level, so an even boss and a fight three levels up can be tuned apart. The scaled boss body in `CreateScaledEnemy` is `220 + 23*level` hit points. Content bosses still use `CreateEnemy` and the duration bands.
 
 - Warrior even-fight damage is unchanged, so at-level trash duration stays in the old windows. The thicker boss is what pulls an appropriate-gear at-level boss into the 50–65% band. `behind_dealt` 1.20 keeps a good-gear boss at +3 near 60%.
-- Class rows were replaced, not stacked. Sentinel (warrior) 1.00 dealt / 0.90 taken, Cutpurse (rogue, and ranger/hunter weapons) 0.55 dealt × 2 swings / 1.15 taken, Runecaster (mage) 1.40 dealt / 1.25 taken, Ward (stored hitch id included) 0.95 dealt / 1.05 taken. `behind_dealt` is capped at 1.15 for every class. The old rogue 2.35 and mage 0.46 taken are gone.
-- Signatures: Brace (Sentinel, once, halves the next hit), Slip (Cutpurse, once, the next swing misses), Inscribe (Runecaster basic, 4/round × 3, refresh, no stack; basic costs 0 mana), Guard (Ward, once, the next hit aimed at an ally hits you; guarding yourself stacks two Grit). A fight opens at 1 Grit. Slam is on the level-1 bar and scales with Grit. A level-1 basic swing adds +1 so the starter sword is a 7, not a 6. No new trash flee table.
+- Class rows were replaced, not stacked. Sentinel (warrior) 1.00 dealt / 0.90 taken, Cutpurse (rogue, and ranger/hunter weapons) 0.55 dealt × 2 swings / 1.15 taken, Runecaster (mage) 1.40 dealt / 1.25 taken, Ward (stored hitch id included) 0.95 dealt / 1.00 taken. The template keeps a 50-point budget and puts the spare points in stamina (20) so later levels have a soak pool; level-1 hit points stay on the 1.05 multiplier. `behind_dealt` is capped at 1.15 for every class. The old rogue 2.35 and mage 0.46 taken are gone.
+- Signatures: Brace (Sentinel, once, halves the next hit), Slip (Cutpurse, once, the next swing misses), Inscribe (Runecaster basic, 4/round × 3, refresh, no stack; basic costs 0 mana), Guard (Ward, once, the next hit aimed at an ally hits you; guarding yourself stacks two Grit). A fight opens at 1 Grit. Slam is on the level-1 bar and scales with Grit. A level-1 basic swing adds +1 so the starter sword is a 7, not a 6. A missed Slam says it missed. Ward's Slam does not start its 4-round cooldown unless the swing hits. Other Slam skills still start their cooldown on a miss. Grit is still gained only from a connecting hit. No new trash flee table.
 - Ranger damage dealt is 1.26× so an at-level boss is no longer a one-sided loss. Content boss fights still last at least 12 rounds.
 - Appropriate-gear elites and bosses at +5 stay under 15%.
 
 `level_gap` per level of attacker advantage is unchanged: hit +3.5%, crit +1%, damage dealt +3.5%, damage taken +2%, clamped at ±6. Gap 0 does not change the level-gap term.
+
+## Enemy attackSpeed
+
+`EnemyTrait.AttackSpeed` is attacks per round. It does not change the turn beat (`TurnBeatMs` 1000 + `ReactionMs` 400). Players still use class swing counts.
+
+- 0 or omitted: one swing when the enemy attacks, and the enemy never skips an attack action. Same tempo as before this field was honored.
+- Positive values clamp to 0.25–3.
+- 1.0 is one swing. Same count as 0.
+- 2.0 is two swings on that attack action. 3 is three. The value is rounded, then clamped to 1–3 swings.
+- Below 1 the enemy still has one swing, then holds. Period N is `round(1/speed)`, clamped to 2–4. The enemy swings when its attack-action index mod N is 0, and otherwise the log says it is slow to swing. 0.5 swings, holds, swings. 0.25 swings every fourth attack action. 0.8 uses a period of 2.
+- A boss or hard telegraph is not an attack action. Extra swings apply when the blow lands.
+
+`onAggroScript` runs once when that NPC enters a fight through `CombatController.InitiateCombat` (a player attack, or a later aggro-on-sight start that uses the same call). `onDeathScript` runs once when that NPC dies, before loot and XP. `onFleeScript` runs once when it first chooses to flee. Each call uses the existing Lua sandbox and its timeout. A script error is logged and swallowed. Helpers are `tales.combat.healNpc` and `tales.combat.applyEffect` (an existing buff or debuff id). v1 does not spawn.

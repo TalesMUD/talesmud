@@ -55,11 +55,11 @@ func TestScaleClassDamageRoster(t *testing.T) {
 	if got := ScaleClassDamage("ward", "", 20, 20, 20); got != 19 {
 		t.Fatalf("ward id dealt 20 * 0.95 = %d, want 19", got)
 	}
-	if got := ScaleClassDamage("", "hitch", 10, 10, 20); got != 21 {
-		t.Fatalf("ward taken 20 * 1.05 = %d, want 21", got)
+	if got := ScaleClassDamage("", "hitch", 10, 10, 20); got != 20 {
+		t.Fatalf("ward taken 20 * 1.00 = %d, want 20", got)
 	}
-	if got := ScaleClassDamage("", "ward", 10, 10, 20); got != 21 {
-		t.Fatalf("ward id taken 20 * 1.05 = %d, want 21", got)
+	if got := ScaleClassDamage("", "ward", 10, 10, 20); got != 20 {
+		t.Fatalf("ward id taken 20 * 1.00 = %d, want 20", got)
 	}
 	if got := ScaleClassDamage("warrior", "rogue", 10, 10, 10); got != 12 {
 		t.Fatalf("sentinel into cutpurse 10 * 1.00 * 1.15 = %d, want 12", got)
@@ -169,7 +169,7 @@ func TestClassRosterShape(t *testing.T) {
 		if id == "rigger" && (row.DamageDealt != 0.85 || row.DamageTaken != 1 || row.Swings != 1 || row.BehindDealt != BehindDealtCap) {
 			t.Fatalf("rigger row %+v", row)
 		}
-		if id == "ward" && (row.DamageDealt != 0.95 || row.DamageTaken != 1.05 || row.Swings != 1 || row.BehindDealt != BehindDealtCap) {
+		if id == "ward" && (row.DamageDealt != 0.95 || row.DamageTaken != 1 || row.Swings != 1 || row.BehindDealt != BehindDealtCap) {
 			t.Fatalf("ward row %+v", row)
 		}
 	}

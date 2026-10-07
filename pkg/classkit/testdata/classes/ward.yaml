@@ -13,7 +13,7 @@ hp_multiplier: 1.05
 hotbar_cap: 4
 balance:
   damage_dealt: 0.95
-  damage_taken: 1.05
+  damage_taken: 1.00
   behind_dealt: 1.15
   swings: 1
 grit:
@@ -31,10 +31,10 @@ template:
   archetype: ward
   race: human
   str: 12
-  dex: 12
+  dex: 6
   int: 6
-  wis: 8
-  sta: 12
+  wis: 6
+  sta: 20
   starting_items:
     - {slot: main_hand, name: Rusty Sword}
     - {slot: chest, name: Leather Armor}
@@ -59,4 +59,4 @@ skills:
     cooldown: 4
     multiplier: 1.00
     target: enemy
-    tooltip: "Replaces your swing. 1.00×, plus 0.20× for each Grit, up to 2.00×."
+    tooltip: "Replaces your swing. 1.00×, plus 0.20× for each Grit, up to 2.00×. A miss does not start the cooldown."

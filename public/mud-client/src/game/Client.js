@@ -236,6 +236,7 @@ function createClient(renderer, characterCreator, muxStore) {
         pending: !!msg.pending,
         inviterName: msg.inviterName || '',
         partyId: msg.partyId || msg.partyID || '',
+        expiresAt: msg.expiresAt || 0,
       });
     }
   };

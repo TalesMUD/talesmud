@@ -14,7 +14,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	e "github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
-	"github.com/talesmud/talesmud/pkg/entities/items"
 	"github.com/talesmud/talesmud/pkg/entities/skills"
 )
 
@@ -188,23 +187,7 @@ func (gs *guestService) CreateGuestSessionPick(remoteIP, templateID, raceID stri
 		copy(character.EquippedSkills, template.DefaultSkills)
 	}
 	character.EquippedSkills = skills.FillHotbar(character.Class.ID, character.Level, character.EquippedSkills)
-
-	// Equip starter items from template
-	if len(template.StartingItems) > 0 {
-		character.EquippedItems = make(map[items.ItemSlot]*items.Item)
-		for _, si := range template.StartingItems {
-			itemTemplate := items.StarterItemTemplateByName(si.ItemTemplateName)
-			if itemTemplate != nil {
-				// Create a copy of the item for this character
-				itemCopy := *itemTemplate
-				itemCopy.Entity = e.NewEntity()
-				itemCopy.IsTemplate = false
-				if si.Slot != "" {
-					character.EquippedItems[si.Slot] = &itemCopy
-				}
-			}
-		}
-	}
+	equipStartingItems(character, template.StartingItems)
 
 	// Store character (bypasses name-taken check since we already verified above)
 	storedChar, err := gs.facade.CharactersService().Store(character)

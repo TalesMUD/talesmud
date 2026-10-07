@@ -158,6 +158,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - A signed-in player with more than one character sees that picker once per login (the server still enters on `lastCharacter`)
   - First-time users prompted to choose a display name/nickname
   - Three-step character creation wizard: Choose Template, Name Character, Confirm & Create
+  - Signed-in create equips that template's starting items: a fresh copy of each named starter, not the template itself. Guests use the same equip path. Characters already in the world are left unchanged.
   - Automatic phase detection from user profile and character data
   - Guest users skip onboarding (character auto-created server-side)
 
@@ -177,7 +178,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Party Combat Assist v1: same-room players join in-progress fights via `attack <npc>`; party members get a join nudge; XP/gold split among living joiners
   - Party Loot & XP Share v1: victory gold and XP also split equally with online party members in the killer's room (leftover to the engager; out-of-room and offline members excluded; items stay on the ground)
   - Party Follow v1: `party follow` / `party unfollow` trail the party leader through normal exits (`RelocateCharacter`); combat, teleports, portals, and private instances do not pull followers
-  - Party UI: HUD launch next to Friends, PartyOverlay (create/invite/list/say/leave), Accept/Decline invite banner; guests see sign-in note
+  - Party UI: HUD launch next to Friends, PartyOverlay (create/invite/list/say/leave), centered Accept/Decline invite popup with countdown/timeout; guests can party like signed-in players
   - Emote system
   - Live session-based player presence tracking for room UI, chat routing, `who`, and silent room presence refreshes
   - Reconnect-aware client state with visible connecting/reconnecting status and automatic reconnect attempts
@@ -255,7 +256,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - World export/import functionality
   - YAML/JSON data file support
   - Optional per-character refilling resources (`character_resources`). Keys come from `config/ruleset.yaml`. The shipped file lists none, so a default server never spends a balance. Scripts read them through `tales.resources`.
-  - Ruleset death penalties, level-up mode (`auto` or `trainer`), and an optional dawn heal. Defaults match the previous 10% XP loss, 1 gold, bind-point respawn, cap 50, and immediate level-up.
+  - Ruleset death penalties, level-up mode (`auto` or `trainer`), and an optional dawn heal. Defaults match the previous 10% XP loss, 1 gold, bind-point respawn, cap 50, and immediate level-up. A successful flee or slip is not a defeat: the escaper keeps hit points, gold, and the room they reached. A mixed party penalizes only the players who died.
   - Procedural private instances (`tales.instances.generate`): a per-character room line from templates, level-filtered encounters, cleanup on leave or timeout. Existing cellar instances and Party Follow are unchanged. Generated exits do not pull followers.
   - Optional text client at `/door` when `presentation: door_tui`. Classic mode does not mount that path. The page title, subtitle, and token key come from the game-mode file, with generic TalesMUD defaults. It paints rooms, exits, actions, NPCs, resources, combat status, and recent command replies, and it sends normal commands. A pack `keymap.yaml` can bind keys per room or area. A new character picks a numbered path, then sex. Reconnect applies the new-day pass. `-config` can point a second process at its own port and database. Classic play is unchanged when no config is set.
 
@@ -342,7 +343,7 @@ talesmud/
 | `help` | `h` | Show help |
 | `attack` | `a`, `hit` | Attack a target / switch combat target |
 | `defend` | `d`, `guard` | Queue defensive stance for next combat turn |
-| `flee` | `run`, `escape` | Queue flee attempt for next combat turn |
+| `flee` | `run`, `escape` | Queue a flee attempt. Success ends as escaped, with no death penalty |
 | `status` | `cs`, `combat` | Show combat status |
 | `cast` | `spell` | Use a skill in combat: cast \<skill\> [target] |
 | `skills` | `spells`, `abilities` | Manage skills: skills [equip\|unequip] [name] |
@@ -401,11 +402,12 @@ The NPCs branch represents the latest development work, focusing on NPC systems 
    - Players can queue special actions between auto-attacks: target switch, defend, flee
    - Combat starts with `attack`/`kill` and proceeds automatically
    - Level-gap modifiers (`config/combat_balance.yaml` `level_gap`): hit, crit, and damage dealt/taken scale with attacker level minus defender level, clamped (default ±6). Equal levels are unchanged. Applies to basic attacks and skills for players and NPCs.
-   - Class balance (`class_balance`): per-class damage dealt and taken, plus an uphill `behind_dealt` multiplier capped at 1.15. The world-pack class catalog wins when it has a row. `config/combat_balance.yaml` is the fallback. `wizard` uses the mage row. Ranger and hunter share the rogue row.
+   - Class balance (`class_balance`): per-class damage dealt and taken, plus an uphill `behind_dealt` multiplier capped at 1.15. The world-pack class catalog wins when it has a row. `config/combat_balance.yaml` is the fallback. Ward takes hits at 1.00. A soak class's Slam starts its cooldown only when the swing hits. `wizard` uses the mage row. Ranger and hunter share the rogue row.
    - Boss mechanics (`boss_mechanics`): bosses and elites telegraph blows; bosses enrage on a round count or HP percent. Bosses also progress through Opening, Escalation (66% HP), and Last Stand (33% HP), with a transition banner and persistent BattleStage phase label. YAML controls tiers, bands, labels, and optional damage/enrage overrides.
    - Threat colors from the same gap (grey through skull) on room enemy names and battle nameplates. Orange or worse asks once before `attack`; `attack!` or a second `attack` engages.
    - Victory XP and gold scale by that tier against the highest level in the reward split. Bosses pay a one-time first-kill bonus per character. The battle victory panel shows base, level modifier, and a first-kill bonus when one was paid, then reveals each drop in its rarity color and calls out a level-up. Defeat lists XP, gold, battered armor, and the room you wake in. The panel dismisses on click, Enter, or Escape and leaves the terminal usable. Hits float a number over the struck nameplate (a crit is larger, a miss reads "miss"); crits and Crushing Blow flash harder. `prefers-reduced-motion` turns those animations off.
    - No turn timeouts or AFK mechanics needed
+   - Enemy `attackSpeed` is attacks per round. 0 or omitted keeps one swing on the old beat. `onAggroScript`, `onDeathScript`, and `onFleeScript` run once per fight in the sandboxed Lua runner. A script can heal an ally in the fight or apply an existing buff or debuff. It cannot spawn.
 
 5. **NPC Behavior and Quest Interaction**
    - NPC update loop handles idle wandering, ordered patrol paths, respawn cleanup, and idle chatter cooldowns

@@ -114,6 +114,7 @@ func characterFromTemplate(template *characters.CharacterTemplate) *characters.C
 		copy(ch.EquippedSkills, template.DefaultSkills)
 	}
 	ch.EquippedSkills = skills.FillHotbar(ch.Class.ID, ch.Level, ch.EquippedSkills)
+	equipStartingItems(ch, template.StartingItems)
 	return ch
 }
 

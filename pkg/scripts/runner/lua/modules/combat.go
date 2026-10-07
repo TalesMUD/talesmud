@@ -42,6 +42,43 @@ func RegisterCombatModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 		return 1
 	}))
 
+	// tales.combat.healNpc(npcID, amount) -> number restored (0 if none)
+	mod.RawSetString("healNpc", L.NewFunction(func(L *lua.LState) int {
+		npcID := L.CheckString(1)
+		amount := int32(L.CheckInt(2))
+		game := runner.GetGame()
+		if game == nil {
+			L.Push(lua.LNumber(0))
+			return 1
+		}
+		engine := game.GetCombatEngine()
+		if engine == nil {
+			L.Push(lua.LNumber(0))
+			return 1
+		}
+		L.Push(lua.LNumber(engine.HealCombatNPC(npcID, amount)))
+		return 1
+	}))
+
+	// tales.combat.applyEffect(targetID, effectID) -> bool
+	// Only an existing buff or debuff skill id. Damage skills return false.
+	mod.RawSetString("applyEffect", L.NewFunction(func(L *lua.LState) int {
+		targetID := L.CheckString(1)
+		effectID := L.CheckString(2)
+		game := runner.GetGame()
+		if game == nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+		engine := game.GetCombatEngine()
+		if engine == nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+		L.Push(lua.LBool(engine.ApplyCombatEffect(targetID, effectID)))
+		return 1
+	}))
+
 	L.Push(mod)
 	return 1
 }

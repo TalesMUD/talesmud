@@ -52,7 +52,7 @@
 
   $: guest = isGuestSession(authToken);
   $: showFriends = !guest;
-  $: showParty = !guest;
+  $: showParty = true;
   $: resting = !!(!$store.inCombat && $store.characterStats?.resting);
   $: if (showFriends && authToken) {
     loadAccount();
