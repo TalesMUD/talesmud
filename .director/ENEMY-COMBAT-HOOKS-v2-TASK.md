@@ -1,0 +1,37 @@
+# Lua timeout fix port + Enemy combat hooks v2 (onLowHealth + summon helper) — night slice 2026-10-07
+
+## Hard stop
+Marcus: "use the 26% quota left for something good." Weekly Grok quota resets Oct 8 01:21 Berlin.
+Stop starting new work at **00:45 Berlin** or when `/usage` shows ~95% used, whichever is first. At the stop point everything must be either committed+pushed+deployed+smoked, or not deployed at all (live stays on the previous binary). Never leave a half-deployed server.
+
+## Repos / worktrees
+- Engine: **clean worktree `~/dev/talesmud-hooks2`**, local branch `hooks-v2` tracking `origin/engine-june` (tip `5afe110`). Work and commit here; push with `git push origin hooks-v2:engine-june` (fast-forward only; if rejected, `git pull --rebase origin engine-june` then push; never force). Do NOT use or commit from `~/dev/talesmud-june` (it has unrelated portrait-bust dirt).
+- Content: `~/dev/talesmud-rpg-1` main (tip `64a9e8a`). Only stage files you changed (there is untracked `.director` dirt — leave it).
+
+## Slice 1 — port public-master fix 5f8fb2b (do first, own commit)
+On public master, a Lua script that hit its time limit crashed the whole server under gopher-lua v1.1.2 (cancelled ctx raises a panic inside the VM goroutine; caller then closed the LState while still running). engine-june still has gopher-lua v1.1.1 but must be safe before any bump.
+- `git cherry-pick -x 5f8fb2b` (or adapt) into `pkg/scripts/runner/lua/luarunner.go`: recover() in the script goroutine, and on timeout wait (bounded, 2s) for the goroutine to unwind before returning.
+- Add a regression test in `pkg/scripts/runner/lua` (e.g. `TestTimedOutScriptDoesNotCrash`): an infinite-loop script with a short timeout returns Success=false with a timeout error, the process survives, and a following script on the same runner still works. Keep the test fast (short timeout — make the timeout injectable if needed, no 5s sleeps).
+- Verify the test passes on BOTH gopher-lua v1.1.1 (committed) and v1.1.2 (temporarily: `go get github.com/yuin/gopher-lua@v1.1.2 && go test ./pkg/scripts/...`, then `git checkout go.mod go.sum` — do NOT commit the bump). Record both results.
+- Commit `fix: [grokbot] port Lua timeout crash fix from master (5f8fb2b)` and push to engine-june.
+
+## Slice 2 — Enemy combat hooks v2
+Build on v1 (engine 123555a: `HookOnce`, `ctx.hook/roomId/npc/opponents/allies`, `tales.game.msgToRoom`, `tales.combat.healNpc`, `tales.combat.applyEffect`; see `.director/CORE-FOCUS-PROGRESS.md` "Enemy combat hooks v1").
+Engine stays framework-neutral: generic hook + generic helper in Go core; anything Veilspan-specific lives in content Lua/YAML only.
+
+1. **onLowHealth hook.** New `EnemyTrait.OnLowHealthScript` (yaml `onLowHealthScript`) and `EnemyTrait.LowHealthThreshold` (yaml `lowHealthThreshold`, fraction 0–1 of max HP; 0/unset = default 0.30; clamp to (0,1)). Fires once per NPC per fight (reuse HookOnce) the first time its HP drops below threshold*maxHP after taking damage while still alive. If one hit takes it from above-threshold to dead, do NOT fire onLowHealth (onDeath covers it). `ctx.hook = "onLowHealth"`. Importer + validator check the script id like the other hooks. Document in `interfaces/npc.yaml`/FEATURES.md (content) and docs (engine).
+2. **Generic summon helper.** `tales.combat.summon(templateId, count)` callable from enemy hook scripts (it may use the current hook context for fight/room). Spawns `count` instances of an existing enemy NPC template into the hook's room and adds them to the current fight on the enemy side (opponents unchanged), using the normal NPC instance creation path that spawners use (so they have proper HP/stats, are lootable/XP-able consistently with normal spawns — or, if simpler and safer, summoned adds give no loot/XP; pick one, document it). Caps: max **3 summoned per fight** total (constant or engine config, not content-specific) and per-call count clamped to 1..3 and the remaining cap. Returns number actually spawned. Unknown template, not-an-enemy template, no active fight, cap reached → log + return 0, never error out of combat. Summons must not trigger their own onAggro recursion problems (they may fire their own onAggro once; just make sure no loop). Summoned adds must not persist as permanent world NPCs after the fight beyond normal behaviour — if they survive the fight they should despawn/clean up or behave like normal spawned mobs without breaking spawner counts; pick the safest and document.
+3. **Showcase (content).** The Hollow Knight (ENM0009, Z02, R0228, boss L6, 150 HP) gets `onLowHealthScript` (new SCR in Z02 scripts, next free id). At default 30%: summon 2 fitting existing low-level enemy templates (pick something already in Z02/sewers that fits an ancient construct in a sewer chamber — e.g. a small construct/rat/etc. that exists; do NOT invent new enemy templates unless none fit, and if you must, keep it one small one), plus one short room line in Veilspan's clipped voice, e.g. "The Knight's runes flare. Something answers from the drains." — short, human, no purple metaphor stacks. Keep it conservative: adds should be weak (L1–3 level) so a party that could kill the Knight still can. Note the numbers for Quest Master to tune. Keep the existing intro script SCR0202 untouched.
+4. **Tests** (engine): onLowHealth fires exactly once per fight; respects custom threshold and default 0.30; does not fire on overkill-from-above-to-dead; summon adds to fight and respects per-call and per-fight cap; unknown template/no fight returns 0 and logs; script error in onLowHealth is swallowed and combat continues. Content: validator/import dry-run clean.
+5. `go test -count=1 -timeout 20m ./pkg/...` green (known: `pkg/webuiplay` no test files; `TestGapMatrixTargets` was fixed in 516532b).
+6. Commits `[grokbot]`, push engine-june + talesmud-rpg-1 main.
+
+## Deploy (same path as v1 — see v1 progress entry)
+`ssh veilspan-vps`, `/home/atla/dev/talesmud`. Engine ff pull (leave the VPS portrait dirt unstaged), content ff pull, `deploy.sh --dry-run --skip-export --no-assets` first, build `bin/tales.next` (Go 1.24.12, CGO_ENABLED=1, GOAMD64=v1), keep `bin/tales.prev-<oldsha>` + record sha256s, SIGTERM **talesmud MainPID only** (Restart=always), `./bin/tales --import mvp-rpg-1` (with `--skip-export` semantics as before). **NEVER touch Door :8020 / door-* processes.** No firewall/port changes. Do not merge public master.
+If slice 2 is not done and tested by ~00:15, deploy slice 1 alone (engine only) instead and leave slice 2 committed on a branch, not on engine-june.
+
+## Live smoke
+`GET /play/` 200, `POST /api/guest` 200, `/api/server-info` 200. Then try to trigger the Knight hook: if there's an admin/test path (admin command, test character, or a scripted fight harness against the live DB copy) use it; a guest probably can't reach R0228 at L1 — if not triggerable live, say so and rely on unit/integration tests. Verify a normal L1 rat fight still works. Close any fights/sockets you opened; if a probe leaves a fight stuck, restart talesmud MainPID only, same binary.
+
+## Report
+Append "Enemy combat hooks v2" section to `.director/CORE-FOCUS-PROGRESS.md` (SHAs, API: hook + summon signature/caps/loot policy, showcase numbers for Quest Master, tests, deploy sha256s/PIDs, smoke, residuals) and commit it. Then print exactly `HOOKS2 DONE` or `HOOKS2 BLOCKED: <reason>` (or `SLICE1 ONLY: <reason>`).
