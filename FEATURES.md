@@ -522,21 +522,25 @@ single broadcast is shared by multiple users.
 Party membership is persisted in the existing `Party` entity (SQLite JSON),
 including `leaderCharacterId`. Creator is leader. Soft/hard cap: **5** members
 (`entities.MaxPartySize`) enforced on invite and accept. Pending invites
-remain in-memory on the game server. Guests are refused (same as Friends).
+remain in-memory on the game server and expire after **45 seconds** (both sides
+get a clear timeout notice + `party_invite{pending:false}`). Guests may invite,
+accept, decline, follow, and chat in parties (Friends still refuse guests).
 
 Structured WebSocket payloads:
 `party` `{inParty,partyId,partyName,leaderId,maxMembers,members[{id,name,online,level,class,portrait,isLeader}]}`
-and `party_invite` `{pending,inviterName,partyId}` (clear with `pending:false`).
+and `party_invite` `{pending,inviterName,partyId,expiresAt}` (clear with `pending:false`).
 
-Client (Party UI v2, cache-bust `?v=party2`): HUD Party button opens a gold-bordered
-panel — party name title + `N/M members · K online` subtitle; member rows with
-avatar/initial, You/Leader badges, class · level, online pill; sticky action bar
-(Say primary, Invite secondary, Leave danger+confirm); party-say strip (~8 lines);
-Create/Invite empty state; mobile bottom-sheet. Friends rows use matching **Invite**
-outline. Leader sees Kick on other members.
+Client (Party invite popup + guest parties, cache-bust `?v=partyinvite1`): HUD Party
+button opens a gold-bordered panel — party name title + `N/M members · K online`
+subtitle; member rows with avatar/initial, You/Leader badges, class · level, online
+pill; sticky action bar (Say primary, Invite secondary, Leave danger+confirm);
+party-say strip (~8 lines); Create/Invite empty state; mobile bottom-sheet. A
+pending invite opens a centered Accept/Decline popup with a countdown (not only a
+terminal line). Friends rows use matching **Invite** outline. Leader sees Kick on
+other members.
 
-Room players overlay and Friends rows can invite online players. Guests hide
-the Party button and see a sign-in note in the overlay.
+Room players overlay and Friends rows can invite online players. Guests see the
+Party button and full party UI.
 
 ### Party Combat Assist (v1)
 Same-room players can join an in-progress fight by `attack <npc>` on an enemy
