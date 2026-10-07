@@ -1947,6 +1947,8 @@ Each script type receives a `ctx` global table with different fields. Access fie
 - `LowHealthThreshold` is a fraction of max HP. `0` or unset means `0.30`. A killing blow from above the line does not run the low-health script.
 - Context varies by event type. Enemy hooks set `ctx.hook`, `ctx.roomId`, `ctx.npc`, `ctx.opponents`, and `ctx.allies`.
 - `tales.combat.summon(templateId, count)` spawns enemy-template adds into the current fight. Count clamps to 1..3 and to the remaining fight cap of 3. Adds grant no loot, gold, XP, or quest credit and are removed when the fight ends. Unknown template, non-enemy, no fight, or a full cap returns 0.
+- Room lines from `tales.game.msgToRoom` and `tales.game.msgToRoomExcept` during an enemy hook stay `type: "message"` and `username: "SYSTEM"`. They also carry `style: "combatEvent"`, `hook` (`onAggro`, `onLowHealth`, `onDeath`, `onFlee`), and `source` (that NPC's display name). Other scripts omit those fields. A hook flush that summoned adds sends `combatStatus` with the live `combatants` roster immediately.
+- The play client renders `style === "combatEvent"` as a gold chip in the BattleStage combat log (icon per hook, `source` as a small label) and still prints the plain line. Cache-bust for that client is `?v=hooks2`.
 
 ### Context Variable Quick Reference
 

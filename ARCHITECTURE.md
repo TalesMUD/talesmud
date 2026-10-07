@@ -1257,8 +1257,13 @@ type MessageResponse struct {
     Type       MessageType
     Username   string
     Message    string
+    Style      string // omitempty; "combatEvent" on enemy-hook room lines
+    Hook       string // omitempty; onAggro | onLowHealth | onDeath | onFlee
+    Source     string // omitempty; display name of the NPC whose hook ran
 }
 ```
+
+Enemy-hook `msgToRoom` / `msgToRoomExcept` lines keep `type` `message` and `username` `SYSTEM`. The three fields are omitted on every other message. The stamp lives on that script run's Lua state, not a process global. `combatStatus` may include `combatants` (the same roster view as `combatAction`) when a hook flush summoned adds, so the client can refresh the fight before the next action.
 
 `combatEnd` keeps `outcome` and `message`. Optional `rewards`, `loot`, `levelUp`, and `defeat` objects ride on the same message. `combatAction` may include `ability` when a named blow lands. Clients that only read `message` still work. Outcome `fled` is a successful flee or slip, with no `defeat` payload. In a mixed party, only the dead receive outcome `defeat`.
 

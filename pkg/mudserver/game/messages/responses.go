@@ -67,6 +67,11 @@ type MessageResponse struct {
 	Type     MessageType `json:"type"`
 	Username string      `json:"username"`
 	Message  string      `json:"message"`
+
+	// Enemy-hook room lines. Omitted on every other message.
+	Style  string `json:"style,omitempty"`  // "combatEvent"
+	Hook   string `json:"hook,omitempty"`   // onAggro | onLowHealth | onDeath | onFlee
+	Source string `json:"source,omitempty"` // display name of the NPC whose hook ran
 }
 
 // GetAudience ,,,
@@ -758,9 +763,11 @@ type CombatActionMessage struct {
 }
 
 // CombatStatusMessage carries queue/cooldown snapshots without resolving an action.
+// Combatants, when set, is the live roster (the same view combatAction sends).
 type CombatStatusMessage struct {
 	MessageResponse
-	Round int `json:"round,omitempty"`
+	Round      int             `json:"round,omitempty"`
+	Combatants []CombatantView `json:"combatants,omitempty"`
 	CombatQueueState
 }
 
@@ -940,10 +947,10 @@ func (m *PartyMessage) AttachPartyMeta(party *e.Party) *PartyMessage {
 // PartyInviteMessage drives the Accept/Decline invite popup.
 type PartyInviteMessage struct {
 	MessageResponse
-	Pending     bool  `json:"pending"`
+	Pending     bool   `json:"pending"`
 	InviterName string `json:"inviterName,omitempty"`
 	PartyID     string `json:"partyId,omitempty"`
-	ExpiresAt   int64 `json:"expiresAt,omitempty"` // unix seconds; 0 when cleared
+	ExpiresAt   int64  `json:"expiresAt,omitempty"` // unix seconds; 0 when cleared
 }
 
 // NewPartyInviteMessage creates a pending (or cleared) party invite payload.

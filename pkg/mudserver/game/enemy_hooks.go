@@ -97,6 +97,7 @@ func (c *CombatController) flushEnemyLowHealthHooks(instance *combat.CombatInsta
 	if c == nil || instance == nil {
 		return
 	}
+	beforeSummons := instance.SummonsUsed
 	ids := make([]string, len(instance.Enemies))
 	for i := range instance.Enemies {
 		ids[i] = instance.Enemies[i].ID
@@ -126,6 +127,7 @@ func (c *CombatController) flushEnemyLowHealthHooks(instance *combat.CombatInsta
 			c.runEnemyHook(instance, instance.GetEnemyByID(id), "onLowHealth")
 		}
 	}
+	c.emitSummonRosterIfGrew(instance, beforeSummons)
 }
 
 // flushEnemyDeathHooks fires onDeath once for each enemy that is already dead.
@@ -134,12 +136,14 @@ func (c *CombatController) flushEnemyDeathHooks(instance *combat.CombatInstance)
 	if c == nil || instance == nil {
 		return
 	}
+	beforeSummons := instance.SummonsUsed
 	for i := range instance.Enemies {
 		if instance.Enemies[i].IsAlive {
 			continue
 		}
 		c.runEnemyHook(instance, &instance.Enemies[i], "onDeath")
 	}
+	c.emitSummonRosterIfGrew(instance, beforeSummons)
 }
 
 // runEnemyHook runs one sandboxed script. An empty script id is ignored.
@@ -180,6 +184,7 @@ func (c *CombatController) runEnemyHook(instance *combat.CombatInstance, enemy *
 	}
 	ctx := scripts.NewScriptContext()
 	ctx.Set("hook", hook)
+	ctx.SetCombatHook(hook, enemy.Name)
 	ctx.Set("roomId", instance.OriginRoomID)
 	ctx.Set("npc", enemyHookViewFrom(enemy))
 	ctx.Set("opponents", enemyHookOpponents(instance))

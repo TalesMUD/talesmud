@@ -515,6 +515,30 @@ func (c *CombatController) emitPlayerQueueUpdate(instance *combat.CombatInstance
 	c.game.sendMessage <- messages.NewCombatStatusMessage(char.BelongsUserID, prose, instance.Round, queue)
 }
 
+// emitSummonRosterIfGrew pushes a combatStatus roster when this flush summoned adds.
+// An empty message does not add a combat line. Inactive fights skip it.
+func (c *CombatController) emitSummonRosterIfGrew(instance *combat.CombatInstance, before int) {
+	if c == nil || instance == nil || c.game == nil || instance.State != combat.CombatStateActive {
+		return
+	}
+	if instance.SummonsUsed <= before {
+		return
+	}
+	views := combatantViewsFromInstance(instance)
+	for _, player := range instance.Players {
+		if !player.IsAlive || player.HasFled {
+			continue
+		}
+		char, err := c.game.Facade.CharactersService().FindByID(player.ID)
+		if err != nil || char == nil {
+			continue
+		}
+		msg := messages.NewCombatStatusMessage(char.BelongsUserID, "", instance.Round, c.playerCombatQueueState(instance, player.ID))
+		msg.Combatants = stampViewerThreat(views, player.Level, instance)
+		c.game.sendMessage <- msg
+	}
+}
+
 // notifyPlayersInCombat sends a prose combat line to all living players (terminal/console path).
 func (c *CombatController) notifyPlayersInCombat(instance *combat.CombatInstance, message string) {
 	c.notifyCombatAction(instance, messages.CombatActionMessage{}, message)

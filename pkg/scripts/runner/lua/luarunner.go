@@ -157,6 +157,10 @@ func (r *LuaRunner) RunWithResult(script scripts.Script, ctx *scripts.ScriptCont
 
 	// Set context variables
 	r.setContext(L, ctx)
+	if hook, ok := ctx.CombatHook(); ok {
+		SetHookLine(L, hook.Hook, hook.Source)
+		defer ClearHookLine(L)
+	}
 
 	// Debug: log module availability to help diagnose broken tables/functions
 	r.logModuleDiagnostics(L, script.Name)

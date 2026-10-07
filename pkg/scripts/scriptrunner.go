@@ -10,9 +10,17 @@ type ScriptResult struct {
 	Duration time.Duration `json:"duration"`
 }
 
+// CombatHook is the enemy-hook stamp for room lines sent during one script run.
+// It is not copied into the Lua ctx table.
+type CombatHook struct {
+	Hook   string
+	Source string
+}
+
 // ScriptContext provides context data for script execution
 type ScriptContext struct {
-	Data map[string]interface{}
+	Data       map[string]interface{}
+	combatHook *CombatHook
 }
 
 // NewScriptContext creates a new script context
@@ -32,6 +40,22 @@ func (c *ScriptContext) Set(key string, value interface{}) *ScriptContext {
 func (c *ScriptContext) Get(key string) (interface{}, bool) {
 	val, ok := c.Data[key]
 	return val, ok
+}
+
+// SetCombatHook marks room lines from this run as an enemy-hook combat event.
+func (c *ScriptContext) SetCombatHook(hook, source string) {
+	if c == nil || hook == "" {
+		return
+	}
+	c.combatHook = &CombatHook{Hook: hook, Source: source}
+}
+
+// CombatHook returns the enemy-hook stamp for this run.
+func (c *ScriptContext) CombatHook() (CombatHook, bool) {
+	if c == nil || c.combatHook == nil || c.combatHook.Hook == "" {
+		return CombatHook{}, false
+	}
+	return *c.combatHook, true
 }
 
 // ScriptRunner defines the interface for script execution engines

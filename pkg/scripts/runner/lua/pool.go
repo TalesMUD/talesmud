@@ -103,6 +103,7 @@ func (p *VMPool) Size() int {
 
 // resetState resets a Lua state for reuse
 func resetState(L *lua.LState) {
+	ClearHookLine(L)
 	// Clear the stack
 	L.SetTop(0)
 
@@ -112,32 +113,32 @@ func resetState(L *lua.LState) {
 
 	// List of globals to preserve (built-in)
 	preserve := map[string]bool{
-		"_G":       true,
-		"_VERSION": true,
-		"assert":   true,
-		"error":    true,
-		"ipairs":   true,
-		"next":     true,
-		"pairs":    true,
-		"pcall":    true,
-		"print":    true,
-		"rawequal": true,
-		"rawget":   true,
-		"rawset":   true,
-		"select":   true,
+		"_G":           true,
+		"_VERSION":     true,
+		"assert":       true,
+		"error":        true,
+		"ipairs":       true,
+		"next":         true,
+		"pairs":        true,
+		"pcall":        true,
+		"print":        true,
+		"rawequal":     true,
+		"rawget":       true,
+		"rawset":       true,
+		"select":       true,
 		"setmetatable": true,
 		"getmetatable": true,
-		"tonumber": true,
-		"tostring": true,
-		"type":     true,
-		"unpack":   true,
-		"xpcall":   true,
-		"string":   true,
-		"table":    true,
-		"math":     true,
-		"coroutine": true,
-		"tales":    true, // Our custom module
-		"ctx":      true, // Context is reset per execution anyway
+		"tonumber":     true,
+		"tostring":     true,
+		"type":         true,
+		"unpack":       true,
+		"xpcall":       true,
+		"string":       true,
+		"table":        true,
+		"math":         true,
+		"coroutine":    true,
+		"tales":        true, // Our custom module
+		"ctx":          true, // Context is reset per execution anyway
 	}
 
 	// Collect keys to remove
