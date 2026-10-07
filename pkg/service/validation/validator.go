@@ -280,6 +280,7 @@ func ValidateNPC(n *npc.NPC, snapshot WorldSnapshot) Result {
 			{"enemyTrait.onAggroScript", n.EnemyTrait.OnAggroScript},
 			{"enemyTrait.onDeathScript", n.EnemyTrait.OnDeathScript},
 			{"enemyTrait.onFleeScript", n.EnemyTrait.OnFleeScript},
+			{"enemyTrait.onLowHealthScript", n.EnemyTrait.OnLowHealthScript},
 		} {
 			if scriptField.id != "" && !snapshot.HasScript(scriptField.id) {
 				result.Add(Error("missing_script", "npc", n.ID, scriptField.field, "script", scriptField.id, "Enemy event script references a missing script."))

@@ -1,5 +1,10 @@
 package npc
 
+import "math"
+
+// DefaultLowHealthFraction is the onLowHealth line when the threshold is unset or <= 0.
+const DefaultLowHealthFraction = 0.30
+
 // Range represents a min/max range for random values (e.g., gold drops)
 type Range struct {
 	Min int32 `json:"min"`
@@ -80,4 +85,22 @@ type EnemyTrait struct {
 	OnDeathScript string `json:"onDeathScript,omitempty"`
 	// OnFleeScript runs when NPC starts fleeing
 	OnFleeScript string `json:"onFleeScript,omitempty"`
+	// OnLowHealthScript runs once when HP first drops below LowHealthThreshold
+	// while the NPC is still alive. A hit that kills from above the line does not run it.
+	OnLowHealthScript string `json:"onLowHealthScript,omitempty"`
+	// LowHealthThreshold is a fraction of max HP in (0,1). 0 or unset uses
+	// DefaultLowHealthFraction. Other out-of-range values clamp into (0,1).
+	LowHealthThreshold float64 `json:"lowHealthThreshold,omitempty"`
+}
+
+// NormalizeLowHealthThreshold maps an authored fraction onto (0,1).
+// <= 0 (including unset) is the default 0.30. >= 1 clamps to just under 1.
+func NormalizeLowHealthThreshold(v float64) float64 {
+	if v <= 0 || math.IsNaN(v) {
+		return DefaultLowHealthFraction
+	}
+	if v >= 1 {
+		return math.Nextafter(1, 0)
+	}
+	return v
 }

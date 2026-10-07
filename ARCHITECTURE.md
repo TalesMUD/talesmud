@@ -899,10 +899,12 @@ type EnemyTrait struct {
     GuaranteedLoot []string  // Item template IDs that always drop
     MaxDrops       int32     // Max items from loot table (0 = unlimited)
 
-    // Event Scripts (once per fight; heal an ally or apply an existing buff/debuff; no spawn)
-    OnAggroScript string
-    OnDeathScript string
-    OnFleeScript  string
+    // Event Scripts (once per fight; heal, apply an existing buff/debuff, or summon)
+    OnAggroScript      string
+    OnDeathScript      string
+    OnFleeScript       string
+    OnLowHealthScript  string  // first drop below LowHealthThreshold while still alive
+    LowHealthThreshold float64 // 0 = 0.30; otherwise a fraction in (0, 1)
 }
 ```
 

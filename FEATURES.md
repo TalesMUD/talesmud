@@ -704,9 +704,11 @@ type EnemyTrait struct {
     MaxDrops       int32     // Max items from loot table (0 = unlimited)
 
     // Event Scripts (once per fight, sandboxed; errors are logged and swallowed)
-    OnAggroScript string  // when this NPC enters the fight
-    OnDeathScript string  // when this NPC dies, before loot and XP
-    OnFleeScript  string  // when this NPC first chooses to flee
+    OnAggroScript      string  // when this NPC enters the fight
+    OnDeathScript      string  // when this NPC dies, before loot and XP
+    OnFleeScript       string  // when this NPC first chooses to flee
+    OnLowHealthScript  string  // first time HP drops below LowHealthThreshold while still alive
+    LowHealthThreshold float64 // fraction of max HP; 0 or unset = 0.30; clamp to (0, 1)
 }
 ```
 
@@ -1704,6 +1706,18 @@ tales.game.resetCollectedItem(characterID, templateID)
 -- templateID: string (item template ID)
 ```
 
+### tales.combat Module (enemy hooks)
+
+Callable from sandboxed scripts. Failures return a zero result and do not abort combat.
+
+```lua
+tales.combat.healNpc(npcID, amount)       -- HP restored (0 if none)
+tales.combat.applyEffect(targetID, effectID) -- existing buff or debuff only
+tales.combat.summon(templateId, count)    -- enemy-template adds spawned (0 on failure)
+```
+
+`summon` uses the running enemy-hook fight and room. `count` clamps to 1..3 and to whatever remains of a fight cap of 3. Adds copy template stats, are not charged to a spawner, grant no loot, gold, XP, or quest credit, and are removed when the fight ends (win, lose, flee, or timeout). Each add may run its own `onAggroScript` once.
+
 ### tales.items Module
 ```lua
 -- Get item
@@ -1929,8 +1943,10 @@ Each script type receives a `ctx` global table with different fields. Access fie
   - `ctx.room` — Room entity object (if character is in a room)
 
 **NPC Event Scripts** (`type: npc`):
-- `OnAggroScript`, `OnDeathScript`, `OnFleeScript`
-- Context varies by event type
+- `OnAggroScript`, `OnDeathScript`, `OnFleeScript`, `OnLowHealthScript`
+- `LowHealthThreshold` is a fraction of max HP. `0` or unset means `0.30`. A killing blow from above the line does not run the low-health script.
+- Context varies by event type. Enemy hooks set `ctx.hook`, `ctx.roomId`, `ctx.npc`, `ctx.opponents`, and `ctx.allies`.
+- `tales.combat.summon(templateId, count)` spawns enemy-template adds into the current fight. Count clamps to 1..3 and to the remaining fight cap of 3. Adds grant no loot, gold, XP, or quest credit and are removed when the fight ends. Unknown template, non-enemy, no fight, or a full cap returns 0.
 
 ### Context Variable Quick Reference
 
@@ -2226,7 +2242,7 @@ end
 ### Entity ID References
 - **Rooms** - Reference other rooms via `Exit.Target`
 - **Items** - Reference templates via `TemplateID`, scripts via `OnUseScriptID`
-- **NPCs** - Reference templates via `TemplateID`, dialogs via `DialogID`, scripts via `OnAggroScript`/`OnDeathScript`/`OnFleeScript`
+- **NPCs** - Reference templates via `TemplateID`, dialogs via `DialogID`, scripts via `OnAggroScript`/`OnDeathScript`/`OnFleeScript`/`OnLowHealthScript`
 - **Quests** - Reference NPCs via `Source.NPCID`, scripts via `OnCompleteScriptID`
 - **Skills** - Reference classes via `ClassIDs` array
 
@@ -2262,6 +2278,7 @@ instance, err := service.CreateInstanceFromTemplate(templateID)
 - `OnAggroScript` - Enemy aggros
 - `OnDeathScript` - Enemy dies
 - `OnFleeScript` - Enemy flees
+- `OnLowHealthScript` - Enemy HP first drops below `LowHealthThreshold` while still alive (`tales.combat.summon` may add up to 3 enemy-template copies to that fight; they grant no rewards and leave when the fight ends)
 
 **Quest**:
 - `OnCompleteScriptID` - Quest completed

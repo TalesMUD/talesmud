@@ -75,6 +75,10 @@ type CombatEngineCtrl interface {
 	ApplyCombatDot(attackerID, targetID, effectID, name string, damage int32, duration int) bool
 	// HealCombatNPC heals a living enemy in the active fight and returns HP actually restored.
 	HealCombatNPC(npcID string, amount int32) int32
+	// SummonCombatAllies spawns enemy-template adds into the summoner's fight.
+	// Returns how many this call spawned. Unknown template, a non-enemy, no fight,
+	// or a full cap returns 0.
+	SummonCombatAllies(summonerNPCID, templateID string, count int) int
 	// ApplyCombatEffect applies an existing buff or debuff skill id to a combatant in the fight.
 	ApplyCombatEffect(targetID, effectID string) bool
 	// QueuePlayerSkill queues a skill for a player's next turn

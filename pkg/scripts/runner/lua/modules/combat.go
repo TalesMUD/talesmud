@@ -1,6 +1,8 @@
 package modules
 
 import (
+	"reflect"
+
 	"github.com/sirupsen/logrus"
 	lua "github.com/yuin/gopher-lua"
 
@@ -79,6 +81,76 @@ func RegisterCombatModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 		return 1
 	}))
 
+	// tales.combat.summon(templateId, count) -> number spawned.
+	// Uses the running enemy-hook context. Count clamps to 1..3 and the fight cap.
+	// Unknown template, a non-enemy, no fight, or a full cap returns 0.
+	mod.RawSetString("summon", L.NewFunction(func(L *lua.LState) int {
+		templateID := L.OptString(1, "")
+		count := L.OptInt(2, 1)
+		game := runner.GetGame()
+		if game == nil || templateID == "" {
+			logrus.WithField("template", templateID).Warn("summon: no active fight")
+			L.Push(lua.LNumber(0))
+			return 1
+		}
+		engine := game.GetCombatEngine()
+		if engine == nil {
+			logrus.WithField("template", templateID).Warn("summon: no active fight")
+			L.Push(lua.LNumber(0))
+			return 1
+		}
+		summonerID := luaHookNPCID(L)
+		spawned := engine.SummonCombatAllies(summonerID, templateID, count)
+		L.Push(lua.LNumber(spawned))
+		return 1
+	}))
+
 	L.Push(mod)
 	return 1
+}
+
+// luaHookNPCID reads ctx.npc.ID from the running enemy hook.
+func luaHookNPCID(L *lua.LState) string {
+	if L == nil {
+		return ""
+	}
+	ctx := L.GetGlobal("ctx")
+	tbl, ok := ctx.(*lua.LTable)
+	if !ok {
+		return ""
+	}
+	npc := L.GetField(tbl, "npc")
+	if npc == lua.LNil {
+		return ""
+	}
+	if s := luaUserFieldString(npc, "ID"); s != "" {
+		return s
+	}
+	id := L.GetField(npc, "ID")
+	if s, ok := id.(lua.LString); ok {
+		return string(s)
+	}
+	return ""
+}
+
+func luaUserFieldString(v lua.LValue, field string) string {
+	ud, ok := v.(*lua.LUserData)
+	if !ok || ud == nil || ud.Value == nil {
+		return ""
+	}
+	rv := reflect.ValueOf(ud.Value)
+	if rv.Kind() == reflect.Ptr {
+		if rv.IsNil() {
+			return ""
+		}
+		rv = rv.Elem()
+	}
+	if rv.Kind() != reflect.Struct {
+		return ""
+	}
+	f := rv.FieldByName(field)
+	if !f.IsValid() || f.Kind() != reflect.String {
+		return ""
+	}
+	return f.String()
 }

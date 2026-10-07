@@ -75,14 +75,18 @@ func TestCreateCombatantFromNPCCopiesHooksAndSpeed(t *testing.T) {
 		EnemyTrait: &npc.EnemyTrait{
 			AttackSpeed: 2, Difficulty: "easy", AttackPower: 3,
 			OnAggroScript: "SCR-A", OnDeathScript: "SCR-D", OnFleeScript: "SCR-F",
+			OnLowHealthScript: "SCR-L", LowHealthThreshold: 0.5,
 		},
 	}
 	ref := e.CreateCombatantFromNPC(n)
-	if ref.AttackSpeed != 2 || ref.OnAggroScript != "SCR-A" || ref.OnDeathScript != "SCR-D" || ref.OnFleeScript != "SCR-F" {
+	if ref.AttackSpeed != 2 || ref.OnAggroScript != "SCR-A" || ref.OnDeathScript != "SCR-D" || ref.OnFleeScript != "SCR-F" || ref.OnLowHealthScript != "SCR-L" || ref.LowHealthThreshold != 0.5 {
 		t.Fatalf("snapshot = %+v", ref)
 	}
+	if !ref.LowHealthSeen || ref.LowHealthHP != n.CurrentHitPoints {
+		t.Fatalf("low-health baseline = seen %v hp %d", ref.LowHealthSeen, ref.LowHealthHP)
+	}
 	plain := e.CreateCombatantFromNPC(&npc.NPC{Entity: &entities.Entity{ID: "rat"}, Name: "Rat"})
-	if plain.AttackSpeed != 0 || plain.OnAggroScript != "" {
+	if plain.AttackSpeed != 0 || plain.OnAggroScript != "" || plain.LowHealthThreshold != npc.DefaultLowHealthFraction {
 		t.Fatalf("unset speed must stay 0, got %+v", plain)
 	}
 }

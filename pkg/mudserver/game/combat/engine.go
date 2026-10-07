@@ -154,7 +154,8 @@ func (e *Engine) CreateCombatantFromNPC(n *npc.NPC) combat.CombatantRef {
 
 	difficulty := ""
 	var attackSpeed float64
-	var onAggro, onDeath, onFlee string
+	var onAggro, onDeath, onFlee, onLow string
+	lowHealth := npc.NormalizeLowHealthThreshold(0)
 	if n.EnemyTrait != nil {
 		attackPower = n.EnemyTrait.AttackPower
 		defense = n.EnemyTrait.Defense
@@ -163,33 +164,39 @@ func (e *Engine) CreateCombatantFromNPC(n *npc.NPC) combat.CombatantRef {
 		onAggro = n.EnemyTrait.OnAggroScript
 		onDeath = n.EnemyTrait.OnDeathScript
 		onFlee = n.EnemyTrait.OnFleeScript
+		onLow = n.EnemyTrait.OnLowHealthScript
+		lowHealth = npc.NormalizeLowHealthThreshold(n.EnemyTrait.LowHealthThreshold)
 	}
 
 	// Use level as a rough approximation for DEX modifier if not specified
 	dexMod = int(n.Level) / 4
 
 	ref := combat.CombatantRef{
-		ID:            n.Entity.ID,
-		Type:          combat.CombatantTypeNPC,
-		Name:          n.GetDisplayName(),
-		Portrait:      portraits.ForNPC(n),
-		TemplateID:    n.TemplateID,
-		Initiative:    0, // Will be rolled
-		IsAlive:       true,
-		HasFled:       false,
-		Level:         n.Level,
-		Difficulty:    difficulty,
-		MaxHP:         n.MaxHitPoints,
-		CurrentHP:     n.CurrentHitPoints,
-		AttackPower:   attackPower,
-		Defense:       defense,
-		AttackSpeed:   attackSpeed,
-		OnAggroScript: onAggro,
-		OnDeathScript: onDeath,
-		OnFleeScript:  onFlee,
-		STRMod:        int(n.Level) / 4, // Approximation
-		DEXMod:        dexMod,
-		CONMod:        int(n.Level) / 4, // Approximation
+		ID:                 n.Entity.ID,
+		Type:               combat.CombatantTypeNPC,
+		Name:               n.GetDisplayName(),
+		Portrait:           portraits.ForNPC(n),
+		TemplateID:         n.TemplateID,
+		Initiative:         0, // Will be rolled
+		IsAlive:            true,
+		HasFled:            false,
+		Level:              n.Level,
+		Difficulty:         difficulty,
+		MaxHP:              n.MaxHitPoints,
+		CurrentHP:          n.CurrentHitPoints,
+		AttackPower:        attackPower,
+		Defense:            defense,
+		AttackSpeed:        attackSpeed,
+		OnAggroScript:      onAggro,
+		OnDeathScript:      onDeath,
+		OnFleeScript:       onFlee,
+		OnLowHealthScript:  onLow,
+		LowHealthThreshold: lowHealth,
+		LowHealthSeen:      true,
+		LowHealthHP:        n.CurrentHitPoints,
+		STRMod:             int(n.Level) / 4, // Approximation
+		DEXMod:             dexMod,
+		CONMod:             int(n.Level) / 4, // Approximation
 	}
 	phases := balance.BossPhases(difficulty)
 	if len(phases) > 0 {

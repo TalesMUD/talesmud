@@ -207,10 +207,12 @@ func (y *YAMLNPC) ToEntity() *npc.NPC {
 				Min: y.EnemyTrait.GoldDrop.Min,
 				Max: y.EnemyTrait.GoldDrop.Max,
 			},
-			LootTableID:   y.EnemyTrait.LootTableID,
-			OnAggroScript: y.EnemyTrait.OnAggroScript,
-			OnDeathScript: y.EnemyTrait.OnDeathScript,
-			OnFleeScript:  y.EnemyTrait.OnFleeScript,
+			LootTableID:        y.EnemyTrait.LootTableID,
+			OnAggroScript:      y.EnemyTrait.OnAggroScript,
+			OnDeathScript:      y.EnemyTrait.OnDeathScript,
+			OnFleeScript:       y.EnemyTrait.OnFleeScript,
+			OnLowHealthScript:  y.EnemyTrait.OnLowHealthScript,
+			LowHealthThreshold: y.EnemyTrait.LowHealthThreshold,
 		}
 	}
 

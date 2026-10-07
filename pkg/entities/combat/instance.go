@@ -101,11 +101,20 @@ type CombatantRef struct {
 	AttackPower      int32  `json:"attackPower"`
 	Defense          int32  `json:"defense"`
 	// AttackSpeed is attacks per round. 0 matches one swing and never holds.
-	AttackSpeed   float64 `json:"attackSpeed,omitempty"`
-	AttackActions int     `json:"attackActions,omitempty"`
-	OnAggroScript string  `json:"onAggroScript,omitempty"`
-	OnDeathScript string  `json:"onDeathScript,omitempty"`
-	OnFleeScript  string  `json:"onFleeScript,omitempty"`
+	AttackSpeed        float64 `json:"attackSpeed,omitempty"`
+	AttackActions      int     `json:"attackActions,omitempty"`
+	OnAggroScript      string  `json:"onAggroScript,omitempty"`
+	OnDeathScript      string  `json:"onDeathScript,omitempty"`
+	OnFleeScript       string  `json:"onFleeScript,omitempty"`
+	OnLowHealthScript  string  `json:"onLowHealthScript,omitempty"`
+	LowHealthThreshold float64 `json:"lowHealthThreshold,omitempty"`
+	// LowHealthSeen is set when this fight first observed the NPC's HP.
+	LowHealthSeen bool `json:"-"`
+	// LowHealthHP is the HP at the previous low-health check.
+	LowHealthHP int32 `json:"-"`
+	// Summoned adds are script spawns. They grant no loot, XP, or quest credit
+	// and are removed when the fight ends.
+	Summoned bool `json:"summoned,omitempty"`
 
 	// Attribute modifiers (calculated from character attributes)
 	STRMod int `json:"strMod"`
@@ -219,8 +228,11 @@ type CombatInstance struct {
 	// Rig is the room turret. It is not a pet, not a follower, and not in turn order.
 	Rig *RigTurret `json:"rig,omitempty"`
 
-	// HookOnce records npcID|hook so onAggro, onDeath, and onFlee run once per fight.
+	// HookOnce records npcID|hook so onAggro, onDeath, onFlee, and onLowHealth run once per fight.
 	HookOnce map[string]bool `json:"-"`
+
+	// SummonsUsed counts adds spawned by tales.combat.summon during this fight.
+	SummonsUsed int `json:"-"`
 }
 
 // RigTurret is a construct dropped in the fight's room. It does not move or follow.

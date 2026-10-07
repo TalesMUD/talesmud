@@ -126,6 +126,7 @@ func (c *CombatController) ProcessPlayerAttack(characterID, targetID string) (me
 	result := c.engine.ProcessAttack(instance, characterID, targetID)
 	c.applyWeaponOnHitScript(instance, characterID, targetID, &result)
 	message = result.Message
+	c.flushEnemyLowHealthHooks(instance)
 	c.flushEnemyDeathHooks(instance)
 
 	// Advance turn
@@ -237,6 +238,7 @@ func (c *CombatController) ProcessPlayerSkill(characterID, skillID, targetID str
 	}
 
 	result := c.engine.ProcessSkill(instance, characterID, skillID, targetID)
+	c.flushEnemyLowHealthHooks(instance)
 	message = strings.Join(result.Messages, "\n")
 
 	if !result.Success {
@@ -455,6 +457,7 @@ func (c *CombatController) processNPCTurns(instance *combat.CombatInstance) {
 			c.notifyPlayersInCombat(instance, actionMsg)
 		}
 
+		c.flushEnemyLowHealthHooks(instance)
 		c.flushEnemyDeathHooks(instance)
 
 		// Advance turn
@@ -822,6 +825,7 @@ func (c *CombatController) processAllTurnsLocked(instance *combat.CombatInstance
 	}
 
 	logLenBefore = len(instance.Log)
+	c.flushEnemyLowHealthHooks(instance)
 	c.flushEnemyDeathHooks(instance)
 	current = instance.GetCurrentTurnCombatant()
 	if current == nil || !current.IsAlive {
@@ -855,6 +859,7 @@ func (c *CombatController) processAllTurnsLocked(instance *combat.CombatInstance
 		}
 	}
 	c.sendPlayerCharacterUpdate(instance)
+	c.flushEnemyLowHealthHooks(instance)
 	c.flushEnemyDeathHooks(instance)
 
 	endState := c.engine.CheckCombatEnd(instance)
@@ -989,12 +994,17 @@ func (c *CombatController) resolveNPCTurn(instance *combat.CombatInstance, curre
 // cleanupCombatInstance cleans up after combat ends, processes rewards, and notifies players
 func (c *CombatController) cleanupCombatInstance(instance *combat.CombatInstance, endState combat.CombatState) {
 	// Death scripts run before loot and XP. A second flush does not grant either.
+	c.flushEnemyLowHealthHooks(instance)
 	c.flushEnemyDeathHooks(instance)
 
 	// Mark NPCs dead, then refresh the origin room, THEN send victory
 	// text. The room update must not be queued after combatEnd or a
 	// player who already left will see the fight room again.
 	for _, enemy := range instance.Enemies {
+		if enemy.Summoned {
+			c.game.NPCManager.RemoveInstance(enemy.ID)
+			continue
+		}
 		c.game.NPCManager.UpdateInstance(enemy.ID, func(n *npc.NPC) {
 			n.InCombat = false
 			n.CombatInstanceID = ""
@@ -1099,7 +1109,7 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 	room, roomErr := c.game.Facade.RoomsService().FindByID(instance.OriginRoomID)
 
 	for _, enemy := range instance.Enemies {
-		if enemy.IsAlive {
+		if enemy.IsAlive || enemy.Summoned {
 			continue
 		}
 		enemyNames = append(enemyNames, enemy.Name)
@@ -1164,7 +1174,7 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 	// Track quest progress for NPC kills
 	livingPlayers := instance.GetLivingPlayers()
 	for _, enemy := range instance.Enemies {
-		if enemy.IsAlive {
+		if enemy.IsAlive || enemy.Summoned {
 			continue
 		}
 		npcData := c.game.NPCManager.GetInstance(enemy.ID)
