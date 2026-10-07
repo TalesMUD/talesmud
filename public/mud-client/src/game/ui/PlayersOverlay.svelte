@@ -54,13 +54,12 @@
   }
 
   function openParty() {
-    if (isGuestClient()) return;
     if (store && store.openPartyOverlay) store.openPartyOverlay();
     showPlayersOverlay = false;
   }
 
   function inviteToParty(player) {
-    if (!player || !player.name || isGuestClient() || player.isYou) return;
+    if (!player || !player.name || player.isYou) return;
     sendMessage(`party invite ${player.name}`);
   }
 </script>
@@ -383,8 +382,8 @@
     <div class="players-overlay expanded">
       <div class="players-overlay-title">
         In this room
+        <button class="player-action-btn friends-link whisper" type="button" on:click={openParty} title="Open party">Party</button>
         {#if !isGuestClient()}
-          <button class="player-action-btn friends-link whisper" type="button" on:click={openParty} title="Open party">Party</button>
           <button class="player-action-btn friends-link whisper" type="button" on:click={openFriends} title="Open friends">Friends</button>
         {/if}
       </div>
@@ -409,12 +408,12 @@
                   on:click={() => inspectPlayer(player)}
                   title="Inspect {player.name}"
                 >&#x1F50D;</button>
+                <button
+                  class="player-action-btn whisper"
+                  on:click={() => inviteToParty(player)}
+                  title="Invite {player.name} to party"
+                >P</button>
                 {#if !isGuestClient()}
-                  <button
-                    class="player-action-btn whisper"
-                    on:click={() => inviteToParty(player)}
-                    title="Invite {player.name} to party"
-                  >P</button>
                   <button
                     class="player-action-btn whisper"
                     on:click={() => addFriend(player)}

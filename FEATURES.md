@@ -434,7 +434,7 @@ local solved = tales.game.getFlag(characterID, "puzzle_solved_statue")
 
 An enemy's authored XP reward is the base. When that reward is 0, `progression.base_xp_by_enemy_level` supplies the base, and otherwise the built-in `15*level+5` curve does. `reward_scale` multiplies that base afterward. `level_up_mode: trainer` banks combat, quest, exploration, and select catch-up until `tales.characters.applyLevels`. Quest XP is not multiplied by `reward_scale`.
 
-Death math is `ruleset.ApplyDeath`, called from defeat only.
+Death math is `ruleset.ApplyDeath`, called from defeat only. A fight is a defeat when nobody is still fighting and at least one player is actually dead. When every player has fled or slipped, the fight ends as fled: no XP loss, no gold loss, no armor damage, and no respawn move. A slip that already took one exit stays in that room. In a mixed party only the dead take the penalty. Anyone who fled gets the escaped notice and keeps their hit points, gold, and room. Post-combat cleanup still clears `InCombat` and syncs the escaper's combat hit points.
 
 `combat.pacing: auto` keeps the 5 second decision window and resolves a queued action on the next beat. `turn_based` leaves that window open until the player sends a command. NPCs still take their own turns afterward. The default file is `auto`. During a fight, a bare `attack` queues a swing on the current target or the first living enemy so a turn-based round advances. Outside combat, `combat.bare_attack: ask` (the default) still answers "Attack whom?". `first_hostile` starts the fight against the first hostile in the room.
 
@@ -522,21 +522,25 @@ single broadcast is shared by multiple users.
 Party membership is persisted in the existing `Party` entity (SQLite JSON),
 including `leaderCharacterId`. Creator is leader. Soft/hard cap: **5** members
 (`entities.MaxPartySize`) enforced on invite and accept. Pending invites
-remain in-memory on the game server. Guests are refused (same as Friends).
+remain in-memory on the game server and expire after **45 seconds** (both sides
+get a clear timeout notice + `party_invite{pending:false}`). Guests may invite,
+accept, decline, follow, and chat in parties (Friends still refuse guests).
 
 Structured WebSocket payloads:
 `party` `{inParty,partyId,partyName,leaderId,maxMembers,members[{id,name,online,level,class,portrait,isLeader}]}`
-and `party_invite` `{pending,inviterName,partyId}` (clear with `pending:false`).
+and `party_invite` `{pending,inviterName,partyId,expiresAt}` (clear with `pending:false`).
 
-Client (Party UI v2, cache-bust `?v=party2`): HUD Party button opens a gold-bordered
-panel — party name title + `N/M members · K online` subtitle; member rows with
-avatar/initial, You/Leader badges, class · level, online pill; sticky action bar
-(Say primary, Invite secondary, Leave danger+confirm); party-say strip (~8 lines);
-Create/Invite empty state; mobile bottom-sheet. Friends rows use matching **Invite**
-outline. Leader sees Kick on other members.
+Client (Party invite popup + guest parties, cache-bust `?v=partyinvite1`): HUD Party
+button opens a gold-bordered panel — party name title + `N/M members · K online`
+subtitle; member rows with avatar/initial, You/Leader badges, class · level, online
+pill; sticky action bar (Say primary, Invite secondary, Leave danger+confirm);
+party-say strip (~8 lines); Create/Invite empty state; mobile bottom-sheet. A
+pending invite opens a centered Accept/Decline popup with a countdown (not only a
+terminal line). Friends rows use matching **Invite** outline. Leader sees Kick on
+other members.
 
-Room players overlay and Friends rows can invite online players. Guests hide
-the Party button and see a sign-in note in the overlay.
+Room players overlay and Friends rows can invite online players. Guests see the
+Party button and full party UI.
 
 ### Party Combat Assist (v1)
 Same-room players can join an in-progress fight by `attack <npc>` on an enemy
@@ -684,7 +688,7 @@ type EnemyTrait struct {
     // Combat Stats (base values, modified by difficulty multipliers)
     AttackPower  int32
     Defense      int32
-    AttackSpeed  float64
+    AttackSpeed  float64 // attacks per round; 0 or omitted is one swing and the old beat
 
     // AI Behavior
     AggroRadius   int     // Detection range in rooms (0 = passive)
@@ -699,10 +703,10 @@ type EnemyTrait struct {
     GuaranteedLoot []string  // Item template IDs that always drop
     MaxDrops       int32     // Max items from loot table (0 = unlimited)
 
-    // Event Scripts
-    OnAggroScript string  // Lua script on aggro
-    OnDeathScript string  // Lua script on death
-    OnFleeScript  string  // Lua script on flee
+    // Event Scripts (once per fight, sandboxed; errors are logged and swallowed)
+    OnAggroScript string  // when this NPC enters the fight
+    OnDeathScript string  // when this NPC dies, before loot and XP
+    OnFleeScript  string  // when this NPC first chooses to flee
 }
 ```
 
@@ -938,7 +942,7 @@ Players and NPCs both use `CombatantRef.Level`, copied from the character or NPC
 ### Class balance
 **Config**: `class_balance` in `config/combat_balance.yaml` (defaults in `pkg/mudserver/game/balance/class_balance.go`).
 
-After the level-gap multiplier and before a crit, `damage_dealt` scales hits that class lands and `damage_taken` scales hits that class receives. `behind_dealt` multiplies `damage_dealt` again when that class is the lower level. Class id `wizard` uses the `mage` row. A missing class or a multiplier of 1 leaves that side unchanged. The level-10 gap table uses this so warrior, rogue, ranger, and mage share one band: at-level bosses about 50–65%, and a good-gear boss three levels up about 50%.
+After the level-gap multiplier and before a crit, `damage_dealt` scales hits that class lands and `damage_taken` scales hits that class receives. `behind_dealt` multiplies `damage_dealt` again when that class is the lower level. Class id `wizard` uses the `mage` row. A missing class or a multiplier of 1 leaves that side unchanged. A loaded class pack overrides this file. Ward's pack row takes damage at 1.00, so a soak hit is not larger than the unscaled blow, and the template's stamina is what grows the later hit-point pool. Grit is still gained from a connecting hit. A soak class's Slam prints a miss and starts its cooldown only when the swing hits. The level-10 gap table uses this so warrior, rogue, ranger, and mage share one band: at-level bosses about 50–65%, and a good-gear boss three levels up about 50%.
 
 ### Boss telegraph and enrage
 **Config**: `boss_mechanics` in `config/combat_balance.yaml`.
@@ -2393,7 +2397,7 @@ type GuestService interface {
 1. Client calls `POST /api/guest` (public endpoint)
 2. Server checks `ServerSettings.GuestsAllowed` and `MaxGuestAccounts`
 3. IP rate limit checked (10 per hour per IP)
-4. Random character created from system template presets with full starter items
+4. Random character created from system template presets with full starter items. Signed-in create uses the same equip path: each `StartingItems` name becomes a new item copy (`IsTemplate` false) in the listed slot. Presets take those names from the class catalog `starting_items`. An id that is not on the roster falls back to the stored template's names. Existing characters are not updated.
 5. Character spawned in `ServerSettings.StartRoomID` when the pack sets it. If that field is empty, the engine uses room `R0001` only when that room exists. Auto quests whose area matches the start room are granted
 5a. Entering a room grants auto-source quests for that room's area
 5b. Lua `tales.game.giveItem` notifies collect-quest progress (foraging, script rewards)

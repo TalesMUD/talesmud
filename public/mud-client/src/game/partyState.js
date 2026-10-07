@@ -36,10 +36,12 @@ export function normalizePartyState(raw) {
 
 export function normalizePartyInvite(raw) {
   if (!raw || !raw.pending) return null;
+  const expiresAt = Number(raw.expiresAt) || 0;
   return {
     pending: true,
     inviterName: String(raw.inviterName || ''),
     partyId: String(raw.partyId || raw.partyID || ''),
+    expiresAt,
   };
 }
 

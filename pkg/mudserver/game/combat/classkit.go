@@ -220,8 +220,22 @@ func (e *Engine) processClassKit(instance *entcombat.CombatInstance, caster *ent
 		if target != nil {
 			name = target.Name
 		}
+		caster = instance.GetCombatantByID(caster.ID)
+		if !swing.Hit {
+			// A soak Slam that does not connect does not start its cooldown.
+			// Other classes keep the cooldown they just paid.
+			if caster != nil && balance.IsWard(caster.ClassID) && skill.CooldownRounds > 0 && caster.SkillCooldowns != nil {
+				delete(caster.SkillCooldowns, id)
+				e.UpdateCombatant(instance, caster)
+			}
+			msg := fmt.Sprintf("You slam %s and miss.", name)
+			if caster != nil {
+				e.kitLog(instance, caster, target, msg, 0)
+			}
+			return SkillResult{Success: true, SkillName: skill.Name, Messages: []string{msg}}
+		}
 		msg := fmt.Sprintf("You slam %s for %d.", name, swing.Damage)
-		if balance.IsWard(caster.ClassID) {
+		if caster != nil && balance.IsWard(caster.ClassID) {
 			msg = fmt.Sprintf("You slam %s for %d. Grit %d.", name, swing.Damage, grit)
 		}
 		if swing.TargetDied {

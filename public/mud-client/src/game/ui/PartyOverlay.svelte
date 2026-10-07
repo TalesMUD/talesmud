@@ -9,9 +9,13 @@
   let inviteName = '';
   let sayText = '';
   let escHandler = null;
+  let inviteEscHandler = null;
   let closeBtn;
+  let acceptBtn;
   let localPartyChat = [];
   let wasOpen = false;
+  let nowSec = Math.floor(Date.now() / 1000);
+  let countdownTimer = null;
 
   $: open = !!(store && $store && $store.partyOverlayOpen);
   $: party = (store && $store && $store.party) || {
@@ -19,7 +23,10 @@
   };
   $: members = Array.isArray(party.members) ? party.members : [];
   $: invite = (store && $store && $store.partyInvite) || null;
-  $: guest = isGuestClient();
+  $: invitePending = !!(invite && invite.pending);
+  $: secondsLeft = invitePending && invite.expiresAt
+    ? Math.max(0, invite.expiresAt - nowSec)
+    : 0;
   $: me = (store && $store && $store.character) || null;
   $: myId = me && me.id ? String(me.id) : '';
   $: myName = me && me.name ? String(me.name) : '';
@@ -33,14 +40,6 @@
   $: subtitle = party.inParty
     ? `${memberCount}/${maxMembers} members · ${onlineCount} online`
     : '';
-
-  function isGuestClient() {
-    try {
-      return typeof sessionStorage !== 'undefined' && !!sessionStorage.getItem('talesmud_guest_token');
-    } catch (err) {
-      return false;
-    }
-  }
 
   function mergeChat(a, b) {
     const seen = new Set();
@@ -74,12 +73,42 @@
 
   $: if (open && !wasOpen) {
     wasOpen = true;
-    if (!guest && sendMessage) sendMessage('party list');
+    if (sendMessage) sendMessage('party list');
     tick().then(() => {
       if (closeBtn && typeof closeBtn.focus === 'function') closeBtn.focus();
     });
   } else if (!open && wasOpen) {
     wasOpen = false;
+  }
+
+  $: if (invitePending) {
+    if (!countdownTimer && typeof window !== 'undefined') {
+      nowSec = Math.floor(Date.now() / 1000);
+      countdownTimer = setInterval(() => {
+        nowSec = Math.floor(Date.now() / 1000);
+      }, 1000);
+    }
+    if (!inviteEscHandler) {
+      inviteEscHandler = (e) => {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          declineInvite();
+        }
+      };
+      if (typeof window !== 'undefined') window.addEventListener('keydown', inviteEscHandler);
+    }
+    tick().then(() => {
+      if (acceptBtn && typeof acceptBtn.focus === 'function') acceptBtn.focus();
+    });
+  } else {
+    if (countdownTimer) {
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+    }
+    if (inviteEscHandler) {
+      if (typeof window !== 'undefined') window.removeEventListener('keydown', inviteEscHandler);
+      inviteEscHandler = null;
+    }
   }
 
   $: if (open) {
@@ -165,6 +194,8 @@
 
   onDestroy(() => {
     if (escHandler && typeof window !== 'undefined') window.removeEventListener('keydown', escHandler);
+    if (inviteEscHandler && typeof window !== 'undefined') window.removeEventListener('keydown', inviteEscHandler);
+    if (countdownTimer) clearInterval(countdownTimer);
   });
 </script>
 
@@ -413,38 +444,61 @@
     border-color: rgba(248, 113, 113, 0.4);
     color: #fca5a5;
   }
-  .guest-note {
-    color: #fbbf24;
-    font-size: 13px;
-    padding: 1.5em 1em;
-    text-align: center;
-    line-height: 1.45;
-  }
-  .invite-banner {
+  .invite-overlay {
     position: fixed;
-    left: 50%;
-    bottom: max(1.2em, env(safe-area-inset-bottom, 0px));
-    transform: translateX(-50%);
-    z-index: 140;
-    width: min(440px, calc(100% - 1.5em));
+    inset: 0;
+    z-index: 145;
+    background: rgba(0, 0, 0, 0.72);
+    backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px 14px;
-    background: rgba(12, 16, 24, 0.96);
-    border: 1px solid rgba(212, 175, 55, 0.4);
-    border-radius: 10px;
-    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55);
+    justify-content: center;
+    padding: 1em;
+    box-sizing: border-box;
   }
+  .invite-panel {
+    width: min(380px, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 1.25em 1.35em 1.15em;
+    background: var(--social-panel-bg, rgba(12, 16, 24, 0.97));
+    border: 1px solid var(--social-border, rgba(212, 175, 55, 0.4));
+    border-radius: 12px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+  }
+  .invite-kicker {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #fbbf24;
+    display: flex;
+    align-items: center;
+    gap: 0.35em;
+  }
+  .invite-kicker i { font-size: 1.15em; }
   .invite-text {
-    flex: 1;
-    min-width: 0;
     color: #f3ead4;
-    font-size: 13px;
-    line-height: 1.35;
+    font-size: 15px;
+    line-height: 1.4;
+    margin: 0;
   }
   .invite-text strong { color: #fbbf24; }
-  .invite-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .invite-timer {
+    color: #9ca3af;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+  .invite-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .invite-actions .act {
+    flex: 1;
+    min-height: 44px;
+  }
   @media (max-width: 768px) {
     .party-overlay {
       align-items: flex-end;
@@ -469,14 +523,29 @@
   }
 </style>
 
-{#if invite && invite.pending && !guest}
-  <div class="invite-banner" role="status" aria-live="polite">
-    <div class="invite-text">
-      <strong>{invite.inviterName || 'Someone'}</strong> invited you to a party.
-    </div>
-    <div class="invite-actions">
-      <button class="act accept" type="button" on:click={acceptInvite}>Accept</button>
-      <button class="act decline" type="button" on:click={declineInvite}>Decline</button>
+{#if invitePending}
+  <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+  <div
+    class="invite-overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Party invite"
+    on:click={(e) => { if (e.target === e.currentTarget) declineInvite(); }}
+  >
+    <div class="invite-panel" on:click|stopPropagation>
+      <div class="invite-kicker"><i class="material-icons" aria-hidden="true">groups</i> Party Invite</div>
+      <p class="invite-text">
+        <strong>{invite.inviterName || 'Someone'}</strong> invited you to a party.
+      </p>
+      {#if invite.expiresAt}
+        <div class="invite-timer" aria-live="polite">
+          {secondsLeft > 0 ? `Expires in ${secondsLeft}s` : 'Expiring…'}
+        </div>
+      {/if}
+      <div class="invite-actions">
+        <button class="act accept" type="button" bind:this={acceptBtn} on:click={acceptInvite}>Accept</button>
+        <button class="act decline" type="button" on:click={declineInvite}>Decline</button>
+      </div>
     </div>
   </div>
 {/if}
@@ -494,13 +563,11 @@
         </div>
         <button class="party-close" type="button" bind:this={closeBtn} on:click={close} aria-label="Close party">×</button>
       </div>
-      {#if guest}
-        <div class="guest-note">Parties are for lasting adventurers. Sign in to form a party.</div>
-      {:else if !party.inParty}
+      {#if !party.inParty}
         <div class="party-body">
           <div class="empty">
             No party yet — gather up to {maxMembers} adventurers.
-            <span class="empty-hint">Invite requires the target online with a lasting (non-guest) account.</span>
+            <span class="empty-hint">Invite an online player by name, or from the room roster.</span>
           </div>
         </div>
         <div class="action-bar">

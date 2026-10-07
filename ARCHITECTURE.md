@@ -461,6 +461,7 @@ type StatusEffect struct {
        │   │     Gap 0 matches the pre-gap formulas.
        │   │     class_balance then scales damage dealt and taken per class.
        │   │     The pack catalog wins. The YAML row is the fallback.
+       │   │     A soak class's Slam starts its cooldown only when the swing hits.
        │   │     wizard uses the mage row; behind_dealt applies when lower level.
        │   │     boss_mechanics: bosses and hard elites wind up one action before
        │   │     the hit; bosses enrage on round 16 or at 30% HP (1.20× damage).
@@ -476,8 +477,8 @@ type StatusEffect struct {
 
 3. RESOLUTION
    ├── Victory (all enemies dead) → XP/gold rewards scaled by threat tier against the highest level in the split (equal split: living combatants + online same-room party; leftover to the engager when it is a party share). Boss first-kill bonus is per character (`firstBossKills`). Loot drops stay in the room.
-   ├── Defeat (all players dead) → 10% XP loss, 1 gold loss, respawn at bind point
-   └── Fled (all players escaped) → NPCs reset to idle
+   ├── Defeat (nobody still fighting, and at least one player actually dead) → 10% XP loss, 1 gold loss, respawn at bind point, for the dead only. A player who fled or slipped keeps hit points, gold, and room.
+   └── Fled (every player fled or slipped, nobody dead) → no death penalty. NPCs reset to idle. A slip exit is left in place.
 ```
 
 #### Combat Commands
@@ -884,7 +885,7 @@ type EnemyTrait struct {
     // Combat Stats
     AttackPower  int32
     Defense      int32
-    AttackSpeed  float64
+    AttackSpeed  float64 // attacks per round; 0 or omitted is one swing and the old beat
 
     // Behavior
     AggroRadius   int     // Detection range (0 = passive)
@@ -899,7 +900,7 @@ type EnemyTrait struct {
     GuaranteedLoot []string  // Item template IDs that always drop
     MaxDrops       int32     // Max items from loot table (0 = unlimited)
 
-    // Event Scripts
+    // Event Scripts (once per fight; heal an ally or apply an existing buff/debuff; no spawn)
     OnAggroScript string
     OnDeathScript string
     OnFleeScript  string
@@ -1258,7 +1259,7 @@ type MessageResponse struct {
 }
 ```
 
-`combatEnd` keeps `outcome` and `message`. Optional `rewards`, `loot`, `levelUp`, and `defeat` objects ride on the same message. `combatAction` may include `ability` when a named blow lands. Clients that only read `message` still work.
+`combatEnd` keeps `outcome` and `message`. Optional `rewards`, `loot`, `levelUp`, and `defeat` objects ride on the same message. `combatAction` may include `ability` when a named blow lands. Clients that only read `message` still work. Outcome `fled` is a successful flee or slip, with no `defeat` payload. In a mixed party, only the dead receive outcome `defeat`.
 
 ### Boss phase data flow
 
@@ -1501,7 +1502,7 @@ HTTP/WS Request with Token → AuthMiddleware
 
 Guest sessions use HMAC-SHA256 tokens (not Auth0 JWTs):
 1. Client calls `POST /api/guest` (public, no auth)
-2. Server creates temporary User + Character, signs HMAC token with `GUEST_SECRET`
+2. Server creates temporary User + Character, equips the template's starting items, and signs an HMAC token with `GUEST_SECRET`. Signed-in `CreateNewCharacter` uses that same equip step.
 3. Client stores token in `sessionStorage` (dies with browser tab)
 4. Auth middleware validates HMAC token before trying Auth0 JWT
 5. Guest sessions expire after 30 minutes; cleanup goroutine deletes stale data

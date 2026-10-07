@@ -191,6 +191,126 @@ func TestNextResetDeathDoesNotRelocate(t *testing.T) {
 	}
 }
 
+func TestFledPlayerKeepsHPGoldAndRoom(t *testing.T) {
+	ruleset.Reset()
+	t.Cleanup(ruleset.Reset)
+
+	g, facade := newNPCTestGame(t)
+	storeTestRoom(t, facade, "nest", nil)
+	storeTestRoom(t, facade, "alley", nil)
+	storeTestRoom(t, facade, "town", nil)
+
+	fled, err := facade.CharactersService().Store(&characters.Character{
+		Entity:           &entities.Entity{ID: "char-fled"},
+		Name:             "Slipper",
+		BelongsUser:      *traits.BelongsToUser("user-fled"),
+		CurrentRoom:      traits.CurrentRoom{CurrentRoomID: "alley"},
+		BoundRoomID:      "town",
+		MaxHitPoints:     21,
+		CurrentHitPoints: 21,
+		XP:               100,
+		Gold:             5,
+		InCombat:         true,
+		CombatInstanceID: "combat-mixed",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	dead, err := facade.CharactersService().Store(&characters.Character{
+		Entity:           &entities.Entity{ID: "char-dead"},
+		Name:             "Faller",
+		BelongsUser:      *traits.BelongsToUser("user-dead"),
+		CurrentRoom:      traits.CurrentRoom{CurrentRoomID: "nest"},
+		BoundRoomID:      "town",
+		MaxHitPoints:     21,
+		CurrentHitPoints: 21,
+		XP:               100,
+		Gold:             5,
+		InCombat:         true,
+		CombatInstanceID: "combat-mixed",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	alley, _ := facade.RoomsService().FindByID("alley")
+	alley.AddCharacter(fled.ID)
+	_ = facade.RoomsService().Update("alley", alley)
+	nest, _ := facade.RoomsService().FindByID("nest")
+	nest.AddCharacter(dead.ID)
+	_ = facade.RoomsService().Update("nest", nest)
+
+	instance := &combat.CombatInstance{
+		ID:           "combat-mixed",
+		OriginRoomID: "nest",
+		State:        combat.CombatStateDefeat,
+		Players: []combat.CombatantRef{
+			{ID: fled.ID, Name: fled.Name, CurrentHP: 21, MaxHP: 21, IsAlive: true, HasFled: true},
+			{ID: dead.ID, Name: dead.Name, CurrentHP: 0, MaxHP: 21, IsAlive: false},
+		},
+	}
+
+	// cleanup calls processCombatDefeat, then syncs HP and clears InCombat.
+	g.CombatController.cleanupCombatInstance(instance, combat.CombatStateDefeat)
+
+	storedFled, err := facade.CharactersService().FindByID(fled.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if storedFled.CurrentRoomID != "alley" || storedFled.CurrentHitPoints != 21 || storedFled.Gold != 5 || storedFled.XP != 100 {
+		t.Fatalf("fled player changed: room=%s hp=%d gold=%d xp=%d", storedFled.CurrentRoomID, storedFled.CurrentHitPoints, storedFled.Gold, storedFled.XP)
+	}
+	if storedFled.InCombat || storedFled.CombatInstanceID != "" {
+		t.Fatalf("fled combat flags: inCombat=%v instance=%q", storedFled.InCombat, storedFled.CombatInstanceID)
+	}
+
+	storedDead, err := facade.CharactersService().FindByID(dead.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if storedDead.CurrentRoomID != "town" || storedDead.CurrentHitPoints != 10 || storedDead.Gold != 4 || storedDead.XP != 90 {
+		t.Fatalf("dead player: room=%s hp=%d gold=%d xp=%d", storedDead.CurrentRoomID, storedDead.CurrentHitPoints, storedDead.Gold, storedDead.XP)
+	}
+	if storedDead.InCombat || storedDead.CombatInstanceID != "" {
+		t.Fatalf("dead combat flags: inCombat=%v instance=%q", storedDead.InCombat, storedDead.CombatInstanceID)
+	}
+
+	alleyAfter, _ := facade.RoomsService().FindByID("alley")
+	if alleyAfter == nil || !alleyAfter.IsCharacterInRoom(fled.ID) {
+		t.Fatal("fled player should stay in the slip room")
+	}
+	town, _ := facade.RoomsService().FindByID("town")
+	if town == nil || !town.IsCharacterInRoom(dead.ID) || town.IsCharacterInRoom(fled.ID) {
+		t.Fatal("only the dead player should be in the respawn room")
+	}
+
+	var fledEscaped, fledDefeat, deadDefeat bool
+	for _, out := range drainGameMessages(g.SendMessage()) {
+		msg, ok := out.(*messages.CombatEndMessage)
+		if !ok {
+			continue
+		}
+		switch msg.AudienceID {
+		case "user-fled":
+			if msg.Outcome == "defeat" || strings.Contains(msg.Message, "DEFEAT") || msg.Defeat != nil {
+				fledDefeat = true
+			}
+			if msg.Outcome == "fled" && strings.Contains(msg.Message, "ESCAPED") {
+				fledEscaped = true
+			}
+		case "user-dead":
+			if msg.Outcome == "defeat" && strings.Contains(msg.Message, "DEFEAT") {
+				deadDefeat = true
+			}
+		}
+	}
+	if !fledEscaped || fledDefeat {
+		t.Fatalf("fled notices: escaped=%v defeat=%v", fledEscaped, fledDefeat)
+	}
+	if !deadDefeat {
+		t.Fatal("dead player should still receive the defeat notice")
+	}
+}
+
 func drainGameMessages(ch <-chan interface{}) []interface{} {
 	var result []interface{}
 	for {

@@ -8,13 +8,13 @@ type Range struct {
 
 // CreatureType constants for NPC classification
 const (
-	CreatureTypeBeast     = "beast"     // Animals, insects, natural creatures
-	CreatureTypeHumanoid  = "humanoid"  // Goblins, orcs, bandits - use Race/Class on NPC
-	CreatureTypeUndead    = "undead"    // Skeletons, zombies, ghosts
-	CreatureTypeElemental = "elemental" // Fire, water, earth, air beings
-	CreatureTypeConstruct = "construct" // Golems, animated objects
-	CreatureTypeDemon     = "demon"     // Demons, devils, otherworldly beings
-	CreatureTypeDragon    = "dragon"    // Dragons and dragonkin
+	CreatureTypeBeast      = "beast"      // Animals, insects, natural creatures
+	CreatureTypeHumanoid   = "humanoid"   // Goblins, orcs, bandits - use Race/Class on NPC
+	CreatureTypeUndead     = "undead"     // Skeletons, zombies, ghosts
+	CreatureTypeElemental  = "elemental"  // Fire, water, earth, air beings
+	CreatureTypeConstruct  = "construct"  // Golems, animated objects
+	CreatureTypeDemon      = "demon"      // Demons, devils, otherworldly beings
+	CreatureTypeDragon     = "dragon"     // Dragons and dragonkin
 	CreatureTypeAberration = "aberration" // Unnatural, eldritch creatures
 )
 
@@ -44,7 +44,11 @@ type EnemyTrait struct {
 	AttackPower int32 `json:"attackPower"`
 	// Defense reduces incoming damage
 	Defense int32 `json:"defense"`
-	// AttackSpeed is attacks per second (e.g., 1.0 = one attack per second)
+	// AttackSpeed is attacks per round. 0 or omitted is one swing and never holds.
+	// Positive values clamp to 0.25–3. 1.0 is also one swing. 2.0 is two swings
+	// on that attack action. Below 1, the enemy swings then holds for
+	// round(1/speed) attack actions (period clamped to 2–4). The turn beat
+	// does not change. See docs/COMBAT-BALANCE.md.
 	AttackSpeed float64 `json:"attackSpeed"`
 
 	// Behavior Configuration

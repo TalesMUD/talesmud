@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/talesmud/talesmud/pkg/db/sqlite"
 	"github.com/talesmud/talesmud/pkg/entities"
@@ -13,6 +14,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/mudserver/game"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/commands"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/portraits"
 	"github.com/talesmud/talesmud/pkg/repository"
 	"github.com/talesmud/talesmud/pkg/service"
 )
@@ -237,11 +239,15 @@ func TestPartyCreateSetsLeaderAndRichMembers(t *testing.T) {
 	if _, err := facade.UsersService().Import(user); err != nil {
 		t.Fatalf("import user: %v", err)
 	}
+	class := characters.ClassWarrior
+	if loaded, ok := characters.ClassByID("warrior"); ok {
+		class = loaded
+	}
 	character := &characters.Character{
 		Entity:      &entities.Entity{ID: "char-1"},
 		Name:        "Aster",
 		Race:        characters.RaceHuman,
-		Class:       characters.ClassWarrior,
+		Class:       class,
 		Level:       3,
 		BelongsUser: *traits.BelongsToUser("user-1"),
 	}
@@ -276,7 +282,8 @@ func TestPartyCreateSetsLeaderAndRichMembers(t *testing.T) {
 		t.Fatalf("expected roster with one member, got %#v", roster)
 	}
 	m := roster.Members[0]
-	if m.Level != 3 || m.Class != characters.ClassWarrior.Name || !m.IsLeader || m.Portrait != "/api/portraits/player-human-warrior.png" {
+	wantPortrait := portraits.ForPlayer(character)
+	if m.Level != 3 || m.Class != class.Name || !m.IsLeader || m.Portrait != wantPortrait {
 		t.Fatalf("expected rich member fields, got %#v", m)
 	}
 	if roster.MaxMembers != entities.MaxPartySize || roster.LeaderID != "char-1" {
@@ -399,5 +406,136 @@ func TestPartyInviteEnforcesCap(t *testing.T) {
 	}
 	if !sawFull {
 		t.Fatal("expected full-party reply to leader")
+	}
+}
+
+func TestPartyGuestInviteAcceptAndFollow(t *testing.T) {
+	g, facade := newPartyCommandTestGame(t)
+	leaderUser := &entities.User{Entity: &entities.Entity{ID: "guest-1"}, RefID: "guest|1", LastCharacter: "char-1", IsOnline: true, IsGuest: true}
+	targetUser := &entities.User{Entity: &entities.Entity{ID: "guest-2"}, RefID: "guest|2", LastCharacter: "char-2", IsOnline: true, IsGuest: true}
+	for _, user := range []*entities.User{leaderUser, targetUser} {
+		if _, err := facade.UsersService().Import(user); err != nil {
+			t.Fatalf("import user: %v", err)
+		}
+	}
+	leader := &characters.Character{Entity: &entities.Entity{ID: "char-1"}, Name: "GuestA", BelongsUser: *traits.BelongsToUser("guest-1")}
+	target := &characters.Character{Entity: &entities.Entity{ID: "char-2"}, Name: "GuestB", BelongsUser: *traits.BelongsToUser("guest-2")}
+	for _, character := range []*characters.Character{leader, target} {
+		if _, err := facade.CharactersService().Import(character); err != nil {
+			t.Fatalf("import character: %v", err)
+		}
+	}
+
+	g.ConnectUserSession(leaderUser)
+	g.SetUserSessionCharacter(leaderUser, leader)
+	g.ConnectUserSession(targetUser)
+	g.SetUserSessionCharacter(targetUser, target)
+	_ = drainPartyMessages(g.SendMessage())
+
+	if !(&commands.PartyCommand{}).Execute(g, &messages.Message{FromUser: leaderUser, Character: leader, Data: "party invite GuestB"}) {
+		t.Fatal("guest invite not handled")
+	}
+	var sawInvite bool
+	for _, out := range drainPartyMessages(g.SendMessage()) {
+		if inv, ok := out.(*messages.PartyInviteMessage); ok && inv.Pending && inv.AudienceID == targetUser.ID {
+			sawInvite = true
+			if inv.ExpiresAt == 0 {
+				t.Fatal("expected expiresAt on pending invite")
+			}
+		}
+	}
+	if !sawInvite {
+		t.Fatal("expected structured invite for guest target")
+	}
+
+	if !(&commands.PartyCommand{}).Execute(g, &messages.Message{FromUser: targetUser, Character: target, Data: "party accept"}) {
+		t.Fatal("guest accept not handled")
+	}
+	party, err := facade.PartiesService().FindPartyForCharacter("char-2")
+	if err != nil || party == nil || len(party.Characters) != 2 {
+		t.Fatalf("expected guests in party, got %#v err=%v", party, err)
+	}
+
+	_ = drainPartyMessages(g.SendMessage())
+	if !(&commands.PartyCommand{}).Execute(g, &messages.Message{FromUser: targetUser, Character: target, Data: "party follow"}) {
+		t.Fatal("guest follow not handled")
+	}
+	if leaderID, ok := g.PartyFollowTarget(target.ID); !ok || leaderID != leader.ID {
+		t.Fatalf("expected guest following leader, got %q ok=%v", leaderID, ok)
+	}
+}
+
+func TestPartyInviteTimeoutClearsBothSides(t *testing.T) {
+	g, facade := newPartyCommandTestGame(t)
+	leaderUser := &entities.User{Entity: &entities.Entity{ID: "user-1"}, RefID: "auth|1", LastCharacter: "char-1", IsOnline: true}
+	targetUser := &entities.User{Entity: &entities.Entity{ID: "user-2"}, RefID: "auth|2", LastCharacter: "char-2", IsOnline: true}
+	for _, user := range []*entities.User{leaderUser, targetUser} {
+		if _, err := facade.UsersService().Import(user); err != nil {
+			t.Fatalf("import user: %v", err)
+		}
+	}
+	leader := &characters.Character{Entity: &entities.Entity{ID: "char-1"}, Name: "Aster", BelongsUser: *traits.BelongsToUser("user-1")}
+	target := &characters.Character{Entity: &entities.Entity{ID: "char-2"}, Name: "Bryn", BelongsUser: *traits.BelongsToUser("user-2")}
+	for _, character := range []*characters.Character{leader, target} {
+		if _, err := facade.CharactersService().Import(character); err != nil {
+			t.Fatalf("import character: %v", err)
+		}
+	}
+
+	g.ConnectUserSession(leaderUser)
+	g.SetUserSessionCharacter(leaderUser, leader)
+	g.ConnectUserSession(targetUser)
+	g.SetUserSessionCharacter(targetUser, target)
+	_ = drainPartyMessages(g.SendMessage())
+
+	if !(&commands.PartyCommand{}).Execute(g, &messages.Message{FromUser: leaderUser, Character: leader, Data: "party invite Bryn"}) {
+		t.Fatal("invite not handled")
+	}
+	_ = drainPartyMessages(g.SendMessage())
+
+	inv, ok := g.GetPartyInvite(target.ID)
+	if !ok {
+		t.Fatal("expected pending invite")
+	}
+	inv.CreatedAt = time.Now().Add(-60 * time.Second)
+	g.SetPartyInvite(inv)
+
+	g.ExpirePartyInvites()
+
+	if _, ok := g.GetPartyInvite(target.ID); ok {
+		t.Fatal("invite should be cleared after timeout")
+	}
+
+	var clearInvite, targetNote, inviterNote bool
+	for _, out := range drainPartyMessages(g.SendMessage()) {
+		switch msg := out.(type) {
+		case *messages.PartyInviteMessage:
+			if msg.AudienceID == targetUser.ID && !msg.Pending {
+				clearInvite = true
+			}
+		case messages.MessageResponse:
+			if msg.AudienceID == targetUser.ID && strings.Contains(msg.Message, "expired") {
+				targetNote = true
+			}
+			if msg.AudienceID == leaderUser.ID && strings.Contains(msg.Message, "did not respond") {
+				inviterNote = true
+			}
+		}
+	}
+	if !clearInvite || !targetNote || !inviterNote {
+		t.Fatalf("timeout notify incomplete: clear=%v target=%v inviter=%v", clearInvite, targetNote, inviterNote)
+	}
+
+	if !(&commands.PartyCommand{}).Execute(g, &messages.Message{FromUser: targetUser, Character: target, Data: "party accept"}) {
+		t.Fatal("accept after expiry not handled")
+	}
+	var sawNoInvite bool
+	for _, out := range drainPartyMessages(g.SendMessage()) {
+		if rsp, ok := out.(messages.MessageResponse); ok && strings.Contains(rsp.Message, "no pending party invite") {
+			sawNoInvite = true
+		}
+	}
+	if !sawNoInvite {
+		t.Fatal("expected accept after expiry to report no pending invite")
 	}
 }

@@ -73,6 +73,10 @@ type CombatEngineCtrl interface {
 	ProcessPlayerSkill(characterID, skillID, targetID string) (message string, combatEnded bool, endState combat.CombatState)
 	// ApplyCombatDot applies a content-authored DoT during an active fight (Lua on-hit procs)
 	ApplyCombatDot(attackerID, targetID, effectID, name string, damage int32, duration int) bool
+	// HealCombatNPC heals a living enemy in the active fight and returns HP actually restored.
+	HealCombatNPC(npcID string, amount int32) int32
+	// ApplyCombatEffect applies an existing buff or debuff skill id to a combatant in the fight.
+	ApplyCombatEffect(targetID, effectID string) bool
 	// QueuePlayerSkill queues a skill for a player's next turn
 	QueuePlayerSkill(characterID, skillID, targetID string)
 }
@@ -96,12 +100,16 @@ type OnlinePlayer struct {
 	LastSeen      time.Time
 }
 
+// PartyInviteTTL is how long a pending party invite stays valid.
+const PartyInviteTTL = 45 * time.Second
+
 // PartyInvite describes a pending invitation to join a party.
 type PartyInvite struct {
 	PartyID              string
 	InviterUserID        string
 	InviterCharacterID   string
 	InviterCharacterName string
+	TargetUserID         string
 	TargetCharacterID    string
 	TargetCharacterName  string
 	CreatedAt            time.Time

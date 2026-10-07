@@ -316,9 +316,11 @@ EnemyTrait:
 
     attackSpeed:
       type: number
-      default: 1.0
-      # Attacks per combat round. 1.0 = one attack per round.
-      # 0.5 = attacks every other round. 2.0 = two attacks per round.
+      default: 0
+      # Attacks per round. 0 or omitted: one swing, same beat as an enemy with no speed.
+      # 1.0 is also one swing. 2.0 is two swings on that attack action. 3 is three.
+      # Below 1 the enemy holds: period is round(1/speed), clamped to 2–4.
+      # Positive values clamp to 0.25–3. This does not change the turn beat.
 
     # ─── Aggro Behavior ─────────────────────────────────────────────────────
 
@@ -386,18 +388,18 @@ EnemyTrait:
 
     onAggroScript:
       type: string
-      # Script ID executed when this NPC enters combat (aggros a player).
-      # Use for boss introductions, triggering events, calling reinforcements.
+      # Script ID executed once when this NPC enters a fight.
+      # v1 can message the room, heal an ally in the fight, or apply an existing buff or debuff.
+      # It does not spawn.
 
     onDeathScript:
       type: string
-      # Script ID executed when this NPC is killed. Use for quest progression,
-      # spawning follow-up enemies, dropping special items, or cutscenes.
+      # Script ID executed once when this NPC dies, before loot and XP.
+      # v1 does not spawn and must not grant loot or XP itself.
 
     onFleeScript:
       type: string
-      # Script ID executed when this NPC flees combat (hits fleeThreshold).
-      # Use for cowardly NPCs that run and alert others.
+      # Script ID executed once when this NPC first chooses to flee.
 
 
 # =============================================================================
