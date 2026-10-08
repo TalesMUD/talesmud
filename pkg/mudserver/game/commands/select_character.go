@@ -10,6 +10,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
+	"github.com/talesmud/talesmud/pkg/instances"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
@@ -66,6 +67,25 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 	} else if ruleset.ApplyNewDay(character, time.Now()) {
 		if err := game.GetFacade().CharactersService().Update(character.ID, character); err != nil {
 			log.WithError(err).WithField("characterID", character.ID).Warn("new day: failed to persist")
+		}
+	}
+
+	// A copy that survived startup is still not a place to log into.
+	if instances.IsCloneID(character.CurrentRoomID) {
+		if living, ok := game.(interface {
+			EnsureLivingRoom(*characters.Character)
+		}); ok {
+			living.EnsureLivingRoom(character)
+			if fresh, ferr := game.GetFacade().CharactersService().FindByID(character.ID); ferr == nil && fresh != nil {
+				character = fresh
+			}
+		}
+	}
+	if announcer, ok := game.(interface {
+		TakeRelocationNotice(string) string
+	}); ok {
+		if line := announcer.TakeRelocationNotice(character.ID); line != "" {
+			game.SendMessage() <- messages.Reply(user.ID, line)
 		}
 	}
 

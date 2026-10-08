@@ -70,7 +70,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Room action/system reaction toast: centered on room hero art; LOOK-sized padding (no half-cut last line)
   - Quest Accepted / Complete: Veilspan moment cards (centered); open Talk dialog refreshes `[Quest]` → `[In Progress]`
   - Quest log Turn In for anywhere-ready quests; otherwise Turn in: NPC hint
-  - WoW-style private cellar instances: `type: instance` exits, or a shared-room exit into a room tagged `instance`, clone a small room graph per character; town hub stays shared; empty copies are destroyed
+  - WoW-style private cellar instances: `type: instance` exits, or a shared-room exit into a room tagged `instance`, clone a small room graph per character; town hub stays shared; empty copies are destroyed. Startup deletes leftover `~` room rows and moves characters to the hub, the copy's return exit, the start room, or the bind room, then tells them once on the next login
 
 - **Character System**
   - Full RPG character creation with races and classes

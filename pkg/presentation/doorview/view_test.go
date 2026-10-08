@@ -71,6 +71,70 @@ func TestViewPaintsTheLiveRoom(t *testing.T) {
 	}
 }
 
+func TestViewShowsRelocationLineOnce(t *testing.T) {
+	client, err := dbsqlite.Open(filepath.Join(t.TempDir(), "view.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	facade := service.NewFacade(repository.NewSQLiteFactory(client), nil)
+	exits := rooms.Exits{}
+	if _, err := facade.RoomsService().Import(&rooms.Room{
+		Entity: &entities.Entity{ID: "R0001"}, Name: "Awakening Chamber", Exits: &exits,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	hubExits := rooms.Exits{{Name: "down", Target: "R0210", Type: "instance", Instance: true}}
+	if _, err := facade.RoomsService().Import(&rooms.Room{
+		Entity: &entities.Entity{ID: "R0201"}, Name: "Sewer Grate", Exits: &hubExits,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	mouthExits := rooms.Exits{{Name: "up", Target: "R0201"}}
+	if _, err := facade.RoomsService().Import(&rooms.Room{
+		Entity: &entities.Entity{ID: "R0210"}, Name: "Cellar Mouth", Tags: []string{"instance"}, Exits: &mouthExits,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	copyExits := rooms.Exits{{Name: "up", Target: "R0201"}}
+	if _, err := facade.RoomsService().Import(&rooms.Room{
+		Entity: &entities.Entity{ID: "R0210~abcd"}, Name: "Cellar Mouth", Exits: &copyExits,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := facade.CharactersService().Import(&characters.Character{
+		Entity:      &entities.Entity{ID: "hero"},
+		Name:        "Hero",
+		BelongsUser: *traits.BelongsToUser("user-1"),
+		CurrentRoom: traits.CurrentRoom{CurrentRoomID: "R0210~abcd"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	user := &entities.User{Entity: &entities.Entity{ID: "user-1"}, RefID: "user-1", LastCharacter: "hero"}
+	g := game.New(facade)
+	g.SweepInstanceRooms()
+	view := &View{Game: g, Title: "Sample"}
+	var frame ansi.Frame
+	view.OnConnect(user, func(msg any) {
+		if f, ok := msg.(ansi.Frame); ok {
+			frame = f
+		}
+	})
+	if !strings.Contains(frame.ANSI, "You find yourself back at Sewer Grate.") {
+		t.Fatalf("missing login line:\n%s", frame.ANSI)
+	}
+	view.OnDisconnect(user)
+	frame = ansi.Frame{}
+	view.OnConnect(user, func(msg any) {
+		if f, ok := msg.(ansi.Frame); ok {
+			frame = f
+		}
+	})
+	if strings.Contains(frame.ANSI, "You find yourself back at") {
+		t.Fatalf("login line repeated:\n%s", frame.ANSI)
+	}
+}
+
 func TestViewNamePromptCreatesAndSelects(t *testing.T) {
 	client, err := dbsqlite.Open(filepath.Join(t.TempDir(), "view.db"))
 	if err != nil {

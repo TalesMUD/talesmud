@@ -90,6 +90,80 @@ func TestSelectCharacterSendsRoomPresenceRefresh(t *testing.T) {
 	}
 }
 
+func TestSelectCharacterDeliversRelocationLineOnce(t *testing.T) {
+	g, facade := newSelectionTestGame(t)
+	exits := rooms.Exits{}
+	chars := rooms.Characters{}
+	if _, err := facade.RoomsService().Import(&rooms.Room{
+		Entity: &entities.Entity{ID: "R0001"}, Name: "Awakening Chamber", Exits: &exits, Characters: &chars,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	hubExits := rooms.Exits{{Name: "down", Target: "R0210", Type: "instance", Instance: true}}
+	if _, err := facade.RoomsService().Import(&rooms.Room{
+		Entity: &entities.Entity{ID: "R0201"}, Name: "Sewer Grate", Exits: &hubExits, Characters: &rooms.Characters{},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	mouthExits := rooms.Exits{{Name: "up", Target: "R0201"}}
+	if _, err := facade.RoomsService().Import(&rooms.Room{
+		Entity: &entities.Entity{ID: "R0210"}, Name: "Cellar Mouth", Tags: []string{"instance"}, Exits: &mouthExits, Characters: &rooms.Characters{},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	copyExits := rooms.Exits{{Name: "up", Target: "R0201"}}
+	if _, err := facade.RoomsService().Import(&rooms.Room{
+		Entity: &entities.Entity{ID: "R0210~abcd"}, Name: "Cellar Mouth", Exits: &copyExits, Characters: &rooms.Characters{},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	user := &entities.User{Entity: &entities.Entity{ID: "user-1"}, RefID: "auth|1", IsOnline: true}
+	if _, err := facade.UsersService().Import(user); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := facade.CharactersService().Import(&characters.Character{
+		Entity:      &entities.Entity{ID: "char-1"},
+		Name:        "Aster",
+		BelongsUser: *traits.BelongsToUser("user-1"),
+		CurrentRoom: traits.CurrentRoom{CurrentRoomID: "R0210~abcd"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	g.SweepInstanceRooms()
+
+	msg := &messages.Message{FromUser: user, Data: "sc Aster"}
+	if !(&commands.SelectCharacterCommand{}).Execute(g, msg) {
+		t.Fatal("select failed")
+	}
+	if n := countRelocationLines(drainSelectionMessages(g.SendMessage())); n != 1 {
+		t.Fatalf("login lines = %d", n)
+	}
+	if !(&commands.SelectCharacterCommand{}).Execute(g, msg) {
+		t.Fatal("second select failed")
+	}
+	if n := countRelocationLines(drainSelectionMessages(g.SendMessage())); n != 0 {
+		t.Fatalf("second login lines = %d", n)
+	}
+	stored, err := facade.CharactersService().FindByID("char-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stored.CurrentRoomID != "R0201" {
+		t.Fatalf("room=%s", stored.CurrentRoomID)
+	}
+}
+
+func countRelocationLines(msgs []interface{}) int {
+	n := 0
+	for _, out := range msgs {
+		resp, ok := out.(messages.MessageResponse)
+		if ok && resp.Message == "You find yourself back at Sewer Grate." {
+			n++
+		}
+	}
+	return n
+}
+
 func TestSelectCharacterEmptyRoomSpawnsInR0001NotFirstRoom(t *testing.T) {
 	g, facade := newSelectionTestGame(t)
 	roomExits := rooms.Exits{}

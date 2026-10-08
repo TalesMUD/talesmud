@@ -119,6 +119,13 @@ func (server *server) Run() {
 
 	log.WithTime(time.Now()).Info("MUD Server starting ...")
 
+	// Drop leftover instance copies before any player can connect.
+	// ListenAndServe runs only after setupRoutes returns, and this call
+	// returns before the game loop starts, so the sweep is done first.
+	if server.Game != nil {
+		server.Game.SweepInstanceRooms()
+	}
+
 	go server.receiveMessages()
 	go server.Game.Run()
 	go server.handleBroadcastMessages()
