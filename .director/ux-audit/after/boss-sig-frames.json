@@ -1,0 +1,87 @@
+{
+  "base": "https://veilspan.com",
+  "fights": [
+    {
+      "key": "hollow-knight",
+      "room": "R0228",
+      "level": 10,
+      "hook": {
+        "type": "message",
+        "username": "SYSTEM",
+        "style": "combatEvent",
+        "hook": "onLowHealth",
+        "source": "The Hollow Knight",
+        "message": "The Knight's runes flare. Something answers from the drains."
+      },
+      "roster": {
+        "type": "combatStatus",
+        "message": "",
+        "adds": [
+          {
+            "name": "Sewer Rat",
+            "hp": 32,
+            "maxHp": 32,
+            "isAlive": true,
+            "type": "npc"
+          },
+          {
+            "name": "Sewer Rat",
+            "hp": 32,
+            "maxHp": 32,
+            "isAlive": true,
+            "type": "npc"
+          }
+        ]
+      },
+      "chip": {
+        "text": "The Knight's runes flare. Something answers from the drains.",
+        "source": "The Hollow Knight"
+      },
+      "chipBox": null,
+      "end": null,
+      "pageErrors": []
+    },
+    {
+      "key": "burrow-brute",
+      "room": "R0112",
+      "level": 6,
+      "hook": {
+        "type": "message",
+        "username": "SYSTEM",
+        "style": "combatEvent",
+        "hook": "onLowHealth",
+        "source": "Burrow Brute",
+        "message": "The brute slams the burrow floor. A tunnel mole claws up through the dirt."
+      },
+      "roster": {
+        "type": "combatStatus",
+        "message": "",
+        "adds": [
+          {
+            "name": "Tunnel Mole",
+            "hp": 40,
+            "maxHp": 40,
+            "isAlive": true,
+            "type": "npc"
+          }
+        ]
+      },
+      "chip": {
+        "text": "The brute slams the burrow floor. A tunnel mole claws up through the dirt.",
+        "source": "Burrow Brute"
+      },
+      "chipBox": {
+        "x": 344.5,
+        "y": 981.59375,
+        "width": 1231,
+        "height": 19.84375,
+        "vw": 1920,
+        "vh": 1080
+      },
+      "end": null,
+      "pageErrors": []
+    }
+  ],
+  "errors": [],
+  "ok": true
+}
