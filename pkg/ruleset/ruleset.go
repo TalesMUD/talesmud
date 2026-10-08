@@ -47,6 +47,12 @@ const (
 	BareAttackFirst = "first_hostile"
 
 	defaultPath = "config/ruleset.yaml"
+
+	aggroGraceDefault    = 2500 * time.Millisecond
+	aggroGraceMin        = 500 * time.Millisecond
+	aggroGraceMax        = 10 * time.Second
+	aggroGapDefault      = 5
+	aggroCooldownDefault = 15 * time.Second
 )
 
 var forbiddenKeys = map[string]bool{
@@ -85,12 +91,22 @@ type fileShape struct {
 		Interval  string `yaml:"interval"`
 	} `yaml:"resources"`
 	Combat struct {
-		Pacing     string `yaml:"pacing"`
-		SafeRoom   string `yaml:"safe_room"`
-		Disconnect string `yaml:"disconnect"`
-		BareAttack string `yaml:"bare_attack"`
+		Pacing       string          `yaml:"pacing"`
+		SafeRoom     string          `yaml:"safe_room"`
+		Disconnect   string          `yaml:"disconnect"`
+		BareAttack   string          `yaml:"bare_attack"`
+		AggroOnSight *aggroSightFile `yaml:"aggro_on_sight"`
 	} `yaml:"combat"`
 	Regen regenFile `yaml:"regen"`
+}
+
+// aggroSightFile uses pointers so an omitted key keeps the built-in default.
+// A plain bool would turn enabled off whenever the block is present and the key is left out.
+type aggroSightFile struct {
+	Enabled                *bool    `yaml:"enabled"`
+	GraceSeconds           *float64 `yaml:"grace_seconds"`
+	MaxLevelGap            *int     `yaml:"max_level_gap"`
+	ReaggroCooldownSeconds *float64 `yaml:"reaggro_cooldown_seconds"`
 }
 
 type resourceSpec struct {
@@ -113,7 +129,15 @@ type state struct {
 	safeRoom    string
 	disconnect  string
 	bareAttack  string
+	aggro       aggroSight
 	regen       RegenProfile
+}
+
+type aggroSight struct {
+	enabled     bool
+	grace       time.Duration
+	maxLevelGap int
+	cooldown    time.Duration
 }
 
 var (
@@ -148,7 +172,17 @@ func builtin() state {
 		safeRoom:   SafeStay,
 		disconnect: DisconnectContinue,
 		bareAttack: BareAttackAsk,
+		aggro:      defaultAggroSight(),
 		regen:      defaultRegen(),
+	}
+}
+
+func defaultAggroSight() aggroSight {
+	return aggroSight{
+		enabled:     true,
+		grace:       aggroGraceDefault,
+		maxLevelGap: aggroGapDefault,
+		cooldown:    aggroCooldownDefault,
 	}
 }
 
@@ -302,6 +336,9 @@ func decode(raw []byte) (state, error) {
 	if next.bareAttack != BareAttackAsk && next.bareAttack != BareAttackFirst {
 		return state{}, fmt.Errorf("combat bare_attack %q", next.bareAttack)
 	}
+	if spec := file.Combat.AggroOnSight; spec != nil {
+		next.aggro = applyAggroSight(next.aggro, spec)
+	}
 	if len(file.Resources) > 0 {
 		next.resources = map[string]resourceSpec{}
 		for key, spec := range file.Resources {
@@ -334,6 +371,42 @@ func decode(raw []byte) (state, error) {
 		return state{}, err
 	}
 	return next, nil
+}
+
+func applyAggroSight(base aggroSight, spec *aggroSightFile) aggroSight {
+	if spec == nil {
+		return base
+	}
+	if spec.Enabled != nil {
+		base.enabled = *spec.Enabled
+	}
+	if spec.GraceSeconds != nil {
+		base.grace = clampAggroGrace(time.Duration(*spec.GraceSeconds * float64(time.Second)))
+	}
+	if spec.MaxLevelGap != nil {
+		base.maxLevelGap = *spec.MaxLevelGap
+		if base.maxLevelGap < 0 {
+			base.maxLevelGap = 0
+		}
+	}
+	if spec.ReaggroCooldownSeconds != nil {
+		secs := *spec.ReaggroCooldownSeconds
+		if secs < 0 {
+			secs = 0
+		}
+		base.cooldown = time.Duration(secs * float64(time.Second))
+	}
+	return base
+}
+
+func clampAggroGrace(d time.Duration) time.Duration {
+	if d < aggroGraceMin {
+		return aggroGraceMin
+	}
+	if d > aggroGraceMax {
+		return aggroGraceMax
+	}
+	return d
 }
 
 func rejectForbidden(node *yaml.Node) error {
@@ -592,6 +665,65 @@ func SetSafeRoom(mode string) {
 	}
 	mu.Lock()
 	current.safeRoom = mode
+	mu.Unlock()
+}
+
+// AggroOnSightEnabled is combat.aggro_on_sight.enabled. Omitted stays on.
+func AggroOnSightEnabled() bool {
+	mu.RLock()
+	defer mu.RUnlock()
+	return current.aggro.enabled
+}
+
+// AggroGrace is how long a player can leave before an aggressive NPC engages.
+// It is clamped to 0.5–10 seconds. The shipped default is 2.5 seconds.
+func AggroGrace() time.Duration {
+	mu.RLock()
+	defer mu.RUnlock()
+	if current.aggro.grace <= 0 {
+		return aggroGraceDefault
+	}
+	return current.aggro.grace
+}
+
+// AggroMaxLevelGap skips players more than this many levels above the enemy.
+// Zero disables the filter.
+func AggroMaxLevelGap() int {
+	mu.RLock()
+	defer mu.RUnlock()
+	if current.aggro.maxLevelGap < 0 {
+		return 0
+	}
+	return current.aggro.maxLevelGap
+}
+
+// AggroReaggroCooldown is the per player+NPC quiet period after a fight between them ends.
+// Zero allows another sighting to schedule immediately. Leaving during the grace window does not start it.
+func AggroReaggroCooldown() time.Duration {
+	mu.RLock()
+	defer mu.RUnlock()
+	if current.aggro.cooldown < 0 {
+		return 0
+	}
+	return current.aggro.cooldown
+}
+
+// SetAggroOnSight overrides combat.aggro_on_sight until Reset.
+// Grace clamps to 0.5–10 seconds. A negative gap or cooldown becomes zero.
+func SetAggroOnSight(enabled bool, grace time.Duration, maxLevelGap int, cooldown time.Duration) {
+	if maxLevelGap < 0 {
+		maxLevelGap = 0
+	}
+	if cooldown < 0 {
+		cooldown = 0
+	}
+	mu.Lock()
+	current.aggro = aggroSight{
+		enabled:     enabled,
+		grace:       clampAggroGrace(grace),
+		maxLevelGap: maxLevelGap,
+		cooldown:    cooldown,
+	}
 	mu.Unlock()
 }
 

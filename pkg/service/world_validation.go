@@ -371,6 +371,10 @@ func (ctx *validationContext) validateEnemy(n *npc.NPC) {
 	ctx.requireScript("combat", "npc", n.ID, "enemyTrait.onAggroScript", enemy.OnAggroScript)
 	ctx.requireScript("combat", "npc", n.ID, "enemyTrait.onDeathScript", enemy.OnDeathScript)
 	ctx.requireScript("combat", "npc", n.ID, "enemyTrait.onFleeScript", enemy.OnFleeScript)
+	ctx.requireScript("combat", "npc", n.ID, "enemyTrait.onLowHealthScript", enemy.OnLowHealthScript)
+	if enemy.LowHealthThreshold < 0 || enemy.LowHealthThreshold >= 1 {
+		ctx.add(ValidationSeverityWarning, "combat", "npc", n.ID, "enemyTrait.lowHealthThreshold", "low-health threshold should be 0 (default 30%) or a fraction between 0 and 1")
+	}
 }
 
 func (ctx *validationContext) validateSpawners() {

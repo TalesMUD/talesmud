@@ -207,6 +207,7 @@ func (g *Game) DisconnectUserSession(userID string) {
 		}
 	}
 	if charID := g.Sessions.characterID(userID); charID != "" {
+		g.cancelAggroForPlayer(charID)
 		if ruleset.Disconnect() == ruleset.DisconnectRelease {
 			g.ReleaseToSafety(charID)
 		}

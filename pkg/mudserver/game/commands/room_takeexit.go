@@ -124,6 +124,7 @@ func TakeExit(exit string) RoomCommand {
 				// Party Follow v1: only a normal exit walk. Teleports, portals,
 				// instance crossings, bindstones, and scripts do not pull.
 				game.PullPartyFollowers(character, room.ID, next.ID, partyFollowAllowed(exit, next.ID))
+				game.NotePlayerEntered(character.ID, next.ID)
 
 				return true
 			}

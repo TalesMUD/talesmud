@@ -41,6 +41,7 @@ func RegisterGameModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 		msg := messages.NewRoomBasedMessage("SYSTEM", message)
 		msg.Audience = messages.MessageAudienceRoom
 		msg.AudienceID = roomID
+		stampHookLine(L, &msg)
 		game.SendMessage() <- msg
 
 		L.Push(lua.LBool(true))
@@ -136,6 +137,7 @@ func RegisterGameModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 			msg := messages.NewRoomBasedMessage("SYSTEM", message)
 			msg.Audience = messages.MessageAudienceRoom
 			msg.AudienceID = roomID
+			stampHookLine(L, &msg)
 			game.SendMessage() <- msg
 			L.Push(lua.LBool(true))
 			return 1
@@ -145,6 +147,7 @@ func RegisterGameModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 		msg.Audience = messages.MessageAudienceRoomWithoutOrigin
 		msg.AudienceID = roomID
 		msg.OriginID = character.BelongsUserID
+		stampHookLine(L, &msg)
 		game.SendMessage() <- msg
 
 		L.Push(lua.LBool(true))
@@ -545,4 +548,18 @@ func RegisterGameModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 
 	L.Push(mod)
 	return 1
+}
+
+// stampHookLine tags a room line when this LState is inside an enemy hook.
+func stampHookLine(L *lua.LState, msg *messages.MessageResponse) {
+	if msg == nil {
+		return
+	}
+	hook, source, ok := luarunner.HookLineFrom(L)
+	if !ok {
+		return
+	}
+	msg.Style = "combatEvent"
+	msg.Hook = hook
+	msg.Source = source
 }

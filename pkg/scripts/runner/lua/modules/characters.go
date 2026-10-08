@@ -260,6 +260,9 @@ func RegisterCharactersModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 		// Update character's current room
 		character.CurrentRoomID = roomID
 		facade.CharactersService().Update(characterID, character)
+		if game := runner.GetGame(); game != nil {
+			game.NotePlayerEntered(characterID, roomID)
+		}
 
 		L.Push(lua.LBool(true))
 		return 1

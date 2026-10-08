@@ -44,6 +44,9 @@ func (g *Game) updateSpawner(spawner *npc.NPCSpawner) {
 		}).Warn("Failed to spawn NPC from spawner")
 		return
 	}
+	if instance != nil && instance.Entity != nil {
+		g.NoteNPCAppeared(instance.Entity.ID, instance.CurrentRoomID)
+	}
 
 	log.WithFields(log.Fields{
 		"spawner":  spawner.ID,

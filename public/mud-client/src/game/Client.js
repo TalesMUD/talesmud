@@ -370,6 +370,7 @@ function createClient(renderer, characterCreator, muxStore) {
         nextActionAtMs: msg.nextActionAtMs || 0,
         decisionDeadlineMs: msg.decisionDeadlineMs || 0,
         round: msg.round || 0,
+        combatants: msg.combatants || [],
       });
     } else if (mux) {
       mux.setGameContext({ inCombat: true });
@@ -650,6 +651,14 @@ function createClient(renderer, characterCreator, muxStore) {
         if (mux && mux.appendRoomChat) {
           const line = parseRoomChatLine(msg, currentCharacter);
           if (line) mux.appendRoomChat(line);
+        }
+
+        if (msg.style === "combatEvent" && mux && mux.appendCombatEvent) {
+          mux.appendCombatEvent({
+            text: msg.message,
+            hook: msg.hook || "",
+            source: msg.source || "",
+          });
         }
 
         if (!msg.username) {

@@ -115,11 +115,16 @@ func (w *WorldImporter) validateData(
 				{"onAggroScript", n.EnemyTrait.OnAggroScript},
 				{"onDeathScript", n.EnemyTrait.OnDeathScript},
 				{"onFleeScript", n.EnemyTrait.OnFleeScript},
+				{"onLowHealthScript", n.EnemyTrait.OnLowHealthScript},
 			} {
 				if field.val != "" && !scriptIDs[field.val] {
 					w.addValidation("NPC %s (%s): enemyTrait.%s references unknown script %s", n.ID, n.Name, field.name, field.val)
 					warnings++
 				}
+			}
+			if n.EnemyTrait.LowHealthThreshold < 0 || n.EnemyTrait.LowHealthThreshold >= 1 {
+				w.addValidation("NPC %s (%s): enemyTrait.lowHealthThreshold %v is outside [0, 1); 0 means 30%%", n.ID, n.Name, n.EnemyTrait.LowHealthThreshold)
+				warnings++
 			}
 		}
 		if n.MerchantTrait != nil {
@@ -134,7 +139,7 @@ func (w *WorldImporter) validateData(
 
 	// 4. Item cross-reference checks
 	for _, i := range yamlItems {
-			onUse := i.OnUseScript
+		onUse := i.OnUseScript
 		if onUse == "" {
 			onUse = i.OnUseScriptID
 		}
@@ -279,11 +284,11 @@ func checkDuplicateIDs[T any](w *WorldImporter, entityType string, entities []*T
 // - Context variable misuse (ctx.roomID in onEnter scripts)
 func (w *WorldImporter) validateScriptCode(scriptID, scriptName, scriptType, code string, isOnEnterScript bool) int {
 	result := validation.ValidateLuaScript(&scripts.Script{
-		Entity:      nil,
-		Name:        scriptName,
-		Code:        code,
-		Type:        scripts.ScriptType(scriptType),
-		Language:    scripts.ScriptLanguageLua,
+		Entity:   nil,
+		Name:     scriptName,
+		Code:     code,
+		Type:     scripts.ScriptType(scriptType),
+		Language: scripts.ScriptLanguageLua,
 	}, isOnEnterScript)
 	warnings := 0
 	for _, issue := range result.Issues {

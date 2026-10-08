@@ -294,6 +294,9 @@ func RegisterNPCsModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 			L.Push(lua.LNil)
 			return 1
 		}
+		if instance.Entity != nil {
+			game.NoteNPCAppeared(instance.Entity.ID, roomID)
+		}
 
 		L.Push(luar.New(L, instance))
 		return 1
