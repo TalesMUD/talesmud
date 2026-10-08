@@ -2,6 +2,7 @@ package game
 
 import (
 	"strings"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -59,6 +60,12 @@ type Game struct {
 	Avatars map[string]*Avatar
 
 	Sessions *sessionRegistry
+
+	// relocNotice is one login line per character moved by the instance sweep.
+	// The sweep runs at process start, before anyone connects, so the map
+	// only has to live until that character's next login in this process.
+	relocMu     sync.Mutex
+	relocNotice map[string]string
 
 	// regenTick counts one-second regeneration passes on the server clock.
 	// Each active pool is due when its interval divides this counter.
