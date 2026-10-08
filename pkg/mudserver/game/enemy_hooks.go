@@ -45,6 +45,8 @@ func enemyHookScriptID(ref *combat.CombatantRef, hook string) string {
 		return ref.OnDeathScript
 	case "onFlee":
 		return ref.OnFleeScript
+	case "onLowHealth":
+		return ref.OnLowHealthScript
 	default:
 		return ""
 	}
@@ -85,18 +87,63 @@ func (c *CombatController) runEnemyHooksOnEnter(instance *combat.CombatInstance)
 	}
 }
 
+// MaxSummonsPerFight is the engine cap for tales.combat.summon. It is not content.
+const MaxSummonsPerFight = 3
+
+// flushEnemyLowHealthHooks fires onLowHealth once when an enemy's HP first
+// crosses below its threshold while still alive. A hit that goes from
+// above the line to dead does not fire (onDeath covers that).
+func (c *CombatController) flushEnemyLowHealthHooks(instance *combat.CombatInstance) {
+	if c == nil || instance == nil {
+		return
+	}
+	beforeSummons := instance.SummonsUsed
+	ids := make([]string, len(instance.Enemies))
+	for i := range instance.Enemies {
+		ids[i] = instance.Enemies[i].ID
+	}
+	for _, id := range ids {
+		e := instance.GetEnemyByID(id)
+		if e == nil {
+			continue
+		}
+		if !e.LowHealthSeen {
+			e.LowHealthSeen = true
+			e.LowHealthHP = e.CurrentHP
+			continue
+		}
+		before := e.LowHealthHP
+		after := e.CurrentHP
+		e.LowHealthHP = after
+		if !e.IsAlive || e.HasFled || after <= 0 {
+			continue
+		}
+		threshold := e.LowHealthThreshold
+		if threshold <= 0 || threshold >= 1 {
+			threshold = npc.DefaultLowHealthFraction
+		}
+		line := threshold * float64(e.MaxHP)
+		if float64(before) >= line && float64(after) < line {
+			c.runEnemyHook(instance, instance.GetEnemyByID(id), "onLowHealth")
+		}
+	}
+	c.emitSummonRosterIfGrew(instance, beforeSummons)
+}
+
 // flushEnemyDeathHooks fires onDeath once for each enemy that is already dead.
 // Safe to call again. It does not grant loot or XP.
 func (c *CombatController) flushEnemyDeathHooks(instance *combat.CombatInstance) {
 	if c == nil || instance == nil {
 		return
 	}
+	beforeSummons := instance.SummonsUsed
 	for i := range instance.Enemies {
 		if instance.Enemies[i].IsAlive {
 			continue
 		}
 		c.runEnemyHook(instance, &instance.Enemies[i], "onDeath")
 	}
+	c.emitSummonRosterIfGrew(instance, beforeSummons)
 }
 
 // runEnemyHook runs one sandboxed script. An empty script id is ignored.
@@ -137,6 +184,7 @@ func (c *CombatController) runEnemyHook(instance *combat.CombatInstance, enemy *
 	}
 	ctx := scripts.NewScriptContext()
 	ctx.Set("hook", hook)
+	ctx.SetCombatHook(hook, enemy.Name)
 	ctx.Set("roomId", instance.OriginRoomID)
 	ctx.Set("npc", enemyHookViewFrom(enemy))
 	ctx.Set("opponents", enemyHookOpponents(instance))
@@ -248,4 +296,100 @@ func (c *CombatController) ApplyCombatEffect(targetID, effectID string) bool {
 		SourceID: "script",
 	}
 	return c.engine.ApplyStatusEffectFromScript(instance, targetID, se)
+}
+
+// clampSummonCount limits one tales.combat.summon call to 1..3 and the remaining fight cap.
+func clampSummonCount(count, remaining int) int {
+	if remaining <= 0 {
+		return 0
+	}
+	if count < 1 {
+		count = 1
+	}
+	if count > MaxSummonsPerFight {
+		count = MaxSummonsPerFight
+	}
+	if count > remaining {
+		return remaining
+	}
+	return count
+}
+
+// SummonCombatAllies spawns enemy-template adds into the summoner's current fight.
+// Adds use the spawner instance path (HP and stats from the template) but are not
+// registered on a spawner. They grant no loot, XP, or quest credit, and they are
+// removed when the fight ends. Each new add may run onAggro once. The per-fight
+// cap stops a summon loop. Returns how many this call spawned.
+func (c *CombatController) SummonCombatAllies(summonerNPCID, templateID string, count int) int {
+	if c == nil || c.manager == nil || c.engine == nil || c.game == nil || c.game.NPCManager == nil {
+		log.Warn("summon: no active fight")
+		return 0
+	}
+	instance := c.manager.GetInstanceByNPCID(summonerNPCID)
+	if instance == nil || instance.State != combat.CombatStateActive || instance.OriginRoomID == "" {
+		log.WithFields(log.Fields{"npc": summonerNPCID, "template": templateID}).Warn("summon: no active fight")
+		return 0
+	}
+	if c.game.Facade == nil {
+		log.WithField("template", templateID).Warn("summon: unknown template")
+		return 0
+	}
+	template, err := c.game.Facade.NPCsService().FindByID(templateID)
+	if err != nil || template == nil || !template.IsTemplate {
+		log.WithField("template", templateID).WithError(err).Warn("summon: unknown template")
+		return 0
+	}
+	if template.EnemyTrait == nil {
+		log.WithField("template", templateID).Warn("summon: not an enemy")
+		return 0
+	}
+	remaining := MaxSummonsPerFight - instance.SummonsUsed
+	want := clampSummonCount(count, remaining)
+	if want == 0 {
+		log.WithFields(log.Fields{"npc": summonerNPCID, "template": templateID, "used": instance.SummonsUsed}).Warn("summon: cap reached")
+		return 0
+	}
+
+	currentID := ""
+	if instance.CurrentTurnIdx >= 0 && instance.CurrentTurnIdx < len(instance.TurnOrder) {
+		currentID = instance.TurnOrder[instance.CurrentTurnIdx].ID
+	}
+
+	spawned := 0
+	for spawned < want {
+		if instance.SummonsUsed >= MaxSummonsPerFight {
+			log.WithFields(log.Fields{"template": templateID, "used": instance.SummonsUsed}).Warn("summon: cap reached")
+			break
+		}
+		inst, spawnErr := c.game.NPCManager.SpawnInstanceDirect(templateID, instance.OriginRoomID)
+		if spawnErr != nil || inst == nil || inst.Entity == nil {
+			log.WithField("template", templateID).WithError(spawnErr).Warn("summon: unknown template")
+			break
+		}
+		c.game.NPCManager.UpdateInstance(inst.Entity.ID, func(n *npc.NPC) {
+			n.InCombat = true
+			n.CombatInstanceID = instance.ID
+			n.State = "combat"
+		})
+		ref := c.engine.CreateCombatantFromNPC(inst)
+		ref.Summoned = true
+		c.engine.RollInitiative(&ref)
+		instance.Enemies = append(instance.Enemies, ref)
+		instance.SummonsUsed++
+		c.manager.RegisterNPC(inst.Entity.ID, instance.ID)
+		c.engine.BuildTurnOrder(instance)
+		if currentID != "" {
+			for i := range instance.TurnOrder {
+				if instance.TurnOrder[i].ID == currentID {
+					instance.CurrentTurnIdx = i
+					break
+				}
+			}
+		}
+		spawned++
+		if added := instance.GetEnemyByID(inst.Entity.ID); added != nil {
+			c.runEnemyHook(instance, added, "onAggro")
+		}
+	}
+	return spawned
 }

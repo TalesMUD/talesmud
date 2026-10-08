@@ -32,6 +32,16 @@ combat:
   safe_room: stay       # stay | bind | start — used only when disconnect is release
   disconnect: continue  # continue | release — continue leaves the fight running
   bare_attack: ask      # ask | first_hostile — ask is "Attack whom?" outside combat
+  # Same-room aggro for enemies with aggroOnSight. Sight is this room only.
+  # enabled false is the kill switch. grace_seconds clamps to 0.5–10.
+  # max_level_gap skips a player more than this many levels above the enemy; 0 disables that filter.
+  # reaggro_cooldown_seconds is per player+NPC after a fight between them ends. 0 allows an immediate new sighting.
+  # Leaving during the grace window does not start the cooldown.
+  aggro_on_sight:
+    enabled: true
+    grace_seconds: 2.5
+    max_level_gap: 5
+    reaggro_cooldown_seconds: 15
 
 # Passive HP and mana. Each block has an hp pool and a mana pool.
 # A pool is off when enabled is false, or when percent and flat are both 0.

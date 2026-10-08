@@ -391,6 +391,8 @@ Key methods:
 
 Turn-based combat occurs in isolated **Combat Instances** that manage fights between players and NPCs.
 
+Aggro on sight uses that same start. `combat.aggro_on_sight` (default on, 2.5s grace, level gap 5, 15s reaggro cooldown) schedules one watch per player and aggressive NPC when the player enters the room or the NPC arrives. The timer enqueues onto the command loop. The loop re-checks, posts `The <name> spots you.` as a normal message, and calls `BeginEngagement`, which calls `InitiateCombat`. Swarm pack, one `onAggro`, and the party assist nudge match a manual `attack`. Leaving during the grace cancels the watch. The cooldown starts when the fight ends.
+
 #### Combat Instance Model
 
 ```go
@@ -889,7 +891,7 @@ type EnemyTrait struct {
 
     // Behavior
     AggroRadius   int     // Detection range (0 = passive)
-    AggroOnSight  bool    // Auto-attack on detection
+    AggroOnSight  bool    // same-room engage after combat.aggro_on_sight grace
     CallForHelp   bool    // Alert nearby enemies
     FleeThreshold float64 // HP % to flee
 
@@ -900,10 +902,12 @@ type EnemyTrait struct {
     GuaranteedLoot []string  // Item template IDs that always drop
     MaxDrops       int32     // Max items from loot table (0 = unlimited)
 
-    // Event Scripts (once per fight; heal an ally or apply an existing buff/debuff; no spawn)
-    OnAggroScript string
-    OnDeathScript string
-    OnFleeScript  string
+    // Event Scripts (once per fight; heal, apply an existing buff/debuff, or summon)
+    OnAggroScript      string
+    OnDeathScript      string
+    OnFleeScript       string
+    OnLowHealthScript  string  // first drop below LowHealthThreshold while still alive
+    LowHealthThreshold float64 // 0 = 0.30; otherwise a fraction in (0, 1)
 }
 ```
 
@@ -1256,8 +1260,13 @@ type MessageResponse struct {
     Type       MessageType
     Username   string
     Message    string
+    Style      string // omitempty; "combatEvent" on enemy-hook room lines
+    Hook       string // omitempty; onAggro | onLowHealth | onDeath | onFlee
+    Source     string // omitempty; display name of the NPC whose hook ran
 }
 ```
+
+Enemy-hook `msgToRoom` / `msgToRoomExcept` lines keep `type` `message` and `username` `SYSTEM`. The three fields are omitted on every other message. The stamp lives on that script run's Lua state, not a process global. `combatStatus` may include `combatants` (the same roster view as `combatAction`) when a hook flush summoned adds, so the client can refresh the fight before the next action.
 
 `combatEnd` keeps `outcome` and `message`. Optional `rewards`, `loot`, `levelUp`, and `defeat` objects ride on the same message. `combatAction` may include `ability` when a named blow lands. Clients that only read `message` still work. Outcome `fled` is a successful flee or slip, with no `defeat` payload. In a mixed party, only the dead receive outcome `defeat`.
 

@@ -51,6 +51,7 @@ func (g *Game) RelocateCharacter(char *characters.Character, userID, destRoomID 
 		return nil, false
 	}
 	char.CurrentRoomID = destRoomID
+	g.NotePlayerEntered(char.ID, destRoomID)
 
 	user, _ := g.Facade.UsersService().FindByID(userID)
 	if user == nil {

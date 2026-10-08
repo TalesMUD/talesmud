@@ -64,6 +64,11 @@ type Game struct {
 	// Each active pool is due when its interval divides this counter.
 	regenTick uint64
 
+	// aggroCh carries grace timers onto the command loop. The combat ticker
+	// must not start a fight; it only requeues a send that the buffer dropped.
+	aggroCh chan aggroFire
+	aggro   aggroBook
+
 	//world *World
 }
 
@@ -90,6 +95,10 @@ func New(facade service.Facade) *Game {
 
 		Facade: facade,
 	}
+	g.aggroCh = make(chan aggroFire, 64)
+	g.aggro.pending = map[string]*aggroWatch{}
+	g.aggro.cooldown = map[string]time.Time{}
+	g.aggro.ch = g.aggroCh
 
 	// Initialize NPC instance manager
 	g.NPCManager = NewNPCInstanceManager(facade)
@@ -213,6 +222,7 @@ func (g *Game) handleGameUpdates() {
 
 // handleCombatUpdates processes combat tick (turn timeouts, NPC actions)
 func (g *Game) handleCombatUpdates() {
+	g.nudgeDueAggro()
 	if g.CombatController != nil {
 		g.CombatController.Update()
 	}
@@ -241,6 +251,9 @@ func (g *Game) Run() {
 					"nickname": userQuit.User.Nickname,
 				}).Debug("UserQuit channel received")
 				g.handleUserQuit(userQuit.User)
+
+			case fire := <-g.aggroCh:
+				g.fireAggro(fire.key, fire.gen)
 
 			case msg := <-g.onMessageReceived:
 				switch message := msg.(type) {

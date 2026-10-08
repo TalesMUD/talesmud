@@ -302,6 +302,42 @@ function appendCombatLog(log, text) {
   return next.slice(-12);
 }
 
+function combatEventEntry(ev) {
+  const text = String(ev?.text || "").trim();
+  if (!text) return null;
+  return {
+    id: nextCombatLogId(),
+    text,
+    kind: "combatEvent",
+    hook: ev.hook || "",
+    source: ev.source || "",
+  };
+}
+
+function applyRosterSnapshots(state, combatants) {
+  const snapshots = normalizeCombatantList(combatants);
+  if (!snapshots.length) return;
+  const merged = mergeCombatantSnapshots(state.combatEnemies, state.combatPlayers, snapshots);
+  state.combatEnemies = merged.enemies;
+  state.combatPlayers = merged.players;
+  const living = (state.combatEnemies || []).filter((e) => (e.hp ?? 0) > 0);
+  if (state.combatTargetId && !living.some((e) => e.id === state.combatTargetId)) {
+    state.combatTargetId = living[0]?.id || null;
+    state.combatThreatWarning = null;
+  }
+  const selfId = state.character?.id;
+  if (selfId) {
+    const self = (state.combatPlayers || []).find((p) => p.id === selfId);
+    if (self && typeof self.hp === "number") {
+      state.characterStats = {
+        ...state.characterStats,
+        currentHitPoints: self.hp,
+        maxHitPoints: self.maxHp || state.characterStats?.maxHitPoints,
+      };
+    }
+  }
+}
+
 function patchCombatantHp(list, msg) {
   const tid = msg?.targetId;
   if (!tid) return list || [];
@@ -492,7 +528,8 @@ function createStore() {
     combatNextActionAtMs: 0,
     combatDecisionDeadlineMs: 0,
     combatPhaseEnter: null,
-    combatLog: [], // thin optional log [{id,text}]
+    combatLog: [], // thin optional log [{id,text}] or combatEvent cards
+    pendingCombatEvents: [], // hook cards that arrived before combatStart
     combatOutcome: null, // victory | defeat | fled | timeout
     combatFx: null, // { fxId, at, targetId, actorId, damage, heal, result, action }
     combatJoin: null, // { actorId, actorName, at }
@@ -965,8 +1002,23 @@ function createStore() {
         state.combatJoin = null;
         clearCombatQueueFields(state);
         {
-          const lines = proseCombatLogLines(message);
-          state.combatLog = lines.map((line) => ({ id: nextCombatLogId(), text: line }));
+          const pending = state.pendingCombatEvents || [];
+          state.pendingCombatEvents = [];
+          const lines = proseCombatLogLines(message).map((line) => ({ id: nextCombatLogId(), text: line }));
+          state.combatLog = [...pending, ...lines].slice(-12);
+        }
+        return state;
+      });
+    },
+
+    appendCombatEvent: (ev) => {
+      update((state) => {
+        const entry = combatEventEntry(ev);
+        if (!entry) return state;
+        if (state.inCombat && state.combatPhase === "active") {
+          state.combatLog = [...(state.combatLog || []), entry].slice(-12);
+        } else {
+          state.pendingCombatEvents = [...(state.pendingCombatEvents || []), entry].slice(-6);
         }
         return state;
       });
@@ -1002,6 +1054,7 @@ function createStore() {
         if (state.characterStats?.resting) {
           state.characterStats = { ...state.characterStats, inCombat: true, resting: false };
         }
+        applyRosterSnapshots(state, msg?.combatants);
         applyCombatQueueFields(state, msg);
         return state;
       });
@@ -1122,6 +1175,7 @@ function createStore() {
           state.combatFx = null;
           state.combatJoin = null;
           state.combatLog = [];
+          state.pendingCombatEvents = [];
           clearCombatQueueFields(state);
           return state;
         });
@@ -1144,6 +1198,7 @@ function createStore() {
         state.combatFx = null;
         state.combatJoin = null;
         state.combatLog = [];
+        state.pendingCombatEvents = [];
         clearCombatQueueFields(state);
         state.characterStats = { ...state.characterStats, inCombat: false };
         return state;
@@ -1166,6 +1221,7 @@ function createStore() {
         state.combatFx = null;
         state.combatJoin = null;
         state.combatLog = [];
+        state.pendingCombatEvents = [];
         clearCombatQueueFields(state);
         state.characterStats = { ...state.characterStats, inCombat: false };
         return state;

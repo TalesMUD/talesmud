@@ -22,6 +22,7 @@
   import { itemArtSrc, onItemArtError } from '../itemArtSrc.js';
   import { backend } from '../../api/base.js';
   import { livingFocus } from '../combatFocus.js';
+  import { combatEventIcon } from '../combatEvent.js';
   import {
     DEFAULT_DECISION_WINDOW_MS,
     DEFAULT_BEAT_BUDGET_MS,
@@ -68,7 +69,7 @@
   $: threatWarning = $store.combatThreatWarning;
   $: turn = $store.combatTurn;
   $: logRaw = $store.combatLog || [];
-  $: log = (logRaw || []).filter((line) => line && !isCombatLogNoise(line.text));
+  $: log = (logRaw || []).filter((line) => line && (line.kind === "combatEvent" || !isCombatLogNoise(line.text)));
   $: outcome = $store.combatOutcome;
   $: endMessage = $store.combatEndMessage || '';
   $: rewardBreakdown = $store.combatRewards;
@@ -1311,7 +1312,15 @@
     <div id="combat-log-body" class="combat-log-body">
       {#if log.length}
         {#each log.slice(-10) as line (line.id)}
-          <div class="combat-log-line">&gt; {line.text}</div>
+          {#if line.kind === "combatEvent"}
+            <div class="combat-event-card">
+              <i class="material-icons" aria-hidden="true">{combatEventIcon(line.hook)}</i>
+              <span class="combat-event-text">{line.text}</span>
+              {#if line.source}<span class="combat-event-source">{line.source}</span>{/if}
+            </div>
+          {:else}
+            <div class="combat-log-line">&gt; {line.text}</div>
+          {/if}
         {/each}
       {:else}
         <div class="combat-log-line muted">&gt; Waiting for the clash…</div>
@@ -3008,6 +3017,38 @@
   .combat-log-line.muted {
     color: #9ca3af;
     opacity: 0.85;
+  }
+  .combat-event-card {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0.15rem 0;
+    padding: 0.12rem 0.45rem;
+    border: 1px solid rgba(212, 164, 74, 0.75);
+    border-radius: 999px;
+    background: rgba(40, 28, 8, 0.72);
+    color: #e8c878;
+    font-size: 0.72rem;
+    line-height: 1.25;
+  }
+  .combat-event-card .material-icons {
+    font-size: 0.95rem;
+    color: #d4a44a;
+    flex: 0 0 auto;
+  }
+  .combat-event-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .combat-event-source {
+    margin-left: auto;
+    flex: 0 0 auto;
+    font-size: 0.62rem;
+    letter-spacing: 0.04em;
+    color: rgba(232, 200, 120, 0.85);
+    white-space: nowrap;
   }
 
   .outcome-panel {

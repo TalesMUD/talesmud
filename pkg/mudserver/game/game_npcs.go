@@ -69,13 +69,18 @@ func (g *Game) respawnNPC(inst *npc.NPC) {
 			"npc":  inst.GetDisplayName(),
 			"room": inst.SpawnRoomID,
 		}).Debug("NPC respawned")
+		roomID := inst.SpawnRoomID
+		if fresh := g.NPCManager.GetInstance(inst.Entity.ID); fresh != nil && fresh.CurrentRoomID != "" {
+			roomID = fresh.CurrentRoomID
+		}
+		g.NoteNPCAppeared(inst.Entity.ID, roomID)
 	}
 }
 
 // updateIdleNPC handles idle state behavior
 func (g *Game) updateIdleNPC(inst *npc.NPC) (npcMovementEvent, bool) {
-	// Future: check aggro radius for nearby players. A fight started that way
-	// must call CombatController.InitiateCombat so onAggro stays once per fight.
+	// Same-room aggro is scheduled when a player enters or this NPC arrives.
+	// This tick does not start fights.
 	g.triggerIdleDialog(inst)
 
 	if inst.WanderRadius > 0 {
@@ -126,6 +131,7 @@ func (g *Game) moveNPCInstance(inst *npc.NPC, roomID string) (npcMovementEvent, 
 		"from": fromRoomID,
 		"to":   roomID,
 	}).Debug("NPC moved")
+	g.NoteNPCAppeared(inst.Entity.ID, roomID)
 	return npcMovementEvent{NPCID: inst.Entity.ID, FromRoom: fromRoomID, ToRoom: roomID}, true
 }
 

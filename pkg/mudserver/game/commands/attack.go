@@ -5,7 +5,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/talesmud/talesmud/pkg/entities/characters"
 	"github.com/talesmud/talesmud/pkg/entities/combat"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/balance"
@@ -177,108 +176,11 @@ func (command *AttackCommand) handleInitiateCombat(game def.GameCtrl, message *m
 		return true
 	}
 
-	// Gather enemies to pull into combat.
-	// Only CombatStyleSwarm packs the room. CallForHelp alone must NOT multi-pull.
-	enemies := []*npc.NPC{target}
-
-	pullSwarm := target.EnemyTrait != nil && target.EnemyTrait.CombatStyle == npc.CombatStyleSwarm
-	if pullSwarm {
-		nearbyNPCs := npcManager.GetInstancesInRoom(message.Character.CurrentRoomID)
-		for _, nearby := range nearbyNPCs {
-			if nearby.Entity.ID == target.Entity.ID {
-				continue
-			}
-			if !nearby.IsEnemy() || nearby.IsDead || combatEngine.IsNPCInCombat(nearby.Entity.ID) {
-				continue
-			}
-			enemies = append(enemies, nearby)
-		}
-	}
-
-	// Gather players (initiator only — others join via attack on the same NPC)
-	players := []*characters.Character{message.Character}
-
-	// Initiate combat
-	instance := combatEngine.InitiateCombat(message.Character.CurrentRoomID, players, enemies)
-	if instance == nil {
+	// Same path as aggro-on-sight. Swarm pack, onAggro, combatStart, and the party nudge
+	// live on BeginEngagement. The breath window and overlevel warning stay here.
+	if combatEngine.BeginEngagement(message.Character.CurrentRoomID, message.Character, message.FromUser.ID, target, false) == nil {
 		game.SendMessage() <- message.Reply("Failed to initiate combat.")
-		return true
 	}
-
-	// Update character's combat state in database
-	message.Character.InCombat = true
-	message.Character.CombatInstanceID = instance.ID
-	game.GetFacade().CharactersService().Update(message.Character.ID, message.Character)
-
-	// Update NPC combat states
-	for _, enemy := range enemies {
-		npcManager.UpdateInstance(enemy.Entity.ID, func(n *npc.NPC) {
-			n.InCombat = true
-			n.CombatInstanceID = instance.ID
-			n.State = "combat"
-		})
-	}
-
-	// Build combat start message
-	var enemyNames []string
-	for _, e := range enemies {
-		enemyNames = append(enemyNames, e.Name)
-	}
-
-	startMsg := fmt.Sprintf("\n%s\n%s\n\n",
-		"═══════════════════════════════════════════════════",
-		"              COMBAT INITIATED!")
-	startMsg += fmt.Sprintf("You attack %s!\n\n", target.Name)
-
-	if len(enemies) > 1 {
-		if pullSwarm {
-			startMsg += fmt.Sprintf("A swarm joins the fight: %s\n\n", strings.Join(enemyNames[1:], ", "))
-		} else {
-			startMsg += fmt.Sprintf("Enemies join the fight: %s\n\n", strings.Join(enemyNames[1:], ", "))
-		}
-	}
-
-	// Show turn order
-	startMsg += "Turn Order:\n"
-	for i, combatant := range instance.TurnOrder {
-		marker := "  "
-		if i == instance.CurrentTurnIdx {
-			marker = "► "
-		}
-		startMsg += fmt.Sprintf("%s%d. %s (Initiative: %d)\n", marker, i+1, combatant.Name, combatant.Initiative)
-	}
-
-	startMsg += "\n" + combatEngine.GetCombatStatus(message.Character.Entity.ID)
-	startMsg += "\n═══════════════════════════════════════════════════"
-
-	start := messages.NewCombatStartMessage(
-		message.FromUser.ID,
-		startMsg,
-		combatViews(instance.Enemies, message.Character.Level),
-		combatViews(instance.Players, message.Character.Level),
-	)
-	start.TargetID = target.Entity.ID
-	game.SendMessage() <- start
-
-	// Set auto-attack target to the initial target
-	combatEngine.SetAutoAttackTarget(message.Character.Entity.ID, target.Entity.ID)
-
-	game.SendMessage() <- message.Reply("\nCombat is automatic. Commands: attack <target> (switch target) | defend | flee | status")
-
-	// Notify other players in the room (use default message type so their
-	// client doesn't enter combat mode — only the attacker should get combatStart)
-	roomMsg := messages.MessageResponse{
-		Audience:   messages.MessageAudienceRoomWithoutOrigin,
-		AudienceID: message.Character.CurrentRoomID,
-		OriginID:   message.FromUser.ID,
-		Type:       messages.MessageTypeDefault,
-		Message:    fmt.Sprintf("%s engages %s in combat!", message.Character.Name, strings.Join(enemyNames, ", ")),
-	}
-	game.SendMessage() <- roomMsg
-
-	// Party assist nudge: same-room online party members can attack to join
-	nudgePartyAssist(game, message, combatEngine, target.Name, enemyNames)
-
 	return true
 }
 
@@ -390,50 +292,6 @@ func (command *AttackCommand) handleJoinCombat(game def.GameCtrl, message *messa
 	game.SendMessage() <- roomMsg
 
 	return true
-}
-
-// nudgePartyAssist tells same-room online party members they can attack to join.
-func nudgePartyAssist(game def.GameCtrl, message *messages.Message, combatEngine def.CombatEngineCtrl, primaryTarget string, enemyNames []string) {
-	if game == nil || message == nil || message.Character == nil || combatEngine == nil {
-		return
-	}
-	party, err := game.GetFacade().PartiesService().FindByCharacterID(message.Character.ID)
-	if err != nil || party == nil || len(party.Characters) == 0 {
-		return
-	}
-
-	fightLabel := strings.Join(enemyNames, ", ")
-	if fightLabel == "" {
-		fightLabel = primaryTarget
-	}
-	attackHint := primaryTarget
-	if attackHint == "" && len(enemyNames) > 0 {
-		attackHint = enemyNames[0]
-	}
-
-	roomID := message.Character.CurrentRoomID
-	for _, memberID := range party.Characters {
-		if memberID == message.Character.ID {
-			continue
-		}
-		if combatEngine.IsPlayerInCombat(memberID) {
-			continue
-		}
-		for _, online := range game.GetOnlinePlayers() {
-			if online.CharacterID != memberID {
-				continue
-			}
-			if online.RoomID != roomID {
-				continue
-			}
-			if online.UserID == "" {
-				continue
-			}
-			game.SendMessage() <- messages.Reply(online.UserID,
-				fmt.Sprintf("[Party] %s engaged %s nearby! Type 'attack %s' to join the fight.",
-					message.Character.Name, fightLabel, attackHint))
-		}
-	}
 }
 
 func combatViews(refs []combat.CombatantRef, viewerLevel int32) []messages.CombatantView {
