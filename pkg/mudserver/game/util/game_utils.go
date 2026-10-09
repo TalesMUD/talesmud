@@ -91,13 +91,15 @@ func CreateRoomDescription(room *rooms.Room, user *entities.User, game def.GameC
 		description += "\n"
 	}
 
-	// Exits
+	// Exits. A room loaded without an exit list has a nil pointer.
 	description += "\n"
 	description += "- The visible exits are:\n"
 
-	for _, exit := range *room.Exits {
-		if !exit.Hidden {
-			description += " + [" + exit.Name + "] " + exit.Description + "\n"
+	if room.Exits != nil {
+		for _, exit := range *room.Exits {
+			if !exit.Hidden {
+				description += " + [" + exit.Name + "] " + exit.Description + "\n"
+			}
 		}
 	}
 
