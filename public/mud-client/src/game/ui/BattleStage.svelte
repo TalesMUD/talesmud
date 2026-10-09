@@ -4498,16 +4498,17 @@
     .battle-stage.layout-b .enemy-strip.pack-solo,
     .battle-stage.layout-b .enemy-strip.pack-duo,
     .battle-stage.layout-b .enemy-strip.pack-swarm {
-      /* One centered row under the TL/TR frames. The old narrow column wrapped
-         every extra foe onto its own row, so mid-fight adds stacked upward
-         under the HUD and behind the action toast. */
+      /* Full-width centered row under the TL/TR frames. The old narrow column
+         wrapped every extra foe onto its own row, so mid-fight adds stacked
+         upward under the HUD and behind the action toast. */
       top: auto;
       bottom: auto;
       right: auto;
       left: auto;
       width: 100%;
       max-width: none;
-      flex-wrap: nowrap;
+      flex-wrap: wrap;
+      align-content: flex-start;
       align-self: start;
       align-items: flex-end;
       justify-content: center;
@@ -4515,8 +4516,13 @@
       padding: 7.5rem 0.5rem 0;
     }
     .battle-stage.layout-b .enemy-strip .enemy-card {
-      flex: 0 1 auto;
-      min-width: 0;
+      flex: 0 0 auto;
+    }
+    /* Phase / wind-up banners are full-width flex items: keep them on a row
+       below the foes so they never squeeze the sprite row to zero width. */
+    .battle-stage.layout-b .enemy-strip > .phase-banner,
+    .battle-stage.layout-b .enemy-strip > .telegraph-banner {
+      order: 1;
     }
     /* Toast sits between the enemy row and the player, never over a sprite. */
     .battle-stage.layout-b .action-banner-stack {

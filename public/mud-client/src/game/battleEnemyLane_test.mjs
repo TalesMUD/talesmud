@@ -10,10 +10,12 @@ const lb = blocks.reverse().find((b) => b.includes('.battle-stage.layout-b .enem
 assert.ok(lb, 'layout B phone block exists');
 const strip = lb.slice(lb.indexOf('.battle-stage.layout-b .enemy-strip.pack-swarm'));
 const rule = strip.slice(strip.indexOf('{') + 1, strip.indexOf('}'));
-assert.match(rule, /flex-wrap:\s*nowrap/);
+assert.match(rule, /width:\s*100%/);
+assert.match(rule, /align-content:\s*flex-start/, 'extra rows grow downward, not under the HUD');
 assert.match(rule, /max-width:\s*none/);
 assert.doesNotMatch(rule, /220px/);
 assert.doesNotMatch(rule, /bottom:\s*\d/);
 assert.match(rule, /padding:\s*[\d.]+rem/, 'top padding clears the TL/TR frames');
+assert.match(lb, /\.enemy-strip > \.phase-banner,\s*\.battle-stage\.layout-b \.enemy-strip > \.telegraph-banner\s*\{\s*order:\s*1/, 'banners go below the foe row');
 assert.match(lb, /\.battle-stage\.layout-b \.action-banner-stack\s*\{\s*top:\s*50%/);
 console.log('battleEnemyLane_test ok');
