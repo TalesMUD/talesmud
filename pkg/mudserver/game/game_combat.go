@@ -1039,6 +1039,7 @@ func (c *CombatController) cleanupCombatInstance(instance *combat.CombatInstance
 			n.CurrentHitPoints = enemy.CurrentHP
 			if enemy.IsAlive {
 				n.State = "idle"
+				resetNPCAfterDisengage(n)
 			} else {
 				n.IsDead = true
 				n.State = "dead"
@@ -1818,4 +1819,17 @@ func (c *CombatController) applyWeaponOnHitScript(instance *combat.CombatInstanc
 	if !run.Success {
 		log.WithField("script", script.Name).WithField("error", run.Error).Warn("Weapon OnHit script failed")
 	}
+}
+
+// resetNPCAfterDisengage restores a surviving boss (or any NPC whose content
+// opts in) to full HP when a fight ends without killing it. Per-fight hook and
+// phase state lives on the combat instance, so the next fight starts clean.
+func resetNPCAfterDisengage(n *npc.NPC) bool {
+	if n == nil || n.IsDead || !n.ResetsOnDisengage() {
+		return false
+	}
+	if n.MaxHitPoints > 0 {
+		n.CurrentHitPoints = n.MaxHitPoints
+	}
+	return true
 }

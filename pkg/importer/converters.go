@@ -219,6 +219,7 @@ func (y *YAMLNPC) ToEntity() *npc.NPC {
 			OnFleeScript:       y.EnemyTrait.OnFleeScript,
 			OnLowHealthScript:  y.EnemyTrait.OnLowHealthScript,
 			LowHealthThreshold: y.EnemyTrait.LowHealthThreshold,
+			ResetOnDisengage:   y.EnemyTrait.ResetOnDisengage,
 		}
 	}
 
@@ -402,8 +403,21 @@ func (y *YAMLSpawner) ToEntity() *npc.NPCSpawner {
 		MaxInstances:  y.MaxInstances,
 		SpawnInterval: parseDuration(y.SpawnInterval),
 		InitialCount:  initialCount,
+		RespawnDelay:  parseOptionalDuration(y.RespawnDelay),
 		Created:       time.Now(),
 	}
+}
+
+// parseOptionalDuration parses "30m"; empty or invalid input yields 0.
+func parseOptionalDuration(s string) time.Duration {
+	if s == "" {
+		return 0
+	}
+	d, err := time.ParseDuration(s)
+	if err != nil || d < 0 {
+		return 0
+	}
+	return d
 }
 
 // ToEntity converts a YAMLQuest to a Quest entity

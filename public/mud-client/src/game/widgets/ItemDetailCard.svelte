@@ -94,7 +94,7 @@
     {#if effects.length}
       <ul class="item-card-effects" aria-label="Effects">
         {#each effects as eff, i (i)}
-          <li><span class="eff-mark" aria-hidden="true">✦</span><span><strong>{eff.label}</strong>{#if eff.name} — <em>{eff.name}</em>{/if}{#if eff.text}{eff.name ? ': ' : ' — '}{eff.text}{/if}</span></li>
+          <li><span class="eff-mark" aria-hidden="true">✦</span><span><strong>{eff.label}</strong>{#if eff.name}{' — '}<em>{eff.name}</em>{/if}{#if eff.text}{eff.name ? ': ' : ' — '}{eff.text}{/if}</span></li>
         {/each}
       </ul>
     {/if}

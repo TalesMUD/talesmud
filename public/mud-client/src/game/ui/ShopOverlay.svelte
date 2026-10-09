@@ -1008,7 +1008,7 @@
           {#if itemEffectLines(selected).length}
             <ul class="detail-effects" aria-label="Effects">
               {#each itemEffectLines(selected) as eff, i (i)}
-                <li><span class="eff-mark" aria-hidden="true">✦</span><span><strong>{eff.label}</strong>{#if eff.name} — <em>{eff.name}</em>{/if}{#if eff.text}{eff.name ? ': ' : ' — '}{eff.text}{/if}</span></li>
+                <li><span class="eff-mark" aria-hidden="true">✦</span><span><strong>{eff.label}</strong>{#if eff.name}{' — '}<em>{eff.name}</em>{/if}{#if eff.text}{eff.name ? ': ' : ' — '}{eff.text}{/if}</span></li>
               {/each}
             </ul>
           {/if}

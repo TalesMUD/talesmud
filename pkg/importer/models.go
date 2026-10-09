@@ -210,6 +210,7 @@ type YAMLEnemyTrait struct {
 	OnFleeScript       string    `yaml:"onFleeScript"`
 	OnLowHealthScript  string    `yaml:"onLowHealthScript"`
 	LowHealthThreshold float64   `yaml:"lowHealthThreshold"`
+	ResetOnDisengage   *bool     `yaml:"resetOnDisengage"`
 }
 
 // YAMLMerchantTrait contains merchant-specific configuration
@@ -365,6 +366,8 @@ type YAMLSpawner struct {
 	MaxInstances  int    `yaml:"maxInstances"`
 	SpawnInterval string `yaml:"spawnInterval"`
 	InitialCount  int    `yaml:"initialCount"`
+	// RespawnDelay is optional ("30m"). Empty or invalid means no delay.
+	RespawnDelay string `yaml:"respawnDelay"`
 }
 
 // YAMLQuest represents a quest in YAML format

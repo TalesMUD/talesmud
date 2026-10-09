@@ -16,6 +16,22 @@ type SpawnerState struct {
 	ActiveInstances []string
 	// LastSpawnTime is when the last instance was spawned
 	LastSpawnTime time.Time
+	// LastDeathTime is when an instance of this spawner last died (zero if none).
+	LastDeathTime time.Time
+}
+
+// noteSpawnerDeath records a death on the spawner state. Caller holds m.mu.
+func (state *SpawnerState) noteDeath(inst *npc.NPC) {
+	if state == nil {
+		return
+	}
+	at := time.Now()
+	if inst != nil && !inst.DeathTime.IsZero() {
+		at = inst.DeathTime
+	}
+	if at.After(state.LastDeathTime) {
+		state.LastDeathTime = at
+	}
 }
 
 // NPCInstanceManager manages in-memory NPC instances
@@ -337,12 +353,16 @@ func (m *NPCInstanceManager) RemoveInstance(id string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	inst := m.instances[id]
 	delete(m.instances, id)
 
 	// Remove from spawner state
 	for _, state := range m.spawnerState {
 		for i, instID := range state.ActiveInstances {
 			if instID == id {
+				if inst != nil && inst.IsDead {
+					state.noteDeath(inst)
+				}
 				state.ActiveInstances = append(state.ActiveInstances[:i], state.ActiveInstances[i+1:]...)
 				break
 			}
@@ -461,6 +481,9 @@ func (m *NPCInstanceManager) CleanupDeadFromSpawner(spawnerID string) int {
 		if inst != nil && !inst.IsDead {
 			alive = append(alive, id)
 		} else {
+			if inst != nil {
+				state.noteDeath(inst)
+			}
 			removed++
 		}
 	}

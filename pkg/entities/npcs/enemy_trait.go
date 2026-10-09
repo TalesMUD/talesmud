@@ -1,6 +1,9 @@
 package npc
 
-import "math"
+import (
+	"math"
+	"strings"
+)
 
 // DefaultLowHealthFraction is the onLowHealth line when the threshold is unset or <= 0.
 const DefaultLowHealthFraction = 0.30
@@ -43,6 +46,10 @@ type EnemyTrait struct {
 	CombatStyle string `json:"combatStyle"`
 	// Difficulty indicates combat challenge level: "trivial", "easy", "normal", "hard", "boss"
 	Difficulty string `json:"difficulty"`
+	// ResetOnDisengage restores full HP when a fight ends with this NPC still
+	// alive (players fled, died, disconnected or timed out). Nil uses the default:
+	// on for difficulty "boss", off otherwise.
+	ResetOnDisengage *bool `json:"resetOnDisengage,omitempty"`
 
 	// Combat Stats (used by future combat system)
 	// AttackPower is the base damage dealt
@@ -105,4 +112,16 @@ func NormalizeLowHealthThreshold(v float64) float64 {
 		return math.Nextafter(1, 0)
 	}
 	return v
+}
+
+// ResetsOnDisengage reports whether this NPC returns to full HP after a fight
+// it survives. Content can set EnemyTrait.ResetOnDisengage; otherwise bosses do.
+func (n *NPC) ResetsOnDisengage() bool {
+	if n == nil || n.EnemyTrait == nil {
+		return false
+	}
+	if n.EnemyTrait.ResetOnDisengage != nil {
+		return *n.EnemyTrait.ResetOnDisengage
+	}
+	return strings.EqualFold(strings.TrimSpace(n.EnemyTrait.Difficulty), "boss")
 }
