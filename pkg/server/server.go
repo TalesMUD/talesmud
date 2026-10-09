@@ -355,6 +355,7 @@ func (app *app) setupRoutes() {
 		if ctrl := app.mud.GameCtrl(); ctrl != nil {
 			liveGame, _ = ctrl.(*game.Game)
 		}
+		healthHandler.Game = liveGame
 		creator := protected.Group("")
 		creator.Use(CreatorMiddleware())
 		creator.Use(handler.AuditWrites(app.Facade.AuditService()))
@@ -370,6 +371,7 @@ func (app *app) setupRoutes() {
 			// Creator quality diagnostics
 			creator.GET("diagnostics/world", validationHandler.WorldDiagnostics)
 			creator.GET("world/reachability", healthHandler.Reachability)
+			creator.GET("world/overlays", healthHandler.Overlays)
 			creator.GET("search", searchHandler.Search)
 			creator.GET("refs/:type/:id", searchHandler.Refs)
 			creator.GET("health", healthHandler.Get)

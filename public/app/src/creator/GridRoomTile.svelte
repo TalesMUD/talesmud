@@ -13,6 +13,8 @@
   /** "reachable", "instance", "unreachable", or "" to keep the area color. */
   export let mark = "";
   export let pinned = false;
+  /** overlayView() result: level band, badges, and the hover title. */
+  export let overlay = { levelBand: "", missingArt: false, badges: [], title: "" };
 
   const MARK_COLOR = {
     reachable: "#16a34a",
@@ -24,10 +26,38 @@
     instance: "#1e1b4b",
     unreachable: "#450a0a",
   };
+  const LEVEL_STROKE = {
+    "1": "#22d3ee",
+    "2": "#2dd4bf",
+    "3": "#fbbf24",
+    "4": "#fb923c",
+    "5": "#fb7185",
+    "6": "#c084fc",
+  };
+  const LEVEL_FILL = {
+    "1": "#083344",
+    "2": "#134e4a",
+    "3": "#422006",
+    "4": "#431407",
+    "5": "#4c0519",
+    "6": "#3b0764",
+  };
+  const BADGE_FILL = {
+    aggro: "#7f1d1d",
+    spawner: "#1e3a8a",
+    players: "#0c4a6e",
+    quest: "#713f12",
+    copies: "#4c1d95",
+  };
 
-  $: tileStroke = MARK_COLOR[mark] || areaColor;
-  $: tileFill = MARK_FILL[mark] || "#1a1a2a";
-  $: tileDash = mark === "unreachable" ? "5 3" : "none";
+  $: levelBand = overlay?.levelBand || "";
+  $: missingArt = !!overlay?.missingArt;
+  $: badges = overlay?.badges || [];
+  $: overlayTitle = overlay?.title || "";
+  $: bareMissing = missingArt && !mark && !levelBand;
+  $: tileStroke = MARK_COLOR[mark] || (bareMissing ? "#f59e0b" : LEVEL_STROKE[levelBand]) || areaColor;
+  $: tileFill = MARK_FILL[mark] || LEVEL_FILL[levelBand] || "#1a1a2a";
+  $: tileDash = mark === "unreachable" || bareMissing ? "5 3" : "none";
 
   const dispatch = createEventDispatcher();
 
@@ -142,6 +172,9 @@
   role="button"
   tabindex="0"
 >
+  {#if overlayTitle}
+    <title>{overlayTitle}</title>
+  {/if}
   <!-- Selection highlight / hover glow -->
   {#if selected}
     <rect
@@ -167,6 +200,27 @@
     class="room-rect"
     style="stroke: {tileStroke}; fill: {tileFill}; stroke-dasharray: {tileDash};"
   />
+
+  {#if mark && levelBand}
+    <rect
+      x={-width/2}
+      y={-height/2}
+      width="6"
+      height={height}
+      fill={LEVEL_STROKE[levelBand]}
+      class="level-bar"
+    />
+  {/if}
+  {#if missingArt && !bareMissing}
+    <rect
+      x={-width/2}
+      y={height/2 - 3}
+      width={width}
+      height="3"
+      fill="#f59e0b"
+      class="missing-art"
+    />
+  {/if}
 
   <!-- Room ID (top left, monospace) -->
   <text
@@ -225,6 +279,23 @@
   {/if}
 
   <!-- Portal badges for non-cardinal exits (bottom left) -->
+  {#if badges.length > 0}
+    {#each badges as badge, i (badge.kind)}
+      <g class="ov-badge" transform="translate({width/2 - 14 - i * 20}, {-height/2 + 12})">
+        <rect
+          x={badge.kind === "copies" ? -13 : -8}
+          y="-8"
+          width={badge.kind === "copies" ? 26 : 16}
+          height="16"
+          rx="8"
+          fill={BADGE_FILL[badge.kind] || "#334155"}
+        />
+        <text y="1" text-anchor="middle" dominant-baseline="middle" class="ov-badge-text">{badge.text}</text>
+        <title>{badge.title}</title>
+      </g>
+    {/each}
+  {/if}
+
   {#if !isTemporary && specialExits.length > 0}
     {#each specialExits as exit, i}
       {@const badgeX = -width/2 + 16 + i * 22}
@@ -305,6 +376,19 @@
     fill: none;
     stroke-width: 2;
     stroke-opacity: 0.6;
+    pointer-events: none;
+  }
+
+  .level-bar,
+  .missing-art {
+    pointer-events: none;
+  }
+
+  .ov-badge-text {
+    fill: #f8fafc;
+    font-size: 9px;
+    font-weight: 700;
+    font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
     pointer-events: none;
   }
 

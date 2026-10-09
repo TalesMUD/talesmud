@@ -103,6 +103,16 @@ function getWorldReachabilityAsync(token, from) {
     .then((result) => result.data);
 }
 
+function getWorldOverlaysAsync(token) {
+  return axios
+    .get(`${backend}/world/overlays`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    .then((result) => result.data);
+}
+
 function getWorldValidationAsync(token) {
   return axios
     .get(`${backend}/world/validation`, {
@@ -123,4 +133,5 @@ export {
   getWorldValidation,
   getWorldValidationAsync,
   getWorldReachabilityAsync,
+  getWorldOverlaysAsync,
 };

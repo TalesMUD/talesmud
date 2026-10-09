@@ -6,6 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/talesmud/talesmud/pkg/contenthealth"
+	"github.com/talesmud/talesmud/pkg/entities"
+	"github.com/talesmud/talesmud/pkg/mudserver/game"
 	"github.com/talesmud/talesmud/pkg/repository"
 	"github.com/talesmud/talesmud/pkg/service"
 )
@@ -14,6 +16,7 @@ import (
 type HealthHandler struct {
 	Facade  service.Facade
 	Health  repository.ContentHealthRepository
+	Game    *game.Game
 	Loaders healthLoaders
 }
 
@@ -65,6 +68,66 @@ func (h *HealthHandler) Reachability(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, view)
+}
+
+// Overlays returns the world-map layers. Creator and admin both call it.
+// Player names are included only for an admin. Counts stay for a creator.
+func (h *HealthHandler) Overlays(c *gin.Context) {
+	if h == nil || h.Facade == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "world overlays are unavailable"})
+		return
+	}
+	world, err := contenthealth.WorldFromFacade(h.Facade)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	admin := callerIsAdmin(c)
+	c.JSON(http.StatusOK, contenthealth.MapOverlayView(world, h.overlayLive(), admin))
+}
+
+func (h *HealthHandler) overlayLive() contenthealth.OverlayLive {
+	if h == nil || h.Game == nil {
+		return contenthealth.OverlayLive{}
+	}
+	var (
+		rows   []game.LiveCharacter
+		copies []game.LiveInstance
+		err    error
+	)
+	if callErr := h.Game.Call(func() {
+		rows, err = h.Game.LiveCharacters(game.LiveQuery{OnlineOnly: true})
+		if err != nil {
+			return
+		}
+		copies, err = h.Game.LiveInstances()
+	}); callErr != nil || err != nil {
+		return contenthealth.OverlayLive{}
+	}
+	live := contenthealth.OverlayLive{Available: true}
+	for _, row := range rows {
+		if !row.Online || strings.TrimSpace(row.RoomID) == "" {
+			continue
+		}
+		live.Players = append(live.Players, contenthealth.OverlayPlayer{
+			ID:     row.ID,
+			Name:   row.Name,
+			RoomID: row.RoomID,
+		})
+	}
+	for _, copy := range copies {
+		live.CloneIDs = append(live.CloneIDs, copy.CloneIDs...)
+	}
+	return live
+}
+
+func callerIsAdmin(c *gin.Context) bool {
+	usr, ok := c.Get("user")
+	if !ok || usr == nil {
+		return false
+	}
+	user, ok := usr.(*entities.User)
+	return ok && user != nil && user.IsAdmin()
 }
 
 // Get returns the content-health report.

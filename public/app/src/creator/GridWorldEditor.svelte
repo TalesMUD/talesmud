@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import { navigateTo } from "yrv";
   import { getAuth } from "../auth.js";
-  import { getMinimalRoomsAsync, batchUpdateCoordsAsync, getWorldReachabilityAsync } from "../api/world.js";
+  import { getMinimalRoomsAsync, batchUpdateCoordsAsync, getWorldReachabilityAsync, getWorldOverlaysAsync } from "../api/world.js";
   import {
     getRoomsValueHelpAsync,
     createRoomAsync,
@@ -15,6 +15,9 @@
   import { getOppositeDirection, CARDINAL_DIRECTIONS } from "./WorldEditorStore.js";
   import { fitViewBox, pixelToCoords, roomPixel } from "./mapFit.js";
   import { edgeLook, islandPinned, roomMark } from "./reachMarks.js";
+  import { overlayView } from "./overlayMarks.js";
+  import { reasonChain } from "./islandLinks.js";
+  import { overlayLayersOn, readLayers, writeLayers } from "./mapLayers.js";
 
   // svelte-ignore unused-export-let
   export let location;
@@ -771,14 +774,40 @@
     viewBox = fitViewBox(filteredRooms.map((room) => room.coords), GRID_SCALE, 2);
   }
 
-  // Reachability layer. The walk is the same one content health uses.
-  let reachOn = false;
+  // Reachability plus the other map layers. Toggles persist across visits.
+  const OVERLAY_TOGGLES = [
+    { id: "level", label: "Level", title: "Color rooms by the NPC level range in the room, or in the zone" },
+    { id: "aggro", label: "Aggro", title: "Badge for enemies with aggro on sight" },
+    { id: "spawners", label: "Spawners", title: "Spawner icon. Hover shows the respawn time" },
+    { id: "players", label: "Players", title: "Online players. An admin sees names. A creator sees the count" },
+    { id: "quests", label: "Quests", title: "Rooms named by a quest objective. Hover shows the quest ids" },
+    { id: "art", label: "Missing art", title: "Rooms with no background image" },
+    { id: "copies", label: "Copies", title: "Live instance rooms (~) for this template" },
+  ];
+  let mapLayers = {
+    reachability: false,
+    level: false,
+    aggro: false,
+    spawners: false,
+    players: false,
+    quests: false,
+    art: false,
+    copies: false,
+  };
+  $: reachOn = !!mapLayers.reachability;
+  $: overlayOn = overlayLayersOn(mapLayers);
   let reachReport = null;
   let reachError = "";
   let reachLoading = false;
   let selectedIsland = -1;
   let reachById = new Map();
   $: reachById = new Map((reachReport?.rooms || []).map((room) => [room.id, room]));
+  $: reachRoomIds = (reachReport?.rooms || []).map((room) => room.id);
+  let overlayReport = null;
+  let overlayError = "";
+  let overlayLoading = false;
+  let overlayById = new Map();
+  $: overlayById = new Map((overlayReport?.rooms || []).map((room) => [room.id, room]));
 
   async function loadReachability() {
     if (!$authToken) return;
@@ -796,12 +825,49 @@
     }
   }
 
-  function toggleReach() {
-    reachOn = !reachOn;
-    selectedIsland = -1;
-    if (reachOn && !reachReport && !reachLoading) {
-      loadReachability();
+  function toggleLayer(id) {
+    const next = !mapLayers[id];
+    mapLayers = { ...mapLayers, [id]: next };
+    try {
+      writeLayers(localStorage, mapLayers);
+    } catch {
+      /* keep the toggles in memory when storage is blocked */
     }
+    if (id === "reachability") {
+      selectedIsland = -1;
+      if (next) {
+        reachError = "";
+        if (!reachReport && !reachLoading) loadReachability();
+      }
+      return;
+    }
+    if (!next) return;
+    if (id === "players" || id === "copies") {
+      loadOverlays(true);
+      return;
+    }
+    if (!overlayReport && !overlayLoading) loadOverlays(false);
+  }
+
+  async function loadOverlays(force) {
+    if (!$authToken || overlayLoading) return;
+    if (overlayReport && !force) return;
+    overlayLoading = true;
+    overlayError = "";
+    try {
+      overlayReport = await getWorldOverlaysAsync($authToken);
+    } catch (err) {
+      console.error("Overlays failed", err);
+      overlayError = "Could not load map overlays.";
+    } finally {
+      overlayLoading = false;
+    }
+  }
+
+  function openIslandLink(event, href) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (href) navigateTo(href);
   }
 
   function islandLabel(island) {
@@ -1049,8 +1115,19 @@
   }
 
   onMount(() => {
-    console.log("GridWorldEditor mounted");
+    try {
+      mapLayers = readLayers(localStorage);
+    } catch {
+      /* start with every layer off */
+    }
   });
+
+  $: if ($authToken && mapLayers.reachability && !reachReport && !reachLoading && !reachError) {
+    loadReachability();
+  }
+  $: if ($authToken && overlayOn && !overlayReport && !overlayLoading && !overlayError) {
+    loadOverlays(false);
+  }
 </script>
 
 <div class="world-editor-page">
@@ -1090,13 +1167,24 @@
 
       <button
         class="layer-btn"
-        class:on={reachOn}
+        class:on={mapLayers.reachability}
         type="button"
-        on:click={toggleReach}
+        on:click={() => toggleLayer("reachability")}
         title="Color rooms by reachability from the start room"
       >
         Reachability
       </button>
+      {#each OVERLAY_TOGGLES as layer (layer.id)}
+        <button
+          class="layer-btn"
+          class:on={mapLayers[layer.id]}
+          type="button"
+          title={layer.title}
+          on:click={() => toggleLayer(layer.id)}
+        >
+          {layer.label}
+        </button>
+      {/each}
       <button class="icon-btn" on:click={fitView} title="Fit view">
         <span class="material-symbols-outlined">fit_screen</span>
       </button>
@@ -1242,6 +1330,7 @@
                   dragging={dragging?.roomId === room.id}
                   areaColor={getRoomAreaColor(room)}
                   mark={roomMark(room, reachOn, reachReport, reachById)}
+                  overlay={overlayView(room, mapLayers, overlayById)}
                   pinned={islandPinned(room.id, reachOn, selectedIsland, reachReport)}
                   on:select={handleRoomSelect}
                   on:dragstart={handleRoomDragStart}
@@ -1286,18 +1375,43 @@
                     <p>{reachReport.islands.length} unreachable {reachReport.islands.length === 1 ? "island" : "islands"}</p>
                     <div class="reach-list">
                       {#each reachReport.islands as island, index (island.roomIds?.[0] || index)}
-                        <button
-                          class="reach-island"
-                          class:on={selectedIsland === index}
-                          type="button"
-                          on:click={() => showIsland(index)}
-                        >
-                          <span class="reach-name">{islandLabel(island)}</span>
-                          <span class="reach-count">{island.roomIds.length}</span>
-                          <span class="reach-reason">{island.reason}</span>
-                        </button>
+                        <div class="reach-island" class:on={selectedIsland === index}>
+                          <button class="reach-open" type="button" on:click={() => showIsland(index)}>
+                            <span class="reach-name">{islandLabel(island)}</span>
+                            <span class="reach-count">{island.roomIds.length}</span>
+                          </button>
+                          <div class="reach-reason">
+                            {#each reasonChain(island.reason, reachRoomIds) as note}
+                              <p>
+                                {#each note.parts as part}
+                                  {#if part.href}
+                                    <a href={part.href} on:click={(event) => openIslandLink(event, part.href)}>{part.text}</a>
+                                  {:else}
+                                    {part.text}
+                                  {/if}
+                                {/each}
+                              </p>
+                            {/each}
+                          </div>
+                        </div>
                       {/each}
                     </div>
+                  {/if}
+                {/if}
+              </div>
+            {/if}
+            {#if overlayLoading || overlayError || (overlayReport && !overlayReport.live && (mapLayers.players || mapLayers.copies)) || (overlayReport && mapLayers.players && !overlayReport.admin)}
+              <div class="reach-block">
+                {#if overlayLoading}
+                  <p>Loading overlays…</p>
+                {:else if overlayError}
+                  <p>{overlayError}</p>
+                {:else}
+                  {#if overlayReport && !overlayReport.live && (mapLayers.players || mapLayers.copies)}
+                    <p>Live world is unavailable.</p>
+                  {/if}
+                  {#if overlayReport && mapLayers.players && !overlayReport.admin}
+                    <p>Player counts. Names are admin only.</p>
                   {/if}
                 {/if}
               </div>
@@ -1356,6 +1470,32 @@
                 <svg width="30" height="10"><line x1="0" y1="5" x2="30" y2="5" stroke="#b08050" stroke-width="1.5" stroke-dasharray="4,3"/></svg>
                 <span class="legend-name">Special exit</span>
               </div>
+              {#if mapLayers.level}
+                <div class="legend-item connection-type">
+                  <span class="legend-swatch" style="background: #22d3ee;"></span>
+                  <span class="legend-name">Level 0–4</span>
+                </div>
+                <div class="legend-item connection-type">
+                  <span class="legend-swatch" style="background: #2dd4bf;"></span>
+                  <span class="legend-name">Level 5–9</span>
+                </div>
+                <div class="legend-item connection-type">
+                  <span class="legend-swatch" style="background: #fbbf24;"></span>
+                  <span class="legend-name">Level 10–14</span>
+                </div>
+                <div class="legend-item connection-type">
+                  <span class="legend-swatch" style="background: #fb923c;"></span>
+                  <span class="legend-name">Level 15–19</span>
+                </div>
+                <div class="legend-item connection-type">
+                  <span class="legend-swatch" style="background: #fb7185;"></span>
+                  <span class="legend-name">Level 20–29</span>
+                </div>
+                <div class="legend-item connection-type">
+                  <span class="legend-swatch" style="background: #c084fc;"></span>
+                  <span class="legend-name">Level 30+</span>
+                </div>
+              {/if}
               {#if reachOn}
                 <div class="legend-item connection-type">
                   <span class="legend-swatch" style="background: #16a34a;"></span>
@@ -1503,8 +1643,10 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 8px;
     margin-bottom: 16px;
     flex-shrink: 0;
+    flex-wrap: wrap;
   }
 
   .header h4 {
@@ -1515,7 +1657,9 @@
   .header-actions {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   .icon-btn {
@@ -1654,7 +1798,7 @@
     margin-top: 10px;
     padding-top: 8px;
     border-top: 1px solid #3a3a5a;
-    max-width: 280px;
+    max-width: 340px;
     font-size: 12px;
     color: #cbd5e1;
   }
@@ -1681,7 +1825,18 @@
     border-radius: 6px;
     color: #fecaca;
     padding: 6px 8px;
+  }
+
+  .reach-open {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    background: transparent;
+    border: none;
+    color: inherit;
+    padding: 0;
     cursor: pointer;
+    font: inherit;
   }
 
   .reach-island.on {
@@ -1702,6 +1857,15 @@
     flex-basis: 100%;
     color: #cbd5e1;
     line-height: 1.35;
+  }
+
+  .reach-reason p {
+    margin: 0 0 2px;
+  }
+
+  .reach-reason a {
+    color: #93c5fd;
+    text-decoration: underline;
   }
 
   .controls {

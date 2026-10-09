@@ -39,6 +39,7 @@
     deleteNPCSpawner,
   } from "../api/npcspawners.js";
   import { roomColumns } from "./tableColumns.js";
+  import { roomTab } from "./islandLinks.js";
   import { uniqueValues } from "./fieldSuggestions.js";
   import {
     getItem,
@@ -284,6 +285,8 @@
   };
 
   onMount(() => {
+    const tab = roomTab(window.location.search);
+    if (tab) activeTab = tab;
     loadRoomsValueHelp();
   });
 
