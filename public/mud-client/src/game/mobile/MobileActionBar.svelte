@@ -320,7 +320,7 @@
     font-size: 12px;
     min-height: 44px;
   }
-  .pin-toggle.pinned {
+  .pin-toggle.is-pinned {
     border-color: rgba(59, 130, 246, 0.55);
     background: rgba(59, 130, 246, 0.15);
     color: #bfdbfe;
@@ -335,7 +335,7 @@
     border-color: #2f3648;
     color: #d5dbe5;
   }
-  .dialog .pin-toggle.pinned {
+  .dialog .pin-toggle.is-pinned {
     background: #1a2742;
     border-color: #3b6fc4;
     color: #cfe0ff;
@@ -582,7 +582,7 @@
         {#each PINNABLE_COMMANDS as cmd}
           <button
             class="pin-toggle"
-            class:pinned={isPinned(cmd.id)}
+            class:is-pinned={isPinned(cmd.id)}
             type="button"
             on:click={() => onTogglePin(cmd.id)}
           >
