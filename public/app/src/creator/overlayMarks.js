@@ -43,8 +43,10 @@ export function overlayView(room, layers, byId) {
     lines.push(title);
   }
   if (flags.quests && row.quests?.length) {
-    const title = row.quests.join(", ");
-    badges.push({ kind: "quest", text: "Q", title });
+    const ids = row.quests.filter(Boolean);
+    const title = ids.join(", ");
+    const text = ids.length > 1 ? `Q×${ids.length}` : "Q";
+    badges.push({ kind: "quest", text, title });
     lines.push(`Quests: ${title}`);
   }
   if (flags.art && row.missingArt) {

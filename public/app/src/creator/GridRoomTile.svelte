@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from "svelte";
+  import { layoutOverlayBadges } from "./badgeLayout.js";
 
   export let room;
   export let x;
@@ -15,6 +16,8 @@
   export let pinned = false;
   /** overlayView() result: level band, badges, and the hover title. */
   export let overlay = { levelBand: "", missingArt: false, badges: [], title: "" };
+  /** SVG user units per CSS pixel. Badges counter-scale so they stay ~12px. */
+  export let svgPerPx = 1;
 
   const MARK_COLOR = {
     reachable: "#16a34a",
@@ -48,11 +51,13 @@
     players: "#0c4a6e",
     quest: "#713f12",
     copies: "#4c1d95",
+    more: "#334155",
   };
 
   $: levelBand = overlay?.levelBand || "";
   $: missingArt = !!overlay?.missingArt;
   $: badges = overlay?.badges || [];
+  $: badgeLayout = layoutOverlayBadges(badges, { tileWidth: width, tileHeight: height, svgPerPx });
   $: overlayTitle = overlay?.title || "";
   $: bareMissing = missingArt && !mark && !levelBand;
   $: tileStroke = MARK_COLOR[mark] || (bareMissing ? "#f59e0b" : LEVEL_STROKE[levelBand]) || areaColor;
@@ -278,22 +283,24 @@
     {/each}
   {/if}
 
-  <!-- Portal badges for non-cardinal exits (bottom left) -->
-  {#if badges.length > 0}
-    {#each badges as badge, i (badge.kind)}
-      <g class="ov-badge" transform="translate({width/2 - 14 - i * 20}, {-height/2 + 12})">
-        <rect
-          x={badge.kind === "copies" ? -13 : -8}
-          y="-8"
-          width={badge.kind === "copies" ? 26 : 16}
-          height="16"
-          rx="8"
-          fill={BADGE_FILL[badge.kind] || "#334155"}
-        />
-        <text y="1" text-anchor="middle" dominant-baseline="middle" class="ov-badge-text">{badge.text}</text>
-        <title>{badge.title}</title>
-      </g>
-    {/each}
+  <!-- Overlay badges, top right. Drawn in screen pixels, then counter-scaled. -->
+  {#if badgeLayout.badges.length > 0}
+    <g class="ov-badges" transform="translate({width / 2}, {-height / 2}) scale({badgeLayout.scale})">
+      {#each badgeLayout.badges as badge (badge.kind)}
+        <g class="ov-badge" transform="translate({badge.x}, {badge.y})">
+          <rect
+            x={-badge.width / 2}
+            y={-badge.height / 2}
+            width={badge.width}
+            height={badge.height}
+            rx={badge.height / 2}
+            fill={BADGE_FILL[badge.kind] || "#334155"}
+          />
+          <text y="0.5" text-anchor="middle" dominant-baseline="middle" class="ov-badge-text">{badge.text}</text>
+          <title>{badge.title}</title>
+        </g>
+      {/each}
+    </g>
   {/if}
 
   {#if !isTemporary && specialExits.length > 0}
@@ -386,7 +393,7 @@
 
   .ov-badge-text {
     fill: #f8fafc;
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 700;
     font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
     pointer-events: none;

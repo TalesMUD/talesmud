@@ -61,6 +61,9 @@ test("badges carry the hover text and hide names the payload left out", () => {
   assert.match(view.title, /3 live instance copies/);
   const kinds = view.badges.map((badge) => badge.kind);
   assert.deepEqual(kinds, ["aggro", "spawner", "players", "quest", "copies"]);
+  const quest = view.badges.find((badge) => badge.kind === "quest");
+  assert.equal(quest.text, "Q×2");
+  assert.equal(quest.title, "Q1, Q2");
 
   const counts = overlayView({ id: "R2" }, layers, report);
   assert.match(counts.title, /2 online/);
@@ -72,6 +75,7 @@ test("badges carry the hover text and hide names the payload left out", () => {
 test("the map template passes layer state into the overlay helper", () => {
   const source = readFileSync(new URL("./GridWorldEditor.svelte", import.meta.url), "utf8");
   assert.match(source, /overlayView\(room, mapLayers, overlayById\)/);
+  assert.match(source, /svgPerPx=\{unitsPerPixel\}/);
   assert.match(source, /reasonChain\(island\.reason, reachRoomIds\)/);
   assert.match(source, /readLayers\(localStorage\)/);
 });

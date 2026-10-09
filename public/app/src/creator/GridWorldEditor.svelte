@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
   import { navigateTo } from "yrv";
   import { getAuth } from "../auth.js";
   import { getMinimalRoomsAsync, batchUpdateCoordsAsync, getWorldReachabilityAsync, getWorldOverlaysAsync } from "../api/world.js";
@@ -107,6 +107,27 @@
   let viewBox = { x: -600, y: -400, width: 1200, height: 800 };
   let svgElement;
   let containerElement;
+  // SVG user units per CSS pixel. Overlay badges divide by this so they stay ~12px.
+  let unitsPerPixel = 1;
+  let viewportObserver;
+
+  function syncUnitsPerPixel() {
+    const el = svgElement;
+    const w = el?.clientWidth || 0;
+    const h = el?.clientHeight || 0;
+    if (w < 1 || h < 1) return;
+    const next = Math.max(viewBox.width / w, viewBox.height / h);
+    if (next > 0 && next !== unitsPerPixel) unitsPerPixel = next;
+  }
+
+  function watchViewport(node) {
+    viewportObserver?.disconnect();
+    viewportObserver = null;
+    if (!node || typeof ResizeObserver === "undefined") return;
+    viewportObserver = new ResizeObserver(() => syncUnitsPerPixel());
+    viewportObserver.observe(node);
+    syncUnitsPerPixel();
+  }
 
   // Drag state for moving rooms
   let dragging = null; // { roomId, startMouseX, startMouseY, startRoomX, startRoomY }
@@ -1122,6 +1143,15 @@
     }
   });
 
+  $: watchViewport(svgElement);
+  $: {
+    viewBox.width;
+    viewBox.height;
+    syncUnitsPerPixel();
+  }
+
+  onDestroy(() => viewportObserver?.disconnect());
+
   $: if ($authToken && mapLayers.reachability && !reachReport && !reachLoading && !reachError) {
     loadReachability();
   }
@@ -1331,6 +1361,7 @@
                   areaColor={getRoomAreaColor(room)}
                   mark={roomMark(room, reachOn, reachReport, reachById)}
                   overlay={overlayView(room, mapLayers, overlayById)}
+                  svgPerPx={unitsPerPixel}
                   pinned={islandPinned(room.id, reachOn, selectedIsland, reachReport)}
                   on:select={handleRoomSelect}
                   on:dragstart={handleRoomDragStart}
