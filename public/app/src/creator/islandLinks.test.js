@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { reasonChain, roomInspectorPath, roomTab, scriptInspectorPath } from "./islandLinks.js";
+import { reasonChain, roomInspectorPath, roomTab, scriptInspectorPath, wantsInspector } from "./islandLinks.js";
 
 const rooms = ["R0215", "R0217", "R0207"];
 
@@ -30,9 +30,17 @@ test("a parenthetical script id still links when the note is free text", () => {
   assert.equal(room.href, roomInspectorPath("R0207"));
 });
 
-test("the room editor tab query opens the inspector", () => {
+test("the room editor opens the inspector from either query name", () => {
+  assert.equal(roomInspectorPath("R1"), "/creator/rooms?id=R1&view=inspector");
   assert.equal(roomTab("?id=R1&tab=inspector"), "inspector");
+  assert.equal(roomTab("?id=R1&view=inspector"), "inspector");
+  assert.equal(roomTab("?tab=exits&view=inspector"), "exits");
   assert.equal(roomTab("?tab=exits"), "exits");
   assert.equal(roomTab("?tab=map"), "");
   assert.equal(roomTab(""), "");
+  assert.equal(wantsInspector("?id=N1&view=inspector"), true);
+  assert.equal(wantsInspector("?id=N1&tab=inspector"), true);
+  assert.equal(wantsInspector("?tab=exits&view=inspector"), true);
+  assert.equal(wantsInspector("?tab=exits"), false);
+  assert.equal(wantsInspector(""), false);
 });

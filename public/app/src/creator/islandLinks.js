@@ -1,19 +1,30 @@
 // Island reasons are the same semicolon-separated notes content health uses.
 // Room ids and script ids in those notes become inspector links.
+// New inspector links use ?view=inspector. Rooms and NPCs also accept ?tab=inspector.
 
 const ROOM_TABS = ["exits", "actions", "spawners", "items", "residents", "inspector"];
 
 export function roomInspectorPath(id) {
-  return `/creator/rooms?id=${encodeURIComponent(id)}&tab=inspector`;
+  return `/creator/rooms?id=${encodeURIComponent(id)}&view=inspector`;
 }
 
 export function scriptInspectorPath(id) {
   return `/creator/scripts?id=${encodeURIComponent(id)}`;
 }
 
+// True when either query name asks for the inspector. NPC detail uses this.
+// A named room tab is handled by roomTab and wins over view=inspector.
+export function wantsInspector(search) {
+  const params = new URLSearchParams(search || "");
+  return params.get("view") === "inspector" || params.get("tab") === "inspector";
+}
+
 export function roomTab(search) {
-  const tab = new URLSearchParams(search || "").get("tab");
-  return ROOM_TABS.includes(tab) ? tab : "";
+  const params = new URLSearchParams(search || "");
+  const tab = params.get("tab");
+  if (ROOM_TABS.includes(tab)) return tab;
+  if (params.get("view") === "inspector") return "inspector";
+  return "";
 }
 
 export function reasonChain(reason, roomIds) {

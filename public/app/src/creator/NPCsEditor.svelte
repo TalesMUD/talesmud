@@ -24,6 +24,7 @@
   import { getEnemyScaling } from "../api/balance.js";
   import { npcColumns, dialogColumns, roomColumns } from "./tableColumns.js";
   import { knownRaces, knownClasses } from "./fieldSuggestions.js";
+  import { wantsInspector } from "./islandLinks.js";
   import { previewMerchant } from "../api/previews.js";
 
   // Clone columns so we can populate dynamic dropdown options
@@ -95,7 +96,7 @@
     if (id !== detailViewFor) {
       detailViewFor = id;
       if (inspectorRequested === null && typeof window !== "undefined") {
-        inspectorRequested = new URLSearchParams(window.location.search).get("view") === "inspector";
+        inspectorRequested = wantsInspector(window.location.search);
       }
       detailView = inspectorRequested ? "inspector" : "edit";
       inspectorRequested = false;
