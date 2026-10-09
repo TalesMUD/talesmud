@@ -10,6 +10,24 @@
   export let dragging = false;
   export let isTemporary = false;
   export let areaColor = "#888"; // Area color for border
+  /** "reachable", "instance", "unreachable", or "" to keep the area color. */
+  export let mark = "";
+  export let pinned = false;
+
+  const MARK_COLOR = {
+    reachable: "#16a34a",
+    instance: "#6366f1",
+    unreachable: "#ef4444",
+  };
+  const MARK_FILL = {
+    reachable: "#14532d",
+    instance: "#1e1b4b",
+    unreachable: "#450a0a",
+  };
+
+  $: tileStroke = MARK_COLOR[mark] || areaColor;
+  $: tileFill = MARK_FILL[mark] || "#1a1a2a";
+  $: tileDash = mark === "unreachable" ? "5 3" : "none";
 
   const dispatch = createEventDispatcher();
 
@@ -115,6 +133,7 @@
   class="room-tile"
   class:selected
   class:dragging
+  class:pinned
   class:temporary={isTemporary}
   transform="translate({x}, {y})"
   on:mousedown={handleMouseDown}
@@ -133,7 +152,7 @@
       rx="8"
       ry="8"
       class="selection-glow"
-      style="stroke: {areaColor}; filter: drop-shadow(0 0 6px {areaColor}66);"
+      style="stroke: {tileStroke}; filter: drop-shadow(0 0 6px {tileStroke}66);"
     />
   {/if}
 
@@ -146,7 +165,7 @@
     rx="6"
     ry="6"
     class="room-rect"
-    style="stroke: {areaColor}; fill: #1a1a2a;"
+    style="stroke: {tileStroke}; fill: {tileFill}; stroke-dasharray: {tileDash};"
   />
 
   <!-- Room ID (top left, monospace) -->
@@ -200,7 +219,7 @@
         on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleExitMouseDown(e, direction); }}
         role="button"
         tabindex="0"
-        style={connected ? `fill: ${areaColor};` : ''}
+        style={connected ? `fill: ${tileStroke};` : ''}
       />
     {/each}
   {/if}
@@ -271,6 +290,10 @@
   .room-tile.selected .room-rect {
     stroke-width: 2.5;
     fill: #252540;
+  }
+
+  .room-tile.pinned .room-rect {
+    stroke-width: 3.5;
   }
 
   .room-tile.dragging .room-rect {

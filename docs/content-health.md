@@ -31,6 +31,8 @@ The printed content commit is that folder's own git HEAD. A copy that sits insid
 
 `GET /api/quests/:id/debug` uses this same quest check for one quest. Each character row names the open objective. The Creator opens it at `/creator/quests/debug?id=` and follows that id when the URL changes. Health quest hits link there. An admin can reset the open step.
 
+`GET /api/world/reachability` uses this same walk for the Creator world map. `from` overrides the start room. An unknown `from` is 404. The body lists each content room as reachable or not, marks instance templates, and lists unreachable islands with the same reason text as the health hits.
+
 ## GitHub Actions
 
 ```yaml

@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import { navigateTo } from "yrv";
   import { getAuth } from "../auth.js";
-  import { getMinimalRoomsAsync, batchUpdateCoordsAsync } from "../api/world.js";
+  import { getMinimalRoomsAsync, batchUpdateCoordsAsync, getWorldReachabilityAsync } from "../api/world.js";
   import {
     getRoomsValueHelpAsync,
     createRoomAsync,
@@ -258,6 +258,7 @@
           isBidirectional,
           isCardinal,
           isCrossZone,
+          isHidden: !!exit.hidden || !!reverseExit?.hidden,
           sourceArea: room.area,
           targetArea: targetRoom.area,
         });
@@ -774,6 +775,92 @@
     viewBox = fitViewBox(filteredRooms.map((room) => room.coords), GRID_SCALE, 2);
   }
 
+  // Reachability layer. The walk is the same one content health uses.
+  let reachOn = false;
+  let reachReport = null;
+  let reachError = "";
+  let reachLoading = false;
+  let selectedIsland = -1;
+  let reachById = new Map();
+  $: reachById = new Map((reachReport?.rooms || []).map((room) => [room.id, room]));
+
+  async function loadReachability() {
+    if (!$authToken) return;
+    reachLoading = true;
+    reachError = "";
+    try {
+      reachReport = await getWorldReachabilityAsync($authToken);
+      selectedIsland = -1;
+    } catch (err) {
+      console.error("Reachability failed", err);
+      reachError = "Could not load reachability.";
+      reachReport = null;
+    } finally {
+      reachLoading = false;
+    }
+  }
+
+  function toggleReach() {
+    reachOn = !reachOn;
+    selectedIsland = -1;
+    if (reachOn && !reachReport && !reachLoading) {
+      loadReachability();
+    }
+  }
+
+  function roomMark(room) {
+    if (!reachOn || !reachReport) return "";
+    const row = reachById.get(room?.id);
+    if (!row) return "";
+    if (!row.reachable) return "unreachable";
+    if (row.instance) return "instance";
+    return "reachable";
+  }
+
+  function islandPinned(roomId) {
+    if (!reachOn || selectedIsland < 0) return false;
+    const island = reachReport?.islands?.[selectedIsland];
+    return !!island?.roomIds?.includes(roomId);
+  }
+
+  function islandLabel(island) {
+    const first = (rooms || []).find((room) => room.id === island.roomIds?.[0]);
+    return first?.name || island.roomIds?.[0] || "Island";
+  }
+
+  function showIsland(index) {
+    if (selectedIsland === index) {
+      selectedIsland = -1;
+      fitView();
+      return;
+    }
+    selectedIsland = index;
+    const ids = new Set(reachReport?.islands?.[index]?.roomIds || []);
+    const coords = filteredRooms.filter((room) => ids.has(room.id)).map((room) => room.coords);
+    viewBox = fitViewBox(coords, GRID_SCALE, 2);
+  }
+
+  function edgeLook(edge) {
+    if (!reachOn || !reachReport) {
+      return {
+        color: edge.isCrossZone ? "#e06040" : (edge.isCardinal ? "#888" : "#b08050"),
+        dash: edge.isCrossZone ? "8,4" : (edge.isCardinal ? "none" : "4,3"),
+        width: edge.isCrossZone ? 2 : 1.5,
+      };
+    }
+    const source = reachById.get(edge.sourceId);
+    const target = reachById.get(edge.targetId);
+    const unreachable = (source && !source.reachable) || (target && !target.reachable);
+    const instance = !unreachable && (source?.instance || target?.instance);
+    let color = "#16a34a";
+    if (unreachable) color = "#ef4444";
+    else if (instance) color = "#6366f1";
+    let dash = "none";
+    if (edge.isHidden) dash = "5 4";
+    else if (!edge.isBidirectional) dash = "2 4";
+    return { color, dash, width: unreachable ? 2 : 1.5 };
+  }
+
   // Panel handlers
   function handleCancel() {
     selectedRoomId = null;
@@ -1041,6 +1128,15 @@
         </div>
       {/if}
 
+      <button
+        class="layer-btn"
+        class:on={reachOn}
+        type="button"
+        on:click={toggleReach}
+        title="Color rooms by reachability from the start room"
+      >
+        Reachability
+      </button>
       <button class="icon-btn" on:click={fitView} title="Fit view">
         <span class="material-symbols-outlined">fit_screen</span>
       </button>
@@ -1118,17 +1214,15 @@
               {#each edges as edge}
                 {@const source = coordsToPixel(edge.sourceCoords)}
                 {@const target = coordsToPixel(edge.targetCoords)}
-                {@const edgeColor = edge.isCrossZone ? '#e06040' : (edge.isCardinal ? '#888' : '#b08050')}
-                {@const dashArray = edge.isCrossZone ? '8,4' : (edge.isCardinal ? 'none' : '4,3')}
-                {@const strokeWidth = edge.isCrossZone ? 2 : 1.5}
+                {@const look = edgeLook(edge)}
                 <line
                   x1={source.x}
                   y1={source.y}
                   x2={target.x}
                   y2={target.y}
-                  stroke={edgeColor}
-                  stroke-width={strokeWidth}
-                  stroke-dasharray={dashArray}
+                  stroke={look.color}
+                  stroke-width={look.width}
+                  stroke-dasharray={look.dash}
                   class="edge-line"
                 />
                 {#if !edge.isBidirectional}
@@ -1139,7 +1233,7 @@
                   <polygon
                     points="-7,-4 0,0 -7,4"
                     transform="translate({midX}, {midY}) rotate({angle})"
-                    fill={edgeColor}
+                    fill={look.color}
                   />
                 {/if}
               {/each}
@@ -1187,6 +1281,8 @@
                   selected={selectedRoomId === room.id}
                   dragging={dragging?.roomId === room.id}
                   areaColor={getRoomAreaColor(room)}
+                  mark={roomMark(room)}
+                  pinned={islandPinned(room.id)}
                   on:select={handleRoomSelect}
                   on:dragstart={handleRoomDragStart}
                   on:exitdragstart={handleExitDragStart}
@@ -1216,6 +1312,36 @@
             <div class="info-title">TalesMUD World Map</div>
             <div class="info-hint">Scroll to zoom · Drag to pan · Hover for details</div>
             <div class="info-stats">Rooms: {filteredRooms.length}</div>
+            {#if reachOn}
+              <div class="reach-block">
+                {#if reachLoading}
+                  <p>Loading reachability…</p>
+                {:else if reachError}
+                  <p>{reachError}</p>
+                {:else if reachReport}
+                  <p>Start {reachReport.startRoomId || "unknown"}</p>
+                  {#if (reachReport.islands || []).length === 0}
+                    <p>Every room is reachable.</p>
+                  {:else}
+                    <p>{reachReport.islands.length} unreachable {reachReport.islands.length === 1 ? "island" : "islands"}</p>
+                    <div class="reach-list">
+                      {#each reachReport.islands as island, index (island.roomIds?.[0] || index)}
+                        <button
+                          class="reach-island"
+                          class:on={selectedIsland === index}
+                          type="button"
+                          on:click={() => showIsland(index)}
+                        >
+                          <span class="reach-name">{islandLabel(island)}</span>
+                          <span class="reach-count">{island.roomIds.length}</span>
+                          <span class="reach-reason">{island.reason}</span>
+                        </button>
+                      {/each}
+                    </div>
+                  {/if}
+                {/if}
+              </div>
+            {/if}
           </div>
 
           <!-- Zoom controls -->
@@ -1270,6 +1396,24 @@
                 <svg width="30" height="10"><line x1="0" y1="5" x2="30" y2="5" stroke="#b08050" stroke-width="1.5" stroke-dasharray="4,3"/></svg>
                 <span class="legend-name">Special exit</span>
               </div>
+              {#if reachOn}
+                <div class="legend-item connection-type">
+                  <span class="legend-swatch" style="background: #16a34a;"></span>
+                  <span class="legend-name">Reachable</span>
+                </div>
+                <div class="legend-item connection-type">
+                  <span class="legend-swatch" style="background: #6366f1;"></span>
+                  <span class="legend-name">Instance</span>
+                </div>
+                <div class="legend-item connection-type">
+                  <span class="legend-swatch" style="background: #ef4444;"></span>
+                  <span class="legend-name">Unreachable</span>
+                </div>
+                <div class="legend-item connection-type">
+                  <svg width="30" height="10"><line x1="0" y1="5" x2="30" y2="5" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,4"/></svg>
+                  <span class="legend-name">Hidden exit</span>
+                </div>
+              {/if}
             </div>
           </div>
 
@@ -1428,6 +1572,32 @@
     transition: all 0.2s ease;
   }
 
+  .layer-btn {
+    height: 36px;
+    padding: 0 12px;
+    background: #252540;
+    border: 1px solid #3a3a5a;
+    border-radius: 6px;
+    color: #cbd5e1;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .layer-btn.on {
+    background: #14532d;
+    border-color: #16a34a;
+    color: #dcfce7;
+  }
+
+  .layer-btn:hover {
+    background: #333355;
+  }
+
+  .layer-btn.on:hover {
+    background: #166534;
+  }
+
   .icon-btn:hover {
     background: #333355;
     color: #fff;
@@ -1518,6 +1688,60 @@
   .info-stats {
     font-size: 11px;
     color: #666;
+  }
+
+  .reach-block {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid #3a3a5a;
+    max-width: 280px;
+    font-size: 12px;
+    color: #cbd5e1;
+  }
+
+  .reach-block p {
+    margin: 0 0 6px;
+  }
+
+  .reach-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+
+  .reach-island {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    text-align: left;
+    background: #1a1a2e;
+    border: 1px solid #7f1d1d;
+    border-radius: 6px;
+    color: #fecaca;
+    padding: 6px 8px;
+    cursor: pointer;
+  }
+
+  .reach-island.on {
+    border-color: #ef4444;
+    background: #450a0a;
+  }
+
+  .reach-name {
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .reach-count {
+    color: #fca5a5;
+  }
+
+  .reach-reason {
+    flex-basis: 100%;
+    color: #cbd5e1;
+    line-height: 1.35;
   }
 
   .controls {

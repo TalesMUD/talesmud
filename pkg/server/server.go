@@ -367,6 +367,7 @@ func (app *app) setupRoutes() {
 
 			// Creator quality diagnostics
 			creator.GET("diagnostics/world", validationHandler.WorldDiagnostics)
+			creator.GET("world/reachability", healthHandler.Reachability)
 			creator.GET("health", healthHandler.Get)
 			creator.PUT("health/mute", healthHandler.Mute)
 			creator.GET("health/drift", healthHandler.Drift)

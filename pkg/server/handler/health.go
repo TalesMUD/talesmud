@@ -48,6 +48,25 @@ func (h *HealthHandler) loaders() healthLoaders {
 	}
 }
 
+// Reachability returns the world-map layer. from overrides the start room.
+func (h *HealthHandler) Reachability(c *gin.Context) {
+	if h == nil || h.Facade == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "world reachability is unavailable"})
+		return
+	}
+	world, err := contenthealth.WorldFromFacade(h.Facade)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	view, ok := contenthealth.MapReachabilityView(world, c.Query("from"))
+	if !ok {
+		c.JSON(http.StatusNotFound, gin.H{"error": "start room not found"})
+		return
+	}
+	c.JSON(http.StatusOK, view)
+}
+
 // Get returns the content-health report.
 func (h *HealthHandler) Get(c *gin.Context) {
 	report, err := contenthealth.RunFromFacade(h.Facade, h.Health)
