@@ -16,6 +16,8 @@
   import WorldEditor from "./creator/GridWorldEditor.svelte";
   import SettingsEditor from "./creator/SettingsEditor.svelte";
   import WorldHealth from "./creator/WorldHealth.svelte";
+  import Players from "./creator/Players.svelte";
+  import AuditLog from "./creator/AuditLog.svelte";
   import Characters from "./characters/Characters.svelte";
   import NewCharacter from "./characters/NewCharacter.svelte";
   import UserForm from "./UserForm.svelte";
@@ -96,6 +98,16 @@
   <Route exact path="/creator/settings">
     <CreatorLayout>
       <SettingsEditor />
+    </CreatorLayout>
+  </Route>
+  <Route exact path="/creator/players">
+    <CreatorLayout>
+      <Players />
+    </CreatorLayout>
+  </Route>
+  <Route exact path="/creator/audit">
+    <CreatorLayout>
+      <AuditLog />
     </CreatorLayout>
   </Route>
   <Route exact path="/manage/users">

@@ -13,6 +13,10 @@
   export let detail = "";
   export let title = "";
   export let confirmLabel = "Delete";
+  /** Replaces the delete warning. Ops dialogs pass their own line. */
+  export let hint = "This removes it from the world. There is no undo.";
+  /** "danger" keeps the red button. "ops" is for live actions. */
+  export let tone = "danger";
 
   const dispatch = createEventDispatcher();
 
@@ -56,10 +60,12 @@
       {#if detail}
         <p class="cd-detail">{detail}</p>
       {/if}
-      <p class="cd-hint">This removes it from the world. There is no undo.</p>
+      {#if hint}
+        <p class="cd-hint">{hint}</p>
+      {/if}
       <div class="cd-actions">
         <button class="cd-cancel" type="button" on:click={cancel}>Cancel</button>
-        <button class="cd-delete" type="button" on:click={confirm}>{confirmLabel}</button>
+        <button class={tone === "ops" ? "cd-run" : "cd-delete"} type="button" on:click={confirm}>{confirmLabel}</button>
       </div>
     </div>
   </div>
@@ -156,5 +162,15 @@
 
   .cd-delete:hover {
     background: #ef4444;
+  }
+
+  .cd-run {
+    background: #b45309;
+    color: #fff;
+    border: 1px solid #92400e;
+  }
+
+  .cd-run:hover {
+    background: #d97706;
   }
 </style>
