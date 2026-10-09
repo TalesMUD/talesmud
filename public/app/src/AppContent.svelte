@@ -27,7 +27,7 @@
   import GuestStatistics from "./admin/GuestStatistics.svelte";
 </script>
 
-<main class="min-h-[calc(100vh-72px)]">
+<main class="min-h-[calc(100vh-var(--app-nav-height,72px))]">
   <Route exact path="/account" component="{UserForm}" />
   <!-- yrv only matches Route components that are direct children of Router, so we
        define creator sub-routes here and use Creator as a shared layout shell. -->

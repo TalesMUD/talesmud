@@ -256,7 +256,7 @@
 </script>
 
 {#if isAdmin}
-<div class="flex flex-col h-[calc(100vh-128px)]">
+<div class="flex h-full min-h-0 flex-col">
   <div class="px-6 pt-5 pb-3 flex-shrink-0">
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
       <div class="space-y-1">
@@ -270,7 +270,7 @@
     </div>
   </div>
 
-  <div class="flex-1 overflow-y-auto px-6 pb-5 thin-scrollbar space-y-4">
+  <div class="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 pb-5 thin-scrollbar">
     {#if error}
       <div class="rounded-md border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-100">{error}</div>
     {/if}

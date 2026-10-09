@@ -1362,7 +1362,8 @@
   .world-editor-page {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 120px);
+    height: 100%;
+    min-height: 0;
     padding: 16px;
   }
 

@@ -699,9 +699,19 @@
 </div>
 
 <style>
+  .row {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    padding: 16px 24px 20px;
+    box-sizing: border-box;
+  }
+
   .editor-container {
     display: flex;
-    height: 80vh;
+    flex: 1;
+    min-height: 0;
     background: #1a1a1a;
     border-radius: 8px;
     overflow: hidden;
@@ -966,7 +976,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 80vh;
+    flex: 1;
+    min-height: 12rem;
     color: #00bcd4;
     font-size: 18px;
   }

@@ -264,7 +264,7 @@
     Please log in to access Creator tools.
   </div>
 {:else}
-  <div class="flex flex-col h-[calc(100vh-128px)]">
+  <div class="flex h-full min-h-0 flex-col">
     <!-- Header: Title + Action Buttons -->
     <div class="px-6 pt-5 pb-3 flex-shrink-0">
       <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -315,10 +315,10 @@
     </div>
 
     <!-- Main content: side-by-side table + detail -->
-    <div class="flex-1 flex overflow-hidden px-6 pb-5 gap-5">
+    <div class="flex min-h-0 flex-1 gap-5 overflow-hidden px-6 pb-5">
       <!-- Data Table Panel -->
       <div
-        class="flex-shrink-0 overflow-y-auto transition-all duration-200 thin-scrollbar"
+        class="min-h-0 flex-shrink-0 overflow-y-auto transition-all duration-200 thin-scrollbar"
         style={$store.detailOpen ? "width: 44%; min-width: 380px;" : "width: 100%;"}
       >
         <DataTable
@@ -339,7 +339,7 @@
 
       <!-- Detail Panel (visible when an element is selected and detail is open) -->
       {#if $store.detailOpen && $store.selectedElement}
-        <div class="flex-1 overflow-y-auto min-w-[400px] thin-scrollbar">
+        <div class="min-h-0 min-w-[400px] flex-1 overflow-y-auto thin-scrollbar">
           <!-- Detail header bar -->
           <div class="card px-4 py-2.5 mb-4 flex items-center justify-between">
             <div class="flex items-center gap-3 min-w-0">

@@ -125,7 +125,7 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
     └── world              # World map (basic auth)
 ```
 
-`GET /api/server-info` adds `envLabel` from `ADMIN_ENV_LABEL` and `host` from `ADMIN_ENV_HOST` or the request host. The Creator header shows a red `{label} · {host}` badge only when the label is non-empty.
+`GET /api/server-info` adds `envLabel` from `ADMIN_ENV_LABEL` and `host` from `ADMIN_ENV_HOST` or the request host. The top bar shows a red `{label} · {host}` badge only when the label is non-empty.
 
 Creator writes (POST/PUT/DELETE for rooms, items, NPCs, loot tables, spawners, dialogs, quests, scripts, skills, character templates, and settings) pass through `AuditWrites`. Each successful write stores actor, action, entity, before JSON, and after JSON in `audit_log`. Deletes keep the full before document. `POST /api/audit/:id/undo` (admin) restores that before state, or runs the stored inverse for a live op. Undo is refused when the row is not undoable, already undone, or the current document no longer matches the recorded after state. The undo itself is an audit row.
 
@@ -1344,6 +1344,8 @@ Onboarding components are in `src/onboarding/`:
 
 ### Admin/Creator App — Component Hierarchy
 
+The production Vite build restores the `browser` package export condition after the Svelte plugin. Without it, Vite 6 resolves Svelte's SSR entry, `onMount` is a no-op, and Rollup drops those callbacks.
+
 ```
 App.svelte (role-aware navigation: Creator/Admin links gated by user role)
 ├── AppContent.svelte (router)
@@ -1355,7 +1357,7 @@ App.svelte (role-aware navigation: Creator/Admin links gated by user role)
 │   ├── Characters.svelte
 │   │   ├── CharacterCard.svelte
 │   │   └── CharacterCreator.svelte
-│   ├── Creator.svelte (editor, creator/admin role)
+│   ├── Creator.svelte (left sidebar shell, creator/admin role)
 │   │   ├── CRUDEditor.svelte (shared master-detail layout)
 │   │   │   ├── ValidationPanel.svelte (inline validation issues)
 │   │   │   ├── DataTable.svelte (filterable, sortable data table)

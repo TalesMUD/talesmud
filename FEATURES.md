@@ -2015,10 +2015,17 @@ Creator editors share backend validation rules from `pkg/service/validation`:
 - Data table rows surface warning/error indicators when stored entities have diagnostics. An editor-specific row indicator is not used for NPC type.
 - Preview/test tools validate draft dialogs, quests, rooms, merchants, and Lua scripts before content is published into the world.
 
-### Creator Tabs
+### Creator navigation
+The Creator screens sit in a left sidebar instead of a horizontal tab row. Groups are World (Rooms, World / Zones, Health), Actors (NPCs, Character Templates, Items), Narrative (Dialogs, Dialog Graph, Quests), Systems (Skills, Scripts, Settings), and Operate (Players, Audit log). Players stays admin-only. Audit log stays visible to creators. `/creator` still opens Rooms. `?id=` links are unchanged. `/creator/quests/debug` stays on the Quests item.
+
+The sidebar collapses to an icon rail from its toggle or Ctrl+B / Cmd+B. The shortcut is ignored in inputs, textareas, selects, contenteditable editors (the script editor), and CodeMirror. Collapse and per-group folds persist in `localStorage` (`tales.creator.nav.v1`). The group that contains the current page opens on navigation. Below 1024px the rail is an off-canvas drawer: the top bar shows a menu button, and the backdrop, Escape, or a navigation click closes it.
+
+The top bar keeps the app links, a search box (`data-creator-search`, not wired yet; hidden under 640px so the bar stays one row), and the red LIVE badge when `ADMIN_ENV_LABEL` is set.
+
+### Creator screens
 1. **Rooms** - Full room editor (exits, actions, spawners, NPCs, items, scripts)
-2. **Items** - Item instances and templates
-3. **Item Templates** - Reusable item blueprints
+2. **Items** - Live item instances at `/creator/items`. That route stays available and is not in the sidebar.
+3. **Item Templates** - Reusable item blueprints. The sidebar entry is labeled Items.
 4. **NPCs** - NPC templates and unique NPCs
 5. **Dialogs** - Dialog tree editor
 6. **Quests** - Quest editor (objectives, rewards, prerequisites)
@@ -2027,11 +2034,11 @@ Creator editors share backend validation rules from `pkg/service/validation`:
 9. **Character Templates** - Archetype editor with modal item-template selection for starting gear
 10. **World Map** - Grid-based world visualization
 11. **World Health** - Content-health report (reachability, reveal scripts, impossible quests, bosses, pack rules, drift) plus cross-system diagnostics for broken entity references and suspicious content values, including character template starting item references
-12. **Players** - Admin only. Live characters (online, guest, zone, in combat; optional older rows), a side drawer, and confirmed ops: teleport (room picker), give item (template picker), take item (that character's inventory), end combat, quest complete/reset/abandon, and re-grant starter kit. Instance copies and cleanup sit on the same page. Creators do not see this tab.
+12. **Players** - Admin only. Live characters (online, guest, zone, in combat; optional older rows), a side drawer, and confirmed ops: teleport (room picker), give item (template picker), take item (that character's inventory), end combat, quest complete/reset/abandon, and re-grant starter kit. Instance copies and cleanup sit on the same page. Creators do not see this page.
 13. **Audit log** - Filterable creator and ops history, before/after JSON, and Undo for an admin
 
 ### Live Ops And Audit
-- `ADMIN_ENV_LABEL` (optional `ADMIN_ENV_HOST`) feeds `GET /api/server-info`. A non-empty label shows a red `LABEL · host` badge in the Creator header. Local servers leave the label empty.
+- `ADMIN_ENV_LABEL` (optional `ADMIN_ENV_HOST`) feeds `GET /api/server-info`. A non-empty label shows a red `LABEL · host` badge in the top bar. Local servers leave the label empty.
 - Live ops and live reads run on the game command loop through `Game.Call`. The HTTP handler does not edit an online character behind that loop.
 - Every op body must include `confirm: true`. The Players page and `OpsButtons` open the shared confirm dialog before the request. A success toast offers Undo only when the audit row is undoable.
 - `OpsButtons` modes are `character` (end combat, re-grant starter kit), `quest` (complete quest, abandon, reset quest, mark one step done, reset one step), and `npc` (heal, respawn, despawn, end combat) for a later NPC inspector. The component renders only when the signed-in user is an admin.

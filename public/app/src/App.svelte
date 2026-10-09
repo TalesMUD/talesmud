@@ -4,7 +4,9 @@
   import UserMenu from "./UserMenu.svelte";
   import { createAuth } from "./auth.js";
   import { getUser } from "./api/user.js";
+  import { getServerInfo } from "./api/live.js";
   import { userRole } from "./stores.js";
+  import { creatorDrawerOpen, creatorNavNarrow } from "./creator/creatorNavStore.js";
   import { onDestroy, onMount } from "svelte";
 
   const config = {
@@ -41,6 +43,19 @@
   let playMenuEl;
   let adminMenuOpen = false;
   let adminMenuEl;
+  let navEl;
+  let pathname = typeof window !== "undefined" ? window.location.pathname : "";
+
+  if (typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches) {
+    creatorNavNarrow.set(true);
+  }
+  let envLabel = "";
+  let envHost = "";
+  let removeNavWatch = () => {};
+
+  $: onCreator = pathname.startsWith("/creator");
+
+  $: if (!onCreator && $creatorDrawerOpen) creatorDrawerOpen.set(false);
 
   function togglePlayMenu(e) {
     e.preventDefault();
@@ -60,19 +75,76 @@
     if (adminMenuEl && !adminMenuEl.contains(e.target)) adminMenuOpen = false;
   }
 
+  function syncPath() {
+    const next = window.location.pathname || "/";
+    if (next !== pathname) creatorDrawerOpen.set(false);
+    pathname = next;
+  }
+
+  function syncNavHeight() {
+    if (!navEl) return;
+    document.documentElement.style.setProperty("--app-nav-height", `${navEl.offsetHeight}px`);
+  }
+
+  function toggleCreatorDrawer() {
+    creatorDrawerOpen.update((open) => !open);
+  }
+
   onMount(() => {
     document.addEventListener("click", onDocumentClick);
+    syncPath();
+    window.addEventListener("popstate", syncPath);
+    const mq = window.matchMedia("(max-width: 1023px)");
+    const applyNarrow = () => {
+      creatorNavNarrow.set(mq.matches);
+      if (!mq.matches) creatorDrawerOpen.set(false);
+    };
+    applyNarrow();
+    mq.addEventListener("change", applyNarrow);
+    syncNavHeight();
+    const observer = new ResizeObserver(syncNavHeight);
+    if (navEl) observer.observe(navEl);
+    getServerInfo()
+      .then((info) => {
+        envLabel = String(info?.envLabel || "").trim();
+        envHost = String(info?.host || "").trim();
+      })
+      .catch(() => {
+        envLabel = "";
+      });
+    removeNavWatch = () => {
+      window.removeEventListener("popstate", syncPath);
+      mq.removeEventListener("change", applyNarrow);
+      observer.disconnect();
+    };
   });
   onDestroy(() => {
     document.removeEventListener("click", onDocumentClick);
+    removeNavWatch();
   });
 </script>
 
 <Router>
-  <nav class="border-b border-slate-200 bg-white px-6 py-3 dark:border-slate-800 dark:bg-slate-900 sticky top-0 z-50">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-8">
-        <a href="/" class="flex items-center gap-2 font-bold text-xl tracking-tight">
+  <nav
+    class="sticky top-0 z-50 border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900 sm:px-6"
+    bind:this={navEl}
+  >
+    <div class="flex items-center gap-2 sm:gap-3">
+      {#if onCreator && $creatorNavNarrow}
+        <button
+          id="creator-nav-toggle"
+          class="rounded-md p-1.5 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 lg:hidden"
+          type="button"
+          aria-label={$creatorDrawerOpen ? "Close creator navigation" : "Open creator navigation"}
+          aria-expanded={$creatorDrawerOpen}
+          aria-controls="creator-nav-drawer"
+          on:click={toggleCreatorDrawer}
+        >
+          <span class="material-symbols-outlined">menu</span>
+        </button>
+      {/if}
+      <div class="flex min-w-0 items-center gap-8">
+        <a href="/" class="flex shrink-0 items-center gap-2 text-xl font-bold tracking-tight">
           <span class="material-symbols-outlined text-primary">auto_stories</span>
           <span>Tales</span>
         </a>
@@ -154,8 +226,29 @@
           <a class="hover:text-primary transition-colors" href="/news">News</a>
         </div>
       </div>
-      <div class="flex items-center gap-4">
-        <button class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors" type="button">
+      {#if onCreator}
+        <label class="ml-auto hidden min-w-0 max-w-md flex-1 items-center sm:flex">
+          <span class="sr-only">Search</span>
+          <span class="relative block w-full">
+            <span class="material-symbols-outlined pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-base text-slate-400" aria-hidden="true">search</span>
+            <input
+              class="h-8 w-full rounded-md border border-slate-200 bg-slate-50 pl-8 pr-3 text-xs text-slate-700 placeholder:text-slate-400 focus:border-primary focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+              type="search"
+              placeholder="Search rooms, NPCs, items…"
+              aria-label="Search"
+              autocomplete="off"
+              data-creator-search
+            />
+          </span>
+        </label>
+      {/if}
+      <div class="ml-auto flex shrink-0 items-center gap-2 whitespace-nowrap sm:gap-3 {onCreator ? 'sm:ml-0' : ''}">
+        {#if envLabel}
+          <span class="shrink-0 whitespace-nowrap rounded bg-red-600 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-white">
+            {envLabel}{envHost ? ` · ${envHost}` : ""}
+          </span>
+        {/if}
+        <button class="shrink-0 rounded-full p-2 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800" type="button">
           <span class="material-symbols-outlined">notifications</span>
         </button>
         <UserMenu />

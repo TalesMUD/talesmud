@@ -56,8 +56,8 @@
     Please log in to access Creator tools.
   </div>
 {:else}
-  <div class="flex h-[calc(100vh-128px)]">
-    <section class="flex-1 overflow-y-auto">
+  <div class="flex h-full min-h-0">
+    <section class="min-h-0 flex-1 overflow-y-auto">
       <div class="p-8 pb-4">
         <div class="max-w-3xl mx-auto">
           <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
