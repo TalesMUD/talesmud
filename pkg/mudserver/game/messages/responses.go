@@ -610,10 +610,12 @@ type RewardBreakdown struct {
 
 // LootReveal is one dropped item for the victory panel.
 // Quality is normal, magic, rare, legendary, or mythic. Quantity is at least 1.
+// Unique marks a one-per-character drop so the client can frame the row.
 type LootReveal struct {
 	Name     string `json:"name"`
 	Quality  string `json:"quality,omitempty"`
 	Quantity int32  `json:"quantity,omitempty"`
+	Unique   bool   `json:"unique,omitempty"`
 }
 
 // LevelUpCallout is set when this victory raised the character's level.

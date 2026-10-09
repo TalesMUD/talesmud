@@ -365,21 +365,36 @@ func (c *Character) HasCollectedCopyItem(templateID string) bool {
 	return false
 }
 
-// CountOfTemplate counts inventory plus equipped copies of a catalog id.
+// CountOfTemplate counts bag, equipped, and nested container copies of a catalog id.
+// There is no separate item bank. A container in the bag or on the body is the only extra store.
 func (c *Character) CountOfTemplate(templateID string) int32 {
 	if c == nil || templateID == "" {
 		return 0
 	}
-	n := c.Inventory.CountMatchingTemplate(templateID)
+	var n int32
+	for _, it := range c.Inventory.Items {
+		n += countHeldTemplate(it, templateID, 0)
+	}
 	for _, it := range c.EquippedItems {
-		if it == nil || !it.MatchesTemplate(templateID) {
-			continue
-		}
-		if it.Quantity > 0 {
-			n += it.Quantity
+		n += countHeldTemplate(it, templateID, 0)
+	}
+	return n
+}
+
+func countHeldTemplate(item *items.Item, templateID string, depth int) int32 {
+	if item == nil || depth > 8 {
+		return 0
+	}
+	var n int32
+	if item.MatchesTemplate(templateID) {
+		if item.Quantity > 0 {
+			n += item.Quantity
 		} else {
 			n++
 		}
+	}
+	for _, child := range item.Items {
+		n += countHeldTemplate(child, templateID, depth+1)
 	}
 	return n
 }

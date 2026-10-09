@@ -329,9 +329,22 @@ type YAMLLootTable struct {
 type YAMLLootEntry struct {
 	ItemTemplateID string  `yaml:"itemTemplateId"`
 	DropChance     float64 `yaml:"dropChance"`
-	MinQuantity    int32   `yaml:"minQuantity"`
-	MaxQuantity    int32   `yaml:"maxQuantity"`
-	Guaranteed     bool    `yaml:"guaranteed"`
+	// Chance is an alias of DropChance. A non-zero chance wins.
+	Chance      float64 `yaml:"chance"`
+	MinQuantity int32   `yaml:"minQuantity"`
+	MaxQuantity int32   `yaml:"maxQuantity"`
+	Guaranteed  bool    `yaml:"guaranteed"`
+	Rarity      string  `yaml:"rarity"`
+	BossOnly    bool    `yaml:"boss_only"`
+	BossOnlyAlt bool    `yaml:"bossOnly"`
+}
+
+// EffectiveDropChance returns chance when it is set, otherwise dropChance.
+func (e YAMLLootEntry) EffectiveDropChance() float64 {
+	if e.Chance != 0 {
+		return e.Chance
+	}
+	return e.DropChance
 }
 
 // YAMLSpawner represents an NPC spawner in YAML format

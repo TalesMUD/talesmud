@@ -388,6 +388,34 @@ func TestBareAttackStartsAndAdvances(t *testing.T) {
 	}
 }
 
+func TestReleaseToSafetyRelocatesOrphanCloneID(t *testing.T) {
+	ruleset.SetSafeRoom(ruleset.SafeStay)
+	t.Cleanup(ruleset.Reset)
+	g, facade := newNPCTestGame(t)
+	storeTestRoom(t, facade, "haven", nil)
+	char, err := facade.CharactersService().Store(&characters.Character{
+		Entity:      &entities.Entity{ID: "char-orphan"},
+		Name:        "Hero",
+		BelongsUser: *traits.BelongsToUser("user-orphan"),
+		CurrentRoom: traits.CurrentRoom{CurrentRoomID: "R0210~zzzz"},
+		BoundRoomID: "haven",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if g.RoomInstances.IsClone(char.CurrentRoomID) {
+		t.Fatal("orphan id must not be in the live map")
+	}
+	g.ReleaseToSafety(char.ID)
+	stored, err := facade.CharactersService().FindByID(char.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stored.CurrentRoomID != "haven" {
+		t.Fatalf("orphan copy stayed at %s", stored.CurrentRoomID)
+	}
+}
+
 func TestEnsureLivingRoomUsesBind(t *testing.T) {
 	g, facade := newNPCTestGame(t)
 	storeTestRoom(t, facade, "haven", nil)

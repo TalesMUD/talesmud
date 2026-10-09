@@ -1135,6 +1135,7 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 
 	// Get the room for loot drops
 	room, roomErr := c.game.Facade.RoomsService().FindByID(instance.OriginRoomID)
+	lootRecipients := victoryRecipientIDs(c, instance, instance.GetLivingPlayers())
 
 	for _, enemy := range instance.Enemies {
 		if enemy.IsAlive || enemy.Summoned {
@@ -1185,9 +1186,15 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 				}
 			}
 
-			lootResult, err := DropLootFromNPC(c.game.Facade, npcData, room, killerLevel)
+			lootResult, err := DropLootFromNPCFor(c.game.Facade, npcData, room, killerLevel, lootRecipients)
 			if err == nil && lootResult != nil {
-				for _, reveal := range lootReveals(lootResult.Items) {
+				for _, item := range lootResult.RareUnique {
+					if item == nil || strings.TrimSpace(item.Name) == "" || c.game == nil {
+						continue
+					}
+					c.game.sendMessage <- uniqueDropMessage(room.ID, npcData.GetDisplayName(), item.Name)
+				}
+				for _, reveal := range lootReveals(lootResult.Items, lootResult.RareUnique) {
 					allLoot = append(allLoot, reveal)
 					if reveal.Quantity > 1 {
 						allLootItems = append(allLootItems, fmt.Sprintf("%s (x%d)", reveal.Name, reveal.Quantity))

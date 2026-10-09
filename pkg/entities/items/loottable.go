@@ -43,6 +43,12 @@ type LootEntry struct {
 
 	// RequiredTags are tags the player must have for this drop (e.g., quest progress)
 	RequiredTags []string `bson:"requiredTags,omitempty" json:"requiredTags,omitempty"`
+
+	// Rarity is a content tag. "unique" means one copy per character.
+	Rarity string `bson:"rarity,omitempty" json:"rarity,omitempty"`
+
+	// BossOnly skips this entry unless the dead NPC's difficulty is boss.
+	BossOnly bool `bson:"bossOnly,omitempty" json:"bossOnly,omitempty"`
 }
 
 // LootTables type alias for slice of LootTable pointers

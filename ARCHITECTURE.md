@@ -122,7 +122,7 @@ Combat start and action `CombatantView` snapshots include participant type, clas
 
 The play embed includes `fonts/MaterialIcons-Regular.woff2` and its Apache license. `icons.css` declares the font with `font-display: block`, and the initial HTML preloads it. The client enables icon visibility after the local FontFace loads; failed loads leave the ligatures hidden. Icon rendering no longer depends on a Google Fonts request.
 
-Private cellars: an exit with `type: instance` or `instance: true`, or a normal exit from a non-instance room into a room tagged `instance`/`instanced`, clones the dest room plus rooms reachable without returning to the hub. Each character gets their own copy; the hub stays shared. Empty instances are deleted.
+Private cellars: an exit with `type: instance` or `instance: true`, or a normal exit from a non-instance room into a room tagged `instance`/`instanced`, clones the dest room plus rooms reachable without returning to the hub. Each character gets their own copy; the hub stays shared. Empty instances are deleted. `MUDServer.Run` sweeps persisted `~` room rows, NPC/spawner rows that are copies, and characters saved in a copy or a missing room before the game loop and before `ListenAndServe`. Relocation order is hub, return exit, start room, bind room. The one-line login notice is in-memory until that character connects.
 
 `GET /api/characters/:id/map` returns that character's fog-of-war atlas. `pkg/worldmap` lays out authored area-local coordinates and compass exits deterministically, then translates zones onto compact centers from embedded `map_layout.json` (unknown zones attach through inter-zone compass exits). Anonymous biome ground and broad land bridges form a connected continent without inventing rooms/exits. Above-ground interiors project onto graph-nearest exterior anchors, including upstairs rooms; outdoor positive Z is elevation on Overworld, while explicit depth and underground context use Lower. Reveal applies discovered rooms, unnamed neighbors through visible exits, area hulls, semantic layers, and fog-masked ground. Discovered places include exits, danger, a short summary, and optional NPC/enemy residents. Hidden exits and entrance stamps stay hidden until revealed. The JSON is the contract for both the web atlas widget and a future mobile renderer.
 
@@ -910,6 +910,8 @@ type EnemyTrait struct {
     LowHealthThreshold float64 // 0 = 0.30; otherwise a fraction in (0, 1)
 }
 ```
+
+Loot entries carry `rarity` (`unique`), `bossOnly`, and `dropChance`. YAML `chance` is an alias stored as `dropChance` (a non-zero chance wins). `bossOnly` rolls only when difficulty is `boss`. A unique entry is skipped when every victory recipient already holds that template in the bag, equipped gear, or a nested container. There is no separate item bank. A `rarity: unique` drop sends a room `combatEvent` with hook `unique`. A template `unique` flag caps ownership and does not send that chip.
 
 #### MerchantTrait
 

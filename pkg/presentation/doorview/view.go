@@ -57,6 +57,9 @@ func (v *View) OnConnect(user *entities.User, send func(any)) {
 		if ch, err := v.Game.GetFacade().CharactersService().FindByID(user.LastCharacter); err == nil && ch != nil {
 			v.Game.ApplySessionStart(ch)
 			v.Game.EnsureLivingRoom(ch)
+			if line := v.Game.TakeRelocationNotice(ch.ID); line != "" {
+				v.pushRecent(user.ID, []string{line})
+			}
 		}
 	}
 	v.paint(user, send)

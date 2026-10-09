@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/talesmud/talesmud/pkg/entities/characters"
+	"github.com/talesmud/talesmud/pkg/instances"
 	"github.com/talesmud/talesmud/pkg/ruleset"
 	"github.com/talesmud/talesmud/pkg/service"
 )
@@ -35,20 +36,71 @@ func (g *Game) ApplySessionStart(char *characters.Character) {
 
 // EnsureLivingRoom moves a character whose saved room no longer exists
 // to the bind room, or the start room when the bind is also gone.
+// An orphan copy (the id contains the instance marker, and the live manager
+// does not know it) uses the startup sweep order: hub, return exit, start
+// room, then bind. A live copy is left where it is.
 func (g *Game) EnsureLivingRoom(char *characters.Character) {
 	if g == nil || g.Facade == nil || char == nil || char.ID == "" {
 		return
 	}
-	if char.CurrentRoomID != "" {
+	// A live copy is a real place to stand. Only an orphan marker, or a
+	// missing room, is relocated here.
+	orphan := g.orphanInstanceCopy(char.CurrentRoomID)
+	if char.CurrentRoomID != "" && !orphan {
 		if room, err := g.Facade.RoomsService().FindByID(char.CurrentRoomID); err == nil && room != nil {
 			return
 		}
 	}
-	dest := g.fallbackRoom(char)
+	dest := ""
+	if orphan {
+		if all, err := loadRoomMap(g.Facade.RoomsService()); err == nil {
+			start := service.ResolveStartRoomID(g.Facade.ServerSettingsService(), g.Facade.RoomsService())
+			if !roomPresent(all, start) {
+				start = ""
+			}
+			fallback := ""
+			if roomPresent(all, char.BoundRoomID) {
+				fallback = char.BoundRoomID
+			}
+			dest = instances.RelocationDest(all, char.CurrentRoomID, start, fallback)
+		}
+	}
+	if dest == "" {
+		dest = g.fallbackRoom(char)
+	}
 	if dest == "" || dest == char.CurrentRoomID {
 		return
 	}
-	g.RelocateCharacter(char, char.BelongsUserID, dest)
+	g.clearOrphanCombat(char)
+	moved, ok := g.RelocateCharacter(char, char.BelongsUserID, dest)
+	if !ok || !orphan || moved == nil {
+		return
+	}
+	name := moved.Name
+	if name == "" {
+		name = moved.ID
+	}
+	g.noteRelocation(char.ID, name)
+}
+
+// inInstanceCopy is true for a live manager clone and for any id that still
+// carries the instance marker after the manager was emptied.
+func (g *Game) inInstanceCopy(roomID string) bool {
+	if instances.IsCloneID(roomID) {
+		return true
+	}
+	return g != nil && g.RoomInstances != nil && roomID != "" && g.RoomInstances.IsClone(roomID)
+}
+
+// orphanInstanceCopy is a saved copy the live manager does not know about.
+func (g *Game) orphanInstanceCopy(roomID string) bool {
+	if !instances.IsCloneID(roomID) {
+		return false
+	}
+	if g != nil && g.RoomInstances != nil && g.RoomInstances.IsClone(roomID) {
+		return false
+	}
+	return true
 }
 
 // ReleaseToSafety ends a live fight without a defeat penalty. A character
@@ -75,7 +127,7 @@ func (g *Game) ReleaseToSafety(characterID string) {
 		char.CombatInstanceID = ""
 		_ = g.Facade.CharactersService().Update(char.ID, char)
 	}
-	inClone := g.RoomInstances != nil && char.CurrentRoomID != "" && g.RoomInstances.IsClone(char.CurrentRoomID)
+	inClone := g.inInstanceCopy(char.CurrentRoomID)
 	if !inClone && !inCombat {
 		return
 	}

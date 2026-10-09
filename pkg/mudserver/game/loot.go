@@ -17,6 +17,9 @@ import (
 type LootDropResult struct {
 	Items []*items.Item
 	Gold  int64
+	// RareUnique lists drops from a rarity:unique loot entry.
+	// Template-unique trophies stay in Items and are not announced.
+	RareUnique []*items.Item
 }
 
 // DropLootFromNPC handles loot drops when an NPC dies
@@ -28,6 +31,13 @@ type LootDropResult struct {
 // - killerLevel: the level of the player who killed the NPC (for level-restricted drops)
 // Returns: the loot result and any error
 func DropLootFromNPC(facade service.Facade, deadNPC *npc.NPC, room *rooms.Room, killerLevel int32) (*LootDropResult, error) {
+	return DropLootFromNPCFor(facade, deadNPC, room, killerLevel, nil)
+}
+
+// DropLootFromNPCFor drops loot for one dead NPC.
+// recipientIDs are the characters the drop is for. A unique entry is skipped
+// only when every one of them already holds that template.
+func DropLootFromNPCFor(facade service.Facade, deadNPC *npc.NPC, room *rooms.Room, killerLevel int32, recipientIDs []string) (*LootDropResult, error) {
 	result := &LootDropResult{
 		Items: make([]*items.Item, 0),
 		Gold:  0,
@@ -65,19 +75,25 @@ func DropLootFromNPC(facade service.Facade, deadNPC *npc.NPC, room *rooms.Room, 
 
 	// Process loot table
 	if enemy.LootTableID != "" {
-		lootResult, err := facade.LootTablesService().RollLoot(enemy.LootTableID, killerLevel, 0)
+		boss := isBossDifficulty(enemy.Difficulty)
+		lootResult, err := facade.LootTablesService().RollLootInContext(enemy.LootTableID, killerLevel, 0, service.LootRollContext{
+			Boss: boss,
+			Owns: uniqueAlreadyHeld(facade, recipientIDs),
+		})
 		if err != nil {
 			log.WithError(err).WithField("lootTableID", enemy.LootTableID).Warn("Failed to roll loot table")
 		} else if lootResult != nil {
+			kept := lootResult.Items
 			// Apply max drops limit
-			if enemy.MaxDrops > 0 && int32(len(lootResult.Items)) > enemy.MaxDrops {
+			if enemy.MaxDrops > 0 && int32(len(kept)) > enemy.MaxDrops {
 				// Randomly shuffle and take first MaxDrops items
-				shuffleItems(lootResult.Items)
-				lootResult.Items = lootResult.Items[:enemy.MaxDrops]
+				shuffleItems(kept)
+				kept = kept[:enemy.MaxDrops]
 			}
 
-			result.Items = append(result.Items, lootResult.Items...)
+			result.Items = append(result.Items, kept...)
 			result.Gold += lootResult.Gold
+			result.RareUnique = append(result.RareUnique, rareStillDropped(lootResult.RareUnique, kept)...)
 		}
 	}
 
@@ -124,7 +140,8 @@ func shuffleItems(items []*items.Item) {
 }
 
 // lootReveals is the victory-panel list for items already dropped in the room.
-func lootReveals(dropped []*items.Item) []messages.LootReveal {
+// Unique is set only for items in announced, which are rarity:unique drops.
+func lootReveals(dropped []*items.Item, announced []*items.Item) []messages.LootReveal {
 	if len(dropped) == 0 {
 		return nil
 	}
@@ -145,12 +162,72 @@ func lootReveals(dropped []*items.Item) []messages.LootReveal {
 			Name:     item.Name,
 			Quality:  quality,
 			Quantity: qty,
+			Unique:   announcedDrop(item, announced),
 		})
 	}
 	if len(out) == 0 {
 		return nil
 	}
 	return out
+}
+
+func announcedDrop(item *items.Item, announced []*items.Item) bool {
+	for _, other := range announced {
+		if item != nil && item == other {
+			return true
+		}
+	}
+	return false
+}
+
+// rareStillDropped keeps rarity-unique items that survived the max-drops cut.
+func rareStillDropped(rare, kept []*items.Item) []*items.Item {
+	if len(rare) == 0 || len(kept) == 0 {
+		return nil
+	}
+	out := make([]*items.Item, 0, len(rare))
+	for _, item := range rare {
+		if announcedDrop(item, kept) {
+			out = append(out, item)
+		}
+	}
+	return out
+}
+
+// uniqueDropMessage is the room-wide gold chip for a rarity:unique drop.
+func uniqueDropMessage(roomID, npcName, itemName string) messages.MessageResponse {
+	msg := messages.NewRoomBasedMessage("SYSTEM", "UNIQUE: "+itemName)
+	msg.Audience = messages.MessageAudienceRoom
+	msg.AudienceID = roomID
+	msg.Style = "combatEvent"
+	msg.Hook = "unique"
+	msg.Source = npcName
+	return msg
+}
+
+// uniqueAlreadyHeld is true only when every recipient already holds the template.
+// An empty list, or a character that cannot be loaded, does not block the drop.
+func uniqueAlreadyHeld(facade service.Facade, recipientIDs []string) func(string) bool {
+	if facade == nil || len(recipientIDs) == 0 {
+		return nil
+	}
+	return func(templateID string) bool {
+		saw := false
+		for _, id := range recipientIDs {
+			if id == "" {
+				continue
+			}
+			ch, err := facade.CharactersService().FindByID(id)
+			if err != nil || ch == nil {
+				return false
+			}
+			saw = true
+			if ch.CountOfTemplate(templateID) < 1 {
+				return false
+			}
+		}
+		return saw
+	}
 }
 
 // FormatLootMessage creates a player-facing message about loot drops
