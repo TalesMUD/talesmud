@@ -1987,7 +1987,7 @@ All entity editors use a unified **filterable, sortable data table**:
 **MANDATORY UI GUIDELINE**:
 - **NEVER use `<select>` dropdowns for entity ID references**
 - **ALWAYS use `EntitySelectButton` + `EntitySelectModal`**
-- Provides filterable DataTable for selecting rooms, NPCs, items, scripts, dialogs, quests
+- Provides filterable DataTable for selecting rooms, NPCs, items, scripts, dialogs, quests, and loot tables
 - Scales to hundreds of entries with search and filter
 
 ```svelte
@@ -2005,8 +2005,13 @@ All entity editors use a unified **filterable, sortable data table**:
 Creator editors share backend validation rules from `pkg/service/validation`:
 - Inline validation panels show errors and warnings for the selected draft entity.
 - Save/update requests for rooms, items, NPCs, NPC spawners, dialogs, loot tables, quests, and scripts reject error-severity broken references before data is stored.
-- World Health runs cross-world diagnostics and reports structured issues with `severity`, `entityType`, `entityId`, `field`, `code`, and `message`.
-- Data table rows surface warning/error indicators when stored entities have diagnostics.
+- World Health runs cross-world diagnostics and reports structured issues with `severity`, `entityType`, `entityId`, `field`, `code`, and `message`. The message column is visible and wraps. Room, NPC, dialog, quest, item, and script IDs link to that editor with `?id=`.
+- Dialog validation allows a node ID to be reached more than once, including shared branches and cycles. It reports `duplicate_dialog_node` only when two definitions of the same node disagree. Option edges that point at a node are not a second definition.
+- Merchant stock with `maxQuantity` -1 is unlimited. Only values below -1 are warned.
+- Deletes that call a DELETE API open a confirm dialog (entity type, name, and ID) before the request. The same dialog covers map room delete, saved spawner delete, room item removal, special exit removal, dialog-graph option and answer removal, and bulk deletion of deprecated scripts. Unsaved form rows (patrol stops, quest objectives, cardinal exits, room actions, alternate texts) stay immediate.
+- Data tables show the full entity ID, with a tooltip and a copy button. The row dot marks validation errors and warnings. NPC type (Enemy, Merchant, both, Neutral) is a text badge.
+- Opening a creator editor URL with `?id=<entityId>` selects that entity after the list loads. The dialog graph honors the same query.
+- Data table rows surface warning/error indicators when stored entities have diagnostics. An editor-specific row indicator is not used for NPC type.
 - Preview/test tools validate draft dialogs, quests, rooms, merchants, and Lua scripts before content is published into the world.
 
 ### Creator Tabs
@@ -2036,7 +2041,8 @@ Creator editors share backend validation rules from `pkg/service/validation`:
 ### NPC Editor Features
 - **Template vs. Unique** - Toggle `IsTemplate` flag
 - **Basic info** - Name, description, race, class, level
-- **Enemy trait** - Combat stats, difficulty, loot, AI behavior
+- **Enemy trait** - Grouped into combat stats, behaviour, loot and rewards, and Lua hooks. Fields: creature type, combat style, difficulty, attack, defense, attack speed, XP, aggro radius, aggro on sight, call for help, flee threshold (shown as a percent), gold range, loot table, guaranteed item templates, max drops, and on-aggro, on-death, on-flee, and on-low-health scripts with the low-health line as a percent and resulting HP. Help text states the engine default when a field is unset. Loot tables, item templates, and scripts use `EntitySelectButton`.
+- **Content base vs effective stats** - Imported enemies store unscaled `enemyTrait.baseStats` (`maxHitPoints`, `attackPower`, `defense`) beside the effective stats written to `maxHitPoints`, `attackPower`, and `defense`. The enemy tab labels which values the inputs edit. Effective stats are read-only and named with the tier. A named override replaces that tier's factors. An unknown tier shows `unknown difficulty tier — no scaling applied` and keeps the base numbers. Editor-created enemies have no content base; their inputs edit the stored combat stats. Saving recomputes effective stats on the server when a content base is present, and a wounded NPC keeps its current HP. YAML export writes the content base when it is present so a round trip does not scale twice.
 - **Merchant trait** - Inventory, pricing, restock, accepted items
 - **Dialog assignment** - Main dialog, idle dialog
 - **Behavior** - State, spawn room, wander radius, patrol path, idle chatter dialog, idle chatter timeout, respawn time

@@ -194,15 +194,15 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - **Entity Selection Modal**: All entity ID selectors (rooms, NPCs, items, scripts, dialogs, quests, character template starting items) use a centered modal dialog with a full filterable DataTable instead of simple dropdowns. This scales to hundreds of entries with per-column search, sort, and filter support. Components: `EntitySelectButton` (inline trigger) + `EntitySelectModal` (table dialog). **UI Guideline: Never use `<select>` dropdowns for entity ID references. Always use `EntitySelectButton` with the appropriate column definitions from `tableColumns.js`.**
   - Room editor with exit, action, spawner, items, and NPC resident configuration
   - Item and item template management with attributes and properties
-  - NPC editor with behavior controls for state, spawn room, wander radius, patrol paths, idle chatter, enemy traits, and merchant traits
+  - NPC editor with behavior controls for state, spawn room, wander radius, patrol paths, idle chatter, enemy traits, and merchant traits. The enemy tab edits combat stats, behaviour, loot, and Lua hooks. Imported enemies keep unscaled content base stats beside the effective stats combat uses. `GET /api/balance/enemy-scaling` supplies the tier and named-override factors. An unknown tier warns and applies no scaling. NPC type is a table badge; the row dot is reserved for validation issues. Tables show full entity IDs with a copy button.
   - Lua script editor with syntax highlighting and integrated test runner
   - Dialog tree editor with options and alternate texts
   - Quest editor with validation and player flow preview for source, objectives, turn-in, and rewards
   - Character template editor with archetype selection and starting gear
   - Skills editor with multi-class assignment, resource types, effects, and secondary effects
   - World map visualization (GridWorldEditor)
-  - World Health diagnostics for broken cross-system references across rooms, NPCs, items, loot tables, quests, dialogs, scripts, spawners, and character template starting gear
-  - Creator quality validation: inline warnings/errors, broken-reference detection, save blocking for invalid references, and a world health diagnostics tab
+  - World Health diagnostics for broken cross-system references across rooms, NPCs, items, loot tables, quests, dialogs, scripts, spawners, and character template starting gear. The message column stays visible, and room, NPC, dialog, quest, item, and script IDs link to `?id=` on that editor.
+  - Creator quality validation: inline warnings/errors, broken-reference detection, save blocking for invalid references, and a world health diagnostics tab. Dialog node IDs may repeat when the same node is linked again; a duplicate is an error only when two definitions of that node disagree. Opening `/creator/<tab>?id=<entityId>` selects that entity. Deletes that call the API, plus room, room-item, special-exit, and dialog-node deletes, ask in a confirm dialog first. Merchant stock `maxQuantity` of -1 is unlimited.
   - Preview/test tools for dialogs, quests, rooms, merchants, and Lua scripts
   - CRUD operations with live preview
 
@@ -553,7 +553,8 @@ go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
 - `POST/PUT/DELETE /api/rooms` - Room management
 - `POST/PUT/DELETE /api/items` - Item management
 - `POST/PUT/DELETE /api/scripts` - Script management
-- `POST/PUT/DELETE /api/npcs` - NPC management
+- `POST/PUT/DELETE /api/npcs` - NPC management. When `enemyTrait.baseStats` is set, create and update recompute effective HP, attack, and defense from the content base and the combat balance table.
+- `GET /api/balance/enemy-scaling` - Read-only difficulty tiers and named overrides (`hp`, `attack`, `defense`)
 - `POST/PUT/DELETE /api/dialogs` - Dialog management
 - `POST/PUT/DELETE /api/quests` - Quest management
 - `POST/PUT/DELETE /api/skills` - Skill management

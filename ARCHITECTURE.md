@@ -95,7 +95,8 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
     ├── items/ (GET)       # Item read (player level)
     ├── items/ (POST/PUT/DELETE) # Item write (creator level)
     ├── scripts/           # Script CRUD (creator level)
-    ├── npcs/              # NPC CRUD (creator level for writes)
+    ├── npcs/              # NPC CRUD (creator level for writes). Saves with enemyTrait.baseStats recompute effective combat stats.
+    ├── balance/enemy-scaling # Read-only difficulty tiers and named overrides (creator level)
     ├── dialogs/           # Dialog CRUD (creator level for writes)
     ├── quests/            # Quest CRUD (creator for writes)
     ├── quest-progress/    # Quest log per character (owner/admin)
@@ -907,8 +908,14 @@ type EnemyTrait struct {
     OnFleeScript       string
     OnLowHealthScript  string  // first drop below LowHealthThreshold while still alive
     LowHealthThreshold float64 // 0 = 0.30; otherwise a fraction in (0, 1)
+
+    // Unscaled content values. Omitempty. Effective stats stay on AttackPower,
+    // Defense, and NPC.MaxHitPoints. YAML export writes the base when present.
+    BaseStats *BaseStats // {MaxHitPoints, AttackPower, Defense}
 }
 ```
+
+`POST` and `PUT /api/npcs` call `importer.ApplyContentBase` before validation when `BaseStats` is set. Unknown difficulty tiers keep the base numbers. `GET /api/balance/enemy-scaling` returns the multiplier tables the editor uses for its preview.
 
 Loot entries carry `rarity` (`unique`), `bossOnly`, and `dropChance`. YAML `chance` is an alias stored as `dropChance` (a non-zero chance wins). `bossOnly` rolls only when difficulty is `boss`. A unique entry is skipped when every victory recipient already holds that template in the bag, equipped gear, or a nested container. There is no separate item bank. A `rarity: unique` drop sends a room `combatEvent` with hook `unique`. A template `unique` flag caps ownership and does not send that chip.
 
