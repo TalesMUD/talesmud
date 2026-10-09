@@ -21,6 +21,10 @@ Muted rule ids are stored on server settings (`mutedHealthRuleIDs`). `PUT /api/h
 
 `/api/diagnostics/world` and `/api/world/validation` keep their existing response shapes.
 
+An item is obtainable when it sits in a reachable room, drops from a reachable NPC, is sold by a reachable merchant, or is granted by `giveItem` from a script the player can run. A quest reward counts too, once that quest can complete and its prerequisites can be finished before the quest that needs the item. The check repeats until it stops changing. A cycle does not make the item obtainable.
+
+Reachability starts at the server setting `startRoomID` when that room exists, and otherwise at the engine default start room. `tales -check` does not open the database, so it uses the engine default.
+
 ## GitHub Actions
 
 ```yaml

@@ -17,6 +17,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/importer"
 	"github.com/talesmud/talesmud/pkg/repository"
 	"github.com/talesmud/talesmud/pkg/server"
+	"github.com/talesmud/talesmud/pkg/service"
 	"github.com/talesmud/talesmud/pkg/util"
 )
 
@@ -169,8 +170,10 @@ func runCheck(folderName string, asJSON bool, failOn string) int {
 	if err != nil {
 		log.Fatalf("rules: %v", err)
 	}
+	// -check does not open the database, so settings are not available.
+	// A live health run passes settings.StartRoomID and falls back to this default.
 	world := contenthealth.World{
-		StartRoomID:   "R0001",
+		StartRoomID:   service.DefaultStartRoomID,
 		ContentCommit: contenthealth.ContentCommit(importPath),
 		Rooms:         converted.Rooms,
 		NPCs:          converted.NPCs,

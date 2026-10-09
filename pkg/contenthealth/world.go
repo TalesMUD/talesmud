@@ -14,6 +14,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/entities/skills"
 	"github.com/talesmud/talesmud/pkg/scripts"
+	"github.com/talesmud/talesmud/pkg/service"
 	"github.com/talesmud/talesmud/pkg/service/validation"
 	"github.com/talesmud/talesmud/pkg/worldindex"
 )
@@ -119,8 +120,8 @@ func (w World) indexSnapshot() worldindex.Snapshot {
 		}
 	}
 	if snap.StartRoomID == "" || snap.Rooms[snap.StartRoomID] == nil {
-		if snap.Rooms["R0001"] != nil {
-			snap.StartRoomID = "R0001"
+		if snap.Rooms[service.DefaultStartRoomID] != nil {
+			snap.StartRoomID = service.DefaultStartRoomID
 		}
 	}
 	return snap

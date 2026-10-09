@@ -10,6 +10,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/quests"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/scripts"
+	"github.com/talesmud/talesmud/pkg/service"
 )
 
 func testBalance() *Balance {
@@ -201,6 +202,27 @@ func TestQuestRewardCycleStaysImpossible(t *testing.T) {
 	hits := ruleHits(report, RuleQuest)
 	if len(hits) != 1 || hits[0].EntityID != "QST0303" || !strings.Contains(hits[0].Message, "ITM0059") {
 		t.Fatalf("cycle hits = %+v", hits)
+	}
+}
+
+func TestStartRoomUsesDefaultWhenUnset(t *testing.T) {
+	world := World{Rooms: []*rooms.Room{
+		testRoom("R9", "Other"),
+		testRoom(service.DefaultStartRoomID, "Start"),
+	}}
+	snap := world.indexSnapshot()
+	if snap.StartRoomID != service.DefaultStartRoomID {
+		t.Fatalf("empty start = %q", snap.StartRoomID)
+	}
+	world.StartRoomID = "R9"
+	snap = world.indexSnapshot()
+	if snap.StartRoomID != "R9" {
+		t.Fatalf("settings start = %q", snap.StartRoomID)
+	}
+	world.StartRoomID = "missing"
+	snap = world.indexSnapshot()
+	if snap.StartRoomID != service.DefaultStartRoomID {
+		t.Fatalf("missing settings start = %q", snap.StartRoomID)
 	}
 }
 
