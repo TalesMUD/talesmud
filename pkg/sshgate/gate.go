@@ -34,10 +34,12 @@ type UserLookup interface {
 }
 
 // Deps are the engine hooks. Nil guests or users fail closed.
+// Door selects the 80x25 frame renderer. Classic play is the default.
 type Deps struct {
 	Mud    mudserver.MUDServer
 	Guests service.GuestService
 	Users  UserLookup
+	Door   bool
 }
 
 // PublicInfo is the unauthenticated GET /api/ssh/info body.
@@ -62,7 +64,9 @@ type Gate struct {
 	ctx     context.Context
 	cancel  context.CancelFunc
 	playURL string
-	once    sync.Once
+	// door selects the 80x25 frame renderer. Classic play is the default.
+	door bool
+	once sync.Once
 }
 
 // Listen starts the SSH listener when cfg.Enabled. A disabled config returns
@@ -81,6 +85,7 @@ func Listen(cfg gamemode.SSHConfig, deps Deps) (*Gate, error) {
 		ctx:     ctx,
 		cancel:  cancel,
 		playURL: playURL(cfg),
+		door:    deps.Door,
 	}
 	if !cfg.Enabled {
 		return g, nil

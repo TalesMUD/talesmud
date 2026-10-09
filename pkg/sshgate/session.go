@@ -91,6 +91,7 @@ type liveSession struct {
 	cols      int
 	rows      int
 	env       map[string]string
+	repaint   chan struct{}
 }
 
 func newSession(g *Gate, conn net.Conn, channel ssh.Channel, ip string) *liveSession {
@@ -101,6 +102,7 @@ func newSession(g *Gate, conn net.Conn, channel ssh.Channel, ip string) *liveSes
 		ip:      ip,
 		stop:    make(chan struct{}),
 		kick:    make(chan struct{}),
+		repaint: make(chan struct{}, 1),
 		cols:    80,
 		rows:    24,
 		env:     map[string]string{},
@@ -175,12 +177,17 @@ func (s *liveSession) requests(reqs <-chan *ssh.Request) {
 				continue
 			}
 			_ = req.Reply(true, nil)
-			go s.loop()
+			if s.gate.door {
+				go s.doorLoop()
+			} else {
+				go s.classicLoop()
+			}
 		case "window-change":
 			if cols, rows, ok := parseWindow(req.Payload); ok {
 				s.mu.Lock()
 				s.cols, s.rows = cols, rows
 				s.mu.Unlock()
+				s.signalRepaint()
 			}
 			_ = req.Reply(true, nil)
 		case "env":
@@ -196,13 +203,23 @@ func (s *liveSession) requests(reqs <-chan *ssh.Request) {
 	}
 }
 
+func (s *liveSession) signalRepaint() {
+	if s == nil || s.repaint == nil {
+		return
+	}
+	select {
+	case s.repaint <- struct{}{}:
+	default:
+	}
+}
+
 func (s *liveSession) hasPty() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.pty
 }
 
-func (s *liveSession) loop() {
+func (s *liveSession) classicLoop() {
 	defer s.finish()
 	defer s.flushClose()
 	if s.link.closed.Load() {

@@ -612,6 +612,7 @@ func (app *app) startSSH() {
 		Mud:    app.mud,
 		Guests: app.Facade.GuestService(),
 		Users:  app.Facade.UsersService(),
+		Door:   gamemode.ANSI(),
 	})
 	if err != nil {
 		log.WithError(err).Fatal("ssh listener failed")
