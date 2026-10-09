@@ -52,15 +52,19 @@ type LiveCharacterDetail struct {
 
 // LiveNPC is one running NPC instance.
 type LiveNPC struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	TemplateID string `json:"templateId"`
-	RoomID     string `json:"roomId"`
-	HP         int32  `json:"hp"`
-	MaxHP      int32  `json:"maxHp"`
-	InCombat   bool   `json:"inCombat"`
-	Dead       bool   `json:"dead"`
-	LastEvent  string `json:"lastEvent,omitempty"`
+	ID         string     `json:"id"`
+	Name       string     `json:"name"`
+	TemplateID string     `json:"templateId"`
+	RoomID     string     `json:"roomId"`
+	RoomName   string     `json:"roomName,omitempty"`
+	HP         int32      `json:"hp"`
+	MaxHP      int32      `json:"maxHp"`
+	InCombat   bool       `json:"inCombat"`
+	CombatWith []string   `json:"combatWith,omitempty"`
+	Dead       bool       `json:"dead"`
+	DeadUntil  *time.Time `json:"deadUntil,omitempty"`
+	NoRespawn  bool       `json:"noRespawn,omitempty"`
+	LastEvent  string     `json:"lastEvent,omitempty"`
 }
 
 // LiveInstance is one instance copy.
@@ -171,6 +175,12 @@ func (g *Game) LiveNPCs(templateID, roomID string) ([]LiveNPC, error) {
 	if g == nil || g.NPCManager == nil {
 		return []LiveNPC{}, nil
 	}
+	roomsByID := map[string]*rooms.Room{}
+	if g.Facade != nil && g.Facade.RoomsService() != nil {
+		if all, err := loadRoomMap(g.Facade.RoomsService()); err == nil {
+			roomsByID = all
+		}
+	}
 	out := make([]LiveNPC, 0)
 	for _, inst := range g.NPCManager.GetAllInstances() {
 		if inst == nil || inst.Entity == nil {
@@ -190,20 +200,59 @@ func (g *Game) LiveNPCs(templateID, roomID string) ([]LiveNPC, error) {
 		if g.CombatController != nil && g.CombatController.IsNPCInCombat(inst.ID) {
 			inCombat = true
 		}
-		out = append(out, LiveNPC{
+		roomName := ""
+		if room := roomsByID[inst.CurrentRoomID]; room != nil {
+			roomName = room.Name
+		}
+		row := LiveNPC{
 			ID:         inst.ID,
 			Name:       inst.Name,
 			TemplateID: tpl,
 			RoomID:     inst.CurrentRoomID,
+			RoomName:   roomName,
 			HP:         inst.CurrentHitPoints,
 			MaxHP:      inst.MaxHitPoints,
 			InCombat:   inCombat,
+			CombatWith: npcCombatWith(g, inst.ID, inCombat),
 			Dead:       inst.IsDead,
 			LastEvent:  g.NPCManager.LastNote(inst.ID),
-		})
+		}
+		if inst.IsDead {
+			if inst.RespawnTime > 0 && !inst.DeathTime.IsZero() {
+				until := inst.DeathTime.Add(inst.RespawnTime)
+				row.DeadUntil = &until
+			} else if inst.RespawnTime <= 0 {
+				row.NoRespawn = true
+			}
+		}
+		out = append(out, row)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out, nil
+}
+
+func npcCombatWith(g *Game, npcID string, inCombat bool) []string {
+	if !inCombat || g == nil || g.CombatController == nil || npcID == "" {
+		return nil
+	}
+	fight := g.CombatController.GetCombatInstanceByNPC(npcID)
+	if fight == nil {
+		return nil
+	}
+	names := make([]string, 0, len(fight.Players))
+	for _, player := range fight.Players {
+		name := player.Name
+		if name == "" {
+			name = player.ID
+		}
+		if name != "" {
+			names = append(names, name)
+		}
+	}
+	if len(names) == 0 {
+		return nil
+	}
+	return names
 }
 
 // LiveInstances lists in-memory copies and database copies the process still has.

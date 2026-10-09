@@ -194,7 +194,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - **Entity Selection Modal**: All entity ID selectors (rooms, NPCs, items, scripts, dialogs, quests, character template starting items) use a centered modal dialog with a full filterable DataTable instead of simple dropdowns. This scales to hundreds of entries with per-column search, sort, and filter support. Components: `EntitySelectButton` (inline trigger) + `EntitySelectModal` (table dialog). **UI Guideline: Never use `<select>` dropdowns for entity ID references. Always use `EntitySelectButton` with the appropriate column definitions from `tableColumns.js`.**
   - Room editor with exit, action, spawner, items, and NPC resident configuration
   - Item and item template management with attributes and properties
-  - NPC editor with behavior controls for state, spawn room, wander radius, patrol paths, idle chatter, enemy traits, and merchant traits. The enemy tab edits combat stats, behaviour, loot, and Lua hooks. Imported enemies keep unscaled content base stats beside the effective stats combat uses. `GET /api/balance/enemy-scaling` supplies the tier and named-override factors. An unknown tier warns and applies no scaling. NPC type is a table badge; the row dot is reserved for validation issues. Tables show full entity IDs with a copy button.
+  - NPC editor with behavior controls for state, spawn room, wander radius, patrol paths, idle chatter, enemy traits, and merchant traits. The enemy tab edits combat stats, behaviour, loot, and Lua hooks. Imported enemies keep unscaled content base stats beside the effective stats combat uses. `GET /api/balance/enemy-scaling` supplies the tier and named-override factors. An unknown tier warns and applies no scaling. The detail can switch from the form to an Inspector: type, level, difficulty, content base versus effective stats, loot chances, dialogs, hooks, spawners, and kill/talk/deliver quests. Live instances come from `GET /api/live/npcs`. Admin heal, respawn, despawn, and end combat use the shared confirm dialog. NPC type is a table badge; the row dot is reserved for validation issues. Tables show full entity IDs with a copy button.
   - Lua script editor with syntax highlighting and integrated test runner
   - Dialog tree editor with options and alternate texts
   - Quest editor with validation, player flow preview, and a quest debugger for the step chain, reachability, prerequisites, and live character progress
@@ -564,6 +564,7 @@ go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
 - `POST/PUT/DELETE /api/items` - Item management
 - `POST/PUT/DELETE /api/scripts` - Script management
 - `POST/PUT/DELETE /api/npcs` - NPC management. When `enemyTrait.baseStats` is set, create and update recompute effective HP, attack, and defense from the content base and the combat balance table.
+- `GET /api/npcs/:id/inspect` - Static NPC inspector (creator or admin). An instance id resolves to its template. Live rows stay on `GET /api/live/npcs`.
 - `GET /api/balance/enemy-scaling` - Read-only difficulty tiers and named overrides (`hp`, `attack`, `defense`)
 - `POST/PUT/DELETE /api/dialogs` - Dialog management
 - `POST/PUT/DELETE /api/quests` - Quest management
@@ -582,7 +583,7 @@ go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
 - `POST /api/preview/dialog`, `/api/preview/quest`, `/api/preview/room`, `/api/preview/merchant` - Preview/test draft content with validation issues
 - `PUT /api/settings` - Server settings
 - `GET /api/audit?entityType=&entityId=&limit=` - Audit log of creator writes and live ops
-- `GET /api/live/npcs?templateId=&roomId=` - Running NPC instances
+- `GET /api/live/npcs?templateId=&roomId=` - Running NPC instances, including room name, who they are fighting, and `deadUntil` when a corpse has a respawn time
 - `GET /api/live/instances` - Instance room copies
 
 ### Admin API Endpoints (Require Admin Role)

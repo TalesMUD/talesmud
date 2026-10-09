@@ -96,6 +96,7 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
     ├── items/ (POST/PUT/DELETE) # Item write (creator level)
     ├── scripts/           # Script CRUD (creator level)
     ├── npcs/              # NPC CRUD (creator level for writes). Saves with enemyTrait.baseStats recompute effective combat stats.
+    ├── npcs/:id/inspect   # Static NPC inspector (creator or admin). Live rows stay on live/npcs.
     ├── balance/enemy-scaling # Read-only difficulty tiers and named overrides (creator level)
     ├── dialogs/           # Dialog CRUD (creator level for writes)
     ├── quests/            # Quest CRUD (creator for writes)
@@ -116,7 +117,7 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
     ├── audit              # Creator reads the log; admin POST /audit/:id/undo
     ├── ops/:action        # Admin live ops (confirm:true), run on the game loop
     ├── live/characters    # Admin live character list and detail (inventory and quest log)
-    ├── live/npcs          # Creator running NPC instances
+    ├── live/npcs          # Creator running NPC instances (room, HP, opponent, respawn time)
     ├── live/instances     # Creator instance room copies
     └── templates/         # Public templates
 /admin/

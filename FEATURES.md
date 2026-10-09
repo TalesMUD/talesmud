@@ -2028,7 +2028,7 @@ The top bar keeps the app links, a search box (`data-creator-search`) that opens
 1. **Rooms** - Full room editor (exits, actions, spawners, NPCs, items, scripts)
 2. **Items** - Live item instances at `/creator/items`. That route stays available and is not in the sidebar.
 3. **Item Templates** - Reusable item blueprints. The sidebar entry is labeled Items.
-4. **NPCs** - NPC templates and unique NPCs
+4. **NPCs** - NPC templates and unique NPCs. The detail switches between the form and an Inspector.
 5. **Dialogs** - Dialog tree editor
 6. **Quests** - Quest editor (objectives, rewards, prerequisites)
 7. **Skills** - Skill/spell editor (multi-class, effects)
@@ -2043,7 +2043,7 @@ The top bar keeps the app links, a search box (`data-creator-search`) that opens
 - `ADMIN_ENV_LABEL` (optional `ADMIN_ENV_HOST`) feeds `GET /api/server-info`. A non-empty label shows a red `LABEL · host` badge in the top bar. Local servers leave the label empty.
 - Live ops and live reads run on the game command loop through `Game.Call`. The HTTP handler does not edit an online character behind that loop.
 - Every op body must include `confirm: true`. The Players page and `OpsButtons` open the shared confirm dialog before the request. A success toast offers Undo only when the audit row is undoable.
-- `OpsButtons` modes are `character` (end combat, re-grant starter kit), `quest` (complete quest, abandon, reset quest, mark one step done, reset one step), and `npc` (heal, respawn, despawn, end combat) for a later NPC inspector. The component renders only when the signed-in user is an admin.
+- `OpsButtons` modes are `character` (end combat, re-grant starter kit), `quest` (complete quest, abandon, reset quest, mark one step done, reset one step), and `npc` (heal, respawn, despawn, end combat). The NPC inspector embeds the npc mode. The component renders only when the signed-in user is an admin.
 - Teleport moves online and offline characters through `RelocateCharacter`. A fight blocks the move unless `force` aborts it first. Undo teleports back when the character is still in the destination and not in a new fight.
 - Give and take follow unique-item rules and tell an online player. Undo of a give removes the added pieces. Undo of a take puts those pieces back.
 - `end-combat` aborts the fight: no rewards, penalties, or healing. It is not undoable. `instance-cleanup` relocates players in a chosen copy, or deletes only empty copies when `allEmpty` is set. It does not abort a fight in the copy and is not undoable.
@@ -2072,6 +2072,7 @@ The top bar keeps the app links, a search box (`data-creator-search`) that opens
 - **Dialog assignment** - Main dialog, idle dialog
 - **Behavior** - State, spawn room, wander radius, patrol path, idle chatter dialog, idle chatter timeout, respawn time
 - **Resident placement** - Assign `CurrentRoomID` for auto-spawn
+- **Inspector** - Edit / Inspector on the NPC detail. Inspector calls `GET /api/npcs/:id/inspect` for the template summary: type, level, difficulty, content base versus effective stats (same multipliers as `GET /api/balance/enemy-scaling`; a named override replaces the tier; an unknown tier keeps the base), loot-table chances, dialog and idle-dialog links, on-aggro / on-death / on-flee / on-low-health scripts, spawners (room, respawn time, max), and quests with a kill, talk, or deliver objective for this NPC. A running instance id resolves to its template. Live instances come from `GET /api/live/npcs?templateId=` (room, HP, opponent names, dead-until). Admin ops on that list are heal, respawn, despawn, and end combat, each behind the shared confirm dialog and the audit toast. Creators see the live rows and a note that ops are admin only. A `data-backlinks-slot` is left for the inbound-reference panel.
 
 ### Quest Editor Features
 - **Objectives** - Add kill/collect/deliver/visit/talk/custom objectives

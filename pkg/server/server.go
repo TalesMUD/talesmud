@@ -394,6 +394,7 @@ func (app *app) setupRoutes() {
 			creator.POST("run-script/:id", scripts.ExecuteScript)
 
 			// NPCs
+			creator.GET("npcs/:id/inspect", npcs.InspectNPC)
 			creator.POST("npcs", npcs.PostNPC)
 			creator.PUT("npcs/:id", npcs.UpdateNPCByID)
 			creator.DELETE("npcs/:id", npcs.DeleteNPCByID)

@@ -6,6 +6,7 @@
   import MerchantPreviewModal from "./MerchantPreviewModal.svelte";
   import EnemyTraitPanel from "./EnemyTraitPanel.svelte";
   import EntitySelectButton from "./EntitySelectButton.svelte";
+  import NPCInspector from "./NPCInspector.svelte";
   import { getAuth } from "../auth.js";
 
   import {
@@ -85,6 +86,16 @@
 
   // Tab state for traits section
   let activeTraitTab = "behavior";
+  let detailView = "edit";
+  let detailViewFor = "";
+
+  $: {
+    const id = $store.selectedElement?.id || "";
+    if (id !== detailViewFor) {
+      detailViewFor = id;
+      detailView = "edit";
+    }
+  }
 
   const config = {
     title: "Manage NPCs",
@@ -358,6 +369,18 @@
 
 <CRUDEditor store={store} config={config}>
   <div slot="content" class="space-y-6">
+    <div class="flex items-center gap-1 border-b border-slate-200 dark:border-slate-700">
+      <button type="button" class="tab-btn" class:active={detailView === "edit"} on:click={() => detailView = "edit"}>
+        Edit
+      </button>
+      <button type="button" class="tab-btn" class:active={detailView === "inspector"} on:click={() => detailView = "inspector"}>
+        Inspector
+      </button>
+    </div>
+
+    {#if detailView === "inspector"}
+      <NPCInspector npcId={$store.selectedElement.id} isNew={!!$store.selectedElement.isNew} />
+    {:else}
     <!-- NPC Type Configuration -->
     <div class="p-4 rounded-lg bg-slate-800/50 border border-slate-700/50 space-y-3">
       <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
@@ -477,9 +500,11 @@
       </div>
     </div>
 
+    {/if}
   </div>
 
   <div slot="extensions" class="space-y-4">
+    {#if detailView !== "inspector"}
     <!-- Tabbed Navigation for Traits -->
     <div class="flex items-center gap-1 border-b border-slate-200 dark:border-slate-700">
       <button
@@ -708,6 +733,7 @@
         </div>
       {/if}
     </div>
+    {/if}
   </div>
 </CRUDEditor>
 

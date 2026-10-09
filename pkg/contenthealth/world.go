@@ -63,6 +63,11 @@ func (w World) Snapshot() worldindex.Snapshot {
 	return w.indexSnapshot()
 }
 
+// Graph is the reference index for this snapshot, including reachability.
+func (w World) Graph() *worldindex.Index {
+	return worldindex.Build(w.indexSnapshot())
+}
+
 func (w World) indexSnapshot() worldindex.Snapshot {
 	snap := worldindex.NewSnapshot()
 	snap.StartRoomID = w.StartRoomID

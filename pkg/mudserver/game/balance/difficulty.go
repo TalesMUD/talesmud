@@ -193,22 +193,34 @@ func ApplyEnemyMultipliers(baseHP, baseAttack, baseDef int32, difficulty, enemyN
 }
 
 func lookupMultipliers(cfg *CombatBalanceConfig, difficulty, enemyName string) (DifficultyMultipliers, bool) {
+	m, _, ok := factors(cfg, difficulty, enemyName)
+	return m, ok
+}
+
+// EnemyFactors reports the multipliers ApplyEnemyMultipliers uses.
+// Source is "named" or "tier". ok is false when the name has no override and the tier is not in the table.
+func EnemyFactors(difficulty, enemyName string) (DifficultyMultipliers, string, bool) {
+	return factors(GetConfig(), difficulty, enemyName)
+}
+
+func factors(cfg *CombatBalanceConfig, difficulty, enemyName string) (DifficultyMultipliers, string, bool) {
 	if cfg != nil && enemyName != "" && cfg.NamedOverrides != nil {
 		if m, ok := cfg.NamedOverrides[enemyName]; ok {
-			return m, true
+			return m, "named", true
 		}
-		// Case-insensitive fallback
 		lower := strings.ToLower(enemyName)
 		for name, m := range cfg.NamedOverrides {
 			if strings.ToLower(name) == lower {
-				return m, true
+				return m, "named", true
 			}
 		}
 	}
-
 	if cfg == nil || cfg.DifficultyMultipliers == nil {
-		return DifficultyMultipliers{}, false
+		return DifficultyMultipliers{}, "", false
 	}
 	m, ok := cfg.DifficultyMultipliers[difficulty]
-	return m, ok
+	if !ok {
+		return DifficultyMultipliers{}, "", false
+	}
+	return m, "tier", true
 }
