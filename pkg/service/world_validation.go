@@ -338,7 +338,8 @@ func (ctx *validationContext) validateMerchant(n *npc.NPC) {
 		if entry.Quantity < -1 {
 			ctx.add(ValidationSeverityWarning, "item", "npc", n.ID, prefix+".quantity", "quantity should be -1 for unlimited or 0+")
 		}
-		if entry.MaxQuantity < 0 {
+		// -1 is unlimited stock. Only values below that are invalid.
+		if entry.MaxQuantity < -1 {
 			ctx.add(ValidationSeverityWarning, "item", "npc", n.ID, prefix+".maxQuantity", "max quantity should not be negative")
 		}
 		if entry.RequiredLevel < 0 {

@@ -150,6 +150,45 @@ func TestWorldValidationReportsBrokenReferences(t *testing.T) {
 	}
 }
 
+func TestMerchantMaxQuantityUnlimitedIsValid(t *testing.T) {
+	facade, _ := worldValidationTestFacade(t)
+
+	template := &items.Item{
+		Entity:     &entities.Entity{ID: "item-template-stock"},
+		IsTemplate: true,
+		Name:       "Bread",
+	}
+	if _, err := facade.ItemsService().Import(template); err != nil {
+		t.Fatalf("store template: %v", err)
+	}
+	merchant := &npc.NPC{
+		Entity: &entities.Entity{ID: "npc-merchant"},
+		Name:   "Baker",
+		MerchantTrait: &npc.MerchantTrait{
+			BuyMultiplier:  1,
+			SellMultiplier: 1,
+			Inventory: []npc.MerchantItem{
+				{ItemTemplateID: template.ID, Quantity: -1, MaxQuantity: -1},
+				{ItemTemplateID: template.ID, Quantity: 1, MaxQuantity: -2},
+			},
+		},
+	}
+	if _, err := facade.NPCsService().Import(merchant); err != nil {
+		t.Fatalf("store merchant: %v", err)
+	}
+
+	report, err := NewWorldValidationService(facade).Validate()
+	if err != nil {
+		t.Fatalf("validate world: %v", err)
+	}
+	if hasValidationIssue(report, "item", "npc", merchant.ID, "merchantTrait.inventory[0].maxQuantity") {
+		t.Fatalf("unlimited maxQuantity -1 was warned: %#v", report.Issues)
+	}
+	if !hasValidationIssue(report, "item", "npc", merchant.ID, "merchantTrait.inventory[1].maxQuantity") {
+		t.Fatalf("maxQuantity -2 should be invalid: %#v", report.Issues)
+	}
+}
+
 func TestWorldValidationAcceptsMinimalValidWorld(t *testing.T) {
 	facade, _ := worldValidationTestFacade(t)
 
