@@ -2,6 +2,7 @@
   import { createEventDispatcher } from "svelte";
   import CardinalExitsEditor from "./CardinalExitsEditor.svelte";
   import SpecialExitsModal from "./SpecialExitsModal.svelte";
+  import ConfirmDialog from "./ConfirmDialog.svelte";
   import { isCardinalDirection, CARDINAL_DIRECTIONS } from "./WorldEditorStore.js";
 
   export let room = null;
@@ -12,6 +13,7 @@
   const dispatch = createEventDispatcher();
 
   let showSpecialExitsModal = false;
+  let confirmOpen = false;
 
   // Local editable copy
   let editingRoom = null;
@@ -50,9 +52,18 @@
   }
 
   function handleDelete() {
-    if (confirm("Are you sure you want to delete this room?")) {
-      dispatch("delete", editingRoom.id);
-    }
+    if (!editingRoom) return;
+    confirmOpen = true;
+  }
+
+  function confirmDelete() {
+    confirmOpen = false;
+    if (!editingRoom) return;
+    dispatch("delete", editingRoom.id);
+  }
+
+  function cancelDelete() {
+    confirmOpen = false;
   }
 
   function handleFullEditor() {
@@ -282,6 +293,15 @@
   exits={editingRoom ? editingRoom.exits : []}
   {roomsValueHelp}
   on:close={handleSpecialExitsClose}
+/>
+
+<ConfirmDialog
+  open={confirmOpen}
+  entityType="room"
+  entityName={editingRoom?.name || ""}
+  entityId={editingRoom?.id || ""}
+  on:confirm={confirmDelete}
+  on:cancel={cancelDelete}
 />
 
 <style>

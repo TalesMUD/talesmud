@@ -4,6 +4,7 @@
   import { getWorldDiagnosticsAsync, validateEntityAsync } from "../api/validation.js";
   import DataTable from "./DataTable.svelte";
   import ValidationPanel from "./ValidationPanel.svelte";
+  import ConfirmDialog from "./ConfirmDialog.svelte";
 
   export let config;
   export let store;
@@ -14,6 +15,8 @@
   };
 
   let hasLoadedData = false;
+  let appliedQueryId = false;
+  let confirmOpen = false;
   let validationResult = null;
   let validationLoading = false;
   let validationUnavailable = "";
@@ -31,6 +34,12 @@
         store.setElements(all);
         hasLoadedData = true;
         loadDiagnostics();
+        if (!appliedQueryId) {
+          appliedQueryId = true;
+          const queryId = new URLSearchParams(window.location.search).get("id");
+          const match = queryId && (all || []).find((el) => el.id === queryId);
+          if (match) selectElement(match);
+        }
         if (cb) cb();
       },
       (err) => console.log(err)
@@ -114,7 +123,18 @@
     return "";
   };
 
+  const askDelete = () => {
+    if (!$store.selectedElement || $store.selectedElement.isNew) return;
+    confirmOpen = true;
+  };
+
+  const cancelDelete = () => {
+    confirmOpen = false;
+  };
+
   const deleteElement = async () => {
+    confirmOpen = false;
+    if (!$store.selectedElement) return;
     config.delete(
       $authToken,
       $store.selectedElement.id,
@@ -280,7 +300,7 @@
                 {labels.create}
               </button>
             {:else}
-              <button class="btn btn-danger" type="button" on:click={() => deleteElement()}>
+              <button class="btn btn-danger" type="button" on:click={askDelete}>
                 <span class="material-symbols-outlined text-sm">delete</span>
                 {labels.delete}
               </button>
@@ -419,6 +439,15 @@
     </div>
   </div>
 {/if}
+
+<ConfirmDialog
+  open={confirmOpen}
+  entityType={config.entityType || "entity"}
+  entityName={$store.selectedElement?.name || ""}
+  entityId={$store.selectedElement?.id || ""}
+  on:confirm={deleteElement}
+  on:cancel={cancelDelete}
+/>
 
 <style>
   .thin-scrollbar::-webkit-scrollbar {

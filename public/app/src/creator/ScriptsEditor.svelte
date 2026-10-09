@@ -10,6 +10,7 @@
 
   import CRUDEditor from "./CRUDEditor.svelte";
   import ScriptsGuideModal from "./ScriptsGuideModal.svelte";
+  import ConfirmDialog from "./ConfirmDialog.svelte";
   import { createStore } from "./CRUDEditorStore.js";
   import { getAuth } from "../auth.js";
 
@@ -129,7 +130,19 @@
     );
   };
 
+  let confirmDeprecated = false;
+
+  const askDeleteDeprecated = () => {
+    if (!deprecatedScripts.length) return;
+    confirmDeprecated = true;
+  };
+
+  const cancelDeleteDeprecated = () => {
+    confirmDeprecated = false;
+  };
+
   const deleteDeprecated = async () => {
+    confirmDeprecated = false;
     if (!deprecatedScripts.length) return;
 
     await Promise.all(
@@ -245,7 +258,7 @@ return input`,
           {deprecatedScripts.length} deprecated JavaScript scripts found.
           This editor only supports Lua scripts.
         </div>
-        <button class="btn btn-outline text-xs" type="button" on:click={deleteDeprecated}>
+        <button class="btn btn-outline text-xs" type="button" on:click={askDeleteDeprecated}>
           Delete deprecated scripts ({deprecatedScripts.length})
         </button>
       </div>
@@ -302,3 +315,14 @@ return input`,
 </CRUDEditor>
 
 <ScriptsGuideModal open={showGuide} on:close={() => (showGuide = false)} />
+
+<ConfirmDialog
+  open={confirmDeprecated}
+  entityType="script"
+  entityName={`${deprecatedScripts.length} deprecated scripts`}
+  entityId=""
+  detail="Deletes every deprecated JavaScript script. Lua scripts stay."
+  confirmLabel="Delete all"
+  on:confirm={deleteDeprecated}
+  on:cancel={cancelDeleteDeprecated}
+/>

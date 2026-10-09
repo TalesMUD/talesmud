@@ -11,6 +11,7 @@
   import RoomItemsModal from "./RoomItemsModal.svelte";
   import RoomPreviewModal from "./RoomPreviewModal.svelte";
   import EntitySelectButton from "./EntitySelectButton.svelte";
+  import ConfirmDialog from "./ConfirmDialog.svelte";
   import { scriptColumns, npcColumns } from "./tableColumns.js";
 
   import { getAuth } from "../auth.js";
@@ -514,15 +515,25 @@
     );
   };
 
+  let spawnerToDelete = null;
+
   const deleteSpawnerHandler = (spawner) => {
-    // If it's a pending (unsaved) spawner, just remove from list
+    // A pending spawner exists only in this form. Removing it does not call the API.
     if (spawner.isNew) {
       pendingSpawners = pendingSpawners.filter(s => s.id !== spawner.id);
       return;
     }
+    spawnerToDelete = spawner;
+  };
 
-    if (!confirm("Are you sure you want to delete this spawner?")) return;
-    if (!$isAuthenticated || !$authToken) return;
+  const cancelDeleteSpawner = () => {
+    spawnerToDelete = null;
+  };
+
+  const confirmDeleteSpawner = () => {
+    const spawner = spawnerToDelete;
+    spawnerToDelete = null;
+    if (!spawner || !$isAuthenticated || !$authToken) return;
 
     deleteNPCSpawner(
       $authToken,
@@ -1116,6 +1127,16 @@
   open={showRoomPreview}
   preview={roomPreview}
   on:close={() => showRoomPreview = false}
+/>
+
+<ConfirmDialog
+  open={!!spawnerToDelete}
+  entityType="spawner"
+  entityName={spawnerToDelete?.name || spawnerToDelete?.templateId || "spawner"}
+  entityId={spawnerToDelete?.id || ""}
+  detail={spawnerToDelete?.roomId ? `Room ${spawnerToDelete.roomId}` : ""}
+  on:confirm={confirmDeleteSpawner}
+  on:cancel={cancelDeleteSpawner}
 />
 
 <style>
