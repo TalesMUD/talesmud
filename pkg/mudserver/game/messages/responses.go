@@ -73,6 +73,9 @@ type MessageResponse struct {
 	Style  string `json:"style,omitempty"`  // "combatEvent"
 	Hook   string `json:"hook,omitempty"`   // onAggro | onLowHealth | onDeath | onFlee
 	Source string `json:"source,omitempty"` // display name of the NPC whose hook ran
+
+	// NoticeGen is the command that produced this line. Zero is not command output.
+	NoticeGen uint64 `json:"-"`
 }
 
 // GetAudience ,,,
@@ -93,6 +96,16 @@ func (m MessageResponse) GetOriginID() string {
 // GetMessage ,,,
 func (m MessageResponse) GetMessage() string {
 	return m.Message
+}
+
+// GetType is the client message type. Classic sockets already send Type as JSON.
+func (m MessageResponse) GetType() MessageType {
+	return m.Type
+}
+
+// GetNoticeGen is the command generation stamped on a reply. Zero is unset.
+func (m MessageResponse) GetNoticeGen() uint64 {
+	return m.NoticeGen
 }
 
 // MessageResponder ...

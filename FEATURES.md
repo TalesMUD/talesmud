@@ -440,7 +440,7 @@ An enemy's authored XP reward is the base. When that reward is 0, `progression.b
 
 Death math is `ruleset.ApplyDeath`, called from defeat only. A fight is a defeat when nobody is still fighting and at least one player is actually dead. When every player has fled or slipped, the fight ends as fled: no XP loss, no gold loss, no armor damage, and no respawn move. A slip that already took one exit stays in that room. In a mixed party only the dead take the penalty. Anyone who fled gets the escaped notice and keeps their hit points, gold, and room. Post-combat cleanup still clears `InCombat` and syncs the escaper's combat hit points.
 
-`combat.pacing: auto` keeps the 5 second decision window and resolves a queued action on the next beat. `turn_based` leaves that window open until the player sends a command. NPCs still take their own turns afterward. The default file is `auto`. During a fight, a bare `attack` queues a swing on the current target or the first living enemy so a turn-based round advances. Outside combat, `combat.bare_attack: ask` (the default) still answers "Attack whom?". `first_hostile` starts the fight against the first hostile in the room.
+`combat.pacing: auto` keeps the 5 second decision window and resolves a queued action on the next beat. `turn_based` leaves that window open until the player sends a command. NPCs still take their own turns afterward. The default file is `auto`. During a fight, a bare `attack` queues a swing on the current target or the first living enemy so a turn-based round advances. Outside combat, `combat.bare_attack: ask` (the default) still answers "Attack whom?". `first_hostile` starts the fight against the first hostile in the room, and says nobody is there when none is.
 
 `combat.disconnect: continue` (the default) leaves a dropped connection in the fight and does not move the character. `release` ends that fight as a flee: no gold loss, no XP loss, and no death flag. `combat.safe_room` is `stay` (default), `bind`, or `start`, and applies only when disconnect is `release`. `stay` leaves the character in a real room. `bind` and `start` move them. A room id containing `~` is treated as an instance even when the in-memory map has lost it, so release still moves that character. A generated instance that times out still moves its occupant to the return room and ends the fight without a defeat. On the next enter, a saved room that no longer exists is replaced by the bind room, then the start room. An orphan `~` id uses the startup sweep's room order instead.
 
@@ -454,7 +454,7 @@ Off: `enabled: false` on that pool (`regen.out_of_combat.hp`, `regen.resting.hp`
 
 ### Refilling resources
 
-Per-character balances live in the `character_resources` table. A key grants uses only after something configures an allowance (calendar day in a timezone, or a fixed interval). Inside a period, raising the allowance or a modifier does not give the extra uses back; the next period refills to the new amount. An empty catalog, which is the process default, answers every key as not configured and writes no row.
+Per-character balances live in the `character_resources` table. A key grants uses only after something configures an allowance (calendar day in a timezone, or a fixed interval). An optional `label` is a display name; an empty label leaves the key as the name. Inside a period, raising the allowance or a modifier does not give the extra uses back; the next period refills to the new amount. An empty catalog, which is the process default, answers every key as not configured and writes no row.
 
 Another world can use a key for a daily gathering node or a delve ticket, spent from a room-action script. No content ships a key, so play is unchanged. Entering play calls `Get` for each configured key, so a new period is refilled even before a script reads it. A one-word room action accepts a trailing argument (`deposit 20`); the script sees it as `ctx.args`. Multi-word action names stay exact.
 
@@ -742,7 +742,7 @@ type MerchantItem struct {
 
 Merchant commands are available in rooms with merchant NPCs:
 - `list`, `shop`, or `trade` (exact key — no NPC name) opens a structured `shop` WS payload for the client overlay and refreshes after buy/sell
-- `buy <item> [quantity]` purchases stock; stackable quantities can fit in one inventory stack
+- `buy <item|number> [quantity]` purchases stock. A bare number is the 1-based catalog row. Stackable quantities can fit in one inventory stack. `sell` accepts the same number for items that merchant will take.
 - `sell <item> [quantity]` sells accepted, unbound inventory items
 - `value <item>` / `price <item>` checks the merchant's sell price
 
@@ -1663,6 +1663,12 @@ tales.game.setFlag(characterID, flagName, value)
 -- characterID: string
 -- flagName: string
 -- value: bool, number, string, or nil (nil deletes the flag)
+
+tales.game.clearGear(characterID)
+-- Deletes worn items and bagged weapons and armor. Other bag items stay. Returns how many were removed.
+
+tales.game.equipFromTemplate(characterID, templateID)
+-- Creates an instance of a template and wears it in that template's slot, replacing the piece already there.
 ```
 
 #### Hidden Exit Reveals (Per-Character)
@@ -1789,6 +1795,12 @@ tales.characters.applyLevels(characterID)
 -- Class, skills, inventory, gold, and flags are left alone.
 tales.characters.setProgress(characterID, level, xp, maxHP)
 
+-- Permanent combat grant. kind is "attack", "defense", or "maxHP".
+-- One call changes that stat by at most 10. Attack and defense grants stay in 0..40.
+-- Max hit points stay in 1..5000. A positive maxHP grant also raises current hit points.
+-- Zero leaves a classic character unchanged. Returns false for an unknown kind or a zero delta.
+tales.characters.grant(characterID, kind, delta)
+
 -- Read-only top list. n defaults to 12 and is capped at 50.
 -- sortKey "xp" orders by experience. Any other key orders by level, then experience.
 local rows = tales.characters.top(n, sortKey) -- rows[i].name, .level, .xp
@@ -1829,6 +1841,10 @@ local isMerchant = tales.npcs.isMerchant(npcID)
 local templates = tales.npcs.getTemplates()
 local isTemplate = tales.npcs.isTemplate(npcID)
 local instance = tales.npcs.spawnFromTemplate(templateID, roomID)
+local started = tales.npcs.beginFight(characterID, instanceID)
+-- Starts a real fight when both are in the same room, the target is a living enemy,
+-- and neither is already fighting. Returns false during the post-combat breath window.
+-- The caller chose the target, so this does not print an over-level warning.
 local inst = tales.npcs.getInstance(instanceID)
 local instances = tales.npcs.getInstancesInRoom(roomID)
 
@@ -1840,7 +1856,7 @@ local died = tales.npcs.damageInstance(instanceID, amount)
 tales.npcs.healInstance(instanceID, amount)
 tales.npcs.moveInstance(instanceID, roomID)
 
--- Delete
+-- Delete the saved row and, when a game is running, the live instance.
 tales.npcs.delete(npcID)
 ```
 
@@ -2502,7 +2518,7 @@ The leveling system (`CheckLevelUp`, `ApplyLevelUp`) respects `MaxLevelCap` auto
 - Token claims: `sub` (RefID), `uid` (user entity ID), `exp` (30min), `guest: true`
 - If `GUEST_SECRET` is not set, a random key is generated at startup
 - Optional local username/password sessions (Argon2id) when a game-mode file sets `auth: local`. Classic servers leave this off. API responses omit the password hash. Login attempts are limited per client address. `X-Forwarded-For` is trusted only from loopback unless `trusted_proxies` or `TRUSTED_PROXIES` says otherwise.
-- `presentation: door_tui` serves `public/door` and `GET /api/door/config` (title, subtitle, token key). Classic mode does not mount `/door`. The page paints live rooms, exits, actions, NPCs, resources, and combat status, plus the last few command replies. Keys and typed lines become engine commands. A world pack may add `keymap.yaml` (per room, per area, and a combat overlay) and `character_paths.yaml`. `d` stays down. With no character selected, the page asks for a name, then a numbered path, then sex. An existing name is selected. A new character uses the pack path when that file is present, and otherwise a numbered system template. Reconnect runs the new-day pass without another select.
+- `presentation: door_tui` serves `public/door` and `GET /api/door/config` (title, subtitle, token key). Classic mode does not mount `/door`. The page paints live rooms, exits, actions, NPCs, resource labels, and combat status. The header uses live combat hit points and shows experience beside gold. The fight log stays until any key after the fight ends, including Enter, and a bare extra attack on that screen is not sent. The status line stays pinned above the log. The stats key paints hit points, gold, worn gear, and a gems count. A compass letter uses an open exit before a menu bind, and open east and west exits are listed. The index heading uses the configured title. A one-shot reply stays on the screen that produced it. A merchant room shows a numbered catalog, six rows at a time. `buy` and `sell` accept that number or a name. Keys and typed lines become engine commands. `:` starts a command line in the browser before later letters can hit hotkeys. A pack key whose command is `logout` tells the page to drop the session and return to the sign-in form. A world pack may add `keymap.yaml` (per room, per area, and a combat overlay) and `character_paths.yaml`. `d` stays down. With no character selected, the page asks for a name, then a numbered path, then sex, and the movement legend stays off that prompt. An existing name is selected. A new character uses the pack path when that file is present, and otherwise a numbered system template. The path name is stored on the `path` flag and the stats screen shows it. Reconnect runs the new-day pass without another select.
 
 ---
 

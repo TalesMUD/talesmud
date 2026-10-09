@@ -32,6 +32,9 @@ func TestRegisterLoginResetPersistsHashOnly(t *testing.T) {
 	if _, _, err := svc.Register("mara_quinn", "other@example.com", password); !errorsIs(err, ErrExists) {
 		t.Fatalf("duplicate username err = %v", err)
 	}
+	if _, _, err := svc.Register("bad-name", "mara@example.com", password); err == nil || !strings.Contains(err.Error(), "Hyphen") {
+		t.Fatalf("hyphen err = %v", err)
+	}
 
 	stored, err := users.FindByUsername("mara_quinn")
 	if err != nil {

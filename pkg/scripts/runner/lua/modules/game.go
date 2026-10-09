@@ -69,6 +69,7 @@ func RegisterGameModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 		msg := messages.NewRoomBasedMessage("SYSTEM", message)
 		msg.Audience = messages.MessageAudienceUser
 		msg.AudienceID = character.BelongsUserID
+		msg.NoticeGen = messages.StampNotice(character.BelongsUserID)
 		game.SendMessage() <- msg
 
 		L.Push(lua.LBool(true))
@@ -546,6 +547,79 @@ func RegisterGameModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 		return 1
 	}))
 
+	// tales.game.clearGear(characterID) - delete worn items and bagged weapons and armor.
+	mod.RawSetString("clearGear", L.NewFunction(func(L *lua.LState) int {
+		characterID := L.CheckString(1)
+		facade := runner.GetFacade()
+		if facade == nil {
+			L.Push(lua.LNumber(0))
+			return 1
+		}
+		var removed int
+		err := facade.CharactersService().Modify(characterID, func(character *characters.Character) error {
+			for _, item := range character.EquippedItems {
+				if item != nil {
+					removed++
+				}
+			}
+			character.EquippedItems = map[items.ItemSlot]*items.Item{}
+			if character.Inventory.Items == nil {
+				return nil
+			}
+			kept := character.Inventory.Items[:0]
+			for _, item := range character.Inventory.Items {
+				if item == nil {
+					continue
+				}
+				if item.Type == items.ItemTypeWeapon || item.Type == items.ItemTypeArmor || item.IsArmorPiece() {
+					removed++
+					continue
+				}
+				kept = append(kept, item)
+			}
+			character.Inventory.Items = kept
+			return nil
+		})
+		if err != nil {
+			logrus.WithField("characterID", characterID).WithError(err).Warn("[Script] clearGear failed")
+			L.Push(lua.LNumber(0))
+			return 1
+		}
+		pushGearUpdate(runner, characterID)
+		L.Push(lua.LNumber(removed))
+		return 1
+	}))
+
+	// tales.game.equipFromTemplate(characterID, templateID) - create a template and wear it.
+	mod.RawSetString("equipFromTemplate", L.NewFunction(func(L *lua.LState) int {
+		characterID := L.CheckString(1)
+		templateID := L.CheckString(2)
+		facade := runner.GetFacade()
+		if facade == nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+		item, err := facade.ItemsService().CreateInstanceFromTemplate(templateID)
+		if err != nil || item == nil || item.Slot == "" {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+		err = facade.CharactersService().Modify(characterID, func(character *characters.Character) error {
+			if character.EquippedItems == nil {
+				character.EquippedItems = map[items.ItemSlot]*items.Item{}
+			}
+			character.EquippedItems[item.Slot] = item
+			return nil
+		})
+		if err != nil {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+		pushGearUpdate(runner, characterID)
+		L.Push(lua.LBool(true))
+		return 1
+	}))
+
 	L.Push(mod)
 	return 1
 }
@@ -562,4 +636,29 @@ func stampHookLine(L *lua.LState, msg *messages.MessageResponse) {
 	msg.Style = "combatEvent"
 	msg.Hook = hook
 	msg.Source = source
+}
+
+func pushGearUpdate(runner *luarunner.LuaRunner, characterID string) {
+	game := runner.GetGame()
+	facade := runner.GetFacade()
+	if game == nil || facade == nil {
+		return
+	}
+	character, err := facade.CharactersService().FindByID(characterID)
+	if err != nil || character == nil {
+		return
+	}
+	if update := messages.NewCharacterUpdateMessage(character.BelongsUserID, character); update != nil {
+		game.SendMessage() <- update
+	}
+	game.SendMessage() <- messages.InventoryUpdateMessage{
+		MessageResponse: messages.MessageResponse{
+			Audience:   messages.MessageAudienceUser,
+			AudienceID: character.BelongsUserID,
+			Type:       messages.MessageTypeInventoryUpdate,
+		},
+		Inventory:     character.Inventory,
+		EquippedItems: character.EquippedItems,
+		Gold:          character.Gold,
+	}
 }

@@ -173,6 +173,8 @@ func (g *Game) DispatchCommand(user *entities.User, text string) {
 		return
 	}
 	msg := m.NewMessage(user, text)
+	msg.NoticeGen = m.BeginNotice(user.ID)
+	defer m.EndNotice(user.ID)
 	g.attachCharacterToMessage(msg)
 	if !g.CommandProcessor.Process(g, msg) {
 		g.RoomProcessor.Process(g, msg)

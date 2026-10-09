@@ -233,7 +233,7 @@ type server struct {
 The game engine owns an in-memory session registry for live player state. The
 registry maps connected user IDs to their currently selected character, room,
 and last-seen timestamp. WebSocket connect/read/disconnect paths update this
-registry and persist `User.IsOnline` as a secondary status field. `combat.disconnect: continue` (the default) leaves that fight running. `release` ends it without a defeat penalty and, when `combat.safe_room` says so, moves the character before an instance copy is deleted. A generated instance that times out still does that move. A text-client connect runs the new-day pass and refills configured resources without requiring another character select. Player-directed replies are recorded by the text client and drawn back into its frame off the message-drain goroutine.
+registry and persist `User.IsOnline` as a secondary status field. `combat.disconnect: continue` (the default) leaves that fight running. `release` ends it without a defeat penalty and, when `combat.safe_room` says so, moves the character before an instance copy is deleted. A generated instance that times out still does that move. A text-client connect runs the new-day pass and refills configured resources without requiring another character select. Player-directed replies are recorded by the text client and drawn back into its frame off the message-drain goroutine. Each command has a per-player generation so a late one-shot does not paint on the next screen. Combat lines stay in the fight log until any key after the fight ends, including Enter. A bare extra attack on that screen is not sent. The header and the live status line stay pinned, and the log is capped to the remaining body rows. The stats key paints hit points, gold, worn gear, and a gems count from the optional gems flag. Open compass exits are listed on the key row. The text-client index is branded from the game-mode title before the browser runs.
 
 Room message fan-out, `who`, private tells, friends online flags, regeneration ticks (1s clock; out-of-combat, resting, and in-combat pools each use their ruleset interval, default 10s), and room player
 payloads use the live session registry instead of scanning all users with
@@ -619,7 +619,7 @@ Execute matched command
 | Command | Aliases | Description |
 |---------|---------|-------------|
 | `list` | `shop`, `trade` | Show merchant inventory |
-| `buy <item> [qty]` | - | Purchase from merchant; stackable quantities can occupy one inventory stack |
+| `buy <item|number> [qty]` | - | Purchase from merchant. A number is the catalog row. Stackable quantities can occupy one inventory stack |
 | `sell <item> [qty]` | - | Sell to merchant if accepted and not bound |
 | `value <item>` | `price` | Check sell price |
 
@@ -1638,7 +1638,9 @@ pkg/
 
 The scripting system uses Lua (via gopher-lua) for dynamic game content. JavaScript support is deprecated but maintained for backward compatibility.
 
-Refilling resources are a SQLite table (`character_resources`) owned by `pkg/resources`. The HTTP startup attaches one empty store to the game and to the Lua runner. Callers configure allowances later. Until then, `tales.resources.get` and `consume` report the key as missing.
+Refilling resources are a SQLite table (`character_resources`) owned by `pkg/resources`. The HTTP startup attaches one empty store to the game and to the Lua runner. Callers configure allowances later. A configured key may carry a display `label`. Until then, `tales.resources.get` and `consume` report the key as missing.
+
+A character flag `spar` (boolean) makes one defeat skip death penalties and restore hit points. A flag `after_combat` (script id) runs after the fight is saved, with `last_combat` set to victory, defeat, fled, or timeout. Both flags are absent by default, so a classic defeat is unchanged. `tales.npcs.beginFight` starts one fight the script already chose. `tales.characters.grant` adds a small attack, defense, or max-hit-point bonus that is zero unless a script sets it. `tales.game.clearGear` and `equipFromTemplate` replace worn gear.
 
 ### Script Runner Architecture
 

@@ -4,6 +4,7 @@ package ansi
 
 import (
 	"strings"
+	"unicode/utf8"
 )
 
 const (
@@ -27,6 +28,7 @@ type Frame struct {
 	Screen    string            `json:"screen,omitempty"`
 	Accepts   []string          `json:"accepts,omitempty"`
 	Keys      map[string]string `json:"keys,omitempty"`
+	Logout    bool              `json:"logout,omitempty"`
 }
 
 // Page is the text the caller wants on screen.
@@ -89,18 +91,37 @@ func Render(page Page) Frame {
 }
 
 func titleBar(left, right string) string {
-	gap := Cols - len(left) - len(right) - 2
+	gap := Cols - utf8.RuneCountInString(left) - utf8.RuneCountInString(right) - 2
 	if gap < 1 {
 		gap = 1
 	}
 	plain := " " + left + strings.Repeat(" ", gap) + right + " "
-	if len(plain) > Cols {
-		plain = plain[:Cols]
+	if utf8.RuneCountInString(plain) > Cols {
+		plain = clipRunes(plain, Cols)
 	}
-	if len(plain) < Cols {
-		plain += strings.Repeat(" ", Cols-len(plain))
+	if utf8.RuneCountInString(plain) < Cols {
+		plain += strings.Repeat(" ", Cols-utf8.RuneCountInString(plain))
 	}
 	return ansiBar + plain + ansiReset
+}
+
+func clipRunes(s string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	if utf8.RuneCountInString(s) <= width {
+		return s
+	}
+	var b strings.Builder
+	n := 0
+	for _, r := range s {
+		if n >= width {
+			break
+		}
+		b.WriteRune(r)
+		n++
+	}
+	return b.String()
 }
 
 func fit(s string, width int) string {
@@ -118,18 +139,16 @@ func visibleLen(s string) int {
 	n := 0
 	for i := 0; i < len(s); {
 		if s[i] == 0x1b && i+1 < len(s) && s[i+1] == '[' {
-			j := i + 2
-			for j < len(s) && !((s[j] >= 'A' && s[j] <= 'Z') || (s[j] >= 'a' && s[j] <= 'z')) {
-				j++
-			}
-			if j < len(s) {
-				j++
-			}
+			j := skipANSI(s, i)
 			i = j
 			continue
 		}
+		_, size := utf8.DecodeRuneInString(s[i:])
+		if size < 1 {
+			size = 1
+		}
 		n++
-		i++
+		i += size
 	}
 	return n
 }
@@ -139,13 +158,7 @@ func clipVisible(s string, width int) string {
 	vis := 0
 	for i := 0; i < len(s); {
 		if s[i] == 0x1b && i+1 < len(s) && s[i+1] == '[' {
-			j := i + 2
-			for j < len(s) && !((s[j] >= 'A' && s[j] <= 'Z') || (s[j] >= 'a' && s[j] <= 'z')) {
-				j++
-			}
-			if j < len(s) {
-				j++
-			}
+			j := skipANSI(s, i)
 			b.WriteString(s[i:j])
 			i = j
 			continue
@@ -153,9 +166,24 @@ func clipVisible(s string, width int) string {
 		if vis >= width {
 			break
 		}
-		b.WriteByte(s[i])
+		_, size := utf8.DecodeRuneInString(s[i:])
+		if size < 1 {
+			size = 1
+		}
+		b.WriteString(s[i : i+size])
 		vis++
-		i++
+		i += size
 	}
 	return b.String()
+}
+
+func skipANSI(s string, i int) int {
+	j := i + 2
+	for j < len(s) && !((s[j] >= 'A' && s[j] <= 'Z') || (s[j] >= 'a' && s[j] <= 'z')) {
+		j++
+	}
+	if j < len(s) {
+		j++
+	}
+	return j
 }

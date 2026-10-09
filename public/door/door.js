@@ -15,6 +15,8 @@
   let ws = null;
   let inputMode = "hotkey";
   let line = "";
+  let composing = false;
+  let promptText = ">";
 
   function setMode(next) {
     mode = next;
@@ -119,17 +121,32 @@
     document.getElementById("auth").hidden = true;
     document.getElementById("stage").hidden = false;
     ensureTerm();
+    ["username", "email", "password", "token"].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el) el.blur();
+    });
+    if (term) term.focus();
     const proto = location.protocol === "https:" ? "wss" : "ws";
     ws = new WebSocket(proto + "://" + location.host + "/ws?access_token=" + encodeURIComponent(token));
     ws.onmessage = function (ev) {
       let msg;
       try { msg = JSON.parse(ev.data); } catch (e) { return; }
+      if (msg && msg.logout) {
+        leave();
+        return;
+      }
       if (!msg || (msg.type !== "door_frame" && msg.type !== "doorFrame") || !msg.ansi) return;
       if (msg.accepts && msg.accepts[0] === "line") inputMode = "line";
       else if (msg.accepts && msg.accepts[0] === "hotkey") inputMode = "hotkey";
       else inputMode = msg.inputMode || "hotkey";
-      if (inputMode === "hotkey") line = "";
+      if (inputMode === "hotkey") {
+        line = "";
+        composing = false;
+      }
+      promptText = msg.prompt || ">";
       term.write(msg.ansi);
+      if (inputMode === "line" || composing) echoLine();
+      term.focus();
     };
     ws.onclose = function () {
       term.write("\r\n\x1b[1;31mConnection closed.\x1b[0m\r\n");
@@ -159,6 +176,34 @@
     fitFont();
     window.addEventListener("resize", fitFont);
     term.onData(onData);
+    term.focus();
+  }
+
+  function echoLine() {
+    if (!term) return;
+    const shown = (composing && inputMode !== "line" ? ":" : promptText) + " " + line;
+    term.write("\x1b[23;1H\x1b[2K" + shown.slice(0, 79));
+  }
+
+  function leave() {
+    localStorage.removeItem(TOKEN_KEY);
+    if (ws) {
+      ws.onclose = null;
+      ws.close();
+      ws = null;
+    }
+    composing = false;
+    line = "";
+    inputMode = "hotkey";
+    document.getElementById("stage").hidden = true;
+    document.getElementById("auth").hidden = false;
+    setMode("login");
+    ["username", "password"].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el) el.value = "";
+    });
+    const username = document.getElementById("username");
+    if (username) username.focus();
   }
 
   function fitFont() {
@@ -171,29 +216,50 @@
 
   function onData(data) {
     if (!ws || ws.readyState !== 1) return;
-    if (inputMode === "line") {
+    if (inputMode === "line" || composing) {
       if (data === "\r") {
         const text = line;
         line = "";
-        term.write("\r\n");
+        const local = composing && inputMode !== "line";
+        composing = false;
+        if (local && text === "") return;
         ws.send(JSON.stringify({ type: "door_key", key: text }));
         return;
       }
       if (data === "\x7f" || data === "\b") {
-        if (line.length > 0) {
-          line = line.slice(0, -1);
-          term.write("\b \b");
-        }
+        if (line.length > 0) line = line.slice(0, -1);
+        echoLine();
+        return;
+      }
+      if (data === "\x1b") {
+        line = "";
+        const wasLine = inputMode === "line";
+        composing = false;
+        if (wasLine) ws.send(JSON.stringify({ type: "door_key", key: "x" }));
         return;
       }
       if (data.length === 1 && data >= " " && data <= "~" && line.length < 48) {
         line += data;
-        term.write(data);
+        echoLine();
       }
+      return;
+    }
+    if (data === "\r" || data === "\n") {
+      ws.send(JSON.stringify({ type: "door_key", key: "" }));
+      return;
+    }
+    if (data === ":") {
+      composing = true;
+      line = "";
+      echoLine();
       return;
     }
     if (data.length === 1 && /[a-zA-Z0-9?]/.test(data)) {
       ws.send(JSON.stringify({ type: "door_key", key: data }));
+      return;
+    }
+    if (data.length === 1 && data >= " " && data <= "~") {
+      ws.send(JSON.stringify({ type: "door_key", key: "" }));
     }
   }
 
@@ -226,6 +292,7 @@
       });
   }
 
+  setMode("login");
   fetch("/api/door/config").then(function (res) {
     if (!res.ok) return {};
     return res.json();

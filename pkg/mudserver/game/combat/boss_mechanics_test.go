@@ -1,6 +1,7 @@
 package combat
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/talesmud/talesmud/pkg/entities"
@@ -32,6 +33,56 @@ func testEnemy(name, difficulty string, hp, atk int32) *npc.NPC {
 			Defense:     0,
 			Difficulty:  difficulty,
 		},
+	}
+}
+
+func TestEnemyMissSaysMisses(t *testing.T) {
+	if _, err := balance.ReloadConfig(); err != nil {
+		t.Fatal(err)
+	}
+	e := NewEngine(NewManager(), DefaultConfig())
+	saw := false
+	for i := 0; i < 40 && !saw; i++ {
+		hero := testFighter("Hero", 80)
+		foe := testEnemy("Wolf", "easy", 40, 3)
+		inst := e.InitiateCombat("miss", []*characters.Character{hero}, []*npc.NPC{foe})
+		if inst == nil {
+			t.Fatal("no combat")
+		}
+		for i := range inst.Players {
+			inst.Players[i].Defense = 80
+		}
+		step := stepNextEnemy(t, e, inst)
+		if step.Telegraph {
+			t.Fatalf("easy wind-up: %q", step.Message)
+		}
+		if step.Attack.Miss && strings.Contains(step.Message, "misses") {
+			saw = true
+		}
+	}
+	if !saw {
+		t.Fatal("a miss did not print misses")
+	}
+}
+
+func TestWindupRoundIsNotAHitOrAMiss(t *testing.T) {
+	if _, err := balance.ReloadConfig(); err != nil {
+		t.Fatal(err)
+	}
+	e := NewEngine(NewManager(), DefaultConfig())
+	hero := testFighter("Hero", 80)
+	foe := testEnemy("Wolf", "hard", 40, 3)
+	inst := e.InitiateCombat("wind", []*characters.Character{hero}, []*npc.NPC{foe})
+	if inst == nil {
+		t.Fatal("no combat")
+	}
+	step := stepNextEnemy(t, e, inst)
+	if !step.Telegraph || !strings.Contains(step.Message, "winding up") {
+		t.Fatalf("wind-up: %+v", step)
+	}
+	lower := strings.ToLower(step.Message)
+	if strings.Contains(lower, "misses") || strings.Contains(lower, "hits") {
+		t.Fatalf("wind-up looked like a blow: %q", step.Message)
 	}
 }
 

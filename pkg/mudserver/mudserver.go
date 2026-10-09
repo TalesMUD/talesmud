@@ -507,10 +507,18 @@ func (server *server) noteANSI(msg messages.MessageResponder) {
 	if text == "" || userID == "" {
 		return
 	}
-	go server.repaintANSI(userID, text)
+	kind := ""
+	var gen uint64
+	if typed, ok := msg.(interface{ GetType() messages.MessageType }); ok {
+		kind = string(typed.GetType())
+	}
+	if stamped, ok := msg.(interface{ GetNoticeGen() uint64 }); ok {
+		gen = stamped.GetNoticeGen()
+	}
+	go server.repaintANSI(userID, text, kind, gen)
 }
 
-func (server *server) repaintANSI(userID, text string) {
+func (server *server) repaintANSI(userID, text, kind string, gen uint64) {
 	if server == nil || server.hook == nil || userID == "" {
 		return
 	}
@@ -518,7 +526,7 @@ func (server *server) repaintANSI(userID, text string) {
 	if !ok || client == nil || client.User == nil {
 		return
 	}
-	server.hook.OnNotice(client.User, text, func(v any) {
+	server.hook.OnNotice(client.User, text, kind, gen, func(v any) {
 		server.sendMessage(userID, v)
 	})
 }
