@@ -1,6 +1,7 @@
 <script>
   import { onDestroy } from 'svelte';
   import { itemArtSrc, onItemArtError } from '../itemArtSrc.js';
+  import { itemEffectLines } from '../itemEffects.js';
 
   export let store;
   export let sendMessage;
@@ -681,6 +682,34 @@
   .stat-value { font-weight: 600; color: #f8fafc; }
   .stat-offensive { color: #ef4444; }
   .stat-defensive { color: #3b82f6; }
+  .detail-effects {
+    list-style: none;
+    margin: 0.5rem 0;
+    padding: 0.45rem 0.65rem;
+    border-left: 3px solid #e8c25a;
+    border-radius: 4px;
+    background: linear-gradient(90deg, rgba(232, 194, 90, 0.13), rgba(96, 165, 250, 0.06));
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: #e6dcc4;
+  }
+  .detail-effects li {
+    display: flex;
+    gap: 0.4rem;
+    align-items: baseline;
+  }
+  .detail-effects .eff-mark {
+    color: #f3d27a;
+    flex: none;
+  }
+  .detail-effects strong {
+    color: #f6d77e;
+  }
+  .detail-effects em {
+    font-style: normal;
+    color: #9cc3f5;
+    font-weight: 600;
+  }
   .detail-description {
     font-size: 0.85em;
     color: #94a3b8;
@@ -974,6 +1003,14 @@
                 </div>
               {/each}
             </div>
+          {/if}
+
+          {#if itemEffectLines(selected).length}
+            <ul class="detail-effects" aria-label="Effects">
+              {#each itemEffectLines(selected) as eff, i (i)}
+                <li><span class="eff-mark" aria-hidden="true">✦</span><span><strong>{eff.label}</strong>{#if eff.name} — <em>{eff.name}</em>{/if}{#if eff.text}{eff.name ? ': ' : ' — '}{eff.text}{/if}</span></li>
+              {/each}
+            </ul>
           {/if}
 
           {#if showCompare}

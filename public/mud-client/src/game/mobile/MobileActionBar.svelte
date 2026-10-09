@@ -161,7 +161,7 @@
   .dialog-overlay {
     position: fixed;
     inset: 0;
-    z-index: 9999;
+    z-index: 10050;
     background: rgba(0, 0, 0, 0.6);
     display: flex;
     align-items: center;
@@ -175,9 +175,7 @@
   }
 
   .dialog {
-    background: rgba(15, 15, 25, 0.95);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: #14171f;
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 14px;
     padding: 16px;
@@ -327,6 +325,26 @@
     background: rgba(59, 130, 246, 0.15);
     color: #bfdbfe;
   }
+  /* Opaque sheet tiles: the room text and hotbar must not show through. */
+  .dialog {
+    border-color: rgba(201, 162, 90, 0.5);
+    box-shadow: 0 22px 60px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(0, 0, 0, 0.6);
+  }
+  .dialog .pin-toggle {
+    background: #1b2030;
+    border-color: #2f3648;
+    color: #d5dbe5;
+  }
+  .dialog .pin-toggle.pinned {
+    background: #1a2742;
+    border-color: #3b6fc4;
+    color: #cfe0ff;
+  }
+  .dialog .popup-btn:not(.room-action-popup-btn):not(.pickup-popup-btn) {
+    background: #16223a;
+    border-color: #2f4f86;
+    color: #a9c9fb;
+  }
   .dialog-section-label {
     grid-column: 1 / -1;
     font-size: 10px;
@@ -355,6 +373,7 @@
 </style>
 
 <script>
+  import { portal } from "../portal.js";
   import { getCardinalExits, getSpecialExits, getVerticalExits } from "../MUDXPlusStore";
   import { mobileStore } from './mobileStore.js';
   import { settingsStore } from '../SettingsStore.js';
@@ -546,7 +565,7 @@
 
 {#if showMoreMenu}
   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-  <div class="dialog-overlay" on:click={closeMenus}>
+  <div class="dialog-overlay" use:portal on:click={closeMenus}>
     <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
     <div class="dialog" on:click|stopPropagation>
       <div class="dialog-header">
@@ -606,7 +625,7 @@
 
 {#if showPickupMenu && groundItems.length > 0}
   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-  <div class="dialog-overlay" on:click={closeMenus}>
+  <div class="dialog-overlay" use:portal on:click={closeMenus}>
     <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
     <div class="dialog" on:click|stopPropagation>
       <div class="dialog-header">
@@ -636,7 +655,7 @@
 
 {#if showSayPrompt}
   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-  <div class="dialog-overlay" on:click={closeSayPrompt}>
+  <div class="dialog-overlay" use:portal on:click={closeSayPrompt}>
     <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
     <div class="dialog dialog-say" on:click|stopPropagation>
       <div class="dialog-header">

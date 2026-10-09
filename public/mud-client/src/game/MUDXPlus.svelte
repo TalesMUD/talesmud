@@ -336,7 +336,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 9999;
+    z-index: 10050;
     background: rgba(0, 0, 0, 0.6);
     display: flex;
     align-items: center;
@@ -350,9 +350,7 @@
   }
 
   .dialog {
-    background: rgba(15, 15, 25, 0.95);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: #14171f;
     border: 1px solid rgba(168, 85, 247, 0.3);
     border-radius: 14px;
     padding: 1.2em;
@@ -366,9 +364,40 @@
   }
 
   .dialog.dialog-more {
-    border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    border-color: rgba(201, 162, 90, 0.5);
+    box-shadow: 0 22px 60px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(0, 0, 0, 0.6);
     max-width: 480px;
+  }
+
+  /* Opaque tiles: nothing from the room or hotbar may show through. */
+  .dialog-more .pin-toggle {
+    background: #1b2030;
+    border-color: #2f3648;
+    color: #d5dbe5;
+  }
+  .dialog-more .pin-toggle:hover {
+    background: #222839;
+    border-color: #48526a;
+  }
+  .dialog-more .pin-toggle.pinned {
+    background: #1a2742;
+    border-color: #3b6fc4;
+    color: #cfe0ff;
+  }
+  .dialog-more .popup-btn {
+    background: #16223a;
+    border-color: #2f4f86;
+    color: #a9c9fb;
+  }
+  .dialog-more .popup-btn:hover {
+    background: #1c2c4b;
+    border-color: #4a75bd;
+  }
+  .dialog-more .dialog-section-label {
+    color: #8b95a7;
+  }
+  .dialog-more .pref-row {
+    color: #c3cad6;
   }
 
   .dialog-more .dialog-title {
@@ -557,6 +586,7 @@
 </style>
 
 <script>
+  import { portal } from "./portal.js";
   import { getCardinalExits, getSpecialExits, getVerticalExits } from "./MUDXPlusStore";
   import { settingsStore } from "./SettingsStore.js";
   import {
@@ -752,7 +782,7 @@
 <div class="mudx">
   {#if showMoreMenu}
     <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-    <div class="dialog-overlay" on:click={closeMenus}>
+    <div class="dialog-overlay" use:portal on:click={closeMenus}>
       <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
       <div class="dialog dialog-more" on:click|stopPropagation>
         <div class="dialog-header">
@@ -817,7 +847,7 @@
   {/if}
   {#if showPickupMenu && groundItems.length > 0}
     <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-    <div class="dialog-overlay" on:click={closeMenus}>
+    <div class="dialog-overlay" use:portal on:click={closeMenus}>
       <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
       <div class="dialog dialog-pickup" on:click|stopPropagation>
         <div class="dialog-header">
@@ -854,7 +884,7 @@
   {/if}
   {#if showSayPrompt}
     <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-    <div class="dialog-overlay" on:click={closeSayPrompt}>
+    <div class="dialog-overlay" use:portal on:click={closeSayPrompt}>
       <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
       <div class="dialog dialog-say" on:click|stopPropagation>
         <div class="dialog-header">

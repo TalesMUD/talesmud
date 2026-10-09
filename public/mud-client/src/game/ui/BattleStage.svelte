@@ -23,6 +23,7 @@
   import { backend } from '../../api/base.js';
   import { livingFocus } from '../combatFocus.js';
   import { combatEventIcon } from '../combatEvent.js';
+  import { sortLootUniqueFirst, uniqueDropName } from '../itemEffects.js';
   import {
     DEFAULT_DECISION_WINDOW_MS,
     DEFAULT_BEAT_BUDGET_MS,
@@ -144,7 +145,7 @@
   $: fxAbility = (fx && fx.ability) || '';
   $: fxIsCrush = fxActive && /crushing blow/i.test(fxAbility);
 
-  $: lootList = Array.isArray(rewardBreakdown?.loot) ? rewardBreakdown.loot : [];
+  $: lootList = sortLootUniqueFirst(Array.isArray(rewardBreakdown?.loot) ? rewardBreakdown.loot : []);
   $: levelUp = rewardBreakdown?.levelUp || null;
   $: defeatInfo = rewardBreakdown?.defeat || null;
   $: hasRewardBreakdown = !!(rewardBreakdown && (
@@ -1312,7 +1313,14 @@
     <div id="combat-log-body" class="combat-log-body">
       {#if log.length}
         {#each log.slice(-10) as line (line.id)}
-          {#if line.kind === "combatEvent"}
+          {#if line.kind === "combatEvent" && line.hook === "unique"}
+            <div class="combat-unique-line">
+              <i class="material-icons" aria-hidden="true">diamond</i>
+              <span class="unique-tag">Unique</span>
+              <span class="combat-unique-name">{uniqueDropName(line.text)}</span>
+              {#if line.source}<span class="combat-event-source">{line.source}</span>{/if}
+            </div>
+          {:else if line.kind === "combatEvent"}
             <div class="combat-event-card">
               <i class="material-icons" aria-hidden="true">{combatEventIcon(line.hook)}</i>
               <span class="combat-event-text">{line.text}</span>
@@ -1357,11 +1365,12 @@
             <ul class="loot-reveal" aria-label="Loot">
               {#each lootList.slice(0, lootShown) as item, index (`${item.name}-${index}`)}
                 {#if item.unique}
-                  <li class="loot-item">
-                    <div class="combat-event-card">
-                      <i class="material-icons" aria-hidden="true">diamond</i>
-                      <span class="combat-event-text">UNIQUE: {item.name}</span>
-                    </div>
+                  <li class="loot-item loot-unique">
+                    <i class="material-icons loot-unique-gem" aria-hidden="true">diamond</i>
+                    <span class="loot-unique-body">
+                      <span class="unique-tag">Unique</span>
+                      <span class="loot-unique-name">{item.name}{#if item.quantity > 1} ×{item.quantity}{/if}</span>
+                    </span>
                   </li>
                 {:else}
                   <li class="loot-item rarity-{rarityClass(item.quality)}">{item.name}{#if item.quantity > 1} ×{item.quantity}{/if}</li>
@@ -3251,11 +3260,72 @@
     padding: 0.18rem 0;
     animation: lootIn 0.28s ease-out;
   }
-  .loot-reveal .combat-event-card {
-    margin-top: 0.15rem;
+  /* Rarity-unique drop: a real loot row, first in the list, gold with a quiet tag. */
+  .loot-item.loot-unique {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0.05rem 0 0.35rem;
+    padding: 0.4rem 0.65rem 0.4rem 0.55rem;
+    border-left: 3px solid #e8c25a;
+    border-radius: 3px;
+    background: linear-gradient(90deg, rgba(232, 194, 90, 0.17), rgba(232, 194, 90, 0.04) 70%, rgba(232, 194, 90, 0));
   }
-  .loot-reveal .combat-event-text {
-    white-space: normal;
+  .loot-unique-gem {
+    font-size: 1.15rem;
+    color: #f3d27a;
+    filter: drop-shadow(0 0 5px rgba(243, 210, 122, 0.55));
+    flex: 0 0 auto;
+  }
+  .loot-unique-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+    line-height: 1.2;
+  }
+  .unique-tag {
+    font-family: var(--font-display, 'Cinzel', Georgia, serif);
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(232, 200, 120, 0.78);
+  }
+  .loot-unique-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #f6d77e;
+    text-shadow: 0 0 10px rgba(246, 215, 126, 0.35);
+  }
+  .combat-unique-line {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0.2rem 0;
+    padding: 0.2rem 0.5rem 0.2rem 0.45rem;
+    border-left: 3px solid #e8c25a;
+    border-radius: 3px;
+    background: linear-gradient(90deg, rgba(232, 194, 90, 0.16), rgba(232, 194, 90, 0));
+    line-height: 1.3;
+  }
+  .combat-unique-line .material-icons {
+    font-size: 0.95rem;
+    color: #f3d27a;
+    filter: drop-shadow(0 0 4px rgba(243, 210, 122, 0.5));
+    flex: 0 0 auto;
+  }
+  .combat-unique-line .unique-tag {
+    font-size: 0.56rem;
+    flex: 0 0 auto;
+  }
+  .combat-unique-name {
+    min-width: 0;
+    font-weight: 700;
+    color: #f6d77e;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .rarity-normal { color: #e5e7eb; }
   .rarity-magic { color: #60a5fa; }

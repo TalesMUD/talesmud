@@ -549,6 +549,7 @@ func buildShopMessage(game def.GameCtrl, message *messages.Message, merchant *np
 			MaxStack:      itemTemplate.MaxStack,
 			BasePrice:     itemTemplate.BasePrice,
 			Attributes:    attrs,
+			Effects:       itemTemplate.DisplayEffects(scriptDisplayName(game)),
 		})
 	}
 	merchantID := ""

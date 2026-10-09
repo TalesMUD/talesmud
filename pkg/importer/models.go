@@ -136,6 +136,15 @@ type YAMLItem struct {
 	OnUseScriptID string                 `yaml:"onUseScriptId"` // alias used by content packs
 	OnHitScript   string                 `yaml:"onHitScript"`
 	OnHitScriptID string                 `yaml:"onHitScriptId"` // alias used by content packs
+	// Effects are player-facing lines (trigger, name, text) for script-driven behaviour.
+	Effects []YAMLItemEffect `yaml:"effects"`
+}
+
+// YAMLItemEffect is one player-facing effect line on an item.
+type YAMLItemEffect struct {
+	Trigger string `yaml:"trigger"`
+	Name    string `yaml:"name"`
+	Text    string `yaml:"text"`
 }
 
 // YAMLItemMeta contains item metadata

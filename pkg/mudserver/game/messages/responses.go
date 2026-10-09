@@ -6,6 +6,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities"
 	e "github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
+	"github.com/talesmud/talesmud/pkg/entities/items"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/entities/skills"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/balance"
@@ -840,6 +841,8 @@ type ShopStockItem struct {
 	MaxStack      int32                  `json:"maxStack,omitempty"`
 	BasePrice     int64                  `json:"basePrice,omitempty"`
 	Attributes    map[string]interface{} `json:"attributes,omitempty"`
+	// Effects are the display lines for script-driven behaviour (authored or fallback).
+	Effects []items.ItemEffect `json:"effects,omitempty"`
 }
 
 // ShopMessage opens/refreshes the merchant shop overlay.

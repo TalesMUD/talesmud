@@ -45,4 +45,21 @@ assert.equal(s.title, 'Iron Sword');
 assert.equal(s.details.find((d) => d.label === 'Type').value, 'Weapon (Sword)');
 assert.equal(s.attributes.find((a) => a.label === 'Damage').value, '5');
 
+const blade = parseExamineText(`=== Unmarked Vigil Blade ===
+An unmarked blade.
+
+--- Item Details ---
+Type: Weapon (Sword)
+
+--- Effects ---
+On hit — Vigil Burn: 2 damage at the start of each of the target's turns, for 3 turns.
+On use — Special effect
+`);
+assert.deepEqual(blade.effects, [
+  "On hit — Vigil Burn: 2 damage at the start of each of the target's turns, for 3 turns.",
+  'On use — Special effect',
+]);
+assert.equal(blade.details.length, 1);
+assert.deepEqual(parseExamineText(`=== Rock ===\nA rock.\n\n--- Item Details ---\nType: Junk`).effects, []);
+
 console.log('parseExamineOverlay_test: ok');

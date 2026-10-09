@@ -9,6 +9,7 @@ import (
 
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
+	"github.com/talesmud/talesmud/pkg/entities/items"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/instances"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
@@ -202,6 +203,13 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 			ch.BoundRoomID = currentRoom.ID
 		}
 		worldmap.MarkOn(ch, currentRoom)
+		backfillItemEffects(ch, func(id string) *items.Item {
+			tmpl, err := game.GetFacade().ItemsService().FindByID(id)
+			if err != nil {
+				return nil
+			}
+			return tmpl
+		})
 		return nil
 	}); err != nil {
 		log.WithError(err).WithField("characterID", character.ID).Warn("select character: failed to persist discovery")

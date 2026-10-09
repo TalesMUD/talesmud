@@ -122,6 +122,12 @@ func (y *YAMLItem) ToEntity() *items.Item {
 		OnUseScriptID: firstNonEmpty(y.OnUseScript, y.OnUseScriptID),
 		OnHitScriptID: firstNonEmpty(y.OnHitScript, y.OnHitScriptID),
 	}
+	for _, eff := range y.Effects {
+		if eff.Text == "" && eff.Name == "" {
+			continue
+		}
+		item.Effects = append(item.Effects, items.ItemEffect{Trigger: eff.Trigger, Name: eff.Name, Text: eff.Text})
+	}
 
 	// Set meta if img is provided
 	if y.Meta.Img != "" {

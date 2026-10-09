@@ -1,6 +1,8 @@
 <script>
   import { createEventDispatcher, onMount } from 'svelte';
   import { itemArtSrc, onItemArtError } from '../itemArtSrc.js';
+  import { itemEffectLines } from '../itemEffects.js';
+  import { portal } from '../portal.js';
   import { comparisonItems, comparisonRows, isTwoHanded, itemUsabilityReason, itemWeight, itemIsUsable, itemOffersUseOn } from './itemComparison.js';
 
   export let item;
@@ -20,6 +22,7 @@
   $: consumable = item?.type === 'consumable' || item?.consumable;
   $: usable = itemIsUsable(item);
   $: offersUseOn = itemOffersUseOn(item);
+  $: effects = itemEffectLines(item);
 
   onMount(() => card?.focus());
 
@@ -36,11 +39,6 @@
   }
   function label(value) { return String(value || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); }
   function format(value) { return Number.isInteger(value) ? String(value) : Number(value).toFixed(1); }
-  // Grid widgets clip their children; move the dialog to the page layer.
-  function portal(node) {
-    document.body.appendChild(node);
-    return { destroy() { node.remove(); } };
-  }
 </script>
 
 <svelte:window on:keydown={keydown} />
@@ -52,7 +50,7 @@
       <img class="item-card-art" src={itemArtSrc(item)} alt="" on:error={(event) => onItemArtError(event, item)} />
       <div class="item-card-heading">
         <h2 style="color: {item.unique ? '#fde68a' : color(item.quality)}">{item.name}{#if item.unique}<span class="item-card-unique-mark">UNIQUE</span>{/if}</h2>
-        <div class="item-card-meta">{label(item.quality || 'normal')} · {label(item.type)}{#if item.subType} · {label(item.subType)}{/if}</div>
+        <div class="item-card-meta">{[item.quality || 'normal', item.type, item.subType].filter(Boolean).map(label).join(' · ')}</div>
         {#if equippable}<div class="item-card-slot">{label(item.slot)}{#if isTwoHanded(item)} · Two handed{/if}</div>{/if}
       </div>
       <button class="item-card-close" type="button" aria-label="Close item details" on:click={close}>×</button>
@@ -93,6 +91,14 @@
       </div>
     {/if}
 
+    {#if effects.length}
+      <ul class="item-card-effects" aria-label="Effects">
+        {#each effects as eff, i (i)}
+          <li><span class="eff-mark" aria-hidden="true">✦</span><span><strong>{eff.label}</strong>{#if eff.name} — <em>{eff.name}</em>{/if}{#if eff.text}{eff.name ? ': ' : ' — '}{eff.text}{/if}</span></li>
+        {/each}
+      </ul>
+    {/if}
+
     <div class="item-card-facts">
       <span>Weight <strong>{weight === null ? '—' : format(weight)}</strong></span>
       <span>Value <strong>{item.basePrice == null ? '—' : `${item.basePrice} gold`}</strong></span>
@@ -121,6 +127,12 @@
   .item-card{width:min(660px,100%);max-height:min(86dvh,760px);overflow:auto;background:#11161c;border:1px solid rgba(212,175,55,.5);border-radius:12px;box-shadow:0 24px 70px #000c;color:#e5e7eb;padding:20px;outline:none}
   .item-card.item-card-unique{border:2px solid #facc15;box-shadow:0 0 0 1px #7a5a16,0 24px 70px #000c,0 0 22px rgba(250,204,21,.35)}
   .item-card-unique-mark{display:inline-block;margin-left:8px;font-size:.62rem;letter-spacing:.14em;color:#fde68a;border:1px solid rgba(250,204,21,.75);border-radius:999px;padding:1px 6px;vertical-align:middle}
+  .item-card-effects{list-style:none;margin:2px 0 14px;padding:9px 12px;border-left:3px solid #e8c25a;border-radius:4px;background:linear-gradient(90deg,rgba(232,194,90,.13),rgba(96,165,250,.06));font-size:.84rem;line-height:1.45;color:#e6dcc4}
+  .item-card-effects li{display:flex;gap:8px;align-items:baseline}
+  .item-card-effects li+li{margin-top:4px}
+  .item-card-effects .eff-mark{color:#f3d27a;flex:none}
+  .item-card-effects strong{color:#f6d77e;font-weight:700}
+  .item-card-effects em{font-style:normal;color:#9cc3f5;font-weight:600}
   .item-card-header{display:flex;gap:16px;align-items:center}
   .item-card-art{width:84px;height:84px;object-fit:contain;image-rendering:pixelated;background:#080b0f;border:1px solid #3d3423;border-radius:8px;flex:none}
   .item-card-heading{min-width:0;flex:1}

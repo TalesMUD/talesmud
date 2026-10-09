@@ -86,6 +86,7 @@ export function parseExamineText(text) {
   const details = [];
   const attributes = [];
   const properties = [];
+  const effects = [];
 
   for (const line of lines) {
     const section = line.match(SECTION_RE);
@@ -94,6 +95,7 @@ export function parseExamineText(text) {
       if (name === 'item details') mode = 'details';
       else if (name === 'attributes') mode = 'attributes';
       else if (name === 'properties') mode = 'properties';
+      else if (name === 'effects') mode = 'effects';
       else mode = 'details';
       continue;
     }
@@ -105,6 +107,10 @@ export function parseExamineText(text) {
 
     const trimmed = line.trim();
     if (!trimmed) continue;
+    if (mode === 'effects') {
+      effects.push(trimmed);
+      continue;
+    }
     const kv = trimmed.match(DETAIL_LINE_RE);
     if (!kv) continue;
     const label = kv[1].trim();
@@ -145,6 +151,7 @@ export function parseExamineText(text) {
     details,
     attributes,
     properties,
+    effects,
   };
 }
 
