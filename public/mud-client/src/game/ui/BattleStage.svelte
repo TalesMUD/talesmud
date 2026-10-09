@@ -4498,11 +4498,29 @@
     .battle-stage.layout-b .enemy-strip.pack-solo,
     .battle-stage.layout-b .enemy-strip.pack-duo,
     .battle-stage.layout-b .enemy-strip.pack-swarm {
+      /* One centered row under the TL/TR frames. The old narrow column wrapped
+         every extra foe onto its own row, so mid-fight adds stacked upward
+         under the HUD and behind the action toast. */
       top: auto;
-      bottom: 14%;
-      right: 3%;
+      bottom: auto;
+      right: auto;
       left: auto;
-      max-width: min(48%, 220px);
+      width: 100%;
+      max-width: none;
+      flex-wrap: nowrap;
+      align-self: start;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 7.5rem 0.5rem 0;
+    }
+    .battle-stage.layout-b .enemy-strip .enemy-card {
+      flex: 0 1 auto;
+      min-width: 0;
+    }
+    /* Toast sits between the enemy row and the player, never over a sprite. */
+    .battle-stage.layout-b .action-banner-stack {
+      top: 50%;
     }
     .battle-stage.layout-b .player-team,
     .battle-stage.layout-b .player-team.solo {
