@@ -216,4 +216,33 @@ func TestBossOnlyDoesNotConsumeTheNextRoll(t *testing.T) {
 	if len(res.Items) != 1 || res.Items[0].TemplateID != "PLAIN" {
 		t.Fatalf("items %#v", res.Items)
 	}
+	if len(res.RareUnique) != 0 {
+		t.Fatalf("skipped unique still announced: %d", len(res.RareUnique))
+	}
+}
+
+func TestRarityUniqueIsAnnouncedApartFromTemplateUnique(t *testing.T) {
+	srv := (&uniqueItemStub{templates: map[string]*items.Item{
+		"REL": {Entity: &entities.Entity{ID: "REL"}, Name: "Relic", Unique: true},
+	}}).service()
+	always := LootRollContext{Float64: func() float64 { return 0 }}
+
+	rare, err := srv.RollLootFromTableInContext(uniqueTable("REL", 1, "unique", false), 1, 0, always)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rare.Items) != 1 || len(rare.RareUnique) != 1 || rare.RareUnique[0] != rare.Items[0] {
+		t.Fatalf("rarity unique items %d announced %d", len(rare.Items), len(rare.RareUnique))
+	}
+	if !rare.Items[0].Unique {
+		t.Fatal("rarity unique did not stamp the item")
+	}
+
+	flagged, err := srv.RollLootFromTableInContext(uniqueTable("REL", 1, "", false), 1, 0, always)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(flagged.Items) != 1 || !flagged.Items[0].Unique || len(flagged.RareUnique) != 0 {
+		t.Fatalf("template unique items %d unique %v announced %d", len(flagged.Items), flagged.Items[0] != nil && flagged.Items[0].Unique, len(flagged.RareUnique))
+	}
 }
