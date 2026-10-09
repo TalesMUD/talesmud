@@ -5,6 +5,9 @@
   import DataTable from "./DataTable.svelte";
   import ValidationPanel from "./ValidationPanel.svelte";
   import ConfirmDialog from "./ConfirmDialog.svelte";
+  import BacklinksPanel from "./BacklinksPanel.svelte";
+  import { getRefs } from "../api/search.js";
+  import { backlinkTypes, referencedByHint, refTypes } from "./searchGroups.js";
 
   export let config;
   export let store;
@@ -17,6 +20,8 @@
   let hasLoadedData = false;
   let appliedQueryId = false;
   let confirmOpen = false;
+  let deleteHint = "This removes it from the world. There is no undo.";
+  let deleteWatch = 0;
   let validationResult = null;
   let validationLoading = false;
   let validationUnavailable = "";
@@ -124,11 +129,25 @@
   };
 
   const askDelete = () => {
-    if (!$store.selectedElement || $store.selectedElement.isNew) return;
+    const element = $store.selectedElement;
+    if (!element || element.isNew) return;
+    deleteHint = "This removes it from the world. There is no undo.";
     confirmOpen = true;
+    const type = config.entityType || "";
+    const id = element.id || "";
+    if (!$authToken || !id || !refTypes.has(type)) return;
+    const watch = ++deleteWatch;
+    getRefs($authToken, type, id)
+      .then((view) => {
+        if (watch !== deleteWatch || !confirmOpen) return;
+        const hint = referencedByHint(view);
+        if (hint) deleteHint = hint;
+      })
+      .catch(() => {});
   };
 
   const cancelDelete = () => {
+    deleteWatch += 1;
     confirmOpen = false;
   };
 
@@ -434,6 +453,9 @@
           <div class="mt-6">
             <slot name="extensions" />
           </div>
+          {#if backlinkTypes.has(config.entityType) && !$store.selectedElement.isNew && $store.selectedElement.id}
+            <BacklinksPanel type={config.entityType} id={$store.selectedElement.id} />
+          {/if}
         </div>
       {/if}
     </div>
@@ -445,6 +467,7 @@
   entityType={config.entityType || "entity"}
   entityName={$store.selectedElement?.name || ""}
   entityId={$store.selectedElement?.id || ""}
+  hint={deleteHint}
   on:confirm={deleteElement}
   on:cancel={cancelDelete}
 />
