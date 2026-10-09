@@ -78,11 +78,6 @@ func TestWebsocketReplaceClosesOldWith4001(t *testing.T) {
 		}
 		return conn
 	}
-	c1 := dial()
-	t.Cleanup(func() { _ = c1.Close() })
-	c2 := dial()
-	t.Cleanup(func() { _ = c2.Close() })
-
 	want, err := json.Marshal(messages.NewRoomBasedMessage("", "Connected to [TalesMUD] ..."))
 	if err != nil {
 		t.Fatal(err)
@@ -95,6 +90,8 @@ func TestWebsocketReplaceClosesOldWith4001(t *testing.T) {
 		return payload, err
 	}
 
+	c1 := dial()
+	t.Cleanup(func() { _ = c1.Close() })
 	got1, err := readFrame(c1)
 	if err != nil {
 		t.Fatalf("first welcome: %v", err)
@@ -102,6 +99,9 @@ func TestWebsocketReplaceClosesOldWith4001(t *testing.T) {
 	if string(got1) != string(want) {
 		t.Fatalf("first welcome bytes\n got %q\nwant %q", got1, want)
 	}
+
+	c2 := dial()
+	t.Cleanup(func() { _ = c2.Close() })
 
 	var closed bool
 	deadline := time.Now().Add(3 * time.Second)
