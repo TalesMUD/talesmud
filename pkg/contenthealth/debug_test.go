@@ -111,10 +111,10 @@ func TestDebugQuestRewardChainAndGraph(t *testing.T) {
 	if grantView.Rewards.XP != 40 || grantView.Rewards.Gold != 12 || len(grantView.Rewards.Items) != 1 {
 		t.Fatalf("grant rewards %+v", grantView.Rewards)
 	}
-	if len(view.Characters) != 1 || view.Characters[0].Step != "deliver 0/1" || view.Characters[0].Status != "active" {
+	if len(view.Characters) != 1 || view.Characters[0].Step != "deliver 0/1" || view.Characters[0].Status != "active" || view.Characters[0].ObjectiveID != "drop" {
 		t.Fatalf("characters %+v", view.Characters)
 	}
-	if view.Ops.QuestStep.Path != QuestStepOpPath || view.Ops.QuestStep.Implemented || view.Ops.QuestStep.Method != "POST" {
+	if view.Ops.QuestStep.Path != QuestStepOpPath || !view.Ops.QuestStep.Implemented || view.Ops.QuestStep.Method != "POST" {
 		t.Fatalf("ops %+v", view.Ops.QuestStep)
 	}
 }

@@ -566,7 +566,7 @@ go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
 - `GET /api/balance/enemy-scaling` - Read-only difficulty tiers and named overrides (`hp`, `attack`, `defense`)
 - `POST/PUT/DELETE /api/dialogs` - Dialog management
 - `POST/PUT/DELETE /api/quests` - Quest management
-- `GET /api/quests/:id/debug` - Quest debugger: step chain, where each objective can be satisfied, reachability, prerequisite graph, offer and turn-in, rewards, and read-only character progress. `ops.questStep` names `POST /api/ops/quest-step` and does not perform it.
+- `GET /api/quests/:id/debug` - Quest debugger: step chain, where each objective can be satisfied, reachability, prerequisite graph, offer and turn-in, rewards, and character progress. Each character row includes the open `objectiveId`. `ops.questStep.implemented` is true. The Creator page follows `?id=` on load and on navigation. An admin resets that open step with `POST /api/ops/quest-step`.
 - `POST/PUT/DELETE /api/skills` - Skill management
 - `GET /api/world/validation` - World Health diagnostics
 - `GET /api/diagnostics/world` - World health diagnostics across rooms, NPCs, dialogs, quests, loot, items, and scripts

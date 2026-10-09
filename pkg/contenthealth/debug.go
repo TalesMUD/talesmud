@@ -10,8 +10,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/worldindex"
 )
 
-// QuestStepOpPath is the live-ops route that resets a quest step.
-// This slice does not implement that route.
+// QuestStepOpPath is the live-ops route that changes one character's quest step.
 const QuestStepOpPath = "/api/ops/quest-step"
 
 // DebugCharacterInput is one stored quest-progress row joined to its character.
@@ -90,6 +89,7 @@ type DebugCharacter struct {
 	Guest         bool       `json:"guest"`
 	Status        string     `json:"status"`
 	Step          string     `json:"step"`
+	ObjectiveID   string     `json:"objectiveId,omitempty"`
 	CurrentRoomID string     `json:"currentRoomId,omitempty"`
 	AcceptedAt    *time.Time `json:"acceptedAt,omitempty"`
 	CompletedAt   *time.Time `json:"completedAt,omitempty"`
@@ -100,7 +100,7 @@ type DebugOps struct {
 	QuestStep DebugOp `json:"questStep"`
 }
 
-// DebugOp is a hook for a live operation this slice does not perform.
+// DebugOp names a live operation the debugger can call.
 type DebugOp struct {
 	Method      string `json:"method"`
 	Path        string `json:"path"`
@@ -151,7 +151,7 @@ func DebugQuest(world World, questID string, characters []DebugCharacterInput) (
 		Ops: DebugOps{QuestStep: DebugOp{
 			Method:      "POST",
 			Path:        QuestStepOpPath,
-			Implemented: false,
+			Implemented: true,
 		}},
 	}
 	out.Steps = append(out.Steps, DebugStep{
@@ -451,7 +451,7 @@ func debugCharacters(quest *quests.Quest, characters []DebugCharacterInput) []De
 				row.ID = in.Progress.CharacterID
 			}
 			row.Status = string(in.Progress.Status)
-			row.Step = progressStep(quest, in.Progress)
+			row.ObjectiveID, row.Step = progressStep(quest, in.Progress)
 			if !in.Progress.AcceptedAt.IsZero() {
 				accepted := in.Progress.AcceptedAt
 				row.AcceptedAt = &accepted
@@ -475,15 +475,17 @@ func debugCharacters(quest *quests.Quest, characters []DebugCharacterInput) []De
 	return out
 }
 
-func progressStep(quest *quests.Quest, progress *quests.QuestProgress) string {
+// progressStep returns the open objective id and the same step label the panel shows.
+// A completed quest and a ready quest have no open objective.
+func progressStep(quest *quests.Quest, progress *quests.QuestProgress) (string, string) {
 	if progress == nil {
-		return ""
+		return "", ""
 	}
 	if progress.Status == quests.QuestStatusCompleted {
-		return "completed"
+		return "", "completed"
 	}
 	if quest == nil {
-		return string(progress.Status)
+		return "", string(progress.Status)
 	}
 	byID := map[string]quests.ObjectiveProgress{}
 	for _, objective := range progress.Objectives {
@@ -505,10 +507,10 @@ func progressStep(quest *quests.Quest, progress *quests.QuestProgress) string {
 				continue
 			}
 		}
-		return fmt.Sprintf("%s %d/%d", objective.Type, current, required)
+		return objective.ID, fmt.Sprintf("%s %d/%d", objective.Type, current, required)
 	}
 	if progress.Status == quests.QuestStatusActive {
-		return "ready"
+		return "", "ready"
 	}
-	return string(progress.Status)
+	return "", string(progress.Status)
 }

@@ -29,7 +29,7 @@ The printed content commit is that folder's own git HEAD. A copy that sits insid
 
 `GET /api/health` also warns with `deploy-tree-dirty` when the server's working directory is its own git checkout and `git status` shows tracked changes. Each changed path is one hit. Paths under `import/` are skipped. The check is one `git status` per health run, with a short timeout, and it is skipped when the directory is not a checkout or `git` is missing. `tales -check` does not run this rule.
 
-`GET /api/quests/:id/debug` uses this same quest check for one quest. The Creator opens it at `/creator/quests/debug?id=`. Health quest hits link there.
+`GET /api/quests/:id/debug` uses this same quest check for one quest. Each character row names the open objective. The Creator opens it at `/creator/quests/debug?id=` and follows that id when the URL changes. Health quest hits link there. An admin can reset the open step.
 
 ## GitHub Actions
 
