@@ -1364,6 +1364,7 @@ App.svelte (role-aware navigation: Creator/Admin links gated by user role)
 │   │   │   ├── DataTable.svelte (filterable, sortable data table)
 │   │   │   └── DataTableFilterBar.svelte (per-column filter inputs)
 │   │   ├── WorldHealth.svelte (world diagnostics)
+│   │   ├── Drift.svelte (/creator/drift, import drift and YAML export)
 │   │   ├── RoomsEditor.svelte
 │   │   ├── ItemsEditor.svelte
 │   │   ├── ItemTemplatesEditor.svelte
@@ -1383,7 +1384,7 @@ App.svelte (role-aware navigation: Creator/Admin links gated by user role)
 
 #### Creator UI Data Table Pattern
 
-The Creator Health route calls `GET /api/health` for the content-health report: blocking errors, warnings, muted hits, import drift, and live anomalies. Entity ids link to `/creator/<tab>?id=<ID>`. `GET /api/world/validation` still surfaces broken cross-system references for the map and editors, including rooms, NPCs, items, loot tables, quests, dialogs, scripts, spawners, and character template starting item references.
+The Creator Health route calls `GET /api/health` for the content-health report: blocking errors, warnings, muted hits, import drift, and live anomalies. Entity ids link to `/creator/<tab>?id=<ID>`. `/creator/drift` lists `GET /api/health/drift` with before/after field values and downloads importer YAML from `GET /api/health/drift/export`, one entity at a time or concatenated. `GET /api/world/validation` still surfaces broken cross-system references for the map and editors, including rooms, NPCs, items, loot tables, quests, dialogs, scripts, spawners, and character template starting item references.
 
 All entity editors (Rooms, Items, Item Templates, NPCs, Dialogs, Quests, Scripts, Character Templates) share the `CRUDEditor` component which provides a side-by-side master-detail layout:
 

@@ -2018,7 +2018,7 @@ Creator editors share backend validation rules from `pkg/service/validation`:
 - Preview/test tools validate draft dialogs, quests, rooms, merchants, and Lua scripts before content is published into the world.
 
 ### Creator navigation
-The Creator screens sit in a left sidebar instead of a horizontal tab row. Groups are World (Rooms, World / Zones, Health), Actors (NPCs, Character Templates, Items), Narrative (Dialogs, Dialog Graph, Quests), Systems (Skills, Scripts, Settings), and Operate (Players, Audit log). Players stays admin-only. Audit log stays visible to creators. `/creator` still opens Rooms. `?id=` links are unchanged. `/creator/quests/debug` stays on the Quests item.
+The Creator screens sit in a left sidebar instead of a horizontal tab row. Groups are World (Rooms, World / Zones, Health), Actors (NPCs, Character Templates, Items), Narrative (Dialogs, Dialog Graph, Quests), Systems (Skills, Scripts, Settings), and Operate (Players, Audit log, Drift). Players stays admin-only. Audit log and Drift stay visible to creators. `/creator` still opens Rooms. `?id=` links are unchanged. `/creator/quests/debug` stays on the Quests item.
 
 The sidebar collapses to an icon rail from its toggle or Ctrl+B / Cmd+B. The shortcut is ignored in inputs, textareas, selects, contenteditable editors (the script editor), and CodeMirror. Collapse and per-group folds persist in `localStorage` (`tales.creator.nav.v1`). The group that contains the current page opens on navigation. Below 1024px the rail is an off-canvas drawer: the top bar shows a menu button, and the backdrop, Escape, or a navigation click closes it.
 
@@ -2038,6 +2038,7 @@ The top bar keeps the app links, a search box (`data-creator-search`) that opens
 11. **World Health** - Content-health report (reachability, reveal scripts, impossible quests, bosses, pack rules, drift) plus cross-system diagnostics for broken entity references and suspicious content values, including character template starting item references
 12. **Players** - Admin only. Live characters (online, guest, zone, in combat; optional older rows), a side drawer, and confirmed ops: teleport (room picker), give item (template picker), take item (that character's inventory), end combat, quest complete/reset/abandon, and re-grant starter kit. Instance copies and cleanup sit on the same page. Creators do not see this page.
 13. **Audit log** - Filterable creator and ops history, before/after JSON, and Undo for an admin
+14. **Drift** - Operate page at `/creator/drift`. Lists entities from `GET /api/health/drift` (added, changed, removed) and shows each changed field's before and after value. Export YAML downloads one entity from `GET /api/health/drift/export`. Export all downloads the current entities as one concatenated YAML file and skips removed rows. Health links here.
 
 ### Live Ops And Audit
 - `ADMIN_ENV_LABEL` (optional `ADMIN_ENV_HOST`) feeds `GET /api/server-info`. A non-empty label shows a red `LABEL · host` badge in the top bar. Local servers leave the label empty.

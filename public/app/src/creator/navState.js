@@ -117,6 +117,7 @@ export const CREATOR_NAV = [
     items: [
       { id: "players", label: "Players", href: "/creator/players", icon: "person", admin: true },
       { id: "audit", label: "Audit log", href: "/creator/audit", icon: "history" },
+      { id: "drift", label: "Drift", href: "/creator/drift", icon: "difference" },
     ],
   },
 ];

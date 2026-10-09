@@ -206,6 +206,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Creator quality validation: inline warnings/errors, broken-reference detection, save blocking for invalid references, and a world health diagnostics tab. Dialog node IDs may repeat when the same node is linked again; a duplicate is an error only when two definitions of that node disagree. Opening `/creator/<tab>?id=<entityId>` selects that entity. Deletes that call the API, plus room, room-item, special-exit, and dialog-node deletes, ask in a confirm dialog first. Merchant stock `maxQuantity` of -1 is unlimited.
   - Live ops on the Players tab (admin only): teleport, give and take items, end a fight, quest step changes, re-grant a starter kit, and instance cleanup. Creators do not see the Players tab. NPC heal, respawn, and despawn, and room teleport and instance cleanup, share `OpsButtons`, which stays hidden unless the user is an admin. Every op confirms first, runs on the game command loop, and can offer Undo from the audit log when the change is reversible.
   - Audit log: creator CRUD writes and live ops, with before/after JSON and admin undo. A red LIVE badge appears in the top bar when `ADMIN_ENV_LABEL` is set.
+  - Drift page (`/creator/drift`, Operate): entities changed since the last import, with each field's before and after value. Export YAML downloads one entity. Export all downloads every added or changed entity as one concatenated YAML file. Removed entities are listed and are not exported.
   - Creator navigation is a left sidebar (World, Actors, Narrative, Systems, Operate). It collapses to icons with Ctrl+B or Cmd+B, folds each group on its own, and becomes an off-canvas drawer below 1024px. The top-bar search field opens the creator search palette. Below 1024px the text links and that search field are hidden so the LIVE badge stays on one row. Loot tables and classes have no editor route yet, so they are not in the sidebar. `/creator/items` stays reachable and is not listed.
   - Creator search (`GET /api/search`): Ctrl+K or Cmd+K opens a palette. Results are grouped by type, and Enter opens the matching Creator editor. The shortcut is ignored while typing in a field or the script editor. Rooms, NPCs, items, dialogs, quests, and scripts show a collapsed "Referenced by (n)" panel under the form. Deleting one of those entities names the inbound references.
   - Preview/test tools for dialogs, quests, rooms, merchants, and Lua scripts
@@ -578,8 +579,8 @@ go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
 - `GET /api/refs/:type/:id` - Inbound and outbound references for one entity, grouped by type, with the field and a short reason. Unknown type is 400. A missing id is 404. The index is cached until a successful creator POST, PUT, PATCH, or DELETE.
 - `GET /api/health` - Content-health report (summary, rules, live anomalies)
 - `PUT /api/health/mute` - Mute or unmute a content-health rule (`{"ruleId","muted"}`)
-- `GET /api/health/drift` - Entities changed since the last import baseline
-- `GET /api/health/drift/export?type=&id=` - Importer-format YAML for one drifted entity
+- `GET /api/health/drift` - Entities changed since the last import baseline. The Creator Drift page lists them with before/after field values.
+- `GET /api/health/drift/export?type=&id=` - Importer-format YAML for one drifted entity. Export all on that page concatenates one response per added or changed entity.
 - `POST /api/validate/:entityType` - Validate a draft Creator entity before save
 - `POST /api/preview/dialog`, `/api/preview/quest`, `/api/preview/room`, `/api/preview/merchant` - Preview/test draft content with validation issues
 - `PUT /api/settings` - Server settings

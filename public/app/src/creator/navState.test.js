@@ -77,6 +77,7 @@ test("rooms highlight covers /creator and dialog graph stays distinct", () => {
   assert.equal(isNavActive("/creator/quests/debug", dialogs), false);
   assert.equal(activeGroupId(CREATOR_NAV, "/creator/health"), "world");
   assert.equal(activeGroupId(CREATOR_NAV, "/creator/quests/debug"), "narrative");
+  assert.equal(activeGroupId(CREATOR_NAV, "/creator/drift"), "operate");
 });
 
 test("players stay admin-only and audit stays visible", () => {
@@ -84,12 +85,12 @@ test("players stay admin-only and audit stays visible", () => {
   const operate = creator.find((group) => group.id === "operate");
   assert.deepEqual(
     operate.items.map((item) => item.id),
-    ["audit"]
+    ["audit", "drift"]
   );
   const admin = visibleNav(CREATOR_NAV, true).find((group) => group.id === "operate");
   assert.deepEqual(
     admin.items.map((item) => item.id),
-    ["players", "audit"]
+    ["players", "audit", "drift"]
   );
 });
 

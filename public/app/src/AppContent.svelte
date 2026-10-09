@@ -19,6 +19,7 @@
   import WorldHealth from "./creator/WorldHealth.svelte";
   import Players from "./creator/Players.svelte";
   import AuditLog from "./creator/AuditLog.svelte";
+  import Drift from "./creator/Drift.svelte";
   import Characters from "./characters/Characters.svelte";
   import NewCharacter from "./characters/NewCharacter.svelte";
   import UserForm from "./UserForm.svelte";
@@ -114,6 +115,11 @@
   <Route exact path="/creator/audit">
     <CreatorLayout>
       <AuditLog />
+    </CreatorLayout>
+  </Route>
+  <Route exact path="/creator/drift">
+    <CreatorLayout>
+      <Drift />
     </CreatorLayout>
   </Route>
   <Route exact path="/manage/users">

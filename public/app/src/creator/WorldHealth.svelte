@@ -277,7 +277,10 @@
 
       <div class="w-full xl:w-96 space-y-4">
         <div class="card p-4">
-          <div class="label-caps">Drift · DB since last import</div>
+          <div class="flex items-center justify-between gap-2">
+            <div class="label-caps">Drift · DB since last import</div>
+            <a class="text-xs text-emerald-300 hover:underline" href="/creator/drift" on:click={(event) => { event.preventDefault(); navigateTo("/creator/drift"); }}>Drift page</a>
+          </div>
           {#if drift?.importedAt}
             <p class="mt-1 text-xs text-slate-500">Imported {when(drift.importedAt)} · {shortCommit(drift.contentCommit)}</p>
           {/if}

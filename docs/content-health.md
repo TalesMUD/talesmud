@@ -19,6 +19,8 @@ Muted rule ids are stored on server settings (`mutedHealthRuleIDs`). `PUT /api/h
 - `GET /api/health/drift`
 - `GET /api/health/drift/export?type=&id=` (importer-format YAML)
 
+`/creator/drift` (Operate) lists that drift response. A changed entity expands to each field's before and after value. Export YAML downloads one entity. Export all downloads every added or changed entity as one concatenated YAML file. Removed entities stay in the list and are not exported. Health links to this page.
+
 `/api/diagnostics/world` and `/api/world/validation` keep their existing response shapes.
 
 An item is obtainable when it sits in a reachable room, drops from a reachable NPC, is sold by a reachable merchant, or is granted by `giveItem` from a script the player can run. A quest reward counts too, once that quest can complete and its prerequisites can be finished before the quest that needs the item. The check repeats until it stops changing. A cycle does not make the item obtainable.
