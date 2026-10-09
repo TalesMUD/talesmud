@@ -126,6 +126,22 @@ func RunFromFacade(facade service.Facade, repo repository.ContentHealthRepositor
 	return Run(world, opt), nil
 }
 
+// WorldFromFacade loads the live content snapshot.
+// The start room is settings.StartRoomID when that value is set.
+func WorldFromFacade(facade service.Facade) (World, error) {
+	start := ""
+	if facade != nil && facade.ServerSettingsService() != nil {
+		settings, err := facade.ServerSettingsService().Get()
+		if err != nil {
+			return World{}, err
+		}
+		if settings != nil {
+			start = settings.StartRoomID
+		}
+	}
+	return worldFromFacade(facade, start)
+}
+
 func worldFromFacade(facade service.Facade, start string) (World, error) {
 	var world World
 	var err error

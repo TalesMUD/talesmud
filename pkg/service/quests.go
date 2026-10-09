@@ -27,6 +27,7 @@ type QuestsService interface {
 
 	// Quest progress operations
 	GetQuestLog(characterID string) ([]*quests.QuestProgress, error)
+	ListProgress() ([]*quests.QuestProgress, error)
 	BuildQuestLog(characterID string) ([]QuestLogEntry, error)
 	GetProgress(characterID, questID string) (*quests.QuestProgress, error)
 	AcceptQuest(characterID, questID string) (*quests.QuestProgress, error)
@@ -389,6 +390,14 @@ func (s *questsService) questExists(id string) bool {
 
 func (s *questsService) GetQuestLog(characterID string) ([]*quests.QuestProgress, error) {
 	return s.progressRepo.FindByCharacterID(characterID)
+}
+
+// ListProgress returns every stored quest-progress row.
+func (s *questsService) ListProgress() ([]*quests.QuestProgress, error) {
+	if s.progressRepo == nil {
+		return nil, nil
+	}
+	return s.progressRepo.FindAll()
 }
 
 func (s *questsService) BuildQuestLog(characterID string) ([]QuestLogEntry, error) {

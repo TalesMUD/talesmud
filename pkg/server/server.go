@@ -418,6 +418,7 @@ func (app *app) setupRoutes() {
 			creator.POST("loottables/:id/roll", lootTables.RollLootTable)
 
 			// Quests
+			creator.GET("quests/:id/debug", questsHandler.DebugQuest)
 			creator.POST("quests", questsHandler.PostQuest)
 			creator.PUT("quests/:id", questsHandler.UpdateQuestByID)
 			creator.DELETE("quests/:id", questsHandler.DeleteQuestByID)

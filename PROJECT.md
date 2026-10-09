@@ -197,7 +197,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - NPC editor with behavior controls for state, spawn room, wander radius, patrol paths, idle chatter, enemy traits, and merchant traits. The enemy tab edits combat stats, behaviour, loot, and Lua hooks. Imported enemies keep unscaled content base stats beside the effective stats combat uses. `GET /api/balance/enemy-scaling` supplies the tier and named-override factors. An unknown tier warns and applies no scaling. NPC type is a table badge; the row dot is reserved for validation issues. Tables show full entity IDs with a copy button.
   - Lua script editor with syntax highlighting and integrated test runner
   - Dialog tree editor with options and alternate texts
-  - Quest editor with validation and player flow preview for source, objectives, turn-in, and rewards
+  - Quest editor with validation, player flow preview, and a quest debugger for the step chain, reachability, prerequisites, and live character progress
   - Character template editor with archetype selection and starting gear
   - Skills editor with multi-class assignment, resource types, effects, and secondary effects
   - World map visualization (GridWorldEditor)
@@ -565,6 +565,7 @@ go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
 - `GET /api/balance/enemy-scaling` - Read-only difficulty tiers and named overrides (`hp`, `attack`, `defense`)
 - `POST/PUT/DELETE /api/dialogs` - Dialog management
 - `POST/PUT/DELETE /api/quests` - Quest management
+- `GET /api/quests/:id/debug` - Quest debugger: step chain, where each objective can be satisfied, reachability, prerequisite graph, offer and turn-in, rewards, and read-only character progress. `ops.questStep` names `POST /api/ops/quest-step` and does not perform it.
 - `POST/PUT/DELETE /api/skills` - Skill management
 - `GET /api/world/validation` - World Health diagnostics
 - `GET /api/diagnostics/world` - World health diagnostics across rooms, NPCs, dialogs, quests, loot, items, and scripts

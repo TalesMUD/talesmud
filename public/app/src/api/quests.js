@@ -68,6 +68,16 @@ function deleteQuest(token, id, cb, errorCb) {
     .catch((err) => errorCb(err));
 }
 
+function getQuestDebug(token, id) {
+  return axios
+    .get(`${backend}/quests/${encodeURIComponent(id)}/debug`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    .then((result) => result.data);
+}
+
 function getQuestProgress(token, characterId, cb, errorCb) {
   axios
     .get(`${backend}/quest-progress/${characterId}`, {
@@ -95,4 +105,4 @@ function completeQuest(token, characterId, questId, cb, errorCb) {
     .catch((err) => errorCb(err));
 }
 
-export { getQuest, getQuests, createQuest, updateQuest, deleteQuest, getQuestProgress, completeQuest };
+export { getQuest, getQuests, createQuest, updateQuest, deleteQuest, getQuestProgress, completeQuest, getQuestDebug };

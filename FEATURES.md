@@ -2074,6 +2074,7 @@ Creator editors share backend validation rules from `pkg/service/validation`:
 - **OnComplete script** - Lua script on quest completion
 - **Validation panel** - Flags missing source references, objective targets, duplicate IDs, invalid rewards, missing scripts, self-prerequisites, and unresolved entity IDs before save
 - **Player flow preview** - Summarizes offer source, objective lines, ready turn-in target, and rewards for quick testing while authoring
+- **Quest debugger** - `GET /api/quests/:id/debug` and `/creator/quests/debug?id=`. Shows the step chain, where each objective can be satisfied, whether that place is reachable, and a green, amber, or red verdict using the same completability check as content health. Also shows prerequisites, follow-on quests, the offer and turn-in, rewards, and characters currently on the quest. The Quests editor opens it, and Health quest hits link here. Reset quest step opens a confirm dialog and does not call `POST /api/ops/quest-step`.
 
 ### Skill Editor Features
 - **Multi-class assignment** - Skills can belong to multiple classes

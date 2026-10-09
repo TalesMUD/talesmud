@@ -11,6 +11,7 @@
   import DialogsEditor from "./creator/DialogsEditor.svelte";
   import DialogGraphEditor from "./creator/DialogGraphEditor.svelte";
   import QuestsEditor from "./creator/QuestsEditor.svelte";
+  import QuestDebug from "./creator/QuestDebug.svelte";
   import SkillsEditor from "./creator/SkillsEditor.svelte";
   import ScriptsEditor from "./creator/ScriptsEditor.svelte";
   import WorldEditor from "./creator/GridWorldEditor.svelte";
@@ -73,6 +74,11 @@
   <Route exact path="/creator/quests">
     <CreatorLayout>
       <QuestsEditor />
+    </CreatorLayout>
+  </Route>
+  <Route exact path="/creator/quests/debug">
+    <CreatorLayout>
+      <QuestDebug />
     </CreatorLayout>
   </Route>
   <Route exact path="/creator/skills">

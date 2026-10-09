@@ -13,7 +13,7 @@
   export let detail = "";
   export let title = "";
   export let confirmLabel = "Delete";
-  /** Replaces the delete warning. Ops dialogs pass their own line. */
+  /** Replaces the default delete warning. Ops dialogs pass their own line. An empty hint hides the line. */
   export let hint = "This removes it from the world. There is no undo.";
   /** "danger" keeps the red button. "ops" is for live actions. */
   export let tone = "danger";

@@ -34,6 +34,9 @@
   function entityPath(entityType, id, related) {
     const kind = normType(entityType);
     if (!id || kind === "loottable") return "";
+    if (kind === "quest") {
+      return `/creator/quests/debug?id=${encodeURIComponent(id)}`;
+    }
     if (kind === "spawner") {
       const room = (related || []).find((item) => normType(item.type) === "room" && item.id);
       return room ? `/creator/rooms?id=${encodeURIComponent(room.id)}` : "";
