@@ -47,11 +47,11 @@
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 <div class="item-card-backdrop" use:portal on:click={(event) => { if (event.target === event.currentTarget) close(); }}>
-  <section class="item-card" role="dialog" aria-modal="true" aria-label="{item.name} details" tabindex="-1" bind:this={card}>
+  <section class="item-card" class:item-card-unique={item.unique} role="dialog" aria-modal="true" aria-label="{item.name} details" tabindex="-1" bind:this={card}>
     <header class="item-card-header">
       <img class="item-card-art" src={itemArtSrc(item)} alt="" on:error={(event) => onItemArtError(event, item)} />
       <div class="item-card-heading">
-        <h2 style="color: {color(item.quality)}">{item.name}</h2>
+        <h2 style="color: {item.unique ? '#fde68a' : color(item.quality)}">{item.name}{#if item.unique}<span class="item-card-unique-mark">UNIQUE</span>{/if}</h2>
         <div class="item-card-meta">{label(item.quality || 'normal')} · {label(item.type)}{#if item.subType} · {label(item.subType)}{/if}</div>
         {#if equippable}<div class="item-card-slot">{label(item.slot)}{#if isTwoHanded(item)} · Two handed{/if}</div>{/if}
       </div>
@@ -119,6 +119,8 @@
 <style>
   .item-card-backdrop{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:16px}
   .item-card{width:min(660px,100%);max-height:min(86dvh,760px);overflow:auto;background:#11161c;border:1px solid rgba(212,175,55,.5);border-radius:12px;box-shadow:0 24px 70px #000c;color:#e5e7eb;padding:20px;outline:none}
+  .item-card.item-card-unique{border:2px solid #facc15;box-shadow:0 0 0 1px #7a5a16,0 24px 70px #000c,0 0 22px rgba(250,204,21,.35)}
+  .item-card-unique-mark{display:inline-block;margin-left:8px;font-size:.62rem;letter-spacing:.14em;color:#fde68a;border:1px solid rgba(250,204,21,.75);border-radius:999px;padding:1px 6px;vertical-align:middle}
   .item-card-header{display:flex;gap:16px;align-items:center}
   .item-card-art{width:84px;height:84px;object-fit:contain;image-rendering:pixelated;background:#080b0f;border:1px solid #3d3423;border-radius:8px;flex:none}
   .item-card-heading{min-width:0;flex:1}

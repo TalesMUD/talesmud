@@ -37,3 +37,16 @@ func TestExamineItemOmitsInternalSubtype(t *testing.T) {
 		t.Fatalf("expected header for client parser, got:\n%s", out)
 	}
 }
+
+func TestExamineItemMarksUnique(t *testing.T) {
+	item := &items.Item{
+		Name:    "Relic",
+		Type:    items.ItemTypeWeapon,
+		Quality: items.ItemQualityRare,
+		Unique:  true,
+	}
+	out := examineItem(item, nil)
+	if !strings.Contains(out, "Mark: Unique\n") {
+		t.Fatalf("missing unique mark:\n%s", out)
+	}
+}

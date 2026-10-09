@@ -121,6 +121,9 @@ func examineItem(item *items.Item, equippedItems map[items.ItemSlot]*items.Item)
 		sb.WriteString(formatQuality(item.Quality))
 		sb.WriteString("\n")
 	}
+	if item.Unique {
+		sb.WriteString("Mark: Unique\n")
+	}
 
 	// Level requirement
 	if item.Level > 0 {
