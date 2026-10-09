@@ -80,10 +80,11 @@ func DialogSelectCommand(room *rooms.Room, game def.GameCtrl, message *messages.
 		filteredOptions = game.GetFacade().ConversationsService().GetFilteredOptions(activeConv, currentNode)
 	}
 
-	// Re-compute quest options for this NPC (only at root level)
+	// Generated quest options are offered at every node, after the authored ones,
+	// exactly as sendDialogMessage lists them.
 	var questOptions []questDialogOption
-	if activeConv.TargetID != "" && (activeConv.CurrentNodeID == "" || activeConv.CurrentNodeID == "main") {
-		questOptions = questOptionsForConversation(game, message.Character.ID, activeConv)
+	if activeConv.TargetID != "" {
+		questOptions = questOptionsForNode(filteredOptions, questOptionsForConversation(game, message.Character.ID, activeConv))
 	}
 
 	totalOptions := len(filteredOptions) + len(questOptions)
@@ -174,18 +175,8 @@ func DialogSelectCommand(room *rooms.Room, game def.GameCtrl, message *messages.
 			game.GetFacade().ConversationsService().Update(activeConv.ID, activeConv)
 
 			// Send the answer with its options
-			options := make([]messages.DialogOption, 0)
 			answerOptions := game.GetFacade().ConversationsService().GetFilteredOptions(activeConv, selectedOption.Answer)
-			for i, opt := range answerOptions {
-				optText := opt.Text
-				if optText == "" {
-					optText = opt.RenderPlain(dialogState)
-				}
-				options = append(options, messages.DialogOption{
-					Index: i + 1,
-					Text:  optText,
-				})
-			}
+			options := buildDialogOptions(answerOptions, dialogState, questOptionsForNode(answerOptions, questOptionsForConversation(game, message.Character.ID, activeConv)))
 
 			dialogMsg := messages.NewDialogMessage(
 				message.FromUser.ID,
@@ -209,18 +200,8 @@ func DialogSelectCommand(room *rooms.Room, game def.GameCtrl, message *messages.
 					Context:         activeConv.Context,
 				}
 				nodeText := targetNode.Render(dialogState)
-				options := make([]messages.DialogOption, 0)
 				navOptions := game.GetFacade().ConversationsService().GetFilteredOptions(activeConv, targetNode)
-				for i, opt := range navOptions {
-					optText := opt.Text
-					if optText == "" {
-						optText = opt.RenderPlain(dialogState)
-					}
-					options = append(options, messages.DialogOption{
-						Index: i + 1,
-						Text:  optText,
-					})
-				}
+				options := buildDialogOptions(navOptions, dialogState, questOptionsForNode(navOptions, questOptionsForConversation(game, message.Character.ID, activeConv)))
 				dialogMsg := messages.NewDialogMessage(
 					message.FromUser.ID,
 					npcName,
@@ -252,18 +233,8 @@ func DialogSelectCommand(room *rooms.Room, game def.GameCtrl, message *messages.
 		}
 
 		nodeText := selectedOption.Render(dialogState)
-		options := make([]messages.DialogOption, 0)
 		subOptions := game.GetFacade().ConversationsService().GetFilteredOptions(activeConv, selectedOption)
-		for i, opt := range subOptions {
-			optText := opt.Text
-			if optText == "" {
-				optText = opt.RenderPlain(dialogState)
-			}
-			options = append(options, messages.DialogOption{
-				Index: i + 1,
-				Text:  optText,
-			})
-		}
+		options := buildDialogOptions(subOptions, dialogState, questOptionsForNode(subOptions, questOptionsForConversation(game, message.Character.ID, activeConv)))
 
 		dialogMsg := messages.NewDialogMessage(
 			message.FromUser.ID,
