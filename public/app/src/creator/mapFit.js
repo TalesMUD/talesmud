@@ -1,11 +1,21 @@
-// World-map fit math. Tiles use roomPixel: higher game Y (north) is a smaller SVG y.
+// World-map fit math.
+// World coords: north decreases Y, the same axis as authored rooms and the play atlas.
+// Screen: north is toward the top (SVG y grows downward).
 
 const EMPTY = { x: -600, y: -400, width: 1200, height: 800 };
 
 export function roomPixel(coords, gridScale) {
   return {
     x: Number(coords.x) * gridScale,
-    y: -Number(coords.y) * gridScale,
+    y: Number(coords.y) * gridScale,
+  };
+}
+
+// Inverse of roomPixel. A drag toward the top of the screen decreases Y.
+export function pixelToCoords(px, py, gridScale) {
+  return {
+    x: Math.round(px / gridScale),
+    y: Math.round(py / gridScale),
   };
 }
 
@@ -36,7 +46,7 @@ export function fitViewBox(coords, gridScale, padding = 2) {
 
   return {
     x: (minX - padding) * gridScale,
-    y: (-maxY - padding) * gridScale,
+    y: (minY - padding) * gridScale,
     width: Math.max((maxX - minX + padding * 2) * gridScale, 600),
     height: Math.max((maxY - minY + padding * 2) * gridScale, 400),
   };

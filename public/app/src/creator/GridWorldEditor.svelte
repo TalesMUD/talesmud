@@ -13,7 +13,7 @@
   import GridRoomTile from "./GridRoomTile.svelte";
   import RoomEditorPanel from "./RoomEditorPanel.svelte";
   import { getOppositeDirection, CARDINAL_DIRECTIONS } from "./WorldEditorStore.js";
-  import { fitViewBox, roomPixel } from "./mapFit.js";
+  import { fitViewBox, pixelToCoords, roomPixel } from "./mapFit.js";
 
   // svelte-ignore unused-export-let
   export let location;
@@ -481,18 +481,13 @@
     }
   }
 
-  // Convert grid coords to pixel position (center of room). North is up.
+  // World coords: north decreases Y. Screen: north is toward the top.
   function coordsToPixel(coords) {
     return roomPixel(coords, GRID_SCALE);
   }
 
-  // Convert pixel position to grid coords (snap to nearest)
-  // Negate Y to match world coordinates
-  function pixelToCoords(px, py) {
-    return {
-      x: Math.round(px / GRID_SCALE),
-      y: Math.round(-py / GRID_SCALE),
-    };
+  function coordsFromPixel(px, py) {
+    return pixelToCoords(px, py, GRID_SCALE);
   }
 
   // Get mouse position in SVG coordinates
@@ -610,7 +605,7 @@
   async function handleMouseUp(event) {
     if (dragging) {
       // Finish moving a room
-      const newCoords = pixelToCoords(dragging.currentX, dragging.currentY);
+      const newCoords = coordsFromPixel(dragging.currentX, dragging.currentY);
       const oldCoords = dragging.originalCoords;
       const roomId = dragging.roomId;
 
@@ -770,7 +765,7 @@
     };
   }
 
-  // Fit view to the filtered rooms. North (higher Y) is up, matching roomPixel.
+  // Fit view to the filtered rooms. North (smaller Y) is toward the top.
   function fitView() {
     viewBox = fitViewBox(filteredRooms.map((room) => room.coords), GRID_SCALE, 2);
   }

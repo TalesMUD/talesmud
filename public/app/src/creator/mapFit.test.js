@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { fitViewBox, roomPixel } from "./mapFit.js";
+import { fitViewBox, pixelToCoords, roomPixel } from "./mapFit.js";
 
 const SCALE = 220;
 
@@ -18,7 +18,7 @@ test("a positive-Y zone stays inside the view", () => {
   ];
   const box = fitViewBox(coords, SCALE, 2);
   for (const point of coords) contains(box, point);
-  assert.ok(box.y < 0, "north-up tiles sit above the origin");
+  assert.ok(box.y > 0, "positive Y sits below the origin");
 });
 
 test("a negative-Y zone stays inside the view", () => {
@@ -28,6 +28,21 @@ test("a negative-Y zone stays inside the view", () => {
   ];
   const box = fitViewBox(coords, SCALE, 2);
   for (const point of coords) contains(box, point);
+  assert.ok(box.y < 0, "negative Y sits above the origin");
+});
+
+test("north is above south", () => {
+  const south = roomPixel({ x: 0, y: 6 }, SCALE);
+  const north = roomPixel({ x: 0, y: 5 }, SCALE);
+  assert.ok(north.y < south.y);
+  const box = fitViewBox([{ x: 0, y: 6 }, { x: 0, y: 5 }, { x: 0, y: -1 }], SCALE, 2);
+  contains(box, { x: 0, y: 6 });
+  contains(box, { x: 0, y: -1 });
+});
+
+test("dragging toward the top decreases Y", () => {
+  const pixel = roomPixel({ x: 2, y: 5 }, SCALE);
+  assert.deepEqual(pixelToCoords(pixel.x, pixel.y - SCALE, SCALE), { x: 2, y: 4 });
 });
 
 test("missing coordinates are skipped", () => {
