@@ -25,6 +25,21 @@
     return true;
   });
 
+  const editorPath = {
+    room: "/creator/rooms",
+    npc: "/creator/npcs",
+    dialog: "/creator/dialogs",
+    quest: "/creator/quests",
+    item: "/creator/items",
+    script: "/creator/scripts",
+  };
+
+  function entityHref(issue) {
+    const path = editorPath[issue.entityType];
+    if (!path || !issue.entityId) return "";
+    return `${path}?id=${encodeURIComponent(issue.entityId)}`;
+  }
+
   async function loadDiagnostics() {
     if (!$isAuthenticated || !$authToken) return;
     loading = true;
@@ -100,14 +115,20 @@
       </div>
     </div>
 
-    <div class="card overflow-hidden">
-      <table class="w-full text-sm">
+    <div class="card overflow-x-auto">
+      <table class="w-full text-sm" style="table-layout: fixed; min-width: 720px;">
+        <colgroup>
+          <col style="width: 110px;" />
+          <col />
+          <col style="width: 220px;" />
+          <col style="width: 180px;" />
+        </colgroup>
         <thead>
           <tr class="border-b border-slate-700">
             <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500">Severity</th>
+            <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500">Message</th>
             <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500">Entity</th>
             <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500">Field</th>
-            <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-slate-500">Issue</th>
           </tr>
         </thead>
         <tbody>
@@ -117,21 +138,27 @@
             <tr><td colspan="4" class="px-4 py-10 text-center text-xs text-slate-500">No issues match the current filters.</td></tr>
           {:else}
             {#each filteredIssues as issue}
-              <tr class="border-b border-slate-800/50">
+              <tr class="border-b border-slate-800/50 align-top">
                 <td class="px-4 py-2.5 text-xs">
                   <span class="inline-flex items-center gap-1 font-semibold {issue.severity === 'error' ? 'text-red-300' : 'text-amber-300'}">
                     <span class="material-symbols-outlined text-sm">{issue.severity === "error" ? "error" : "warning"}</span>
                     {issue.severity}
                   </span>
                 </td>
-                <td class="px-4 py-2.5 text-xs font-mono text-slate-300">{issue.entityType}:{issue.entityId}</td>
-                <td class="px-4 py-2.5 text-xs font-mono text-slate-400">{issue.field || "-"}</td>
-                <td class="px-4 py-2.5 text-xs text-slate-200">
+                <td class="px-4 py-2.5 text-xs text-slate-200 whitespace-normal break-words">
                   <div>{issue.message}</div>
                   {#if issue.refId}
-                    <div class="mt-1 font-mono text-[10px] text-slate-500">{issue.refType}:{issue.refId}</div>
+                    <div class="mt-1 font-mono text-[10px] text-slate-500 break-all">{issue.refType}:{issue.refId}</div>
                   {/if}
                 </td>
+                <td class="px-4 py-2.5 text-xs font-mono text-slate-300 break-all">
+                  {#if entityHref(issue)}
+                    <a class="text-primary hover:underline" href={entityHref(issue)}>{issue.entityType}:{issue.entityId}</a>
+                  {:else}
+                    {issue.entityType}:{issue.entityId}
+                  {/if}
+                </td>
+                <td class="px-4 py-2.5 text-xs font-mono text-slate-400 break-all">{issue.field || "-"}</td>
               </tr>
             {/each}
           {/if}

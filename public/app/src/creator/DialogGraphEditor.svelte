@@ -24,6 +24,7 @@
 
   // Editor state
   let selectedDialogId = null;
+  let appliedQueryId = false;
   let selectedDialog = null;
   let selectedNode = null;
   let saving = false;
@@ -55,6 +56,14 @@
         (data) => {
           dialogs = data || [];
           loading = false;
+          if (!appliedQueryId) {
+            appliedQueryId = true;
+            const queryId = new URLSearchParams(window.location.search).get("id");
+            if (queryId && dialogs.some((dialog) => dialog.id === queryId)) {
+              selectedDialogId = queryId;
+              loadDialog(queryId);
+            }
+          }
           resolve();
         },
         (err) => {

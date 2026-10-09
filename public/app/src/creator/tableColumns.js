@@ -17,8 +17,7 @@
 
 export const roomColumns = [
   {
-    key: "id", label: "ID", width: 90, mono: true, priority: 1,
-    accessor: (el) => el.id?.length > 10 ? el.id.slice(0, 8) + "\u2026" : el.id,
+    key: "id", label: "ID", mono: true, priority: 1,
   },
   { key: "name", label: "Name", width: 180, priority: 1 },
   { key: "area", label: "Area", width: 160, type: "select", options: [], priority: 2 },
@@ -50,8 +49,7 @@ export const roomColumns = [
 
 export const itemTemplateColumns = [
   {
-    key: "id", label: "ID", width: 90, mono: true, priority: 1,
-    accessor: (el) => el.id?.length > 10 ? el.id.slice(0, 8) + "\u2026" : el.id,
+    key: "id", label: "ID", mono: true, priority: 1,
   },
   { key: "name", label: "Name", width: 180, priority: 1 },
   { key: "type", label: "Type", width: 110, type: "select", options: [], priority: 2 },
@@ -66,16 +64,17 @@ export const itemTemplateColumns = [
 
 export const npcColumns = [
   {
-    key: "id", label: "ID", width: 90, mono: true, priority: 1,
-    accessor: (el) => el.id?.length > 10 ? el.id.slice(0, 8) + "\u2026" : el.id,
+    key: "id", label: "ID", mono: true, priority: 1,
   },
   { key: "name", label: "Name", width: 180, priority: 1 },
   {
-    key: "_npcType", label: "NPC Type", width: 90, type: "select", priority: 1,
-    options: ["Neutral", "Merchant", "Enemy"],
+    key: "_npcType", label: "NPC Type", width: 150, type: "select", priority: 1,
+    options: ["Neutral", "Merchant", "Enemy", "Enemy + Merchant"],
+    badge: true,
     accessor: (el) => {
       const hasEnemy = !!el.enemyTrait;
       const hasMerchant = !!el.merchantTrait;
+      if (hasEnemy && hasMerchant) return "Enemy + Merchant";
       if (hasEnemy) return "Enemy";
       if (hasMerchant) return "Merchant";
       return "Neutral";
@@ -99,8 +98,7 @@ export const npcColumns = [
 
 export const dialogColumns = [
   {
-    key: "id", label: "ID", width: 90, mono: true, priority: 1,
-    accessor: (el) => el.id?.length > 10 ? el.id.slice(0, 8) + "\u2026" : el.id,
+    key: "id", label: "ID", mono: true, priority: 1,
   },
   { key: "name", label: "Name", width: 280, priority: 1 },
   {
@@ -113,8 +111,7 @@ export const dialogColumns = [
 
 export const scriptColumns = [
   {
-    key: "id", label: "ID", width: 90, mono: true, priority: 1,
-    accessor: (el) => el.id?.length > 10 ? el.id.slice(0, 8) + "\u2026" : el.id,
+    key: "id", label: "ID", mono: true, priority: 1,
   },
   { key: "name", label: "Name", width: 280, priority: 1 },
   { key: "type", label: "Type", width: 130, type: "select", options: [], priority: 2 },
@@ -122,8 +119,7 @@ export const scriptColumns = [
 
 export const itemColumns = [
   {
-    key: "id", label: "ID", width: 90, mono: true, priority: 1,
-    accessor: (el) => el.id?.length > 10 ? el.id.slice(0, 8) + "\u2026" : el.id,
+    key: "id", label: "ID", mono: true, priority: 1,
   },
   { key: "name", label: "Name", width: 180, priority: 1 },
   { key: "type", label: "Type", width: 110, type: "select", options: [], priority: 2 },
@@ -138,8 +134,7 @@ export const itemColumns = [
 
 export const questColumns = [
   {
-    key: "id", label: "ID", width: 90, mono: true, priority: 1,
-    accessor: (el) => el.id?.length > 10 ? el.id.slice(0, 8) + "\u2026" : el.id,
+    key: "id", label: "ID", mono: true, priority: 1,
   },
   { key: "name", label: "Name", width: 200, priority: 1 },
   { key: "area", label: "Area", width: 140, type: "select", options: [], priority: 2 },
@@ -167,8 +162,7 @@ export const questColumns = [
 
 export const characterTemplateColumns = [
   {
-    key: "id", label: "ID", width: 90, mono: true, priority: 1,
-    accessor: (el) => el.id?.length > 10 ? el.id.slice(0, 8) + "\u2026" : el.id,
+    key: "id", label: "ID", mono: true, priority: 1,
   },
   { key: "name", label: "Name", width: 200, priority: 1 },
   {
@@ -178,10 +172,15 @@ export const characterTemplateColumns = [
   { key: "level", label: "Lvl", width: 50, type: "number", priority: 2 },
 ];
 
+export const lootTableColumns = [
+  { key: "id", label: "ID", mono: true, priority: 1 },
+  { key: "name", label: "Name", width: 220, priority: 1 },
+  { key: "description", label: "Description", priority: 3 },
+];
+
 export const skillColumns = [
   {
-    key: "id", label: "ID", width: 90, mono: true, priority: 1,
-    accessor: (el) => el.id?.length > 10 ? el.id.slice(0, 8) + "\u2026" : el.id,
+    key: "id", label: "ID", mono: true, priority: 1,
   },
   { key: "name", label: "Name", width: 160, priority: 1 },
   {
