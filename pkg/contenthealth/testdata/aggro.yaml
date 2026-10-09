@@ -1,0 +1,9 @@
+rules:
+  - id: aggro-requires-level-10
+    severity: error
+    entity: npc
+    when: { "enemyTrait.aggroOnSight": true }
+    require:
+      - { field: level, gte: 10 }
+      - { field: "enemyTrait.difficulty", ne: boss }
+    message: "Aggressive enemies must be level 10+ and not bosses"

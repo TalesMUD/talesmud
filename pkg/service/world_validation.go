@@ -52,7 +52,42 @@ func (s *worldValidationService) Validate() (*ValidationReport, error) {
 	if err := ctx.load(); err != nil {
 		return nil, err
 	}
+	return ctx.finish(), nil
+}
 
+// WorldContents is the entity set world validation checks. Callers that already
+// hold a snapshot (the health engine, the CLI) use ValidateContents so the
+// rules stay in this file.
+type WorldContents struct {
+	Rooms              []*rooms.Room
+	NPCs               []*npc.NPC
+	Spawners           []*npc.NPCSpawner
+	Dialogs            map[string]bool
+	Scripts            map[string]bool
+	Items              []*items.Item
+	LootTables         []*items.LootTable
+	Quests             []*quests.Quest
+	CharacterTemplates []*characters.CharacterTemplate
+}
+
+// ValidateContents runs the same checks as WorldValidationService.Validate.
+func ValidateContents(in WorldContents) *ValidationReport {
+	ctx := &validationContext{
+		rooms:              in.Rooms,
+		npcs:               in.NPCs,
+		spawners:           in.Spawners,
+		dialogs:            in.Dialogs,
+		scripts:            in.Scripts,
+		items:              in.Items,
+		lootTables:         in.LootTables,
+		quests:             in.Quests,
+		characterTemplates: in.CharacterTemplates,
+	}
+	ctx.indexIDs()
+	return ctx.finish()
+}
+
+func (ctx *validationContext) finish() *ValidationReport {
 	ctx.validateRooms()
 	ctx.validateNPCs()
 	ctx.validateSpawners()
@@ -91,7 +126,7 @@ func (s *worldValidationService) Validate() (*ValidationReport, error) {
 			report.WarningCount++
 		}
 	}
-	return report, nil
+	return report
 }
 
 type validationContext struct {
@@ -156,18 +191,6 @@ func (ctx *validationContext) load() error {
 		return fmt.Errorf("load character templates: %w", err)
 	}
 
-	ctx.roomIDs = make(map[string]bool, len(ctx.rooms))
-	for _, room := range ctx.rooms {
-		if room != nil && room.ID != "" {
-			ctx.roomIDs[room.ID] = true
-		}
-	}
-	ctx.npcIDs = make(map[string]bool, len(ctx.npcs))
-	for _, n := range ctx.npcs {
-		if n != nil && n.ID != "" {
-			ctx.npcIDs[n.ID] = true
-		}
-	}
 	ctx.dialogs = make(map[string]bool, len(dialogs))
 	for _, dialog := range dialogs {
 		if dialog != nil && dialog.ID != "" {
@@ -180,10 +203,35 @@ func (ctx *validationContext) load() error {
 			ctx.scripts[script.ID] = true
 		}
 	}
+	ctx.indexIDs()
+	return nil
+}
+
+// indexIDs fills the id sets the checks consult. Dialog and script sets are
+// already maps; callers that hold only those sets (ValidateContents) pass them in.
+func (ctx *validationContext) indexIDs() {
+	if ctx.dialogs == nil {
+		ctx.dialogs = map[string]bool{}
+	}
+	if ctx.scripts == nil {
+		ctx.scripts = map[string]bool{}
+	}
+	ctx.roomIDs = make(map[string]bool, len(ctx.rooms))
+	for _, room := range ctx.rooms {
+		if room != nil && room.Entity != nil && room.ID != "" {
+			ctx.roomIDs[room.ID] = true
+		}
+	}
+	ctx.npcIDs = make(map[string]bool, len(ctx.npcs))
+	for _, n := range ctx.npcs {
+		if n != nil && n.Entity != nil && n.ID != "" {
+			ctx.npcIDs[n.ID] = true
+		}
+	}
 	ctx.itemIDs = make(map[string]bool, len(ctx.items))
 	ctx.templates = make(map[string]bool, len(ctx.items))
 	for _, item := range ctx.items {
-		if item == nil || item.ID == "" {
+		if item == nil || item.Entity == nil || item.ID == "" {
 			continue
 		}
 		ctx.itemIDs[item.ID] = true
@@ -193,17 +241,16 @@ func (ctx *validationContext) load() error {
 	}
 	ctx.lootIDs = make(map[string]bool, len(ctx.lootTables))
 	for _, table := range ctx.lootTables {
-		if table != nil && table.ID != "" {
+		if table != nil && table.Entity != nil && table.ID != "" {
 			ctx.lootIDs[table.ID] = true
 		}
 	}
 	ctx.questIDs = make(map[string]bool, len(ctx.quests))
 	for _, quest := range ctx.quests {
-		if quest != nil && quest.ID != "" {
+		if quest != nil && quest.Entity != nil && quest.ID != "" {
 			ctx.questIDs[quest.ID] = true
 		}
 	}
-	return nil
 }
 
 func (ctx *validationContext) add(severity, system, entityType, entityID, field, message string) {
