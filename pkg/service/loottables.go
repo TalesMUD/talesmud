@@ -21,10 +21,13 @@ type LootRollContext struct {
 	Intn    func(n int) int
 }
 
-// LootDropResult represents the result of rolling a loot table
+// LootDropResult represents the result of rolling a loot table.
 type LootDropResult struct {
 	Items []*items.Item
 	Gold  int64
+	// RareUnique lists items that came from a rarity:unique entry.
+	// A template unique flag still caps ownership and is not listed here.
+	RareUnique []*items.Item
 }
 
 // LootTablesService delivers logical functions on top of the loot tables repository
@@ -137,20 +140,18 @@ func (srv *lootTablesService) RollLootFromTableInContext(table *items.LootTable,
 		// Set quantity for stackable items
 		if item.Stackable {
 			item.Quantity = quantity
-		} else {
-			// For non-stackable items, create multiple instances
-			for i := int32(0); i < quantity; i++ {
-				itemInstance, err := srv.itemsService.CreateInstanceFromTemplate(entry.ItemTemplateID)
-				if err != nil {
-					continue
-				}
-				srv.stampUnique(itemInstance, entry)
-				result.Items = append(result.Items, itemInstance)
-			}
+			srv.recordDrop(result, item, entry)
 			continue
 		}
-
-		result.Items = append(result.Items, item)
+		// For non-stackable items, create multiple instances
+		for i := int32(0); i < quantity; i++ {
+			itemInstance, err := srv.itemsService.CreateInstanceFromTemplate(entry.ItemTemplateID)
+			if err != nil {
+				continue
+			}
+			srv.stampUnique(itemInstance, entry)
+			srv.recordDrop(result, itemInstance, entry)
+		}
 	}
 
 	return result, nil
@@ -195,6 +196,16 @@ func (srv *lootTablesService) entryIsUnique(entry items.LootEntry) bool {
 		return false
 	}
 	return tpl.Unique
+}
+
+func (srv *lootTablesService) recordDrop(result *LootDropResult, item *items.Item, entry items.LootEntry) {
+	if result == nil || item == nil {
+		return
+	}
+	result.Items = append(result.Items, item)
+	if strings.EqualFold(strings.TrimSpace(entry.Rarity), "unique") {
+		result.RareUnique = append(result.RareUnique, item)
+	}
 }
 
 func (srv *lootTablesService) stampUnique(item *items.Item, entry items.LootEntry) {

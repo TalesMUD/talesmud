@@ -241,7 +241,7 @@ Stackable item quantities are kept consistent when consumed or partially dropped
 
 `unique: true` on an item template means a character can hold at most one copy. The count covers the bag, equipped gear, and items nested in a container. There is no separate item bank. Pickup of another is refused with "You already have the <name>." Extra copies already in the bag are trimmed to one on that attempt. The ground drop is left for someone else.
 
-A loot entry may set `rarity: unique`, `chance` (a non-zero value wins over `dropChance` at import), and `boss_only: true`. Boss-only entries roll only when the dead NPC's difficulty is `boss`. The unique roll is skipped when every victory recipient already holds that template. One dropped unique sends a room message `UNIQUE: <item name>` with `style: combatEvent`, `hook: unique`, and `source` set to the NPC's display name. The play client frames that row and the item card.
+A loot entry may set `rarity: unique`, `chance` (a non-zero value wins over `dropChance` at import), and `boss_only: true`. Boss-only entries roll only when the dead NPC's difficulty is `boss`. The unique roll is skipped when every victory recipient already holds that template. A drop from a `rarity: unique` entry sends a room message `UNIQUE: <item name>` with `style: combatEvent`, `hook: unique`, and `source` set to the NPC's display name. The play client frames that victory row and the item card. A template `unique: true` flag still caps ownership and frames the item card on examine. It does not send the room chip on its own.
 
 **Item Types**:
 - `currency` - Gold, tokens

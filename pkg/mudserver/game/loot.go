@@ -17,6 +17,9 @@ import (
 type LootDropResult struct {
 	Items []*items.Item
 	Gold  int64
+	// RareUnique lists drops from a rarity:unique loot entry.
+	// Template-unique trophies stay in Items and are not announced.
+	RareUnique []*items.Item
 }
 
 // DropLootFromNPC handles loot drops when an NPC dies
@@ -80,15 +83,17 @@ func DropLootFromNPCFor(facade service.Facade, deadNPC *npc.NPC, room *rooms.Roo
 		if err != nil {
 			log.WithError(err).WithField("lootTableID", enemy.LootTableID).Warn("Failed to roll loot table")
 		} else if lootResult != nil {
+			kept := lootResult.Items
 			// Apply max drops limit
-			if enemy.MaxDrops > 0 && int32(len(lootResult.Items)) > enemy.MaxDrops {
+			if enemy.MaxDrops > 0 && int32(len(kept)) > enemy.MaxDrops {
 				// Randomly shuffle and take first MaxDrops items
-				shuffleItems(lootResult.Items)
-				lootResult.Items = lootResult.Items[:enemy.MaxDrops]
+				shuffleItems(kept)
+				kept = kept[:enemy.MaxDrops]
 			}
 
-			result.Items = append(result.Items, lootResult.Items...)
+			result.Items = append(result.Items, kept...)
 			result.Gold += lootResult.Gold
+			result.RareUnique = append(result.RareUnique, rareStillDropped(lootResult.RareUnique, kept)...)
 		}
 	}
 
@@ -135,7 +140,8 @@ func shuffleItems(items []*items.Item) {
 }
 
 // lootReveals is the victory-panel list for items already dropped in the room.
-func lootReveals(dropped []*items.Item) []messages.LootReveal {
+// Unique is set only for items in announced, which are rarity:unique drops.
+func lootReveals(dropped []*items.Item, announced []*items.Item) []messages.LootReveal {
 	if len(dropped) == 0 {
 		return nil
 	}
@@ -156,7 +162,7 @@ func lootReveals(dropped []*items.Item) []messages.LootReveal {
 			Name:     item.Name,
 			Quality:  quality,
 			Quantity: qty,
-			Unique:   item.Unique,
+			Unique:   announcedDrop(item, announced),
 		})
 	}
 	if len(out) == 0 {
@@ -165,7 +171,30 @@ func lootReveals(dropped []*items.Item) []messages.LootReveal {
 	return out
 }
 
-// uniqueDropMessage is the room-wide gold chip for a one-per-character drop.
+func announcedDrop(item *items.Item, announced []*items.Item) bool {
+	for _, other := range announced {
+		if item != nil && item == other {
+			return true
+		}
+	}
+	return false
+}
+
+// rareStillDropped keeps rarity-unique items that survived the max-drops cut.
+func rareStillDropped(rare, kept []*items.Item) []*items.Item {
+	if len(rare) == 0 || len(kept) == 0 {
+		return nil
+	}
+	out := make([]*items.Item, 0, len(rare))
+	for _, item := range rare {
+		if announcedDrop(item, kept) {
+			out = append(out, item)
+		}
+	}
+	return out
+}
+
+// uniqueDropMessage is the room-wide gold chip for a rarity:unique drop.
 func uniqueDropMessage(roomID, npcName, itemName string) messages.MessageResponse {
 	msg := messages.NewRoomBasedMessage("SYSTEM", "UNIQUE: "+itemName)
 	msg.Audience = messages.MessageAudienceRoom

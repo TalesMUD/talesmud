@@ -24,12 +24,21 @@ func TestUniqueDropMessageIsRoomChip(t *testing.T) {
 }
 
 func TestLootRevealMarksUnique(t *testing.T) {
-	got := lootReveals([]*items.Item{{
+	relic := &items.Item{
 		Name:    "Relic",
 		Quality: items.ItemQualityRare,
 		Unique:  true,
-	}})
-	if len(got) != 1 || !got[0].Unique || got[0].Quality != "rare" || got[0].Name != "Relic" {
+	}
+	shard := &items.Item{
+		Name:    "Shard",
+		Quality: items.ItemQualityRare,
+		Unique:  true,
+	}
+	got := lootReveals([]*items.Item{relic, shard}, []*items.Item{relic})
+	if len(got) != 2 || !got[0].Unique || got[0].Quality != "rare" || got[0].Name != "Relic" {
 		t.Fatalf("%+v", got)
+	}
+	if got[1].Unique || got[1].Name != "Shard" {
+		t.Fatalf("template unique announced: %+v", got[1])
 	}
 }

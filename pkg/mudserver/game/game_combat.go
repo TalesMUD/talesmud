@@ -1188,13 +1188,13 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 
 			lootResult, err := DropLootFromNPCFor(c.game.Facade, npcData, room, killerLevel, lootRecipients)
 			if err == nil && lootResult != nil {
-				for _, item := range lootResult.Items {
-					if item == nil || !item.Unique || c.game == nil {
+				for _, item := range lootResult.RareUnique {
+					if item == nil || strings.TrimSpace(item.Name) == "" || c.game == nil {
 						continue
 					}
 					c.game.sendMessage <- uniqueDropMessage(room.ID, npcData.GetDisplayName(), item.Name)
 				}
-				for _, reveal := range lootReveals(lootResult.Items) {
+				for _, reveal := range lootReveals(lootResult.Items, lootResult.RareUnique) {
 					allLoot = append(allLoot, reveal)
 					if reveal.Quantity > 1 {
 						allLootItems = append(allLootItems, fmt.Sprintf("%s (x%d)", reveal.Name, reveal.Quantity))
