@@ -162,7 +162,7 @@
           <span class="material-symbols-outlined text-primary">auto_stories</span>
           <span>Tales</span>
         </a>
-        <div class="hidden md:flex items-center gap-6 text-sm font-medium text-slate-500 dark:text-slate-400">
+        <div class="hidden items-center gap-6 whitespace-nowrap text-sm font-medium text-slate-500 dark:text-slate-400 lg:flex">
           <div class="relative flex items-center gap-1" bind:this={playMenuEl}>
             <a class="hover:text-primary transition-colors" href="/play">Play</a>
             <button
@@ -241,7 +241,7 @@
         </div>
       </div>
       {#if onCreator}
-        <label class="ml-auto hidden min-w-0 max-w-md flex-1 items-center sm:flex">
+        <label class="ml-auto hidden min-w-0 max-w-md flex-1 items-center lg:flex">
           <span class="sr-only">Search</span>
           <span class="relative block w-full">
             <span class="material-symbols-outlined pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-base text-slate-400" aria-hidden="true">search</span>
@@ -256,7 +256,7 @@
           </span>
         </label>
       {/if}
-      <div class="ml-auto flex shrink-0 items-center gap-2 whitespace-nowrap sm:gap-3 {onCreator ? 'sm:ml-0' : ''}">
+      <div class="ml-auto flex shrink-0 items-center gap-2 whitespace-nowrap sm:gap-3 {onCreator ? 'lg:ml-0' : ''}">
         {#if envLabel}
           <span
             class="relative z-10 shrink-0 whitespace-nowrap rounded bg-red-600 px-2 py-1 font-display text-[10px] font-bold uppercase tracking-widest text-white"

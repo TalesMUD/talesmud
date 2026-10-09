@@ -2020,7 +2020,7 @@ The Creator screens sit in a left sidebar instead of a horizontal tab row. Group
 
 The sidebar collapses to an icon rail from its toggle or Ctrl+B / Cmd+B. The shortcut is ignored in inputs, textareas, selects, contenteditable editors (the script editor), and CodeMirror. Collapse and per-group folds persist in `localStorage` (`tales.creator.nav.v1`). The group that contains the current page opens on navigation. Below 1024px the rail is an off-canvas drawer: the top bar shows a menu button, and the backdrop, Escape, or a navigation click closes it.
 
-The top bar keeps the app links, a search box (`data-creator-search`, not wired yet; hidden under 640px so the bar stays one row), and the red LIVE badge when `ADMIN_ENV_LABEL` is set.
+The top bar keeps the app links, a search box (`data-creator-search`, not wired yet), and the red LIVE badge when `ADMIN_ENV_LABEL` is set. Below 1024px the text links and the search box are hidden so the badge stays on one row.
 
 ### Creator screens
 1. **Rooms** - Full room editor (exits, actions, spawners, NPCs, items, scripts)
