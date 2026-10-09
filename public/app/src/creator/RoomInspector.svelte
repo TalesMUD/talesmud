@@ -428,8 +428,5 @@
         {/if}
       </div>
     </div>
-
-    <!-- Worker B embeds BacklinksPanel for inbound references. -->
-    <div data-backlinks-slot data-entity-type="room" data-entity-id={view.id}></div>
   {/if}
 </div>
