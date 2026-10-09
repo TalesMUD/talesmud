@@ -13,6 +13,7 @@
   import GridRoomTile from "./GridRoomTile.svelte";
   import RoomEditorPanel from "./RoomEditorPanel.svelte";
   import { getOppositeDirection, CARDINAL_DIRECTIONS } from "./WorldEditorStore.js";
+  import { fitViewBox, roomPixel } from "./mapFit.js";
 
   // svelte-ignore unused-export-let
   export let location;
@@ -479,13 +480,9 @@
     }
   }
 
-  // Convert grid coords to pixel position (center of room)
-  // Negate Y so north (higher Y) renders at top of screen
+  // Convert grid coords to pixel position (center of room). North is up.
   function coordsToPixel(coords) {
-    return {
-      x: coords.x * GRID_SCALE,
-      y: -coords.y * GRID_SCALE,
-    };
+    return roomPixel(coords, GRID_SCALE);
   }
 
   // Convert pixel position to grid coords (snap to nearest)
@@ -772,29 +769,9 @@
     };
   }
 
-  // Fit view to content (uses filtered rooms)
+  // Fit view to the filtered rooms. North (higher Y) is up, matching roomPixel.
   function fitView() {
-    if (filteredRooms.length === 0) {
-      viewBox = { x: -600, y: -400, width: 1200, height: 800 };
-      return;
-    }
-
-    const coords = filteredRooms.map(r => r.coords);
-    const minX = Math.min(...coords.map(c => c.x));
-    const maxX = Math.max(...coords.map(c => c.x));
-    const minY = Math.min(...coords.map(c => c.y));
-    const maxY = Math.max(...coords.map(c => c.y));
-
-    const padding = 2; // Grid units
-    const width = (maxX - minX + padding * 2) * GRID_SCALE;
-    const height = (maxY - minY + padding * 2) * GRID_SCALE;
-
-    viewBox = {
-      x: (minX - padding) * GRID_SCALE,
-      y: (minY - padding) * GRID_SCALE,
-      width: Math.max(width, 600),
-      height: Math.max(height, 400),
-    };
+    viewBox = fitViewBox(filteredRooms.map((room) => room.coords), GRID_SCALE, 2);
   }
 
   // Panel handlers

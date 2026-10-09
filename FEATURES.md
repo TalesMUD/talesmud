@@ -2032,7 +2032,7 @@ The top bar keeps the app links, a search box (`data-creator-search`, not wired 
 7. **Skills** - Skill/spell editor (multi-class, effects)
 8. **Scripts** - Lua script editor with syntax highlighting
 9. **Character Templates** - Archetype editor with modal item-template selection for starting gear
-10. **World Map** - Grid-based world visualization
+10. **World Map** - Grid-based world visualization. Fit view uses the same north-up axis as the tiles (higher Y is toward the top), so an area whose rooms sit at positive Y stays on screen.
 11. **World Health** - Content-health report (reachability, reveal scripts, impossible quests, bosses, pack rules, drift) plus cross-system diagnostics for broken entity references and suspicious content values, including character template starting item references
 12. **Players** - Admin only. Live characters (online, guest, zone, in combat; optional older rows), a side drawer, and confirmed ops: teleport (room picker), give item (template picker), take item (that character's inventory), end combat, quest complete/reset/abandon, and re-grant starter kit. Instance copies and cleanup sit on the same page. Creators do not see this page.
 13. **Audit log** - Filterable creator and ops history, before/after JSON, and Undo for an admin
