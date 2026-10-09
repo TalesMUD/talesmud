@@ -13,6 +13,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/audit"
 	"github.com/talesmud/talesmud/pkg/mudserver/game"
 	"github.com/talesmud/talesmud/pkg/service"
+	"github.com/talesmud/talesmud/pkg/worldindex"
 )
 
 type auditRoute struct {
@@ -56,8 +57,11 @@ var auditRoutes = map[string]auditRoute{
 }
 
 // AuditWrites records a successful creator CRUD write. A log failure does not change the response.
+// A successful POST, PUT, PATCH, or DELETE also drops the cached search index, including
+// creator writes that this middleware does not record.
 func AuditWrites(svc service.AuditService) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		defer invalidateSearch(c)
 		spec, ok := auditRoutes[c.Request.Method+" "+c.FullPath()]
 		if !ok || svc == nil {
 			c.Next()
@@ -119,6 +123,21 @@ func AuditWrites(svc service.AuditService) gin.HandlerFunc {
 		}
 		_ = reqBody
 	}
+}
+
+func invalidateSearch(c *gin.Context) {
+	if c == nil || c.Request == nil {
+		return
+	}
+	switch c.Request.Method {
+	case http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:
+	default:
+		return
+	}
+	if c.Writer == nil || c.Writer.Status() >= 400 {
+		return
+	}
+	worldindex.Live.Invalidate()
 }
 
 // ListAudit returns recent audit rows for creators.

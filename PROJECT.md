@@ -571,6 +571,8 @@ go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
 - `GET /api/world/validation` - World Health diagnostics
 - `GET /api/diagnostics/world` - World health diagnostics across rooms, NPCs, dialogs, quests, loot, items, and scripts
 - `GET /api/world/reachability?from=` - World-map reachability from the start room, or from `from` when that room exists. Same walk as content health. Unknown `from` is 404.
+- `GET /api/search?q=&types=&limit=` - Creator search over rooms, NPCs, items, dialogs (including node text), quests, scripts (name and body), loot tables, spawners, skills, and character templates. Exact id ranks above an id prefix, then an id fragment, then a name, then other text. Each hit includes `type`, `id`, `name`, a snippet, and a Creator path. `limit` defaults to 25 and caps at 100. A blank query returns no hits.
+- `GET /api/refs/:type/:id` - Inbound and outbound references for one entity, grouped by type, with the field and a short reason. Unknown type is 400. A missing id is 404. The index is cached until a successful creator POST, PUT, PATCH, or DELETE.
 - `GET /api/health` - Content-health report (summary, rules, live anomalies)
 - `PUT /api/health/mute` - Mute or unmute a content-health rule (`{"ruleId","muted"}`)
 - `GET /api/health/drift` - Entities changed since the last import baseline

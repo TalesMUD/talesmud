@@ -58,6 +58,11 @@ func CatalogClasses() []worldindex.ClassInfo {
 	return out
 }
 
+// Snapshot is the index view of this world. Runtime copies stay out.
+func (w World) Snapshot() worldindex.Snapshot {
+	return w.indexSnapshot()
+}
+
 func (w World) indexSnapshot() worldindex.Snapshot {
 	snap := worldindex.NewSnapshot()
 	snap.StartRoomID = w.StartRoomID

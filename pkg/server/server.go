@@ -276,6 +276,7 @@ func (app *app) setupRoutes() {
 		Facade: app.Facade,
 		Health: app.contentHealth,
 	}
+	searchHandler := &handler.SearchHandler{Facade: app.Facade}
 
 	r.GET("/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "API is up and running")
@@ -368,6 +369,8 @@ func (app *app) setupRoutes() {
 			// Creator quality diagnostics
 			creator.GET("diagnostics/world", validationHandler.WorldDiagnostics)
 			creator.GET("world/reachability", healthHandler.Reachability)
+			creator.GET("search", searchHandler.Search)
+			creator.GET("refs/:type/:id", searchHandler.Refs)
 			creator.GET("health", healthHandler.Get)
 			creator.PUT("health/mute", healthHandler.Mute)
 			creator.GET("health/drift", healthHandler.Drift)
