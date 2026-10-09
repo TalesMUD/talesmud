@@ -32,6 +32,9 @@ type QuestsService interface {
 	AcceptQuest(characterID, questID string) (*quests.QuestProgress, error)
 	AbandonQuest(characterID, questID string) error
 	UpdateProgress(progress *quests.QuestProgress) error
+	// ReplaceProgress writes an exact progress row back, or deletes it when progress is nil.
+	// Live-ops undo uses this to restore the record from before a quest step.
+	ReplaceProgress(characterID, questID string, progress *quests.QuestProgress) error
 	CompleteQuest(characterID, questID string) (*quests.QuestProgress, error)
 	GetAvailableQuests(characterID string) ([]*quests.Quest, error)
 	GrantAutoQuests(characterID, roomArea string) int
@@ -578,6 +581,32 @@ func (s *questsService) AbandonQuest(characterID, questID string) error {
 
 func (s *questsService) UpdateProgress(progress *quests.QuestProgress) error {
 	return s.progressRepo.Update(progress.ID, progress)
+}
+
+func (s *questsService) ReplaceProgress(characterID, questID string, progress *quests.QuestProgress) error {
+	existing, _ := s.progressRepo.FindByCharacterAndQuest(characterID, questID)
+	if progress == nil {
+		if existing == nil || existing.ID == "" {
+			return nil
+		}
+		return s.progressRepo.Delete(existing.ID)
+	}
+	if progress.Entity == nil || progress.ID == "" {
+		return errors.New("progress id is required")
+	}
+	progress.CharacterID = characterID
+	progress.QuestID = questID
+	if existing != nil && existing.ID != "" && existing.ID != progress.ID {
+		if err := s.progressRepo.Delete(existing.ID); err != nil {
+			return err
+		}
+		existing = nil
+	}
+	if existing != nil && existing.ID == progress.ID {
+		return s.progressRepo.Update(progress.ID, progress)
+	}
+	_, err := s.progressRepo.Import(progress)
+	return err
 }
 
 func (s *questsService) CompleteQuest(characterID, questID string) (*quests.QuestProgress, error) {

@@ -16,6 +16,7 @@ const (
 	CombatStateDefeat  CombatState = "defeat"  // No one left fighting, and at least one player died
 	CombatStateFled    CombatState = "fled"    // No one left fighting, and every player fled
 	CombatStateTimeout CombatState = "timeout" // Combat timed out
+	CombatStateAborted CombatState = "aborted" // An operator ended the fight. No rewards or penalties.
 )
 
 // CombatantType identifies whether a combatant is a player or NPC

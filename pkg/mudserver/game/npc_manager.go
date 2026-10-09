@@ -45,6 +45,9 @@ type NPCInstanceManager struct {
 	// spawnerState tracks runtime state per spawner ID
 	spawnerState map[string]*SpawnerState
 
+	// notes is the last operator event for the live NPC list. Memory only.
+	notes map[string]string
+
 	facade service.Facade
 }
 
@@ -53,6 +56,7 @@ func NewNPCInstanceManager(facade service.Facade) *NPCInstanceManager {
 	return &NPCInstanceManager{
 		instances:    make(map[string]*npc.NPC),
 		spawnerState: make(map[string]*SpawnerState),
+		notes:        make(map[string]string),
 		facade:       facade,
 	}
 }

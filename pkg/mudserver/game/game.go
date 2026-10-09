@@ -3,6 +3,7 @@ package game
 import (
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -76,6 +77,11 @@ type Game struct {
 	aggroCh chan aggroFire
 	aggro   aggroBook
 
+	// jobs carries live-ops onto the command loop so they cannot race a player command.
+	// loopOn is set only after Run starts that loop. Call runs inline until then.
+	jobs   chan gameJob
+	loopOn atomic.Bool
+
 	//world *World
 }
 
@@ -106,6 +112,7 @@ func New(facade service.Facade) *Game {
 	g.aggro.pending = map[string]*aggroWatch{}
 	g.aggro.cooldown = map[string]time.Time{}
 	g.aggro.ch = g.aggroCh
+	g.jobs = make(chan gameJob, 32)
 
 	// Initialize NPC instance manager
 	g.NPCManager = NewNPCInstanceManager(facade)
@@ -245,9 +252,13 @@ func (g *Game) Run() {
 
 	go g.handleGameUpdates()
 
+	g.loopOn.Store(true)
 	go func() {
 		for {
 			select {
+			case job := <-g.jobs:
+				g.runJob(job)
+
 			case userJoined := <-g.OnUserJoined:
 				log.Debug("UserJoined channel received")
 				g.handleUserJoined(userJoined.User)

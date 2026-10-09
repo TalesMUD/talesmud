@@ -21,6 +21,7 @@ type Instance struct {
 	CloneOrder []string
 	Procedural bool
 	ExpiresAt  time.Time
+	Created    time.Time
 }
 
 // Manager tracks live cellar instances. Destroyed when empty.
@@ -80,6 +81,7 @@ func (m *Manager) Enter(roomsSvc service.RoomsService, characterID, hubID, destI
 		HubRoomID: hubID,
 		Occupants: map[string]bool{characterID: true},
 		Clones:    map[string]string{},
+		Created:   time.Now().UTC(),
 	}
 	for _, tid := range graph {
 		inst.Clones[tid] = CloneID(tid, instID)

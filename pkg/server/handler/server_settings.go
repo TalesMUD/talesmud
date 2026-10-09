@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -48,7 +49,13 @@ func (h *ServerSettingsHandler) GetServerInfo(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	host := os.Getenv("ADMIN_ENV_HOST")
+	if host == "" && c.Request != nil {
+		host = c.Request.Host
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"serverName": result.ServerName,
+		"envLabel":   os.Getenv("ADMIN_ENV_LABEL"),
+		"host":       host,
 	})
 }

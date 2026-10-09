@@ -15,6 +15,7 @@ import (
 	dbsqlite "github.com/talesmud/talesmud/pkg/db/sqlite"
 	"github.com/talesmud/talesmud/pkg/gamemode"
 	mud "github.com/talesmud/talesmud/pkg/mudserver"
+	"github.com/talesmud/talesmud/pkg/mudserver/game"
 	"github.com/talesmud/talesmud/pkg/repository"
 	"github.com/talesmud/talesmud/pkg/resources"
 	"github.com/talesmud/talesmud/pkg/ruleset"
@@ -349,8 +350,13 @@ func (app *app) setupRoutes() {
 		protected.PUT("user", usr.UpdateUser)
 
 		// Creator-level routes (creator or admin role required)
+		var liveGame *game.Game
+		if ctrl := app.mud.GameCtrl(); ctrl != nil {
+			liveGame, _ = ctrl.(*game.Game)
+		}
 		creator := protected.Group("")
 		creator.Use(CreatorMiddleware())
+		creator.Use(handler.AuditWrites(app.Facade.AuditService()))
 		{
 			// Rooms
 			creator.POST("rooms", rooms.PostRoom)
@@ -427,6 +433,21 @@ func (app *app) setupRoutes() {
 
 			// Server Settings
 			creator.PUT("settings", serverSettings.UpdateServerSettings)
+
+			// Live world and the change log. Writes stay on the admin routes below.
+			creator.GET("audit", handler.ListAudit(app.Facade.AuditService()))
+			creator.GET("live/characters", handler.LiveCharacters(liveGame))
+			creator.GET("live/characters/:id", handler.LiveCharacterDetail(liveGame))
+			creator.GET("live/npcs", handler.LiveNPCs(liveGame))
+			creator.GET("live/instances", handler.LiveInstances(liveGame))
+		}
+
+		// Live ops undo is admin-only and lives at /api/, next to the creator reads.
+		liveAdmin := protected.Group("")
+		liveAdmin.Use(AdminMiddleware())
+		{
+			liveAdmin.POST("audit/:id/undo", handler.UndoAudit(liveGame, app.Facade.AuditService()))
+			liveAdmin.POST("ops/:action", handler.OpsAction(liveGame, app.Facade.AuditService()))
 		}
 
 		// Admin-level routes (admin role required)

@@ -69,6 +69,22 @@ func (r *sessionRegistry) disconnect(userID string) {
 	}
 }
 
+func (r *sessionRegistry) setRoom(characterID, roomID string) {
+	if r == nil || characterID == "" {
+		return
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for id, player := range r.players {
+		if player.CharacterID != characterID {
+			continue
+		}
+		player.RoomID = roomID
+		player.LastSeen = time.Now()
+		r.players[id] = player
+	}
+}
+
 func (r *sessionRegistry) setCharacter(user *entities.User, char *characters.Character) {
 	if user == nil || char == nil {
 		return

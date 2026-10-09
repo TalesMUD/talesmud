@@ -97,6 +97,7 @@ func (m *Manager) Generate(roomsSvc service.RoomsService, characterID string, pl
 		Clones:     map[string]string{},
 		Procedural: true,
 		ExpiresAt:  time.Now().Add(timeout),
+		Created:    time.Now().UTC(),
 	}
 
 	cloneIDs := make([]string, spec.Count)
