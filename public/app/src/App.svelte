@@ -53,6 +53,28 @@
   let envHost = "";
   let removeNavWatch = () => {};
 
+  function applyServerInfo(info) {
+    let payload = info;
+    if (typeof payload === "string") {
+      try {
+        payload = JSON.parse(payload);
+      } catch {
+        payload = null;
+      }
+    }
+    envLabel = String(payload?.envLabel || "").trim();
+    envHost = String(payload?.host || "").trim();
+  }
+
+  // Not inside onMount. A client build that resolves Svelte's SSR entry makes
+  // onMount a no-op, and Rollup then deletes the callback — which removed this
+  // request, and the badge, from the production bundle.
+  if (typeof window !== "undefined") {
+    getServerInfo().then(applyServerInfo).catch(() => {
+      envLabel = "";
+    });
+  }
+
   $: onCreator = pathname.startsWith("/creator");
 
   $: if (!onCreator && $creatorDrawerOpen) creatorDrawerOpen.set(false);
@@ -104,14 +126,6 @@
     syncNavHeight();
     const observer = new ResizeObserver(syncNavHeight);
     if (navEl) observer.observe(navEl);
-    getServerInfo()
-      .then((info) => {
-        envLabel = String(info?.envLabel || "").trim();
-        envHost = String(info?.host || "").trim();
-      })
-      .catch(() => {
-        envLabel = "";
-      });
     removeNavWatch = () => {
       window.removeEventListener("popstate", syncPath);
       mq.removeEventListener("change", applyNarrow);
@@ -244,7 +258,11 @@
       {/if}
       <div class="ml-auto flex shrink-0 items-center gap-2 whitespace-nowrap sm:gap-3 {onCreator ? 'sm:ml-0' : ''}">
         {#if envLabel}
-          <span class="shrink-0 whitespace-nowrap rounded bg-red-600 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-white">
+          <span
+            class="relative z-10 shrink-0 whitespace-nowrap rounded bg-red-600 px-2 py-1 font-display text-[10px] font-bold uppercase tracking-widest text-white"
+            data-env-badge
+            role="status"
+          >
             {envLabel}{envHost ? ` · ${envHost}` : ""}
           </span>
         {/if}

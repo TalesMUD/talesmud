@@ -1344,7 +1344,7 @@ Onboarding components are in `src/onboarding/`:
 
 ### Admin/Creator App — Component Hierarchy
 
-The production Vite build restores the `browser` package export condition after the Svelte plugin. Without it, Vite 6 resolves Svelte's SSR entry, `onMount` is a no-op, and Rollup drops those callbacks.
+The production Vite build restores the `browser` package export condition after the Svelte plugin. Without it, Vite 6 resolves Svelte's SSR entry, `onMount` is a no-op, and Rollup drops those callbacks. The LIVE badge request runs when the app shell is created, so that label still ships if `onMount` is dropped.
 
 ```
 App.svelte (role-aware navigation: Creator/Admin links gated by user role)
