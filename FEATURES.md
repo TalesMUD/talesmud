@@ -2012,6 +2012,7 @@ Creator editors share backend validation rules from `pkg/service/validation`:
 - Deletes that call a DELETE API open a confirm dialog (entity type, name, and ID) before the request. The same dialog covers map room delete, saved spawner delete, room item removal, special exit removal, dialog-graph option and answer removal, and bulk deletion of deprecated scripts. Unsaved form rows (patrol stops, quest objectives, cardinal exits, room actions, alternate texts) stay immediate.
 - Data tables show the full entity ID, with a tooltip and a copy button. The row dot marks validation errors and warnings. NPC type (Enemy, Merchant, both, Neutral) is a text badge.
 - Opening a creator editor URL with `?id=<entityId>` selects that entity after the list loads. The dialog graph honors the same query.
+- Ctrl+K or Cmd+K opens a search palette over rooms, NPCs, items, dialogs (including node text), quests, scripts, loot tables, spawners, skills, and character templates. Results stay grouped by type. Enter opens that entity's Creator path. The shortcut is ignored inside an input, a textarea, or the script editor.
 - Data table rows surface warning/error indicators when stored entities have diagnostics. An editor-specific row indicator is not used for NPC type.
 - Preview/test tools validate draft dialogs, quests, rooms, merchants, and Lua scripts before content is published into the world.
 

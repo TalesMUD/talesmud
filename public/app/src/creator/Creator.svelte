@@ -2,6 +2,7 @@
   import { onDestroy, onMount, tick } from "svelte";
   import { userRole } from "../stores.js";
   import OpsToast from "./OpsToast.svelte";
+  import SearchPalette from "./SearchPalette.svelte";
   import CreatorNavList from "./CreatorNavList.svelte";
   import { creatorDrawerOpen, creatorNavNarrow } from "./creatorNavStore.js";
   import {
@@ -205,6 +206,8 @@
   {/if}
 
   <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+    <!-- Ctrl+K opens search. The top-bar input is wired after the nav rebase. -->
+    <SearchPalette />
     <OpsToast />
     <div class="h-full min-h-0 min-w-0 flex-1 overflow-auto">
       <slot />
