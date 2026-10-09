@@ -1,0 +1,23 @@
+{
+  "message": "UNIQUE: Unmarked Vigil Blade",
+  "desk": {
+    "text": "diamond UNIQUE: Unmarked Vigil Blade",
+    "width": 1920,
+    "height": 1080,
+    "box": {
+      "x": 365.75,
+      "y": 493.4375,
+      "w": 311.203125,
+      "h": 19.84375
+    }
+  },
+  "phone": {
+    "text": "diamond UNIQUE: Unmarked Vigil Blade",
+    "width": 390,
+    "box": {
+      "y": 556.5625,
+      "w": 99.40625,
+      "h": 43.125
+    }
+  }
+}
