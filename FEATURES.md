@@ -239,7 +239,9 @@ type Item struct {
 ### Item Types & Slots
 Stackable item quantities are kept consistent when consumed or partially dropped: the character inventory and backing item instance are both updated.
 
-`unique: true` on an item template means a character can hold at most one copy. Pickup of another (including a Hollow Knight loot instance) is refused with "You already have the <name>." Extra copies already in the bag are trimmed to one on that attempt. The ground drop is left for someone else.
+`unique: true` on an item template means a character can hold at most one copy. The count covers the bag, equipped gear, and items nested in a container. There is no separate item bank. Pickup of another is refused with "You already have the <name>." Extra copies already in the bag are trimmed to one on that attempt. The ground drop is left for someone else.
+
+A loot entry may set `rarity: unique`, `chance` (a non-zero value wins over `dropChance` at import), and `boss_only: true`. Boss-only entries roll only when the dead NPC's difficulty is `boss`. The unique roll is skipped when every victory recipient already holds that template. One dropped unique sends a room message `UNIQUE: <item name>` with `style: combatEvent`, `hook: unique`, and `source` set to the NPC's display name. The play client frames that row and the item card.
 
 **Item Types**:
 - `currency` - Gold, tokens
@@ -1951,7 +1953,7 @@ Each script type receives a `ctx` global table with different fields. Access fie
 - Context varies by event type. Enemy hooks set `ctx.hook`, `ctx.roomId`, `ctx.npc`, `ctx.opponents`, and `ctx.allies`.
 - `tales.combat.summon(templateId, count)` spawns enemy-template adds into the current fight. Count clamps to 1..3 and to the remaining fight cap of 3. Adds grant no loot, gold, XP, or quest credit and are removed when the fight ends. Unknown template, non-enemy, no fight, or a full cap returns 0.
 - Room lines from `tales.game.msgToRoom` and `tales.game.msgToRoomExcept` during an enemy hook stay `type: "message"` and `username: "SYSTEM"`. They also carry `style: "combatEvent"`, `hook` (`onAggro`, `onLowHealth`, `onDeath`, `onFlee`), and `source` (that NPC's display name). Other scripts omit those fields. A hook flush that summoned adds sends `combatStatus` with the live `combatants` roster immediately.
-- The play client renders `style === "combatEvent"` as a gold chip in the BattleStage combat log (icon per hook, `source` as a small label) and still prints the plain line. Cache-bust for that client is `?v=hooks2`.
+- The play client renders `style === "combatEvent"` as a gold chip in the BattleStage combat log (icon per hook, `source` as a small label) and still prints the plain line. Hook `unique` is the room announcement for a one-per-character drop, sent by the loot path rather than a Lua hook. Cache-bust for that client is `?v=uniques1`.
 
 ### Context Variable Quick Reference
 

@@ -1356,7 +1356,16 @@
           {#if lootList.length}
             <ul class="loot-reveal" aria-label="Loot">
               {#each lootList.slice(0, lootShown) as item, index (`${item.name}-${index}`)}
-                <li class="loot-item rarity-{rarityClass(item.quality)}">{item.name}{#if item.quantity > 1} ×{item.quantity}{/if}</li>
+                {#if item.unique}
+                  <li class="loot-item">
+                    <div class="combat-event-card">
+                      <i class="material-icons" aria-hidden="true">diamond</i>
+                      <span class="combat-event-text">UNIQUE: {item.name}</span>
+                    </div>
+                  </li>
+                {:else}
+                  <li class="loot-item rarity-{rarityClass(item.quality)}">{item.name}{#if item.quantity > 1} ×{item.quantity}{/if}</li>
+                {/if}
               {/each}
             </ul>
           {/if}
@@ -3241,6 +3250,12 @@
   .loot-item {
     padding: 0.18rem 0;
     animation: lootIn 0.28s ease-out;
+  }
+  .loot-reveal .combat-event-card {
+    margin-top: 0.15rem;
+  }
+  .loot-reveal .combat-event-text {
+    white-space: normal;
   }
   .rarity-normal { color: #e5e7eb; }
   .rarity-magic { color: #60a5fa; }

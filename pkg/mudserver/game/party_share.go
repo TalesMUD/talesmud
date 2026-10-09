@@ -62,6 +62,30 @@ func splitVictoryAmount(total int64, ids []string, bonusID string, keepRemainder
 	return out
 }
 
+// victoryRecipientIDs is the living fight plus same-room online party members.
+func victoryRecipientIDs(c *CombatController, instance *combat.CombatInstance, living []*combat.CombatantRef) []string {
+	if c == nil {
+		return nil
+	}
+	shares, _ := c.planVictoryShares(instance, living, 0, 0)
+	if len(shares) == 0 {
+		ids := make([]string, 0, len(living))
+		for _, p := range living {
+			if p != nil && p.ID != "" {
+				ids = append(ids, p.ID)
+			}
+		}
+		return ids
+	}
+	ids := make([]string, 0, len(shares))
+	for _, share := range shares {
+		if share.ID != "" {
+			ids = append(ids, share.ID)
+		}
+	}
+	return ids
+}
+
 // planVictoryShares decides who receives this victory's gold and XP.
 // partySplit is true when at least two recipients are in the same party, which
 // is when the leftover is kept and the share summary is shown.

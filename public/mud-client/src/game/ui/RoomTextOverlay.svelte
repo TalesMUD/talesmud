@@ -69,6 +69,11 @@
     overlayStore.removeMessage(id);
   }
 
+  function isUniqueExamine(examine) {
+    if (!examine || !examine.details) return false;
+    return examine.details.some((row) => row.label === 'Mark' && String(row.value).toLowerCase() === 'unique');
+  }
+
   function qualityClass(value) {
     const v = String(value || '').toLowerCase();
     if (v === 'magic') return 'q-magic';
@@ -169,6 +174,14 @@
     font-size: 0.92rem;
     font-weight: 400;
     animation: overlayExamineIn 0.28s ease-out;
+  }
+
+  .overlay-message.examine.examine-unique {
+    border: 2px solid #facc15;
+    box-shadow:
+      0 0 0 1px #7a5a16,
+      0 18px 48px rgba(0, 0, 0, 0.55),
+      0 0 22px rgba(250, 204, 21, 0.35);
   }
 
   .examine-card {
@@ -394,6 +407,7 @@
         class="overlay-message"
         class:ambiance={msg.kind === 'ambiance'}
         class:examine={msg.kind === 'examine' && msg.examine}
+        class:examine-unique={msg.kind === 'examine' && isUniqueExamine(msg.examine)}
         class:fading={msg.fading}
         style="--fade-duration: {msg.fadeOutDuration}ms"
         role={msg.kind === 'examine' ? 'dialog' : undefined}

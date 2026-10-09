@@ -14,6 +14,8 @@ export function combatEventIcon(hook) {
       return "dangerous";
     case "onFlee":
       return "directions_run";
+    case "unique":
+      return "diamond";
     default:
       return "campaign";
   }

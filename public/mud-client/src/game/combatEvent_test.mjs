@@ -22,6 +22,7 @@ assert.deepStrictEqual(card, {
 assert.strictEqual(combatEventIcon('onLowHealth'), 'favorite');
 assert.strictEqual(combatEventIcon('onDeath'), 'dangerous');
 assert.strictEqual(combatEventIcon('onFlee'), 'directions_run');
+assert.strictEqual(combatEventIcon('unique'), 'diamond');
 assert.strictEqual(combatEventIcon('other'), 'campaign');
 
 console.log('combatEvent_test: ok');

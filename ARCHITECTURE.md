@@ -910,6 +910,8 @@ type EnemyTrait struct {
 }
 ```
 
+Loot entries carry `rarity` (`unique`), `bossOnly`, and `dropChance`. YAML `chance` is an alias stored as `dropChance` (a non-zero chance wins). `bossOnly` rolls only when difficulty is `boss`. A unique entry is skipped when every victory recipient already holds that template in the bag, equipped gear, or a nested container. There is no separate item bank. The drop sends a room `combatEvent` with hook `unique`.
+
 #### MerchantTrait
 
 ```go

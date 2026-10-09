@@ -357,10 +357,12 @@ func (y *YAMLLootTable) ToEntity() *items.LootTable {
 
 		lt.Entries = append(lt.Entries, items.LootEntry{
 			ItemTemplateID: e.ItemTemplateID,
-			DropChance:     e.DropChance,
+			DropChance:     e.EffectiveDropChance(),
 			MinQuantity:    minQty,
 			MaxQuantity:    maxQty,
 			Guaranteed:     e.Guaranteed,
+			Rarity:         e.Rarity,
+			BossOnly:       e.BossOnly || e.BossOnlyAlt,
 		})
 	}
 
