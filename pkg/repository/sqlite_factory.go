@@ -84,6 +84,10 @@ func (f *SQLiteFactory) ContentHealth() ContentHealthRepository {
 	return NewSQLiteContentHealthRepository(f.client)
 }
 
+func (f *SQLiteFactory) Audit() AuditRepository {
+	return NewSQLiteAuditRepository(f.client)
+}
+
 func (f *SQLiteFactory) Close() error {
 	return f.client.Close()
 }

@@ -20,5 +20,6 @@ type Factory interface {
 	Skills() SkillsRepository
 	GuestStats() GuestStatsRepository
 	ContentHealth() ContentHealthRepository
+	Audit() AuditRepository
 	Close() error
 }
