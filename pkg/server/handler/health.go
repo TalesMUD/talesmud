@@ -70,15 +70,17 @@ func (h *HealthHandler) Drift(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	// A nil slice boxed in gin.H is a non-nil interface and marshals as null.
+	changes := report.Drift
+	if changes == nil {
+		changes = []contenthealth.DriftRow{}
+	}
 	body := gin.H{
 		"contentCommit": report.ContentCommit,
-		"changes":       report.Drift,
+		"changes":       changes,
 	}
 	if base != nil {
 		body["importedAt"] = base.ImportedAt
-	}
-	if body["changes"] == nil {
-		body["changes"] = []contenthealth.DriftRow{}
 	}
 	c.JSON(http.StatusOK, body)
 }
