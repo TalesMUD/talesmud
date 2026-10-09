@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/talesmud/talesmud/pkg/entities"
+	"github.com/talesmud/talesmud/pkg/entities/items"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/entities/quests"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
@@ -111,6 +112,98 @@ func TestRunGraphRules(t *testing.T) {
 	}
 }
 
+func TestQuestRewardItemIsObtainable(t *testing.T) {
+	start := testRoom("R0", "Start")
+	clerk := &npc.NPC{Entity: &entities.Entity{ID: "N1"}, Name: "Clerk", SpawnRoomID: "R0"}
+	item := &items.Item{Entity: &entities.Entity{ID: "ITM0059"}, Name: "Dispatch", IsTemplate: true}
+	grant := &quests.Quest{
+		Entity:     &entities.Entity{ID: "QST0302"},
+		Name:       "Grant",
+		Source:     quests.QuestSource{Type: "auto"},
+		Objectives: []quests.Objective{{ID: "see", Type: quests.ObjectiveVisit, TargetID: "R0", Amount: 1}},
+		Rewards:    quests.Reward{ItemTemplateIDs: []string{"ITM0059"}},
+	}
+	deliver := &quests.Quest{
+		Entity:           &entities.Entity{ID: "QST0303"},
+		Name:             "Deliver",
+		Source:           quests.QuestSource{Type: "auto"},
+		RequiredQuestIDs: []string{"QST0302"},
+		Objectives: []quests.Objective{{
+			ID: "drop", Type: quests.ObjectiveDeliver, TargetID: "ITM0059", DeliverToNPCID: "N1", Amount: 1,
+		}},
+	}
+	world := World{
+		StartRoomID: "R0",
+		Rooms:       []*rooms.Room{start},
+		NPCs:        []*npc.NPC{clerk},
+		Items:       []*items.Item{item},
+		Quests:      []*quests.Quest{deliver, grant},
+	}
+	report := Run(world, Options{Balance: testBalance()})
+	for _, hit := range ruleHits(report, RuleQuest) {
+		t.Fatalf("reward chain should complete, hit %+v", hit)
+	}
+
+	// A two-step reward chain: the second item exists only because the first quest's reward made the middle quest completable.
+	nextItem := &items.Item{Entity: &entities.Entity{ID: "ITM0060"}, Name: "Seal", IsTemplate: true}
+	middle := &quests.Quest{
+		Entity:           &entities.Entity{ID: "QST0304"},
+		Name:             "Middle",
+		Source:           quests.QuestSource{Type: "auto"},
+		RequiredQuestIDs: []string{"QST0302"},
+		Objectives:       []quests.Objective{{ID: "take", Type: quests.ObjectiveCollect, TargetID: "ITM0059", Amount: 1}},
+		Rewards:          quests.Reward{ItemTemplateIDs: []string{"ITM0060"}},
+	}
+	last := &quests.Quest{
+		Entity:           &entities.Entity{ID: "QST0305"},
+		Name:             "Last",
+		Source:           quests.QuestSource{Type: "auto"},
+		RequiredQuestIDs: []string{"QST0304"},
+		Objectives:       []quests.Objective{{ID: "hand", Type: quests.ObjectiveDeliver, TargetID: "ITM0060", DeliverToNPCID: "N1", Amount: 1}},
+	}
+	world.Items = append(world.Items, nextItem)
+	world.Quests = append(world.Quests, middle, last)
+	report = Run(world, Options{Balance: testBalance()})
+	for _, hit := range ruleHits(report, RuleQuest) {
+		t.Fatalf("chained rewards should complete, hit %+v", hit)
+	}
+}
+
+func TestQuestRewardCycleStaysImpossible(t *testing.T) {
+	start := testRoom("R0", "Start")
+	clerk := &npc.NPC{Entity: &entities.Entity{ID: "N1"}, Name: "Clerk", SpawnRoomID: "R0"}
+	item := &items.Item{Entity: &entities.Entity{ID: "ITM0059"}, Name: "Dispatch", IsTemplate: true}
+	grant := &quests.Quest{
+		Entity:           &entities.Entity{ID: "QST0302"},
+		Name:             "Grant",
+		Source:           quests.QuestSource{Type: "auto"},
+		RequiredQuestIDs: []string{"QST0303"},
+		Objectives:       []quests.Objective{{ID: "see", Type: quests.ObjectiveVisit, TargetID: "R0", Amount: 1}},
+		Rewards:          quests.Reward{ItemTemplateIDs: []string{"ITM0059"}},
+	}
+	deliver := &quests.Quest{
+		Entity:           &entities.Entity{ID: "QST0303"},
+		Name:             "Deliver",
+		Source:           quests.QuestSource{Type: "auto"},
+		RequiredQuestIDs: []string{"QST0302"},
+		Objectives: []quests.Objective{{
+			ID: "drop", Type: quests.ObjectiveDeliver, TargetID: "ITM0059", DeliverToNPCID: "N1", Amount: 1,
+		}},
+	}
+	world := World{
+		StartRoomID: "R0",
+		Rooms:       []*rooms.Room{start},
+		NPCs:        []*npc.NPC{clerk},
+		Items:       []*items.Item{item},
+		Quests:      []*quests.Quest{grant, deliver},
+	}
+	report := Run(world, Options{Balance: testBalance()})
+	hits := ruleHits(report, RuleQuest)
+	if len(hits) != 1 || hits[0].EntityID != "QST0303" || !strings.Contains(hits[0].Message, "ITM0059") {
+		t.Fatalf("cycle hits = %+v", hits)
+	}
+}
+
 func TestInfoDoesNotFail(t *testing.T) {
 	world := World{StartRoomID: "R0", Rooms: []*rooms.Room{testRoom("R0", "Start")}}
 	report := Run(world, Options{
@@ -135,6 +228,15 @@ func TestInfoDoesNotFail(t *testing.T) {
 	if !found {
 		t.Fatal("pack rule missing")
 	}
+}
+
+func ruleHits(report Report, id string) []Hit {
+	for _, rule := range report.Rules {
+		if rule.ID == id {
+			return rule.Hits
+		}
+	}
+	return nil
 }
 
 func ruleByID(t *testing.T, report Report, id string) Rule {

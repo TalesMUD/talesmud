@@ -257,55 +257,14 @@ func (b *builder) addGraph(reach worldindex.Reachability, bal *Balance) {
 
 func (b *builder) addQuests(reach worldindex.Reachability) {
 	hint := hintFor(RuleQuest)
-	obtainable := b.index.Obtainable(reach)
+	report := evaluateQuests(b.index, reach)
 	for _, questID := range sortedIDs(b.snap.Quests) {
-		quest := b.snap.Quests[questID]
-		if quest == nil {
+		ev := report.ByID[questID]
+		if ev == nil {
 			continue
 		}
-		for i, objective := range quest.Objectives {
-			field := fmt.Sprintf("objectives[%d]", i)
-			var problems []string
-			switch objective.Type {
-			case "visit":
-				if objective.TargetID == "" || b.snap.Rooms[objective.TargetID] == nil {
-					continue
-				}
-				if !reach.Reachable[objective.TargetID] {
-					problems = append(problems, "visit room "+objective.TargetID+" is unreachable")
-				}
-			case "kill":
-				if objective.TargetID == "" || b.snap.NPCs[objective.TargetID] == nil {
-					continue
-				}
-				if !b.index.CanMeet(b.snap.NPCs[objective.TargetID], reach) {
-					problems = append(problems, "kill target "+objective.TargetID+" is never spawned in a reachable room")
-				}
-			case "collect":
-				if objective.TargetID == "" || b.snap.Items[objective.TargetID] == nil {
-					continue
-				}
-				if !obtainable[objective.TargetID] {
-					problems = append(problems, "collect item "+objective.TargetID+" is not obtainable")
-				}
-			case "deliver":
-				if objective.TargetID != "" && b.snap.Items[objective.TargetID] != nil && !obtainable[objective.TargetID] {
-					problems = append(problems, "deliver item "+objective.TargetID+" is not obtainable")
-				}
-				if objective.DeliverToNPCID != "" && b.snap.NPCs[objective.DeliverToNPCID] != nil && !b.index.CanMeet(b.snap.NPCs[objective.DeliverToNPCID], reach) {
-					problems = append(problems, "deliver NPC "+objective.DeliverToNPCID+" is not reachable")
-				}
-			case "talk":
-				if objective.TargetID == "" || b.snap.NPCs[objective.TargetID] == nil {
-					continue
-				}
-				if !b.index.CanMeet(b.snap.NPCs[objective.TargetID], reach) {
-					problems = append(problems, "talk NPC "+objective.TargetID+" is not reachable")
-				}
-			default:
-				continue
-			}
-			if len(problems) == 0 {
+		for _, objective := range ev.Objectives {
+			if objective.Verdict != verdictRed || len(objective.Problems) == 0 {
 				continue
 			}
 			b.add(Hit{
@@ -313,8 +272,8 @@ func (b *builder) addQuests(reach worldindex.Reachability) {
 				Severity:   "error",
 				EntityType: "quest",
 				EntityID:   questID,
-				Field:      field,
-				Message:    questID + " cannot complete: " + strings.Join(problems, "; "),
+				Field:      fmt.Sprintf("objectives[%d]", objective.Index),
+				Message:    questID + " cannot complete: " + strings.Join(objective.Problems, "; "),
 				FixHint:    hint,
 			})
 		}
