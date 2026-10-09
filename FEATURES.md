@@ -1721,7 +1721,7 @@ tales.combat.applyEffect(targetID, effectID) -- existing buff or debuff only
 tales.combat.summon(templateId, count)    -- enemy-template adds spawned (0 on failure)
 ```
 
-`summon` uses the running enemy-hook fight and room. `count` clamps to 1..3 and to whatever remains of a fight cap of 3. Adds copy template stats, are not charged to a spawner, grant no loot, gold, XP, or quest credit, and are removed when the fight ends (win, lose, flee, or timeout). Each add may run its own `onAggroScript` once.
+`summon` uses the running enemy-hook fight and room. `count` clamps to 1..3 and to whatever remains of a fight cap of 3. Adds copy template stats, are not charged to a spawner, grant no loot, gold, XP, or quest credit, and are removed when the fight ends (win, lose, flee, or timeout). Each add may run its own `onAggroScript` once. When any combatant dies or flees, they leave the turn order and the current index stays inside the remaining order. If that index is past the end, the next tick wraps into the following round and ends the fight when it is over, so an add dying cannot stall the fight until the idle timeout.
 
 ### tales.items Module
 ```lua

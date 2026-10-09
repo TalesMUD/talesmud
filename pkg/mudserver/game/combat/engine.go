@@ -840,55 +840,121 @@ func (e *Engine) ProcessFlee(instance *combat.CombatInstance, fleeingID string) 
 	return result
 }
 
-// NextTurn advances to the next turn, handling round progression
+// NextTurn advances to the next living combatant. Dead and fled fighters are
+// removed from this round's order. If that walks off the end, the next round
+// opens immediately. The index is never left past the order: a nil return
+// means the order is empty, with CurrentTurnIdx at 0.
 func (e *Engine) NextTurn(instance *combat.CombatInstance) *combat.CombatantRef {
-	// Clear defense bonus from the combatant whose turn just ended
-	current := instance.GetCurrentTurnCombatant()
-	if current != nil {
+	if instance == nil {
+		return nil
+	}
+
+	// Clear defense bonus from the combatant whose turn just ended.
+	// Remember where they stood before pruning; the slice may move.
+	finishedID := ""
+	finishedIdx := -1
+	if current := instance.GetCurrentTurnCombatant(); current != nil {
+		finishedID = current.ID
+		finishedIdx = instance.CurrentTurnIdx
 		current.DefenseBonus = 0
 		e.UpdateCombatant(instance, current)
 	}
 
-	// Advance turn index
-	instance.CurrentTurnIdx++
+	// wrapped means a removal landed past the last slot, so everyone still
+	// listed already acted this round.
+	wrapped := pruneInactiveTurnOrder(instance)
 
-	// Check if we've completed a round
-	if instance.CurrentTurnIdx >= len(instance.TurnOrder) {
-		instance.Round++
-		// Rebuild turn order (in case combatants died/fled)
-		e.BuildTurnOrder(instance)
-
-		if len(instance.TurnOrder) == 0 {
-			return nil
+	start := len(instance.TurnOrder)
+	if finishedID != "" {
+		found := false
+		for i := range instance.TurnOrder {
+			if instance.TurnOrder[i].ID == finishedID {
+				start = i + 1
+				found = true
+				break
+			}
 		}
-
-		// Round-start processing: tick cooldowns and mana regen
-		e.ProcessRoundStart(instance)
-
-		instance.AddLogEntry(combat.CombatLogEntry{
-			Message: fmt.Sprintf("--- Round %d ---", instance.Round),
-		})
+		if !found && !wrapped && finishedIdx >= 0 {
+			// The actor was removed and the next fighter slid into that slot.
+			start = instance.CurrentTurnIdx
+		}
 	}
 
-	// Skip dead or fled combatants
-	for instance.CurrentTurnIdx < len(instance.TurnOrder) {
-		current := &instance.TurnOrder[instance.CurrentTurnIdx]
-		if current.IsAlive && !current.HasFled {
-			break
+	for i := start; i < len(instance.TurnOrder); i++ {
+		if turnEntryLiving(&instance.TurnOrder[i]) {
+			return e.landTurn(instance, i)
 		}
-		instance.CurrentTurnIdx++
 	}
+	return e.openNextRound(instance)
+}
 
-	// Check again if we've run out of combatants
-	if instance.CurrentTurnIdx >= len(instance.TurnOrder) {
+// pruneInactiveTurnOrder drops dead and fled combatants without leaving the
+// turn index past the order. It reports whether the index wrapped to the start.
+func pruneInactiveTurnOrder(instance *combat.CombatInstance) bool {
+	if instance == nil {
+		return false
+	}
+	drop := make([]string, 0)
+	for i := range instance.TurnOrder {
+		if !turnEntryLiving(&instance.TurnOrder[i]) {
+			drop = append(drop, instance.TurnOrder[i].ID)
+		}
+	}
+	wrapped := false
+	for _, id := range drop {
+		if instance.RemoveFromTurnOrder(id) {
+			wrapped = true
+		}
+	}
+	return wrapped
+}
+
+func turnEntryLiving(ref *combat.CombatantRef) bool {
+	return ref != nil && ref.IsAlive && !ref.HasFled
+}
+
+func (e *Engine) landTurn(instance *combat.CombatInstance, idx int) *combat.CombatantRef {
+	instance.CurrentTurnIdx = idx
+	instance.TurnStartTime = time.Now()
+	instance.LastActionAt = time.Now()
+	return instance.GetCurrentTurnCombatant()
+}
+
+// openNextRound starts a new round from the living combatants. An empty order
+// leaves the index at 0 and returns nil.
+func (e *Engine) openNextRound(instance *combat.CombatInstance) *combat.CombatantRef {
+	instance.Round++
+	e.BuildTurnOrder(instance)
+	if len(instance.TurnOrder) == 0 {
+		instance.CurrentTurnIdx = 0
 		return nil
 	}
 
-	// Reset turn timer
-	instance.TurnStartTime = time.Now()
-	instance.LastActionAt = time.Now()
+	e.ProcessRoundStart(instance)
+	instance.AddLogEntry(combat.CombatLogEntry{
+		Message: fmt.Sprintf("--- Round %d ---", instance.Round),
+	})
 
-	return instance.GetCurrentTurnCombatant()
+	for i := range instance.TurnOrder {
+		if turnEntryLiving(&instance.TurnOrder[i]) {
+			return e.landTurn(instance, i)
+		}
+	}
+
+	// Round-start can mark the rebuilt order dead. Rebuild once from the
+	// canonical living set and do not open a further round.
+	e.BuildTurnOrder(instance)
+	if len(instance.TurnOrder) == 0 {
+		instance.CurrentTurnIdx = 0
+		return nil
+	}
+	for i := range instance.TurnOrder {
+		if turnEntryLiving(&instance.TurnOrder[i]) {
+			return e.landTurn(instance, i)
+		}
+	}
+	instance.CurrentTurnIdx = 0
+	return nil
 }
 
 // CheckCombatEnd checks if combat should end and returns the new state.

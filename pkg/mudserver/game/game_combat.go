@@ -804,7 +804,26 @@ func (c *CombatController) processAllTurnsLocked(instance *combat.CombatInstance
 
 	current := instance.GetCurrentTurnCombatant()
 	if current == nil {
-		return
+		// The index is past the order (a dead or fled tail, or a rebuild that
+		// shrank the order). End the fight if it is already over. Otherwise
+		// wrap to the next living combatant and resolve that turn on this tick.
+		endState := c.engine.CheckCombatEnd(instance)
+		if endState != combat.CombatStateActive {
+			c.engine.EndCombat(instance, endState)
+			c.cleanupCombatInstance(instance, endState)
+			return
+		}
+		c.engine.NextTurn(instance)
+		endState = c.engine.CheckCombatEnd(instance)
+		if endState != combat.CombatStateActive {
+			c.engine.EndCombat(instance, endState)
+			c.cleanupCombatInstance(instance, endState)
+			return
+		}
+		current = instance.GetCurrentTurnCombatant()
+		if current == nil {
+			return
+		}
 	}
 
 	// Player decision window: announce once, then wait for queue or deadline

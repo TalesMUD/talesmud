@@ -454,6 +454,8 @@ type StatusEffect struct {
 
 2. COMBAT ROUND
    └── At round start: tick cooldowns, regenerate mana
+   └── Dead or fled combatants leave the turn order; the current index stays inside it
+   └── A missing current combatant wraps into the next round, or ends the fight
    └── For each combatant in turn order:
        ├── Process status effects (DoT damage, HoT healing, stun skip)
        ├── Player turn: 60-second timer, choose action

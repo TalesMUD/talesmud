@@ -265,9 +265,10 @@ func NewCombatInstance(originRoomID string) *CombatInstance {
 	}
 }
 
-// GetCurrentTurnCombatant returns the combatant whose turn it is
+// GetCurrentTurnCombatant returns the combatant whose turn it is.
+// An index outside the order has no current combatant.
 func (c *CombatInstance) GetCurrentTurnCombatant() *CombatantRef {
-	if len(c.TurnOrder) == 0 || c.CurrentTurnIdx >= len(c.TurnOrder) {
+	if c == nil || len(c.TurnOrder) == 0 || c.CurrentTurnIdx < 0 || c.CurrentTurnIdx >= len(c.TurnOrder) {
 		return nil
 	}
 	return &c.TurnOrder[c.CurrentTurnIdx]
@@ -431,4 +432,52 @@ func (c *CombatInstance) UpdateCombatantInTurnOrder(id string) {
 			break
 		}
 	}
+}
+
+// RemoveFromTurnOrder drops id from the turn order and keeps CurrentTurnIdx
+// inside the remaining slice. Removing someone before the current index shifts
+// the index back so it still names the same combatant. Removing the current
+// combatant leaves the index on whoever slides into that slot. Removing the
+// last slot wraps to the start when anyone remains. An empty order leaves the
+// index at 0. The bool is true when the index fell off the end and wrapped
+// onto a non-empty order.
+func (c *CombatInstance) RemoveFromTurnOrder(id string) bool {
+	if c == nil {
+		return false
+	}
+	if id == "" {
+		return c.clampTurnIndex()
+	}
+	idx := -1
+	for i := range c.TurnOrder {
+		if c.TurnOrder[i].ID == id {
+			idx = i
+			break
+		}
+	}
+	if idx < 0 {
+		return c.clampTurnIndex()
+	}
+	c.TurnOrder = append(c.TurnOrder[:idx], c.TurnOrder[idx+1:]...)
+	if idx < c.CurrentTurnIdx {
+		c.CurrentTurnIdx--
+	}
+	return c.clampTurnIndex()
+}
+
+// clampTurnIndex forces CurrentTurnIdx to name a real slot, or 0 when the
+// order is empty. It reports whether a non-empty order had to wrap.
+func (c *CombatInstance) clampTurnIndex() bool {
+	if c == nil {
+		return false
+	}
+	if len(c.TurnOrder) == 0 || c.CurrentTurnIdx < 0 {
+		c.CurrentTurnIdx = 0
+		return false
+	}
+	if c.CurrentTurnIdx >= len(c.TurnOrder) {
+		c.CurrentTurnIdx = 0
+		return true
+	}
+	return false
 }
