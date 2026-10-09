@@ -434,18 +434,18 @@ func (app *app) setupRoutes() {
 			// Server Settings
 			creator.PUT("settings", serverSettings.UpdateServerSettings)
 
-			// Live world and the change log. Writes stay on the admin routes below.
+			// Live world and the change log. Character inventories stay on the admin routes below.
 			creator.GET("audit", handler.ListAudit(app.Facade.AuditService()))
-			creator.GET("live/characters", handler.LiveCharacters(liveGame))
-			creator.GET("live/characters/:id", handler.LiveCharacterDetail(liveGame))
 			creator.GET("live/npcs", handler.LiveNPCs(liveGame))
 			creator.GET("live/instances", handler.LiveInstances(liveGame))
 		}
 
-		// Live ops undo is admin-only and lives at /api/, next to the creator reads.
+		// Character inventories, quest logs, live ops, and undo are admin-only.
 		liveAdmin := protected.Group("")
 		liveAdmin.Use(AdminMiddleware())
 		{
+			liveAdmin.GET("live/characters", handler.LiveCharacters(liveGame))
+			liveAdmin.GET("live/characters/:id", handler.LiveCharacterDetail(liveGame))
 			liveAdmin.POST("audit/:id/undo", handler.UndoAudit(liveGame, app.Facade.AuditService()))
 			liveAdmin.POST("ops/:action", handler.OpsAction(liveGame, app.Facade.AuditService()))
 		}

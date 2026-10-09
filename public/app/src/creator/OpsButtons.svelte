@@ -2,6 +2,7 @@
   import { createEventDispatcher } from "svelte";
   import { get } from "svelte/store";
   import { getAuth } from "../auth.js";
+  import { userRole } from "../stores.js";
   import ConfirmDialog from "./ConfirmDialog.svelte";
   import { opError, performOp } from "./opsFlow.js";
 
@@ -138,6 +139,7 @@
   }
 </script>
 
+{#if $userRole === "admin"}
 <div class="space-y-3">
   {#if error}
     <div class="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-100">{error}</div>
@@ -278,3 +280,4 @@
   on:confirm={runPending}
   on:cancel={() => (pending = null)}
 />
+{/if}

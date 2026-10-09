@@ -52,4 +52,7 @@ function createUserStore() {
 const user = createUserStore();
 const subMenu = createSubMenuStore();
 
-export { user, subMenu };
+// Role from GET /api/user. Stays "player" until that profile loads.
+const userRole = writable("player");
+
+export { user, subMenu, userRole };

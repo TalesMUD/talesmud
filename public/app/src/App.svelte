@@ -1,10 +1,10 @@
 <script>
   import { Router } from "yrv";
-  import { writable } from "svelte/store";
   import AppContent from "./AppContent.svelte";
   import UserMenu from "./UserMenu.svelte";
   import { createAuth } from "./auth.js";
   import { getUser } from "./api/user.js";
+  import { userRole } from "./stores.js";
   import { onDestroy, onMount } from "svelte";
 
   const config = {
@@ -19,8 +19,7 @@
 
   const { isAuthenticated, isLoading, authToken } = createAuth(config);
 
-  // User role tracking
-  let userRole = writable("player");
+  // User role tracking. The store is shared so Creator can hide admin-only tools.
   let userRoleLoaded = false;
 
   $: isCreator = $userRole === "creator" || $userRole === "admin";

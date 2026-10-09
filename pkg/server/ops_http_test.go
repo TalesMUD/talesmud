@@ -48,6 +48,10 @@ func newOpsHTTP(t *testing.T) (*gin.Engine, *game.Game, service.Facade) {
 	r.POST("/api/ops/:action", server.AdminMiddleware(), handler.OpsAction(g, facade.AuditService()))
 	r.POST("/api/audit/:id/undo", server.AdminMiddleware(), handler.UndoAudit(g, facade.AuditService()))
 	r.GET("/api/audit", handler.ListAudit(facade.AuditService()))
+	r.GET("/api/live/characters", server.AdminMiddleware(), handler.LiveCharacters(g))
+	r.GET("/api/live/characters/:id", server.AdminMiddleware(), handler.LiveCharacterDetail(g))
+	r.GET("/api/live/npcs", handler.LiveNPCs(g))
+	r.GET("/api/live/instances", handler.LiveInstances(g))
 	r.PUT("/api/rooms/:id", handler.AuditWrites(facade.AuditService()), func(c *gin.Context) {
 		var room rooms.Room
 		if err := c.ShouldBindJSON(&room); err != nil {
@@ -87,6 +91,28 @@ func doJSON(r http.Handler, method, path, role string, body interface{}) *httpte
 	rec := httptest.NewRecorder()
 	r.ServeHTTP(rec, req)
 	return rec
+}
+
+func TestLiveCharactersForbidCreator(t *testing.T) {
+	r, _, _ := newOpsHTTP(t)
+	rec := doJSON(r, http.MethodGet, "/api/live/characters", entities.RoleCreator, nil)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("creator list: %d %s", rec.Code, rec.Body.String())
+	}
+	rec = doJSON(r, http.MethodGet, "/api/live/characters/char-1", entities.RoleCreator, nil)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("creator detail: %d %s", rec.Code, rec.Body.String())
+	}
+	for _, path := range []string{"/api/live/npcs", "/api/live/instances", "/api/audit"} {
+		rec = doJSON(r, http.MethodGet, path, entities.RoleCreator, nil)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("creator %s: %d %s", path, rec.Code, rec.Body.String())
+		}
+	}
+	rec = doJSON(r, http.MethodGet, "/api/live/characters", entities.RoleAdmin, nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("admin list: %d %s", rec.Code, rec.Body.String())
+	}
 }
 
 func TestOpsRejectPlayerAndMissingConfirm(t *testing.T) {

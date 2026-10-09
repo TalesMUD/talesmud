@@ -2027,14 +2027,14 @@ Creator editors share backend validation rules from `pkg/service/validation`:
 9. **Character Templates** - Archetype editor with modal item-template selection for starting gear
 10. **World Map** - Grid-based world visualization
 11. **World Health** - Content-health report (reachability, reveal scripts, impossible quests, bosses, pack rules, drift) plus cross-system diagnostics for broken entity references and suspicious content values, including character template starting item references
-12. **Players** - Live characters (online, guest, zone, in combat; optional older rows), a side drawer, and confirmed ops: teleport (room picker), give item (template picker), take item (that character's inventory), end combat, quest complete/reset/abandon, and re-grant starter kit. Instance copies and cleanup sit on the same page.
+12. **Players** - Admin only. Live characters (online, guest, zone, in combat; optional older rows), a side drawer, and confirmed ops: teleport (room picker), give item (template picker), take item (that character's inventory), end combat, quest complete/reset/abandon, and re-grant starter kit. Instance copies and cleanup sit on the same page. Creators do not see this tab.
 13. **Audit log** - Filterable creator and ops history, before/after JSON, and Undo for an admin
 
 ### Live Ops And Audit
 - `ADMIN_ENV_LABEL` (optional `ADMIN_ENV_HOST`) feeds `GET /api/server-info`. A non-empty label shows a red `LABEL · host` badge in the Creator header. Local servers leave the label empty.
 - Live ops and live reads run on the game command loop through `Game.Call`. The HTTP handler does not edit an online character behind that loop.
 - Every op body must include `confirm: true`. The Players page and `OpsButtons` open the shared confirm dialog before the request. A success toast offers Undo only when the audit row is undoable.
-- `OpsButtons` modes are `character` (end combat, re-grant starter kit), `quest` (complete quest, abandon, reset quest, mark one step done, reset one step), and `npc` (heal, respawn, despawn, end combat) for a later NPC inspector.
+- `OpsButtons` modes are `character` (end combat, re-grant starter kit), `quest` (complete quest, abandon, reset quest, mark one step done, reset one step), and `npc` (heal, respawn, despawn, end combat) for a later NPC inspector. The component renders only when the signed-in user is an admin.
 - Teleport moves online and offline characters through `RelocateCharacter`. A fight blocks the move unless `force` aborts it first. Undo teleports back when the character is still in the destination and not in a new fight.
 - Give and take follow unique-item rules and tell an online player. Undo of a give removes the added pieces. Undo of a take puts those pieces back.
 - `end-combat` aborts the fight: no rewards, penalties, or healing. It is not undoable. `instance-cleanup` relocates players in a chosen copy, or deletes only empty copies when `allEmpty` is set. It does not abort a fight in the copy and is not undoable.

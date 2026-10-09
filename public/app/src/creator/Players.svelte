@@ -5,6 +5,7 @@
   import { backend } from "../api/base.js";
   import { getRoomsAsync } from "../api/rooms.js";
   import { getLiveCharacters, getLiveCharacter, getLiveInstances } from "../api/live.js";
+  import { userRole } from "../stores.js";
   import { itemTemplateColumns, roomColumns } from "./tableColumns.js";
   import EntitySelectButton from "./EntitySelectButton.svelte";
   import ConfirmDialog from "./ConfirmDialog.svelte";
@@ -240,17 +241,21 @@
     }
   }
 
+  $: isAdmin = $userRole === "admin";
+
   onMount(() => {
+    if ($userRole !== "admin") return;
     loadLists();
     loadCatalogs();
   });
 
-  $: if ($isAuthenticated && $authToken && !loaded && !loading) {
+  $: if (isAdmin && $isAuthenticated && $authToken && !loaded && !loading) {
     loadLists();
     loadCatalogs();
   }
 </script>
 
+{#if isAdmin}
 <div class="flex flex-col h-[calc(100vh-128px)]">
   <div class="px-6 pt-5 pb-3 flex-shrink-0">
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -479,3 +484,4 @@
   on:confirm={runPending}
   on:cancel={() => (pending = null)}
 />
+{/if}

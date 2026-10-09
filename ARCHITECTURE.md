@@ -115,7 +115,7 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
     │   └── users/         # User management (admin only)
     ├── audit              # Creator reads the log; admin POST /audit/:id/undo
     ├── ops/:action        # Admin live ops (confirm:true), run on the game loop
-    ├── live/characters    # Creator live character list and detail
+    ├── live/characters    # Admin live character list and detail (inventory and quest log)
     ├── live/npcs          # Creator running NPC instances
     ├── live/instances     # Creator instance room copies
     └── templates/         # Public templates
@@ -131,7 +131,7 @@ Creator writes (POST/PUT/DELETE for rooms, items, NPCs, loot tables, spawners, d
 
 `POST /api/ops/:action` (admin) requires `confirm: true` and runs inside `Game.Call`, on the same command loop as player commands. It does not write an online character's database row from the HTTP handler. Each success records an audit row. `end-combat` and `instance-cleanup` are not undoable. Quest completion with an objective id only advances that step. Completion without an objective id grants rewards; undoing the progress row does not claw those rewards back.
 
-`GET /api/live/characters` lists characters who are online or whose user was seen within 30 days. `all=1` includes older characters. Detail, NPC, and instance reads use the same game-loop call.
+`GET /api/live/characters` and `GET /api/live/characters/:id` are admin-only. They list characters who are online or whose user was seen within 30 days, and the detail includes inventory and the quest log. `all=1` includes older characters. A creator receives 403. NPC and instance reads stay on the creator routes and use the same game-loop call.
 
 `GET /api/quest-progress/:characterId` returns quest progress merged with quest definition fields for the player UI. Objective rows include `objectiveId`, definition `description`, current/required counts, and completion state so REST refreshes and WebSocket quest log messages have matching player-facing text.
 

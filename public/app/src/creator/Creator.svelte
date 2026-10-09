@@ -1,6 +1,7 @@
 <script>
   import { onMount } from "svelte";
   import { getServerInfo } from "../api/live.js";
+  import { userRole } from "../stores.js";
   import OpsToast from "./OpsToast.svelte";
 
   const tabs = [
@@ -18,9 +19,11 @@
     { name: "World", nav: "/creator/world" },
     { name: "Health", nav: "/creator/health" },
     { name: "Settings", nav: "/creator/settings" },
-    { name: "Players", nav: "/creator/players" },
+    { name: "Players", nav: "/creator/players", admin: true },
     { name: "Audit log", nav: "/creator/audit" },
   ];
+
+  $: visibleTabs = tabs.filter((tab) => !tab.admin || $userRole === "admin");
 
   let envLabel = "";
   let envHost = "";
@@ -44,7 +47,7 @@
   <div class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 px-6 overflow-x-auto scrollbar-hide">
     <div class="flex items-center gap-4 py-3">
       <div class="flex items-center gap-8 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-500 min-w-max">
-        {#each tabs as tab}
+        {#each visibleTabs as tab}
           <a
             class={isActive(tab.nav) ? "text-primary" : "hover:text-primary transition-colors"}
             href={tab.nav}
