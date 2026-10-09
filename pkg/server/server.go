@@ -314,6 +314,7 @@ func (app *app) setupRoutes() {
 		protected.GET("script-types", scripts.GetScriptTypes)
 		protected.GET("world/graph", worldRenderer.RenderGraphData)
 		protected.GET("world/rooms-minimal", worldRenderer.GetMinimalRooms)
+		protected.GET("balance/enemy-scaling", handler.GetEnemyScaling)
 		protected.GET("npcs", npcs.GetNPCs)
 		protected.GET("npcs/templates", npcs.GetNPCTemplates)
 		protected.GET("npcs/:id", npcs.GetNPCByID)

@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
+	"github.com/talesmud/talesmud/pkg/importer"
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
@@ -70,6 +71,7 @@ func (h *NPCsHandler) PostNPC(c *gin.Context) {
 	}
 
 	log.WithField("npc", n.Name).Info("Creating new NPC")
+	importer.ApplyContentBase(&n)
 
 	if rejectInvalidNPC(c, h.Facade, &n) {
 		return
@@ -92,6 +94,7 @@ func (h *NPCsHandler) UpdateNPCByID(c *gin.Context) {
 	}
 
 	log.WithField("npc", n.Name).Info("Updating NPC")
+	importer.ApplyContentBase(&n)
 
 	if rejectInvalidNPC(c, h.Facade, &n) {
 		return

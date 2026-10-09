@@ -36,6 +36,15 @@ const (
 	CombatStyleAgile  = "agile"  // Fast, evasive, hit-and-run
 )
 
+// BaseStats is the unscaled content (YAML) combat numbers.
+// Imported enemies keep these beside the scaled stats combat actually uses.
+// Omitempty so an NPC authored only in the editor has no content base.
+type BaseStats struct {
+	MaxHitPoints int32 `json:"maxHitPoints" bson:"maxHitPoints"`
+	AttackPower  int32 `json:"attackPower" bson:"attackPower"`
+	Defense      int32 `json:"defense" bson:"defense"`
+}
+
 // EnemyTrait contains enemy-specific configuration for NPCs
 type EnemyTrait struct {
 	// Classification
@@ -100,6 +109,10 @@ type EnemyTrait struct {
 	// LowHealthThreshold is a fraction of max HP in (0,1). 0 or unset uses
 	// DefaultLowHealthFraction. Other out-of-range values clamp into (0,1).
 	LowHealthThreshold float64 `json:"lowHealthThreshold,omitempty"`
+
+	// BaseStats holds the content values before difficulty scaling.
+	// AttackPower, Defense, and NPC.MaxHitPoints stay as the effective stats.
+	BaseStats *BaseStats `json:"baseStats,omitempty" bson:"baseStats,omitempty"`
 }
 
 // NormalizeLowHealthThreshold maps an authored fraction onto (0,1).

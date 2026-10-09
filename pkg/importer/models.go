@@ -211,6 +211,8 @@ type YAMLEnemyTrait struct {
 	OnLowHealthScript  string    `yaml:"onLowHealthScript"`
 	LowHealthThreshold float64   `yaml:"lowHealthThreshold"`
 	ResetOnDisengage   *bool     `yaml:"resetOnDisengage"`
+	GuaranteedLoot     []string  `yaml:"guaranteedLoot,omitempty"`
+	MaxDrops           int32     `yaml:"maxDrops,omitempty"`
 }
 
 // YAMLMerchantTrait contains merchant-specific configuration
