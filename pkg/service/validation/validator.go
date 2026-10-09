@@ -3,6 +3,7 @@ package validation
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/talesmud/talesmud/pkg/entities/dialogs"
 	"github.com/talesmud/talesmud/pkg/entities/items"
@@ -311,38 +312,107 @@ func ValidateNPC(n *npc.NPC, snapshot WorldSnapshot) Result {
 	return result
 }
 
+// dialogDefSig is the content of one dialog-node definition (NPC text plus
+// the edges leaving it). A stub created for a loop or a shared branch has
+// the NPC text and no options.
+type dialogDefSig struct {
+	text       string
+	hasOptions bool
+	options    string
+}
+
+func dialogDefinitionSig(node *dialogs.Dialog) dialogDefSig {
+	sig := dialogDefSig{text: node.Text}
+	if len(node.Options) == 0 {
+		return sig
+	}
+	sig.hasOptions = true
+	var b strings.Builder
+	for _, opt := range node.Options {
+		if opt == nil {
+			b.WriteString("\n<nil>")
+			continue
+		}
+		target := opt.NodeID
+		if opt.Answer != nil && opt.Answer.NodeID != "" {
+			target = opt.Answer.NodeID
+		}
+		fmt.Fprintf(&b, "\n%s|%s|%s|%s", target, opt.Text, opt.QuestID, opt.Action)
+	}
+	sig.options = b.String()
+	return sig
+}
+
+// dialogDefConflict is true when the same NodeID was defined twice with
+// different content. A text-only stub (loop or shared link) matches a fuller
+// copy of the same NPC line. Reaching a node twice is not itself a conflict.
+func dialogDefConflict(prev, next dialogDefSig) bool {
+	if prev.text != next.text {
+		return true
+	}
+	if !prev.hasOptions || !next.hasOptions {
+		return false
+	}
+	return prev.options != next.options
+}
+
 func ValidateDialog(dialog *dialogs.Dialog, snapshot WorldSnapshot) Result {
 	result := NewResult()
 	if dialog == nil {
 		return result
 	}
 
-	seen := map[string]bool{}
-	var walk func(node *dialogs.Dialog, path string)
-	walk = func(node *dialogs.Dialog, path string) {
-		if node == nil {
+	// seen records the first definition of each NodeID. Imported dialogs are
+	// node maps expanded through next: links, so root, end, and shared
+	// branches appear many times. Option rows share the destination NodeID
+	// but are edges (player text), not a second definition.
+	seen := map[string]dialogDefSig{}
+	visiting := map[*dialogs.Dialog]bool{}
+
+	var walk func(node *dialogs.Dialog, path string, asDefinition bool)
+	walk = func(node *dialogs.Dialog, path string, asDefinition bool) {
+		if node == nil || visiting[node] {
 			return
 		}
-		if node.NodeID != "" {
-			if seen[node.NodeID] {
-				result.Add(Error("duplicate_dialog_node", "dialog", dialog.ID, path+".nodeId", "dialog_node", node.NodeID, "Dialog contains a duplicate node ID."))
-			}
-			seen[node.NodeID] = true
-		}
+		visiting[node] = true
+		defer delete(visiting, node)
+
 		if node.QuestID != "" && !snapshot.HasQuest(node.QuestID) {
 			result.Add(Error("missing_quest", "dialog", dialog.ID, path+".questId", "quest", node.QuestID, "Dialog quest link references a missing quest."))
 		}
-		for i, option := range node.Options {
-			if option != nil && option.Text == "" && option.Answer == nil && len(option.Options) == 0 {
-				result.Add(Warning("empty_dialog_option", "dialog", dialog.ID, fmt.Sprintf("%s.options[%d]", path, i), "", "", "Dialog option has no text or child response."))
+
+		if asDefinition && node.NodeID != "" {
+			sig := dialogDefinitionSig(node)
+			if prev, ok := seen[node.NodeID]; ok {
+				if dialogDefConflict(prev, sig) {
+					result.Add(Error("duplicate_dialog_node", "dialog", dialog.ID, path+".nodeId", "dialog_node", node.NodeID, "Dialog node ID is defined twice with different content."))
+				}
+				// A later full copy replaces a stub so its children are still checked once.
+				if prev.hasOptions || !sig.hasOptions {
+					return
+				}
 			}
-			walk(option, fmt.Sprintf("%s.options[%d]", path, i))
+			seen[node.NodeID] = sig
 		}
-		if node.Answer != nil {
-			walk(node.Answer, path+".answer")
+
+		for i, option := range node.Options {
+			optPath := fmt.Sprintf("%s.options[%d]", path, i)
+			if option != nil && option.Text == "" && option.Answer == nil && len(option.Options) == 0 {
+				result.Add(Warning("empty_dialog_option", "dialog", dialog.ID, optPath, "", "", "Dialog option has no text or child response."))
+			}
+			if option != nil && option.Answer != nil {
+				// Edge: player line that points at a destination definition.
+				walk(option, optPath, false)
+				walk(option.Answer, optPath+".answer", true)
+				continue
+			}
+			walk(option, optPath, true)
+		}
+		if asDefinition && node.Answer != nil {
+			walk(node.Answer, path+".answer", true)
 		}
 	}
-	walk(dialog, "root")
+	walk(dialog, "root", true)
 	if dialog.NodeID == "" {
 		result.Add(Warning("dialog_without_root_node", "dialog", dialog.ID, "nodeId", "", "", "Dialog root has no node ID."))
 	}

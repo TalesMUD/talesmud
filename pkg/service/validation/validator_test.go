@@ -63,8 +63,8 @@ func TestValidateRoomReportsBrokenExitAndActionScript(t *testing.T) {
 
 func TestValidateNPCReportsBrokenMerchantStockAndDialog(t *testing.T) {
 	n := &npc.NPC{
-		Entity:  &entities.Entity{ID: "npc-a"},
-		Name:    "Merchant",
+		Entity:   &entities.Entity{ID: "npc-a"},
+		Name:     "Merchant",
 		DialogID: "missing-dialog",
 		MerchantTrait: &npc.MerchantTrait{Inventory: []npc.MerchantItem{
 			{ItemTemplateID: "missing-item", Quantity: 1, MaxQuantity: 1},
@@ -111,6 +111,75 @@ func TestValidateSpawnerReportsBrokenTemplateAndRoom(t *testing.T) {
 
 	if result.Errors != 2 {
 		t.Fatalf("Errors = %d, want 2: %#v", result.Errors, result.Issues)
+	}
+}
+
+func TestValidateDialogAllowsSharedAndLoopingNodes(t *testing.T) {
+	// Imported dialogs expand a node map. Shared nodes are copied in full,
+	// and a next: link back to root or end is stored as a text-only stub.
+	// Several player lines can share one destination NodeID.
+	shop := func() *dialogs.Dialog {
+		return &dialogs.Dialog{
+			NodeID: "shop",
+			Text:   "What do you need?",
+			Options: []*dialogs.Dialog{
+				{NodeID: "end", Text: "Nothing.", Answer: &dialogs.Dialog{NodeID: "end", Text: "Farewell."}},
+				{NodeID: "root", Text: "Never mind.", Answer: &dialogs.Dialog{NodeID: "root", Text: "Hello."}},
+			},
+		}
+	}
+	root := &dialogs.Dialog{
+		Entity: &entities.Entity{ID: "DLG-LOOP"},
+		Name:   "Loop",
+		NodeID: "root",
+		Text:   "Hello.",
+		Options: []*dialogs.Dialog{
+			{NodeID: "shop", Text: "Show me your wares.", Answer: shop()},
+			{NodeID: "shop", Text: "I want to trade.", Answer: shop()},
+		},
+	}
+	// Pointer cycle, not a stub: walking must stop.
+	again := &dialogs.Dialog{NodeID: "again", Text: "Still here."}
+	again.Answer = root
+	root.Options = append(root.Options, &dialogs.Dialog{NodeID: "again", Text: "Say that again.", Answer: again})
+
+	result := ValidateDialog(root, NewWorldSnapshot())
+	for _, issue := range result.Issues {
+		if issue.Code == "duplicate_dialog_node" {
+			t.Fatalf("shared and looping nodes flagged as duplicates: %#v", result.Issues)
+		}
+	}
+	if result.Errors != 0 {
+		t.Fatalf("Errors = %d, want 0: %#v", result.Errors, result.Issues)
+	}
+}
+
+func TestValidateDialogErrorsOnConflictingNode(t *testing.T) {
+	dialog := &dialogs.Dialog{
+		Entity: &entities.Entity{ID: "DLG-CONFLICT"},
+		Name:   "Conflict",
+		NodeID: "root",
+		Text:   "Hello.",
+		Options: []*dialogs.Dialog{
+			{
+				NodeID: "end",
+				Text:   "Leave.",
+				Answer: &dialogs.Dialog{NodeID: "end", Text: "Goodbye."},
+			},
+			{
+				NodeID: "end",
+				Text:   "Go.",
+				Answer: &dialogs.Dialog{NodeID: "end", Text: "Farewell."},
+			},
+		},
+	}
+
+	result := ValidateDialog(dialog, NewWorldSnapshot())
+	if result.Errors != 1 {
+		t.Fatalf("Errors = %d, want 1: %#v", result.Errors, result.Issues)
+	}
+	if result.Issues[0].Code != "duplicate_dialog_node" {
+		t.Fatalf("Code = %s, want duplicate_dialog_node", result.Issues[0].Code)
 	}
 }
 
