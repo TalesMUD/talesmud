@@ -10,14 +10,37 @@ import (
 	luar "layeh.com/gopher-luar"
 
 	"github.com/talesmud/talesmud/pkg/entities/characters"
+	"github.com/talesmud/talesmud/pkg/gamemode"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	"github.com/talesmud/talesmud/pkg/ruleset"
 	luarunner "github.com/talesmud/talesmud/pkg/scripts/runner/lua"
+	"github.com/talesmud/talesmud/pkg/service"
 )
 
 var errNotEnoughGold = errors.New("not enough gold")
 var errUnknownGrant = errors.New("unknown grant")
+
+// characterOnBoard decides if a character appears on tales.characters.top.
+// Guests are omitted unless guests.persistent_effects is on. A missing user
+// row stays on the board so older saves without a user record still rank.
+func characterOnBoard(facade service.Facade, ch *characters.Character) bool {
+	if ch == nil {
+		return false
+	}
+	if gamemode.GuestEffectsAllowed(true) {
+		return true
+	}
+	id := strings.TrimSpace(ch.BelongsUserID)
+	if id == "" || facade == nil || facade.UsersService() == nil {
+		return true
+	}
+	user, err := facade.UsersService().FindByID(id)
+	if err != nil || user == nil {
+		return true
+	}
+	return !user.IsGuest
+}
 
 // RegisterCharactersModule registers the tales.characters module
 func RegisterCharactersModule(L *lua.LState, runner *luarunner.LuaRunner) int {
@@ -109,7 +132,7 @@ func RegisterCharactersModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 		}
 		rows := make([]*characters.Character, 0, len(list))
 		for _, ch := range list {
-			if ch != nil && strings.TrimSpace(ch.Name) != "" {
+			if ch != nil && strings.TrimSpace(ch.Name) != "" && characterOnBoard(facade, ch) {
 				rows = append(rows, ch)
 			}
 		}
