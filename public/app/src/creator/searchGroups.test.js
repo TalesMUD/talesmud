@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { groupHits, isTypingTarget, referencedByHint } from "./searchGroups.js";
+import { creatorSearchField, groupHits, isTypingTarget, referencedByHint } from "./searchGroups.js";
 
 test("groups keep the ranked order", () => {
   const groups = groupHits([
@@ -11,6 +11,18 @@ test("groups keep the ranked order", () => {
   assert.deepEqual(groups.map((group) => group.type), ["quest", "item"]);
   assert.deepEqual(groups[0].hits.map((hit) => hit.id), ["Q1", "Q2"]);
   assert.equal(groups[0].hits[1].index, 2);
+});
+
+test("the top-bar search field is recognized", () => {
+  assert.equal(creatorSearchField(null), null);
+  assert.equal(creatorSearchField({ closest: () => null }), null);
+  const field = {};
+  assert.equal(
+    creatorSearchField({
+      closest: (selector) => (selector === "[data-creator-search]" ? field : null),
+    }),
+    field
+  );
 });
 
 test("typing targets are ignored", () => {

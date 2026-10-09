@@ -50,6 +50,11 @@ function groupHits(hits) {
   return groups;
 }
 
+function creatorSearchField(target) {
+  if (!target || typeof target.closest !== "function") return null;
+  return target.closest("[data-creator-search]");
+}
+
 function isTypingTarget(target) {
   if (!target || typeof target.closest !== "function") return false;
   if (target.closest("input, textarea, select, [contenteditable], .cm-editor, .CodeMirror, .codejar-wrap")) {
@@ -77,4 +82,13 @@ function referencedByHint(view, limit = 4) {
   return `Referenced by ${refs.length}: ${shown.join(", ")}${extra}`;
 }
 
-export { backlinkTypes, groupHits, inboundCount, isTypingTarget, refTypes, referencedByHint, typeLabel };
+export {
+  backlinkTypes,
+  creatorSearchField,
+  groupHits,
+  inboundCount,
+  isTypingTarget,
+  refTypes,
+  referencedByHint,
+  typeLabel,
+};

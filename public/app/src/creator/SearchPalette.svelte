@@ -3,9 +3,8 @@
   import { navigateTo } from "yrv";
   import { getAuth } from "../auth.js";
   import { searchContent } from "../api/search.js";
-  import { groupHits, isTypingTarget, typeLabel } from "./searchGroups.js";
+  import { creatorSearchField, groupHits, isTypingTarget, typeLabel } from "./searchGroups.js";
 
-  // The top-bar input (data-creator-search) is wired after the nav rebase.
   let open = false;
   let query = "";
   let hits = [];
@@ -18,6 +17,7 @@
 
   const { isAuthenticated, authToken } = getAuth();
   $: groups = groupHits(hits);
+  $: syncTopBar(query);
 
   function onWindowKey(event) {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
@@ -48,6 +48,23 @@
       event.preventDefault();
       choose(hits[active]);
     }
+  }
+
+  function onTopBar(event) {
+    const field = creatorSearchField(event.target);
+    if (!field) return;
+    const value = field.value || "";
+    open = true;
+    if (value === query) return;
+    query = value;
+    scheduleSearch();
+  }
+
+  function syncTopBar(value) {
+    if (typeof document === "undefined") return;
+    const field = document.querySelector("[data-creator-search]");
+    if (!field || field.value === value) return;
+    field.value = value;
   }
 
   function openPalette() {
@@ -113,7 +130,7 @@
   }
 </script>
 
-<svelte:window on:keydown={onWindowKey} />
+<svelte:window on:keydown={onWindowKey} on:focusin={onTopBar} on:input={onTopBar} />
 
 {#if open}
   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->

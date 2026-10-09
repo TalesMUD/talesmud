@@ -206,7 +206,7 @@
   {/if}
 
   <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-    <!-- Ctrl+K opens search. The top-bar input is wired after the nav rebase. -->
+    <!-- Ctrl+K opens search. The top-bar field (data-creator-search) uses the same query. -->
     <SearchPalette />
     <OpsToast />
     <div class="h-full min-h-0 min-w-0 flex-1 overflow-auto">

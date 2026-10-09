@@ -2012,7 +2012,7 @@ Creator editors share backend validation rules from `pkg/service/validation`:
 - Deletes that call a DELETE API open a confirm dialog (entity type, name, and ID) before the request. The same dialog covers map room delete, saved spawner delete, room item removal, special exit removal, dialog-graph option and answer removal, and bulk deletion of deprecated scripts. Unsaved form rows (patrol stops, quest objectives, cardinal exits, room actions, alternate texts) stay immediate.
 - Data tables show the full entity ID, with a tooltip and a copy button. The row dot marks validation errors and warnings. NPC type (Enemy, Merchant, both, Neutral) is a text badge.
 - Opening a creator editor URL with `?id=<entityId>` selects that entity after the list loads. The dialog graph honors the same query.
-- Ctrl+K or Cmd+K opens a search palette over rooms, NPCs, items, dialogs (including node text), quests, scripts, loot tables, spawners, skills, and character templates. Results stay grouped by type. Enter opens that entity's Creator path. The shortcut is ignored inside an input, a textarea, or the script editor.
+- Ctrl+K or Cmd+K opens a search palette over rooms, NPCs, items, dialogs (including node text), quests, scripts, loot tables, spawners, skills, and character templates. Results stay grouped by type. Enter opens that entity's Creator path. The shortcut is ignored inside an input, a textarea, or the script editor. The top-bar search box (`data-creator-search`) opens the same palette and shares its query.
 - Rooms, NPCs, items, dialogs, quests, and scripts show a collapsed "Referenced by (n)" panel under the form. Deleting one of those entities warns when something still references it.
 - Data table rows surface warning/error indicators when stored entities have diagnostics. An editor-specific row indicator is not used for NPC type.
 - Preview/test tools validate draft dialogs, quests, rooms, merchants, and Lua scripts before content is published into the world.
@@ -2022,7 +2022,7 @@ The Creator screens sit in a left sidebar instead of a horizontal tab row. Group
 
 The sidebar collapses to an icon rail from its toggle or Ctrl+B / Cmd+B. The shortcut is ignored in inputs, textareas, selects, contenteditable editors (the script editor), and CodeMirror. Collapse and per-group folds persist in `localStorage` (`tales.creator.nav.v1`). The group that contains the current page opens on navigation. Below 1024px the rail is an off-canvas drawer: the top bar shows a menu button, and the backdrop, Escape, or a navigation click closes it.
 
-The top bar keeps the app links, a search box (`data-creator-search`, not wired yet), and the red LIVE badge when `ADMIN_ENV_LABEL` is set. Below 1024px the text links and the search box are hidden so the badge stays on one row.
+The top bar keeps the app links, a search box (`data-creator-search`) that opens the search palette, and the red LIVE badge when `ADMIN_ENV_LABEL` is set. Below 1024px the text links and the search box are hidden so the badge stays on one row. Ctrl+K still opens the palette.
 
 ### Creator screens
 1. **Rooms** - Full room editor (exits, actions, spawners, NPCs, items, scripts)
