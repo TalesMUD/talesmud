@@ -449,6 +449,12 @@ func (app *app) setupRoutes() {
 			creator.GET("live/instances", handler.LiveInstances(liveGame))
 		}
 
+		// Frequency preview. Creator-gated, and off AuditWrites so it does not
+		// record a row or drop the search index. It does not write loot.
+		preview := protected.Group("")
+		preview.Use(CreatorMiddleware())
+		preview.POST("loot-tables/:id/roll", lootTables.RollLootPreview)
+
 		// Character inventories, quest logs, live ops, and undo are admin-only.
 		liveAdmin := protected.Group("")
 		liveAdmin.Use(AdminMiddleware())
