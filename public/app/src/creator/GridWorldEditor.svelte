@@ -14,6 +14,7 @@
   import RoomEditorPanel from "./RoomEditorPanel.svelte";
   import { getOppositeDirection, CARDINAL_DIRECTIONS } from "./WorldEditorStore.js";
   import { fitViewBox, pixelToCoords, roomPixel } from "./mapFit.js";
+  import { edgeLook, islandPinned, roomMark } from "./reachMarks.js";
 
   // svelte-ignore unused-export-let
   export let location;
@@ -803,21 +804,6 @@
     }
   }
 
-  function roomMark(room) {
-    if (!reachOn || !reachReport) return "";
-    const row = reachById.get(room?.id);
-    if (!row) return "";
-    if (!row.reachable) return "unreachable";
-    if (row.instance) return "instance";
-    return "reachable";
-  }
-
-  function islandPinned(roomId) {
-    if (!reachOn || selectedIsland < 0) return false;
-    const island = reachReport?.islands?.[selectedIsland];
-    return !!island?.roomIds?.includes(roomId);
-  }
-
   function islandLabel(island) {
     const first = (rooms || []).find((room) => room.id === island.roomIds?.[0]);
     return first?.name || island.roomIds?.[0] || "Island";
@@ -833,27 +819,6 @@
     const ids = new Set(reachReport?.islands?.[index]?.roomIds || []);
     const coords = filteredRooms.filter((room) => ids.has(room.id)).map((room) => room.coords);
     viewBox = fitViewBox(coords, GRID_SCALE, 2);
-  }
-
-  function edgeLook(edge) {
-    if (!reachOn || !reachReport) {
-      return {
-        color: edge.isCrossZone ? "#e06040" : (edge.isCardinal ? "#888" : "#b08050"),
-        dash: edge.isCrossZone ? "8,4" : (edge.isCardinal ? "none" : "4,3"),
-        width: edge.isCrossZone ? 2 : 1.5,
-      };
-    }
-    const source = reachById.get(edge.sourceId);
-    const target = reachById.get(edge.targetId);
-    const unreachable = (source && !source.reachable) || (target && !target.reachable);
-    const instance = !unreachable && (source?.instance || target?.instance);
-    let color = "#16a34a";
-    if (unreachable) color = "#ef4444";
-    else if (instance) color = "#6366f1";
-    let dash = "none";
-    if (edge.isHidden) dash = "5 4";
-    else if (!edge.isBidirectional) dash = "2 4";
-    return { color, dash, width: unreachable ? 2 : 1.5 };
   }
 
   // Panel handlers
@@ -1209,7 +1174,7 @@
               {#each edges as edge}
                 {@const source = coordsToPixel(edge.sourceCoords)}
                 {@const target = coordsToPixel(edge.targetCoords)}
-                {@const look = edgeLook(edge)}
+                {@const look = edgeLook(edge, reachOn, reachReport, reachById)}
                 <line
                   x1={source.x}
                   y1={source.y}
@@ -1276,8 +1241,8 @@
                   selected={selectedRoomId === room.id}
                   dragging={dragging?.roomId === room.id}
                   areaColor={getRoomAreaColor(room)}
-                  mark={roomMark(room)}
-                  pinned={islandPinned(room.id)}
+                  mark={roomMark(room, reachOn, reachReport, reachById)}
+                  pinned={islandPinned(room.id, reachOn, selectedIsland, reachReport)}
                   on:select={handleRoomSelect}
                   on:dragstart={handleRoomDragStart}
                   on:exitdragstart={handleExitDragStart}
