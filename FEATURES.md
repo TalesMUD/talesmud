@@ -2006,6 +2006,7 @@ Creator editors share backend validation rules from `pkg/service/validation`:
 - Inline validation panels show errors and warnings for the selected draft entity.
 - Save/update requests for rooms, items, NPCs, NPC spawners, dialogs, loot tables, quests, and scripts reject error-severity broken references before data is stored.
 - World Health runs cross-world diagnostics and reports structured issues with `severity`, `entityType`, `entityId`, `field`, `code`, and `message`. The message column is visible and wraps. Room, NPC, dialog, quest, item, and script IDs link to that editor with `?id=`.
+- Content health (`GET /api/health`, `tales -check`) adds reachability islands, reveal scripts that name a missing exit, hidden exits with no revealer, quest objectives that cannot complete, bosses with no spawner, unknown difficulty tiers, unreferenced scripts, dangling exits, missing room items, and pack rules. Hits can be muted. Drift compares the database with the last import. See `docs/content-health.md`.
 - Dialog validation allows a node ID to be reached more than once, including shared branches and cycles. It reports `duplicate_dialog_node` only when two definitions of the same node disagree. Option edges that point at a node are not a second definition.
 - Merchant stock with `maxQuantity` -1 is unlimited. Only values below -1 are warned.
 - Deletes that call a DELETE API open a confirm dialog (entity type, name, and ID) before the request. The same dialog covers map room delete, saved spawner delete, room item removal, special exit removal, dialog-graph option and answer removal, and bulk deletion of deprecated scripts. Unsaved form rows (patrol stops, quest objectives, cardinal exits, room actions, alternate texts) stay immediate.
@@ -2025,7 +2026,7 @@ Creator editors share backend validation rules from `pkg/service/validation`:
 8. **Scripts** - Lua script editor with syntax highlighting
 9. **Character Templates** - Archetype editor with modal item-template selection for starting gear
 10. **World Map** - Grid-based world visualization
-11. **World Health** - Cross-system diagnostics for broken entity references and suspicious content values, including character template starting item references
+11. **World Health** - Content-health report (reachability, reveal scripts, impossible quests, bosses, pack rules, drift) plus cross-system diagnostics for broken entity references and suspicious content values, including character template starting item references
 
 ### Room Editor Features
 - **Exit management** - Add/edit/delete exits, toggle hidden

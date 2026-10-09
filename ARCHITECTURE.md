@@ -104,6 +104,10 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
     ├── portraits/:filename # Public NPC/enemy/player portrait images (no auth, guest-ok)
     ├── world/validation   # Creator world health diagnostics
     ├── diagnostics/world  # Creator world health diagnostics
+    ├── health             # Content-health report (creator)
+    ├── health/mute        # Mute a content-health rule (creator)
+    ├── health/drift       # Import drift (creator)
+    ├── health/drift/export # Importer YAML for one drifted entity (creator)
     ├── validate/:entityType # Draft Creator entity validation
     ├── preview/dialog|quest|room|merchant # Draft preview/test endpoints
     ├── user               # User profile (player level)
@@ -674,6 +678,10 @@ type Facade interface {
 #### Creator Validation Service
 
 `pkg/service/validation` provides shared validation rules for Creator-authored content. It loads a `WorldSnapshot` from the facade, validates draft JSON entities and stored world data, and returns structured issues with severity, entity type, entity ID, field path, code, and message. Creator save handlers use the same rules to reject broken references before writes, and `/api/diagnostics/world` runs the rules across the whole world for health checks.
+
+`pkg/worldindex` builds an in-memory reference graph (rooms, NPCs, items, loot tables, spawners, dialogs, quests, scripts, skills, classes, character templates) from either live entities or an import conversion. Lua `tales.*` calls with string literals, locals copied from those literals, and the script's current room (`ctx.roomID` / `ctx.room.ID`) become edges. Reachability is a BFS from the start room; a hidden exit opens when an invoked script reveals it.
+
+`pkg/contenthealth` runs one rule set over that graph. It wraps `validation.ValidateWorld` and `service.ValidateContents` without changing them, then adds reachability, reveal targets, quests that cannot complete, bosses without spawners, unknown difficulty tiers, unreferenced scripts, and pack rules from `data/rules/*.yaml`. A successful `tales -import` stores a canonical baseline in the `content_health` table. `GET /api/health` compares the database with that baseline. `tales -check <folder>` runs the same rules on `import/<folder>` and does not open the database. Muted rule ids live on server settings (`mutedHealthRuleIDs`). `contenthealth` is not imported by repository, service, or importer.
 
 ### Repository Layer (`pkg/repository/`)
 
@@ -1358,7 +1366,7 @@ App.svelte (role-aware navigation: Creator/Admin links gated by user role)
 
 #### Creator UI Data Table Pattern
 
-The Creator World Health route calls `GET /api/world/validation` to surface broken cross-system references, including rooms, NPCs, items, loot tables, quests, dialogs, scripts, spawners, and character template starting item references.
+The Creator Health route calls `GET /api/health` for the content-health report: blocking errors, warnings, muted hits, import drift, and live anomalies. Entity ids link to `/creator/<tab>?id=<ID>`. `GET /api/world/validation` still surfaces broken cross-system references for the map and editors, including rooms, NPCs, items, loot tables, quests, dialogs, scripts, spawners, and character template starting item references.
 
 All entity editors (Rooms, Items, Item Templates, NPCs, Dialogs, Quests, Scripts, Character Templates) share the `CRUDEditor` component which provides a side-by-side master-detail layout:
 
@@ -1368,7 +1376,7 @@ All entity editors (Rooms, Items, Item Templates, NPCs, Dialogs, Quests, Scripts
 - **Client-side filtering**: Instant filtering on the full preloaded dataset with per-column filter inputs (text search, dropdowns for enums). No API calls per filter change.
 - **Client-side sorting**: Click column headers to sort (ascending → descending → none).
 - **Inline validation**: Editors with an `entityType` call `/api/validate/:entityType` for draft validation, show broken-reference warnings/errors through `ValidationPanel`, and disable save while error-severity issues are present.
-- **World health diagnostics**: `WorldHealth.svelte` calls `/api/diagnostics/world` to list cross-entity issues and surface row indicators in Creator tables.
+- **World health diagnostics**: `WorldHealth.svelte` calls `/api/health` for the content-health report. `/api/diagnostics/world` remains for cross-entity issue lists and table row indicators.
 
 `QuestsEditor.svelte` adds quest-specific validation and player flow preview inside the shared detail panel. The validation mirrors server-side quest definition checks where possible and resolves entity references from the preloaded Creator datasets. The preview summarizes source, objective progression, ready turn-in target, and rewards before the creator saves.
 

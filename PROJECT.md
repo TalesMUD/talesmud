@@ -202,6 +202,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Skills editor with multi-class assignment, resource types, effects, and secondary effects
   - World map visualization (GridWorldEditor)
   - World Health diagnostics for broken cross-system references across rooms, NPCs, items, loot tables, quests, dialogs, scripts, spawners, and character template starting gear. The message column stays visible, and room, NPC, dialog, quest, item, and script IDs link to `?id=` on that editor.
+  - Content health: one rule report for reachability, reveal scripts, quests that cannot complete, bosses without spawners, unknown difficulty tiers, unreferenced scripts, and pack rules from `data/rules`. The Creator Health tab and `tales -check` share it. See `docs/content-health.md`.
   - Creator quality validation: inline warnings/errors, broken-reference detection, save blocking for invalid references, and a world health diagnostics tab. Dialog node IDs may repeat when the same node is linked again; a duplicate is an error only when two definitions of that node disagree. Opening `/creator/<tab>?id=<entityId>` selects that entity. Deletes that call the API, plus room, room-item, special-exit, and dialog-node deletes, ask in a confirm dialog first. Merchant stock `maxQuantity` of -1 is unlimited.
   - Preview/test tools for dialogs, quests, rooms, merchants, and Lua scripts
   - CRUD operations with live preview
@@ -560,6 +561,10 @@ go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
 - `POST/PUT/DELETE /api/skills` - Skill management
 - `GET /api/world/validation` - World Health diagnostics
 - `GET /api/diagnostics/world` - World health diagnostics across rooms, NPCs, dialogs, quests, loot, items, and scripts
+- `GET /api/health` - Content-health report (summary, rules, live anomalies)
+- `PUT /api/health/mute` - Mute or unmute a content-health rule (`{"ruleId","muted"}`)
+- `GET /api/health/drift` - Entities changed since the last import baseline
+- `GET /api/health/drift/export?type=&id=` - Importer-format YAML for one drifted entity
 - `POST /api/validate/:entityType` - Validate a draft Creator entity before save
 - `POST /api/preview/dialog`, `/api/preview/quest`, `/api/preview/room`, `/api/preview/merchant` - Preview/test draft content with validation issues
 - `PUT /api/settings` - Server settings

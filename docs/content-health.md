@@ -1,0 +1,49 @@
+# Content health
+
+`tales -check <importFolderName>` reads `import/<name>` and reports content problems without a database. The same rules run in the Creator on `GET /api/health`.
+
+```bash
+go run ./cmd/tales -check game
+go run ./cmd/tales -check game -json
+go run ./cmd/tales -check game -fail-on=warning
+```
+
+`-check` and `-import` cannot be used together. The default `-fail-on=error` exits 1 when any unmuted error remains. `-fail-on=warning` also exits 1 on unmuted warnings. Info hits and muted rules do not fail the run. The text report shows about 30 hits per rule. `-json` prints every hit.
+
+Pack rules live in `import/<name>/data/rules/*.yaml`. A missing directory adds no pack rules. The server keeps the rules that were present at the last successful import and compares the database with that import baseline.
+
+Muted rule ids are stored on server settings (`mutedHealthRuleIDs`). `PUT /api/health/mute` with `{"ruleId":"...","muted":true}` updates them. Creators call:
+
+- `GET /api/health`
+- `PUT /api/health/mute`
+- `GET /api/health/drift`
+- `GET /api/health/drift/export?type=&id=` (importer-format YAML)
+
+`/api/diagnostics/world` and `/api/world/validation` keep their existing response shapes.
+
+## GitHub Actions
+
+```yaml
+name: content-health
+on: [pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - name: Engine
+        uses: actions/checkout@v4
+        with:
+          repository: talesmud/talesmud
+          path: engine
+      - name: Check
+        working-directory: engine
+        run: |
+          ln -s "$GITHUB_WORKSPACE" import/game
+          go run ./cmd/tales -check game -fail-on=error
+```
+
+Point the symlink at the content checkout. The engine directory is the Tales module that contains `cmd/tales`.
