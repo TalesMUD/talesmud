@@ -23,6 +23,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/server/handler"
 	"github.com/talesmud/talesmud/pkg/service"
 	"github.com/talesmud/talesmud/pkg/service/groq"
+	"github.com/talesmud/talesmud/pkg/sshgate"
 	"github.com/talesmud/talesmud/pkg/util"
 	"github.com/talesmud/talesmud/pkg/webui"
 	"github.com/talesmud/talesmud/pkg/webuiplay"
@@ -40,6 +41,7 @@ type app struct {
 	localAuth     *authlocal.Service
 	resetByMail   bool
 	contentHealth repository.ContentHealthRepository
+	ssh           *sshgate.Gate
 }
 
 func adminAuthMiddleware() gin.HandlerFunc {
@@ -517,6 +519,7 @@ func (app *app) setupRoutes() {
 
 		// Public server info (no auth, used by MUD client)
 		public.GET("server-info", serverSettings.GetServerInfo)
+		public.GET("ssh/info", handler.SSHInfo(app.sshPublicInfo))
 
 		// Guest session creation (public, no auth required)
 		guest := &handler.GuestHandler{
@@ -588,9 +591,38 @@ func (app *app) setupRoutes() {
 }
 
 // Run ... starts the server
+func (app *app) sshPublicInfo() any {
+	if app == nil || app.ssh == nil {
+		return gin.H{"enabled": false}
+	}
+	info := app.ssh.PublicInfo()
+	if !info.Enabled {
+		return gin.H{"enabled": false}
+	}
+	return info
+}
+
+func (app *app) startSSH() {
+	cfg := gamemode.SSH()
+	if !cfg.Enabled {
+		log.Info("ssh disabled")
+		return
+	}
+	gate, err := sshgate.Listen(cfg, sshgate.Deps{
+		Mud:    app.mud,
+		Guests: app.Facade.GuestService(),
+		Users:  app.Facade.UsersService(),
+	})
+	if err != nil {
+		log.WithError(err).Fatal("ssh listener failed")
+	}
+	app.ssh = gate
+}
+
 func (app *app) Run() {
 
 	app.setupRoutes()
+	app.startSSH()
 
 	// read port from env file
 	port := os.Getenv("PORT")
