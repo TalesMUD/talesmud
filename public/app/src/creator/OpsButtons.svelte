@@ -6,13 +6,16 @@
   import ConfirmDialog from "./ConfirmDialog.svelte";
   import { opError, performOp } from "./opsFlow.js";
 
-  /** "npc", "quest", or "character". */
+  /** "npc", "quest", "character", or "room". */
   export let mode = "character";
   export let characterId = "";
+  export let characterName = "";
   export let npcInstanceId = "";
   export let npcTemplateId = "";
   export let npcName = "";
   export let roomId = "";
+  /** Clone room id (`R0001~abc`) for instance-cleanup. */
+  export let roomCopyId = "";
   /** Quest log entries from the live character detail. */
   export let quests = [];
   /** Called after a successful op so the parent can refresh. */
@@ -112,6 +115,36 @@
     return jobs;
   }
 
+  function roomJobs() {
+    const jobs = [];
+    const who = characterName || characterId;
+    if (roomId && characterId) {
+      jobs.push({
+        label: "Teleport here",
+        title: "Teleport here?",
+        entityName: who,
+        entityId: roomId,
+        detail: `Move ${who} to ${roomId}. A fight blocks the move unless you force it from Players.`,
+        hint: "Undo moves them back if they are still in the destination and not in a new fight.",
+        action: "teleport",
+        body: { characterId, roomId },
+      });
+    }
+    if (roomCopyId) {
+      jobs.push({
+        label: "Clean up instance",
+        title: "Remove this instance copy?",
+        entityName: roomCopyId,
+        entityId: roomCopyId,
+        detail: "Move anyone inside to the copy's entrance, then delete the copy. A fight in the copy is not aborted.",
+        hint: noUndoHint,
+        action: "instance-cleanup",
+        body: { roomCopyId },
+      });
+    }
+    return jobs;
+  }
+
   function questLabel(quest) {
     return quest?.questName || quest?.questId || "quest";
   }
@@ -161,6 +194,18 @@
         </button>
       {/each}
     </div>
+  {:else if mode === "room"}
+    {#if roomJobs().length}
+      <div class="flex flex-wrap gap-2">
+        {#each roomJobs() as job}
+          <button class="btn btn-outline text-xs" type="button" disabled={busy} on:click={() => ask(job)}>
+            {job.label}
+          </button>
+        {/each}
+      </div>
+    {:else}
+      <p class="text-xs text-slate-500">Pick a character to teleport here.</p>
+    {/if}
   {:else if mode === "quest"}
     {#if !quests?.length}
       <p class="text-sm text-slate-500">No quest progress.</p>

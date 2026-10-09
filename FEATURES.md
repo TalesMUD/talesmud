@@ -2025,7 +2025,7 @@ The sidebar collapses to an icon rail from its toggle or Ctrl+B / Cmd+B. The sho
 The top bar keeps the app links, a search box (`data-creator-search`) that opens the search palette, and the red LIVE badge when `ADMIN_ENV_LABEL` is set. Below 1024px the text links and the search box are hidden so the badge stays on one row. Ctrl+K still opens the palette.
 
 ### Creator screens
-1. **Rooms** - Full room editor (exits, actions, spawners, NPCs, items, scripts)
+1. **Rooms** - Full room editor (exits, actions, spawners, NPCs, items, scripts) plus an Inspector tab
 2. **Items** - Live item instances at `/creator/items`. That route stays available and is not in the sidebar.
 3. **Item Templates** - Reusable item blueprints. The sidebar entry is labeled Items.
 4. **NPCs** - NPC templates and unique NPCs. The detail switches between the form and an Inspector.
@@ -2043,7 +2043,7 @@ The top bar keeps the app links, a search box (`data-creator-search`) that opens
 - `ADMIN_ENV_LABEL` (optional `ADMIN_ENV_HOST`) feeds `GET /api/server-info`. A non-empty label shows a red `LABEL · host` badge in the top bar. Local servers leave the label empty.
 - Live ops and live reads run on the game command loop through `Game.Call`. The HTTP handler does not edit an online character behind that loop.
 - Every op body must include `confirm: true`. The Players page and `OpsButtons` open the shared confirm dialog before the request. A success toast offers Undo only when the audit row is undoable.
-- `OpsButtons` modes are `character` (end combat, re-grant starter kit), `quest` (complete quest, abandon, reset quest, mark one step done, reset one step), and `npc` (heal, respawn, despawn, end combat). The NPC inspector embeds the npc mode. The component renders only when the signed-in user is an admin.
+- `OpsButtons` modes are `character` (end combat, re-grant starter kit), `quest` (complete quest, abandon, reset quest, mark one step done, reset one step), `npc` (heal, respawn, despawn, end combat), and `room` (teleport here, clean up one instance copy). The NPC inspector embeds the npc mode. The room inspector embeds the room mode. The component renders only when the signed-in user is an admin. Room teleport does not pass `force`.
 - Teleport moves online and offline characters through `RelocateCharacter`. A fight blocks the move unless `force` aborts it first. Undo teleports back when the character is still in the destination and not in a new fight.
 - Give and take follow unique-item rules and tell an online player. Undo of a give removes the added pieces. Undo of a take puts those pieces back.
 - `end-combat` aborts the fight: no rewards, penalties, or healing. It is not undoable. `instance-cleanup` relocates players in a chosen copy, or deletes only empty copies when `allEmpty` is set. It does not abort a fight in the copy and is not undoable.
@@ -2062,6 +2062,7 @@ The top bar keeps the app links, a search box (`data-creator-search`) that opens
 - **Background & mood** - Visual settings
 - **Coordinates** - Grid positioning (X, Y, Z)
 - **Bind point** - Allow `/bind` for respawn
+- **Inspector** - Inspector tab on the room detail. It calls `GET /api/rooms/:id/inspect` for exits in and out (a hidden exit lists the script that reveals it, or says none does), resident and spawn-room NPCs, spawners (template, max, respawn time), items, the on-enter script, actions, and quests with a visit objective for this room. Reachability is the world-index result from the start room. An instance-copy id resolves to its template. Live characters in this room or a copy of it come from `GET /api/live/characters?all=1` and are admin only. Live NPC instances come from `GET /api/live/npcs`. Instance copies come from `GET /api/live/instances`. Admin ops are teleport into this room or a chosen copy, and instance cleanup for that copy, each behind the shared confirm dialog and the audit toast. Creators see the live NPC and copy rows and a note that those ops are admin only. A `data-backlinks-slot` is left for the inbound-reference panel.
 
 ### NPC Editor Features
 - **Template vs. Unique** - Toggle `IsTemplate` flag

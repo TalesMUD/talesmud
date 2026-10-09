@@ -92,6 +92,7 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
     ├── characters/        # Character CRUD (owner/admin for direct object access)
     ├── rooms/ (GET)       # Room read (player level)
     ├── rooms/ (POST/PUT/DELETE) # Room write (creator level)
+    ├── rooms/:id/inspect  # Static room inspector (creator or admin). Live rows stay on the live endpoints.
     ├── items/ (GET)       # Item read (player level)
     ├── items/ (POST/PUT/DELETE) # Item write (creator level)
     ├── scripts/           # Script CRUD (creator level)

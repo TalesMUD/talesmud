@@ -145,8 +145,17 @@ function deleteRoomAsync(token, id) {
   });
 }
 
+function getRoomInspect(token, id) {
+  return axios
+    .get(`${backend}/rooms/${encodeURIComponent(id)}/inspect`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    .then((result) => result.data);
+}
+
 export {
   getRoom,
+  getRoomInspect,
   getRoomOfTheDay,
   deleteRoom,
   getRoomsValueHelp,

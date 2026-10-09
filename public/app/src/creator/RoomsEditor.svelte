@@ -12,6 +12,7 @@
   import RoomPreviewModal from "./RoomPreviewModal.svelte";
   import EntitySelectButton from "./EntitySelectButton.svelte";
   import ConfirmDialog from "./ConfirmDialog.svelte";
+  import RoomInspector from "./RoomInspector.svelte";
   import { scriptColumns, npcColumns } from "./tableColumns.js";
 
   import { getAuth } from "../auth.js";
@@ -897,6 +898,15 @@
           <span class="tab-badge">{currentRoomNpcIds.length}</span>
         {/if}
       </button>
+      <button
+        type="button"
+        class="tab-btn"
+        class:active={activeTab === "inspector"}
+        on:click={() => activeTab = "inspector"}
+      >
+        <span class="material-symbols-outlined text-base">manage_search</span>
+        Inspector
+      </button>
     </div>
 
     <!-- Tab Content -->
@@ -1109,6 +1119,8 @@
             {/if}
           </div>
         </div>
+      {:else if activeTab === "inspector"}
+        <RoomInspector roomId={$store.selectedElement.id} isNew={!!$store.selectedElement.isNew} />
       {/if}
     </div>
   </div>

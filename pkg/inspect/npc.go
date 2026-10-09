@@ -90,17 +90,21 @@ type LootView struct {
 	Guaranteed []Link     `json:"guaranteed"`
 }
 
-// SpawnerView is a spawner that creates this NPC.
+// SpawnerView is one content spawner.
+// An NPC inspect lists spawners of that template. A room inspect lists spawners in that room.
 type SpawnerView struct {
-	ID            string `json:"id"`
-	Name          string `json:"name,omitempty"`
-	RoomID        string `json:"roomId,omitempty"`
-	RoomName      string `json:"roomName,omitempty"`
-	RoomMissing   bool   `json:"roomMissing,omitempty"`
-	MaxInstances  int    `json:"maxInstances"`
-	RespawnTime   string `json:"respawnTime,omitempty"`
-	RespawnSource string `json:"respawnSource,omitempty"`
-	SpawnInterval string `json:"spawnInterval,omitempty"`
+	ID              string `json:"id"`
+	Name            string `json:"name,omitempty"`
+	TemplateID      string `json:"templateId,omitempty"`
+	TemplateName    string `json:"templateName,omitempty"`
+	TemplateMissing bool   `json:"templateMissing,omitempty"`
+	RoomID          string `json:"roomId,omitempty"`
+	RoomName        string `json:"roomName,omitempty"`
+	RoomMissing     bool   `json:"roomMissing,omitempty"`
+	MaxInstances    int    `json:"maxInstances"`
+	RespawnTime     string `json:"respawnTime,omitempty"`
+	RespawnSource   string `json:"respawnSource,omitempty"`
+	SpawnInterval   string `json:"spawnInterval,omitempty"`
 }
 
 // QuestHit is a kill, talk, or deliver objective that names this NPC.

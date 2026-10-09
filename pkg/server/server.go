@@ -360,6 +360,7 @@ func (app *app) setupRoutes() {
 		creator.Use(handler.AuditWrites(app.Facade.AuditService()))
 		{
 			// Rooms
+			creator.GET("rooms/:id/inspect", rooms.InspectRoom)
 			creator.POST("rooms", rooms.PostRoom)
 			creator.PUT("rooms/:id", rooms.PutRoom)
 			creator.DELETE("rooms/:id", rooms.DeleteRoom)
