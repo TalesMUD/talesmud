@@ -18,6 +18,10 @@ type ServerSettings struct {
 	// "R0001 if that room exists". Never use an arbitrary rooms[0] while
 	// a configured or Veilspan start room is available.
 	StartRoomID string `json:"startRoomID"`
+
+	// MutedHealthRuleIDs are content-health rules whose hits are counted
+	// separately and do not fail a check.
+	MutedHealthRuleIDs []string `json:"mutedHealthRuleIDs,omitempty"`
 }
 
 // NewDefaultServerSettings returns settings with default values.

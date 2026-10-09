@@ -258,3 +258,9 @@ type GuestStatsRepository interface {
 	CountActive() (int, error)
 	GetDailyStats(days int) ([]*DailyGuestStat, error)
 }
+
+// ContentHealthRepository stores the import baseline and the pack rules that came with it.
+type ContentHealthRepository interface {
+	Get() ([]byte, error)
+	Save(data []byte) error
+}

@@ -33,11 +33,12 @@ type App interface {
 }
 
 type app struct {
-	Router      *gin.Engine
-	Facade      service.Facade
-	mud         mud.MUDServer
-	localAuth   *authlocal.Service
-	resetByMail bool
+	Router        *gin.Engine
+	Facade        service.Facade
+	mud           mud.MUDServer
+	localAuth     *authlocal.Service
+	resetByMail   bool
+	contentHealth repository.ContentHealthRepository
 }
 
 func adminAuthMiddleware() gin.HandlerFunc {
@@ -133,9 +134,10 @@ func NewApp() App {
 	}
 
 	application := &app{
-		Router: r,
-		Facade: facade,
-		mud:    mud,
+		Router:        r,
+		Facade:        facade,
+		mud:           mud,
+		contentHealth: repos.ContentHealth(),
 	}
 	if gamemode.LocalAuth() {
 		secret, err := authlocal.ResolveSecret(gamemode.Current())
@@ -269,6 +271,10 @@ func (app *app) setupRoutes() {
 	validationHandler := &handler.ValidationHandler{
 		Facade: app.Facade,
 	}
+	healthHandler := &handler.HealthHandler{
+		Facade: app.Facade,
+		Health: app.contentHealth,
+	}
 
 	r.GET("/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "API is up and running")
@@ -355,6 +361,10 @@ func (app *app) setupRoutes() {
 
 			// Creator quality diagnostics
 			creator.GET("diagnostics/world", validationHandler.WorldDiagnostics)
+			creator.GET("health", healthHandler.Get)
+			creator.PUT("health/mute", healthHandler.Mute)
+			creator.GET("health/drift", healthHandler.Drift)
+			creator.GET("health/drift/export", healthHandler.Export)
 			creator.POST("validate/:entityType", validationHandler.ValidateEntity)
 			creator.POST("preview/dialog", validationHandler.PreviewDialog)
 			creator.POST("preview/quest", validationHandler.PreviewQuest)
