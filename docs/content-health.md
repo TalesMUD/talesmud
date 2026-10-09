@@ -27,6 +27,8 @@ Reachability starts at the server setting `startRoomID` when that room exists, a
 
 The printed content commit is that folder's own git HEAD. A copy that sits inside another checkout does not inherit the parent commit. It reads the first line of `CONTENT_COMMIT` or `.content-commit` in the folder, and otherwise prints `unknown`.
 
+`GET /api/health` also warns with `deploy-tree-dirty` when the server's working directory is its own git checkout and `git status` shows tracked changes. Each changed path is one hit. Paths under `import/` are skipped. The check is one `git status` per health run, with a short timeout, and it is skipped when the directory is not a checkout or `git` is missing. `tales -check` does not run this rule.
+
 `GET /api/quests/:id/debug` uses this same quest check for one quest. The Creator opens it at `/creator/quests/debug?id=`. Health quest hits link there.
 
 ## GitHub Actions

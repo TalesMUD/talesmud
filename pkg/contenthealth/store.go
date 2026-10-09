@@ -3,6 +3,7 @@ package contenthealth
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -122,6 +123,9 @@ func RunFromFacade(facade service.Facade, repo repository.ContentHealthRepositor
 	opt := Options{Muted: muted, Live: live, Baseline: base}
 	if base != nil {
 		opt.Rules = base.Rules
+	}
+	if wd, err := os.Getwd(); err == nil {
+		opt.DeployDir = wd
 	}
 	return Run(world, opt), nil
 }

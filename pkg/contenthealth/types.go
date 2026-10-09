@@ -14,6 +14,7 @@ const (
 	RuleUnreferenced   = "unreferenced-script"
 	RuleDangling       = "dangling-exits"
 	RuleMissingItem    = "missing-room-item"
+	RuleDeployDirty    = "deploy-tree-dirty"
 )
 
 // Related is another entity a hit points at.
@@ -104,4 +105,7 @@ type Options struct {
 	Balance  *Balance
 	Live     *LiveView
 	Baseline *Baseline
+	// DeployDir, when set, checks that directory for tracked changes.
+	// tales -check leaves it empty. A live health run passes the process working directory.
+	DeployDir string
 }

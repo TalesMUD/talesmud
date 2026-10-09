@@ -51,6 +51,7 @@ func builtinCatalog() []catalogEntry {
 		{RuleUnknownTier, "Unknown difficulty tier", "warning", "Use a tier from the balance table.", true},
 		{RuleUnreferenced, "Script not referenced anywhere", "warning", "Wire the script to a room, item, or NPC, or remove it.", true},
 		{RuleHiddenNoReveal, "Hidden exit with no revealer", "warning", "Add revealExit from a script the player can run.", true},
+		{RuleDeployDirty, "Tracked files differ from the checkout", "warning", "Commit or restore the file before deploy. Files under import/ are ignored.", false},
 	}
 }
 
@@ -75,6 +76,7 @@ func Run(world World, opt Options) Report {
 	b.addWorldValidation(snap)
 	b.addPack(opt.Rules, snap)
 	b.addLive(opt.Live)
+	b.addDeployTree(opt.DeployDir)
 	drift := compareDrift(opt.Baseline, baselineEntries(world))
 	return b.report(world.ContentCommit, opt.Rules, opt.Muted, drift)
 }
