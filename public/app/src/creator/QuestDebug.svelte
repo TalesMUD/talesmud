@@ -1,15 +1,18 @@
 <script>
-  import { onMount } from "svelte";
-  import { navigateTo } from "yrv";
+  import { navigateTo, router } from "yrv";
   import { getAuth } from "../auth.js";
   import { getQuestDebug, getQuests } from "../api/quests.js";
+  import { userRole } from "../stores.js";
   import EntitySelectButton from "./EntitySelectButton.svelte";
   import ConfirmDialog from "./ConfirmDialog.svelte";
+  import { opError, performOp } from "./opsFlow.js";
+  import { questIdFromQuery } from "./questDebugUrl.js";
   import { questColumns } from "./tableColumns.js";
 
   const { isAuthenticated, authToken } = getAuth();
 
   let questId = "";
+  let loadedFor = "";
   let quests = [];
   let questsLoaded = false;
   let report = null;
@@ -84,23 +87,38 @@
     );
   }
 
+  function applyQuestId(id) {
+    if (id === questId) return;
+    questId = id;
+    report = null;
+    error = "";
+    selectedId = "";
+    resetNote = "";
+    loadedFor = "";
+  }
+
   async function loadReport() {
     if (!$authToken || !questId) {
       report = null;
+      loadedFor = "";
       return;
     }
     const id = questId;
+    loadedFor = id;
     loading = true;
     error = "";
     resetNote = "";
+    const keep = selectedId;
     try {
       report = await getQuestDebug($authToken, id);
-      selectedId = "";
+      if (questId !== id) return;
+      selectedId = (report?.characters || []).some((row) => row.id === keep) ? keep : "";
     } catch (err) {
+      if (questId !== id) return;
       report = null;
       error = err?.response?.data?.error || "Quest debug is unavailable.";
     } finally {
-      loading = false;
+      if (questId === id) loading = false;
     }
   }
 
@@ -112,13 +130,8 @@
 
   function chooseQuest(event) {
     const id = event.detail || "";
-    questId = id;
-    report = null;
-    error = "";
-    selectedId = "";
     const path = id ? `/creator/quests/debug?id=${encodeURIComponent(id)}` : "/creator/quests/debug";
     navigateTo(path);
-    if (id) loadReport();
   }
 
   function selectCharacter(row) {
@@ -130,25 +143,41 @@
     resetOpen = true;
   }
 
-  function confirmReset() {
+  async function confirmReset() {
     resetOpen = false;
-    const op = report?.ops?.questStep?.path || "/api/ops/quest-step";
-    if (!selectedId) {
-      resetNote = "Select a character in the live list first.";
+    if ($userRole !== "admin") return;
+    if (!selectedId || !selected?.objectiveId) {
+      resetNote = selectedId
+        ? "This character has no open step to reset."
+        : "Select a character in the live list first.";
       return;
     }
-    resetNote = `Quest step reset is not connected. The live op is POST ${op}.`;
+    const objectiveId = selected.objectiveId;
+    const id = questId;
+    try {
+      await performOp($authToken, "quest-step", {
+        characterId: selectedId,
+        questId: id,
+        objectiveId,
+        op: "reset",
+      });
+      if (questId === id) {
+        loadedFor = "";
+        error = "";
+        await loadReport();
+      }
+    } catch (err) {
+      resetNote = opError(err, "Quest step reset failed.");
+    }
   }
 
   $: selected = (report?.characters || []).find((row) => row.id === selectedId) || null;
-
-  onMount(() => {
-    questId = new URLSearchParams(window.location.search).get("id") || "";
-  });
+  $: applyQuestId(questIdFromQuery($router.query));
+  $: isAdmin = $userRole === "admin";
 
   $: if ($isAuthenticated && $authToken) {
     loadQuestList();
-    if (questId && !report && !loading && !error) {
+    if (questId && loadedFor !== questId && !loading && !error) {
       loadReport();
     }
   }
@@ -279,13 +308,23 @@
                 </table>
               </div>
             {/if}
-            <div class="mt-3">
-              <button class="btn btn-outline" type="button" data-op={report.ops?.questStep?.path || "/api/ops/quest-step"} on:click={askReset}>
-                Reset quest step
-              </button>
-            </div>
-            {#if resetNote}<p class="mt-2 text-xs text-slate-400">{resetNote}</p>{/if}
-            <p class="mt-2 text-xs text-slate-500">Reset is a live op and is not sent from this panel.</p>
+            {#if isAdmin}
+              <div class="mt-3">
+                <button
+                  class="btn btn-outline"
+                  type="button"
+                  data-op={report.ops?.questStep?.path || "/api/ops/quest-step"}
+                  disabled={!selected?.objectiveId}
+                  on:click={askReset}
+                >
+                  Reset quest step
+                </button>
+              </div>
+              {#if selected && !selected.objectiveId}
+                <p class="mt-2 text-xs text-slate-400">This character has no open step to reset.</p>
+              {/if}
+              {#if resetNote}<p class="mt-2 text-xs text-slate-400">{resetNote}</p>{/if}
+            {/if}
           </div>
 
           <div class="card p-4">
@@ -350,7 +389,8 @@
   entityId={selected?.id || report?.id || ""}
   detail={selected ? `${selected.name} · ${selected.step || selected.status || "on this quest"}` : "Select a character in the live list first."}
   confirmLabel="Reset step"
-  hint="This asks for POST /api/ops/quest-step. That live op is not connected, so nothing is sent."
+  hint="This is written to the audit log. Undo from the toast if the world has not moved on."
+  tone="ops"
   on:confirm={confirmReset}
   on:cancel={() => (resetOpen = false)}
 />
