@@ -841,9 +841,9 @@
     </div>
   </div>
 
-  <div slot="extensions" class="space-y-4">
-    <!-- Tabbed Navigation -->
-    <div class="flex items-center gap-1 border-b border-slate-200 dark:border-slate-700">
+  <div slot="extensions" class="min-w-0 space-y-4">
+    <!-- Tabbed Navigation. Scrolls inside this bar so the detail column does not shift sideways. -->
+    <div class="room-tab-bar flex items-center gap-1 border-b border-slate-200 dark:border-slate-700">
       <button
         type="button"
         class="tab-btn"
@@ -1205,6 +1205,30 @@
   }
 
   /* Tab Styles */
+  .room-tab-bar {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-wrap: nowrap;
+    overscroll-behavior-x: contain;
+  }
+
+  .room-tab-bar .tab-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .room-tab-bar::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .room-tab-bar::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.2);
+    border-radius: 3px;
+  }
+
   .tab-btn {
     display: flex;
     align-items: center;
