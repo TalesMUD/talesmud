@@ -25,10 +25,12 @@ type Editor struct {
 }
 
 // FeedResult is what one chunk of terminal input did.
+// Submitted is set when the player pressed Enter, even if the line was empty.
 type FeedResult struct {
-	Out  []byte
-	Line string
-	Quit bool
+	Out       []byte
+	Line      string
+	Submitted bool
+	Quit      bool
 }
 
 // NewEditor builds an editor. history is the number of remembered lines.
@@ -120,6 +122,7 @@ func (e *Editor) Feed(data []byte) FeedResult {
 			buf = append(buf, step...)
 			if submit {
 				out.Line = e.takeSubmit()
+				out.Submitted = true
 			}
 			out.Quit = out.Quit || quit
 			continue
@@ -166,6 +169,7 @@ func (e *Editor) Feed(data []byte) FeedResult {
 		buf = append(buf, step...)
 		if submit {
 			out.Line = e.takeSubmit()
+			out.Submitted = true
 		}
 		out.Quit = out.Quit || quit
 	}
