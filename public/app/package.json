@@ -6,7 +6,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test src/creator/navState.test.js"
+    "test": "node --test 'src/**/*.test.js'"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^3.0.0",
