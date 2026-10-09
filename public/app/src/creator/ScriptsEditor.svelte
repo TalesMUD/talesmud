@@ -221,15 +221,30 @@ return input`,
     }
   };
 
-  onMount(async () => {
-    getScriptTypes((t) => {
-      scriptTypes = t;
-      // Populate script type column filter options
-      const typeCol = columns.find((c) => c.key === "type");
-      if (typeCol) typeCol.options = t;
-    });
+  let scriptTypesToken = "";
+
+  function loadScriptTypes(token) {
+    if (!token || token === scriptTypesToken) return;
+    scriptTypesToken = token;
+    getScriptTypes(
+      token,
+      (t) => {
+        scriptTypes = Array.isArray(t) ? t : [];
+        const typeCol = columns.find((c) => c.key === "type");
+        if (typeCol) typeCol.options = scriptTypes;
+      },
+      (err) => {
+        console.error("Failed to load script types:", err);
+      }
+    );
+  }
+
+  onMount(() => {
+    loadScriptTypes($authToken);
     setupEditors();
   });
+
+  $: loadScriptTypes($authToken);
 
   // Re-setup editors when detail opens or selected element changes
   $: if ($store.selectedElement && $store.detailOpen) {
