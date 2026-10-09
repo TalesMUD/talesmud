@@ -25,6 +25,8 @@ An item is obtainable when it sits in a reachable room, drops from a reachable N
 
 Reachability starts at the server setting `startRoomID` when that room exists, and otherwise at the engine default start room. `tales -check` does not open the database, so it uses the engine default.
 
+The printed content commit is that folder's own git HEAD. A copy that sits inside another checkout does not inherit the parent commit. It reads the first line of `CONTENT_COMMIT` or `.content-commit` in the folder, and otherwise prints `unknown`.
+
 `GET /api/quests/:id/debug` uses this same quest check for one quest. The Creator opens it at `/creator/quests/debug?id=`. Health quest hits link there.
 
 ## GitHub Actions

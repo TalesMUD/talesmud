@@ -1,10 +1,13 @@
 package contenthealth
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -115,16 +118,73 @@ func Hash(v any) (string, []byte, error) {
 	return hex.EncodeToString(sum[:]), canonical, nil
 }
 
-// ContentCommit is git HEAD of dir, or empty when dir is not a checkout.
+// ContentCommit is the git HEAD of dir when that directory is its own checkout.
+// A staged copy inside another repo does not inherit the parent commit.
+// Otherwise the first line of CONTENT_COMMIT or .content-commit is used.
+// Anything else is "unknown".
 func ContentCommit(dir string) string {
-	if strings.TrimSpace(dir) == "" {
+	dir = strings.TrimSpace(dir)
+	if dir == "" {
+		return "unknown"
+	}
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		abs = dir
+	}
+	if commit := gitHeadIfRoot(abs); commit != "" {
+		return commit
+	}
+	if commit := readCommitFile(abs); commit != "" {
+		return commit
+	}
+	return "unknown"
+}
+
+func gitHeadIfRoot(dir string) string {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	top, err := exec.CommandContext(ctx, "git", "-C", dir, "rev-parse", "--show-toplevel").Output()
+	if err != nil || !sameDir(dir, strings.TrimSpace(string(top))) {
 		return ""
 	}
-	out, err := exec.Command("git", "-C", dir, "rev-parse", "HEAD").Output()
+	head, err := exec.CommandContext(ctx, "git", "-C", dir, "rev-parse", "HEAD").Output()
 	if err != nil {
 		return ""
 	}
-	return strings.TrimSpace(string(out))
+	return strings.TrimSpace(string(head))
+}
+
+func readCommitFile(dir string) string {
+	for _, name := range []string{"CONTENT_COMMIT", ".content-commit"} {
+		raw, err := os.ReadFile(filepath.Join(dir, name))
+		if err != nil {
+			continue
+		}
+		line := strings.TrimSpace(string(raw))
+		if i := strings.IndexAny(line, "\r\n"); i >= 0 {
+			line = strings.TrimSpace(line[:i])
+		}
+		if line != "" {
+			return line
+		}
+	}
+	return ""
+}
+
+func sameDir(a, b string) bool {
+	return resolveDir(a) == resolveDir(b)
+}
+
+func resolveDir(path string) string {
+	abs, err := filepath.Abs(strings.TrimSpace(path))
+	if err != nil {
+		abs = strings.TrimSpace(path)
+	}
+	resolved, err := filepath.EvalSymlinks(abs)
+	if err != nil {
+		return filepath.Clean(abs)
+	}
+	return filepath.Clean(resolved)
 }
 
 func compareDrift(base *Baseline, current []BaselineEntry) []DriftRow {
