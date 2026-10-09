@@ -154,7 +154,7 @@
   }
 </script>
 
-<div class="flex flex-col h-[calc(100vh-128px)]">
+<div class="flex h-full min-h-0 flex-col">
   <div class="px-6 pt-5 pb-3 flex-shrink-0">
     <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
       <div class="space-y-1 min-w-0">
@@ -195,7 +195,7 @@
     </div>
   </div>
 
-  <div class="flex-1 overflow-y-auto px-6 pb-6 thin-scrollbar">
+  <div class="min-h-0 flex-1 overflow-y-auto px-6 pb-6 thin-scrollbar">
     {#if !$isAuthenticated}
       <div class="py-12 text-center text-sm text-slate-500">Please log in to access Creator tools.</div>
     {:else if error}

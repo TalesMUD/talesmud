@@ -1369,6 +1369,7 @@ App.svelte (role-aware navigation: Creator/Admin links gated by user role)
 │   │   ├── NPCsEditor.svelte
 │   │   ├── DialogsEditor.svelte
 │   │   ├── QuestsEditor.svelte
+│   │   ├── QuestDebug.svelte (/creator/quests/debug, highlights Quests)
 │   │   ├── ScriptsEditor.svelte
 │   │   ├── CharacterTemplatesEditor.svelte
 │   │   ├── GridWorldEditor.svelte
