@@ -223,31 +223,15 @@ func (ix *Index) hit(kind Kind, id, name, snippet string, rank int) Hit {
 }
 
 // CreatorPath is the Creator deep link for an entity.
-// Spawners open the room they stand in. Loot tables open the first NPC that uses them.
 func (ix *Index) CreatorPath(kind Kind, id string) string {
 	if id == "" {
 		return ""
 	}
 	switch kind {
 	case KindSpawner:
-		if ix == nil || ix.snap.Spawners[id] == nil || ix.snap.Spawners[id].RoomID == "" {
-			return ""
-		}
-		return "/creator/rooms?id=" + url.QueryEscape(ix.snap.Spawners[id].RoomID)
+		return "/creator/spawners?id=" + url.QueryEscape(id)
 	case KindLootTable:
-		var npcID string
-		for _, edge := range ix.Inbound(kind, id) {
-			if edge.FromType != KindNPC || edge.FromID == "" {
-				continue
-			}
-			if npcID == "" || edge.FromID < npcID {
-				npcID = edge.FromID
-			}
-		}
-		if npcID == "" {
-			return ""
-		}
-		return "/creator/npcs?id=" + url.QueryEscape(npcID)
+		return "/creator/loot-tables?id=" + url.QueryEscape(id)
 	}
 	tab := creatorTab(kind)
 	if tab == "" {

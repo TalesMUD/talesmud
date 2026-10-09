@@ -70,6 +70,7 @@ export const CREATOR_NAV = [
     items: [
       { id: "rooms", label: "Rooms", href: "/creator/rooms", icon: "door_open" },
       { id: "world", label: "World / Zones", href: "/creator/world", icon: "map", title: "World map" },
+      { id: "spawners", label: "Spawners", href: "/creator/spawners", icon: "hive" },
       { id: "health", label: "Health", href: "/creator/health", icon: "monitor_heart" },
     ],
   },
@@ -78,6 +79,7 @@ export const CREATOR_NAV = [
     label: "Actors",
     items: [
       { id: "npcs", label: "NPCs", href: "/creator/npcs", icon: "group" },
+      { id: "loot-tables", label: "Loot tables", href: "/creator/loot-tables", icon: "redeem" },
       {
         id: "character-templates",
         label: "Character Templates",

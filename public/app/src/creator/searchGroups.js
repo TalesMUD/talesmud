@@ -3,6 +3,7 @@ const labels = {
   npc: "NPCs",
   item: "Items",
   lootTable: "Loot tables",
+  loottable: "Loot tables",
   spawner: "Spawners",
   dialog: "Dialogs",
   quest: "Quests",
@@ -11,7 +12,7 @@ const labels = {
   characterTemplate: "Character templates",
 };
 
-const backlinkTypes = new Set(["room", "npc", "item", "dialog", "quest", "script"]);
+const backlinkTypes = new Set(["room", "npc", "item", "dialog", "quest", "script", "loottable", "spawner"]);
 
 const refTypes = new Set([
   "room",

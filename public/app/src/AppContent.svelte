@@ -20,6 +20,8 @@
   import Players from "./creator/Players.svelte";
   import AuditLog from "./creator/AuditLog.svelte";
   import Drift from "./creator/Drift.svelte";
+  import LootTablesEditor from "./creator/LootTablesEditor.svelte";
+  import SpawnersEditor from "./creator/SpawnersEditor.svelte";
   import Characters from "./characters/Characters.svelte";
   import NewCharacter from "./characters/NewCharacter.svelte";
   import UserForm from "./UserForm.svelte";
@@ -120,6 +122,16 @@
   <Route exact path="/creator/drift">
     <CreatorLayout>
       <Drift />
+    </CreatorLayout>
+  </Route>
+  <Route exact path="/creator/loot-tables">
+    <CreatorLayout>
+      <LootTablesEditor />
+    </CreatorLayout>
+  </Route>
+  <Route exact path="/creator/spawners">
+    <CreatorLayout>
+      <SpawnersEditor />
     </CreatorLayout>
   </Route>
   <Route exact path="/manage/users">

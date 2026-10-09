@@ -136,11 +136,11 @@ func TestSearchRanksIDAboveNameAboveText(t *testing.T) {
 	}
 
 	spawner := ix.Search(mustQuery(t, "SP1", nil, 5))
-	if len(spawner) != 1 || spawner[0].Path != "/creator/rooms?id=R0215" {
+	if len(spawner) != 1 || spawner[0].Path != "/creator/spawners?id=SP1" {
 		t.Fatalf("spawner = %+v", spawner)
 	}
 	loot := ix.Search(mustQuery(t, "LT1", nil, 5))
-	if len(loot) != 1 || loot[0].Path != "/creator/npcs?id=NPC1" {
+	if len(loot) != 1 || loot[0].Path != "/creator/loot-tables?id=LT1" {
 		t.Fatalf("loot = %+v", loot)
 	}
 }

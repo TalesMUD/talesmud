@@ -19,6 +19,7 @@
     item: "/creator/item-templates",
     script: "/creator/scripts",
     quest: "/creator/quests",
+    spawner: "/creator/spawners",
   };
 
   const characterColumns = [
@@ -282,7 +283,7 @@
       {#if view.spawners?.length}
         {#each view.spawners as spawner}
           <p class="text-sm text-slate-300">
-            Spawner <span class="font-mono text-xs">{spawner.id}</span>
+            Spawner <a class="font-mono text-xs text-primary hover:underline" href={href("spawner", spawner.id)} on:click={(e) => open(e, "spawner", spawner.id)}>{spawner.id}</a>
             {#if spawner.templateId}
               · <a class="text-primary hover:underline" href={href("npc", spawner.templateId)} on:click={(e) => open(e, "npc", spawner.templateId)}>{spawner.templateName || spawner.name || spawner.templateId}</a>
             {/if}

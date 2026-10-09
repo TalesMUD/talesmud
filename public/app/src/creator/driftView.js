@@ -10,6 +10,8 @@ const tabs = {
   script: "scripts",
   skill: "skills",
   charactertemplate: "character-templates",
+  loottable: "loot-tables",
+  spawner: "spawners",
 };
 
 export function normDriftType(entityType) {

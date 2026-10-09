@@ -340,6 +340,7 @@
         class="min-h-0 flex-shrink-0 overflow-y-auto transition-all duration-200 thin-scrollbar"
         style={$store.detailOpen ? "width: 44%; min-width: 380px;" : "width: 100%;"}
       >
+        <slot name="toolbar" />
         <DataTable
           columns={config.columns || []}
           elements={$store.elements}

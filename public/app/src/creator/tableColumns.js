@@ -175,7 +175,27 @@ export const characterTemplateColumns = [
 export const lootTableColumns = [
   { key: "id", label: "ID", mono: true, priority: 1 },
   { key: "name", label: "Name", width: 220, priority: 1 },
+  {
+    key: "_entries", label: "Entries", width: 80, type: "number", priority: 2,
+    accessor: (el) => el.entries?.length || 0,
+    sortAccessor: (el) => el.entries?.length || 0,
+  },
   { key: "description", label: "Description", priority: 3 },
+];
+
+export const spawnerColumns = [
+  { key: "id", label: "ID", mono: true, priority: 1 },
+  { key: "name", label: "Name", width: 160, priority: 2 },
+  { key: "roomName", label: "Room", width: 160, priority: 1 },
+  { key: "zone", label: "Zone", width: 140, type: "select", options: [], priority: 2 },
+  { key: "templateName", label: "Template", width: 160, priority: 1 },
+  { key: "maxInstances", label: "Max", width: 70, type: "number", priority: 1 },
+  { key: "respawnLabel", label: "Respawn", width: 100, priority: 1 },
+  {
+    key: "liveCount", label: "Live", width: 70, type: "number", priority: 1,
+    accessor: (el) => (el.liveCount == null ? "—" : el.liveCount),
+    sortAccessor: (el) => (el.liveCount == null ? -1 : el.liveCount),
+  },
 ];
 
 export const skillColumns = [

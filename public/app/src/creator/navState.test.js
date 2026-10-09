@@ -78,6 +78,15 @@ test("rooms highlight covers /creator and dialog graph stays distinct", () => {
   assert.equal(activeGroupId(CREATOR_NAV, "/creator/health"), "world");
   assert.equal(activeGroupId(CREATOR_NAV, "/creator/quests/debug"), "narrative");
   assert.equal(activeGroupId(CREATOR_NAV, "/creator/drift"), "operate");
+  const spawners = CREATOR_NAV[0].items.find((item) => item.id === "spawners");
+  const loot = CREATOR_NAV[1].items.find((item) => item.id === "loot-tables");
+  assert.equal(spawners.href, "/creator/spawners");
+  assert.equal(loot.label, "Loot tables");
+  assert.equal(isNavActive("/creator/spawners?id=SP1", spawners), true);
+  assert.equal(isNavActive("/creator/loot-tables?id=LT1", loot), true);
+  assert.equal(isNavActive("/creator/loot-tables", spawners), false);
+  assert.equal(activeGroupId(CREATOR_NAV, "/creator/loot-tables"), "actors");
+  assert.equal(activeGroupId(CREATOR_NAV, "/creator/spawners"), "world");
 });
 
 test("players stay admin-only and audit stays visible", () => {

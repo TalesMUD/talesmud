@@ -79,8 +79,11 @@
   $: areaTypeSuggestions = uniqueValues($store.elements, "areaType");
   $: roomTypeSuggestions = uniqueValues($store.elements, "roomType");
 
-  // Tab state for extensions section
+  // Tab state for extensions section. ?view=inspector opens the inspector.
   let activeTab = "exits";
+  if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("view") === "inspector") {
+    activeTab = "inspector";
+  }
 
   // Items modal state
   let showItemsModal = false;

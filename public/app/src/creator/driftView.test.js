@@ -25,8 +25,8 @@ test("drift links open the editor, including quests", () => {
   assert.equal(driftEntityPath("room", "R0001"), "/creator/rooms?id=R0001");
   assert.equal(driftEntityPath("quest", "QST0217"), "/creator/quests?id=QST0217");
   assert.equal(driftEntityPath("character_template", "CT1"), "/creator/character-templates?id=CT1");
-  assert.equal(driftEntityPath("loot_table", "LT1"), "");
-  assert.equal(driftEntityPath("spawner", "SP1"), "");
+  assert.equal(driftEntityPath("loot_table", "LT1"), "/creator/loot-tables?id=LT1");
+  assert.equal(driftEntityPath("spawner", "SP1"), "/creator/spawners?id=SP1");
   assert.equal(driftEntityPath("room", ""), "");
 });
 

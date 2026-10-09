@@ -25,21 +25,19 @@
     script: "scripts",
     skill: "skills",
     charactertemplate: "character-templates",
+    loottable: "loot-tables",
+    spawner: "spawners",
   };
 
   function normType(entityType) {
-    return String(entityType || "").toLowerCase().replaceAll("_", "");
+    return String(entityType || "").toLowerCase().replaceAll("_", "").replaceAll("-", "");
   }
 
-  function entityPath(entityType, id, related) {
+  function entityPath(entityType, id) {
     const kind = normType(entityType);
-    if (!id || kind === "loottable") return "";
+    if (!id) return "";
     if (kind === "quest") {
       return `/creator/quests/debug?id=${encodeURIComponent(id)}`;
-    }
-    if (kind === "spawner") {
-      const room = (related || []).find((item) => normType(item.type) === "room" && item.id);
-      return room ? `/creator/rooms?id=${encodeURIComponent(room.id)}` : "";
     }
     const tab = tabByType[kind];
     return tab ? `/creator/${tab}?id=${encodeURIComponent(id)}` : "";

@@ -19,6 +19,8 @@
     script: "/creator/scripts",
     quest: "/creator/quests",
     item: "/creator/item-templates",
+    loot: "/creator/loot-tables",
+    spawner: "/creator/spawners",
   };
 
   let view = null;
@@ -280,7 +282,7 @@
         <div class="label-caps">Loot</div>
         {#if view.loot.tableId}
           <p class="text-sm">
-            <span class="font-mono text-xs">{view.loot.tableId}</span>
+            <a class="font-mono text-xs text-primary hover:underline" href={href("loot", view.loot.tableId)} on:click={(e) => open(e, "loot", view.loot.tableId)}>{view.loot.tableId}</a>
             {#if view.loot.tableName}<span>{view.loot.tableName}</span>{/if}
             {#if view.loot.missing}<span class="text-amber-300">missing table</span>{/if}
           </p>
@@ -347,7 +349,7 @@
       {#if view.spawners?.length}
         {#each view.spawners as spawner}
           <div class="rounded-md border border-slate-800 px-3 py-2 text-sm">
-            <div class="font-medium">{spawner.name || spawner.id} <span class="font-mono text-[10px] text-slate-500">{spawner.id}</span></div>
+            <div class="font-medium">{spawner.name || spawner.id} <a class="font-mono text-[10px] text-primary hover:underline" href={href("spawner", spawner.id)} on:click={(e) => open(e, "spawner", spawner.id)}>{spawner.id}</a></div>
             <div class="text-xs text-slate-400">
               {#if spawner.roomId}
                 <a class="text-primary hover:underline" href={href("room", spawner.roomId)} on:click={(e) => open(e, "room", spawner.roomId)}>{spawner.roomName || spawner.roomId}</a>

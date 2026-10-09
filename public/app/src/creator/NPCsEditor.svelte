@@ -88,12 +88,17 @@
   let activeTraitTab = "behavior";
   let detailView = "edit";
   let detailViewFor = "";
+  let inspectorRequested = null;
 
   $: {
     const id = $store.selectedElement?.id || "";
     if (id !== detailViewFor) {
       detailViewFor = id;
-      detailView = "edit";
+      if (inspectorRequested === null && typeof window !== "undefined") {
+        inspectorRequested = new URLSearchParams(window.location.search).get("view") === "inspector";
+      }
+      detailView = inspectorRequested ? "inspector" : "edit";
+      inspectorRequested = false;
     }
   }
 
