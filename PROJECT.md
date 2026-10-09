@@ -204,6 +204,8 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - World Health diagnostics for broken cross-system references across rooms, NPCs, items, loot tables, quests, dialogs, scripts, spawners, and character template starting gear. The message column stays visible, and room, NPC, dialog, quest, item, and script IDs link to `?id=` on that editor.
   - Content health: one rule report for reachability, reveal scripts, quests that cannot complete, bosses without spawners, unknown difficulty tiers, unreferenced scripts, and pack rules from `data/rules`. The Creator Health tab and `tales -check` share it. See `docs/content-health.md`.
   - Creator quality validation: inline warnings/errors, broken-reference detection, save blocking for invalid references, and a world health diagnostics tab. Dialog node IDs may repeat when the same node is linked again; a duplicate is an error only when two definitions of that node disagree. Opening `/creator/<tab>?id=<entityId>` selects that entity. Deletes that call the API, plus room, room-item, special-exit, and dialog-node deletes, ask in a confirm dialog first. Merchant stock `maxQuantity` of -1 is unlimited.
+  - Live ops on the Players tab: teleport, give and take items, end a fight, quest step changes, re-grant a starter kit, and instance cleanup. NPC heal, respawn, and despawn share `OpsButtons` for later inspectors. Every op confirms first, runs on the game command loop, and can offer Undo from the audit log when the change is reversible.
+  - Audit log tab: creator CRUD writes and live ops, with before/after JSON and admin undo. A red LIVE badge appears in the Creator header when `ADMIN_ENV_LABEL` is set.
   - Preview/test tools for dialogs, quests, rooms, merchants, and Lua scripts
   - CRUD operations with live preview
 
@@ -462,6 +464,11 @@ MUD_ADMIN_OAUTHID=
 # If not set, a random key is generated at startup (guest tokens won't survive server restart)
 GUEST_SECRET=
 
+# Creator live badge. Empty locally. Set ADMIN_ENV_LABEL=LIVE on a production admin.
+# ADMIN_ENV_HOST overrides the request host shown after the label.
+ADMIN_ENV_LABEL=
+ADMIN_ENV_HOST=
+
 # Optional landing page (path to directory with index.html + static assets)
 # LANDING_PATH=./public/landing
 
@@ -534,7 +541,7 @@ go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
 - `GET /api/templates/characters` - Character creation templates
 - `GET /api/room-of-the-day` - Featured room
 - `POST /api/guest` - Create guest session (returns HMAC token)
-- `GET /api/server-info` - Public server info (guest mode status)
+- `GET /api/server-info` - Public server info: `serverName`, `envLabel` (`ADMIN_ENV_LABEL`), and `host` (`ADMIN_ENV_HOST` or the request host)
 
 ### Protected Endpoints (Require Auth - Player Level)
 - `GET /api/characters`, `POST /api/newcharacter` - Character management; direct character object access is owner/admin only
@@ -568,12 +575,19 @@ go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
 - `POST /api/validate/:entityType` - Validate a draft Creator entity before save
 - `POST /api/preview/dialog`, `/api/preview/quest`, `/api/preview/room`, `/api/preview/merchant` - Preview/test draft content with validation issues
 - `PUT /api/settings` - Server settings
+- `GET /api/audit?entityType=&entityId=&limit=` - Audit log of creator writes and live ops
+- `GET /api/live/characters` - Online characters and anyone seen in the last 30 days (`online`, `guest`, `inCombat`, `zone`, `all=1`)
+- `GET /api/live/characters/:id` - Inventory, equipment, quest log, revealed exits, and current combat
+- `GET /api/live/npcs?templateId=&roomId=` - Running NPC instances
+- `GET /api/live/instances` - Instance room copies
 
 ### Admin API Endpoints (Require Admin Role)
 - `GET /api/admin/users` - List all users
 - `PUT /api/admin/users/:id/role` - Change user role
 - `POST /api/admin/users/:id/ban` - Ban user
 - `POST /api/admin/users/:id/unban` - Unban user
+- `POST /api/audit/:id/undo` - Restore a creator write, or run a live op's inverse. Refuses when the row is not undoable, already undone, or the entity changed.
+- `POST /api/ops/:action` - Live op on the game command loop. Body must include `confirm: true`. Actions: `teleport`, `give-item`, `take-item`, `npc-heal`, `npc-respawn`, `npc-despawn`, `end-combat`, `instance-cleanup`, `quest-step`, `regrant-starter-kit`.
 
 ### Legacy Admin Endpoints (Basic Auth)
 - `GET /admin/export` - Export world data; requires explicit `ADMIN_USER` and `ADMIN_PASSWORD`

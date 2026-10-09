@@ -113,12 +113,25 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
     ├── user               # User profile (player level)
     ├── admin/
     │   └── users/         # User management (admin only)
+    ├── audit              # Creator reads the log; admin POST /audit/:id/undo
+    ├── ops/:action        # Admin live ops (confirm:true), run on the game loop
+    ├── live/characters    # Creator live character list and detail
+    ├── live/npcs          # Creator running NPC instances
+    ├── live/instances     # Creator instance room copies
     └── templates/         # Public templates
 /admin/
     ├── export             # World export (explicit basic auth credentials required)
     ├── import             # World import (explicit basic auth credentials required, validates before drop)
     └── world              # World map (basic auth)
 ```
+
+`GET /api/server-info` adds `envLabel` from `ADMIN_ENV_LABEL` and `host` from `ADMIN_ENV_HOST` or the request host. The Creator header shows a red `{label} · {host}` badge only when the label is non-empty.
+
+Creator writes (POST/PUT/DELETE for rooms, items, NPCs, loot tables, spawners, dialogs, quests, scripts, skills, character templates, and settings) pass through `AuditWrites`. Each successful write stores actor, action, entity, before JSON, and after JSON in `audit_log`. Deletes keep the full before document. `POST /api/audit/:id/undo` (admin) restores that before state, or runs the stored inverse for a live op. Undo is refused when the row is not undoable, already undone, or the current document no longer matches the recorded after state. The undo itself is an audit row.
+
+`POST /api/ops/:action` (admin) requires `confirm: true` and runs inside `Game.Call`, on the same command loop as player commands. It does not write an online character's database row from the HTTP handler. Each success records an audit row. `end-combat` and `instance-cleanup` are not undoable. Quest completion with an objective id only advances that step. Completion without an objective id grants rewards; undoing the progress row does not claw those rewards back.
+
+`GET /api/live/characters` lists characters who are online or whose user was seen within 30 days. `all=1` includes older characters. Detail, NPC, and instance reads use the same game-loop call.
 
 `GET /api/quest-progress/:characterId` returns quest progress merged with quest definition fields for the player UI. Objective rows include `objectiveId`, definition `description`, current/required counts, and completion state so REST refreshes and WebSocket quest log messages have matching player-facing text.
 
@@ -1440,7 +1453,7 @@ main()
   └── MUD Server
         │
         ├── receiveMessages()      // Game → Clients
-        ├── Game.Run()             // Command processing
+        ├── Game.Run()             // Command processing, plus live-ops jobs
         ├── handleBroadcast()      // Global messages
         ├── handleTimeouts()       // Ping/keep-alive
         │
@@ -1456,6 +1469,7 @@ main()
 | `OnUserJoined` | 20 | Login events |
 | `OnUserQuit` | 20 | Logout events |
 | `Broadcast` | unbuffered | Global messages |
+| `Game.jobs` | 32 | Live ops and live reads onto the command loop (`Game.Call`, 30s accept and 30s wait) |
 
 ### Thread Safety
 
@@ -1544,7 +1558,7 @@ Guest sessions use HMAC-SHA256 tokens (not Auth0 JWTs):
   - **Player** (default): Can access own characters, read game data, play the game
   - **Guest**: Same as Player but with level cap (5) and session timeout (30 min)
   - **MUD Creator**: Full access to Creator area (write rooms, items, scripts, NPCs, etc.)
-  - **MUD Admin**: All Creator access plus User Management (promote/demote/ban users)
+  - **MUD Admin**: All Creator access plus User Management (promote/demote/ban users), `POST /api/ops/:action`, and `POST /api/audit/:id/undo`
 - Admin role is assigned exclusively via `MUD_ADMIN_OAUTHID` environment variable
 - Banned users are rejected at the auth middleware layer (403 on all authenticated endpoints)
 - Ban enforcement stores both Reference ID and email for cross-account prevention
