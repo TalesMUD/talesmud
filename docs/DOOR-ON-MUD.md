@@ -295,7 +295,7 @@ The session hook (`pkg/presentation/doorview`) is a view:
 
 Screen art files live in the world pack (`screens/<id>.ans`) and are looked up by room id. Missing art is a text frame of the room name and description. The classic client never reads these files.
 
-Local auth pages in that client post to `/api/auth/register`, `/api/auth/login`, `/api/auth/forgot`, `/api/auth/reset`. Tokens are the local session tokens. Forgot-password writes the outbox file and does not return the token in the response.
+Local auth pages in that client post to `/api/auth/register`, `/api/auth/login`, `/api/auth/forgot`, `/api/auth/reset`. Login returns the local session token. Register returns the same body for a new account and for a taken username or email, and does not return a token; the page asks the player to sign in. Forgot-password writes the outbox file and does not return the token in the response.
 
 ## Retiring pkg/door
 
