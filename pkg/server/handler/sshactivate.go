@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -10,12 +11,17 @@ import (
 	"github.com/talesmud/talesmud/pkg/gamemode"
 )
 
-// Activate serves the local sign-in page. Classic Auth0 mode is handled by
-// the play client; this handler answers only when local accounts are on.
+// Activate serves the local sign-in page. A classic Auth0 process redirects
+// into the play client, which already holds the Auth0 session.
 func Activate(local bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !local {
-			c.Status(http.StatusNotFound)
+			code := strings.TrimSpace(c.Query("code"))
+			target := "/play/"
+			if code != "" {
+				target = "/play/?activate=" + url.QueryEscape(code)
+			}
+			c.Redirect(http.StatusFound, target)
 			return
 		}
 		setActivateHeaders(c)

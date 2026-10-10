@@ -68,9 +68,9 @@ func TestActivatePageIsLocalAndPrefills(t *testing.T) {
 	r.GET("/activate", Activate(true))
 	r.GET("/off", Activate(false))
 	rec := httptest.NewRecorder()
-	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/off", nil))
-	if rec.Code != http.StatusNotFound {
-		t.Fatalf("non-local %d", rec.Code)
+	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/off?code=BCDF-GHJK", nil))
+	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/play/?activate=BCDF-GHJK" {
+		t.Fatalf("non-local %d %s", rec.Code, rec.Header().Get("Location"))
 	}
 	rec = httptest.NewRecorder()
 	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/activate?code=BCDF-GHJK", nil))
