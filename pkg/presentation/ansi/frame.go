@@ -15,6 +15,12 @@ const (
 	ansiTitle = "\x1b[1;36m"
 	ansiDim   = "\x1b[0;37m"
 	ansiBar   = "\x1b[30;46m"
+	ansiRails = "\x1b[0;36m"
+	ansiHot   = "\x1b[1;37m"
+
+	// StyleRails is the pack-selected frame: a dithered location rail,
+	// a status row the caller already coloured, and a half-block rule.
+	StyleRails = "rails"
 )
 
 // Frame is one full-screen page pushed over the existing WebSocket.
@@ -41,6 +47,11 @@ type Page struct {
 	InputMode string
 	ScreenID  string
 	Keys      map[string]string
+	// Style selects the chrome. Empty keeps the classic bar.
+	Style string
+	// Status is the precoloured status row for StyleRails.
+	// The caller owns the words. This package only fits the row.
+	Status string
 }
 
 // Render builds one frame. An empty title leaves the left side of the bar blank.
@@ -54,9 +65,15 @@ func Render(page Page) Frame {
 		accepts = []string{"line"}
 	}
 	lines := make([]string, Rows)
-	lines[0] = titleBar(page.Title, "")
-	lines[1] = fit(ansiTitle+page.Location+ansiReset, Cols)
-	lines[2] = fit(ansiDim+strings.Repeat("-", Cols)+ansiReset, Cols)
+	if page.Style == StyleRails {
+		lines[0] = railsBar(page.Location, page.Title)
+		lines[1] = fit(page.Status, Cols)
+		lines[2] = fit(railsRule(), Cols)
+	} else {
+		lines[0] = titleBar(page.Title, "")
+		lines[1] = fit(ansiTitle+page.Location+ansiReset, Cols)
+		lines[2] = fit(ansiDim+strings.Repeat("-", Cols)+ansiReset, Cols)
+	}
 	const bodyRows = 19
 	for i := 0; i < bodyRows; i++ {
 		src := ""
@@ -88,6 +105,48 @@ func Render(page Page) Frame {
 		Accepts:   accepts,
 		Keys:      page.Keys,
 	}
+}
+
+func railsBar(location, title string) string {
+	loc := strings.TrimSpace(location)
+	right := strings.TrimSpace(title)
+	tail := 0
+	if right != "" {
+		tail = 1 + utf8.RuneCountInString(right)
+	}
+	// "░▒▓ " + name + " ▓▒░" is 8 runes plus the name.
+	maxLoc := Cols - 8 - tail
+	if maxLoc < 1 {
+		right = ""
+		tail = 0
+		maxLoc = Cols - 8
+	}
+	if utf8.RuneCountInString(loc) > maxLoc {
+		loc = clipRunes(loc, maxLoc)
+	}
+	gap := Cols - (8 + utf8.RuneCountInString(loc)) - tail
+	if gap < 0 {
+		gap = 0
+	}
+	var b strings.Builder
+	b.WriteString(ansiRails)
+	b.WriteString("░▒▓ ")
+	b.WriteString(ansiHot)
+	b.WriteString(loc)
+	b.WriteString(ansiRails)
+	b.WriteString(" ▓▒░")
+	b.WriteString(strings.Repeat("░", gap))
+	if right != "" {
+		b.WriteString(ansiDim)
+		b.WriteByte(' ')
+		b.WriteString(right)
+	}
+	b.WriteString(ansiReset)
+	return fit(b.String(), Cols)
+}
+
+func railsRule() string {
+	return ansiRails + strings.Repeat("▀", Cols) + ansiReset
 }
 
 func titleBar(left, right string) string {

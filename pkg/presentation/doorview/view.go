@@ -408,6 +408,9 @@ func (v *View) paint(user *entities.User, send func(any)) {
 		InputMode: "hotkey",
 		Prompt:    ">",
 	}
+	if railsOn() {
+		page.Style = ansi.StyleRails
+	}
 	phase := v.phaseOf(user.ID)
 	if phase == "name" || phase == "amount" || v.peekLine(user.ID) {
 		page.InputMode = "line"
@@ -453,8 +456,12 @@ func (v *View) paint(user *entities.User, send func(any)) {
 			hp, maxHP = cur, mx
 		}
 	}
-	pinned := []string{
-		headerLine(char.Level, hp, maxHP, char.Gold, char.XP),
+	rails := page.Style == ansi.StyleRails
+	var pinned []string
+	if rails {
+		page.Status = statusStrip(char.Level, hp, maxHP, char.Gold, char.XP)
+	} else {
+		pinned = []string{headerLine(char.Level, hp, maxHP, char.Gold, char.XP)}
 	}
 	var chrome []string
 	chrome = append(chrome, v.resourceLines(char.ID)...)
@@ -477,19 +484,28 @@ func (v *View) paint(user *entities.User, send func(any)) {
 	packCount := len(packBinds)
 	binds := applyOpenExits(packBinds, room, char)
 	catalog := v.catalogLines(user.ID, char, room, selling)
+	var art string
+	if brief == "" && room != nil {
+		art = v.screenArtFor(room)
+	}
 	if brief != "" {
 		pinned = append(pinned, brief)
+	} else if len(catalog) > 0 && hasInterior(art) {
+		chrome = append(chrome, insetCatalog(art, catalog)...)
 	} else if len(catalog) > 0 {
 		chrome = append(chrome, catalog...)
-	} else if room != nil {
-		if art := v.screenArtFor(room); art != "" {
-			chrome = append(chrome, strings.Split(art, "\n")...)
-		}
+	} else if art != "" {
+		chrome = append(chrome, strings.Split(art, "\n")...)
 	}
 	if note := v.peekNotice(user.ID); note != "" {
 		lines := wrapPlain(note, 78)
 		if len(lines) > 2 {
 			lines = lines[:2]
+		}
+		if rails {
+			for i, line := range lines {
+				lines[i] = "\x1b[1;37m" + line + "\x1b[0m"
+			}
 		}
 		chrome = append(chrome, lines...)
 	}
@@ -498,13 +514,22 @@ func (v *View) paint(user *entities.User, send func(any)) {
 	} else {
 		page.Location = room.Name
 		if len(catalog) == 0 && room.Description != "" {
-			lines := wrapPlain(room.Description, 78)
+			width := 78
+			if rails {
+				width = 76
+			}
+			lines := wrapPlain(room.Description, width)
 			limit := 2
 			if brief != "" {
 				limit = 1
 			}
 			if len(lines) > limit {
 				lines = lines[:limit]
+			}
+			if rails {
+				for i, line := range lines {
+					lines[i] = "\x1b[0;36m▐ \x1b[0;37m" + line + "\x1b[0m"
+				}
 			}
 			chrome = append(chrome, lines...)
 		}
@@ -517,7 +542,11 @@ func (v *View) paint(user *entities.User, send func(any)) {
 				names = append(names, ex.Name)
 			}
 			if len(names) > 0 {
-				chrome = append(chrome, "Exits: "+strings.Join(names, ", "))
+				line := "Exits: " + strings.Join(names, ", ")
+				if rails {
+					line = "\x1b[1;36mExits:\x1b[0;36m " + strings.Join(names, ", ") + "\x1b[0m"
+				}
+				chrome = append(chrome, line)
 			}
 		}
 		if packCount == 0 && len(catalog) == 0 && room.Actions != nil && len(*room.Actions) > 0 {
@@ -528,7 +557,11 @@ func (v *View) paint(user *entities.User, send func(any)) {
 				}
 			}
 			if len(names) > 0 {
-				chrome = append(chrome, "Actions: "+strings.Join(names, ", "))
+				line := "Actions: " + strings.Join(names, ", ")
+				if rails {
+					line = "\x1b[1;36mActions:\x1b[0;37m " + strings.Join(names, ", ") + "\x1b[0m"
+				}
+				chrome = append(chrome, line)
 			}
 		}
 		if len(catalog) == 0 && v.Game.NPCManager != nil {
@@ -539,14 +572,18 @@ func (v *View) paint(user *entities.User, send func(any)) {
 				}
 			}
 			if len(npcs) > 0 {
-				chrome = append(chrome, "Here: "+strings.Join(npcs, ", "))
+				line := "Here: " + strings.Join(npcs, ", ")
+				if rails {
+					line = "\x1b[1;33mHere:\x1b[1;37m " + strings.Join(npcs, ", ") + "\x1b[0m"
+				}
+				chrome = append(chrome, line)
 			}
 		}
 	}
 	if len(binds) > 0 {
 		page.Footer = commandFooter(room, char)
 		page.Keys = map[string]string{}
-		chrome = append(chrome, legendLines(binds)...)
+		chrome = append(chrome, legendLines(binds, rails)...)
 		for key, b := range binds {
 			if b.Command != "" {
 				page.Keys[key] = b.Command
@@ -556,7 +593,11 @@ func (v *View) paint(user *entities.User, send func(any)) {
 		page.Footer = idleFooter(room, char)
 	}
 	if sheet := v.peekSheet(user.ID); len(sheet) > 0 {
-		page.Body = fitBody(pinned[:1], nil, sheet, 19)
+		pin := []string{}
+		if !rails && len(pinned) > 0 {
+			pin = pinned[:1]
+		}
+		page.Body = fitBody(pin, nil, sheet, 19)
 	} else {
 		page.Body = fitBody(pinned, chrome, append(v.peekRecent(user.ID), v.peekFlash(user.ID)...), 19)
 	}
@@ -607,7 +648,7 @@ func (v *View) characterLines(user *entities.User) []string {
 	return lines
 }
 
-func legendLines(binds map[string]keyBind) []string {
+func legendLines(binds map[string]keyBind, styled bool) []string {
 	keys := make([]string, 0, len(binds))
 	for key := range binds {
 		keys = append(keys, key)
@@ -623,10 +664,17 @@ func legendLines(binds map[string]keyBind) []string {
 		if key == "?" {
 			shown = "?"
 		}
+		if styled {
+			parts = append(parts, "\x1b[1;33m"+shown+"\x1b[0;37m "+label+"\x1b[0m")
+			continue
+		}
 		parts = append(parts, shown+" "+label)
 	}
 	if len(parts) == 0 {
 		return nil
+	}
+	if styled {
+		return wrapEntries(parts, 78)
 	}
 	return wrapPlain(strings.Join(parts, "   "), 78)
 }
@@ -642,8 +690,9 @@ func screenArt(roomID string) string {
 	}
 	text := strings.ReplaceAll(string(raw), "\r\n", "\n")
 	lines := strings.Split(text, "\n")
-	if len(lines) > 8 {
-		lines = lines[:8]
+	limit := artRowLimit()
+	if len(lines) > limit {
+		lines = lines[:limit]
 	}
 	for len(lines) > 0 && strings.TrimSpace(stripANSI(lines[len(lines)-1])) == "" {
 		lines = lines[:len(lines)-1]

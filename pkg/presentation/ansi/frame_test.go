@@ -50,3 +50,35 @@ func TestClipKeepsMultibyteBarsIntact(t *testing.T) {
 		t.Fatalf("bar runes = %d", strings.Count(frame.ANSI, "═"))
 	}
 }
+
+func TestRailsReplacesTheDashedRule(t *testing.T) {
+	classic := Render(Page{Title: "Sample", Location: "Market", Body: []string{"A stall."}})
+	if !strings.Contains(classic.ANSI, strings.Repeat("-", 80)) {
+		t.Fatal("classic frame lost the dashed rule")
+	}
+	frame := Render(Page{
+		Style:    StyleRails,
+		Title:    "Sample",
+		Location: "Market",
+		Status:   "\x1b[0;37mLevel \x1b[1;37m3\x1b[0;37m   HP \x1b[1;32m11/20\x1b[0m",
+		Body:     []string{"A stall."},
+		Prompt:   ">",
+		Footer:   "n north",
+	})
+	if frame.Cols != 80 || frame.Rows != 25 {
+		t.Fatalf("%+v", frame)
+	}
+	if strings.Contains(frame.ANSI, strings.Repeat("-", 40)) {
+		t.Fatal("rails kept a dashed rule")
+	}
+	if !strings.Contains(frame.ANSI, "Market") || !strings.Contains(frame.ANSI, "11/20") || !strings.Contains(frame.ANSI, "▀") || !strings.Contains(frame.ANSI, "░") {
+		t.Fatalf("rails frame:\n%s", frame.ANSI)
+	}
+	if !utf8.ValidString(frame.ANSI) {
+		t.Fatal("rails frame is not utf-8")
+	}
+	lines := strings.Split(strings.TrimPrefix(frame.ANSI, "\x1b[2J\x1b[H"), "\r\n")
+	if len(lines) != 25 {
+		t.Fatalf("lines = %d", len(lines))
+	}
+}

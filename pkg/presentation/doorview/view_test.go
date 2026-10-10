@@ -61,7 +61,8 @@ func TestViewPaintsTheLiveRoom(t *testing.T) {
 			frame = f
 		}
 	})
-	if frame.Type != "door_frame" || !strings.Contains(frame.ANSI, "Market Square") || !strings.Contains(frame.ANSI, "HP 11/20") {
+	plain := stripANSI(frame.ANSI)
+	if frame.Type != "door_frame" || !strings.Contains(plain, "Market Square") || !strings.Contains(plain, "HP 11/20") {
 		t.Fatalf("frame = %q", frame.ANSI)
 	}
 	view.OnInput(user, "l", func(msg any) {
@@ -122,7 +123,8 @@ func TestViewNamePromptCreatesAndSelects(t *testing.T) {
 			frame = f
 		}
 	})
-	if !strings.Contains(frame.ANSI, "Market Square") || !strings.Contains(frame.ANSI, "N North") || !strings.Contains(frame.ANSI, "Actions: news") {
+	entered := stripANSI(frame.ANSI)
+	if !strings.Contains(entered, "Market Square") || !strings.Contains(entered, "N North") || !strings.Contains(entered, "Actions: news") {
 		t.Fatalf("created character did not enter the start room:\n%s", frame.ANSI)
 	}
 	if user.LastCharacter == "" {
@@ -228,7 +230,7 @@ func TestKeyMapBindsRoomAndLeavesDownAlone(t *testing.T) {
 			frame = f
 		}
 	})
-	if frame.Keys["f"] != "news" || frame.Keys["d"] != "" || !strings.Contains(frame.ANSI, "F News") {
+	if frame.Keys["f"] != "news" || frame.Keys["d"] != "" || !strings.Contains(stripANSI(frame.ANSI), "F News") {
 		t.Fatalf("keys=%v frame:\n%s", frame.Keys, frame.ANSI)
 	}
 	view.OnInput(user, "f", func(msg any) {
@@ -558,6 +560,124 @@ func TestStatsSheetShowsHitPointsGoldGearAndGems(t *testing.T) {
 		if !strings.Contains(frame.ANSI, want) {
 			t.Fatalf("stats missing %q:\n%s", want, frame.ANSI)
 		}
+	}
+}
+
+func TestStatusStripMatchesTheHeader(t *testing.T) {
+	plain := stripANSI(statusStrip(3, 11, 20, 6, 40))
+	if plain != headerLine(3, 11, 20, 6, 40) {
+		t.Fatalf("strip %q header %q", plain, headerLine(3, 11, 20, 6, 40))
+	}
+	if !strings.Contains(statusStrip(1, 4, 20, 0, 0), "\x1b[1;31m") {
+		t.Fatal("low hit points stayed green")
+	}
+	if !strings.Contains(statusStrip(1, 8, 20, 0, 0), "\x1b[1;33m") {
+		t.Fatal("mid hit points were not yellow")
+	}
+	if !strings.Contains(statusStrip(1, 12, 20, 0, 0), "\x1b[1;32m") {
+		t.Fatal("high hit points were not green")
+	}
+}
+
+func TestInsetCatalogSkipsPictureRows(t *testing.T) {
+	interior := "║" + strings.Repeat(" ", 20) + "║"
+	picture := "║" + "████████" + strings.Repeat(" ", 12) + "║"
+	art := strings.Join([]string{
+		"████ ANVIL ████",
+		picture,
+		interior,
+		interior,
+		"╚════════════════════╝",
+	}, "\n")
+	out := insetCatalog(art, []string{"1 knife", "2 sword", "3 extra"})
+	plain := stripANSI(strings.Join(out, "\n"))
+	if !strings.Contains(plain, "1 knife") || !strings.Contains(plain, "2 sword") || !strings.Contains(plain, "3 extra") {
+		t.Fatalf("catalog missing:\n%s", plain)
+	}
+	if !strings.Contains(plain, "████████") {
+		t.Fatalf("picture row was overwritten:\n%s", plain)
+	}
+	if strings.Contains(out[1], "knife") {
+		t.Fatal("picture row received an item")
+	}
+}
+
+func TestRailsLayoutKeepsTheStatusWords(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "screens"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "screens", "layout.yaml"), []byte("style: rails\nart_rows: 12\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var art strings.Builder
+	for i := 1; i <= 13; i++ {
+		fmt.Fprintf(&art, "ROW%02d\n", i)
+	}
+	if err := os.WriteFile(filepath.Join(root, "screens", "square.ans"), []byte(art.String()), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "keymap.yaml"), []byte("rooms:\n  square:\n    f:\n      command: news\n      label: News\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := filepath.Join(t.TempDir(), "mode.yaml")
+	if err := os.WriteFile(cfg, []byte("world_pack: "+root+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	prev := gamemode.Current()
+	if err := gamemode.ApplyFile(cfg); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		restore := filepath.Join(t.TempDir(), "restore.yaml")
+		_ = os.WriteFile(restore, []byte("presentation: "+prev.Presentation+"\nworld_pack: \""+prev.WorldPack+"\"\n"), 0o644)
+		_ = gamemode.ApplyFile(restore)
+	})
+
+	client, err := dbsqlite.Open(filepath.Join(t.TempDir(), "view.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	facade := service.NewFacade(repository.NewSQLiteFactory(client), nil)
+	if _, err := facade.RoomsService().Import(&rooms.Room{
+		Entity:      &entities.Entity{ID: "square"},
+		Name:        "Market Square",
+		Description: "Stalls and steam.",
+		Exits:       &rooms.Exits{{Name: "north", Target: "square"}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	created, err := facade.CharactersService().Store(&characters.Character{
+		Entity:           &entities.Entity{ID: "hero"},
+		Name:             "Hero",
+		BelongsUser:      *traits.BelongsToUser("user-1"),
+		CurrentRoom:      traits.CurrentRoom{CurrentRoomID: "square"},
+		Level:            3,
+		MaxHitPoints:     20,
+		CurrentHitPoints: 11,
+		Gold:             6,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	user := &entities.User{Entity: &entities.Entity{ID: "user-1"}, RefID: "user-1", LastCharacter: created.ID}
+	view := &View{Game: game.New(facade), Title: "Sample"}
+	var frame ansi.Frame
+	view.OnConnect(user, func(msg any) {
+		if f, ok := msg.(ansi.Frame); ok {
+			frame = f
+		}
+	})
+	plain := stripANSI(frame.ANSI)
+	if !strings.Contains(plain, "HP 11/20") || !strings.Contains(plain, "N North") || !strings.Contains(plain, "Stalls and steam.") {
+		t.Fatalf("rails words:\n%s", plain)
+	}
+	if !strings.Contains(frame.ANSI, "▀") || strings.Contains(frame.ANSI, strings.Repeat("-", 40)) {
+		t.Fatal("rails chrome missing")
+	}
+	if strings.Contains(plain, "ROW13") || !strings.Contains(plain, "ROW12") {
+		t.Fatalf("art clip:\n%s", plain)
 	}
 }
 
