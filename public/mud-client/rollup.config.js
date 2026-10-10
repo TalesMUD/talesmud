@@ -48,6 +48,17 @@ export default [{
 		clearScreen: false
 	}
 }, {
+	// Standalone /activate page (SSH device sign-in). Component CSS stays inside
+	// the JS so it never touches the play client's extra.css.
+	input: 'src/activate/main.js',
+	output: { sourcemap: true, format: 'iife', name: 'activatepage', file: 'public/activate.js' },
+	plugins: [
+		svelte({ compilerOptions: { dev: !production, css: true }, emitCss: false }),
+		resolve({ browser: true, dedupe: ['svelte'], extensions: ['.svelte', '.mjs', '.js', '.json'] }),
+		commonjs(),
+		production && terser()
+	]
+}, {
  input:'src/game/widgets/worldmapWorker.js',
  output:{file:'public/worldmap-worker.js',format:'iife',sourcemap:true},
  plugins:[resolve({browser:true}),production&&terser()]

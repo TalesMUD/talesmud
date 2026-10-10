@@ -75,3 +75,4 @@ tales
 # Flutter APK playtest builds (rsync to VPS; do not commit)
 public/landing/app/downloads/*.apk
 public/landing/app/downloads/*.apk.sha256
+public/mud-client/public/activate.js.map

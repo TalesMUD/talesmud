@@ -35,6 +35,18 @@ func (command *SelectCharacterCommand) Execute(game def.GameCtrl, message *messa
 	parts := strings.Fields(message.Data)
 	characterName := strings.Join(parts[1:], " ")
 
+	// A character in a fight stays the active one until the fight ends.
+	// Switching away left the old fight running on auto-attack while its
+	// turn prompts, status lines and defeat went to the same user session.
+	if current := activeCharacterID(message); current != "" {
+		if engine := game.GetCombatEngine(); engine != nil && engine.IsPlayerInCombat(current) {
+			if name := activeCharacterName(message); name == "" || name != characterName {
+				game.SendMessage() <- message.Reply("You can't switch characters during a fight. Flee or finish the fight first.")
+				return true
+			}
+		}
+	}
+
 	if characters, err := game.GetFacade().CharactersService().FindByName(characterName); err == nil {
 
 		for _, character := range characters {
@@ -274,4 +286,25 @@ func sendQuestLogToPlayer(game def.GameCtrl, userID, characterID string) {
 
 	// Send quest log message
 	game.SendMessage() <- m.NewQuestLogMessage(userID, entries)
+}
+
+// activeCharacterID is the character this session is playing right now.
+func activeCharacterID(message *messages.Message) string {
+	if message == nil {
+		return ""
+	}
+	if message.Character != nil && message.Character.Entity != nil && message.Character.ID != "" {
+		return message.Character.ID
+	}
+	if message.FromUser != nil {
+		return message.FromUser.LastCharacter
+	}
+	return ""
+}
+
+func activeCharacterName(message *messages.Message) string {
+	if message == nil || message.Character == nil {
+		return ""
+	}
+	return message.Character.Name
 }

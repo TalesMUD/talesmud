@@ -70,10 +70,22 @@ func TestActivatePageIsLocalAndPrefills(t *testing.T) {
 	r := gin.New()
 	r.GET("/activate", Activate(true))
 	r.GET("/off", Activate(false))
+	saved := classicActivatePage
+	defer func() { classicActivatePage = saved }()
+	classicActivatePage = func() []byte { return nil }
 	rec := httptest.NewRecorder()
 	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/off?code=BCDF-GHJK", nil))
 	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/play/?activate=BCDF-GHJK" {
-		t.Fatalf("non-local %d %s", rec.Code, rec.Header().Get("Location"))
+		t.Fatalf("non-local fallback %d %s", rec.Code, rec.Header().Get("Location"))
+	}
+	classicActivatePage = func() []byte { return []byte("<!doctype html><title>activate</title>") }
+	rec = httptest.NewRecorder()
+	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/off?code=BCDF-GHJK", nil))
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "<title>activate</title>") {
+		t.Fatalf("classic page %d %s", rec.Code, rec.Body.String())
+	}
+	if rec.Header().Get("Cache-Control") != "no-store" || rec.Header().Get("X-Frame-Options") != "DENY" {
+		t.Fatalf("classic headers %v", rec.Header())
 	}
 	rec = httptest.NewRecorder()
 	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/activate?code=BCDF-GHJK", nil))
