@@ -38,9 +38,9 @@ func (s *liveSession) applyAuth(conn *ssh.ServerConn) {
 }
 
 // publicKeyAuth decides whether a signature is worth checking.
-// An unknown key is remembered as an unverified candidate and rejected, so
-// VerifiedPublicKeyCallback does not run for it. x/crypto calls that callback
-// only after PublicKeyCallback returns a nil error.
+// An unknown key returns a nil error so the library requires a signature.
+// The fingerprint is recorded only in verifiedKeyAuth, after that signature
+// checks. A query that is never signed is not an offer.
 func (g *Gate) publicKeyAuth(meta ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
 	if g == nil || key == nil || g.deps.Keys == nil {
 		return nil, errors.New("unknown key")
@@ -70,13 +70,26 @@ func (g *Gate) publicKeyAuth(meta ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Per
 			}}, nil
 		}
 	}
-	g.noteFP(meta, fp)
-	return nil, errors.New("unknown key")
+	return &ssh.Permissions{Extensions: map[string]string{
+		"fp":  fp,
+		"via": "proof",
+	}}, nil
 }
 
 // verifiedKeyAuth runs only after the client proves it holds the private key.
 func (g *Gate) verifiedKeyAuth(meta ssh.ConnMetadata, key ssh.PublicKey, perms *ssh.Permissions, _ string) (*ssh.Permissions, error) {
-	if g == nil || perms == nil || perms.Extensions == nil || g.deps.Users == nil {
+	if g == nil || perms == nil || perms.Extensions == nil {
+		return nil, errors.New("refused")
+	}
+	if perms.Extensions["via"] == "proof" {
+		if key != nil {
+			fp := ssh.FingerprintSHA256(key)
+			line := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(key)))
+			g.noteSigned(meta, fp, line)
+		}
+		return nil, errors.New("unlinked key")
+	}
+	if g.deps.Users == nil {
 		return nil, errors.New("refused")
 	}
 	userRef := perms.Extensions["user"]
@@ -85,6 +98,10 @@ func (g *Gate) verifiedKeyAuth(meta ssh.ConnMetadata, key ssh.PublicKey, perms *
 		return nil, errors.New("refused")
 	}
 	if key != nil {
+		signed := ssh.FingerprintSHA256(key)
+		if want := perms.Extensions["fp"]; want != "" && want != signed {
+			return nil, errors.New("refused")
+		}
 		g.setLine(meta, strings.TrimSpace(string(ssh.MarshalAuthorizedKey(key))))
 	}
 	return perms, nil
@@ -147,7 +164,8 @@ func accountLabel(user *entities.User) string {
 	return name
 }
 
-func (g *Gate) noteFP(meta ssh.ConnMetadata, fp string) {
+// noteSigned records a fingerprint only after its signature verified.
+func (g *Gate) noteSigned(meta ssh.ConnMetadata, fp, line string) {
 	if g == nil || fp == "" {
 		return
 	}
@@ -158,13 +176,16 @@ func (g *Gate) noteFP(meta ssh.ConnMetadata, fp string) {
 	if g.notes == nil {
 		g.notes = map[string]*authNote{}
 	}
-	if len(g.notes) > 1024 {
+	if len(g.notes) > 1024 && g.notes[key] == nil {
 		return
 	}
 	n := g.notes[key]
 	if n == nil {
 		n = &authNote{at: time.Now()}
 		g.notes[key] = n
+	}
+	if line != "" {
+		n.line = line
 	}
 	for _, have := range n.fps {
 		if have == fp {
@@ -175,6 +196,21 @@ func (g *Gate) noteFP(meta ssh.ConnMetadata, fp string) {
 		return
 	}
 	n.fps = append(n.fps, fp)
+}
+
+// signedFingerprint is the key that produced a signature. An unsigned offer
+// is not used.
+func signedFingerprint(line string, offers []string) string {
+	if strings.TrimSpace(line) != "" {
+		pub, _, _, _, err := ssh.ParseAuthorizedKey([]byte(strings.TrimSpace(line)))
+		if err == nil && pub != nil {
+			return ssh.FingerprintSHA256(pub)
+		}
+	}
+	if len(offers) > 0 {
+		return offers[0]
+	}
+	return ""
 }
 
 func (g *Gate) setLine(meta ssh.ConnMetadata, line string) {

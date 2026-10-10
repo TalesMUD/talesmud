@@ -210,6 +210,13 @@ func (h *frameHook) lastUser() *entities.User {
 	return h.last
 }
 
+func (h *frameHook) clear() {
+	h.mu.Lock()
+	h.last = nil
+	h.keys = nil
+	h.mu.Unlock()
+}
+
 func waitKey(t *testing.T, h *frameHook, key string) {
 	t.Helper()
 	deadline := time.Now().Add(10 * time.Second)

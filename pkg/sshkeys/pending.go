@@ -29,6 +29,7 @@ func NewPending(ttl time.Duration) *Pending {
 }
 
 // Offer records that this account asked to link this fingerprint.
+// A live offer for a different account is left in place.
 func (p *Pending) Offer(fp, userRef string) (string, bool) {
 	if p == nil || fp == "" || userRef == "" {
 		return "", false
@@ -36,6 +37,9 @@ func (p *Pending) Offer(fp, userRef string) (string, bool) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.purge()
+	if row, found := p.byFP[fp]; found && row.UserRef != userRef {
+		return "", false
+	}
 	id := fp
 	p.byFP[fp] = pendingRow{ID: id, FP: fp, UserRef: userRef, Expires: p.now().Add(p.ttl)}
 	return id, true

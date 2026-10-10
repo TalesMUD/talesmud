@@ -101,6 +101,15 @@ func TestPendingOffer(t *testing.T) {
 	if ref, _, ok := p.Get("SHA256:abc"); !ok || ref != "local:ada" {
 		t.Fatal(ref, ok)
 	}
+	if _, ok := p.Offer("SHA256:abc", "local:bea"); ok {
+		t.Fatal("overwrote another account")
+	}
+	if ref, _, ok := p.Get("SHA256:abc"); !ok || ref != "local:ada" {
+		t.Fatalf("overwrite stuck %s %v", ref, ok)
+	}
+	if _, ok := p.Offer("SHA256:abc", "local:ada"); !ok {
+		t.Fatal("same account refresh")
+	}
 	p.Drop("SHA256:abc")
 	if _, _, ok := p.Get("SHA256:abc"); ok {
 		t.Fatal("dropped")

@@ -210,11 +210,13 @@ func (s *liveSession) finishDevice(in <-chan []byte, view *termout.Screen, cs *t
 	return true
 }
 
-// offerLink asks the account owner to remember an unverified key.
+// offerLink asks the account owner to remember the key that signed.
 // Y stores a pending link only. The key row is written on the next connection,
-// after the signature is verified and the owner presses Y again.
+// after the signature is verified and the owner answers Y again.
+// N leaves the device-confirmed account in the game and stores nothing.
 func (s *liveSession) offerLink(in <-chan []byte, view *termout.Screen, cs *termout.Charset) bool {
-	if len(s.offers) == 0 || s.gate.deps.Pending == nil || !s.gate.cfg.Keys.Enabled {
+	fp := signedFingerprint(s.keyLine, s.offers)
+	if fp == "" || s.gate.deps.Pending == nil || !s.gate.cfg.Keys.Enabled {
 		return true
 	}
 	user, err := s.gate.deps.Users.FindByRefID(s.userRef)
@@ -222,7 +224,6 @@ func (s *liveSession) offerLink(in <-chan []byte, view *termout.Screen, cs *term
 		s.refuse(view, "Sign-in was refused.\r\n")
 		return false
 	}
-	fp := s.offers[0]
 	prompt := fmt.Sprintf("Remember this computer? Link key %s to %s [Y/N]\r\n", MaskFingerprint(fp), accountLabel(user))
 	answer, ok := s.askYN(in, prompt, view, cs)
 	if !ok || answer == "q" {
@@ -240,8 +241,9 @@ func (s *liveSession) offerLink(in <-chan []byte, view *termout.Screen, cs *term
 	return s.writeRaw([]byte("Key not linked.\r\n"))
 }
 
-// confirmPending asks the key holder to link the key to the named account.
-// N drops the pending link and still admits that account for this session.
+// confirmPending asks the key holder to link the signed key to the named account.
+// Y admits that account after the key row is written. N, a timeout, or quitting
+// drops the pending row and disconnects without admitting it.
 func (s *liveSession) confirmPending(in <-chan []byte, view *termout.Screen, cs *termout.Charset) bool {
 	if s.gate.deps.Users == nil {
 		s.refuse(view, "Sign-in was refused.\r\n")
@@ -252,30 +254,40 @@ func (s *liveSession) confirmPending(in <-chan []byte, view *termout.Screen, cs 
 		s.refuse(view, "Sign-in was refused.\r\n")
 		return false
 	}
-	prompt := fmt.Sprintf("Link key %s to account %s? %s [Y/N]\r\n", MaskFingerprint(s.fp), accountLabel(user), linkQuestion)
-	answer, ok := s.askYN(in, prompt, view, cs)
-	if !ok || answer == "q" {
-		s.refuse(view, "Goodbye.\r\n")
-		return false
-	}
-	if answer == "y" {
-		if s.gate.deps.Keys == nil || s.keyLine == "" {
-			return s.writeRaw([]byte("The key was not linked.\r\n"))
-		}
-		max := s.gate.cfg.Keys.MaxPerAccount
-		if _, err := s.gate.deps.Keys.Add(s.userRef, s.keyLine, "ssh", "device", max); err != nil {
-			log.WithFields(log.Fields{"ip": s.ip, "userId": user.ID, "method": "link_pending"}).Info("ssh link refused")
-			return s.writeRaw([]byte("The key was not linked.\r\n"))
-		}
-		if s.gate.deps.Pending != nil {
+	drop := func() {
+		if s.gate.deps.Pending != nil && s.fp != "" {
 			s.gate.deps.Pending.Drop(s.fp)
 		}
-		return s.writeRaw([]byte("Key linked.\r\n"))
 	}
-	if s.gate.deps.Pending != nil {
-		s.gate.deps.Pending.Drop(s.fp)
+	prompt := fmt.Sprintf("Link key %s to account %s? %s [Y/N]\r\n", MaskFingerprint(s.fp), accountLabel(user), linkQuestion)
+	answer, ok := s.askYN(in, prompt, view, cs)
+	if !ok || answer != "y" {
+		drop()
+		if answer == "n" {
+			s.refuse(view, "Key not linked.\r\n")
+		} else {
+			s.refuse(view, "Goodbye.\r\n")
+		}
+		return false
 	}
-	return s.writeRaw([]byte("Key not linked.\r\n"))
+	signed := signedFingerprint(s.keyLine, nil)
+	if s.gate.deps.Keys == nil || signed == "" || signed != s.fp {
+		drop()
+		s.refuse(view, "The key was not linked.\r\n")
+		return false
+	}
+	max := s.gate.cfg.Keys.MaxPerAccount
+	if _, err := s.gate.deps.Keys.Add(s.userRef, s.keyLine, "ssh", "device", max); err != nil {
+		log.WithFields(log.Fields{"ip": s.ip, "userId": user.ID, "method": "link_pending"}).Info("ssh link refused")
+		drop()
+		s.refuse(view, "The key was not linked.\r\n")
+		return false
+	}
+	drop()
+	if !s.writeRaw([]byte("Key linked.\r\n")) {
+		return false
+	}
+	return true
 }
 
 func (s *liveSession) askYN(in <-chan []byte, prompt string, view *termout.Screen, cs *termout.Charset) (string, bool) {
@@ -301,14 +313,8 @@ func (s *liveSession) askYN(in <-chan []byte, prompt string, view *termout.Scree
 			if !ok {
 				return "", false
 			}
-			if isQuit(chunk) && !isLetter(chunk, 'y') && !isLetter(chunk, 'n') {
-				return "q", true
-			}
-			if isLetter(chunk, 'y') {
-				return "y", true
-			}
-			if isLetter(chunk, 'n') {
-				return "n", true
+			if answer := exactYN(chunk); answer != "" {
+				return answer, true
 			}
 		}
 	}
@@ -397,6 +403,21 @@ func loadActivateTemplate(cfg gamemode.SSHConfig) string {
 		return genericActivateTemplate()
 	}
 	return text
+}
+
+// exactYN accepts only a whole chunk of y, n, or quit, after a trailing CR/LF.
+func exactYN(chunk []byte) string {
+	text := strings.TrimRight(string(chunk), "\r\n")
+	switch text {
+	case "y", "Y":
+		return "y"
+	case "n", "N":
+		return "n"
+	case "q", "Q", "\x03", "\x04":
+		return "q"
+	default:
+		return ""
+	}
 }
 
 func isLetter(chunk []byte, want byte) bool {
