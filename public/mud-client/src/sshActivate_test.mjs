@@ -1,5 +1,5 @@
 import assert from "assert";
-import { ACTIVATE_KEY, clearActivateCode, readActivateCode } from "./sshActivate.js";
+import { ACTIVATE_KEY, clearActivateCode, readActivateCode, stripActivateQuery } from "./sshActivate.js";
 
 function mem() {
   const data = new Map();
@@ -21,4 +21,24 @@ function mem() {
 
 {
   assert.equal(readActivateCode("", null), "");
+}
+
+{
+  let replaced = "";
+  const next = stripActivateQuery(
+    "https://veilspan.example/play/?code=auth0-code&activate=BCDF-GHJK",
+    (_data, _title, url) => { replaced = url; },
+  );
+  assert.equal(next, "/play/?code=auth0-code");
+  assert.equal(replaced, "/play/?code=auth0-code");
+  assert.equal(replaced.includes("BCDF-GHJK"), false);
+  assert.equal(replaced.includes("activate="), false);
+}
+
+{
+  let called = false;
+  const href = "https://veilspan.example/play/?code=auth0-code";
+  const out = stripActivateQuery(href, () => { called = true; });
+  assert.equal(called, false);
+  assert.equal(out, href);
 }

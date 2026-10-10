@@ -25,3 +25,25 @@ export function clearActivateCode(storage) {
     storage.removeItem(ACTIVATE_KEY);
   }
 }
+
+// stripActivateQuery removes activate from the visible URL after it has been
+// stored. Auth0's code parameter is left in place. replaceState is called
+// only when activate is present.
+export function stripActivateQuery(href, replaceState) {
+  if (typeof href !== "string" || typeof replaceState !== "function") {
+    return href;
+  }
+  let url;
+  try {
+    url = new URL(href, "http://localhost");
+  } catch {
+    return href;
+  }
+  if (!url.searchParams.has("activate")) {
+    return href;
+  }
+  url.searchParams.delete("activate");
+  const next = url.pathname + url.search + url.hash;
+  replaceState(null, "", next);
+  return next;
+}

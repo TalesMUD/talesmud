@@ -91,7 +91,7 @@
   import CharacterCreationWizard from "./onboarding/CharacterCreationWizard.svelte";
   import { showCharacterWizard } from "./onboarding/onboardingStore.js";
   import { isGuestSession } from "./authSession.js";
-  import { readActivateCode } from "./sshActivate.js";
+  import { readActivateCode, stripActivateQuery } from "./sshActivate.js";
   import SSHActivate from "./SSHActivate.svelte";
   import SSHKeys from "./SSHKeys.svelte";
 
@@ -113,6 +113,7 @@
   let activateCode = "";
   if (typeof window !== "undefined") {
     activateCode = readActivateCode(window.location.search, window.sessionStorage);
+    stripActivateQuery(window.location.href, window.history.replaceState.bind(window.history));
   }
 
   function closeActivate() {

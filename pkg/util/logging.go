@@ -53,20 +53,40 @@ func ConfigureLogging() string {
 	return logFile
 }
 
-// RedactAccessToken strips access_token query values from URLs for safe logging.
+// RedactAccessToken strips secret query values from URLs for safe logging.
+// access_token, code, and activate are removed. A key counts only at the
+// start of the string or after ? or &, so user_code is left alone.
 func RedactAccessToken(path string) string {
 	if path == "" {
 		return path
 	}
 	lower := strings.ToLower(path)
-	idx := strings.Index(lower, "access_token=")
-	if idx < 0 {
-		return path
+	var b strings.Builder
+	b.Grow(len(path))
+	for i := 0; i < len(path); {
+		if n, ok := redactKeyAt(lower, i); ok {
+			b.WriteString(path[i : i+n])
+			b.WriteString("[REDACTED]")
+			i += n
+			for i < len(path) && path[i] != '&' && path[i] != ' ' {
+				i++
+			}
+			continue
+		}
+		b.WriteByte(path[i])
+		i++
 	}
-	start := idx + len("access_token=")
-	end := start
-	for end < len(path) && path[end] != '&' && path[end] != ' ' {
-		end++
+	return b.String()
+}
+
+func redactKeyAt(lower string, i int) (int, bool) {
+	if i > 0 && lower[i-1] != '?' && lower[i-1] != '&' {
+		return 0, false
 	}
-	return path[:start] + "[REDACTED]" + path[end:]
+	for _, key := range []string{"access_token=", "activate=", "code="} {
+		if strings.HasPrefix(lower[i:], key) {
+			return len(key), true
+		}
+	}
+	return 0, false
 }
