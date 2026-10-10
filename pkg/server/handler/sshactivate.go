@@ -26,7 +26,7 @@ func Activate(local bool) gin.HandlerFunc {
 		}
 		setActivateHeaders(c)
 		_, _, tokenKey := gamemode.ClientPage()
-		c.Data(http.StatusOK, "text/html; charset=utf-8", activatePage(tokenKey))
+		c.Data(http.StatusOK, "text/html; charset=utf-8", activatePage(tokenKey, gamemode.SignupOpen()))
 	}
 }
 
@@ -38,12 +38,18 @@ func setActivateHeaders(c *gin.Context) {
 	c.Header("X-Content-Type-Options", "nosniff")
 }
 
-func activatePage(tokenKey string) []byte {
+func activatePage(tokenKey string, signup bool) []byte {
 	key, err := json.Marshal(tokenKey)
 	if err != nil || tokenKey == "" {
 		key = []byte(`"talesmudDoorToken"`)
 	}
-	return []byte(strings.ReplaceAll(activateHTML, "__TOKEN_KEY__", string(key)))
+	html := activateHTML
+	if signup {
+		html = strings.Replace(html, "<!--REGISTER-->", activateRegisterForm, 1)
+		html = strings.Replace(html, "/*REGISTER_CSS*/", activateRegisterCSS, 1)
+		html = strings.Replace(html, "//REGISTER_SCRIPT", activateRegisterScript, 1)
+	}
+	return []byte(strings.ReplaceAll(html, "__TOKEN_KEY__", string(key)))
 }
 
 const activateHTML = `<!DOCTYPE html>
@@ -53,21 +59,28 @@ const activateHTML = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TalesMUD sign-in</title>
 <style>
-body { font-family: sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1rem; }
+body { font-family: sans-serif; max-width: 52rem; margin: 2rem auto; padding: 0 1rem; }
 label { display: block; margin-top: 0.8rem; }
 input { width: 100%; box-sizing: border-box; }
 button { margin-top: 0.8rem; margin-right: 0.4rem; }
 #detail { white-space: pre-wrap; }
+#gates { display: flex; gap: 2rem; flex-wrap: wrap; align-items: flex-start; }
+#gates form { flex: 1 1 16rem; }
+/*REGISTER_CSS*/
 </style>
 </head>
 <body>
 <h1>TalesMUD sign-in</h1>
+<div id="gates">
 <form id="login">
+<h2>Sign in</h2>
 <label>Username <input id="username" autocomplete="username"></label>
 <label>Password <input id="password" type="password" autocomplete="current-password"></label>
 <p id="loginerr"></p>
 <button type="submit">Sign in</button>
 </form>
+<!--REGISTER-->
+</div>
 <div id="panel" hidden>
 <label>Code <input id="code" autocomplete="off"></label>
 <button type="button" onclick="lookupCode()">Look up</button>
@@ -88,7 +101,7 @@ const params = new URLSearchParams(location.search);
 if (params.get("code")) codeInput.value = params.get("code");
 function token() { return localStorage.getItem(tokenKey) || ""; }
 function showLogin(on) {
-  document.getElementById("login").hidden = !on;
+  document.getElementById("gates").hidden = !on;
   document.getElementById("panel").hidden = on;
 }
 async function api(method, path, body) {
@@ -122,6 +135,7 @@ document.getElementById("login").addEventListener("submit", async function (ev) 
   showLogin(false);
   loadKeys();
 });
+//REGISTER_SCRIPT
 let csrf = "";
 async function lookupCode() {
   document.getElementById("detail").textContent = "";
@@ -184,3 +198,42 @@ if (token()) { showLogin(false); loadKeys(); } else { showLogin(true); }
 </body>
 </html>
 `
+
+const activateRegisterCSS = ``
+
+const activateRegisterForm = `<form id="register">
+<h2>Create account</h2>
+<label>Username <input id="newuser" autocomplete="username"></label>
+<label>Email <input id="newemail" type="email" autocomplete="email"></label>
+<label>Password <input id="newpass" type="password" autocomplete="new-password"></label>
+<p id="regerr"></p>
+<button type="submit">Create account</button>
+</form>`
+
+const activateRegisterScript = `document.getElementById("register").addEventListener("submit", async function (ev) {
+  ev.preventDefault();
+  const res = await fetch("/api/auth/register", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      username: document.getElementById("newuser").value,
+      email: document.getElementById("newemail").value,
+      password: document.getElementById("newpass").value
+    })
+  });
+  const data = await res.json().catch(function () { return {}; });
+  if (!res.ok) {
+    document.getElementById("regerr").textContent = data.error || "Could not create the account";
+    return;
+  }
+  localStorage.setItem(tokenKey, data.token || "");
+  showLogin(false);
+  if (codeInput.value) {
+    lookupCode();
+  }
+  loadKeys();
+});
+if (params.get("signup") === "1") {
+  var created = document.getElementById("newuser");
+  if (created) created.focus();
+}`

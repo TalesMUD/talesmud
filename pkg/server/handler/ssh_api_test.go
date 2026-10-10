@@ -3,8 +3,11 @@ package handler
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -99,5 +102,71 @@ func TestActivatePageIsLocalAndPrefills(t *testing.T) {
 	_, _, tokenKey := gamemode.ClientPage()
 	if !strings.Contains(body, tokenKey) {
 		t.Fatalf("token key %s missing", tokenKey)
+	}
+	if strings.Contains(body, "Create account") || strings.Contains(body, "/api/auth/register") {
+		t.Fatal("create account is offered while signup is closed")
+	}
+}
+
+func TestActivateSignupFormWhenOpen(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "mode.yaml")
+	if err := os.WriteFile(path, []byte("presentation: door_tui\nauth: local\nssh:\n  signup:\n    enabled: true\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := gamemode.ApplyFile(path); err != nil {
+		t.Fatal(err)
+	}
+	off := filepath.Join(t.TempDir(), "off.yaml")
+	if err := os.WriteFile(off, []byte("presentation: classic\nauth: auth0\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := gamemode.ApplyFile(off); err != nil {
+			t.Error(err)
+		}
+	})
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.GET("/activate", Activate(true))
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/activate?code=BCDF-GHJK&signup=1", nil))
+	body := rec.Body.String()
+	if !strings.Contains(body, "Sign in") || !strings.Contains(body, "Create account") || !strings.Contains(body, "/api/auth/register") {
+		t.Fatal("signup page is missing a side")
+	}
+	if strings.Contains(body, "addkey") || strings.Contains(body, "/api/ssh/keys\",") {
+		t.Fatal("signup page offers a key paste")
+	}
+	if !strings.Contains(body, "lookupCode();") {
+		t.Fatal("register does not land on lookup")
+	}
+	if strings.Contains(body, "decide('/api/ssh/device/confirm');") {
+		t.Fatal("confirm is called by itself")
+	}
+	tail := body[strings.LastIndex(body, "if (token())"):]
+	if strings.Contains(tail, "lookupCode") {
+		t.Fatal("page load looks up the code")
+	}
+}
+
+func TestRegisterRateLimit(t *testing.T) {
+	prev := authLimiter
+	authLimiter = newIPLimiter(12, time.Minute)
+	t.Cleanup(func() { authLimiter = prev })
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.POST("/api/auth/register", (&LocalAuthHandler{}).Register)
+	for i := 0; i < 12; i++ {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/api/auth/register", strings.NewReader(""))
+		r.ServeHTTP(rec, req)
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("try %d status %d", i, rec.Code)
+		}
+	}
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/auth/register", strings.NewReader("")))
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("limit %d %s", rec.Code, rec.Body.String())
 	}
 }
