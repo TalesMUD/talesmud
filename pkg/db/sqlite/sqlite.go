@@ -89,6 +89,8 @@ func (c *Client) InitSchema() error {
 		`CREATE TABLE IF NOT EXISTS character_resources (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
 		`CREATE TABLE IF NOT EXISTS content_health (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
 		`CREATE TABLE IF NOT EXISTS audit_log (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
+		`CREATE TABLE IF NOT EXISTS ssh_keys (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_ssh_keys_fp ON ssh_keys(json_extract(data, '$.fingerprint'));`,
 	}
 	for _, stmt := range stmts {
 		if _, err := c.db.Exec(stmt); err != nil {
