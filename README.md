@@ -127,7 +127,7 @@ TalesMUD's **generic, reusable architecture** makes it perfect for any setting:
 
 ### 🚀 Modern Architecture
 
-- **Go 1.24** backend with Gin HTTP framework
+- **Go 1.26** backend with Gin HTTP framework
 - **Svelte 4** frontend with TailwindCSS
 - **SQLite** for persistence (simple deployment, no database server needed)
 - **WebSocket** real-time communication
@@ -141,7 +141,7 @@ TalesMUD's **generic, reusable architecture** makes it perfect for any setting:
 
 ### Prerequisites
 
-- **Go 1.24+** ([Download](https://golang.org/dl/))
+- **Go 1.26+** ([Download](https://golang.org/dl/))
 - **Node.js 18+** ([Download](https://nodejs.org/))
 - **Make** (optional, for convenience commands)
 
@@ -201,7 +201,7 @@ See [Configuration](#configuration-reference) for full details.
 ### Backend
 | Component | Technology |
 |-----------|------------|
-| Language | Go 1.24 |
+| Language | Go 1.26 |
 | HTTP Framework | Gin |
 | WebSocket | Gorilla WebSocket |
 | Database | SQLite (JSON document storage) |

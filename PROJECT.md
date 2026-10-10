@@ -497,7 +497,7 @@ GROQ_API_KEY=
 ## Building & Running
 
 ### Prerequisites
-- Go 1.24+
+- Go 1.26+ (toolchain go1.26.9)
 - Node.js (for frontend build)
 
 ### Build Commands
