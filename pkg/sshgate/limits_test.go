@@ -1,11 +1,58 @@
 package sshgate
 
 import (
+	"net"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/talesmud/talesmud/pkg/gamemode"
 )
+
+func TestSlowReaderDoesNotBlock(t *testing.T) {
+	link := &sshLink{queue: make(chan outbound, 1), fail: func(int) {}}
+	if err := link.Send("one"); err != nil {
+		t.Fatal(err)
+	}
+	start := time.Now()
+	if err := link.Send("two"); err == nil {
+		t.Fatal("full queue was accepted")
+	}
+	if time.Since(start) > 50*time.Millisecond {
+		t.Fatal("send blocked the caller")
+	}
+}
+
+func TestAuthTimeoutClosesSilentTCP(t *testing.T) {
+	gate, err := Listen(gamemode.SSHConfig{
+		Enabled:     true,
+		Listen:      "127.0.0.1:0",
+		HostKeyPath: filepath.Join(t.TempDir(), "host_ed25519"),
+		AuthTimeout: gamemode.Duration(400 * time.Millisecond),
+		IdleTimeout: gamemode.Duration(time.Minute),
+	}, Deps{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer gate.Close()
+	conn, err := net.Dial("tcp", gate.Addr())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	start := time.Now()
+	buf := make([]byte, 64)
+	for {
+		_ = conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+		_, err := conn.Read(buf)
+		if err != nil {
+			if time.Since(start) > 2*time.Second {
+				t.Fatalf("silent handshake stayed open: %v", err)
+			}
+			return
+		}
+	}
+}
 
 func TestLimitsBanRateAndGuestCap(t *testing.T) {
 	cfg := gamemode.SSHConfig{

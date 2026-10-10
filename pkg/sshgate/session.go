@@ -261,10 +261,7 @@ func (s *liveSession) classicLoop() {
 		defer warn.Stop()
 		idleWarn = warn.C
 	}
-	maxFor := time.Duration(0)
-	if s.guestHeld {
-		maxFor = s.gate.cfg.Guest.MaxSession.Duration()
-	}
+	maxFor, _ := s.maxLimit()
 	var maxEnd <-chan time.Time
 	var maxWarn <-chan time.Time
 	if maxFor > 0 {
@@ -310,14 +307,43 @@ func (s *liveSession) classicLoop() {
 			_, _ = s.channel.Write([]byte("\r\nIdle timeout. Goodbye.\r\n"))
 			return
 		case <-maxWarn:
-			s.writeRaw([]byte("\r\nYour guest session expires in 5 minutes.\r\n"))
+			s.writeRaw([]byte(s.maxNotice(true)))
 			s.redraw()
 			maxWarn = nil
 		case <-maxEnd:
-			_, _ = s.channel.Write([]byte("\r\nYour guest session has expired. Goodbye.\r\n"))
+			_, _ = s.channel.Write([]byte(s.maxNotice(false)))
 			return
 		}
 	}
+}
+
+// maxLimit is the hard cap for this session. Zero means no cap.
+// Guests use ssh.guest.max_session. Other admitted sessions use ssh.max_session.
+func (s *liveSession) maxLimit() (time.Duration, bool) {
+	if s == nil || s.gate == nil {
+		return 0, false
+	}
+	if s.guestHeld || s.via == "guest" {
+		return s.gate.cfg.Guest.MaxSession.Duration(), true
+	}
+	if s.via == "" {
+		return 0, false
+	}
+	return s.gate.cfg.MaxSession.Duration(), false
+}
+
+func (s *liveSession) maxNotice(warn bool) string {
+	guest := s != nil && (s.guestHeld || s.via == "guest")
+	if warn {
+		if guest {
+			return "\r\nYour guest session expires in 5 minutes.\r\n"
+		}
+		return "\r\nYour session expires in 5 minutes.\r\n"
+	}
+	if guest {
+		return "\r\nYour guest session has expired. Goodbye.\r\n"
+	}
+	return "\r\nYour session has expired. Goodbye.\r\n"
 }
 
 func (s *liveSession) admitGuest() error {

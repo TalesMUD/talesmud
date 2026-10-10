@@ -90,9 +90,9 @@ func (s *liveSession) doorLoop() {
 		stopTimer(maxTimer)
 		stopTimer(maxWarnTimer)
 	}()
-	startGuestMax := func() {
-		maxFor := s.gate.cfg.Guest.MaxSession.Duration()
-		if maxFor <= 0 {
+	startMax := func() {
+		maxFor, _ := s.maxLimit()
+		if maxFor <= 0 || maxTimer != nil {
 			return
 		}
 		maxTimer = time.NewTimer(maxFor)
@@ -101,6 +101,9 @@ func (s *liveSession) doorLoop() {
 			maxWarnTimer = time.NewTimer(maxFor - 5*time.Minute)
 			maxWarn = maxWarnTimer.C
 		}
+	}
+	if s.via != "guest" {
+		startMax()
 	}
 
 	for {
@@ -162,7 +165,7 @@ func (s *liveSession) doorLoop() {
 						return
 					}
 					playing = true
-					startGuestMax()
+					startMax()
 				}
 				continue
 			}
@@ -199,10 +202,10 @@ func (s *liveSession) doorLoop() {
 			s.endDoor(view, "\r\nIdle timeout. Goodbye.\r\n")
 			return
 		case <-maxWarn:
-			s.writeRaw([]byte("\r\nYour guest session expires in 5 minutes.\r\n"))
+			s.writeRaw([]byte(s.maxNotice(true)))
 			maxWarn = nil
 		case <-maxEnd:
-			s.endDoor(view, "\r\nYour guest session has expired. Goodbye.\r\n")
+			s.endDoor(view, s.maxNotice(false))
 			return
 		}
 	}
