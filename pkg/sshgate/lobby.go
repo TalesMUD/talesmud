@@ -84,7 +84,7 @@ func (s *liveSession) deviceLobby(in <-chan []byte, view *termout.Screen, cs *te
 	if ttl <= 0 {
 		ttl = 10 * time.Minute
 	}
-	id, code, expires, err := s.gate.deps.Devices.Begin(s.ip, s.mode(), s.clientVersion, s.offers)
+	id, code, expires, err := s.gate.deps.Devices.Begin(s.ip, s.mode(), s.clientVersion, storedOffers(s.keyLine))
 	if err != nil {
 		s.refuse(view, "Too many sign-in attempts from this address. Try again later.\r\n")
 		return false

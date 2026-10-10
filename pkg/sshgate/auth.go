@@ -203,6 +203,17 @@ func (g *Gate) noteSigned(meta ssh.ConnMetadata, fp, line string) {
 	n.fps = append(n.fps, fp)
 }
 
+// storedOffers is the one fingerprint the confirm page shows and Y stores.
+// It is the latest verified key line. Earlier signatures from the same
+// handshake are not offers, and an unsigned list is not a fallback.
+func storedOffers(line string) []string {
+	fp := signedFingerprint(line, nil)
+	if fp == "" {
+		return nil
+	}
+	return []string{fp}
+}
+
 // signedFingerprint is the key that produced a signature. An unsigned offer
 // is not used.
 func signedFingerprint(line string, offers []string) string {
