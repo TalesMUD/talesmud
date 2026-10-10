@@ -480,6 +480,8 @@ GUEST_SECRET=
 # SSH_ACTIVATE_URL=https://veilspan.com/activate
 # SSH_GUEST_ENABLED=false
 # SSH_DEVICE_ENABLED=false
+# Device codes also stop at max_pending (default 100) for the process.
+# Per-address caps bucket IPv6 as a /64. See docs/ssh-access.md.
 
 # Creator live badge. Empty locally. Set ADMIN_ENV_LABEL=LIVE on a production admin.
 # ADMIN_ENV_HOST overrides the request host shown after the label.

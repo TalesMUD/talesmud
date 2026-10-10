@@ -37,7 +37,8 @@ ssh:
     enabled: false
     ttl: 10m
     activate_url: "https://veilspan.com/activate"
-    max_pending_per_ip: 3
+    max_pending_per_ip: 3           # IPv6 counts a /64 as one address
+    max_pending: 100                # pending codes for the whole process
     lookups_per_user_per_10m: 10
     lookups_per_ip_per_10m: 20
   guest:
@@ -56,6 +57,8 @@ ssh:
 
 Environment overrides, when set: `SSH_ENABLED`, `SSH_LISTEN`, `SSH_HOST_KEY_PATH`, `SSH_PUBLIC_HOST`, `SSH_PUBLIC_PORT`, `SSH_ACTIVATE_URL`, `SSH_GUEST_ENABLED`, `SSH_DEVICE_ENABLED`. They turn features on or off and set limits. They never name a user, a key, or a token.
 
+Per-address SSH caps, auth-fail bans, guest caps, and device-code caps treat an IPv6 /64 as one address. IPv4 stays one address. Pending device codes also stop at `max_pending` (default 100) for the whole process. The connection cap stays global. The address shown on the confirm page is the peer address, not the /64.
+
 `ssh.enabled: false` does not open a listener. `GET /api/ssh/info` then returns `{"enabled": false}`.
 
 A process with `ssh.enabled: true` and a missing listen address or host-key path stops before it serves HTTP.
@@ -70,7 +73,7 @@ Startup logs the full public fingerprint, and `GET /api/ssh/info` returns the sa
 SHA256:base64-unpadded-hash
 ```
 
-User key fingerprints in logs are shortened to `SHA256:ab12…wxyz`. Device codes in logs are shortened to `BC**-****`. The log does not contain key blobs, device-code secrets, or session tokens.
+User key fingerprints in logs are shortened to `SHA256:ab12…wxyz`. The SSH lobby shortens a device code to `BC**-****`. The HTTP access log replaces `access_token`, `code`, and `activate` query values with `[REDACTED]`. The play client stores `activate` and removes that parameter from the page URL before the login redirect. The log does not contain key blobs, device-code secrets, or session tokens.
 
 Players can pin the host with:
 
@@ -90,7 +93,7 @@ Password authentication is not offered. `exec`, subsystems, forwarding, agent fo
   - Door (`auth: local`) serves `GET /activate` as a small sign-in page.
   - Classic (`auth: auth0`) answers `GET /activate?code=...` with a redirect to `/play/?activate=...`. The play client looks the code up and waits for Confirm or Deny.
 - **Linking.** After a confirmed device login, the lobby asks whether to remember the computer. The offer is the key that signed. Yes stores a pending link and asks the player to reconnect. The next connection checks that same signature, names the account, and writes the key only when the whole answer is Y. N, a timeout, or quitting drops the pending link and disconnects. That session does not enter the account. Declining the first remember question still enters the account that confirmed the device code and does not store a link. A word that merely contains y is not yes. One fingerprint cannot be claimed by a second account while the first offer is live.
-- **Web keys.** A signed-in, non-guest account can list and revoke keys that were linked from SSH. Classic uses the play-client account menu ("SSH keys"). Door uses the same `/api/ssh/keys` routes. `POST /api/ssh/keys` does not link a pasted key. A paste is not a signature, so it does not occupy the fingerprint or sign anyone in. The key is stored only after the device-link reconnect proves the signature and the owner presses Y.
+- **Web keys.** A signed-in, non-guest account can list and revoke keys that were linked from SSH. Classic uses the play-client account menu ("SSH keys"). Door uses the same `/api/ssh/keys` routes. `POST /api/ssh/keys` does not link a pasted key. A paste is not a signature, so it does not occupy the fingerprint or sign anyone in. The key is stored only after the device-link reconnect proves the signature and the owner presses Y. Deleting a key, or banning the account, closes that account's live SSH sessions in this process.
 
 Account sessions use `ssh.max_session` when that value is greater than zero. Zero leaves them uncapped. Idle still applies.
 
@@ -111,7 +114,7 @@ Signed in (guest and banned accounts are refused):
 - `POST /api/ssh/device/lookup` with `{user_code}`
 - `POST /api/ssh/device/confirm` and `POST /api/ssh/device/deny` with `{user_code, csrf}`
 
-The lookup response shows the address, age, client version, and a shortened key fingerprint. Confirm needs the `csrf` value from that lookup. Key changes are limited to 20 per 10 minutes per account.
+The lookup response shows the address, age, client version, and a shortened key fingerprint. Confirm and deny need the `csrf` value from that lookup, and an `Origin` header whose scheme and host match `activate_url`. A missing Origin is refused. The request still uses the bearer token. Key changes are limited to 20 per 10 minutes per account.
 
 ## World pack art
 

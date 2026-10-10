@@ -1547,7 +1547,7 @@ HTTP/WS Request with Token → AuthMiddleware
 
 ### SSH authentication
 
-`pkg/sshgate` accepts none-auth only for the username `guest` when guest SSH is enabled. Public-key auth runs only when the key store is enabled. An unknown key is not recorded until its signature verifies, and that verification does not authenticate. Keyboard-interactive asks no questions and opens a lobby until the account confirms a device code on the web. That lobby does not attach the game. The pending link is the signed key. It is written only after that signature and an answer that is exactly Y. N, a timeout, or quitting drops the offer and disconnects. Password auth, exec, subsystems, forwarding, and X11 are refused. Host keys stay on disk outside the repo. The HTTP key and device routes use the same auth middleware as the rest of the API. A guest token is refused there, on creator and admin routes, and on `PUT /api/user`. Details and limits are in `docs/ssh-access.md`.
+`pkg/sshgate` accepts none-auth only for the username `guest` when guest SSH is enabled. Public-key auth runs only when the key store is enabled. An unknown key is not recorded until its signature verifies, and that verification does not authenticate. Keyboard-interactive asks no questions and opens a lobby until the account confirms a device code on the web. That lobby does not attach the game. The pending link is the signed key. It is written only after that signature and an answer that is exactly Y. N, a timeout, or quitting drops the offer and disconnects. Password auth, exec, subsystems, forwarding, and X11 are refused. Host keys stay on disk outside the repo. The HTTP key and device routes use the same auth middleware as the rest of the API. Auth0 tokens must include the configured audience and issuer. A guest HMAC is accepted only when the loaded user is a guest. Device confirm, deny, and lookup require an Origin that matches the activate URL. Deleting a key or banning the user closes matching live SSH sessions in this process. A guest token is refused on those SSH routes, on creator and admin routes, and on `PUT /api/user`. Details and limits are in `docs/ssh-access.md`.
 
 ### Guest Authentication
 
@@ -1557,7 +1557,7 @@ Guest sessions use HMAC-SHA256 tokens (not Auth0 JWTs):
 1. Client calls `POST /api/guest` (public, no auth)
 2. Server creates temporary User + Character, equips the template's starting items, and signs an HMAC token with `GUEST_SECRET`. Signed-in `CreateNewCharacter` uses that same equip step.
 3. Client stores token in `sessionStorage` (dies with browser tab)
-4. Auth middleware validates HMAC token before trying Auth0 JWT
+4. Auth middleware validates the HMAC token before trying an Auth0 JWT, and only when that user is a guest
 5. Guest sessions expire after 30 minutes; cleanup goroutine deletes stale data
 
 ### Authorization

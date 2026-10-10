@@ -2515,7 +2515,7 @@ The leveling system (`CheckLevelUp`, `ApplyLevelUp`) respects `MaxLevelCap` auto
 - `api/guest.js` — `createGuestSession()` API client
 
 ### Authentication
-- Guest HMAC tokens are validated before Auth0 JWTs in `AuthMiddleware`
+- Guest HMAC tokens are validated before Auth0 JWTs in `AuthMiddleware`. The token is accepted only when the loaded user is a guest. An Auth0 token must include the configured audience and issuer.
 - Token claims: `sub` (RefID), `uid` (user entity ID), `exp` (30min), `guest: true`
 - If `GUEST_SECRET` is not set, a random key is generated at startup
 - Optional local username/password sessions (Argon2id) when a game-mode file sets `auth: local`. Classic servers leave this off. API responses omit the password hash. Login attempts are limited per client address. `X-Forwarded-For` is trusted only from loopback unless `trusted_proxies` or `TRUSTED_PROXIES` says otherwise.
@@ -2534,6 +2534,8 @@ SSH is off by default. `ssh.enabled` starts one listener in the current process.
 - Keyboard-interactive reaches a lobby only. The game attaches after the web confirm.
 - `ssh.max_session: 0` leaves account sessions uncapped. Guest sessions use `ssh.guest.max_session` (default 30 minutes). Idle applies to play on both.
 - Output is queued per session (128 messages). A full queue drops that session instead of blocking the game loop.
+- Door frames sanitize player and creator text. OSC, DCS, C1, and bidi controls are dropped. Pack screen CSI is kept on the art path. SGR color in a frame is kept.
+- Deleting a linked key, or banning the account, closes that account's live SSH sessions in this process.
 
 ### Stored keys
 
@@ -2543,7 +2545,7 @@ Accepted public keys: ed25519, sk-ed25519, ecdsa-sha2-nistp256/384/521, and ssh-
 
 ### Play client
 
-`/play/?activate=<code>` is stored in `sessionStorage` under `talesmud_ssh_activate` before the Auth0 redirect, so the Auth0 `code` parameter does not replace it. Once a non-guest access token exists, the client looks the code up once and shows address, mode, and the shortened fingerprint. Confirm and Deny are buttons. Guests do not get the panel or the SSH keys menu. The account menu item is on the desktop chip, the phone header, and the onboarding menu.
+`/play/?activate=<code>` is stored in `sessionStorage` under `talesmud_ssh_activate`, then removed from the page URL, before the Auth0 redirect, so the Auth0 `code` parameter does not replace it and the code is not left on the address bar. Once a non-guest access token exists, the client looks the code up once and shows address, mode, and the shortened fingerprint. Confirm and Deny are buttons. Guests do not get the panel or the SSH keys menu. The account menu item is on the desktop chip, the phone header, and the onboarding menu.
 
 ### Lua
 
