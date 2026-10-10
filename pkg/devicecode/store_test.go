@@ -8,10 +8,19 @@ import (
 
 func allowOK(string) error { return nil }
 
+func setClock(s *Store, now func() time.Time) {
+	if s == nil || now == nil {
+		return
+	}
+	s.mu.Lock()
+	s.now = now
+	s.mu.Unlock()
+}
+
 func TestDeviceCodeSingleUseAndExpiry(t *testing.T) {
 	now := time.Date(2026, 10, 10, 12, 0, 0, 0, time.UTC)
 	s := New(Config{TTL: time.Minute, PerUser: 10, PerIP: 20})
-	s.SetClock(func() time.Time { return now })
+	setClock(s, func() time.Time { return now })
 	id, display, _, err := s.Begin("203.0.113.5", "door", "SSH-2.0-OpenSSH", []string{"SHA256:abcdefghijklmnopqrstuvwxyz012345"})
 	if err != nil {
 		t.Fatal(err)

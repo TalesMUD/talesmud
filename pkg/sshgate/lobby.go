@@ -142,6 +142,7 @@ func (s *liveSession) deviceLobby(in <-chan []byte, view *termout.Screen, cs *te
 		case <-s.stop:
 			return false
 		case <-s.kick:
+			s.onKick()
 			return false
 		case <-deadline.C:
 			s.refuse(view, "code not found or expired\r\n")
@@ -306,6 +307,7 @@ func (s *liveSession) askYN(in <-chan []byte, prompt string, view *termout.Scree
 		case <-s.stop:
 			return "", false
 		case <-s.kick:
+			s.onKick()
 			return "", false
 		case <-deadline.C:
 			return "n", true

@@ -76,6 +76,8 @@ type Gate struct {
 	once    sync.Once
 	notesMu sync.Mutex
 	notes   map[string]*authNote
+	sessMu  sync.Mutex
+	live    map[*liveSession]struct{}
 }
 
 // Listen starts the SSH listener when cfg.Enabled. A disabled config returns
@@ -139,6 +141,62 @@ func (g *Gate) PublicInfo() PublicInfo {
 }
 
 // Addr is the bound address, including an ephemeral port.
+// CloseUser ends live SSH sessions for this user id in this process.
+func (g *Gate) CloseUser(id string) {
+	g.closeLive(id, "")
+}
+
+// CloseFingerprint ends live SSH sessions that authenticated with this key.
+func (g *Gate) CloseFingerprint(fp string) {
+	g.closeLive("", fp)
+}
+
+func (g *Gate) closeLive(id, fp string) {
+	if g == nil {
+		return
+	}
+	id = strings.TrimSpace(id)
+	fp = strings.TrimSpace(fp)
+	if id == "" && fp == "" {
+		return
+	}
+	g.sessMu.Lock()
+	hit := make([]*liveSession, 0, 1)
+	for s := range g.live {
+		s.mu.Lock()
+		match := (id != "" && s.userID == id) || (fp != "" && s.fp == fp)
+		s.mu.Unlock()
+		if match {
+			hit = append(hit, s)
+		}
+	}
+	g.sessMu.Unlock()
+	for _, s := range hit {
+		s.revoke()
+	}
+}
+
+func (g *Gate) track(s *liveSession) {
+	if g == nil || s == nil {
+		return
+	}
+	g.sessMu.Lock()
+	if g.live == nil {
+		g.live = map[*liveSession]struct{}{}
+	}
+	g.live[s] = struct{}{}
+	g.sessMu.Unlock()
+}
+
+func (g *Gate) untrack(s *liveSession) {
+	if g == nil || s == nil {
+		return
+	}
+	g.sessMu.Lock()
+	delete(g.live, s)
+	g.sessMu.Unlock()
+}
+
 func (g *Gate) Addr() string {
 	if g == nil || g.ln == nil {
 		return ""

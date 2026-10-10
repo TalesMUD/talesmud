@@ -19,6 +19,7 @@ const (
 	lineMax          = 512
 	envValueMax      = 64
 	replaceNotice    = "\r\nSession moved to another client.\r\n"
+	revokeNotice     = "\r\nThis session was closed.\r\n"
 	useTerminal      = "use: ssh -t ...\r\n"
 	guestUnavailable = "Guest login is unavailable.\r\n"
 )
@@ -101,6 +102,7 @@ type liveSession struct {
 	rows          int
 	env           map[string]string
 	repaint       chan struct{}
+	notice        string
 }
 
 func newSession(g *Gate, conn net.Conn, channel ssh.Channel, ip string) *liveSession {
@@ -122,6 +124,7 @@ func newSession(g *Gate, conn net.Conn, channel ssh.Channel, ip string) *liveSes
 		playURL: g.playURL,
 		fail:    s.fail,
 	}
+	g.track(s)
 	return s
 }
 
@@ -140,8 +143,35 @@ func (s *liveSession) nudge() {
 	}
 }
 
+func (s *liveSession) revoke() {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	s.notice = revokeNotice
+	s.mu.Unlock()
+	s.fail(0)
+}
+
+func (s *liveSession) onKick() {
+	if s == nil || s.channel == nil {
+		return
+	}
+	s.mu.Lock()
+	n := s.notice
+	s.notice = ""
+	s.mu.Unlock()
+	if n == "" {
+		return
+	}
+	_, _ = s.channel.Write([]byte(n))
+}
+
 func (s *liveSession) finish() {
 	s.once.Do(func() {
+		if s.gate != nil {
+			s.gate.untrack(s)
+		}
 		s.link.closed.Store(true)
 		close(s.stop)
 		if s.channel != nil {
@@ -281,6 +311,7 @@ func (s *liveSession) classicLoop() {
 		case <-s.stop:
 			return
 		case <-s.kick:
+			s.onKick()
 			return
 		case item := <-s.link.queue:
 			if s.netConn != nil {
@@ -370,7 +401,9 @@ func (s *liveSession) admitGuest() error {
 	if err != nil || user == nil || !user.IsGuest || user.IsBanned || user.IsCreator() {
 		return errors.New("guest refused")
 	}
+	s.mu.Lock()
 	s.userID = user.ID
+	s.mu.Unlock()
 	input, done := s.gate.deps.Mud.AttachExternal(user, s.link)
 	s.input = input
 	s.done = done
@@ -452,6 +485,7 @@ func (s *liveSession) writeRaw(b []byte) bool {
 }
 
 func (s *liveSession) flushClose() {
+	s.onKick()
 	if s.link.code.Load() != closeSessionReplaced {
 		return
 	}

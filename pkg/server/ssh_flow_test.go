@@ -132,7 +132,7 @@ func TestSSHDeviceLoginLinkAndGuards(t *testing.T) {
 	if strings.Contains(text, fp) {
 		t.Fatal("terminal showed the full fingerprint")
 	}
-	body := postAuth(t, srv.URL+"/api/ssh/device/lookup", token, map[string]string{"user_code": code}, "")
+	body := postAuth(t, srv.URL+"/api/ssh/device/lookup", token, map[string]string{"user_code": code}, srv.URL)
 	if body["mode"] != "mud" || body["ip"] != "127.0.0.1" {
 		t.Fatalf("lookup %#v", body)
 	}
@@ -144,7 +144,11 @@ func TestSSHDeviceLoginLinkAndGuards(t *testing.T) {
 	if csrf == "" {
 		t.Fatal("missing csrf")
 	}
-	bad := postStatus(t, srv.URL+"/api/ssh/device/confirm", token, map[string]string{"user_code": code, "csrf": "nope"}, "")
+	missingOrigin := postStatus(t, srv.URL+"/api/ssh/device/confirm", token, map[string]string{"user_code": code, "csrf": csrf}, "")
+	if missingOrigin != http.StatusForbidden {
+		t.Fatalf("missing origin %d", missingOrigin)
+	}
+	bad := postStatus(t, srv.URL+"/api/ssh/device/confirm", token, map[string]string{"user_code": code, "csrf": "nope"}, srv.URL)
 	if bad != http.StatusNotFound {
 		t.Fatalf("bad csrf %d", bad)
 	}
@@ -156,7 +160,7 @@ func TestSSHDeviceLoginLinkAndGuards(t *testing.T) {
 	if ok != http.StatusOK {
 		t.Fatalf("confirm %d", ok)
 	}
-	again := postStatus(t, srv.URL+"/api/ssh/device/confirm", token, map[string]string{"user_code": code, "csrf": csrf}, "")
+	again := postStatus(t, srv.URL+"/api/ssh/device/confirm", token, map[string]string{"user_code": code, "csrf": csrf}, srv.URL)
 	if again != http.StatusNotFound {
 		t.Fatalf("reuse %d", again)
 	}
@@ -212,28 +216,19 @@ func TestSSHDeviceLoginLinkAndGuards(t *testing.T) {
 	if _, err := dialPlayerErr(gate.Addr(), signer, false); err == nil {
 		t.Fatal("banned key was accepted")
 	}
-	if postStatus(t, srv.URL+"/api/ssh/device/lookup", token, map[string]string{"user_code": "BCDF-GHJK"}, "") != http.StatusForbidden {
+	if postStatus(t, srv.URL+"/api/ssh/device/lookup", token, map[string]string{"user_code": "BCDF-GHJK"}, srv.URL) != http.StatusForbidden {
 		t.Fatal("banned confirm was allowed")
 	}
 	if err := facade.UsersService().UnbanUser(user.ID); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := keys.Delete(user.RefID, rows[0].ID); err != nil {
+	if _, err := keys.Delete(user.RefID, rows[0].ID); err != nil {
 		t.Fatal(err)
 	}
 	conn = dialPlayer(t, gate.Addr(), signer, true)
 	session, _, out = playerShell(t, conn)
 	out.wait(t, "Code: ", 15*time.Second)
-	_ = session.Close()
-	_ = conn.Close()
-
-	conn = dialPlayer(t, gate.Addr(), signer, true)
-	session, _, out = playerShell(t, conn)
-	out.wait(t, "Code: ", 15*time.Second)
-	devices.SetClock(func() time.Time { return time.Now().Add(time.Hour) })
-	out.wait(t, "code not found or expired", 15*time.Second)
-	devices.SetClock(time.Now)
 	_ = session.Close()
 	_ = conn.Close()
 
@@ -245,7 +240,7 @@ func TestSSHDeviceLoginLinkAndGuards(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if postStatus(t, srv.URL+"/api/ssh/device/lookup", guestTok, map[string]string{"user_code": guestCode}, "") != http.StatusForbidden {
+	if postStatus(t, srv.URL+"/api/ssh/device/lookup", guestTok, map[string]string{"user_code": guestCode}, srv.URL) != http.StatusForbidden {
 		t.Fatal("guest lookup was allowed")
 	}
 	priv := postAuth(t, srv.URL+"/api/ssh/keys", token, map[string]string{"public_key": "-----BEGIN PRIVATE KEY-----\nsecret\n", "label": "nope"}, "")
@@ -271,6 +266,50 @@ func TestSSHDeviceLoginLinkAndGuards(t *testing.T) {
 			t.Fatalf("ssh log contained %q in %s", secret, logged)
 		}
 	}
+}
+
+func TestSSHDeviceCodeExpiresOnShortTTL(t *testing.T) {
+	client, err := dbsqlite.Open(filepath.Join(t.TempDir(), "expire.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	facade := service.NewFacade(repository.NewSQLiteFactory(client), nil)
+	if _, err := facade.RoomsService().Store(&rooms.Room{
+		Entity:      &entities.Entity{ID: "R0001"},
+		Name:        "Harbor",
+		Description: "quiet",
+		LookAt:      traits.LookAt{Detail: "quiet"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	devices := devicecode.New(devicecode.Config{TTL: 400 * time.Millisecond})
+	mud := mudserver.New(facade)
+	mud.Run()
+	gate, err := sshgate.Listen(gamemode.SSHConfig{
+		Enabled:     true,
+		Listen:      "127.0.0.1:0",
+		HostKeyPath: filepath.Join(t.TempDir(), "host_ed25519"),
+		Device: gamemode.SSHDeviceConfig{
+			Enabled:     true,
+			TTL:         gamemode.Duration(400 * time.Millisecond),
+			ActivateURL: "http://127.0.0.1/activate",
+		},
+		IdleTimeout: gamemode.Duration(30 * time.Minute),
+	}, sshgate.Deps{
+		Mud: mud, Users: facade.UsersService(), Devices: devices,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer gate.Close()
+	conn := dialPlayer(t, gate.Addr(), testSigner(t), true)
+	defer conn.Close()
+	session, _, out := playerShell(t, conn)
+	defer session.Close()
+	out.wait(t, "Code: ", 8*time.Second)
+	time.Sleep(500 * time.Millisecond)
+	out.wait(t, "code not found or expired", 8*time.Second)
 }
 
 func waitOffline(t *testing.T, facade service.Facade, id string) {

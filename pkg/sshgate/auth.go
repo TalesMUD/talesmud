@@ -25,6 +25,8 @@ func (s *liveSession) applyAuth(conn *ssh.ServerConn) {
 	if s == nil || conn == nil {
 		return
 	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if conn.Permissions.Extensions != nil {
 		s.via = conn.Permissions.Extensions["via"]
 		s.userRef = conn.Permissions.Extensions["user"]
@@ -128,7 +130,9 @@ func (s *liveSession) admitAccount() error {
 	if err != nil || user == nil || user.IsBanned || user.IsGuest {
 		return errors.New("refused")
 	}
+	s.mu.Lock()
 	s.userID = user.ID
+	s.mu.Unlock()
 	input, done := s.gate.deps.Mud.AttachExternal(user, s.link)
 	s.input = input
 	s.done = done

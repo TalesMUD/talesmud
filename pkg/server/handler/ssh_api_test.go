@@ -40,9 +40,9 @@ func TestSSHRoutesClosedUntilConfigured(t *testing.T) {
 }
 
 func TestOriginAllowed(t *testing.T) {
-	req := httptest.NewRequest(http.MethodPost, "/api/ssh/device/lookup", nil)
-	if !originAllowed(req, "") {
-		t.Fatal("bearer without origin")
+	req := httptest.NewRequest(http.MethodPost, "/api/ssh/device/confirm", nil)
+	if originAllowed(req, "http://127.0.0.1:8031/activate") {
+		t.Fatal("missing origin")
 	}
 	req.Header.Set("Origin", "https://evil.example")
 	if originAllowed(req, "http://127.0.0.1:8031/activate") {
@@ -57,8 +57,8 @@ func TestOriginAllowed(t *testing.T) {
 	}
 	req.Header.Del("Origin")
 	req.Header.Set("Referer", "http://127.0.0.1:8031/activate?code=BCDF-GHJK")
-	if !originAllowed(req, "http://127.0.0.1:8031/activate") {
-		t.Fatal("referer origin")
+	if originAllowed(req, "http://127.0.0.1:8031/activate") {
+		t.Fatal("referer without origin")
 	}
 }
 

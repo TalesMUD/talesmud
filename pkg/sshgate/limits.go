@@ -2,6 +2,8 @@ package sshgate
 
 import (
 	"errors"
+	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -40,6 +42,7 @@ func newLimits(cfg gamemode.SSHConfig) *limits {
 }
 
 func (l *limits) acquire(ip string, now time.Time) error {
+	ip = limitKey(ip)
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if until, ok := l.banned[ip]; ok {
@@ -67,6 +70,7 @@ func (l *limits) acquire(ip string, now time.Time) error {
 }
 
 func (l *limits) release(ip string) {
+	ip = limitKey(ip)
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.total > 0 {
@@ -80,6 +84,7 @@ func (l *limits) release(ip string) {
 }
 
 func (l *limits) authFail(ip string, now time.Time) {
+	ip = limitKey(ip)
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	window := now.Add(-l.cfg.AuthFailBan.Window.Duration())
@@ -92,6 +97,7 @@ func (l *limits) authFail(ip string, now time.Time) {
 }
 
 func (l *limits) acquireGuest(ip string, now time.Time) error {
+	ip = limitKey(ip)
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	window := now.Add(-time.Hour)
@@ -118,10 +124,26 @@ func (l *limits) releaseGuest(ip string) {
 }
 
 func (l *limits) bannedNow(ip string, now time.Time) bool {
+	ip = limitKey(ip)
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	until, ok := l.banned[ip]
 	return ok && now.Before(until)
+}
+
+// limitKey buckets IPv6 by /64. IPv4, including IPv4-mapped IPv6, stays one address.
+func limitKey(ip string) string {
+	parsed := net.ParseIP(strings.TrimSpace(ip))
+	if parsed == nil {
+		if strings.TrimSpace(ip) == "" {
+			return "-"
+		}
+		return ip
+	}
+	if v4 := parsed.To4(); v4 != nil {
+		return v4.String()
+	}
+	return parsed.Mask(net.CIDRMask(64, 128)).String() + "/64"
 }
 
 func prune(times []time.Time, after time.Time) []time.Time {

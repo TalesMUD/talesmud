@@ -41,11 +41,22 @@ type SSHAPI struct {
 	web         bool
 	maxKeys     int
 	mutate      *ipLimiter
+	dropKey     func(string)
 }
 
 // NewSSHAPI is closed until Set is called.
 func NewSSHAPI() *SSHAPI {
 	return &SSHAPI{mutate: newIPLimiter(20, 10*time.Minute)}
+}
+
+// SetKeyDrop is called with the fingerprint after a key row is removed.
+func (a *SSHAPI) SetKeyDrop(fn func(string)) {
+	if a == nil {
+		return
+	}
+	a.mu.Lock()
+	a.dropKey = fn
+	a.mu.Unlock()
 }
 
 // Set installs the stores for a running listener.
@@ -163,9 +174,16 @@ func (a *SSHAPI) DeleteKey(c *gin.Context) {
 	if refuseAccount(c, user) {
 		return
 	}
-	if err := store.Delete(user.RefID, c.Param("id")); err != nil {
+	fp, err := store.Delete(user.RefID, c.Param("id"))
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "key not found"})
 		return
+	}
+	a.mu.RLock()
+	drop := a.dropKey
+	a.mu.RUnlock()
+	if drop != nil && fp != "" {
+		drop(fp)
 	}
 	c.Status(http.StatusNoContent)
 }
@@ -279,23 +297,15 @@ func originAllowed(r *http.Request, activateURL string) bool {
 		return false
 	}
 	origin := strings.TrimSpace(r.Header.Get("Origin"))
-	referer := strings.TrimSpace(r.Header.Get("Referer"))
-	if origin == "" && referer == "" {
-		return true
+	if origin == "" {
+		return false
 	}
 	want, err := url.Parse(activateURL)
 	if err != nil || want.Scheme == "" || want.Host == "" {
 		return false
 	}
 	allowed := strings.ToLower(want.Scheme + "://" + want.Host)
-	if origin != "" {
-		return strings.EqualFold(strings.TrimRight(origin, "/"), allowed)
-	}
-	ref, err := url.Parse(referer)
-	if err != nil || ref.Scheme == "" || ref.Host == "" {
-		return false
-	}
-	return strings.EqualFold(ref.Scheme+"://"+ref.Host, allowed)
+	return strings.EqualFold(strings.TrimRight(origin, "/"), allowed)
 }
 
 func accountUser(c *gin.Context) (*e.User, bool) {

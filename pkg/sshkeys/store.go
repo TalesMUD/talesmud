@@ -18,10 +18,10 @@ import (
 const maxLabel = 64
 
 var (
-	ErrExists    = errors.New("key already linked")
-	ErrFull      = errors.New("too many keys")
-	ErrRejected  = errors.New("key rejected")
-	ErrNotFound  = errors.New("key not found")
+	ErrExists   = errors.New("key already linked")
+	ErrFull     = errors.New("too many keys")
+	ErrRejected = errors.New("key rejected")
+	ErrNotFound = errors.New("key not found")
 )
 
 // Key is one linked public key. PublicKey is an authorized_keys line.
@@ -159,29 +159,30 @@ func (s *Store) ByFingerprint(fp string) (*Key, error) {
 	return s.byFP(fp)
 }
 
-// Delete removes one of the account's keys.
-func (s *Store) Delete(userRef, id string) error {
+// Delete removes one of the account's keys and returns its fingerprint.
+func (s *Store) Delete(userRef, id string) (string, error) {
 	if s == nil {
-		return ErrNotFound
+		return "", ErrNotFound
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	key, err := s.byID(id)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if key == nil || key.UserRefID != userRef {
-		return ErrNotFound
+		return "", ErrNotFound
 	}
+	fp := key.Fingerprint
 	res, err := s.db.Exec(`DELETE FROM ssh_keys WHERE id = ?`, id)
 	if err != nil {
-		return err
+		return "", err
 	}
 	n, _ := res.RowsAffected()
 	if n == 0 {
-		return ErrNotFound
+		return "", ErrNotFound
 	}
-	return nil
+	return fp, nil
 }
 
 // Touch records a successful key login. The address is stored, not logged here.

@@ -47,6 +47,7 @@ type app struct {
 	db            *dbsqlite.Client
 	ssh           *sshgate.Gate
 	sshAPI        *handler.SSHAPI
+	userMgmt      *handler.UserManagementHandler
 }
 
 func adminAuthMiddleware() gin.HandlerFunc {
@@ -269,9 +270,10 @@ func (app *app) setupRoutes() {
 		Service: app.Facade.ServerSettingsService(),
 	}
 
-	userMgmt := &handler.UserManagementHandler{
+	app.userMgmt = &handler.UserManagementHandler{
 		Service: app.Facade.UsersService(),
 	}
+	userMgmt := app.userMgmt
 
 	guestStats := &handler.GuestStatsHandler{
 		StatsService: app.Facade.GuestStatsService(),
@@ -642,6 +644,7 @@ func (app *app) startSSH() {
 		devices = devicecode.New(devicecode.Config{
 			TTL:             cfg.Device.TTL.Duration(),
 			MaxPendingPerIP: cfg.Device.MaxPendingPerIP,
+			MaxPending:      cfg.Device.MaxPending,
 			PerUser:         cfg.Device.LookupsPerUserPer10m,
 			PerIP:           cfg.Device.LookupsPerIPPer10m,
 			Window:          10 * time.Minute,
@@ -671,6 +674,12 @@ func (app *app) startSSH() {
 		log.WithError(err).Fatal("ssh listener failed")
 	}
 	app.ssh = gate
+	if app.userMgmt != nil {
+		app.userMgmt.OnBan = gate.CloseUser
+	}
+	if app.sshAPI != nil {
+		app.sshAPI.SetKeyDrop(gate.CloseFingerprint)
+	}
 }
 
 func (app *app) Run() {

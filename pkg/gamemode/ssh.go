@@ -71,6 +71,7 @@ type SSHDeviceConfig struct {
 	TTL                  Duration `yaml:"ttl"`
 	ActivateURL          string   `yaml:"activate_url"`
 	MaxPendingPerIP      int      `yaml:"max_pending_per_ip"`
+	MaxPending           int      `yaml:"max_pending"`
 	LookupsPerUserPer10m int      `yaml:"lookups_per_user_per_10m"`
 	LookupsPerIPPer10m   int      `yaml:"lookups_per_ip_per_10m"`
 }
@@ -180,6 +181,9 @@ func normalizeSSH(cfg SSHConfig) SSHConfig {
 	}
 	if cfg.Device.MaxPendingPerIP <= 0 {
 		cfg.Device.MaxPendingPerIP = 3
+	}
+	if cfg.Device.MaxPending <= 0 {
+		cfg.Device.MaxPending = 100
 	}
 	if cfg.Device.LookupsPerUserPer10m <= 0 {
 		cfg.Device.LookupsPerUserPer10m = 10

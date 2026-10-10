@@ -2,6 +2,7 @@ package devicecode
 
 import (
 	"errors"
+	"net"
 	"strings"
 	"sync"
 	"time"
@@ -25,6 +26,7 @@ var (
 type Config struct {
 	TTL             time.Duration
 	MaxPendingPerIP int
+	MaxPending      int // whole process, not one address
 	PerUser         int
 	PerIP           int
 	Window          time.Duration
@@ -73,6 +75,9 @@ func New(cfg Config) *Store {
 	if cfg.MaxPendingPerIP <= 0 {
 		cfg.MaxPendingPerIP = 3
 	}
+	if cfg.MaxPending <= 0 {
+		cfg.MaxPending = 100
+	}
 	if cfg.PerUser <= 0 {
 		cfg.PerUser = 10
 	}
@@ -92,16 +97,6 @@ func New(cfg Config) *Store {
 	}
 }
 
-// SetClock overrides the clock. Tests use it. It does not skip a check.
-func (s *Store) SetClock(now func() time.Time) {
-	if s == nil || now == nil {
-		return
-	}
-	s.mu.Lock()
-	s.now = now
-	s.mu.Unlock()
-}
-
 // Begin opens one code for an SSH lobby. display is the only copy of the code.
 func (s *Store) Begin(ip, mode, client string, fps []string) (id, display string, expires time.Time, err error) {
 	if s == nil {
@@ -110,7 +105,7 @@ func (s *Store) Begin(ip, mode, client string, fps []string) (id, display string
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.purgeLocked()
-	if s.pendingCount(ip) >= s.cfg.MaxPendingPerIP {
+	if s.pendingTotal() >= s.cfg.MaxPending || s.pendingCount(ip) >= s.cfg.MaxPendingPerIP {
 		return "", "", time.Time{}, ErrLimited
 	}
 	norm, err := randomCode()
@@ -247,7 +242,7 @@ func (s *Store) findLocked(code, userRef, ip string) (*request, error) {
 		return nil, ErrNotFound
 	}
 	s.purgeLocked()
-	if !s.hit(s.userHits, userRef, s.cfg.PerUser) || !s.hit(s.ipHits, ip, s.cfg.PerIP) {
+	if !s.hit(s.userHits, userRef, s.cfg.PerUser) || !s.hit(s.ipHits, limitKey(ip), s.cfg.PerIP) {
 		return nil, ErrLimited
 	}
 	req := s.byID[s.byHash[Hash(norm)]]
@@ -273,14 +268,42 @@ func (s *Store) view(req *request, csrf string) View {
 }
 
 func (s *Store) pendingCount(ip string) int {
+	key := limitKey(ip)
 	n := 0
 	now := s.now()
 	for _, req := range s.byID {
-		if req.ip == ip && req.status == "pending" && now.Before(req.expires) {
+		if limitKey(req.ip) == key && req.status == "pending" && now.Before(req.expires) {
 			n++
 		}
 	}
 	return n
+}
+
+func (s *Store) pendingTotal() int {
+	n := 0
+	now := s.now()
+	for _, req := range s.byID {
+		if req.status == "pending" && now.Before(req.expires) {
+			n++
+		}
+	}
+	return n
+}
+
+// limitKey buckets IPv6 by /64. IPv4, including IPv4-mapped IPv6, stays one address.
+// The stored address on a code stays the raw peer for the confirm page.
+func limitKey(ip string) string {
+	parsed := net.ParseIP(strings.TrimSpace(ip))
+	if parsed == nil {
+		if strings.TrimSpace(ip) == "" {
+			return "-"
+		}
+		return ip
+	}
+	if v4 := parsed.To4(); v4 != nil {
+		return v4.String()
+	}
+	return parsed.Mask(net.CIDRMask(64, 128)).String() + "/64"
 }
 
 func (s *Store) purgeLocked() {

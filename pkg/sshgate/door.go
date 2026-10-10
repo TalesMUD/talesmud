@@ -111,6 +111,7 @@ func (s *liveSession) doorLoop() {
 		case <-s.stop:
 			return
 		case <-s.kick:
+			s.onKick()
 			return
 		case <-s.repaint:
 			if !paint(true) {

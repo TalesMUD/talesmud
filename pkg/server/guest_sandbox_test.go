@@ -122,7 +122,7 @@ func TestGuestSandboxDeniesElevation(t *testing.T) {
 		{http.MethodPut, "/api/user", `{"name":"New","email":"new@example.com","nickname":"Admin","picture":"new.png","role":"admin","isGuest":false}`, "guest accounts cannot be changed"},
 	}
 	for _, check := range checks {
-		status, body := callAs(t, check.method, srv.URL+check.path, guestTok, check.body)
+		status, body := callAs(t, check.method, srv.URL+check.path, guestTok, check.body, srv.URL)
 		if status != http.StatusForbidden || !strings.Contains(body, check.want) {
 			t.Fatalf("%s %s status %d body %s", check.method, check.path, status, body)
 		}
@@ -147,14 +147,14 @@ func TestGuestSandboxDeniesElevation(t *testing.T) {
 	}
 
 	for _, path := range []string{"/api/creator-probe/touch", "/api/admin-probe/touch"} {
-		status, body := callAs(t, http.MethodPost, srv.URL+path, adminTok, "")
+		status, body := callAs(t, http.MethodPost, srv.URL+path, adminTok, "", srv.URL)
 		if status != http.StatusOK || !strings.Contains(body, `"ok":true`) {
 			t.Fatalf("admin %s status %d body %s", path, status, body)
 		}
 	}
 }
 
-func callAs(t *testing.T, method, url, token, raw string) (int, string) {
+func callAs(t *testing.T, method, url, token, raw, origin string) (int, string) {
 	t.Helper()
 	var body io.Reader
 	if raw != "" {
@@ -168,6 +168,9 @@ func callAs(t *testing.T, method, url, token, raw string) (int, string) {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
+	if origin != "" {
+		req.Header.Set("Origin", origin)
+	}
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)

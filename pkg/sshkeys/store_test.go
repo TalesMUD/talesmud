@@ -54,11 +54,12 @@ func TestKeyStoreUniqueAndCap(t *testing.T) {
 	if err != nil || len(list) != 1 {
 		t.Fatalf("list %d %v", len(list), err)
 	}
-	if err := store.Delete("local:bea", row.ID); !errors.Is(err, ErrNotFound) {
+	if _, err := store.Delete("local:bea", row.ID); !errors.Is(err, ErrNotFound) {
 		t.Fatal(err)
 	}
-	if err := store.Delete("local:ada", row.ID); err != nil {
-		t.Fatal(err)
+	fp, err := store.Delete("local:ada", row.ID)
+	if err != nil || fp == "" || fp != row.Fingerprint {
+		t.Fatalf("delete fp %q %v", fp, err)
 	}
 	if got, err := store.ByFingerprint(row.Fingerprint); err != nil || got != nil {
 		t.Fatal("still linked")

@@ -11,6 +11,8 @@ import (
 // UserManagementHandler handles admin user management endpoints.
 type UserManagementHandler struct {
 	Service service.UsersService
+	// OnBan runs after a ban is stored. It closes live SSH sessions for that user id.
+	OnBan func(userID string)
 }
 
 // GetAllUsers returns all users (admin only).
@@ -57,6 +59,9 @@ func (h *UserManagementHandler) BanUser(c *gin.Context) {
 	if err := h.Service.BanUser(userID); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+	if h.OnBan != nil {
+		h.OnBan(userID)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "User banned"})
