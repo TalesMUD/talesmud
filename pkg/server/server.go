@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/handlers"
@@ -13,6 +14,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/authlocal"
 	"github.com/talesmud/talesmud/pkg/classkit"
 	dbsqlite "github.com/talesmud/talesmud/pkg/db/sqlite"
+	"github.com/talesmud/talesmud/pkg/devicecode"
 	"github.com/talesmud/talesmud/pkg/gamemode"
 	mud "github.com/talesmud/talesmud/pkg/mudserver"
 	"github.com/talesmud/talesmud/pkg/mudserver/game"
@@ -24,6 +26,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/service"
 	"github.com/talesmud/talesmud/pkg/service/groq"
 	"github.com/talesmud/talesmud/pkg/sshgate"
+	"github.com/talesmud/talesmud/pkg/sshkeys"
 	"github.com/talesmud/talesmud/pkg/util"
 	"github.com/talesmud/talesmud/pkg/webui"
 	"github.com/talesmud/talesmud/pkg/webuiplay"
@@ -41,7 +44,9 @@ type app struct {
 	localAuth     *authlocal.Service
 	resetByMail   bool
 	contentHealth repository.ContentHealthRepository
+	db            *dbsqlite.Client
 	ssh           *sshgate.Gate
+	sshAPI        *handler.SSHAPI
 }
 
 func adminAuthMiddleware() gin.HandlerFunc {
@@ -141,6 +146,8 @@ func NewApp() App {
 		Facade:        facade,
 		mud:           mud,
 		contentHealth: repos.ContentHealth(),
+		db:            client,
+		sshAPI:        handler.NewSSHAPI(),
 	}
 	if gamemode.LocalAuth() {
 		secret, err := authlocal.ResolveSecret(gamemode.Current())
@@ -299,6 +306,14 @@ func (app *app) setupRoutes() {
 		if app.localAuth != nil {
 			localAuth := &handler.LocalAuthHandler{Auth: app.localAuth}
 			protected.GET("auth/me", localAuth.Me)
+		}
+		if app.sshAPI != nil {
+			protected.GET("ssh/keys", app.sshAPI.ListKeys)
+			protected.POST("ssh/keys", app.sshAPI.AddKey)
+			protected.DELETE("ssh/keys/:id", app.sshAPI.DeleteKey)
+			protected.POST("ssh/device/lookup", app.sshAPI.Lookup)
+			protected.POST("ssh/device/confirm", app.sshAPI.Confirm)
+			protected.POST("ssh/device/deny", app.sshAPI.Deny)
 		}
 
 		// Characters
@@ -549,6 +564,7 @@ func (app *app) setupRoutes() {
 	ws.GET("", app.mud.HandleConnections)
 
 	// Serve mud-client (game client) at /play
+	r.GET("/activate", handler.Activate(gamemode.LocalAuth()))
 	r.Use(SPAMiddleware("/play", webuiplay.FS(), webuiplay.IndexFile))
 
 	if gamemode.ANSI() {
@@ -608,11 +624,48 @@ func (app *app) startSSH() {
 		log.Info("ssh disabled")
 		return
 	}
+	var keys *sshkeys.Store
+	var pending *sshkeys.Pending
+	if cfg.Keys.Enabled {
+		if app.db == nil {
+			log.Fatal("ssh keys enabled but database is missing")
+		}
+		store, err := sshkeys.Open(app.db.DB())
+		if err != nil {
+			log.WithError(err).Fatal("ssh keys store")
+		}
+		keys = store
+		pending = sshkeys.NewPending(10 * time.Minute)
+	}
+	var devices *devicecode.Store
+	if cfg.Device.Enabled {
+		devices = devicecode.New(devicecode.Config{
+			TTL:             cfg.Device.TTL.Duration(),
+			MaxPendingPerIP: cfg.Device.MaxPendingPerIP,
+			PerUser:         cfg.Device.LookupsPerUserPer10m,
+			PerIP:           cfg.Device.LookupsPerIPPer10m,
+			Window:          10 * time.Minute,
+		})
+	}
+	if app.sshAPI != nil {
+		app.sshAPI.Set(handler.SSHSettings{
+			Keys:          keys,
+			Devices:       devices,
+			ActivateURL:   cfg.Device.ActivateURL,
+			KeysEnabled:   cfg.Keys.Enabled,
+			DeviceEnabled: cfg.Device.Enabled,
+			WebManage:     cfg.Keys.WebManageOn(),
+			MaxKeys:       cfg.Keys.MaxPerAccount,
+		})
+	}
 	gate, err := sshgate.Listen(cfg, sshgate.Deps{
-		Mud:    app.mud,
-		Guests: app.Facade.GuestService(),
-		Users:  app.Facade.UsersService(),
-		Door:   gamemode.ANSI(),
+		Mud:     app.mud,
+		Guests:  app.Facade.GuestService(),
+		Users:   app.Facade.UsersService(),
+		Door:    gamemode.ANSI(),
+		Keys:    keys,
+		Pending: pending,
+		Devices: devices,
 	})
 	if err != nil {
 		log.WithError(err).Fatal("ssh listener failed")

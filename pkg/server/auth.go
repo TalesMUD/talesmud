@@ -260,6 +260,12 @@ func AuthMiddleware(facade service.Facade) gin.HandlerFunc {
 		// Local username/password sessions. Tokens from this process are not sent to the external provider.
 		if localSessions != nil && authlocal.IsLocalIssuer(tokenStr) {
 			user, err := localSessions.UserFromToken(tokenStr)
+			if errors.Is(err, authlocal.ErrBanned) {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+					"error": "Your account has been banned",
+				})
+				return
+			}
 			if err != nil || user == nil {
 				handleTokenError(c, err, nil)
 				return
