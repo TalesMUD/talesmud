@@ -105,6 +105,10 @@ type Room struct {
 	// CanBind indicates if players can use /bind in this room to set their respawn point
 	// Typically true for inns, temples, safe houses
 	CanBind bool `bson:"canBind" json:"canBind"`
+
+	// NoAggro stops aggressive enemies from opening a fight in this room.
+	// Players can still attack. It is not the disconnect safe-room setting.
+	NoAggro bool `bson:"noAggro" json:"noAggro"`
 }
 
 // Rooms type

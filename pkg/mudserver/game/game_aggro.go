@@ -181,6 +181,18 @@ func npcCanAggro(inst *npc.NPC, roomID string) bool {
 	return true
 }
 
+// roomBlocksAggro is true when the room is marked noAggro. A missing room does not block.
+func (g *Game) roomBlocksAggro(roomID string) bool {
+	if g == nil || g.Facade == nil || roomID == "" {
+		return false
+	}
+	room, err := g.Facade.RoomsService().FindByID(roomID)
+	if err != nil || room == nil {
+		return false
+	}
+	return room.NoAggro
+}
+
 func aggroLevelSkipped(playerLevel, enemyLevel int32) bool {
 	gap := ruleset.AggroMaxLevelGap()
 	if gap <= 0 {
@@ -206,6 +218,9 @@ func (g *Game) scheduleAggro(char *characters.Character, inst *npc.NPC, roomID s
 		return
 	}
 	if aggroLevelSkipped(char.Level, inst.Level) {
+		return
+	}
+	if g.roomBlocksAggro(roomID) {
 		return
 	}
 	key := aggroKey(char.ID, inst.Entity.ID)
@@ -350,6 +365,9 @@ func (g *Game) tryAggro(playerID, npcID, roomID string) {
 		return
 	}
 	if aggroLevelSkipped(char.Level, inst.Level) {
+		return
+	}
+	if g.roomBlocksAggro(roomID) {
 		return
 	}
 	if g.aggro.cooling(aggroKey(playerID, npcID)) {

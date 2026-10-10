@@ -25,6 +25,7 @@ func (y *YAMLRoom) ToEntity() *rooms.Room {
 		Area:            y.Area,
 		Tags:            y.Tags,
 		CanBind:         y.CanBind,
+		NoAggro:         y.NoAggro,
 		OnEnterScriptID: y.OnEnter,
 	}
 

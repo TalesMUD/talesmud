@@ -233,6 +233,7 @@ func cloneRoom(src *rooms.Room, cloneID, hubID string, clones map[string]string)
 		Tags:            append([]string(nil), src.Tags...),
 		OnEnterScriptID: src.OnEnterScriptID,
 		CanBind:         src.CanBind,
+		NoAggro:         src.NoAggro,
 		Meta:            src.Meta,
 		Coords:          src.Coords,
 	}

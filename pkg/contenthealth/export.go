@@ -132,6 +132,7 @@ func roomYAML(room *rooms.Room) map[string]any {
 		out["tags"] = room.Tags
 	}
 	put(out, "canBind", room.CanBind)
+	put(out, "noAggro", room.NoAggro)
 	put(out, "onEnterScript", room.OnEnterScriptID)
 	if room.Coords != nil {
 		out["coords"] = map[string]any{"x": room.Coords.X, "y": room.Coords.Y, "z": room.Coords.Z}

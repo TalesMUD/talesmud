@@ -158,6 +158,9 @@
       if (element.canBind === undefined) {
         element.canBind = false;
       }
+      if (element.noAggro === undefined) {
+        element.noAggro = false;
+      }
     },
     badge: (element) => element.area,
   };
@@ -216,6 +219,7 @@
       actions: [],
       coords: { x: 0, y: 0, z: 0 },
       canBind: false,
+      noAggro: false,
       meta: {
         background: "",
       },
@@ -839,6 +843,15 @@
         />
         <span class="text-sm text-slate-300">Can Bind</span>
         <span class="text-[10px] text-slate-500">(Players can set respawn point here)</span>
+      </label>
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          class="w-4 h-4 rounded border-slate-600 bg-slate-800 text-primary focus:ring-primary focus:ring-offset-0"
+          bind:checked={$store.selectedElement.noAggro}
+        />
+        <span class="text-sm text-slate-300">No aggro</span>
+        <span class="text-[10px] text-slate-500">(Aggressive enemies do not attack here)</span>
       </label>
     </div>
   </div>

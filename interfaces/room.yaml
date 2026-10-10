@@ -78,6 +78,12 @@ fields:
     # On death, players respawn at their bound room. Typically only inns,
     # temples, or safe areas should have canBind: true.
 
+  noAggro:
+    type: boolean
+    default: false
+    # If true, aggressive enemies do not open a fight in this room.
+    # Players can still attack. This is not the disconnect safe-room setting.
+
   onEnterScriptID:
     type: string
     # Script ID executed every time ANY player enters this room.

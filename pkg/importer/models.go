@@ -12,6 +12,7 @@ type YAMLRoom struct {
 	Area        string         `yaml:"area"`
 	Tags        []string       `yaml:"tags"`
 	CanBind     bool           `yaml:"canBind"`
+	NoAggro     bool           `yaml:"noAggro"`
 	Coords      *YAMLCoords    `yaml:"coords"`
 	Exits       []YAMLExit     `yaml:"exits"`
 	Actions     []YAMLAction   `yaml:"actions"`
