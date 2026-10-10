@@ -2531,7 +2531,9 @@ SSH is off by default. `ssh.enabled` starts one listener in the current process.
 
 - Guest SSH reuses guest creation. The account stays `IsGuest` with role `player` and no creator or admin role. It cannot confirm or deny a device code, link a key, open a creator or admin route, or change account fields (`PUT /api/user` is 403). The same connection stays that guest. The device lobby does not enter the game before confirm.
 - A linked public key enters as that account. Creators and admins use the same check as everyone else.
-- Keyboard-interactive reaches a lobby only. The game attaches after the web confirm.
+- Keyboard-interactive reaches a lobby only. The game attaches after the web confirm. The lobby shows the code and an account URL. When `ssh.signup.enabled` is on and `auth` is local, it also shows a new-player URL (`signup=1`). Choosing it does not create an account. The browser register form does, under the existing username, email, password, and address limits, and then shows the confirm step. Confirm is still a button. Origin and CSRF still apply. A classic Auth0 lobby points new players at the activate page.
+- After confirm, Y stores the key that signed this connection and the same session enters. N enters and stores nothing. A pending row from an older session still requires Y on the next connection, and N drops it without entering. The unsigned offer list is not stored.
+- Door key and device logins show the splash briefly. The key that dismisses it is not forwarded. Guests still press Enter. Activate placeholders keep the frame width and wrap a long URL onto a blank interior line.
 - `ssh.max_session: 0` leaves account sessions uncapped. Guest sessions use `ssh.guest.max_session` (default 30 minutes). Idle applies to play on both.
 - Output is queued per session (128 messages). A full queue drops that session instead of blocking the game loop.
 - Door frames sanitize player and creator text. OSC, DCS, C1, and bidi controls are dropped. Pack screen CSI is kept on the art path. SGR color in a frame is kept.

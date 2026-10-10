@@ -46,16 +46,21 @@ ssh:
     max_concurrent: 10
     per_ip_per_hour: 5
     max_session: 30m                # warns five minutes before
+  signup:
+    enabled: false                  # lobby "new player" option; requires auth: local
   door:
     splash: ""                      # raw CP437 .ans inside the world pack
     activate_screen: ""
     charset_default: auto
     letterbox_fill: ""
+    splash_hold: 0s                 # 0 uses a short built-in hold for key and device logins
   mud:
     history: 20
 ```
 
-Environment overrides, when set: `SSH_ENABLED`, `SSH_LISTEN`, `SSH_HOST_KEY_PATH`, `SSH_PUBLIC_HOST`, `SSH_PUBLIC_PORT`, `SSH_ACTIVATE_URL`, `SSH_GUEST_ENABLED`, `SSH_DEVICE_ENABLED`. They turn features on or off and set limits. They never name a user, a key, or a token.
+Environment overrides, when set: `SSH_ENABLED`, `SSH_LISTEN`, `SSH_HOST_KEY_PATH`, `SSH_PUBLIC_HOST`, `SSH_PUBLIC_PORT`, `SSH_ACTIVATE_URL`, `SSH_GUEST_ENABLED`, `SSH_DEVICE_ENABLED`, `SSH_SIGNUP_ENABLED`. They turn features on or off and set limits. They never name a user, a key, or a token.
+
+`ssh.signup.enabled` only offers local account creation when the process uses `auth: local`. A classic Auth0 process leaves it off. A typical classic listener sets `ssh.guest.enabled: true` and `ssh.signup.enabled: false`. A typical local-auth listener sets guests off and signup on. SSH never creates the account. The browser form does, and only after the player submits it. Lobby signups share the device-code pending cap (`max_pending_per_ip`, including an IPv6 /64, and `max_pending`).
 
 Per-address SSH caps, auth-fail bans, guest caps, and device-code caps treat an IPv6 /64 as one address. IPv4 stays one address. Pending device codes also stop at `max_pending` (default 100) for the whole process. The connection cap stays global. The address shown on the confirm page is the peer address, not the /64.
 
@@ -89,11 +94,11 @@ Password authentication is not offered. `exec`, subsystems, forwarding, agent fo
 
 - **Guest.** `ssh -t -p 2222 -l guest host`. Allowed only when `ssh.guest.enabled` is on and the process still allows guests. The account is a guest player: it cannot confirm or deny a device code, link a key, open a creator or admin route, or change its web profile (`PUT /api/user` is 403). The same connection does not become another account. It ends at `ssh.guest.max_session` (default 30 minutes) and on the idle timer.
 - **Linked key.** `ssh -t -p 2222 -i ~/.ssh/id_ed25519 host`. A key that is already on the account enters the game with no extra question. Creators and admins use this same path.
-- **Device code.** Any other user name opens a lobby. The screen shows a code like `BCDF-GHJK` and the activate URL. The player opens that URL, signs in on the web, and presses Confirm. Nothing is confirmed automatically.
-  - Door (`auth: local`) serves `GET /activate` as a small sign-in page.
+- **Device code.** Any other user name opens a lobby. The screen shows a code like `BCDF-GHJK`, `[L] I have an account`, and the activate URL with that code. When `ssh.signup.enabled` is on and registration is local, it also shows `[N] New player` and the same URL with `signup=1`. Pressing those letters does not create an account. The player opens the URL, signs in or registers in the browser, and presses Confirm. Nothing is confirmed automatically. A classic Auth0 lobby points new players at the same activate URL. They create the account through Auth0, not a local form.
+  - Door (`auth: local`) serves `GET /activate` as a small page. With signup on, Sign in and Create account sit side by side. Create account uses the local register rules (username, email, password, and the shared address limit) and then shows the confirm step for that code. Confirm is still a button. Origin and CSRF apply to that confirm.
   - Classic (`auth: auth0`) answers `GET /activate?code=...` with a redirect to `/play/?activate=...`. The play client looks the code up and waits for Confirm or Deny.
-- **Linking.** After a confirmed device login, the lobby asks whether to remember the computer. The offer is the key that signed. Yes stores a pending link and asks the player to reconnect. The next connection checks that same signature, names the account, and writes the key only when the whole answer is Y. N, a timeout, or quitting drops the pending link and disconnects. That session does not enter the account. Declining the first remember question still enters the account that confirmed the device code and does not store a link. A word that merely contains y is not yes. One fingerprint cannot be claimed by a second account while the first offer is live.
-- **Web keys.** A signed-in, non-guest account can list and revoke keys that were linked from SSH. Classic uses the play-client account menu ("SSH keys"). Door uses the same `/api/ssh/keys` routes. The local activate page lists and revokes, and it has no paste field. `POST /api/ssh/keys` does not link a pasted key. A paste is not a signature, so it does not occupy the fingerprint or sign anyone in. The key is stored only after the device-link reconnect proves the signature and the owner presses Y. Deleting a key, or banning the account, closes that account's live SSH sessions in this process.
+- **Linking.** After a confirmed device login, the lobby asks whether to remember the computer. The key is the one that signed this connection. An unsigned offer is not stored. Yes writes that key and the same session enters the account. No, or a timeout, enters the account and stores nothing. Quitting does not enter. A word that merely contains y is not yes. A pending row left from an older session still asks on the next connection: Y writes the key only when the signature matches that row, and N, a timeout, or quitting drops the row and does not enter. One fingerprint cannot be claimed by a second account while that offer is live.
+- **Web keys.** A signed-in, non-guest account can list and revoke keys that were linked from SSH. Classic uses the play-client account menu ("SSH keys"). Door uses the same `/api/ssh/keys` routes. The local activate page lists and revokes, and it has no paste field. `POST /api/ssh/keys` does not link a pasted key. A paste is not a signature, so it does not occupy the fingerprint or sign anyone in. The key is stored when the signed SSH session answers Y, or when a pending reconnect answers Y. Deleting a key, or banning the account, closes that account's live SSH sessions in this process.
 
 Account sessions use `ssh.max_session` when that value is greater than zero. Zero leaves them uncapped. Idle still applies.
 
@@ -104,7 +109,7 @@ A newer web or SSH session replaces the older one. The SSH side prints `Session 
 Public:
 
 - `GET /api/ssh/info` — `{enabled, host, port, host_key_fingerprints, guest_enabled, activate_url}` with the full host fingerprint.
-- `GET /activate` — local page, or a redirect into `/play/?activate=` on a classic process.
+- `GET /activate` — local page, or a redirect into `/play/?activate=` on a classic process. With local signup on, the page also offers Create account.
 
 Signed in (guest and banned accounts are refused):
 
@@ -118,13 +123,13 @@ The lookup response shows the address, age, client version, and a shortened key 
 
 ## World pack art
 
-Door splash and activate screens are optional files named by `ssh.door.splash` and `ssh.door.activate_screen`. They are raw CP437 and must stay inside the world pack. Their CSI is kept. The activate screen may contain `{{CODE}}`, `{{URL}}`, and `{{EXPIRES}}`. The engine ships a plain fallback and does not embed a world's art. Player and creator text is sanitized before it is painted. A door frame drops OSC, DCS, C1, and bidi controls. A one-line label also drops CR and LF. SGR color in the frame is kept.
+Door splash and activate screens are optional files named by `ssh.door.splash` and `ssh.door.activate_screen`. They are raw CP437 and must stay inside the world pack. Their CSI is kept. The activate screen may contain `{{CODE}}`, `{{URL}}`, `{{SIGNUP_URL}}`, and `{{EXPIRES}}`. A short value is padded so the frame stays put. A long URL wraps onto the following blank interior lines. The engine ships a plain fallback and does not embed a world's art. Key and device logins see the splash briefly, or until a key, and that key is not typed into the game. Guests still press Enter. `ssh.door.splash_hold` overrides the brief hold. Player and creator text is sanitized before it is painted. A door frame drops OSC, DCS, C1, and bidi controls. A one-line label also drops CR and LF. SGR color in the frame is kept. Link questions are wrapped on spaces and painted once.
 
 ## Still to do before production
 
 - Open TCP 2222 and 2223 on the host firewall.
 - Set `ssh:` (or the `SSH_*` variables) on each service, with a host-key path outside the repo.
 - Confirm the reverse proxy forwards `/activate` and `/api/ssh/*`.
-- Decide whether guests are on for each mode. They stay off until that is set.
+- Decide whether guests are on for each mode. They stay off until that is set. Classic SSH usually leaves guests on and signup off. A local-auth process usually leaves guests off and signup on.
 - No Auth0 dashboard change is required while activation stays under `/play`.
 - An independent review of the auth paths is still outstanding. This document does not certify the feature.
