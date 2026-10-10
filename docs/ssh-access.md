@@ -115,7 +115,7 @@ The lookup response shows the address, age, client version, and a shortened key 
 
 ## World pack art
 
-Door splash and activate screens are optional files named by `ssh.door.splash` and `ssh.door.activate_screen`. They are raw CP437 and must stay inside the world pack. The activate screen may contain `{{CODE}}`, `{{URL}}`, and `{{EXPIRES}}`. The engine ships a plain fallback and does not embed a world's art.
+Door splash and activate screens are optional files named by `ssh.door.splash` and `ssh.door.activate_screen`. They are raw CP437 and must stay inside the world pack. Their CSI is kept. The activate screen may contain `{{CODE}}`, `{{URL}}`, and `{{EXPIRES}}`. The engine ships a plain fallback and does not embed a world's art. Player and creator text is sanitized before it is painted. A door frame drops OSC, DCS, C1, and bidi controls. A one-line label also drops CR and LF. SGR color in the frame is kept.
 
 ## Still to do before production
 

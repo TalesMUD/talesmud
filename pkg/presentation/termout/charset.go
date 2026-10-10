@@ -4,6 +4,7 @@ package termout
 
 import (
 	"strings"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -86,33 +87,75 @@ func containsUTF8(s string) bool {
 	return strings.Contains(s, "UTF-8") || strings.Contains(s, "UTF8")
 }
 
-// Encode writes s for the client. ESC sequences are copied unchanged.
-// Unmappable runes become '?'. UTF-8 is the identity encoding.
+// Encode writes s for the client. CSI is kept so pack .ans art can clear,
+// home, and color. OSC, DCS, other escapes, C1, and format controls are
+// dropped. Unmappable runes become '?'.
 func Encode(s string, cs Charset) []byte {
 	if s == "" {
 		return nil
 	}
-	if cs == "" || cs == UTF8 {
-		return []byte(s)
+	if cs == "" {
+		cs = UTF8
 	}
 	raw := []byte(s)
 	out := make([]byte, 0, len(raw))
 	for i := 0; i < len(raw); {
 		if raw[i] == 0x1b {
-			j := skipESC(raw, i)
-			out = append(out, raw[i:j]...)
+			j, keep := takeOutputESC(raw, i)
+			if keep {
+				out = append(out, raw[i:j]...)
+			}
 			i = j
 			continue
 		}
 		r, size := utf8.DecodeRune(raw[i:])
-		if size < 1 {
-			size = 1
-			r = utf8.RuneError
+		if size < 1 || (r == utf8.RuneError && size == 1) {
+			i++
+			continue
+		}
+		if (r >= 0x80 && r <= 0x9f) || unicode.Is(unicode.Cf, r) {
+			i += size
+			continue
+		}
+		if cs == UTF8 {
+			out = append(out, raw[i:i+size]...)
+		} else {
+			out = append(out, mapRune(r, cs))
 		}
 		i += size
-		out = append(out, mapRune(r, cs))
 	}
 	return out
+}
+
+// takeOutputESC keeps CSI, including the cursor and erase commands in pack
+// art. OSC and DCS are dropped, including the DCS payload.
+func takeOutputESC(b []byte, i int) (int, bool) {
+	if i+1 >= len(b) {
+		return len(b), false
+	}
+	switch b[i+1] {
+	case '[':
+		return skipESC(b, i), true
+	case ']':
+		return skipESC(b, i), false
+	case 'P', 'X', '^', '_':
+		return skipUntilST(b, i+2), false
+	default:
+		return skipESC(b, i), false
+	}
+}
+
+func skipUntilST(b []byte, j int) int {
+	for j < len(b) {
+		if b[j] == 0x07 {
+			return j + 1
+		}
+		if b[j] == 0x1b && j+1 < len(b) && b[j+1] == '\\' {
+			return j + 2
+		}
+		j++
+	}
+	return j
 }
 
 func mapRune(r rune, cs Charset) byte {

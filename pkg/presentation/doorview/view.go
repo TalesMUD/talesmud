@@ -20,6 +20,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/gamemode"
 	"github.com/talesmud/talesmud/pkg/mudserver/game"
 	"github.com/talesmud/talesmud/pkg/presentation/ansi"
+	"github.com/talesmud/talesmud/pkg/presentation/textline"
 	"github.com/talesmud/talesmud/pkg/ruleset"
 )
 
@@ -418,7 +419,7 @@ func (v *View) paint(user *entities.User, send func(any)) {
 	}
 	if phase == "amount" {
 		if d := v.draftOf(user.ID); d != nil && d.prompt != "" {
-			page.Prompt = d.prompt
+			page.Prompt = textline.SingleLine(d.prompt)
 		}
 	}
 	facade := v.Game.GetFacade()
@@ -448,7 +449,7 @@ func (v *View) paint(user *entities.User, send func(any)) {
 		send(ansi.Render(page))
 		return
 	}
-	page.Location = char.Name
+	page.Location = textline.SingleLine(char.Name)
 	page.ScreenID = char.CurrentRoomID
 	hp, maxHP := char.CurrentHitPoints, char.MaxHitPoints
 	if v.Game.CombatController != nil {
@@ -481,7 +482,7 @@ func (v *View) paint(user *entities.User, send func(any)) {
 	binds := applyOpenExits(packBinds, room, char)
 	catalog := v.catalogLines(user.ID, char, room, selling)
 	if brief != "" {
-		pinned = append(pinned, brief)
+		pinned = append(pinned, textline.Sanitize(brief))
 	} else if len(catalog) > 0 {
 		chrome = append(chrome, catalog...)
 	} else if room != nil {
@@ -490,7 +491,7 @@ func (v *View) paint(user *entities.User, send func(any)) {
 		}
 	}
 	if note := v.peekNotice(user.ID); note != "" {
-		lines := wrapPlain(note, 78)
+		lines := wrapPlain(textline.Sanitize(note), 78)
 		if len(lines) > 2 {
 			lines = lines[:2]
 		}
@@ -499,9 +500,9 @@ func (v *View) paint(user *entities.User, send func(any)) {
 	if room == nil {
 		chrome = append(chrome, "You are nowhere.")
 	} else {
-		page.Location = room.Name
+		page.Location = textline.SingleLine(room.Name)
 		if len(catalog) == 0 && room.Description != "" {
-			lines := wrapPlain(room.Description, 78)
+			lines := wrapPlain(textline.Sanitize(room.Description), 78)
 			limit := 2
 			if brief != "" {
 				limit = 1
@@ -517,7 +518,7 @@ func (v *View) paint(user *entities.User, send func(any)) {
 				if ex.Hidden && !char.HasRevealedExit(room.ID, ex.Name) {
 					continue
 				}
-				names = append(names, ex.Name)
+				names = append(names, textline.SingleLine(ex.Name))
 			}
 			if len(names) > 0 {
 				chrome = append(chrome, "Exits: "+strings.Join(names, ", "))
@@ -527,7 +528,7 @@ func (v *View) paint(user *entities.User, send func(any)) {
 			names := make([]string, 0, len(*room.Actions))
 			for _, action := range *room.Actions {
 				if action.Name != "" {
-					names = append(names, action.Name)
+					names = append(names, textline.SingleLine(action.Name))
 				}
 			}
 			if len(names) > 0 {
@@ -538,7 +539,7 @@ func (v *View) paint(user *entities.User, send func(any)) {
 			var npcs []string
 			for _, n := range v.Game.NPCManager.GetInstancesInRoom(room.ID) {
 				if n != nil && (n.MerchantTrait == nil || len(n.MerchantTrait.Inventory) == 0) {
-					npcs = append(npcs, n.Name)
+					npcs = append(npcs, textline.SingleLine(n.Name))
 				}
 			}
 			if len(npcs) > 0 {
@@ -559,10 +560,13 @@ func (v *View) paint(user *entities.User, send func(any)) {
 		page.Footer = idleFooter(room, char)
 	}
 	if sheet := v.peekSheet(user.ID); len(sheet) > 0 {
-		page.Body = fitBody(pinned[:1], nil, sheet, 19)
+		page.Body = fitBody(pinned[:1], nil, scrubLines(sheet), 19)
 	} else {
-		page.Body = fitBody(pinned, chrome, append(v.peekRecent(user.ID), v.peekFlash(user.ID)...), 19)
+		page.Body = fitBody(pinned, chrome, scrubLines(append(v.peekRecent(user.ID), v.peekFlash(user.ID)...)), 19)
 	}
+	page.Title = textline.SingleLine(page.Title)
+	page.Prompt = textline.SingleLine(page.Prompt)
+	page.Footer = textline.SingleLine(page.Footer)
 	send(ansi.Render(page))
 }
 
@@ -571,12 +575,12 @@ func (v *View) characterLines(user *entities.User) []string {
 	if phase == "path" {
 		lines := []string{"Choose a path."}
 		if note := v.peekNotice(user.ID); note != "" {
-			lines = append(lines, note)
+			lines = append(lines, textline.Sanitize(note))
 		}
 		for i, path := range loadPaths() {
-			lines = append(lines, fmt.Sprintf("%d %s", i+1, path.Name))
+			lines = append(lines, fmt.Sprintf("%d %s", i+1, textline.SingleLine(path.Name)))
 			if path.Blurb != "" {
-				lines = append(lines, "  "+path.Blurb)
+				lines = append(lines, "  "+textline.Sanitize(path.Blurb))
 			}
 		}
 		return lines
@@ -584,14 +588,14 @@ func (v *View) characterLines(user *entities.User) []string {
 	if phase == "sex" {
 		lines := []string{"How should the square address you?"}
 		if note := v.peekNotice(user.ID); note != "" {
-			lines = append(lines, note)
+			lines = append(lines, textline.Sanitize(note))
 		}
 		lines = append(lines, "M Man", "F Woman", "X Neither word fits")
 		return lines
 	}
 	lines := []string{"Type a character name."}
 	if note := v.peekNotice(user.ID); note != "" {
-		lines = append(lines, note)
+		lines = append(lines, textline.Sanitize(note))
 	}
 	facade := v.Game.GetFacade()
 	if facade == nil {
@@ -604,7 +608,7 @@ func (v *View) characterLines(user *entities.User) []string {
 	}
 	for _, ch := range chars {
 		if ch != nil {
-			lines = append(lines, ch.Name)
+			lines = append(lines, textline.SingleLine(ch.Name))
 		}
 	}
 	return lines
@@ -618,7 +622,7 @@ func legendLines(binds map[string]keyBind) []string {
 	sort.Strings(keys)
 	parts := make([]string, 0, len(keys))
 	for _, key := range keys {
-		label := binds[key].Label
+		label := textline.SingleLine(binds[key].Label)
 		if label == "" {
 			continue
 		}
@@ -652,6 +656,17 @@ func screenArt(roomID string) string {
 		lines = lines[:len(lines)-1]
 	}
 	return strings.Join(lines, "\n")
+}
+
+func scrubLines(lines []string) []string {
+	if len(lines) == 0 {
+		return lines
+	}
+	out := make([]string, len(lines))
+	for i, line := range lines {
+		out[i] = textline.Sanitize(line)
+	}
+	return out
 }
 
 func wrapPlain(s string, width int) []string {
@@ -791,9 +806,9 @@ func (v *View) catalogLines(userID string, char *characters.Character, room *roo
 		}
 		if len(rows) == 0 {
 			if selling {
-				return []string{n.Name + " will take nothing you carry."}
+				return []string{textline.SingleLine(n.Name) + " will take nothing you carry."}
 			}
-			return []string{n.Name + " has nothing on the rack."}
+			return []string{textline.SingleLine(n.Name) + " has nothing on the rack."}
 		}
 		pages := (len(rows) + shopPageSize - 1) / shopPageSize
 		page := v.pageOf(userID)
@@ -808,13 +823,13 @@ func (v *View) catalogLines(userID string, char *characters.Character, room *roo
 		if end > len(rows) {
 			end = len(rows)
 		}
-		head := fmt.Sprintf("%s  %d-%d of %d", n.Name, rows[start].n, rows[end-1].n, len(rows))
+		head := fmt.Sprintf("%s  %d-%d of %d", textline.SingleLine(n.Name), rows[start].n, rows[end-1].n, len(rows))
 		if pages > 1 {
 			head += "   N next  P prev"
 		}
 		out := []string{clipWidth(head, 78)}
 		for _, row := range rows[start:end] {
-			out = append(out, clipWidth(row.line, 78))
+			out = append(out, clipWidth(textline.SingleLine(row.line), 78))
 		}
 		return out
 	}
