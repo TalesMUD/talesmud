@@ -77,12 +77,8 @@ button { margin-top: 0.8rem; margin-right: 0.4rem; }
 <button type="button" onclick="decide('/api/ssh/device/deny')">Deny</button>
 </div>
 <h2>SSH keys</h2>
+<p>Keys are linked from an SSH sign-in. This page can revoke one.</p>
 <div id="keys"></div>
-<form id="addkey">
-<label>Public key <input id="pubkey" autocomplete="off"></label>
-<label>Label <input id="label" autocomplete="off"></label>
-<button type="submit">Add key</button>
-</form>
 <p id="keyerr"></p>
 </div>
 <script>
@@ -183,20 +179,6 @@ async function revoke(id) {
     document.getElementById("keyerr").textContent = err.message;
   }
 }
-document.getElementById("addkey").addEventListener("submit", async function (ev) {
-  ev.preventDefault();
-  document.getElementById("keyerr").textContent = "";
-  try {
-    await api("POST", "/api/ssh/keys", {
-      public_key: document.getElementById("pubkey").value,
-      label: document.getElementById("label").value
-    });
-    document.getElementById("pubkey").value = "";
-    loadKeys();
-  } catch (err) {
-    document.getElementById("keyerr").textContent = err.message;
-  }
-});
 if (token()) { showLogin(false); loadKeys(); } else { showLogin(true); }
 </script>
 </body>

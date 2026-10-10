@@ -93,6 +93,9 @@ func TestActivatePageIsLocalAndPrefills(t *testing.T) {
 	if !strings.Contains(body, `params.get("code")`) {
 		t.Fatal("code is not prefilled")
 	}
+	if strings.Contains(body, "addkey") || strings.Contains(body, "/api/ssh/keys\",") {
+		t.Fatal("activate page still offers a key paste")
+	}
 	_, _, tokenKey := gamemode.ClientPage()
 	if !strings.Contains(body, tokenKey) {
 		t.Fatalf("token key %s missing", tokenKey)
