@@ -24,6 +24,28 @@ import (
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
+func TestAudienceMatches(t *testing.T) {
+	const want = "http://tales.test/api"
+	cases := []struct {
+		name   string
+		claims jwt.MapClaims
+		ok     bool
+	}{
+		{name: "missing", claims: jwt.MapClaims{}, ok: true},
+		{name: "string", claims: jwt.MapClaims{"aud": want}, ok: true},
+		{name: "other string", claims: jwt.MapClaims{"aud": "https://evil.example"}, ok: false},
+		{name: "array hit", claims: jwt.MapClaims{"aud": []interface{}{"https://evil.example", want}}, ok: true},
+		{name: "array miss", claims: jwt.MapClaims{"aud": []interface{}{"https://evil.example"}}, ok: false},
+		{name: "empty array", claims: jwt.MapClaims{"aud": []interface{}{}}, ok: false},
+		{name: "number", claims: jwt.MapClaims{"aud": 12}, ok: false},
+	}
+	for _, tc := range cases {
+		if got := audienceMatches(tc.claims, want); got != tc.ok {
+			t.Fatalf("%s: got %v", tc.name, got)
+		}
+	}
+}
+
 func TestSSHAuth0DeviceConfirm(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	prev := localSessions
@@ -139,17 +161,33 @@ func TestSSHAuth0DeviceConfirm(t *testing.T) {
 	if bad.Code != http.StatusUnauthorized {
 		t.Fatalf("bad signature %d", bad.Code)
 	}
+	arrayAud := signAuth0Claims(t, key, kid, jwt.MapClaims{
+		"sub": subject,
+		"aud": []string{"https://evil.example"},
+		"iss": issuer,
+		"exp": time.Now().Add(time.Hour).Unix(),
+		"iat": time.Now().Add(-time.Minute).Unix(),
+	})
+	rejected := postAuth0(t, r, "/api/ssh/device/lookup", arrayAud, `{"user_code":"`+display+`"}`)
+	if rejected.Code != http.StatusUnauthorized {
+		t.Fatalf("array audience %d", rejected.Code)
+	}
 }
 
 func signAuth0(t *testing.T, key *rsa.PrivateKey, kid, audience, issuer, subject string) string {
 	t.Helper()
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
+	return signAuth0Claims(t, key, kid, jwt.MapClaims{
 		"sub": subject,
 		"aud": audience,
 		"iss": issuer,
 		"exp": time.Now().Add(time.Hour).Unix(),
 		"iat": time.Now().Add(-time.Minute).Unix(),
 	})
+}
+
+func signAuth0Claims(t *testing.T, key *rsa.PrivateKey, kid string, claims jwt.MapClaims) string {
+	t.Helper()
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	token.Header["kid"] = kid
 	signed, err := token.SignedString(key)
 	if err != nil {

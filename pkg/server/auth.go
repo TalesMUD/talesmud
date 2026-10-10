@@ -105,14 +105,55 @@ func getPemCert(token *jwt.Token) (string, error) {
 	return "", errors.New("Unable to find appropriate key")
 }
 
+// audienceMatches accepts a missing audience. A string must be the expected
+// value. An array must contain it. Any other shape is rejected.
+func audienceMatches(claims jwt.MapClaims, want string) bool {
+	if claims == nil {
+		return false
+	}
+	raw, ok := claims["aud"]
+	if !ok || raw == nil {
+		return true
+	}
+	switch v := raw.(type) {
+	case string:
+		return v == want
+	case []string:
+		for _, one := range v {
+			if one == want {
+				return true
+			}
+		}
+		return false
+	case []interface{}:
+		if len(v) == 0 {
+			return false
+		}
+		matched := false
+		for _, one := range v {
+			s, ok := one.(string)
+			if !ok {
+				return false
+			}
+			if s == want {
+				matched = true
+			}
+		}
+		return matched
+	default:
+		return false
+	}
+}
+
 // getKeyFunc returns a function to be used as the jwt.Keyfunc for JWT token validation.
 // It verifies the 'aud' and 'iss' claims and extracts the PEM certificate.
 func getKeyFunc() jwt.Keyfunc {
 	return func(token *jwt.Token) (interface{}, error) {
-		// Verify 'aud' claim
+		// Verify 'aud' claim. Do not call MapClaims.VerifyAudience: in this
+		// jwt-go release an array audience skips the check (GO-2020-0017).
 		aud := os.Getenv("AUTH0_AUDIENCE")
-		checkAud := token.Claims.(jwt.MapClaims).VerifyAudience(aud, false)
-		if !checkAud {
+		claims, _ := token.Claims.(jwt.MapClaims)
+		if !audienceMatches(claims, aud) {
 			return token, errors.New("Invalid audience")
 		}
 		// Verify 'iss' claim

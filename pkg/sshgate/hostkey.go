@@ -24,7 +24,7 @@ func LoadOrCreateHostKey(path string) (ssh.Signer, string, error) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, "", fmt.Errorf("ssh host key dir: %w", err)
 	}
-	if err := os.Chmod(dir, 0o700); err != nil {
+	if err := os.Chmod(dir, 0o700); err != nil { // #nosec G302 -- a directory needs the execute bit; the key file is 0600
 		return nil, "", fmt.Errorf("ssh host key dir mode: %w", err)
 	}
 	info, err := os.Stat(path)
@@ -52,7 +52,7 @@ func writeNewHostKey(path string) error {
 	if err != nil {
 		return err
 	}
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600) // #nosec G304 -- operator host_key_path, created exclusively, never request input
 	if err != nil {
 		return err
 	}

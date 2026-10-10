@@ -3,6 +3,7 @@ package sshgate
 import (
 	"encoding/binary"
 	"errors"
+	"math"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -125,7 +126,7 @@ func newSession(g *Gate, conn net.Conn, channel ssh.Channel, ip string) *liveSes
 }
 
 func (s *liveSession) fail(code int) {
-	if code != 0 {
+	if code > 0 && code <= math.MaxInt32 {
 		s.link.code.Store(int32(code))
 	}
 	s.link.closed.Store(true)

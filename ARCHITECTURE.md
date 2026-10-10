@@ -181,6 +181,7 @@ Request → Extract Token → Try Guest HMAC → (if fail) Validate Auth0 JWT �
 - Guest tokens signed with `GUEST_SECRET` env var, validated via `GuestService.ValidateGuestToken()`
 - Guest session expiry checked at auth layer (returns 401 if expired)
 - Auth0 tokens validated against JWKS endpoint (with in-memory cache, 1-hour TTL)
+- A missing `aud` is accepted. A string `aud` must equal `AUTH0_AUDIENCE`. An array `aud` must contain it. The check does not use `jwt-go` `VerifyAudience` (GO-2020-0017)
 - Creates new user on first login
 - Syncs admin role from `MUD_ADMIN_OAUTHID` env var on every login
 - Rejects banned users with 403 at the auth layer
