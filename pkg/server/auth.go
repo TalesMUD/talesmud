@@ -284,8 +284,14 @@ func AuthMiddleware(facade service.Facade) gin.HandlerFunc {
 		if guestSvc := facade.GuestService(); guestSvc != nil {
 			if userID, err := guestSvc.ValidateGuestToken(tokenStr); err == nil {
 				if user, err := facade.UsersService().FindByID(userID); err == nil {
-					// Check if guest session has expired
-					if user.IsGuest && !user.GuestExpiresAt.IsZero() && time.Now().After(user.GuestExpiresAt) {
+					// The uid claim selects a row. It must be a guest row.
+					if !user.IsGuest {
+						c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+							"error": "invalid guest token",
+						})
+						return
+					}
+					if !user.GuestExpiresAt.IsZero() && time.Now().After(user.GuestExpiresAt) {
 						c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 							"error": "Guest session expired",
 						})
