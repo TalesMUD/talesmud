@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"io/fs"
 	"net/http"
 	"net/url"
 	"strings"
@@ -9,25 +10,45 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/talesmud/talesmud/pkg/gamemode"
+	"github.com/talesmud/talesmud/pkg/webuiplay"
 )
 
-// Activate serves the local sign-in page. A classic Auth0 process redirects
-// into the play client, which already holds the Auth0 session.
+// Activate serves the SSH sign-in page. A door (local auth) process serves
+// its own form. A classic Auth0 process serves the standalone activate page
+// from the play client build; it signs in through Auth0 and returns here.
 func Activate(local bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !local {
-			code := strings.TrimSpace(c.Query("code"))
-			target := "/play/"
-			if code != "" {
-				target = "/play/?activate=" + url.QueryEscape(code)
+			page := classicActivatePage()
+			if page == nil {
+				code := strings.TrimSpace(c.Query("code"))
+				target := "/play/"
+				if code != "" {
+					target = "/play/?activate=" + url.QueryEscape(code)
+				}
+				c.Redirect(http.StatusFound, target)
+				return
 			}
-			c.Redirect(http.StatusFound, target)
+			setActivateHeaders(c)
+			c.Data(http.StatusOK, "text/html; charset=utf-8", page)
 			return
 		}
 		setActivateHeaders(c)
 		_, _, tokenKey := gamemode.ClientPage()
 		c.Data(http.StatusOK, "text/html; charset=utf-8", activatePage(tokenKey))
 	}
+}
+
+// ClassicActivateFile is the play-client file served at /activate on a classic process.
+const ClassicActivateFile = "activate.html"
+
+// classicActivatePage reads the page from the embedded play build. Nil when absent.
+var classicActivatePage = func() []byte {
+	b, err := fs.ReadFile(webuiplay.FS(), ClassicActivateFile)
+	if err != nil || len(b) == 0 {
+		return nil
+	}
+	return b
 }
 
 func setActivateHeaders(c *gin.Context) {

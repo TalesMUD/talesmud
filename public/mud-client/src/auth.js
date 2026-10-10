@@ -3,6 +3,7 @@
 import { onMount, setContext, getContext } from "svelte";
 import { writable } from "svelte/store";
 import createAuth0Client from "@auth0/auth0-spa-js";
+import { returnTarget } from "./activate/activateFlow.js";
 import { clearGuestToken, clearLocalSession, readGuestToken, restoredSession } from "./authSession.js";
 
 const isLoading = writable(true);
@@ -40,7 +41,14 @@ function createAuth(config) {
       // Handle redirect callback after login
       if (params.has("code")) {
         try {
-          await auth0.handleRedirectCallback();
+          const result = await auth0.handleRedirectCallback();
+          // The standalone /activate page signs in through this callback.
+          // Only the exact /activate path is honoured (no open redirect).
+          const back = returnTarget(result && result.appState);
+          if (back) {
+            window.location.replace(back);
+            return;
+          }
           // Clear URL parameters after successful callback
           window.history.replaceState({}, document.title, window.location.pathname);
           authError.set(null);
