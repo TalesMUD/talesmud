@@ -67,7 +67,10 @@ func TestPendingNDisconnects(t *testing.T) {
 	if err := devices.Confirm(code, user.RefID, "127.0.0.1", view.CSRF, func(string) error { return nil }); err != nil {
 		t.Fatal(err)
 	}
-	out.wait(t, []string{"Remember this computer?"}, 15*time.Second)
+	remember := out.wait(t, []string{"Remember this computer?"}, 15*time.Second)
+	if strings.ContainsRune(remember, '\u202e') || strings.Contains(remember, "\nFAKE") || strings.Contains(remember, "\rFAKE") {
+		t.Fatalf("nickname controls in %q", remember)
+	}
 	if _, err := io.WriteString(stdin, "maybe"); err != nil {
 		t.Fatal(err)
 	}

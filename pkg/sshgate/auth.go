@@ -154,12 +154,13 @@ func accountLabel(user *entities.User) string {
 			name = user.Username
 		}
 	}
-	name = textline.Sanitize(strings.TrimSpace(name))
+	name = textline.SingleLine(name)
 	if name == "" {
 		return "this account"
 	}
-	if len(name) > 32 {
-		name = name[:32]
+	runes := []rune(name)
+	if len(runes) > 32 {
+		name = string(runes[:32])
 	}
 	return name
 }
