@@ -62,12 +62,16 @@ func (s *liveSession) doorLoop() {
 		}
 		return true
 	}
-	if !paint(true) {
-		return
-	}
-
 	in := make(chan []byte, 16)
 	go s.readInput(in)
+	if s.via != "guest" {
+		if !s.openDoorAuth(in, view, &cs) {
+			return
+		}
+		playing = true
+	} else if !paint(true) {
+		return
+	}
 
 	idleFor := s.gate.cfg.IdleTimeout.Duration()
 	idle := time.NewTimer(idleFor)

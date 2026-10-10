@@ -13,11 +13,13 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 
+	"github.com/talesmud/talesmud/pkg/devicecode"
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/gamemode"
 	"github.com/talesmud/talesmud/pkg/mudserver"
 	"github.com/talesmud/talesmud/pkg/presentation/textline"
 	"github.com/talesmud/talesmud/pkg/service"
+	"github.com/talesmud/talesmud/pkg/sshkeys"
 )
 
 const (
@@ -31,15 +33,20 @@ const (
 // UserLookup is the account read the gate needs. *service users satisfy it.
 type UserLookup interface {
 	FindByID(id string) (*entities.User, error)
+	FindByRefID(refID string) (*entities.User, error)
 }
 
 // Deps are the engine hooks. Nil guests or users fail closed.
 // Door selects the 80x25 frame renderer. Classic play is the default.
+// Keys, Pending, and Devices stay nil unless that feature is enabled.
 type Deps struct {
-	Mud    mudserver.MUDServer
-	Guests service.GuestService
-	Users  UserLookup
-	Door   bool
+	Mud     mudserver.MUDServer
+	Guests  service.GuestService
+	Users   UserLookup
+	Door    bool
+	Keys    *sshkeys.Store
+	Pending *sshkeys.Pending
+	Devices *devicecode.Store
 }
 
 // PublicInfo is the unauthenticated GET /api/ssh/info body.
@@ -65,8 +72,10 @@ type Gate struct {
 	cancel  context.CancelFunc
 	playURL string
 	// door selects the 80x25 frame renderer. Classic play is the default.
-	door bool
-	once sync.Once
+	door    bool
+	once    sync.Once
+	notesMu sync.Mutex
+	notes   map[string]*authNote
 }
 
 // Listen starts the SSH listener when cfg.Enabled. A disabled config returns
@@ -86,6 +95,7 @@ func Listen(cfg gamemode.SSHConfig, deps Deps) (*Gate, error) {
 		cancel:  cancel,
 		playURL: playURL(cfg),
 		door:    deps.Door,
+		notes:   map[string]*authNote{},
 	}
 	if !cfg.Enabled {
 		return g, nil
@@ -103,7 +113,7 @@ func Listen(cfg gamemode.SSHConfig, deps Deps) (*Gate, error) {
 		GuestEnabled:        cfg.Guest.Enabled,
 		ActivateURL:         cfg.Device.ActivateURL,
 	}
-	g.sshConf = serverConfig(signer, cfg.Guest.Enabled, g.noneAuth)
+	g.sshConf = g.serverConfig(signer)
 	ln, err := net.Listen("tcp", cfg.Listen)
 	if err != nil {
 		cancel()
@@ -217,6 +227,7 @@ func (g *Gate) serve(conn net.Conn, sshConn *ssh.ServerConn, chans <-chan ssh.Ne
 		}
 		sessions++
 		sess := newSession(g, conn, channel, ip)
+		sess.applyAuth(sshConn)
 		go sess.requests(requests)
 	}
 }
@@ -334,7 +345,8 @@ func prepare(cfg gamemode.SSHConfig) (gamemode.SSHConfig, error) {
 	return cfg, nil
 }
 
-func serverConfig(signer ssh.Signer, guest bool, none func(ssh.ConnMetadata) (*ssh.Permissions, error)) *ssh.ServerConfig {
+func (g *Gate) serverConfig(signer ssh.Signer) *ssh.ServerConfig {
+	guest := g.cfg.Guest.Enabled
 	cfg := &ssh.ServerConfig{
 		ServerVersion: serverVersion,
 		MaxAuthTries:  6,
@@ -366,6 +378,7 @@ func serverConfig(signer ssh.Signer, guest bool, none func(ssh.ConnMetadata) (*s
 			},
 		},
 		AuthLogCallback: func(meta ssh.ConnMetadata, method string, err error) {
+			// method and ok only. The error text and the key stay out of the log.
 			log.WithFields(log.Fields{
 				"ip":     remoteHost(meta.RemoteAddr()),
 				"method": method,
@@ -375,7 +388,16 @@ func serverConfig(signer ssh.Signer, guest bool, none func(ssh.ConnMetadata) (*s
 		},
 	}
 	if guest {
-		cfg.NoClientAuthCallback = none
+		cfg.NoClientAuthCallback = g.noneAuth
+	}
+	// Callbacks stay nil unless the flag and the store are both set, so a
+	// guest-only listener does not advertise publickey or keyboard-interactive.
+	if g.cfg.Keys.Enabled && g.deps.Keys != nil {
+		cfg.PublicKeyCallback = g.publicKeyAuth
+		cfg.VerifiedPublicKeyCallback = g.verifiedKeyAuth
+	}
+	if g.cfg.Device.Enabled && g.deps.Devices != nil {
+		cfg.KeyboardInteractiveCallback = g.deviceAuth
 	}
 	cfg.AddHostKey(signer)
 	return cfg

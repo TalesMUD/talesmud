@@ -71,27 +71,35 @@ func (l *sshLink) RemoteIP() string {
 func (l *sshLink) Kind() string { return "ssh" }
 
 type liveSession struct {
-	gate      *Gate
-	netConn   net.Conn
-	channel   ssh.Channel
-	ip        string
-	stop      chan struct{}
-	kick      chan struct{}
-	kickOnce  sync.Once
-	once      sync.Once
-	link      *sshLink
-	editor    *textline.Editor
-	input     func(string, bool)
-	done      func()
-	guestHeld bool
-	userID    string
-	pty       bool
-	started   atomic.Bool
-	mu        sync.Mutex
-	cols      int
-	rows      int
-	env       map[string]string
-	repaint   chan struct{}
+	gate          *Gate
+	netConn       net.Conn
+	channel       ssh.Channel
+	ip            string
+	stop          chan struct{}
+	kick          chan struct{}
+	kickOnce      sync.Once
+	once          sync.Once
+	link          *sshLink
+	editor        *textline.Editor
+	input         func(string, bool)
+	done          func()
+	guestHeld     bool
+	userID        string
+	via           string
+	userRef       string
+	fp            string
+	linkID        string
+	offers        []string
+	keyLine       string
+	clientVersion string
+	deviceID      string
+	pty           bool
+	started       atomic.Bool
+	mu            sync.Mutex
+	cols          int
+	rows          int
+	env           map[string]string
+	repaint       chan struct{}
 }
 
 func newSession(g *Gate, conn net.Conn, channel ssh.Channel, ip string) *liveSession {
@@ -144,7 +152,14 @@ func (s *liveSession) finish() {
 		if s.guestHeld {
 			s.gate.limits.releaseGuest(s.ip)
 		}
-		log.WithFields(log.Fields{"ip": s.ip, "userId": s.userID, "method": "guest"}).Info("ssh close")
+		method := s.via
+		if s.guestHeld {
+			method = "guest"
+		}
+		if method == "" {
+			method = "none"
+		}
+		log.WithFields(log.Fields{"ip": s.ip, "userId": s.userID, "method": method}).Info("ssh close")
 	})
 }
 
@@ -230,14 +245,12 @@ func (s *liveSession) classicLoop() {
 		history = 20
 	}
 	s.editor = textline.NewEditor(history, lineMax)
-	if err := s.admitGuest(); err != nil {
-		log.WithFields(log.Fields{"ip": s.ip, "method": "guest"}).Info("ssh guest refused")
-		_, _ = s.channel.Write([]byte(guestUnavailable))
+	in := make(chan []byte, 16)
+	go s.readInput(in)
+	if !s.openClassic(in) {
 		return
 	}
 	_, _ = s.channel.Write(s.editor.Redraw())
-	in := make(chan []byte, 16)
-	go s.readInput(in)
 
 	idleFor := s.gate.cfg.IdleTimeout.Duration()
 	idle := time.NewTimer(idleFor)
@@ -248,7 +261,10 @@ func (s *liveSession) classicLoop() {
 		defer warn.Stop()
 		idleWarn = warn.C
 	}
-	maxFor := s.gate.cfg.Guest.MaxSession.Duration()
+	maxFor := time.Duration(0)
+	if s.guestHeld {
+		maxFor = s.gate.cfg.Guest.MaxSession.Duration()
+	}
 	var maxEnd <-chan time.Time
 	var maxWarn <-chan time.Time
 	if maxFor > 0 {
