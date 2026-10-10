@@ -222,6 +222,7 @@ type RoomNPC struct {
 	CurrentHP     int32  `json:"currentHp,omitempty"`
 	MaxHP         int32  `json:"maxHp,omitempty"`
 	Level         int32  `json:"level,omitempty"`
+	AggroOnSight  bool   `json:"aggroOnSight,omitempty"`
 	State         string `json:"state"`
 	Portrait      string `json:"portrait,omitempty"`
 	TemplateID    string `json:"templateId,omitempty"`
@@ -250,6 +251,7 @@ func GetRoomNPCs(room *rooms.Room, game def.GameCtrl) []RoomNPC {
 			CurrentHP:     n.CurrentHitPoints,
 			MaxHP:         n.MaxHitPoints,
 			Level:         n.Level,
+			AggroOnSight:  n.EnemyTrait != nil && n.EnemyTrait.AggroOnSight,
 			State:         n.State,
 			Portrait:      portraits.ForNPC(n),
 			TemplateID:    n.TemplateID,

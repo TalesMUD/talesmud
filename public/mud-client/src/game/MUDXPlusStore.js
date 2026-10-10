@@ -638,7 +638,8 @@ function createStore() {
             && !!p.hasDialog === !!n.hasDialog
             && (p.portrait || '') === (n.portrait || '')
             && (p.threat || '') === (n.threat || '')
-            && (p.level || 0) === (n.level || 0);
+            && (p.level || 0) === (n.level || 0)
+            && !!p.aggroOnSight === !!n.aggroOnSight;
         })) {
           return state;
         }

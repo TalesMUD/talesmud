@@ -1,6 +1,7 @@
 <script>
   import { onDestroy } from 'svelte';
   import { overlayStore } from './overlayStore.js';
+  import { formatOverlayText } from './formatOverlayText.js';
 
   // Always show action/system reaction toasts on the room hero art (desktop + mobile).
   // This is the room reaction overlay — not the command log.
@@ -55,8 +56,7 @@
   }
 
   function formatText(text) {
-    const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    return escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    return formatOverlayText(text);
   }
 
   function dismiss(id) {
@@ -345,6 +345,13 @@
     white-space: pre-wrap;
     word-break: break-word;
     overflow-wrap: anywhere;
+  }
+
+  .overlay-message-inner :global(.aggro-mark) {
+    color: #f87171;
+    font-size: 0.78em;
+    font-weight: 650;
+    letter-spacing: 0.08em;
   }
 
   .overlay-message :global(strong) {

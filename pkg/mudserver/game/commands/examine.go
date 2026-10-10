@@ -65,6 +65,9 @@ func (command *ExamineCommand) Execute(game def.GameCtrl, message *messages.Mess
 		if roomActionMatches(game, message) {
 			return false
 		}
+		if examineNPC(game, message, itemName) {
+			return true
+		}
 		game.SendMessage() <- message.Reply("You don't see a '" + itemName + "' here.")
 		return true
 	}
@@ -73,6 +76,23 @@ func (command *ExamineCommand) Execute(game def.GameCtrl, message *messages.Mess
 	result := examineItem(item, message.Character.EquippedItems, scriptDisplayName(game))
 	game.SendMessage() <- message.Reply(result)
 
+	return true
+}
+
+// examineNPC shows the same look text as "look <name>" when the target is an NPC here.
+func examineNPC(game def.GameCtrl, message *messages.Message, name string) bool {
+	if game == nil || message == nil || message.Character == nil || message.Character.CurrentRoomID == "" {
+		return false
+	}
+	mgr := game.GetNPCInstanceManager()
+	if mgr == nil {
+		return false
+	}
+	found := mgr.FindInstanceByNameInRoom(message.Character.CurrentRoomID, name)
+	if found == nil {
+		return false
+	}
+	game.SendMessage() <- message.Reply(lookAtNPC(found))
 	return true
 }
 

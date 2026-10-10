@@ -145,6 +145,7 @@ type RoomNPC struct {
 	CurrentHP     int32  `json:"currentHp,omitempty"`
 	MaxHP         int32  `json:"maxHp,omitempty"`
 	Level         int32  `json:"level,omitempty"`
+	AggroOnSight  bool   `json:"aggroOnSight,omitempty"`
 	Threat        string `json:"threat,omitempty"` // grey|green|yellow|orange|red|skull, enemies only
 	State         string `json:"state"`            // idle, patrol, combat, dead
 	Portrait      string `json:"portrait,omitempty"`
@@ -180,6 +181,7 @@ func roomNPCPayload(n util.RoomNPC, char *characters.Character) RoomNPC {
 		CurrentHP:     n.CurrentHP,
 		MaxHP:         n.MaxHP,
 		Level:         n.Level,
+		AggroOnSight:  n.AggroOnSight,
 		State:         n.State,
 		Portrait:      n.Portrait,
 		TemplateID:    n.TemplateID,

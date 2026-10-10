@@ -307,6 +307,9 @@ func lookAtNPC(npc *npc.NPC) string {
 	if npc.IsEnemy() {
 		sb.WriteString("\n[HOSTILE]")
 	}
+	if npc.EnemyTrait != nil && npc.EnemyTrait.AggroOnSight {
+		sb.WriteString("\nAggressive")
+	}
 
 	// Merchant indicator
 	if npc.IsMerchant() {
