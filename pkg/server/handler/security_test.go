@@ -223,6 +223,55 @@ func TestUpdateUserUsesAuthenticatedRefIDAndPreservesRole(t *testing.T) {
 	}
 }
 
+func TestUpdateUserRejectsGuest(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	facade := testFacade(t)
+
+	user := testUser("guest-1", "guest:abc", entities.RolePlayer)
+	user.IsGuest = true
+	user.Name = "Old"
+	user.Email = "old@example.com"
+	user.Nickname = "Wanderer"
+	user.Picture = "old.png"
+	if _, err := facade.UsersService().Create(user); err != nil {
+		t.Fatalf("create guest: %v", err)
+	}
+
+	h := &UsersHandler{Service: facade.UsersService()}
+	rec := performHandlerRequest(
+		http.MethodPut,
+		"/api/user",
+		gin.H{
+			"name":     "New",
+			"email":    "new@example.com",
+			"nickname": "Admin",
+			"picture":  "new.png",
+			"role":     entities.RoleAdmin,
+			"isGuest":  false,
+		},
+		user,
+		nil,
+		h.UpdateUser,
+	)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if !bytes.Contains(rec.Body.Bytes(), []byte("guest accounts cannot be changed")) {
+		t.Fatalf("body %s", rec.Body.String())
+	}
+
+	stored, err := facade.UsersService().FindByRefID("guest:abc")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !stored.IsGuest || stored.IsAdmin() || stored.IsCreator() || stored.Role != entities.RolePlayer {
+		t.Fatalf("guest role changed: %+v", stored)
+	}
+	if stored.Name != "Old" || stored.Email != "old@example.com" || stored.Nickname != "Wanderer" || stored.Picture != "old.png" {
+		t.Fatalf("guest profile changed: name=%q email=%q nick=%q picture=%q", stored.Name, stored.Email, stored.Nickname, stored.Picture)
+	}
+}
+
 func TestCharacterHandlersRejectCrossUserAccess(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	facade := testFacade(t)

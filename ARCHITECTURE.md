@@ -1547,7 +1547,7 @@ HTTP/WS Request with Token → AuthMiddleware
 
 ### SSH authentication
 
-`pkg/sshgate` accepts none-auth only for the username `guest` when guest SSH is enabled. Public-key auth runs only when the key store is enabled. An unknown key is recorded as an unverified candidate and rejected, so it is not linked. Keyboard-interactive asks no questions and opens a lobby until the account confirms a device code on the web. A linked key is written only after a verified signature and a second confirmation that names the account. Password auth, exec, subsystems, forwarding, and X11 are refused. Host keys stay on disk outside the repo. The HTTP key and device routes use the same auth middleware as the rest of the API. Details and limits are in `docs/ssh-access.md`.
+`pkg/sshgate` accepts none-auth only for the username `guest` when guest SSH is enabled. Public-key auth runs only when the key store is enabled. An unknown key is recorded as an unverified candidate and rejected, so it is not linked. Keyboard-interactive asks no questions and opens a lobby until the account confirms a device code on the web. That lobby does not attach the game. A linked key is written only after a verified signature and a second confirmation that names the account. Password auth, exec, subsystems, forwarding, and X11 are refused. Host keys stay on disk outside the repo. The HTTP key and device routes use the same auth middleware as the rest of the API. A guest token is refused there, on creator and admin routes, and on `PUT /api/user`. Details and limits are in `docs/ssh-access.md`.
 
 ### Guest Authentication
 

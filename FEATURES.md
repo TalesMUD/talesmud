@@ -2529,7 +2529,7 @@ SSH is off by default. `ssh.enabled` starts one listener in the current process.
 
 ### What a session can do
 
-- Guest SSH reuses guest creation. The account stays `IsGuest` with no creator or admin role. It cannot call the device confirm or key routes, and it cannot link a key from the lobby.
+- Guest SSH reuses guest creation. The account stays `IsGuest` with role `player` and no creator or admin role. It cannot confirm or deny a device code, link a key, open a creator or admin route, or change account fields (`PUT /api/user` is 403). The same connection stays that guest. The device lobby does not enter the game before confirm.
 - A linked public key enters as that account. Creators and admins use the same check as everyone else.
 - Keyboard-interactive reaches a lobby only. The game attaches after the web confirm.
 - `ssh.max_session: 0` leaves account sessions uncapped. Guest sessions use `ssh.guest.max_session` (default 30 minutes). Idle applies to play on both.

@@ -104,6 +104,27 @@ func TestGuestMudOverSSH(t *testing.T) {
 		if guest == nil {
 			t.Fatal("no guest user")
 		}
+		if !guest.IsGuest || guest.IsCreator() || guest.IsAdmin() || guest.Role != entities.RolePlayer || !strings.HasPrefix(guest.RefID, "guest:") {
+			t.Fatalf("guest was not a plain player: %+v", guest)
+		}
+		if _, err := io.WriteString(stdin, "friend add Harbor\r"); err != nil {
+			t.Fatal(err)
+		}
+		out.wait(t, []string{"Sign in"}, 15*time.Second)
+		again, err := facade.UsersService().FindByID(guest.ID)
+		if err != nil || again == nil {
+			t.Fatal(err)
+		}
+		if !again.IsGuest || again.RefID != guest.RefID || again.IsCreator() || again.IsAdmin() || again.Role != entities.RolePlayer {
+			t.Fatalf("guest session changed account: %+v", again)
+		}
+		all, err := facade.UsersService().FindAll()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(all) != 1 {
+			t.Fatalf("guest connection created another account: %d", len(all))
+		}
 		mud.AttachExternal(guest, discardTransport{ip: "127.0.0.1"})
 		moved := out.wait(t, []string{"Session moved to another client."}, 10*time.Second)
 		if strings.Contains(moved, guest.ID) && strings.Contains(moved, "BEGIN OPENSSH") {

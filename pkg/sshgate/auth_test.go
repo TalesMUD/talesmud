@@ -44,7 +44,8 @@ func TestDoorDeviceLobbySkipsGuestSplash(t *testing.T) {
 	pending := sshkeys.NewPending(10 * time.Minute)
 	devices := devicecode.New(devicecode.Config{})
 	mud := mudserver.New(facade)
-	mud.SetSessionHook(&frameHook{})
+	hook := &frameHook{}
+	mud.SetSessionHook(hook)
 	mud.Run()
 	cfg := gamemode.SSHConfig{
 		Enabled:     true,
@@ -95,6 +96,9 @@ func TestDoorDeviceLobbySkipsGuestSplash(t *testing.T) {
 	text := out.wait(t, []string{"[G] guest"}, 15*time.Second)
 	if strings.Contains(text, "do you see") {
 		t.Fatal("device lobby painted the guest splash")
+	}
+	if strings.Contains(text, "DOOR-FRAME-MARKER") || hook.lastUser() != nil {
+		t.Fatal("device lobby reached the game before confirm")
 	}
 	match := regexp.MustCompile(`[BCDFGHJKLMNPQRSTVWXZ]{4}-[BCDFGHJKLMNPQRSTVWXZ]{4}`).FindString(text)
 	if match == "" {

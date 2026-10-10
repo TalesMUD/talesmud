@@ -566,7 +566,7 @@ go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
 - `GET /api/characters`, `POST /api/newcharacter` - Character management; direct character object access is owner/admin only
 - `POST /api/generate/character` - AI-powered character name/description generation
 - `GET /api/rooms`, `GET /api/items`, `GET /api/skills` - Read game data
-- `GET /api/user`, `PUT /api/user` - User profile
+- `GET /api/user`, `PUT /api/user` - User profile. A guest may read it. PUT returns 403 and leaves name, email, nickname, picture, role, and the guest flag unchanged
 - `GET/POST /api/ssh/keys`, `DELETE /api/ssh/keys/:id` - List, paste, and revoke the signed-in account's SSH public keys. Guests and banned accounts are refused. 404 while the key store is off
 - `POST /api/ssh/device/lookup|confirm|deny` - Confirm an SSH device code. Lookup returns a csrf nonce. Confirm and deny send it back. Nothing is confirmed automatically
 

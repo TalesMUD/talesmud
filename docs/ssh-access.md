@@ -84,7 +84,7 @@ Compare that fingerprint with the startup line or `/api/ssh/info` before trustin
 
 Password authentication is not offered. `exec`, subsystems, forwarding, agent forwarding, and X11 are refused. The server banner is `SSH-2.0-TalesMUD`.
 
-- **Guest.** `ssh -t -p 2222 -l guest host`. Allowed only when `ssh.guest.enabled` is on and the process still allows guests. The session has no roles, cannot confirm a device code, and cannot link a key. It ends at `ssh.guest.max_session` (default 30 minutes) and on the idle timer.
+- **Guest.** `ssh -t -p 2222 -l guest host`. Allowed only when `ssh.guest.enabled` is on and the process still allows guests. The account is a guest player: it cannot confirm or deny a device code, link a key, open a creator or admin route, or change its web profile (`PUT /api/user` is 403). The same connection does not become another account. It ends at `ssh.guest.max_session` (default 30 minutes) and on the idle timer.
 - **Linked key.** `ssh -t -p 2222 -i ~/.ssh/id_ed25519 host`. A key that is already on the account enters the game with no extra question. Creators and admins use this same path.
 - **Device code.** Any other user name opens a lobby. The screen shows a code like `BCDF-GHJK` and the activate URL. The player opens that URL, signs in on the web, and presses Confirm. Nothing is confirmed automatically.
   - Door (`auth: local`) serves `GET /activate` as a small sign-in page.
