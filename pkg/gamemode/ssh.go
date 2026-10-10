@@ -84,12 +84,19 @@ type SSHGuestConfig struct {
 	MaxSession    Duration `yaml:"max_session"`
 }
 
+// SSHSignupConfig is the in-lobby new-player option. It does nothing unless
+// local registration is enabled.
+type SSHSignupConfig struct {
+	Enabled bool `yaml:"enabled"`
+}
+
 // SSHDoorConfig is presentation for the text client over SSH.
 type SSHDoorConfig struct {
-	Splash         string `yaml:"splash"`
-	ActivateScreen string `yaml:"activate_screen"`
-	CharsetDefault string `yaml:"charset_default"`
-	LetterboxFill  string `yaml:"letterbox_fill"`
+	Splash         string   `yaml:"splash"`
+	ActivateScreen string   `yaml:"activate_screen"`
+	CharsetDefault string   `yaml:"charset_default"`
+	LetterboxFill  string   `yaml:"letterbox_fill"`
+	SplashHold     Duration `yaml:"splash_hold"`
 }
 
 // SSHMudConfig is presentation for classic play over SSH.
@@ -115,6 +122,7 @@ type SSHConfig struct {
 	Keys                SSHKeysConfig   `yaml:"keys"`
 	Device              SSHDeviceConfig `yaml:"device"`
 	Guest               SSHGuestConfig  `yaml:"guest"`
+	Signup              SSHSignupConfig `yaml:"signup"`
 	Door                SSHDoorConfig   `yaml:"door"`
 	Mud                 SSHMudConfig    `yaml:"mud"`
 }
@@ -232,6 +240,9 @@ func applySSHEnv(cfg SSHConfig) SSHConfig {
 	}
 	if v, ok := envBool("SSH_DEVICE_ENABLED"); ok {
 		cfg.Device.Enabled = v
+	}
+	if v, ok := envBool("SSH_SIGNUP_ENABLED"); ok {
+		cfg.Signup.Enabled = v
 	}
 	return cfg
 }

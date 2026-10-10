@@ -58,6 +58,7 @@ func TestDoorDeviceLobbySkipsGuestSplash(t *testing.T) {
 			ActivateURL: "http://127.0.0.1:8031/activate",
 		},
 		IdleTimeout: gamemode.Duration(30 * time.Minute),
+		Door:        gamemode.SSHDoorConfig{SplashHold: gamemode.Duration(30 * time.Millisecond)},
 	}
 	gate, err := Listen(cfg, Deps{
 		Mud: mud, Guests: facade.GuestService(), Users: facade.UsersService(),
@@ -94,9 +95,6 @@ func TestDoorDeviceLobbySkipsGuestSplash(t *testing.T) {
 	session, stdin, out := doorShell(t, conn, "xterm-256color", 80, 25, "")
 	defer session.Close()
 	text := out.wait(t, []string{"[G] guest"}, 15*time.Second)
-	if strings.Contains(text, "do you see") {
-		t.Fatal("device lobby painted the guest splash")
-	}
 	if strings.Contains(text, "DOOR-FRAME-MARKER") || hook.lastUser() != nil {
 		t.Fatal("device lobby reached the game before confirm")
 	}
@@ -118,12 +116,15 @@ func TestDoorDeviceLobbySkipsGuestSplash(t *testing.T) {
 	if _, err := io.WriteString(stdin, "y"); err != nil {
 		t.Fatal(err)
 	}
-	out.wait(t, []string{"Reconnect once to finish", "DOOR-FRAME-MARKER"}, 15*time.Second)
+	linked := out.wait(t, []string{"Key linked.", "DOOR-FRAME-MARKER"}, 15*time.Second)
+	if strings.Contains(linked, "Reconnect once") {
+		t.Fatal("one-step link asked for a reconnect")
+	}
 	rows, err := keys.List(user.RefID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(rows) != 0 {
-		t.Fatal("door lobby stored a key before the verified reconnect")
+	if len(rows) != 1 || rows[0].CreatedVia != "device" {
+		t.Fatalf("signed key was not stored: %+v", rows)
 	}
 }

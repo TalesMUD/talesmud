@@ -67,6 +67,12 @@ func LocalAuth() bool {
 	return current.Auth == AuthLocal
 }
 
+// SignupOpen reports whether an SSH lobby may offer local account creation.
+// The flag only works when this process uses local registration.
+func SignupOpen() bool {
+	return current.SSH.Signup.Enabled && LocalAuth()
+}
+
 const (
 	defaultDoorTitle    = "TalesMUD Door"
 	defaultDoorSubtitle = "A text client on TalesMUD"

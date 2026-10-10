@@ -65,6 +65,9 @@ func (s *liveSession) doorLoop() {
 	in := make(chan []byte, 16)
 	go s.readInput(in)
 	if s.via != "guest" {
+		if !s.briefSplash(paint, in, view) {
+			return
+		}
 		if !s.openDoorAuth(in, view, &cs) {
 			return
 		}
@@ -230,6 +233,40 @@ func (s *liveSession) window() (int, int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.cols, s.rows
+}
+
+// briefSplash shows the title screen for a key or device login, then moves on.
+// The key that dismisses it is not forwarded into the lobby or the game.
+func (s *liveSession) briefSplash(paint func(bool) bool, in <-chan []byte, view *termout.Screen) bool {
+	if !paint(true) {
+		return false
+	}
+	hold := 1200 * time.Millisecond
+	if s.gate != nil && s.gate.cfg.Door.SplashHold.Duration() > 0 {
+		hold = s.gate.cfg.Door.SplashHold.Duration()
+	}
+	timer := time.NewTimer(hold)
+	defer timer.Stop()
+	for {
+		select {
+		case <-s.stop:
+			return false
+		case <-s.kick:
+			s.onKick()
+			return false
+		case <-timer.C:
+			return true
+		case chunk, ok := <-in:
+			if !ok {
+				return false
+			}
+			if quitChunk(chunk) {
+				s.endDoor(view, "\r\n")
+				return false
+			}
+			return true
+		}
+	}
 }
 
 func splashKeys(chunk []byte) (admit, quit, toggle, refresh bool) {

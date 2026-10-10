@@ -165,33 +165,22 @@ func TestSSHDeviceLoginLinkAndGuards(t *testing.T) {
 		t.Fatalf("reuse %d", again)
 	}
 	out.wait(t, "Remember this computer?", 15*time.Second)
+	if _, err := io.WriteString(stdin, "maybe"); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(200 * time.Millisecond)
+	if early, err := keys.List(user.RefID); err != nil || len(early) != 0 {
+		t.Fatalf("maybe stored %+v %v", early, err)
+	}
 	if _, err := io.WriteString(stdin, "y"); err != nil {
 		t.Fatal(err)
 	}
-	out.wait(t, "Reconnect once to finish", 15*time.Second)
+	linked := out.wait(t, "Key linked.", 15*time.Second)
+	if strings.Contains(linked, "Reconnect once") {
+		t.Fatal("link asked for a second connection")
+	}
 	rows, err := keys.List(user.RefID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(rows) != 0 {
-		t.Fatalf("key stored before the verified confirm: %+v", rows)
-	}
-	_ = session.Close()
-	_ = conn.Close()
-
-	conn = dialPlayer(t, gate.Addr(), signer, true)
-	session, stdin, out = playerShell(t, conn)
-	out.wait(t, "Only press Y if that is your account.", 15*time.Second)
-	rows, _ = keys.List(user.RefID)
-	if len(rows) != 0 {
-		t.Fatal("key stored before the second yes")
-	}
-	if _, err := io.WriteString(stdin, "y"); err != nil {
-		t.Fatal(err)
-	}
-	out.wait(t, "Key linked.", 15*time.Second)
-	rows, err = keys.List(user.RefID)
-	if err != nil || len(rows) != 1 || rows[0].CreatedVia != "device" {
+	if err != nil || len(rows) != 1 || rows[0].CreatedVia != "device" || rows[0].Fingerprint != fp {
 		t.Fatalf("linked %+v %v", rows, err)
 	}
 	_ = session.Close()

@@ -11,8 +11,11 @@ func TestSSHDefaultsOff(t *testing.T) {
 	current = normalize(Config{})
 	t.Cleanup(func() { current = normalize(Config{}) })
 	cfg := Current()
-	if cfg.SSH.Enabled || cfg.SSH.Keys.Enabled || cfg.SSH.Device.Enabled || cfg.SSH.Guest.Enabled {
+	if cfg.SSH.Enabled || cfg.SSH.Keys.Enabled || cfg.SSH.Device.Enabled || cfg.SSH.Guest.Enabled || cfg.SSH.Signup.Enabled {
 		t.Fatalf("ssh must default off: %+v", cfg.SSH)
+	}
+	if SignupOpen() {
+		t.Fatal("signup must stay closed when registration is off")
 	}
 	if cfg.Guests.PersistentEffects {
 		t.Fatal("guest persistent effects must default off")
@@ -75,6 +78,7 @@ func TestSSHEnvOverrides(t *testing.T) {
 	t.Setenv("SSH_ACTIVATE_URL", "https://mud.example/activate")
 	t.Setenv("SSH_GUEST_ENABLED", "1")
 	t.Setenv("SSH_DEVICE_ENABLED", "on")
+	t.Setenv("SSH_SIGNUP_ENABLED", "true")
 	ApplyEnv()
 	cfg := Current()
 	if !cfg.SSH.Enabled || cfg.SSH.Listen != ":2232" || cfg.SSH.HostKeyPath != "/tmp/ssh-smoke/host" {
@@ -86,9 +90,36 @@ func TestSSHEnvOverrides(t *testing.T) {
 	if !cfg.SSH.Guest.Enabled || !cfg.SSH.Device.Enabled || cfg.SSH.Device.ActivateURL != "https://mud.example/activate" {
 		t.Fatalf("flags %+v", cfg.SSH)
 	}
+	if !cfg.SSH.Signup.Enabled || SignupOpen() {
+		t.Fatal("signup flag must not open registration on an external-auth process")
+	}
 	t.Setenv("SSH_ENABLED", "false")
+	t.Setenv("SSH_SIGNUP_ENABLED", "off")
 	ApplyEnv()
-	if Current().SSH.Enabled {
-		t.Fatal("SSH_ENABLED=false did not win")
+	if Current().SSH.Enabled || Current().SSH.Signup.Enabled {
+		t.Fatal("env false did not win")
+	}
+}
+
+func TestSignupOpenRequiresLocalAuth(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "signup.yaml")
+	body := []byte("presentation: door_tui\nauth: local\nssh:\n  signup:\n    enabled: true\n  guest:\n    enabled: false\n")
+	if err := os.WriteFile(path, body, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := ApplyFile(path); err != nil {
+		t.Fatal(err)
+	}
+	off := filepath.Join(t.TempDir(), "off.yaml")
+	if err := os.WriteFile(off, []byte("presentation: classic\nauth: auth0\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := ApplyFile(off); err != nil {
+			t.Error(err)
+		}
+	})
+	if !LocalAuth() || !SignupOpen() || Current().SSH.Guest.Enabled {
+		t.Fatalf("door signup %+v auth %s", Current().SSH.Signup, Current().Auth)
 	}
 }

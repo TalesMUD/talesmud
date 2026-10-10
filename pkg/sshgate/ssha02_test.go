@@ -38,8 +38,8 @@ func TestExactYN(t *testing.T) {
 	}
 }
 
-// TestPendingNDisconnects is the SSHA-02 PoC: "maybe" does not link, and N
-// on the reconnect drops the pending row and does not enter that account.
+// TestPendingNDisconnects is the SSHA-02 PoC for the first prompt: "maybe"
+// does not link, and Y stores only the key that signed this connection.
 func TestPendingNDisconnects(t *testing.T) {
 	facade, keys, pending, devices, hook, gate := pendingGate(t)
 	user, err := facade.UsersService().Create(&entities.User{
@@ -84,20 +84,46 @@ func TestPendingNDisconnects(t *testing.T) {
 	if _, err := io.WriteString(stdin, "y"); err != nil {
 		t.Fatal(err)
 	}
-	out.wait(t, []string{"Reconnect once"}, 15*time.Second)
-	if ref, _, ok := pending.Get(fp); !ok || ref != user.RefID {
-		t.Fatalf("pending %s %v", ref, ok)
+	linked := out.wait(t, []string{"Key linked."}, 15*time.Second)
+	if strings.Contains(linked, "Reconnect once") {
+		t.Fatal("Y asked for a second connection")
+	}
+	time.Sleep(300 * time.Millisecond)
+	if u := hook.lastUser(); u == nil || u.RefID != user.RefID {
+		t.Fatalf("Y did not admit the confirmed account: %+v", u)
+	}
+	if _, _, ok := pending.Get(fp); ok {
+		t.Fatal("Y left a pending row")
+	}
+	rows, err := keys.List(user.RefID)
+	if err != nil || len(rows) != 1 || rows[0].CreatedVia != "device" || rows[0].Fingerprint != fp {
+		t.Fatalf("linked %+v %v", rows, err)
 	}
 	_ = session.Close()
 	_ = conn.Close()
+}
 
-	hook.clear()
-	conn = dialAuth(t, gate.Addr(), signer, false)
-	session, stdin, out = doorShell(t, conn, "xterm", 80, 24, "")
+// TestPendingReconnectNDoesNotAdmit keeps the SSHA-02 reconnect guarantee:
+// N on a seeded pending row drops it and does not enter that account.
+func TestPendingReconnectNDoesNotAdmit(t *testing.T) {
+	facade, keys, pending, _, hook, gate := pendingGate(t)
+	user, err := facade.UsersService().Create(&entities.User{
+		RefID: "local:pendingn", Nickname: "PendingN", Username: "pendingn", Role: entities.RolePlayer,
+	})
+	if err != nil || user == nil {
+		t.Fatal(err)
+	}
+	signer := newEdSigner(t)
+	fp := ssh.FingerprintSHA256(signer.PublicKey())
+	if _, ok := pending.Offer(fp, user.RefID); !ok {
+		t.Fatal("seed offer")
+	}
+	conn := dialAuth(t, gate.Addr(), signer, false)
+	session, stdin, out := doorShell(t, conn, "xterm", 80, 24, "")
 	defer session.Close()
 	defer conn.Close()
 	ntext := out.wait(t, []string{"[Y/N]"}, 15*time.Second)
-	if !strings.Contains(ntext, "Link key") {
+	if !strings.Contains(ntext, "Link key") || !strings.Contains(ntext, "PendingN") {
 		t.Fatalf("prompt %q", ntext)
 	}
 	if _, err := io.WriteString(stdin, "n"); err != nil {
@@ -117,10 +143,47 @@ func TestPendingNDisconnects(t *testing.T) {
 	}
 }
 
+// TestPendingYLinksSignedKey keeps the seeded-pending Y path: the stored key
+// is the one that signed, and that account is the one admitted.
+func TestPendingYLinksSignedKey(t *testing.T) {
+	facade, keys, pending, _, hook, gate := pendingGate(t)
+	user, err := facade.UsersService().Create(&entities.User{
+		RefID: "local:pendingy", Nickname: "PendingY", Username: "pendingy", Role: entities.RolePlayer,
+	})
+	if err != nil || user == nil {
+		t.Fatal(err)
+	}
+	signer := newEdSigner(t)
+	fp := ssh.FingerprintSHA256(signer.PublicKey())
+	if _, ok := pending.Offer(fp, user.RefID); !ok {
+		t.Fatal("seed offer")
+	}
+	conn := dialAuth(t, gate.Addr(), signer, false)
+	session, stdin, out := doorShell(t, conn, "xterm", 80, 24, "")
+	defer session.Close()
+	defer conn.Close()
+	out.wait(t, []string{"Only press Y"}, 15*time.Second)
+	if _, err := io.WriteString(stdin, "y"); err != nil {
+		t.Fatal(err)
+	}
+	out.wait(t, []string{"Key linked."}, 15*time.Second)
+	time.Sleep(300 * time.Millisecond)
+	if u := hook.lastUser(); u == nil || u.RefID != user.RefID {
+		t.Fatalf("Y admitted %+v", u)
+	}
+	rows, err := keys.List(user.RefID)
+	if err != nil || len(rows) != 1 || rows[0].CreatedVia != "device" || rows[0].Fingerprint != fp {
+		t.Fatalf("linked %+v %v", rows, err)
+	}
+	if _, _, ok := pending.Get(fp); ok {
+		t.Fatal("Y left the pending row")
+	}
+}
+
 // TestCrossAccountNDoesNotAdmit is the SSHA-02 cross-account PoC: the victim
 // presses N and must not enter the account that created the pending link.
 func TestCrossAccountNDoesNotAdmit(t *testing.T) {
-	facade, _, pending, devices, hook, gate := pendingGate(t)
+	facade, _, pending, _, hook, gate := pendingGate(t)
 	atk, err := facade.UsersService().Create(&entities.User{
 		RefID: "local:atk2", Nickname: "AtkTwo", Username: "atk2", Role: entities.RolePlayer,
 	})
@@ -129,34 +192,11 @@ func TestCrossAccountNDoesNotAdmit(t *testing.T) {
 	}
 	signer := newEdSigner(t)
 	fp := ssh.FingerprintSHA256(signer.PublicKey())
-	conn := dialAuth(t, gate.Addr(), signer, true)
+	if _, ok := pending.Offer(fp, atk.RefID); !ok {
+		t.Fatal("seed offer")
+	}
+	conn := dialAuth(t, gate.Addr(), signer, false)
 	session, stdin, out := doorShell(t, conn, "xterm", 80, 24, "")
-	text := out.wait(t, []string{"Code:"}, 15*time.Second)
-	code := regexp.MustCompile(`[BCDFGHJKLMNPQRSTVWXZ]{4}-[BCDFGHJKLMNPQRSTVWXZ]{4}`).FindString(text)
-	if code == "" {
-		t.Fatalf("no code in %q", text)
-	}
-	view, err := devices.Lookup(code, atk.RefID, "127.0.0.1", func(string) error { return nil })
-	if err != nil {
-		t.Fatal(err)
-	}
-	if view.KeyFP != fp {
-		t.Fatalf("offer is not the signed key: %s", view.KeyFP)
-	}
-	if err := devices.Confirm(code, atk.RefID, "127.0.0.1", view.CSRF, func(string) error { return nil }); err != nil {
-		t.Fatal(err)
-	}
-	out.wait(t, []string{"Remember this computer?"}, 15*time.Second)
-	if _, err := io.WriteString(stdin, "y"); err != nil {
-		t.Fatal(err)
-	}
-	out.wait(t, []string{"Reconnect once"}, 15*time.Second)
-	_ = session.Close()
-	_ = conn.Close()
-
-	hook.clear()
-	conn = dialAuth(t, gate.Addr(), signer, false)
-	session, stdin, out = doorShell(t, conn, "xterm", 80, 24, "")
 	defer session.Close()
 	defer conn.Close()
 	ntext := out.wait(t, []string{"[Y/N]"}, 15*time.Second)

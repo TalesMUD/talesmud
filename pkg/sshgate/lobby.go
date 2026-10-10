@@ -2,6 +2,7 @@ package sshgate
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -13,10 +14,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/presentation/textline"
 )
 
-const (
-	linkReconnect = "Reconnect once to finish linking this key.\r\n"
-	linkQuestion  = "Only press Y if that is your account."
-)
+const linkQuestion = "Only press Y if that is your account."
 
 func (s *liveSession) openClassic(in <-chan []byte) bool {
 	switch s.via {
@@ -98,11 +96,15 @@ func (s *liveSession) deviceLobby(in <-chan []byte, view *termout.Screen, cs *te
 			s.deviceID = ""
 		}
 	}()
-	url := s.activateURL()
+	loginURL := decorateURL(s.activateURL(), code, false)
+	signupURL := ""
+	if s.signupOn() {
+		signupURL = decorateURL(s.activateURL(), code, true)
+	}
 	var tmpl string
 	if view != nil {
-		tmpl = loadActivateTemplate(s.gate.cfg)
-	} else if !s.writeRaw([]byte(classicLobbyText(code, url, expires))) {
+		tmpl = loadActivateTemplate(s.gate.cfg, s.signupOn(), s.gate.cfg.Guest.Enabled)
+	} else if !s.writeRaw([]byte(classicLobbyText(code, loginURL, signupURL, expires, s.gate.cfg.Guest.Enabled))) {
 		return false
 	}
 	deadline := time.NewTimer(ttl)
@@ -120,9 +122,9 @@ func (s *liveSession) deviceLobby(in <-chan []byte, view *termout.Screen, cs *te
 			left = 0
 		}
 		shown := left.String()
-		text := termout.Substitute(tmpl, code, url, shown)
+		text := termout.SubstituteSignup(tmpl, code, loginURL, shown, signupURL)
 		if !strings.Contains(text, code) {
-			text = termout.Substitute(genericActivateTemplate(), code, url, shown)
+			text = termout.SubstituteSignup(genericActivateTemplate(s.signupOn(), s.gate.cfg.Guest.Enabled), code, loginURL, shown, signupURL)
 		}
 		cols, rows := s.window()
 		charset := termout.UTF8
@@ -211,13 +213,13 @@ func (s *liveSession) finishDevice(in <-chan []byte, view *termout.Screen, cs *t
 	return true
 }
 
-// offerLink asks the account owner to remember the key that signed.
-// Y stores a pending link only. The key row is written on the next connection,
-// after the signature is verified and the owner answers Y again.
+// offerLink asks the account owner to remember the key that signed this
+// connection. Y stores that signed key and the same session continues.
 // N leaves the device-confirmed account in the game and stores nothing.
+// An unsigned offer list is never written.
 func (s *liveSession) offerLink(in <-chan []byte, view *termout.Screen, cs *termout.Charset) bool {
-	fp := signedFingerprint(s.keyLine, s.offers)
-	if fp == "" || s.gate.deps.Pending == nil || !s.gate.cfg.Keys.Enabled {
+	fp := signedFingerprint(s.keyLine, nil)
+	if fp == "" || s.gate.deps.Keys == nil || !s.gate.cfg.Keys.Enabled {
 		return true
 	}
 	user, err := s.gate.deps.Users.FindByRefID(s.userRef)
@@ -231,15 +233,19 @@ func (s *liveSession) offerLink(in <-chan []byte, view *termout.Screen, cs *term
 		s.refuse(view, "Goodbye.\r\n")
 		return false
 	}
-	if answer == "y" {
-		if _, offered := s.gate.deps.Pending.Offer(fp, s.userRef); offered {
-			if !s.writeRaw([]byte(linkReconnect)) {
-				return false
-			}
-		}
-		return true
+	if answer != "y" {
+		return s.sayLine(view, cs, "Key not linked.\r\n")
 	}
-	return s.writeRaw([]byte("Key not linked.\r\n"))
+	max := s.gate.cfg.Keys.MaxPerAccount
+	if _, err := s.gate.deps.Keys.Add(s.userRef, s.keyLine, "ssh", "device", max); err != nil {
+		log.WithFields(log.Fields{"ip": s.ip, "userId": user.ID, "method": "device"}).Info("ssh link refused")
+		s.refuse(view, "The key was not linked.\r\n")
+		return false
+	}
+	if s.gate.deps.Pending != nil {
+		s.gate.deps.Pending.Drop(fp)
+	}
+	return s.sayLine(view, cs, "Key linked.\r\n")
 }
 
 // confirmPending asks the key holder to link the signed key to the named account.
@@ -285,20 +291,26 @@ func (s *liveSession) confirmPending(in <-chan []byte, view *termout.Screen, cs 
 		return false
 	}
 	drop()
-	if !s.writeRaw([]byte("Key linked.\r\n")) {
-		return false
-	}
-	return true
+	return s.sayLine(view, cs, "Key linked.\r\n")
 }
 
 func (s *liveSession) askYN(in <-chan []byte, prompt string, view *termout.Screen, cs *termout.Charset) (string, bool) {
+	text := strings.TrimRight(prompt, "\r\n")
 	if view != nil {
-		if !s.paintPrompt(view, cs, strings.TrimRight(prompt, "\r\n")) {
+		lines := termout.WrapText(text, 76)
+		lines = append(lines, "", "[Y] yes    [N] no    [Q] quit")
+		if !s.paintLines(view, cs, lines) {
 			return "", false
 		}
-	}
-	if !s.writeRaw([]byte(prompt)) {
-		return "", false
+	} else {
+		var b strings.Builder
+		for _, line := range termout.WrapText(text, 78) {
+			b.WriteString(line)
+			b.WriteString("\r\n")
+		}
+		if !s.writeRaw([]byte(b.String())) {
+			return "", false
+		}
 	}
 	deadline := time.NewTimer(2 * time.Minute)
 	defer deadline.Stop()
@@ -322,19 +334,34 @@ func (s *liveSession) askYN(in <-chan []byte, prompt string, view *termout.Scree
 	}
 }
 
-func (s *liveSession) paintPrompt(view *termout.Screen, cs *termout.Charset, prompt string) bool {
+func (s *liveSession) sayLine(view *termout.Screen, cs *termout.Charset, msg string) bool {
+	if view == nil {
+		return s.writeRaw([]byte(msg))
+	}
+	return s.paintLines(view, cs, []string{strings.TrimRight(msg, "\r\n")})
+}
+
+func (s *liveSession) paintLines(view *termout.Screen, cs *termout.Charset, rows []string) bool {
 	if view == nil {
 		return true
 	}
 	lines := make([]string, 25)
-	lines[10] = prompt
-	lines[12] = "[Y] yes    [N] no    [Q] quit"
+	start := 8
+	if len(rows) > 14 {
+		start = 4
+	}
+	for i, row := range rows {
+		if start+i >= 23 {
+			break
+		}
+		lines[start+i] = row
+	}
 	charset := termout.UTF8
 	if cs != nil {
 		charset = *cs
 	}
-	cols, rows := s.window()
-	return s.writeRaw(view.Paint(strings.Join(lines, "\r\n"), cols, rows, charset, true))
+	cols, windowRows := s.window()
+	return s.writeRaw(view.Paint(strings.Join(lines, "\r\n"), cols, windowRows, charset, true))
 }
 
 func (s *liveSession) refuse(view *termout.Screen, msg string) {
@@ -365,36 +392,87 @@ func (s *liveSession) activateURL() string {
 	return u
 }
 
-func classicLobbyText(code, url string, expires time.Time) string {
+func (s *liveSession) signupOn() bool {
+	return s != nil && s.gate != nil && s.gate.cfg.Signup.Enabled && gamemode.LocalAuth()
+}
+
+func decorateURL(base, code string, signup bool) string {
+	base = strings.TrimSpace(base)
+	if base == "" {
+		return "the activate page"
+	}
+	u, err := url.Parse(base)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return base
+	}
+	q := u.Query()
+	if code != "" {
+		q.Set("code", code)
+	}
+	if signup {
+		q.Set("signup", "1")
+	}
+	u.RawQuery = q.Encode()
+	return u.String()
+}
+
+func classicLobbyText(code, loginURL, signupURL string, expires time.Time, guest bool) string {
 	left := time.Until(expires).Round(time.Second)
 	if left < 0 {
 		left = 0
 	}
-	return "\r\nTalesMUD SSH\r\nOpen " + url + "\r\nCode: " + code + "\r\nExpires in " + left.String() + ".\r\n[G] continue as guest    [Q] quit\r\n"
+	var b strings.Builder
+	b.WriteString("\r\nTalesMUD SSH\r\n")
+	b.WriteString("Code: " + code + "\r\n")
+	b.WriteString("[L] I have an account\r\n")
+	b.WriteString(loginURL + "\r\n")
+	if signupURL != "" {
+		b.WriteString("[N] New player\r\n")
+		b.WriteString(signupURL + "\r\n")
+	} else {
+		b.WriteString("New players: open the same page.\r\n")
+	}
+	b.WriteString("Expires in " + left.String() + ".\r\n")
+	if guest {
+		b.WriteString("[G] continue as guest    [Q] quit\r\n")
+	} else {
+		b.WriteString("[Q] quit\r\n")
+	}
+	return b.String()
 }
 
-func genericActivateTemplate() string {
+func genericActivateTemplate(signup, guest bool) string {
 	lines := make([]string, 25)
-	lines[6] = "TalesMUD"
-	lines[8] = "Sign in with this code"
+	lines[4] = "TalesMUD"
+	lines[6] = "Sign in with this code"
+	lines[8] = "Your code"
 	lines[10] = "{{CODE}}"
-	lines[12] = "{{URL}}"
-	lines[14] = "expires {{EXPIRES}}"
-	lines[18] = "[G] guest     [Q] quit"
+	lines[12] = "[L] I have an account"
+	lines[13] = "{{URL}}"
+	if signup {
+		lines[15] = "[N] New player"
+		lines[16] = "{{SIGNUP_URL}}"
+	}
+	lines[18] = "expires {{EXPIRES}}"
+	if guest {
+		lines[20] = "[G] guest     [Q] quit"
+	} else {
+		lines[20] = "[Q] quit"
+	}
 	return strings.Join(lines, "\r\n")
 }
 
-func loadActivateTemplate(cfg gamemode.SSHConfig) string {
+func loadActivateTemplate(cfg gamemode.SSHConfig, signup, guest bool) string {
 	path := resolvePackFile(gamemode.Current().WorldPack, cfg.Door.ActivateScreen)
 	if path == "" {
-		return genericActivateTemplate()
+		return genericActivateTemplate(signup, guest)
 	}
 	// Operator-chosen screen. resolvePackFile already rejected a relative path
 	// that escapes the world pack. The bytes are painted, never logged.
 	b, err := os.ReadFile(path) // #nosec G304 -- operator-configured activate screen path
 	if err != nil {
 		log.WithField("path", textline.Sanitize(path)).Info("ssh activate screen missing, using built-in")
-		return genericActivateTemplate()
+		return genericActivateTemplate(signup, guest)
 	}
 	if len(b) > splashCap {
 		b = b[:splashCap]
@@ -402,7 +480,7 @@ func loadActivateTemplate(cfg gamemode.SSHConfig) string {
 	b = stripSAUCE(b)
 	text := termout.DecodeANS(b)
 	if strings.TrimSpace(stripANSI(text)) == "" {
-		return genericActivateTemplate()
+		return genericActivateTemplate(signup, guest)
 	}
 	return text
 }
