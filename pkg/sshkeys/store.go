@@ -70,9 +70,11 @@ func ParseAuthorizedKey(line string) (ssh.PublicKey, string, error) {
 	return pub, ssh.FingerprintSHA256(pub), nil
 }
 
-// Add links a public key to an account. via is "web" or "device".
+// Add links a public key the client proved during device sign-in.
+// via must be "device". A web paste is refused so it cannot occupy the
+// unique fingerprint index or authenticate as this account.
 func (s *Store) Add(userRef, line, label, via string, max int) (*Key, error) {
-	if s == nil || strings.TrimSpace(userRef) == "" {
+	if s == nil || strings.TrimSpace(userRef) == "" || via != "device" {
 		return nil, ErrRejected
 	}
 	pub, fp, err := ParseAuthorizedKey(line)
@@ -83,9 +85,6 @@ func (s *Store) Add(userRef, line, label, via string, max int) (*Key, error) {
 		max = 10
 	}
 	label = cleanLabel(label)
-	if via != "web" && via != "device" {
-		via = "web"
-	}
 	row := &Key{
 		ID:          uuid.NewString(),
 		UserRefID:   userRef,
@@ -94,7 +93,7 @@ func (s *Store) Add(userRef, line, label, via string, max int) (*Key, error) {
 		PublicKey:   strings.TrimSpace(string(ssh.MarshalAuthorizedKey(pub))),
 		Label:       label,
 		CreatedAt:   time.Now().UTC(),
-		CreatedVia:  via,
+		CreatedVia:  "device",
 	}
 	raw, err := json.Marshal(row)
 	if err != nil {

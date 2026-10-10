@@ -2537,7 +2537,7 @@ SSH is off by default. `ssh.enabled` starts one listener in the current process.
 
 ### Stored keys
 
-`ssh_keys` is a SQLite JSON row (`id`, `data`) plus a unique index on `json_extract(data, '$.fingerprint')`. The row stores the account ref, fingerprint, key type, authorized_keys line, label, timestamps, and `created_via` (`web` or `device`). HTTP list responses omit the key blob and the last-used address. The owner still receives the full fingerprint. Device lookup returns only the shortened fingerprint.
+`ssh_keys` is a SQLite JSON row (`id`, `data`) plus a unique index on `json_extract(data, '$.fingerprint')`. The row stores the account ref, fingerprint, key type, authorized_keys line, label, timestamps, and `created_via` (`device` only). A web paste is rejected and does not occupy that index. HTTP list responses omit the key blob and the last-used address. The owner still receives the full fingerprint. Device lookup returns only the shortened fingerprint.
 
 Accepted public keys: ed25519, sk-ed25519, ecdsa-sha2-nistp256/384/521, and ssh-rsa. `ssh-dss`, private-key blobs, and newlines are rejected. Signature algorithms stay the modern set from the SSH library (RSA signatures are rsa-sha2 only).
 

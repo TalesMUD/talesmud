@@ -254,8 +254,11 @@ func TestSSHDeviceLoginLinkAndGuards(t *testing.T) {
 	}
 	line := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(testSigner(t).PublicKey())))
 	added := postAuth(t, srv.URL+"/api/ssh/keys", token, map[string]string{"public_key": line, "label": "laptop"}, "")
-	if added["created_via"] != "web" || added["id"] == "" {
-		t.Fatalf("web add %#v", added)
+	if added["error"] != "link the key from an SSH sign-in" || added["id"] != nil {
+		t.Fatalf("web paste activated a key %#v", added)
+	}
+	if rows, err := keys.List(user.RefID); err != nil || len(rows) != 0 {
+		t.Fatalf("paste left a row %+v %v", rows, err)
 	}
 	api.Set(handler.SSHSettings{Keys: keys, Devices: devices, ActivateURL: srv.URL + "/activate", KeysEnabled: true, DeviceEnabled: true, WebManage: false, MaxKeys: 10})
 	if postStatus(t, srv.URL+"/api/ssh/keys", token, map[string]string{"public_key": line, "label": "x"}, "") != http.StatusForbidden {

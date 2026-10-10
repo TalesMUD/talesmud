@@ -57,7 +57,7 @@ func TestAccountMaxSessionExpires(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := keys.Add(user.RefID, string(ssh.MarshalAuthorizedKey(signer.PublicKey())), "laptop", "web", 10); err != nil {
+	if _, err := keys.Add(user.RefID, string(ssh.MarshalAuthorizedKey(signer.PublicKey())), "laptop", "device", 10); err != nil {
 		t.Fatal(err)
 	}
 	mud := mudserver.New(facade)

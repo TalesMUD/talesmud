@@ -32,7 +32,7 @@ ssh:
   keys:
     enabled: false
     max_per_account: 10
-    web_manage: true                # omit to leave web add/revoke on
+    web_manage: true                # omit to leave web list/revoke on. A paste does not link a key.
   device:
     enabled: false
     ttl: 10m
@@ -90,7 +90,7 @@ Password authentication is not offered. `exec`, subsystems, forwarding, agent fo
   - Door (`auth: local`) serves `GET /activate` as a small sign-in page.
   - Classic (`auth: auth0`) answers `GET /activate?code=...` with a redirect to `/play/?activate=...`. The play client looks the code up and waits for Confirm or Deny.
 - **Linking.** After a confirmed device login, the lobby asks whether to remember the computer. Yes stores a pending link and asks the player to reconnect. The next connection checks the signature, names the account, and writes the key only if the player presses Y again. No still enters the game and drops the pending link.
-- **Web keys.** A signed-in, non-guest account can list, paste, and revoke public keys. Classic uses the play-client account menu ("SSH keys"). Door uses the same `/api/ssh/keys` routes. A pasted key is linked immediately because the account owner is already signed in. Private keys are rejected.
+- **Web keys.** A signed-in, non-guest account can list and revoke keys that were linked from SSH. Classic uses the play-client account menu ("SSH keys"). Door uses the same `/api/ssh/keys` routes. `POST /api/ssh/keys` does not link a pasted key. A paste is not a signature, so it does not occupy the fingerprint or sign anyone in. The key is stored only after the device-link reconnect proves the signature and the owner presses Y.
 
 Account sessions use `ssh.max_session` when that value is greater than zero. Zero leaves them uncapped. Idle still applies.
 
@@ -106,7 +106,7 @@ Public:
 Signed in (guest and banned accounts are refused):
 
 - `GET /api/ssh/keys`
-- `POST /api/ssh/keys` with `{public_key, label}`
+- `POST /api/ssh/keys` refuses a pasted key. Link the key from an SSH sign-in.
 - `DELETE /api/ssh/keys/:id`
 - `POST /api/ssh/device/lookup` with `{user_code}`
 - `POST /api/ssh/device/confirm` and `POST /api/ssh/device/deny` with `{user_code, csrf}`

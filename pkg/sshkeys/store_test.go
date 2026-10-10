@@ -29,18 +29,18 @@ func TestKeyStoreUniqueAndCap(t *testing.T) {
 	if _, _, err := ParseAuthorizedKey("-----BEGIN OPENSSH PRIVATE KEY-----\nsecret"); !errors.Is(err, ErrRejected) {
 		t.Fatal(err)
 	}
-	row, err := store.Add("local:ada", line, "laptop\x1b[2J", "web", 1)
+	row, err := store.Add("local:ada", line, "laptop\x1b[2J", "device", 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(row.Label, "\x1b") || row.Fingerprint == "" || row.UserRefID != "local:ada" {
+	if strings.Contains(row.Label, "\x1b") || row.Fingerprint == "" || row.UserRefID != "local:ada" || row.CreatedVia != "device" {
 		t.Fatalf("%+v", row)
 	}
-	if _, err := store.Add("local:ada", line, "again", "web", 1); !errors.Is(err, ErrExists) && !errors.Is(err, ErrFull) {
+	if _, err := store.Add("local:ada", line, "again", "device", 1); !errors.Is(err, ErrExists) && !errors.Is(err, ErrFull) {
 		t.Fatalf("dup %v", err)
 	}
 	otherLine := string(ssh.MarshalAuthorizedKey(two.PublicKey()))
-	if _, err := store.Add("local:ada", otherLine, "", "web", 1); !errors.Is(err, ErrFull) {
+	if _, err := store.Add("local:ada", otherLine, "", "device", 1); !errors.Is(err, ErrFull) {
 		t.Fatalf("cap %v", err)
 	}
 	if _, err := store.Add("local:bea", line, "", "device", 10); !errors.Is(err, ErrExists) {
@@ -62,6 +62,34 @@ func TestKeyStoreUniqueAndCap(t *testing.T) {
 	}
 	if got, err := store.ByFingerprint(row.Fingerprint); err != nil || got != nil {
 		t.Fatal("still linked")
+	}
+}
+
+func TestWebPasteDoesNotSquat(t *testing.T) {
+	client, err := dbsqlite.Open(t.TempDir() + "/squat.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	store, err := Open(client.DB())
+	if err != nil {
+		t.Fatal(err)
+	}
+	line := string(ssh.MarshalAuthorizedKey(testSigner(t).PublicKey()))
+	if _, err := store.Add("local:attacker", line, "squat", "web", 10); !errors.Is(err, ErrRejected) {
+		t.Fatalf("web paste stored a key: %v", err)
+	}
+	pub, fp, err := ParseAuthorizedKey(line)
+	if err != nil || pub == nil || fp == "" {
+		t.Fatal(err)
+	}
+	got, err := store.ByFingerprint(fp)
+	if err != nil || got != nil {
+		t.Fatalf("paste occupied the fingerprint: %+v %v", got, err)
+	}
+	list, err := store.List("local:attacker")
+	if err != nil || len(list) != 0 {
+		t.Fatalf("attacker list %v %v", list, err)
 	}
 }
 

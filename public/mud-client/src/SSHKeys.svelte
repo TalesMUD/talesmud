@@ -1,13 +1,11 @@
 <script>
   import { getAuth } from "./auth.js";
-  import { addKey, listKeys, revokeKey } from "./api/ssh.js";
+  import { listKeys, revokeKey } from "./api/ssh.js";
   import { sshKeysOpen } from "./sshStore.js";
 
   const { authToken } = getAuth();
 
   let keys = [];
-  let publicKey = "";
-  let label = "";
   let errorText = "";
   let off = false;
   let loading = false;
@@ -45,26 +43,8 @@
 
   function close() {
     sshKeysOpen.set(false);
-    publicKey = "";
-    label = "";
     errorText = "";
     loadedFor = "";
-  }
-
-  async function add() {
-    if (busy || !$authToken) return;
-    busy = true;
-    errorText = "";
-    try {
-      await addKey($authToken, publicKey, label);
-      publicKey = "";
-      label = "";
-      await load($authToken);
-    } catch (err) {
-      errorText = message(err, "Could not add that key.");
-    } finally {
-      busy = false;
-    }
   }
 
   async function revoke(id) {
@@ -99,7 +79,7 @@
       {#if off}
         <p>SSH keys are not enabled on this server.</p>
       {:else}
-        <p class="hint">Paste a public key. The private key stays on your computer.</p>
+        <p class="hint">Keys are linked from an SSH sign-in. Press Y when the lobby asks to remember this computer, then reconnect and press Y again. A key pasted here does not sign in.</p>
         {#if loading}
           <p>Loading keys…</p>
         {:else if keys.length === 0}
@@ -120,15 +100,6 @@
             {/each}
           </ul>
         {/if}
-        <label>
-          Label
-          <input type="text" maxlength="64" bind:value={label} autocomplete="off" />
-        </label>
-        <label>
-          Public key
-          <textarea rows="4" bind:value={publicKey} spellcheck="false" autocomplete="off"></textarea>
-        </label>
-        <button type="button" class="yes" disabled={busy || !publicKey.trim()} on:click={add}>Add key</button>
       {/if}
       {#if errorText}
         <p class="err">{errorText}</p>
@@ -173,19 +144,6 @@
   }
   li div { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
   li span { overflow-wrap: anywhere; color: #b6aa92; font-size: 0.82rem; }
-  label { display: block; margin: 0.55rem 0; color: #f0e6d3; font-size: 0.85rem; }
-  input, textarea {
-    display: block;
-    width: 100%;
-    margin-top: 0.25rem;
-    box-sizing: border-box;
-    border: 1px solid #8b692f;
-    border-radius: 6px;
-    padding: 0.4rem 0.5rem;
-    background: #100e0b;
-    color: #f0e6d3;
-    font: 0.85rem ui-monospace, monospace;
-  }
   button {
     border: 1px solid #8b692f;
     border-radius: 6px;
@@ -195,7 +153,6 @@
     cursor: pointer;
   }
   button:disabled { opacity: 0.55; cursor: default; }
-  button.yes { background: #3d2a12; color: #fff0bb; }
   button.text { background: transparent; }
   .err { color: #e7b1a4; }
 </style>

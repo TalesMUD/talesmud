@@ -26,12 +26,8 @@ function listKeys(token) {
   return axios.get(`${backend}/ssh/keys`, headers(token));
 }
 
-function addKey(token, publicKey, label) {
-  return axios.post(`${backend}/ssh/keys`, { public_key: publicKey, label }, headers(token));
-}
-
 function revokeKey(token, id) {
   return axios.delete(`${backend}/ssh/keys/${encodeURIComponent(id)}`, headers(token));
 }
 
-export { lookupDevice, confirmDevice, denyDevice, listKeys, addKey, revokeKey };
+export { lookupDevice, confirmDevice, denyDevice, listKeys, revokeKey };

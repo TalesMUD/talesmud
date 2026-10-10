@@ -65,11 +65,6 @@ func (a *SSHAPI) Set(cfg SSHSettings) {
 	a.mu.Unlock()
 }
 
-type sshKeyBody struct {
-	PublicKey string `json:"public_key"`
-	Label     string `json:"label"`
-}
-
 type sshCodeBody struct {
 	UserCode string `json:"user_code"`
 	CSRF     string `json:"csrf"`
@@ -120,10 +115,10 @@ func (a *SSHAPI) ListKeys(c *gin.Context) {
 	c.JSON(http.StatusOK, out)
 }
 
-// AddKey links a public key the signed-in account pasted.
-// Possession of the private key is not required: the account owner is already signed in.
+// AddKey refuses a pasted public key. A key is linked only after that key
+// signs an SSH connection and the account owner confirms the link.
 func (a *SSHAPI) AddKey(c *gin.Context) {
-	store, max, web, ok := a.keyStore()
+	_, _, web, ok := a.keyStore()
 	if !ok {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
@@ -144,23 +139,9 @@ func (a *SSHAPI) AddKey(c *gin.Context) {
 		c.JSON(http.StatusTooManyRequests, gin.H{"error": "too many attempts"})
 		return
 	}
-	var body sshKeyBody
-	if !bindSSH(c, &body) {
-		return
-	}
-	row, err := store.Add(user.RefID, body.PublicKey, body.Label, "web", max)
-	if err != nil {
-		writeKeyErr(c, err)
-		return
-	}
-	c.JSON(http.StatusCreated, sshKeyView{
-		ID:          row.ID,
-		Fingerprint: row.Fingerprint,
-		KeyType:     row.KeyType,
-		Label:       row.Label,
-		CreatedAt:   row.CreatedAt,
-		CreatedVia:  row.CreatedVia,
-	})
+	// The body is not stored and is not copied into the response, so a
+	// private-key paste cannot be echoed back.
+	c.JSON(http.StatusForbidden, gin.H{"error": "link the key from an SSH sign-in"})
 }
 
 // DeleteKey revokes one key owned by the signed-in account.
@@ -353,17 +334,6 @@ func bindSSH(c *gin.Context, dst any) bool {
 		return false
 	}
 	return true
-}
-
-func writeKeyErr(c *gin.Context, err error) {
-	switch {
-	case errors.Is(err, sshkeys.ErrExists):
-		c.JSON(http.StatusConflict, gin.H{"error": "key already linked"})
-	case errors.Is(err, sshkeys.ErrFull):
-		c.JSON(http.StatusConflict, gin.H{"error": "too many keys"})
-	default:
-		c.JSON(http.StatusBadRequest, gin.H{"error": "key rejected"})
-	}
 }
 
 func writeDeviceErr(c *gin.Context, err error) {
