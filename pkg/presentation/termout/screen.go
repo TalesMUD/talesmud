@@ -219,6 +219,56 @@ func splitFrame(ansi string) [frameRows]string {
 	return rows
 }
 
+// WrapText breaks text on spaces so each line's visible width stays within
+// width. A single word longer than width is split by rune.
+func WrapText(s string, width int) []string {
+	s = strings.TrimRight(s, "\r\n")
+	if width < 8 {
+		width = 8
+	}
+	var lines []string
+	for _, para := range strings.Split(s, "\n") {
+		para = strings.TrimRight(para, "\r")
+		words := strings.Fields(para)
+		if len(words) == 0 {
+			lines = append(lines, "")
+			continue
+		}
+		cur := ""
+		for _, w := range words {
+			for visibleLen(w) > width {
+				if cur != "" {
+					lines = append(lines, cur)
+					cur = ""
+				}
+				chunk := clipVisible(w, width)
+				lines = append(lines, chunk)
+				w = w[len(chunk):]
+			}
+			if w == "" {
+				continue
+			}
+			if cur == "" {
+				cur = w
+				continue
+			}
+			if visibleLen(cur)+1+visibleLen(w) <= width {
+				cur += " " + w
+				continue
+			}
+			lines = append(lines, cur)
+			cur = w
+		}
+		if cur != "" {
+			lines = append(lines, cur)
+		}
+	}
+	if len(lines) == 0 {
+		return []string{""}
+	}
+	return lines
+}
+
 func padClip(s string, width int) string {
 	s = clipVisible(s, width)
 	n := visibleLen(s)

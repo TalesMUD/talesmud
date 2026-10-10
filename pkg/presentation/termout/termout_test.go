@@ -150,6 +150,83 @@ func TestGenericSplashAndSubstitute(t *testing.T) {
 	}
 }
 
+func TestSubstituteKeepsFrame(t *testing.T) {
+	shade, bar := "░", "║"
+	interior := strings.Repeat(" ", 27) + "\x1b[1;33;40m{{CODE}}\x1b[0;37;40m" + strings.Repeat(" ", 27)
+	codeLine := strings.Repeat(shade, 8) + bar + interior + bar + strings.Repeat(shade, 8)
+	if visibleLen(codeLine) != 80 {
+		t.Fatalf("code fixture width %d", visibleLen(codeLine))
+	}
+	got := Substitute(codeLine, "ABCD-EFGH", "", "")
+	if visibleLen(got) != 80 || !strings.Contains(got, "ABCD-EFGH") || !strings.HasSuffix(visibleText(got), shade) {
+		t.Fatalf("code line %d %q", visibleLen(got), got)
+	}
+	expInterior := "expires {{EXPIRES}}"
+	expPad := (62 - visibleLen(expInterior)) / 2
+	expLine := strings.Repeat(shade, 8) + bar + strings.Repeat(" ", expPad) + expInterior + strings.Repeat(" ", 62-expPad-visibleLen(expInterior)) + bar + strings.Repeat(shade, 8)
+	if visibleLen(expLine) != 80 {
+		t.Fatalf("expires fixture %d", visibleLen(expLine))
+	}
+	got = Substitute(expLine, "", "", "9m30s")
+	if visibleLen(got) != 80 || !strings.Contains(got, "9m30s") || strings.Contains(got, "{{") {
+		t.Fatalf("expires %d %q", visibleLen(got), got)
+	}
+	url := "https://play.example/activate?code=ABCD-EFGH&signup=1"
+	urlInterior := strings.Repeat(" ", 27) + "{{URL}}" + strings.Repeat(" ", 28)
+	urlLine := strings.Repeat(shade, 8) + bar + urlInterior + bar + strings.Repeat(shade, 8)
+	padInterior := strings.Repeat(" ", 62)
+	padLine := strings.Repeat(shade, 8) + bar + padInterior + bar + strings.Repeat(shade, 8)
+	screen := urlLine + "\n" + padLine
+	got = Substitute(screen, "", url, "")
+	parts := strings.Split(got, "\n")
+	if len(parts) != 2 || visibleLen(parts[0]) != 80 || visibleLen(parts[1]) != 80 {
+		t.Fatalf("url wrap widths %v", parts)
+	}
+	flat := visibleText(parts[0]) + visibleText(parts[1])
+	if !strings.Contains(strings.ReplaceAll(flat, " ", ""), strings.ReplaceAll(url, " ", "")) {
+		t.Fatalf("url missing in %q", flat)
+	}
+	if strings.Contains(got, "{{URL}}") {
+		t.Fatal("placeholder remained")
+	}
+	signup := SubstituteSignup("{{SIGNUP_URL}}\n{{URL}}", "ABCD-EFGH", "http://login.example/a", "1m", "http://signup.example/new")
+	if !strings.Contains(signup, "http://signup.example/new") || !strings.Contains(signup, "http://login.example/a") {
+		t.Fatal(signup)
+	}
+}
+
+func TestWrapTextWords(t *testing.T) {
+	lines := WrapText("Remember this computer? Link key SHA256:abcd…wxyz to account [Y/N]", 24)
+	for _, line := range lines {
+		if visibleLen(line) > 24 {
+			t.Fatalf("overwide %q", line)
+		}
+		if strings.Contains(line, "accoun") && !strings.Contains(line, "account") {
+			t.Fatalf("split a word %q", line)
+		}
+	}
+	if strings.Join(lines, " ") == "" || !strings.Contains(strings.Join(lines, " "), "Remember") {
+		t.Fatal(lines)
+	}
+}
+
+func visibleText(s string) string {
+	var b strings.Builder
+	for i := 0; i < len(s); {
+		if s[i] == 0x1b {
+			i = skipESC([]byte(s), i)
+			continue
+		}
+		r, size := utf8.DecodeRuneInString(s[i:])
+		if size < 1 {
+			break
+		}
+		b.WriteRune(r)
+		i += size
+	}
+	return b.String()
+}
+
 func TestLetterboxFill(t *testing.T) {
 	s := NewScreen()
 	s.SetFill("·")
