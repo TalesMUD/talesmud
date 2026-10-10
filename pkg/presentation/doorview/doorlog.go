@@ -16,6 +16,24 @@ import (
 // headerLine is the status row. Experience sits after gold so a reader that
 // stops at the gold figure still matches.
 func headerLine(level, hp, maxHP int32, gold int64, xp int32) string {
+	lv, hpText, goldText, xpPart := statusParts(level, hp, maxHP, gold, xp)
+	return fmt.Sprintf("Level %s   HP %s   Gold %s   %s", lv, hpText, goldText, xpPart)
+}
+
+// statusStrip is headerLine with dim labels and a bright hit-point figure.
+// Stripping the colour codes yields headerLine.
+func statusStrip(level, hp, maxHP int32, gold int64, xp int32) string {
+	lv, hpText, goldText, xpPart := statusParts(level, hp, maxHP, gold, xp)
+	const dim = "\x1b[0;37m"
+	const hi = "\x1b[1;37m"
+	const off = "\x1b[0m"
+	return dim + "Level " + off + hi + lv + off +
+		dim + "   HP " + off + hpColour(hp, maxHP) + hpText + off +
+		dim + "   Gold " + off + hi + goldText + off +
+		dim + "   " + off + hi + xpPart + off
+}
+
+func statusParts(level, hp, maxHP int32, gold int64, xp int32) (string, string, string, string) {
 	xpPart := fmt.Sprintf("XP %d", xp)
 	if level < ruleset.LevelCap() {
 		next := leveling.GetXPRequired(level + 1)
@@ -23,7 +41,22 @@ func headerLine(level, hp, maxHP int32, gold int64, xp int32) string {
 			xpPart = fmt.Sprintf("XP %d/%d", xp, next)
 		}
 	}
-	return fmt.Sprintf("Level %d   HP %d/%d   Gold %d   %s", level, hp, maxHP, gold, xpPart)
+	return fmt.Sprintf("%d", level), fmt.Sprintf("%d/%d", hp, maxHP), fmt.Sprintf("%d", gold), xpPart
+}
+
+func hpColour(hp, maxHP int32) string {
+	if maxHP <= 0 {
+		return "\x1b[1;31m"
+	}
+	pct := int64(hp) * 100 / int64(maxHP)
+	switch {
+	case pct >= 60:
+		return "\x1b[1;32m"
+	case pct >= 30:
+		return "\x1b[1;33m"
+	default:
+		return "\x1b[1;31m"
+	}
 }
 
 func combatKind(kind string) bool {
