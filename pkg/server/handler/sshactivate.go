@@ -85,6 +85,7 @@ button { margin-top: 0.8rem; margin-right: 0.4rem; }
 <label>Code <input id="code" autocomplete="off"></label>
 <button type="button" onclick="lookupCode()">Look up</button>
 <p id="detail"></p>
+<p id="keyline"></p>
 <div id="decide" hidden>
 <button type="button" onclick="decide('/api/ssh/device/confirm')">Confirm</button>
 <button type="button" onclick="decide('/api/ssh/device/deny')">Deny</button>
@@ -139,6 +140,7 @@ document.getElementById("login").addEventListener("submit", async function (ev) 
 let csrf = "";
 async function lookupCode() {
   document.getElementById("detail").textContent = "";
+  document.getElementById("keyline").textContent = "";
   try {
     const data = await api("POST", "/api/ssh/device/lookup", {user_code: codeInput.value});
     csrf = data.csrf || "";
@@ -150,10 +152,12 @@ async function lookupCode() {
     document.getElementById("detail").textContent =
       "An SSH session from " + (data.ip || "unknown") + " (" + ago + ") wants to sign in as you. " +
       "Mode " + (data.mode || "") + ". Client " + (data.client_version || "") + ". " +
-      "Key " + (data.key || "none") + ". Only confirm if you started it yourself.";
+      "Only confirm if you started it yourself.";
+    document.getElementById("keyline").textContent = "Key " + (data.key || "none");
     document.getElementById("decide").hidden = false;
   } catch (err) {
     document.getElementById("detail").textContent = err.message;
+    document.getElementById("keyline").textContent = "";
     document.getElementById("decide").hidden = true;
   }
 }
@@ -226,12 +230,12 @@ const activateRegisterScript = `document.getElementById("register").addEventList
     document.getElementById("regerr").textContent = data.error || "Could not create the account";
     return;
   }
-  localStorage.setItem(tokenKey, data.token || "");
-  showLogin(false);
-  if (codeInput.value) {
-    lookupCode();
-  }
-  loadKeys();
+  document.getElementById("regerr").textContent = "";
+  document.getElementById("loginerr").textContent = data.message || "Sign in to continue.";
+  var user = document.getElementById("username");
+  var createdName = document.getElementById("newuser");
+  if (user && createdName) user.value = createdName.value;
+  if (user) user.focus();
 });
 if (params.get("signup") === "1") {
   var created = document.getElementById("newuser");

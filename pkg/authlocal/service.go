@@ -117,9 +117,11 @@ func (s *Service) Register(username, email, password string) (string, PublicUser
 		return "", PublicUser{}, err
 	}
 	if _, err := s.users.FindByUsername(username); err == nil {
+		s.burn(password)
 		return "", PublicUser{}, ErrExists
 	}
 	if _, err := s.users.FindByEmail(email); err == nil {
+		s.burn(password)
 		return "", PublicUser{}, ErrExists
 	}
 	hash, err := Hash(password)

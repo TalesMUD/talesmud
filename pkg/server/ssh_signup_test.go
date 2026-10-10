@@ -73,6 +73,7 @@ func TestSSHRegisterThenConfirm(t *testing.T) {
 	api := handler.NewSSHAPI()
 	r := gin.New()
 	r.POST("/api/auth/register", (&handler.LocalAuthHandler{Auth: auth}).Register)
+	r.POST("/api/auth/login", (&handler.LocalAuthHandler{Auth: auth}).Login)
 	protected := r.Group("/api/")
 	protected.Use(AuthMiddleware(facade))
 	protected.POST("ssh/device/lookup", api.Lookup)
@@ -124,9 +125,15 @@ func TestSSHRegisterThenConfirm(t *testing.T) {
 	reg := postAuth(t, srv.URL+"/api/auth/register", "", map[string]string{
 		"username": "newssh", "email": "newssh@example.com", "password": "password1",
 	}, "")
-	token, _ := reg["token"].(string)
-	if token == "" {
+	if reg["token"] != nil || reg["ok"] != true || reg["message"] != "Sign in to continue." {
 		t.Fatalf("register %#v", reg)
+	}
+	logged := postAuth(t, srv.URL+"/api/auth/login", "", map[string]string{
+		"username": "newssh", "password": "password1",
+	}, "")
+	token, _ := logged["token"].(string)
+	if token == "" {
+		t.Fatalf("login %#v", logged)
 	}
 	if _, err := facade.UsersService().FindByUsername("newssh"); err != nil {
 		t.Fatal(err)
@@ -139,6 +146,9 @@ func TestSSHRegisterThenConfirm(t *testing.T) {
 	csrf, _ := lookup["csrf"].(string)
 	if csrf == "" || lookup["ip"] != "127.0.0.1" {
 		t.Fatalf("lookup %#v", lookup)
+	}
+	if lookup["key"] != sshgate.MaskFingerprint(fp) {
+		t.Fatalf("lookup key %#v", lookup["key"])
 	}
 	if postStatus(t, srv.URL+"/api/ssh/device/confirm", token, map[string]string{"user_code": code, "csrf": csrf}, "") != http.StatusForbidden {
 		t.Fatal("missing origin")

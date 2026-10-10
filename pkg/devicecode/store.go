@@ -242,7 +242,7 @@ func (s *Store) findLocked(code, userRef, ip string) (*request, error) {
 		return nil, ErrNotFound
 	}
 	s.purgeLocked()
-	if !s.hit(s.userHits, userRef, s.cfg.PerUser) || !s.hit(s.ipHits, limitKey(ip), s.cfg.PerIP) {
+	if !s.hit(s.userHits, userRef, s.cfg.PerUser) || !s.hit(s.ipHits, LimitKey(ip), s.cfg.PerIP) {
 		return nil, ErrLimited
 	}
 	req := s.byID[s.byHash[Hash(norm)]]
@@ -268,11 +268,11 @@ func (s *Store) view(req *request, csrf string) View {
 }
 
 func (s *Store) pendingCount(ip string) int {
-	key := limitKey(ip)
+	key := LimitKey(ip)
 	n := 0
 	now := s.now()
 	for _, req := range s.byID {
-		if limitKey(req.ip) == key && req.status == "pending" && now.Before(req.expires) {
+		if LimitKey(req.ip) == key && req.status == "pending" && now.Before(req.expires) {
 			n++
 		}
 	}
@@ -290,9 +290,9 @@ func (s *Store) pendingTotal() int {
 	return n
 }
 
-// limitKey buckets IPv6 by /64. IPv4, including IPv4-mapped IPv6, stays one address.
+// LimitKey buckets IPv6 by /64. IPv4, including IPv4-mapped IPv6, stays one address.
 // The stored address on a code stays the raw peer for the confirm page.
-func limitKey(ip string) string {
+func LimitKey(ip string) string {
 	parsed := net.ParseIP(strings.TrimSpace(ip))
 	if parsed == nil {
 		if strings.TrimSpace(ip) == "" {

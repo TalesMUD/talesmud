@@ -2,11 +2,10 @@ package sshgate
 
 import (
 	"errors"
-	"net"
-	"strings"
 	"sync"
 	"time"
 
+	"github.com/talesmud/talesmud/pkg/devicecode"
 	"github.com/talesmud/talesmud/pkg/gamemode"
 )
 
@@ -133,17 +132,7 @@ func (l *limits) bannedNow(ip string, now time.Time) bool {
 
 // limitKey buckets IPv6 by /64. IPv4, including IPv4-mapped IPv6, stays one address.
 func limitKey(ip string) string {
-	parsed := net.ParseIP(strings.TrimSpace(ip))
-	if parsed == nil {
-		if strings.TrimSpace(ip) == "" {
-			return "-"
-		}
-		return ip
-	}
-	if v4 := parsed.To4(); v4 != nil {
-		return v4.String()
-	}
-	return parsed.Mask(net.CIDRMask(64, 128)).String() + "/64"
+	return devicecode.LimitKey(ip)
 }
 
 func prune(times []time.Time, after time.Time) []time.Time {

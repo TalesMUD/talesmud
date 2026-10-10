@@ -93,6 +93,12 @@ func TestActivatePageIsLocalAndPrefills(t *testing.T) {
 	if strings.Count(body, "lookupCode()") != 2 || strings.Contains(body, "lookupCode();") {
 		t.Fatalf("lookup calls %d", strings.Count(body, "lookupCode()"))
 	}
+	if !strings.Contains(body, `id="keyline"`) || strings.Contains(body, `"Key " + (data.key || "none") +`) {
+		t.Fatal("confirm page does not give the stored key its own line")
+	}
+	if !strings.Contains(body, `getElementById("keyline").textContent = "Key " + (data.key || "none")`) {
+		t.Fatal("key line is not filled from the lookup")
+	}
 	if !strings.Contains(body, `params.get("code")`) {
 		t.Fatal("code is not prefilled")
 	}
@@ -137,8 +143,20 @@ func TestActivateSignupFormWhenOpen(t *testing.T) {
 	if strings.Contains(body, "addkey") || strings.Contains(body, "/api/ssh/keys\",") {
 		t.Fatal("signup page offers a key paste")
 	}
-	if !strings.Contains(body, "lookupCode();") {
-		t.Fatal("register does not land on lookup")
+	if strings.Contains(body, "lookupCode();") {
+		t.Fatal("register looks the code up")
+	}
+	if !strings.Contains(body, "Sign in to continue.") {
+		t.Fatal("register does not send the player to sign in")
+	}
+	start := strings.Index(body, `getElementById("register")`)
+	end := strings.Index(body, "let csrf")
+	if start < 0 || end < start {
+		t.Fatal("register script is missing")
+	}
+	reg := body[start:end]
+	if strings.Contains(reg, "localStorage") || strings.Contains(reg, "lookupCode") || strings.Contains(reg, "token") {
+		t.Fatal("register stores a session or looks the code up")
 	}
 	if strings.Contains(body, "decide('/api/ssh/device/confirm');") {
 		t.Fatal("confirm is called by itself")

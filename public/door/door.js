@@ -93,6 +93,13 @@
       ? { username: username, email: email, password: password }
       : { username: username, password: password };
     post(path, body).then(function (data) {
+      if (mode === "register") {
+        const message = (data && data.message) || "Sign in to continue.";
+        setMode("login");
+        err.style.color = "#9c9";
+        err.textContent = message;
+        return;
+      }
       if (!data.token) throw new Error("no session token");
       connect(data.token);
     }).catch(showErr);

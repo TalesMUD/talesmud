@@ -1,12 +1,14 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/talesmud/talesmud/pkg/authlocal"
+	"github.com/talesmud/talesmud/pkg/devicecode"
 	e "github.com/talesmud/talesmud/pkg/entities"
 )
 
@@ -37,7 +39,9 @@ type resetBody struct {
 
 var authLimiter = newIPLimiter(12, time.Minute)
 
-// Register creates an account and session. The response never includes a password hash.
+// Register creates an account when the username and email are free.
+// A new account and a collision share one response and no session token,
+// so the body does not say which field matched. The player signs in.
 func (h *LocalAuthHandler) Register(c *gin.Context) {
 	if !authLimiter.allow(c.ClientIP()) {
 		c.JSON(http.StatusTooManyRequests, gin.H{"error": "too many attempts"})
@@ -48,12 +52,12 @@ func (h *LocalAuthHandler) Register(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
-	token, user, err := h.Auth.Register(body.Username, body.Email, body.Password)
-	if err != nil {
+	_, _, err := h.Auth.Register(body.Username, body.Email, body.Password)
+	if err != nil && !errors.Is(err, authlocal.ErrExists) {
 		writeAuthErr(c, err)
 		return
 	}
-	c.JSON(http.StatusCreated, gin.H{"token": token, "user": user})
+	writeRegisterContinue(c)
 }
 
 // Login verifies a password and returns a session token.
@@ -132,7 +136,7 @@ func writeAuthErr(c *gin.Context, err error) {
 	case authlocal.ErrValidation, authlocal.ErrUsername, authlocal.ErrEmail, authlocal.ErrPassword, authlocal.ErrToken:
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	case authlocal.ErrExists:
-		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		writeRegisterContinue(c)
 	case authlocal.ErrCredentials:
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 	case authlocal.ErrBanned:
@@ -153,7 +157,19 @@ func newIPLimiter(limit int, window time.Duration) *ipLimiter {
 	return &ipLimiter{limit: limit, window: window, hits: map[string][]time.Time{}}
 }
 
+type registerContinue struct {
+	OK      bool   `json:"ok"`
+	Message string `json:"message"`
+}
+
+// writeRegisterContinue is the only success body for a new account and for
+// a taken username or email. It names neither field and carries no token.
+func writeRegisterContinue(c *gin.Context) {
+	c.JSON(http.StatusOK, registerContinue{OK: true, Message: "Sign in to continue."})
+}
+
 func (l *ipLimiter) allow(ip string) bool {
+	ip = devicecode.LimitKey(ip)
 	now := time.Now()
 	l.mu.Lock()
 	defer l.mu.Unlock()
