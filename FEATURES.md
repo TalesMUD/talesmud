@@ -23,6 +23,7 @@
 13. [Recent Features & Best Practices](#recent-features--best-practices)
 14. [Discovered World Atlas](#discovered-world-atlas)
 15. [Game Client Tab Container Widget](#game-client-tab-container-widget)
+16. [SSH Access](#ssh-access)
 
 ---
 
@@ -2519,6 +2520,34 @@ The leveling system (`CheckLevelUp`, `ApplyLevelUp`) respects `MaxLevelCap` auto
 - If `GUEST_SECRET` is not set, a random key is generated at startup
 - Optional local username/password sessions (Argon2id) when a game-mode file sets `auth: local`. Classic servers leave this off. API responses omit the password hash. Login attempts are limited per client address. `X-Forwarded-For` is trusted only from loopback unless `trusted_proxies` or `TRUSTED_PROXIES` says otherwise.
 - `presentation: door_tui` serves `public/door` and `GET /api/door/config` (title, subtitle, token key). Classic mode does not mount `/door`. The page paints live rooms, exits, actions, NPCs, resource labels, and combat status. The header uses live combat hit points and shows experience beside gold. The fight log stays until any key after the fight ends, including Enter, and a bare extra attack on that screen is not sent. The status line stays pinned above the log. The stats key paints hit points, gold, worn gear, and a gems count. A compass letter uses an open exit before a menu bind, and open east and west exits are listed. The index heading uses the configured title. A one-shot reply stays on the screen that produced it. A merchant room shows a numbered catalog, six rows at a time. `buy` and `sell` accept that number or a name. Keys and typed lines become engine commands. `:` starts a command line in the browser before later letters can hit hotkeys. A pack key whose command is `logout` tells the page to drop the session and return to the sign-in form. A world pack may add `keymap.yaml` (per room, per area, and a combat overlay) and `character_paths.yaml`. `d` stays down. With no character selected, the page asks for a name, then a numbered path, then sex, and the movement legend stays off that prompt. An existing name is selected. A new character uses the pack path when that file is present, and otherwise a numbered system template. The path name is stored on the `path` flag and the stats screen shows it. Reconnect runs the new-day pass without another select.
+
+---
+
+## SSH Access
+
+SSH is off by default. `ssh.enabled` starts one listener in the current process. Classic Auth0 and door local-auth are separate processes and separate ports. Setup, limits, and player commands are in `docs/ssh-access.md`.
+
+### What a session can do
+
+- Guest SSH reuses guest creation. The account stays `IsGuest` with no creator or admin role. It cannot call the device confirm or key routes, and it cannot link a key from the lobby.
+- A linked public key enters as that account. Creators and admins use the same check as everyone else.
+- Keyboard-interactive reaches a lobby only. The game attaches after the web confirm.
+- `ssh.max_session: 0` leaves account sessions uncapped. Guest sessions use `ssh.guest.max_session` (default 30 minutes). Idle applies to play on both.
+- Output is queued per session (128 messages). A full queue drops that session instead of blocking the game loop.
+
+### Stored keys
+
+`ssh_keys` is a SQLite JSON row (`id`, `data`) plus a unique index on `json_extract(data, '$.fingerprint')`. The row stores the account ref, fingerprint, key type, authorized_keys line, label, timestamps, and `created_via` (`web` or `device`). HTTP list responses omit the key blob and the last-used address. The owner still receives the full fingerprint. Device lookup returns only the shortened fingerprint.
+
+Accepted public keys: ed25519, sk-ed25519, ecdsa-sha2-nistp256/384/521, and ssh-rsa. `ssh-dss`, private-key blobs, and newlines are rejected. Signature algorithms stay the modern set from the SSH library (RSA signatures are rsa-sha2 only).
+
+### Play client
+
+`/play/?activate=<code>` is stored in `sessionStorage` under `talesmud_ssh_activate` before the Auth0 redirect, so the Auth0 `code` parameter does not replace it. Once a non-guest access token exists, the client looks the code up once and shows address, mode, and the shortened fingerprint. Confirm and Deny are buttons. Guests do not get the panel or the SSH keys menu. The account menu item is on the desktop chip, the phone header, and the onboarding menu.
+
+### Lua
+
+`tales.users.isGuest(id)` is false when the user is missing. `ctx.user.isGuest` is the same flag. `tales.characters.top` skips guest rows unless `guests.persistent_effects` is on. A row with no user id stays on the board.
 
 ---
 

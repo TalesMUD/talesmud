@@ -216,6 +216,8 @@ type Connection struct {
 
 The client registry supports stale-safe replacement for reconnects. When a user opens a new WebSocket, the server replaces the previous connection and only a matching current connection can mark the user offline or emit quit cleanup. This prevents an old socket close from deleting a fresh connection or incorrectly clearing online state.
 
+Game sessions talk to the engine through a `Transport` (`Send`, `Close`, `RemoteIP`, `Kind`). The websocket client is one transport. `pkg/sshgate` is the other: an `x/crypto/ssh` listener that is started only when `ssh.enabled` is set. SSH writes go through a bounded per-session queue so a slow reader cannot block the game loop. A newer session, web or SSH, replaces the older one. Guest admission, public-key admission, and the device-code lobby all end in `AttachExternal` on that transport. Operator setup is in `docs/ssh-access.md`.
+
 #### Server Components
 
 ```go
@@ -1541,6 +1543,10 @@ HTTP/WS Request with Token → AuthMiddleware
                                     ▼                    ▼
                                   Handler executes
 ```
+
+### SSH authentication
+
+`pkg/sshgate` accepts none-auth only for the username `guest` when guest SSH is enabled. Public-key auth runs only when the key store is enabled. An unknown key is recorded as an unverified candidate and rejected, so it is not linked. Keyboard-interactive asks no questions and opens a lobby until the account confirms a device code on the web. A linked key is written only after a verified signature and a second confirmation that names the account. Password auth, exec, subsystems, forwarding, and X11 are refused. Host keys stay on disk outside the repo. The HTTP key and device routes use the same auth middleware as the rest of the API. Details and limits are in `docs/ssh-access.md`.
 
 ### Guest Authentication
 
