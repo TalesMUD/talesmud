@@ -31,7 +31,7 @@ func TestAudienceMatches(t *testing.T) {
 		claims jwt.MapClaims
 		ok     bool
 	}{
-		{name: "missing", claims: jwt.MapClaims{}, ok: true},
+		{name: "missing", claims: jwt.MapClaims{}, ok: false},
 		{name: "string", claims: jwt.MapClaims{"aud": want}, ok: true},
 		{name: "other string", claims: jwt.MapClaims{"aud": "https://evil.example"}, ok: false},
 		{name: "array hit", claims: jwt.MapClaims{"aud": []interface{}{"https://evil.example", want}}, ok: true},
@@ -43,6 +43,9 @@ func TestAudienceMatches(t *testing.T) {
 		if got := audienceMatches(tc.claims, want); got != tc.ok {
 			t.Fatalf("%s: got %v", tc.name, got)
 		}
+	}
+	if audienceMatches(jwt.MapClaims{"aud": want}, "") {
+		t.Fatal("empty expected audience was accepted")
 	}
 }
 
@@ -172,6 +175,24 @@ func TestSSHAuth0DeviceConfirm(t *testing.T) {
 	if rejected.Code != http.StatusUnauthorized {
 		t.Fatalf("array audience %d", rejected.Code)
 	}
+	missingAud := signAuth0Claims(t, key, kid, jwt.MapClaims{
+		"sub": subject,
+		"iss": issuer,
+		"exp": time.Now().Add(time.Hour).Unix(),
+		"iat": time.Now().Add(-time.Minute).Unix(),
+	})
+	if got := postAuth0(t, r, "/api/ssh/device/lookup", missingAud, `{"user_code":"BCDF-GHJK"}`); got.Code != http.StatusUnauthorized {
+		t.Fatalf("missing aud %d", got.Code)
+	}
+	missingIss := signAuth0Claims(t, key, kid, jwt.MapClaims{
+		"sub": subject,
+		"aud": audience,
+		"exp": time.Now().Add(time.Hour).Unix(),
+		"iat": time.Now().Add(-time.Minute).Unix(),
+	})
+	if got := postAuth0(t, r, "/api/ssh/device/lookup", missingIss, `{"user_code":"BCDF-GHJK"}`); got.Code != http.StatusUnauthorized {
+		t.Fatalf("missing iss %d", got.Code)
+	}
 }
 
 func signAuth0(t *testing.T, key *rsa.PrivateKey, kid, audience, issuer, subject string) string {
@@ -201,6 +222,7 @@ func postAuth0(t *testing.T, r http.Handler, path, token, body string) *httptest
 	req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(body))
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Origin", "http://127.0.0.1")
 	rec := httptest.NewRecorder()
 	r.ServeHTTP(rec, req)
 	return rec

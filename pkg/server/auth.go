@@ -105,15 +105,16 @@ func getPemCert(token *jwt.Token) (string, error) {
 	return "", errors.New("Unable to find appropriate key")
 }
 
-// audienceMatches accepts a missing audience. A string must be the expected
-// value. An array must contain it. Any other shape is rejected.
+// audienceMatches requires the expected audience. A missing audience fails.
+// A string must be the expected value. An array must contain it.
+// Any other shape is rejected.
 func audienceMatches(claims jwt.MapClaims, want string) bool {
-	if claims == nil {
+	if claims == nil || want == "" {
 		return false
 	}
 	raw, ok := claims["aud"]
 	if !ok || raw == nil {
-		return true
+		return false
 	}
 	switch v := raw.(type) {
 	case string:
@@ -152,14 +153,14 @@ func getKeyFunc() jwt.Keyfunc {
 		// Verify 'aud' claim. Do not call MapClaims.VerifyAudience: in this
 		// jwt-go release an array audience skips the check (GO-2020-0017).
 		aud := os.Getenv("AUTH0_AUDIENCE")
-		claims, _ := token.Claims.(jwt.MapClaims)
-		if !audienceMatches(claims, aud) {
+		claims, ok := token.Claims.(jwt.MapClaims)
+		if !ok || !audienceMatches(claims, aud) {
 			return token, errors.New("Invalid audience")
 		}
-		// Verify 'iss' claim
-		iss := os.Getenv("AUTH0_DOMAIN")
-		checkIss := token.Claims.(jwt.MapClaims).VerifyIssuer(iss, false)
-		if !checkIss {
+		// A missing issuer is a failure. VerifyIssuer's required flag is what
+		// rejects that claim in this jwt-go release.
+		iss := strings.TrimSpace(os.Getenv("AUTH0_DOMAIN"))
+		if iss == "" || !claims.VerifyIssuer(iss, true) {
 			return token, errors.New("Invalid issuer")
 		}
 
