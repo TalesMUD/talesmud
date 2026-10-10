@@ -57,6 +57,7 @@
   import { user } from "./stores.js";
   import { layoutStore } from "./game/layout/LayoutStore.js";
   import { settingsStore } from "./game/SettingsStore.js";
+  import { sshKeysOpen } from "./sshStore.js";
 
   export let isGuest = false;
   export let login = null; // For guest "Create Account" button
@@ -172,6 +173,13 @@
         </a>
       </li>
     {/if}
+    <li>
+      <!-- svelte-ignore a11y-invalid-attribute -->
+      <a href="#!" on:click="{() => sshKeysOpen.set(true)}">
+        <i class="material-icons" style="font-size: 1.2em; vertical-align: middle; margin-right: 0.5em;">vpn_key</i>
+        SSH keys
+      </a>
+    </li>
     <li class="divider"></li>
     <li>
       <!-- svelte-ignore a11y-invalid-attribute -->

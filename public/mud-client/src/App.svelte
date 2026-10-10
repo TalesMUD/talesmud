@@ -91,6 +91,9 @@
   import CharacterCreationWizard from "./onboarding/CharacterCreationWizard.svelte";
   import { showCharacterWizard } from "./onboarding/onboardingStore.js";
   import { isGuestSession } from "./authSession.js";
+  import { readActivateCode } from "./sshActivate.js";
+  import SSHActivate from "./SSHActivate.svelte";
+  import SSHKeys from "./SSHKeys.svelte";
 
   // Auth0 config
   const config = {
@@ -107,6 +110,14 @@
   let currentUser = null;
   let loadingUser = false;
   let isGuest = false;
+  let activateCode = "";
+  if (typeof window !== "undefined") {
+    activateCode = readActivateCode(window.location.search, window.sessionStorage);
+  }
+
+  function closeActivate() {
+    activateCode = "";
+  }
 
   String.prototype.capitalize = function () {
     return this.charAt(0).toUpperCase() + this.slice(1);
@@ -295,3 +306,8 @@
     />
   {/if}
 {/if}
+
+{#if activateCode && $authToken && $isAuthenticated && !isGuest && !isGuestSession($authToken)}
+  <SSHActivate code={activateCode} token={$authToken} onClose={closeActivate} />
+{/if}
+<SSHKeys />

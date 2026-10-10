@@ -185,6 +185,7 @@
   import { layoutStore } from "../layout/LayoutStore.js";
   import { settingsStore } from "../SettingsStore.js";
   import { openCharacterPicker } from "../ui/characterPickerStore.js";
+  import { sshKeysOpen } from "../../sshStore.js";
 
   export let store;
   export let authToken = "";
@@ -227,6 +228,11 @@
   function openSettings() {
     open = false;
     settingsStore.openModal();
+  }
+
+  function openSSHKeys() {
+    open = false;
+    sshKeysOpen.set(true);
   }
 
   function endSession() {
@@ -284,6 +290,9 @@
           <button type="button" role="menuitem" on:click={editLayout}><i class="material-icons">dashboard_customize</i> Edit Layout</button>
           <button type="button" role="menuitem" on:click={switchCharacter}><i class="material-icons">switch_account</i> Switch character</button>
           <button type="button" role="menuitem" on:click={openSettings}><i class="material-icons">settings</i> Settings</button>
+          {#if !guest}
+            <button type="button" role="menuitem" on:click={openSSHKeys}><i class="material-icons">vpn_key</i> SSH keys</button>
+          {/if}
           {#if guest}
             <button type="button" role="menuitem" on:click={() => loginWith("twitter")}><i class="material-icons">login</i> Continue with X</button>
             <button type="button" role="menuitem" on:click={() => loginWith("google-oauth2")}><i class="material-icons">login</i> Continue with Google</button>
