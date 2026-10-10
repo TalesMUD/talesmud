@@ -257,6 +257,34 @@ func TestKeyMapBindsRoomAndLeavesDownAlone(t *testing.T) {
 	}
 }
 
+func TestFitScreenKeepsResourcesAheadOfArt(t *testing.T) {
+	art := make([]string, 12)
+	for i := range art {
+		art[i] = fmt.Sprintf("art %d", i)
+	}
+	text := []string{"Forest walks 25/25"}
+	for i := 0; i < 7; i++ {
+		text = append(text, fmt.Sprintf("line %d", i))
+	}
+	out := fitScreen(nil, art, text, []string{"You are now playing as Hero"}, 19)
+	if len(out) != 19 || out[len(out)-1] != "You are now playing as Hero" {
+		t.Fatalf("layout = %v", out)
+	}
+	joined := strings.Join(out, "\n")
+	if !strings.Contains(joined, "Forest walks 25/25") || !strings.Contains(joined, "art 0") || strings.Contains(joined, "art 11") {
+		t.Fatalf("art covered the resource line: %v", out)
+	}
+	log := make([]string, 0, 31)
+	for i := 0; i < 30; i++ {
+		log = append(log, fmt.Sprintf("hit %d", i))
+	}
+	log = append(log, "VICTORY!")
+	out = fitScreen(nil, art, []string{"Forest walks 25/25"}, log, 19)
+	if len(out) != 19 || out[len(out)-1] != "VICTORY!" || strings.Contains(strings.Join(out, "\n"), "Forest walks") || strings.Contains(strings.Join(out, "\n"), "art 0") {
+		t.Fatalf("long log = %v", out)
+	}
+}
+
 func TestFitBodyKeepsTheLatestLine(t *testing.T) {
 	body := []string{"Level 1   HP 25/25   Gold 50"}
 	for i := 0; i < 24; i++ {

@@ -488,6 +488,7 @@ func (v *View) paint(user *entities.User, send func(any)) {
 	if brief == "" && room != nil {
 		art = v.screenArtFor(room)
 	}
+	var artLines []string
 	if brief != "" {
 		pinned = append(pinned, brief)
 	} else if len(catalog) > 0 && hasInterior(art) {
@@ -495,7 +496,7 @@ func (v *View) paint(user *entities.User, send func(any)) {
 	} else if len(catalog) > 0 {
 		chrome = append(chrome, catalog...)
 	} else if art != "" {
-		chrome = append(chrome, strings.Split(art, "\n")...)
+		artLines = strings.Split(art, "\n")
 	}
 	if note := v.peekNotice(user.ID); note != "" {
 		lines := wrapPlain(note, 78)
@@ -599,7 +600,7 @@ func (v *View) paint(user *entities.User, send func(any)) {
 		}
 		page.Body = fitBody(pin, nil, sheet, 19)
 	} else {
-		page.Body = fitBody(pinned, chrome, append(v.peekRecent(user.ID), v.peekFlash(user.ID)...), 19)
+		page.Body = fitScreen(pinned, artLines, chrome, append(v.peekRecent(user.ID), v.peekFlash(user.ID)...), 19)
 	}
 	send(ansi.Render(page))
 }
@@ -1151,6 +1152,38 @@ func (v *View) clearNotice(id string) {
 	v.mu.Lock()
 	defer v.mu.Unlock()
 	delete(v.notice, id)
+}
+
+// fitScreen keeps resource lines and room text ahead of screen art. Art keeps
+// its top rows and gives up the bottom. A log longer than the body replaces both.
+func fitScreen(pinned, art, text, log []string, limit int) []string {
+	if limit < 1 {
+		limit = 1
+	}
+	pin := append([]string{}, pinned...)
+	if len(pin) > limit {
+		return pin[:limit]
+	}
+	budget := limit - len(pin)
+	lines := append([]string{}, log...)
+	if len(lines) > budget {
+		return append(pin, lines[len(lines)-budget:]...)
+	}
+	room := budget - len(lines)
+	keep := append([]string{}, text...)
+	if len(keep) > room {
+		keep = keep[:room]
+	}
+	artRoom := room - len(keep)
+	shown := append([]string{}, art...)
+	if artRoom <= 0 {
+		shown = nil
+	} else if len(shown) > artRoom {
+		shown = shown[:artRoom]
+	}
+	out := append(pin, shown...)
+	out = append(out, keep...)
+	return append(out, lines...)
 }
 
 // fitBody pins the header and, during a fight, the status line. Room art and
