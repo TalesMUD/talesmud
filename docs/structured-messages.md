@@ -3,6 +3,13 @@
 These additions preserve existing message types, fields, and prose. New fields
 use `omitempty`; clients must ignore unknown fields and message types.
 
+## Room aggression marker
+
+Both `enterRoom.npcs[]` and `roomUpdate.npcs[]` carry the existing additive
+`aggroOnSight: true` marker from aggressive-v1; false is omitted. The web enemy
+cards and NPC examine text use it for the red Aggressive label. Room `noAggro`
+prevents automatic engagement without changing an NPC's authored marker.
+
 ## Item inspection
 
 Successful `examine <item>` and `inspect <item>` send the original `message`
