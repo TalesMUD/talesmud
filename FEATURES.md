@@ -681,7 +681,7 @@ NPCs are processed by the game update loop every 10 seconds:
 - An enemy with `aggroOnSight` engages a player who enters its room, and engages players already there when it spawns, respawns, or walks in. `config/ruleset.yaml` `combat.aggro_on_sight` defaults to on, 2.5s grace, level gap 5, and 15s reaggro cooldown. That quiet period also covers other aggressive NPCs still in the room. `enabled: false` stops it. The sight line is ordinary text. The fight then uses the same path as `attack`. A room with `noAggro` skips both the grace watch and the fire. Look and examine of an `aggroOnSight` NPC include the line `Aggressive`.
 - NPC movement sends silent room updates so clients refresh NPC presence without reprinting the room description.
 
-Room NPC payloads sent to the MUD client include `isEnemy`, `isMerchant`, `isQuestGiver`, `hasDialog`, `hasIdleDialog`, `aggroOnSight`, and `state` so the UI can show interaction badges without duplicating backend lookup rules. An `aggroOnSight` enemy card shows a red Aggressive label.
+Room NPC payloads sent to the MUD client include `isEnemy`, `isMerchant`, `isQuestGiver`, `hasDialog`, `hasIdleDialog`, `aggroOnSight`, and `state` so the UI can show interaction badges without duplicating backend lookup rules. An `aggroOnSight` enemy card shows a red Aggressive label. The `aggroOnSight` JSON field is omitted for passive NPCs. `noAggro` survives room import/export and instance cloning; it suppresses automatic aggression without blocking a manual attack.
 
 ### Enemy Trait
 ```go
