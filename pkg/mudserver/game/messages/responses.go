@@ -31,6 +31,7 @@ type CharacterSelected struct {
 	MessageResponse
 	Character      *characters.Character `json:"character"`
 	XPForNextLevel int32                 `json:"xpForNextLevel"`
+	Guest          bool                  `json:"guest,omitempty"`
 }
 
 // NewUserQuit ... creates a new User Joined event

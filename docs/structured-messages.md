@@ -27,3 +27,9 @@ The snapshot includes the full `combatants` roster, `round`, `actorId`,
 window), and the player's `targetId`, queue, cooldowns, and pacing clocks.
 The web play client merges the roster and restores the battle, turn, and focus
 immediately. Ordinary queue updates omit the new turn/target fields.
+
+## Guest identity
+
+`characterSelected.guest` is `true` for an authenticated guest session. It is
+omitted for account sessions. This is the single guest marker on the socket;
+it derives from the authenticated user, not client input.

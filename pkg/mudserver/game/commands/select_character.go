@@ -169,6 +169,7 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 		},
 		Character:      character,
 		XPForNextLevel: leveling.GetXPRequired(character.Level + 1),
+		Guest:          user.IsGuest,
 	}
 
 	game.SendMessage() <- characterSelected
