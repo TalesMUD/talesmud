@@ -30,6 +30,9 @@ type Config struct {
 	PerUser         int
 	PerIP           int
 	Window          time.Duration
+	StartsPerIP     int // public app starts per Window
+	StartsGlobal    int // public app starts per Window
+	PollsPerIP      int // public polls per minute, including bad secrets
 }
 
 // View is what a logged-in account may see. KeyFP is the offered fingerprint.
@@ -38,33 +41,43 @@ type View struct {
 	Created       time.Time
 	Mode          string
 	ClientVersion string
+	ClientKind    string
+	ClientName    string
 	KeyFP         string
 	CSRF          string
 }
 
 type request struct {
-	id      string
-	hash    string
-	ip      string
-	mode    string
-	client  string
-	created time.Time
-	expires time.Time
-	status  string // pending, confirmed, denied, consumed
-	userRef string
-	fps     []string
-	csrf    map[string]string
+	id       string
+	hash     string
+	ip       string
+	mode     string
+	client   string
+	created  time.Time
+	expires  time.Time
+	status   string // pending, confirmed, denied, consumed
+	userRef  string
+	fps      []string
+	csrf     map[string]string
+	kind     string // ssh or app
+	name     string
+	pollHash string
+	interval time.Duration
+	nextPoll time.Time
 }
 
 // Store holds pending device codes for one process.
 type Store struct {
-	mu       sync.Mutex
-	now      func() time.Time
-	cfg      Config
-	byID     map[string]*request
-	byHash   map[string]string
-	userHits map[string][]time.Time
-	ipHits   map[string][]time.Time
+	mu         sync.Mutex
+	now        func() time.Time
+	cfg        Config
+	byID       map[string]*request
+	byHash     map[string]string
+	userHits   map[string][]time.Time
+	ipHits     map[string][]time.Time
+	byPollHash map[string]string
+	startHits  map[string][]time.Time
+	pollHits   map[string][]time.Time
 }
 
 // New builds a store. now may be nil.
@@ -87,13 +100,25 @@ func New(cfg Config) *Store {
 	if cfg.Window <= 0 {
 		cfg.Window = 10 * time.Minute
 	}
+	if cfg.StartsPerIP <= 0 {
+		cfg.StartsPerIP = 10
+	}
+	if cfg.StartsGlobal <= 0 {
+		cfg.StartsGlobal = 100
+	}
+	if cfg.PollsPerIP <= 0 {
+		cfg.PollsPerIP = 60
+	}
 	return &Store{
-		now:      time.Now,
-		cfg:      cfg,
-		byID:     map[string]*request{},
-		byHash:   map[string]string{},
-		userHits: map[string][]time.Time{},
-		ipHits:   map[string][]time.Time{},
+		now:        time.Now,
+		cfg:        cfg,
+		byID:       map[string]*request{},
+		byHash:     map[string]string{},
+		userHits:   map[string][]time.Time{},
+		ipHits:     map[string][]time.Time{},
+		byPollHash: map[string]string{},
+		startHits:  map[string][]time.Time{},
+		pollHits:   map[string][]time.Time{},
 	}
 }
 
@@ -105,6 +130,10 @@ func (s *Store) Begin(ip, mode, client string, fps []string) (id, display string
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.purgeLocked()
+	return s.beginLocked(ip, mode, client, fps)
+}
+
+func (s *Store) beginLocked(ip, mode, client string, fps []string) (id, display string, expires time.Time, err error) {
 	if s.pendingTotal() >= s.cfg.MaxPending || s.pendingCount(ip) >= s.cfg.MaxPendingPerIP {
 		return "", "", time.Time{}, ErrLimited
 	}
@@ -128,6 +157,7 @@ func (s *Store) Begin(ip, mode, client string, fps []string) (id, display string
 		status:  "pending",
 		fps:     clipFPs(fps),
 		csrf:    map[string]string{},
+		kind:    "ssh",
 	}
 	s.byID[req.id] = req
 	s.byHash[req.hash] = req.id
@@ -170,7 +200,7 @@ func (s *Store) Take(id string) (string, bool) {
 	defer s.mu.Unlock()
 	s.purgeLocked()
 	req := s.byID[id]
-	if req == nil || req.status != "confirmed" || req.userRef == "" {
+	if req == nil || req.kind != "ssh" || req.status != "confirmed" || req.userRef == "" {
 		return "", false
 	}
 	req.status = "consumed"
@@ -262,6 +292,8 @@ func (s *Store) view(req *request, csrf string) View {
 		Created:       req.created,
 		Mode:          req.mode,
 		ClientVersion: req.client,
+		ClientKind:    req.kind,
+		ClientName:    req.name,
 		KeyFP:         fp,
 		CSRF:          csrf,
 	}
@@ -309,20 +341,45 @@ func limitKey(ip string) string {
 func (s *Store) purgeLocked() {
 	now := s.now()
 	for id, req := range s.byID {
-		if !now.Before(req.expires) && req.status == "pending" {
+		if !now.Before(req.expires) && (req.status == "pending" || req.kind == "app") {
 			req.status = "expired"
 			delete(s.byHash, req.hash)
 			delete(s.byID, id)
+			delete(s.byPollHash, req.pollHash)
+		}
+	}
+	for _, book := range []map[string][]time.Time{s.userHits, s.ipHits, s.startHits} {
+		pruneHits(book, now.Add(-s.cfg.Window))
+	}
+	pruneHits(s.pollHits, now.Add(-time.Minute))
+}
+
+func pruneHits(book map[string][]time.Time, cut time.Time) {
+	for key, hits := range book {
+		kept := hits[:0]
+		for _, ts := range hits {
+			if ts.After(cut) {
+				kept = append(kept, ts)
+			}
+		}
+		if len(kept) == 0 {
+			delete(book, key)
+		} else {
+			book[key] = kept
 		}
 	}
 }
 
 func (s *Store) hit(book map[string][]time.Time, key string, limit int) bool {
+	return s.hitWindow(book, key, limit, s.cfg.Window)
+}
+
+func (s *Store) hitWindow(book map[string][]time.Time, key string, limit int, window time.Duration) bool {
 	if key == "" {
 		key = "-"
 	}
 	now := s.now()
-	cut := now.Add(-s.cfg.Window)
+	cut := now.Add(-window)
 	kept := book[key][:0]
 	for _, ts := range book[key] {
 		if ts.After(cut) {

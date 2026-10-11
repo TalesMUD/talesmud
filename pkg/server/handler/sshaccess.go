@@ -188,7 +188,7 @@ func (a *SSHAPI) DeleteKey(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// Lookup describes a pending SSH sign-in. The response never contains the raw code.
+// Lookup describes a pending SSH or app sign-in. The response never contains the raw code.
 func (a *SSHAPI) Lookup(c *gin.Context) {
 	a.device(c, func(store *devicecode.Store, user *e.User, body sshCodeBody) {
 		view, err := store.Lookup(body.UserCode, user.RefID, c.ClientIP(), allowUser(user))
@@ -200,18 +200,23 @@ func (a *SSHAPI) Lookup(c *gin.Context) {
 		if view.KeyFP != "" {
 			key = sshgate.MaskFingerprint(view.KeyFP)
 		}
-		c.JSON(http.StatusOK, gin.H{
+		response := gin.H{
 			"ip":             view.IP,
 			"created":        view.Created,
 			"mode":           view.Mode,
 			"client_version": textline.Sanitize(view.ClientVersion),
 			"key":            key,
 			"csrf":           view.CSRF,
-		})
+		}
+		if view.ClientKind == "app" {
+			response["client_kind"] = view.ClientKind
+			response["client"] = textline.Sanitize(view.ClientName)
+		}
+		c.JSON(http.StatusOK, response)
 	})
 }
 
-// Confirm binds the signed-in account to the waiting SSH lobby.
+// Confirm binds the signed-in account to the waiting SSH lobby or app poll.
 func (a *SSHAPI) Confirm(c *gin.Context) {
 	a.device(c, func(store *devicecode.Store, user *e.User, body sshCodeBody) {
 		if err := store.Confirm(body.UserCode, user.RefID, c.ClientIP(), body.CSRF, allowUser(user)); err != nil {
@@ -222,7 +227,7 @@ func (a *SSHAPI) Confirm(c *gin.Context) {
 	})
 }
 
-// Deny rejects a pending SSH sign-in.
+// Deny rejects a pending SSH or app sign-in.
 func (a *SSHAPI) Deny(c *gin.Context) {
 	a.device(c, func(store *devicecode.Store, user *e.User, body sshCodeBody) {
 		if err := store.Deny(body.UserCode, user.RefID, c.ClientIP(), body.CSRF, allowUser(user)); err != nil {

@@ -46,15 +46,15 @@ func ConfigureLogging() string {
 	}
 	log.SetOutput(io.MultiWriter(os.Stderr, rotator))
 	log.WithFields(log.Fields{
-		"logFile":  logFile,
+		"logFile":    logFile,
 		"maxAgeDays": 7,
-		"level":    level.String(),
+		"level":      level.String(),
 	}).Info("Logging configured (stderr + rotating file, 7-day retention)")
 	return logFile
 }
 
 // RedactAccessToken strips secret query values from URLs for safe logging.
-// access_token, code, and activate are removed. A key counts only at the
+// access_token, code, activate, device_code and token are removed. A key counts only at the
 // start of the string or after ? or &, so user_code is left alone.
 func RedactAccessToken(path string) string {
 	if path == "" {
@@ -83,7 +83,7 @@ func redactKeyAt(lower string, i int) (int, bool) {
 	if i > 0 && lower[i-1] != '?' && lower[i-1] != '&' {
 		return 0, false
 	}
-	for _, key := range []string{"access_token=", "activate=", "code="} {
+	for _, key := range []string{"access_token=", "activate=", "code=", "device_code=", "token="} {
 		if strings.HasPrefix(lower[i:], key) {
 			return len(key), true
 		}

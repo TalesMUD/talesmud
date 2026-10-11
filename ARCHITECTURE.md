@@ -87,8 +87,11 @@ Use `SQLITE_PATH` to specify the database file path (defaults to `talesmud.db`).
 /                          # Static files (frontend)
 /play                      # MUD client SPA (JS/CSS/HTML Cache-Control: no-cache)
 /health                    # Health check
+/activate                  # Explicit browser device confirmation
 /ws                        # WebSocket (game connection)
 /api/
+    ├── device/start      # Public app device-code start (classic)
+    ├── device/poll       # Public account session retrieval (classic)
     ├── characters/        # Character CRUD (owner/admin for direct object access)
     ├── rooms/ (GET)       # Room read (player level)
     ├── rooms/ (POST/PUT/DELETE) # Room write (creator level)
@@ -173,15 +176,16 @@ Optional middleware that serves a static landing page from the OS filesystem whe
 **File:** `pkg/server/auth.go`
 
 ```
-Request → Extract Token → Try Guest HMAC → (if fail) Validate Auth0 JWT → Find/Create User → Check Ban → Set Context
+Request → Extract Token → Guest HMAC / Server Session / Local Session / Auth0 JWT → Load User → Check Ban → Set Context
 ```
 
 - Supports both query parameter (`?access_token=`) and Authorization header
-- **Dual token validation**: Tries guest HMAC-SHA256 token first (fast), falls back to Auth0 JWT
+- Tries guest HMAC first, then the explicit server-session issuer, optional local auth, and Auth0 JWT
+- Classic device logins use `pkg/authsession`: HS256, issuer `talesmud-server-session`, audience `talesmud-api`, mandatory 30-minute expiry, account entity ID and session version. The verifier is passed explicitly to HTTP and WebSocket middleware. Secret resolution reuses `authlocal.ResolveSecret` (`SESSION_SECRET`, game-mode session secret, or persistent key file); these tokens load existing accounts without creating users.
 - Guest tokens signed with `GUEST_SECRET` env var, validated via `GuestService.ValidateGuestToken()`
 - Guest session expiry checked at auth layer (returns 401 if expired)
 - Auth0 tokens validated against JWKS endpoint (with in-memory cache, 1-hour TTL)
-- A missing `aud` is accepted. A string `aud` must equal `AUTH0_AUDIENCE`. An array `aud` must contain it. The check does not use `jwt-go` `VerifyAudience` (GO-2020-0017)
+- Auth0 requires `aud` and `iss`. A string `aud` must equal `AUTH0_AUDIENCE`; an array must contain it. The check does not use `jwt-go` `VerifyAudience` (GO-2020-0017)
 - Creates new user on first login
 - Syncs admin role from `MUD_ADMIN_OAUTHID` env var on every login
 - Rejects banned users with 403 at the auth layer
@@ -1520,32 +1524,28 @@ main()
 ### Authentication Flow
 
 ```
-Client → Auth0 Login OR Guest Session → Token (JWT or HMAC)
-                                              │
-                                              ▼
-HTTP/WS Request with Token → AuthMiddleware
-                                              │
-                                              ▼
-                                    Try Guest HMAC Validation
-                                     (fast, local HMAC check)
-                                              │
-                                    ┌─────────┴─────────┐
-                                    ▼ (valid)            ▼ (invalid)
-                              Load Guest User    Validate Auth0 JWT
-                              Check Expiry       (JWKS lookup)
-                                    │                    │
-                                    ▼                    ▼
-                              Set Context          Find/Create User
-                              (userid, user)             │
-                                    │                    ▼
-                                    │              Set Context
-                                    │              (userid, user)
-                                    │                    │
-                                    ▼                    ▼
-                                  Handler executes
+Auth0 / Guest / Local Login / Confirmed Device Login → Bearer
+                                                        │
+                                                        ▼
+                                           AuthMiddleware (HTTP + WS)
+                                                        │
+          ┌─────────────────┬──────────────────┬────────┴─────────┐
+          ▼                 ▼                  ▼                  ▼
+     Guest HMAC      Server-session JWT   Local-session JWT    Auth0 JWT
+     guest row       signature + aud/iss  optional local mode  JWKS + aud/iss
+     guest expiry    exp + session ver.   session version      find/create user
+          │                 │                  │                  │
+          └─────────────────┴──────────────────┴──────────────────┘
+                                                        │
+                                             Account checks + context
+                                                        │
+                                                        ▼
+                                                     Handler
 ```
 
 ### SSH authentication
+
+Classic public app login adds `/api/device/start` and `/api/device/poll` through `handler.DeviceAPI`. `app` initializes one `pkg/devicecode.Store` and passes it to both HTTP activation and the SSH gate. App records add client kind/name, a hashed 256-bit poll secret mapping, polling interval and next allowed poll time; no second store or database table is introduced. Existing authenticated `/api/ssh/device/lookup|confirm|deny` retain Origin and CSRF checks. Confirmation binds the account; a permitted poll issues and consumes its signed session atomically under the store lock. All app states expire within ten minutes and are purged. Public login is independent of SSH enablement; Door skips this initialization and retains its existing store setup. See `docs/device-login.md` for contracts, limits and signing configuration.
 
 `pkg/sshgate` accepts none-auth only for the username `guest` when guest SSH is enabled. Public-key auth runs only when the key store is enabled. An unknown key is not recorded until its signature verifies, and that verification does not authenticate. Keyboard-interactive asks no questions and opens a lobby until the account confirms a device code on the web. That lobby does not attach the game. The pending link is the signed key. It is written only after that signature and an answer that is exactly Y. N, a timeout, or quitting drops the offer and disconnects. Password auth, exec, subsystems, forwarding, and X11 are refused. Host keys stay on disk outside the repo. The HTTP key and device routes use the same auth middleware as the rest of the API. Auth0 tokens must include the configured audience and issuer. A guest HMAC is accepted only when the loaded user is a guest. Device confirm, deny, and lookup require an Origin that matches the activate URL. Deleting a key or banning the user closes matching live SSH sessions in this process. A guest token is refused on those SSH routes, on creator and admin routes, and on `PUT /api/user`. Details and limits are in `docs/ssh-access.md`.
 

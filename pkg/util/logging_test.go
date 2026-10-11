@@ -22,4 +22,7 @@ func TestRedactAccessToken(t *testing.T) {
 	if shaped != "/play/?user_code=KEEP-ME&code=[REDACTED]&activate=[REDACTED]" {
 		t.Fatalf("query boundary: %s", shaped)
 	}
+	if got := RedactAccessToken("/api/device/poll?device_code=POLLSECRET&token=SESSION"); got != "/api/device/poll?device_code=[REDACTED]&token=[REDACTED]" {
+		t.Fatal("device secrets leaked in access log")
+	}
 }

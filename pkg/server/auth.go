@@ -15,6 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/authlocal"
+	"github.com/talesmud/talesmud/pkg/authsession"
 	e "github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/service"
 )
@@ -255,8 +256,12 @@ func UseLocalAuth(svc *authlocal.Service) {
 
 // AuthMiddleware is a gin middleware function for authentication.
 // It verifies the JWT token from the query parameter or the authorization header.
-// Supports both Auth0 JWTs and guest HMAC tokens (tried first for fast validation).
-func AuthMiddleware(facade service.Facade) gin.HandlerFunc {
+// Supports Auth0, optional server sessions, local auth and guest HMAC tokens.
+func AuthMiddleware(facade service.Facade, sessions ...*authsession.Service) gin.HandlerFunc {
+	var session *authsession.Service
+	if len(sessions) > 0 {
+		session = sessions[0]
+	}
 	return func(c *gin.Context) {
 		// Extract token string from query param or Authorization header
 		var tokenStr string
@@ -303,6 +308,22 @@ func AuthMiddleware(facade service.Facade) gin.HandlerFunc {
 					return
 				}
 			}
+		}
+
+		if authsession.IsIssuer(tokenStr) {
+			user, err := session.UserFromToken(tokenStr)
+			if errors.Is(err, authsession.ErrBanned) {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Your account has been banned"})
+				return
+			}
+			if err != nil {
+				handleTokenError(c, err, nil)
+				return
+			}
+			c.Set("userid", user.RefID)
+			c.Set("user", user)
+			c.Next()
+			return
 		}
 
 		// Local username/password sessions. Tokens from this process are not sent to the external provider.

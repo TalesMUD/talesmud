@@ -74,7 +74,7 @@
   function submitCode() {
     const value = normalizeCode(typed);
     if (!isCompleteCode(value)) {
-      errorText = "Enter the 8-character code shown in your terminal.";
+      errorText = "Enter the 8-character code shown in your terminal/app.";
       return;
     }
     code = value;
@@ -182,13 +182,13 @@
     </div>
 
     {#if phase === "loading" || phase === "lookup"}
-      <p class="lead">Sign in to connect your terminal</p>
+      <p class="lead">Sign in to connect your terminal/app</p>
       <p class="muted center">{phase === "lookup" ? "Checking the code…" : "Loading…"}</p>
 
     {:else if phase === "enter"}
-      <p class="lead">Sign in to connect your terminal</p>
+      <p class="lead">Sign in to connect your terminal/app</p>
       <form on:submit|preventDefault={submitCode}>
-        <label for="code">Code from your terminal</label>
+        <label for="code">Code from your terminal/app</label>
         <input
           id="code"
           class="codebox"
@@ -206,21 +206,21 @@
       </form>
 
     {:else if phase === "signin"}
-      <p class="lead">Sign in to connect your terminal</p>
+      <p class="lead">Sign in to connect your terminal/app</p>
       <div class="code">{code}</div>
-      <p class="muted center">Check this matches the code in your terminal.</p>
+      <p class="muted center">Check this matches the code in your terminal/app.</p>
       <button class="primary" on:click={() => signIn(false)} disabled={busy}>Sign in</button>
       <button class="link" on:click={otherCode}>Use a different code</button>
 
     {:else if phase === "confirm"}
-      <p class="lead">Connect this terminal to your account?</p>
+      <p class="lead">Connect this terminal/app to your account?</p>
       <div class="code">{code}</div>
       <dl>
         {#if who}<dt>Account</dt><dd>{who}</dd>{/if}
         <dt>From</dt><dd>{view?.ip || "unknown address"}</dd>
         <dt>Started</dt><dd>{since(view?.created)}</dd>
       </dl>
-      <p class="warn">Only confirm if you started this from your own terminal just now.</p>
+      <p class="warn">Only confirm if you started this from your own terminal/app just now.</p>
       <button class="primary" on:click={confirm} disabled={busy || !view?.csrf}>Confirm</button>
       <div class="row">
         <button class="link" on:click={deny} disabled={busy}>Not me — reject</button>
@@ -229,17 +229,17 @@
 
     {:else if phase === "done"}
       <div class="tick" aria-hidden="true">✓</div>
-      <p class="lead">Done — return to your terminal.</p>
+      <p class="lead">Done — return to your terminal/app.</p>
       <p class="muted center">You can close this page.</p>
 
     {:else if phase === "denied"}
       <p class="lead">Sign-in rejected.</p>
-      <p class="muted center">That terminal was not connected. You can close this page.</p>
+      <p class="muted center">That terminal/app was not connected. You can close this page.</p>
     {/if}
 
     {#if errorText}<p class="err">{errorText}</p>{/if}
   </section>
-  <p class="foot">ssh -p 2222 veilspan.com</p>
+  <p class="foot">Terminal and app sign-in</p>
 </main>
 
 <style>

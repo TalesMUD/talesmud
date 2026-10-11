@@ -12,6 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/talesmud/talesmud/pkg/authlocal"
+	"github.com/talesmud/talesmud/pkg/authsession"
 	"github.com/talesmud/talesmud/pkg/classkit"
 	dbsqlite "github.com/talesmud/talesmud/pkg/db/sqlite"
 	"github.com/talesmud/talesmud/pkg/devicecode"
@@ -42,6 +43,9 @@ type app struct {
 	Facade        service.Facade
 	mud           mud.MUDServer
 	localAuth     *authlocal.Service
+	sessions      *authsession.Service
+	devices       *devicecode.Store
+	deviceAPI     *handler.DeviceAPI
 	resetByMail   bool
 	contentHealth repository.ContentHealthRepository
 	db            *dbsqlite.Client
@@ -164,7 +168,32 @@ func NewApp() App {
 			"resetMail": application.resetByMail,
 		}).Info("Local auth enabled")
 	}
+	application.initDeviceLogin()
 	return application
+}
+
+// initDeviceLogin leaves Door unchanged. Classic HTTP and SSH share one store,
+// including when the SSH listener or SSH device lobby is disabled.
+func (app *app) initDeviceLogin() {
+	if gamemode.ANSI() {
+		return
+	}
+	secret, err := authlocal.ResolveSecret(gamemode.Current())
+	if err != nil {
+		log.WithError(err).Fatal("Failed to load server session secret")
+	}
+	cfg := gamemode.SSH().Device
+	app.sessions = authsession.New(secret, app.Facade.UsersService())
+	app.devices = devicecode.New(devicePolicy(cfg))
+	app.deviceAPI = &handler.DeviceAPI{Devices: app.devices, ActivateURL: cfg.ActivateURL, Issue: app.sessions.Issue}
+	app.sshAPI.Set(handler.SSHSettings{Devices: app.devices, ActivateURL: cfg.ActivateURL, DeviceEnabled: true})
+}
+
+func devicePolicy(cfg gamemode.SSHDeviceConfig) devicecode.Config {
+	return devicecode.Config{
+		TTL: cfg.TTL.Duration(), MaxPendingPerIP: cfg.MaxPendingPerIP, MaxPending: cfg.MaxPending,
+		PerUser: cfg.LookupsPerUserPer10m, PerIP: cfg.LookupsPerIPPer10m, Window: 10 * time.Minute,
+	}
 }
 
 // SetupRoutes ... Configures the routes
@@ -302,7 +331,7 @@ func (app *app) setupRoutes() {
 
 	// Protected API routes (JWT auth required)
 	protected := r.Group("/api/")
-	protected.Use(AuthMiddleware(app.Facade))
+	protected.Use(AuthMiddleware(app.Facade, app.sessions))
 	{
 		// Player-level routes (any authenticated user)
 		if app.localAuth != nil {
@@ -537,6 +566,10 @@ func (app *app) setupRoutes() {
 		// Public server info (no auth, used by MUD client)
 		public.GET("server-info", serverSettings.GetServerInfo)
 		public.GET("ssh/info", handler.SSHInfo(app.sshPublicInfo))
+		if app.deviceAPI != nil {
+			public.POST("device/start", app.deviceAPI.Start)
+			public.POST("device/poll", app.deviceAPI.Poll)
+		}
 
 		// Guest session creation (public, no auth required)
 		guest := &handler.GuestHandler{
@@ -562,7 +595,7 @@ func (app *app) setupRoutes() {
 	app.Facade.GuestService().StartCleanupLoop()
 
 	ws := r.Group("/ws")
-	ws.Use(AuthMiddleware(app.Facade))
+	ws.Use(AuthMiddleware(app.Facade, app.sessions))
 	ws.GET("", app.mud.HandleConnections)
 
 	// Serve mud-client (game client) at /play
@@ -639,16 +672,9 @@ func (app *app) startSSH() {
 		keys = store
 		pending = sshkeys.NewPending(10 * time.Minute)
 	}
-	var devices *devicecode.Store
-	if cfg.Device.Enabled {
-		devices = devicecode.New(devicecode.Config{
-			TTL:             cfg.Device.TTL.Duration(),
-			MaxPendingPerIP: cfg.Device.MaxPendingPerIP,
-			MaxPending:      cfg.Device.MaxPending,
-			PerUser:         cfg.Device.LookupsPerUserPer10m,
-			PerIP:           cfg.Device.LookupsPerIPPer10m,
-			Window:          10 * time.Minute,
-		})
+	devices := app.devices
+	if devices == nil && cfg.Device.Enabled {
+		devices = devicecode.New(devicePolicy(cfg.Device))
 	}
 	if app.sshAPI != nil {
 		app.sshAPI.Set(handler.SSHSettings{
@@ -656,7 +682,7 @@ func (app *app) startSSH() {
 			Devices:       devices,
 			ActivateURL:   cfg.Device.ActivateURL,
 			KeysEnabled:   cfg.Keys.Enabled,
-			DeviceEnabled: cfg.Device.Enabled,
+			DeviceEnabled: cfg.Device.Enabled || app.deviceAPI != nil,
 			WebManage:     cfg.Keys.WebManageOn(),
 			MaxKeys:       cfg.Keys.MaxPerAccount,
 		})

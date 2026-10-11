@@ -1,6 +1,6 @@
 // Package devicecode is the in-memory device-code login.
-// The SSH listener and the activate API share one process, so a restart
-// drops pending codes. Codes are stored as hashes.
+// The SSH listener, public app polling and activate API share one store in one
+// process, so a restart drops pending codes. Codes are stored as hashes.
 package devicecode
 
 import (

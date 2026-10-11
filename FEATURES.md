@@ -2,7 +2,7 @@
 
 **Purpose**: This document catalogs ALL core systems, data structures, features, and APIs available in TalesMUD. It is designed to provide complete context for AI agents reworking game content to leverage the latest capabilities.
 
-**Last Updated**: 2026-06-18
+**Last Updated**: 2026-10-11
 
 ---
 
@@ -2515,6 +2515,7 @@ The leveling system (`CheckLevelUp`, `ApplyLevelUp`) respects `MaxLevelCap` auto
 - `api/guest.js` — `createGuestSession()` API client
 
 ### Authentication
+- Classic public device login: `POST /api/device/start` (`client`, `client_version`, `proto: 1`) and `POST /api/device/poll` (`device_code`) share `pkg/devicecode` with SSH. A separate hashed 256-bit poll secret, app client metadata, interval backoff, IP/global start limits and IP/device poll limits protect the flow. Explicit authenticated `/activate` confirmation issues one signed 30-minute account JWT accepted by character APIs and `/ws`; guests cannot confirm. `pkg/authsession` checks issuer, audience, mandatory expiry, bans and the existing session version, using the `SESSION_SECRET` / persistent session-key resolver. Door remains on its existing login. See `docs/device-login.md`.
 - Guest HMAC tokens are validated before Auth0 JWTs in `AuthMiddleware`. The token is accepted only when the loaded user is a guest. An Auth0 token must include the configured audience and issuer.
 - Token claims: `sub` (RefID), `uid` (user entity ID), `exp` (30min), `guest: true`
 - If `GUEST_SECRET` is not set, a random key is generated at startup
@@ -2545,7 +2546,7 @@ Accepted public keys: ed25519, sk-ed25519, ecdsa-sha2-nistp256/384/521, and ssh-
 
 ### Play client
 
-`/play/?activate=<code>` is stored in `sessionStorage` under `talesmud_ssh_activate`, then removed from the page URL, before the Auth0 redirect, so the Auth0 `code` parameter does not replace it and the code is not left on the address bar. Once a non-guest access token exists, the client looks the code up once and shows address, mode, and the shortened fingerprint. Confirm and Deny are buttons. Guests do not get the panel or the SSH keys menu. The account menu item is on the desktop chip, the phone header, and the onboarding menu.
+Classic `/activate` is a standalone Auth0 page for SSH and app codes, with “Connect this terminal/app” wording and explicit Confirm and Deny actions. Legacy `/play/?activate=<code>` links go there. The code is kept in `sessionStorage` under `talesmud_ssh_activate` and removed from the address bar before Auth0 redirects. Guests cannot confirm and do not get the SSH keys menu. The account menu item is on the desktop chip, the phone header, and the onboarding menu.
 
 ### Lua
 

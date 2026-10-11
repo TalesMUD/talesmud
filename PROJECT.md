@@ -50,7 +50,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Merchant shop overlay in the room widget (structured `shop` WS message with item stats/description; click inspects, explicit Buy/Sell confirm; WoW-style compare-to-equipped deltas on buy inspect; dialog Trade inject)
   - Player chrome Map: Cartographer overlay (desktop ~80% + intel rail; phone full-bleed + bottom intel sheet); tap select with Travel primary (Inspect optional); compact Map tab has no duplicate Map/Open Map header; 14 terrain types with six native 48px pixel-art variants plus room-driven roof/keep/service/landmark stamps and four underground floor styles on one sprite sheet; dithered biomes, smooth organic beaches/foam/depth bands and offshore rocks/coastal cliffs, mixed foothills and central peaks, biome-specific oaks/pines/marsh trees, crisp town glyphs, quiet dirt roads batched beneath relief, canopies, buildings and opaque town paving, water bridges along charted outdoor exits, street-shaped town paving with angular footprint walls, corner towers and road gates, roofs and town/farm props with filterable interior selection, parchment fog, textured sea, glowing you-marker, Fit world / recenter and zoom/pan, with up to 10× fit scale and 220px tiles (twice the previous closest view), using crisp nearest-neighbor sampling. World fit and minimum zoom share a continent frame at roughly 70–80% of the map height on desktop. The minimap shares cached overview/close landscapes and the underground renderer; 48px close detail bakes on demand in an OffscreenCanvas worker where supported, with a synchronous fallback. The distant overview retains a compact 32px cache; finer leaves, bark, timber lookout towers, roof tiles, masonry, bridge planks, crop rows and props remain crisp at maximum zoom. Lower uses 48px themed floors, bones/barrels and dim cluster light, with no long void-crossing connectors. The full map has low-rate water/smoke accents that respect reduced motion; trees and buildings have no drop shadows. Outdoor elevations stay on Overworld, interiors share exterior anchors, underground rooms stay on Lower. Terrain rules/defaults live in `pkg/worldmap/map_terrain.json`; compact centers/ground/town flags in `pkg/worldmap/map_layout.json`; read-only preview instructions are in `tools/WORLDMAP-PREVIEW.md`
   - Play client WS: single-flight socket gate; close 4001 (session replaced) does not auto-reconnect; `/play` JS/CSS served no-cache. An optional SSH listener (`ssh.enabled`, default off) uses the same session replace across web and SSH. See `docs/ssh-access.md`.
-- SSH device confirm: classic `/activate` redirects to `/play/?activate=<code>`. The play client looks the code up and confirms only after a click. Account menus list and revoke SSH keys that were linked from an SSH sign-in. A pasted public key does not become active. Guests do not see those controls.
+- Device login: classic `/activate` is a standalone “Connect this terminal/app” page and confirms only after a click. Public `/api/device/start` and `/api/device/poll` let installable clients obtain a signed 30-minute account session using the shared SSH device store. Set `SSH_ACTIVATE_URL` and a persistent `SESSION_SECRET` or session key path; see `docs/device-login.md`. Account menus list and revoke SSH keys linked from an SSH sign-in. Guests cannot confirm codes.
   - Action bar Option C: room dirs + room actions + Shop; fixed INV/MAP/SAY chrome; **Recipes** pin seeded by default; optional Look/Rest/… via ⋯
   - Gathering & crafting v1 (no professions): room GATHER chips + recipes/craft; R0209 CRAFT/RECIPES chips; R0102 first-gather hint
   - Spell Bar / Hotbar: docked on the desktop action bar (a moved hotbar widget stays separate); nine slots; skills + consumables; Rest seeded on empty/default bar (slot 7); Look/Talk/Flee bindable; no Search=look. Keys 1–9 fire those slots, Tab cycles combat targets, Escape closes the top panel, and `?` opens the shortcut list. None of those fire while a command or other text field is focused.
@@ -470,6 +470,11 @@ MUD_ADMIN_OAUTHID=
 # If not set, a random key is generated at startup (guest tokens won't survive server restart)
 GUEST_SECRET=
 
+# Confirmed public device logins use signed 30-minute account sessions.
+# SESSION_SECRET wins over game-mode session_secret / secret_path.
+# If unset, a persistent key is generated at data/session.key (0600).
+SESSION_SECRET=
+
 # SSH listener (also settable in the game-mode ssh: block). All default off.
 # These enable the listener and set its public address. They do not name a user or a key.
 # SSH_ENABLED=false
@@ -478,6 +483,7 @@ GUEST_SECRET=
 # SSH_PUBLIC_HOST=veilspan.com
 # SSH_PUBLIC_PORT=2222
 # SSH_ACTIVATE_URL=https://veilspan.com/activate
+# Also required for public app device login; points at the existing /activate.
 # SSH_GUEST_ENABLED=false
 # SSH_DEVICE_ENABLED=false
 # Device codes also stop at max_pending (default 100) for the process.

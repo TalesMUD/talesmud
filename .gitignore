@@ -35,6 +35,7 @@ public/mud-client/public/worldmap-worker.js.map
 
 # Environment and IDE
 .env
+/data/session.key
 .idea/
 .vscode/
 .cursor/

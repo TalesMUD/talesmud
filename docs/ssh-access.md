@@ -73,7 +73,7 @@ Startup logs the full public fingerprint, and `GET /api/ssh/info` returns the sa
 SHA256:base64-unpadded-hash
 ```
 
-User key fingerprints in logs are shortened to `SHA256:ab12…wxyz`. The SSH lobby shortens a device code to `BC**-****`. The HTTP access log replaces `access_token`, `code`, and `activate` query values with `[REDACTED]`. The play client stores `activate` and removes that parameter from the page URL before the login redirect. The log does not contain key blobs, device-code secrets, or session tokens.
+User key fingerprints in logs are shortened to `SHA256:ab12…wxyz`. The SSH lobby shortens a device code to `BC**-****`. The HTTP access log replaces `access_token`, `code`, `activate`, `device_code` and `token` query values with `[REDACTED]`. The play client stores `activate` and removes that parameter from the page URL before the login redirect. The log does not contain key blobs, device-code secrets, or session tokens.
 
 Players can pin the host with:
 
@@ -91,7 +91,7 @@ Password authentication is not offered. `exec`, subsystems, forwarding, agent fo
 - **Linked key.** `ssh -t -p 2222 -i ~/.ssh/id_ed25519 host`. A key that is already on the account enters the game with no extra question. Creators and admins use this same path.
 - **Device code.** Any other user name opens a lobby. The screen shows a code like `BCDF-GHJK` and the activate URL. The player opens that URL, signs in on the web, and presses Confirm. Nothing is confirmed automatically.
   - Door (`auth: local`) serves `GET /activate` as a small sign-in page.
-  - Classic (`auth: auth0`) answers `GET /activate?code=...` with a redirect to `/play/?activate=...`. The play client looks the code up and waits for Confirm or Deny.
+  - Classic (`auth: auth0`) serves a standalone `/activate` page with “Connect this terminal/app” wording. It looks the code up and waits for Confirm or Deny. Legacy `/play/?activate=` links go to that page.
 - **Linking.** After a confirmed device login, the lobby asks whether to remember the computer. The offer is the key that signed. Yes stores a pending link and asks the player to reconnect. The next connection checks that same signature, names the account, and writes the key only when the whole answer is Y. N, a timeout, or quitting drops the pending link and disconnects. That session does not enter the account. Declining the first remember question still enters the account that confirmed the device code and does not store a link. A word that merely contains y is not yes. One fingerprint cannot be claimed by a second account while the first offer is live.
 - **Web keys.** A signed-in, non-guest account can list and revoke keys that were linked from SSH. Classic uses the play-client account menu ("SSH keys"). Door uses the same `/api/ssh/keys` routes. The local activate page lists and revokes, and it has no paste field. `POST /api/ssh/keys` does not link a pasted key. A paste is not a signature, so it does not occupy the fingerprint or sign anyone in. The key is stored only after the device-link reconnect proves the signature and the owner presses Y. Deleting a key, or banning the account, closes that account's live SSH sessions in this process.
 
@@ -104,7 +104,11 @@ A newer web or SSH session replaces the older one. The SSH side prints `Session 
 Public:
 
 - `GET /api/ssh/info` — `{enabled, host, port, host_key_fingerprints, guest_enabled, activate_url}` with the full host fingerprint.
-- `GET /activate` — local page, or a redirect into `/play/?activate=` on a classic process.
+- `GET /activate` — local page on Door, standalone Auth0 confirmation page on classic.
+
+Classic installable clients use public `/api/device/start` and `/api/device/poll`
+with this same store and browser confirmation flow; see [device login](device-login.md).
+SSH lobby and key behavior remain unchanged.
 
 Signed in (guest and banned accounts are refused):
 
