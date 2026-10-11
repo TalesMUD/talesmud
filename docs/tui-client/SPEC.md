@@ -1,154 +1,147 @@
-# Veilspan TUI client
+# Veilspan TUI
 
 Status: spec only. No implementation in this change.
 Base: `engine-june` `99492b3` (character switch blocked mid-fight).
-Date: 2026-10-11. Owner ask: Marcus.
+Date: 2026-10-11. Owner ask: Marcus. Revision 2: installable client only.
 
-This document specifies a terminal client for the classic Veilspan world. It does not specify a replacement for the Door text client on `door.veilspan.com:2223`.
+This document specifies Veilspan TUI, a standalone terminal client for the Veilspan world. It does not specify a replacement for the Door text client on `door.veilspan.com:2223`.
+
+SSH :2222 (`pkg/sshgate` + textline line mode) stays exactly as-is and is out of scope for this client.
 
 ## 1. Executive summary
 
-Build one Go program, `cmd/veilspan-tui`, on Bubble Tea v2, Lip Gloss v2, and Bubbles v2. The same `tea.Model` runs two ways:
+Veilspan TUI is one Veilspan-branded Go binary. UI is Bubble Tea v2, Lip Gloss v2, and Bubbles v2. It dials `wss://veilspan.com/ws` (`GET /ws` in `pkg/server/server.go`) and the existing HTTP APIs (guest, characters, classes, art). It is a protocol client: the model consumes the structs that `wsTransport.Send` already JSON-encodes (`pkg/mudserver/transport.go`). It does not scrape ANSI, and it does not import `pkg/mudserver/game`. The engine must not import Bubble Tea, Lip Gloss, or this client.
 
-1. Server-side, on an already-admitted SSH session on the existing `:2222` listener, when the session has a PTY and a usable size. Zero install. `ssh -t -p 2222 veilspan.com` lands in the TUI.
-2. As a downloadable binary on the player's machine. It dials the existing game socket `GET /ws` (`pkg/server/server.go`) and speaks the same JSON.
+Screen-reader mode is a local flag, `--a11y`, or `:a11y on` saved in the config file. It is a second presentation of the same events: linear lines, no alternate screen, no cursor-addressed redraw. It is not an SSH environment variable.
 
-Both paths are protocol clients. The model consumes the structs that `wsTransport.Send` already JSON-encodes (`pkg/mudserver/transport.go`). It does not scrape ANSI, and it does not import `pkg/mudserver/game`. Core packages must not import Bubble Tea, Lip Gloss, Wish, or the TUI module.
+Rust plus Ratatui is the stronger pixel-art toolkit. For a standalone client the gap is narrower than it was when this spec also scored an in-process SSH session. Go is still the recommendation, for the reasons in section 1.2. Those reasons are shared Go fixtures, the team that already ships this engine, and a Bubble Tea v2 renderer that is enough on a local terminal. They are not "`sshgate` is already Go."
 
-The line-based SSH mode stays. `pkg/sshgate` plus `pkg/presentation/textline` remain the classic client. The TUI is the default when the PTY is at least 80x24 and `TERM` is not `dumb`. A small window stays on the line editor. Opting out on a large window needs `VEILSPAN_CLASSIC=1`, which `acceptEnv` does not allow yet (section 1.4). The downloadable binary takes `--classic` and `--a11y` as local flags. Screen-reader mode is a third presentation of the same events: linear lines, no alternate screen, no cursor-addressed redraw.
+### 1.1 Where it lives
 
-Rust plus Ratatui is the stronger pixel-art toolkit and a proven SSH-game stack. It is the wrong default here. The engine, the socket types, `sshgate`, portraits, item art, and the Door ANSI helpers are Go. A second language would fork the contract the web client and the Flutter client already share.
+Put the client in its own repo, `atla/veilspan-tui`, the same way the Flutter client lives in `atla/veilspan-client`. Do not add `cmd/veilspan-tui` to talesmud.
 
-### 1.1 Recommendation
+- Engine neutrality. Bubble Tea never becomes an import of `pkg/mudserver`, `pkg/server`, or `pkg/entities`. A separate module makes that a build fact.
+- Release cadence. The terminal client ships when its UI or install story changes. It does not wait on, or force, an `engine-june` binary.
+- Branding. The binary is Veilspan. The OSS engine stays a generic MUD. Door and the line-mode SSH client stay in talesmud, untouched.
+- The play client and Flutter already talk to this world from outside the engine process. This client is the third one.
+
+The wire contract stays in sync without importing talesmud (that import would pull the game):
+
+- Source of truth stays `pkg/mudserver/game/messages/responses.go` on the engine.
+- An engine test marshals one fixture per constructor in section 2.3 and fails if the committed JSON drifts.
+- `atla/veilspan-tui` CI checks out those fixtures at a pinned engine commit and fails if `internal/wire` cannot decode them.
+- `proto` (section 2.5 and section 7.3) is the compatibility number. Additive fields do not bump it.
+- A later extract of a tiny module (for example `atla/veilspan-wire`) that both sides import is optional. It is not required for v1. v1 is fixtures plus `proto`.
+
+Binary name: `veilspan`. Module path: `github.com/atla/veilspan-tui`.
+
+### 1.2 Recommendation
 
 | Choice | Decision |
 | --- | --- |
 | Language | Go |
+| Repo | `atla/veilspan-tui`. Not a command inside talesmud. |
 | UI | `charm.land/bubbletea/v2`, `charm.land/lipgloss/v2`, `charm.land/bubbles/v2` |
-| Renderer | Bubble Tea v2 Cursed renderer (cell diff, mode 2026). This is the bandwidth plan for SSH. |
-| SSH server | Keep `pkg/sshgate` (gliderlabs/ssh). Do not stand up a second listener. |
-| Wish | Reference and optional helper for "one program per session", not a replacement lobby. Auth, device code, guest caps, and key linking stay in `sshgate`. |
-| Wire | Existing JSON. New fields only as additive messages. |
+| Renderer | Bubble Tea v2 Cursed renderer (cell diff, mode 2026). Enough for a local terminal. |
+| Transport | Dial `GET /ws`. Send `{message, type:"message"}`. HTTP for everything in section 6 and section 4. |
+| Wire | Existing JSON. New fields only as additive messages. Fixtures generated from the engine structs. |
 | Art | Kitty, then sixel, then iTerm2 inline, then half-block truecolor, then ASCII. Half-block is the MVP picture. |
-| Classic SSH | Unchanged `textline` editor. |
 
-### 1.2 Weighted comparison
+### 1.3 Weighted comparison
 
-Weights are 1–5 by how much they matter for this product. Scores are 1–5. Higher is better. Weighted total is sum of weight times score.
+Standalone client only. Weights are 1–5 by how much they matter. Scores are 1–5. Higher is better. Weighted total is the sum of weight times score.
 
-| Criterion | W | Go + Bubble Tea v2 + existing sshgate | Rust + Ratatui 0.30.2 + russh |
+The earlier table scored about Go 200 to Rust 158 on weights that summed to 40. Most of that gap was rows that only exist if the TUI is also an SSH session: zero-install on `:2222`, SSH bandwidth, one binary that is also the SSH runner, and a line-mode fallback beside the TUI. Those rows are gone. What is left:
+
+| Criterion | W | Go + Bubble Tea v2 | Rust + Ratatui 0.30.2 |
 | --- | --- | --- | --- |
-| Shares the Go engine and JSON types without a second decoder stack | 5 | 5 | 2 |
-| Zero-install over the SSH port that already exists | 5 | 5 (session handoff after admit) | 3 (russh can serve, but it replaces or duplicates `sshgate`) |
-| Same binary as a downloadable websocket client | 4 | 5 | 4 |
+| Shares the Go response structs. Fixtures are marshalled in Go. The client still does not import the engine module. | 5 | 5 | 2 (a second decoder, kept honest only by the JSON fixtures) |
+| Team velocity. The engine, the play server, and the fixture test are Go. | 4 | 5 | 2 |
 | Terminal graphics (sixel, kitty, iTerm2, half-blocks) | 4 | 3 (`charmbracelet/x` has sixel and kitty encoders; no Ratatui-image equivalent) | 5 (`ratatui-image` 11.1.0 stable, 12.0.0-rc.2 on 2026-10-05) |
-| SSH bandwidth / redraw diffing | 4 | 5 (Cursed renderer, mode 2026; Wish v2 notes order-of-magnitude savings) | 4 (immediate mode, app owns the diff) |
-| Fits the "core stays framework-neutral" rule | 5 | 5 if the TUI lives in `cmd/` and a leaf package | 5 (separate process) but the in-process adapter is then a Go bridge anyway |
-| Team velocity on this repo | 4 | 5 | 2 |
+| Local redraw: cell diff, resize, mouse, Kitty keyboard | 3 | 4 (Cursed renderer, mode 2026, Ultraviolet) | 4 (immediate mode; the app owns the diff; Ratatui's widgets are the more proven set) |
+| Core stays framework-neutral | 4 | 5 (separate repo; talesmud never imports Bubble Tea) | 5 (separate repo) |
 | Snapshot tests | 3 | 4 (`teatest`) | 5 (mature golden tests) |
-| Screen reader / classic fallback beside a TUI | 3 | 4 (classic path already shipped) | 3 |
-| Risk of fighting Door's ANSI client | 3 | 4 if we do not import `doorview` | 5 (fully separate) |
 
-Weighted: Go about 200, Rust about 158 (weights sum 40; Go 4.9, Rust 3.7 average). Graphics is the one row where Rust wins cleanly. Pay that down with half-block first and a small Go encoder for kitty/sixel, not with a second client.
+Weights sum to 23. Go totals 101 (about 4.4). Rust totals 85 (about 3.7). The gap is 16 points. Rust still wins graphics and snapshot tests. Local redraw and engine neutrality are a tie once nobody is hosting the TUI inside the game process. Go stays the choice because the fixtures and the people building them are Go, and Bubble Tea v2's renderer is enough for this UI. Half-block first still pays down the graphics gap. A Rust client would be the right call if pictures were the product. They are a fallback ladder on top of a JSON protocol.
 
-### 1.3 What "both ways" means
+### 1.4 Process shape
 
 ```
-+------------------+     JSON events      +----------------------+
-| tea.Model        |<--------------------| session adapter      |
-| panels, keys     |  command lines       |                      |
-|                  |-------------------->|                      |
-+------------------+                      +----------+-----------+
-                                                     |
-                         +---------------------------+---------------------------+
-                         |                                                       |
-              downloadable binary                                    SSH after admit
-              dial wss://host/ws?access_token=                       Transport.Send(v)
-              gorilla/websocket                                      AttachExternal input()
-                         |                                                       |
-                         +---------------------------+---------------------------+
-                                                     |
-                                            pkg/mudserver  (unchanged contract)
++------------------+     JSON events       +----------------------+
+| tea.Model        |<----------------------| websocket + HTTP     |
+| panels, keys     |  {message, type}      |                      |
++------------------+---------------------->|                      |
+                                            +----------+-----------+
+                                                       |
+                                            wss://veilspan.com/ws
+                                            https://veilspan.com/api/...
+                                                       |
+                                            pkg/mudserver (unchanged)
                                             web /play and Flutter use this too
 ```
 
-Server-side, the adapter is a `mudserver.Transport` (`pkg/mudserver/transport.go`). `Send(v any)` JSON-encodes the same value `wsTransport` writes. `AttachExternal` (`pkg/mudserver/mudserver.go`) already delivers command lines. The TUI sends lines through that callback (`input(text, false)`). It does not call game methods.
+There is no in-process `Transport` adapter and no `AttachExternal` path. The client is a process on the player's machine. A loopback `httptest` websocket is the conformance test in CI. It is not a production mode.
 
-A loopback dial to `/ws` is the conformance test that the adapter and the socket match. It is not the production SSH path. An extra hop on the same host adds latency to the 5 second decision window and breaks when the process is bound to a socket the TUI cannot see.
+### 1.5 Door stays a different product
 
-### 1.4 Coexistence with line mode and with Door
+Door (`:2223`, `gamemode.ANSI()`, `pkg/presentation/doorview`) is a different product. `doorview.View` holds `*game.Game` and paints from live engine objects. Veilspan TUI must not do that, and must not import `doorview` (that import would pull the game into the client). Reuse, by copying into the client repo:
 
-Admission does not change. Guest, device code, and linked-key login stay in `pkg/sshgate/lobby.go` and `pkg/sshgate/session.go`. A shell with no PTY is already rejected (`session.go` `shell` request). `exec` is refused. `acceptEnv` allows only `LANG`, `LC_ALL`, `LC_CTYPE`, and `TALES_CHARSET`. So `ssh host classic` does not work today, and a client `SendEnv VEILSPAN_CLASSIC` is dropped until the allowlist grows.
-
-After admit, `classicLoop` is what runs now. The TUI choice replaces that call:
-
-| Condition | Session |
-| --- | --- |
-| `TERM=dumb`, or cols < 80, or rows < 24 (pty-req and window-change already parse size) | Classic `textline` editor. `ssh.mud.history` defaults to 20 (`docs/ssh-access.md`). |
-| `VEILSPAN_CLASSIC=1` once `acceptEnv` allows that name | Classic, even on a large terminal. |
-| `VEILSPAN_A11Y=1` once allowed | Linear mode. Same events, no alternate screen. |
-| Otherwise | Bubble Tea on that channel. |
-
-M5 adds those two names to `acceptEnv`, sanitized the same way as `TALES_CHARSET`. OpenSSH only sends them if the player's config has `SendEnv`. Players who do nothing get the TUI on a normal 80x24-or-larger PTY. Ctrl-C / Ctrl-D keep their classic meaning inside the line editor. Inside the TUI, Ctrl-C asks for quit and then closes the channel (section 7).
-
-Door (`:2223`, `gamemode.ANSI()`, `pkg/presentation/doorview`) is a different product. `doorview.View` holds `*game.Game` and paints from live engine objects. The Veilspan TUI must not do that, and must not import `doorview` (that import would pull the game into the client). Reuse, by copying or by a later leaf extract:
-
-- `pkg/presentation/ansi`: frame sanitizer. Door frames drop OSC, DCS, C1, and bidi controls (`docs/ssh-access.md`).
-- `pkg/presentation/termout`: charset selection for CP437 art.
-- The idea in `doorview` of mapping a key to an engine command string. The map itself stays Door's.
+- The frame sanitizer rules from `pkg/presentation/ansi`. Door frames drop OSC, DCS, C1, and bidi controls (`docs/ssh-access.md`).
+- Charset selection from `pkg/presentation/termout` when a CP437 glyph is the fallback.
+- The idea of mapping a key to an engine command string. The Door map itself stays Door's.
 
 Do not share a screen layout, a color theme, or a binary with Doorkeeper.
 
-### 1.5 Library facts (checked 2026-10-11)
+### 1.6 Library facts (checked 2026-10-11)
 
 | Library | State | Source |
 | --- | --- | --- |
 | Bubble Tea v2.0.0 | Stable 2026-02-24. Cursed renderer, `tea.View`, mode 2026 sync updates, Kitty keyboard protocol, Lip Gloss no longer touches I/O. | https://charm.land/blog/v2.md (post date 23 Feb 2026). Patch v2.0.10 on 2026-09-24 skips capability queries when input is disabled: https://github.com/charmbracelet/bubbletea/releases (via newreleases, retrieved 2026-10-11). Latest is v2.1.0 (2026-10-08): OSC 7501 program status, 0x0 tty size falls back to defaults, shutdown deadlock fix. Target v2.1.x. |
 | Lip Gloss v2.0.0 | Stable 2026-02-24. Pure styling. Import `charm.land/lipgloss/v2`. | https://github.com/charmbracelet/lipgloss/releases/tag/v2.0.0 |
-| Bubbles v2.0.0 | Stable 2026-02-24. Import `charm.land/bubbles/v2/...`. Light/dark styles are explicit. Wish must read the client background; do not use Lip Gloss `compat` on SSH. | https://github.com/charmbracelet/bubbles/releases (v2 notes, retrieved 2026-10-11) |
-| Wish v2.0.0 | Stable 2026-03-09. Built on Bubble Tea v2. Import `charm.land/wish/v2`. | https://github.com/charmbracelet/wish/releases (v2.0.0 notes, retrieved 2026-10-11) |
+| Bubbles v2.0.0 | Stable 2026-02-24. Import `charm.land/bubbles/v2/...`. Light and dark styles are explicit. There is no `AdaptiveColor`. Detect the background yourself. If the query times out, assume dark. | https://github.com/charmbracelet/bubbles/releases (v2 notes, retrieved 2026-10-11) |
 | Ultraviolet | Cell diff renderer under Bubble Tea v2. Kitty keyboard, SGR mouse, Windows console input. | https://github.com/charmbracelet/ultraviolet (retrieved 2026-10-11) |
 | charmbracelet/x | Experimental. `ansi` package gained sixel (`DCS`) and kitty graphics helpers (PR #380, merged Feb 2025). | https://github.com/charmbracelet/x/pull/380 |
-| Ratatui | 0.30.2 on 2026-06-19. Backend split; `ratatui-crossterm` 0.1.2. | https://crates.io/crates/ratatui |
-| ratatui-image | 11.1.0 stable 2026-09-17. 12.0.0-rc.2 on 2026-10-05. Sixel, kitty, iTerm2, half-blocks. | https://lib.rs/crates/ratatui-image |
-| russh | 0.64.1 on 2026-10-05. Used by SSH-delivered Ratatui games (kartoffels). | https://crates.io/crates/russh/0.64.1 |
+| Ratatui | 0.30.2 on 2026-06-19. Backend split; `ratatui-crossterm` 0.1.2. Cited for the comparison only. | https://crates.io/crates/ratatui |
+| ratatui-image | 11.1.0 stable 2026-09-17. 12.0.0-rc.2 on 2026-10-05. Sixel, kitty, iTerm2, half-blocks. Cited for the comparison only. | https://lib.rs/crates/ratatui-image |
 
-Not verified: any Bubble Tea release after v2.0.10, and whether `charmbracelet/x` sixel is the API we should pin. Pin versions in `go.mod` when implementation starts.
+Not verified: building against Bubble Tea v2.1.0 (the notes were read; the module was not compiled), and whether `charmbracelet/x` sixel is the API to pin. Pin versions in the client `go.mod` when implementation starts.
 
-### 1.6 Lessons from other terminals
+### 1.7 Lessons from other terminals
 
 | Work | Take |
 | --- | --- |
-| terminal.shop, Charm soft-serve | Wish/Bubble Tea over SSH is a product, not a demo. Capability detection and resize are the hard parts. |
+| terminal.shop, Charm soft-serve | Capability detection and resize are the hard parts of a full-screen terminal program. Use those lessons in this local binary. Do not host this TUI on `:2222`. |
 | Brogue CE, Caves of Qud (curses) | A fixed grid, a small verb set, and a message log beat a free-form terminal. 80 columns is the floor. |
 | Cataclysm DDA | Dense panels work when every panel has a key and a one-line help row. |
-| TinTin++, Blightmud | Scriptable triggers are how experts escape bad UIs. We do not need them in MVP. We do need the command line to stay first-class so muscle memory from classic SSH still works. |
+| TinTin++, Blightmud | Scriptable triggers are how experts escape bad UIs. We do not need them in MVP. The command line stays first-class so typed verbs from the line client still work. |
 | Mudlet | GUI maps and triggers set the expectation. Our atlas message is the structured map. Do not redraw a pixel map by scraping room text. |
 | Evennia web | Confirms the split we already have: server sends structured state, client renders. |
-| `ssh tetris` / SSH toys | Fun and brittle. They skip auth, resize, and reconnect. We already have those problems solved for the line client. Do not throw them out. |
+| Full-screen SSH toys | They skip auth, resize, and reconnect. This client has to do all three against `/ws`. It does not extend the line-mode session. |
 
 ## 2. Architecture
 
 ### 2.1 Modules
 
+Repo `atla/veilspan-tui`:
+
 | Path | Role | May import |
 | --- | --- | --- |
-| `cmd/veilspan-tui` | `main`. Flags, SSH-channel vs stdio, websocket dial. | `pkg/tui`, Bubble Tea |
-| `pkg/tui` | Model, views, keys, art fallback, themes. | `pkg/wire` (new, leaf), Bubble Tea. Not `mudserver`, not `doorview`, not `game`. |
-| `pkg/wire` | JSON structs that match today's socket. Decode only. | stdlib |
-| `pkg/sshgate` | Admit, then choose classic vs TUI. | May construct the TUI adapter. Must not import Bubble Tea types in the lobby. The session file can depend on a small `tui.Runner` interface defined in `pkg/sshgate` and implemented in `cmd` or `pkg/tui`. |
-| `pkg/mudserver` | Unchanged contract. | Must not import `pkg/tui`. |
+| `cmd/veilspan` | `main`. Flags, config dir, websocket dial, subcommands `update` and `logout`. | `internal/tui`, `internal/auth`, Bubble Tea |
+| `internal/tui` | Model, views, keys, art fallback, themes. | `internal/wire`, Bubble Tea. Not talesmud. |
+| `internal/wire` | JSON structs that match today's socket. Decode only. | stdlib |
+| `internal/auth` | Guest POST, device-code start/poll client, token file. | stdlib |
+| `internal/update` | GitHub releases check. No network unless the check is enabled. | stdlib |
 
-`pkg/wire` is allowed to duplicate the JSON tags from `pkg/mudserver/game/messages/responses.go`. A later extract that moves those structs into `pkg/wire` and has `messages` alias them is optional and is the only core edit this spec wants. Until that extract, the TUI carries its own structs. Drift is caught by the fixture test in section 7.
+In talesmud, add no TUI package. The v1 engine touch is the fixture test that writes JSON (section 8.5). The device-code HTTP pair in section 6 lands only when Marcus wants account login. `pkg/mudserver` must not import Bubble Tea. `pkg/bus` (`pkg/bus/bus.go`) is an in-process event bus. It is not the player socket. The TUI does not subscribe to it.
 
-`pkg/bus` (`pkg/bus/bus.go`) is an in-process event bus. It is not the player socket. The TUI does not subscribe to it.
+`internal/wire` duplicates the JSON tags from `responses.go`. Drift is caught by the fixture test in section 8.5.
 
 ### 2.2 Directions
 
 | Direction | Today | TUI |
 | --- | --- | --- |
-| Client to server | One JSON object per command. `messages.IncomingMessage` is `{message, type, key}` (`pkg/mudserver/game/messages/incoming.go`). Web play sends `{message, type:"message"}` (`public/mud-client/src/game/Client.js`). Door sends `{type:"door_key", key}` (`public/door/door.js`). | SSH adapter calls `input(line, false)`. Downloadable client sends `{message, type:"message"}`. No new client verb in MVP. Panels format the same command strings the keyboard already sends (`attack`, `1`, `party accept`). |
-| Server to client | `Transport.Send` of a struct with `type`. Audience fields are `json:"-"` and are not on the wire. | Adapter marshals that value. Unknown `type` is ignored, except a non-empty `message` is appended to the log (Flutter already does this fallback in `veilspan-client/lib/src/game/game_view_state.dart`). |
+| Client to server | One JSON object per command. `messages.IncomingMessage` is `{message, type, key}` (`pkg/mudserver/game/messages/incoming.go`). Web play sends `{message, type:"message"}` (`public/mud-client/src/game/Client.js`). Door sends `{type:"door_key", key}` (`public/door/door.js`). | Send `{message, type:"message"}`. No new client verb in MVP. Panels format the same command strings the keyboard already sends (`attack`, `1`, `party accept`). |
+| Server to client | `Transport.Send` of a struct with `type`. Audience fields are `json:"-"` and are not on the wire. | Decode that JSON. Unknown `type` is ignored, except a non-empty `message` is appended to the log (Flutter already does this fallback in `veilspan-client/lib/src/game/game_view_state.dart`). |
 
 Auth on the socket is `AuthMiddleware`: `access_token` query or `Authorization` header. Guest HMAC is tried before Auth0 (`pkg/server/auth.go`). Close code `4001` means "session moved". Clients must not reconnect (`pkg/mudserver/mudserver.go`, `closeSessionReplaced`).
 
@@ -202,11 +195,11 @@ Flutter (`game_view_state.dart`) handles the same set minus `party`, `party_invi
 
 ### 2.4 Messages that are missing
 
-These are the gaps that make a panel lie or fall back to prose. Priority matches section 9.
+These are the gaps that make a panel lie or fall back to prose. Priority matches section 10.
 
 | Gap | Why it hurts | Proposal | Priority |
 | --- | --- | --- | --- |
-| No `hello` / protocol version / capability | TUI cannot say "I understand combatEnd.loot" vs an older process | Client may send `{type:"hello", proto:1}` with an empty `message` once. Classic `handleInput` ignores an empty line (`text != ""` before enqueue) but still runs `ConnectUserSession` and a user update, same as any other read (`mudserver.go`). Do not put `hello` in `message` or it runs as a command. A server reply `hello` is new and optional. `door_key` is the only incoming `type` with special handling. | v1 |
+| No `hello` / protocol version / capability | TUI cannot say "I understand combatEnd.loot" vs an older process | Client sends `{type:"hello", proto:1, client:"<semver>"}` with an empty `message` once. `handleInput` ignores an empty line (`text != ""` before enqueue) but still runs `ConnectUserSession` and a user update, same as any other read (`mudserver.go`). Do not put `hello` in `message` or it runs as a command. A server reply with `ok` / `upgrade-recommended` / `too-old` is new (section 7.3). `door_key` is the only incoming `type` with special handling today. | v1 |
 | `aggroOnSight` not on `RoomNPC` | `EnemyTrait.AggroOnSight` exists (`pkg/entities/npcs/enemy_trait.go`) and the scheduler runs (`game_aggro.go`). The room card does not say so. Play client in this tree has no Aggressive label. | Add `aggroOnSight` bool on `RoomNPC`. Until then the TUI has only the prose line when the fight starts. | v1 |
 | Examine is prose | `examine` / `inspect` reply with `message` text (`commands/examine.go`). Web parses it (`parseExamineOverlay.js`). | `examineResult` with name, slot, quality, stats, `effects[]` using `items.FormatEffect` ("On hit — Name: text"). | v1 |
 | Who, say, tell, emote are prose | `who`, `say`, `tell`/`whisper`/`pm`, `scream`, `shrug` are `message` lines. | Keep prose in the log. A `who` snapshot can wait. | later |
@@ -214,7 +207,7 @@ These are the gaps that make a panel lie or fall back to prose. Priority matches
 | Hotbar layout is client-local | Engine registers shortcuts `1`–`4` only (`commandprocessor.go`). `skills.HotbarCap` is 4 (`pkg/entities/skills/classkit.go`). Web shows 9 slots in `localStorage`, mixing skills, items, and commands (`hudPrefs.js`). | TUI shows `maxSkillSlots` from `characterUpdate` (4 for kit classes). Keys 1–4 send `1`..`4` in combat. Extra web slots are not protocol. Item-on-hotbar waits. | MVP |
 | Inventory is a full dump, not a delta | Fine at current bag sizes. | Keep the dump. Do not invent a delta. | — |
 | No art cell size on the room | `room.meta.background` is an id. Bytes live at portrait and item-art URLs. | Section 4. No new socket type for MVP. Optional later: `art` message with a content hash and cell-size variants. | later |
-| `quit` does not disconnect | There is no `quit` command. Classic SSH leaves only when `textline` sets `Quit` on confirmed Ctrl-C / Ctrl-D (`pkg/presentation/textline/editor.go`, `sshgate/session.go` `onBytes`). | TUI quit closes the SSH channel or the websocket. Do not send the word `quit` and hope. Optional later: server `session` message `{op:"bye"}` so a remote kick and a local quit look the same. Close `4001` already covers "session moved". | MVP behavior, later message |
+| `quit` does not disconnect | There is no `quit` command on the server. | Quit closes the websocket and exits the process. Do not send the word `quit`. The server sees a dropped socket and runs `handleUserQuit` (`game_handlers.go`). Optional later: server `session` message `{op:"bye"}` so a remote kick and a local quit look the same. Close `4001` already covers "session moved". | MVP behavior, later message |
 | No combat snapshot on reconnect | A rejoining client waits for the next `combatTurn` / `combatStatus`. | On attach, if `characterUpdate.inCombat`, server sends one `combatStatus` with combatants. | v1 |
 | Room NPC portrait is a path | `portrait` is a URL path from `pkg/portraits` (`/api/portraits/<id>.png`). | HTTP fetch, then section 4. | MVP |
 | Party HP is not in `party` | Overlay has level and class, not vitals. Combat roster has HP only while `inCombat`. | Use `combatStart.players` during a fight. Out of combat, do not invent HP. | — |
@@ -228,8 +221,8 @@ These are the gaps that make a panel lie or fall back to prose. Priority matches
 
 - `proto` starts at 1 and means "the table in 2.3".
 - Servers add fields as `omitempty`. Clients ignore unknown fields and unknown `type` values.
-- A breaking change (rename, or a new required field) bumps `proto` and is not allowed on `:2222` until both play clients tolerate it.
-- The TUI may send one empty-message `hello` and continues if the server never answers. Absence of a reply means "classic server, proto 1 as documented here". The empty read is not a command. It does touch presence, so do not send it on a timer.
+- A breaking change (rename, or a new required field) bumps `proto` and is not allowed on the public websocket until the play client and Flutter tolerate it.
+- The TUI sends one empty-message `hello` (with `proto` and `client`) and continues if the server never answers. Absence of a reply means "this server, proto 1 as documented here". The empty read is not a command. It does touch presence, so do not send it on a timer. Reply statuses, when they exist, are in section 7.3.
 
 ### 2.6 Commands the line still has to type
 
@@ -255,21 +248,21 @@ Ops (`pkg/mudserver/game/ops.go`) are HTTP admin actions, not player commands: `
 
 Character switch mid-fight is refused. `select_character.go` replies `You can't switch characters during a fight. Flee or finish the fight first.` when the active character `IsPlayerInCombat` and the requested name differs. The bug was fight traffic routed per account while commands ran per character. The TUI greys Switch while `characterUpdate.inCombat` is true, and it still sends `sc` so the server stays the authority.
 
-`quit` typed at the classic prompt does not drop SSH. Ctrl-C and Ctrl-D do, after `Quit? [Y/N]`. The TUI's quit path calls `Transport.Close` / channel close, the same end state as a confirmed classic quit.
+The word `quit` is not a registered command, so sending it does nothing useful. Veilspan TUI closes the websocket and exits the process. The server treats the dropped socket as a disconnect (`handleUserQuit`).
 
 ## 3. Screens
 
-Coordinates are terminal cells. The minimum is 80x24. Below that, the session stays classic (section 1.4). Resize reflows on the next frame. No panel stores a pixel position.
+Coordinates are terminal cells. The minimum is 80x24. Below that, the binary shows a one-line "window too small" screen and accepts only quit or a resize. It does not switch to another client. Resize reflows on the next frame. No panel stores a pixel position.
 
 Breakpoints:
 
 | Size | Layout |
 | --- | --- |
-| 80–109 cols, or rows < 30 | One column. Art up to 16x6. Log at least 4 rows. Panels replace the room (inventory, quests, map) instead of sitting beside it. |
+| 80–109 cols, or rows 24–29 | One column. Art up to 16x6. Log at least 4 rows. Panels replace the room (inventory, quests, map) instead of sitting beside it. |
 | 110–159 cols and rows >= 30 | Art beside description. Log under both. Hotbar is one row. |
 | 160–199 cols | Art, description, and a 28-col minimap. Log gets the extra rows. A 160x48 screen is this split plus 24 more log rows. |
 | >= 200 cols and >= 48 rows | The 160 layout plus a right inspector (examine, quest pin, or who). 200x60 is that inspector at full height. |
-| rows < 24 | Refuse the TUI. Classic. |
+| rows < 24 or cols < 80 | Too-small screen. Quit or resize. |
 
 Combat replaces exploration. Dialog, shop, party invite, and level-up are modal layers in that order: invite and level-up outrank dialog; dialog outranks shop; Escape closes the top layer. This matches the play client's "top panel wins" idea (`keyboardShortcuts.js` `PANEL_ORDER`) without copying its widget grid.
 
@@ -312,7 +305,7 @@ Header reads `characterUpdate` and the room name from `enterRoom.room.name`. Art
 
 NPC row: `displayName`, markers from `hasDialog`, `isMerchant`, `isQuestGiver`, `isEnemy`, `level`, `threat`. `AGGRESSIVE` appears only after `aggroOnSight` is on the payload (section 2.4). Until then, omit the word.
 
-Log is a ring (section 7). `combatEvent` lines are prefixed and kept when the fight UI opens.
+Log is a ring (section 8). `combatEvent` lines are prefixed and kept when the fight UI opens.
 
 ### 3.2 Exploration, 160 columns
 
@@ -627,13 +620,13 @@ Sources, all HTTP, guest-readable:
 
 Fallback chain, first that works:
 
-1. Kitty graphics protocol (Unicode placeholders, RGBA). Best over SSH when the terminal answers the query. Ghostty, Kitty, and WezTerm advertise it. WezTerm's ratatui-image notes say kitty placement is not the bug-free path there; prefer iTerm2 or sixel on WezTerm if the kitty query fails.
+1. Kitty graphics protocol (Unicode placeholders, RGBA). Best when the local terminal answers the query. Ghostty, Kitty, and WezTerm advertise it. WezTerm's ratatui-image notes say kitty placement is not the bug-free path there; prefer iTerm2 or sixel on WezTerm if the kitty query fails.
 2. Sixel (DCS). foot, xterm (`-ti 340`), Windows Terminal, mlterm. 256-color palette. Re-send on every redraw is expensive. Cache the DCS blob for the cell size.
-3. iTerm2 inline (OSC 1337). iTerm2, and some other terminals. Large base64. Avoid on slow SSH if sixel or kitty worked.
-4. Half-block (`▀` upper, `▄` lower) in truecolor. Two pixels per cell. This is the MVP and the SSH-safe default when queries time out.
+3. iTerm2 inline (OSC 1337). iTerm2, and some other terminals. Large base64. Prefer sixel or kitty when those queries succeeded.
+4. Half-block (`▀` upper, `▄` lower) in truecolor. Two pixels per cell. This is the MVP default when queries time out.
 5. Quarter-block or ASCII ramp (` .:-=+*#%@`) when color is 16 or mono.
 
-Detection, once per session, budget 150ms after the first prompt, then give up. Over SSH the round trip may be 80ms. Do not block the first room paint on the query. Paint half-blocks, upgrade if a reply arrives.
+Detection, once per session, budget 150ms after the first prompt, then give up. A local query is usually a few milliseconds. Do not block the first room paint on the query. Paint half-blocks, upgrade if a reply arrives. The client fetches PNGs over HTTPS and renders them here. The game server does not grow a graphics stack.
 
 Sequence:
 
@@ -644,12 +637,12 @@ Sequence:
 5. iTerm2: no reliable query. Use it only when `TERM_PROGRAM=iTerm.app` or the user forced it.
 6. tmux: if `TERM` starts with `tmux` or `screen`, do not send sixel or kitty unless the user forced it. tmux needs `allow-passthrough` and still corrupts DCS. Half-block is the default inside a multiplexer. Document that in the help line.
 
-Server-side pre-render (SSH mode only): the process already has the PNG bytes. The adapter may cache, per asset and per `(cols, rows, protocol)`:
+Local cache, per asset and per `(cols, rows, protocol)`:
 
 - half-block cell grid
 - sixel blob at the cell pixel size (use the terminal's reported cell size if XTWINOPS / CSI 16 t answered; else assume 8x16 and accept a blurry first frame)
 
-The downloadable client does this locally. The game server does not grow a graphics stack. Cache cap: 32 images, drop least recently used on resize. A resize invalidates cell-sized blobs and keeps the PNG.
+Cache cap: 32 images, drop least recently used. A resize invalidates cell-sized blobs and keeps the PNG.
 
 User override is a command in the TUI (`:art half`) stored in the local config. It applies on the next paint.
 
@@ -690,13 +683,13 @@ In combat, letters a/d/f/1–4 are the fight. Movement keys are ignored while `i
 
 Bubbles `textarea` is the wrong widget (multiline). Use a single-line text input. Completion on Tab, in order: command names from section 2.6, exit names in this room, NPC `displayName`, item names in bag and room, skill names from `/api/classes`. Completion replaces the token. It does not send.
 
-History: 100 local lines, not the SSH `mud.history` of 20. Up/Down walk it. Ctrl-R is optional later.
+History: 100 local lines. Up/Down walk it. Ctrl-R is optional later.
 
-Mouse: SGR mouse when the terminal reports it (Bubble Tea v2 / Ultraviolet). Click an exit, an NPC, a foe, a dialog row, a shop row. Wheel scrolls the log. Mouse off with `--no-mouse` because some SSH clients paste as mouse. Selection for copy uses the terminal's shift-drag. The TUI does not capture shift-drag.
+Mouse: SGR mouse when the terminal reports it (Bubble Tea v2 / Ultraviolet). Click an exit, an NPC, a foe, a dialog row, a shop row. Wheel scrolls the log. `--no-mouse` turns it off, because some terminals report a paste as mouse clicks. Selection for copy uses the terminal's shift-drag. The TUI does not capture shift-drag.
 
 ### 5.3 Accessibility
 
-`VEILSPAN_A11Y=1` or `:a11y on`:
+`--a11y`, or `:a11y on` saved in the config file:
 
 - No alternate screen.
 - No cursor-addressed full redraw. Print a line when something changes.
@@ -706,85 +699,189 @@ Mouse: SGR mouse when the terminal reports it (Bubble Tea v2 / Ultraviolet). Cli
 - HP changes print only when the integer HP changes, not every frame.
 - Bell optional on your turn (`BEL`), off by default.
 
-This mode can run inside Bubble Tea's inline mode or as a thin printer over the same event stream. Prefer the printer so a screen reader is not fighting the Cursed renderer. Same adapter, different consumer.
+This mode can run inside Bubble Tea's inline mode or as a thin printer over the same event stream. Prefer the printer so a screen reader is not fighting the Cursed renderer. Same events, different consumer.
 
 ### 5.4 Themes and keyboards
 
-Themes: `veil` (default, dim gold on near-black, 16-color fallback uses yellow/white), `mono`, `paper` (dark on light). Lip Gloss v2 has no `AdaptiveColor`. Pick the theme from the detected background. On SSH, read the background the Wish/Bubble Tea query reports. If the query times out, assume dark.
+Themes: `veil` (default, dim gold on near-black, 16-color fallback uses yellow/white), `mono`, `paper` (dark on light). Lip Gloss v2 has no `AdaptiveColor`. Pick the theme from the background Bubble Tea reports. If the query times out, assume dark.
 
-Kitty keyboard protocol: Bubble Tea v2 already decodes it. Bind actions to keys, not to bytes. Do not assume Ctrl-C is the byte `0x03` on every terminal. Still treat raw `0x03` as quit-confirm when the enhanced protocol is off, because classic SSH sends that.
+Kitty keyboard protocol: Bubble Tea v2 already decodes it. Bind actions to keys, not to bytes. Do not assume Ctrl-C is the byte `0x03` on every terminal. Still treat raw `0x03` as quit-confirm when the enhanced keyboard protocol is off.
 
 Layout: physical keys. Do not localize n/s/e/w. Command words stay English because the server matches English verbs (`commandprocessor.go`).
 
 ## 6. Auth
 
-| Path | Behavior |
+Default login is the device-code flow against `/activate`. Guest is the other path. A pasted bearer is a developer escape, not the screen players see.
+
+### 6.1 What the server already does
+
+Checked on `99492b3`.
+
+`pkg/devicecode.Store` is in-memory, shared today by the SSH lobby and the activate API, and lost on process restart. `Begin(ip, mode, client, fps)` opens one code. The comment on `Begin` says it opens a code for an SSH lobby, and that the display string is the only copy of the code. It returns an internal id, a formatted user code (shape `BCDF-GHJK`), and an expiry. Defaults when the config is unset (`store.go`): TTL 10 minutes, `MaxPendingPerIP` 3, `MaxPending` 100. `Take(id)` returns the confirmed `userRef` (an account id) once and marks the code consumed. It does not return a websocket token. Nothing in `pkg/server` exposes `Begin` or `Take` over HTTP.
+
+The browser half is public and authenticated as follows (`pkg/server/server.go`, `pkg/server/handler/sshaccess.go`, `sshactivate.go`):
+
+| Call | Who | Result |
+| --- | --- | --- |
+| `GET /activate?code=` | The human's browser | On a classic Auth0 process, redirect to `/play/?activate=<code>` unless embedded `activate.html` is present. A local-auth process serves its own confirm form. |
+| `POST /api/ssh/device/lookup` `{user_code}` | Already signed-in account. Origin check. CSRF issued here. | `ip`, `created`, `mode`, `client_version`, masked `key`, `csrf`. Never the raw code. |
+| `POST /api/ssh/device/confirm` `{user_code, csrf}` | Same account | `{ok:true}`. Binds that account's `userRef` onto the pending code. Does not return a token. |
+| `POST /api/ssh/device/deny` | Same account | `{ok:true}`. |
+
+Guests are rejected on lookup (`ssh_flow_test.go`). The TUI does not call lookup, confirm, or deny. The browser does, after the player is logged into play.
+
+Guest login that this client can use today: `POST /api/guest` with an optional body `{templateId, race}` (`GuestHandler.CreateGuestSession`). Response `{token, expiresIn: 1800}`. The token is HMAC HS256. Claims include `sub`, `uid`, `exp`, `iat`, and `guest: true` (`pkg/service/guest.go`). `GuestExpiresAt` is 30 minutes. `AuthMiddleware` tries that HMAC first (`pkg/server/auth.go`). A guest claim on a user row that is not a guest is `"invalid guest token"`. There is no guest refresh route.
+
+`pkg/authlocal.Service.Login` issues a token from a username and password. It has no `Refresh`. The server does not mint Auth0 access tokens. The only refresh in `pkg/server/auth.go` is the JWKS cache (one hour). That is not a user-token refresh. Auth0 refresh lives in the browser SDK.
+
+### 6.2 What a non-SSH client can reuse
+
+- The code alphabet and the `BCDF-GHJK` display format.
+- `GET /activate` and the play redirect. The human confirms in a browser that is already logged into play.
+- The authenticated lookup, confirm, and deny routes, unchanged.
+
+### 6.3 What is missing
+
+A public start and a public poll. Names here are the contract, not a promise that the paths are final:
+
+- `POST /api/device/start` calls `Begin` and returns `{user_code, verification_uri, verification_uri_complete, expires_in, device_code, interval}`. `device_code` is the poll secret (the store id, or a separate secret). It must not equal `user_code`. `verification_uri_complete` is `https://veilspan.com/activate?code=<user_code>`.
+- `POST /api/device/poll` takes that secret. While the code is pending it answers `authorization_pending` (and `slow_down` if the client polls faster than `interval`). On confirm, the handler calls `Take` and mints a token `AuthMiddleware` will accept on `GET /ws`.
+
+That token cannot be a guest HMAC. Poll must issue a server-signed session token for the confirmed account, on a validation path `AuthMiddleware` already trusts (the local issuer, or a new issuer added beside it). Returning `userRef` alone is not enough to open `/ws`.
+
+Until those two routes exist, the binary plays as a guest, or accepts `--token` for tests. It must not pretend the SSH lobby handed it a session.
+
+### 6.4 Token file, refresh, logout
+
+Store tokens under `os.UserConfigDir()/veilspan/`. Directory mode `0700`. File `tokens.json` mode `0600`. An OS keyring is optional later. The file is the v1 store.
+
+Do not put the token on the process command line. Prefer `Authorization: Bearer` on the websocket dial. The server also accepts `?access_token=` (`auth.go`). The query form can land in proxy logs. The server redacts `access_token` in its HTTP log. Use the header.
+
+One current token is enough for v1. The file may later hold `{accounts:[{label, token, guest}], current}`. Logout deletes the current token from the file and closes the socket. There is no server logout for a guest HMAC. Multiple accounts are optional and not an MVP gate.
+
+Refresh, as of this commit:
+
+| Token | Refresh today | What v1 does |
+| --- | --- | --- |
+| Guest HMAC | None. 30 minutes, then it dies. | On expiry or 401, offer a new guest or device login. Do not call a refresh URL. |
+| Account token from poll | The route does not exist, so no refresh exists. | The minted token should carry `exp`. v1 stores it and does not refresh it. On 401, run device code again. A refresh route is a later engine change if `exp` is short. |
+| Pasted Auth0 bearer | No game-server refresh. The browser SDK is not in this process. | Use it until `/ws` rejects it, then ask for device code or a new paste. |
+
+### 6.5 After the socket is up
+
+If `createCharacter` arrives, open the creator. Else `GET /api/my-characters`. One character: `sc` that name. Several: the picker. Remember the last choice in the config file. Never send `sc` while `inCombat`.
+
+Close code `4001` (`closeSessionReplaced`) means the session moved. Show it and exit. Do not reconnect.
+
+Guests do not get Party and Friends as account features on the web header. The TUI hides those panels when the stored token is a guest token. If a `party` message arrives anyway, show it.
+
+## 7. Install and distribution
+
+The binary is `veilspan`, from `github.com/atla/veilspan-tui`. Releases are GitHub releases of that repo. talesmud does not embed the TUI and does not grow an install script.
+
+### 7.1 Release build
+
+GoReleaser, `CGO_ENABLED=0`:
+
+| Target | Archives |
 | --- | --- |
-| Guest, SSH | `ssh -t -p 2222 -l guest host` when `ssh.guest.enabled` and the process allows guests (`docs/ssh-access.md`). The TUI starts already admitted. No token on disk. Guest cap and 30 minute default session stay in `sshgate`. |
-| Guest, downloadable | `POST /api/guest`, store the HMAC token in the user config with mode `0600`. Send it as `access_token`. Logout deletes the file. |
-| Device code | Unchanged lobby in `sshgate`. Code like `BCDF-GHJK`, URL `/activate`. Classic Auth0 redirects `/activate?code=` into `/play/?activate=`. The TUI does not paint its own activate screen. The lobby paints, then hands off a live session. |
-| Linked key | `ssh.keys.enabled` must be on. This tree's default is off (`docs/ssh-access.md`, `SSHKeysConfig.Enabled`). The brief says production key auth is off pending root. Not re-checked against the live host in this spec. When it is on, a linked key skips the lobby and the TUI starts. Web list/revoke stays `GET/DELETE /api/ssh/keys`. `POST /api/ssh/keys` does not link a pasted key. |
-| Downloadable account | Auth0 device flow or a pasted bearer token. Store in the config file, mode `0600`. Do not put the token in the process list: prefer `Authorization` on the dial if the websocket stack allows it; the server also accepts `?access_token=` (`auth.go`). If the URL form is required, document that it can land in proxy logs. The server already redacts `access_token` in its HTTP log (`docs/ssh-access.md`). |
-| Character select | After connect, if `createCharacter` arrives, open the creator. Else `GET /api/my-characters`. One character: `sc` that name. Several: picker. Remember the last choice locally. Never `sc` while `inCombat`. |
-| Session replaced | Close code 4001, or SSH text `Session moved to another client.` Show it and exit. Do not reconnect. |
+| linux/amd64, linux/arm64 | `.tar.gz` |
+| darwin/amd64, darwin/arm64 | `.tar.gz` |
+| windows/amd64, windows/arm64 | `.zip` |
 
-Guests do not get Party and Friends as account features on the web header. The TUI hides those panels when the account is a guest. If a `party` message arrives anyway, show it.
+Each release publishes `checksums.txt` (sha256). Sign the checksum file (cosign or minisign). macOS: Developer ID, notarize with `notarytool`, staple the ticket. Windows: Authenticode when a cert exists. The first tag may ship unsigned if the signing accounts in section 12.2 are still open. The notes for that tag say so. An SBOM (Syft via GoReleaser) is optional and is not a v1 gate.
 
-## 7. Performance, reconnect, quit, tests
+Homebrew: a formula in a tap repo (section 12.2), pointed at the release tarball, `sha256` taken from `checksums.txt`. Scoop: a bucket manifest with the Windows amd64 and arm64 zips. winget: a manifest whose package id is decided with the publisher. Those three files can live in the client repo until the tap, bucket, and winget repo exist. Publishing them is not the same commit as writing them.
 
-### 7.1 Frames
+`curl | sh`, checksum verified: a script shipped as a release asset. It picks OS and arch, downloads the archive and `checksums.txt`, checks sha256, and only then unpacks to `~/.local/bin/veilspan` (or `/usr/local/bin` when run as root). If the checksum file is missing or the hash does not match, the script exits and leaves the old binary in place.
+
+`go install github.com/atla/veilspan-tui/cmd/veilspan@latest` is the toolchain path. It skips notarization. Document that next to the script.
+
+### 7.2 Self-update
+
+On startup, unless `--no-update-check` or config `update_check: false`, GET the GitHub releases API for the latest tag. A 403 or 404 skips the check. No other telemetry (section 12.2).
+
+If the tag is newer, print one line: `veilspan X.Y.Z is available. Run: veilspan update`. Do not download yet.
+
+`veilspan update` downloads the archive and `checksums.txt`, verifies sha256, then asks `Replace <path>? [y/N]`. Default is no. A no leaves the binary untouched. If the running path is owned by Homebrew, Scoop, or winget, print the package-manager command and do not replace the file.
+
+### 7.3 Version handshake
+
+Once per socket, after the upgrade, send `{type:"hello", proto:1, client:"<semver>", message:""}`. The empty `message` is required so the line is not a command (section 2.5). Do not repeat it on a timer.
+
+The server does not reply today. Silence means proto 1, keep playing.
+
+The reply to add with the other engine gaps:
+
+| `status` | Client |
+| --- | --- |
+| `ok` | Play. |
+| `upgrade-recommended` | Print `message` in the log. Play. |
+| `too-old` | Print `message`, close the socket, exit non-zero. Do not enter the world. |
+
+The reply also carries `proto` and `minProto`. The client speaks proto 1 only. If the server says the client proto is below `minProto`, that is `too-old`.
+
+Compatibility: servers add fields as `omitempty`. Clients ignore unknown fields and unknown `type` values. A non-empty `message` on an unknown type still goes to the log. Removing a field, renaming one, or making a field required bumps `proto`. That bump waits until the play client and Flutter tolerate it (section 2.5).
+
+### 7.4 What the player runs
+
+`veilspan` with no args: load the token file, or offer guest vs device code, then dial `wss://veilspan.com/ws`. `--host` overrides the host for a dev server. `--token` uses a pasted bearer and does not write it unless `--save` is set.
+
+## 8. Performance, reconnect, quit, tests
+
+### 8.1 Frames
 
 - Cap at 20 fps while idle-animating a timer, 8 fps is enough. The decision timer repaints once a second, plus once when it crosses each whole second. Do not repaint at 60.
-- Combat log and room log are a ring of 500 lines. SSH classic history stays 20 for the line editor only.
+- Combat log and room log are a ring of 500 lines.
 - The Cursed renderer sends diffs. Do not also send a full screen on a timer.
 - Art blobs are not inside the cell diff. Send graphics only when the image id or the cell rect changes.
-- Bandwidth budget over SSH: a room change should be one diff under 8 KB plus at most one cached image. If the image is cold, half-block first.
+- A room change is one cell diff plus at most one image. If the image is cold, half-block first.
 
-### 7.2 Resize
+### 8.2 Resize
 
-`tea.WindowSizeMsg` rebuilds the layout. Invalidate art cell caches. If the new size is under 80x24, offer a one-line "window too small, Ctrl-C to quit or resize" and pause input other than quit. Do not fall through to classic mid-session. Classic is chosen at admit.
+`tea.WindowSizeMsg` rebuilds the layout. Invalidate art cell caches. If the new size is under 80x24, show one line, "window too small, Ctrl-C to quit or resize", and pause input other than quit. Stay on that screen until the terminal is large enough again.
 
-### 7.3 Reconnect
+### 8.3 Reconnect
 
-Downloadable client: on socket close other than 4001, retry with backoff 1s, 2s, 4s, max 15s, for 2 minutes, then show the error. On success, the server sends a fresh `enterRoom` / `characterSelected` as it does for any new socket. A newer login kicks this one with 4001.
+On socket close other than 4001, retry with backoff 1s, 2s, 4s, max 15s, for 2 minutes, then show the error. On success, the server sends a fresh `enterRoom` / `characterSelected` as it does for any new socket. A newer login kicks this one with 4001.
 
-SSH: the TCP session is the connection. There is no second reconnect. Idle warning and idle drop stay in `classicLoop` (30 minutes, warn at 1 minute, `docs/ssh-access.md`). The TUI runner must honor the same timers. Guest max session stays. Do not paint over the idle warning with a frame. Print it as a log line and keep the UI.
+A guest token dies after 30 minutes. When the socket closes because the token is expired, say so and offer a new guest or device login. Do not spin the backoff on a 401.
 
 Resume: there is no client-side combat replay. After a new socket, show whatever the server sends. The v1 gap (combat snapshot on attach) is in section 2.4.
 
-### 7.4 Quit
+### 8.4 Quit
 
 | Gesture | Result |
 | --- | --- |
-| Ctrl-C, or `quit` / `exit` after confirm | Close the SSH channel or the websocket. The game sees a disconnect and runs `handleUserQuit` (`game_handlers.go`). |
+| Ctrl-C, or `quit` / `exit` after confirm | Close the websocket and exit the process. The game sees a disconnect and runs `handleUserQuit` (`game_handlers.go`). |
 | Close the terminal | Same. |
 | `party leave`, `flee` | Game commands. They do not disconnect. |
 
 Do not send the text `quit` to the command processor. It is not registered, so today it does nothing useful and does not drop the link.
 
-### 7.5 Tests
+### 8.5 Tests
 
 | Test | What |
 | --- | --- |
 | Golden | `teatest` at 80x24 and 160x48 for exploration, combat (your turn, victory with `unique`, defeat), dialog, shop, invite. Feed recorded JSON. Compare the view string. |
-| Contract | Fixtures checked in from `responses.go` constructors (`NewEnterRoomMessage`, `NewCombatEndMessage`, ...). `pkg/wire` unmarshals them. A Go test in the engine module marshals one of each type. The TUI module reads the same files. |
+| Contract | Fixtures from `responses.go` constructors (`NewEnterRoomMessage`, `NewCombatEndMessage`, ...). The engine test fails if the committed JSON changes without an update. `internal/wire` in the client repo decodes the same files. |
 | Commands | Table test: key to command string, including "no `sc` while inCombat" as a UI gate plus the server string still available. |
 | Timer | `deadlineMs` in the past paints `0s` and does not go negative. A deadline 5s ahead paints `5s` then `4s` without a full-screen snapshot change except the timer cells. |
-| Fuzz | The line editor is not ours. Fuzz the JSON decoder and the layout splitter (cols, rows, random message order). |
+| Fuzz | Fuzz the JSON decoder and the layout splitter (cols, rows, random message order). |
 | Resize | 80x24 view, then 40x12, stays on the too-small screen and does not panic. |
-| CI | `go test ./pkg/tui/... ./pkg/wire/...` on the engine repo. No SSH to production. No dependency on a live websocket. |
+| CI | `go test` in `atla/veilspan-tui`. The engine fixture test runs in talesmud. No production websocket. |
 
-## 8. Milestones
+## 9. Milestones
 
-Agent-sized. Hours are focused implementation time, not calendar time. Each one is shippable on the branch and does not deploy.
+Agent-sized. Hours are focused implementation time for one agent, not calendar time and not a measured benchmark. Each client milestone lands in `atla/veilspan-tui` and does not deploy. The engine milestones are separate commits on talesmud.
 
 ### M0 — Wire fixtures and empty model (3–5 h)
 
-- `pkg/wire` decodes every type in section 2.3 from fixtures.
-- `cmd/veilspan-tui` paints "not connected" at 80x24.
-- Core `go test` packages that already pass still pass. No import from `pkg/mudserver` to `pkg/tui`.
+- The engine test marshals every type in section 2.3 to JSON fixtures.
+- `internal/wire` decodes those files. The client `go.mod` does not require `github.com/talesmud/talesmud`.
+- `cmd/veilspan` paints "not connected" at 80x24.
 
-Done when: `go test ./pkg/wire` is green and `grep` shows no `bubbletea` import under `pkg/mudserver`, `pkg/server`, `pkg/entities`.
+Done when: both tests are green, and a grep of talesmud shows no `bubbletea` import under `pkg/mudserver`, `pkg/server`, or `pkg/entities`.
 
 ### M1 — Replay exploration (4–6 h)
 
@@ -802,65 +899,73 @@ Done when: the golden test fails if the exit row disappears.
 
 Done when: a fixture with `loot[].unique` shows `UNIQUE`, and a deadline in 3.2s shows `3s` on the second-aligned clock.
 
-### M3 — Downloadable socket (4–6 h)
+### M3 — Auth (4–6 h)
 
-- Dial `/ws` with a token flag.
+- Guest: `POST /api/guest`, store the token at `os.UserConfigDir()/veilspan/` mode `0600`, logout deletes it.
+- Device-code client: print `user_code` and the activate URL, poll with the interval. The poll test uses an httptest fake that returns `{token}` or `authorization_pending`. It does not claim the engine routes exist.
+- `--token` still works and is not written unless asked.
+
+Done when: a unit test round-trips a `0600` token file, guest JSON parses, and the poll client stays up on `authorization_pending` and then accepts a token. Section 6.3 stays the list of engine routes this milestone does not add.
+
+### M4 — Websocket (4–6 h)
+
+- Dial `/ws` with the stored token on `Authorization`.
 - Send `{type:"message", message:<line>}`.
-- Handle 4001 by exiting.
-- Reconnect backoff for other closes.
-- `hello` sent once. Ignore the lack of a reply.
+- Send `hello` once with `proto` and `client`. Silence is proto 1.
+- Close `4001` exits. Other closes use the backoff in section 8.3.
+- Quit closes the socket and exits. It does not send `quit`.
 
-Done when: against a local `go test` server or a recorded httptest upgrade, one `enterRoom` reaches the model. Do not point this at production.
+Done when: an httptest upgrade delivers one `enterRoom`, and a `4001` test exits. Do not point this at production.
 
-### M4 — Panels (6–8 h)
+### M5 — Panels (6–8 h)
 
 - Dialog, shop, inventory (effects), quests, party invite accept/decline, character HTTP picker.
 - `sc` blocked in the UI while `inCombat`.
 
 Done when: golden tests for dialog and invite exist, and accept sends `party accept`.
 
-### M5 — SSH handoff (6–8 h)
-
-- After `sshgate` admit, size and `TERM` select the runner. No PTY is still rejected, as today.
-- `acceptEnv` gains `VEILSPAN_CLASSIC` and `VEILSPAN_A11Y` only. `exec` stays refused.
-- Small terminals and `TERM=dumb` stay on `textline`.
-- Quit closes the channel.
-- Idle and guest max timers still fire.
-
-Done when: `pkg/sshgate` tests cover "small window stays classic", "VEILSPAN_CLASSIC stays classic", "a large PTY runs the runner interface", and "exec is still refused", with a fake runner. No live port.
-
 ### M6 — Art and a11y (4–6 h)
 
 - Half-block from a PNG in the fixture.
-- Query timeouts fall back.
-- A11y printer emits one line per `enterRoom` and does not emit cursor addressing.
+- Query timeouts fall back to half-block.
+- `--a11y` printer emits one line per `enterRoom` and does not emit cursor addressing.
 
 Done when: `NO_COLOR=1` golden output has no ANSI color.
 
-### M7 — Gaps worth a small engine change (separate, only if Marcus wants)
+### M7 — Install and release (6–8 h)
 
+- GoReleaser config for linux, darwin, and windows, each on amd64 and arm64, plus `checksums.txt`.
+- The install script refuses a bad checksum in a test.
+- `veilspan update` asks before replace and does nothing on the default answer.
+- Homebrew, Scoop, and winget manifest files are in the repo. Publishing them waits on section 12.2.
+
+Done when: `goreleaser release --snapshot` produces the six archives and the checksum file, the script test fails closed on a bad hash, and declining the update prompt leaves the binary in place. This milestone does not publish a tap.
+
+### M8 — Engine gaps (separate, only if Marcus wants)
+
+- Public device start and poll that return a non-guest token usable on `/ws` (section 6.3).
 - `aggroOnSight` on `RoomNPC`.
 - `examineResult`.
 - `combatStatus` on attach when already in combat.
-- Server `hello` reply.
+- Server `hello` reply with `ok` / `upgrade-recommended` / `too-old`.
 
-Each is its own commit on the engine, with a client fixture update. Not part of the TUI branch's first merge.
+Each is its own commit on the engine, with a client fixture update when the JSON changes. Not part of the client's first tag. Account login in the binary stays on the httptest fake until the poll route is real.
 
-Acceptance for the whole spec: a player can explore, fight, talk, and quit over SSH in the TUI, and a second binary can do the same over `/ws`, and classic SSH still passes the existing `sshgate` tests.
+Acceptance for the whole spec: a player can install `veilspan`, play as a guest (and, once M8's poll exists, with a device code), explore, fight, talk, and quit by closing the websocket and exiting. Line-mode SSH on `:2222` is unchanged and is not part of this acceptance.
 
-## 9. Feature translation matrix
+## 10. Feature translation matrix
 
 Every row is a feature that exists in this tree (engine command, socket message, play client, Flutter client, or creator app). Priority is when the TUI should grow it. Protocol is whether a structured message exists on `99492b3`.
 
 `partial` means some fields exist and the panel still depends on prose or on a second HTTP call.
 
-### 9.1 Rooms, movement, look
+### 10.1 Rooms, movement, look
 
 | Feature | TUI | Keys | Terminal vs web | Pri | Protocol |
 | --- | --- | --- | --- | --- | --- |
 | Room enter, description | Room panel + log | `l`, `r` | Text description is the native form. Web art is richer until half-block. | MVP | yes `enterRoom` |
 | Exits, hidden exits | Exit row | n/s/e/w and the exit name | Single-key move is better than a compass click. Hidden exits already stripped server-side. | MVP | yes, on `room.exits` |
-| Room actions | Hint row | type the action name | Same as classic. | MVP | partial (`room.actions` on the room object; result is `message`) |
+| Room actions | Hint row | type the action name | Same typed name as the play client. | MVP | partial (`room.actions` on the room object; result is `message`) |
 | Mood | Header | — | One word. Web can tint the whole scene. | MVP | partial `room.meta.mood` |
 | Room art `meta.background` | Art cell | `:art` | Degrades to blocks. Better only when kitty/sixel works. | v1 | partial (id only, bytes via HTTP) |
 | Room items | Ground row | `get <name>` | Names, not sprites. | MVP | partial `items[]` id/name/noPickup |
@@ -872,7 +977,7 @@ Every row is a feature that exists in this tree (engine command, socket message,
 | Follow leader | Status on party | `party follow` | Same rule: no follow into an instance. | v1 | partial `party.following` |
 | Instances | Log only | the exit | No special chrome. | later | no (exit `instance` bool is on the exit) |
 
-### 9.2 Combat
+### 10.2 Combat
 
 | Feature | TUI | Keys | Terminal vs web | Pri | Protocol |
 | --- | --- | --- | --- | --- | --- |
@@ -895,7 +1000,7 @@ Every row is a feature that exists in this tree (engine command, socket message,
 | In-combat regen tick | Bar tick | — | `characterUpdate` when the server sends it. Regen rates live in ruleset, not in the client. | v1 | partial |
 | Switch character mid-fight | Disabled | — | Server refuses. UI matches. | MVP | partial (`inCombat` plus prose refusal) |
 
-### 9.3 Talk, quests, economy
+### 10.3 Talk, quests, economy
 
 | Feature | TUI | Keys | Terminal vs web | Pri | Protocol |
 | --- | --- | --- | --- | --- | --- |
@@ -909,7 +1014,7 @@ Every row is a feature that exists in this tree (engine command, socket message,
 | Gather | Command | `gather` | Prose. | later | no |
 | Item effects | Detail pane | x | `FormatEffect` lines. Native to text. | MVP | partial (on shop stock and on items inside `inventoryUpdate` when the entity has `effects`) |
 
-### 9.4 Character, social, body
+### 10.4 Character, social, body
 
 | Feature | TUI | Keys | Terminal vs web | Pri | Protocol |
 | --- | --- | --- | --- | --- | --- |
@@ -923,10 +1028,10 @@ Every row is a feature that exists in this tree (engine command, socket message,
 | Party roster, follow | Panel | p | Structured. | MVP | yes `party` |
 | Party invite popup | Modal | A / X | 45s `expiresAt`. | MVP | yes `party_invite` |
 | Friends | Panel | — | Structured list. Add is prose. | v1 | partial |
-| Guests | Hide party/friends, show login hint | — | Same as web header. | MVP | no guest flag on the socket (know it from how you logged in) |
+| Guests | Hide party/friends, show a login hint | — | Same as the web header. Guest means the stored token is a guest HMAC. | MVP | no guest flag on the socket |
 | Notifications | Log + modal for invite and level-up | Esc | No toast stack. One modal. | MVP | partial |
 
-### 9.5 Client chrome the web has and the TUI should not copy
+### 10.5 Client chrome the web has and the TUI should not copy
 
 | Web / Flutter surface | TUI decision | Pri |
 | --- | --- | --- |
@@ -935,12 +1040,12 @@ Every row is a feature that exists in this tree (engine command, socket message,
 | CRT terminal widget | The whole app is the terminal. | never |
 | Settings modal (motion, scale) | `:set` and a local file. Reduced motion = no timer blink. | v1 |
 | Shortcut sheet | `?` | MVP |
-| Account menu, Auth0 buttons | SSH lobby or the downloadable login. Not inside the 80-col frame. | MVP |
+| Account menu, Auth0 buttons | Device code and guest, before the 80-col frame (section 6). | MVP |
 | Phone bottom sheet | 80-col panels already are sheets. | — |
 | Flutter battle FX | Skip. `fxId` may color the log word. | later |
-| Reconnect overlay | Section 7.3 | MVP |
+| Reconnect overlay | Section 8.3 | MVP |
 
-### 9.6 Door, and admin later
+### 10.6 Door, and admin later
 
 Door features that stay Door's: CP437 splash, activate screen templates, `door_key` single-key commands, `doorview` phase/draft UI, resource/daily lines that are pack text. The Veilspan TUI does not grow a Door layout.
 
@@ -954,12 +1059,12 @@ Admin worth a later ops TUI, not this client. All of these live in `public/app` 
 | Items, loot tables, spawners | No. | HTTP |
 | Quests editor, quest debug | No. | HTTP |
 | Scripts | No. | HTTP |
-| World health, drift, validation, search palette | A future `cmd/veilspan-ops` could call the health endpoints. Not the game TUI. | HTTP |
+| World health, drift, validation, search palette | A future separate ops binary could call the health endpoints. Not this client. | HTTP |
 | Live ops (`OpsButtons.svelte`, `RunOp`) | Dangerous (teleport, give, end combat). If ever, a separate binary, creator auth, confirm. | HTTP `RunOp` |
 | Users, guests stats | No. | HTTP |
 | Audit log | No. | HTTP |
 
-## 10. Features with no structured protocol yet
+## 11. Features with no structured protocol yet
 
 Text or HTTP only, on this commit. The TUI must not pretend these are socket messages.
 
@@ -976,54 +1081,52 @@ Text or HTTP only, on this commit. The TUI must not pretend these are socket mes
 11. Character list and create form (`lc`, `nc` prose). Use `GET /api/my-characters` and `POST /api/characters`.
 12. `createCharacter` socket message (one sentence, no roster).
 13. Attack warning that requires `attack!`.
-14. Quit / disconnect (no message; the link drops).
+14. Quit / disconnect. The client closes the websocket and exits. No quit command is sent.
 15. `aggroOnSight` on the room NPC (trait exists, payload does not).
 16. Combat snapshot for a client that connects mid-fight.
 17. Hotbar item binds and slots 5–9 (web local storage only).
 18. Settings, themes, layout.
-19. Guest-vs-account as a socket field.
+19. Guest-vs-account as a socket field. The client uses the token it stored (guest HMAC vs account token).
 20. Admin, creator, world health, drift, search, loot editor, spawners, ops.
 21. `combatLeave` (web handler only; server does not send it).
 22. Door key events (`door_key`) — Door's, not this client's.
 
 Section 2.4 is the subset worth adding to the socket. This list is the full "do not scrape, do not fake" set.
 
-## 11. Risks and open questions
+## 12. Risks and open questions
 
-### 11.1 Risks
+### 12.1 Risks
 
 | Risk | Mitigation |
 | --- | --- |
-| TUI code imports `game` "just for one field" and core stops being framework-neutral | `pkg/tui` is banned from that import. CI grep in M0. |
-| SSH TUI and classic editor both read the channel | Choose once at admit. Do not switch mid-session. `exec` stays refused. The classic opt-out is an allowlisted env var, not a remote command. |
-| Bubble Tea capability queries leak escape codes into a classic session | Only start the program after the choice. v2.0.10 skips queries when input is disabled. Keep input enabled only on the TUI path. |
+| The client imports talesmud "just for one struct" and pulls the game | `go.mod` does not require the engine module. CI in M0. Fixtures are JSON. |
+| Account login is blocked on two routes that do not exist yet | Guest and `--token` work without them. M3 tests the poll client against a fake. M8 is the engine change. Do not call `Begin` from the SSH lobby and pretend that is the binary. |
+| `veilspan update` replaces a binary the player did not mean to replace | Checksum first. Ask. Default is no. If Homebrew, Scoop, or winget owns the path, print their command and do not write the file. |
 | Graphics DCS corrupts the next frame inside tmux | Default half-block when `TERM` is tmux/screen. |
-| 5s timer feels late because of SSH lag | Display server `deadlineMs`, not a local 5s. |
-| Player hits `q` and expects quit, gets quests | Help line and `?`. Quit is Ctrl-C and the words `quit`/`exit` with confirm. |
+| The 5s timer feels late on a slow link | Display server `deadlineMs`, not a local 5s. |
+| Player hits `q` and expects quit, gets quests | Help line and `?`. Quit is Ctrl-C and the words `quit`/`exit` with confirm. Those words are not sent. |
 | `sc` during a fight | UI lock plus the server sentence from `99492b3`. |
 | Door and this TUI diverge on ANSI safety | Copy the sanitize rules. Do not share the view. |
-| Fixture drift from `responses.go` | Contract test marshals engine structs. |
-| Wish rewrite of `sshgate` | Do not. The lobby is audited. The TUI is a runner behind it. |
+| Fixture drift between talesmud and `atla/veilspan-tui` | Engine test marshals `responses.go`. Client CI decodes the same files at a pinned commit. |
 
-### 11.2 Open questions for Marcus
+### 12.2 Open questions for Marcus
 
-1. Is the default on a large PTY the TUI, with `SendEnv VEILSPAN_CLASSIC=1` as the escape, or the reverse until golden tests exist? `exec` cannot carry this. It is refused in `session.go`.
-2. May M7 add `aggroOnSight` on `RoomNPC` and an `examineResult` message on `engine-june`, or do those wait?
-3. Downloadable auth: is a pasted Auth0 bearer acceptable for the first binary, or do you want a device-code flow that does not reuse the SSH lobby?
-4. Should screen-reader mode be selected from the SSH lobby (a third question) or only from `VEILSPAN_A11Y`?
-5. Art: is half-block enough for the first public SSH default, with kitty/sixel behind `:art`?
-6. Confirm production still has `ssh.keys.enabled` false. This spec did not log into the host. The repo default is false.
-7. Rigger and Ward are in `pkg/classkit/testdata`. Is the live pack's `GET /api/classes` the same five? The TUI will trust the HTTP list either way.
-8. Is a separate ops TUI in scope this quarter, or is the note in section 9.6 enough?
+1. Repo name and owner: is `atla/veilspan-tui` (module `github.com/atla/veilspan-tui`) the one to create?
+2. May the engine gain a public device start and poll that returns a non-guest token usable on `/ws`, and may that plus the other M8 fields land on `engine-june`?
+3. Who holds the Apple Developer account for signing and notarization, and is there a Windows Authenticode certificate?
+4. Homebrew tap repo name and owner? Same question for the Scoop bucket and the winget publisher.
+5. Confirm telemetry is none. This spec sends no analytics. The only startup request besides the game is the GitHub releases check, and `--no-update-check` turns that off.
+6. Rigger and Ward are in `pkg/classkit/testdata`. Is the live pack's `GET /api/classes` the same five? The TUI trusts the HTTP list either way.
+7. Is a separate ops TUI in scope this quarter, or is the note in section 10.6 enough?
 
-### 11.3 Not verified
+### 12.3 Not verified
 
-- The live process on veilspan.com (ports, key auth, which class pack is loaded). Docs and this tree only.
+- The live process on veilspan.com (which class pack is loaded). Docs and this tree only.
 - The Doorkeeper worktree's private UI beyond `pkg/presentation/doorview` and `public/door` in this commit. `~/dev/talesmud-door-mud` exists and was not used as a second source of truth.
 - Bubble Tea v2.1.0 (2026-10-08) was checked only from its release notes, not built against.
 - Exact HTTP path that serves `room.meta.background` bytes.
 - Whether Flutter on disk outside this repo handles `party_invite`. The `game_view_state.dart` switch in `~/dev/veilspan-client` does not.
 
-## 12. Implementation note for docs
+## 13. Implementation note for docs
 
-When a later change implements this, update `PROJECT.md` (player-facing SSH/TUI behavior), `ARCHITECTURE.md` (new `cmd/veilspan-tui` and `pkg/tui` boundary), and `FEATURES.md` (new socket fields, if any). This spec does not change those files because no behavior changed.
+This spec does not change `PROJECT.md`, `ARCHITECTURE.md`, or `FEATURES.md`, because no behavior changed. When an engine change from M8 lands, update those three for the new routes or socket fields. The TUI repo gets its own README. Do not add `cmd/veilspan` to talesmud.
