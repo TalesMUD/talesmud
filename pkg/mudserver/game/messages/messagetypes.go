@@ -10,7 +10,8 @@ const (
 	MessageTypeSelectCharacter   = "selectCharacter"
 	MessageTypeCharacterSelected = "characterSelected"
 
-	MessageTypePing = "ping"
+	MessageTypePing  = "ping"
+	MessageTypeHello = "hello"
 
 	// Dialog messages
 	MessageTypeDialog    = "dialog"    // NPC dialog with options

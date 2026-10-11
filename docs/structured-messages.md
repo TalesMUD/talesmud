@@ -33,3 +33,15 @@ immediately. Ordinary queue updates omit the new turn/target fields.
 `characterSelected.guest` is `true` for an authenticated guest session. It is
 omitted for account sessions. This is the single guest marker on the socket;
 it derives from the authenticated user, not client input.
+
+## Optional hello
+
+Send `{"type":"hello","proto":1,"client":"name/semver","message":""}` once
+after connecting. The server answers `type: "hello"`, `proto: 1`,
+`server: "talesmud/<vcs-sha>"` (or `talesmud/dev` for builds without VCS metadata),
+and `status: "ok"`. A lower client protocol gets `too-old`; a higher one gets
+`upgrade-recommended`. These statuses are advisory and do not close the socket.
+
+Hello refreshes normal session presence but never enters command dispatch,
+even if a malformed hello includes nonempty `message`. Clients that never send
+hello retain the same welcome and commands. The ANSI/Door input path is unchanged.

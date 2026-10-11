@@ -229,6 +229,10 @@ func (server *server) HandleConnections(c *gin.Context) {
 			break
 		}
 
+		if !server.ansiSession() && server.handleHello(user, msg) {
+			continue
+		}
+
 		text := msg.Message
 		isKey := false
 		if strings.EqualFold(msg.Type, "door_key") && msg.Key != "" {
@@ -245,6 +249,17 @@ func (server *server) HandleConnections(c *gin.Context) {
 		}
 		server.handleInput(user, msg.Message, false)
 	}
+}
+
+// handleHello consumes protocol negotiation before command dispatch. Even a
+// malformed hello carrying message text must never enter the game command loop.
+func (server *server) handleHello(user *entities.User, msg messages.IncomingMessage) bool {
+	if msg.Type != messages.MessageTypeHello {
+		return false
+	}
+	server.handleInput(user, "", false)
+	server.sendMessage(user.ID, messages.NewHelloMessage(user.ID, msg.Proto))
+	return true
 }
 
 // attachSession installs t as the user's live session and kicks the previous one.
