@@ -53,6 +53,36 @@ func TestMovementTimingAndIndependentJitter(t *testing.T) {
 	}
 }
 
+func TestMovementRequiresExplicitOptInAcrossManyTicks(t *testing.T) {
+	for _, kind := range []string{"ordinary", "shop", "dialog", "patrol-state-only"} {
+		t.Run(kind, func(t *testing.T) {
+			g, n := movementTestNPC(t, "loop")
+			n.Movement = nil
+			n.WanderRadius = 0
+			n.PatrolPath = nil
+			n.NextMoveAt = time.Time{}
+			if kind == "shop" {
+				n.MerchantTrait = npc.NewMerchantTrait()
+			}
+			if kind == "dialog" {
+				n.DialogID = "greeting"
+			}
+			if kind == "patrol-state-only" {
+				n.State = "patrol"
+			}
+			for i := 0; i < 1000; i++ {
+				g.handleNPCUpdates()
+				if _, moved := g.updateTimedNPC(n, time.Now().Add(time.Duration(i+1)*time.Hour)); moved {
+					t.Fatal("unconfigured NPC moved")
+				}
+				if n.CurrentRoomID != "a" || n.EffectiveMovement() != nil || !n.NextMoveAt.IsZero() {
+					t.Fatal("movement was implicitly enabled")
+				}
+			}
+		})
+	}
+}
+
 func TestMovementRouteLoopAndPingpong(t *testing.T) {
 	for _, tc := range []struct {
 		loop string

@@ -44,8 +44,8 @@ type NPC struct {
 	PatrolPath []string `bson:"patrolPath,omitempty" json:"patrolPath,omitempty"`
 	// Movement configures timed routes or roaming. Runtime clocks are memory-only.
 	Movement       *Movement `bson:"movement,omitempty" json:"movement,omitempty"`
-	NextMoveAt     time.Time `bson:"-" json:"nextMoveAt,omitempty"`
-	PausedUntil    time.Time `bson:"-" json:"pausedUntil,omitempty"`
+	NextMoveAt     time.Time `bson:"-" json:"-"`
+	PausedUntil    time.Time `bson:"-" json:"-"`
 	RouteDirection int       `bson:"-" json:"-"`
 
 	// State Tracking
