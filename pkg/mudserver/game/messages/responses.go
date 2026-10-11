@@ -786,6 +786,10 @@ type CombatStatusMessage struct {
 	MessageResponse
 	Round      int             `json:"round,omitempty"`
 	Combatants []CombatantView `json:"combatants,omitempty"`
+	ActorID    string          `json:"actorId,omitempty"`
+	ActorName  string          `json:"actorName,omitempty"`
+	DeadlineMs int64           `json:"deadlineMs,omitempty"`
+	TargetID   string          `json:"targetId,omitempty"`
 	CombatQueueState
 }
 

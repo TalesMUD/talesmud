@@ -371,6 +371,10 @@ function createClient(renderer, characterCreator, muxStore) {
         decisionDeadlineMs: msg.decisionDeadlineMs || 0,
         round: msg.round || 0,
         combatants: msg.combatants || [],
+        actorId: msg.actorId,
+        actorName: msg.actorName,
+        deadlineMs: msg.deadlineMs,
+        targetId: msg.targetId,
       });
     } else if (mux) {
       mux.setGameContext({ inCombat: true });

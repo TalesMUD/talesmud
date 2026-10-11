@@ -96,6 +96,29 @@ func (c *CombatController) GetCombatInstance(characterID string) *combat.CombatI
 	return c.manager.GetInstanceByPlayerID(characterID)
 }
 
+// CombatSnapshot reads a live fight without advancing turns or starting combat.
+// Character selection calls this after loading the character's inCombat flag.
+func (c *CombatController) CombatSnapshot(characterID, userID string) *messages.CombatStatusMessage {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	instance := c.manager.GetInstanceByPlayerID(characterID)
+	if instance == nil || instance.State != combat.CombatStateActive {
+		return nil
+	}
+	player := instance.GetPlayerByID(characterID)
+	if player == nil || !player.IsAlive || player.HasFled {
+		return nil
+	}
+	msg := messages.NewCombatStatusMessage(userID, "", instance.Round, c.playerCombatQueueState(instance, characterID))
+	msg.Combatants = stampViewerThreat(combatantViewsFromInstance(instance), player.Level, instance)
+	if actor := instance.GetCurrentTurnCombatant(); actor != nil {
+		msg.ActorID, msg.ActorName = actor.ID, actor.Name
+	}
+	msg.DeadlineMs = msg.DecisionDeadlineMs
+	msg.TargetID = player.AutoAttackTargetID
+	return msg
+}
+
 // InitiateCombat starts combat between players and enemies
 func (c *CombatController) InitiateCombat(roomID string, players []*characters.Character, enemies []*npc.NPC) *combat.CombatInstance {
 	c.fillKitHotbars(players)

@@ -251,6 +251,15 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 
 	// Send initial character stats (HP, mana, XP, etc.) to the client
 	game.SendMessage() <- m.NewCharacterUpdateMessage(user.ID, character)
+	if character.InCombat {
+		if snapshots, ok := game.GetCombatEngine().(interface {
+			CombatSnapshot(string, string) *m.CombatStatusMessage
+		}); ok {
+			if snapshot := snapshots.CombatSnapshot(character.ID, user.ID); snapshot != nil {
+				game.SendMessage() <- snapshot
+			}
+		}
+	}
 
 	// Send initial inventory state to the client
 	game.SendMessage() <- &m.InventoryUpdateMessage{

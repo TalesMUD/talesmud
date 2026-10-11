@@ -14,3 +14,16 @@ attributes), `value` (base price in gold), `description`, `detail`, and `effects
 (strings formatted with `items.FormatEffect`). Script effects without authored
 text get the same named "Special effect" fallback as prose. Empty/zero fields
 are omitted. NPC inspection remains prose.
+
+## Rejoining combat
+
+Character selection (including the automatic selection on reconnect) sends one
+`combatStatus` when `inCombat` is true and the character is a living, non-fled
+participant in an active in-memory fight. A stale saved flag sends no snapshot.
+It reads the fight under its pacing lock without starting it or changing turns.
+
+The snapshot includes the full `combatants` roster, `round`, `actorId`,
+`actorName`, `deadlineMs` (absolute Unix milliseconds, omitted if no decision
+window), and the player's `targetId`, queue, cooldowns, and pacing clocks.
+The web play client merges the roster and restores the battle, turn, and focus
+immediately. Ordinary queue updates omit the new turn/target fields.

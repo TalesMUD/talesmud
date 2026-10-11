@@ -1056,6 +1056,17 @@ function createStore() {
           state.characterStats = { ...state.characterStats, inCombat: true, resting: false };
         }
         applyRosterSnapshots(state, msg?.combatants);
+        if (msg?.actorId !== undefined) {
+          state.combatTurn = {
+            actorId: msg.actorId || "",
+            actorName: msg.actorName || "",
+            round: msg.round || 0,
+            deadlineMs: msg.deadlineMs || 0,
+          };
+        }
+        if (msg?.targetId || !state.combatTargetId) {
+          state.combatTargetId = livingFocus(state.combatEnemies, msg?.targetId)?.id || null;
+        }
         applyCombatQueueFields(state, msg);
         return state;
       });
