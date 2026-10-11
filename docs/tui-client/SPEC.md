@@ -103,7 +103,7 @@ Do not share a screen layout, a color theme, or a binary with Doorkeeper.
 
 | Library | State | Source |
 | --- | --- | --- |
-| Bubble Tea v2.0.0 | Stable 2026-02-24. Cursed renderer, `tea.View`, mode 2026 sync updates, Kitty keyboard protocol, Lip Gloss no longer touches I/O. | https://charm.land/blog/v2.md (post date 23 Feb 2026). Patch v2.0.10 on 2026-09-24 skips capability queries when input is disabled: https://github.com/charmbracelet/bubbletea/releases (via newreleases, retrieved 2026-10-11). |
+| Bubble Tea v2.0.0 | Stable 2026-02-24. Cursed renderer, `tea.View`, mode 2026 sync updates, Kitty keyboard protocol, Lip Gloss no longer touches I/O. | https://charm.land/blog/v2.md (post date 23 Feb 2026). Patch v2.0.10 on 2026-09-24 skips capability queries when input is disabled: https://github.com/charmbracelet/bubbletea/releases (via newreleases, retrieved 2026-10-11). Latest is v2.1.0 (2026-10-08): OSC 7501 program status, 0x0 tty size falls back to defaults, shutdown deadlock fix. Target v2.1.x. |
 | Lip Gloss v2.0.0 | Stable 2026-02-24. Pure styling. Import `charm.land/lipgloss/v2`. | https://github.com/charmbracelet/lipgloss/releases/tag/v2.0.0 |
 | Bubbles v2.0.0 | Stable 2026-02-24. Import `charm.land/bubbles/v2/...`. Light/dark styles are explicit. Wish must read the client background; do not use Lip Gloss `compat` on SSH. | https://github.com/charmbracelet/bubbles/releases (v2 notes, retrieved 2026-10-11) |
 | Wish v2.0.0 | Stable 2026-03-09. Built on Bubble Tea v2. Import `charm.land/wish/v2`. | https://github.com/charmbracelet/wish/releases (v2.0.0 notes, retrieved 2026-10-11) |
@@ -1020,7 +1020,7 @@ Section 2.4 is the subset worth adding to the socket. This list is the full "do 
 
 - The live process on veilspan.com (ports, key auth, which class pack is loaded). Docs and this tree only.
 - The Doorkeeper worktree's private UI beyond `pkg/presentation/doorview` and `public/door` in this commit. `~/dev/talesmud-door-mud` exists and was not used as a second source of truth.
-- Bubble Tea releases after v2.0.10.
+- Bubble Tea v2.1.0 (2026-10-08) was checked only from its release notes, not built against.
 - Exact HTTP path that serves `room.meta.background` bytes.
 - Whether Flutter on disk outside this repo handles `party_invite`. The `game_view_state.dart` switch in `~/dev/veilspan-client` does not.
 
