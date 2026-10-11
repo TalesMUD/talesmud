@@ -7,6 +7,7 @@ export const MAP_LAYER_IDS = [
   "level",
   "aggro",
   "spawners",
+ "wanderers",
   "players",
   "quests",
   "art",
@@ -19,6 +20,7 @@ export function defaultLayers() {
     level: false,
     aggro: false,
     spawners: false,
+ wanderers: false,
     players: false,
     quests: false,
     art: false,
@@ -55,6 +57,7 @@ export function overlayLayersOn(layers) {
     layers?.level ||
     layers?.aggro ||
     layers?.spawners ||
+ layers?.wanderers ||
     layers?.players ||
     layers?.quests ||
     layers?.art ||

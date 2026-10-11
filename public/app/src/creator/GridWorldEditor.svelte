@@ -799,7 +799,8 @@
   const OVERLAY_TOGGLES = [
     { id: "level", label: "Level", title: "Color rooms by the NPC level range in the room, or in the zone" },
     { id: "aggro", label: "Aggro", title: "Badge for enemies with aggro on sight" },
-    { id: "spawners", label: "Spawners", title: "Spawner icon. Hover shows the respawn time" },
+    { id: "wanderers", label: "Wanderers", title: "Live wandering NPC positions; refresh to update" },
+ { id: "spawners", label: "Spawners", title: "Spawner icon. Hover shows the respawn time" },
     { id: "players", label: "Players", title: "Online players. An admin sees names. A creator sees the count" },
     { id: "quests", label: "Quests", title: "Rooms named by a quest objective. Hover shows the quest ids" },
     { id: "art", label: "Missing art", title: "Rooms with no background image" },
@@ -810,6 +811,7 @@
     level: false,
     aggro: false,
     spawners: false,
+ wanderers: false,
     players: false,
     quests: false,
     art: false,
@@ -863,7 +865,7 @@
       return;
     }
     if (!next) return;
-    if (id === "players" || id === "copies") {
+    if (id === "players" || id === "copies" || id === "wanderers") {
       loadOverlays(true);
       return;
     }

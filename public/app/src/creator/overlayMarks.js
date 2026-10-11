@@ -36,7 +36,11 @@ export function overlayView(room, layers, byId) {
     badges.push({ kind: "spawner", text: "S", title: hover });
     lines.push(`Spawners: ${hover}`);
   }
-  if (flags.players && row.players > 0) {
+  if (flags.wanderers && row.wanderers?.length) {
+ const title=`Wanderers: ${row.wanderers.join(", ")}`;
+ badges.push({kind:"wanderer",text:"W",title});lines.push(title);
+ }
+ if (flags.players && row.players > 0) {
     const names = Array.isArray(row.playerNames) ? row.playerNames.filter(Boolean) : [];
     const title = names.length ? `${row.players} online: ${names.join(", ")}` : `${row.players} online`;
     badges.push({ kind: "players", text: String(row.players), title });

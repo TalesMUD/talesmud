@@ -334,7 +334,14 @@
     {/if}
 
     <div class="card p-4 space-y-2">
-      <div class="label-caps">Spawners</div>
+      {#if view.movement}
+ <div class="label-caps">Movement</div>
+ <p class="text-sm">{view.movement.mode} · {view.movement.loop || "loop"} · every {view.movement.intervalSeconds || 90}s + 0–{view.movement.jitterSeconds || 0}s · engage pause {view.movement.pauseOnEngageSeconds || 120}s</p>
+ <p class="text-sm">{#each view.movement.route || [] as id,i}{#if i} → {/if}<a class="text-primary hover:underline" href={href("room",id)} on:click={(e)=>open(e,"room",id)}>{id}</a>{/each}</p>
+ {#if view.movement.zones?.length}<p>Zones: {view.movement.zones.join(", ")}</p>{/if}
+ {#if view.movement.rooms?.length}<p>Rooms: {view.movement.rooms.join(", ")}</p>{/if}
+ {/if}
+ <div class="label-caps">Spawners</div>
       {#if view.spawnRoom}
         <p class="text-sm">
           Spawn room
@@ -426,6 +433,12 @@
                 Not in combat
               {/if}
               {#if row.lastEvent} · {row.lastEvent}{/if}
+ {#if row.movement}
+  <br />Movement: {row.movement.mode} · {row.movement.loop || "loop"}
+  {#if row.movementHeld} · dialog/shop open{/if}
+  {#if row.pausedUntil} · paused until {when(row.pausedUntil)}{/if}
+  {#if row.nextMoveAt} · next move {when(row.nextMoveAt)} (in {Math.max(0, Math.ceil((new Date(row.nextMoveAt)-Date.now())/1000))}s){/if}
+ {/if}
             </p>
             {#if $userRole === "admin"}
               <OpsButtons

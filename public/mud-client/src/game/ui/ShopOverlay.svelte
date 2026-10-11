@@ -80,6 +80,7 @@
   }
 
   function closeShop() {
+ if (shop) sendMessage("shopclose");
     errorText = '';
     page = 0;
     selected = null;

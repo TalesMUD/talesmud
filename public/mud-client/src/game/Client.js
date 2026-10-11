@@ -206,6 +206,7 @@ function createClient(renderer, characterCreator, muxStore) {
 
     // Update store for UI overlay
     if (mux) {
+      if (mux.clearShop) mux.clearShop();
       mux.setDialog(msg.npcName, msg.npcText, msg.options || [], msg.conversationID || "");
     }
   };
