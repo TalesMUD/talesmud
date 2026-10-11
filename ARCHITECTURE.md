@@ -1419,7 +1419,16 @@ All entity editors (Rooms, Items, Item Templates, NPCs, Dialogs, Quests, Scripts
 
 ### WebSocket Client
 
-**File:** `public/app/src/game/Client.js`
+The framework-neutral socket contract uses optional protocol-1 `hello` negotiation
+in the WebSocket read loop, before command dispatch. Existing clients receive
+the same welcome and prose. Item inspection emits a companion `examineResult`;
+`characterSelected.guest` identifies guest sessions. On character selection,
+an active combat controller provides a read-only `combatStatus` snapshot under
+the pacing lock. Its roster, turn, target, and deadline flow through the existing
+web client combat store. New fields are optional (`omitempty`); clients ignore
+unknown fields/types. See `docs/structured-messages.md` for payload details.
+
+**File:** `public/mud-client/src/game/Client.js`
 
 ```javascript
 class GameClient {

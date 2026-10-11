@@ -33,6 +33,12 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
 
 ### Core Game Features
 
+- **Structured WebSocket Protocol**
+  - Optional protocol-1 `hello` negotiation preserves existing clients and command input.
+  - Item `examine`/`inspect` adds `examineResult` with stats, value, description, and explicit effect lines alongside the original prose.
+  - Guest sessions report `characterSelected.guest`; reconnecting during a live fight restores the web battle roster, turn, target, and deadline immediately.
+  - Additive fields use `omitempty`; clients ignore unknown fields and types. See `docs/structured-messages.md`.
+
 - **Room-Based World System**
   - Interconnected rooms with customizable exits (directional, named, teleport)
   - Hidden/secret exits (toggleable visibility in editor)

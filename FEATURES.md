@@ -2124,6 +2124,21 @@ The top bar keeps the app links, a search box (`data-creator-search`) that opens
 
 ## Recent Features & Best Practices
 
+### Additive structured messages (protocol 1)
+
+- `examine`/`inspect` retains its prose and adds `examineResult` for items:
+  `name`, `slot`, `quality`, `stats`, `value`, `description`, `detail`, and
+  `effects[]` strings from `items.FormatEffect`, including script fallbacks.
+- `characterSelected.guest: true` identifies guests; account sessions omit it.
+- Character selection/reconnect in a live fight sends one `combatStatus` with
+  the full roster, round, actor, deadline, target, and player queue/cooldowns.
+  It does not advance or restart combat. Stale `inCombat` flags produce no snapshot.
+- Optional socket `hello` negotiates protocol 1 and server build identity with
+  `ok`, `upgrade-recommended`, or `too-old`. It never executes a game command.
+- The web battle store restores the snapshot immediately. New fields use
+  `omitempty`; clients must ignore unknown fields and types. Protocol notes:
+  `docs/structured-messages.md`.
+
 ### Per-Character Hidden Exit Reveals
 **Feature**: Hidden exits can be revealed individually per character via scripting.
 
