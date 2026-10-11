@@ -25,6 +25,7 @@ const (
 
 	// Inventory messages
 	MessageTypeInventoryUpdate = "inventoryUpdate" // Inventory/equipment changed
+	MessageTypeExamineResult   = "examineResult"   // Structured companion to item inspection prose
 
 	// Character update messages
 	MessageTypeCharacterUpdate = "characterUpdate" // Character stats changed (HP, XP, etc.)

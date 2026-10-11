@@ -75,6 +75,7 @@ func (command *ExamineCommand) Execute(game def.GameCtrl, message *messages.Mess
 	// Generate detailed item description
 	result := examineItem(item, message.Character.EquippedItems, scriptDisplayName(game))
 	game.SendMessage() <- message.Reply(result)
+	game.SendMessage() <- messages.NewExamineResult(message.FromUser.ID, item, scriptDisplayName(game))
 
 	return true
 }
