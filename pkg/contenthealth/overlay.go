@@ -22,6 +22,7 @@ type OverlayPlayer struct {
 // CloneIDs are live instance room ids (they contain "~").
 type OverlayLive struct {
 	Available bool
+	Wanderers []OverlayPlayer
 	Players   []OverlayPlayer
 	CloneIDs  []string
 }
@@ -48,6 +49,7 @@ type OverlayRoom struct {
 	PlayerNames []string         `json:"playerNames,omitempty"`
 	Quests      []string         `json:"quests,omitempty"`
 	MissingArt  bool             `json:"missingArt,omitempty"`
+	Wanderers   []string         `json:"wanderers,omitempty"`
 	Copies      int              `json:"copies,omitempty"`
 }
 
@@ -139,6 +141,15 @@ func MapOverlayView(world World, live OverlayLive, includePlayers bool) MapOverl
 		row.Quests = questList(quests)
 	}
 
+	for _, wanderer := range live.Wanderers {
+		if wanderer.RoomID != "" {
+			row := ensureRow(rows, wanderer.RoomID)
+			row.Wanderers = append(row.Wanderers, wanderer.Name)
+		}
+	}
+	for _, row := range rows {
+		sort.Strings(row.Wanderers)
+	}
 	playerSeen := map[string]map[string]bool{}
 	for _, player := range live.Players {
 		roomID := strings.TrimSpace(player.RoomID)
@@ -202,7 +213,7 @@ func MapOverlayView(world World, live OverlayLive, includePlayers bool) MapOverl
 }
 
 func overlayEmpty(row OverlayRoom) bool {
-	return row.LevelBand == "" && row.Aggro == 0 && len(row.Spawners) == 0 && row.Players == 0 && len(row.Quests) == 0 && !row.MissingArt && row.Copies == 0
+	return row.LevelBand == "" && row.Aggro == 0 && len(row.Spawners) == 0 && row.Players == 0 && len(row.Quests) == 0 && !row.MissingArt && row.Copies == 0 && len(row.Wanderers) == 0
 }
 
 func ensureRow(rows map[string]*OverlayRoom, id string) *OverlayRoom {

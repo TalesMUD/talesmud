@@ -137,6 +137,7 @@ func (ix *Index) collect() {
 			name = spawner.ID
 		}
 		ix.note(KindSpawner, id, name)
+		ix.movementEdges(KindSpawner, id, spawner.Movement)
 		ix.add(Edge{FromType: KindSpawner, FromID: id, Field: "templateId", ToType: KindNPC, ToID: spawner.TemplateID, How: "spawner template"})
 		ix.add(Edge{FromType: KindSpawner, FromID: id, Field: "roomId", ToType: KindRoom, ToID: spawner.RoomID, How: "spawner room"})
 	}
@@ -246,6 +247,7 @@ func (ix *Index) npcEdges(n *npc.NPC) {
 	for i, roomID := range n.PatrolPath {
 		ix.add(Edge{FromType: KindNPC, FromID: id, Field: fmt.Sprintf("patrolPath[%d]", i), ToType: KindRoom, ToID: roomID, How: "patrol"})
 	}
+	ix.movementEdges(KindNPC, id, n.Movement)
 	if et := n.EnemyTrait; et != nil {
 		ix.add(Edge{FromType: KindNPC, FromID: id, Field: "enemyTrait.lootTableId", ToType: KindLootTable, ToID: et.LootTableID, How: "loot table"})
 		for i, itemID := range et.GuaranteedLoot {
@@ -351,6 +353,20 @@ func (ix *Index) questEdges(quest *quests.Quest) {
 		case quests.ObjectiveDeliver:
 			ix.add(Edge{FromType: KindQuest, FromID: id, Field: prefix + ".targetId", ToType: KindItem, ToID: objective.TargetID, How: "quest objective deliver"})
 			ix.add(Edge{FromType: KindQuest, FromID: id, Field: prefix + ".deliverToNpcId", ToType: KindNPC, ToID: objective.DeliverToNPCID, How: "quest objective deliver"})
+		}
+	}
+}
+
+func (ix *Index) movementEdges(kind Kind, id string, m *npc.Movement) {
+	if m == nil {
+		return
+	}
+	for _, field := range []struct {
+		name string
+		ids  []string
+	}{{"route", m.Route}, {"rooms", m.Rooms}} {
+		for i, roomID := range field.ids {
+			ix.add(Edge{FromType: kind, FromID: id, Field: fmt.Sprintf("movement.%s[%d]", field.name, i), ToType: KindRoom, ToID: roomID, How: "NPC movement"})
 		}
 	}
 }

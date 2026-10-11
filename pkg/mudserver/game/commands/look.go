@@ -100,6 +100,7 @@ func lookAtTarget(room *rooms.Room, game def.GameCtrl, message *messages.Message
 	if npcManager != nil {
 		npcInstance := npcManager.FindInstanceByNameInRoom(room.ID, target)
 		if npcInstance != nil {
+			engageNPC(game, message, npcInstance.ID, "")
 			result := lookAtNPC(npcInstance)
 			game.SendMessage() <- message.Reply(result)
 			return true

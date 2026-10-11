@@ -43,7 +43,7 @@ func DialogSelectCommand(room *rooms.Room, game def.GameCtrl, message *messages.
 	// Find most recent active conversation (within timeout)
 	var activeConv *conversations.Conversation
 	for _, conv := range convs {
-		if time.Since(conv.LastInteracted) < conversationTimeout {
+		if time.Since(conv.LastInteracted) < conversationTimeout || npcSessionOpen(game, message.Character.ID, conv.TargetID, "dialog") {
 			if activeConv == nil || conv.LastInteracted.After(activeConv.LastInteracted) {
 				activeConv = conv
 			}
@@ -54,6 +54,14 @@ func DialogSelectCommand(room *rooms.Room, game def.GameCtrl, message *messages.
 		return false // No active conversation, let other handlers process
 	}
 
+	if n := game.GetNPCInstanceManager().GetInstance(activeConv.TargetID); n != nil {
+		if n.CurrentRoomID != message.Character.CurrentRoomID {
+			closeNPCSession(game, message, "dialog")
+			game.GetFacade().ConversationsService().ResetConversation(activeConv)
+			return false
+		}
+		engageNPC(game, message, n.ID, "")
+	}
 	if isQuestOnlyConversation(activeConv) {
 		return handleQuestOnlyDialogSelection(game, message, activeConv, optionIndex)
 	}
@@ -123,6 +131,7 @@ func DialogSelectCommand(room *rooms.Room, game def.GameCtrl, message *messages.
 	// Check if this is a dialog exit
 	if selectedOption.IsDialogExit != nil && *selectedOption.IsDialogExit {
 		// End conversation
+		closeNPCSession(game, message, "dialog")
 		game.GetFacade().ConversationsService().ResetConversation(activeConv)
 
 		// If there's exit text, show it
@@ -161,6 +170,7 @@ func DialogSelectCommand(room *rooms.Room, game def.GameCtrl, message *messages.
 
 		// If the answer is a dialog exit
 		if selectedOption.Answer.IsDialogExit != nil && *selectedOption.Answer.IsDialogExit {
+			closeNPCSession(game, message, "dialog")
 			game.GetFacade().ConversationsService().ResetConversation(activeConv)
 			game.SendMessage() <- messages.NewDialogEndMessage(message.FromUser.ID, npcName, answerText)
 			return true
@@ -212,12 +222,14 @@ func DialogSelectCommand(room *rooms.Room, game def.GameCtrl, message *messages.
 				game.SendMessage() <- dialogMsg
 			} else {
 				// Target node not found or has no options — end conversation
-				game.SendMessage() <- message.Reply("[" + npcName + "] " + answerText)
+				game.SendMessage() <- messages.NewDialogEndMessage(message.FromUser.ID, npcName, answerText)
+				closeNPCSession(game, message, "dialog")
 				game.GetFacade().ConversationsService().ResetConversation(activeConv)
 			}
 		} else {
 			// Answer has no options and no node reference - just show it and end
-			game.SendMessage() <- message.Reply("[" + npcName + "] " + answerText)
+			game.SendMessage() <- messages.NewDialogEndMessage(message.FromUser.ID, npcName, answerText)
+			closeNPCSession(game, message, "dialog")
 			game.GetFacade().ConversationsService().ResetConversation(activeConv)
 		}
 	} else if len(selectedOption.Options) > 0 {
@@ -250,7 +262,8 @@ func DialogSelectCommand(room *rooms.Room, game def.GameCtrl, message *messages.
 			Context: activeConv.Context,
 		}
 		optionText := selectedOption.Render(dialogState)
-		game.SendMessage() <- message.Reply("[" + npcName + "] " + optionText)
+		game.SendMessage() <- messages.NewDialogEndMessage(message.FromUser.ID, npcName, optionText)
+		closeNPCSession(game, message, "dialog")
 		game.GetFacade().ConversationsService().ResetConversation(activeConv)
 	}
 
@@ -471,6 +484,7 @@ func handleQuestAction(game def.GameCtrl, message *messages.Message, selectedOpt
 	}
 
 	// End dialog after complete/progress (accept refreshes in place above)
+	closeNPCSession(game, message, "dialog")
 	game.GetFacade().ConversationsService().ResetConversation(activeConv)
 }
 
@@ -483,6 +497,14 @@ func refreshActiveDialog(game def.GameCtrl, message *messages.Message, npcName s
 
 	questOptions := questOptionsForConversation(game, message.Character.ID, activeConv)
 
+	if n := game.GetNPCInstanceManager().GetInstance(activeConv.TargetID); n != nil {
+		if n.CurrentRoomID != message.Character.CurrentRoomID {
+			closeNPCSession(game, message, "dialog")
+			game.GetFacade().ConversationsService().ResetConversation(activeConv)
+			return
+		}
+		engageNPC(game, message, n.ID, "")
+	}
 	if isQuestOnlyConversation(activeConv) {
 		sendQuestOnlyDialog(game, message, npcName, activeConv, questOptions)
 		return

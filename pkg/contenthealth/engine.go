@@ -42,6 +42,7 @@ type catalogEntry struct {
 
 func builtinCatalog() []catalogEntry {
 	return []catalogEntry{
+		{RuleMovement, "NPC movement configuration", "error", "Use allowed rooms and adjacent ordinary exits.", true},
 		{RuleUnreachable, "Rooms unreachable from start", "error", "Add the hidden exit the reveal script names, or wire the reveal script to a reachable action.", true},
 		{RuleRevealMissing, "Reveal script targets a missing exit", "error", "Add that hidden exit, or change the script so it reveals an exit that exists.", true},
 		{RuleQuest, "Quest objective can never complete", "error", "Make the target reachable, or change the objective.", true},
@@ -72,6 +73,7 @@ func Run(world World, opt Options) Report {
 		snap:  snap,
 	}
 	b.addGraph(reach, bal)
+	b.addMovement()
 	b.addValidation(world.validationSnapshot(snap))
 	b.addWorldValidation(snap)
 	b.addPack(opt.Rules, snap)

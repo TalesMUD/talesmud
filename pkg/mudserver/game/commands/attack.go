@@ -40,6 +40,7 @@ func refuseOverlevelWarning(game def.GameCtrl, message *messages.Message, target
 	if game == nil || message == nil || message.Character == nil || target == nil || target.Entity == nil {
 		return false
 	}
+	engageNPC(game, message, target.ID, "")
 	if !target.IsEnemy() {
 		return false
 	}
@@ -153,6 +154,7 @@ func (command *AttackCommand) handleInitiateCombat(game def.GameCtrl, message *m
 	}
 
 	// Check if the NPC is an enemy (has EnemyTrait)
+	engageNPC(game, message, target.ID, "")
 	if !target.IsEnemy() {
 		game.SendMessage() <- message.Reply(fmt.Sprintf("%s is not hostile. You cannot attack them.", target.Name))
 		return true

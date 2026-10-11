@@ -39,6 +39,8 @@ func (y *YAMLRoom) ToEntity() *rooms.Room {
 				Type:        rooms.RoomExitType(e.Type),
 				Description: e.Description,
 				Hidden:      e.Hidden,
+				Locked:      e.Locked,
+				Params:      e.Params,
 				Instance:    e.Instance,
 			}
 		}
@@ -151,6 +153,7 @@ func (y *YAMLNPC) ToEntity() *npc.NPC {
 	n := &npc.NPC{
 		Entity:           &entities.Entity{ID: y.ID},
 		Name:             y.Name,
+		Tags:             append([]string(nil), y.Tags...),
 		Description:      y.Description,
 		Level:            y.Level,
 		MaxHitPoints:     y.MaxHitPoints,
@@ -158,6 +161,9 @@ func (y *YAMLNPC) ToEntity() *npc.NPC {
 		DialogID:         y.DialogID,
 		IsTemplate:       isTemplate,
 		SpawnRoomID:      y.SpawnRoomId,
+		Movement:         y.Movement.Clone(),
+		WanderRadius:     y.WanderRadius,
+		PatrolPath:       append([]string(nil), y.PatrolPath...),
 		State:            "idle",
 	}
 
@@ -228,6 +234,7 @@ func (y *YAMLNPC) ToEntity() *npc.NPC {
 			SellMultiplier: y.MerchantTrait.SellMultiplier,
 			RestockMinutes: y.MerchantTrait.RestockMinutes,
 			AcceptedTypes:  append([]string{}, y.MerchantTrait.AcceptedTypes...),
+			RejectedTags:   append([]string(nil), y.MerchantTrait.RejectedTags...),
 			Inventory:      make([]npc.MerchantItem, 0),
 		}
 		// Convert inventory items
@@ -396,6 +403,7 @@ func (y *YAMLSpawner) ToEntity() *npc.NPCSpawner {
 		Entity:        &entities.Entity{ID: y.ID},
 		Name:          y.Name,
 		TemplateID:    y.TemplateID,
+		Movement:      y.Movement.Clone(),
 		RoomID:        y.RoomID,
 		MaxInstances:  y.MaxInstances,
 		SpawnInterval: parseDuration(y.SpawnInterval),

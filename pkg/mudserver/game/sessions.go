@@ -224,6 +224,7 @@ func (g *Game) DisconnectUserSession(userID string) {
 	}
 	if charID := g.Sessions.characterID(userID); charID != "" {
 		g.cancelAggroForPlayer(charID)
+		g.NPCManager.CloseNPCSession(charID, "")
 		if ruleset.Disconnect() == ruleset.DisconnectRelease {
 			g.ReleaseToSafety(charID)
 		}
@@ -253,6 +254,10 @@ func (g *Game) SetUserSessionCharacter(user *entities.User, char *characters.Cha
 	if user == nil || char == nil {
 		return
 	}
+	if previous := g.Sessions.characterID(user.ID); previous != "" && previous != char.ID {
+		g.NPCManager.CloseNPCSession(previous, "")
+	}
+	g.NPCManager.releaseNPCSessionsOutsideRoom(char.ID, char.CurrentRoomID)
 	user.LastCharacter = char.ID
 	user.IsOnline = true
 	user.LastSeen = time.Now()

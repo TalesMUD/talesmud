@@ -35,11 +35,15 @@ func ContentNPC(n *npc.NPC) *importer.YAMLNPC {
 	out := &importer.YAMLNPC{
 		ID:           n.ID,
 		Name:         n.Name,
+		Tags:         append([]string(nil), n.Tags...),
 		Description:  n.Description,
 		Level:        n.Level,
 		MaxHitPoints: maxHP,
 		SpawnRoomId:  n.SpawnRoomID,
 		DialogID:     n.DialogID,
+		Movement:     n.Movement.Clone(),
+		WanderRadius: n.WanderRadius,
+		PatrolPath:   append([]string(nil), n.PatrolPath...),
 	}
 	if n.Race.ID != "" || n.Race.Name != "" {
 		out.Race = importer.YAMLRace{ID: n.Race.ID, Name: n.Race.Name}

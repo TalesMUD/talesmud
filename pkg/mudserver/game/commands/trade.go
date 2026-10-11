@@ -103,6 +103,7 @@ func (command *BuyCommand) Execute(game def.GameCtrl, message *messages.Message)
 		return true
 	}
 
+	engageNPC(game, message, merchant.ID, "")
 	if merchant.MerchantTrait == nil {
 		game.SendMessage() <- message.Reply(merchant.Name + " is not selling anything.")
 		return true
@@ -323,6 +324,7 @@ func (command *SellCommand) Execute(game def.GameCtrl, message *messages.Message
 		return true
 	}
 
+	engageNPC(game, message, merchant.ID, "")
 	if merchant.MerchantTrait == nil {
 		game.SendMessage() <- message.Reply(merchant.Name + " is not buying anything.")
 		return true
@@ -458,6 +460,7 @@ func (command *ValueCommand) Execute(game def.GameCtrl, message *messages.Messag
 		return true
 	}
 
+	engageNPC(game, message, merchant.ID, "")
 	if merchant.MerchantTrait == nil {
 		game.SendMessage() <- message.Reply(merchant.Name + " can't appraise items.")
 		return true
@@ -559,6 +562,7 @@ func buildShopMessage(game def.GameCtrl, message *messages.Message, merchant *np
 	if message == nil || message.FromUser == nil || message.Character == nil || merchant == nil || merchant.MerchantTrait == nil {
 		return nil
 	}
+	engageNPC(game, message, merchant.ID, "shop")
 	stock := make([]messages.ShopStockItem, 0, len(merchant.MerchantTrait.Inventory))
 	for _, invItem := range merchant.MerchantTrait.Inventory {
 		itemTemplate, err := game.GetFacade().ItemsService().FindByID(invItem.ItemTemplateID)

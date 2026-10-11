@@ -91,9 +91,10 @@ func (h *HealthHandler) overlayLive() contenthealth.OverlayLive {
 		return contenthealth.OverlayLive{}
 	}
 	var (
-		rows   []game.LiveCharacter
-		copies []game.LiveInstance
-		err    error
+		rows      []game.LiveCharacter
+		copies    []game.LiveInstance
+		wanderers []game.LiveNPC
+		err       error
 	)
 	if callErr := h.Game.Call(func() {
 		rows, err = h.Game.LiveCharacters(game.LiveQuery{OnlineOnly: true})
@@ -101,10 +102,18 @@ func (h *HealthHandler) overlayLive() contenthealth.OverlayLive {
 			return
 		}
 		copies, err = h.Game.LiveInstances()
+		if err == nil {
+			wanderers, err = h.Game.LiveNPCs("", "")
+		}
 	}); callErr != nil || err != nil {
 		return contenthealth.OverlayLive{}
 	}
 	live := contenthealth.OverlayLive{Available: true}
+	for _, n := range wanderers {
+		if n.Movement != nil && !n.Dead {
+			live.Wanderers = append(live.Wanderers, contenthealth.OverlayPlayer{ID: n.ID, Name: n.Name, RoomID: n.RoomID})
+		}
+	}
 	for _, row := range rows {
 		if !row.Online || strings.TrimSpace(row.RoomID) == "" {
 			continue

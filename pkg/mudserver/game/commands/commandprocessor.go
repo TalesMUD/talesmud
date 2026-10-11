@@ -100,6 +100,8 @@ func (commandProcessor *CommandProcessor) registerCommands() {
 	commandProcessor.RegisterCommand(&ExamineCommand{}, "Examine an item: examine [item]", "examine", "inspect")
 	commandProcessor.RegisterCommand(&UseCommand{}, "Use an item: use <item> [on <target>]", "use", "eat", "drink", "consume")
 
+	commandProcessor.RegisterCommand(&CloseNPCSessionCommand{}, "Close an NPC dialog or shop", "dialogclose", "shopclose")
+	commandProcessor.RegisterCommand(&TargetNPCCommand{}, "Target an NPC: target <name>", "target")
 	// Trade commands
 	commandProcessor.RegisterCommand(&ListCommand{}, "List merchant inventory: list", "list", "shop", "trade")
 	commandProcessor.RegisterCommand(&BuyCommand{}, "Buy from merchant: buy [item] [quantity]", "buy")

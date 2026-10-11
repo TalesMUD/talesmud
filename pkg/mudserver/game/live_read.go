@@ -6,6 +6,7 @@ import (
 
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
+	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/instances"
 )
@@ -52,19 +53,23 @@ type LiveCharacterDetail struct {
 
 // LiveNPC is one running NPC instance.
 type LiveNPC struct {
-	ID         string     `json:"id"`
-	Name       string     `json:"name"`
-	TemplateID string     `json:"templateId"`
-	RoomID     string     `json:"roomId"`
-	RoomName   string     `json:"roomName,omitempty"`
-	HP         int32      `json:"hp"`
-	MaxHP      int32      `json:"maxHp"`
-	InCombat   bool       `json:"inCombat"`
-	CombatWith []string   `json:"combatWith,omitempty"`
-	Dead       bool       `json:"dead"`
-	DeadUntil  *time.Time `json:"deadUntil,omitempty"`
-	NoRespawn  bool       `json:"noRespawn,omitempty"`
-	LastEvent  string     `json:"lastEvent,omitempty"`
+	Movement     *npc.Movement `json:"movement,omitempty"`
+	NextMoveAt   *time.Time    `json:"nextMoveAt,omitempty"`
+	PausedUntil  *time.Time    `json:"pausedUntil,omitempty"`
+	MovementHeld bool          `json:"movementHeld,omitempty"`
+	ID           string        `json:"id"`
+	Name         string        `json:"name"`
+	TemplateID   string        `json:"templateId"`
+	RoomID       string        `json:"roomId"`
+	RoomName     string        `json:"roomName,omitempty"`
+	HP           int32         `json:"hp"`
+	MaxHP        int32         `json:"maxHp"`
+	InCombat     bool          `json:"inCombat"`
+	CombatWith   []string      `json:"combatWith,omitempty"`
+	Dead         bool          `json:"dead"`
+	DeadUntil    *time.Time    `json:"deadUntil,omitempty"`
+	NoRespawn    bool          `json:"noRespawn,omitempty"`
+	LastEvent    string        `json:"lastEvent,omitempty"`
 }
 
 // LiveInstance is one instance copy.
@@ -216,6 +221,18 @@ func (g *Game) LiveNPCs(templateID, roomID string) ([]LiveNPC, error) {
 			CombatWith: npcCombatWith(g, inst.ID, inCombat),
 			Dead:       inst.IsDead,
 			LastEvent:  g.NPCManager.LastNote(inst.ID),
+		}
+		if cfg := inst.EffectiveMovement(); cfg != nil {
+			row.Movement = cfg.Clone()
+			if !inst.NextMoveAt.IsZero() {
+				at := inst.NextMoveAt
+				row.NextMoveAt = &at
+			}
+			if !inst.PausedUntil.IsZero() {
+				at := inst.PausedUntil
+				row.PausedUntil = &at
+			}
+			row.MovementHeld = g.NPCManager.movementHeld(inst.ID)
 		}
 		if inst.IsDead {
 			if inst.RespawnTime > 0 && !inst.DeathTime.IsZero() {

@@ -119,6 +119,7 @@ type QuestHit struct {
 // NPCView is the static half of the NPC inspector.
 // RequestedID is set when the caller asked for a running instance and the view is its template.
 type NPCView struct {
+	Movement        *npc.Movement `json:"movement,omitempty"`
 	ID              string        `json:"id"`
 	RequestedID     string        `json:"requestedId,omitempty"`
 	Name            string        `json:"name"`
@@ -159,6 +160,7 @@ func NPC(ix *worldindex.Index, id string) (NPCView, bool) {
 		Level:           n.Level,
 		IsTemplate:      n.IsTemplate,
 		MaxHitPoints:    n.MaxHitPoints,
+		Movement:        n.EffectiveMovement().Clone(),
 		TemplateRespawn: durationString(n.RespawnTime),
 		Dialog:          link(ix, worldindex.KindDialog, n.DialogID),
 		IdleDialog:      link(ix, worldindex.KindDialog, n.IdleDialogID),

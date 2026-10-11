@@ -93,6 +93,9 @@ func (g *Game) FireDueAggro() {
 // NotePlayerEntered schedules a grace watch for each aggressive NPC already in the room.
 // A watch for a room the player left is dropped and does not start the reaggro cooldown.
 func (g *Game) NotePlayerEntered(characterID, roomID string) {
+	if g != nil && g.NPCManager != nil {
+		g.NPCManager.releaseNPCSessionsOutsideRoom(characterID, roomID)
+	}
 	if g == nil || characterID == "" || roomID == "" {
 		return
 	}

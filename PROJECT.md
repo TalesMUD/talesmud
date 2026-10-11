@@ -671,3 +671,6 @@ This project is actively developed. The NPCs branch contains the latest work on 
 - [Go Documentation](https://golang.org/doc/) - Go language reference
 - [Svelte Tutorial](https://svelte.dev/tutorial) - Svelte framework guide
 - [SQLite Documentation](https://www.sqlite.org/docs.html) - Database documentation
+
+### Timed wandering NPCs
+NPC templates support routes (loop or pingpong) and constrained roaming with intervals, jitter and engagement pauses. Spawners may override movement. Open dialogs/shops hold NPCs; movement sends departure/arrival prose and room presence updates. Creator NPC inspectors show movement and timers, the world map shows live wanderers, and content health validates routes. Legacy wanderRadius/patrolPath use the same timed system.

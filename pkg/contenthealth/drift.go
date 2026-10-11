@@ -26,6 +26,8 @@ var volatileFields = map[string]bool{
 	"inCombat":         true,
 	"combatInstanceId": true,
 	"lastIdleDialog":   true,
+	"nextMoveAt":       true,
+	"pausedUntil":      true,
 	"characters":       true,
 	"npcs":             true,
 	"currentRoomID":    true,

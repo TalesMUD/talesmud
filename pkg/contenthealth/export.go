@@ -152,6 +152,7 @@ func roomYAML(room *rooms.Room) map[string]any {
 			put(row, "type", string(exit.Type))
 			put(row, "description", exit.Description)
 			put(row, "hidden", exit.Hidden)
+			put(row, "locked", exit.Locked)
 			put(row, "instance", exit.Instance)
 			exits = append(exits, row)
 		}
@@ -185,6 +186,13 @@ func npcYAML(n *npc.NPC) map[string]any {
 	put(out, "level", n.Level)
 	put(out, "maxHitPoints", n.MaxHitPoints)
 	put(out, "spawnRoomId", n.SpawnRoomID)
+	if n.Movement != nil {
+		out["movement"] = n.Movement.Clone()
+	}
+	put(out, "wanderRadius", n.WanderRadius)
+	if len(n.PatrolPath) > 0 {
+		out["patrolPath"] = n.PatrolPath
+	}
 	put(out, "dialogID", n.DialogID)
 	if n.RespawnTime > 0 {
 		out["respawnTime"] = n.RespawnTime.String()
@@ -320,6 +328,9 @@ func spawnerYAML(spawner *npc.NPCSpawner) map[string]any {
 		"initialCount": spawner.InitialCount,
 	}
 	put(out, "name", spawner.Name)
+	if spawner.Movement != nil {
+		out["movement"] = spawner.Movement.Clone()
+	}
 	if spawner.SpawnInterval > 0 {
 		out["spawnInterval"] = spawner.SpawnInterval.String()
 	}

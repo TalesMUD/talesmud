@@ -225,7 +225,7 @@ func (g *Game) handleGameUpdates() {
 		case <-roomTicker.C:
 			g.handleRoomUpdates()
 		case <-npcTicker.C:
-			g.handleNPCUpdates()
+			_ = g.Call(func() { g.handleNPCUpdates() })
 		case <-spawnerTicker.C:
 			g.handleSpawnerUpdates()
 		case <-combatTicker.C:

@@ -27,6 +27,8 @@ type NPCSpawner struct {
 	// Optional Overrides
 	// RespawnTimeOverride overrides the template's respawn time if set
 	RespawnTimeOverride *time.Duration `json:"respawnTimeOverride,omitempty"`
+	// Movement replaces the template's movement block for this spawner.
+	Movement *Movement `json:"movement,omitempty"`
 	// RespawnDelay, when > 0, is the minimum time between an instance's death
 	// and its replacement. Without it InitialCount is refilled on the next tick.
 	// Use it for bosses and other unique encounters.

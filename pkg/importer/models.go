@@ -1,5 +1,7 @@
 package importer
 
+import npc "github.com/talesmud/talesmud/pkg/entities/npcs"
+
 // YAML model definitions for importing world data
 // These match the structure of YAML files in the import folder
 
@@ -52,12 +54,14 @@ func (ri *YAMLRoomItem) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 // YAMLExit represents a room exit
 type YAMLExit struct {
-	Name        string `yaml:"name"`
-	Target      string `yaml:"target"`
-	Type        string `yaml:"type"`
-	Description string `yaml:"description"`
-	Hidden      bool   `yaml:"hidden"`
-	Instance    bool   `yaml:"instance"`
+	Name        string                 `yaml:"name"`
+	Target      string                 `yaml:"target"`
+	Type        string                 `yaml:"type"`
+	Description string                 `yaml:"description"`
+	Hidden      bool                   `yaml:"hidden"`
+	Instance    bool                   `yaml:"instance"`
+	Locked      bool                   `yaml:"locked"`
+	Params      map[string]interface{} `yaml:"params"`
 }
 
 // YAMLAction represents a room action
@@ -167,6 +171,9 @@ type YAMLClass struct {
 
 // YAMLNPC represents an NPC in YAML format
 type YAMLNPC struct {
+	Movement      *npc.Movement      `yaml:"movement,omitempty"`
+	WanderRadius  int                `yaml:"wanderRadius,omitempty"`
+	PatrolPath    []string           `yaml:"patrolPath,omitempty"`
 	ID            string             `yaml:"id"`
 	Name          string             `yaml:"name"`
 	Description   string             `yaml:"description"`
@@ -222,6 +229,7 @@ type YAMLMerchantTrait struct {
 	BuyMultiplier  float64                     `yaml:"buyMultiplier"`
 	SellMultiplier float64                     `yaml:"sellMultiplier"`
 	RestockMinutes int32                       `yaml:"restockMinutes"`
+	RejectedTags   []string                    `yaml:"rejectedTags"`
 	AcceptedTypes  []string                    `yaml:"acceptedTypes"`
 	Inventory      []YAMLMerchantInventoryItem `yaml:"inventory"`
 }
@@ -362,13 +370,14 @@ func (e YAMLLootEntry) EffectiveDropChance() float64 {
 
 // YAMLSpawner represents an NPC spawner in YAML format
 type YAMLSpawner struct {
-	ID            string `yaml:"id"`
-	Name          string `yaml:"name"`
-	TemplateID    string `yaml:"templateId"`
-	RoomID        string `yaml:"roomId"`
-	MaxInstances  int    `yaml:"maxInstances"`
-	SpawnInterval string `yaml:"spawnInterval"`
-	InitialCount  int    `yaml:"initialCount"`
+	Movement      *npc.Movement `yaml:"movement,omitempty"`
+	ID            string        `yaml:"id"`
+	Name          string        `yaml:"name"`
+	TemplateID    string        `yaml:"templateId"`
+	RoomID        string        `yaml:"roomId"`
+	MaxInstances  int           `yaml:"maxInstances"`
+	SpawnInterval string        `yaml:"spawnInterval"`
+	InitialCount  int           `yaml:"initialCount"`
 	// RespawnDelay is optional ("30m"). Empty or invalid means no delay.
 	RespawnDelay string `yaml:"respawnDelay"`
 }

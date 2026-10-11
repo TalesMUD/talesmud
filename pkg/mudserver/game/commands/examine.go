@@ -93,6 +93,7 @@ func examineNPC(game def.GameCtrl, message *messages.Message, name string) bool 
 	if found == nil {
 		return false
 	}
+	engageNPC(game, message, found.ID, "")
 	game.SendMessage() <- message.Reply(lookAtNPC(found))
 	return true
 }

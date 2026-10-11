@@ -62,6 +62,7 @@ func (command *TalkCommand) Execute(game def.GameCtrl, message *messages.Message
 		return true
 	}
 
+	engageNPC(game, message, npc.ID, "")
 	// Track quest progress for talking to NPC (deliver objectives)
 	NotifyQuestTalkToNPC(game, message.Character.ID, message.FromUser.ID, npc)
 
@@ -286,6 +287,7 @@ func sendQuestOnlyDialog(game def.GameCtrl, message *messages.Message, npcName s
 		conv.ID,
 	)
 
+	engageNPC(game, message, conv.TargetID, "dialog")
 	game.SendMessage() <- dialogMsg
 }
 
@@ -321,6 +323,7 @@ func sendDialogMessage(game def.GameCtrl, message *messages.Message, npcName str
 		conv.ID,
 	)
 
+	engageNPC(game, message, conv.TargetID, "dialog")
 	game.SendMessage() <- dialogMsg
 }
 

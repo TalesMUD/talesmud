@@ -5,6 +5,7 @@ package contenthealth
 import "time"
 
 const (
+	RuleMovement       = "npc-movement"
 	RuleUnreachable    = "unreachable-rooms"
 	RuleRevealMissing  = "reveal-missing-exit"
 	RuleHiddenNoReveal = "hidden-exit-no-revealer"

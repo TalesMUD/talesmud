@@ -45,6 +45,7 @@ type Exit struct {
 	Description string                 `bson:"description,omitempty" json:"description,omitempty"`
 	Type        RoomExitType           `bson:"type,omitempty" json:"type,omitempty"`
 	Hidden      bool                   `bson:"hidden,omitempty" json:"hidden,omitempty"`
+	Locked      bool                   `bson:"locked,omitempty" json:"locked,omitempty"`
 	Instance    bool                   `bson:"instance,omitempty" json:"instance,omitempty"`
 	Target      string                 `bson:"target,omitempty" json:"target,omitempty"`
 	Params      map[string]interface{} `bson:"params,omitempty" json:"params"`
