@@ -143,14 +143,16 @@
   import { settingsStore } from "./SettingsStore.js";
   import { overlayStore } from "./ui/overlayStore.js";
   import { characterClassId, normalizeHotbarBinds, resolveHotbarActivation } from "./hudPrefs.js";
-  import { hotbarSlotFromKey, isTextEntry, topOpenPanel } from "./keyboardShortcuts.js";
+  import { hotbarSlotFromKey, isTextEntry, setShortcutFlags, topOpenPanel } from "./keyboardShortcuts.js";
   import {
     accountMenuOpen,
     battleDockOpen,
     cheatSheetOpen,
     layoutDialogOpen,
+    pickupPanelOpen,
     requestCloseLayoutDialog,
   } from "./uiChrome.js";
+  import PickupPanel from "./ui/PickupPanel.svelte";
   import ShortcutSheet from "./ui/ShortcutSheet.svelte";
   import { ROOM_PLACEHOLDER } from "./portraitSrc.js";
   import { getAuth } from "../auth.js";
@@ -372,11 +374,13 @@
       accountMenu: get(accountMenuOpen),
       widgetFocus: !!layout.focusId,
       editMode: !!layout.editMode,
+      pickup: get(pickupPanelOpen),
     };
   }
 
   function closeTopPanel(id) {
     if (id === "cheatSheet") cheatSheetOpen.set(false);
+    else if (id === "pickup") pickupPanelOpen.set(false);
     else if (id === "layoutDialog") requestCloseLayoutDialog();
     else if (id === "characterPicker") closeCharacterPicker();
     else if (id === "settings") settingsStore.closeModal();
@@ -442,18 +446,20 @@
   function onShortcutKey(event) {
     if (event.metaKey || event.ctrlKey || event.altKey) return;
     if (isTextEntry(event.target)) return;
+    const top = topOpenPanel(shortcutFlags());
     if (event.key === "?" || (event.key === "/" && event.shiftKey)) {
       event.preventDefault();
       cheatSheetOpen.update((open) => !open);
       return;
     }
     if (event.key === "Escape") {
-      const top = topOpenPanel(shortcutFlags());
       if (!top) return;
       event.preventDefault();
       closeTopPanel(top);
       return;
     }
+    // The pickup panel handles 1–9 and Enter. Do not also fire the hotbar.
+    if (top === "pickup") return;
     if (event.key === "Tab") {
       const play = get(muxStore);
       if (play.combatPhase !== "active") return;
@@ -505,12 +511,14 @@
 
     // Initialize layout from storage
     layoutStore.loadFromStorage();
+    setShortcutFlags(shortcutFlags);
     window.addEventListener("keydown", onShortcutKey);
   });
 
   onDestroy(async () => {
     destroyed = true;
     layoutStore.syncCombatFocus("idle");
+    setShortcutFlags(() => ({}));
     window.removeEventListener("keydown", onShortcutKey);
     clearTimeout(reconnectTimer);
     reconnectTimer = null;
@@ -570,6 +578,13 @@
   <InventoryOverlay store={muxStore} {sendMessage} />
   <FriendsOverlay store={muxStore} {sendMessage} />
   <PartyOverlay store={muxStore} {sendMessage} />
+  <PickupPanel
+    open={$pickupPanelOpen}
+    items={$muxStore.groundItems || []}
+    {sendMessage}
+    removeItem={(id) => muxStore.removeGroundItem && muxStore.removeGroundItem(id)}
+    on:close={() => pickupPanelOpen.set(false)}
+  />
 
 </div>
 

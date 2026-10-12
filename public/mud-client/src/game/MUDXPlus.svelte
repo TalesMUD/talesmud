@@ -289,18 +289,6 @@
     border-color: rgba(168, 85, 247, 0.6);
   }
 
-  /* Green popup buttons for pickup items */
-  .popup-btn.pickup-popup-btn {
-    background: rgba(34, 197, 94, 0.2);
-    border-color: rgba(34, 197, 94, 0.4);
-    color: #86efac;
-  }
-
-  .popup-btn.pickup-popup-btn:hover {
-    background: rgba(34, 197, 94, 0.35);
-    border-color: rgba(34, 197, 94, 0.6);
-  }
-
   .pickup-bar-btn {
     position: relative;
     background: rgba(34, 197, 94, 0.18);
@@ -402,15 +390,6 @@
 
   .dialog-more .dialog-title {
     color: #e5e7eb;
-  }
-
-  .dialog.dialog-pickup {
-    border-color: rgba(34, 197, 94, 0.3);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(34, 197, 94, 0.1);
-  }
-
-  .dialog-pickup .dialog-title {
-    color: #86efac;
   }
 
   .dialog.dialog-say {
@@ -600,6 +579,7 @@
     armsScrap,
   } from "./hudPrefs.js";
   import { classCatalog } from "../onboarding/classCatalog.js";
+  import { pickupPanelOpen } from "./uiChrome.js";
 
   export let store;
   // svelte-ignore unused-export-let
@@ -607,7 +587,6 @@
   export let sendMessage;
 
   let showMoreMenu = false;
-  let showPickupMenu = false;
   let showSayPrompt = false;
   let sayText = '';
 
@@ -707,7 +686,7 @@
 
   function openSayPrompt() {
     showMoreMenu = false;
-    showPickupMenu = false;
+    pickupPanelOpen.set(false);
     sayText = '';
     showSayPrompt = true;
   }
@@ -736,33 +715,20 @@
     else executeCommand("i");
   }
 
-  function pickupItem(item) {
-    sendMessage("pickup " + item.name);
-    store.removeGroundItem(item.id);
-  }
-
-  function pickupAll() {
-    const items = [...groundItems];
-    for (const item of items) {
-      sendMessage("pickup " + item.name);
-      store.removeGroundItem(item.id);
-    }
-    showPickupMenu = false;
-  }
-
   function toggleMoreMenu() {
     showMoreMenu = !showMoreMenu;
-    showPickupMenu = false;
+    if (showMoreMenu) pickupPanelOpen.set(false);
   }
 
   function togglePickupMenu() {
-    showPickupMenu = !showPickupMenu;
     showMoreMenu = false;
+    showSayPrompt = false;
+    pickupPanelOpen.update((open) => !open);
   }
 
   function closeMenus() {
     showMoreMenu = false;
-    showPickupMenu = false;
+    pickupPanelOpen.set(false);
   }
 
   function onTogglePin(id) {
@@ -841,43 +807,6 @@
               On-screen / log
             </label>
           </div>
-        </div>
-      </div>
-    </div>
-  {/if}
-  {#if showPickupMenu && groundItems.length > 0}
-    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-    <div class="dialog-overlay" use:portal on:click={closeMenus}>
-      <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-      <div class="dialog dialog-pickup" on:click|stopPropagation>
-        <div class="dialog-header">
-          <span class="dialog-title">
-            <i class="material-icons">back_hand</i>
-            Pick Up
-          </span>
-          <button class="dialog-close" on:click={closeMenus}>
-            <i class="material-icons">close</i>
-          </button>
-        </div>
-        <div class="dialog-grid">
-          {#if groundItems.length > 1}
-            <button
-              class="popup-btn pickup-popup-btn"
-              on:click={pickupAll}
-              title="Pick up all items"
-            >
-              Pick up all ({groundItems.length})
-            </button>
-          {/if}
-          {#each groundItems as item}
-            <button
-              class="popup-btn pickup-popup-btn"
-              on:click={() => pickupItem(item)}
-              title={item.name}
-            >
-              {item.name}
-            </button>
-          {/each}
         </div>
       </div>
     </div>
@@ -992,7 +921,7 @@
     {#if groundItems.length > 0}
       <button
         class="btn context-btn pickup-bar-btn"
-        class:active={showPickupMenu}
+        class:active={$pickupPanelOpen}
         on:click={togglePickupMenu}
         title="Pick up items"
       >

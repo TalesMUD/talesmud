@@ -4,6 +4,7 @@ export const accountMenuOpen = writable(false);
 export const battleDockOpen = writable(false);
 export const cheatSheetOpen = writable(false);
 export const layoutDialogOpen = writable(false);
+export const pickupPanelOpen = writable(false);
 
 let closeLayoutDialog = () => {};
 

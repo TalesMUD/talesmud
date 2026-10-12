@@ -11,6 +11,7 @@
   import { settingsStore } from '../SettingsStore.js';
   import { backend } from '../../api/base.js';
   import { ROOM_PLACEHOLDER } from '../portraitSrc.js';
+  import { pickupPanelOpen } from '../uiChrome.js';
 
   export let store;
   export let sendMessage;
@@ -19,23 +20,11 @@
   let img1El;
   let img2El;
   let descriptionExpanded = false;
-  let showPickupMenu = false;
 
   $: groundItems = ($store.groundItems || []).filter(item => !item.noPickup);
 
-  function pickupItem(item) {
-    sendMessage('pickup ' + item.name);
-    store.removeGroundItem(item.id);
-    showPickupMenu = false;
-  }
-
-  function pickupAll() {
-    const items = [...groundItems];
-    for (const item of items) {
-      sendMessage('pickup ' + item.name);
-      store.removeGroundItem(item.id);
-    }
-    showPickupMenu = false;
+  function togglePickup() {
+    pickupPanelOpen.update((open) => !open);
   }
 
   // Derive NPC type for dialog overlay
@@ -312,62 +301,6 @@
     line-height: 16px;
     text-align: center;
   }
-
-  .pickup-dialog-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    background: rgba(0, 0, 0, 0.6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .pickup-dialog {
-    background: rgba(15, 15, 25, 0.95);
-    border: 1px solid rgba(34, 197, 94, 0.4);
-    border-radius: 14px;
-    padding: 16px;
-    width: 90vw;
-    max-width: 400px;
-    max-height: 60vh;
-    overflow-y: auto;
-  }
-
-  .pickup-dialog-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-  }
-
-  .pickup-dialog-title {
-    color: #86efac;
-    font-size: 13px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .pickup-dialog-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-  }
-
-  .pickup-dialog-grid button {
-    background: rgba(34, 197, 94, 0.2);
-    border: 1px solid rgba(34, 197, 94, 0.4);
-    border-radius: 8px;
-    padding: 10px 8px;
-    color: #86efac;
-    min-height: 44px;
-    text-transform: uppercase;
-    font-size: 12px;
-  }
 </style>
 
 <div class="mobile-room">
@@ -408,41 +341,16 @@
     {#if groundItems.length > 0}
       <button
         class="room-pickup-fab"
+        class:active={$pickupPanelOpen}
         type="button"
         aria-label="Pick up {groundItems.length} items"
-        on:click={() => showPickupMenu = true}
+        on:click={togglePickup}
       >
         <i class="material-icons">back_hand</i>
         <span class="room-pickup-count">{groundItems.length}</span>
       </button>
     {/if}
   </div>
-
-  {#if showPickupMenu && groundItems.length > 0}
-    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-    <div class="pickup-dialog-overlay" on:click={() => showPickupMenu = false}>
-      <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-      <div class="pickup-dialog" on:click|stopPropagation>
-        <div class="pickup-dialog-header">
-          <span class="pickup-dialog-title">
-            <i class="material-icons">back_hand</i>
-            Pick Up
-          </span>
-          <button type="button" on:click={() => showPickupMenu = false} aria-label="Close">
-            <i class="material-icons">close</i>
-          </button>
-        </div>
-        <div class="pickup-dialog-grid">
-          {#if groundItems.length > 1}
-            <button type="button" on:click={pickupAll}>Pick up all ({groundItems.length})</button>
-          {/if}
-          {#each groundItems as item}
-            <button type="button" on:click={() => pickupItem(item)}>{item.name}</button>
-          {/each}
-        </div>
-      </div>
-    </div>
-  {/if}
 
   <!-- Room description (tap to expand) -->
   {#if $store.roomDescription}

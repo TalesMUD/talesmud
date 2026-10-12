@@ -28,7 +28,8 @@ assert.equal(roomClear.includes('clearDialog'), true);
 
 assert.equal(shop.includes('shopclose'), true);
 assert.equal(shop.includes("e.key !== 'Escape'"), true);
-assert.match(index, /bundle\.js\?v=wander2/);
+assert.match(index, /bundle\.js\?v=pickup1/);
+assert.equal(index.includes('wander2'), false);
 assert.equal(index.includes('wander1'), false);
 
 console.log('dialogOverlay_test ok');
