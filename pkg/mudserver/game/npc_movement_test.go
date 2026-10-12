@@ -181,6 +181,99 @@ func TestMovementReleaseOnLeaveAndCharacterDisconnect(t *testing.T) {
 	}
 }
 
+func TestMovementReleaseOnCharacterSwitch(t *testing.T) {
+	g, n := movementTestNPC(t, "loop")
+	user := &entities.User{Entity: &entities.Entity{ID: "user"}}
+	first := &characters.Character{Entity: &entities.Entity{ID: "p"}, Name: "Traveler"}
+	first.CurrentRoomID = "a"
+	second := &characters.Character{Entity: &entities.Entity{ID: "q"}, Name: "Other"}
+	second.CurrentRoomID = "a"
+	g.ConnectUserSession(user)
+	g.SetUserSessionCharacter(user, first)
+	g.NPCManager.EngageNPC(first.ID, n.ID, "dialog")
+	if !g.NPCManager.movementHeld(n.ID) {
+		t.Fatal("expected an open dialog hold")
+	}
+	g.SetUserSessionCharacter(user, second)
+	if g.NPCManager.movementHeld(n.ID) {
+		t.Fatal("character switch did not release")
+	}
+}
+
+func TestDialogGoodbyeReleasesHold(t *testing.T) {
+	g, n := movementTestNPC(t, "loop")
+	char := &characters.Character{Entity: &entities.Entity{ID: "player"}, Name: "Traveler"}
+	char.CurrentRoomID = "a"
+	user := &entities.User{Entity: &entities.Entity{ID: "user"}}
+	n.DialogID = "greeting"
+	exit := true
+	later := dialogs.NewDialog("later", "Later.", nil, nil)
+	bye := dialogs.NewDialog("end", "Just browsing. Goodbye.", nil, nil)
+	bye.Answer = &dialogs.Dialog{NodeID: "end", Text: "Come back anytime.", IsDialogExit: &exit}
+	ask := dialogs.NewDialog("who", "Who are you?", nil, nil)
+	travels := dialogs.NewDialog("end", "Safe travels.", nil, nil)
+	travels.Answer = &dialogs.Dialog{NodeID: "end", Text: "And you.", IsDialogExit: &exit}
+	ask.Answer = &dialogs.Dialog{NodeID: "who", Text: "Pack Seller.", Options: []*dialogs.Dialog{travels}}
+	root := &dialogs.Dialog{
+		Entity:  &entities.Entity{ID: n.DialogID},
+		NodeID:  "main",
+		Text:    "What do you need?",
+		Options: []*dialogs.Dialog{ask, bye, later},
+	}
+	if _, err := g.Facade.DialogsService().Import(root); err != nil {
+		t.Fatal(err)
+	}
+	play := func(data string) []interface{} {
+		m := &messages.Message{Data: data, Character: char, FromUser: user}
+		if !g.CommandProcessor.Process(g, m) {
+			g.RoomProcessor.Process(g, m)
+		}
+		return drainNPCMessages(g.SendMessage())
+	}
+	sawEnd := func(outs []interface{}, text string) bool {
+		for _, out := range outs {
+			msg, ok := out.(messages.MessageResponse)
+			if ok && msg.Type == messages.MessageTypeDialogEnd && strings.Contains(msg.Message, text) {
+				return true
+			}
+		}
+		return false
+	}
+
+	play("talk Pack Seller")
+	if !g.NPCManager.movementHeld(n.ID) {
+		t.Fatal("talk did not hold")
+	}
+	if play("1") == nil || !g.NPCManager.movementHeld(n.ID) {
+		t.Fatal("continuing the dialog released the hold")
+	}
+	if !sawEnd(play("1"), "And you.") || g.NPCManager.movementHeld(n.ID) {
+		t.Fatal("leaf goodbye did not end the dialog")
+	}
+
+	play("talk Pack Seller")
+	if !g.NPCManager.movementHeld(n.ID) {
+		t.Fatal("second talk did not hold")
+	}
+	if !sawEnd(play("2"), "Come back anytime.") || g.NPCManager.movementHeld(n.ID) {
+		t.Fatal("root goodbye did not end the dialog")
+	}
+
+	play("talk Pack Seller")
+	if !sawEnd(play("3"), "Later.") || g.NPCManager.movementHeld(n.ID) {
+		t.Fatal("option with no answer did not end the dialog")
+	}
+
+	play("talk Pack Seller")
+	if !g.NPCManager.NPCSessionOpen(char.ID, n.ID, "dialog") {
+		t.Fatal("dialog session missing")
+	}
+	outs := play("dialogclose")
+	if g.NPCManager.movementHeld(n.ID) || !sawEnd(outs, "") {
+		t.Fatal("dialogclose did not release")
+	}
+}
+
 func TestMovementCombatDeadAndUnsafeAggression(t *testing.T) {
 	for _, state := range []string{"combat", "dead", "zero-hp", "boss", "low-level"} {
 		t.Run(state, func(t *testing.T) {

@@ -252,7 +252,6 @@
     </div>
     <div class="dialog-header-text">
       <span class="npc-name">{npcName}</span>
- <button class="dialog-option-btn" on:click={() => sendMessage("dialogclose")} aria-label="Close dialog">Leave conversation</button>
       <div class="dialog-text" class:quest={npcType === 'quest'}>
         {npcText}
       </div>
