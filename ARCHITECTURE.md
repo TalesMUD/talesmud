@@ -12,6 +12,8 @@ NPC movement configuration is persisted with templates/spawners; runtime clocks 
 
 REST accepts Bearer tokens only. WebSocket upgrades retain the single-use ticket or Bearer-header contract. Guest HMAC, server device sessions, optional local sessions and Auth0 RS256 are separate verification paths; Auth0 audience/issuer are mandatory. All use JWT v5. Query secret redaction includes tickets and device codes at key boundaries, and path-only logging remains available. Docker/CI builds use Go 1.26; `go.mod` pins `go1.26.9` and updated crypto/network dependencies.
 
+Frontend Docker stages use Node 22. `netlify.toml` pins Node 22.18.0 for Creator UI builds, sets `public/app` as the build base, installs from the npm lockfile with the existing legacy peer policy, and publishes Vite's `dist` output. Netlify hosts this frontend; the Go process still owns the game, API and SSH listeners.
+
 ## System Overview
 
 TalesMUD follows a layered architecture with clear separation between HTTP API, real-time game server, business logic, and data access layers.

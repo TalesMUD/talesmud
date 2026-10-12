@@ -15,6 +15,7 @@ TalesMUD is a browser-based Multi-User Dungeon (MUD) framework built with Go and
 - `tales -check sample-world` validates an imported pack without running a server. `-json` emits the report and `-fail-on error|warning` sets the failure threshold. See [content health](docs/content-health.md).
 - NPC routes/roaming are timed and validated, pause for player engagement, and default to stationary. Structured examine/effect lines, pickup controls, optional WebSocket hello, combat reattach snapshots, `noAggro` rooms and `aggroOnSight` markers improve client behavior. Boss spawners respect `respawnDelay` and restore full HP; Door trading uses catalog names and supports scripted combat.
 - Backend builds require Go 1.26 (toolchain `go1.26.9`); Docker uses Go 1.26. JWT verification stays on `github.com/golang-jwt/jwt/v5` with required Auth0 audience/issuer checks. Logs redact `access_token`, `ticket`, `code`, `activate`, `device_code` and `token` at query-key boundaries; terminal output strips control escapes and bidi controls.
+- Frontend builds use Node 22. `netlify.toml` builds the Creator UI in `public/app` from its lockfile and publishes Vite's `dist` directory; existing plugin peer ranges use `--legacy-peer-deps`. Game and API hosting stay in the Go process.
 
 ## Documentation Index
 
