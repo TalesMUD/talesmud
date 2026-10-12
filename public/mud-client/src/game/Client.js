@@ -3,6 +3,7 @@
 import { onMount } from "svelte";
 import { writable, get } from "svelte/store";
 import { overlayStore } from "./ui/overlayStore.js";
+import { examineResultToCard } from "./ui/parseExamineOverlay.js";
 import { getPlayerColor } from "./playerColors.js";
 import { markPlayersYou, parseRoomChatLine } from "./roomChat.js";
 import { parsePartyChatLine } from "./partyState.js";
@@ -531,6 +532,14 @@ function createClient(renderer, characterCreator, muxStore) {
         objectives: msg.objectives || [],
       });
     }
+  };
+
+  // Structured item inspect companion — prefer over prose-parsed examine cards.
+  // Prose still prints via the default message path; NPC inspect never sends this.
+  messageHandlers["examineResult"] = (msg) => {
+    const examine = examineResultToCard(msg);
+    if (!examine) return;
+    overlayStore.pushMessage({ kind: 'examine', examine });
   };
 
   messageHandlers["questAbandoned"] = (msg) => {

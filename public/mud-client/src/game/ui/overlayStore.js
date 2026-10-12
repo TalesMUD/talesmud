@@ -16,29 +16,45 @@ function createOverlayStore() {
 
     /**
      * Push a room-hero toast.
-     * @param {string|{text:string, kind?:'ambiance'|'chat'|'examine'}} payload
+     * @param {string|{text:string, kind?:'ambiance'|'chat'|'examine', examine?:object}} payload
      *   string → auto-detect examine dumps; else kind 'chat'
      *   { text, kind: 'ambiance' } → mood toast (soft style)
      *   examine dumps → kind 'examine' (item card chrome)
+     *   { examine } → prefer structured examineResult card over prose parse
      */
     pushMessage(payload) {
       let text;
       let kind = 'chat';
+      let examineFromPayload = null;
 
       if (payload && typeof payload === 'object') {
         text = payload.text;
         if (payload.kind === 'ambiance' || payload.kind === 'chat' || payload.kind === 'examine') {
           kind = payload.kind;
         }
+        if (payload.examine && typeof payload.examine === 'object') {
+          examineFromPayload = payload.examine;
+        }
       } else {
         text = payload;
+      }
+
+      // Structured examineResult may arrive with only a card model (no prose blob).
+      if ((!text || String(text).trim() === '') && examineFromPayload) {
+        text = [
+          examineFromPayload.title,
+          examineFromPayload.blurb,
+          examineFromPayload.lore,
+          ...(examineFromPayload.effects || []),
+        ].filter(Boolean).join('\n');
       }
 
       if (!text || String(text).trim() === '') return;
 
       const id = ++messageId;
       const cleanText = String(text).trim();
-      const examine = parseExamineText(cleanText);
+      // Prefer a structured examineResult card; fall back to prose parse.
+      const examine = examineFromPayload || parseExamineText(cleanText);
       if (examine && kind !== 'ambiance') {
         kind = 'examine';
       }

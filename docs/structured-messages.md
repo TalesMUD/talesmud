@@ -22,6 +22,11 @@ attributes), `value` (base price in gold), `description`, `detail`, and `effects
 text get the same named "Special effect" fallback as prose. Empty/zero fields
 are omitted. NPC inspection remains prose.
 
+The play client prefers `examineResult` for the RoomTextOverlay item card
+(title, quality chrome, stats, value, description/detail, and each `effects[]`
+line as explicit effect text). When only prose arrives (older server or NPC
+examine), it falls back to parsing the examine dump.
+
 ## Rejoining combat
 
 Character selection (including the automatic selection on reconnect) sends one

@@ -28,7 +28,8 @@ assert.equal(roomClear.includes('clearDialog'), true);
 
 assert.equal(shop.includes('shopclose'), true);
 assert.equal(shop.includes("e.key !== 'Escape'"), true);
-assert.match(index, /bundle\.js\?v=pickup2/);
+assert.match(index, /bundle\.js\?v=examine1/);
+assert.equal(index.includes('pickup2'), false);
 assert.equal(index.includes('pickup1'), false);
 assert.equal(index.includes('wander2'), false);
 assert.equal(index.includes('wander1'), false);

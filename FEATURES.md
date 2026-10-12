@@ -2134,6 +2134,9 @@ The top bar keeps the app links, a search box (`data-creator-search`) that opens
 - `examine`/`inspect` retains its prose and adds `examineResult` for items:
   `name`, `slot`, `quality`, `stats`, `value`, `description`, `detail`, and
   `effects[]` strings from `items.FormatEffect`, including script fallbacks.
+  The play client consumes `examineResult` for the RoomTextOverlay item card
+  (effects shown as explicit lines); prose-only examine (NPC / old server)
+  still uses the dump parser.
 - `characterSelected.guest: true` identifies guests; account sessions omit it.
 - Character selection/reconnect in a live fight sends one `combatStatus` with
   the full roster, round, actor, deadline, target, and player queue/cooldowns.
@@ -2410,7 +2413,7 @@ Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "unc
 - The widget auto-fits discovered places into its panel and keeps that fit (canvas is out of flow so it cannot resize the widget)
 - Layer tabs, pan, wheel zoom, click-to-travel along discovered paths
 - Desktop/mobile action bars (Option C): room-only dirs + room actions + Shop when a merchant is present; fixed INV / MAP / SAY chrome; **Recipes** seeded by default for crafting discoverability; optional Look/Rest/… pins via ⋯; layout revision migrates legacy Look/pin clutter and seeds Recipes onto rev-2 bars
-- Pickup is one shared panel (`PickupPanel.svelte`, logic in `pickupPanel.js`), opened from the desktop Pickup button and from the phone action-bar button and room hand button. Rows use item art, normal-case names, rarity colors (unique is gold), a ×N stack, and a `type · effect` hint. Currency is `type: currency` or a `currency` tag; a coin name matches only when the row has no type. Pick up all is a separate gold footer button when more than one item is on the ground. Keys 1–9, Enter, and Esc apply while the panel is the top overlay and a text field is not focused. The list scrolls; the header and footer stay put. On screens 600px and under the panel is a full-width bottom sheet. It closes itself when nothing pickable remains. Room item rows keep `id`, `name`, `noPickup`, and `copyOnPickup`, and add optional `type`, `subType`, `quality`, `unique`, `quantity`, and `effect` (one `FormatEffect` line, or `Heals N HP`). Play cache tag `pickup2`.
+- Pickup is one shared panel (`PickupPanel.svelte`, logic in `pickupPanel.js`), opened from the desktop Pickup button and from the phone action-bar button and room hand button. Rows use item art, normal-case names, rarity colors (unique is gold), a ×N stack, and a `type · effect` hint. Currency is `type: currency` or a `currency` tag; a coin name matches only when the row has no type. Pick up all is a separate gold footer button when more than one item is on the ground. Keys 1–9, Enter, and Esc apply while the panel is the top overlay and a text field is not focused. The list scrolls; the header and footer stay put. On screens 600px and under the panel is a full-width bottom sheet. It closes itself when nothing pickable remains. Room item rows keep `id`, `name`, `noPickup`, and `copyOnPickup`, and add optional `type`, `subType`, `quality`, `unique`, `quantity`, and `effect` (one `FormatEffect` line, or `Heals N HP`). Play cache tag `examine1`.
 - Inventory chrome opens a popup overlay by default; preference can switch to on-screen widget / mobile sheet
 - Room action/system reaction toasts render large and centered on the room hero art (not the command log)
 - Same JSON is the contract for a future mobile renderer
