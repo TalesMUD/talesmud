@@ -97,4 +97,12 @@ function getUniqueNPCs(token, cb, errorCb) {
   return getNPCs(token, [{ key: "isTemplate", val: "false" }], cb, errorCb);
 }
 
-export { getNPC, getNPCs, createNPC, updateNPC, deleteNPC, getNPCTemplates, getUniqueNPCs };
+function getNPCInspect(token, id) {
+  return axios
+    .get(`${backend}/npcs/${encodeURIComponent(id)}/inspect`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    .then((result) => result.data);
+}
+
+export { getNPC, getNPCs, createNPC, updateNPC, deleteNPC, getNPCTemplates, getUniqueNPCs, getNPCInspect };

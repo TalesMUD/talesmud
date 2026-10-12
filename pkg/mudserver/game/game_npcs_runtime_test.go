@@ -71,6 +71,7 @@ func TestHandleNPCUpdatesMovesPatrolNPCToNextPatrolRoom(t *testing.T) {
 		PatrolPath:  []string{"room-a", "room-b", "room-c"},
 	}
 	g.NPCManager.RegisterExistingNPC(guard, "room-a")
+	guard.NextMoveAt = time.Now().Add(-time.Second)
 
 	g.handleNPCUpdates()
 
@@ -94,12 +95,14 @@ func TestHandleNPCUpdatesWandersOnlyWithinConfiguredRadius(t *testing.T) {
 		WanderRadius: 1,
 	}
 	g.NPCManager.RegisterExistingNPC(wanderer, "spawn")
+	wanderer.NextMoveAt = time.Now().Add(-time.Second)
 
 	g.handleNPCUpdates()
 	if got := g.NPCManager.GetInstance("wanderer-1").CurrentRoomID; got != "near" {
 		t.Fatalf("expected wanderer to move to adjacent room within radius, got %s", got)
 	}
 
+	wanderer.NextMoveAt = time.Now().Add(-time.Second)
 	g.handleNPCUpdates()
 	if got := g.NPCManager.GetInstance("wanderer-1").CurrentRoomID; got != "spawn" {
 		t.Fatalf("expected wanderer to avoid room outside radius and return toward spawn, got %s", got)

@@ -6,4 +6,6 @@ type IncomingMessage struct {
 	Message string `json:"message"`
 	Type    string `json:"type,omitempty"`
 	Key     string `json:"key,omitempty"`
+	Proto   int    `json:"proto,omitempty"`
+	Client  string `json:"client,omitempty"`
 }

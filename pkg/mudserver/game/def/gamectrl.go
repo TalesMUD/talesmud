@@ -35,6 +35,8 @@ type NPCInstanceCtrl interface {
 	UpdateInstance(id string, updater func(*npc.NPC)) bool
 	// FindInstanceByNameInRoom finds an instance by name in a room
 	FindInstanceByNameInRoom(roomID, name string) *npc.NPC
+	// RemoveInstance drops an instance from the live set. The caller deletes any saved row.
+	RemoveInstance(id string)
 }
 
 // CombatEngineCtrl provides access to the combat system for commands

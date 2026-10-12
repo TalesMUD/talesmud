@@ -15,6 +15,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/authlocal"
+	"github.com/talesmud/talesmud/pkg/authsession"
 	e "github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/service"
 )
@@ -105,11 +106,63 @@ func getPemCert(token *jwt.Token) (string, error) {
 	return "", errors.New("Unable to find appropriate key")
 }
 
+// audienceMatches requires the expected audience. A missing audience fails.
+// A string must be the expected value. An array must contain it.
+// Any other shape is rejected.
+func audienceMatches(claims jwt.MapClaims, want string) bool {
+	if claims == nil || want == "" {
+		return false
+	}
+	raw, ok := claims["aud"]
+	if !ok || raw == nil {
+		return false
+	}
+	switch v := raw.(type) {
+	case string:
+		return v == want
+	case []string:
+		for _, one := range v {
+			if one == want {
+				return true
+			}
+		}
+		return false
+	case []interface{}:
+		if len(v) == 0 {
+			return false
+		}
+		matched := false
+		for _, one := range v {
+			s, ok := one.(string)
+			if !ok {
+				return false
+			}
+			if s == want {
+				matched = true
+			}
+		}
+		return matched
+	default:
+		return false
+	}
+}
+
 // getKeyFunc returns a function to be used as the jwt.Keyfunc for JWT token validation.
 func getKeyFunc() jwt.Keyfunc {
 	return func(token *jwt.Token) (interface{}, error) {
 		if token.Method == nil || token.Method.Alg() != jwt.SigningMethodRS256.Alg() {
 			return nil, errors.New("unexpected signing method")
+		}
+
+		claims, ok := token.Claims.(jwt.MapClaims)
+		aud := strings.TrimSpace(os.Getenv("AUTH0_AUDIENCE"))
+		if !ok || !audienceMatches(claims, aud) {
+			return nil, errors.New("invalid audience")
+		}
+		iss := strings.TrimSpace(os.Getenv("AUTH0_DOMAIN"))
+		gotIssuer, err := claims.GetIssuer()
+		if err != nil || iss == "" || gotIssuer != iss {
+			return nil, errors.New("invalid issuer")
 		}
 
 		cert, err := getPemCert(token)
@@ -222,11 +275,15 @@ func bearerToken(c *gin.Context) string {
 	return ""
 }
 
-func authenticateToken(c *gin.Context, facade service.Facade, tokenStr string) {
+func authenticateToken(c *gin.Context, facade service.Facade, tokenStr string, sessions ...*authsession.Service) {
 	if guestSvc := facade.GuestService(); guestSvc != nil {
 		if userID, err := guestSvc.ValidateGuestToken(tokenStr); err == nil {
 			if user, err := facade.UsersService().FindByID(userID); err == nil {
-				if user.IsGuest && !user.GuestExpiresAt.IsZero() && time.Now().After(user.GuestExpiresAt) {
+				if !user.IsGuest {
+					c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid guest token"})
+					return
+				}
+				if !user.GuestExpiresAt.IsZero() && time.Now().After(user.GuestExpiresAt) {
 					c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 						"error": "Guest session expired",
 					})
@@ -240,9 +297,33 @@ func authenticateToken(c *gin.Context, facade service.Facade, tokenStr string) {
 		}
 	}
 
+	if authsession.IsIssuer(tokenStr) {
+		var session *authsession.Service
+		if len(sessions) > 0 {
+			session = sessions[0]
+		}
+		user, err := session.UserFromToken(tokenStr)
+		if errors.Is(err, authsession.ErrBanned) {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Your account has been banned"})
+			return
+		}
+		if err != nil || user == nil {
+			handleTokenError(c, err, nil)
+			return
+		}
+		c.Set("userid", user.RefID)
+		c.Set("user", user)
+		c.Next()
+		return
+	}
+
 	// Local username/password sessions. Tokens from this process are not sent to the external provider.
 	if localSessions != nil && authlocal.IsLocalIssuer(tokenStr) {
 		user, err := localSessions.UserFromToken(tokenStr)
+		if errors.Is(err, authlocal.ErrBanned) {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Your account has been banned"})
+			return
+		}
 		if err != nil || user == nil {
 			handleTokenError(c, err, nil)
 			return
@@ -279,7 +360,7 @@ func authenticateToken(c *gin.Context, facade service.Facade, tokenStr string) {
 
 // AuthMiddleware authenticates REST requests from the Authorization header only.
 // Query-string access_token values are rejected so session JWTs are not logged.
-func AuthMiddleware(facade service.Facade) gin.HandlerFunc {
+func AuthMiddleware(facade service.Facade, sessions ...*authsession.Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if _, ok := c.GetQuery("access_token"); ok {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
@@ -292,13 +373,13 @@ func AuthMiddleware(facade service.Facade) gin.HandlerFunc {
 			abortMissingToken(c, "missing token")
 			return
 		}
-		authenticateToken(c, facade, tokenStr)
+		authenticateToken(c, facade, tokenStr, sessions...)
 	}
 }
 
 // WSAuthMiddleware authenticates WebSocket upgrades with a single-use ticket
 // or an Authorization Bearer token. Session JWTs in the query string are rejected.
-func WSAuthMiddleware(facade service.Facade, tickets *TicketStore) gin.HandlerFunc {
+func WSAuthMiddleware(facade service.Facade, tickets *TicketStore, sessions ...*authsession.Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if _, ok := c.GetQuery("access_token"); ok {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
@@ -339,7 +420,7 @@ func WSAuthMiddleware(facade service.Facade, tickets *TicketStore) gin.HandlerFu
 			abortMissingToken(c, "missing token")
 			return
 		}
-		authenticateToken(c, facade, tokenStr)
+		authenticateToken(c, facade, tokenStr, sessions...)
 	}
 }
 

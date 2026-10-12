@@ -128,6 +128,11 @@ type Character struct {
 	InCombat         bool   `bson:"inCombat" json:"inCombat"`
 	CombatInstanceID string `bson:"combatInstanceId,omitempty" json:"combatInstanceId,omitempty"`
 
+	// BonusAttack and BonusDefense are script grants added on top of gear.
+	// Zero leaves classic characters unchanged.
+	BonusAttack  int32 `bson:"bonusAttack,omitempty" json:"bonusAttack,omitempty"`
+	BonusDefense int32 `bson:"bonusDefense,omitempty" json:"bonusDefense,omitempty"`
+
 	// Respawn binding - room where player respawns on death
 	BoundRoomID string `bson:"boundRoomId,omitempty" json:"boundRoomId,omitempty"`
 

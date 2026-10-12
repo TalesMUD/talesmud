@@ -31,7 +31,11 @@ func (g *Game) updateSpawner(spawner *npc.NPCSpawner) {
 	// Count current alive instances
 	aliveCount := g.NPCManager.CountAliveForSpawner(spawner.ID)
 
-	if !spawnerShouldSpawn(aliveCount, spawner.InitialCount, spawner.MaxInstances, spawner.SpawnInterval, state.LastSpawnTime, time.Now()) {
+	now := time.Now()
+	if spawnerRespawnDelayed(spawner.RespawnDelay, state.LastDeathTime, now) {
+		return
+	}
+	if !spawnerShouldSpawn(aliveCount, spawner.InitialCount, spawner.MaxInstances, spawner.SpawnInterval, state.LastSpawnTime, now) {
 		return
 	}
 
@@ -75,4 +79,14 @@ func spawnerShouldSpawn(alive, initial, max int, interval time.Duration, lastSpa
 		return true
 	}
 	return now.Sub(lastSpawn) >= interval
+}
+
+// spawnerRespawnDelayed is true while a spawner with a RespawnDelay is still
+// inside that window after its last instance death. It never blocks a spawner
+// that has not lost an instance yet (server start fills InitialCount).
+func spawnerRespawnDelayed(delay time.Duration, lastDeath, now time.Time) bool {
+	if delay <= 0 || lastDeath.IsZero() {
+		return false
+	}
+	return now.Sub(lastDeath) < delay
 }

@@ -3,22 +3,26 @@ package handler
 import (
 	"math/rand"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	"github.com/talesmud/talesmud/pkg/contenthealth"
+	"github.com/talesmud/talesmud/pkg/entities/items"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
+	"github.com/talesmud/talesmud/pkg/inspect"
 	"github.com/talesmud/talesmud/pkg/repository"
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
-//RoomsHandler ...
+// RoomsHandler ...
 type RoomsHandler struct {
 	Service service.RoomsService
 	Facade  service.Facade
 }
 
-//GetRooms returns the list of item templates
+// GetRooms returns the list of item templates
 func (handler *RoomsHandler) GetRooms(c *gin.Context) {
 
 	var query repository.RoomsQuery
@@ -34,7 +38,72 @@ func (handler *RoomsHandler) GetRooms(c *gin.Context) {
 	}
 }
 
-//GetRoomByID returns a single room by ID
+// InspectRoom returns the static inspector for one content room.
+// An instance-copy id resolves to its template. Live rows stay on the live endpoints.
+func (handler *RoomsHandler) InspectRoom(c *gin.Context) {
+	id := strings.TrimSpace(c.Param("id"))
+	if id == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "room id is required"})
+		return
+	}
+	if handler.Facade == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "room inspect is unavailable"})
+		return
+	}
+	world, err := contenthealth.WorldFromFacade(handler.Facade)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	target := roomInspectTarget(world, id)
+	view, ok := inspect.Room(world.Graph(), target)
+	if !ok {
+		c.JSON(http.StatusNotFound, gin.H{"error": "room not found"})
+		return
+	}
+	if target != id {
+		view.RequestedID = id
+	}
+	nameRoomItems(&view, world.Items)
+	c.JSON(http.StatusOK, view)
+}
+
+func roomInspectTarget(world contenthealth.World, id string) string {
+	for _, room := range world.Rooms {
+		if room != nil && room.Entity != nil && room.ID == id {
+			if i := strings.LastIndex(id, "~"); i > 0 {
+				return id[:i]
+			}
+			return id
+		}
+	}
+	if i := strings.LastIndex(id, "~"); i > 0 {
+		return id[:i]
+	}
+	return id
+}
+
+func nameRoomItems(view *inspect.RoomView, list []*items.Item) {
+	names := map[string]string{}
+	for _, item := range list {
+		if item == nil || item.Entity == nil || item.ID == "" {
+			continue
+		}
+		names[item.ID] = item.Name
+	}
+	for i := range view.Items {
+		name, ok := names[view.Items[i].ID]
+		if !ok {
+			continue
+		}
+		if name != "" && name != view.Items[i].ID {
+			view.Items[i].Name = name
+		}
+		view.Items[i].Missing = false
+	}
+}
+
+// GetRoomByID returns a single room by ID
 func (handler *RoomsHandler) GetRoomByID(c *gin.Context) {
 	id := c.Param("id")
 
@@ -45,7 +114,7 @@ func (handler *RoomsHandler) GetRoomByID(c *gin.Context) {
 	}
 }
 
-//GetRoomOfTheDay returns the list of item templates
+// GetRoomOfTheDay returns the list of item templates
 func (handler *RoomsHandler) GetRoomOfTheDay(c *gin.Context) {
 
 	if rooms, err := handler.Service.FindAll(); err == nil {
@@ -60,7 +129,7 @@ func (handler *RoomsHandler) GetRoomOfTheDay(c *gin.Context) {
 	}
 }
 
-//GetRoomValueHelp returns the list of item templates
+// GetRoomValueHelp returns the list of item templates
 func (handler *RoomsHandler) GetRoomValueHelp(c *gin.Context) {
 
 	vh, _ := handler.Service.ValueHelp()
@@ -69,7 +138,7 @@ func (handler *RoomsHandler) GetRoomValueHelp(c *gin.Context) {
 
 }
 
-//PostRoom ... creates a new charactersheet
+// PostRoom ... creates a new charactersheet
 func (handler *RoomsHandler) PostRoom(c *gin.Context) {
 
 	var room rooms.Room
@@ -91,7 +160,7 @@ func (handler *RoomsHandler) PostRoom(c *gin.Context) {
 	}
 }
 
-//PutRoom ... Updates a room
+// PutRoom ... Updates a room
 func (handler *RoomsHandler) PutRoom(c *gin.Context) {
 
 	id := c.Param("id")
@@ -114,7 +183,7 @@ func (handler *RoomsHandler) PutRoom(c *gin.Context) {
 	}
 }
 
-//DeleteRoom ... Updates a room
+// DeleteRoom ... Updates a room
 func (handler *RoomsHandler) DeleteRoom(c *gin.Context) {
 
 	id := c.Param("id")

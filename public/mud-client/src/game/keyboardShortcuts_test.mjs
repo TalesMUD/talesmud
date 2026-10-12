@@ -27,6 +27,8 @@ assert.equal(topOpenPanel({ accountMenu: true, cheatSheet: true }), 'cheatSheet'
 assert.equal(topOpenPanel({ editMode: true, widgetFocus: true }), 'widgetFocus');
 assert.equal(topOpenPanel({}), '');
 assert.equal(topOpenPanel({ battleOutcome: true, inventory: true }), 'inventory');
+assert.equal(topOpenPanel({ pickup: true, inventory: true }), 'pickup');
+assert.equal(topOpenPanel({ pickup: true, settings: true }), 'settings');
 
 console.log('keyboardShortcuts_test ok');
 

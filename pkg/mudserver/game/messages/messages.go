@@ -22,11 +22,18 @@ type Message struct {
 	Character *characters.Character `json:"-"`
 
 	Data string `json:"data,omitempty"`
+
+	// NoticeGen stamps command replies for the text client. Zero on classic traffic.
+	NoticeGen uint64 `json:"-"`
 }
 
 // Reply o a message
 func (msg *Message) Reply(message string) MessageResponse {
-	return Reply(msg.FromUser.ID, message)
+	rsp := Reply(msg.FromUser.ID, message)
+	if msg != nil {
+		rsp.NoticeGen = msg.NoticeGen
+	}
+	return rsp
 }
 
 // NewMessage ... creates a new message

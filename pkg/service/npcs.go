@@ -118,6 +118,7 @@ func (srv *npcsService) SpawnFromTemplate(templateID, roomID string) (*npc.NPC, 
 	instance := &npc.NPC{
 		Entity:           entities.NewEntity(),
 		Name:             template.Name,
+		Tags:             append([]string(nil), template.Tags...),
 		Description:      template.Description,
 		Race:             template.Race,
 		Class:            template.Class,
@@ -134,7 +135,8 @@ func (srv *npcsService) SpawnFromTemplate(templateID, roomID string) (*npc.NPC, 
 		SpawnRoomID:  roomID,
 		RespawnTime:  template.RespawnTime,
 		WanderRadius: template.WanderRadius,
-		PatrolPath:   template.PatrolPath,
+		PatrolPath:   append([]string(nil), template.PatrolPath...),
+		Movement:     template.Movement.Clone(),
 
 		// Initial state
 		IsDead: false,

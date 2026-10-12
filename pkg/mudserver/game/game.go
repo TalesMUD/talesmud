@@ -3,6 +3,7 @@ package game
 import (
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -76,6 +77,11 @@ type Game struct {
 	aggroCh chan aggroFire
 	aggro   aggroBook
 
+	// jobs carries live-ops onto the command loop so they cannot race a player command.
+	// loopOn is set only after Run starts that loop. Call runs inline until then.
+	jobs   chan gameJob
+	loopOn atomic.Bool
+
 	//world *World
 }
 
@@ -106,6 +112,7 @@ func New(facade service.Facade) *Game {
 	g.aggro.pending = map[string]*aggroWatch{}
 	g.aggro.cooldown = map[string]time.Time{}
 	g.aggro.ch = g.aggroCh
+	g.jobs = make(chan gameJob, 32)
 
 	// Initialize NPC instance manager
 	g.NPCManager = NewNPCInstanceManager(facade)
@@ -166,6 +173,8 @@ func (g *Game) DispatchCommand(user *entities.User, text string) {
 		return
 	}
 	msg := m.NewMessage(user, text)
+	msg.NoticeGen = m.BeginNotice(user.ID)
+	defer m.EndNotice(user.ID)
 	g.attachCharacterToMessage(msg)
 	if !g.CommandProcessor.Process(g, msg) {
 		g.RoomProcessor.Process(g, msg)
@@ -216,7 +225,7 @@ func (g *Game) handleGameUpdates() {
 		case <-roomTicker.C:
 			g.handleRoomUpdates()
 		case <-npcTicker.C:
-			g.handleNPCUpdates()
+			_ = g.Call(func() { g.handleNPCUpdates() })
 		case <-spawnerTicker.C:
 			g.handleSpawnerUpdates()
 		case <-combatTicker.C:
@@ -245,9 +254,13 @@ func (g *Game) Run() {
 
 	go g.handleGameUpdates()
 
+	g.loopOn.Store(true)
 	go func() {
 		for {
 			select {
+			case job := <-g.jobs:
+				g.runJob(job)
+
 			case userJoined := <-g.OnUserJoined:
 				log.Debug("UserJoined channel received")
 				g.handleUserJoined(userJoined.User)
@@ -271,7 +284,7 @@ func (g *Game) Run() {
 					// only broadcast if global commandprocessor didnt process it
 					if !g.CommandProcessor.Process(g, message) {
 						// check room commands
-						if !g.RoomProcessor.Process(g, message) {
+						if !g.RoomProcessor.Process(g, message) && !c.BareSkill(g, message) {
 							// generic messages will be converted to plain OutgoingMessages (type message)
 							// and send to the room audience including the origin nickname or charactername
 							g.handleDefaultMessage(message)

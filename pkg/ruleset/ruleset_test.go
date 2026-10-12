@@ -190,4 +190,19 @@ resources:
 	if len(list) != 1 || list[0].Key != "gatherings" || list[0].Amount != 4 || list[0].Interval != 2*time.Hour {
 		t.Fatalf("%+v", list)
 	}
+	if ruleset.ResourceLabel("gatherings") != "" {
+		t.Fatal("missing label should stay empty")
+	}
+	if err := ruleset.LoadBytes([]byte(`
+resources:
+  gatherings:
+    allowance: 4
+    reset: calendar
+    label: Forest walks
+`)); err != nil {
+		t.Fatal(err)
+	}
+	if ruleset.ResourceLabel("gatherings") != "Forest walks" || ruleset.ResourceLabel("missing") != "" {
+		t.Fatalf("label = %q", ruleset.ResourceLabel("gatherings"))
+	}
 }

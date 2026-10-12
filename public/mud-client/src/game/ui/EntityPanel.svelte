@@ -232,6 +232,17 @@
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
   }
 
+  .aggro-mark {
+    font-size: 8px;
+    line-height: 1;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: center;
+    color: #f87171;
+    font-weight: 650;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+  }
+
   .entity-actions {
     display: flex;
     gap: 0.2em;
@@ -586,6 +597,9 @@
           <span class="entity-name" class:threat-grey={npc.threat === 'grey'} class:threat-green={npc.threat === 'green'} class:threat-yellow={npc.threat === 'yellow'} class:threat-orange={npc.threat === 'orange'} class:threat-red={npc.threat === 'red'} class:threat-skull={npc.threat === 'skull'}>
             {#if npc.threat === 'skull'}<span class="skull-mark" title="Skull" aria-hidden="true">☠</span>{/if}{npc.displayName}
           </span>
+          {#if npc.aggroOnSight}
+            <span class="aggro-mark">Aggressive</span>
+          {/if}
           {#if npc.level > 0}
             <span class="entity-meta">Lv {npc.level}</span>
           {/if}

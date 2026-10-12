@@ -1,0 +1,9 @@
+# Build and host the Creator UI. Game/API hosting remains in the Go server.
+[build]
+  base = "public/app"
+  command = "npm ci --include=dev --legacy-peer-deps && npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22.18.0"
+  NPM_FLAGS = "--include=dev --legacy-peer-deps"

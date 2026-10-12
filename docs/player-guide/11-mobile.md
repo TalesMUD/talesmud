@@ -78,6 +78,11 @@ The main interface uses tabs to switch between views:
 - Clear button spacing
 - Tap-friendly design
 
+**Pick up:**
+- A hand button on the room art, and a Pickup button on the action bar, open the same sheet
+- Tap a row to take that item. Pick up all sits in the footer when several items are on the ground
+- The sheet closes when the ground is clear. Tap outside or the X to dismiss it
+
 **Same Functions:**
 - Direction buttons
 - Standard commands

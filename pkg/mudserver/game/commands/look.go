@@ -100,6 +100,7 @@ func lookAtTarget(room *rooms.Room, game def.GameCtrl, message *messages.Message
 	if npcManager != nil {
 		npcInstance := npcManager.FindInstanceByNameInRoom(room.ID, target)
 		if npcInstance != nil {
+			engageNPC(game, message, npcInstance.ID, "")
 			result := lookAtNPC(npcInstance)
 			game.SendMessage() <- message.Reply(result)
 			return true
@@ -306,6 +307,9 @@ func lookAtNPC(npc *npc.NPC) string {
 	// Enemy indicator
 	if npc.IsEnemy() {
 		sb.WriteString("\n[HOSTILE]")
+	}
+	if npc.EnemyTrait != nil && npc.EnemyTrait.AggroOnSight {
+		sb.WriteString("\nAggressive")
 	}
 
 	// Merchant indicator

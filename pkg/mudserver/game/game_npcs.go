@@ -12,9 +12,11 @@ import (
 )
 
 type npcMovementEvent struct {
-	NPCID    string
-	FromRoom string
-	ToRoom   string
+	NPCID      string
+	FromRoom   string
+	ToRoom     string
+	LeaveText  string
+	ArriveText string
 }
 
 // handleNPCUpdates processes all NPC instances for state updates
@@ -83,29 +85,16 @@ func (g *Game) updateIdleNPC(inst *npc.NPC) (npcMovementEvent, bool) {
 	// This tick does not start fights.
 	g.triggerIdleDialog(inst)
 
-	if inst.WanderRadius > 0 {
-		if nextRoomID := g.nextWanderRoom(inst); nextRoomID != "" && nextRoomID != inst.CurrentRoomID {
-			return g.moveNPCInstance(inst, nextRoomID)
-		}
-	}
-
-	return npcMovementEvent{}, false
+	return g.updateTimedNPC(inst, time.Now())
 }
 
-// updatePatrolNPC handles patrol state behavior
+// updatePatrolNPC uses the same timed movement as idle NPCs.
 func (g *Game) updatePatrolNPC(inst *npc.NPC) (npcMovementEvent, bool) {
-	if len(inst.PatrolPath) == 0 {
-		// No patrol path, switch to idle
-		g.NPCManager.UpdateInstance(inst.Entity.ID, func(n *npc.NPC) {
-			n.State = "idle"
-		})
+	if inst.EffectiveMovement() == nil {
+		g.NPCManager.UpdateInstance(inst.ID, func(n *npc.NPC) { n.State = "idle" })
 		return npcMovementEvent{}, false
 	}
-
-	if nextRoomID := nextPatrolRoom(inst); nextRoomID != "" && nextRoomID != inst.CurrentRoomID {
-		return g.moveNPCInstance(inst, nextRoomID)
-	}
-	return npcMovementEvent{}, false
+	return g.updateTimedNPC(inst, time.Now())
 }
 
 func (g *Game) moveNPCInstance(inst *npc.NPC, roomID string) (npcMovementEvent, bool) {
@@ -116,11 +105,11 @@ func (g *Game) moveNPCInstance(inst *npc.NPC, roomID string) (npcMovementEvent, 
 	if fromRoomID == roomID {
 		return npcMovementEvent{}, false
 	}
-	if _, err := g.Facade.RoomsService().FindByID(roomID); err != nil {
-		log.WithError(err).WithFields(log.Fields{
-			"npc":  inst.Entity.ID,
-			"room": roomID,
-		}).Warn("NPC movement target room not found")
+	from, _ := g.Facade.RoomsService().FindByID(fromRoomID)
+	to, _ := g.Facade.RoomsService().FindByID(roomID)
+	exit, ok := npc.MovementExit(from, roomID)
+	cfg := inst.EffectiveMovement()
+	if cfg == nil || !ok || !npc.MovementRoomAllowed(cfg, to) {
 		return npcMovementEvent{}, false
 	}
 	if !g.NPCManager.MoveInstance(inst.Entity.ID, roomID) {
@@ -132,7 +121,17 @@ func (g *Game) moveNPCInstance(inst *npc.NPC, roomID string) (npcMovementEvent, 
 		"to":   roomID,
 	}).Debug("NPC moved")
 	g.NoteNPCAppeared(inst.Entity.ID, roomID)
-	return npcMovementEvent{NPCID: inst.Entity.ID, FromRoom: fromRoomID, ToRoom: roomID}, true
+	dir := exit.Name
+	leave, arrive := cfg.LeaveMessage, cfg.ArriveMessage
+	if leave == "" {
+		leave = "{name} heads {dir}."
+	}
+	if arrive == "" {
+		arrive = "{name} arrives from the {fromDir}."
+	}
+	return npcMovementEvent{NPCID: inst.Entity.ID, FromRoom: fromRoomID, ToRoom: roomID,
+		LeaveText:  movementLine(leave, inst.Name, dir, oppositeDirection(dir)),
+		ArriveText: movementLine(arrive, inst.Name, dir, oppositeDirection(dir))}, true
 }
 
 func nextPatrolRoom(inst *npc.NPC) string {
@@ -174,7 +173,7 @@ func nextWanderRoom(inst *npc.NPC, roomsByID map[string]*rooms.Room, spawnRoomID
 
 	candidates := visibleExitTargets(current)
 	for _, candidate := range candidates {
-		if candidate == inst.CurrentRoomID {
+		if candidate == inst.CurrentRoomID || !npc.MovementRoomAllowed(inst.EffectiveMovement(), roomsByID[candidate]) {
 			continue
 		}
 		if distanceWithinRadius(roomsByID, spawnRoomID, candidate, inst.WanderRadius) {
@@ -190,7 +189,7 @@ func visibleExitTargets(room *rooms.Room) []string {
 	}
 	targets := make([]string, 0, len(*room.Exits))
 	for _, exit := range *room.Exits {
-		if exit.Hidden || exit.Target == "" {
+		if !npc.MovementExitAllowed(exit) {
 			continue
 		}
 		targets = append(targets, exit.Target)
@@ -221,7 +220,7 @@ func distanceWithinRadius(roomsByID map[string]*rooms.Room, fromRoomID, toRoomID
 		}
 		room := roomsByID[item.roomID]
 		for _, target := range visibleExitTargets(room) {
-			if visited[target] {
+			if visited[target] || !npc.MovementRoomAllowed(&npc.Movement{Mode: "roam"}, roomsByID[target]) {
 				continue
 			}
 			if target == toRoomID {
@@ -298,6 +297,11 @@ func (g *Game) broadcastNPCMovements(movements []npcMovementEvent) {
 	}
 	roomIDs := make(map[string]bool)
 	for _, movement := range movements {
+		for roomID, line := range map[string]string{movement.FromRoom: movement.LeaveText, movement.ToRoom: movement.ArriveText} {
+			if roomID != "" && line != "" {
+				g.SendMessage() <- messages.MessageResponse{Audience: messages.MessageAudienceRoom, AudienceID: roomID, Type: messages.MessageTypeDefault, Username: "SYSTEM", Message: line}
+			}
+		}
 		if movement.FromRoom != "" {
 			roomIDs[movement.FromRoom] = true
 		}

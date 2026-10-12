@@ -31,12 +31,19 @@ func (command *CharacterCommand) Execute(game def.GameCtrl, message *m.Message) 
 	sb.WriteString(char.Name)
 	sb.WriteString(" ===\n")
 
-	// Basic info
-	sb.WriteString("Race: ")
-	sb.WriteString(char.Race.Name)
-	sb.WriteString(" | Class: ")
-	sb.WriteString(char.Class.Name)
-	sb.WriteString("\n")
+	// A content path name replaces the race and class line. Classic characters
+	// leave the flag unset and still see race and class.
+	if path := strings.TrimSpace(flagString(char.Flags, "path")); path != "" {
+		sb.WriteString("Path: ")
+		sb.WriteString(path)
+		sb.WriteString("\n")
+	} else {
+		sb.WriteString("Race: ")
+		sb.WriteString(char.Race.Name)
+		sb.WriteString(" | Class: ")
+		sb.WriteString(char.Class.Name)
+		sb.WriteString("\n")
+	}
 
 	sb.WriteString("Level: ")
 	sb.WriteString(itoa(int(char.Level)))
@@ -186,5 +193,17 @@ func formatAttrValue(val interface{}) string {
 		return v
 	default:
 		return "?"
+	}
+}
+
+func flagString(flags map[string]interface{}, key string) string {
+	if flags == nil {
+		return ""
+	}
+	switch v := flags[key].(type) {
+	case string:
+		return v
+	default:
+		return ""
 	}
 }

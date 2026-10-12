@@ -45,6 +45,7 @@ type Exit struct {
 	Description string                 `bson:"description,omitempty" json:"description,omitempty"`
 	Type        RoomExitType           `bson:"type,omitempty" json:"type,omitempty"`
 	Hidden      bool                   `bson:"hidden,omitempty" json:"hidden,omitempty"`
+	Locked      bool                   `bson:"locked,omitempty" json:"locked,omitempty"`
 	Instance    bool                   `bson:"instance,omitempty" json:"instance,omitempty"`
 	Target      string                 `bson:"target,omitempty" json:"target,omitempty"`
 	Params      map[string]interface{} `bson:"params,omitempty" json:"params"`
@@ -105,6 +106,10 @@ type Room struct {
 	// CanBind indicates if players can use /bind in this room to set their respawn point
 	// Typically true for inns, temples, safe houses
 	CanBind bool `bson:"canBind" json:"canBind"`
+
+	// NoAggro stops aggressive enemies from opening a fight in this room.
+	// Players can still attack. It is not the disconnect safe-room setting.
+	NoAggro bool `bson:"noAggro" json:"noAggro"`
 }
 
 // Rooms type

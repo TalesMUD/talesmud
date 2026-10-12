@@ -23,19 +23,21 @@ const (
 
 // Config is the process-wide mode. Zero value matches an unset classic server.
 type Config struct {
-	Presentation   string   `yaml:"presentation"`
-	Auth           string   `yaml:"auth"`
-	Port           string   `yaml:"port"`
-	SQLitePath     string   `yaml:"sqlite_path"`
-	WorldPack      string   `yaml:"world_pack"`
-	Timezone       string   `yaml:"timezone"`
-	Title          string   `yaml:"title"`
-	Subtitle       string   `yaml:"subtitle"`
-	TokenKey       string   `yaml:"token_key"`
-	TrustedProxies []string `yaml:"trusted_proxies"`
-	SessionSecret  string   `yaml:"session_secret"`
-	SecretPath     string   `yaml:"secret_path"`
-	OutboxPath     string   `yaml:"outbox_path"`
+	Presentation   string       `yaml:"presentation"`
+	Auth           string       `yaml:"auth"`
+	Port           string       `yaml:"port"`
+	SQLitePath     string       `yaml:"sqlite_path"`
+	WorldPack      string       `yaml:"world_pack"`
+	Timezone       string       `yaml:"timezone"`
+	Title          string       `yaml:"title"`
+	Subtitle       string       `yaml:"subtitle"`
+	TokenKey       string       `yaml:"token_key"`
+	TrustedProxies []string     `yaml:"trusted_proxies"`
+	SessionSecret  string       `yaml:"session_secret"`
+	SecretPath     string       `yaml:"secret_path"`
+	OutboxPath     string       `yaml:"outbox_path"`
+	SSH            SSHConfig    `yaml:"ssh"`
+	Guests         GuestsConfig `yaml:"guests"`
 }
 
 var (
@@ -160,6 +162,7 @@ func ApplyEnv() {
 	if v := strings.TrimSpace(os.Getenv("AUTH_OUTBOX_PATH")); v != "" {
 		cfg.OutboxPath = v
 	}
+	cfg.SSH = applySSHEnv(cfg.SSH)
 	current = normalize(cfg)
 }
 
@@ -257,5 +260,6 @@ func normalize(cfg Config) Config {
 	if cfg.OutboxPath == "" {
 		cfg.OutboxPath = "data/auth-outbox.log"
 	}
+	cfg.SSH = normalizeSSH(cfg.SSH)
 	return cfg
 }

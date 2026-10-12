@@ -141,6 +141,7 @@ func (srv *itemsService) CreateInstanceFromTemplate(templateID string) (*items.I
 	instance.Consumable = template.Consumable
 	instance.OnUseScriptID = template.OnUseScriptID
 	instance.OnHitScriptID = template.OnHitScriptID
+	instance.Effects = items.CopyEffects(template.Effects)
 	instance.Stackable = template.Stackable
 	instance.Quantity = template.Quantity
 	instance.MaxStack = template.MaxStack

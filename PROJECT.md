@@ -6,6 +6,17 @@ TalesMUD is a browser-based Multi-User Dungeon (MUD) framework built with Go and
 
 **Repository:** [github.com/TalesMUD/talesmud](https://github.com/TalesMUD/talesmud)
 
+## v0.5.0 Engine Update
+
+- SSH is an optional transport for classic MUD and 80×25 Door play. Configure `ssh.enabled`, listener and host-key paths, key/device/guest policy, timeouts and limits in game-mode YAML; [SSH access](docs/ssh-access.md) lists environment overrides and defaults. Public hosts and activation URLs belong to deployment configuration. Both browser pages use `VITE_AUTH0_DOMAIN`, `VITE_AUTH0_CLIENT_ID` and `VITE_AUTH0_AUDIENCE` at build time.
+- Classic clients can start and poll device login independently of the SSH listener. Browser `/activate` confirmation issues a 30-minute account session; `SESSION_SECRET` or the persistent game-mode key signs it. REST remains Bearer-only and WebSockets use single-use tickets or a Bearer header. See [device login](docs/device-login.md).
+- Creator search (Ctrl+K), where-used checks, content health, room/NPC inspectors, quest debugging, loot previews, loot-table/spawner pages, reachability and map overlays share the world reference index. The sidebar is collapsible; entity references use filterable modal selectors.
+- Audit history records content edits. World definitions and raw character creation require a creator role. Admin undo and live operations run through the game loop. Creator live views expose NPCs and instances; character details and mutations require admin access.
+- `tales -check sample-world` validates an imported pack without running a server. `-json` emits the report and `-fail-on error|warning` sets the failure threshold. See [content health](docs/content-health.md).
+- NPC routes/roaming are timed and validated, pause for player engagement, and default to stationary. Structured examine/effect lines, pickup controls, optional WebSocket hello, combat reattach snapshots, `noAggro` rooms and `aggroOnSight` markers improve client behavior. Boss spawners respect `respawnDelay` and restore full HP; Door trading uses catalog names and supports scripted combat.
+- Backend builds require Go 1.26 (toolchain `go1.26.9`); Docker uses Go 1.26. JWT verification stays on `github.com/golang-jwt/jwt/v5` with required Auth0 audience/issuer checks. Logs redact `access_token`, `ticket`, `code`, `activate`, `device_code` and `token` at query-key boundaries; terminal output strips control escapes and bidi controls.
+- Frontend builds use Node 22. `netlify.toml` builds the Creator UI in `public/app` from its lockfile and publishes Vite's `dist` directory; existing plugin peer ranges use `--legacy-peer-deps`. Game and API hosting stay in the Go process.
+
 ## Documentation Index
 
 - **Architecture:** `ARCHITECTURE.md`
@@ -475,8 +486,18 @@ GROQ_API_KEY=
 ## Building & Running
 
 ### Prerequisites
-- Go 1.25+
-- Node.js (for frontend build)
+- Go 1.26+
+- Node.js 22.18+ (for frontend build)
+
+### Verification
+
+```bash
+go build ./... && go vet ./... && go test ./...
+(cd public/app && npm test)
+(cd public/mud-client && node --test 'src/**/*_test.mjs')
+```
+
+The MUD client's existing canvas image test also needs a local `canvas` installation after `npm ci`: `npm install --no-save --package-lock=false --legacy-peer-deps canvas`. Frontend installs use `npm ci --include=dev --legacy-peer-deps` to accommodate the existing bundler plugin peer ranges. Tests use temporary databases and local listeners.
 
 ### Build Commands
 

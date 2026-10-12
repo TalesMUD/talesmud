@@ -6,6 +6,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities"
 	e "github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
+	"github.com/talesmud/talesmud/pkg/entities/items"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/entities/skills"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/balance"
@@ -30,6 +31,7 @@ type CharacterSelected struct {
 	MessageResponse
 	Character      *characters.Character `json:"character"`
 	XPForNextLevel int32                 `json:"xpForNextLevel"`
+	Guest          bool                  `json:"guest,omitempty"`
 }
 
 // NewUserQuit ... creates a new User Joined event
@@ -72,6 +74,9 @@ type MessageResponse struct {
 	Style  string `json:"style,omitempty"`  // "combatEvent"
 	Hook   string `json:"hook,omitempty"`   // onAggro | onLowHealth | onDeath | onFlee
 	Source string `json:"source,omitempty"` // display name of the NPC whose hook ran
+
+	// NoticeGen is the command that produced this line. Zero is not command output.
+	NoticeGen uint64 `json:"-"`
 }
 
 // GetAudience ,,,
@@ -92,6 +97,16 @@ func (m MessageResponse) GetOriginID() string {
 // GetMessage ,,,
 func (m MessageResponse) GetMessage() string {
 	return m.Message
+}
+
+// GetType is the client message type. Classic sockets already send Type as JSON.
+func (m MessageResponse) GetType() MessageType {
+	return m.Type
+}
+
+// GetNoticeGen is the command generation stamped on a reply. Zero is unset.
+func (m MessageResponse) GetNoticeGen() uint64 {
+	return m.NoticeGen
 }
 
 // MessageResponder ...
@@ -131,6 +146,7 @@ type RoomNPC struct {
 	CurrentHP     int32  `json:"currentHp,omitempty"`
 	MaxHP         int32  `json:"maxHp,omitempty"`
 	Level         int32  `json:"level,omitempty"`
+	AggroOnSight  bool   `json:"aggroOnSight,omitempty"`
 	Threat        string `json:"threat,omitempty"` // grey|green|yellow|orange|red|skull, enemies only
 	State         string `json:"state"`            // idle, patrol, combat, dead
 	Portrait      string `json:"portrait,omitempty"`
@@ -166,6 +182,7 @@ func roomNPCPayload(n util.RoomNPC, char *characters.Character) RoomNPC {
 		CurrentHP:     n.CurrentHP,
 		MaxHP:         n.MaxHP,
 		Level:         n.Level,
+		AggroOnSight:  n.AggroOnSight,
 		State:         n.State,
 		Portrait:      n.Portrait,
 		TemplateID:    n.TemplateID,
@@ -770,6 +787,10 @@ type CombatStatusMessage struct {
 	MessageResponse
 	Round      int             `json:"round,omitempty"`
 	Combatants []CombatantView `json:"combatants,omitempty"`
+	ActorID    string          `json:"actorId,omitempty"`
+	ActorName  string          `json:"actorName,omitempty"`
+	DeadlineMs int64           `json:"deadlineMs,omitempty"`
+	TargetID   string          `json:"targetId,omitempty"`
 	CombatQueueState
 }
 
@@ -840,6 +861,8 @@ type ShopStockItem struct {
 	MaxStack      int32                  `json:"maxStack,omitempty"`
 	BasePrice     int64                  `json:"basePrice,omitempty"`
 	Attributes    map[string]interface{} `json:"attributes,omitempty"`
+	// Effects are the display lines for script-driven behaviour (authored or fallback).
+	Effects []items.ItemEffect `json:"effects,omitempty"`
 }
 
 // ShopMessage opens/refreshes the merchant shop overlay.

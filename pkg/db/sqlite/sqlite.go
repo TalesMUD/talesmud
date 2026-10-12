@@ -87,6 +87,10 @@ func (c *Client) InitSchema() error {
 		`CREATE TABLE IF NOT EXISTS skills (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
 		`CREATE TABLE IF NOT EXISTS guest_statistics (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
 		`CREATE TABLE IF NOT EXISTS character_resources (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
+		`CREATE TABLE IF NOT EXISTS content_health (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
+		`CREATE TABLE IF NOT EXISTS audit_log (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
+		`CREATE TABLE IF NOT EXISTS ssh_keys (id TEXT PRIMARY KEY, data TEXT NOT NULL);`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_ssh_keys_fp ON ssh_keys(json_extract(data, '$.fingerprint'));`,
 	}
 	for _, stmt := range stmts {
 		if _, err := c.db.Exec(stmt); err != nil {
@@ -128,6 +132,10 @@ func (c *Client) createIndexes() error {
 		`CREATE INDEX IF NOT EXISTS idx_guest_stats_ref ON guest_statistics(json_extract(data, '$.guestRefID'));`,
 		`CREATE INDEX IF NOT EXISTS idx_guest_stats_date ON guest_statistics(json_extract(data, '$.date'));`,
 		`CREATE INDEX IF NOT EXISTS idx_guest_stats_started ON guest_statistics(json_extract(data, '$.startedAt'));`,
+
+		// Audit log: filtered by entity and listed newest first
+		`CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_log(json_extract(data, '$.entityType'), json_extract(data, '$.entityId'));`,
+		`CREATE INDEX IF NOT EXISTS idx_audit_time ON audit_log(json_extract(data, '$.time'));`,
 	}
 
 	for _, idx := range indexes {

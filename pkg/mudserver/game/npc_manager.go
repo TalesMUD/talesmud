@@ -16,6 +16,22 @@ type SpawnerState struct {
 	ActiveInstances []string
 	// LastSpawnTime is when the last instance was spawned
 	LastSpawnTime time.Time
+	// LastDeathTime is when an instance of this spawner last died (zero if none).
+	LastDeathTime time.Time
+}
+
+// noteSpawnerDeath records a death on the spawner state. Caller holds m.mu.
+func (state *SpawnerState) noteDeath(inst *npc.NPC) {
+	if state == nil {
+		return
+	}
+	at := time.Now()
+	if inst != nil && !inst.DeathTime.IsZero() {
+		at = inst.DeathTime
+	}
+	if at.After(state.LastDeathTime) {
+		state.LastDeathTime = at
+	}
 }
 
 // NPCInstanceManager manages in-memory NPC instances
@@ -29,6 +45,11 @@ type NPCInstanceManager struct {
 	// spawnerState tracks runtime state per spawner ID
 	spawnerState map[string]*SpawnerState
 
+	// notes is the last operator event for the live NPC list. Memory only.
+	notes map[string]string
+
+	engagements map[string]map[string]string // character -> session kind -> NPC id
+
 	facade service.Facade
 }
 
@@ -37,6 +58,7 @@ func NewNPCInstanceManager(facade service.Facade) *NPCInstanceManager {
 	return &NPCInstanceManager{
 		instances:    make(map[string]*npc.NPC),
 		spawnerState: make(map[string]*SpawnerState),
+		notes:        make(map[string]string),
 		facade:       facade,
 	}
 }
@@ -150,6 +172,11 @@ func (m *NPCInstanceManager) SpawnInstance(spawner *npc.NPCSpawner) (*npc.NPC, e
 		return nil, err
 	}
 
+	if spawner.Movement != nil {
+		instance.Movement = spawner.Movement.Clone()
+	}
+	m.initializeMovement(instance)
+
 	// Override respawn time if specified in spawner
 	if spawner.RespawnTimeOverride != nil {
 		instance.RespawnTime = *spawner.RespawnTimeOverride
@@ -182,6 +209,7 @@ func (m *NPCInstanceManager) SpawnInstanceDirect(templateID, roomID string) (*np
 		return nil, err
 	}
 
+	m.initializeMovement(instance)
 	m.mu.Lock()
 	m.instances[instance.Entity.ID] = instance
 	m.mu.Unlock()
@@ -205,7 +233,10 @@ func (m *NPCInstanceManager) RegisterExistingNPC(n *npc.NPC, roomID string) {
 
 	// Set the current room ID
 	n.CurrentRoomID = roomID
-	n.SpawnRoomID = roomID
+	if n.SpawnRoomID == "" {
+		n.SpawnRoomID = roomID
+	}
+	m.initializeMovement(n)
 
 	// Ensure NPC is in a valid state
 	if n.CurrentHitPoints <= 0 && !n.IsDead {
@@ -321,6 +352,9 @@ func (m *NPCInstanceManager) RespawnInstance(id string) bool {
 	inst.CurrentHitPoints = inst.MaxHitPoints
 	inst.State = "idle"
 	inst.CurrentRoomID = inst.SpawnRoomID
+	inst.NextMoveAt = time.Time{}
+	inst.PausedUntil = time.Time{}
+	inst.RouteDirection = 1
 	inst.Updated = time.Now()
 
 	log.WithFields(log.Fields{
@@ -337,12 +371,16 @@ func (m *NPCInstanceManager) RemoveInstance(id string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	inst := m.instances[id]
 	delete(m.instances, id)
 
 	// Remove from spawner state
 	for _, state := range m.spawnerState {
 		for i, instID := range state.ActiveInstances {
 			if instID == id {
+				if inst != nil && inst.IsDead {
+					state.noteDeath(inst)
+				}
 				state.ActiveInstances = append(state.ActiveInstances[:i], state.ActiveInstances[i+1:]...)
 				break
 			}
@@ -461,6 +499,9 @@ func (m *NPCInstanceManager) CleanupDeadFromSpawner(spawnerID string) int {
 		if inst != nil && !inst.IsDead {
 			alive = append(alive, id)
 		} else {
+			if inst != nil {
+				state.noteDeath(inst)
+			}
 			removed++
 		}
 	}

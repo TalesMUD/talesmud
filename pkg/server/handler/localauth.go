@@ -129,7 +129,7 @@ func (h *LocalAuthHandler) Me(c *gin.Context) {
 
 func writeAuthErr(c *gin.Context, err error) {
 	switch err {
-	case authlocal.ErrValidation, authlocal.ErrToken:
+	case authlocal.ErrValidation, authlocal.ErrUsername, authlocal.ErrEmail, authlocal.ErrPassword, authlocal.ErrToken:
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	case authlocal.ErrExists:
 		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})

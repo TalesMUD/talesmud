@@ -7,7 +7,7 @@
 *Build immersive text-based multiplayer adventures in any genre — fantasy, sci-fi, horror, and beyond*
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go)](https://golang.org/)
+[![Go Version](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go)](https://golang.org/)
 [![Svelte](https://img.shields.io/badge/Svelte-4.2-FF3E00?logo=svelte)](https://svelte.dev/)
 [![Live Demo](https://img.shields.io/badge/Demo-talesmud.io-success)](https://talesmud.io)
 
@@ -50,6 +50,14 @@ See the framework at **[talesmud.io](https://talesmud.io)**. A playable world is
 ---
 
 ## ✨ Key Features
+
+### New in v0.5.0
+
+- **SSH access** — Classic text MUD and 80×25 Door clients share the engine; optional device confirmation and linked SSH keys. See [SSH access](docs/ssh-access.md) and [device login](docs/device-login.md).
+- **Creator tools** — Ctrl+K search, references before deletion, content health checks, NPC/room inspectors, quest debugger, loot previews, spawner editors, map overlays, audit history and admin undo/live operations.
+- **NPC movement** — Timed routes and roaming with route validation and engagement holds; NPCs remain stationary unless configured.
+- **Game client** — Structured item inspection, readable effect lines, a pickup panel, optional protocol hello, and combat snapshots on reconnect. See [structured messages](docs/structured-messages.md).
+- **Engine fixes** — Safe rooms suppress automatic aggression, bosses respect respawn delays and reset HP, and Door supports catalog trading and scripted fights.
 
 ### 🎮 Complete RPG Framework
 
@@ -127,7 +135,7 @@ TalesMUD's **generic, reusable architecture** makes it perfect for any setting:
 
 ### 🚀 Modern Architecture
 
-- **Go 1.25** backend with Gin HTTP framework
+- **Go 1.26** backend with Gin HTTP framework
 - **Svelte 4** frontend with TailwindCSS
 - **SQLite** for persistence (simple deployment, no database server needed)
 - **WebSocket** real-time communication
@@ -141,8 +149,8 @@ TalesMUD's **generic, reusable architecture** makes it perfect for any setting:
 
 ### Prerequisites
 
-- **Go 1.25+** ([Download](https://golang.org/dl/))
-- **Node.js 18+** ([Download](https://nodejs.org/))
+- **Go 1.26+** ([Download](https://golang.org/dl/))
+- **Node.js 22.18+** ([Download](https://nodejs.org/))
 - **Make** (optional, for convenience commands)
 
 ### Installation
@@ -202,7 +210,7 @@ See [Configuration](#configuration-reference) for full details.
 ### Backend
 | Component | Technology |
 |-----------|------------|
-| Language | Go 1.25 |
+| Language | Go 1.26 |
 | HTTP Framework | Gin |
 | WebSocket | Gorilla WebSocket |
 | Database | SQLite (JSON document storage) |
@@ -215,7 +223,7 @@ See [Configuration](#configuration-reference) for full details.
 | Component | Technology |
 |-----------|------------|
 | Framework | Svelte 4.2 |
-| Build Tool | Vite 6 |
+| Build Tool | Vite 8 |
 | Styling | TailwindCSS 3.4 |
 | Terminal | xterm.js |
 | HTTP Client | Axios |

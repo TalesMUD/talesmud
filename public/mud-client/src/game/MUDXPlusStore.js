@@ -424,6 +424,11 @@ function sameGroundItems(a, b) {
     return e.id === o.id
       && (e.name || "") === (o.name || "")
       && !!e.noPickup === !!o.noPickup
+      && (e.type || "") === (o.type || "")
+      && (e.subType || "") === (o.subType || "")
+      && (e.quality || e.rarity || "") === (o.quality || o.rarity || "")
+      && !!e.unique === !!o.unique
+      && (e.effect || "") === (o.effect || "")
       && (e.quantity || e.count || 1) === (o.quantity || o.count || 1);
   });
 }
@@ -638,7 +643,8 @@ function createStore() {
             && !!p.hasDialog === !!n.hasDialog
             && (p.portrait || '') === (n.portrait || '')
             && (p.threat || '') === (n.threat || '')
-            && (p.level || 0) === (n.level || 0);
+            && (p.level || 0) === (n.level || 0)
+            && !!p.aggroOnSight === !!n.aggroOnSight;
         })) {
           return state;
         }
@@ -1055,6 +1061,17 @@ function createStore() {
           state.characterStats = { ...state.characterStats, inCombat: true, resting: false };
         }
         applyRosterSnapshots(state, msg?.combatants);
+        if (msg?.actorId !== undefined) {
+          state.combatTurn = {
+            actorId: msg.actorId || "",
+            actorName: msg.actorName || "",
+            round: msg.round || 0,
+            deadlineMs: msg.deadlineMs || 0,
+          };
+        }
+        if (msg?.targetId || !state.combatTargetId) {
+          state.combatTargetId = livingFocus(state.combatEnemies, msg?.targetId)?.id || null;
+        }
         applyCombatQueueFields(state, msg);
         return state;
       });

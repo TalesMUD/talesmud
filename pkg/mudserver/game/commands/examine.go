@@ -65,19 +65,41 @@ func (command *ExamineCommand) Execute(game def.GameCtrl, message *messages.Mess
 		if roomActionMatches(game, message) {
 			return false
 		}
+		if examineNPC(game, message, itemName) {
+			return true
+		}
 		game.SendMessage() <- message.Reply("You don't see a '" + itemName + "' here.")
 		return true
 	}
 
 	// Generate detailed item description
-	result := examineItem(item, message.Character.EquippedItems)
+	result := examineItem(item, message.Character.EquippedItems, scriptDisplayName(game))
 	game.SendMessage() <- message.Reply(result)
+	game.SendMessage() <- messages.NewExamineResult(message.FromUser.ID, item, scriptDisplayName(game))
 
 	return true
 }
 
+// examineNPC shows the same look text as "look <name>" when the target is an NPC here.
+func examineNPC(game def.GameCtrl, message *messages.Message, name string) bool {
+	if game == nil || message == nil || message.Character == nil || message.Character.CurrentRoomID == "" {
+		return false
+	}
+	mgr := game.GetNPCInstanceManager()
+	if mgr == nil {
+		return false
+	}
+	found := mgr.FindInstanceByNameInRoom(message.Character.CurrentRoomID, name)
+	if found == nil {
+		return false
+	}
+	engageNPC(game, message, found.ID, "")
+	game.SendMessage() <- message.Reply(lookAtNPC(found))
+	return true
+}
+
 // examineItem generates a detailed description of an item
-func examineItem(item *items.Item, equippedItems map[items.ItemSlot]*items.Item) string {
+func examineItem(item *items.Item, equippedItems map[items.ItemSlot]*items.Item, scriptName ...func(string) string) string {
 	var sb strings.Builder
 
 	// Header with quality color indicator
@@ -235,6 +257,18 @@ func examineItem(item *items.Item, equippedItems map[items.ItemSlot]*items.Item)
 			default:
 				sb.WriteString("?")
 			}
+			sb.WriteString("\n")
+		}
+	}
+
+	var lookup func(string) string
+	if len(scriptName) > 0 {
+		lookup = scriptName[0]
+	}
+	if effects := item.DisplayEffects(lookup); len(effects) > 0 {
+		sb.WriteString("\n--- Effects ---\n")
+		for _, eff := range effects {
+			sb.WriteString(items.FormatEffect(eff))
 			sb.WriteString("\n")
 		}
 	}

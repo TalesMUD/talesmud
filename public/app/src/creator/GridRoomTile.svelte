@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from "svelte";
+  import { layoutOverlayBadges } from "./badgeLayout.js";
 
   export let room;
   export let x;
@@ -10,6 +11,58 @@
   export let dragging = false;
   export let isTemporary = false;
   export let areaColor = "#888"; // Area color for border
+  /** "reachable", "instance", "unreachable", or "" to keep the area color. */
+  export let mark = "";
+  export let pinned = false;
+  /** overlayView() result: level band, badges, and the hover title. */
+  export let overlay = { levelBand: "", missingArt: false, badges: [], title: "" };
+  /** SVG user units per CSS pixel. Badges counter-scale so they stay ~12px. */
+  export let svgPerPx = 1;
+
+  const MARK_COLOR = {
+    reachable: "#16a34a",
+    instance: "#6366f1",
+    unreachable: "#ef4444",
+  };
+  const MARK_FILL = {
+    reachable: "#14532d",
+    instance: "#1e1b4b",
+    unreachable: "#450a0a",
+  };
+  const LEVEL_STROKE = {
+    "1": "#22d3ee",
+    "2": "#2dd4bf",
+    "3": "#fbbf24",
+    "4": "#fb923c",
+    "5": "#fb7185",
+    "6": "#c084fc",
+  };
+  const LEVEL_FILL = {
+    "1": "#083344",
+    "2": "#134e4a",
+    "3": "#422006",
+    "4": "#431407",
+    "5": "#4c0519",
+    "6": "#3b0764",
+  };
+  const BADGE_FILL = {
+    aggro: "#7f1d1d",
+    spawner: "#1e3a8a",
+    players: "#0c4a6e",
+    quest: "#713f12",
+    copies: "#4c1d95",
+    more: "#334155",
+  };
+
+  $: levelBand = overlay?.levelBand || "";
+  $: missingArt = !!overlay?.missingArt;
+  $: badges = overlay?.badges || [];
+  $: badgeLayout = layoutOverlayBadges(badges, { tileWidth: width, tileHeight: height, svgPerPx });
+  $: overlayTitle = overlay?.title || "";
+  $: bareMissing = missingArt && !mark && !levelBand;
+  $: tileStroke = MARK_COLOR[mark] || (bareMissing ? "#f59e0b" : LEVEL_STROKE[levelBand]) || areaColor;
+  $: tileFill = MARK_FILL[mark] || LEVEL_FILL[levelBand] || "#1a1a2a";
+  $: tileDash = mark === "unreachable" || bareMissing ? "5 3" : "none";
 
   const dispatch = createEventDispatcher();
 
@@ -115,6 +168,7 @@
   class="room-tile"
   class:selected
   class:dragging
+  class:pinned
   class:temporary={isTemporary}
   transform="translate({x}, {y})"
   on:mousedown={handleMouseDown}
@@ -123,6 +177,9 @@
   role="button"
   tabindex="0"
 >
+  {#if overlayTitle}
+    <title>{overlayTitle}</title>
+  {/if}
   <!-- Selection highlight / hover glow -->
   {#if selected}
     <rect
@@ -133,7 +190,7 @@
       rx="8"
       ry="8"
       class="selection-glow"
-      style="stroke: {areaColor}; filter: drop-shadow(0 0 6px {areaColor}66);"
+      style="stroke: {tileStroke}; filter: drop-shadow(0 0 6px {tileStroke}66);"
     />
   {/if}
 
@@ -146,8 +203,29 @@
     rx="6"
     ry="6"
     class="room-rect"
-    style="stroke: {areaColor}; fill: #1a1a2a;"
+    style="stroke: {tileStroke}; fill: {tileFill}; stroke-dasharray: {tileDash};"
   />
+
+  {#if mark && levelBand}
+    <rect
+      x={-width/2}
+      y={-height/2}
+      width="6"
+      height={height}
+      fill={LEVEL_STROKE[levelBand]}
+      class="level-bar"
+    />
+  {/if}
+  {#if missingArt && !bareMissing}
+    <rect
+      x={-width/2}
+      y={height/2 - 3}
+      width={width}
+      height="3"
+      fill="#f59e0b"
+      class="missing-art"
+    />
+  {/if}
 
   <!-- Room ID (top left, monospace) -->
   <text
@@ -200,12 +278,31 @@
         on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleExitMouseDown(e, direction); }}
         role="button"
         tabindex="0"
-        style={connected ? `fill: ${areaColor};` : ''}
+        style={connected ? `fill: ${tileStroke};` : ''}
       />
     {/each}
   {/if}
 
-  <!-- Portal badges for non-cardinal exits (bottom left) -->
+  <!-- Overlay badges, top right. Drawn in screen pixels, then counter-scaled. -->
+  {#if badgeLayout.badges.length > 0}
+    <g class="ov-badges" transform="translate({width / 2}, {-height / 2}) scale({badgeLayout.scale})">
+      {#each badgeLayout.badges as badge (badge.kind)}
+        <g class="ov-badge" transform="translate({badge.x}, {badge.y})">
+          <rect
+            x={-badge.width / 2}
+            y={-badge.height / 2}
+            width={badge.width}
+            height={badge.height}
+            rx={badge.height / 2}
+            fill={BADGE_FILL[badge.kind] || "#334155"}
+          />
+          <text y="0.5" text-anchor="middle" dominant-baseline="middle" class="ov-badge-text">{badge.text}</text>
+          <title>{badge.title}</title>
+        </g>
+      {/each}
+    </g>
+  {/if}
+
   {#if !isTemporary && specialExits.length > 0}
     {#each specialExits as exit, i}
       {@const badgeX = -width/2 + 16 + i * 22}
@@ -273,6 +370,10 @@
     fill: #252540;
   }
 
+  .room-tile.pinned .room-rect {
+    stroke-width: 3.5;
+  }
+
   .room-tile.dragging .room-rect {
     stroke-dasharray: 4 2;
     opacity: 0.85;
@@ -282,6 +383,19 @@
     fill: none;
     stroke-width: 2;
     stroke-opacity: 0.6;
+    pointer-events: none;
+  }
+
+  .level-bar,
+  .missing-art {
+    pointer-events: none;
+  }
+
+  .ov-badge-text {
+    fill: #f8fafc;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
     pointer-events: none;
   }
 

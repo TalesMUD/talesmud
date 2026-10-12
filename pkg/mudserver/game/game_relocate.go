@@ -70,6 +70,12 @@ func (g *Game) RelocateCharacter(char *characters.Character, userID, destRoomID 
 		g.sendMessage <- messages.NewRoomPresenceMessage(oldRoom, g)
 	}
 
+	// Leave was addressed to whoever the session map still had in the old room.
+	// Join and presence need this character listed in the destination.
+	if g.Sessions != nil {
+		g.Sessions.setRoom(char.ID, destRoomID)
+	}
+
 	enterRoom := messages.NewEnterRoomMessage(util.RoomWithCharacterReveals(dest, char), user, g, char)
 	enterRoom.AudienceID = user.ID
 	g.sendMessage <- enterRoom

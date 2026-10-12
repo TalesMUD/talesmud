@@ -3,6 +3,7 @@
 import { onMount } from "svelte";
 import { writable, get } from "svelte/store";
 import { overlayStore } from "./ui/overlayStore.js";
+import { examineResultToCard } from "./ui/parseExamineOverlay.js";
 import { getPlayerColor } from "./playerColors.js";
 import { markPlayersYou, parseRoomChatLine } from "./roomChat.js";
 import { parsePartyChatLine } from "./partyState.js";
@@ -206,6 +207,7 @@ function createClient(renderer, characterCreator, muxStore) {
 
     // Update store for UI overlay
     if (mux) {
+      if (mux.clearShop) mux.clearShop();
       mux.setDialog(msg.npcName, msg.npcText, msg.options || [], msg.conversationID || "");
     }
   };
@@ -371,6 +373,10 @@ function createClient(renderer, characterCreator, muxStore) {
         decisionDeadlineMs: msg.decisionDeadlineMs || 0,
         round: msg.round || 0,
         combatants: msg.combatants || [],
+        actorId: msg.actorId,
+        actorName: msg.actorName,
+        deadlineMs: msg.deadlineMs,
+        targetId: msg.targetId,
       });
     } else if (mux) {
       mux.setGameContext({ inCombat: true });
@@ -526,6 +532,14 @@ function createClient(renderer, characterCreator, muxStore) {
         objectives: msg.objectives || [],
       });
     }
+  };
+
+  // Structured item inspect companion — prefer over prose-parsed examine cards.
+  // Prose still prints via the default message path; NPC inspect never sends this.
+  messageHandlers["examineResult"] = (msg) => {
+    const examine = examineResultToCard(msg);
+    if (!examine) return;
+    overlayStore.pushMessage({ kind: 'examine', examine });
   };
 
   messageHandlers["questAbandoned"] = (msg) => {

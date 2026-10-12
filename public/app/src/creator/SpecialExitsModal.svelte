@@ -3,6 +3,7 @@
   import { isCardinalDirection } from "./WorldEditorStore.js";
   import EntitySelectButton from "./EntitySelectButton.svelte";
   import { roomColumns } from "./tableColumns.js";
+  import ConfirmDialog from "./ConfirmDialog.svelte";
 
   export let open = false;
   export let exits = [];
@@ -12,6 +13,8 @@
 
   // Local copy for editing
   let localExits = [];
+  let confirmOpen = false;
+  let pendingExitIndex = -1;
 
   // Sync local exits when modal opens
   $: if (open) {
@@ -26,7 +29,7 @@
 
   const handleKey = (event) => {
     if (!open) return;
-    if (event.key === "Escape") {
+    if (event.key === "Escape" && !confirmOpen) {
       close();
     }
   };
@@ -44,8 +47,22 @@
     ];
   }
 
-  function removeExit(index) {
+  function askRemoveExit(index) {
+    pendingExitIndex = index;
+    confirmOpen = true;
+  }
+
+  function confirmRemoveExit() {
+    const index = pendingExitIndex;
+    confirmOpen = false;
+    pendingExitIndex = -1;
+    if (index < 0) return;
     localExits = localExits.filter((_, i) => i !== index);
+  }
+
+  function cancelRemoveExit() {
+    confirmOpen = false;
+    pendingExitIndex = -1;
   }
 
   function updateExit(index, field, value) {
@@ -160,7 +177,7 @@
                 <button
                   class="remove-btn"
                   type="button"
-                  on:click={() => removeExit(index)}
+                  on:click={() => askRemoveExit(index)}
                   title="Remove exit"
                 >
                   <span class="material-symbols-outlined">delete</span>
@@ -184,6 +201,16 @@
     </div>
   </div>
 {/if}
+
+<ConfirmDialog
+  open={confirmOpen}
+  entityType="special exit"
+  entityName={localExits[pendingExitIndex]?.name || "exit"}
+  entityId={localExits[pendingExitIndex]?.target || ""}
+  detail="Removes this exit from the room. Save the room to keep the change."
+  on:confirm={confirmRemoveExit}
+  on:cancel={cancelRemoveExit}
+/>
 
 <style>
   .modal-backdrop {

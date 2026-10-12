@@ -19,6 +19,10 @@ type ServerSettings struct {
 	// conventional sample id R0001 only when that room exists, and never
 	// an arbitrary rooms[0]. Packs should set this to their own start room.
 	StartRoomID string `json:"startRoomID"`
+
+	// MutedHealthRuleIDs are content-health rules whose hits are counted
+	// separately and do not fail a check.
+	MutedHealthRuleIDs []string `json:"mutedHealthRuleIDs,omitempty"`
 }
 
 // NewDefaultServerSettings returns settings with default values.

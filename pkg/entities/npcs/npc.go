@@ -14,6 +14,7 @@ type NPC struct {
 	traits.BelongsUser `bson:",inline"` // optionally, e.g. a bot could belong to a user
 	traits.CurrentRoom `bson:",inline"`
 
+	Tags        []string         `bson:"tags,omitempty" json:"tags,omitempty"`
 	Name        string           `bson:"name" json:"name"`
 	Description string           `bson:"description" json:"description"`
 	Race        characters.Race  `bson:"race,omitempty" json:"race,omitempty"`
@@ -41,6 +42,11 @@ type NPC struct {
 	WanderRadius int `bson:"wanderRadius,omitempty" json:"wanderRadius,omitempty"`
 	// PatrolPath is an ordered list of room IDs for patrol behavior
 	PatrolPath []string `bson:"patrolPath,omitempty" json:"patrolPath,omitempty"`
+	// Movement configures timed routes or roaming. Runtime clocks are memory-only.
+	Movement       *Movement `bson:"movement,omitempty" json:"movement,omitempty"`
+	NextMoveAt     time.Time `bson:"-" json:"-"`
+	PausedUntil    time.Time `bson:"-" json:"-"`
+	RouteDirection int       `bson:"-" json:"-"`
 
 	// State Tracking
 	// IsDead indicates the NPC is currently dead and awaiting respawn

@@ -19,5 +19,7 @@ type Factory interface {
 	QuestProgress() QuestProgressRepository
 	Skills() SkillsRepository
 	GuestStats() GuestStatsRepository
+	ContentHealth() ContentHealthRepository
+	Audit() AuditRepository
 	Close() error
 }
