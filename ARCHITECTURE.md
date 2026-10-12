@@ -290,6 +290,8 @@ receiveMessages() routes by Audience
 
 Character selection, room movement, and disconnect cleanup also emit `roomPresence` messages. These are silent room-scoped WebSocket payloads that refresh the client player list without re-rendering the full room description.
 
+`enterRoom` and `roomUpdate` item rows stay additive. They still send `id`, `name`, `noPickup`, and `copyOnPickup`. Optional `type`, `subType`, `quality`, `unique`, `quantity`, and `effect` are omitted when empty. `effect` is one line from `items.FormatEffect`, the same helper as `examineResult`, or `Heals N HP` when the item only restores health.
+
 ### Game Engine (`pkg/mudserver/game/`)
 
 The game engine contains the core game loop, command processing, and state management.

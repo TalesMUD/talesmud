@@ -424,6 +424,11 @@ function sameGroundItems(a, b) {
     return e.id === o.id
       && (e.name || "") === (o.name || "")
       && !!e.noPickup === !!o.noPickup
+      && (e.type || "") === (o.type || "")
+      && (e.subType || "") === (o.subType || "")
+      && (e.quality || e.rarity || "") === (o.quality || o.rarity || "")
+      && !!e.unique === !!o.unique
+      && (e.effect || "") === (o.effect || "")
       && (e.quantity || e.count || 1) === (o.quantity || o.count || 1);
   });
 }

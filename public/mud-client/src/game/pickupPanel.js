@@ -20,13 +20,22 @@ export function shouldClosePickup(items) {
   return pickupEntryCount(items) === 0;
 }
 
+function hasCurrencyTag(item) {
+  const tags = item && item.tags;
+  if (!Array.isArray(tags)) return false;
+  return tags.some((tag) => String(tag || '').trim().toLowerCase() === 'currency');
+}
+
 /**
- * Currency from the payload type, or from a coin name when the room list
- * does not carry type. Ordinary names that merely contain those letters do not match.
+ * Currency from type or a currency tag. A coin name matches only when the
+ * payload has no type at all. Ordinary names that merely contain those letters do not match.
  */
 export function isCurrencyItem(item) {
   if (!item) return false;
-  if (String(item.type || '').trim().toLowerCase() === 'currency') return true;
+  const type = String(item.type || '').trim().toLowerCase();
+  if (type === 'currency') return true;
+  if (hasCurrencyTag(item)) return true;
+  if (type) return false;
   const name = String(item.name || '').trim().toLowerCase();
   if (!name) return false;
   if (/\b(silver|gold|copper|platinum)\s+marks?\b/.test(name)) return true;
@@ -62,13 +71,18 @@ function healText(item) {
   return `Heals ${n} HP`;
 }
 
-/** Short type or effect line. Empty when the payload has neither. */
+/** Short type · effect line. The server effect wins; older payloads still derive one. */
 export function groundItemHint(item) {
   if (!item) return '';
   const parts = [];
   let typeLabel = titleCaseType(item.type);
   if (!typeLabel && isCurrencyItem(item)) typeLabel = 'Currency';
   if (typeLabel) parts.push(typeLabel);
+  const effect = String(item.effect || '').trim();
+  if (effect) {
+    if (effect !== typeLabel) parts.push(effect);
+    return parts.join(' · ');
+  }
   const heal = healText(item);
   if (heal) {
     parts.push(heal);

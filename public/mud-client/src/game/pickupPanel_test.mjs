@@ -30,6 +30,11 @@ assert.equal(isCurrencyItem({ name: 'Silver Mark' }), true);
 assert.equal(isCurrencyItem({ name: 'gold' }), true);
 assert.equal(isCurrencyItem({ name: 'Gold Coin' }), true);
 assert.equal(isCurrencyItem({ type: 'currency', name: 'Old Token' }), true);
+assert.equal(isCurrencyItem({ type: 'currency', name: 'Copper Bits' }), true);
+assert.equal(isCurrencyItem({ tags: ['currency'], name: 'Copper Bits' }), true);
+assert.equal(isCurrencyItem({ name: 'Copper Bits' }), false);
+assert.equal(isCurrencyItem({ type: 'weapon', name: 'Gold Coin' }), false);
+assert.equal(isCurrencyItem({ type: 'collectible', name: 'Corroded Coins' }), false);
 assert.equal(isCurrencyItem({ name: 'Thornback Claw' }), false);
 assert.equal(isCurrencyItem({ name: 'Golden Thorn' }), false);
 assert.equal(isCurrencyItem({ name: 'Marigold' }), false);
@@ -44,6 +49,14 @@ assert.equal(groundItemHint({ name: 'Silver Mark' }), 'Currency');
 assert.equal(
   groundItemHint({ name: 'Fang', type: 'weapon', effects: [{ trigger: 'onHit', text: 'Bleeds' }] }),
   'Weapon · Bleeds'
+);
+assert.equal(
+  groundItemHint({ name: 'Fang', type: 'weapon', effect: 'On hit — Burn: 2 damage.' }),
+  'Weapon · On hit — Burn: 2 damage.'
+);
+assert.equal(
+  groundItemHint({ name: 'Weak Health Potion', type: 'consumable', effect: 'Heals 25 HP', attributes: { healthRestore: 99 } }),
+  'Consumable · Heals 25 HP'
 );
 
 const rows = groupGroundItems(ground);
@@ -65,6 +78,7 @@ assert.equal(rows[1].hint, 'Consumable · Heals 25 HP');
 assert.equal(rows[1].rarity, 'normal');
 assert.equal(rows[2].hint, 'Material');
 assert.equal(rows[3].rarity, 'unique');
+assert.equal(groupGroundItems([{ id: 'mantle', name: 'Mire Mantle', type: 'armor', quality: 'rare' }])[0].rarity, 'rare');
 assert.equal(rows[3].unique, true);
 assert.equal(rows[4].count, 3);
 assert.equal(rows[4].ids.length, 1);
