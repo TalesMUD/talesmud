@@ -9,7 +9,8 @@ type SessionHook interface {
 	OnConnect(user *entities.User, send func(any))
 	OnInput(user *entities.User, text string, send func(any)) bool
 	OnDisconnect(user *entities.User)
-	// OnNotice records one player-visible line and redraws. Callers may
-	// invoke it off the message-drain goroutine.
-	OnNotice(user *entities.User, text string, send func(any))
+	// OnNotice records one player-visible line and redraws. kind is the
+	// message type. gen is the command generation, or zero when the line
+	// is not command output. Callers may invoke it off the message-drain goroutine.
+	OnNotice(user *entities.User, text, kind string, gen uint64, send func(any))
 }

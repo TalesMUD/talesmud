@@ -2,7 +2,7 @@
 
 **Purpose**: This document catalogs ALL core systems, data structures, features, and APIs available in TalesMUD. It is designed to provide complete context for AI agents reworking game content to leverage the latest capabilities.
 
-**Last Updated**: 2026-06-18
+**Last Updated**: 2026-10-12
 
 ---
 
@@ -25,6 +25,15 @@
 15. [Game Client Tab Container Widget](#game-client-tab-container-widget)
 
 ---
+
+## v0.5.0 Capabilities and Authoring
+
+- **NPC movement:** `NPC.Tags` and optional `movement` are shared with templates and spawner overrides. `mode` is `route` or `roam`; `route`, `loop` (`loop`/`pingpong`), `zones`, `rooms`, `intervalSeconds`, `jitterSeconds`, `pauseOnEngageSeconds`, `leaveMessage` and `arriveMessage` configure it. Default interval is 90 seconds and engagement hold is 120 seconds. Movement clocks/direction are memory-only. Legacy patrol paths and wander radii still work; absent movement leaves an NPC stationary. Validate walkable routes; hidden, locked, teleport and instance exits and `noNPC`/`noWander` rooms are excluded.
+- **Rooms and spawners:** Room `noAggro` suppresses automatic attack on arrival. Room NPC payloads include `aggroOnSight` for aggressive labels. Spawner `respawnDelay` controls boss reappearance and respawn restores full HP.
+- **Item effects:** `effects` contains `{trigger, name, text}` entries (`onHit`, `onEquip` or `onUse`; custom triggers are displayed as authored). Author player-readable effect lines; missing lines fall back to the linked script's display name and generic effect text. Inventory copies backfill template effect data; examine, shop and item cards show the same lines. These descriptions do not execute scripts.
+- **Protocol and character state:** Item examine sends a structured `examineResult` payload alongside compatible text. Optional `hello` advertises protocol version/capabilities. Combat reattach restores the roster, actor, target, deadline and queued action; selected-character payloads mark guest identity. See [structured messages](docs/structured-messages.md).
+- **Creator workflow:** Search with Ctrl+K; review references before deletion. Content health and `tales -check` validate reachability, entity references, quests and movement. Room/NPC inspectors, quest debugger, deterministic loot previews, loot-table/spawner editors, map overlays and live NPC/instance views share this data. Admins can inspect live characters, run operations and undo audited edits through the game loop. Entity IDs use `EntitySelectButton` and its filterable modal.
+- **Access and security:** Optional SSH supports classic text play and 80×25 Door play with device confirmation, linked keys, guest limits and sanitized terminal output. Public classic device login issues expiring, revocable account sessions via [device login](docs/device-login.md). Auth0 requires audience and issuer; HTTP Bearer auth and one-use WebSocket tickets remain the browser contract. Door now supports catalog buy/sell, display names and scripted fights.
 
 ## Data Structures (Entities)
 
@@ -917,9 +926,9 @@ difficulty_multipliers:
     attack: 1.5
     defense: 2.0
   hard:
-    hp: 1.25
+    hp: 1.26
     attack: 1.18
-    defense: 1.25
+    defense: 1.26
   boss:
     hp: 2.0
     attack: 1.5

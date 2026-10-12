@@ -1,11 +1,15 @@
 import axios from "axios";
 import { backend } from "./base.js";
 
-function getScriptTypes(cb, errorCb) {
+function getScriptTypes(token, cb, errorCb) {
   axios
-    .get(`${backend}/script-types`)
+    .get(`${backend}/script-types`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
     .then((result) => cb(result.data))
-    .catch((err) => errorCb(err));
+    .catch((err) => {
+      if (typeof errorCb === "function") errorCb(err);
+    });
 }
 
 function getScript(token, id, cb, errorCb) {

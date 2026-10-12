@@ -62,6 +62,7 @@ func (command *TalkCommand) Execute(game def.GameCtrl, message *messages.Message
 		return true
 	}
 
+	engageNPC(game, message, npc.ID, "")
 	// Track quest progress for talking to NPC (deliver objectives)
 	NotifyQuestTalkToNPC(game, message.Character.ID, message.FromUser.ID, npc)
 
@@ -122,8 +123,11 @@ func (command *TalkCommand) Execute(game def.GameCtrl, message *messages.Message
 		return true
 	}
 
-	// Set context for template rendering
+	// Talking again starts the dialog over at its start node instead of resuming
+	// wherever the last conversation stopped.
 	conv.DialogID = npc.DialogID
+	conv.CurrentNodeID = "main"
+	// Set context for template rendering
 	conv.SetContext("PLAYER", message.Character.Name)
 	conv.SetContext("NPC", npc.Name)
 	game.GetFacade().ConversationsService().Update(conv.ID, conv)
@@ -283,6 +287,7 @@ func sendQuestOnlyDialog(game def.GameCtrl, message *messages.Message, npcName s
 		conv.ID,
 	)
 
+	engageNPC(game, message, conv.TargetID, "dialog")
 	game.SendMessage() <- dialogMsg
 }
 
@@ -305,29 +310,9 @@ func sendDialogMessage(game def.GameCtrl, message *messages.Message, npcName str
 	// Render the NPC text with context
 	npcText := currentNode.Render(dialogState)
 
-	// Get filtered options
+	// Authored options first, then generated quest options (same order DialogSelectCommand uses)
 	filteredOptions := game.GetFacade().ConversationsService().GetFilteredOptions(conv, currentNode)
-
-	// Convert to DialogOption format
-	options := make([]messages.DialogOption, 0)
-	for i, opt := range filteredOptions {
-		optText := opt.Text
-		if optText == "" {
-			optText = opt.RenderPlain(dialogState)
-		}
-		options = append(options, messages.DialogOption{
-			Index: i + 1, // 1-based index
-			Text:  optText,
-		})
-	}
-
-	// Inject quest options at the end
-	for _, qo := range questOptions {
-		options = append(options, messages.DialogOption{
-			Index: len(options) + 1,
-			Text:  qo.text,
-		})
-	}
+	options := buildDialogOptions(filteredOptions, dialogState, questOptionsForNode(filteredOptions, questOptions))
 
 	// Send dialog message
 	dialogMsg := messages.NewDialogMessage(
@@ -338,5 +323,45 @@ func sendDialogMessage(game def.GameCtrl, message *messages.Message, npcName str
 		conv.ID,
 	)
 
+	engageNPC(game, message, conv.TargetID, "dialog")
 	game.SendMessage() <- dialogMsg
+}
+
+// questOptionsForNode drops a generated quest option when the node already has
+// an authored option for the same quest and action, so a dialog that scripts its
+// own accept or turn-in line does not list it twice.
+func questOptionsForNode(nodeOptions []*dialogs.Dialog, questOptions []questDialogOption) []questDialogOption {
+	if len(questOptions) == 0 {
+		return nil
+	}
+	authored := map[string]bool{}
+	for _, opt := range nodeOptions {
+		if opt != nil && opt.QuestID != "" && opt.Action != "" {
+			authored[opt.QuestID+"|"+opt.Action] = true
+		}
+	}
+	out := make([]questDialogOption, 0, len(questOptions))
+	for _, qo := range questOptions {
+		if authored[qo.questID+"|"+qo.action] {
+			continue
+		}
+		out = append(out, qo)
+	}
+	return out
+}
+
+// buildDialogOptions numbers authored options 1..n and appends quest options after them.
+func buildDialogOptions(nodeOptions []*dialogs.Dialog, state *dialogs.DialogState, questOptions []questDialogOption) []messages.DialogOption {
+	options := make([]messages.DialogOption, 0, len(nodeOptions)+len(questOptions))
+	for _, opt := range nodeOptions {
+		text := opt.Text
+		if text == "" {
+			text = opt.RenderPlain(state)
+		}
+		options = append(options, messages.DialogOption{Index: len(options) + 1, Text: text})
+	}
+	for _, qo := range questOptions {
+		options = append(options, messages.DialogOption{Index: len(options) + 1, Text: qo.text})
+	}
+	return options
 }

@@ -1,12 +1,15 @@
 package service
 
 import (
+	"errors"
 	"math/rand"
 	"strings"
 
 	"github.com/talesmud/talesmud/pkg/entities/items"
 	r "github.com/talesmud/talesmud/pkg/repository"
 )
+
+var errLootTableNotFound = errors.New("entity not found")
 
 // LootRollContext gates boss-only and unique entries.
 // An empty context matches RollLoot: nothing is boss-only blocked, and ownership is not checked.
@@ -50,6 +53,9 @@ type LootTablesService interface {
 
 	// RollLootFromTableInContext is RollLootFromTable with boss and ownership gates.
 	RollLootFromTableInContext(table *items.LootTable, playerLevel int32, baseGold int64, ctx LootRollContext) (*LootDropResult, error)
+
+	// PreviewRolls counts drop frequency. It does not create items or write.
+	PreviewRolls(tableID string, n int, seed int64, playerLevel int32, boss bool) (*LootPreview, error)
 }
 
 type lootTablesService struct {
@@ -206,6 +212,31 @@ func (srv *lootTablesService) recordDrop(result *LootDropResult, item *items.Ite
 	if strings.EqualFold(strings.TrimSpace(entry.Rarity), "unique") {
 		result.RareUnique = append(result.RareUnique, item)
 	}
+}
+
+// PreviewRolls implements LootTablesService.PreviewRolls.
+// Template names are read once. Item instances are not created.
+func (srv *lootTablesService) PreviewRolls(tableID string, n int, seed int64, playerLevel int32, boss bool) (*LootPreview, error) {
+	table, err := srv.FindByID(tableID)
+	if err != nil {
+		return nil, err
+	}
+	if table == nil {
+		return nil, errLootTableNotFound
+	}
+	preview := PreviewLoot(table, n, seed, playerLevel, boss, srv.templateInfo)
+	return &preview, nil
+}
+
+func (srv *lootTablesService) templateInfo(templateID string) (string, bool) {
+	if srv == nil || srv.itemsService == nil || templateID == "" {
+		return "", false
+	}
+	tpl, err := srv.itemsService.FindByID(templateID)
+	if err != nil || tpl == nil {
+		return "", false
+	}
+	return tpl.Name, tpl.Unique
 }
 
 func (srv *lootTablesService) stampUnique(item *items.Item, entry items.LootEntry) {

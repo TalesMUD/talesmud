@@ -90,6 +90,29 @@ function getWorldValidation(token, cb, errorCb) {
     .catch((err) => errorCb(err));
 }
 
+function getWorldReachabilityAsync(token, from) {
+  const params = {};
+  if (from) params.from = from;
+  return axios
+    .get(`${backend}/world/reachability`, {
+      params,
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    .then((result) => result.data);
+}
+
+function getWorldOverlaysAsync(token) {
+  return axios
+    .get(`${backend}/world/overlays`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    .then((result) => result.data);
+}
+
 function getWorldValidationAsync(token) {
   return axios
     .get(`${backend}/world/validation`, {
@@ -109,4 +132,6 @@ export {
   batchUpdateCoordsAsync,
   getWorldValidation,
   getWorldValidationAsync,
+  getWorldReachabilityAsync,
+  getWorldOverlaysAsync,
 };

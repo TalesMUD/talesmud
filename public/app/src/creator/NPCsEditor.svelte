@@ -4,7 +4,9 @@
   import CRUDEditor from "./CRUDEditor.svelte";
   import { createStore } from "./CRUDEditorStore.js";
   import MerchantPreviewModal from "./MerchantPreviewModal.svelte";
+  import EnemyTraitPanel from "./EnemyTraitPanel.svelte";
   import EntitySelectButton from "./EntitySelectButton.svelte";
+  import NPCInspector from "./NPCInspector.svelte";
   import { getAuth } from "../auth.js";
 
   import {
@@ -16,8 +18,13 @@
   } from "../api/npcs.js";
   import { getDialogs } from "../api/dialogs.js";
   import { getRoomsValueHelp } from "../api/rooms.js";
+  import { getScripts } from "../api/scripts.js";
+  import { getItemTemplates } from "../api/items.js";
+  import { getLootTables } from "../api/loottables.js";
+  import { getEnemyScaling } from "../api/balance.js";
   import { npcColumns, dialogColumns, roomColumns } from "./tableColumns.js";
   import { knownRaces, knownClasses } from "./fieldSuggestions.js";
+  import { wantsInspector } from "./islandLinks.js";
   import { previewMerchant } from "../api/previews.js";
 
   // Clone columns so we can populate dynamic dropdown options
@@ -37,6 +44,11 @@
   const store = createStore();
   let hasLoadedDialogs = false;
   let hasLoadedRooms = false;
+  let hasLoadedEnemyRefs = false;
+  let scripts = [];
+  let lootTables = [];
+  let itemTemplates = [];
+  let enemyScaling = null;
   let showMerchantPreview = false;
   let merchantPreview = null;
 
@@ -67,37 +79,6 @@
     { id: "commoner", name: "Commoner", description: "Simple folk" },
   ];
 
-  // CreatureType for enemies - what the creature fundamentally IS
-  const creatureTypes = [
-    { id: "beast", name: "Beast", description: "Animals, insects, natural creatures" },
-    { id: "humanoid", name: "Humanoid", description: "Goblins, orcs, bandits - uses Race/Class" },
-    { id: "undead", name: "Undead", description: "Skeletons, zombies, ghosts" },
-    { id: "elemental", name: "Elemental", description: "Fire, water, earth, air beings" },
-    { id: "construct", name: "Construct", description: "Golems, animated objects" },
-    { id: "demon", name: "Demon", description: "Demons, devils, otherworldly beings" },
-    { id: "dragon", name: "Dragon", description: "Dragons and dragonkin" },
-    { id: "aberration", name: "Aberration", description: "Unnatural, eldritch creatures" },
-  ];
-
-  // CombatStyle for enemies - HOW the creature fights
-  const combatStyles = [
-    { id: "melee", name: "Melee", description: "Close-range physical attacks" },
-    { id: "ranged", name: "Ranged", description: "Bows, thrown weapons, spitting" },
-    { id: "magic", name: "Magic", description: "Spells and magical attacks" },
-    { id: "swarm", name: "Swarm", description: "Overwhelm with numbers" },
-    { id: "brute", name: "Brute", description: "Heavy, slow, powerful attacks" },
-    { id: "agile", name: "Agile", description: "Fast, evasive, hit-and-run" },
-  ];
-
-  // Difficulty levels for enemies
-  const difficulties = [
-    { id: "trivial", name: "Trivial" },
-    { id: "easy", name: "Easy" },
-    { id: "normal", name: "Normal" },
-    { id: "hard", name: "Hard" },
-    { id: "boss", name: "Boss" },
-  ];
-
   const getRaceById = (id) => races.find((r) => r.id === id) || races[0];
   const getClassById = (id) => classes.find((c) => c.id === id) || classes[0];
 
@@ -106,6 +87,21 @@
 
   // Tab state for traits section
   let activeTraitTab = "behavior";
+  let detailView = "edit";
+  let detailViewFor = "";
+  let inspectorRequested = null;
+
+  $: {
+    const id = $store.selectedElement?.id || "";
+    if (id !== detailViewFor) {
+      detailViewFor = id;
+      if (inspectorRequested === null && typeof window !== "undefined") {
+        inspectorRequested = wantsInspector(window.location.search);
+      }
+      detailView = inspectorRequested ? "inspector" : "edit";
+      inspectorRequested = false;
+    }
+  }
 
   const config = {
     title: "Manage NPCs",
@@ -163,14 +159,6 @@
       }
       return null;
     },
-    rowIndicator: (element) => {
-      const hasEnemy = !!element.enemyTrait;
-      const hasMerchant = !!element.merchantTrait;
-      if (hasEnemy && hasMerchant) return { color: "#f59e0b", title: "Enemy + Merchant" };
-      if (hasEnemy) return { color: "#ef4444", title: "Enemy" };
-      if (hasMerchant) return { color: "#22c55e", title: "Merchant" };
-      return { color: "#64748b", title: "Neutral" };
-    },
   };
 
   const runMerchantPreview = () => {
@@ -206,10 +194,23 @@
             creatureType: "beast",
             combatStyle: "melee",
             difficulty: "normal",
-            aggroOnSight: false,
             attackPower: 5,
             defense: 2,
+            attackSpeed: 0,
+            aggroRadius: 0,
+            aggroOnSight: false,
+            callForHelp: false,
+            fleeThreshold: 0,
             xpReward: 10,
+            goldDrop: { min: 0, max: 0 },
+            lootTableId: "",
+            guaranteedLoot: [],
+            maxDrops: 0,
+            onAggroScript: "",
+            onDeathScript: "",
+            onFleeScript: "",
+            onLowHealthScript: "",
+            lowHealthThreshold: 0,
           };
       return state;
     });
@@ -323,6 +324,43 @@
     );
   };
 
+  const loadEnemyRefs = () => {
+    if (hasLoadedEnemyRefs) return;
+    if (!$isAuthenticated || !$authToken) return;
+    hasLoadedEnemyRefs = true;
+    getScripts(
+      $authToken,
+      [],
+      (all) => {
+        scripts = all || [];
+      },
+      (err) => console.log("Failed to load scripts for enemy editor:", err)
+    );
+    getLootTables(
+      $authToken,
+      [],
+      (all) => {
+        lootTables = all || [];
+      },
+      (err) => console.log("Failed to load loot tables for enemy editor:", err)
+    );
+    getItemTemplates(
+      $authToken,
+      [],
+      (all) => {
+        itemTemplates = all || [];
+      },
+      (err) => console.log("Failed to load item templates for enemy editor:", err)
+    );
+    getEnemyScaling(
+      $authToken,
+      (data) => {
+        enemyScaling = data;
+      },
+      (err) => console.log("Failed to load enemy scaling:", err)
+    );
+  };
+
   // Load dialogs and rooms once auth token becomes available
   $: if ($isAuthenticated && $authToken && !hasLoadedDialogs) {
     loadDialogs();
@@ -330,10 +368,25 @@
   $: if ($isAuthenticated && $authToken && !hasLoadedRooms) {
     loadRooms();
   }
+  $: if ($isAuthenticated && $authToken && !hasLoadedEnemyRefs) {
+    loadEnemyRefs();
+  }
 </script>
 
 <CRUDEditor store={store} config={config}>
   <div slot="content" class="space-y-6">
+    <div class="flex items-center gap-1 border-b border-slate-200 dark:border-slate-700">
+      <button type="button" class="tab-btn" class:active={detailView === "edit"} on:click={() => detailView = "edit"}>
+        Edit
+      </button>
+      <button type="button" class="tab-btn" class:active={detailView === "inspector"} on:click={() => detailView = "inspector"}>
+        Inspector
+      </button>
+    </div>
+
+    {#if detailView === "inspector"}
+      <NPCInspector npcId={$store.selectedElement.id} isNew={!!$store.selectedElement.isNew} />
+    {:else}
     <!-- NPC Type Configuration -->
     <div class="p-4 rounded-lg bg-slate-800/50 border border-slate-700/50 space-y-3">
       <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
@@ -438,14 +491,26 @@
         <label class="label-caps" for="npc-hp-current">Hit Points</label>
         <div class="grid grid-cols-2 gap-2">
           <input id="npc-hp-current" class="input-base text-center" bind:value={$store.selectedElement.currentHitPoints} type="number" />
-          <input id="npc-hp-max" class="input-base text-center" bind:value={$store.selectedElement.maxHitPoints} type="number" />
+          <input
+            id="npc-hp-max"
+            class="input-base text-center"
+            bind:value={$store.selectedElement.maxHitPoints}
+            type="number"
+            readonly={!!$store.selectedElement.enemyTrait?.baseStats}
+            title={$store.selectedElement.enemyTrait?.baseStats ? "Effective max after scaling. Edit the content base on the Enemy tab." : "Max hit points"}
+          />
         </div>
+        {#if $store.selectedElement.enemyTrait?.baseStats}
+          <p class="text-[10px] text-slate-500">Current HP, then effective max. Edit the content base on the Enemy tab.</p>
+        {/if}
       </div>
     </div>
 
+    {/if}
   </div>
 
   <div slot="extensions" class="space-y-4">
+    {#if detailView !== "inspector"}
     <!-- Tabbed Navigation for Traits -->
     <div class="flex items-center gap-1 border-b border-slate-200 dark:border-slate-700">
       <button
@@ -611,61 +676,14 @@
           </div>
 
           {#if $store.selectedElement.enemyTrait}
-            <p class="text-xs text-slate-500 dark:text-slate-400">
-              Configure combat behavior for this NPC when engaged in battle.
-            </p>
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div class="space-y-1.5">
-                <label class="label-caps" for="enemy-creature-type">Creature Type</label>
-                <select id="enemy-creature-type" class="input-base text-xs" bind:value={$store.selectedElement.enemyTrait.creatureType}>
-                  {#each creatureTypes as ct}
-                    <option value={ct.id}>{ct.name}</option>
-                  {/each}
-                </select>
-              </div>
-              <div class="space-y-1.5">
-                <label class="label-caps" for="enemy-combat-style">Combat Style</label>
-                <select id="enemy-combat-style" class="input-base text-xs" bind:value={$store.selectedElement.enemyTrait.combatStyle}>
-                  {#each combatStyles as cs}
-                    <option value={cs.id}>{cs.name}</option>
-                  {/each}
-                </select>
-              </div>
-              <div class="space-y-1.5">
-                <label class="label-caps" for="enemy-difficulty">Difficulty</label>
-                <select id="enemy-difficulty" class="input-base text-xs" bind:value={$store.selectedElement.enemyTrait.difficulty}>
-                  {#each difficulties as d}
-                    <option value={d.id}>{d.name}</option>
-                  {/each}
-                </select>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-4">
-              <div class="space-y-1.5">
-                <label class="label-caps" for="enemy-attack">Attack Power</label>
-                <input id="enemy-attack" class="input-base text-xs text-center" type="number" bind:value={$store.selectedElement.enemyTrait.attackPower} />
-              </div>
-              <div class="space-y-1.5">
-                <label class="label-caps" for="enemy-defense">Defense</label>
-                <input id="enemy-defense" class="input-base text-xs text-center" type="number" bind:value={$store.selectedElement.enemyTrait.defense} />
-              </div>
-              <div class="space-y-1.5">
-                <label class="label-caps" for="enemy-xp">XP Reward</label>
-                <input id="enemy-xp" class="input-base text-xs text-center" type="number" bind:value={$store.selectedElement.enemyTrait.xpReward} />
-              </div>
-            </div>
-
-            <div class="flex items-center gap-3 pt-2 border-t border-slate-200 dark:border-slate-700/50">
-              <label class="flex items-center gap-2 text-xs cursor-pointer">
-                <input
-                  type="checkbox"
-                  class="rounded border-slate-300 dark:border-slate-600"
-                  bind:checked={$store.selectedElement.enemyTrait.aggroOnSight}
-                />
-                <span class="label-caps">Aggressive (attacks on sight)</span>
-              </label>
-            </div>
+            <EnemyTraitPanel
+              npc={$store.selectedElement}
+              {store}
+              {scripts}
+              {lootTables}
+              {itemTemplates}
+              scaling={enemyScaling}
+            />
           {:else}
             <div class="p-4 rounded-lg bg-slate-800/30 border border-slate-700/50 text-center">
               <span class="material-symbols-outlined text-3xl text-slate-600 mb-2">swords</span>
@@ -721,6 +739,7 @@
         </div>
       {/if}
     </div>
+    {/if}
   </div>
 </CRUDEditor>
 

@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/talesmud/talesmud/pkg/entities/characters"
+	"github.com/talesmud/talesmud/pkg/entities/items"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/itemart"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
@@ -80,23 +82,14 @@ func (command *BuyCommand) Execute(game def.GameCtrl, message *messages.Message)
 		return true
 	}
 
-	// Parse: "buy <item> [quantity]"
+	// Parse: "buy <item|number> [quantity]"
 	parts := strings.Fields(message.Data)
 	if len(parts) < 2 {
 		game.SendMessage() <- message.Reply("Buy what? Usage: buy <item> [quantity]")
 		return true
 	}
 
-	// Check for quantity at the end
-	quantity := int32(1)
-	var itemName string
-	lastPart := parts[len(parts)-1]
-	if q, err := strconv.Atoi(lastPart); err == nil && len(parts) > 2 {
-		quantity = int32(q)
-		itemName = strings.Join(parts[1:len(parts)-1], " ")
-	} else {
-		itemName = strings.Join(parts[1:], " ")
-	}
+	quantity, itemName, stockIndex := parseTradeTarget(parts)
 
 	if quantity <= 0 {
 		game.SendMessage() <- message.Reply("Invalid quantity.")
@@ -110,20 +103,31 @@ func (command *BuyCommand) Execute(game def.GameCtrl, message *messages.Message)
 		return true
 	}
 
+	engageNPC(game, message, merchant.ID, "")
 	if merchant.MerchantTrait == nil {
 		game.SendMessage() <- message.Reply(merchant.Name + " is not selling anything.")
 		return true
 	}
 
-	// Find item in merchant inventory
+	// Find item in merchant inventory. A bare number is the catalog row.
 	var foundItem *npc.MerchantItem
 	var foundIndex int
 	itemNameLower := strings.ToLower(itemName)
+	shown := 0
 
 	for i := range merchant.MerchantTrait.Inventory {
 		invItem := &merchant.MerchantTrait.Inventory[i]
 		itemTemplate, err := game.GetFacade().ItemsService().FindByID(invItem.ItemTemplateID)
 		if err != nil || itemTemplate == nil {
+			continue
+		}
+		shown++
+		if stockIndex > 0 {
+			if shown == stockIndex {
+				foundItem = invItem
+				foundIndex = i
+				break
+			}
 			continue
 		}
 
@@ -136,7 +140,11 @@ func (command *BuyCommand) Execute(game def.GameCtrl, message *messages.Message)
 	}
 
 	if foundItem == nil {
-		game.SendMessage() <- message.Reply(merchant.Name + " doesn't sell '" + itemName + "'.")
+		if stockIndex > 0 {
+			game.SendMessage() <- message.Reply(merchant.Name + " has no item " + itoa(stockIndex) + ".")
+		} else {
+			game.SendMessage() <- message.Reply(merchant.Name + " doesn't sell '" + itemName + "'.")
+		}
 		return true
 	}
 
@@ -302,16 +310,7 @@ func (command *SellCommand) Execute(game def.GameCtrl, message *messages.Message
 		return true
 	}
 
-	// Check for quantity at the end
-	quantity := int32(1)
-	var itemName string
-	lastPart := parts[len(parts)-1]
-	if q, err := strconv.Atoi(lastPart); err == nil && len(parts) > 2 {
-		quantity = int32(q)
-		itemName = strings.Join(parts[1:len(parts)-1], " ")
-	} else {
-		itemName = strings.Join(parts[1:], " ")
-	}
+	quantity, itemName, stockIndex := parseTradeTarget(parts)
 
 	if quantity <= 0 {
 		game.SendMessage() <- message.Reply("Invalid quantity.")
@@ -325,25 +324,33 @@ func (command *SellCommand) Execute(game def.GameCtrl, message *messages.Message
 		return true
 	}
 
+	engageNPC(game, message, merchant.ID, "")
 	if merchant.MerchantTrait == nil {
 		game.SendMessage() <- message.Reply(merchant.Name + " is not buying anything.")
 		return true
 	}
 
-	// Find item in inventory
-	item := message.Character.Inventory.FindItemByName(itemName)
-	if item == nil {
-		item = message.Character.Inventory.FindItemByTargetName(itemName)
-	}
-	if item == nil {
-		game.SendMessage() <- message.Reply("You don't have '" + itemName + "' in your inventory.")
-		return true
-	}
-
-	// Check if merchant accepts this item
-	if !merchant.MerchantTrait.CanBuyItem(string(item.Type), item.Tags) {
-		game.SendMessage() <- message.Reply(merchant.Name + " doesn't want to buy that.")
-		return true
+	// A bare number picks from the items this merchant will take, in bag order.
+	var item *items.Item
+	if stockIndex > 0 {
+		item = sellableAt(message.Character, merchant, stockIndex)
+		if item == nil {
+			game.SendMessage() <- message.Reply("You don't have item " + itoa(stockIndex) + " to sell.")
+			return true
+		}
+	} else {
+		item = message.Character.Inventory.FindItemByName(itemName)
+		if item == nil {
+			item = message.Character.Inventory.FindItemByTargetName(itemName)
+		}
+		if item == nil {
+			game.SendMessage() <- message.Reply("You don't have '" + itemName + "' in your inventory.")
+			return true
+		}
+		if !merchant.MerchantTrait.CanBuyItem(string(item.Type), item.Tags) {
+			game.SendMessage() <- message.Reply(merchant.Name + " doesn't want to buy that.")
+			return true
+		}
 	}
 
 	// Check if item is bound (cannot be sold)
@@ -453,6 +460,7 @@ func (command *ValueCommand) Execute(game def.GameCtrl, message *messages.Messag
 		return true
 	}
 
+	engageNPC(game, message, merchant.ID, "")
 	if merchant.MerchantTrait == nil {
 		game.SendMessage() <- message.Reply(merchant.Name + " can't appraise items.")
 		return true
@@ -490,6 +498,46 @@ func (command *ValueCommand) Execute(game def.GameCtrl, message *messages.Messag
 	return true
 }
 
+// parseTradeTarget reads "<item or number> [quantity]".
+// A single integer is a 1-based catalog row, not a quantity.
+func parseTradeTarget(parts []string) (quantity int32, itemName string, index int) {
+	quantity = 1
+	if len(parts) < 2 {
+		return quantity, "", 0
+	}
+	last := parts[len(parts)-1]
+	if q, err := strconv.Atoi(last); err == nil && len(parts) > 2 {
+		quantity = int32(q)
+		itemName = strings.Join(parts[1:len(parts)-1], " ")
+	} else {
+		itemName = strings.Join(parts[1:], " ")
+	}
+	if n, err := strconv.Atoi(itemName); err == nil && n > 0 && !strings.Contains(itemName, " ") {
+		index = n
+	}
+	return quantity, itemName, index
+}
+
+func sellableAt(char *characters.Character, merchant *npc.NPC, index int) *items.Item {
+	if char == nil || merchant == nil || merchant.MerchantTrait == nil || index < 1 {
+		return nil
+	}
+	shown := 0
+	for _, item := range char.Inventory.Items {
+		if item == nil || item.IsBound() {
+			continue
+		}
+		if !merchant.MerchantTrait.CanBuyItem(string(item.Type), item.Tags) {
+			continue
+		}
+		shown++
+		if shown == index {
+			return item
+		}
+	}
+	return nil
+}
+
 // findMerchantInRoom finds a merchant NPC in the given room
 func findMerchantInRoom(game def.GameCtrl, roomID string) *npc.NPC {
 	npcManager := game.GetNPCInstanceManager()
@@ -514,6 +562,7 @@ func buildShopMessage(game def.GameCtrl, message *messages.Message, merchant *np
 	if message == nil || message.FromUser == nil || message.Character == nil || merchant == nil || merchant.MerchantTrait == nil {
 		return nil
 	}
+	engageNPC(game, message, merchant.ID, "shop")
 	stock := make([]messages.ShopStockItem, 0, len(merchant.MerchantTrait.Inventory))
 	for _, invItem := range merchant.MerchantTrait.Inventory {
 		itemTemplate, err := game.GetFacade().ItemsService().FindByID(invItem.ItemTemplateID)
@@ -549,6 +598,7 @@ func buildShopMessage(game def.GameCtrl, message *messages.Message, merchant *np
 			MaxStack:      itemTemplate.MaxStack,
 			BasePrice:     itemTemplate.BasePrice,
 			Attributes:    attrs,
+			Effects:       itemTemplate.DisplayEffects(scriptDisplayName(game)),
 		})
 	}
 	merchantID := ""

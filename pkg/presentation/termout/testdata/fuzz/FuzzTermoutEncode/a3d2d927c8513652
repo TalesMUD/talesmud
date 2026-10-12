@@ -1,0 +1,3 @@
+go test fuzz v1
+string("0")
+string("\xf1\xc1\x9bA\xedAA\xb2A¡\xcaAA\xd1A\xc6A\x9e")

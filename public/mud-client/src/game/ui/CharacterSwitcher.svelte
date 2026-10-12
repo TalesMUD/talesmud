@@ -8,6 +8,7 @@
   import { settingsStore } from "../SettingsStore.js";
   import { openCharacterPicker } from "./characterPickerStore.js";
   import { accountMenuOpen } from "../uiChrome.js";
+  import { sshKeysOpen } from "../../sshStore.js";
 
   export let store;
   export let authToken;
@@ -96,6 +97,11 @@
     settingsStore.openModal();
   }
 
+  function openSSHKeys() {
+    closeMenu();
+    sshKeysOpen.set(true);
+  }
+
   function endSession() {
     closeMenu();
     if (guest) {
@@ -171,6 +177,12 @@
         <i class="material-icons">settings</i>
         Settings
       </button>
+      {#if !guest}
+        <button class="menu-item" type="button" role="menuitem" on:click={openSSHKeys}>
+          <i class="material-icons">vpn_key</i>
+          SSH keys
+        </button>
+      {/if}
       {#if guest}
         <button class="menu-item" type="button" role="menuitem" on:click={() => loginWith("twitter")}>
           <i class="material-icons">login</i>

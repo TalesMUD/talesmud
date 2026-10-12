@@ -414,3 +414,55 @@ func TestAggroNPCSpawnIntoOccupiedRoom(t *testing.T) {
 		t.Fatal("spawn into an occupied room did not aggro")
 	}
 }
+
+func setRoomNoAggro(t *testing.T, facade service.Facade, id string, on bool) {
+	t.Helper()
+	room, err := facade.RoomsService().FindByID(id)
+	if err != nil || room == nil {
+		t.Fatalf("room %s: %v", id, err)
+	}
+	room.NoAggro = on
+	if err := facade.RoomsService().Update(id, room); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAggroSkipsNoAggroRoom(t *testing.T) {
+	g, facade := newHookTestGame(t)
+	now := useAggroClock(t, g)
+	hero, enemy := placeAggro(t, g, facade, "R-chapel", "wolf-chapel", "Wolf", 2, nil)
+	setRoomNoAggro(t, facade, "R-chapel", true)
+	online(g, facade, hero)
+
+	g.NotePlayerEntered(hero.ID, "R-chapel")
+	advanceAggro(now, g, time.Second)
+	if g.CombatController.IsPlayerInCombat(hero.ID) {
+		t.Fatal("noAggro room scheduled a fight")
+	}
+
+	g.NoteNPCAppeared(enemy.ID, "R-chapel")
+	advanceAggro(now, g, time.Second)
+	if g.CombatController.IsPlayerInCombat(hero.ID) {
+		t.Fatal("noAggro room aggroed when the NPC appeared")
+	}
+
+	setRoomNoAggro(t, facade, "R-chapel", false)
+	g.NotePlayerEntered(hero.ID, "R-chapel")
+	advanceAggro(now, g, 500*time.Millisecond)
+	if !g.CombatController.IsPlayerInCombat(hero.ID) {
+		t.Fatal("clearing noAggro should allow the next sighting")
+	}
+}
+
+func TestAggroNoAggroRecheckOnFire(t *testing.T) {
+	g, facade := newHookTestGame(t)
+	now := useAggroClock(t, g)
+	hero, _ := placeAggro(t, g, facade, "R-inn", "wolf-inn", "Wolf", 2, nil)
+	online(g, facade, hero)
+	g.NotePlayerEntered(hero.ID, "R-inn")
+	setRoomNoAggro(t, facade, "R-inn", true)
+	advanceAggro(now, g, time.Second)
+	if g.CombatController.IsPlayerInCombat(hero.ID) {
+		t.Fatal("noAggro set during grace still started a fight")
+	}
+}

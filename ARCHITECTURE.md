@@ -1,5 +1,17 @@
 # TalesMUD Architecture Documentation
 
+## v0.5.0 Components and Data Flow
+
+`pkg/mudserver.Transport` (`Send`, `Close`, `RemoteIP`, `Kind`) separates session lifecycle from delivery. WebSockets use `wsTransport`; `pkg/sshgate` attaches classic text or Door sessions with `MUDServer.AttachExternal`. Both feed the existing command/game loop and session registry; replacement closes the prior transport without deleting the new session. SSH queues output off the game loop and applies session limits and terminal sanitization.
+
+`pkg/devicecode` holds expiring pending requests and confirmation/rate-limit state in memory. Classic public `POST /api/device/start` and `/api/device/poll` share it with SSH. Authenticated `/api/ssh/device/{lookup,confirm,deny}` uses explicit `/activate` browser approval; `pkg/sshkeys` persists signature-proven keys in SQLite. `pkg/authsession` signs HS256 account sessions with required issuer, audience, expiry, account ID and session version; middleware receives its verifier explicitly. User session-version changes revoke tokens. SQLite adds SSH key, content-health and audit storage while retaining JSON entities.
+
+`pkg/worldindex` builds entity references, reachability and search data. `pkg/contenthealth` consumes the same world snapshot for validation, quest debugging, map overlays, pack drift/export and the `tales -check` CLI. `pkg/inspect` produces static NPC/room inspector responses. Creator endpoints add search, refs, health, world overlays, NPC/room inspection, quest debugging, loot preview, audit and live NPC/instance views. Admin live character inspection, audited operations and undo are scheduled on the game loop rather than mutating live state from HTTP goroutines.
+
+NPC movement configuration is persisted with templates/spawners; runtime clocks and engagement holds are memory-only. Structured examine, aggression markers, guest identity and reattach combat snapshots extend messages additively; optional `hello` negotiates capabilities without dispatching a command. See [structured messages](docs/structured-messages.md).
+
+REST accepts Bearer tokens only. WebSocket upgrades retain the single-use ticket or Bearer-header contract. Guest HMAC, server device sessions, optional local sessions and Auth0 RS256 are separate verification paths; Auth0 audience/issuer are mandatory. All use JWT v5. Query secret redaction includes tickets and device codes at key boundaries, and path-only logging remains available. Docker/CI builds use Go 1.26; `go.mod` pins `go1.26.9` and updated crypto/network dependencies.
+
 ## System Overview
 
 TalesMUD follows a layered architecture with clear separation between HTTP API, real-time game server, business logic, and data access layers.
@@ -7,14 +19,14 @@ TalesMUD follows a layered architecture with clear separation between HTTP API, 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                         Clients                                  │
-│              (Browser / WebSocket / REST API)                    │
+│              (Browser / WebSocket / REST API / SSH)                    │
 └─────────────────────────────────────────────────────────────────┘
                               │
          ┌────────────────────┼────────────────────┐
          ▼                    ▼                    ▼
 ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
 │   HTTP Server   │  │   MUD Server    │  │  Embedded SPA   │
-│   (Gin Router)  │  │  (WebSocket)    │  │  (go:embed FS)  │
+│   (Gin Router)  │  │   (Transport)  │  │  (go:embed FS)  │
 └────────┬────────┘  └────────┬────────┘  └─────────────────┘
          │                    │
          │                    ▼
@@ -152,7 +164,7 @@ Optional middleware that serves a static landing page from the OS filesystem whe
 **File:** `pkg/server/auth.go`
 
 ```
-REST: Authorization Bearer → Try Guest HMAC → (if fail) Validate Auth0 RS256 JWT (aud+iss required) → Find/Create User → Check Ban → Set Context
+REST: Authorization Bearer → Guest HMAC / Server Session / Local Session / Auth0 RS256 (aud+iss required) → Load User → Check Ban → Set Context
 WebSocket: POST /api/ws-ticket (Bearer) → GET /ws?ticket=… (single use, 60s) or Authorization Bearer
 ```
 
@@ -182,14 +194,14 @@ WebSocket: POST /api/ws-ticket (Bearer) → GET /ws?ticket=… (single use, 60s)
 
 ### MUD Server (`pkg/mudserver/`)
 
-The MUD server manages WebSocket connections and routes messages between clients and the game engine.
+The MUD server manages WebSocket and external SSH sessions and routes messages between clients and the game engine.
 
 #### Connection Model
 
 ```go
 type Connection struct {
     User   *entities.User   // Authenticated user
-    ws     *websocket.Conn  // WebSocket connection
+    t      Transport        // WebSocket or SSH transport
     mu     sync.Mutex       // Thread-safe writes
     active bool             // Connection state
 }

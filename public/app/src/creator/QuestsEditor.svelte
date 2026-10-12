@@ -24,6 +24,7 @@
   } from "./tableColumns.js";
   import { uniqueValues } from "./fieldSuggestions.js";
   import { previewQuest } from "../api/previews.js";
+  import { navigateTo } from "yrv";
 
   const { isAuthenticated, authToken } = getAuth();
 
@@ -120,7 +121,19 @@
     );
   };
 
+  const openQuestDebug = () => {
+    const id = $store.selectedElement?.id;
+    if (!id || $store.selectedElement.isNew) return;
+    navigateTo(`/creator/quests/debug?id=${encodeURIComponent(id)}`);
+  };
+
   config.extraActions = [
+    {
+      label: "Debug quest",
+      icon: "bug_report",
+      variant: "btn-outline",
+      onClick: openQuestDebug,
+    },
     {
       label: "Preview Quest",
       icon: "visibility",

@@ -11,11 +11,17 @@
   import DialogsEditor from "./creator/DialogsEditor.svelte";
   import DialogGraphEditor from "./creator/DialogGraphEditor.svelte";
   import QuestsEditor from "./creator/QuestsEditor.svelte";
+  import QuestDebug from "./creator/QuestDebug.svelte";
   import SkillsEditor from "./creator/SkillsEditor.svelte";
   import ScriptsEditor from "./creator/ScriptsEditor.svelte";
   import WorldEditor from "./creator/GridWorldEditor.svelte";
   import SettingsEditor from "./creator/SettingsEditor.svelte";
   import WorldHealth from "./creator/WorldHealth.svelte";
+  import Players from "./creator/Players.svelte";
+  import AuditLog from "./creator/AuditLog.svelte";
+  import Drift from "./creator/Drift.svelte";
+  import LootTablesEditor from "./creator/LootTablesEditor.svelte";
+  import SpawnersEditor from "./creator/SpawnersEditor.svelte";
   import Characters from "./characters/Characters.svelte";
   import NewCharacter from "./characters/NewCharacter.svelte";
   import UserForm from "./UserForm.svelte";
@@ -24,7 +30,7 @@
   import GuestStatistics from "./admin/GuestStatistics.svelte";
 </script>
 
-<main class="min-h-[calc(100vh-72px)]">
+<main class="min-h-[calc(100vh-var(--app-nav-height,72px))]">
   <Route exact path="/account" component="{UserForm}" />
   <!-- yrv only matches Route components that are direct children of Router, so we
        define creator sub-routes here and use Creator as a shared layout shell. -->
@@ -73,6 +79,11 @@
       <QuestsEditor />
     </CreatorLayout>
   </Route>
+  <Route exact path="/creator/quests/debug">
+    <CreatorLayout>
+      <QuestDebug />
+    </CreatorLayout>
+  </Route>
   <Route exact path="/creator/skills">
     <CreatorLayout>
       <SkillsEditor />
@@ -96,6 +107,31 @@
   <Route exact path="/creator/settings">
     <CreatorLayout>
       <SettingsEditor />
+    </CreatorLayout>
+  </Route>
+  <Route exact path="/creator/players">
+    <CreatorLayout>
+      <Players />
+    </CreatorLayout>
+  </Route>
+  <Route exact path="/creator/audit">
+    <CreatorLayout>
+      <AuditLog />
+    </CreatorLayout>
+  </Route>
+  <Route exact path="/creator/drift">
+    <CreatorLayout>
+      <Drift />
+    </CreatorLayout>
+  </Route>
+  <Route exact path="/creator/loot-tables">
+    <CreatorLayout>
+      <LootTablesEditor />
+    </CreatorLayout>
+  </Route>
+  <Route exact path="/creator/spawners">
+    <CreatorLayout>
+      <SpawnersEditor />
     </CreatorLayout>
   </Route>
   <Route exact path="/manage/users">

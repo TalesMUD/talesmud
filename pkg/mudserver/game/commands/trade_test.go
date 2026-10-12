@@ -127,6 +127,58 @@ func TestBuyStackableQuantityUsesOneInventorySlot(t *testing.T) {
 	}
 }
 
+func TestBuyByCatalogNumber(t *testing.T) {
+	g, facade := newTradeTestGame(t)
+	first := &items.Item{
+		Entity: &entities.Entity{ID: "stick-template"}, IsTemplate: true,
+		Name: "Ash Stick", Type: items.ItemTypeWeapon, Slot: items.ItemSlotMainHand, BasePrice: 10,
+	}
+	second := &items.Item{
+		Entity: &entities.Entity{ID: "knife-template"}, IsTemplate: true,
+		Name: "Hedge Knife", Type: items.ItemTypeWeapon, Slot: items.ItemSlotMainHand, BasePrice: 25,
+	}
+	for _, template := range []*items.Item{first, second} {
+		if _, err := facade.ItemsService().Import(template); err != nil {
+			t.Fatal(err)
+		}
+	}
+	character, err := facade.CharactersService().Store(&characters.Character{
+		Name:        "Buyer",
+		BelongsUser: *traits.BelongsToUser("user-1"),
+		CurrentRoom: traits.CurrentRoom{CurrentRoomID: "room-shop"},
+		Gold:        100,
+		Inventory:   items.Inventory{Size: 4, Items: []*items.Item{}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	merchant := &npc.NPC{
+		Entity:        &entities.Entity{ID: "merchant-num"},
+		Name:          "Shopkeep",
+		CurrentRoom:   traits.CurrentRoom{CurrentRoomID: "room-shop"},
+		MerchantTrait: npc.NewMerchantTrait(),
+	}
+	merchant.MerchantTrait.Inventory = []npc.MerchantItem{
+		{ItemTemplateID: first.ID, Quantity: -1, MaxQuantity: -1},
+		{ItemTemplateID: second.ID, Quantity: -1, MaxQuantity: -1},
+	}
+	g.NPCManager.RegisterExistingNPC(merchant, "room-shop")
+	msg := &messages.Message{
+		FromUser:  &entities.User{Entity: &entities.Entity{ID: "user-1"}},
+		Character: character,
+		Data:      "buy 2",
+	}
+	if !(&commands.BuyCommand{}).Execute(g, msg) {
+		t.Fatal("buy did not handle")
+	}
+	if len(character.Inventory.Items) != 1 || character.Inventory.Items[0].Name != "Hedge Knife" {
+		t.Fatalf("inventory = %+v", character.Inventory.Items)
+	}
+	if character.Gold != 75 {
+		t.Fatalf("gold = %d", character.Gold)
+	}
+}
+
 func TestListRestocksMerchantInventory(t *testing.T) {
 	g, facade := newTradeTestGame(t)
 

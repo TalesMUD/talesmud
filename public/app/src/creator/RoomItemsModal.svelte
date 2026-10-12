@@ -3,6 +3,7 @@
   import ItemViewModal from "./ItemViewModal.svelte";
   import EntitySelectButton from "./EntitySelectButton.svelte";
   import { itemTemplateColumns } from "./tableColumns.js";
+  import ConfirmDialog from "./ConfirmDialog.svelte";
 
   export let open = false;
   export let itemIds = [];  // Current item IDs in the room (array of strings)
@@ -17,6 +18,8 @@
   let showItemView = false;
   let selectedTemplateId = "";
   let wasOpen = false;
+  let confirmOpen = false;
+  let pendingItemId = "";
 
   // Reset selection only when modal first opens
   $: if (open && !wasOpen) {
@@ -37,7 +40,7 @@
 
   const handleKey = (event) => {
     if (!open) return;
-    if (event.key === "Escape" && !showItemView) {
+    if (event.key === "Escape" && !showItemView && !confirmOpen) {
       close();
     }
   };
@@ -48,8 +51,21 @@
     selectedTemplateId = "";
   }
 
-  function removeItem(itemId) {
+  function askRemoveItem(itemId) {
+    pendingItemId = itemId;
+    confirmOpen = true;
+  }
+
+  function confirmRemoveItem() {
+    const itemId = pendingItemId;
+    confirmOpen = false;
+    pendingItemId = "";
     localItemIds = localItemIds.filter(id => id !== itemId);
+  }
+
+  function cancelRemoveItem() {
+    confirmOpen = false;
+    pendingItemId = "";
   }
 
   function viewItem(item) {
@@ -178,7 +194,7 @@
                       <button
                         class="remove-btn"
                         type="button"
-                        on:click={() => removeItem(itemId)}
+                        on:click={() => askRemoveItem(itemId)}
                         title="Remove from Room"
                       >
                         <span class="material-symbols-outlined">delete</span>
@@ -193,7 +209,7 @@
                       <button
                         class="remove-btn"
                         type="button"
-                        on:click={() => removeItem(itemId)}
+                        on:click={() => askRemoveItem(itemId)}
                         title="Remove from Room"
                       >
                         <span class="material-symbols-outlined">delete</span>
@@ -220,6 +236,16 @@
   open={showItemView}
   item={selectedItem}
   on:close={closeItemView}
+/>
+
+<ConfirmDialog
+  open={confirmOpen}
+  entityType="room item"
+  entityName={getItemById(pendingItemId)?.name || "item"}
+  entityId={pendingItemId}
+  detail="Removes this item from the room. Save the room to keep the change."
+  on:confirm={confirmRemoveItem}
+  on:cancel={cancelRemoveItem}
 />
 
 <style>

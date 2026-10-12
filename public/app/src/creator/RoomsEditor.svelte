@@ -11,6 +11,8 @@
   import RoomItemsModal from "./RoomItemsModal.svelte";
   import RoomPreviewModal from "./RoomPreviewModal.svelte";
   import EntitySelectButton from "./EntitySelectButton.svelte";
+  import ConfirmDialog from "./ConfirmDialog.svelte";
+  import RoomInspector from "./RoomInspector.svelte";
   import { scriptColumns, npcColumns } from "./tableColumns.js";
 
   import { getAuth } from "../auth.js";
@@ -37,6 +39,7 @@
     deleteNPCSpawner,
   } from "../api/npcspawners.js";
   import { roomColumns } from "./tableColumns.js";
+  import { roomTab } from "./islandLinks.js";
   import { uniqueValues } from "./fieldSuggestions.js";
   import {
     getItem,
@@ -76,8 +79,13 @@
   $: areaTypeSuggestions = uniqueValues($store.elements, "areaType");
   $: roomTypeSuggestions = uniqueValues($store.elements, "roomType");
 
-  // Tab state for extensions section
+  // Tab state for extensions section. ?view=inspector and ?tab=inspector open the inspector.
+  // A named room tab such as ?tab=exits wins over view=inspector.
   let activeTab = "exits";
+  if (typeof window !== "undefined") {
+    const tab = roomTab(window.location.search);
+    if (tab) activeTab = tab;
+  }
 
   // Items modal state
   let showItemsModal = false;
@@ -150,6 +158,9 @@
       if (element.canBind === undefined) {
         element.canBind = false;
       }
+      if (element.noAggro === undefined) {
+        element.noAggro = false;
+      }
     },
     badge: (element) => element.area,
   };
@@ -208,6 +219,7 @@
       actions: [],
       coords: { x: 0, y: 0, z: 0 },
       canBind: false,
+      noAggro: false,
       meta: {
         background: "",
       },
@@ -282,6 +294,8 @@
   };
 
   onMount(() => {
+    const tab = roomTab(window.location.search);
+    if (tab) activeTab = tab;
     loadRoomsValueHelp();
   });
 
@@ -514,15 +528,25 @@
     );
   };
 
+  let spawnerToDelete = null;
+
   const deleteSpawnerHandler = (spawner) => {
-    // If it's a pending (unsaved) spawner, just remove from list
+    // A pending spawner exists only in this form. Removing it does not call the API.
     if (spawner.isNew) {
       pendingSpawners = pendingSpawners.filter(s => s.id !== spawner.id);
       return;
     }
+    spawnerToDelete = spawner;
+  };
 
-    if (!confirm("Are you sure you want to delete this spawner?")) return;
-    if (!$isAuthenticated || !$authToken) return;
+  const cancelDeleteSpawner = () => {
+    spawnerToDelete = null;
+  };
+
+  const confirmDeleteSpawner = () => {
+    const spawner = spawnerToDelete;
+    spawnerToDelete = null;
+    if (!spawner || !$isAuthenticated || !$authToken) return;
 
     deleteNPCSpawner(
       $authToken,
@@ -820,12 +844,21 @@
         <span class="text-sm text-slate-300">Can Bind</span>
         <span class="text-[10px] text-slate-500">(Players can set respawn point here)</span>
       </label>
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input
+          type="checkbox"
+          class="w-4 h-4 rounded border-slate-600 bg-slate-800 text-primary focus:ring-primary focus:ring-offset-0"
+          bind:checked={$store.selectedElement.noAggro}
+        />
+        <span class="text-sm text-slate-300">No aggro</span>
+        <span class="text-[10px] text-slate-500">(Aggressive enemies do not attack here)</span>
+      </label>
     </div>
   </div>
 
-  <div slot="extensions" class="space-y-4">
-    <!-- Tabbed Navigation -->
-    <div class="flex items-center gap-1 border-b border-slate-200 dark:border-slate-700">
+  <div slot="extensions" class="min-w-0 space-y-4">
+    <!-- Tabbed Navigation. Scrolls inside this bar so the detail column does not shift sideways. -->
+    <div class="room-tab-bar flex items-center gap-1 border-b border-slate-200 dark:border-slate-700">
       <button
         type="button"
         class="tab-btn"
@@ -885,6 +918,15 @@
         {#if currentRoomNpcIds.length}
           <span class="tab-badge">{currentRoomNpcIds.length}</span>
         {/if}
+      </button>
+      <button
+        type="button"
+        class="tab-btn"
+        class:active={activeTab === "inspector"}
+        on:click={() => activeTab = "inspector"}
+      >
+        <span class="material-symbols-outlined text-base">manage_search</span>
+        Inspector
       </button>
     </div>
 
@@ -1098,6 +1140,8 @@
             {/if}
           </div>
         </div>
+      {:else if activeTab === "inspector"}
+        <RoomInspector roomId={$store.selectedElement.id} isNew={!!$store.selectedElement.isNew} />
       {/if}
     </div>
   </div>
@@ -1116,6 +1160,16 @@
   open={showRoomPreview}
   preview={roomPreview}
   on:close={() => showRoomPreview = false}
+/>
+
+<ConfirmDialog
+  open={!!spawnerToDelete}
+  entityType="spawner"
+  entityName={spawnerToDelete?.name || spawnerToDelete?.templateId || "spawner"}
+  entityId={spawnerToDelete?.id || ""}
+  detail={spawnerToDelete?.roomId ? `Room ${spawnerToDelete.roomId}` : ""}
+  on:confirm={confirmDeleteSpawner}
+  on:cancel={cancelDeleteSpawner}
 />
 
 <style>
@@ -1166,6 +1220,30 @@
   }
 
   /* Tab Styles */
+  .room-tab-bar {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-wrap: nowrap;
+    overscroll-behavior-x: contain;
+  }
+
+  .room-tab-bar .tab-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  .room-tab-bar::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .room-tab-bar::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.2);
+    border-radius: 3px;
+  }
+
   .tab-btn {
     display: flex;
     align-items: center;

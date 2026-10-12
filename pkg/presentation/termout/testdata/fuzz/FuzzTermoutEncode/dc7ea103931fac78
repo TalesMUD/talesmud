@@ -1,0 +1,3 @@
+go test fuzz v1
+string("\x81\xde\xcb0\xa7")
+string("0")

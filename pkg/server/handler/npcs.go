@@ -2,10 +2,14 @@ package handler
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	"github.com/talesmud/talesmud/pkg/contenthealth"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
+	"github.com/talesmud/talesmud/pkg/importer"
+	"github.com/talesmud/talesmud/pkg/inspect"
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
@@ -50,6 +54,48 @@ func (h *NPCsHandler) GetNPCs(c *gin.Context) {
 	c.JSON(http.StatusOK, npcs)
 }
 
+// InspectNPC returns the static inspector for one NPC template or unique.
+// A running instance id resolves to its template. Live rows stay on GET /api/live/npcs.
+func (h *NPCsHandler) InspectNPC(c *gin.Context) {
+	id := strings.TrimSpace(c.Param("id"))
+	if id == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "npc id is required"})
+		return
+	}
+	if h.Facade == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "npc inspect is unavailable"})
+		return
+	}
+	world, err := contenthealth.WorldFromFacade(h.Facade)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	target := npcInspectTarget(world, id)
+	view, ok := inspect.NPC(world.Graph(), target)
+	if !ok {
+		c.JSON(http.StatusNotFound, gin.H{"error": "NPC not found"})
+		return
+	}
+	if target != id {
+		view.RequestedID = id
+	}
+	c.JSON(http.StatusOK, view)
+}
+
+func npcInspectTarget(world contenthealth.World, id string) string {
+	for _, n := range world.NPCs {
+		if n == nil || n.Entity == nil || n.ID != id {
+			continue
+		}
+		if tpl := strings.TrimSpace(n.TemplateID); tpl != "" {
+			return tpl
+		}
+		return id
+	}
+	return id
+}
+
 // GetNPCByID returns a single NPC by ID
 func (h *NPCsHandler) GetNPCByID(c *gin.Context) {
 	id := c.Param("id")
@@ -70,6 +116,7 @@ func (h *NPCsHandler) PostNPC(c *gin.Context) {
 	}
 
 	log.WithField("npc", n.Name).Info("Creating new NPC")
+	importer.ApplyContentBase(&n)
 
 	if rejectInvalidNPC(c, h.Facade, &n) {
 		return
@@ -92,6 +139,7 @@ func (h *NPCsHandler) UpdateNPCByID(c *gin.Context) {
 	}
 
 	log.WithField("npc", n.Name).Info("Updating NPC")
+	importer.ApplyContentBase(&n)
 
 	if rejectInvalidNPC(c, h.Facade, &n) {
 		return

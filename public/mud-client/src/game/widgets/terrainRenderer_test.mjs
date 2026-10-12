@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { tileKeyFor, terrainConnectors, computeCamera, clampMapScale } from './atlasRenderer.js';
+import { tileKeyFor, terrainConnectors, computeCamera, clampMapScale, MAP_SCALE_MIN } from './atlasRenderer.js';
 assert.equal(tileKeyFor({discovered:false,terrain:'castle'}),'fog');
 assert.equal(tileKeyFor({discovered:true,kind:'uncharted',terrain:'forest'}),'fog');
 assert.equal(tileKeyFor({discovered:true,terrain:'forest'}),'forest');
@@ -17,5 +17,5 @@ assert.equal(terrainConnectors([a,{...b,x:20}],paths).length,0,'long exits do no
 const world=[a,{...b,x:80,y:50}];
 const zoom=computeCamera(world,800,600,0,0,.5);
 assert.ok(zoom.tileStep<28,'overview can fit multiple distant zones');
-assert.equal(clampMapScale(.01),.12);
+assert.equal(clampMapScale(.01),MAP_SCALE_MIN);
 console.log('terrainRenderer: fog, terrain keys, zone/layer connectors, overview zoom OK');

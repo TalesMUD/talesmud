@@ -44,6 +44,7 @@ type MinimalExit struct {
 	Name       string `json:"name"`
 	Target     string `json:"target"`
 	IsCardinal bool   `json:"isCardinal"`
+	Hidden     bool   `json:"hidden,omitempty"`
 }
 
 // GraphEdge represents a connection between rooms
@@ -63,7 +64,7 @@ type GraphData struct {
 	Edges []GraphEdge `json:"edges"`
 }
 
-//WorldRendererHandler ...
+// WorldRendererHandler ...
 type WorldRendererHandler struct {
 	RoomsService service.RoomsService
 }
@@ -83,7 +84,7 @@ func isCardinalDirection(exitName string) bool {
 func (handler *WorldRendererHandler) calculatePositions(rooms []*rooms.Room) map[string]*GraphNode {
 	const gridScale = 100.0 // pixels per grid unit
 	nodes := make(map[string]*GraphNode)
-	
+
 	// First pass: create nodes with existing coordinates
 	positioned := make(map[string]bool)
 	for _, room := range rooms {
@@ -96,40 +97,40 @@ func (handler *WorldRendererHandler) calculatePositions(rooms []*rooms.Room) map
 			RoomType:    room.RoomType,
 			Z:           0,
 		}
-		
+
 		if room.Coords != nil {
 			node.X = float64(room.Coords.X) * gridScale
 			node.Y = float64(room.Coords.Y) * gridScale
 			node.Z = room.Coords.Z
 			positioned[room.ID] = true
 		}
-		
+
 		nodes[room.ID] = node
 	}
-	
+
 	// Second pass: auto-position rooms without coordinates based on connections
 	// Use BFS to expand from positioned rooms
 	changed := true
 	maxIterations := 10
 	iteration := 0
-	
+
 	for changed && iteration < maxIterations {
 		changed = false
 		iteration++
-		
+
 		for _, room := range rooms {
 			// Skip if already positioned
 			if positioned[room.ID] {
 				continue
 			}
-			
+
 			// Look for positioned neighbors
 			if room.Exits != nil {
 				for _, exit := range *room.Exits {
 					if positioned[exit.Target] && isCardinalDirection(exit.Name) {
 						targetNode := nodes[exit.Target]
 						currentNode := nodes[room.ID]
-						
+
 						// Calculate position based on reverse direction
 						switch exit.Name {
 						case "north":
@@ -152,19 +153,19 @@ func (handler *WorldRendererHandler) calculatePositions(rooms []*rooms.Room) map
 					}
 				}
 			}
-			
+
 			// Also check incoming connections
 			if !positioned[room.ID] {
 				for _, otherRoom := range rooms {
 					if !positioned[otherRoom.ID] || otherRoom.Exits == nil {
 						continue
 					}
-					
+
 					for _, exit := range *otherRoom.Exits {
 						if exit.Target == room.ID && isCardinalDirection(exit.Name) {
 							sourceNode := nodes[otherRoom.ID]
 							currentNode := nodes[room.ID]
-							
+
 							// Calculate position based on direction
 							switch exit.Name {
 							case "north":
@@ -193,7 +194,7 @@ func (handler *WorldRendererHandler) calculatePositions(rooms []*rooms.Room) map
 			}
 		}
 	}
-	
+
 	// Third pass: place remaining unpositioned rooms in a grid
 	unpositionedCount := 0
 	for _, room := range rooms {
@@ -206,7 +207,7 @@ func (handler *WorldRendererHandler) calculatePositions(rooms []*rooms.Room) map
 			unpositionedCount++
 		}
 	}
-	
+
 	return nodes
 }
 
@@ -217,25 +218,25 @@ func (handler *WorldRendererHandler) RenderGraphData(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	// Calculate positions for all rooms
 	nodeMap := handler.calculatePositions(rooms)
-	
+
 	// Build nodes array
 	nodes := make([]GraphNode, 0, len(nodeMap))
 	for _, node := range nodeMap {
 		nodes = append(nodes, *node)
 	}
-	
+
 	// Build edges array
 	edges := make([]GraphEdge, 0)
 	edgeID := 0
-	
+
 	for _, room := range rooms {
 		if room.Exits == nil {
 			continue
 		}
-		
+
 		for _, exit := range *room.Exits {
 			// Only create edge if target exists
 			if _, exists := nodeMap[exit.Target]; exists {
@@ -253,12 +254,12 @@ func (handler *WorldRendererHandler) RenderGraphData(c *gin.Context) {
 			}
 		}
 	}
-	
+
 	graphData := GraphData{
 		Nodes: nodes,
 		Edges: edges,
 	}
-	
+
 	c.JSON(http.StatusOK, graphData)
 }
 
@@ -300,6 +301,7 @@ func (handler *WorldRendererHandler) GetMinimalRooms(c *gin.Context) {
 					Name:       exit.Name,
 					Target:     exit.Target,
 					IsCardinal: isCardinalDirection(exit.Name),
+					Hidden:     exit.Hidden,
 				})
 			}
 		}

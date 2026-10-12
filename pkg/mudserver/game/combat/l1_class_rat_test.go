@@ -494,11 +494,8 @@ func fightOnce(ch *characters.Character, enemies []*npc.NPC, track, auto bool) f
 	for turn := 0; turn < maxTurns; turn++ {
 		current := inst.GetCurrentTurnCombatant()
 		if current == nil {
-			// NextTurn returns without opening the next round when the tail
-			// of this round's order is already dead. Live play wraps on the
-			// player's next action, which calls NextTurn again from an index
-			// past the end and hits the round-wrap branch. Do that here so a
-			// multi-enemy fight continues while anyone is still alive.
+			// NextTurn opens the next round when the tail is already dead, so
+			// a nil current means no living combatant is left in the order.
 			state = engine.CheckCombatEnd(inst)
 			if state != combatentity.CombatStateActive {
 				return finishFight(inst, ch.ID, state, hpMax, track, grit, seen)

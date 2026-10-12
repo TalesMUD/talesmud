@@ -1,0 +1,2 @@
+go test fuzz v1
+string("\uf186\x86")

@@ -4,6 +4,10 @@
   import { getWorldDiagnosticsAsync, validateEntityAsync } from "../api/validation.js";
   import DataTable from "./DataTable.svelte";
   import ValidationPanel from "./ValidationPanel.svelte";
+  import ConfirmDialog from "./ConfirmDialog.svelte";
+  import BacklinksPanel from "./BacklinksPanel.svelte";
+  import { getRefs } from "../api/search.js";
+  import { backlinkTypes, referencedByHint, refTypes } from "./searchGroups.js";
 
   export let config;
   export let store;
@@ -14,6 +18,10 @@
   };
 
   let hasLoadedData = false;
+  let appliedQueryId = false;
+  let confirmOpen = false;
+  let deleteHint = "This removes it from the world. There is no undo.";
+  let deleteWatch = 0;
   let validationResult = null;
   let validationLoading = false;
   let validationUnavailable = "";
@@ -31,6 +39,12 @@
         store.setElements(all);
         hasLoadedData = true;
         loadDiagnostics();
+        if (!appliedQueryId) {
+          appliedQueryId = true;
+          const queryId = new URLSearchParams(window.location.search).get("id");
+          const match = queryId && (all || []).find((el) => el.id === queryId);
+          if (match) selectElement(match);
+        }
         if (cb) cb();
       },
       (err) => console.log(err)
@@ -114,7 +128,32 @@
     return "";
   };
 
+  const askDelete = () => {
+    const element = $store.selectedElement;
+    if (!element || element.isNew) return;
+    deleteHint = "This removes it from the world. There is no undo.";
+    confirmOpen = true;
+    const type = config.entityType || "";
+    const id = element.id || "";
+    if (!$authToken || !id || !refTypes.has(type)) return;
+    const watch = ++deleteWatch;
+    getRefs($authToken, type, id)
+      .then((view) => {
+        if (watch !== deleteWatch || !confirmOpen) return;
+        const hint = referencedByHint(view);
+        if (hint) deleteHint = hint;
+      })
+      .catch(() => {});
+  };
+
+  const cancelDelete = () => {
+    deleteWatch += 1;
+    confirmOpen = false;
+  };
+
   const deleteElement = async () => {
+    confirmOpen = false;
+    if (!$store.selectedElement) return;
     config.delete(
       $authToken,
       $store.selectedElement.id,
@@ -244,7 +283,7 @@
     Please log in to access Creator tools.
   </div>
 {:else}
-  <div class="flex flex-col h-[calc(100vh-128px)]">
+  <div class="flex h-full min-h-0 flex-col">
     <!-- Header: Title + Action Buttons -->
     <div class="px-6 pt-5 pb-3 flex-shrink-0">
       <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -280,7 +319,7 @@
                 {labels.create}
               </button>
             {:else}
-              <button class="btn btn-danger" type="button" on:click={() => deleteElement()}>
+              <button class="btn btn-danger" type="button" on:click={askDelete}>
                 <span class="material-symbols-outlined text-sm">delete</span>
                 {labels.delete}
               </button>
@@ -295,12 +334,13 @@
     </div>
 
     <!-- Main content: side-by-side table + detail -->
-    <div class="flex-1 flex overflow-hidden px-6 pb-5 gap-5">
+    <div class="flex min-h-0 flex-1 gap-5 overflow-hidden px-6 pb-5">
       <!-- Data Table Panel -->
       <div
-        class="flex-shrink-0 overflow-y-auto transition-all duration-200 thin-scrollbar"
+        class="min-h-0 flex-shrink-0 overflow-y-auto transition-all duration-200 thin-scrollbar"
         style={$store.detailOpen ? "width: 44%; min-width: 380px;" : "width: 100%;"}
       >
+        <slot name="toolbar" />
         <DataTable
           columns={config.columns || []}
           elements={$store.elements}
@@ -319,7 +359,7 @@
 
       <!-- Detail Panel (visible when an element is selected and detail is open) -->
       {#if $store.detailOpen && $store.selectedElement}
-        <div class="flex-1 overflow-y-auto min-w-[400px] thin-scrollbar">
+        <div class="min-h-0 min-w-[400px] flex-1 overflow-y-auto thin-scrollbar">
           <!-- Detail header bar -->
           <div class="card px-4 py-2.5 mb-4 flex items-center justify-between">
             <div class="flex items-center gap-3 min-w-0">
@@ -414,11 +454,24 @@
           <div class="mt-6">
             <slot name="extensions" />
           </div>
+          {#if backlinkTypes.has(config.entityType) && !$store.selectedElement.isNew && $store.selectedElement.id}
+            <BacklinksPanel type={config.entityType} id={$store.selectedElement.id} />
+          {/if}
         </div>
       {/if}
     </div>
   </div>
 {/if}
+
+<ConfirmDialog
+  open={confirmOpen}
+  entityType={config.entityType || "entity"}
+  entityName={$store.selectedElement?.name || ""}
+  entityId={$store.selectedElement?.id || ""}
+  hint={deleteHint}
+  on:confirm={deleteElement}
+  on:cancel={cancelDelete}
+/>
 
 <style>
   .thin-scrollbar::-webkit-scrollbar {

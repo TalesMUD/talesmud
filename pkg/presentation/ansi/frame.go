@@ -4,6 +4,8 @@ package ansi
 
 import (
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 const (
@@ -27,6 +29,7 @@ type Frame struct {
 	Screen    string            `json:"screen,omitempty"`
 	Accepts   []string          `json:"accepts,omitempty"`
 	Keys      map[string]string `json:"keys,omitempty"`
+	Logout    bool              `json:"logout,omitempty"`
 }
 
 // Page is the text the caller wants on screen.
@@ -52,7 +55,7 @@ func Render(page Page) Frame {
 		accepts = []string{"line"}
 	}
 	lines := make([]string, Rows)
-	lines[0] = titleBar(page.Title, "")
+	lines[0] = titleBar(framePlain(page.Title), "")
 	lines[1] = fit(ansiTitle+page.Location+ansiReset, Cols)
 	lines[2] = fit(ansiDim+strings.Repeat("-", Cols)+ansiReset, Cols)
 	const bodyRows = 19
@@ -89,73 +92,174 @@ func Render(page Page) Frame {
 }
 
 func titleBar(left, right string) string {
-	gap := Cols - len(left) - len(right) - 2
+	gap := Cols - utf8.RuneCountInString(left) - utf8.RuneCountInString(right) - 2
 	if gap < 1 {
 		gap = 1
 	}
 	plain := " " + left + strings.Repeat(" ", gap) + right + " "
-	if len(plain) > Cols {
-		plain = plain[:Cols]
+	if utf8.RuneCountInString(plain) > Cols {
+		plain = clipRunes(plain, Cols)
 	}
-	if len(plain) < Cols {
-		plain += strings.Repeat(" ", Cols-len(plain))
+	if utf8.RuneCountInString(plain) < Cols {
+		plain += strings.Repeat(" ", Cols-utf8.RuneCountInString(plain))
 	}
 	return ansiBar + plain + ansiReset
 }
 
-func fit(s string, width int) string {
-	if visibleLen(s) > width {
-		s = clipVisible(s, width)
+func clipRunes(s string, width int) string {
+	if width <= 0 {
+		return ""
 	}
-	pad := width - visibleLen(s)
+	if utf8.RuneCountInString(s) <= width {
+		return s
+	}
+	var b strings.Builder
+	n := 0
+	for _, r := range s {
+		if n >= width {
+			break
+		}
+		b.WriteRune(r)
+		n++
+	}
+	return b.String()
+}
+
+func fit(s string, width int) string {
+	s = clipFrame(s, width)
+	pad := width - frameWidth(s)
 	if pad < 0 {
 		pad = 0
 	}
 	return s + strings.Repeat(" ", pad)
 }
 
-func visibleLen(s string) int {
-	n := 0
-	for i := 0; i < len(s); {
-		if s[i] == 0x1b && i+1 < len(s) && s[i+1] == '[' {
-			j := i + 2
-			for j < len(s) && !((s[j] >= 'A' && s[j] <= 'Z') || (s[j] >= 'a' && s[j] <= 'z')) {
-				j++
-			}
-			if j < len(s) {
-				j++
-			}
-			i = j
-			continue
-		}
-		n++
-		i++
-	}
+func frameWidth(s string) int {
+	_, n := filterFrame(s, -1, false)
 	return n
 }
 
-func clipVisible(s string, width int) string {
+func clipFrame(s string, width int) string {
+	out, _ := filterFrame(s, width, true)
+	return out
+}
+
+// framePlain drops every escape sequence. The title bar adds its own SGR.
+func framePlain(s string) string {
+	out, _ := filterFrame(s, -1, true)
+	return stripSGR(out)
+}
+
+func stripSGR(s string) string {
 	var b strings.Builder
-	vis := 0
 	for i := 0; i < len(s); {
-		if s[i] == 0x1b && i+1 < len(s) && s[i+1] == '[' {
-			j := i + 2
-			for j < len(s) && !((s[j] >= 'A' && s[j] <= 'Z') || (s[j] >= 'a' && s[j] <= 'z')) {
-				j++
-			}
-			if j < len(s) {
-				j++
-			}
-			b.WriteString(s[i:j])
+		if s[i] == 0x1b {
+			j, _ := takeESC(s, i)
 			i = j
 			continue
 		}
-		if vis >= width {
-			break
-		}
 		b.WriteByte(s[i])
-		vis++
 		i++
 	}
 	return b.String()
+}
+
+// filterFrame copies text for one frame row. CSI SGR is kept and has no
+// width. OSC, DCS, other escapes, C1, CR, LF, and format controls are dropped.
+func filterFrame(s string, width int, copy bool) (string, int) {
+	var b strings.Builder
+	vis := 0
+	for i := 0; i < len(s); {
+		if s[i] == 0x1b {
+			j, sgr := takeESC(s, i)
+			if copy && sgr {
+				b.WriteString(s[i:j])
+			}
+			i = j
+			continue
+		}
+		if s[i] >= 0x80 && s[i] <= 0x9f {
+			i++
+			continue
+		}
+		r, size := utf8.DecodeRuneInString(s[i:])
+		if size < 1 {
+			i++
+			continue
+		}
+		if r == utf8.RuneError && size == 1 {
+			i++
+			continue
+		}
+		if dropFrameRune(r) {
+			i += size
+			continue
+		}
+		if width >= 0 && vis >= width {
+			break
+		}
+		if copy {
+			b.WriteString(s[i : i+size])
+		}
+		vis++
+		i += size
+	}
+	if !copy {
+		return "", vis
+	}
+	return b.String(), vis
+}
+
+func dropFrameRune(r rune) bool {
+	if r == '\n' || r == '\r' || r == 0x7f {
+		return true
+	}
+	if r < 0x20 && r != '\t' {
+		return true
+	}
+	if r >= 0x80 && r <= 0x9f || unicode.Is(unicode.Cf, r) {
+		return true
+	}
+	return false
+}
+
+// takeESC returns the index after this escape and whether it is CSI SGR.
+func takeESC(s string, i int) (int, bool) {
+	if i+1 >= len(s) {
+		return len(s), false
+	}
+	switch s[i+1] {
+	case '[':
+		j := i + 2
+		for j < len(s) {
+			c := s[j]
+			j++
+			if c >= 0x40 && c <= 0x7e {
+				return j, c == 'm'
+			}
+		}
+		return j, false
+	case ']':
+		return skipST(s, i+2), false
+	case 'P', 'X', '^', '_':
+		return skipST(s, i+2), false
+	default:
+		if i+2 > len(s) {
+			return len(s), false
+		}
+		return i + 2, false
+	}
+}
+
+func skipST(s string, j int) int {
+	for j < len(s) {
+		if s[j] == 0x07 {
+			return j + 1
+		}
+		if s[j] == 0x1b && j+1 < len(s) && s[j+1] == '\\' {
+			return j + 2
+		}
+		j++
+	}
+	return j
 }

@@ -96,6 +96,29 @@ func (c *CombatController) GetCombatInstance(characterID string) *combat.CombatI
 	return c.manager.GetInstanceByPlayerID(characterID)
 }
 
+// CombatSnapshot reads a live fight without advancing turns or starting combat.
+// Character selection calls this after loading the character's inCombat flag.
+func (c *CombatController) CombatSnapshot(characterID, userID string) *messages.CombatStatusMessage {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	instance := c.manager.GetInstanceByPlayerID(characterID)
+	if instance == nil || instance.State != combat.CombatStateActive {
+		return nil
+	}
+	player := instance.GetPlayerByID(characterID)
+	if player == nil || !player.IsAlive || player.HasFled {
+		return nil
+	}
+	msg := messages.NewCombatStatusMessage(userID, "", instance.Round, c.playerCombatQueueState(instance, characterID))
+	msg.Combatants = stampViewerThreat(combatantViewsFromInstance(instance), player.Level, instance)
+	if actor := instance.GetCurrentTurnCombatant(); actor != nil {
+		msg.ActorID, msg.ActorName = actor.ID, actor.Name
+	}
+	msg.DeadlineMs = msg.DecisionDeadlineMs
+	msg.TargetID = player.AutoAttackTargetID
+	return msg
+}
+
 // InitiateCombat starts combat between players and enemies
 func (c *CombatController) InitiateCombat(roomID string, players []*characters.Character, enemies []*npc.NPC) *combat.CombatInstance {
 	c.fillKitHotbars(players)
@@ -269,7 +292,25 @@ func (c *CombatController) ProcessPlayerSkill(characterID, skillID, targetID str
 	return
 }
 
+// PlayerHP is the live combat hit-point pair. ok is false when this character
+// is not in a fight, so callers keep the stored character values.
+func (c *CombatController) PlayerHP(characterID string) (current, max int32, ok bool) {
+	if c == nil || c.manager == nil || characterID == "" {
+		return 0, 0, false
+	}
+	instance := c.manager.GetInstanceByPlayerID(characterID)
+	if instance == nil {
+		return 0, 0, false
+	}
+	player := instance.GetPlayerByID(characterID)
+	if player == nil {
+		return 0, 0, false
+	}
+	return player.CurrentHP, player.MaxHP, true
+}
+
 // BriefStatus is one line of live hit points for the text client.
+// Each enemy is named with its level so a fight screen can show who you face.
 func (c *CombatController) BriefStatus(characterID string) string {
 	if c == nil || c.manager == nil || characterID == "" {
 		return ""
@@ -284,7 +325,7 @@ func (c *CombatController) BriefStatus(characterID string) string {
 	}
 	for _, enemy := range instance.Enemies {
 		if enemy.IsAlive {
-			parts = append(parts, fmt.Sprintf("%s %d/%d", enemy.Name, enemy.CurrentHP, enemy.MaxHP))
+			parts = append(parts, fmt.Sprintf("%s L%d %d/%d", enemy.Name, enemy.Level, enemy.CurrentHP, enemy.MaxHP))
 		}
 	}
 	return strings.Join(parts, "   ")
@@ -804,7 +845,26 @@ func (c *CombatController) processAllTurnsLocked(instance *combat.CombatInstance
 
 	current := instance.GetCurrentTurnCombatant()
 	if current == nil {
-		return
+		// The index is past the order (a dead or fled tail, or a rebuild that
+		// shrank the order). End the fight if it is already over. Otherwise
+		// wrap to the next living combatant and resolve that turn on this tick.
+		endState := c.engine.CheckCombatEnd(instance)
+		if endState != combat.CombatStateActive {
+			c.engine.EndCombat(instance, endState)
+			c.cleanupCombatInstance(instance, endState)
+			return
+		}
+		c.engine.NextTurn(instance)
+		endState = c.engine.CheckCombatEnd(instance)
+		if endState != combat.CombatStateActive {
+			c.engine.EndCombat(instance, endState)
+			c.cleanupCombatInstance(instance, endState)
+			return
+		}
+		current = instance.GetCurrentTurnCombatant()
+		if current == nil {
+			return
+		}
 	}
 
 	// Player decision window: announce once, then wait for queue or deadline
@@ -968,6 +1028,13 @@ func (c *CombatController) resolveNPCTurn(instance *combat.CombatInstance, curre
 			if target != nil {
 				remaining, maxHP = target.CurrentHP, target.MaxHP
 			}
+			prose := strings.TrimSpace(result.Message)
+			if prose == "" {
+				prose = strings.TrimSpace(step.Message)
+			}
+			if prose == "" {
+				prose = fmt.Sprintf("%s attacks.", current.Name)
+			}
 			c.notifyCombatAction(instance, messages.CombatActionMessage{
 				ActorID:     current.ID,
 				ActorName:   current.Name,
@@ -979,7 +1046,7 @@ func (c *CombatController) resolveNPCTurn(instance *combat.CombatInstance, curre
 				RemainingHP: remaining,
 				MaxHP:       maxHP,
 				FxID:        fxIDForAttack(result, result.TargetDied),
-			}, result.Message)
+			}, prose)
 			if result.TargetDied {
 				if target != nil && target.Type == combat.CombatantTypePlayer {
 					c.syncPlayerHP(targetID, 0)
@@ -1039,6 +1106,7 @@ func (c *CombatController) cleanupCombatInstance(instance *combat.CombatInstance
 			n.CurrentHitPoints = enemy.CurrentHP
 			if enemy.IsAlive {
 				n.State = "idle"
+				resetNPCAfterDisengage(n)
 			} else {
 				n.IsDead = true
 				n.State = "dead"
@@ -1073,11 +1141,22 @@ func (c *CombatController) cleanupCombatInstance(instance *combat.CombatInstance
 		char.CurrentHitPoints = player.CurrentHP
 		char.CurrentMana = player.CurrentMana
 
+		// A spar only restores hit points when the bout is a defeat.
+		// Any other ending drops the flag so a later fight stays real.
+		if endState != combat.CombatStateDefeat && char.Flags != nil {
+			delete(char.Flags, "spar")
+		}
+
 		c.game.Facade.CharactersService().Update(player.ID, char)
 		c.markCombatGrace(player.ID)
+		c.runAfterCombat(char, string(endState))
 
 		// Send updated stats to client (combat ended, final HP/XP/Gold)
-		update := messages.NewCharacterUpdateMessage(char.BelongsUserID, char)
+		fresh, ferr := c.game.Facade.CharactersService().FindByID(player.ID)
+		if ferr != nil || fresh == nil {
+			fresh = char
+		}
+		update := messages.NewCharacterUpdateMessage(fresh.BelongsUserID, fresh)
 		if update != nil {
 			c.game.sendMessage <- update
 		}
@@ -1356,6 +1435,76 @@ func (c *CombatController) processCombatVictory(instance *combat.CombatInstance)
 	}
 }
 
+func flagBool(flags map[string]interface{}, key string) bool {
+	if flags == nil {
+		return false
+	}
+	switch v := flags[key].(type) {
+	case bool:
+		return v
+	case string:
+		return strings.EqualFold(v, "true") || v == "1"
+	case float64:
+		return v != 0
+	case int:
+		return v != 0
+	default:
+		return false
+	}
+}
+
+func combatFlagString(flags map[string]interface{}, key string) string {
+	if flags == nil {
+		return ""
+	}
+	s, ok := flags[key].(string)
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(s)
+}
+
+// runAfterCombat runs the script id stored in the after_combat flag, then clears it.
+// last_combat is set to the outcome so the script can tell a win from a loss.
+// Classic characters have neither flag, so this does nothing.
+func (c *CombatController) runAfterCombat(char *characters.Character, outcome string) {
+	if c == nil || char == nil || char.Flags == nil || c.game == nil || c.game.Facade == nil {
+		return
+	}
+	scriptID := combatFlagString(char.Flags, "after_combat")
+	if scriptID == "" {
+		return
+	}
+	delete(char.Flags, "after_combat")
+	char.Flags["last_combat"] = outcome
+	if err := c.game.Facade.CharactersService().Update(char.ID, char); err != nil {
+		log.WithError(err).WithField("characterID", char.ID).Warn("after_combat flag save failed")
+		return
+	}
+	runner := c.game.Facade.Runner()
+	if runner == nil {
+		return
+	}
+	script, err := c.game.Facade.ScriptsService().FindByID(scriptID)
+	if err != nil || script == nil {
+		log.WithError(err).WithField("scriptID", scriptID).Warn("after_combat script not found")
+		return
+	}
+	fresh, ferr := c.game.Facade.CharactersService().FindByID(char.ID)
+	if ferr != nil || fresh == nil {
+		fresh = char
+	}
+	ctx := scripts.NewScriptContext()
+	ctx.Set("eventType", "combat.end")
+	ctx.Set("character", fresh)
+	ctx.Set("characterID", fresh.ID)
+	ctx.Set("outcome", outcome)
+	result := runner.RunWithResult(*script, ctx)
+	if result != nil && !result.Success {
+		log.WithField("script", scriptID).WithField("error", result.Error).Warn("after_combat script failed")
+	}
+}
+
 // processCombatDefeat handles death penalties and sends the defeat message.
 // Players who already fled or slipped are not dead: no penalty, no respawn
 // move, and the same escaped notice a full flee would send.
@@ -1367,6 +1516,28 @@ func (c *CombatController) processCombatDefeat(instance *combat.CombatInstance) 
 		}
 		char, err := c.game.Facade.CharactersService().FindByID(player.ID)
 		if err != nil {
+			continue
+		}
+
+		if flagBool(char.Flags, "spar") {
+			if char.MaxHitPoints < 1 {
+				char.MaxHitPoints = 1
+			}
+			char.CurrentHitPoints = char.MaxHitPoints
+			char.AwaitingReset = false
+			delete(char.Flags, "spar")
+			for i := range instance.Players {
+				if instance.Players[i].ID == player.ID {
+					instance.Players[i].CurrentHP = char.CurrentHitPoints
+					instance.Players[i].IsAlive = true
+					break
+				}
+			}
+			_ = c.game.Facade.CharactersService().Update(player.ID, char)
+			c.game.sendMessage <- messages.NewCombatEndMessage(char.BelongsUserID,
+				fmt.Sprintf("\n═══════════════════════════════════════════════════\n              THE BOUT ENDS\n═══════════════════════════════════════════════════\n\nYou are still standing.\n\nYou awaken with %d/%d HP.\n═══════════════════════════════════════════════════",
+					char.CurrentHitPoints, char.MaxHitPoints),
+				string(combat.CombatStateDefeat))
 			continue
 		}
 
@@ -1818,4 +1989,17 @@ func (c *CombatController) applyWeaponOnHitScript(instance *combat.CombatInstanc
 	if !run.Success {
 		log.WithField("script", script.Name).WithField("error", run.Error).Warn("Weapon OnHit script failed")
 	}
+}
+
+// resetNPCAfterDisengage restores a surviving boss (or any NPC whose content
+// opts in) to full HP when a fight ends without killing it. Per-fight hook and
+// phase state lives on the combat instance, so the next fight starts clean.
+func resetNPCAfterDisengage(n *npc.NPC) bool {
+	if n == nil || n.IsDead || !n.ResetsOnDisengage() {
+		return false
+	}
+	if n.MaxHitPoints > 0 {
+		n.CurrentHitPoints = n.MaxHitPoints
+	}
+	return true
 }

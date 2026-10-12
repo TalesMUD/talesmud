@@ -97,6 +97,7 @@ func (m *Manager) Generate(roomsSvc service.RoomsService, characterID string, pl
 		Clones:     map[string]string{},
 		Procedural: true,
 		ExpiresAt:  time.Now().Add(timeout),
+		Created:    time.Now().UTC(),
 	}
 
 	cloneIDs := make([]string, spec.Count)
@@ -185,6 +186,17 @@ func blockedExit(name, target string) rooms.Exit {
 	}
 }
 
+func procRoomTags(src *rooms.Room) []string {
+	tags := []string{"procedural"}
+	if src != nil && src.Entity != nil && src.ID != "" {
+		tags = append(tags, "screen:"+src.ID)
+	}
+	if src != nil {
+		tags = append(tags, src.Tags...)
+	}
+	return tags
+}
+
 func buildProcRoom(src *rooms.Room, cloneID string, exits rooms.Exits) *rooms.Room {
 	out := &rooms.Room{
 		Entity:          &entities.Entity{ID: cloneID},
@@ -193,7 +205,7 @@ func buildProcRoom(src *rooms.Room, cloneID string, exits rooms.Exits) *rooms.Ro
 		Description:     src.Description,
 		Area:            src.Area,
 		AreaType:        src.AreaType,
-		Tags:            append([]string{"procedural"}, src.Tags...),
+		Tags:            procRoomTags(src),
 		OnEnterScriptID: src.OnEnterScriptID,
 	}
 	chars := rooms.Characters{}

@@ -1,8 +1,8 @@
 <script>
-  import { onMount } from "svelte";
+  import { onDestroy, onMount } from "svelte";
   import { navigateTo } from "yrv";
   import { getAuth } from "../auth.js";
-  import { getMinimalRoomsAsync, batchUpdateCoordsAsync } from "../api/world.js";
+  import { getMinimalRoomsAsync, batchUpdateCoordsAsync, getWorldReachabilityAsync, getWorldOverlaysAsync } from "../api/world.js";
   import {
     getRoomsValueHelpAsync,
     createRoomAsync,
@@ -13,6 +13,11 @@
   import GridRoomTile from "./GridRoomTile.svelte";
   import RoomEditorPanel from "./RoomEditorPanel.svelte";
   import { getOppositeDirection, CARDINAL_DIRECTIONS } from "./WorldEditorStore.js";
+  import { fitViewBox, pixelToCoords, roomPixel } from "./mapFit.js";
+  import { edgeLook, islandPinned, roomMark } from "./reachMarks.js";
+  import { overlayView } from "./overlayMarks.js";
+  import { reasonChain } from "./islandLinks.js";
+  import { overlayLayersOn, readLayers, writeLayers } from "./mapLayers.js";
 
   // svelte-ignore unused-export-let
   export let location;
@@ -102,6 +107,27 @@
   let viewBox = { x: -600, y: -400, width: 1200, height: 800 };
   let svgElement;
   let containerElement;
+  // SVG user units per CSS pixel. Overlay badges divide by this so they stay ~12px.
+  let unitsPerPixel = 1;
+  let viewportObserver;
+
+  function syncUnitsPerPixel() {
+    const el = svgElement;
+    const w = el?.clientWidth || 0;
+    const h = el?.clientHeight || 0;
+    if (w < 1 || h < 1) return;
+    const next = Math.max(viewBox.width / w, viewBox.height / h);
+    if (next > 0 && next !== unitsPerPixel) unitsPerPixel = next;
+  }
+
+  function watchViewport(node) {
+    viewportObserver?.disconnect();
+    viewportObserver = null;
+    if (!node || typeof ResizeObserver === "undefined") return;
+    viewportObserver = new ResizeObserver(() => syncUnitsPerPixel());
+    viewportObserver.observe(node);
+    syncUnitsPerPixel();
+  }
 
   // Drag state for moving rooms
   let dragging = null; // { roomId, startMouseX, startMouseY, startRoomX, startRoomY }
@@ -257,6 +283,7 @@
           isBidirectional,
           isCardinal,
           isCrossZone,
+          isHidden: !!exit.hidden || !!reverseExit?.hidden,
           sourceArea: room.area,
           targetArea: targetRoom.area,
         });
@@ -479,22 +506,13 @@
     }
   }
 
-  // Convert grid coords to pixel position (center of room)
-  // Negate Y so north (higher Y) renders at top of screen
+  // World coords: north decreases Y. Screen: north is toward the top.
   function coordsToPixel(coords) {
-    return {
-      x: coords.x * GRID_SCALE,
-      y: -coords.y * GRID_SCALE,
-    };
+    return roomPixel(coords, GRID_SCALE);
   }
 
-  // Convert pixel position to grid coords (snap to nearest)
-  // Negate Y to match world coordinates
-  function pixelToCoords(px, py) {
-    return {
-      x: Math.round(px / GRID_SCALE),
-      y: Math.round(-py / GRID_SCALE),
-    };
+  function coordsFromPixel(px, py) {
+    return pixelToCoords(px, py, GRID_SCALE);
   }
 
   // Get mouse position in SVG coordinates
@@ -612,7 +630,7 @@
   async function handleMouseUp(event) {
     if (dragging) {
       // Finish moving a room
-      const newCoords = pixelToCoords(dragging.currentX, dragging.currentY);
+      const newCoords = coordsFromPixel(dragging.currentX, dragging.currentY);
       const oldCoords = dragging.originalCoords;
       const roomId = dragging.roomId;
 
@@ -772,29 +790,124 @@
     };
   }
 
-  // Fit view to content (uses filtered rooms)
+  // Fit view to the filtered rooms. North (smaller Y) is toward the top.
   function fitView() {
-    if (filteredRooms.length === 0) {
-      viewBox = { x: -600, y: -400, width: 1200, height: 800 };
+    viewBox = fitViewBox(filteredRooms.map((room) => room.coords), GRID_SCALE, 2);
+  }
+
+  // Reachability plus the other map layers. Toggles persist across visits.
+  const OVERLAY_TOGGLES = [
+    { id: "level", label: "Level", title: "Color rooms by the NPC level range in the room, or in the zone" },
+    { id: "aggro", label: "Aggro", title: "Badge for enemies with aggro on sight" },
+    { id: "wanderers", label: "Wanderers", title: "Live wandering NPC positions; refresh to update" },
+ { id: "spawners", label: "Spawners", title: "Spawner icon. Hover shows the respawn time" },
+    { id: "players", label: "Players", title: "Online players. An admin sees names. A creator sees the count" },
+    { id: "quests", label: "Quests", title: "Rooms named by a quest objective. Hover shows the quest ids" },
+    { id: "art", label: "Missing art", title: "Rooms with no background image" },
+    { id: "copies", label: "Copies", title: "Live instance rooms (~) for this template" },
+  ];
+  let mapLayers = {
+    reachability: false,
+    level: false,
+    aggro: false,
+    spawners: false,
+ wanderers: false,
+    players: false,
+    quests: false,
+    art: false,
+    copies: false,
+  };
+  $: reachOn = !!mapLayers.reachability;
+  $: overlayOn = overlayLayersOn(mapLayers);
+  let reachReport = null;
+  let reachError = "";
+  let reachLoading = false;
+  let selectedIsland = -1;
+  let reachById = new Map();
+  $: reachById = new Map((reachReport?.rooms || []).map((room) => [room.id, room]));
+  $: reachRoomIds = (reachReport?.rooms || []).map((room) => room.id);
+  let overlayReport = null;
+  let overlayError = "";
+  let overlayLoading = false;
+  let overlayById = new Map();
+  $: overlayById = new Map((overlayReport?.rooms || []).map((room) => [room.id, room]));
+
+  async function loadReachability() {
+    if (!$authToken) return;
+    reachLoading = true;
+    reachError = "";
+    try {
+      reachReport = await getWorldReachabilityAsync($authToken);
+      selectedIsland = -1;
+    } catch (err) {
+      console.error("Reachability failed", err);
+      reachError = "Could not load reachability.";
+      reachReport = null;
+    } finally {
+      reachLoading = false;
+    }
+  }
+
+  function toggleLayer(id) {
+    const next = !mapLayers[id];
+    mapLayers = { ...mapLayers, [id]: next };
+    try {
+      writeLayers(localStorage, mapLayers);
+    } catch {
+      /* keep the toggles in memory when storage is blocked */
+    }
+    if (id === "reachability") {
+      selectedIsland = -1;
+      if (next) {
+        reachError = "";
+        if (!reachReport && !reachLoading) loadReachability();
+      }
       return;
     }
+    if (!next) return;
+    if (id === "players" || id === "copies" || id === "wanderers") {
+      loadOverlays(true);
+      return;
+    }
+    if (!overlayReport && !overlayLoading) loadOverlays(false);
+  }
 
-    const coords = filteredRooms.map(r => r.coords);
-    const minX = Math.min(...coords.map(c => c.x));
-    const maxX = Math.max(...coords.map(c => c.x));
-    const minY = Math.min(...coords.map(c => c.y));
-    const maxY = Math.max(...coords.map(c => c.y));
+  async function loadOverlays(force) {
+    if (!$authToken || overlayLoading) return;
+    if (overlayReport && !force) return;
+    overlayLoading = true;
+    overlayError = "";
+    try {
+      overlayReport = await getWorldOverlaysAsync($authToken);
+    } catch (err) {
+      console.error("Overlays failed", err);
+      overlayError = "Could not load map overlays.";
+    } finally {
+      overlayLoading = false;
+    }
+  }
 
-    const padding = 2; // Grid units
-    const width = (maxX - minX + padding * 2) * GRID_SCALE;
-    const height = (maxY - minY + padding * 2) * GRID_SCALE;
+  function openIslandLink(event, href) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (href) navigateTo(href);
+  }
 
-    viewBox = {
-      x: (minX - padding) * GRID_SCALE,
-      y: (minY - padding) * GRID_SCALE,
-      width: Math.max(width, 600),
-      height: Math.max(height, 400),
-    };
+  function islandLabel(island) {
+    const first = (rooms || []).find((room) => room.id === island.roomIds?.[0]);
+    return first?.name || island.roomIds?.[0] || "Island";
+  }
+
+  function showIsland(index) {
+    if (selectedIsland === index) {
+      selectedIsland = -1;
+      fitView();
+      return;
+    }
+    selectedIsland = index;
+    const ids = new Set(reachReport?.islands?.[index]?.roomIds || []);
+    const coords = filteredRooms.filter((room) => ids.has(room.id)).map((room) => room.coords);
+    viewBox = fitViewBox(coords, GRID_SCALE, 2);
   }
 
   // Panel handlers
@@ -1025,8 +1138,28 @@
   }
 
   onMount(() => {
-    console.log("GridWorldEditor mounted");
+    try {
+      mapLayers = readLayers(localStorage);
+    } catch {
+      /* start with every layer off */
+    }
   });
+
+  $: watchViewport(svgElement);
+  $: {
+    viewBox.width;
+    viewBox.height;
+    syncUnitsPerPixel();
+  }
+
+  onDestroy(() => viewportObserver?.disconnect());
+
+  $: if ($authToken && mapLayers.reachability && !reachReport && !reachLoading && !reachError) {
+    loadReachability();
+  }
+  $: if ($authToken && overlayOn && !overlayReport && !overlayLoading && !overlayError) {
+    loadOverlays(false);
+  }
 </script>
 
 <div class="world-editor-page">
@@ -1064,6 +1197,26 @@
         </div>
       {/if}
 
+      <button
+        class="layer-btn"
+        class:on={mapLayers.reachability}
+        type="button"
+        on:click={() => toggleLayer("reachability")}
+        title="Color rooms by reachability from the start room"
+      >
+        Reachability
+      </button>
+      {#each OVERLAY_TOGGLES as layer (layer.id)}
+        <button
+          class="layer-btn"
+          class:on={mapLayers[layer.id]}
+          type="button"
+          title={layer.title}
+          on:click={() => toggleLayer(layer.id)}
+        >
+          {layer.label}
+        </button>
+      {/each}
       <button class="icon-btn" on:click={fitView} title="Fit view">
         <span class="material-symbols-outlined">fit_screen</span>
       </button>
@@ -1141,17 +1294,15 @@
               {#each edges as edge}
                 {@const source = coordsToPixel(edge.sourceCoords)}
                 {@const target = coordsToPixel(edge.targetCoords)}
-                {@const edgeColor = edge.isCrossZone ? '#e06040' : (edge.isCardinal ? '#888' : '#b08050')}
-                {@const dashArray = edge.isCrossZone ? '8,4' : (edge.isCardinal ? 'none' : '4,3')}
-                {@const strokeWidth = edge.isCrossZone ? 2 : 1.5}
+                {@const look = edgeLook(edge, reachOn, reachReport, reachById)}
                 <line
                   x1={source.x}
                   y1={source.y}
                   x2={target.x}
                   y2={target.y}
-                  stroke={edgeColor}
-                  stroke-width={strokeWidth}
-                  stroke-dasharray={dashArray}
+                  stroke={look.color}
+                  stroke-width={look.width}
+                  stroke-dasharray={look.dash}
                   class="edge-line"
                 />
                 {#if !edge.isBidirectional}
@@ -1162,7 +1313,7 @@
                   <polygon
                     points="-7,-4 0,0 -7,4"
                     transform="translate({midX}, {midY}) rotate({angle})"
-                    fill={edgeColor}
+                    fill={look.color}
                   />
                 {/if}
               {/each}
@@ -1210,6 +1361,10 @@
                   selected={selectedRoomId === room.id}
                   dragging={dragging?.roomId === room.id}
                   areaColor={getRoomAreaColor(room)}
+                  mark={roomMark(room, reachOn, reachReport, reachById)}
+                  overlay={overlayView(room, mapLayers, overlayById)}
+                  svgPerPx={unitsPerPixel}
+                  pinned={islandPinned(room.id, reachOn, selectedIsland, reachReport)}
                   on:select={handleRoomSelect}
                   on:dragstart={handleRoomDragStart}
                   on:exitdragstart={handleExitDragStart}
@@ -1239,6 +1394,61 @@
             <div class="info-title">TalesMUD World Map</div>
             <div class="info-hint">Scroll to zoom · Drag to pan · Hover for details</div>
             <div class="info-stats">Rooms: {filteredRooms.length}</div>
+            {#if reachOn}
+              <div class="reach-block">
+                {#if reachLoading}
+                  <p>Loading reachability…</p>
+                {:else if reachError}
+                  <p>{reachError}</p>
+                {:else if reachReport}
+                  <p>Start {reachReport.startRoomId || "unknown"}</p>
+                  {#if (reachReport.islands || []).length === 0}
+                    <p>Every room is reachable.</p>
+                  {:else}
+                    <p>{reachReport.islands.length} unreachable {reachReport.islands.length === 1 ? "island" : "islands"}</p>
+                    <div class="reach-list">
+                      {#each reachReport.islands as island, index (island.roomIds?.[0] || index)}
+                        <div class="reach-island" class:on={selectedIsland === index}>
+                          <button class="reach-open" type="button" on:click={() => showIsland(index)}>
+                            <span class="reach-name">{islandLabel(island)}</span>
+                            <span class="reach-count">{island.roomIds.length}</span>
+                          </button>
+                          <div class="reach-reason">
+                            {#each reasonChain(island.reason, reachRoomIds) as note}
+                              <p>
+                                {#each note.parts as part}
+                                  {#if part.href}
+                                    <a href={part.href} on:click={(event) => openIslandLink(event, part.href)}>{part.text}</a>
+                                  {:else}
+                                    {part.text}
+                                  {/if}
+                                {/each}
+                              </p>
+                            {/each}
+                          </div>
+                        </div>
+                      {/each}
+                    </div>
+                  {/if}
+                {/if}
+              </div>
+            {/if}
+            {#if overlayLoading || overlayError || (overlayReport && !overlayReport.live && (mapLayers.players || mapLayers.copies)) || (overlayReport && mapLayers.players && !overlayReport.admin)}
+              <div class="reach-block">
+                {#if overlayLoading}
+                  <p>Loading overlays…</p>
+                {:else if overlayError}
+                  <p>{overlayError}</p>
+                {:else}
+                  {#if overlayReport && !overlayReport.live && (mapLayers.players || mapLayers.copies)}
+                    <p>Live world is unavailable.</p>
+                  {/if}
+                  {#if overlayReport && mapLayers.players && !overlayReport.admin}
+                    <p>Player counts. Names are admin only.</p>
+                  {/if}
+                {/if}
+              </div>
+            {/if}
           </div>
 
           <!-- Zoom controls -->
@@ -1293,6 +1503,50 @@
                 <svg width="30" height="10"><line x1="0" y1="5" x2="30" y2="5" stroke="#b08050" stroke-width="1.5" stroke-dasharray="4,3"/></svg>
                 <span class="legend-name">Special exit</span>
               </div>
+              {#if mapLayers.level}
+                <div class="legend-item connection-type">
+                  <span class="legend-swatch" style="background: #22d3ee;"></span>
+                  <span class="legend-name">Level 0–4</span>
+                </div>
+                <div class="legend-item connection-type">
+                  <span class="legend-swatch" style="background: #2dd4bf;"></span>
+                  <span class="legend-name">Level 5–9</span>
+                </div>
+                <div class="legend-item connection-type">
+                  <span class="legend-swatch" style="background: #fbbf24;"></span>
+                  <span class="legend-name">Level 10–14</span>
+                </div>
+                <div class="legend-item connection-type">
+                  <span class="legend-swatch" style="background: #fb923c;"></span>
+                  <span class="legend-name">Level 15–19</span>
+                </div>
+                <div class="legend-item connection-type">
+                  <span class="legend-swatch" style="background: #fb7185;"></span>
+                  <span class="legend-name">Level 20–29</span>
+                </div>
+                <div class="legend-item connection-type">
+                  <span class="legend-swatch" style="background: #c084fc;"></span>
+                  <span class="legend-name">Level 30+</span>
+                </div>
+              {/if}
+              {#if reachOn}
+                <div class="legend-item connection-type">
+                  <span class="legend-swatch" style="background: #16a34a;"></span>
+                  <span class="legend-name">Reachable</span>
+                </div>
+                <div class="legend-item connection-type">
+                  <span class="legend-swatch" style="background: #6366f1;"></span>
+                  <span class="legend-name">Instance</span>
+                </div>
+                <div class="legend-item connection-type">
+                  <span class="legend-swatch" style="background: #ef4444;"></span>
+                  <span class="legend-name">Unreachable</span>
+                </div>
+                <div class="legend-item connection-type">
+                  <svg width="30" height="10"><line x1="0" y1="5" x2="30" y2="5" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,4"/></svg>
+                  <span class="legend-name">Hidden exit</span>
+                </div>
+              {/if}
             </div>
           </div>
 
@@ -1362,7 +1616,8 @@
   .world-editor-page {
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 120px);
+    height: 100%;
+    min-height: 0;
     padding: 16px;
   }
 
@@ -1421,8 +1676,10 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 8px;
     margin-bottom: 16px;
     flex-shrink: 0;
+    flex-wrap: wrap;
   }
 
   .header h4 {
@@ -1433,7 +1690,9 @@
   .header-actions {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   .icon-btn {
@@ -1448,6 +1707,32 @@
     color: #aaa;
     cursor: pointer;
     transition: all 0.2s ease;
+  }
+
+  .layer-btn {
+    height: 36px;
+    padding: 0 12px;
+    background: #252540;
+    border: 1px solid #3a3a5a;
+    border-radius: 6px;
+    color: #cbd5e1;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .layer-btn.on {
+    background: #14532d;
+    border-color: #16a34a;
+    color: #dcfce7;
+  }
+
+  .layer-btn:hover {
+    background: #333355;
+  }
+
+  .layer-btn.on:hover {
+    background: #166534;
   }
 
   .icon-btn:hover {
@@ -1540,6 +1825,80 @@
   .info-stats {
     font-size: 11px;
     color: #666;
+  }
+
+  .reach-block {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid #3a3a5a;
+    max-width: 340px;
+    font-size: 12px;
+    color: #cbd5e1;
+  }
+
+  .reach-block p {
+    margin: 0 0 6px;
+  }
+
+  .reach-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+
+  .reach-island {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    text-align: left;
+    background: #1a1a2e;
+    border: 1px solid #7f1d1d;
+    border-radius: 6px;
+    color: #fecaca;
+    padding: 6px 8px;
+  }
+
+  .reach-open {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    background: transparent;
+    border: none;
+    color: inherit;
+    padding: 0;
+    cursor: pointer;
+    font: inherit;
+  }
+
+  .reach-island.on {
+    border-color: #ef4444;
+    background: #450a0a;
+  }
+
+  .reach-name {
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .reach-count {
+    color: #fca5a5;
+  }
+
+  .reach-reason {
+    flex-basis: 100%;
+    color: #cbd5e1;
+    line-height: 1.35;
+  }
+
+  .reach-reason p {
+    margin: 0 0 2px;
+  }
+
+  .reach-reason a {
+    color: #93c5fd;
+    text-decoration: underline;
   }
 
   .controls {

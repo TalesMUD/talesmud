@@ -9,6 +9,7 @@ import (
 
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
+	"github.com/talesmud/talesmud/pkg/entities/items"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/instances"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
@@ -33,6 +34,18 @@ func (command *SelectCharacterCommand) Execute(game def.GameCtrl, message *messa
 
 	parts := strings.Fields(message.Data)
 	characterName := strings.Join(parts[1:], " ")
+
+	// A character in a fight stays the active one until the fight ends.
+	// Switching away left the old fight running on auto-attack while its
+	// turn prompts, status lines and defeat went to the same user session.
+	if current := activeCharacterID(message); current != "" {
+		if engine := game.GetCombatEngine(); engine != nil && engine.IsPlayerInCombat(current) {
+			if name := activeCharacterName(message); name == "" || name != characterName {
+				game.SendMessage() <- message.Reply("You can't switch characters during a fight. Flee or finish the fight first.")
+				return true
+			}
+		}
+	}
 
 	if characters, err := game.GetFacade().CharactersService().FindByName(characterName); err == nil {
 
@@ -156,6 +169,7 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 		},
 		Character:      character,
 		XPForNextLevel: leveling.GetXPRequired(character.Level + 1),
+		Guest:          user.IsGuest,
 	}
 
 	game.SendMessage() <- characterSelected
@@ -202,6 +216,13 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 			ch.BoundRoomID = currentRoom.ID
 		}
 		worldmap.MarkOn(ch, currentRoom)
+		backfillItemEffects(ch, func(id string) *items.Item {
+			tmpl, err := game.GetFacade().ItemsService().FindByID(id)
+			if err != nil {
+				return nil
+			}
+			return tmpl
+		})
 		return nil
 	}); err != nil {
 		log.WithError(err).WithField("characterID", character.ID).Warn("select character: failed to persist discovery")
@@ -231,6 +252,15 @@ func handleCharacterSelected(game def.GameCtrl, user *entities.User, character *
 
 	// Send initial character stats (HP, mana, XP, etc.) to the client
 	game.SendMessage() <- m.NewCharacterUpdateMessage(user.ID, character)
+	if character.InCombat {
+		if snapshots, ok := game.GetCombatEngine().(interface {
+			CombatSnapshot(string, string) *m.CombatStatusMessage
+		}); ok {
+			if snapshot := snapshots.CombatSnapshot(character.ID, user.ID); snapshot != nil {
+				game.SendMessage() <- snapshot
+			}
+		}
+	}
 
 	// Send initial inventory state to the client
 	game.SendMessage() <- &m.InventoryUpdateMessage{
@@ -266,4 +296,25 @@ func sendQuestLogToPlayer(game def.GameCtrl, userID, characterID string) {
 
 	// Send quest log message
 	game.SendMessage() <- m.NewQuestLogMessage(userID, entries)
+}
+
+// activeCharacterID is the character this session is playing right now.
+func activeCharacterID(message *messages.Message) string {
+	if message == nil {
+		return ""
+	}
+	if message.Character != nil && message.Character.Entity != nil && message.Character.ID != "" {
+		return message.Character.ID
+	}
+	if message.FromUser != nil {
+		return message.FromUser.LastCharacter
+	}
+	return ""
+}
+
+func activeCharacterName(message *messages.Message) string {
+	if message == nil || message.Character == nil {
+		return ""
+	}
+	return message.Character.Name
 }

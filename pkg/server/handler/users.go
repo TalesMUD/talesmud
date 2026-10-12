@@ -51,6 +51,10 @@ func (handler *UsersHandler) UpdateUser(c *gin.Context) {
 			c.Error(err)
 			return
 		}
+		if user.IsGuest {
+			c.JSON(http.StatusForbidden, gin.H{"error": "guest accounts cannot be changed"})
+			return
+		}
 
 		user.Name = updates.Name
 		user.Email = updates.Email

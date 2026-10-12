@@ -1,6 +1,9 @@
 package npc
 
-import "math"
+import (
+	"math"
+	"strings"
+)
 
 // DefaultLowHealthFraction is the onLowHealth line when the threshold is unset or <= 0.
 const DefaultLowHealthFraction = 0.30
@@ -33,6 +36,15 @@ const (
 	CombatStyleAgile  = "agile"  // Fast, evasive, hit-and-run
 )
 
+// BaseStats is the unscaled content (YAML) combat numbers.
+// Imported enemies keep these beside the scaled stats combat actually uses.
+// Omitempty so an NPC authored only in the editor has no content base.
+type BaseStats struct {
+	MaxHitPoints int32 `json:"maxHitPoints" bson:"maxHitPoints"`
+	AttackPower  int32 `json:"attackPower" bson:"attackPower"`
+	Defense      int32 `json:"defense" bson:"defense"`
+}
+
 // EnemyTrait contains enemy-specific configuration for NPCs
 type EnemyTrait struct {
 	// Classification
@@ -43,6 +55,10 @@ type EnemyTrait struct {
 	CombatStyle string `json:"combatStyle"`
 	// Difficulty indicates combat challenge level: "trivial", "easy", "normal", "hard", "boss"
 	Difficulty string `json:"difficulty"`
+	// ResetOnDisengage restores full HP when a fight ends with this NPC still
+	// alive (players fled, died, disconnected or timed out). Nil uses the default:
+	// on for difficulty "boss", off otherwise.
+	ResetOnDisengage *bool `json:"resetOnDisengage,omitempty"`
 
 	// Combat Stats (used by future combat system)
 	// AttackPower is the base damage dealt
@@ -93,6 +109,10 @@ type EnemyTrait struct {
 	// LowHealthThreshold is a fraction of max HP in (0,1). 0 or unset uses
 	// DefaultLowHealthFraction. Other out-of-range values clamp into (0,1).
 	LowHealthThreshold float64 `json:"lowHealthThreshold,omitempty"`
+
+	// BaseStats holds the content values before difficulty scaling.
+	// AttackPower, Defense, and NPC.MaxHitPoints stay as the effective stats.
+	BaseStats *BaseStats `json:"baseStats,omitempty" bson:"baseStats,omitempty"`
 }
 
 // NormalizeLowHealthThreshold maps an authored fraction onto (0,1).
@@ -105,4 +125,16 @@ func NormalizeLowHealthThreshold(v float64) float64 {
 		return math.Nextafter(1, 0)
 	}
 	return v
+}
+
+// ResetsOnDisengage reports whether this NPC returns to full HP after a fight
+// it survives. Content can set EnemyTrait.ResetOnDisengage; otherwise bosses do.
+func (n *NPC) ResetsOnDisengage() bool {
+	if n == nil || n.EnemyTrait == nil {
+		return false
+	}
+	if n.EnemyTrait.ResetOnDisengage != nil {
+		return *n.EnemyTrait.ResetOnDisengage
+	}
+	return strings.EqualFold(strings.TrimSpace(n.EnemyTrait.Difficulty), "boss")
 }

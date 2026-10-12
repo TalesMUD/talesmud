@@ -10,13 +10,37 @@ import (
 	luar "layeh.com/gopher-luar"
 
 	"github.com/talesmud/talesmud/pkg/entities/characters"
+	"github.com/talesmud/talesmud/pkg/gamemode"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
 	"github.com/talesmud/talesmud/pkg/ruleset"
 	luarunner "github.com/talesmud/talesmud/pkg/scripts/runner/lua"
+	"github.com/talesmud/talesmud/pkg/service"
 )
 
 var errNotEnoughGold = errors.New("not enough gold")
+var errUnknownGrant = errors.New("unknown grant")
+
+// characterOnBoard decides if a character appears on tales.characters.top.
+// Guests are omitted unless guests.persistent_effects is on. A missing user
+// row stays on the board so older saves without a user record still rank.
+func characterOnBoard(facade service.Facade, ch *characters.Character) bool {
+	if ch == nil {
+		return false
+	}
+	if gamemode.GuestEffectsAllowed(true) {
+		return true
+	}
+	id := strings.TrimSpace(ch.BelongsUserID)
+	if id == "" || facade == nil || facade.UsersService() == nil {
+		return true
+	}
+	user, err := facade.UsersService().FindByID(id)
+	if err != nil || user == nil {
+		return true
+	}
+	return !user.IsGuest
+}
 
 // RegisterCharactersModule registers the tales.characters module
 func RegisterCharactersModule(L *lua.LState, runner *luarunner.LuaRunner) int {
@@ -108,7 +132,7 @@ func RegisterCharactersModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 		}
 		rows := make([]*characters.Character, 0, len(list))
 		for _, ch := range list {
-			if ch != nil && strings.TrimSpace(ch.Name) != "" {
+			if ch != nil && strings.TrimSpace(ch.Name) != "" && characterOnBoard(facade, ch) {
 				rows = append(rows, ch)
 			}
 		}
@@ -418,6 +442,77 @@ func RegisterCharactersModule(L *lua.LState, runner *luarunner.LuaRunner) int {
 		})
 		if err != nil {
 			log.WithError(err).WithField("characterID", id).Warn("setProgress failed")
+			L.Push(lua.LBool(false))
+			return 1
+		}
+		pushGoldUpdate(runner, id)
+		L.Push(lua.LBool(true))
+		return 1
+	}))
+
+	// tales.characters.grant(id, "attack"|"defense"|"maxHP", delta)
+	// Adds a small permanent bonus. One call may change the stat by at most 10.
+	// Attack and defense grants stay between 0 and 40. Max hit points stay between 1 and 5000.
+	mod.RawSetString("grant", L.NewFunction(func(L *lua.LState) int {
+		id := L.CheckString(1)
+		kind := strings.ToLower(strings.TrimSpace(L.CheckString(2)))
+		delta := int32(L.CheckInt(3))
+		if delta > 10 {
+			delta = 10
+		}
+		if delta < -10 {
+			delta = -10
+		}
+		facade := runner.GetFacade()
+		if facade == nil || delta == 0 {
+			L.Push(lua.LBool(false))
+			return 1
+		}
+		var applied bool
+		err := facade.CharactersService().Modify(id, func(character *characters.Character) error {
+			switch kind {
+			case "attack":
+				character.BonusAttack += delta
+				if character.BonusAttack < 0 {
+					character.BonusAttack = 0
+				}
+				if character.BonusAttack > 40 {
+					character.BonusAttack = 40
+				}
+				applied = true
+			case "defense":
+				character.BonusDefense += delta
+				if character.BonusDefense < 0 {
+					character.BonusDefense = 0
+				}
+				if character.BonusDefense > 40 {
+					character.BonusDefense = 40
+				}
+				applied = true
+			case "maxhp":
+				character.MaxHitPoints += delta
+				if character.MaxHitPoints < 1 {
+					character.MaxHitPoints = 1
+				}
+				if character.MaxHitPoints > 5000 {
+					character.MaxHitPoints = 5000
+				}
+				if character.CurrentHitPoints > character.MaxHitPoints {
+					character.CurrentHitPoints = character.MaxHitPoints
+				}
+				if delta > 0 {
+					character.CurrentHitPoints += delta
+					if character.CurrentHitPoints > character.MaxHitPoints {
+						character.CurrentHitPoints = character.MaxHitPoints
+					}
+				}
+				applied = true
+			default:
+				return errUnknownGrant
+			}
+			return nil
+		})
+		if err != nil || !applied {
 			L.Push(lua.LBool(false))
 			return 1
 		}

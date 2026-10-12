@@ -13,6 +13,7 @@ export const PANEL_ORDER = [
   'layoutDialog',
   'characterPicker',
   'settings',
+  'pickup',
   'addWidget',
   'map',
   'friends',
@@ -31,6 +32,17 @@ export function topOpenPanel(flags) {
     if (flags[id]) return id;
   }
   return '';
+}
+
+let readShortcutFlags = () => ({});
+
+/** Game.svelte registers the live overlay flags so the pickup panel can yield. */
+export function setShortcutFlags(reader) {
+  readShortcutFlags = typeof reader === 'function' ? reader : () => ({});
+}
+
+export function currentTopPanel() {
+  return topOpenPanel(readShortcutFlags());
 }
 
 /** True when the event target is a command line or any text field. */

@@ -5,16 +5,20 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/handlers"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/talesmud/talesmud/pkg/authlocal"
+	"github.com/talesmud/talesmud/pkg/authsession"
 	"github.com/talesmud/talesmud/pkg/classkit"
 	dbsqlite "github.com/talesmud/talesmud/pkg/db/sqlite"
+	"github.com/talesmud/talesmud/pkg/devicecode"
 	"github.com/talesmud/talesmud/pkg/gamemode"
 	mud "github.com/talesmud/talesmud/pkg/mudserver"
+	"github.com/talesmud/talesmud/pkg/mudserver/game"
 	"github.com/talesmud/talesmud/pkg/repository"
 	"github.com/talesmud/talesmud/pkg/resources"
 	"github.com/talesmud/talesmud/pkg/ruleset"
@@ -22,6 +26,8 @@ import (
 	"github.com/talesmud/talesmud/pkg/server/handler"
 	"github.com/talesmud/talesmud/pkg/service"
 	"github.com/talesmud/talesmud/pkg/service/groq"
+	"github.com/talesmud/talesmud/pkg/sshgate"
+	"github.com/talesmud/talesmud/pkg/sshkeys"
 	"github.com/talesmud/talesmud/pkg/util"
 	"github.com/talesmud/talesmud/pkg/webui"
 	"github.com/talesmud/talesmud/pkg/webuiplay"
@@ -33,12 +39,20 @@ type App interface {
 }
 
 type app struct {
-	Router      *gin.Engine
-	Facade      service.Facade
-	mud         mud.MUDServer
-	tickets     *TicketStore
-	localAuth   *authlocal.Service
-	resetByMail bool
+	Router        *gin.Engine
+	Facade        service.Facade
+	mud           mud.MUDServer
+	tickets       *TicketStore
+	localAuth     *authlocal.Service
+	sessions      *authsession.Service
+	devices       *devicecode.Store
+	deviceAPI     *handler.DeviceAPI
+	resetByMail   bool
+	contentHealth repository.ContentHealthRepository
+	db            *dbsqlite.Client
+	ssh           *sshgate.Gate
+	sshAPI        *handler.SSHAPI
+	userMgmt      *handler.UserManagementHandler
 }
 
 func adminAuthMiddleware() gin.HandlerFunc {
@@ -148,10 +162,13 @@ func NewApp() App {
 	}
 
 	application := &app{
-		Router:  r,
-		Facade:  facade,
-		mud:     mudSrv,
-		tickets: NewTicketStore(),
+		Router:        r,
+		Facade:        facade,
+		mud:           mudSrv,
+		tickets:       NewTicketStore(),
+		contentHealth: repos.ContentHealth(),
+		db:            client,
+		sshAPI:        handler.NewSSHAPI(),
 	}
 	if gamemode.LocalAuth() {
 		secret, err := authlocal.ResolveSecret(gamemode.Current())
@@ -167,7 +184,32 @@ func NewApp() App {
 			"resetMail": application.resetByMail,
 		}).Info("Local auth enabled")
 	}
+	application.initDeviceLogin()
 	return application
+}
+
+// initDeviceLogin leaves Door unchanged. Classic HTTP and SSH share one store,
+// including when the SSH listener or SSH device lobby is disabled.
+func (app *app) initDeviceLogin() {
+	if gamemode.ANSI() {
+		return
+	}
+	secret, err := authlocal.ResolveSecret(gamemode.Current())
+	if err != nil {
+		log.WithError(err).Fatal("Failed to load server session secret")
+	}
+	cfg := gamemode.SSH().Device
+	app.sessions = authsession.New(secret, app.Facade.UsersService())
+	app.devices = devicecode.New(devicePolicy(cfg))
+	app.deviceAPI = &handler.DeviceAPI{Devices: app.devices, ActivateURL: cfg.ActivateURL, Issue: app.sessions.Issue}
+	app.sshAPI.Set(handler.SSHSettings{Devices: app.devices, ActivateURL: cfg.ActivateURL, DeviceEnabled: true})
+}
+
+func devicePolicy(cfg gamemode.SSHDeviceConfig) devicecode.Config {
+	return devicecode.Config{
+		TTL: cfg.TTL.Duration(), MaxPendingPerIP: cfg.MaxPendingPerIP, MaxPending: cfg.MaxPending,
+		PerUser: cfg.LookupsPerUserPer10m, PerIP: cfg.LookupsPerIPPer10m, Window: 10 * time.Minute,
+	}
 }
 
 // SetupRoutes ... Configures the routes
@@ -273,9 +315,10 @@ func (app *app) setupRoutes() {
 		Service: app.Facade.ServerSettingsService(),
 	}
 
-	userMgmt := &handler.UserManagementHandler{
+	app.userMgmt = &handler.UserManagementHandler{
 		Service: app.Facade.UsersService(),
 	}
+	userMgmt := app.userMgmt
 
 	guestStats := &handler.GuestStatsHandler{
 		StatsService: app.Facade.GuestStatsService(),
@@ -285,6 +328,11 @@ func (app *app) setupRoutes() {
 	validationHandler := &handler.ValidationHandler{
 		Facade: app.Facade,
 	}
+	healthHandler := &handler.HealthHandler{
+		Facade: app.Facade,
+		Health: app.contentHealth,
+	}
+	searchHandler := &handler.SearchHandler{Facade: app.Facade}
 
 	r.GET("/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "API is up and running")
@@ -299,19 +347,26 @@ func (app *app) setupRoutes() {
 
 	// Protected API routes (JWT auth required)
 	protected := r.Group("/api/")
-	protected.Use(AuthMiddleware(app.Facade))
+	protected.Use(AuthMiddleware(app.Facade, app.sessions))
 	{
 		// Player-level routes (any authenticated user)
 		if app.localAuth != nil {
 			localAuth := &handler.LocalAuthHandler{Auth: app.localAuth}
 			protected.GET("auth/me", localAuth.Me)
 		}
+		if app.sshAPI != nil {
+			protected.GET("ssh/keys", app.sshAPI.ListKeys)
+			protected.POST("ssh/keys", app.sshAPI.AddKey)
+			protected.DELETE("ssh/keys/:id", app.sshAPI.DeleteKey)
+			protected.POST("ssh/device/lookup", app.sshAPI.Lookup)
+			protected.POST("ssh/device/confirm", app.sshAPI.Confirm)
+			protected.POST("ssh/device/deny", app.sshAPI.Deny)
+		}
 
 		// Characters
 		protected.POST("ws-ticket", app.tickets.IssueWSTicket)
 		protected.GET("characters", csh.GetCharacters)
 		protected.GET("my-characters", csh.GetMyCharacters)
-		protected.POST("characters", csh.PostCharacter)
 		protected.GET("characters/:id", csh.GetCharacterByID)
 		protected.GET("characters/:id/map", characterMap.GetCharacterMap)
 		protected.DELETE("characters/:id", csh.DeleteCharacterByID)
@@ -321,34 +376,10 @@ func (app *app) setupRoutes() {
 		// AI-powered generation
 		protected.POST("generate/character", generate.GenerateCharacter)
 
-		// Read-only game data (accessible to all authenticated users)
-		protected.GET("rooms", rooms.GetRooms)
-		protected.GET("rooms-vh", rooms.GetRoomValueHelp)
-		protected.GET("rooms/:id", rooms.GetRoomByID)
-		protected.GET("items", items.GetItems)
-		protected.GET("items/:id", items.GetItemByID)
-		protected.GET("scripts", scripts.GetScripts)
-		protected.GET("script-types", scripts.GetScriptTypes)
-		protected.GET("world/graph", worldRenderer.RenderGraphData)
-		protected.GET("world/rooms-minimal", worldRenderer.GetMinimalRooms)
-		protected.GET("npcs", npcs.GetNPCs)
-		protected.GET("npcs/templates", npcs.GetNPCTemplates)
-		protected.GET("npcs/:id", npcs.GetNPCByID)
-		protected.GET("spawners", npcSpawners.GetSpawners)
-		protected.GET("spawners/:id", npcSpawners.GetSpawnerByID)
-		protected.GET("dialogs", dialogs.GetDialogs)
-		protected.GET("dialogs/:id", dialogs.GetDialogByID)
+		// Player character templates remain available for character creation.
 		protected.GET("character-templates", charTemplates.GetCharacterTemplates)
 		protected.GET("character-templates/:id", charTemplates.GetCharacterTemplateByID)
 		protected.GET("character-templates/presets", charTemplates.GetCharacterTemplatePresets)
-		protected.GET("loottables", lootTables.GetLootTables)
-		protected.GET("loottables/:id", lootTables.GetLootTableByID)
-		protected.GET("backgrounds", backgrounds.ListBackgrounds)
-		protected.GET("settings", serverSettings.GetServerSettings)
-		protected.GET("quests", questsHandler.GetQuests)
-		protected.GET("quests/:id", questsHandler.GetQuestByID)
-		protected.GET("skills", skillsHandler.GetSkills)
-		protected.GET("skills/:id", skillsHandler.GetSkillByID)
 		protected.GET("quest-progress/:characterId", questsHandler.GetQuestLog)
 		protected.POST("quest-progress/:characterId/accept/:questId", questsHandler.AcceptQuest)
 		protected.POST("quest-progress/:characterId/abandon/:questId", questsHandler.AbandonQuest)
@@ -359,10 +390,45 @@ func (app *app) setupRoutes() {
 		protected.PUT("user", usr.UpdateUser)
 
 		// Creator-level routes (creator or admin role required)
+		var liveGame *game.Game
+		if ctrl := app.mud.GameCtrl(); ctrl != nil {
+			liveGame, _ = ctrl.(*game.Game)
+		}
+		healthHandler.Game = liveGame
 		creator := protected.Group("")
 		creator.Use(CreatorMiddleware())
+		creator.Use(handler.AuditWrites(app.Facade.AuditService()))
 		{
+			// World definitions and raw character creation require a creator role.
+			creator.POST("characters", csh.PostCharacter)
+			creator.GET("rooms", rooms.GetRooms)
+			creator.GET("rooms-vh", rooms.GetRoomValueHelp)
+			creator.GET("rooms/:id", rooms.GetRoomByID)
+			creator.GET("items", items.GetItems)
+			creator.GET("items/:id", items.GetItemByID)
+			creator.GET("scripts", scripts.GetScripts)
+			creator.GET("script-types", scripts.GetScriptTypes)
+			creator.GET("world/graph", worldRenderer.RenderGraphData)
+			creator.GET("world/rooms-minimal", worldRenderer.GetMinimalRooms)
+			creator.GET("balance/enemy-scaling", handler.GetEnemyScaling)
+			creator.GET("npcs", npcs.GetNPCs)
+			creator.GET("npcs/templates", npcs.GetNPCTemplates)
+			creator.GET("npcs/:id", npcs.GetNPCByID)
+			creator.GET("spawners", npcSpawners.GetSpawners)
+			creator.GET("spawners/:id", npcSpawners.GetSpawnerByID)
+			creator.GET("dialogs", dialogs.GetDialogs)
+			creator.GET("dialogs/:id", dialogs.GetDialogByID)
+			creator.GET("loottables", lootTables.GetLootTables)
+			creator.GET("loottables/:id", lootTables.GetLootTableByID)
+			creator.GET("backgrounds", backgrounds.ListBackgrounds)
+			creator.GET("settings", serverSettings.GetServerSettings)
+			creator.GET("quests", questsHandler.GetQuests)
+			creator.GET("quests/:id", questsHandler.GetQuestByID)
+			creator.GET("skills", skillsHandler.GetSkills)
+			creator.GET("skills/:id", skillsHandler.GetSkillByID)
+
 			// Rooms
+			creator.GET("rooms/:id/inspect", rooms.InspectRoom)
 			creator.POST("rooms", rooms.PostRoom)
 			creator.PUT("rooms/:id", rooms.PutRoom)
 			creator.DELETE("rooms/:id", rooms.DeleteRoom)
@@ -371,6 +437,14 @@ func (app *app) setupRoutes() {
 
 			// Creator quality diagnostics
 			creator.GET("diagnostics/world", validationHandler.WorldDiagnostics)
+			creator.GET("world/reachability", healthHandler.Reachability)
+			creator.GET("world/overlays", healthHandler.Overlays)
+			creator.GET("search", searchHandler.Search)
+			creator.GET("refs/:type/:id", searchHandler.Refs)
+			creator.GET("health", healthHandler.Get)
+			creator.PUT("health/mute", healthHandler.Mute)
+			creator.GET("health/drift", healthHandler.Drift)
+			creator.GET("health/drift/export", healthHandler.Export)
 			creator.POST("validate/:entityType", validationHandler.ValidateEntity)
 			creator.POST("preview/dialog", validationHandler.PreviewDialog)
 			creator.POST("preview/quest", validationHandler.PreviewQuest)
@@ -390,6 +464,7 @@ func (app *app) setupRoutes() {
 			creator.POST("run-script/:id", scripts.ExecuteScript)
 
 			// NPCs
+			creator.GET("npcs/:id/inspect", npcs.InspectNPC)
 			creator.POST("npcs", npcs.PostNPC)
 			creator.PUT("npcs/:id", npcs.UpdateNPCByID)
 			creator.DELETE("npcs/:id", npcs.DeleteNPCByID)
@@ -418,6 +493,7 @@ func (app *app) setupRoutes() {
 			creator.POST("loottables/:id/roll", lootTables.RollLootTable)
 
 			// Quests
+			creator.GET("quests/:id/debug", questsHandler.DebugQuest)
 			creator.POST("quests", questsHandler.PostQuest)
 			creator.PUT("quests/:id", questsHandler.UpdateQuestByID)
 			creator.DELETE("quests/:id", questsHandler.DeleteQuestByID)
@@ -433,6 +509,27 @@ func (app *app) setupRoutes() {
 
 			// Server Settings
 			creator.PUT("settings", serverSettings.UpdateServerSettings)
+
+			// Live world and the change log. Character inventories stay on the admin routes below.
+			creator.GET("audit", handler.ListAudit(app.Facade.AuditService()))
+			creator.GET("live/npcs", handler.LiveNPCs(liveGame))
+			creator.GET("live/instances", handler.LiveInstances(liveGame))
+		}
+
+		// Frequency preview. Creator-gated, and off AuditWrites so it does not
+		// record a row or drop the search index. It does not write loot.
+		preview := protected.Group("")
+		preview.Use(CreatorMiddleware())
+		preview.POST("loot-tables/:id/roll", lootTables.RollLootPreview)
+
+		// Character inventories, quest logs, live ops, and undo are admin-only.
+		liveAdmin := protected.Group("")
+		liveAdmin.Use(AdminMiddleware())
+		{
+			liveAdmin.GET("live/characters", handler.LiveCharacters(liveGame))
+			liveAdmin.GET("live/characters/:id", handler.LiveCharacterDetail(liveGame))
+			liveAdmin.POST("audit/:id/undo", handler.UndoAudit(liveGame, app.Facade.AuditService()))
+			liveAdmin.POST("ops/:action", handler.OpsAction(liveGame, app.Facade.AuditService()))
 		}
 
 		// Admin-level routes (admin role required)
@@ -487,6 +584,11 @@ func (app *app) setupRoutes() {
 
 		// Public server info (no auth, used by MUD client)
 		public.GET("server-info", serverSettings.GetServerInfo)
+		public.GET("ssh/info", handler.SSHInfo(app.sshPublicInfo))
+		if app.deviceAPI != nil {
+			public.POST("device/start", app.deviceAPI.Start)
+			public.POST("device/poll", app.deviceAPI.Poll)
+		}
 
 		// Guest session creation (public, no auth required)
 		guest := &handler.GuestHandler{
@@ -512,15 +614,22 @@ func (app *app) setupRoutes() {
 	app.Facade.GuestService().StartCleanupLoop()
 
 	ws := r.Group("/ws")
-	ws.Use(WSAuthMiddleware(app.Facade, app.tickets))
+	ws.Use(WSAuthMiddleware(app.Facade, app.tickets, app.sessions))
 	ws.GET("", app.mud.HandleConnections)
 
 	// Serve mud-client (game client) at /play
+	r.GET("/activate", handler.Activate(gamemode.LocalAuth()))
 	r.Use(SPAMiddleware("/play", webuiplay.FS(), webuiplay.IndexFile))
 
 	if gamemode.ANSI() {
 		if st, err := os.Stat("public/door"); err == nil && st.IsDir() {
-			r.Static("/door", "public/door")
+			dir := "public/door"
+			r.GET("/door", func(c *gin.Context) {
+				c.Redirect(http.StatusFound, "/door/")
+			})
+			r.GET("/door/*filepath", func(c *gin.Context) {
+				serveDoor(c, dir)
+			})
 		}
 		r.GET("/api/door/config", func(c *gin.Context) {
 			title, subtitle, tokenKey := gamemode.ClientPage()
@@ -552,9 +661,76 @@ func (app *app) setupRoutes() {
 }
 
 // Run ... starts the server
+func (app *app) sshPublicInfo() any {
+	if app == nil || app.ssh == nil {
+		return gin.H{"enabled": false}
+	}
+	info := app.ssh.PublicInfo()
+	if !info.Enabled {
+		return gin.H{"enabled": false}
+	}
+	return info
+}
+
+func (app *app) startSSH() {
+	cfg := gamemode.SSH()
+	if !cfg.Enabled {
+		log.Info("ssh disabled")
+		return
+	}
+	var keys *sshkeys.Store
+	var pending *sshkeys.Pending
+	if cfg.Keys.Enabled {
+		if app.db == nil {
+			log.Fatal("ssh keys enabled but database is missing")
+		}
+		store, err := sshkeys.Open(app.db.DB())
+		if err != nil {
+			log.WithError(err).Fatal("ssh keys store")
+		}
+		keys = store
+		pending = sshkeys.NewPending(10 * time.Minute)
+	}
+	devices := app.devices
+	if devices == nil && cfg.Device.Enabled {
+		devices = devicecode.New(devicePolicy(cfg.Device))
+	}
+	if app.sshAPI != nil {
+		app.sshAPI.Set(handler.SSHSettings{
+			Keys:          keys,
+			Devices:       devices,
+			ActivateURL:   cfg.Device.ActivateURL,
+			KeysEnabled:   cfg.Keys.Enabled,
+			DeviceEnabled: cfg.Device.Enabled || app.deviceAPI != nil,
+			WebManage:     cfg.Keys.WebManageOn(),
+			MaxKeys:       cfg.Keys.MaxPerAccount,
+		})
+	}
+	gate, err := sshgate.Listen(cfg, sshgate.Deps{
+		Mud:     app.mud,
+		Guests:  app.Facade.GuestService(),
+		Users:   app.Facade.UsersService(),
+		Door:    gamemode.ANSI(),
+		Keys:    keys,
+		Pending: pending,
+		Devices: devices,
+	})
+	if err != nil {
+		log.WithError(err).Fatal("ssh listener failed")
+	}
+	app.ssh = gate
+	if app.userMgmt != nil {
+		app.userMgmt.OnBan = gate.CloseUser
+	}
+	if app.sshAPI != nil {
+		app.sshAPI.SetKeyDrop(gate.CloseFingerprint)
+	}
+}
+
 func (app *app) Run() {
 
 	app.setupRoutes()
+	app.startSSH()
 
 	// read port from env file
 	port := os.Getenv("PORT")

@@ -1,6 +1,7 @@
 <script>
   import { onDestroy } from 'svelte';
   import { overlayStore } from './overlayStore.js';
+  import { formatOverlayText } from './formatOverlayText.js';
 
   // Always show action/system reaction toasts on the room hero art (desktop + mobile).
   // This is the room reaction overlay — not the command log.
@@ -55,8 +56,7 @@
   }
 
   function formatText(text) {
-    const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    return escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    return formatOverlayText(text);
   }
 
   function dismiss(id) {
@@ -174,6 +174,27 @@
     font-size: 0.92rem;
     font-weight: 400;
     animation: overlayExamineIn 0.28s ease-out;
+  }
+
+  .examine-effects {
+    list-style: none;
+    margin: 0.6rem 0 0.2rem;
+    padding: 0.5rem 0.7rem;
+    border-left: 3px solid #e8c25a;
+    border-radius: 4px;
+    background: linear-gradient(90deg, rgba(232, 194, 90, 0.13), rgba(96, 165, 250, 0.06));
+    font-size: 0.84rem;
+    line-height: 1.45;
+    color: #e6dcc4;
+  }
+  .examine-effects li {
+    display: flex;
+    gap: 0.45rem;
+    align-items: baseline;
+  }
+  .examine-effects .eff-mark {
+    color: #f3d27a;
+    flex: none;
   }
 
   .overlay-message.examine.examine-unique {
@@ -326,6 +347,13 @@
     overflow-wrap: anywhere;
   }
 
+  .overlay-message-inner :global(.aggro-mark) {
+    color: #f87171;
+    font-size: 0.78em;
+    font-weight: 650;
+    letter-spacing: 0.08em;
+  }
+
   .overlay-message :global(strong) {
     color: #fde68a;
     font-weight: 700;
@@ -450,6 +478,13 @@
               </div>
             {/if}
 
+            {#if msg.examine.effects && msg.examine.effects.length}
+              <ul class="examine-effects" aria-label="Effects">
+                {#each msg.examine.effects as line}
+                  <li><span class="eff-mark" aria-hidden="true">✦</span><span>{line}</span></li>
+                {/each}
+              </ul>
+            {/if}
             {#if msg.examine.attributes.length || msg.examine.properties.length}
               <div class="examine-rows">
                 {#each [...msg.examine.attributes, ...msg.examine.properties] as row}

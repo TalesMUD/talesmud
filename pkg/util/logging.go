@@ -61,29 +61,40 @@ func RequestPathWithoutQuery(path string) string {
 	return path
 }
 
-// RedactAccessToken strips access_token and ticket query values from URLs for safe logging.
+// RedactAccessToken strips secret query values from URLs for safe logging.
+// access_token, ticket, code, activate, device_code and token are removed. A key counts only at the
+// start of the string or after ? or &, so user_code is left alone.
 func RedactAccessToken(path string) string {
 	if path == "" {
 		return path
 	}
-	out := path
-	for _, key := range []string{"access_token=", "ticket="} {
-		out = redactQueryValue(out, key)
+	lower := strings.ToLower(path)
+	var b strings.Builder
+	b.Grow(len(path))
+	for i := 0; i < len(path); {
+		if n, ok := redactKeyAt(lower, i); ok {
+			b.WriteString(path[i : i+n])
+			b.WriteString("[REDACTED]")
+			i += n
+			for i < len(path) && path[i] != '&' && path[i] != ' ' {
+				i++
+			}
+			continue
+		}
+		b.WriteByte(path[i])
+		i++
 	}
-	return out
+	return b.String()
 }
 
-func redactQueryValue(path, key string) string {
-	lower := strings.ToLower(path)
-	keyLower := strings.ToLower(key)
-	idx := strings.Index(lower, keyLower)
-	if idx < 0 {
-		return path
+func redactKeyAt(lower string, i int) (int, bool) {
+	if i > 0 && lower[i-1] != '?' && lower[i-1] != '&' {
+		return 0, false
 	}
-	start := idx + len(key)
-	end := start
-	for end < len(path) && path[end] != '&' && path[end] != ' ' {
-		end++
+	for _, key := range []string{"ticket=", "access_token=", "activate=", "code=", "device_code=", "token="} {
+		if strings.HasPrefix(lower[i:], key) {
+			return len(key), true
+		}
 	}
-	return path[:start] + "[REDACTED]" + path[end:]
+	return 0, false
 }

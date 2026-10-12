@@ -1,7 +1,7 @@
 # ============================================================
 # Stage 1: Build the Creator UI (Vite + Svelte)
 # ============================================================
-FROM node:20-alpine AS build-frontend
+FROM node:22-alpine AS build-frontend
 
 ARG VITE_AUTH0_DOMAIN
 ARG VITE_AUTH0_CLIENT_ID
@@ -19,7 +19,7 @@ RUN npm run build
 # ============================================================
 # Stage 2: Build the Game Client (Rollup + Svelte)
 # ============================================================
-FROM node:20-alpine AS build-mud-client
+FROM node:22-alpine AS build-mud-client
 
 ARG VITE_AUTH0_DOMAIN
 ARG VITE_AUTH0_CLIENT_ID
@@ -37,7 +37,7 @@ RUN npm run build
 # ============================================================
 # Stage 3: Build the Go binary
 # ============================================================
-FROM golang:1.25-alpine AS build-backend
+FROM golang:1.26-alpine AS build-backend
 
 WORKDIR /src
 

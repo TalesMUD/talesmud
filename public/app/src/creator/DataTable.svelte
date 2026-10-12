@@ -88,6 +88,36 @@
   function selectRow(element) {
     dispatch("select", element);
   }
+
+  function copyId(event, id) {
+    event.stopPropagation();
+    const text = id == null ? "" : String(id);
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+      return;
+    }
+    fallbackCopy(text);
+  }
+
+  function fallbackCopy(text) {
+    const el = document.createElement("textarea");
+    el.value = text;
+    el.setAttribute("readonly", "");
+    el.style.position = "fixed";
+    el.style.left = "-9999px";
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand("copy");
+    el.remove();
+  }
+
+  function badgeClass(value) {
+    const label = String(value || "");
+    if (label === "Enemy + Merchant") return "kind-both";
+    if (label === "Enemy") return "kind-enemy";
+    if (label === "Merchant") return "kind-merchant";
+    return "kind-neutral";
+  }
 </script>
 
 <div class="space-y-4">
@@ -166,6 +196,21 @@
                           Draft
                         </span>
                       {/if}
+                    {:else if col.key === "id"}
+                      <span class="inline-flex items-center gap-1">
+                        <span title={element.id}>{element.id}</span>
+                        <button
+                          type="button"
+                          class="id-copy"
+                          title="Copy ID"
+                          aria-label="Copy ID"
+                          on:click={(event) => copyId(event, element.id)}
+                        >
+                          <span class="material-symbols-outlined" style="font-size: 14px">content_copy</span>
+                        </button>
+                      </span>
+                    {:else if col.badge}
+                      <span class="kind-badge {badgeClass(getCellValue(element, col))}">{getCellValue(element, col)}</span>
                     {:else}
                       {getCellValue(element, col)}
                     {/if}
@@ -194,5 +239,56 @@
   }
   .thin-scrollbar::-webkit-scrollbar-thumb:hover {
     background: rgba(148, 163, 184, 0.35);
+  }
+
+  .id-copy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border: none;
+    border-radius: 3px;
+    background: transparent;
+    color: #64748b;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .id-copy:hover {
+    color: #e2e8f0;
+    background: rgba(148, 163, 184, 0.15);
+  }
+
+  .kind-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .kind-enemy {
+    color: #fecaca;
+    background: rgba(239, 68, 68, 0.16);
+  }
+
+  .kind-merchant {
+    color: #bbf7d0;
+    background: rgba(34, 197, 94, 0.16);
+  }
+
+  .kind-both {
+    color: #fde68a;
+    background: rgba(245, 158, 11, 0.18);
+  }
+
+  .kind-neutral {
+    color: #cbd5e1;
+    background: rgba(100, 116, 139, 0.28);
   }
 </style>

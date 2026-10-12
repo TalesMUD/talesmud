@@ -12,7 +12,6 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/entities/skills"
 	"github.com/talesmud/talesmud/pkg/entities/traits"
-	"github.com/talesmud/talesmud/pkg/mudserver/game/balance"
 	"github.com/talesmud/talesmud/pkg/scripts"
 )
 
@@ -26,6 +25,7 @@ func (y *YAMLRoom) ToEntity() *rooms.Room {
 		Area:            y.Area,
 		Tags:            y.Tags,
 		CanBind:         y.CanBind,
+		NoAggro:         y.NoAggro,
 		OnEnterScriptID: y.OnEnter,
 	}
 
@@ -39,6 +39,8 @@ func (y *YAMLRoom) ToEntity() *rooms.Room {
 				Type:        rooms.RoomExitType(e.Type),
 				Description: e.Description,
 				Hidden:      e.Hidden,
+				Locked:      e.Locked,
+				Params:      e.Params,
 				Instance:    e.Instance,
 			}
 		}
@@ -122,6 +124,12 @@ func (y *YAMLItem) ToEntity() *items.Item {
 		OnUseScriptID: firstNonEmpty(y.OnUseScript, y.OnUseScriptID),
 		OnHitScriptID: firstNonEmpty(y.OnHitScript, y.OnHitScriptID),
 	}
+	for _, eff := range y.Effects {
+		if eff.Text == "" && eff.Name == "" {
+			continue
+		}
+		item.Effects = append(item.Effects, items.ItemEffect{Trigger: eff.Trigger, Name: eff.Name, Text: eff.Text})
+	}
 
 	// Set meta if img is provided
 	if y.Meta.Img != "" {
@@ -145,6 +153,7 @@ func (y *YAMLNPC) ToEntity() *npc.NPC {
 	n := &npc.NPC{
 		Entity:           &entities.Entity{ID: y.ID},
 		Name:             y.Name,
+		Tags:             append([]string(nil), y.Tags...),
 		Description:      y.Description,
 		Level:            y.Level,
 		MaxHitPoints:     y.MaxHitPoints,
@@ -152,6 +161,9 @@ func (y *YAMLNPC) ToEntity() *npc.NPC {
 		DialogID:         y.DialogID,
 		IsTemplate:       isTemplate,
 		SpawnRoomID:      y.SpawnRoomId,
+		Movement:         y.Movement.Clone(),
+		WanderRadius:     y.WanderRadius,
+		PatrolPath:       append([]string(nil), y.PatrolPath...),
 		State:            "idle",
 	}
 
@@ -176,27 +188,15 @@ func (y *YAMLNPC) ToEntity() *npc.NPC {
 		}
 	}
 
-	// Convert enemy trait if present
+	// Convert enemy trait if present.
+	// YAML numbers are the content base. Combat stores the scaled stats.
 	if y.EnemyTrait != nil {
-		// Apply difficulty-based multipliers to base stats
-		finalHP, finalAttack, finalDefense := balance.ApplyEnemyMultipliers(
-			y.MaxHitPoints,
-			y.EnemyTrait.AttackPower,
-			y.EnemyTrait.Defense,
-			y.EnemyTrait.Difficulty,
-			y.Name,
-		)
-
-		// Update NPC HP with multiplied value
-		n.MaxHitPoints = finalHP
-		n.CurrentHitPoints = finalHP
-
 		n.EnemyTrait = &npc.EnemyTrait{
 			CreatureType:  y.EnemyTrait.CreatureType,
 			CombatStyle:   y.EnemyTrait.CombatStyle,
 			Difficulty:    y.EnemyTrait.Difficulty,
-			AttackPower:   finalAttack,
-			Defense:       finalDefense,
+			AttackPower:   y.EnemyTrait.AttackPower,
+			Defense:       y.EnemyTrait.Defense,
 			AttackSpeed:   y.EnemyTrait.AttackSpeed,
 			AggroRadius:   y.EnemyTrait.AggroRadius,
 			AggroOnSight:  y.EnemyTrait.AggroOnSight,
@@ -208,12 +208,22 @@ func (y *YAMLNPC) ToEntity() *npc.NPC {
 				Max: y.EnemyTrait.GoldDrop.Max,
 			},
 			LootTableID:        y.EnemyTrait.LootTableID,
+			GuaranteedLoot:     append([]string{}, y.EnemyTrait.GuaranteedLoot...),
+			MaxDrops:           y.EnemyTrait.MaxDrops,
 			OnAggroScript:      y.EnemyTrait.OnAggroScript,
 			OnDeathScript:      y.EnemyTrait.OnDeathScript,
 			OnFleeScript:       y.EnemyTrait.OnFleeScript,
 			OnLowHealthScript:  y.EnemyTrait.OnLowHealthScript,
 			LowHealthThreshold: y.EnemyTrait.LowHealthThreshold,
+			ResetOnDisengage:   y.EnemyTrait.ResetOnDisengage,
+			BaseStats: &npc.BaseStats{
+				MaxHitPoints: y.MaxHitPoints,
+				AttackPower:  y.EnemyTrait.AttackPower,
+				Defense:      y.EnemyTrait.Defense,
+			},
 		}
+		// n.MaxHitPoints is still the YAML value, so scaling treats the NPC as full health.
+		ApplyContentBase(n)
 	}
 
 	// Convert merchant trait if present
@@ -224,6 +234,7 @@ func (y *YAMLNPC) ToEntity() *npc.NPC {
 			SellMultiplier: y.MerchantTrait.SellMultiplier,
 			RestockMinutes: y.MerchantTrait.RestockMinutes,
 			AcceptedTypes:  append([]string{}, y.MerchantTrait.AcceptedTypes...),
+			RejectedTags:   append([]string(nil), y.MerchantTrait.RejectedTags...),
 			Inventory:      make([]npc.MerchantItem, 0),
 		}
 		// Convert inventory items
@@ -392,12 +403,26 @@ func (y *YAMLSpawner) ToEntity() *npc.NPCSpawner {
 		Entity:        &entities.Entity{ID: y.ID},
 		Name:          y.Name,
 		TemplateID:    y.TemplateID,
+		Movement:      y.Movement.Clone(),
 		RoomID:        y.RoomID,
 		MaxInstances:  y.MaxInstances,
 		SpawnInterval: parseDuration(y.SpawnInterval),
 		InitialCount:  initialCount,
+		RespawnDelay:  parseOptionalDuration(y.RespawnDelay),
 		Created:       time.Now(),
 	}
+}
+
+// parseOptionalDuration parses "30m"; empty or invalid input yields 0.
+func parseOptionalDuration(s string) time.Duration {
+	if s == "" {
+		return 0
+	}
+	d, err := time.ParseDuration(s)
+	if err != nil || d < 0 {
+		return 0
+	}
+	return d
 }
 
 // ToEntity converts a YAMLQuest to a Quest entity

@@ -9,6 +9,7 @@ func RegisterAllModules(runner *luarunner.LuaRunner) {
 	runner.RegisterModule("items", RegisterItemsModule)
 	runner.RegisterModule("rooms", RegisterRoomsModule)
 	runner.RegisterModule("characters", RegisterCharactersModule)
+	runner.RegisterModule("users", RegisterUsersModule)
 	runner.RegisterModule("npcs", RegisterNPCsModule)
 	runner.RegisterModule("dialogs", RegisterDialogsModule)
 	runner.RegisterModule("game", RegisterGameModule)

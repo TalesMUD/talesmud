@@ -1,11 +1,13 @@
 package util
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/characters"
+	"github.com/talesmud/talesmud/pkg/entities/items"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
@@ -91,13 +93,15 @@ func CreateRoomDescription(room *rooms.Room, user *entities.User, game def.GameC
 		description += "\n"
 	}
 
-	// Exits
+	// Exits. A room loaded without an exit list has a nil pointer.
 	description += "\n"
 	description += "- The visible exits are:\n"
 
-	for _, exit := range *room.Exits {
-		if !exit.Hidden {
-			description += " + [" + exit.Name + "] " + exit.Description + "\n"
+	if room.Exits != nil {
+		for _, exit := range *room.Exits {
+			if !exit.Hidden {
+				description += " + [" + exit.Name + "] " + exit.Description + "\n"
+			}
 		}
 	}
 
@@ -158,12 +162,91 @@ func GetRoomPresenceCharacters(room *rooms.Room, game def.GameCtrl) []RoomCharac
 	return result
 }
 
-// RoomItem represents item data for frontend UI rendering
+// RoomItem represents item data for frontend UI rendering.
+// Fields after copyOnPickup are additive. Empty values stay off the wire.
 type RoomItem struct {
-	ID           string `json:"id"`
-	Name         string `json:"name"`
-	NoPickup     bool   `json:"noPickup,omitempty"`
-	CopyOnPickup bool   `json:"copyOnPickup,omitempty"`
+	ID           string            `json:"id"`
+	Name         string            `json:"name"`
+	NoPickup     bool              `json:"noPickup,omitempty"`
+	CopyOnPickup bool              `json:"copyOnPickup,omitempty"`
+	Type         items.ItemType    `json:"type,omitempty"`
+	SubType      items.ItemSubType `json:"subType,omitempty"`
+	Quality      items.ItemQuality `json:"quality,omitempty"`
+	Unique       bool              `json:"unique,omitempty"`
+	Quantity     int32             `json:"quantity,omitempty"`
+	Effect       string            `json:"effect,omitempty"`
+}
+
+// roomItemPayload copies the display fields a pickup row needs.
+// Effect is one line: the first examine FormatEffect line, or "Heals N HP"
+// when the item only restores health.
+func roomItemPayload(item *items.Item) RoomItem {
+	if item == nil {
+		return RoomItem{}
+	}
+	row := RoomItem{
+		ID:           item.ID,
+		Name:         item.Name,
+		NoPickup:     item.NoPickup,
+		CopyOnPickup: item.CopyOnPickup || item.IsRoomBlueprint(),
+		Type:         item.Type,
+		SubType:      item.SubType,
+		Quality:      item.Quality,
+		Unique:       item.Unique,
+		Effect:       roomItemEffect(item),
+	}
+	if item.Quantity > 0 {
+		row.Quantity = item.Quantity
+	}
+	return row
+}
+
+func roomItemEffect(item *items.Item) string {
+	if item == nil {
+		return ""
+	}
+	if effects := item.DisplayEffects(nil); len(effects) > 0 {
+		if line := strings.TrimSpace(items.FormatEffect(effects[0])); line != "" {
+			return line
+		}
+	}
+	for _, key := range []string{"healthRestore", "healAmount"} {
+		if n, ok := attrInt(item.Attributes, key); ok && n > 0 {
+			return fmt.Sprintf("Heals %d HP", n)
+		}
+	}
+	return ""
+}
+
+func attrInt(attrs map[string]interface{}, key string) (int32, bool) {
+	if len(attrs) == 0 {
+		return 0, false
+	}
+	val, ok := attrs[key]
+	if !ok || val == nil {
+		return 0, false
+	}
+	switch v := val.(type) {
+	case int32:
+		return v, true
+	case int:
+		return int32(v), true
+	case int64:
+		return int32(v), true
+	case float64:
+		return int32(v), true
+	case float32:
+		return int32(v), true
+	case string:
+		text := strings.TrimSpace(v)
+		if n, err := strconv.Atoi(text); err == nil {
+			return int32(n), true
+		}
+		if n, err := strconv.ParseFloat(text, 64); err == nil {
+			return int32(n), true
+		}
+	}
+	return 0, false
 }
 
 // GetRoomItems returns item data for frontend rendering.
@@ -196,12 +279,7 @@ func GetRoomItems(room *rooms.Room, game def.GameCtrl, char *characters.Characte
 			}
 		}
 
-		result = append(result, RoomItem{
-			ID:           item.ID,
-			Name:         item.Name,
-			NoPickup:     item.NoPickup,
-			CopyOnPickup: item.CopyOnPickup || item.IsRoomBlueprint(),
-		})
+		result = append(result, roomItemPayload(item))
 	}
 
 	return result
@@ -220,6 +298,7 @@ type RoomNPC struct {
 	CurrentHP     int32  `json:"currentHp,omitempty"`
 	MaxHP         int32  `json:"maxHp,omitempty"`
 	Level         int32  `json:"level,omitempty"`
+	AggroOnSight  bool   `json:"aggroOnSight,omitempty"`
 	State         string `json:"state"`
 	Portrait      string `json:"portrait,omitempty"`
 	TemplateID    string `json:"templateId,omitempty"`
@@ -248,6 +327,7 @@ func GetRoomNPCs(room *rooms.Room, game def.GameCtrl) []RoomNPC {
 			CurrentHP:     n.CurrentHitPoints,
 			MaxHP:         n.MaxHitPoints,
 			Level:         n.Level,
+			AggroOnSight:  n.EnemyTrait != nil && n.EnemyTrait.AggroOnSight,
 			State:         n.State,
 			Portrait:      portraits.ForNPC(n),
 			TemplateID:    n.TemplateID,

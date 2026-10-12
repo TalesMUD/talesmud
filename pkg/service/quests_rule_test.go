@@ -550,6 +550,7 @@ func (f *fakeQuestValidationFacade) CharacterTemplatesRepo() repository.Characte
 }
 func (f *fakeQuestValidationFacade) GuestService() GuestService           { return nil }
 func (f *fakeQuestValidationFacade) GuestStatsService() GuestStatsService { return nil }
+func (f *fakeQuestValidationFacade) AuditService() AuditService           { return nil }
 func (f *fakeQuestValidationFacade) Runner() scripts.ScriptRunner         { return nil }
 
 type fakeQuestsRepo struct {

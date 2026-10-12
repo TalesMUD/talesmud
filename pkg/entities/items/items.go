@@ -143,6 +143,9 @@ type Item struct {
 	// ctx.targetID, ctx.targetName, ctx.damage, ctx.critical. Prefer tales.combat.applyDot
 	// for content-authored weapon procs (Maintainer-neutral).
 	OnHitScriptID string `bson:"onHitScriptId,omitempty" json:"onHitScriptId,omitempty"`
+	// Effects are player-facing lines for what the item does beyond its stats
+	// (for example what its onHit script applies). Clients render them as written.
+	Effects []ItemEffect `bson:"effects,omitempty" json:"effects,omitempty"`
 
 	// Consumable indicates item is consumed on use (removed or quantity decremented)
 	Consumable bool `bson:"consumable,omitempty" json:"consumable,omitempty"`

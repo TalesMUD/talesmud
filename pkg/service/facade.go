@@ -24,6 +24,7 @@ type Facade interface {
 	CharacterTemplatesRepo() repository.CharacterTemplatesRepository
 	GuestService() GuestService
 	GuestStatsService() GuestStatsService
+	AuditService() AuditService
 
 	Runner() scripts.ScriptRunner
 }
@@ -45,6 +46,7 @@ type facade struct {
 	skls  SkillsService
 	gs    GuestService
 	gss   GuestStatsService
+	aud   AuditService
 	sr    scripts.ScriptRunner
 	repos repository.Factory
 }
@@ -95,6 +97,7 @@ func NewFacade(repos repository.Factory, runner scripts.ScriptRunner) Facade {
 		sss:   sss,
 		qs:    qs,
 		skls:  skls,
+		aud:   NewAuditService(repos.Audit()),
 		sr:    runner,
 		repos: repos,
 	}
@@ -176,4 +179,8 @@ func (f *facade) GuestService() GuestService {
 
 func (f *facade) GuestStatsService() GuestStatsService {
 	return f.gss
+}
+
+func (f *facade) AuditService() AuditService {
+	return f.aud
 }

@@ -92,6 +92,14 @@
   import CharacterCreationWizard from "./onboarding/CharacterCreationWizard.svelte";
   import { showCharacterWizard } from "./onboarding/onboardingStore.js";
   import { isGuestSession } from "./authSession.js";
+  import { activateRedirect } from "./activate/activateFlow.js";
+  import SSHKeys from "./SSHKeys.svelte";
+
+  // SSH device sign-in lives on its own page. Old /play/?activate= links go there.
+  if (typeof window !== "undefined") {
+    const target = activateRedirect(window.location.search);
+    if (target) window.location.replace(target);
+  }
 
   const config = isAuth0Configured() ? auth0Config : { domain: "", client_id: "", audience: "" };
 
@@ -291,3 +299,5 @@
     />
   {/if}
 {/if}
+
+<SSHKeys />

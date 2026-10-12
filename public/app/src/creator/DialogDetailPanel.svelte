@@ -1,11 +1,15 @@
 <script>
   import { createEventDispatcher } from "svelte";
+  import ConfirmDialog from "./ConfirmDialog.svelte";
 
   export let dialog = null;
   export let selectedNode = null;
   export let saving = false;
 
   const dispatch = createEventDispatcher();
+
+  let confirmOpen = false;
+  let pendingDelete = null;
 
   // Generate a short random ID with a prefix
   function generateShortId(prefix) {
@@ -53,6 +57,18 @@
     dialog = dialog;
   }
 
+  function askRemoveOption(index) {
+    const option = displayNode?.options?.[index];
+    if (!option) return;
+    pendingDelete = {
+      kind: "option",
+      index,
+      name: option.text || "option",
+      id: option.nodeId || "",
+    };
+    confirmOpen = true;
+  }
+
   function addAlternateText() {
     if (!displayNode) return;
     if (!displayNode.alternateTexts) displayNode.alternateTexts = [];
@@ -98,6 +114,30 @@
     if (!displayNode) return;
     displayNode.answer = null;
     dialog = dialog;
+  }
+
+  function askRemoveAnswer() {
+    if (!displayNode?.answer) return;
+    pendingDelete = {
+      kind: "answer",
+      name: displayNode.answer.text || "answer",
+      id: displayNode.answer.nodeId || "",
+    };
+    confirmOpen = true;
+  }
+
+  function confirmPendingDelete() {
+    const pending = pendingDelete;
+    confirmOpen = false;
+    pendingDelete = null;
+    if (!pending) return;
+    if (pending.kind === "option") removeOption(pending.index);
+    if (pending.kind === "answer") removeAnswer();
+  }
+
+  function cancelPendingDelete() {
+    confirmOpen = false;
+    pendingDelete = null;
   }
 
   function addRequiredDialog() {
@@ -236,7 +276,7 @@
           {#if !displayNode.answer}
             <button class="add-btn" on:click={addAnswer}>+ Add Answer</button>
           {:else}
-            <button class="remove-btn-text" on:click={removeAnswer}>Remove</button>
+            <button class="remove-btn-text" on:click={askRemoveAnswer}>Remove</button>
           {/if}
         </div>
         <p class="section-hint">Automatic NPC response after this option is selected</p>
@@ -269,7 +309,7 @@
                 <div class="option-header">
                   <span class="option-number">{index + 1}</span>
                   <input type="text" bind:value={option.nodeId} placeholder="Node ID" class="option-id-input" />
-                  <button class="remove-btn" on:click={() => removeOption(index)}>
+                  <button class="remove-btn" on:click={() => askRemoveOption(index)}>
                     <span class="material-symbols-outlined">delete</span>
                   </button>
                 </div>
@@ -297,6 +337,16 @@
     </div>
   {/if}
 </div>
+
+<ConfirmDialog
+  open={confirmOpen}
+  entityType={pendingDelete?.kind === "answer" ? "dialog answer" : "dialog option"}
+  entityName={pendingDelete?.name || ""}
+  entityId={pendingDelete?.id || ""}
+  detail="Removes this node from the dialog. Save the dialog to keep the change."
+  on:confirm={confirmPendingDelete}
+  on:cancel={cancelPendingDelete}
+/>
 
 <style>
   .detail-panel {
