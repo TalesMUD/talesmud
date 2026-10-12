@@ -1,3 +1,11 @@
+## Structured examine cards v1 (2026-10-12)
+
+- SHIPPED engine `4dc2e6f` (`[grokbot] Prefer examineResult for play-client item inspect cards`) on `engine-june`. Play client `?v=examine1`. Public master not merged. Door `:8020` untouched (pid `1178139`, `tales-door-mud`).
+- Client prefers websocket `examineResult` for the RoomTextOverlay item card (title, quality chrome, stats, value, description/detail, explicit `effects[]`). Prose still prints; prose-parse fallback remains for NPC / old-server examine. NPC inspect stays prose-only.
+- Tests: `node …/parseExamineOverlay_test.mjs` (effects present, empty omit, quality chrome); `dialogOverlay_test.mjs` cache tag; `npm run build`.
+- Deploy: VPS ff `5402f01..4dc2e6f`, embed `public/mud-client/public` → `pkg/webuiplay/dist` (`examine1` ×6), `bin/tales.prev-5402f01` kept (sha256 `2daa6f770af984fcd0c84dfca52942d6684b53af420568a07c291ac3b95518ee`), new binary sha256 `fa597809b67c44b866a8a70758ada3bd626eab7c55b326933ad18c5f918eff3f`. SIGTERM talesmud MainPID `1209473` only; Restart=always → MainPID `1214674` on `:8010`.
+- Smoke: `GET /play/?v=examine1` 200 (assets tagged examine1), `bundle.js?v=examine1` contains `examineResult`, `POST /api/guest` 200. Guest WS: north→west to Torch Alcove, take flint, `examine flint` → `examineResult` with `effects: ["On use — Light Torch: …"]`.
+
 ## Rare uniques v1 (2026-10-09)
 
 - SHIPPED engine `6e8719a` (`feat: [grokbot] rare unique loot rolls and a room chip`) and `8c48b6d` (`fix: [grokbot] announce only rarity-unique drops`) on `engine-june`. Content `85f8af9` (`content: [grokbot] rare uniques for three bosses`) on `talesmud-rpg-1` main. Play client `?v=uniques1`. Public master not merged. Door `:8020` pid `1035507` (`tales-door-mud`, started Tue Oct 6 13:59:21 2026) was not signaled.
