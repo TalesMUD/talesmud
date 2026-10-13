@@ -62,4 +62,7 @@ const (
 
 	// Pending party invite toast/banner (Accept / Decline without typing)
 	MessageTypePartyInvite = "party_invite"
+
+	// Party Need/Greed loot roll popup (Need / Greed / Pass)
+	MessageTypeNeedGreed = "need_greed"
 )

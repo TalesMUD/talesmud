@@ -82,6 +82,9 @@ type Game struct {
 	jobs   chan gameJob
 	loopOn atomic.Bool
 
+	// needGreed holds the open Party Need/Greed loot round and the queue behind it.
+	needGreed needGreedBook
+
 	//world *World
 }
 
