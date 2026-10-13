@@ -559,8 +559,8 @@ already in combat. Joiners receive `combatStart` (BattleStage), initiative is
 rolled, and turn order is rebuilt (current actor preserved). Cross-room join
 is refused. Party membership is **not** required to join; when combat starts,
 same-room online party members get a `[Party] … Type 'attack <enemy>' to join`
-nudge. Out of scope: need/greed item assignment, auto-pull without attack,
-following anyone except the party leader, Flutter.
+nudge. Out of scope: auto-pull without attack, following anyone except the
+party leader, Flutter. Item Need/Greed is Party Need/Greed v1.
 
 ### Party Loot & XP Share (v1)
 On victory, gold and XP split equally among the living combatants **and**
@@ -573,8 +573,25 @@ gets `total/n` and any remainder is dropped.
 When two or more recipients are in the same party, leftover gold and XP
 (`total % n`) go to the killer so nothing is discarded. The victory combat log
 lists each recipient (`PARTY SHARE`), and every recipient gets a one-line
-`[Party] Equal split…` toast. Item drops stay on the ground (no need/greed).
-Quest kill credit stays with living combatants only.
+`[Party] Equal split…` toast. Quest kill credit stays with living combatants only.
+
+### Party Need/Greed (v1)
+When a victory has **2+ living same-room online party members** (same eligibility
+band as Party Loot & XP Share), each **item** drop opens a Need / Greed / Pass
+round instead of becoming free ground loot. Gold share is unchanged. Solo and
+non-party kills still drop items to the ground.
+
+Every eligible member gets a `need_greed` popup (item name + quality chrome,
+Need / Greed / Pass, 30s countdown). Commands: `need`, `greed`, `pass`, and
+`loot need|greed|pass`. Need beats Greed beats Pass; ties are uniform random
+among the highest tier. The winner receives the item in inventory (or on the
+ground at their feet if inventory is full). A short `[Party]` line announces who
+won and Need vs Greed. If everyone Passes, or the TTL ends with no Need/Greed,
+the item stays on the corpse/ground as free-for-all.
+
+Multiple drops from one kill resolve **one at a time**. Disconnect, leave room,
+die, or leave/kick from the party mid-round counts as Pass. Still out of scope:
+master-looter, bind-on-pickup, cross-room rolls, Flutter.
 
 ### Party Follow
 `party follow` starts following the current party leader. `party unfollow` stops.
@@ -592,7 +609,8 @@ Leaving the party, being kicked, the leader leaving, or a leadership change clea
 the follow flag. The flag is in-memory on the game server. The party payload
 includes `following` for the recipient. The reply is a `[Party] You are following <leader>`
 line (party strip and room toast). Still out of scope: auto-join combat without
-`attack`, item need/greed, and following a member who is not the leader.
+`attack`, and following a member who is not the leader. Item Need/Greed is
+Party Need/Greed v1.
 
 ### Friends (v1)
 Per-character friends list stored as `Character.FriendIDs` (character UUIDs) in

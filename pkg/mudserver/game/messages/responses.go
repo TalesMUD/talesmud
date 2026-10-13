@@ -997,6 +997,42 @@ func NewPartyInviteMessage(userID string, pending bool, inviterName, partyID str
 	return msg
 }
 
+// NeedGreedMessage drives the Need / Greed / Pass loot popup.
+type NeedGreedMessage struct {
+	MessageResponse
+	Pending   bool   `json:"pending"`
+	RoundID   string `json:"roundId,omitempty"`
+	ItemName  string `json:"itemName,omitempty"`
+	Quality   string `json:"quality,omitempty"`
+	Quantity  int32  `json:"quantity,omitempty"`
+	ExpiresAt int64  `json:"expiresAt,omitempty"` // unix seconds; 0 when cleared
+}
+
+// NewNeedGreedMessage creates a pending (or cleared) Need/Greed payload.
+func NewNeedGreedMessage(userID string, pending bool, roundID, itemName, quality string, quantity int32, expires time.Time) *NeedGreedMessage {
+	msg := &NeedGreedMessage{
+		MessageResponse: MessageResponse{
+			Audience:   MessageAudienceOrigin,
+			AudienceID: userID,
+			Type:       MessageTypeNeedGreed,
+			Message:    "",
+		},
+		Pending:  pending,
+		RoundID:  roundID,
+		ItemName: itemName,
+		Quality:  quality,
+		Quantity: quantity,
+	}
+	if pending {
+		if !expires.IsZero() {
+			msg.ExpiresAt = expires.Unix()
+		} else {
+			msg.ExpiresAt = time.Now().Add(30 * time.Second).Unix()
+		}
+	}
+	return msg
+}
+
 // NewShopMessage creates a structured shop payload for the client overlay.
 func NewShopMessage(userID, merchantName, merchantID string, gold int64, stock []ShopStockItem, acceptedTypes, rejectedTags []string, sellMultiplier float64) *ShopMessage {
 	if stock == nil {

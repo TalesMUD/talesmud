@@ -243,6 +243,7 @@ func (g *Game) DisconnectUserSession(userID string) {
 		if leaderID, ok := g.Sessions.followTarget(departed.CharacterID); ok {
 			g.tellPartyFollowers([]string{leaderID}, "[Party] "+name+" disconnected. They are still following.")
 		}
+		g.NoteNeedGreedMemberLeft(departed.CharacterID)
 	}
 	g.Sessions.disconnect(userID)
 	if departed.CharacterID != "" {

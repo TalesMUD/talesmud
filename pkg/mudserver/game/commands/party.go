@@ -205,6 +205,7 @@ func (command *PartyCommand) leave(game def.GameCtrl, message *messages.Message)
 		command.sendToParty(game, stopped, "[Party] You stop following. The party leader left.")
 	}
 	game.ClearPartyFollow(message.Character.ID)
+	game.NoteNeedGreedMemberLeft(message.Character.ID)
 	command.sendToParty(game, membersBefore, fmt.Sprintf("[Party] %s left the party.", message.Character.Name))
 	command.pushEmptyParty(game, message.FromUser.ID)
 	// Refresh remaining members' overlays
@@ -321,6 +322,7 @@ func (command *PartyCommand) kick(game def.GameCtrl, message *messages.Message, 
 	if _, wasFollowing := game.ClearPartyFollow(targetID); wasFollowing {
 		command.sendToParty(game, []string{targetID}, "[Party] You stop following.")
 	}
+	game.NoteNeedGreedMemberLeft(targetID)
 	command.sendToParty(game, membersBefore, fmt.Sprintf("[Party] %s was kicked from the party.", targetDisplay))
 	command.pushPartyForCharacterID(game, targetID)
 	if refreshed, err := game.GetFacade().PartiesService().GetPartyByID(party.ID); err == nil && refreshed != nil {
