@@ -185,7 +185,8 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Private tells/whispers and minimal party chat
   - Party flow: create parties, invite online players, accept/decline invites, list members, leave party, and send party chat
   - Party Combat Assist v1: same-room players join in-progress fights via `attack <npc>`; party members get a join nudge; XP/gold split among living joiners
-  - Party Loot & XP Share v1: victory gold and XP also split equally with online party members in the killer's room (leftover to the engager; out-of-room and offline members excluded; items stay on the ground)
+  - Party Loot & XP Share v1: victory gold and XP also split equally with online party members in the killer's room (leftover to the engager; out-of-room and offline members excluded)
+  - Party Need/Greed v1: with 2+ eligible party members, item drops open a 30s Need/Greed/Pass round (Need > Greed > Pass; all-pass/timeout → ground; sequential multi-drop)
   - Party Follow v1: `party follow` / `party unfollow` trail the party leader through normal exits (`RelocateCharacter`); combat, teleports, portals, and private instances do not pull followers
   - Party UI: HUD launch next to Friends, PartyOverlay (create/invite/list/say/leave), centered Accept/Decline invite popup with countdown/timeout; guests can party like signed-in players
   - Emote system
@@ -353,6 +354,7 @@ talesmud/
 | `party list` | - | List party members |
 | `party leave` | - | Leave the current party |
 | `party say <message>` / `party <message>` | `p say <message>` / `p <message>` | Send party chat |
+| `need` / `greed` / `pass` | `loot need\|greed\|pass` | Party Need/Greed loot roll (30s popup when 2+ eligible party members) |
 | `scream` | - | Broadcast to room |
 | `shrug` | - | Emote action |
 | `help` | `h` | Show help |
@@ -366,7 +368,7 @@ talesmud/
 | `quest` | - | Show quest details: quest [name] |
 | `abandon` | - | Abandon a quest: abandon [name] |
 | `spend` | - | Spend attribute points: spend \<attr\> [amount] |
-| `pickup` | `get`, `take` | Pick up an item from the room (room-placed catalog items copy per character and stay for the next guest; dropped loot is still taken). The play client opens one pickup panel for desktop and phone: each ground row is tappable, 1–9 and Enter take a row or everything, and the panel closes when the ground is clear. Ground rows include optional quality, stack, type, and one effect line. Play cache tag `examine1`. |
+| `pickup` | `get`, `take` | Pick up an item from the room (room-placed catalog items copy per character and stay for the next guest; dropped loot is still taken). The play client opens one pickup panel for desktop and phone: each ground row is tappable, 1–9 and Enter take a row or everything, and the panel closes when the ground is clear. Ground rows include optional quality, stack, type, and one effect line. Play cache tag `needgreed1`. |
 | `drop` | - | Drop an item to the room (blocked for bound items) |
 | `destroy` | `discard` | Destroy an item from inventory |
 | `examine` | `inspect` | Examine an item in detail |

@@ -1,3 +1,12 @@
+## Party Need/Greed v1 (2026-10-13)
+
+- SHIPPED engine (pending deploy SHA) on `engine-june`. Play client `?v=needgreed1`. Public master not merged. Door `:8020` untouched.
+- Rules: with 2+ living same-room online party members (same band as Party Loot & XP Share), each item drop opens a 30s Need/Greed/Pass round instead of free ground loot. Need > Greed > Pass; uniform random among the highest tier; winner gets inventory (or ground at feet if full). All-pass / TTL with no Need/Greed → ground free-for-all. Multi-drop queues one at a time. Disconnect / leave room / die / leave-or-kick party = Pass. Solo and non-party unchanged. Gold/XP share unchanged.
+- Commands: `need`, `greed`, `pass`, `loot need|greed|pass`. Wire: `need_greed` popup (item name, quality chrome, countdown).
+- Tests: `go test -count=1 -timeout 20m ./pkg/...` green (eligibility, Need>Greed>Pass, all-pass→ground, timeout→ground, solo unchanged, disconnect=pass, sequential multi-drop). Client `node src/game/needGreedState_test.mjs` (pending, expiresAt, item label); `npm run build`.
+- Residuals still out: master-looter, bind-on-pickup, cross-room rolls, Flutter.
+- Deploy / smoke: filled after VPS ship.
+
 ## Structured examine cards v1 (2026-10-12)
 
 - SHIPPED engine `4dc2e6f` (`[grokbot] Prefer examineResult for play-client item inspect cards`) on `engine-june`. Play client `?v=examine1`. Public master not merged. Door `:8020` untouched (pid `1178139`, `tales-door-mud`).

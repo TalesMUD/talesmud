@@ -243,6 +243,19 @@ function createClient(renderer, characterCreator, muxStore) {
     }
   };
 
+  messageHandlers["need_greed"] = (msg) => {
+    if (mux && mux.setNeedGreed) {
+      mux.setNeedGreed({
+        pending: !!msg.pending,
+        roundId: msg.roundId || msg.roundID || '',
+        itemName: msg.itemName || msg.name || '',
+        quality: msg.quality || msg.rarity || 'normal',
+        quantity: msg.quantity || 0,
+        expiresAt: msg.expiresAt || 0,
+      });
+    }
+  };
+
   messageHandlers["shop"] = (msg) => {
     if (mux) {
       mux.setShop({

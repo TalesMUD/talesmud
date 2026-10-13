@@ -94,6 +94,10 @@ func Render(v any, opt Options) Result {
 		return renderInvite(msg)
 	case messages.PartyInviteMessage:
 		return renderInvite(&msg)
+	case *messages.NeedGreedMessage:
+		return renderNeedGreed(msg)
+	case messages.NeedGreedMessage:
+		return renderNeedGreed(&msg)
 	case *messages.FriendsMessage:
 		return renderFriends(msg)
 	case messages.FriendsMessage:
@@ -540,6 +544,17 @@ func renderInvite(msg *messages.PartyInviteMessage) Result {
 		name = "Someone"
 	}
 	return Result{Text: name + " invites you to a party. Type accept or decline."}
+}
+
+func renderNeedGreed(msg *messages.NeedGreedMessage) Result {
+	if msg == nil || !msg.Pending {
+		return Result{}
+	}
+	name := Sanitize(msg.ItemName)
+	if name == "" {
+		name = "an item"
+	}
+	return Result{Text: "Loot roll: " + name + ". Type need, greed, or pass."}
 }
 
 func renderFriends(msg *messages.FriendsMessage) Result {

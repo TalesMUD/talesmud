@@ -137,6 +137,7 @@
   import MapOverviewOverlay from "./ui/MapOverviewOverlay.svelte";
   import FriendsOverlay from "./ui/FriendsOverlay.svelte";
   import PartyOverlay from "./ui/PartyOverlay.svelte";
+  import NeedGreedOverlay from "./ui/NeedGreedOverlay.svelte";
 
   import { onMount, onDestroy } from "svelte";
   import { get } from "svelte/store";
@@ -578,6 +579,7 @@
   <InventoryOverlay store={muxStore} {sendMessage} />
   <FriendsOverlay store={muxStore} {sendMessage} />
   <PartyOverlay store={muxStore} {sendMessage} />
+  <NeedGreedOverlay store={muxStore} {sendMessage} />
   <PickupPanel
     open={$pickupPanelOpen}
     items={$muxStore.groundItems || []}

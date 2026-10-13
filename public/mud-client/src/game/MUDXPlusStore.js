@@ -593,6 +593,7 @@ function createStore() {
     party: { inParty: false, partyId: '', partyName: '', leaderId: '', maxMembers: 5, members: [], following: false },
     partyChat: [],
     partyInvite: null,
+    needGreed: null,
   });
 
   const store = {
@@ -1527,6 +1528,28 @@ function createStore() {
           inviterName: String(invite.inviterName || ''),
           partyId: String(invite.partyId || invite.partyID || ''),
           expiresAt: Number(invite.expiresAt) || 0,
+        };
+        return state;
+      });
+    },
+    setNeedGreed: (roll) => {
+      update((state) => {
+        if (!roll || !roll.pending) {
+          state.needGreed = null;
+          return state;
+        }
+        const quantity = Number(roll.quantity) || 0;
+        const itemName = String(roll.itemName || roll.name || '').trim();
+        let itemLabel = itemName || 'an item';
+        if (quantity > 1) itemLabel = `${itemLabel} (x${quantity})`;
+        state.needGreed = {
+          pending: true,
+          roundId: String(roll.roundId || roll.roundID || ''),
+          itemName,
+          quality: String(roll.quality || roll.rarity || 'normal').toLowerCase() || 'normal',
+          quantity: quantity > 0 ? quantity : 1,
+          itemLabel,
+          expiresAt: Number(roll.expiresAt) || 0,
         };
         return state;
       });

@@ -34,10 +34,20 @@ func DropLootFromNPC(facade service.Facade, deadNPC *npc.NPC, room *rooms.Room, 
 	return DropLootFromNPCFor(facade, deadNPC, room, killerLevel, nil)
 }
 
-// DropLootFromNPCFor drops loot for one dead NPC.
+// DropLootFromNPCFor drops loot for one dead NPC and places items in the room.
 // recipientIDs are the characters the drop is for. A unique entry is skipped
 // only when every one of them already holds that template.
 func DropLootFromNPCFor(facade service.Facade, deadNPC *npc.NPC, room *rooms.Room, killerLevel int32, recipientIDs []string) (*LootDropResult, error) {
+	return dropLootFromNPC(facade, deadNPC, room, killerLevel, recipientIDs, true)
+}
+
+// RollLootFromNPCFor rolls loot and stores item instances without placing them
+// in the room. Used when Party Need/Greed holds items until the roll resolves.
+func RollLootFromNPCFor(facade service.Facade, deadNPC *npc.NPC, room *rooms.Room, killerLevel int32, recipientIDs []string) (*LootDropResult, error) {
+	return dropLootFromNPC(facade, deadNPC, room, killerLevel, recipientIDs, false)
+}
+
+func dropLootFromNPC(facade service.Facade, deadNPC *npc.NPC, room *rooms.Room, killerLevel int32, recipientIDs []string, placeInRoom bool) (*LootDropResult, error) {
 	result := &LootDropResult{
 		Items: make([]*items.Item, 0),
 		Gold:  0,
@@ -97,23 +107,25 @@ func DropLootFromNPCFor(facade service.Facade, deadNPC *npc.NPC, room *rooms.Roo
 		}
 	}
 
-	// Place items in room
+	// Store items; optionally place them in the room.
+	placed := make([]*items.Item, 0, len(result.Items))
 	for _, item := range result.Items {
-		// Store the item
 		storedItem, err := facade.ItemsService().Store(item)
 		if err != nil {
 			log.WithError(err).WithField("item", item.Name).Warn("Failed to store dropped item")
 			continue
 		}
-
-		// Add to room
-		if err := room.AddItem(storedItem.ID); err != nil {
-			log.WithError(err).WithField("item", item.Name).Warn("Failed to add item to room")
+		placed = append(placed, storedItem)
+		if placeInRoom {
+			if err := room.AddItem(storedItem.ID); err != nil {
+				log.WithError(err).WithField("item", item.Name).Warn("Failed to add item to room")
+			}
 		}
 	}
+	result.Items = placed
 
 	// Update room if items were placed
-	if len(result.Items) > 0 {
+	if placeInRoom && len(result.Items) > 0 {
 		if err := facade.RoomsService().Update(room.ID, room); err != nil {
 			log.WithError(err).WithField("roomID", room.ID).Warn("Failed to update room with loot")
 		}
@@ -126,6 +138,7 @@ func DropLootFromNPCFor(facade service.Facade, deadNPC *npc.NPC, room *rooms.Roo
 		"room":       room.ID,
 		"lootTable":  enemy.LootTableID,
 		"guaranteed": len(enemy.GuaranteedLoot),
+		"placed":     placeInRoom,
 	}).Debug("Loot dropped from NPC")
 
 	return result, nil
