@@ -1,11 +1,12 @@
 ## Party Need/Greed v1 (2026-10-13)
 
-- SHIPPED engine (pending deploy SHA) on `engine-june`. Play client `?v=needgreed1`. Public master not merged. Door `:8020` untouched.
+- SHIPPED engine `8368a8d` (`feat: [grokbot] Party Need/Greed loot rolls for party kills`) on `engine-june`. Play client `?v=needgreed1`. Public master not merged. Door `:8020` untouched (pid `1178139`, `tales-door-mud`).
 - Rules: with 2+ living same-room online party members (same band as Party Loot & XP Share), each item drop opens a 30s Need/Greed/Pass round instead of free ground loot. Need > Greed > Pass; uniform random among the highest tier; winner gets inventory (or ground at feet if full). All-pass / TTL with no Need/Greed → ground free-for-all. Multi-drop queues one at a time. Disconnect / leave room / die / leave-or-kick party = Pass. Solo and non-party unchanged. Gold/XP share unchanged.
 - Commands: `need`, `greed`, `pass`, `loot need|greed|pass`. Wire: `need_greed` popup (item name, quality chrome, countdown).
 - Tests: `go test -count=1 -timeout 20m ./pkg/...` green (eligibility, Need>Greed>Pass, all-pass→ground, timeout→ground, solo unchanged, disconnect=pass, sequential multi-drop). Client `node src/game/needGreedState_test.mjs` (pending, expiresAt, item label); `npm run build`.
+- Deploy: VPS ff `aa40a6f..8368a8d`, embed `public/mud-client/public` → `pkg/webuiplay/dist` (`needgreed1` ×6), `bin/tales.prev-aa40a6f` kept (sha256 `fa597809b67c44b866a8a70758ada3bd626eab7c55b326933ad18c5f918eff3f`), new binary sha256 `48dfdcda080175f535dc4a0ca973aed218a664427c7f126a882166f6acce2058`. SIGTERM talesmud MainPID `1214674` only; Restart=always → MainPID `1238568` on `:8010`. Smoke seed briefly set ENM0001 `guaranteedLoot: [ITM0018]` then restored from `/tmp/ENM0001.bak.json` and SIGTERM again → final MainPID `1238969` on `:8010`; Door `:8020` pid `1178139` unchanged.
+- Smoke: `GET /play/?v=needgreed1` 200 (assets tagged needgreed1 ×6), `bundle.js?v=needgreed1` contains `need_greed`, `POST /api/guest` 200. Two guests party in R0005, kill Catacomb Rat → both get Need/Greed popup for Rat Tail; Need beats Greed → inventory has Rat Tail; second kill Pass/Pass → ground line. Seed reverted after smoke.
 - Residuals still out: master-looter, bind-on-pickup, cross-room rolls, Flutter.
-- Deploy / smoke: filled after VPS ship.
 
 ## Structured examine cards v1 (2026-10-12)
 
