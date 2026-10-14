@@ -1,5 +1,6 @@
 <script>
   import { onDestroy, tick } from 'svelte';
+  import { portal } from '../portal.js';
 
   export let store = null;
   export let sendMessage = null;
@@ -62,16 +63,21 @@
   .ng-overlay {
     position: fixed;
     inset: 0;
-    z-index: 146;
-    background: rgba(0, 0, 0, 0.72);
-    backdrop-filter: blur(4px);
+    z-index: 10240;
+    background: transparent;
+    pointer-events: none;
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: center;
-    padding: 1em;
+    padding:
+      max(0.75rem, env(safe-area-inset-top, 0px))
+      max(0.75rem, env(safe-area-inset-right, 0px))
+      max(0.75rem, env(safe-area-inset-bottom, 0px))
+      max(0.75rem, env(safe-area-inset-left, 0px));
     box-sizing: border-box;
   }
   .ng-panel {
+    pointer-events: auto;
     width: min(400px, 100%);
     display: flex;
     flex-direction: column;
@@ -143,16 +149,21 @@
     color: #fca5a5;
     background: transparent;
   }
+  @media (min-width: 900px) and (min-height: 700px) {
+    .ng-overlay {
+      align-items: center;
+    }
+  }
 </style>
 
 {#if pending}
   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
   <div
     class="ng-overlay"
+    use:portal
     role="dialog"
     aria-modal="true"
     aria-label="Loot roll"
-    on:click={(e) => { if (e.target === e.currentTarget) choose('pass'); }}
   >
     <div class="ng-panel" on:click|stopPropagation>
       <div class="ng-kicker"><i class="material-icons" aria-hidden="true">casino</i> Loot Roll</div>

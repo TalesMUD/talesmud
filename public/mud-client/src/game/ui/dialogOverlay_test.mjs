@@ -28,7 +28,12 @@ assert.equal(roomClear.includes('clearDialog'), true);
 
 assert.equal(shop.includes('shopclose'), true);
 assert.equal(shop.includes("e.key !== 'Escape'"), true);
-assert.match(index, /bundle\.js\?v=oss051/);
+assert.match(index, /bundle\.js\?v=oss052/);
+assert.equal(overlay.includes('use:portal'), true);
+assert.equal(overlay.includes('position: fixed'), true);
+assert.equal(shop.includes('use:portal'), true);
+assert.equal(shop.includes('position: fixed'), true);
+assert.equal(shop.includes('aria-label="Close shop"'), true);
 assert.equal(index.includes('pickup2'), false);
 assert.equal(index.includes('pickup1'), false);
 assert.equal(index.includes('wander2'), false);
