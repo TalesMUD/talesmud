@@ -1,3 +1,9 @@
+## UX P0 overlays (2026-10-14)
+
+- SHIPPED engine `1750edb` (`fix: [grokbot] keep dialogs, hotbar, and loot rolls on screen`) on `engine-june`. Play cache `?v=uxp0fix1`. Door `:8020` untouched (pid `1178139`).
+- Dialog and shop are portaled sheets on phone, tablet, and short landscape. Nine hotbar slots fit at 375px in the room and in the narrow combat dock. Need/Greed stays above the victory card and takes the click.
+- Live: MainPID `1268668` (was `1238969`), binary sha256 `ffc0d5b77c2373875376ceb58ccdaf67584a9035246724c044e166f1ea29f9db`, rollback `bin/tales.prev-5d1a0db`. Backup `backups/talesmud-pre-1750edb-20261014T162208Z.db` (6,238,208 bytes, mode 600). Online gate was 0. `/play/?v=uxp0fix1` and `POST /api/guest` returned 200.
+
 ## ACCEPT — 2026-10-14 daily director
 
 - Party Need/Greed loot v1 accepted. Engine `8368a8d`, docs `5d1a0db`, live play cache `?v=needgreed1`. HTTPS, `/play`, `/app`, `/health`, and guest login returned 200 at about 10:05. Door `:8020` was not touched.
