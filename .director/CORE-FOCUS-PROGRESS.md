@@ -1,3 +1,13 @@
+## ACCEPT — 2026-10-14 daily director
+
+- Party Need/Greed loot v1 accepted. Engine `8368a8d`, docs `5d1a0db`, live play cache `?v=needgreed1`. HTTPS, `/play`, `/app`, `/health`, and guest login returned 200 at about 10:05. Door `:8020` was not touched.
+
+## UX responsive audit 2026-10-14
+
+- Live https://veilspan.com/play/ (`?v=needgreed1`) at 375×812, 768×1024, 1440×900, and bonus 812×375. Throwaway guests only. 12 issues (P0=3, P1=6, P2=3).
+- Top 5: UX-02 dialog and shop trapped in the room image (Tue 20); UX-01 phone hotbar slots clipped (Wed 21); UX-03 victory card covers Need/Greed while the 30s timer runs (Tue 20); UX-04 header and tab bar cover inventory and the party invite (Tue 20); UX-05 no character, equipment, skills, or quest-log panel on the phone shell (Thu 22).
+- Report: `docs/ux/RESPONSIVE-AUDIT-2026-10-14.md`. Shots and contact sheets stay in `~/dev/briefs/UX-AUDIT-2026-10-14/`.
+
 ## Party Need/Greed v1 (2026-10-13)
 
 - SHIPPED engine `8368a8d` (`feat: [grokbot] Party Need/Greed loot rolls for party kills`) on `engine-june`. Play client `?v=needgreed1`. Public master not merged. Door `:8020` untouched (pid `1178139`, `tales-door-mud`).
