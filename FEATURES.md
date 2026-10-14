@@ -581,7 +581,7 @@ Need / Greed / Pass, 30s countdown). Commands: `need`, `greed`, `pass`, and
 among the highest tier. The winner receives the item in inventory (or on the
 ground at their feet if inventory is full). A short `[Party]` line announces who
 won and Need vs Greed. If everyone Passes, or the TTL ends with no Need/Greed,
-the item stays on the corpse/ground as free-for-all.
+the item stays on the corpse/ground as free-for-all. The play roll panel is portaled above the battle stage, so Need, Greed, and Pass stay visible and clickable while the victory or defeat card is up. On narrow or short screens the roll sits at the bottom and the outcome card yields height.
 
 Multiple drops from one kill resolve **one at a time**. Disconnect, leave room,
 die, or leave/kick from the party mid-round counts as Pass. Still out of scope:
@@ -1304,7 +1304,7 @@ Enhanced notification system with interactions:
 - Quest log: READY + turnInAnywhere shows **Turn In** (`complete <name>`); otherwise a **Turn in: &lt;NPC&gt;** hint
 
 ### Spell Bar / Hotbar
-- 8 square slots docked on top of the desktop action bar (a placed hotbar widget still floats on its own). Mobile keeps its own strip
+- Nine square slots docked on top of the desktop action bar (a placed hotbar widget still floats on its own). Mobile keeps its own strip. At 375px the room strip and the combat-dock row shrink the slot and the gap so slots 1 through 9 stay fully inside the viewport.
 - Bind equipped combat skills (`cast` / combat-only) or inventory consumables (`use`)
 - Look / Talk / Flee are bindable actions but **not** seeded by default
 - Rest is seeded on an empty/default hotbar (slot 7). Customized binds are never overwritten
@@ -1557,6 +1557,7 @@ type DialogState struct {
 - **One-time** - `ShowOnlyOnce` options disappear after first selection
 - **Variations** - Random or sequential alternate texts
 - **Exit markers** - Return to "main" node on completion
+- **Play overlay** - Dialog and shop are portaled to the page layer (`position: fixed`). Phone and tablet (≤768px), and any window shorter than 500px, use a scrollable bottom sheet with safe-area padding. The shop close control stays in the header. A dialog × is shown only when the current node has an exit choice, and it selects that choice. There is no separate Leave conversation control. Taller desktop windows keep centered panels that scroll inside the viewport. Play cache tag `?v=uxp0fix1`.
 
 ### Dialog API
 ```lua
@@ -2431,7 +2432,7 @@ Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "unc
 - The widget auto-fits discovered places into its panel and keeps that fit (canvas is out of flow so it cannot resize the widget)
 - Layer tabs, pan, wheel zoom, click-to-travel along discovered paths
 - Desktop/mobile action bars (Option C): room-only dirs + room actions + Shop when a merchant is present; fixed INV / MAP / SAY chrome; **Recipes** seeded by default for crafting discoverability; optional Look/Rest/… pins via ⋯; layout revision migrates legacy Look/pin clutter and seeds Recipes onto rev-2 bars
-- Pickup is one shared panel (`PickupPanel.svelte`, logic in `pickupPanel.js`), opened from the desktop Pickup button and from the phone action-bar button and room hand button. Rows use item art, normal-case names, rarity colors (unique is gold), a ×N stack, and a `type · effect` hint. Currency is `type: currency` or a `currency` tag; a coin name matches only when the row has no type. Pick up all is a separate gold footer button when more than one item is on the ground. Keys 1–9, Enter, and Esc apply while the panel is the top overlay and a text field is not focused. The list scrolls; the header and footer stay put. On screens 600px and under the panel is a full-width bottom sheet. It closes itself when nothing pickable remains. Room item rows keep `id`, `name`, `noPickup`, and `copyOnPickup`, and add optional `type`, `subType`, `quality`, `unique`, `quantity`, and `effect` (one `FormatEffect` line, or `Heals N HP`). Play cache tag `examine1`.
+- Pickup is one shared panel (`PickupPanel.svelte`, logic in `pickupPanel.js`), opened from the desktop Pickup button and from the phone action-bar button and room hand button. Rows use item art, normal-case names, rarity colors (unique is gold), a ×N stack, and a `type · effect` hint. Currency is `type: currency` or a `currency` tag; a coin name matches only when the row has no type. Pick up all is a separate gold footer button when more than one item is on the ground. Keys 1–9, Enter, and Esc apply while the panel is the top overlay and a text field is not focused. The list scrolls; the header and footer stay put. On screens 600px and under the panel is a full-width bottom sheet. It closes itself when nothing pickable remains. Room item rows keep `id`, `name`, `noPickup`, and `copyOnPickup`, and add optional `type`, `subType`, `quality`, `unique`, `quantity`, and `effect` (one `FormatEffect` line, or `Heals N HP`). Play cache tag `uxp0fix1`.
 - Inventory chrome opens a popup overlay by default; preference can switch to on-screen widget / mobile sheet
 - Room action/system reaction toasts render large and centered on the room hero art (not the command log)
 - Same JSON is the contract for a future mobile renderer

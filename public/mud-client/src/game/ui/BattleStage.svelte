@@ -53,6 +53,7 @@
   let logExpanded = false;
 
   $: phase = $store.combatPhase || ($store.inCombat ? 'active' : 'idle');
+  $: lootRollPending = !!($store.needGreed && $store.needGreed.pending);
   $: visible = shown && (phase === 'active' || phase === 'ending');
   $: if (!visible) logExpanded = false;
   $: enemies = $store.combatEnemies || [];
@@ -677,7 +678,7 @@
 
 <svelte:window on:keydown={onOutcomeKey} />
 {#if visible}
-<div class="battle-stage" class:ending={phase === 'ending'} class:layout-b={layoutB} class:reduced-motion={prefersReducedMotion($settingsStore.interface?.reducedMotion)} role="dialog" aria-label="Combat" tabindex="-1" use:combatStageFocus>
+<div class="battle-stage" class:ending={phase === 'ending'} class:yield-roll={lootRollPending} class:layout-b={layoutB} class:reduced-motion={prefersReducedMotion($settingsStore.interface?.reducedMotion)} role="dialog" aria-label="Combat" tabindex="-1" use:combatStageFocus>
   <div class="battle-backdrop" aria-hidden="true"></div>
   <div class="battle-frame">
   <header class="battle-header">
@@ -3233,6 +3234,15 @@
     max-width: min(26rem, 38vw);
     text-align: left;
   }
+  .battle-stage.ending.yield-roll .outcome-panel {
+    justify-items: center;
+    padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+  }
+  .battle-stage.ending.yield-roll .outcome-card {
+    max-width: min(26rem, calc(100vw - 1.5rem));
+    max-height: min(46dvh, calc(100dvh - 16.5rem));
+    overflow: auto;
+  }
   .battle-stage.ending .outcome-title,
   .battle-stage.ending .outcome-ornament,
   .battle-stage.ending .outcome-rewards,
@@ -3745,17 +3755,17 @@
       width: 100%;
       flex: 0 0 auto;
       box-sizing: border-box;
-      gap: 0.28rem;
+      gap: 4px;
       padding: 0;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      justify-content: space-between;
+      overflow: hidden;
+      justify-content: center;
     }
     .hb-slot {
-      width: clamp(44px, 11.5vw, 52px);
-      height: clamp(44px, 11.5vw, 52px);
-      min-width: 44px;
-      min-height: 44px;
+      width: auto;
+      height: auto;
+      aspect-ratio: 1;
+      min-width: 0;
+      min-height: 0;
       flex: 1 1 0;
       max-width: 52px;
     }

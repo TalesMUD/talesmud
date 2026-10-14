@@ -189,6 +189,9 @@
   }
 
   .hotbar-widget.compact {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
     padding: 6px 8px 4px;
     background: rgba(0, 0, 0, 0.45);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -219,6 +222,23 @@
     gap: 0.4em;
     width: 100%;
     max-width: 560px;
+  }
+
+  .hotbar-widget.compact .slots {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    gap: 4px;
+    justify-content: center;
+  }
+
+  .hotbar-widget.compact .slot {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    max-width: 56px;
+    height: auto;
+    aspect-ratio: 1;
   }
 
   .slot {
