@@ -61,6 +61,9 @@ const (
 	// Party roster overlay (structured members for web/mobile)
 	MessageTypeParty = "party"
 
+	// Read-only inspect of one player in the same room.
+	MessageTypePartyInspect = "partyInspect"
+
 	// Pending party invite toast/banner (Accept / Decline without typing)
 	MessageTypePartyInvite = "party_invite"
 

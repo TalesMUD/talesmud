@@ -81,6 +81,7 @@ func (commandProcessor *CommandProcessor) registerCommands() {
 	commandProcessor.RegisterCommand(&SayCommand{}, "Speak to the current room: say <message>", "say")
 	commandProcessor.RegisterCommand(&TellCommand{}, "Send private message: tell <player> <message>", "tell", "whisper", "pm")
 	commandProcessor.RegisterCommand(&PartyCommand{}, "Party commands: party create|invite|accept|decline|leave|list|say or party <message>", "party", "p")
+	commandProcessor.RegisterCommand(&PartyInspectCommand{}, "Inspect a player in the room: partyinspect <id or name>", "partyinspect")
 	commandProcessor.RegisterCommand(&NeedCommand{}, "Need on the open party loot roll: need", "need")
 	commandProcessor.RegisterCommand(&GreedCommand{}, "Greed on the open party loot roll: greed", "greed")
 	commandProcessor.RegisterCommand(&PassCommand{}, "Pass on the open party loot roll: pass", "pass")
