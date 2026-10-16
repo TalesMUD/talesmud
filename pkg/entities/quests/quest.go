@@ -2,8 +2,8 @@ package quests
 
 import (
 	"strings"
-	"unicode"
 	"time"
+	"unicode"
 
 	"github.com/talesmud/talesmud/pkg/entities"
 )
@@ -71,6 +71,10 @@ type Quest struct {
 	Area       string `json:"area,omitempty"`
 	Level      int32  `json:"level,omitempty"`
 	Repeatable bool   `json:"repeatable,omitempty"`
+
+	// Guide marks this quest as the new-character next-step hint.
+	// When no quest sets it, the hint falls back to the active quest log.
+	Guide bool `json:"guide,omitempty"`
 
 	// Source - how player gets this quest
 	Source QuestSource `json:"source"`

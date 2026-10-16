@@ -96,6 +96,7 @@ func (commandProcessor *CommandProcessor) registerCommands() {
 	commandProcessor.RegisterCommand(&CharacterCommand{}, "Display character stats", "character", "char", "stats")
 	commandProcessor.RegisterCommand(&NewCharacterCommand{}, "Create a new character", "newcharacter", "nc")
 	commandProcessor.RegisterCommand(&TalkCommand{}, "Talk to an NPC: talk [npc-name]", "talk", "speak")
+	commandProcessor.RegisterCommand(&GuideCommand{}, "Dismiss the next-step hint: guide dismiss", "guide")
 
 	// Item commands
 	commandProcessor.RegisterCommand(&PickupCommand{}, "Pick up an item: pickup [item]", "pickup", "get", "take")

@@ -293,6 +293,13 @@
     if (!races.some((race) => race.id === guestRaceId)) {
       guestRaceId = races[0]?.id || "";
     }
+    requestAnimationFrame(() => {
+      const card = document.querySelector(".welcome-screen .card");
+      const play = card && card.querySelector(".guest-play");
+      if (!card || !play) return;
+      const delta = play.getBoundingClientRect().bottom - card.getBoundingClientRect().bottom + 12;
+      if (delta > 0) card.scrollBy({ top: delta, behavior: "smooth" });
+    });
   }
 
   $: guestRaces = guestTemplate ? racesForTemplate(guestTemplate) : [];
@@ -421,7 +428,7 @@
             {/each}
           </div>
           <button
-            class="btn-welcome guest"
+            class="btn-welcome guest guest-play"
             type="button"
             on:click={handleGuestChosen}
             disabled={guestLoading || !guestRaceId}

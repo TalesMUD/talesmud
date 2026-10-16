@@ -22,6 +22,15 @@ func NotifyQuestRoomEnter(game def.GameCtrl, characterID, userID string, room *r
 	if qt := game.GetQuestTracker(); qt != nil {
 		qt.OnRoomEnter(characterID, userID, room)
 	}
+	if game.GetFacade() != nil && game.GetFacade().CharactersService() != nil {
+		if char, err := game.GetFacade().CharactersService().FindByID(characterID); err == nil && char != nil {
+			roomID := ""
+			if room != nil {
+				roomID = room.ID
+			}
+			PushGuideHintAt(game, userID, char, roomID)
+		}
+	}
 }
 
 // NotifyQuestDialogNode notifies the quest tracker of a dialog node reached

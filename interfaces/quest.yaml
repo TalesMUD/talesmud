@@ -88,6 +88,12 @@ fields:
     # If true, the quest can be completed multiple times. After completion,
     # it returns to "available" status. Typical for daily quests.
 
+  guide:
+    type: boolean
+    default: false
+    # When true, this quest is the new-character next-step hint.
+    # When no quest sets it, the hint uses the active quest log.
+
   # ─── Source ─────────────────────────────────────────────────────────────────
 
   source:
