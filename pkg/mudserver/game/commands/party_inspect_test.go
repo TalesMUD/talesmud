@@ -309,3 +309,23 @@ func assertInspectDoll(t *testing.T, frame *messages.PartyInspectMessage, userID
 		t.Fatalf("attack %d defense %d", frame.AttackPower, frame.Defense)
 	}
 }
+
+// Leaving a two-member party deletes it; the leave refresh used to panic on the missing row.
+func TestPartyLeaveLastPairDoesNotPanic(t *testing.T) {
+	g, facade := newSocialTestGame(t)
+	aUser, a := storeSocialPlayer(t, facade, "user-a", "ref-a", "char-a", "Aryn", "room-1")
+	bUser, b := storeSocialPlayer(t, facade, "user-b", "ref-b", "char-b", "Bran", "room-1")
+	inspectParty(t, facade, a.ID, b.ID)
+	g.ConnectUserSession(aUser)
+	g.SetUserSessionCharacter(aUser, a)
+	g.ConnectUserSession(bUser)
+	g.SetUserSessionCharacter(bUser, b)
+
+	(&commands.PartyCommand{}).Execute(g, &messages.Message{FromUser: bUser, Character: b, Data: "party leave"})
+	drainSocialMessages(g.SendMessage())
+	(&commands.PartyCommand{}).Execute(g, &messages.Message{FromUser: aUser, Character: a, Data: "party leave"})
+	drainSocialMessages(g.SendMessage())
+	if party, err := facade.PartiesService().FindByCharacterID(a.ID); err == nil && party != nil {
+		t.Fatalf("party still exists: %#v", party)
+	}
+}

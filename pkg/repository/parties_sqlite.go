@@ -31,12 +31,14 @@ func (repo *sqlitePartiesRepository) FindAll() ([]*e.Party, error) {
 func (repo *sqlitePartiesRepository) Store(party *e.Party) (*e.Party, error) {
 	party.Entity = e.NewEntity()
 	result, err := repo.sqliteGenericRepo.Store(party)
-	return result.(*e.Party), err
+	stored, _ := result.(*e.Party)
+	return stored, err
 }
 
 func (repo *sqlitePartiesRepository) FindByID(id string) (*e.Party, error) {
 	result, err := repo.sqliteGenericRepo.FindByID(id)
-	return result.(*e.Party), err
+	party, _ := result.(*e.Party)
+	return party, err
 }
 
 func (repo *sqlitePartiesRepository) Update(id string, party *e.Party) error {
