@@ -9,11 +9,15 @@
 # HOW SPAWNING WORKS:
 # ───────────────────
 # 1. On server start, the spawner creates initialCount instances immediately
-# 2. The spawner checks every spawnInterval whether instances need replacing
-# 3. If alive count < maxInstances, a new instance is spawned from the template
-# 4. Instances are placed in the spawner's roomId
-# 5. When an instance dies, it respawns after the template's respawnTime
-#    (or respawnTimeOverride if set on the spawner)
+# 2. The spawner is checked every 5 seconds
+# 3. While alive count is below initialCount, it refills on the next check
+#    until a death has been recorded
+# 4. After a death it waits respawnDelay, and at least combat.respawn_min_seconds
+#    (default 30; 0 disables that floor), before it replaces the corpse
+# 5. spawnInterval spaces only the extras between initialCount and maxInstances
+# 6. Instances are placed in the spawner's roomId
+#    Template respawnTime applies to unique NPCs. respawnTimeOverride copies onto
+#    the instance and does not gate this replacement.
 #
 # RELATIONSHIP TO NPC TEMPLATES:
 # ──────────────────────────────
@@ -69,11 +73,20 @@ fields:
   spawnInterval:
     type: duration
     required: true
-    # How often the spawner checks if new instances are needed.
-    # Go duration string. The spawner runs on this timer, and if the
-    # alive count is below maxInstances, it spawns one new instance.
-    # Example: "30s" = checks every 30 seconds.
+    # Go duration string. Spaces extra instances after initialCount is full
+    # and the alive count is still below maxInstances.
+    # The spawner itself is checked every 5 seconds.
+    # Example: "5m" = at most one extra body per five minutes.
     examples: ["10s", "30s", "1m", "5m"]
+
+  respawnDelay:
+    type: duration
+    # Minimum time after a death before this spawner replaces the corpse.
+    # Go duration string. The engine also applies combat.respawn_min_seconds
+    # (default 30). The longer of the two wins. 0 on the ruleset key disables
+    # that floor. Omitted here means only the floor applies.
+    # Server start still fills initialCount immediately.
+    examples: ["45s", "90s", "3m", "5m", "30m"]
 
   initialCount:
     type: integer

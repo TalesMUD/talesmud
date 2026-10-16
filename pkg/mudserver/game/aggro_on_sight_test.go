@@ -17,6 +17,8 @@ func useAggroClock(t *testing.T, g *Game) *time.Time {
 	now := time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)
 	g.SetAggroClock(func() time.Time { return now })
 	ruleset.SetAggroOnSight(true, 500*time.Millisecond, 5, 15*time.Second)
+	// Older sight tests cover the 15s instance cooldown only.
+	ruleset.SetAggroQuiet(0, 0, 0)
 	t.Cleanup(ruleset.Reset)
 	return &now
 }

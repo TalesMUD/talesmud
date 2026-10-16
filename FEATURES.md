@@ -455,6 +455,8 @@ Off: `enabled: false` on that pool (`regen.out_of_combat.hp`, `regen.resting.hp`
 
 `guide.enabled` defaults to on. A world game-mode file may set the same key. `false` builds no next-step hint and the server sends no `guideHint`. An omitted key stays on.
 
+`combat.respawn_min_seconds` defaults to 30. After a death, a spawner waits at least that long before it replaces the corpse. An authored `respawnDelay` still waits when it is longer. `0` disables the floor. Server start still fills `initialCount` immediately. `combat.aggro_on_sight.respawn_grace_seconds` defaults to 8 and holds a fresh respawn that appears on players already in the room. `0` uses `grace_seconds`. `post_combat_grace_seconds` defaults to 10 and holds aggressive NPCs in the fight room after a victory or flee. Leaving that room ends it. `spawn_aggro_cooldown_seconds` defaults to 60 and stops that same spawn, including a replacement, from auto-aggroing the same player again. Another player is still engaged. `attack` still starts a fight. `0` disables a window.
+
 ### Refilling resources
 
 Per-character balances live in the `character_resources` table. A key grants uses only after something configures an allowance (calendar day in a timezone, or a fixed interval). An optional `label` is a display name; an empty label leaves the key as the name. Inside a period, raising the allowance or a modifier does not give the extra uses back; the next period refills to the new amount. An empty catalog, which is the process default, answers every key as not configured and writes no row.
@@ -702,8 +704,8 @@ NPCs are processed by the game update loop every 10 seconds:
 - Runtime `nextMoveAt`, `pausedUntil` and pingpong direction are memory-only. On registration an invalid current room resets to an allowed spawn/first route room; no valid start means no walking. Spawns and residents return to authored placements after restart. Aggressive wanderers must be non-boss and level >= 10; arrival uses normal aggro scheduling and room sanctuary rules.
 - The NPC inspector shows static movement and live current room, next move time/ETA, paused-until and session hold; `/api/live/npcs` adds these fields. The world map has a Wanderers layer from live positions (refresh to update).
 - NPCs with `IdleDialogID` and `IdleDialogTimeout` broadcast ambient chatter to their current room when the cooldown has elapsed.
-- Dead spawned instances are removed for spawner replacement; dead unique NPCs respawn at `SpawnRoomID` after `RespawnTime`.
-- An enemy with `aggroOnSight` engages a player who enters its room, and engages players already there when it spawns, respawns, or walks in. `config/ruleset.yaml` `combat.aggro_on_sight` defaults to on, 2.5s grace, level gap 5, and 15s reaggro cooldown. That quiet period also covers other aggressive NPCs still in the room. `enabled: false` stops it. The sight line is ordinary text. The fight then uses the same path as `attack`. A room with `noAggro` skips both the grace watch and the fire. Look and examine of an `aggroOnSight` NPC include the line `Aggressive`.
+- Dead spawned instances are removed for spawner replacement. The spawner waits `respawnDelay`, and at least `combat.respawn_min_seconds`, after that death. Dead unique NPCs respawn at `SpawnRoomID` after `RespawnTime`.
+- An enemy with `aggroOnSight` engages a player who enters its room, and engages players already there when it spawns, respawns, or walks in. `config/ruleset.yaml` `combat.aggro_on_sight` defaults to on, 2.5s grace, level gap 5, and 15s reaggro cooldown. That quiet period also covers other aggressive NPCs still in the room. A fresh respawn uses `respawn_grace_seconds` (default 8) for players already there. After a victory or flee, `post_combat_grace_seconds` (default 10) holds the fight room, and ends when the player leaves. `spawn_aggro_cooldown_seconds` (default 60) is per player and spawn, so a replacement remembers the same player. `enabled: false` stops sight aggro. The sight line is ordinary text. The fight then uses the same path as `attack`. A room with `noAggro` skips both the grace watch and the fire. Look and examine of an `aggroOnSight` NPC include the line `Aggressive`.
 - NPC movement sends ordinary room prose to both rooms and existing `roomUpdate` payloads so web/Flutter refresh presence without reprinting the room description. Messages default to `{name} heads {dir}.` and `{name} arrives from the {fromDir}.`; direction comes from the real exit.
 
 Room NPC payloads sent to the MUD client include `isEnemy`, `isMerchant`, `isQuestGiver`, `hasDialog`, `hasIdleDialog`, `aggroOnSight`, and `state` so the UI can show interaction badges without duplicating backend lookup rules. An `aggroOnSight` enemy card shows a red Aggressive label. The `aggroOnSight` JSON field is omitted for passive NPCs. `noAggro` survives room import/export and instance cloning; it suppresses automatic aggression without blocking a manual attack.
@@ -784,8 +786,9 @@ type NPCSpawner struct {
     TemplateID    string         // NPC template to spawn
     RoomID        string         // Where to spawn
     MaxInstances  int            // Max alive at once
-    SpawnInterval time.Duration  // Time between spawns
+    SpawnInterval time.Duration  // Time between extra spawns above InitialCount
     InitialCount  int            // Spawn on world load
+    RespawnDelay  time.Duration  // Wait after a death before replacing
 
     RespawnTimeOverride *time.Duration  // Override template respawn
 }
@@ -793,7 +796,9 @@ type NPCSpawner struct {
 
 **Spawner Behavior** (automated by server):
 - Checks every 5 seconds
-- Spawns instances up to `MaxInstances`
+- Fills `InitialCount` immediately when the spawner has not lost an instance yet
+- After a death, waits the longer of `RespawnDelay` and `combat.respawn_min_seconds` (default 30s, `0` disables the floor)
+- `SpawnInterval` spaces only the extras between `InitialCount` and `MaxInstances`
 - Tracks live instances via `NPCInstanceManager`
 
 ### NPC Resident System

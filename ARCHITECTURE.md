@@ -360,7 +360,9 @@ The game runs multiple update tickers:
 
 3. **Spawner Updates** (5 seconds)
    - Check each spawner's instance count
-   - Spawn new instances when below max capacity
+   - Fill `InitialCount` immediately until the spawner has lost an instance
+   - After a death, wait the longer of `RespawnDelay` and `combat.respawn_min_seconds` (default 30s)
+   - Let `SpawnInterval` space only the extras between `InitialCount` and `MaxInstances`
    - Clean up dead instances from spawner tracking
 
 4. **Combat Updates** (2 seconds)
@@ -419,7 +421,7 @@ Key methods:
 
 Turn-based combat occurs in isolated **Combat Instances** that manage fights between players and NPCs.
 
-Aggro on sight uses that same start. `combat.aggro_on_sight` (default on, 2.5s grace, level gap 5, 15s reaggro cooldown) schedules one watch per player and aggressive NPC when the player enters the room or the NPC arrives. The timer enqueues onto the command loop. The loop re-checks, posts `The <name> spots you.` as a normal message, and calls `BeginEngagement`, which calls `InitiateCombat`. Swarm pack, one `onAggro`, and the party assist nudge match a manual `attack`. Leaving during the grace cancels the watch. The cooldown starts when the fight ends. A room with `noAggro` is skipped at schedule and again when the timer fires. Room NPC payloads include optional `aggroOnSight: true` (`omitempty`, absent for passive NPCs) so the play client can mark those cards. The field is copied through both the runtime room summary and the websocket response. Look and examine of that NPC add a line `Aggressive`.
+Aggro on sight uses that same start. `combat.aggro_on_sight` (default on, 2.5s grace, level gap 5, 15s reaggro cooldown) schedules one watch per player and aggressive NPC when the player enters the room or the NPC arrives. A death replacement and a unique NPC respawn use `respawn_grace_seconds` (default 8) for players already in the room. The first fill, a walk-in, and a summon keep the short grace. After a victory or flee, `post_combat_grace_seconds` (default 10) holds aggressive NPCs in the fight room for players still standing there. Entering a different room ends that hold. `spawn_aggro_cooldown_seconds` (default 60) is stored on the spawner id, or on the resident NPC id, so a new instance remembers the player it already auto-aggroed. The timer enqueues onto the command loop. The loop re-checks, posts `The <name> spots you.` as a normal message, and calls `BeginEngagement`, which calls `InitiateCombat`. Swarm pack, one `onAggro`, and the party assist nudge match a manual `attack`. Leaving during the grace cancels the watch. The per-instance cooldown starts when the fight ends. A room with `noAggro` is skipped at schedule and again when the timer fires. Room NPC payloads include optional `aggroOnSight: true` (`omitempty`, absent for passive NPCs) so the play client can mark those cards. The field is copied through both the runtime room summary and the websocket response. Look and examine of that NPC add a line `Aggressive`.
 
 #### Combat Instance Model
 
@@ -990,12 +992,15 @@ type NPCSpawner struct {
     TemplateID    string         // NPC template to spawn
     RoomID        string         // Where to spawn
     MaxInstances  int            // Max alive at once
-    SpawnInterval time.Duration  // Time between spawns
+    SpawnInterval time.Duration  // Time between extra spawns above InitialCount
     InitialCount  int            // Spawn on world load
+    RespawnDelay  time.Duration  // Wait after a death; the ruleset floor can extend it
 
     RespawnTimeOverride *time.Duration  // Override template respawn
 }
 ```
+
+`combat.respawn_min_seconds` (default 30) is the floor under `RespawnDelay` after a death. `0` disables that floor. A spawner that has not lost an instance still fills `InitialCount` on the next tick.
 
 ### LootTable Entity
 

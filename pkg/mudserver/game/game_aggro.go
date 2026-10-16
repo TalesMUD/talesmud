@@ -32,17 +32,24 @@ type aggroWatch struct {
 	timer    *time.Timer
 }
 
+// roomQuiet keeps one player safe from auto-aggro in a single room until a time.
+type roomQuiet struct {
+	roomID string
+	until  time.Time
+}
+
 // aggroBook is the in-memory sight scheduler. It is process-local.
 // Timers only enqueue. Combat starts on the command loop, or in tests via FireDueAggro.
 type aggroBook struct {
-	mu       sync.Mutex
-	pending  map[string]*aggroWatch
-	cooldown map[string]time.Time
-	now      func() time.Time
-	manual   bool
-	dropped  bool
-	nextGen  uint64
-	ch       chan aggroFire
+	mu         sync.Mutex
+	pending    map[string]*aggroWatch
+	cooldown   map[string]time.Time
+	postCombat map[string]roomQuiet
+	now        func() time.Time
+	manual     bool
+	dropped    bool
+	nextGen    uint64
+	ch         chan aggroFire
 }
 
 func (b *aggroBook) nowTime() time.Time {
@@ -54,6 +61,24 @@ func (b *aggroBook) nowTime() time.Time {
 
 func aggroKey(playerID, npcID string) string {
 	return playerID + "|" + npcID
+}
+
+// spawnAggroKey survives a new instance id. Identity is spawner:<id> or npc:<id>.
+func spawnAggroKey(playerID, identity string) string {
+	return playerID + "|spawn|" + identity
+}
+
+func spawnIdentity(inst *npc.NPC) string {
+	if inst == nil {
+		return ""
+	}
+	if inst.SpawnerID != "" {
+		return "spawner:" + inst.SpawnerID
+	}
+	if inst.Entity != nil && inst.Entity.ID != "" {
+		return "npc:" + inst.Entity.ID
+	}
+	return ""
 }
 
 // SetAggroClock installs a test clock and does not arm time.AfterFunc.
@@ -99,6 +124,8 @@ func (g *Game) NotePlayerEntered(characterID, roomID string) {
 	if g == nil || characterID == "" || roomID == "" {
 		return
 	}
+	// Same-room entry keeps the post-combat quiet. A different room ends it.
+	g.aggro.clearPostCombatUnless(characterID, roomID)
 	g.aggro.cancelPlayerExcept(characterID, roomID)
 	if !ruleset.AggroOnSightEnabled() || g.NPCManager == nil {
 		return
@@ -108,12 +135,23 @@ func (g *Game) NotePlayerEntered(characterID, roomID string) {
 		return
 	}
 	for _, inst := range g.NPCManager.GetInstancesInRoom(roomID) {
-		g.scheduleAggro(char, inst, roomID)
+		g.scheduleAggro(char, inst, roomID, false)
 	}
 }
 
-// NoteNPCAppeared schedules a grace watch for each player already standing in the room.
+// NoteNPCAppeared schedules a short grace watch for each player already standing in the room.
+// Walk-ins, the first fill of a spawner, and summons use this path.
 func (g *Game) NoteNPCAppeared(npcID, roomID string) {
+	g.noteNPCSight(npcID, roomID, false)
+}
+
+// NoteNPCRespawned is NoteNPCAppeared for a body that replaced a corpse.
+// Players already in the room get the longer respawn grace.
+func (g *Game) NoteNPCRespawned(npcID, roomID string) {
+	g.noteNPCSight(npcID, roomID, true)
+}
+
+func (g *Game) noteNPCSight(npcID, roomID string, respawned bool) {
 	if g == nil || npcID == "" || roomID == "" || g.NPCManager == nil {
 		return
 	}
@@ -133,7 +171,7 @@ func (g *Game) NoteNPCAppeared(npcID, roomID string) {
 		if !g.playerCanBeAggroed(char, roomID) {
 			continue
 		}
-		g.scheduleAggro(char, inst, roomID)
+		g.scheduleAggro(char, inst, roomID, respawned)
 	}
 }
 
@@ -213,7 +251,7 @@ func (g *Game) playingUserID(characterID string) string {
 	return ""
 }
 
-func (g *Game) scheduleAggro(char *characters.Character, inst *npc.NPC, roomID string) {
+func (g *Game) scheduleAggro(char *characters.Character, inst *npc.NPC, roomID string, respawned bool) {
 	if !npcCanAggro(inst, roomID) || !g.playerCanBeAggroed(char, roomID) {
 		return
 	}
@@ -226,9 +264,61 @@ func (g *Game) scheduleAggro(char *characters.Character, inst *npc.NPC, roomID s
 	if g.roomBlocksAggro(roomID) {
 		return
 	}
-	key := aggroKey(char.ID, inst.Entity.ID)
-	grace := ruleset.AggroGrace()
-	g.aggro.arm(key, char.ID, inst.Entity.ID, roomID, grace)
+	wait := ruleset.AggroGrace()
+	if respawned {
+		if extra := ruleset.RespawnAggroGrace(); extra > wait {
+			wait = extra
+		}
+	}
+	if extra := g.aggroQuietWait(char.ID, inst, roomID); extra > wait {
+		wait = extra
+	}
+	g.aggro.arm(aggroKey(char.ID, inst.Entity.ID), char.ID, inst.Entity.ID, roomID, wait)
+}
+
+// aggroQuietWait is the longer of the post-combat quiet and the per-spawn cooldown
+// still left for this player. Zero means neither window is holding.
+func (g *Game) aggroQuietWait(playerID string, inst *npc.NPC, roomID string) time.Duration {
+	if g == nil || playerID == "" {
+		return 0
+	}
+	g.aggro.mu.Lock()
+	defer g.aggro.mu.Unlock()
+	return g.aggro.quietWaitLocked(playerID, inst, roomID)
+}
+
+func (b *aggroBook) quietWaitLocked(playerID string, inst *npc.NPC, roomID string) time.Duration {
+	if b == nil || playerID == "" {
+		return 0
+	}
+	now := b.nowTime()
+	var wait time.Duration
+	if q, ok := b.postCombat[playerID]; ok && q.roomID == roomID && now.Before(q.until) {
+		if d := q.until.Sub(now); d > wait {
+			wait = d
+		}
+	}
+	if id := spawnIdentity(inst); id != "" {
+		if until, ok := b.cooldown[spawnAggroKey(playerID, id)]; ok && now.Before(until) {
+			if d := until.Sub(now); d > wait {
+				wait = d
+			}
+		}
+	}
+	return wait
+}
+
+func (b *aggroBook) clearPostCombatUnless(playerID, roomID string) {
+	if b == nil || playerID == "" {
+		return
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	q, ok := b.postCombat[playerID]
+	if !ok || q.roomID == roomID {
+		return
+	}
+	delete(b.postCombat, playerID)
 }
 
 func (b *aggroBook) arm(key, playerID, npcID, roomID string, grace time.Duration) {
@@ -376,11 +466,19 @@ func (g *Game) tryAggro(playerID, npcID, roomID string) {
 	if g.aggro.cooling(aggroKey(playerID, npcID)) {
 		return
 	}
+	// A watch armed before the fight ended still has to honor the quiet windows.
+	if wait := g.aggroQuietWait(playerID, inst, roomID); wait > 0 {
+		g.aggro.arm(aggroKey(playerID, npcID), playerID, npcID, roomID, wait)
+		return
+	}
 	userID := g.playingUserID(char.ID)
 	if userID == "" {
 		return
 	}
-	g.CombatController.BeginEngagement(roomID, char, userID, inst, true)
+	if g.CombatController.BeginEngagement(roomID, char, userID, inst, true) == nil {
+		return
+	}
+	g.stampSpawnAggroCooldown(playerID, inst)
 }
 
 func (b *aggroBook) cooling(key string) bool {
@@ -432,6 +530,70 @@ func (g *Game) stampFightAggroCooldown(instance *combat.CombatInstance) {
 			g.aggro.cooldown[aggroKey(player.ID, npcID)] = until
 		}
 	}
+}
+
+// stampPostCombatAggroQuiet holds auto-aggro in the fight room after a victory or flee.
+// A player who has already left that room is left out, so a slip keeps the next room's short grace.
+// Call this after InCombat is cleared and the combat instance is gone.
+func (g *Game) stampPostCombatAggroQuiet(instance *combat.CombatInstance, endState combat.CombatState) {
+	if g == nil || instance == nil || g.Facade == nil {
+		return
+	}
+	if endState != combat.CombatStateVictory && endState != combat.CombatStateFled {
+		return
+	}
+	d := ruleset.PostCombatAggroGrace()
+	if d <= 0 || instance.OriginRoomID == "" {
+		return
+	}
+	until := g.aggro.nowTime().Add(d)
+	ids := make([]string, 0, len(instance.Players))
+	for _, player := range instance.Players {
+		if player.ID == "" || !player.IsAlive || player.CurrentHP <= 0 {
+			continue
+		}
+		char, err := g.Facade.CharactersService().FindByID(player.ID)
+		if err != nil || char == nil || char.CurrentRoomID != instance.OriginRoomID {
+			continue
+		}
+		ids = append(ids, player.ID)
+	}
+	if len(ids) == 0 {
+		return
+	}
+	g.aggro.mu.Lock()
+	if g.aggro.postCombat == nil {
+		g.aggro.postCombat = map[string]roomQuiet{}
+	}
+	for _, id := range ids {
+		g.aggro.postCombat[id] = roomQuiet{roomID: instance.OriginRoomID, until: until}
+	}
+	g.aggro.mu.Unlock()
+	if g.NPCManager == nil {
+		return
+	}
+	for _, id := range ids {
+		char := g.aggroCharacter(id)
+		for _, inst := range g.NPCManager.GetInstancesInRoom(instance.OriginRoomID) {
+			g.scheduleAggro(char, inst, instance.OriginRoomID, false)
+		}
+	}
+}
+
+// stampSpawnAggroCooldown records a successful auto-aggro against this spawn.
+// A later instance from the same spawner shares the window. Manual attacks do not call this.
+func (g *Game) stampSpawnAggroCooldown(playerID string, inst *npc.NPC) {
+	cd := ruleset.SpawnAggroCooldown()
+	id := spawnIdentity(inst)
+	if g == nil || cd <= 0 || playerID == "" || id == "" {
+		return
+	}
+	g.aggro.mu.Lock()
+	defer g.aggro.mu.Unlock()
+	if g.aggro.cooldown == nil {
+		g.aggro.cooldown = map[string]time.Time{}
+	}
+	g.aggro.cooldown[spawnAggroKey(playerID, id)] = g.aggro.nowTime().Add(cd)
 }
 
 // nudgeDueAggro requeues a grace timer whose channel send was dropped.

@@ -32,6 +32,9 @@ type NPC struct {
 	TemplateID string `bson:"templateId,omitempty" json:"templateId,omitempty"`
 	// InstanceSuffix is a unique suffix for spawned instances (e.g., "abc123")
 	InstanceSuffix string `bson:"instanceSuffix,omitempty" json:"instanceSuffix,omitempty"`
+	// SpawnerID is the spawner that created this instance. Memory only.
+	// Aggro memory uses it so a replacement counts as the same spawn.
+	SpawnerID string `bson:"-" json:"-"`
 
 	// Behavior Configuration
 	// SpawnRoomID is the room where this NPC spawns/respawns
