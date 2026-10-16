@@ -1,3 +1,10 @@
+## Party gear inspect + party-leave crash fix (2026-10-16)
+
+- SHIPPED engine `59b131b` (`feat: [grokbot] add a read-only partyinspect command`) and `5d04c16` (`fix: [grokbot] stop party leave from crashing the server when the party is gone`) on `engine-june`, together with `f0e4b95` (guide.enabled switch). No client or content change. Door `:8020`/`:2223` untouched (pid `1178139`).
+- `partyinspect <id or name>` answers only for yourself or a member of your party (any room). Strangers get "You can only inspect members of your party." Worn items are copied with container contents, lock owner, creator and bind owner stripped. Purse, inventory, gold, XP, flags and friends never leave the server.
+- The live smoke found a pre-existing crash: when the second-to-last member left a two-person party, the leave refresh type-asserted a nil row and panicked the game loop (systemd restarted it in ~5s). Fixed with a regression test.
+- Live: MainPID `1316625`, binary sha256 `d73c54231b0ae0d87f26691c9271e2d22f93d23da7fa1db8891d219b0dc366eb`, rollback `bin/tales.prev-d7a8bd2` (sha256 `f575c923…fa09`). Backups `backups/talesmud-pre-59b131b-20261016T214225Z.db` and `backups/talesmud-pre-5d04c16-20261016T214615Z.db` (mode 600, online `sqlite3` backup API). Online gate was 0 both times. `/`, `/play/` and `POST /api/guest` returned 200. Live websocket smoke: party member frame had `chest` and `main_hand`, attack 6, defense 8, no private fields; stranger refused; party leave no longer crashes.
+
 ## FTUE next-step hint (2026-10-16)
 
 - SHIPPED engine `d7a8bd2` (`feat: [grokbot] guide a new character to the first fight`) on `engine-june`. Play cache `?v=ftue1`. Door `:8020` untouched (pid `1178139`).
