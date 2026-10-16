@@ -53,6 +53,11 @@ const (
 	aggroGraceMax        = 10 * time.Second
 	aggroGapDefault      = 5
 	aggroCooldownDefault = 15 * time.Second
+
+	respawnMinDefault         = 30 * time.Second
+	respawnGraceDefault       = 8 * time.Second
+	postCombatGraceDefault    = 10 * time.Second
+	spawnAggroCooldownDefault = 60 * time.Second
 )
 
 var forbiddenKeys = map[string]bool{
@@ -92,11 +97,12 @@ type fileShape struct {
 		Label     string `yaml:"label"`
 	} `yaml:"resources"`
 	Combat struct {
-		Pacing       string          `yaml:"pacing"`
-		SafeRoom     string          `yaml:"safe_room"`
-		Disconnect   string          `yaml:"disconnect"`
-		BareAttack   string          `yaml:"bare_attack"`
-		AggroOnSight *aggroSightFile `yaml:"aggro_on_sight"`
+		Pacing            string          `yaml:"pacing"`
+		SafeRoom          string          `yaml:"safe_room"`
+		Disconnect        string          `yaml:"disconnect"`
+		BareAttack        string          `yaml:"bare_attack"`
+		RespawnMinSeconds *float64        `yaml:"respawn_min_seconds"`
+		AggroOnSight      *aggroSightFile `yaml:"aggro_on_sight"`
 	} `yaml:"combat"`
 	Regen regenFile `yaml:"regen"`
 	Guide guideFile `yaml:"guide"`
@@ -111,10 +117,13 @@ type guideFile struct {
 // aggroSightFile uses pointers so an omitted key keeps the built-in default.
 // A plain bool would turn enabled off whenever the block is present and the key is left out.
 type aggroSightFile struct {
-	Enabled                *bool    `yaml:"enabled"`
-	GraceSeconds           *float64 `yaml:"grace_seconds"`
-	MaxLevelGap            *int     `yaml:"max_level_gap"`
-	ReaggroCooldownSeconds *float64 `yaml:"reaggro_cooldown_seconds"`
+	Enabled                   *bool    `yaml:"enabled"`
+	GraceSeconds              *float64 `yaml:"grace_seconds"`
+	MaxLevelGap               *int     `yaml:"max_level_gap"`
+	ReaggroCooldownSeconds    *float64 `yaml:"reaggro_cooldown_seconds"`
+	RespawnGraceSeconds       *float64 `yaml:"respawn_grace_seconds"`
+	PostCombatGraceSeconds    *float64 `yaml:"post_combat_grace_seconds"`
+	SpawnAggroCooldownSeconds *float64 `yaml:"spawn_aggro_cooldown_seconds"`
 }
 
 type resourceSpec struct {
@@ -138,16 +147,20 @@ type state struct {
 	safeRoom     string
 	disconnect   string
 	bareAttack   string
+	respawnMin   time.Duration
 	aggro        aggroSight
 	regen        RegenProfile
 	guideEnabled bool
 }
 
 type aggroSight struct {
-	enabled     bool
-	grace       time.Duration
-	maxLevelGap int
-	cooldown    time.Duration
+	enabled         bool
+	grace           time.Duration
+	maxLevelGap     int
+	cooldown        time.Duration
+	respawnGrace    time.Duration
+	postCombatGrace time.Duration
+	spawnCooldown   time.Duration
 }
 
 var (
@@ -182,6 +195,7 @@ func builtin() state {
 		safeRoom:     SafeStay,
 		disconnect:   DisconnectContinue,
 		bareAttack:   BareAttackAsk,
+		respawnMin:   respawnMinDefault,
 		aggro:        defaultAggroSight(),
 		regen:        defaultRegen(),
 		guideEnabled: true,
@@ -190,10 +204,13 @@ func builtin() state {
 
 func defaultAggroSight() aggroSight {
 	return aggroSight{
-		enabled:     true,
-		grace:       aggroGraceDefault,
-		maxLevelGap: aggroGapDefault,
-		cooldown:    aggroCooldownDefault,
+		enabled:         true,
+		grace:           aggroGraceDefault,
+		maxLevelGap:     aggroGapDefault,
+		cooldown:        aggroCooldownDefault,
+		respawnGrace:    respawnGraceDefault,
+		postCombatGrace: postCombatGraceDefault,
+		spawnCooldown:   spawnAggroCooldownDefault,
 	}
 }
 
@@ -347,6 +364,9 @@ func decode(raw []byte) (state, error) {
 	if next.bareAttack != BareAttackAsk && next.bareAttack != BareAttackFirst {
 		return state{}, fmt.Errorf("combat bare_attack %q", next.bareAttack)
 	}
+	if file.Combat.RespawnMinSeconds != nil {
+		next.respawnMin = nonNegativeSeconds(*file.Combat.RespawnMinSeconds)
+	}
 	if spec := file.Combat.AggroOnSight; spec != nil {
 		next.aggro = applyAggroSight(next.aggro, spec)
 	}
@@ -405,13 +425,25 @@ func applyAggroSight(base aggroSight, spec *aggroSightFile) aggroSight {
 		}
 	}
 	if spec.ReaggroCooldownSeconds != nil {
-		secs := *spec.ReaggroCooldownSeconds
-		if secs < 0 {
-			secs = 0
-		}
-		base.cooldown = time.Duration(secs * float64(time.Second))
+		base.cooldown = nonNegativeSeconds(*spec.ReaggroCooldownSeconds)
+	}
+	if spec.RespawnGraceSeconds != nil {
+		base.respawnGrace = nonNegativeSeconds(*spec.RespawnGraceSeconds)
+	}
+	if spec.PostCombatGraceSeconds != nil {
+		base.postCombatGrace = nonNegativeSeconds(*spec.PostCombatGraceSeconds)
+	}
+	if spec.SpawnAggroCooldownSeconds != nil {
+		base.spawnCooldown = nonNegativeSeconds(*spec.SpawnAggroCooldownSeconds)
 	}
 	return base
+}
+
+func nonNegativeSeconds(seconds float64) time.Duration {
+	if seconds < 0 {
+		seconds = 0
+	}
+	return time.Duration(seconds * float64(time.Second))
 }
 
 func clampAggroGrace(d time.Duration) time.Duration {
@@ -742,8 +774,86 @@ func AggroReaggroCooldown() time.Duration {
 	return current.aggro.cooldown
 }
 
+// RespawnMin is combat.respawn_min_seconds. After a death, a spawner waits
+// at least this long before it replaces the corpse. Zero disables the floor.
+// A spawner that has not lost an instance yet still fills immediately.
+func RespawnMin() time.Duration {
+	mu.RLock()
+	defer mu.RUnlock()
+	if current.respawnMin < 0 {
+		return 0
+	}
+	return current.respawnMin
+}
+
+// RespawnAggroGrace is how long a freshly respawned aggressive NPC waits
+// before it engages players already in the room. Zero uses AggroGrace.
+// It is not clamped to the 0.5–10s sight window.
+func RespawnAggroGrace() time.Duration {
+	mu.RLock()
+	defer mu.RUnlock()
+	if current.aggro.respawnGrace < 0 {
+		return 0
+	}
+	return current.aggro.respawnGrace
+}
+
+// PostCombatAggroGrace is how long aggressive NPCs in the fight room stay
+// quiet after that player wins or flees. Zero disables it. Leaving the room ends it.
+func PostCombatAggroGrace() time.Duration {
+	mu.RLock()
+	defer mu.RUnlock()
+	if current.aggro.postCombatGrace < 0 {
+		return 0
+	}
+	return current.aggro.postCombatGrace
+}
+
+// SpawnAggroCooldown is how long one spawn waits before it auto-aggros the
+// same player again. A replacement from the same spawner shares the window.
+// Zero disables it. A manual attack is still allowed.
+func SpawnAggroCooldown() time.Duration {
+	mu.RLock()
+	defer mu.RUnlock()
+	if current.aggro.spawnCooldown < 0 {
+		return 0
+	}
+	return current.aggro.spawnCooldown
+}
+
+// SetRespawnMin overrides combat.respawn_min_seconds until Reset.
+// A negative duration becomes zero, which disables the floor.
+func SetRespawnMin(d time.Duration) {
+	if d < 0 {
+		d = 0
+	}
+	mu.Lock()
+	current.respawnMin = d
+	mu.Unlock()
+}
+
+// SetAggroQuiet overrides the respawn, post-combat, and per-spawn windows until Reset.
+// A negative duration becomes zero, which disables that window.
+func SetAggroQuiet(respawnGrace, postCombat, spawnCooldown time.Duration) {
+	if respawnGrace < 0 {
+		respawnGrace = 0
+	}
+	if postCombat < 0 {
+		postCombat = 0
+	}
+	if spawnCooldown < 0 {
+		spawnCooldown = 0
+	}
+	mu.Lock()
+	current.aggro.respawnGrace = respawnGrace
+	current.aggro.postCombatGrace = postCombat
+	current.aggro.spawnCooldown = spawnCooldown
+	mu.Unlock()
+}
+
 // SetAggroOnSight overrides combat.aggro_on_sight until Reset.
 // Grace clamps to 0.5–10 seconds. A negative gap or cooldown becomes zero.
+// The respawn, post-combat, and per-spawn windows are left as they are.
 func SetAggroOnSight(enabled bool, grace time.Duration, maxLevelGap int, cooldown time.Duration) {
 	if maxLevelGap < 0 {
 		maxLevelGap = 0
@@ -752,11 +862,15 @@ func SetAggroOnSight(enabled bool, grace time.Duration, maxLevelGap int, cooldow
 		cooldown = 0
 	}
 	mu.Lock()
+	quiet := current.aggro
 	current.aggro = aggroSight{
-		enabled:     enabled,
-		grace:       clampAggroGrace(grace),
-		maxLevelGap: maxLevelGap,
-		cooldown:    cooldown,
+		enabled:         enabled,
+		grace:           clampAggroGrace(grace),
+		maxLevelGap:     maxLevelGap,
+		cooldown:        cooldown,
+		respawnGrace:    quiet.respawnGrace,
+		postCombatGrace: quiet.postCombatGrace,
+		spawnCooldown:   quiet.spawnCooldown,
 	}
 	mu.Unlock()
 }

@@ -10,17 +10,26 @@ import (
 
 func TestSpawnerRespawnDelayed(t *testing.T) {
 	now := time.Date(2026, 10, 9, 12, 0, 0, 0, time.UTC)
-	if spawnerRespawnDelayed(0, now.Add(-time.Second), now) {
-		t.Fatal("no delay configured must never block")
+	if spawnerRespawnDelayed(0, 0, now.Add(-time.Second), now) {
+		t.Fatal("no delay and no floor must never block")
 	}
-	if spawnerRespawnDelayed(30*time.Minute, time.Time{}, now) {
+	if spawnerRespawnDelayed(30*time.Minute, 30*time.Second, time.Time{}, now) {
 		t.Fatal("a spawner that never lost an instance must not be blocked")
 	}
-	if !spawnerRespawnDelayed(30*time.Minute, now.Add(-29*time.Minute), now) {
+	if !spawnerRespawnDelayed(30*time.Minute, 30*time.Second, now.Add(-29*time.Minute), now) {
 		t.Fatal("inside the delay window the boss must stay gone")
 	}
-	if spawnerRespawnDelayed(30*time.Minute, now.Add(-30*time.Minute), now) {
+	if spawnerRespawnDelayed(30*time.Minute, 30*time.Second, now.Add(-30*time.Minute), now) {
 		t.Fatal("after the delay the boss must come back")
+	}
+	if !spawnerRespawnDelayed(0, 30*time.Second, now.Add(-29*time.Second), now) {
+		t.Fatal("the floor holds a spawner with no authored delay")
+	}
+	if spawnerRespawnDelayed(0, 30*time.Second, now.Add(-30*time.Second), now) {
+		t.Fatal("the floor releases when the window has elapsed")
+	}
+	if spawnerRespawnDelayed(0, 0, now.Add(-time.Second), now) {
+		t.Fatal("a zero floor leaves an unset delay free to replace")
 	}
 }
 

@@ -181,6 +181,7 @@ func (m *NPCInstanceManager) SpawnInstance(spawner *npc.NPCSpawner) (*npc.NPC, e
 	if spawner.RespawnTimeOverride != nil {
 		instance.RespawnTime = *spawner.RespawnTimeOverride
 	}
+	instance.SpawnerID = spawner.ID
 
 	m.mu.Lock()
 	m.instances[instance.Entity.ID] = instance
