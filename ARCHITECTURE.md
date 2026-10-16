@@ -1325,7 +1325,7 @@ The play client observes `combatPhase` in `Game.svelte` and calls `LayoutStore.s
 
 ### MUD Client — Onboarding Flow
 
-The MUD client (`/play`) uses a phase-based routing system in `App.svelte` to guide new players through onboarding before showing the game UI. After character select, the server pushes `guideHint`. `GuideHint.svelte` renders that one line above the hotbar and sends the hint command, or `guide dismiss`. `pkg/guide` chooses the step from quest progress and the room graph, with no world-pack ids in the engine.
+The MUD client (`/play`) uses a phase-based routing system in `App.svelte` to guide new players through onboarding before showing the game UI. After character select, the server pushes `guideHint`. `GuideHint.svelte` renders that one line above the hotbar and sends the hint command, or `guide dismiss`. `pkg/guide` chooses the step from quest progress and the room graph, with no world-pack ids in the engine. `guide.enabled` in the ruleset defaults to on. `false` builds no hint and sends no `guideHint`. A game-mode file may set the same key. Hint text names the action in ordinary words (`Attack the <name>.`) so telnet, SSH, and Door can show the same line.
 
 ```
 App.svelte (phase-based routing)
@@ -1634,7 +1634,7 @@ pkg/
 ├── repository/        # Data access
 ├── db/                # Database client
 ├── resources/         # Per-character refilling balances
-├── ruleset/           # Level cap, level-up mode, death, new day, resource catalog, passive regen
+├── ruleset/           # Level cap, level-up mode, death, new day, resource catalog, passive regen, guide switch
 ├── gamemode/          # Process presentation and auth mode
 ├── authlocal/         # Optional Argon2id username/password sessions
 ├── presentation/      # Text-client frame renderer and view

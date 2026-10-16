@@ -1,6 +1,11 @@
 package guide
 
-import "testing"
+import (
+	"strings"
+	"testing"
+
+	"github.com/talesmud/talesmud/pkg/ruleset"
+)
 
 func catacombs() World {
 	return World{
@@ -59,8 +64,83 @@ func TestFightWhenTargetIsHere(t *testing.T) {
 	if h == nil || h.Step != "fight" || h.Command != "attack Cave Rat" || h.Label != "Fight" {
 		t.Fatalf("hint = %+v", h)
 	}
-	if h.Text != "Tap the Cave Rat to fight." {
+	if h.Text != "Attack the Cave Rat." {
 		t.Fatalf("text = %q", h.Text)
+	}
+}
+
+func TestGuideDisabledProducesNoHint(t *testing.T) {
+	ruleset.Reset()
+	t.Cleanup(ruleset.Reset)
+	if err := ruleset.LoadBytes([]byte("guide:\n  enabled: false\n")); err != nil {
+		t.Fatal(err)
+	}
+	if Build(catacombs()) != nil {
+		t.Fatal("disabled guide still produced a hint")
+	}
+	w := catacombs()
+	w.CurrentRoomID = "nest"
+	w.Here = []Actor{{TemplateID: "rat", Name: "Cave Rat"}}
+	if Build(w) != nil {
+		t.Fatal("disabled guide still produced a fight hint")
+	}
+}
+
+func TestGuideDefaultProducesHint(t *testing.T) {
+	ruleset.Reset()
+	t.Cleanup(ruleset.Reset)
+	if !ruleset.GuideEnabled() {
+		t.Fatal("default guide.enabled is off")
+	}
+	h := Build(catacombs())
+	if h == nil || strings.TrimSpace(h.Text) == "" {
+		t.Fatal("default ruleset produced no hint")
+	}
+}
+
+func TestHintTextHasNoPointerWording(t *testing.T) {
+	ruleset.Reset()
+	t.Cleanup(ruleset.Reset)
+	fight := catacombs()
+	fight.CurrentRoomID = "nest"
+	fight.Here = []Actor{{TemplateID: "rat", Name: "Cave Rat"}}
+	ready := catacombs()
+	ready.Quests[1].Objectives[0].Completed = true
+	ready.Quests[1].Objectives[0].Current = 3
+	accept := World{
+		CurrentRoomID: "hall",
+		Here:          []Actor{{TemplateID: "mira", Name: "Mira"}},
+		Quests: []Quest{{
+			ID: "herbs", Name: "Herb Run", Guide: true, SourceType: "npc",
+			SourceNPCID: "mira", SourceNPCName: "Mira",
+		}},
+	}
+	ladder := World{
+		CurrentRoomID: "hall",
+		Rooms: []Room{
+			{ID: "hall", Exits: []Exit{{Name: "ladder", Target: "loft"}}},
+			{ID: "loft"},
+		},
+		Places: map[string][]string{"rat": {"loft"}},
+		Quests: []Quest{{
+			ID: "pest", Name: "Pest Control", Status: "active", SourceType: "auto",
+			Objectives: []Objective{{Type: "kill", Description: "Kill the rat", TargetID: "rat", TargetName: "Cave Rat"}},
+		}},
+	}
+	worlds := []World{catacombs(), fight, ready, accept, ladder}
+	for _, w := range worlds {
+		h := Build(w)
+		if h == nil {
+			t.Fatalf("expected a hint in %s", w.CurrentRoomID)
+		}
+		for _, word := range []string{"Tap", "Click", "tap", "click"} {
+			if strings.Contains(h.Text, word) {
+				t.Fatalf("text %q contains %q", h.Text, word)
+			}
+		}
+	}
+	if h := Build(fight); h.Command != "attack Cave Rat" || h.Label != "Fight" {
+		t.Fatalf("command or label changed: %+v", h)
 	}
 }
 

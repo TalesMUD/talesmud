@@ -99,6 +99,13 @@ type fileShape struct {
 		AggroOnSight *aggroSightFile `yaml:"aggro_on_sight"`
 	} `yaml:"combat"`
 	Regen regenFile `yaml:"regen"`
+	Guide guideFile `yaml:"guide"`
+}
+
+// guideFile uses a pointer so an omitted key stays on.
+// A plain bool would turn the hint off whenever the block is present and the key is left out.
+type guideFile struct {
+	Enabled *bool `yaml:"enabled"`
 }
 
 // aggroSightFile uses pointers so an omitted key keeps the built-in default.
@@ -119,20 +126,21 @@ type resourceSpec struct {
 }
 
 type state struct {
-	levelCap    int32
-	levelUpMode string
-	xpRequired  map[int32]int32
-	baseXP      map[int32]int64
-	death       DeathPolicy
-	fullHeal    bool
-	timezone    string
-	resources   map[string]resourceSpec
-	pacing      string
-	safeRoom    string
-	disconnect  string
-	bareAttack  string
-	aggro       aggroSight
-	regen       RegenProfile
+	levelCap     int32
+	levelUpMode  string
+	xpRequired   map[int32]int32
+	baseXP       map[int32]int64
+	death        DeathPolicy
+	fullHeal     bool
+	timezone     string
+	resources    map[string]resourceSpec
+	pacing       string
+	safeRoom     string
+	disconnect   string
+	bareAttack   string
+	aggro        aggroSight
+	regen        RegenProfile
+	guideEnabled bool
 }
 
 type aggroSight struct {
@@ -168,14 +176,15 @@ func builtin() state {
 			RespawnHPPercent: 50,
 			DamageArmor:      true,
 		},
-		fullHeal:   false,
-		timezone:   "UTC",
-		pacing:     PacingAuto,
-		safeRoom:   SafeStay,
-		disconnect: DisconnectContinue,
-		bareAttack: BareAttackAsk,
-		aggro:      defaultAggroSight(),
-		regen:      defaultRegen(),
+		fullHeal:     false,
+		timezone:     "UTC",
+		pacing:       PacingAuto,
+		safeRoom:     SafeStay,
+		disconnect:   DisconnectContinue,
+		bareAttack:   BareAttackAsk,
+		aggro:        defaultAggroSight(),
+		regen:        defaultRegen(),
+		guideEnabled: true,
 	}
 }
 
@@ -372,6 +381,9 @@ func decode(raw []byte) (state, error) {
 	}
 	if err := applyRegen(&next, file.Regen); err != nil {
 		return state{}, err
+	}
+	if file.Guide.Enabled != nil {
+		next.guideEnabled = *file.Guide.Enabled
 	}
 	return next, nil
 }
@@ -680,6 +692,14 @@ func SetSafeRoom(mode string) {
 	mu.Lock()
 	current.safeRoom = mode
 	mu.Unlock()
+}
+
+// GuideEnabled is guide.enabled. Omitted stays on.
+// When false, no next-step hint is built or sent.
+func GuideEnabled() bool {
+	mu.RLock()
+	defer mu.RUnlock()
+	return current.guideEnabled
 }
 
 // AggroOnSightEnabled is combat.aggro_on_sight.enabled. Omitted stays on.

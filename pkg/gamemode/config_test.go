@@ -74,8 +74,31 @@ func TestDocumentHasRulesetRegenOnly(t *testing.T) {
 	if !documentHasRuleset([]byte("regen:\n  out_of_combat:\n    hp:\n      enabled: false\n")) {
 		t.Fatal("regen-only document was not detected")
 	}
+	if !documentHasRuleset([]byte("guide:\n  enabled: false\n")) {
+		t.Fatal("guide-only document was not detected")
+	}
 	if documentHasRuleset([]byte("presentation: classic\nport: \"1\"\n")) {
 		t.Fatal("unrelated keys counted as a ruleset")
+	}
+}
+
+func TestApplyFileGuideEnabled(t *testing.T) {
+	ruleset.Reset()
+	t.Cleanup(func() {
+		rulesetFromConfig = false
+		ruleset.Reset()
+		current = normalize(Config{})
+	})
+	path := filepath.Join(t.TempDir(), "mode.yaml")
+	body := []byte("presentation: classic\nguide:\n  enabled: false\n")
+	if err := os.WriteFile(path, body, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := ApplyFile(path); err != nil {
+		t.Fatal(err)
+	}
+	if !RulesetFromConfig() || ruleset.GuideEnabled() {
+		t.Fatalf("from=%v enabled=%v", RulesetFromConfig(), ruleset.GuideEnabled())
 	}
 }
 

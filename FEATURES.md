@@ -453,6 +453,8 @@ Off: `enabled: false` on that pool (`regen.out_of_combat.hp`, `regen.resting.hp`
 
 `CalculateManaRegen` (1 + WISMod per combat round, minimum 1) is separate from `regen.in_combat`.
 
+`guide.enabled` defaults to on. A world game-mode file may set the same key. `false` builds no next-step hint and the server sends no `guideHint`. An omitted key stays on.
+
 ### Refilling resources
 
 Per-character balances live in the `character_resources` table. A key grants uses only after something configures an allowance (calendar day in a timezone, or a fixed interval). An optional `label` is a display name; an empty label leaves the key as the name. Inside a period, raising the allowance or a modifier does not give the extra uses back; the next period refills to the new amount. An empty catalog, which is the process default, answers every key as not configured and writes no row.
@@ -1302,7 +1304,7 @@ Enhanced notification system with interactions:
 - Smooth transitions
 - Accepting a quest refreshes the open Talk dialog so `[Quest]` becomes `[In Progress]` without closing Talk
 - Quest log: READY + turnInAnywhere shows **Turn In** (`complete <name>`); otherwise a **Turn in: &lt;NPC&gt;** hint
-- **Next-step hint** (`guideHint`): one leather/bronze chip for a character who has not finished a quest and has not dismissed it. Optional quest field `guide: true` (YAML `guide`, JSON `guide`) selects that quest. With no flag, active quests are the pool and an open kill wins. Steps are talk/accept, head along a visible exit, fight (`attack <name>`), and turn in (`complete <name>` or talk). `guide dismiss` sets `flags.guideDismissed` on that character. The chip is portaled to the page, sits above the hotbar, and hides during combat, dialog, shop, and Need/Greed. It does not cover `.room-name` or `.hotbar-widget`.
+- **Next-step hint** (`guideHint`): one leather/bronze chip for a character who has not finished a quest and has not dismissed it. Optional quest field `guide: true` (YAML `guide`, JSON `guide`) selects that quest. With no flag, active quests are the pool and an open kill wins. Steps are talk/accept, head along a visible exit, fight (`attack <name>`, text `Attack the <name>.`), and turn in (`complete <name>` or talk). Hint text does not say tap or click, so web, telnet, SSH, and Door show the same line. `guide dismiss` sets `flags.guideDismissed` on that character. The chip is portaled to the page, sits above the hotbar, and hides during combat, dialog, shop, and Need/Greed. It does not cover `.room-name` or `.hotbar-widget`. `guide.enabled: false` in the ruleset or a game-mode file turns the hint off for every character and sends nothing.
 
 ### Spell Bar / Hotbar
 - Nine square slots docked on top of the desktop action bar (a placed hotbar widget still floats on its own). Mobile keeps its own strip. At 375px the room strip and the combat-dock row shrink the slot and the gap so slots 1 through 9 stay fully inside the viewport.
