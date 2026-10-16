@@ -82,3 +82,8 @@ regen:
       percent: 1
       flat: 0
       interval_seconds: 10
+
+# Next-step hint for a character who has not finished a quest.
+# enabled false builds no hint and sends nothing. Omitted stays on.
+guide:
+  enabled: true

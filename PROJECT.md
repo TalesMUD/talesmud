@@ -12,7 +12,7 @@ TalesMUD is a browser-based Multi-User Dungeon (MUD) framework built with Go and
 - **Core Systems & Features:** `FEATURES.md` (comprehensive reference for all systems, data structures, and APIs)
 - **Game design + MVP backlog:** `docs/design/GAME_DESIGN.md`
 - **Door on the shared engine:** `docs/DOOR-ON-MUD.md`
-- **Ruleset profile:** `config/ruleset.yaml` (level cap, level-up mode, death, new day, resource keys, combat pacing, regen for out of combat, resting, and in combat). Combat math stays in `config/combat_balance.yaml`.
+- **Ruleset profile:** `config/ruleset.yaml` (level cap, level-up mode, death, new day, resource keys, combat pacing, regen for out of combat, resting, and in combat, `guide.enabled`). Combat math stays in `config/combat_balance.yaml`.
 - **Scripting system:** `docs/design/SCRIPTING.md`
 - **World map implementation:** `docs/design/WORLD_MAP_IMPLEMENTATION.md`
 - **Quest authoring guide:** `docs/design/QUEST_AUTHORING.md`
@@ -141,7 +141,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Lua scripting API (`tales.quests`) for custom quest logic
   - Creator UI: full quest editor with objectives, rewards, prerequisites, dialog text configuration, validation feedback, and player flow preview
   - Player commands: `quests`/`ql` (quest log), `quest <name>` (details), `abandon <name>` (abandon quest), `guide dismiss` (close the next-step hint)
-  - Next-step hint: one dismissible chip for a new character. A quest may set `guide: true`. When none do, the hint uses the active quest log and prefers an open kill. It walks room exits to the objective, then offers attack or `complete <name>`. Dismissal is stored on the character (`flags.guideDismissed`) and the chip stays hidden after any completed quest. The client keeps it off the room name, the hotbar, dialogs, the shop, and Need/Greed.
+  - Next-step hint: one dismissible chip for a new character. A quest may set `guide: true`. When none do, the hint uses the active quest log and prefers an open kill. It walks room exits to the objective, then offers attack or `complete <name>`. The fight line is `Attack the <name>.` The same wording is what telnet, SSH, and Door show. Dismissal is stored on the character (`flags.guideDismissed`) and the chip stays hidden after any completed quest. The client keeps it off the room name, the hotbar, dialogs, the shop, and Need/Greed. `config/ruleset.yaml` `guide.enabled` defaults to on. A game-mode file may set the same key. `false` builds no hint and sends nothing.
 
 - **Guest Mode (Play as Guest)**
   - Anonymous 30-minute demo sessions without Auth0 registration

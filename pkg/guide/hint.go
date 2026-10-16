@@ -5,6 +5,8 @@ package guide
 import (
 	"sort"
 	"strings"
+
+	"github.com/talesmud/talesmud/pkg/ruleset"
 )
 
 // Hint is one line a new character can act on. Empty Text means show nothing.
@@ -82,7 +84,7 @@ type Actor struct {
 
 // Build returns the single next step, or nil when the hint must stay hidden.
 func Build(w World) *Hint {
-	if w.Dismissed || anyCompleted(w.Quests) {
+	if !ruleset.GuideEnabled() || w.Dismissed || anyCompleted(w.Quests) {
 		return nil
 	}
 	pool := poolOf(w.Quests)
@@ -293,7 +295,7 @@ func killStep(w World, q Quest, obj Objective) *Hint {
 	name := displayName(obj.TargetName, "the enemy")
 	if a := actorHere(w, obj.TargetID, name); a != nil {
 		who := displayName(obj.TargetName, a.Name)
-		return &Hint{Text: "Tap the " + who + " to fight.", QuestName: q.Name, Step: "fight", Command: "attack " + who, Label: "Fight"}
+		return &Hint{Text: "Attack the " + who + ".", QuestName: q.Name, Step: "fight", Command: "attack " + who, Label: "Fight"}
 	}
 	blurb := obj.Description
 	if strings.TrimSpace(blurb) == "" {

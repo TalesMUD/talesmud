@@ -46,6 +46,38 @@ func TestShippedFileMatchesCurrentPlay(t *testing.T) {
 	}
 }
 
+func TestGuideEnabledKey(t *testing.T) {
+	ruleset.Reset()
+	t.Cleanup(ruleset.Reset)
+	if !ruleset.GuideEnabled() {
+		t.Fatal("default guide.enabled is off")
+	}
+	if err := ruleset.LoadBytes([]byte("progression:\n  level_cap: 12\n")); err != nil {
+		t.Fatal(err)
+	}
+	if !ruleset.GuideEnabled() || ruleset.LevelCap() != 12 {
+		t.Fatalf("omitted key enabled=%v cap=%d", ruleset.GuideEnabled(), ruleset.LevelCap())
+	}
+	if err := ruleset.LoadBytes([]byte("guide:\n  enabled: false\n")); err != nil {
+		t.Fatal(err)
+	}
+	if ruleset.GuideEnabled() {
+		t.Fatal("guide.enabled false stayed on")
+	}
+	if err := ruleset.LoadBytes([]byte("guide:\n  enabled: true\n")); err != nil {
+		t.Fatal(err)
+	}
+	if !ruleset.GuideEnabled() {
+		t.Fatal("guide.enabled true stayed off")
+	}
+	if err := ruleset.LoadBytes([]byte("guide: {}\n")); err != nil {
+		t.Fatal(err)
+	}
+	if !ruleset.GuideEnabled() {
+		t.Fatal("empty guide block turned the hint off")
+	}
+}
+
 func TestRejectsCombatBalanceKeys(t *testing.T) {
 	ruleset.Reset()
 	t.Cleanup(ruleset.Reset)
