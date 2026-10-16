@@ -543,6 +543,33 @@ func NewQuestUpdateMessage(userID, questID, questName, status string, objectives
 	}
 }
 
+// GuideHintMessage is the single next-step chip. Empty Text clears it.
+type GuideHintMessage struct {
+	MessageResponse
+	Text      string `json:"text"`
+	QuestName string `json:"questName,omitempty"`
+	Step      string `json:"step,omitempty"`
+	Command   string `json:"command,omitempty"`
+	Label     string `json:"label,omitempty"`
+}
+
+// NewGuideHintMessage creates a guideHint for one user. Empty text hides the chip.
+func NewGuideHintMessage(userID, text, questName, step, command, label string) *GuideHintMessage {
+	return &GuideHintMessage{
+		MessageResponse: MessageResponse{
+			Audience:   MessageAudienceOrigin,
+			AudienceID: userID,
+			Type:       MessageTypeGuideHint,
+			Message:    text,
+		},
+		Text:      text,
+		QuestName: questName,
+		Step:      step,
+		Command:   command,
+		Label:     label,
+	}
+}
+
 // NewQuestLogMessage creates a quest log message for the player
 func NewQuestLogMessage(userID string, entries []QuestLogEntry) *QuestLogMessage {
 	return &QuestLogMessage{

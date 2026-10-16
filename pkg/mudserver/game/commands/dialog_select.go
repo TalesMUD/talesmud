@@ -384,6 +384,7 @@ func handleQuestAction(game def.GameCtrl, message *messages.Message, selectedOpt
 		}).Info("Quest accepted via dialog")
 
 		runQuestAcceptScript(game, message, quest.OnAcceptScriptID)
+		PushGuideHint(game, char.BelongsUserID, char)
 
 		// Keep Talk open: refresh options so [Quest] becomes [In Progress]
 		refreshActiveDialog(game, message, npcName, activeConv)
@@ -414,6 +415,7 @@ func handleQuestAction(game def.GameCtrl, message *messages.Message, selectedOpt
 
 		rewardMsg := buildQuestRewardMessage(quest, grantedItems)
 		game.SendMessage() <- questCompletedUpdate(char.BelongsUserID, quest.ID, quest.Name, rewardMsg)
+		PushGuideHint(game, char.BelongsUserID, char)
 
 		// Get updated character for stats update
 		updatedChar, _ := game.GetFacade().CharactersService().FindByID(char.ID)
