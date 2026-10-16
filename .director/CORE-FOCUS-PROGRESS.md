@@ -1,3 +1,10 @@
+## FTUE next-step hint (2026-10-16)
+
+- SHIPPED engine `d7a8bd2` (`feat: [grokbot] guide a new character to the first fight`) on `engine-june`. Play cache `?v=ftue1`. Door `:8020` untouched (pid `1178139`).
+- A new character gets one dismissible leather chip from quest data (optional `guide` flag, otherwise the active log prefers an open kill). The phone class card scrolls the race row and Play into view. Dismissal is `flags.guideDismissed`. Any completed quest hides the chip.
+- Before → after to first attack: phone 7 taps / 7.2s → 4 / 4.6s, tablet 7 / 8.4s → 4 / 5.4s, desktop 7 / 8.7s → 4 / 5.4s. The north dead-end was one stuck point per size and is gone. All three sizes won.
+- Live: MainPID `1308141` (was `1268668`), binary sha256 `f575c92315d9e9c7d3fa85853837b7be99d013ecd9c8169e6e7d0cbceb4ffa09`, rollback `bin/tales.prev-21c5059`. Backup `backups/talesmud-pre-21c5059-20261016T090013Z.db` (6,414,336 bytes, mode 600). Online gate was 0. `/play/?v=ftue1` and `POST /api/guest` returned 200. No content import.
+
 ## UX P0 overlays (2026-10-14)
 
 - SHIPPED engine `1750edb` (`fix: [grokbot] keep dialogs, hotbar, and loot rolls on screen`) on `engine-june`. Play cache `?v=uxp0fix1`. Door `:8020` untouched (pid `1178139`).
