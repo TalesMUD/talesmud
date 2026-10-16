@@ -354,6 +354,53 @@ func (c *Character) RepairEquippedArmor() int {
 	return n
 }
 
+// FlagGuideDismissed remembers that this character closed the next-step hint.
+const FlagGuideDismissed = "guideDismissed"
+
+// GuideDismissed reports the per-character hint dismissal.
+// JSON flags may come back as bool, string, or number.
+func (c *Character) GuideDismissed() bool {
+	if c == nil || c.Flags == nil {
+		return false
+	}
+	return flagOn(c.Flags[FlagGuideDismissed])
+}
+
+// SetGuideDismissed marks the hint closed on this character object.
+func (c *Character) SetGuideDismissed() {
+	if c == nil {
+		return
+	}
+	if c.Flags == nil {
+		c.Flags = map[string]interface{}{}
+	}
+	c.Flags[FlagGuideDismissed] = true
+}
+
+func flagOn(v interface{}) bool {
+	switch t := v.(type) {
+	case bool:
+		return t
+	case string:
+		switch strings.ToLower(strings.TrimSpace(t)) {
+		case "1", "true", "yes":
+			return true
+		default:
+			return false
+		}
+	case float64:
+		return t != 0
+	case int:
+		return t != 0
+	case int32:
+		return t != 0
+	case int64:
+		return t != 0
+	default:
+		return false
+	}
+}
+
 // HasCollectedCopyItem checks if the character has already collected a CopyOnPickup item
 func (c *Character) HasCollectedCopyItem(templateID string) bool {
 	if c.Flags == nil {

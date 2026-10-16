@@ -577,6 +577,7 @@ function createStore() {
 
     // Quest state
     quests: [], // Array of quest log entries
+    guideHint: null,
     questNotifications: [], // Recent quest events for toast notifications
 
     // Minimap / atlas state
@@ -1264,6 +1265,12 @@ function createStore() {
     updateQuests: (questLog) => {
       update((state) => {
         state.quests = questLog || [];
+        return state;
+      });
+    },
+    setGuideHint: (hint) => {
+      update((state) => {
+        state.guideHint = hint && hint.text ? hint : null;
         return state;
       });
     },

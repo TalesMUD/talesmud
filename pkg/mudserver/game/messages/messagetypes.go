@@ -38,6 +38,7 @@ const (
 	MessageTypeRoomPresence = "roomPresence"
 
 	// Quest messages
+	MessageTypeGuideHint      = "guideHint"      // One next-step hint for a new character
 	MessageTypeQuestAccepted  = "questAccepted"  // Quest accepted
 	MessageTypeQuestProgress  = "questProgress"  // Quest objective progress updated
 	MessageTypeQuestReady     = "questReady"     // Quest objectives complete and ready for turn-in

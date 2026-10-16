@@ -127,6 +127,7 @@
   import { mobileStore } from "./mobile/mobileStore.js";
   import MobileLayout from "./mobile/MobileLayout.svelte";
   import QuestNotifications from "./ui/QuestNotifications.svelte";
+  import GuideHint from "./ui/GuideHint.svelte";
   import CharacterSwitcher from "./ui/CharacterSwitcher.svelte";
   import CharacterPicker from "./ui/CharacterPicker.svelte";
   import { characterPickerOpen, openCharacterPicker, closeCharacterPicker } from "./ui/characterPickerStore.js";
@@ -588,6 +589,7 @@
 
   <!-- Quest notifications - shown on all layouts -->
   <QuestNotifications store={muxStore} {sendMessage} />
+  <GuideHint store={muxStore} {sendMessage} />
 
   <!-- Inventory popup overlay (default inv open mode) -->
   <InventoryOverlay store={muxStore} {sendMessage} />

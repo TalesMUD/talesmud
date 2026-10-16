@@ -442,6 +442,7 @@ func (y *YAMLQuest) ToEntity() *quests.Quest {
 		OnAcceptScriptID:   y.OnAcceptScriptID,
 		OnCompleteScriptID: y.OnCompleteScriptID,
 		TurnIn:             y.TurnIn,
+		Guide:              y.Guide,
 		Created:            time.Now(),
 		Updated:            time.Now(),
 	}

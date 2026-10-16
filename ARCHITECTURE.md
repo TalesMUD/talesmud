@@ -1232,6 +1232,7 @@ const (
     MessageTypeSelectCharacter  // Character selection
     MessageTypeCharacterSelected // Selection confirmed
     MessageTypePing             // Keep-alive
+    MessageTypeGuideHint        // One next-step hint, or empty text to clear it
     MessageTypeQuestAccepted    // Quest accepted
     MessageTypeQuestProgress    // Quest objective updated
     MessageTypeQuestReady       // Quest objectives complete and ready for turn-in
@@ -1298,7 +1299,7 @@ The play client observes `combatPhase` in `Game.svelte` and calls `LayoutStore.s
 
 ### MUD Client — Onboarding Flow
 
-The MUD client (`/play`) uses a phase-based routing system in `App.svelte` to guide new players through onboarding before showing the game UI:
+The MUD client (`/play`) uses a phase-based routing system in `App.svelte` to guide new players through onboarding before showing the game UI. After character select, the server pushes `guideHint`. `GuideHint.svelte` renders that one line above the hotbar and sends the hint command, or `guide dismiss`. `pkg/guide` chooses the step from quest progress and the room graph, with no world-pack ids in the engine.
 
 ```
 App.svelte (phase-based routing)
