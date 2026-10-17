@@ -1,3 +1,11 @@
+## Daily bounties (2026-10-17)
+
+- SHIPPED engine `031004a` (`feat: [grokbot] add timed resets for repeatable quests`) on `engine-june`. Content `68d287d` (`feat: [grokbot] add Oldtown daily bounty postings`) on `talesmud-rpg-1` main. Play cache `?v=bounty1`. Door `:8020`/`:2223` untouched (pid `1178139`).
+- Repeatable quests can set `repeatReset: daily` or `cooldown` plus `repeatCooldownSeconds`. Daily reset hour is `quests.daily_reset_hour_utc` (4). Payloads add `repeats`, `repeatReset`, and `nextAvailableAt`. Plain `repeatable: true` is unchanged. The guide will not pick a repeating quest while a normal quest is open.
+- Content: Ivo Quill (NPC0086, DLG0093) in R0210 with four dailies, QST0900/QST0907/QST0908/QST0909. L1–4 is three Alley Thugs in R0207 for 20 XP, 5 gold, and a ration.
+- Deploy: VPS engine ff `caeaab3..031004a`. Online gate 0 (TCP `:8010`/`:2222`/`:2223`, `isOnline` 0). Backup `backups/talesmud-pre-caeaab3-20261017T083712Z.db` (6,488,064 bytes, mode 600, integrity ok). Rollback `bin/tales.prev-caeaab3` sha256 `8667cdaff4e75da78d5af16ab74093a9e0dcf7b4682c8d2b925d979e81449465`. Running binary sha256 `b0c3c49a6538b5e061c117beb1395a79caa27cdbfe04cd55d7b908065d9a9c36`. SIGTERM MainPID `1318969` only. Import 1.430s (161 NPCs, 86 dialogs, 354 rooms). New MainPID `1331091`.
+- Smoke: guest Wanderer_d9ec accepted Alley Posting, killed 3 thugs, turned in (+20 XP, +5 gold, Traveler's Ration). Dialog said available again in 19h. `nextAvailableAt` was `2026-10-18T04:00:00Z`. Phone and desktop shots are in `~/dev/briefs/DAILY-BOUNTIES-1017/live/`. Report `~/dev/briefs/DAILY-BOUNTIES-1017-REPORT.md`.
+
 ## Respawn grace (2026-10-17)
 
 - SHIPPED engine `caeaab3` (`fix: [grokbot] hold enemy respawns and aggro after a kill`) on `engine-june`. Content `d06e3bd` (`fix: [grokbot] slow normal and elite enemy respawns`) on `talesmud-rpg-1` main. Play client unchanged. Door `:8020`/`:2223` untouched (pid `1178139`, started 2026-10-10 21:57:12 UTC).
