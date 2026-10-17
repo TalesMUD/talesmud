@@ -1,6 +1,8 @@
 <script>
   import { portraitBustSrc, onPortraitBustError } from '../portraitSrc.js';
   import { portal } from '../portal.js';
+  import { optionLabel } from '../questRepeat.js';
+  import RepeatMark from './RepeatMark.svelte';
 
   export let npcName = "";
   export let npcText = "";
@@ -253,8 +255,19 @@
     background: rgba(245, 158, 11, 0.28);
   }
 
+  .option-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.2rem;
+  }
+
   .option-text {
     flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   @media screen and (min-width: 769px) {
@@ -375,7 +388,10 @@
           on:click={() => handleOption(option)}
         >
           <span class="option-index">{isTradeOption(option) ? '★' : option.index}</span>
-          <span class="option-text">{option.text}</span>
+          <span class="option-body">
+            <span class="option-text">{optionLabel(option)}</span>
+            <RepeatMark repeats={option.repeats} repeatReset={option.repeatReset} nextAvailableAt={option.nextAvailableAt} />
+          </span>
         </button>
       {/each}
     </div>

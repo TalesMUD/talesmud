@@ -7,6 +7,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/quests"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/ruleset"
 )
 
 // QuestLogCommand shows the player's active quests
@@ -54,7 +55,11 @@ func (cmd *QuestLogCommand) Execute(game def.GameCtrl, message *messages.Message
 			if err != nil || quest == nil {
 				continue
 			}
-			sb.WriteString(fmt.Sprintf("  [*] %s\n", quest.Name))
+			name := quest.Name
+			if tag := quest.RepeatTag(); tag != "" {
+				name = fmt.Sprintf("%s (%s)", quest.Name, tag)
+			}
+			sb.WriteString(fmt.Sprintf("  [*] %s\n", name))
 			for _, obj := range quest.Objectives {
 				for _, op := range p.Objectives {
 					if op.ObjectiveID == obj.ID {
@@ -71,6 +76,17 @@ func (cmd *QuestLogCommand) Execute(game def.GameCtrl, message *messages.Message
 
 	if len(completed) > 0 {
 		sb.WriteString(fmt.Sprintf("\nCompleted: %d quest(s)\n", len(completed)))
+		now := quests.Now()
+		hour := ruleset.QuestDailyResetHourUTC()
+		for _, p := range completed {
+			quest, err := game.GetFacade().QuestsService().FindByID(p.QuestID)
+			if err != nil || quest == nil {
+				continue
+			}
+			if until, waiting := quest.AvailableAgain(p.CompletedAt, now, hour); waiting {
+				sb.WriteString(fmt.Sprintf("  %s — %s\n", quest.Name, quests.FormatAvailableAgain(until, now)))
+			}
+		}
 	}
 
 	game.SendMessage() <- message.Reply(sb.String())
@@ -115,6 +131,11 @@ func (cmd *QuestDetailCommand) Execute(game def.GameCtrl, message *messages.Mess
 			var sb strings.Builder
 			sb.WriteString(fmt.Sprintf("\n--- %s ---\n", quest.Name))
 			sb.WriteString(fmt.Sprintf("Status: %s\n", string(p.Status)))
+			if until, waiting := quest.AvailableAgain(p.CompletedAt, quests.Now(), ruleset.QuestDailyResetHourUTC()); waiting {
+				sb.WriteString(quests.FormatAvailableAgain(until, quests.Now()) + "\n")
+			} else if tag := quest.RepeatTag(); tag != "" {
+				sb.WriteString(fmt.Sprintf("Repeats: %s\n", tag))
+			}
 			if quest.Category != "" {
 				sb.WriteString(fmt.Sprintf("Category: %s\n", quest.Category))
 			}

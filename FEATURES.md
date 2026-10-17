@@ -1565,7 +1565,7 @@ type DialogState struct {
 - **One-time** - `ShowOnlyOnce` options disappear after first selection
 - **Variations** - Random or sequential alternate texts
 - **Exit markers** - Return to "main" node on completion
-- **Play overlay** - Dialog and shop are portaled to the page layer (`position: fixed`). Phone and tablet (≤768px), and any window shorter than 500px, use a scrollable bottom sheet with safe-area padding. The shop close control stays in the header. A dialog × is shown only when the current node has an exit choice, and it selects that choice. There is no separate Leave conversation control. Taller desktop windows keep centered panels that scroll inside the viewport. Play cache tag `?v=oss053`.
+- **Play overlay** - Dialog and shop are portaled to the page layer (`position: fixed`). Phone and tablet (≤768px), and any window shorter than 500px, use a scrollable bottom sheet with safe-area padding. The shop close control stays in the header. A dialog × is shown only when the current node has an exit choice, and it selects that choice. There is no separate Leave conversation control. Taller desktop windows keep centered panels that scroll inside the viewport. Play cache tag `?v=bounty1`.
 
 ### Dialog API
 ```lua
@@ -2133,7 +2133,7 @@ The top bar keeps the app links, a search box (`data-creator-search`) that opens
 - **Rewards** - XP, gold, item grants
 - **Prerequisites** - Required quests, level requirement
 - **Dialog integration** - Accept/progress/complete text
-- **Repeatable** - Daily/recurring quests
+- **Repeatable** - Daily/recurring quests. `repeatReset: daily` waits until `quests.daily_reset_hour_utc` (default 4). `repeatReset: cooldown` waits `repeatCooldownSeconds`. The quest log, dialog offer, and `quests` command say "Available again in 5h 12m" until then. Client payloads carry `repeats`, `repeatReset`, and `nextAvailableAt`. Plain `repeatable: true` is unchanged. The next-step guide skips a quest with a reset while any normal quest is still open.
 - **OnComplete script** - Lua script on quest completion
 - **Validation panel** - Flags missing source references, objective targets, duplicate IDs, invalid rewards, missing scripts, self-prerequisites, and unresolved entity IDs before save
 - **Player flow preview** - Summarizes offer source, objective lines, ready turn-in target, and rewards for quick testing while authoring
@@ -2440,7 +2440,7 @@ Fog neighbors are places with `discovered: false`, empty `name`, and `kind: "unc
 - The widget auto-fits discovered places into its panel and keeps that fit (canvas is out of flow so it cannot resize the widget)
 - Layer tabs, pan, wheel zoom, click-to-travel along discovered paths
 - Desktop/mobile action bars (Option C): room-only dirs + room actions + Shop when a merchant is present; fixed INV / MAP / SAY chrome; **Recipes** seeded by default for crafting discoverability; optional Look/Rest/… pins via ⋯; layout revision migrates legacy Look/pin clutter and seeds Recipes onto rev-2 bars
-- Pickup is one shared panel (`PickupPanel.svelte`, logic in `pickupPanel.js`), opened from the desktop Pickup button and from the phone action-bar button and room hand button. Rows use item art, normal-case names, rarity colors (unique is gold), a ×N stack, and a `type · effect` hint. Currency is `type: currency` or a `currency` tag; a coin name matches only when the row has no type. Pick up all is a separate gold footer button when more than one item is on the ground. Keys 1–9, Enter, and Esc apply while the panel is the top overlay and a text field is not focused. The list scrolls; the header and footer stay put. On screens 600px and under the panel is a full-width bottom sheet. It closes itself when nothing pickable remains. Room item rows keep `id`, `name`, `noPickup`, and `copyOnPickup`, and add optional `type`, `subType`, `quality`, `unique`, `quantity`, and `effect` (one `FormatEffect` line, or `Heals N HP`). Play cache tag `oss053`.
+- Pickup is one shared panel (`PickupPanel.svelte`, logic in `pickupPanel.js`), opened from the desktop Pickup button and from the phone action-bar button and room hand button. Rows use item art, normal-case names, rarity colors (unique is gold), a ×N stack, and a `type · effect` hint. Currency is `type: currency` or a `currency` tag; a coin name matches only when the row has no type. Pick up all is a separate gold footer button when more than one item is on the ground. Keys 1–9, Enter, and Esc apply while the panel is the top overlay and a text field is not focused. The list scrolls; the header and footer stay put. On screens 600px and under the panel is a full-width bottom sheet. It closes itself when nothing pickable remains. Room item rows keep `id`, `name`, `noPickup`, and `copyOnPickup`, and add optional `type`, `subType`, `quality`, `unique`, `quantity`, and `effect` (one `FormatEffect` line, or `Heals N HP`). Play cache tag `bounty1`.
 - Inventory chrome opens a popup overlay by default; preference can switch to on-screen widget / mobile sheet
 - Room action/system reaction toasts render large and centered on the room hero art (not the command log)
 - Same JSON is the contract for a future mobile renderer

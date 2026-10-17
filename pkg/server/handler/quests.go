@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/entities"
 	"github.com/talesmud/talesmud/pkg/entities/quests"
+	"github.com/talesmud/talesmud/pkg/ruleset"
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
@@ -127,20 +128,23 @@ func (h *QuestsHandler) DeleteQuestByID(c *gin.Context) {
 
 // QuestLogEntry combines quest progress with quest definition for frontend
 type QuestLogEntry struct {
-	QuestID        string                   `json:"questId"`
-	QuestName      string                   `json:"questName"`
-	Status         string                   `json:"status"`
-	Description    string                   `json:"description"`
-	Category       string                   `json:"category,omitempty"`
-	Area           string                   `json:"area,omitempty"`
-	Level          int32                    `json:"level,omitempty"`
-	ReadyToTurnIn  bool                     `json:"readyToTurnIn,omitempty"`
-	TurnInAnywhere bool                     `json:"turnInAnywhere,omitempty"`
-	TurnInNpcID    string                   `json:"turnInNpcId,omitempty"`
-	Objectives     []QuestObjectiveProgress `json:"objectives"`
-	Rewards        *quests.Reward           `json:"rewards,omitempty"`
-	AcceptedAt     string                   `json:"acceptedAt,omitempty"`
-	CompletedAt    string                   `json:"completedAt,omitempty"`
+	QuestID         string                   `json:"questId"`
+	QuestName       string                   `json:"questName"`
+	Status          string                   `json:"status"`
+	Description     string                   `json:"description"`
+	Category        string                   `json:"category,omitempty"`
+	Area            string                   `json:"area,omitempty"`
+	Level           int32                    `json:"level,omitempty"`
+	ReadyToTurnIn   bool                     `json:"readyToTurnIn,omitempty"`
+	TurnInAnywhere  bool                     `json:"turnInAnywhere,omitempty"`
+	TurnInNpcID     string                   `json:"turnInNpcId,omitempty"`
+	Objectives      []QuestObjectiveProgress `json:"objectives"`
+	Rewards         *quests.Reward           `json:"rewards,omitempty"`
+	AcceptedAt      string                   `json:"acceptedAt,omitempty"`
+	CompletedAt     string                   `json:"completedAt,omitempty"`
+	Repeats         bool                     `json:"repeats,omitempty"`
+	RepeatReset     string                   `json:"repeatReset,omitempty"`
+	NextAvailableAt string                   `json:"nextAvailableAt,omitempty"`
 }
 
 // QuestObjectiveProgress combines objective progress with definition text.
@@ -204,6 +208,10 @@ func (h *QuestsHandler) GetQuestLog(c *gin.Context) {
 		if !progress.CompletedAt.IsZero() {
 			entry.CompletedAt = progress.CompletedAt.Format("2006-01-02T15:04:05Z07:00")
 		}
+		payload := quest.RepeatPayload(string(progress.Status), progress.CompletedAt, quests.Now(), ruleset.QuestDailyResetHourUTC())
+		entry.Repeats = payload.Repeats
+		entry.RepeatReset = payload.RepeatReset
+		entry.NextAvailableAt = payload.NextAvailableAt
 
 		entries = append(entries, entry)
 	}
