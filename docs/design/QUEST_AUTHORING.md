@@ -72,7 +72,9 @@ The server returns the created quest with a generated `id` field (UUID).
 | `description` | string | **Yes** | Journal text describing the quest. Shown when player inspects quest details. |
 | `category` | string | No | Classification: `"main"`, `"side"`, or `"daily"`. Defaults to empty. |
 | `level` | int32 | No | Recommended player level. Used for UI display, not enforced. |
-| `repeatable` | bool | No | If `true`, quest can be accepted again after completion. Default `false`. |
+| `repeatable` | bool | No | If `true`, quest can be accepted again after completion. Default `false`. Without `repeatReset`, the next accept is immediate. |
+| `repeatReset` | string | No | `daily` or `cooldown`. Ignored unless `repeatable` is true. `daily` waits until `quests.daily_reset_hour_utc` (default 4). |
+| `repeatCooldownSeconds` | int64 | No | Seconds to wait after completion when `repeatReset` is `cooldown`. |
 | `source` | QuestSource | **Yes** | How the player acquires this quest. See [Quest Source](#quest-source-configuration). |
 | `objectives` | Objective[] | **Yes** | Array of objectives. At least one required. See [Objective Types](#objective-types). |
 | `rewards` | Reward | No | XP, gold, and items granted on completion. See [Rewards](#rewards). |

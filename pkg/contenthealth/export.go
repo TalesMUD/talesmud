@@ -383,6 +383,8 @@ func questYAML(quest *quests.Quest) map[string]any {
 	put(out, "category", quest.Category)
 	put(out, "level", quest.Level)
 	put(out, "repeatable", quest.Repeatable)
+	put(out, "repeatReset", quest.RepeatReset)
+	put(out, "repeatCooldownSeconds", quest.RepeatCooldownSeconds)
 	put(out, "turnIn", quest.TurnIn)
 	put(out, "requiredLevel", quest.RequiredLevel)
 	put(out, "acceptDialogText", quest.AcceptDialogText)

@@ -117,6 +117,22 @@ func validateQuestDefinition(quest *quests.Quest) error {
 		}
 	}
 
+	reset := strings.ToLower(strings.TrimSpace(quest.RepeatReset))
+	switch reset {
+	case "", quests.RepeatResetDaily, quests.RepeatResetCooldown:
+	default:
+		add("repeatReset %q is invalid", quest.RepeatReset)
+	}
+	if quest.RepeatCooldownSeconds < 0 {
+		add("repeatCooldownSeconds cannot be negative")
+	}
+	if reset == quests.RepeatResetCooldown && quest.RepeatCooldownSeconds <= 0 {
+		add("repeatCooldownSeconds must be greater than 0 for a cooldown reset")
+	}
+	if (reset != "" || quest.RepeatCooldownSeconds > 0) && !quest.Repeatable {
+		add("repeatable must be true when a reset is set")
+	}
+
 	if len(errs) > 0 {
 		return &questValidationError{errs: errs}
 	}

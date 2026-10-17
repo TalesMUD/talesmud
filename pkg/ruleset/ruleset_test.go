@@ -46,6 +46,29 @@ func TestShippedFileMatchesCurrentPlay(t *testing.T) {
 	}
 }
 
+func TestQuestDailyResetHour(t *testing.T) {
+	ruleset.Reset()
+	t.Cleanup(ruleset.Reset)
+	if ruleset.QuestDailyResetHourUTC() != 4 {
+		t.Fatalf("default hour %d", ruleset.QuestDailyResetHourUTC())
+	}
+	if err := ruleset.LoadBytes([]byte("quests:\n  daily_reset_hour_utc: 6\n")); err != nil {
+		t.Fatal(err)
+	}
+	if ruleset.QuestDailyResetHourUTC() != 6 {
+		t.Fatalf("hour %d", ruleset.QuestDailyResetHourUTC())
+	}
+	if err := ruleset.LoadBytes([]byte("quests: {}\n")); err != nil {
+		t.Fatal(err)
+	}
+	if ruleset.QuestDailyResetHourUTC() != 4 {
+		t.Fatal("omitted hour left the override in place")
+	}
+	if err := ruleset.LoadBytes([]byte("quests:\n  daily_reset_hour_utc: 24\n")); err == nil {
+		t.Fatal("hour 24 was accepted")
+	}
+}
+
 func TestGuideEnabledKey(t *testing.T) {
 	ruleset.Reset()
 	t.Cleanup(ruleset.Reset)

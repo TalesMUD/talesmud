@@ -71,6 +71,13 @@ type Quest struct {
 	Area       string `json:"area,omitempty"`
 	Level      int32  `json:"level,omitempty"`
 	Repeatable bool   `json:"repeatable,omitempty"`
+	// RepeatReset is "daily", "cooldown", or empty.
+	// Empty keeps today's immediate re-accept when Repeatable is set.
+	// A reset is ignored unless Repeatable is true.
+	RepeatReset string `json:"repeatReset,omitempty"`
+	// RepeatCooldownSeconds is the wait after completion for a cooldown reset.
+	// A positive value with an empty RepeatReset is also a cooldown.
+	RepeatCooldownSeconds int64 `json:"repeatCooldownSeconds,omitempty"`
 
 	// Guide marks this quest as the new-character next-step hint.
 	// When no quest sets it, the hint falls back to the active quest log.

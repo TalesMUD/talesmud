@@ -1039,7 +1039,9 @@ type Quest struct {
     Category    string       // "main", "side", "daily"
     Area        string       // Optional region label for filtering and organization
     Level       int32        // Recommended level
-    Repeatable  bool         // Can be completed again
+    Repeatable            bool   // Can be completed again
+    RepeatReset           string // "daily", "cooldown", or empty (immediate re-accept)
+    RepeatCooldownSeconds int64  // Wait after completion for a cooldown reset
 
     Source      QuestSource  // How player gets quest (NPC, item, auto, script)
     Objectives  []Objective  // Kill, Collect, Deliver, Visit, Talk, Custom objectives

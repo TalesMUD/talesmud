@@ -104,8 +104,14 @@ type fileShape struct {
 		RespawnMinSeconds *float64        `yaml:"respawn_min_seconds"`
 		AggroOnSight      *aggroSightFile `yaml:"aggro_on_sight"`
 	} `yaml:"combat"`
-	Regen regenFile `yaml:"regen"`
-	Guide guideFile `yaml:"guide"`
+	Regen  regenFile  `yaml:"regen"`
+	Guide  guideFile  `yaml:"guide"`
+	Quests questsFile `yaml:"quests"`
+}
+
+// questsFile uses a pointer so an omitted hour stays at the built-in default.
+type questsFile struct {
+	DailyResetHourUTC *int `yaml:"daily_reset_hour_utc"`
 }
 
 // guideFile uses a pointer so an omitted key stays on.
@@ -135,22 +141,23 @@ type resourceSpec struct {
 }
 
 type state struct {
-	levelCap     int32
-	levelUpMode  string
-	xpRequired   map[int32]int32
-	baseXP       map[int32]int64
-	death        DeathPolicy
-	fullHeal     bool
-	timezone     string
-	resources    map[string]resourceSpec
-	pacing       string
-	safeRoom     string
-	disconnect   string
-	bareAttack   string
-	respawnMin   time.Duration
-	aggro        aggroSight
-	regen        RegenProfile
-	guideEnabled bool
+	levelCap       int32
+	levelUpMode    string
+	xpRequired     map[int32]int32
+	baseXP         map[int32]int64
+	death          DeathPolicy
+	fullHeal       bool
+	timezone       string
+	resources      map[string]resourceSpec
+	pacing         string
+	safeRoom       string
+	disconnect     string
+	bareAttack     string
+	respawnMin     time.Duration
+	aggro          aggroSight
+	regen          RegenProfile
+	guideEnabled   bool
+	dailyResetHour int
 }
 
 type aggroSight struct {
@@ -189,16 +196,17 @@ func builtin() state {
 			RespawnHPPercent: 50,
 			DamageArmor:      true,
 		},
-		fullHeal:     false,
-		timezone:     "UTC",
-		pacing:       PacingAuto,
-		safeRoom:     SafeStay,
-		disconnect:   DisconnectContinue,
-		bareAttack:   BareAttackAsk,
-		respawnMin:   respawnMinDefault,
-		aggro:        defaultAggroSight(),
-		regen:        defaultRegen(),
-		guideEnabled: true,
+		fullHeal:       false,
+		timezone:       "UTC",
+		pacing:         PacingAuto,
+		safeRoom:       SafeStay,
+		disconnect:     DisconnectContinue,
+		bareAttack:     BareAttackAsk,
+		respawnMin:     respawnMinDefault,
+		aggro:          defaultAggroSight(),
+		regen:          defaultRegen(),
+		guideEnabled:   true,
+		dailyResetHour: 4,
 	}
 }
 
@@ -404,6 +412,13 @@ func decode(raw []byte) (state, error) {
 	}
 	if file.Guide.Enabled != nil {
 		next.guideEnabled = *file.Guide.Enabled
+	}
+	if file.Quests.DailyResetHourUTC != nil {
+		hour := *file.Quests.DailyResetHourUTC
+		if hour < 0 || hour > 23 {
+			return state{}, fmt.Errorf("quests.daily_reset_hour_utc %d", hour)
+		}
+		next.dailyResetHour = hour
 	}
 	return next, nil
 }
@@ -732,6 +747,18 @@ func GuideEnabled() bool {
 	mu.RLock()
 	defer mu.RUnlock()
 	return current.guideEnabled
+}
+
+// QuestDailyResetHourUTC is the hour, 0-23, when a daily quest becomes
+// available again. The default is 4. An out-of-range stored value reads as 4.
+func QuestDailyResetHourUTC() int {
+	mu.RLock()
+	hour := current.dailyResetHour
+	mu.RUnlock()
+	if hour < 0 || hour > 23 {
+		return 4
+	}
+	return hour
 }
 
 // AggroOnSightEnabled is combat.aggro_on_sight.enabled. Omitted stays on.

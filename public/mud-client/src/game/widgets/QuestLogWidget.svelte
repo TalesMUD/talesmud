@@ -1,4 +1,6 @@
 <script>
+  import RepeatMark from '../ui/RepeatMark.svelte';
+
   export let store = null;
   export let sendMessage = null;
 
@@ -510,6 +512,7 @@
               <span class="quest-indicator active is-pinned" class:ready={isQuestReady(quest)}></span>
               <div class="quest-title-row">
                 <span class="quest-title">{quest.questName || 'Unnamed Quest'}</span>
+                  <RepeatMark {quest} />
                 <div class="quest-badges">
                   {#if isQuestReady(quest)}
                     <span class="quest-badge ready-badge">Ready</span>
@@ -623,6 +626,7 @@
               <span class="quest-indicator active" class:ready={isQuestReady(quest)}></span>
               <div class="quest-title-row">
                 <span class="quest-title">{quest.questName || 'Unnamed Quest'}</span>
+                  <RepeatMark {quest} />
                 <div class="quest-badges">
                   {#if isQuestReady(quest)}
                     <span class="quest-badge ready-badge">Ready</span>
@@ -728,6 +732,7 @@
               <span class="quest-indicator completed"></span>
               <div class="quest-title-row">
                 <span class="quest-title">{quest.questName || 'Unnamed Quest'}</span>
+                  <RepeatMark {quest} />
                 <div class="quest-badges">
                   {#if quest.level}
                     <span class="quest-badge level-badge">L{quest.level}</span>
@@ -807,6 +812,7 @@
               <span class="quest-indicator abandoned"></span>
               <div class="quest-title-row">
                 <span class="quest-title">{quest.questName || 'Unnamed Quest'}</span>
+                  <RepeatMark {quest} />
               </div>
               <span class="expand-icon">{expandedQuest === quest.questId ? "▾" : "▸"}</span>
             </button>
@@ -827,6 +833,7 @@
               <span class="quest-indicator failed"></span>
               <div class="quest-title-row">
                 <span class="quest-title">{quest.questName || 'Unnamed Quest'}</span>
+                  <RepeatMark {quest} />
               </div>
               <span class="expand-icon">{expandedQuest === quest.questId ? "▾" : "▸"}</span>
             </button>

@@ -313,6 +313,10 @@ func (qt *QuestTracker) pushQuestLogSnapshot(userID, characterID string) {
 			}
 		}
 		entry.ReadyToTurnIn = progress.Status == quests.QuestStatusActive && allDone
+		payload := commands.QuestRepeatPayload(quest, string(progress.Status), progress.CompletedAt)
+		entry.Repeats = payload.Repeats
+		entry.RepeatReset = payload.RepeatReset
+		entry.NextAvailableAt = payload.NextAvailableAt
 		entries = append(entries, entry)
 	}
 	qt.game.SendMessage() <- messages.NewQuestLogMessage(userID, entries)

@@ -38,6 +38,7 @@ type Quest struct {
 	Name           string
 	Level          int32
 	Guide          bool
+	Repeating      bool
 	Status         string
 	SourceType     string
 	SourceNPCID    string
@@ -110,15 +111,24 @@ func anyCompleted(quests []Quest) bool {
 }
 
 func poolOf(quests []Quest) []Quest {
+	candidates := quests
+	if hasOpenNormal(quests) {
+		candidates = make([]Quest, 0, len(quests))
+		for _, q := range quests {
+			if !q.Repeating {
+				candidates = append(candidates, q)
+			}
+		}
+	}
 	guided := false
-	for _, q := range quests {
+	for _, q := range candidates {
 		if q.Guide && !closed(q) {
 			guided = true
 			break
 		}
 	}
 	var pool []Quest
-	for _, q := range quests {
+	for _, q := range candidates {
 		if closed(q) {
 			continue
 		}
@@ -133,6 +143,15 @@ func poolOf(quests []Quest) []Quest {
 		}
 	}
 	return pool
+}
+
+func hasOpenNormal(quests []Quest) bool {
+	for _, q := range quests {
+		if !q.Repeating && !closed(q) {
+			return true
+		}
+	}
+	return false
 }
 
 func closed(q Quest) bool {

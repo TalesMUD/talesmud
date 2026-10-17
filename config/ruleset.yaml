@@ -97,3 +97,8 @@ regen:
 # enabled false builds no hint and sends nothing. Omitted stays on.
 guide:
   enabled: true
+
+# Repeatable quests with repeatReset: daily open again at this UTC hour.
+# Omitted stays at 4. A value outside 0-23 is rejected.
+quests:
+  daily_reset_hour_utc: 4

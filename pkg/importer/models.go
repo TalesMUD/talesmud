@@ -384,24 +384,26 @@ type YAMLSpawner struct {
 
 // YAMLQuest represents a quest in YAML format
 type YAMLQuest struct {
-	ID                 string               `yaml:"id"`
-	Name               string               `yaml:"name"`
-	Description        string               `yaml:"description"`
-	Category           string               `yaml:"category"`
-	Level              int32                `yaml:"level"`
-	Repeatable         bool                 `yaml:"repeatable"`
-	Source             YAMLQuestSource      `yaml:"source"`
-	Guide              bool                 `yaml:"guide,omitempty"`
-	TurnIn             string               `yaml:"turnIn"`
-	Objectives         []YAMLQuestObjective `yaml:"objectives"`
-	Rewards            YAMLQuestRewards     `yaml:"rewards"`
-	RequiredQuestIDs   []string             `yaml:"requiredQuestIds"`
-	RequiredLevel      int32                `yaml:"requiredLevel"`
-	AcceptDialogText   string               `yaml:"acceptDialogText"`
-	ProgressDialogText string               `yaml:"progressDialogText"`
-	CompleteDialogText string               `yaml:"completeDialogText"`
-	OnAcceptScriptID   string               `yaml:"onAcceptScriptId"`
-	OnCompleteScriptID string               `yaml:"onCompleteScriptId"`
+	ID                    string               `yaml:"id"`
+	Name                  string               `yaml:"name"`
+	Description           string               `yaml:"description"`
+	Category              string               `yaml:"category"`
+	Level                 int32                `yaml:"level"`
+	Repeatable            bool                 `yaml:"repeatable"`
+	RepeatReset           string               `yaml:"repeatReset"`
+	RepeatCooldownSeconds int64                `yaml:"repeatCooldownSeconds"`
+	Source                YAMLQuestSource      `yaml:"source"`
+	Guide                 bool                 `yaml:"guide,omitempty"`
+	TurnIn                string               `yaml:"turnIn"`
+	Objectives            []YAMLQuestObjective `yaml:"objectives"`
+	Rewards               YAMLQuestRewards     `yaml:"rewards"`
+	RequiredQuestIDs      []string             `yaml:"requiredQuestIds"`
+	RequiredLevel         int32                `yaml:"requiredLevel"`
+	AcceptDialogText      string               `yaml:"acceptDialogText"`
+	ProgressDialogText    string               `yaml:"progressDialogText"`
+	CompleteDialogText    string               `yaml:"completeDialogText"`
+	OnAcceptScriptID      string               `yaml:"onAcceptScriptId"`
+	OnCompleteScriptID    string               `yaml:"onCompleteScriptId"`
 }
 
 // YAMLQuestSource represents how a quest is obtained

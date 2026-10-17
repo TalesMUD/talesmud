@@ -200,6 +200,7 @@ func gatherGuideWorld(game def.GameCtrl, char *characters.Character, roomID stri
 			Name:          q.Name,
 			Level:         q.Level,
 			Guide:         q.Guide,
+			Repeating:     q.Repeats(),
 			SourceType:    q.Source.Type,
 			SourceNPCID:   q.Source.NPCID,
 			SourceNPCName: names[q.Source.NPCID],
