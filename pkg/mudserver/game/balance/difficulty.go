@@ -26,6 +26,40 @@ type CombatBalanceConfig struct {
 	RewardScale           RewardScaleConfig                `yaml:"reward_scale"`
 	ClassBalance          map[string]ClassBalance          `yaml:"class_balance"`
 	BossMechanics         BossMechanicsConfig              `yaml:"boss_mechanics"`
+	EarlyNormal           EarlyNormalConfig                `yaml:"early_normal"`
+	NewbieCurve           NewbieCurveConfig                `yaml:"newbie_curve"`
+}
+
+// EarlyNormalConfig scales the normal-tier multipliers for low-level enemies.
+// Other tiers, and normal enemies above MaxLevel, keep the tier table.
+// Factors are applied before the integer truncate. 0 means 1.
+type EarlyNormalConfig struct {
+	MaxLevel int32   `yaml:"max_level"`
+	HP       float64 `yaml:"hp"`
+	Attack   float64 `yaml:"attack"`
+	Defense  float64 `yaml:"defense"`
+}
+
+// NewbieClassFactor is an extra damage factor while that class is still in the newbie band.
+// UphillTaken, when set, replaces the curve-wide fallback for a +2 attacker.
+type NewbieClassFactor struct {
+	DamageDealt float64 `yaml:"damage_dealt"`
+	DamageTaken float64 `yaml:"damage_taken"`
+	UphillTaken float64 `yaml:"uphill_taken"`
+}
+
+// NewbieCurveConfig is applied in ScaleClassDamage only when that combatant's
+// level is in 1..MaxPlayerLevel. The level-10 gap table does not see it.
+// UphillTaken multiplies damage taken when the attacker is at least UphillGap
+// levels higher and not above UphillMaxAttackerLevel. Plate and cloth do not
+// share one factor: leather stops most early swings, so the hit that lands
+// has to matter, while a cloth robe is already being hit.
+type NewbieCurveConfig struct {
+	MaxPlayerLevel         int32                        `yaml:"max_player_level"`
+	UphillGap              int32                        `yaml:"uphill_gap"`
+	UphillTaken            float64                      `yaml:"uphill_taken"`
+	UphillMaxAttackerLevel int32                        `yaml:"uphill_max_attacker_level"`
+	Classes                map[string]NewbieClassFactor `yaml:"classes"`
 }
 
 var (
@@ -141,6 +175,25 @@ func getDefaultConfig() *CombatBalanceConfig {
 		RewardScale:   defaultRewardScale(),
 		ClassBalance:  defaultClassBalance(),
 		BossMechanics: defaultBossMechanics(),
+		EarlyNormal: EarlyNormalConfig{
+			MaxLevel: 6,
+			HP:       0.42,
+			Attack:   1.45,
+			Defense:  0.80,
+		},
+		NewbieCurve: NewbieCurveConfig{
+			MaxPlayerLevel:         5,
+			UphillGap:              2,
+			UphillTaken:            2.2,
+			UphillMaxAttackerLevel: 6,
+			Classes: map[string]NewbieClassFactor{
+				"warrior": {UphillTaken: 2.2},
+				"rogue":   {UphillTaken: 1.5},
+				"ward":    {UphillTaken: 1.5},
+				"mage":    {DamageDealt: 1.15, DamageTaken: 0.32, UphillTaken: 1.0},
+				"rigger":  {DamageDealt: 1.30, DamageTaken: 0.95, UphillTaken: 1.0},
+			},
+		},
 	}
 }
 
@@ -166,7 +219,18 @@ func ApplyMultipliers(baseHP, baseAttack, baseDef int32, difficulty string) (hp,
 
 // ApplyEnemyMultipliers applies difficulty multipliers, with optional named overrides
 // that replace the tier multipliers when enemyName matches (case-insensitive).
+// Level is unknown here, so the early-normal curve is not applied.
 func ApplyEnemyMultipliers(baseHP, baseAttack, baseDef int32, difficulty, enemyName string) (hp, attack, def int32) {
+	return applyEnemy(baseHP, baseAttack, baseDef, difficulty, enemyName, 0)
+}
+
+// ApplyEnemyCombat is ApplyEnemyMultipliers plus the early-normal curve when
+// level is in 1..early_normal.max_level and the tier is normal.
+func ApplyEnemyCombat(baseHP, baseAttack, baseDef int32, difficulty, enemyName string, level int32) (hp, attack, def int32) {
+	return applyEnemy(baseHP, baseAttack, baseDef, difficulty, enemyName, level)
+}
+
+func applyEnemy(baseHP, baseAttack, baseDef int32, difficulty, enemyName string, level int32) (hp, attack, def int32) {
 	cfg := GetConfig()
 
 	mult, ok := lookupMultipliers(cfg, difficulty, enemyName)
@@ -175,9 +239,16 @@ func ApplyEnemyMultipliers(baseHP, baseAttack, baseDef int32, difficulty, enemyN
 		return baseHP, baseAttack, baseDef
 	}
 
-	hp = int32(float64(baseHP) * mult.HP)
-	attack = int32(float64(baseAttack) * mult.Attack)
-	def = int32(float64(baseDef) * mult.Defense)
+	hpM, atkM, defM := mult.HP, mult.Attack, mult.Defense
+	if earlyNormalApplies(cfg, difficulty, level) {
+		hpM *= factorOrOne(cfg.EarlyNormal.HP)
+		atkM *= factorOrOne(cfg.EarlyNormal.Attack)
+		defM *= factorOrOne(cfg.EarlyNormal.Defense)
+	}
+
+	hp = int32(float64(baseHP) * hpM)
+	attack = int32(float64(baseAttack) * atkM)
+	def = int32(float64(baseDef) * defM)
 
 	if hp < 1 {
 		hp = 1
@@ -190,6 +261,20 @@ func ApplyEnemyMultipliers(baseHP, baseAttack, baseDef int32, difficulty, enemyN
 	}
 
 	return hp, attack, def
+}
+
+func earlyNormalApplies(cfg *CombatBalanceConfig, difficulty string, level int32) bool {
+	if cfg == nil || level <= 0 || cfg.EarlyNormal.MaxLevel <= 0 || level > cfg.EarlyNormal.MaxLevel {
+		return false
+	}
+	return strings.ToLower(strings.TrimSpace(difficulty)) == "normal"
+}
+
+func factorOrOne(v float64) float64 {
+	if v <= 0 {
+		return 1
+	}
+	return v
 }
 
 func lookupMultipliers(cfg *CombatBalanceConfig, difficulty, enemyName string) (DifficultyMultipliers, bool) {

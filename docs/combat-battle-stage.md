@@ -44,7 +44,7 @@ Later optional: **Party** mode (FF side-by-side) for large multi-combat.
 - Actor turn beat: ~0.8–1.2s windup → resolve → ~0.4s reaction
 - Player **decision window ~5s**; if no queue → auto Attack
 - Queued actions issued **during** the window resolve immediately (autotimer is AFK-only). A choice already queued when the window opens still uses the small `TurnBeatMs` windup.
-- Duration targets (C6): trash 3–6 player turns, elites 8–15, bosses 15–30
+- Duration targets (C6, then the 2026-10-18 early curve): trash and level 1–6 normal bodies 3–7 player turns, hard elites 8–16, bosses 15–30
 
 ## WS event protocol (C1)
 
@@ -95,7 +95,8 @@ Clients **animate from events**; they do not invent outcomes.
 | Band | Examples | Player turns |
 |------|----------|--------------|
 | Trash | Catacomb Rat, Sewer Rat, Tunnel Mole | 3–6 |
-| Elite | Meadow Wolf, Bandit, Thornback Bear | 8–15 |
+| Early normal | Meadow Wolf, Bandit (level 1–6 `early_normal`) | 3–7 |
+| Elite | Thornback Bear | 8–16 |
 | Boss | Burrow Brute, Hollow Knight | 15–30 |
 
 Reference harness: **Warrior** with distributable attribute points auto-spent on primary, skills AI enabled.
@@ -106,8 +107,8 @@ Reference harness: **Warrior** with distributable attribute points auto-spent on
 |---------|-----------------|-------|-------|
 | L1 vs Catacomb Rat | ~7.2 rnds, 100% | **~4.3**, 100% | trash |
 | L2 vs Sewer Rat | ~7.0 | **~4.1**, 100% | trash |
-| L2 vs Meadow Wolf | ~13.1 | **~8.8**, 100% | elite |
-| L3 vs Bandit | ~24.3 | **~12.3**, 100% | elite |
+| L2 vs Meadow Wolf | ~13.1 | **~8.8**, 100% | elite at C6; early curve later moved this to ~4.4 rounds |
+| L3 vs Bandit | ~24.3 | **~12.3**, 100% | elite at C6; early curve later moved this to ~4.5 rounds |
 | L5 vs Thornback Bear | ~42, 40% win | **~11.6**, 100% | elite |
 | L4 vs Burrow Brute | ~39, 18% win | **~20**, ~100% | boss |
 | L6 vs Hollow Knight | ~34, **0%** win | **~21**, ~100% | boss (was unkillable) |

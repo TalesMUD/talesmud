@@ -10,6 +10,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/quests"
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/entities/skills"
+	"github.com/talesmud/talesmud/pkg/mudserver/game/balance"
 	"github.com/talesmud/talesmud/pkg/scripts"
 	"gopkg.in/yaml.v3"
 )
@@ -205,12 +206,32 @@ func npcYAML(n *npc.NPC) map[string]any {
 	}
 	if n.EnemyTrait != nil {
 		enemy := n.EnemyTrait
+		authoredHP := n.MaxHitPoints
+		authoredAtk := enemy.AttackPower
+		authoredDef := enemy.Defense
+		effHP, effAtk, effDef := authoredHP, authoredAtk, authoredDef
+		// Stored MaxHitPoints and attack/defense are the scaled numbers combat
+		// uses. The importer fields must stay the content base, or a re-import
+		// multiplies the tier again. combat records both so the drift file
+		// shows the gap (an Alley Thug authored at 18 is not stored as 18).
+		if enemy.BaseStats != nil {
+			authoredHP = enemy.BaseStats.MaxHitPoints
+			authoredAtk = enemy.BaseStats.AttackPower
+			authoredDef = enemy.BaseStats.Defense
+			if authoredHP != 0 {
+				out["maxHitPoints"] = authoredHP
+			}
+			effHP, effAtk, effDef = balance.ApplyEnemyCombat(
+				authoredHP, authoredAtk, authoredDef,
+				enemy.Difficulty, n.Name, n.Level,
+			)
+		}
 		row := map[string]any{}
 		put(row, "creatureType", enemy.CreatureType)
 		put(row, "combatStyle", enemy.CombatStyle)
 		put(row, "difficulty", enemy.Difficulty)
-		put(row, "attackPower", enemy.AttackPower)
-		put(row, "defense", enemy.Defense)
+		put(row, "attackPower", authoredAtk)
+		put(row, "defense", authoredDef)
 		put(row, "attackSpeed", enemy.AttackSpeed)
 		put(row, "aggroRadius", enemy.AggroRadius)
 		put(row, "aggroOnSight", enemy.AggroOnSight)
@@ -230,6 +251,14 @@ func npcYAML(n *npc.NPC) map[string]any {
 		put(row, "onLowHealthScript", enemy.OnLowHealthScript)
 		put(row, "lowHealthThreshold", enemy.LowHealthThreshold)
 		out["enemyTrait"] = row
+		out["combat"] = map[string]any{
+			"authored": map[string]any{
+				"hp": authoredHP, "attack": authoredAtk, "defense": authoredDef,
+			},
+			"effective": map[string]any{
+				"hp": effHP, "attack": effAtk, "defense": effDef,
+			},
+		}
 	}
 	if n.MerchantTrait != nil {
 		mt := n.MerchantTrait

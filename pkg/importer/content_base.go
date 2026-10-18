@@ -14,12 +14,13 @@ func ApplyContentBase(n *npc.NPC) {
 		return
 	}
 	base := n.EnemyTrait.BaseStats
-	hp, attack, defense := balance.ApplyEnemyMultipliers(
+	hp, attack, defense := balance.ApplyEnemyCombat(
 		base.MaxHitPoints,
 		base.AttackPower,
 		base.Defense,
 		n.EnemyTrait.Difficulty,
 		n.Name,
+		n.Level,
 	)
 	oldMax := n.MaxHitPoints
 	full := oldMax <= 0 || n.CurrentHitPoints >= oldMax

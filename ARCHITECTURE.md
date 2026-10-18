@@ -495,6 +495,8 @@ type StatusEffect struct {
        │   │     Gap 0 matches the pre-gap formulas.
        │   │     class_balance then scales damage dealt and taken per class.
        │   │     The pack catalog wins. The YAML row is the fallback.
+       │   │     early_normal scales normal-tier enemies at level 6 and below.
+       │   │     newbie_curve adds level 1–5 factors. Level 10 does not use them.
        │   │     A soak class's Slam starts its cooldown only when the swing hits.
        │   │     wizard uses the mage row; behind_dealt applies when lower level.
        │   │     boss_mechanics: bosses and hard elites wind up one action before
