@@ -1,3 +1,11 @@
+## New-player combat curve (2026-10-18)
+
+- SHIPPED engine `803b0a0` (`feat: [grokbot] soften the level 1-5 combat curve`) on `engine-june`. Content `2941520` (`feat: [grokbot] give Ivo Quill art and cut the hollow bounty to one spider`) on `talesmud-rpg-1` main. Play cache `?v=curve1`. Door `:8020` untouched (pid `1178139`).
+- `early_normal` shortens normal-tier enemies at level 6 and below before the integer truncate. An authored 18 HP Alley Thug lives at 20 HP. `newbie_curve` adds level 1–5 class factors and a +2 uphill taken multiplier. Level 10, hard, and boss tiers stay on the old table. Content-health export writes authored stats and a `combat` block so a re-import scales once.
+- QST0907 is one Marsh Spider (was three). Rewards stay 70 XP and 15 gold. Spider stats stay 81/10/3. Ivo Quill has a sprite and a dialog bust. A missing bust falls back to the body portrait, then a silhouette.
+- Deploy: VPS engine ff `031004a..803b0a0`. Online gate 0 (TCP `:8010`/`:2222`/`:2223`, `isOnline` 0 of 20). Backup `backups/talesmud-pre-031004a-20261018T090455Z.db` (6,488,064 bytes, mode 600, integrity ok). Rollback `bin/tales.prev-031004a` sha256 `b0c3c49a6538b5e061c117beb1395a79caa27cdbfe04cd55d7b908065d9a9c36`. Running binary sha256 `07c02c00084b46bbae68237dfa79ee1a5c2c3010467b59a552c0efdc4fcf210d`. SIGTERM MainPID `1331091` only. Import 1.670s (161 NPCs, 887 assets). New MainPID `1359234`.
+- Smoke: Rune Hand Pilgrim_cb1c and Fenwatch Drifter_9ab0 each beat one Alley Thug in R0207. Live HP was 20, not 48. Both won. Ivo's bust loaded at 512×512. Shots are in `~/dev/briefs/NEWBIE-CURVE-1018/live/`. Report `~/dev/briefs/NEWBIE-CURVE-1018-REPORT.md`.
+
 ## Daily bounties (2026-10-17)
 
 - SHIPPED engine `031004a` (`feat: [grokbot] add timed resets for repeatable quests`) on `engine-june`. Content `68d287d` (`feat: [grokbot] add Oldtown daily bounty postings`) on `talesmud-rpg-1` main. Play cache `?v=bounty1`. Door `:8020`/`:2223` untouched (pid `1178139`).
