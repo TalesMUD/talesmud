@@ -1,6 +1,6 @@
 import assert from 'assert';
 import { itemArtFallbackSrc, itemArtGenericKey } from './itemArtSrc.js';
-import { battleSpriteSrc, figureFallback, playerPortraitSrc, playerSilhouette, portraitSrc, SILHOUETTE } from './portraitSrc.js';
+import { battleSpriteSrc, figureFallback, onPortraitBustError, playerPortraitSrc, playerSilhouette, portraitBustSrc, portraitSrc, SILHOUETTE } from './portraitSrc.js';
 
 const fang = { templateId: 'ITM0087', type: 'weapon', name: 'Fang' };
 assert.equal(itemArtGenericKey(fang), 'weapon');
@@ -55,5 +55,24 @@ assert.equal(
   battleSpriteSrc({ id: '11111111-1111-1111-1111-111111111111', type: 'player', classId: 'mage' }),
   playerSilhouette('mage')
 );
+
+const ivo = { id: 'NPC0086', name: 'Ivo Quill' };
+assert.equal(portraitBustSrc(ivo), '/api/portraits/NPC0086-bust.png');
+const bustImg = {
+  dataset: {},
+  _src: portraitBustSrc(ivo),
+  get src() { return this._src; },
+  set src(value) { this._src = value; },
+  getAttribute() { return this._src; },
+};
+onPortraitBustError({ currentTarget: bustImg }, ivo);
+assert.equal(bustImg.dataset.fallback, '1');
+assert.equal(bustImg.src, '/api/portraits/NPC0086.png');
+onPortraitBustError({ currentTarget: bustImg }, ivo);
+assert.equal(bustImg.dataset.fallback, '2');
+assert.ok(bustImg.src.startsWith('data:image/svg+xml'), bustImg.src.slice(0, 40));
+const held = bustImg.src;
+onPortraitBustError({ currentTarget: bustImg }, ivo);
+assert.equal(bustImg.src, held);
 
 console.log('artFallback_test ok');

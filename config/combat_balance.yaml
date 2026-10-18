@@ -37,8 +37,54 @@ difficulty_multipliers:
     attack: 1.15    # Sample Brute: 8 * 1.15 ≈ 9 ATK (survivable)
     defense: 1.5    # Sample Brute: 3 * 1.5 ≈ 4–5 DEF
 
-# Per-enemy overrides (applied instead of the difficulty tier multipliers).
-# Sample only. Packs replace this map.
+# Normal-tier enemies at or below max_level multiply the tier factors above
+# before the integer truncate. A level-2 Alley Thug is authored at 18 HP.
+# The normal tier alone makes that 18 * 2.7 = 48. early_normal.hp 0.42 makes
+# the live body 18 * 2.7 * 0.42 = 20. Levels above max_level, and every
+# other tier (trivial rats, hard elites, bosses, named overrides), stay
+# on the table above. This does not touch the level-10 gap matrix, which
+# uses CreateScaledEnemy rather than these multipliers.
+early_normal:
+  max_level: 6
+  hp: 0.42
+  attack: 1.45
+  defense: 0.80
+
+# Extra class factors while THAT combatant is level 1–5. Plate and leather
+# subtract 4 from a hit; a cloth robe subtracts 1, so the same starter
+# enemy deletes a Rune Hand and barely chips a Fenwatch. These factors
+# close that gap for the first five levels only. Level 6 and up, including
+# the level-10 gap table, do not use them.
+newbie_curve:
+  max_player_level: 5
+  # A +2 (or worse) attacker hits harder against a level 1–5 player, and
+  # only when that attacker is also still in the early band. Same-level and
+  # +1 fights do not. A level-9 Marsh Spider does not. Level 6+ players do not.
+  # The factor is per class. Leather AC 18 shrugs off a bandit swing, so the
+  # one hit that lands has to threaten a second. A cloth robe is already hit
+  # often enough that an extra factor would delete the Rune Hand.
+  uphill_gap: 2
+  uphill_max_attacker_level: 6
+  uphill_taken: 2.2
+  classes:
+    warrior:
+      uphill_taken: 2.2
+    rogue:
+      # 1.5 leaves a Bandit crit at 20 against 21 HP. 1.6 makes that crit 22
+      # and the fight falls from about 82% to 50%. There is no integer between.
+      uphill_taken: 1.5
+    ward:
+      uphill_taken: 1.5
+    mage:
+      damage_dealt: 1.15
+      damage_taken: 0.32
+      uphill_taken: 1.0
+    rigger:
+      damage_dealt: 1.30
+      damage_taken: 0.95
+      uphill_taken: 1.0
+
+# Per-enemy overrides (applied instead of the difficulty tier multipliers)
 named_overrides:
   "Sample Warden":
     hp: 1.0         # 150 HP (~22 turns with skills at L6)

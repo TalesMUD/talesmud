@@ -254,6 +254,21 @@ Quests are organized into three main categories:
 - **Recommended:** Do daily for steady progress
 - **Impact:** Regular income and experience
 
+### Daily bounties
+
+Ivo Quill stands at the notice board in Notice Board Square. Talk to him for the day's postings. Each one is a kill count, and the board will not offer it again until the next reset.
+
+The reset is 04:00 UTC. After you turn a posting in, the dialog says "Available again in …" and counts down to that hour.
+
+| Posting | You can take it from | The work |
+| --- | --- | --- |
+| Alley Posting | Level 1 | Three Alley Thugs |
+| Hollow Posting | Level 5 | One Marsh Spider |
+| Grove Posting | Level 10 | Three Bloated Toads |
+| Armory Posting | Level 15 | Two Ashenveil Brutes |
+
+The higher postings are a step up from the alley. Bring the gear you have been using, and a friend for the armory if the brutes look like too much.
+
 **Filtering by Category:**
 - Use category dropdown in Quest Log
 - Select Main/Side/Daily to filter

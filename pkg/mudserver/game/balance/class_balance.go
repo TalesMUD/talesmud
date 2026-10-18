@@ -279,6 +279,9 @@ func ScaleClassDamage(attackerClass, defenderClass string, attackerLevel, defend
 	if row, ok := lookupClass(defenderClass); ok {
 		taken = multOrOne(row.DamageTaken)
 	}
+	dealt *= newbieDealt(attackerClass, attackerLevel)
+	taken *= newbieTaken(defenderClass, defenderLevel)
+	taken *= newbieUphill(defenderClass, defenderLevel, attackerLevel)
 	if dealt == 1 && taken == 1 {
 		return damage
 	}
@@ -287,4 +290,74 @@ func ScaleClassDamage(attackerClass, defenderClass string, attackerLevel, defend
 		return 1
 	}
 	return out
+}
+
+func newbieRow(classID string, level int32) (NewbieClassFactor, bool) {
+	if level <= 0 {
+		return NewbieClassFactor{}, false
+	}
+	cfg := GetConfig()
+	if cfg == nil || level > cfg.NewbieCurve.MaxPlayerLevel || cfg.NewbieCurve.MaxPlayerLevel <= 0 {
+		return NewbieClassFactor{}, false
+	}
+	if cfg.NewbieCurve.Classes == nil {
+		return NewbieClassFactor{}, false
+	}
+	row, ok := cfg.NewbieCurve.Classes[classKey(classID)]
+	return row, ok
+}
+
+func newbieDealt(classID string, level int32) float64 {
+	row, ok := newbieRow(classID, level)
+	if !ok {
+		return 1
+	}
+	return factorOrOne(row.DamageDealt)
+}
+
+func newbieTaken(classID string, level int32) float64 {
+	row, ok := newbieRow(classID, level)
+	if !ok {
+		return 1
+	}
+	return factorOrOne(row.DamageTaken)
+}
+
+func newbieUphill(defenderClass string, defenderLevel, attackerLevel int32) float64 {
+	if defenderLevel <= 0 || !playableClass(defenderClass) {
+		return 1
+	}
+	cfg := GetConfig()
+	if cfg == nil || cfg.NewbieCurve.UphillGap <= 0 || cfg.NewbieCurve.UphillTaken <= 0 {
+		return 1
+	}
+	if defenderLevel > cfg.NewbieCurve.MaxPlayerLevel || cfg.NewbieCurve.MaxPlayerLevel <= 0 {
+		return 1
+	}
+	if attackerLevel < defenderLevel+cfg.NewbieCurve.UphillGap {
+		return 1
+	}
+	// A level-9 bounty target is outside the early band. Uphill is for the
+	// short L1–6 bodies, not for every fight a level-5 character can start.
+	if max := cfg.NewbieCurve.UphillMaxAttackerLevel; max > 0 && attackerLevel > max {
+		return 1
+	}
+	if cfg.NewbieCurve.Classes != nil {
+		if row, ok := cfg.NewbieCurve.Classes[classKey(defenderClass)]; ok && row.UphillTaken > 0 {
+			return row.UphillTaken
+		}
+	}
+	if cfg.NewbieCurve.UphillTaken <= 0 {
+		return 1
+	}
+	return cfg.NewbieCurve.UphillTaken
+}
+
+func playableClass(id string) bool {
+	switch classKey(id) {
+	case "warrior", "rogue", "mage", "ward", "rigger":
+		return true
+	default:
+		return false
+	}
 }
