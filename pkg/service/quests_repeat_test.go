@@ -22,8 +22,8 @@ func TestRepeatResetBlocksUntilDailyWindow(t *testing.T) {
 
 	facade := newTestFacade(t)
 	char, quest := storeKillQuest(t, facade, &quests.Quest{
-		Name:        "Alley Contract",
-		Description: "Clear the alley.",
+		Name:        "Sample Contract",
+		Description: "Clear the sample den.",
 		Repeatable:  true,
 		RepeatReset: quests.RepeatResetDaily,
 		Source:      quests.QuestSource{Type: "npc", NPCID: "clerk"},
@@ -72,8 +72,8 @@ func TestRepeatResetSurvivesRestart(t *testing.T) {
 
 	facade := open()
 	char, quest := storeKillQuest(t, facade, &quests.Quest{
-		Name:        "Alley Contract",
-		Description: "Clear the alley.",
+		Name:        "Sample Contract",
+		Description: "Clear the sample den.",
 		Repeatable:  true,
 		RepeatReset: quests.RepeatResetDaily,
 		Source:      quests.QuestSource{Type: "npc", NPCID: "clerk"},

@@ -170,12 +170,12 @@ func TestDismissedAndCompletedStayHidden(t *testing.T) {
 func TestRepeatingQuestSkippedWhileNormalQuestOpen(t *testing.T) {
 	w := catacombs()
 	w.Quests = append(w.Quests, Quest{
-		ID: "board", Name: "Alley Contract", Level: 1, Guide: true, Repeating: true,
+		ID: "board", Name: "Sample Contract", Level: 1, Guide: true, Repeating: true,
 		SourceType: "npc", SourceNPCID: "mira", SourceNPCName: "Mira",
 		Objectives: []Objective{{Type: "talk", TargetID: "mira", TargetName: "Mira", Description: "Speak with Mira"}},
 	})
 	h := Build(w)
-	if h == nil || h.QuestName == "Alley Contract" {
+	if h == nil || h.QuestName == "Sample Contract" {
 		t.Fatalf("repeating quest was the hint: %+v", h)
 	}
 }
@@ -185,12 +185,12 @@ func TestRepeatingQuestCanHintWhenNoNormalQuestIsOpen(t *testing.T) {
 		CurrentRoomID: "hall",
 		Here:          []Actor{{TemplateID: "clerk", Name: "Ned"}},
 		Quests: []Quest{{
-			ID: "board", Name: "Alley Contract", Repeating: true, Guide: true,
+			ID: "board", Name: "Sample Contract", Repeating: true, Guide: true,
 			SourceType: "npc", SourceNPCID: "clerk", SourceNPCName: "Ned",
 		}},
 	}
 	h := Build(w)
-	if h == nil || h.QuestName != "Alley Contract" {
+	if h == nil || h.QuestName != "Sample Contract" {
 		t.Fatalf("hint = %+v", h)
 	}
 }

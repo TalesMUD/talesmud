@@ -79,7 +79,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Clicking equipped gear opens a detail card; Unequip is an explicit action. Inventory item cards show stats, value, available weight, usability requirements, and differences from worn gear. Clear class-relevant upgrades get a green badge. Equip, Use, Sell, and Drop remain explicit buttons. A unique item card has a gold frame and a UNIQUE mark.
   - A loot entry can be `rarity: unique` with a `chance` and `boss_only`. The roll is skipped when every victory recipient already holds that template (bag, equipped, nested container; no separate item bank). That drop announces `UNIQUE:` as a gold room chip. A template `unique` flag caps ownership and does not send the chip.
   - Room action/system reaction toast: centered on room hero art; LOOK-sized padding (no half-cut last line)
-  - Quest Accepted / Complete: Veilspan moment cards (centered); open Talk dialog refreshes `[Quest]` → `[In Progress]`
+  - Quest Accepted / Complete: centered moment cards; open Talk dialog refreshes `[Quest]` → `[In Progress]`
   - Quest log Turn In for anywhere-ready quests; otherwise Turn in: NPC hint
   - WoW-style private cellar instances: `type: instance` exits, or a shared-room exit into a room tagged `instance`, clone a small room graph per character; town hub stays shared; empty copies are destroyed. Startup deletes leftover `~` room rows and moves characters to the hub, the copy's return exit, the start room, or the bind room, then tells them once on the next login
 
@@ -493,9 +493,9 @@ SESSION_SECRET=
 # SSH_ENABLED=false
 # SSH_LISTEN=127.0.0.1:2222
 # SSH_HOST_KEY_PATH=/var/lib/talesmud/ssh/host_ed25519
-# SSH_PUBLIC_HOST=veilspan.com
+# SSH_PUBLIC_HOST=mud.example.com
 # SSH_PUBLIC_PORT=2222
-# SSH_ACTIVATE_URL=https://veilspan.com/activate
+# SSH_ACTIVATE_URL=https://mud.example.com/activate
 # Also required for public app device login; points at the existing /activate.
 # SSH_GUEST_ENABLED=false
 # SSH_DEVICE_ENABLED=false

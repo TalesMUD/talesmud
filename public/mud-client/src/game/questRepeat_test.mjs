@@ -20,10 +20,10 @@ assert.equal(formatAvailableAgain('2026-10-17T09:00:00Z', now), '');
 assert.equal(formatAvailableAgain('', now), '');
 
 assert.equal(
-  optionLabel({ text: '[Quest] Alley Contract — Available again in 5h 12m', nextAvailableAt: '2026-10-18T04:00:00Z' }),
-  '[Quest] Alley Contract',
+  optionLabel({ text: '[Quest] Sample Contract — Available again in 5h 12m', nextAvailableAt: '2026-10-18T04:00:00Z' }),
+  '[Quest] Sample Contract',
 );
-assert.equal(optionLabel({ text: '[Quest] Alley Contract' }), '[Quest] Alley Contract');
+assert.equal(optionLabel({ text: '[Quest] Sample Contract' }), '[Quest] Sample Contract');
 
 const phone = repeatLayoutAt(375);
 assert.equal(phone.tagFits, true);

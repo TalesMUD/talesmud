@@ -1,5 +1,7 @@
 package simutil
 
+// Sample simulation roster for early-game balance tables, not a content pack.
+
 import (
 	"fmt"
 	"math/rand"

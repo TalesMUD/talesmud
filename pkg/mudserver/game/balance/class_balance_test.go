@@ -101,30 +101,30 @@ func TestNewbieCurveStaysOffTheGapTable(t *testing.T) {
 	}
 	// Level 10 is the gap matrix. Newbie factors must not move it.
 	if got := ScaleClassDamage("", "wizard", 12, 10, 20); got != 25 {
-		t.Fatalf("level 10 rune hand taken %d, want 25", got)
+		t.Fatalf("level 10 caster taken %d, want 25", got)
 	}
 	if got := ScaleClassDamage("warrior", "", 10, 10, 20); got != 20 {
-		t.Fatalf("level 10 fenwatch dealt %d, want 20", got)
+		t.Fatalf("level 10 tank dealt %d, want 20", got)
 	}
 	// Level 1–5 overlay. Mage taken 0.32, no uphill on a +1 or on a level-9 attacker.
 	if got := ScaleClassDamage("", "wizard", 2, 1, 100); got != 40 {
-		t.Fatalf("l1 rune hand +1 %d, want 40", got)
+		t.Fatalf("l1 caster +1 %d, want 40", got)
 	}
 	if got := ScaleClassDamage("", "wizard", 3, 1, 100); got != 40 {
-		t.Fatalf("l1 rune hand +2 %d, want 40", got)
+		t.Fatalf("l1 caster +2 %d, want 40", got)
 	}
 	if got := ScaleClassDamage("", "wizard", 9, 1, 100); got != 40 {
-		t.Fatalf("l1 rune hand vs level 9 %d, want 40", got)
+		t.Fatalf("l1 caster vs level 9 %d, want 40", got)
 	}
 	// Plate's +2 factor is the one that makes a bandit connect matter.
 	if got := ScaleClassDamage("", "warrior", 3, 1, 100); got != 198 {
-		t.Fatalf("l1 fenwatch +2 %d, want 198", got)
+		t.Fatalf("l1 tank +2 %d, want 198", got)
 	}
 	if got := ScaleClassDamage("", "warrior", 2, 1, 100); got != 90 {
-		t.Fatalf("l1 fenwatch +1 %d, want 90", got)
+		t.Fatalf("l1 tank +1 %d, want 90", got)
 	}
 	if got := ScaleClassDamage("", "warrior", 8, 6, 100); got != 90 {
-		t.Fatalf("level 6 fenwatch %d, want 90", got)
+		t.Fatalf("level 6 tank %d, want 90", got)
 	}
 	if got := ScaleClassDamage("rigger", "", 1, 1, 100); got != 111 {
 		t.Fatalf("l1 rigger dealt %d, want 111", got)
