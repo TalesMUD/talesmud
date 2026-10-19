@@ -1,4 +1,5 @@
 <script>
+  import { createVisibleLifetime, notificationsBlocked } from './notificationPresentation.js';
   export let store = null;
   export let sendMessage = null;
   export let onQuestClick = null;
@@ -6,7 +7,6 @@
   const ATTR_ORDER = ['STR', 'DEX', 'INT', 'WIS', 'STA'];
 
   let notifications = [];
-  let dismissingIds = new Set();
   let pendingSpend = {}; // attr -> local optimistic spends this card session
 
   $: if (store) {
@@ -22,8 +22,9 @@
   $: momentCards = prioritizeMoments(
     notifications.filter((n) => n.type === 'accepted' || n.type === 'completed' || n.type === 'levelup')
   );
-  $: activeMoment = momentCards.length ? [momentCards[0]] : [];
-  $: corner = notifications.filter((n) => n.type !== 'accepted' && n.type !== 'completed' && n.type !== 'levelup');
+  $: blocked = notificationsBlocked(store ? $store : null);
+  $: activeMoment = blocked ? [] : momentCards.slice(0, 1);
+  $: corner = blocked ? [] : notifications.filter((n) => n.type !== 'accepted' && n.type !== 'completed' && n.type !== 'levelup').slice(0, 4);
 
   function prioritizeMoments(list) {
     const rank = { levelup: 0, completed: 1, accepted: 2 };
@@ -35,24 +36,16 @@
     });
   }
 
+  const lifetime = createVisibleLifetime(dismissNotification);
+
   function dismissNotification(notification) {
-    if (dismissingIds.has(notification.id)) return;
-
-    dismissingIds.add(notification.id);
-    dismissingIds = dismissingIds;
-    if (notification.type === 'levelup') {
-      pendingSpend = {};
+    if (notification.type === 'levelup') pendingSpend = {};
+    if (store) {
+      store.update(state => ({
+        ...state,
+        questNotifications: state.questNotifications.filter(n => n !== notification),
+      }));
     }
-
-    setTimeout(() => {
-      if (store) {
-        store.update(state => {
-          state.questNotifications = state.questNotifications.filter(n => n.id !== notification.id);
-          return state;
-        });
-      }
-      dismissingIds.delete(notification.id);
-    }, 300);
   }
 
   function handleNotificationClick(notification) {
@@ -66,9 +59,6 @@
     dismissNotification(notification);
   }
 
-  function isDismissing(notification) {
-    return dismissingIds.has(notification.id);
-  }
 
   function kickerFor(notification) {
     if (notification.type === 'levelup') return 'Level up';
@@ -196,11 +186,11 @@
 
 {#if activeMoment.length > 0}
   <div class="quest-moment-layer" aria-live="polite">
-    {#each activeMoment as notification (notification.id || notification)}
+    {#each activeMoment as notification (notification)}
       <div
         class="quest-card"
         class:level-up={notification.type === 'levelup'}
-        class:slide-out={isDismissing(notification)}
+        use:lifetime={{ notification, duration: 16000 }}
         role="dialog"
         aria-label={kickerFor(notification)}
       >
@@ -276,11 +266,10 @@
 
 {#if corner.length > 0}
   <div class="quest-notifications">
-    {#each corner as notification (notification.id || notification)}
+    {#each corner as notification (notification)}
       <div
         class="notification {notification.type}"
-        class:slide-in={!isDismissing(notification)}
-        class:slide-out={isDismissing(notification)}
+        use:lifetime={{ notification, duration: 5000 }}
         on:click={() => handleNotificationClick(notification)}
         on:keydown={(e) => e.key === 'Enter' && handleNotificationClick(notification)}
         role="button"
@@ -307,7 +296,7 @@
   .quest-moment-layer {
     position: fixed;
     inset: 0;
-    z-index: 1200;
+    z-index: var(--layer-moment);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -342,9 +331,6 @@
       inset 0 0 0 1px rgba(116, 91, 51, 0.35);
   }
 
-  .quest-card.slide-out {
-    animation: acceptOut 0.25s ease-in forwards;
-  }
 
   .card-kicker {
     font-family: "Cinzel", serif;
@@ -495,7 +481,7 @@
     position: fixed;
     top: 80px;
     right: 20px;
-    z-index: 1000;
+    z-index: var(--layer-notification);
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -528,13 +514,10 @@
     transform: translateX(-4px);
   }
 
-  .notification.slide-in {
+  .notification {
     animation: slideIn 0.3s ease-out;
   }
 
-  .notification.slide-out {
-    animation: slideOut 0.3s ease-in forwards;
-  }
 
   .notification-content {
     flex: 1;
@@ -609,16 +592,7 @@
     }
   }
 
-  @keyframes acceptOut {
-    from {
-      opacity: 1;
-      transform: scale(1);
-    }
-    to {
-      opacity: 0;
-      transform: scale(0.96) translateY(8px);
-    }
-  }
+
 
   @keyframes slideIn {
     from {
@@ -631,20 +605,8 @@
     }
   }
 
-  @keyframes slideOut {
-    from {
-      transform: translateX(0);
-      opacity: 1;
-      max-height: 100px;
-      margin-bottom: 10px;
-    }
-    to {
-      transform: translateX(100%);
-      opacity: 0;
-      max-height: 0;
-      margin-bottom: 0;
-      padding-top: 0;
-      padding-bottom: 0;
-    }
+
+  @media (prefers-reduced-motion: reduce) {
+    .veilspan-card, .notification { animation: none; transition: none; }
   }
 </style>

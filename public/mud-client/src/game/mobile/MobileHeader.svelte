@@ -15,7 +15,7 @@
     justify-content: space-between;
     padding-left: 12px;
     padding-right: 12px;
-    z-index: 1001;
+    z-index: var(--layer-chrome);
     box-sizing: border-box;
   }
 

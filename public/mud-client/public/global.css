@@ -1,5 +1,24 @@
 /* CSS Custom Properties for theming */
 :root {
+  /* Page layers ascend from shell chrome to sheets, combat, dialogs, rolls, and map.
+     Component-local decoration stays inside its parent's stacking context. */
+  --layer-chrome: 80;
+  --layer-guide: 90;
+  --layer-inventory: 120;
+  --layer-social: 130;
+  --layer-invite: 145;
+  --layer-notification: 1000;
+  --layer-settings: 1100;
+  --layer-moment: 1200;
+  --layer-sheet-backdrop: 2000;
+  --layer-sheet: 2001;
+  --layer-battle: 9000;
+  --layer-shortcuts: 9500;
+  --layer-action-dialog: 10050;
+  --layer-dialog: 10100;
+  --layer-shop: 10120;
+  --layer-roll: 10240;
+  --layer-map: 200000;
   --terminal-bg: rgba(0, 0, 0, 0.75);
   --terminal-blur: 12px;
   --glass-border: rgba(255, 255, 255, 0.1);

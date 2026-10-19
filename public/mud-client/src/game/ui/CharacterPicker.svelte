@@ -146,7 +146,7 @@
   .char-picker {
     position: fixed;
     inset: 0;
-    z-index: 2000;
+    z-index: var(--layer-sheet);
     width: auto;
     height: auto;
     margin: 0;

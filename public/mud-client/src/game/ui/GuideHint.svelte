@@ -19,6 +19,7 @@
   $: if (!show) box = null;
 
   function schedule() {
+    box = null;
     cancelAnimationFrame(frame);
     frame = requestAnimationFrame(() => { place(); });
   }
@@ -31,7 +32,8 @@
     }
     const width = Math.min(340, window.innerWidth - 16);
     const height = root.offsetHeight || 48;
-    const bars = [...document.querySelectorAll(".hotbar-widget")].map(rectOf);
+    const bars = [...document.querySelectorAll(".hotbar-widget")].map(rectOf).filter(Boolean);
+    if (!bars.length) { box = null; return; }
     const names = [...document.querySelectorAll(".room-name, .roomName")].map(rectOf);
     box = hintRect({
       vw: window.innerWidth,
@@ -61,13 +63,17 @@
 
   onMount(() => {
     window.addEventListener("resize", schedule);
+    window.addEventListener("scroll", schedule, true);
     timer = setInterval(() => { if (show) place(); }, 400);
   });
 
   onDestroy(() => {
     cancelAnimationFrame(frame);
     if (timer) clearInterval(timer);
-    if (typeof window !== "undefined") window.removeEventListener("resize", schedule);
+    if (typeof window !== "undefined") {
+      window.removeEventListener("resize", schedule);
+      window.removeEventListener("scroll", schedule, true);
+    }
   });
 
   $: style = box
@@ -95,7 +101,7 @@
 <style>
   .guide-hint {
     position: fixed;
-    z-index: 8900;
+    z-index: var(--layer-guide);
     display: flex;
     align-items: center;
     gap: 8px;

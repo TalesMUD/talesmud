@@ -144,7 +144,7 @@
   .recipes-overlay {
     position: absolute;
     inset: 0;
-    z-index: 120;
+    z-index: var(--layer-inventory);
     background: rgba(0, 0, 0, 0.82);
     backdrop-filter: blur(6px);
     display: flex;

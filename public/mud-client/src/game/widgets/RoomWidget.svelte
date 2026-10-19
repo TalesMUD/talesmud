@@ -301,7 +301,7 @@
     <div id="roomImg2" class="roomImageInner hidden"></div>
     <div class="roomImageGradient"></div>
 
-    <RoomTextOverlay />
+    <RoomTextOverlay {store} />
 
     {#if $store.roomName}
       <div class="roomName">

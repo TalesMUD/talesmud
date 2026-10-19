@@ -203,7 +203,7 @@
   .party-overlay {
     position: fixed;
     inset: 0;
-    z-index: 130;
+    z-index: var(--layer-social);
     background: rgba(0, 0, 0, 0.82);
     backdrop-filter: blur(6px);
     display: flex;
@@ -447,7 +447,7 @@
   .invite-overlay {
     position: fixed;
     inset: 0;
-    z-index: 145;
+    z-index: var(--layer-invite);
     background: rgba(0, 0, 0, 0.72);
     backdrop-filter: blur(4px);
     display: flex;
@@ -499,7 +499,7 @@
     flex: 1;
     min-height: 44px;
   }
-  @media (max-width: 768px) {
+  @media (max-width: 768px), (max-width: 1024px) and (max-height: 500px) and (orientation: landscape) {
     .party-overlay {
       align-items: flex-end;
       padding: 0;

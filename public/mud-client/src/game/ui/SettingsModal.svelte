@@ -18,7 +18,7 @@
   .modal-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 1100;
+    z-index: var(--layer-settings);
     display: grid;
     place-items: center;
     padding: 1rem;

@@ -89,7 +89,7 @@
       'bottom:0',
       narrow ? `width:${vp.w}px` : 'width:100vw',
       narrow ? `height:${vp.h}px` : 'height:100vh',
-      'z-index:200000',
+      'z-index:var(--layer-map)',
       'display:flex',
       narrow ? 'align-items:stretch' : 'align-items:center',
       narrow ? 'justify-content:stretch' : 'justify-content:center',
@@ -693,7 +693,7 @@
   .map-overlay {
     position: fixed;
     inset: 0;
-    z-index: 200000;
+    z-index: var(--layer-map);
     background: rgba(0, 0, 0, 0.82);
     display: flex;
     align-items: center;
@@ -1135,7 +1135,7 @@
     class="map-overlay"
     class:narrow={$isMobile}
     class:fading={overlayFading}
-    style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:200000;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;background:rgba(0,0,0,0.82);opacity:1;visibility:visible;"
+    style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:var(--layer-map);display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;background:rgba(0,0,0,0.82);opacity:1;visibility:visible;"
     use:portalToBody
     role="dialog"
     aria-modal="true"

@@ -1306,6 +1306,16 @@ The play client observes `combatPhase` in `Game.svelte` and calls `LayoutStore.s
 
 `SettingsStore` persists `interface.reducedMotion` (`system`/`on`/`off`) and `interface.combatAutoFocus` (default true) alongside the existing inventory mode. `Game.svelte` passes the auto-focus or manual-stage choice into `LayoutStore.syncCombatFocus` and gates Stage rendering; switching the preference during combat restores or opens the transient cover immediately. The shared `prefersReducedMotion()` helper resolves the stored override before the OS media query, and BattleStage CSS uses that resolved state. Map ambience uses the same helper.
 
+### Responsive presentation ownership
+
+`public/mud-client/public/global.css` defines the page z-index ladder with `--layer-*` properties. Shell chrome is below sheets. BattleStage is below NPC dialogs, shop, and Need/Greed. Component decoration keeps its local stacking context.
+
+`mobileStore.js` owns the viewport query for the mobile Room/Console shell, including short landscape. `App.svelte` uses the matching media query to hide its desktop home link. The mobile room scrolls independently from the console tab. `EntityPanel` accepts `--entity-card-width`; the short landscape room sets it to keep NPC cards inside the hero image.
+
+The existing `MUDXPlusStore.questNotifications` and `overlayStore` arrays own queued events. Producers enqueue and explicitly remove messages. They do not expire unseen messages or truncate the pending queue. `notificationPresentation.js` provides the combat/outcome/roll presentation gate and `createVisibleLifetime`, a Svelte action. Each renderer owns one action instance; each rendered card owns one timeout. Removing a card pauses its remaining reading time in a WeakMap keyed by the notification object. Rendering it again resumes that clock. Expiry and explicit dismissal remove the queued event. Mobile room tab visibility also gates room messages. The client keeps combat validation feedback in the BattleStage action banner.
+
+The outcome card contains a scrollable reward body and a separate Continue button. Short landscape reserves separate horizontal lanes for the outcome and Need/Greed.
+
 ### MUD Client — Onboarding Flow
 
 The MUD client (`/play`) uses a phase-based routing system in `App.svelte` to guide new players through onboarding before showing the game UI. After character select, the server pushes `guideHint`. `GuideHint.svelte` renders that one line above the hotbar and sends the hint command, or `guide dismiss`. `pkg/guide` chooses the step from quest progress and the room graph, with no world-pack ids in the engine. `guide.enabled` in the ruleset defaults to on. `false` builds no hint and sends no `guideHint`. A game-mode file may set the same key. Hint text names the action in ordinary words (`Attack the <name>.`) so telnet, SSH, and Door can show the same line.
