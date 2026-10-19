@@ -42,8 +42,8 @@
     position: absolute;
     left: 15px;
     top: 15px;
-    z-index: 1000;
-    padding: 1em;
+    z-index: var(--layer-chrome);
+    padding: 0.25em;
   }
 
   .user-menu-wrapper {
@@ -60,7 +60,7 @@
     padding: 0;
   }
 
-  @media screen and (max-width: 768px) {
+  @media (max-width: 768px), (max-width: 1024px) and (max-height: 500px) and (orientation: landscape) {
     .back-link {
       display: none;
     }

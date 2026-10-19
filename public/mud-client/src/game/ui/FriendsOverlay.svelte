@@ -90,7 +90,7 @@
   .friends-overlay {
     position: fixed;
     inset: 0;
-    z-index: 130;
+    z-index: var(--layer-social);
     background: rgba(0, 0, 0, 0.82);
     backdrop-filter: blur(6px);
     display: flex;

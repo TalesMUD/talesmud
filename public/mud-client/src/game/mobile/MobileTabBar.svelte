@@ -11,7 +11,7 @@
     -webkit-backdrop-filter: blur(12px);
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
-    z-index: 1001;
+    z-index: var(--layer-chrome);
   }
 
   .tab {

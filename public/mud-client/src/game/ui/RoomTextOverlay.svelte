@@ -1,71 +1,18 @@
 <script>
-  import { onDestroy } from 'svelte';
+  import { createVisibleLifetime, notificationsBlocked } from './notificationPresentation.js';
+  export let store = null;
+  export let visible = true;
   import { overlayStore } from './overlayStore.js';
   import { formatOverlayText } from './formatOverlayText.js';
 
-  // Always show action/system reaction toasts on the room hero art (desktop + mobile).
-  // This is the room reaction overlay — not the command log.
-
-  let timers = new Map();
-
-  $: scheduleTimers($overlayStore);
-
-  function scheduleTimers(messages) {
-    for (const msg of messages) {
-      // Stack accel (or an early startFade) may mark fading before our display timer fires.
-      if (msg.fading) {
-        const existing = timers.get(msg.id);
-        if (existing && existing.removeTimer) continue;
-        if (existing && existing.displayTimer) clearTimeout(existing.displayTimer);
-        const removeTimer = setTimeout(() => {
-          overlayStore.removeMessage(msg.id);
-          timers.delete(msg.id);
-        }, msg.fadeOutDuration || 350);
-        timers.set(msg.id, { displayTimer: null, removeTimer });
-        continue;
-      }
-
-      if (timers.has(msg.id)) continue;
-
-      const displayTimer = setTimeout(() => {
-        overlayStore.startFade(msg.id);
-
-        const removeTimer = setTimeout(() => {
-          overlayStore.removeMessage(msg.id);
-          timers.delete(msg.id);
-        }, msg.fadeOutDuration);
-
-        const entry = timers.get(msg.id);
-        if (entry) entry.removeTimer = removeTimer;
-      }, msg.displayDuration);
-
-      timers.set(msg.id, { displayTimer, removeTimer: null });
-    }
-
-    // Drop timers for messages that were replaced/removed (e.g. new examine card).
-    for (const id of [...timers.keys()]) {
-      if (!messages.some(m => m.id === id)) {
-        const t = timers.get(id);
-        if (t) {
-          if (t.displayTimer) clearTimeout(t.displayTimer);
-          if (t.removeTimer) clearTimeout(t.removeTimer);
-        }
-        timers.delete(id);
-      }
-    }
-  }
+  const lifetime = createVisibleLifetime(msg => overlayStore.removeMessage(msg.id));
+  $: visibleMessages = !visible || notificationsBlocked(store ? $store : null) ? [] : $overlayStore.slice(0, 4);
 
   function formatText(text) {
     return formatOverlayText(text);
   }
 
   function dismiss(id) {
-    const t = timers.get(id);
-    if (t) {
-      clearTimeout(t.displayTimer);
-      if (t.removeTimer) clearTimeout(t.removeTimer);
-      timers.delete(id);
-    }
     overlayStore.removeMessage(id);
   }
 
@@ -83,13 +30,6 @@
     return 'q-normal';
   }
 
-  onDestroy(() => {
-    for (const [, t] of timers) {
-      clearTimeout(t.displayTimer);
-      if (t.removeTimer) clearTimeout(t.removeTimer);
-    }
-    timers.clear();
-  });
 </script>
 
 <style>
@@ -127,7 +67,6 @@
     border: 1.5px solid rgba(249, 115, 22, 0.65);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
     opacity: 1;
-    transition: opacity var(--fade-duration) ease-out;
     animation: overlayPopIn 0.22s ease-out;
     text-align: center;
     max-width: min(90%, 36rem);
@@ -359,9 +298,6 @@
     font-weight: 700;
   }
 
-  .overlay-message.fading {
-    opacity: 0;
-  }
 
   @keyframes overlayPopIn {
     from {
@@ -426,18 +362,20 @@
       padding: 0.45em 0.7em 0.55em;
     }
   }
+  @media (prefers-reduced-motion: reduce) {
+    .overlay-message { animation: none; transition: none; }
+  }
 </style>
 
-{#if $overlayStore.length > 0}
+{#if visibleMessages.length > 0}
   <div class="room-text-overlay" aria-live="polite">
-    {#each $overlayStore as msg (msg.id)}
+    {#each visibleMessages as msg (msg.id)}
       <div
         class="overlay-message"
         class:ambiance={msg.kind === 'ambiance'}
         class:examine={msg.kind === 'examine' && msg.examine}
         class:examine-unique={msg.kind === 'examine' && isUniqueExamine(msg.examine)}
-        class:fading={msg.fading}
-        style="--fade-duration: {msg.fadeOutDuration}ms"
+        use:lifetime={{ notification: msg, duration: msg.displayDuration }}
         role={msg.kind === 'examine' ? 'dialog' : undefined}
         aria-label={msg.examine ? msg.examine.title : undefined}
       >

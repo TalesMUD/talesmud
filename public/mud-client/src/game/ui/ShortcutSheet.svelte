@@ -33,7 +33,7 @@
   .sheet-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 9500;
+    z-index: var(--layer-shortcuts);
     display: grid;
     place-items: center;
     background: rgba(0, 0, 0, 0.45);

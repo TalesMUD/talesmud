@@ -3,7 +3,7 @@
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.6);
-    z-index: 2000;
+    z-index: var(--layer-sheet-backdrop);
     animation: backdropFadeIn 0.2s ease-out;
   }
 
@@ -23,7 +23,7 @@
     -webkit-backdrop-filter: blur(16px);
     border-top: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 16px 16px 0 0;
-    z-index: 2001;
+    z-index: var(--layer-sheet);
     display: flex;
     flex-direction: column;
     animation: sheetSlideUp 0.3s ease-out;
@@ -112,6 +112,9 @@
   /* Hide the widget's own header since the sheet already has one */
   .sheet-content :global(.widget-header) {
     display: none !important;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bottom-sheet, .bottom-sheet-backdrop { animation: none; transition: none; }
   }
 </style>
 

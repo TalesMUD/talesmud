@@ -920,3 +920,10 @@ Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated bl
 - No open Marcus-signed P0 (DSA armor-weight still unsigned). Workers idle after examine (cursor-examine) / overnight stack.
 - CozyTown: prepended catch-up entry for examine cards (wanderers entry already live 2026-10-12).
 - Crown today: **SYSTEM — Party Need/Greed loot v1** (party item rolls; gold/XP share unchanged). Task `~/dev/briefs/PARTY-NEED-GREED-v1-TASK.md` / `.director/PARTY-NEED-GREED-v1-TASK.md` on tmux `cursor-needgreed` in `~/dev/talesmud-needgreed` (cursor-agent — Grok weekly ~9%).
+
+## UX top fixes — 2026-10-19 (deployment held)
+
+- UX-04: shared page-layer ladder keeps mobile chrome below inventory and party controls. UX-03 remainder: quest/loot queues pause while combat, outcomes, or rolls own the screen, and visible cards own their reading clocks. UX-08: short landscape uses the compact shell with reachable NPC cards and hotbar; the desktop home link is hidden.
+- Regression fixes keep outcome Continue outside scrollable rewards, cancel stale outcome timers, clear stale guide placement on scroll, and reset combat-validation banner timers. Reduced motion is respected. Client cache tags, including the map worker, are `uxtop1`.
+- Verification: 56 client tests; 47 Go packages with tests (19 without); production build exit 0; 106 browser checks at five widths, zero failures, all 15 loaded asset hashes match. Generic rerunnable protocol proof is in `public/mud-client/scripts/`. Baseline used live throwaway guests; later live checks stopped at the guest quota, and the final layout matrix used a local protocol fixture.
+- Deployment held: direct instruction prohibits SSH and administrative-access clarification is unanswered. No VPS mutation, online count, backup, restart, or import. Read-only live HTTP remains 200 with six `curve1` tags. Report and labeled before/local-after contacts: `/home/clawd/dev/briefs/UX-TOP-1019-REPORT.md` and `/home/clawd/dev/briefs/UX-TOP-1019/`. No Door, content, or public master changes.

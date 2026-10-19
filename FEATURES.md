@@ -629,6 +629,16 @@ Client: HUD group button (next to the character switcher) opens a Friends
 panel — list, Tell (whisper), Remove, add-by-name. Room players overlay can
 add the other player. Guests hide the HUD entry.
 
+### Responsive notification and sheet behavior
+
+Page layers are named in `public/mud-client/public/global.css`. Shell chrome stays below inventory, social sheets, and invite dialogs. Combat stays below NPC dialogs and Need/Greed. Inventory includes safe-area padding.
+
+`mobileStore.MOBILE_QUERY` selects the Room/Console shell at widths through 768px and at landscape widths through 1024px when height is at most 500px. The home link is hidden for the same query. The room scrolls to its image, NPC cards, hotbar, and actions; Console remains a separate tab.
+
+`QuestNotifications` and `RoomTextOverlay` defer presentation during active combat, an ending outcome, or a pending loot roll. Queues retain unseen entries. The first prioritized quest moment and up to four corner or room messages render at once. Reading clocks pause on removal from the rendered view and resume with the remaining time. A new examine replaces the previous examine and goes first. Continue stays outside the outcome rewards scroll area. Starting, ending, clearing, or dismissing combat cancels the prior outcome timeout. Compact hotbars keep their content height inside the scrollable room. Short landscape uses `--entity-card-width` to fit NPC cards inside the hero image. Short landscape puts the outcome and roll in separate horizontal lanes.
+
+The next-step guide hides over inventory, party, friends, recipes, and map sheets, and hides when no room hotbar is visible. Scroll events clear its old placement before the next frame so it cannot cover newly scrolled hotbar slots. Notifications and mobile sheets honor the system reduced-motion preference.
+
 ### Client Session UX
 The MUD client exposes connection state in `MUDXPlusStore`:
 `disconnected`, `connecting`, `connected`, and `reconnecting`.

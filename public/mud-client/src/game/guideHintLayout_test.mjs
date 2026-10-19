@@ -46,13 +46,16 @@ test("hint hides during combat, dialog, shop, and need or greed", () => {
   assert.equal(hintBlocked({ dialogActive: true }), true);
   assert.equal(hintBlocked({ shop: { name: "stall" } }), true);
   assert.equal(hintBlocked({ needGreed: { pending: true } }), true);
+  for (const field of ['inventoryOverlayOpen', 'partyOverlayOpen', 'friendsOverlayOpen', 'mapOverviewOpen', 'recipes']) {
+    assert.equal(hintBlocked({[field]: true}), true, field);
+  }
   assert.equal(hintBlocked({ combatPhase: "idle" }), false);
 });
 
 test("chip is portaled and stays under battle, dialogs, and need or greed", () => {
   assert.equal(chip.includes("use:portal"), true);
   assert.match(chip, /class="guide-hint"/);
-  assert.match(chip, /z-index:\s*8900/);
+  assert.match(chip, /z-index:\s*var\(--layer-guide\)/);
   assert.equal(chip.includes("R0001"), false);
   assert.equal(chip.includes("ENM0001"), false);
   assert.equal(chip.includes("QST0002"), false);

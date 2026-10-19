@@ -14,6 +14,7 @@
   import { pickupPanelOpen } from '../uiChrome.js';
 
   export let store;
+  export let active = true;
   export let sendMessage;
 
   let toggleImage = true;
@@ -115,9 +116,14 @@
 
   @media (orientation: landscape) {
     .room-image-section {
-      height: clamp(140px, 36vh, 280px);
+      height: clamp(120px, 36vh, 280px);
+      min-height: 120px;
       max-height: 280px;
     }
+  }
+
+  @media (orientation: landscape) and (max-height: 500px) {
+    .entity-section { --entity-card-width: clamp(64px, 18vh, 80px); }
   }
 
   .room-image-inner {
@@ -312,7 +318,7 @@
 
     <!-- Room name is already shown in MobileHeader -->
 
-    <RoomTextOverlay />
+    <RoomTextOverlay {store} visible={active} />
     <PlayersOverlay {store} {sendMessage} />
 
     {#if $store.dialogActive}

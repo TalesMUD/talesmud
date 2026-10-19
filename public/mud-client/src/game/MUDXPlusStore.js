@@ -488,6 +488,7 @@ function sameAtlasSnapshot(a, b) {
 }
 
 function createStore() {
+  let outcomeTimer;
   const { subscribe, set, update } = writable({
     // Room data
     exits: [],
@@ -989,6 +990,7 @@ function createStore() {
     },
 
     beginCombat: (enemies, players, message, initialTargetId) => {
+      clearTimeout(outcomeTimer);
       update((state) => {
         const nextEnemies = normalizeCombatantList(enemies);
         const nextPlayers = normalizeCombatantList(players);
@@ -1160,6 +1162,7 @@ function createStore() {
     },
 
     endCombat: (outcome, message, rewards) => {
+      clearTimeout(outcomeTimer);
       update((state) => {
         state.inCombat = false;
         state.combatPhase = "ending";
@@ -1178,7 +1181,7 @@ function createStore() {
       });
 
       // Longer outcome panel — Continue / dismissCombat also clears early
-      setTimeout(() => {
+      outcomeTimer = setTimeout(() => {
         update((state) => {
           if (state.combatPhase !== "ending") return state;
           state.combatPhase = "idle";
@@ -1202,6 +1205,7 @@ function createStore() {
     },
 
     dismissCombat: () => {
+      clearTimeout(outcomeTimer);
       update((state) => {
         state.inCombat = false;
         state.combatPhase = "idle";
@@ -1225,6 +1229,7 @@ function createStore() {
     },
 
     clearCombat: () => {
+      clearTimeout(outcomeTimer);
       update((state) => {
         state.inCombat = false;
         state.combatPhase = "idle";
@@ -1276,18 +1281,9 @@ function createStore() {
     },
     addQuestNotification: (notification) => {
       update((state) => {
-        state.questNotifications = [...state.questNotifications, notification].slice(-4);
+        state.questNotifications = [...state.questNotifications, notification];
         return state;
       });
-
-      // Accepted banner stays longer; corner toasts dismiss sooner
-      const ttl = (notification?.type === 'accepted' || notification?.type === 'completed' || notification?.type === 'levelup') ? 16000 : 5000;
-      setTimeout(() => {
-        update((state) => {
-          state.questNotifications = state.questNotifications.filter(n => n.id !== notification.id && n !== notification);
-          return state;
-        });
-      }, ttl);
     },
 
     // Minimap methods

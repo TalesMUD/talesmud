@@ -370,7 +370,7 @@
   .shop-overlay {
     position: fixed;
     inset: 0;
-    z-index: 10120;
+    z-index: var(--layer-shop);
     background: rgba(0, 0, 0, 0.72);
     display: flex;
     flex-direction: column;

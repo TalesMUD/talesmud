@@ -72,7 +72,9 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Combat self and allies share one row on desktop and a stacked section on phones. Joins show one banner; combat prose stays in the log. Defeated enemy sprites remain visible in grey with a Defeated label.
   - In multi-enemy combat, clicking a BattleStage enemy or pressing Tab changes the gold focus highlight and server aim without spending a turn. Basic attacks and hostile skills use that living target; switching to an orange, red, or skull foe repeats the level-gap warning once per change. A dead target falls back to a living foe.
   - Say chrome opens a message popup, then sends `say <text>`
-  - Inventory chrome opens overlay by default (preference: overlay | on-screen widget)
+  - Inventory chrome opens overlay by default (preference: overlay | on-screen widget). Inventory and party sheets paint above the phone header and Room/Console tabs.
+  - Phones in short landscape use the scrollable Room/Console shell through 1024px width and 500px height. The desktop home link stays outside that room layout.
+  - Quest and room notifications wait through combat, victory/defeat, and pending loot rolls. Their reading time starts on display. A previous fight’s timeout cannot dismiss a later result. Outcome rewards scroll while Continue stays visible; short landscape places outcomes beside Need/Greed.
   - Equipment paper-doll: square slots around portrait (head/neck/chest/hands | legs/boots/ring1/ring2; main_hand + off_hand under); compact ATK/DEF strip
   - Clicking equipped gear opens a detail card; Unequip is an explicit action. Inventory item cards show stats, value, available weight, usability requirements, and differences from worn gear. Clear class-relevant upgrades get a green badge. Equip, Use, Sell, and Drop remain explicit buttons. A unique item card has a gold frame and a UNIQUE mark.
   - A loot entry can be `rarity: unique` with a `chance` and `boss_only`. The roll is skipped when every victory recipient already holds that template (bag, equipped, nested container; no separate item bank). That drop announces `UNIQUE:` as a gold room chip. A template `unique` flag caps ownership and does not send the chip.
@@ -173,11 +175,10 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Guest users skip onboarding (character auto-created server-side)
 
 - **Room Text Overlay**
-  - Game text (combat, actions, player messages) displayed as translucent overlay on room image
-  - Auto-dismiss with duration scaled by text length (2-4 seconds)
-  - Smooth fade-in/fade-out animations
-  - Stacks up to 5 messages during rapid sequences (e.g. combat)
-  - Always enabled on mobile; optional toggle for desktop in Settings > Interface
+  - Room actions, chat, and item examine cards appear over the room image. Combat feedback stays in BattleStage and the console.
+  - Up to four room messages render at once. Later messages queue; a deliberate new examine replaces the previous examine and appears first.
+  - Reading time scales with text length. Hidden room tabs, combat outcomes, and loot rolls pause presentation.
+  - Entry animations respect the system reduced-motion preference. Dismissal removes cards immediately.
 
 - **Multiplayer**
   - Real-time player interactions via WebSocket

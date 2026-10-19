@@ -189,6 +189,8 @@
   }
 
   .hotbar-widget.compact {
+    height: auto;
+    flex-shrink: 0;
     width: 100%;
     min-width: 0;
     box-sizing: border-box;

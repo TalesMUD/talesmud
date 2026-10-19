@@ -63,7 +63,7 @@
   .ng-overlay {
     position: fixed;
     inset: 0;
-    z-index: 10240;
+    z-index: var(--layer-roll);
     background: transparent;
     pointer-events: none;
     display: flex;
@@ -153,6 +153,10 @@
     .ng-overlay {
       align-items: center;
     }
+  }
+  @media (max-width: 1024px) and (max-height: 500px) and (orientation: landscape) {
+    .ng-overlay { justify-content: flex-end; }
+    .ng-panel { width: calc(50vw - 1.5rem); }
   }
 </style>
 

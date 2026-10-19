@@ -50,7 +50,7 @@
   .dialog-overlay {
     position: fixed;
     inset: 0;
-    z-index: 10100;
+    z-index: var(--layer-dialog);
     background: rgba(0, 0, 0, 0.72);
     display: flex;
     align-items: flex-end;

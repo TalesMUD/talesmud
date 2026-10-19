@@ -307,7 +307,6 @@ function createClient(renderer, characterCreator, muxStore) {
   // Combat message handlers — BattleStage is primary UX (C2); skip room toasts.
   messageHandlers["combatStart"] = (msg) => {
     renderer(msg.message);
-    if (overlayStore.clearAll) overlayStore.clearAll();
     if (mux) {
       mux.updateCharacterStats({ inCombat: true });
       if (mux.beginCombat) {
