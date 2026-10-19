@@ -56,7 +56,7 @@ assert.equal(
   playerSilhouette('mage')
 );
 
-const ivo = { id: 'NPC0086', name: 'Ivo Quill' };
+const ivo = { id: 'NPC0086', name: 'Sample Courier' };
 assert.equal(portraitBustSrc(ivo), '/api/portraits/NPC0086-bust.png');
 const bustImg = {
   dataset: {},

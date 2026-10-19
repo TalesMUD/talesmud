@@ -607,6 +607,6 @@
 
 
   @media (prefers-reduced-motion: reduce) {
-    .veilspan-card, .notification { animation: none; transition: none; }
+    .quest-card, .notification { animation: none; transition: none; }
   }
 </style>

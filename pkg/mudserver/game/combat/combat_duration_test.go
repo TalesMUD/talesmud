@@ -27,16 +27,16 @@ func TestCombatDurationTargets(t *testing.T) {
 		maxRounds float64
 		minWin    float64 // minimum win rate for a fair at-level fight
 	}{
-		{"trash_rat", 1, "Catacomb Rat", "trash", 3, 6, 0.90},
-		{"trash_sewer", 2, "Sewer Rat", "trash", 3, 6, 0.90},
-		{"trash_mole", 2, "Tunnel Mole", "trash", 3, 7, 0.85}, // mole DEF can nudge past 6
+		{"trash_rat", 1, "Sample Rat", "trash", 3, 6, 0.90},
+		{"trash_sewer", 2, "Sample Pest", "trash", 3, 6, 0.90},
+		{"trash_mole", 2, "Sample Burrower", "trash", 3, 7, 0.85}, // mole DEF can nudge past 6
 		// early_normal puts level 1–6 normal bodies in the 3–7 window.
-		// Thornback Bear stays on the hard tier and the old elite band.
-		{"early_wolf", 2, "Meadow Wolf", "early", 3, 7, 0.90},
-		{"early_bandit", 3, "Bandit", "early", 3, 7, 0.90},
-		{"elite_bear", 5, "Thornback Bear", "elite", 8, 16, 0.55},
-		{"boss_brute", 4, "Burrow Brute", "boss", 15, 30, 0.45},
-		{"boss_hollow", 6, "Hollow Knight", "boss", 15, 30, 0.35},
+		// Sample Bear stays on the hard tier and the old elite band.
+		{"early_wolf", 2, "Sample Wolf", "early", 3, 7, 0.90},
+		{"early_bandit", 3, "Sample Bandit", "early", 3, 7, 0.90},
+		{"elite_bear", 5, "Sample Bear", "elite", 8, 16, 0.55},
+		{"boss_brute", 4, "Sample Brute", "boss", 15, 30, 0.45},
+		{"boss_warden", 6, "Sample Warden", "boss", 15, 30, 0.35},
 	}
 
 	for _, tc := range cases {

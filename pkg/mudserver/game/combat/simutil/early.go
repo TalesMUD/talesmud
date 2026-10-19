@@ -32,19 +32,19 @@ type EarlyEnemy struct {
 
 // EarlyPackEnemies is every L1–6 non-boss with a live spawner in the
 // talesmud-rpg-1 pack (content 68d287d). Stats are the YAML numbers.
-// Thornback Bear is difficulty hard (elite). The rest are trash tiers.
+// Sample Bear is difficulty hard (elite). The rest are trash tiers.
 func EarlyPackEnemies() []EarlyEnemy {
 	return []EarlyEnemy{
-		{"ENM0001", "Catacomb Rat", 1, 8, 1, 0, "trivial"},
-		{"ENM0002", "Meadow Wolf", 2, 18, 4, 1, "normal"},
-		{"ENM0003", "Wild Boar", 2, 25, 5, 2, "normal"},
-		{"ENM0007", "Alley Thug", 2, 18, 4, 1, "normal"},
-		{"ENM0008", "Sewer Rat", 2, 12, 3, 0, "normal"},
-		{"ENM0010", "Tunnel Mole", 2, 15, 3, 2, "normal"},
-		{"ENM0004", "Bandit", 3, 22, 5, 2, "normal"},
-		{"ENM0006", "Night Whisper", 4, 30, 7, 0, "normal"},
-		{"ENM0012", "Awakened Servitor", 4, 40, 7, 3, "normal"},
-		{"ENM0005", "Thornback Bear", 5, 80, 11, 4, "hard"},
+		{"ENM0001", "Sample Rat", 1, 8, 1, 0, "trivial"},
+		{"ENM0002", "Sample Wolf", 2, 18, 4, 1, "normal"},
+		{"ENM0003", "Sample Boar", 2, 25, 5, 2, "normal"},
+		{"ENM0007", "Sample Thug", 2, 18, 4, 1, "normal"},
+		{"ENM0008", "Sample Pest", 2, 12, 3, 0, "normal"},
+		{"ENM0010", "Sample Burrower", 2, 15, 3, 2, "normal"},
+		{"ENM0004", "Sample Bandit", 3, 22, 5, 2, "normal"},
+		{"ENM0006", "Sample Shade", 4, 30, 7, 0, "normal"},
+		{"ENM0012", "Sample Servitor", 4, 40, 7, 3, "normal"},
+		{"ENM0005", "Sample Bear", 5, 80, 11, 4, "hard"},
 	}
 }
 
@@ -367,7 +367,7 @@ func fightEarly(ch *characters.Character, enemies []*npc.NPC) fightOutcome {
 }
 
 // actEarly uses the level-1 kit the way a new player does, plus the damage
-// buttons that unlock by L5. Slip ends the fight, so Alley swings instead.
+// buttons that unlock by L5. Slip ends the fight, so the rogue swings instead.
 func actEarly(engine *combatengine.Engine, inst *combatentity.CombatInstance, player *combatentity.CombatantRef, targetID string) {
 	try := func(skillID, target string) (bool, bool) {
 		return useEarlyKit(engine, inst, player, skillID, target)

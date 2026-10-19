@@ -169,7 +169,7 @@ async function run(spec) {
     check(await page.locator('.overlay-message').filter({hasText:'Queued room reward'}).count()>0,id,'room-loot-notice-resumes',{});
     const seen=[];
     for(let i=0;i<6;i++) {
-      const title=page.locator('.veilspan-card .card-title');
+      const title=page.locator('.quest-card .card-title');
       if(!await title.count()) break;
       seen.push(await title.textContent());
       await page.locator('.accept-dismiss').click();

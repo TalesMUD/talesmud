@@ -66,10 +66,10 @@ func TestEarlyCurveProbe(t *testing.T) {
 	}
 
 	presets := characters.SystemCharacterTemplatePresets()
-	thug := simutil.EarlyEnemy{ID: "ENM0007", Name: "Alley Thug", Level: 2, HP: 18, Attack: 4, Defense: 1, Difficulty: "normal"}
-	spider := simutil.EarlyEnemy{ID: "ENM0014", Name: "Marsh Spider", Level: 9, HP: 30, Attack: 8, Defense: 2, Difficulty: "normal"}
-	toad := simutil.EarlyEnemy{ID: "ENM0015", Name: "Bloated Toad", Level: 10, HP: 40, Attack: 6, Defense: 4, Difficulty: "normal"}
-	brute := simutil.EarlyEnemy{ID: "ENM0022", Name: "Ashenveil Brute", Level: 16, HP: 78, Attack: 14, Defense: 6, Difficulty: "hard"}
+	thug := simutil.EarlyEnemy{ID: "ENM0007", Name: "Sample Thug", Level: 2, HP: 18, Attack: 4, Defense: 1, Difficulty: "normal"}
+	spider := simutil.EarlyEnemy{ID: "ENM0014", Name: "Sample Spider", Level: 9, HP: 30, Attack: 8, Defense: 2, Difficulty: "normal"}
+	toad := simutil.EarlyEnemy{ID: "ENM0015", Name: "Sample Toad", Level: 10, HP: 40, Attack: 6, Defense: 4, Difficulty: "normal"}
+	brute := simutil.EarlyEnemy{ID: "ENM0022", Name: "Sample Raider", Level: 16, HP: 78, Attack: 14, Defense: 6, Difficulty: "hard"}
 	for _, preset := range presets {
 		if runBounty("0900") {
 			one := simutil.RunBountyFight(preset, 1, thug, 3, true, "", iters)
@@ -101,7 +101,7 @@ func TestEarlyCurveProbe(t *testing.T) {
 // RunEarlyCell, and the windows are wider than one unlucky fight so a
 // one-count wobble does not fail the suite. Targets, measured at 80 iterations
 // of seed 20261018: same-level Bandit is a short win for every class; a +2
-// Bandit is about 65–82% (Alley sits on a crit threshold at 82%, and the next
+// Bandit is about 65–82% (the rogue sits on a crit threshold at 82%, and the next
 // integer of damage drops that cell to 50%).
 func TestEarlyCurveBands(t *testing.T) {
 	if _, err := balance.ReloadConfig(); err != nil {
@@ -121,8 +121,8 @@ func TestEarlyCurveBands(t *testing.T) {
 	if bandit.ID == "" {
 		t.Fatal("missing bandit")
 	}
-	thug := simutil.EarlyEnemy{ID: "ENM0007", Name: "Alley Thug", Level: 2, HP: 18, Attack: 4, Defense: 1, Difficulty: "normal"}
-	spider := simutil.EarlyEnemy{ID: "ENM0014", Name: "Marsh Spider", Level: 9, HP: 30, Attack: 8, Defense: 2, Difficulty: "normal"}
+	thug := simutil.EarlyEnemy{ID: "ENM0007", Name: "Sample Thug", Level: 2, HP: 18, Attack: 4, Defense: 1, Difficulty: "normal"}
+	spider := simutil.EarlyEnemy{ID: "ENM0014", Name: "Sample Spider", Level: 9, HP: 30, Attack: 8, Defense: 2, Difficulty: "normal"}
 
 	var lo, hi float64 = 1, 0
 	for _, preset := range characters.SystemCharacterTemplatePresets() {

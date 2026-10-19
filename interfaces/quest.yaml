@@ -240,7 +240,7 @@ Objective:
       required: true
       # Human-readable objective text shown in the quest log.
       # Include the target and quantity. Write as a directive.
-      # Examples: "Kill 8 Sewer Rats", "Collect 5 Moonbloom Herbs",
+      # Examples: "Kill 8 Sample Pests", "Collect 5 Moonbloom Herbs",
       #           "Deliver the package to Captain Aldric"
 
     # ─── Target Fields ──────────────────────────────────────────────────────

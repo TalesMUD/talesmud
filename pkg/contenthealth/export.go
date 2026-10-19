@@ -213,7 +213,7 @@ func npcYAML(n *npc.NPC) map[string]any {
 		// Stored MaxHitPoints and attack/defense are the scaled numbers combat
 		// uses. The importer fields must stay the content base, or a re-import
 		// multiplies the tier again. combat records both so the drift file
-		// shows the gap (an Alley Thug authored at 18 is not stored as 18).
+		// shows the gap (an Sample Thug authored at 18 is not stored as 18).
 		if enemy.BaseStats != nil {
 			authoredHP = enemy.BaseStats.MaxHitPoints
 			authoredAtk = enemy.BaseStats.AttackPower

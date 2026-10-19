@@ -17,7 +17,7 @@ func TestEnemyExportKeepsAuthoredStatsAndShowsEffective(t *testing.T) {
 	}
 	n := &npc.NPC{
 		Entity:           &entities.Entity{ID: "ENM0007"},
-		Name:             "Alley Thug",
+		Name:             "Sample Thug",
 		Level:            2,
 		MaxHitPoints:     48,
 		CurrentHitPoints: 48,
