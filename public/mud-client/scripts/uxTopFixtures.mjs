@@ -136,6 +136,7 @@ async function run(spec) {
       check(await page.locator('.mobile-layout').count()===1,id,'landscape-mobile-shell',{});
       check(!await page.locator('.back-link').isVisible(),id,'landscape-home-link-hidden',{});
       await page.locator('.hotbar-widget').scrollIntoViewIfNeeded();
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       await hitProof(page,id,'landscape-hotbar','.hotbar-widget .slot',9);
       if(await page.locator('.mobile-layout').count()) {
       await page.locator('.mobile-tab-bar button',{hasText:'Console'}).click();

@@ -1,6 +1,6 @@
 # Verify responsive presentation
 
-The fixture runner uses Chromium. Prefer the local protocol fixture for repeated checks; it creates no live guests. Use the live backend for the baseline and real game walks. It injects client messages to exercise long rewards, six queued quest cards, defeat, populated inventory, party controls, and pending loot rolls. It saves screenshots, loaded asset hashes, bounds, and three hit tests per target at 375×812, 768×1024, 1440×900, 812×375, and 844×390. The phone uses touch and DPR 3. The other touch sizes use DPR 2.
+The fixture runner uses Chromium. Prefer the local protocol fixture for repeated checks; it creates no live guests. Use the live backend for the baseline and real game walks. It injects client messages to exercise long rewards, six queued quest cards, defeat, populated inventory, party controls, and pending loot rolls. After programmatic scrolling, the runner waits two animation frames for layout before hit testing. It saves screenshots, loaded asset hashes, bounds, and three hit tests per target at 375×812, 768×1024, 1440×900, 812×375, and 844×390. The phone uses touch and DPR 3. The other touch sizes use DPR 2.
 
 Install Playwright and `ws` in a separate tools directory. Set `UX_PLAYWRIGHT_PACKAGE` and `UX_PROXY_PACKAGE` to that directory's `package.json` if the tools are not installed in this client.
 
