@@ -107,6 +107,12 @@ type fileShape struct {
 	Regen  regenFile  `yaml:"regen"`
 	Guide  guideFile  `yaml:"guide"`
 	Quests questsFile `yaml:"quests"`
+	UI     uiFile     `yaml:"ui"`
+}
+
+// uiFile uses a pointer so an omitted default_theme stays on the engine default.
+type uiFile struct {
+	DefaultTheme *string `yaml:"default_theme"`
 }
 
 // questsFile uses a pointer so an omitted hour stays at the built-in default.
@@ -158,6 +164,7 @@ type state struct {
 	regen          RegenProfile
 	guideEnabled   bool
 	dailyResetHour int
+	defaultTheme   string
 }
 
 type aggroSight struct {
@@ -207,6 +214,7 @@ func builtin() state {
 		regen:          defaultRegen(),
 		guideEnabled:   true,
 		dailyResetHour: 4,
+		defaultTheme:   DefaultThemeDarkFantasy,
 	}
 }
 
@@ -420,7 +428,45 @@ func decode(raw []byte) (state, error) {
 		}
 		next.dailyResetHour = hour
 	}
+	theme, err := normalizeDefaultTheme(file.UI.DefaultTheme)
+	if err != nil {
+		return state{}, err
+	}
+	next.defaultTheme = theme
 	return next, nil
+}
+
+const (
+	DefaultThemeDarkFantasy = "dark-fantasy"
+	DefaultThemeCleanHUD    = "clean-hud"
+	DefaultThemeGilded      = "gilded"
+)
+
+func normalizeDefaultTheme(raw *string) (string, error) {
+	if raw == nil {
+		return DefaultThemeDarkFantasy, nil
+	}
+	theme := strings.TrimSpace(*raw)
+	if theme == "" {
+		return DefaultThemeDarkFantasy, nil
+	}
+	switch theme {
+	case DefaultThemeDarkFantasy, DefaultThemeCleanHUD, DefaultThemeGilded:
+		return theme, nil
+	default:
+		return "", fmt.Errorf("ui.default_theme %q", theme)
+	}
+}
+
+// DefaultTheme is ui.default_theme. Omitted or empty stays dark-fantasy.
+// A deployment selects gilded by setting the key. Players can still override it.
+func DefaultTheme() string {
+	mu.RLock()
+	defer mu.RUnlock()
+	if current.defaultTheme == "" {
+		return DefaultThemeDarkFantasy
+	}
+	return current.defaultTheme
 }
 
 func applyAggroSight(base aggroSight, spec *aggroSightFile) aggroSight {
