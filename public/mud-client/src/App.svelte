@@ -81,6 +81,7 @@
   import { createGuestSession } from "./api/guest.js";
   import { guestCreateBody } from "./onboarding/raceAllow.js";
   import { getServerInfo } from "./api/server-info.js";
+  import { settingsStore } from "./game/SettingsStore.js";
   import { getUser } from "./api/user.js";
   import { getMyCharacters } from "./api/characters.js";
 
@@ -123,6 +124,7 @@
         if (data.serverName) {
           serverName = data.serverName;
         }
+        settingsStore.setServerDefault(data.defaultTheme);
       },
       (err) => console.warn("Could not load server info:", err)
     );
