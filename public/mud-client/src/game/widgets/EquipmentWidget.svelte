@@ -1,6 +1,7 @@
 <script>
   import { itemArtSrc, onItemArtError } from '../itemArtSrc.js';
   import { portraitSrc, onPortraitError } from '../portraitSrc.js';
+  import { itemQualityKey, qualityColor } from '../qualityColor.js';
   import ItemDetailCard from './ItemDetailCard.svelte';
 
   export let store = null;
@@ -48,16 +49,6 @@
     { key: 'main_hand', label: 'Main Hand' },
     { key: 'off_hand', label: 'Off Hand' },
   ];
-
-  function getQualityColor(quality) {
-    switch (quality) {
-      case 'magic': return '#22c55e';
-      case 'rare': return '#3b82f6';
-      case 'legendary': return '#a855f7';
-      case 'mythic': return '#f59e0b';
-      default: return 'rgba(148, 163, 184, 0.45)';
-    }
-  }
 
   function getSlotIcon(slotKey) {
     switch (slotKey) {
@@ -261,6 +252,11 @@
     pointer-events: none;
   }
 
+  /* Shown by the gilded theme. Hidden here so other themes keep the same slot contents. */
+  .slot-count {
+    display: none;
+  }
+
   .compact-stats {
     display: flex;
     flex-wrap: wrap;
@@ -320,7 +316,9 @@
           class="equip-slot"
           class:empty={!item}
           class:filled={!!item}
-          style="border-color: {item ? getQualityColor(item.quality) : 'rgba(148, 163, 184, 0.35)'}"
+          data-slot={slot.key}
+          data-quality={itemQualityKey(item)}
+          style={item ? `border-color: ${qualityColor(itemQualityKey(item))}` : undefined}
           title={getItemTooltip(item, slot.label)}
           role={item ? 'button' : undefined}
           tabindex={item ? 0 : undefined}
@@ -331,6 +329,7 @@
           <span class="slot-tag">{slot.label}</span>
           {#if item}
             <img src={itemArtSrc(item)} alt="" on:error={(e) => onItemArtError(e, item)} />
+            {#if item.quantity > 1}<span class="slot-count">{item.quantity}</span>{/if}
           {:else}
             <i class="material-icons slot-glyph">{getSlotIcon(slot.key)}</i>
           {/if}
@@ -363,7 +362,9 @@
           class="equip-slot"
           class:empty={!item}
           class:filled={!!item}
-          style="border-color: {item ? getQualityColor(item.quality) : 'rgba(148, 163, 184, 0.35)'}"
+          data-slot={slot.key}
+          data-quality={itemQualityKey(item)}
+          style={item ? `border-color: ${qualityColor(itemQualityKey(item))}` : undefined}
           title={getItemTooltip(item, slot.label)}
           role={item ? 'button' : undefined}
           tabindex={item ? 0 : undefined}
@@ -374,6 +375,7 @@
           <span class="slot-tag">{slot.label}</span>
           {#if item}
             <img src={itemArtSrc(item)} alt="" on:error={(e) => onItemArtError(e, item)} />
+            {#if item.quantity > 1}<span class="slot-count">{item.quantity}</span>{/if}
           {:else}
             <i class="material-icons slot-glyph">{getSlotIcon(slot.key)}</i>
           {/if}
@@ -388,7 +390,9 @@
           class="equip-slot"
           class:empty={!item}
           class:filled={!!item}
-          style="border-color: {item ? getQualityColor(item.quality) : 'rgba(148, 163, 184, 0.35)'}"
+          data-slot={slot.key}
+          data-quality={itemQualityKey(item)}
+          style={item ? `border-color: ${qualityColor(itemQualityKey(item))}` : undefined}
           title={getItemTooltip(item, slot.label)}
           role={item ? 'button' : undefined}
           tabindex={item ? 0 : undefined}
@@ -399,6 +403,7 @@
           <span class="slot-tag">{slot.label}</span>
           {#if item}
             <img src={itemArtSrc(item)} alt="" on:error={(e) => onItemArtError(e, item)} />
+            {#if item.quantity > 1}<span class="slot-count">{item.quantity}</span>{/if}
           {:else}
             <i class="material-icons slot-glyph">{getSlotIcon(slot.key)}</i>
           {/if}

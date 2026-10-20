@@ -1,0 +1,918 @@
+/* Gilded Frame treatment for inventory, character, equipment, party, items, and sign-in.
+   Decoration stays inside existing boxes. Other themes are unchanged. */
+
+@font-face {
+  font-family: "Marcellus";
+  src: url("fonts/Marcellus-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+body[data-theme="gilded"] {
+  --gf-void: #0b0908;
+  --gf-panel: #15110e;
+  --gf-warm: #241912;
+  --gf-raised: #2e2118;
+  --gf-row-a: #2d2017;
+  --gf-row-b: #1c140e;
+  --gf-leather-0: #3a2818;
+  --gf-leather-1: #4a331f;
+  --gf-bronze-dark: #4a3214;
+  --gf-bronze: #8a6428;
+  --gf-bronze-hi: #c79a45;
+  --gf-gold: #ffd24a;
+  --gf-gold-dim: #b8922f;
+  --gf-text: #efe6d6;
+  --gf-dim: #a89c8a;
+  --gf-buff: #3ee04a;
+  --gf-debuff: #ff4a3d;
+  --gf-danger: #b0140c;
+  --gf-danger-shade: #6f0201;
+  --gf-inset: #0e0b09;
+  --gf-shadow: 0 1px 0 #000, 0 0 2px rgba(0, 0, 0, 0.8);
+  --gf-frame: 0 0 0 1px #4a3214, inset 0 0 0 1px #000, inset 0 0 24px rgba(0, 0, 0, 0.65), 0 6px 18px rgba(0, 0, 0, 0.6);
+  --font-display: "Marcellus", "Palatino Linotype", Palatino, serif;
+  --panel-radius: 3px;
+  --bar-radius: 2px;
+  --panel-bg: #15110e;
+  --panel-border: #8a6428;
+  --panel-border-hover: #c79a45;
+  --panel-shadow: var(--gf-frame);
+  --panel-header-bg: linear-gradient(180deg, #2a1a0f 0%, #1a100a 100%);
+  --panel-header-color: #efe6d6;
+  --panel-header-border: #4a3214;
+  --panel-header-shadow: var(--gf-shadow);
+  --panel-inner-bg: #241912;
+  --panel-inner-border: #4a3214;
+  --panel-inner-hover: #2e2118;
+  --accent-primary: #ffd24a;
+  --accent-glow: rgba(199, 154, 69, 0.18);
+  --accent-subtle: rgba(199, 154, 69, 0.1);
+  --text-primary: #efe6d6;
+  --text-secondary: #a89c8a;
+  --text-dim: #a89c8a;
+  --tab-active-color: #ffd24a;
+  --tab-active-bg: rgba(199, 154, 69, 0.16);
+  --tab-active-border: #c79a45;
+  --tab-hover-bg: rgba(199, 154, 69, 0.08);
+  --scrollbar-thumb: #8a6428;
+  --scrollbar-thumb-hover: #c79a45;
+  --scrollbar-track: #1c140e;
+  --btn-bg: #3a2818;
+  --btn-border: #8a6428;
+  --btn-hover-bg: #4a331f;
+  --btn-hover-border: #c79a45;
+  --input-bg: #0e0b09;
+  --input-border: #4a3214;
+  --input-focus-border: #c79a45;
+  --bar-track-bg: #0e0b09;
+  --bar-track-border: 1px solid #4a3214;
+  --divider-color: #4a3214;
+  --color-hp: #2fb32f;
+  --color-mana: #2e6fd8;
+  --color-xp: #8e4fd0;
+  --color-gold: #ffd24a;
+  --color-danger: #b0140c;
+  --color-success: #3ee04a;
+  --color-quality-normal: #e8e4df;
+  --color-quality-magic: #1eff00;
+  --color-quality-rare: #0070dd;
+  --color-quality-legendary: #a335ee;
+  --color-quality-mythic: #ff8000;
+  --color-quality-unique: #ff8000;
+  --gf-q-normal: #e8e4df;
+  --gf-q-magic: #1eff00;
+  --gf-q-rare: #0070dd;
+  --gf-q-legendary: #a335ee;
+  --gf-q-mythic: #ff8000;
+  --gf-q-unique: #ff8000;
+  --inv-cat-equipment: #ffd24a;
+  --inv-cat-consumables: #ffd24a;
+  --inv-cat-quest: #c79a45;
+  --inv-cat-other: #a89c8a;
+  background-color: #0b0908;
+  color: #efe6d6;
+}
+
+body[data-theme="gilded"] .inventory-widget,
+body[data-theme="gilded"] .character-widget,
+body[data-theme="gilded"] .equipment-widget,
+body[data-theme="gilded"] .party-body,
+body[data-theme="gilded"] .recipes-list,
+body[data-theme="gilded"] .char-picker .list,
+body[data-theme="gilded"] .wizard-content,
+body[data-theme="gilded"] .inv-body {
+  scrollbar-width: thin;
+  scrollbar-color: #8a6428 #1c140e;
+}
+
+body[data-theme="gilded"] .inventory-widget::-webkit-scrollbar,
+body[data-theme="gilded"] .character-widget::-webkit-scrollbar,
+body[data-theme="gilded"] .equipment-widget::-webkit-scrollbar,
+body[data-theme="gilded"] .party-body::-webkit-scrollbar,
+body[data-theme="gilded"] .recipes-list::-webkit-scrollbar,
+body[data-theme="gilded"] .inv-body::-webkit-scrollbar,
+body[data-theme="gilded"] .char-picker .list::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+body[data-theme="gilded"] .inventory-widget::-webkit-scrollbar-track,
+body[data-theme="gilded"] .character-widget::-webkit-scrollbar-track,
+body[data-theme="gilded"] .equipment-widget::-webkit-scrollbar-track,
+body[data-theme="gilded"] .party-body::-webkit-scrollbar-track,
+body[data-theme="gilded"] .recipes-list::-webkit-scrollbar-track,
+body[data-theme="gilded"] .inv-body::-webkit-scrollbar-track {
+  background: #1c140e;
+}
+
+body[data-theme="gilded"] .inventory-widget::-webkit-scrollbar-thumb,
+body[data-theme="gilded"] .character-widget::-webkit-scrollbar-thumb,
+body[data-theme="gilded"] .equipment-widget::-webkit-scrollbar-thumb,
+body[data-theme="gilded"] .party-body::-webkit-scrollbar-thumb,
+body[data-theme="gilded"] .recipes-list::-webkit-scrollbar-thumb,
+body[data-theme="gilded"] .inv-body::-webkit-scrollbar-thumb {
+  background: #5a3e18;
+  border: 1px solid #8a6428;
+  border-radius: 2px;
+}
+
+/* Shared frame for the panels this pass owns. */
+body[data-theme="gilded"] .inventory-widget.game-panel,
+body[data-theme="gilded"] .character-widget.game-panel,
+body[data-theme="gilded"] .equipment-widget.game-panel,
+body[data-theme="gilded"] .inv-panel,
+body[data-theme="gilded"] .party-panel,
+body[data-theme="gilded"] .invite-panel,
+body[data-theme="gilded"] .recipes-panel,
+body[data-theme="gilded"] .ng-panel,
+body[data-theme="gilded"] .picker-card,
+body[data-theme="gilded"] .item-card,
+body[data-theme="gilded"] .sell-popup,
+body[data-theme="gilded"] .welcome-screen .card,
+body[data-theme="gilded"] .nickname-screen .card,
+body[data-theme="gilded"] .detail-overlay {
+  background-color: #15110e;
+  background-image: url("textures/panel-stone.png");
+  background-blend-mode: soft-light;
+  border: 2px solid #8a6428;
+  border-radius: 3px;
+  box-shadow: var(--gf-frame);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  color: #efe6d6;
+}
+
+body[data-theme="gilded"] .inventory-widget > .game-panel-header,
+body[data-theme="gilded"] .character-widget > .game-panel-header,
+body[data-theme="gilded"] .equipment-widget > .game-panel-header,
+body[data-theme="gilded"] .inv-header,
+body[data-theme="gilded"] .party-header,
+body[data-theme="gilded"] .recipes-header,
+body[data-theme="gilded"] .picker-head,
+body[data-theme="gilded"] .item-card-header {
+  background: linear-gradient(180deg, #2a1a0f, #1a100a);
+  color: #efe6d6;
+  border-bottom: 1px solid #4a3214;
+  font-family: "Marcellus", serif;
+  letter-spacing: 0;
+  text-transform: none;
+  text-shadow: var(--gf-shadow);
+}
+
+body[data-theme="gilded"] .character-widget .char-name,
+body[data-theme="gilded"] .equipment-widget .portrait-name,
+body[data-theme="gilded"] .picker-card h2,
+body[data-theme="gilded"] .welcome-screen .title,
+body[data-theme="gilded"] .nickname-screen .greeting,
+body[data-theme="gilded"] .wizard-screen .step-title,
+body[data-theme="gilded"] .item-card h2 {
+  font-family: "Marcellus", serif;
+  color: #efe6d6;
+  text-shadow: var(--gf-shadow);
+  letter-spacing: 0;
+}
+
+body[data-theme="gilded"] .character-widget .char-name,
+body[data-theme="gilded"] .equipment-widget .portrait-plate,
+body[data-theme="gilded"] .welcome-screen .title {
+  text-align: center;
+}
+
+body[data-theme="gilded"] .character-widget .char-info,
+body[data-theme="gilded"] .equipment-widget .portrait-meta {
+  justify-content: center;
+  color: #ffd24a;
+  font-family: "Marcellus", serif;
+  background: linear-gradient(180deg, #2b2622, #1d1a17);
+  text-shadow: var(--gf-shadow);
+}
+
+body[data-theme="gilded"] .character-widget .level-badge {
+  background: transparent;
+  border: 0;
+  color: #ffd24a;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* Section plaques stay on the existing divider row. */
+body[data-theme="gilded"] .character-widget .game-panel-divider,
+body[data-theme="gilded"] .inventory-widget .category-header {
+  background: #3a2818 url("textures/plaque-leather.png");
+  background-blend-mode: multiply;
+  border: 1px solid #8a6428;
+  border-radius: 6px;
+  box-shadow: inset 0 1px 0 rgba(199, 154, 69, 0.55);
+}
+
+body[data-theme="gilded"] .character-widget .game-panel-divider {
+  justify-content: center;
+  padding: 0.15em 0.4em;
+}
+
+body[data-theme="gilded"] .character-widget .game-panel-divider::after {
+  display: none;
+}
+
+body[data-theme="gilded"] .character-widget .game-panel-divider span:not(.unspent-badge),
+body[data-theme="gilded"] .inventory-widget .category-label,
+body[data-theme="gilded"] .recipes-overlay .detail-section-label,
+body[data-theme="gilded"] .item-card-compare-title {
+  font-family: "Marcellus", serif;
+  color: #efe6d6;
+  text-transform: none;
+  letter-spacing: 0;
+  text-shadow: var(--gf-shadow);
+}
+
+body[data-theme="gilded"] .character-widget .game-panel-divider span:not(.unspent-badge) {
+  position: relative;
+  padding: 0 1.1em;
+}
+
+body[data-theme="gilded"] .character-widget .game-panel-divider span:not(.unspent-badge)::before,
+body[data-theme="gilded"] .character-widget .game-panel-divider span:not(.unspent-badge)::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  margin-top: -4px;
+  border: 1px solid #c79a45;
+  border-left: 0;
+  border-bottom: 0;
+  border-radius: 0 5px 0 0;
+}
+
+body[data-theme="gilded"] .character-widget .game-panel-divider span:not(.unspent-badge)::before {
+  left: 0;
+  transform: scaleX(-1);
+}
+
+body[data-theme="gilded"] .character-widget .game-panel-divider span:not(.unspent-badge)::after {
+  right: 0;
+}
+
+/* Stat rows: gold label, white value, green or red modifier. Grid stays one column here. */
+body[data-theme="gilded"] .character-widget .attributes-grid,
+body[data-theme="gilded"] .character-widget .combat-stats-grid {
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+body[data-theme="gilded"] .character-widget .attr-item,
+body[data-theme="gilded"] .character-widget .combat-stat,
+body[data-theme="gilded"] .character-widget .gold-row,
+body[data-theme="gilded"] .equipment-widget .compact-stats,
+body[data-theme="gilded"] .item-card .item-card-stat,
+body[data-theme="gilded"] .wizard-screen .confirm-attr {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  border: 0;
+  border-radius: 0;
+  background: #2d2017;
+  color: #efe6d6;
+  font-family: "Marcellus", serif;
+  text-align: left;
+}
+
+body[data-theme="gilded"] .character-widget .attr-item:nth-child(even),
+body[data-theme="gilded"] .character-widget .combat-stat:nth-child(even),
+body[data-theme="gilded"] .item-card .item-card-stat:nth-child(even),
+body[data-theme="gilded"] .wizard-screen .confirm-attr:nth-child(even) {
+  background: #1c140e;
+}
+
+body[data-theme="gilded"] .character-widget .attr-name,
+body[data-theme="gilded"] .character-widget .combat-stat-label,
+body[data-theme="gilded"] .character-widget .gold-label,
+body[data-theme="gilded"] .item-card .item-card-stat span:first-child,
+body[data-theme="gilded"] .wizard-screen .confirm-attr-name {
+  order: 0;
+  flex: 1;
+  margin: 0;
+  color: #ffd24a;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 13px;
+  text-align: left;
+  text-shadow: var(--gf-shadow);
+}
+
+body[data-theme="gilded"] .character-widget .attr-name::after,
+body[data-theme="gilded"] .character-widget .combat-stat-label::after,
+body[data-theme="gilded"] .character-widget .gold-label::after {
+  content: ":";
+}
+
+body[data-theme="gilded"] .character-widget .attr-value {
+  order: 2;
+}
+
+body[data-theme="gilded"] .character-widget .attr-mod {
+  order: 3;
+  margin-left: 8px;
+}
+
+body[data-theme="gilded"] .character-widget .combat-stat-info {
+  display: flex;
+  flex: 1;
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+body[data-theme="gilded"] .character-widget .combat-stat-formula {
+  color: #a89c8a;
+  font-size: 11px;
+}
+
+body[data-theme="gilded"] .character-widget .attr-value,
+body[data-theme="gilded"] .character-widget .combat-stat-value,
+body[data-theme="gilded"] .character-widget .gold-value,
+body[data-theme="gilded"] .wizard-screen .confirm-attr-value,
+body[data-theme="gilded"] .item-card .item-card-stat strong {
+  color: #efe6d6;
+  font-family: "Marcellus", serif;
+  text-shadow: var(--gf-shadow);
+}
+
+body[data-theme="gilded"] .character-widget .attr-mod.positive,
+body[data-theme="gilded"] .item-card .diff.better,
+body[data-theme="gilded"] .inventory-widget .list-upgrade-tag {
+  color: #3ee04a;
+}
+
+body[data-theme="gilded"] .character-widget .attr-mod.negative,
+body[data-theme="gilded"] .item-card .diff.worse {
+  color: #ff4a3d;
+}
+
+body[data-theme="gilded"] .character-widget .bar-track,
+body[data-theme="gilded"] .equipment-widget .compact-stats {
+  border-color: #4a3214;
+}
+
+body[data-theme="gilded"] .character-widget .bar-track {
+  background: #0e0b09;
+  border: 1px solid #4a3214;
+  border-radius: 2px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.65);
+}
+
+body[data-theme="gilded"] .character-widget .bar-fill.hp {
+  background: linear-gradient(180deg, #2fb32f, #1f7d1f);
+  box-shadow: none;
+}
+
+body[data-theme="gilded"] .character-widget .bar-fill.hp.danger {
+  background: linear-gradient(180deg, #d4a017, #8a6410);
+}
+
+body[data-theme="gilded"] .character-widget .bar-fill.hp.critical {
+  background: linear-gradient(180deg, #b0140c, #6f0201);
+}
+
+body[data-theme="gilded"] .character-widget .bar-fill.mana {
+  background: linear-gradient(180deg, #2e6fd8, #1d4796);
+  box-shadow: none;
+}
+
+body[data-theme="gilded"] .character-widget .bar-fill.xp {
+  background: #8e4fd0;
+  box-shadow: none;
+}
+
+body[data-theme="gilded"] .character-widget .bar-label,
+body[data-theme="gilded"] .character-widget .bar-value {
+  font-family: "Marcellus", serif;
+  color: #efe6d6;
+  text-shadow: var(--gf-shadow);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+body[data-theme="gilded"] .character-widget .sheet-tabs {
+  background: #1a100a;
+  border: 1px solid #4a3214;
+  border-radius: 3px;
+}
+
+body[data-theme="gilded"] .character-widget .sheet-tab {
+  border-radius: 3px;
+  font-family: "Marcellus", serif;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+body[data-theme="gilded"] .character-widget .sheet-tab.active {
+  box-shadow: inset 0 0 0 1px #c79a45;
+  color: #ffd24a;
+}
+
+body[data-theme="gilded"] .character-widget .skill-slot,
+body[data-theme="gilded"] .character-widget .skill-card {
+  background: #241912;
+  border: 1px solid #8a6428;
+  border-radius: 3px;
+}
+
+body[data-theme="gilded"] .character-widget .skill-chip,
+body[data-theme="gilded"] .character-widget .tab-count,
+body[data-theme="gilded"] .party-overlay .you-tag,
+body[data-theme="gilded"] .party-overlay .leader-badge,
+body[data-theme="gilded"] .party-overlay .pill,
+body[data-theme="gilded"] .recipes-overlay .chip {
+  border-radius: 3px;
+  letter-spacing: 0;
+}
+
+body[data-theme="gilded"] .character-widget .skill-btn,
+body[data-theme="gilded"] .inventory-widget .detail-action-btn,
+body[data-theme="gilded"] .inventory-widget .qty-btn,
+body[data-theme="gilded"] .inventory-widget .qty-all-btn,
+body[data-theme="gilded"] .item-card .item-card-actions button,
+body[data-theme="gilded"] .welcome-screen .btn-welcome,
+body[data-theme="gilded"] .nickname-screen .btn-continue,
+body[data-theme="gilded"] .wizard-screen .btn-wizard,
+body[data-theme="gilded"] .wizard-screen .btn-generate,
+body[data-theme="gilded"] .party-overlay .act,
+body[data-theme="gilded"] .recipes-overlay .craft-btn,
+body[data-theme="gilded"] .recipes-overlay .detail-action-btn,
+body[data-theme="gilded"] .ng-overlay .ng-act,
+body[data-theme="gilded"] .char-picker .new-btn,
+body[data-theme="gilded"] .switcher .hdr-btn,
+body[data-theme="gilded"] .switcher .menu-item,
+body[data-theme="gilded"] .inv-craft {
+  font-family: "Marcellus", serif;
+  border-radius: 3px;
+  letter-spacing: 0;
+  text-transform: none;
+  text-shadow: var(--gf-shadow);
+}
+
+body[data-theme="gilded"] .item-card .item-card-actions button.primary,
+body[data-theme="gilded"] .welcome-screen .btn-welcome.primary,
+body[data-theme="gilded"] .welcome-screen .btn-welcome.guest,
+body[data-theme="gilded"] .wizard-screen .btn-wizard.primary,
+body[data-theme="gilded"] .nickname-screen .btn-continue,
+body[data-theme="gilded"] .party-overlay .act.gold,
+body[data-theme="gilded"] .character-widget .skill-btn:not(.ghost):not(.danger),
+body[data-theme="gilded"] .ng-overlay .ng-act.need,
+body[data-theme="gilded"] .ng-overlay .ng-act.greed {
+  background: linear-gradient(180deg, #4a331f, #3a2818);
+  color: #ffd24a;
+  border: 1px solid #8a6428;
+  box-shadow: inset 0 1px 0 rgba(199, 154, 69, 0.45);
+}
+
+body[data-theme="gilded"] .item-card .item-card-actions button:not(.primary),
+body[data-theme="gilded"] .welcome-screen .btn-welcome.secondary,
+body[data-theme="gilded"] .wizard-screen .btn-wizard.secondary,
+body[data-theme="gilded"] .party-overlay .act.secondary,
+body[data-theme="gilded"] .character-widget .skill-btn.ghost,
+body[data-theme="gilded"] .ng-overlay .ng-act.pass,
+body[data-theme="gilded"] .party-overlay .act.leave,
+body[data-theme="gilded"] .party-overlay .kick-btn,
+body[data-theme="gilded"] .character-widget .skill-btn.danger {
+  background: #15110e;
+  color: #efe6d6;
+  border: 1px solid #8a6428;
+}
+
+body[data-theme="gilded"] .party-overlay .act.leave,
+body[data-theme="gilded"] .party-overlay .kick-btn,
+body[data-theme="gilded"] .party-overlay .act.decline,
+body[data-theme="gilded"] .character-widget .skill-btn.danger,
+body[data-theme="gilded"] .ng-overlay .ng-act.pass {
+  color: #ffb0a8;
+  border-color: #b0140c;
+  background: #3a100e;
+}
+
+/* Square slots. Outer size stays on the component; the frame is the border plus inset. */
+body[data-theme="gilded"] .equipment-widget .equip-slot,
+body[data-theme="gilded"] .inventory-widget .item-slot,
+body[data-theme="gilded"] .item-card .item-card-art,
+body[data-theme="gilded"] .recipes-overlay .recipe-icon,
+body[data-theme="gilded"] .inventory-widget .use-on-target img,
+body[data-theme="gilded"] .inventory-widget .list-item-art,
+body[data-theme="gilded"] .character-widget .skill-icon {
+  border-radius: 2px;
+  border: 2px solid #8a6428 !important;
+  background-color: #0e0b09;
+  background-image: url("textures/slot-inset.png");
+  background-size: cover;
+  box-shadow: 0 0 0 1px #4a3214, inset 0 0 0 1px #000, inset 0 0 12px rgba(0, 0, 0, 0.72);
+  position: relative;
+}
+
+body[data-theme="gilded"] .equipment-widget .equip-slot.empty {
+  opacity: 1;
+  border-style: solid;
+}
+
+body[data-theme="gilded"] .equipment-widget .equip-slot::after,
+body[data-theme="gilded"] .inventory-widget .item-slot::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  pointer-events: none;
+  background: url("slots/studs.svg") center / 100% 100% no-repeat;
+}
+
+body[data-theme="gilded"] .equipment-widget .equip-slot[data-quality="normal"],
+body[data-theme="gilded"] .inventory-widget .item-slot[data-quality="normal"] {
+  box-shadow: 0 0 0 1px #4a3214, inset 0 0 0 2px #e8e4df, inset 0 0 8px rgba(232, 228, 223, 0.25);
+}
+
+body[data-theme="gilded"] .equipment-widget .equip-slot[data-quality="magic"],
+body[data-theme="gilded"] .inventory-widget .item-slot[data-quality="magic"] {
+  box-shadow: 0 0 0 1px #4a3214, inset 0 0 0 2px #1eff00, inset 0 0 10px rgba(30, 255, 0, 0.35);
+}
+
+body[data-theme="gilded"] .equipment-widget .equip-slot[data-quality="rare"],
+body[data-theme="gilded"] .inventory-widget .item-slot[data-quality="rare"] {
+  box-shadow: 0 0 0 1px #4a3214, inset 0 0 0 2px #0070dd, inset 0 0 10px rgba(0, 112, 221, 0.4);
+}
+
+body[data-theme="gilded"] .equipment-widget .equip-slot[data-quality="legendary"],
+body[data-theme="gilded"] .inventory-widget .item-slot[data-quality="legendary"] {
+  box-shadow: 0 0 0 1px #4a3214, inset 0 0 0 2px #a335ee, inset 0 0 10px rgba(163, 53, 238, 0.4);
+}
+
+body[data-theme="gilded"] .equipment-widget .equip-slot[data-quality="mythic"],
+body[data-theme="gilded"] .inventory-widget .item-slot[data-quality="mythic"],
+body[data-theme="gilded"] .equipment-widget .equip-slot[data-quality="unique"],
+body[data-theme="gilded"] .inventory-widget .item-slot[data-quality="unique"] {
+  box-shadow: 0 0 0 1px #4a3214, inset 0 0 0 2px #ff8000, inset 0 0 10px rgba(255, 128, 0, 0.4);
+}
+
+body[data-theme="gilded"] .equipment-widget .equip-slot.filled:hover,
+body[data-theme="gilded"] .inventory-widget .item-slot:hover {
+  border-color: #c79a45 !important;
+  box-shadow: 0 0 0 1px #c79a45, inset 0 0 0 1px #000, 0 0 6px rgba(199, 154, 69, 0.65);
+}
+
+body[data-theme="gilded"] .inventory-widget .item-slot.selected,
+body[data-theme="gilded"] .inventory-widget .list-item.selected,
+body[data-theme="gilded"] .recipes-overlay .recipe-row.selected {
+  border-color: #ffd24a !important;
+  box-shadow: 0 0 0 1px #ffd24a, inset 0 0 0 1px #c79a45;
+}
+
+body[data-theme="gilded"] .equipment-widget .equip-slot.empty .slot-glyph {
+  font-size: 0;
+  line-height: 0;
+  width: 58%;
+  height: 58%;
+  display: block;
+  background: center / contain no-repeat url("slots/rune.svg");
+  color: transparent;
+}
+
+body[data-theme="gilded"] .equipment-widget .equip-slot.empty[data-slot="head"] .slot-glyph { background-image: url("slots/head.svg"); }
+body[data-theme="gilded"] .equipment-widget .equip-slot.empty[data-slot="neck"] .slot-glyph { background-image: url("slots/neck.svg"); }
+body[data-theme="gilded"] .equipment-widget .equip-slot.empty[data-slot="chest"] .slot-glyph { background-image: url("slots/chest.svg"); }
+body[data-theme="gilded"] .equipment-widget .equip-slot.empty[data-slot="waist"] .slot-glyph { background-image: url("slots/waist.svg"); }
+body[data-theme="gilded"] .equipment-widget .equip-slot.empty[data-slot="hands"] .slot-glyph { background-image: url("slots/hands.svg"); }
+body[data-theme="gilded"] .equipment-widget .equip-slot.empty[data-slot="legs"] .slot-glyph { background-image: url("slots/legs.svg"); }
+body[data-theme="gilded"] .equipment-widget .equip-slot.empty[data-slot="boots"] .slot-glyph { background-image: url("slots/boots.svg"); }
+body[data-theme="gilded"] .equipment-widget .equip-slot.empty[data-slot="ring1"] .slot-glyph,
+body[data-theme="gilded"] .equipment-widget .equip-slot.empty[data-slot="ring2"] .slot-glyph { background-image: url("slots/ring.svg"); }
+body[data-theme="gilded"] .equipment-widget .equip-slot.empty[data-slot="main_hand"] .slot-glyph { background-image: url("slots/main_hand.svg"); }
+body[data-theme="gilded"] .equipment-widget .equip-slot.empty[data-slot="off_hand"] .slot-glyph { background-image: url("slots/off_hand.svg"); }
+
+body[data-theme="gilded"] .equipment-widget .slot-tag {
+  color: #a89c8a;
+  letter-spacing: 0;
+  text-transform: none;
+  font-family: "Marcellus", serif;
+}
+
+body[data-theme="gilded"] .inventory-widget .item-quantity,
+body[data-theme="gilded"] .inventory-widget .item-name,
+body[data-theme="gilded"] .inventory-widget .equipped-badge,
+body[data-theme="gilded"] .inventory-widget .upgrade-badge,
+body[data-theme="gilded"] .equipment-widget .slot-tag,
+body[data-theme="gilded"] .equipment-widget .equip-slot img,
+body[data-theme="gilded"] .equipment-widget .slot-glyph {
+  position: relative;
+  z-index: 1;
+}
+
+body[data-theme="gilded"] .inventory-widget .item-quantity,
+body[data-theme="gilded"] .inventory-widget .list-item-qty,
+body[data-theme="gilded"] .equipment-widget .slot-count {
+  background: none;
+  border-radius: 0;
+  padding: 0;
+  color: #efe6d6;
+  font-family: "Marcellus", serif;
+  font-size: 12px;
+  font-weight: 400;
+  text-shadow: 1px 0 0 #000, -1px 0 0 #000, 0 1px 0 #000, 0 -1px 0 #000;
+}
+
+body[data-theme="gilded"] .equipment-widget .slot-count {
+  display: block;
+  position: absolute;
+  right: 4px;
+  bottom: 2px;
+  z-index: 2;
+  line-height: 1;
+  pointer-events: none;
+}
+
+body[data-theme="gilded"] .inventory-widget .list-item-quality.is-unique {
+  color: #ff8000 !important;
+}
+
+body[data-theme="gilded"] .inventory-widget .item-name,
+body[data-theme="gilded"] .inventory-widget .list-item-name {
+  font-family: "Marcellus", serif;
+  text-shadow: var(--gf-shadow);
+}
+
+body[data-theme="gilded"] .inventory-widget .list-item {
+  border-radius: 0;
+  border-color: transparent;
+  background: #2d2017;
+}
+
+body[data-theme="gilded"] .inventory-widget .list-item:nth-child(even) {
+  background: #1c140e;
+}
+
+body[data-theme="gilded"] .inventory-widget .view-toggle,
+body[data-theme="gilded"] .char-picker .icon,
+body[data-theme="gilded"] .switcher .icon-btn,
+body[data-theme="gilded"] .wizard-screen .btn-generate {
+  background: #0e0b09;
+  border: 1px solid #8a6428;
+  border-radius: 5px;
+  color: #ffd24a;
+}
+
+body[data-theme="gilded"] .equipment-widget .portrait-frame {
+  border-radius: 3px;
+  border: 2px solid #8a6428;
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.65), 0 0 0 1px #4a3214;
+  background: #0e0b09;
+}
+
+body[data-theme="gilded"] .party-overlay .avatar,
+body[data-theme="gilded"] .nickname-screen .avatar,
+body[data-theme="gilded"] .wizard-screen .template-avatar,
+body[data-theme="gilded"] .wizard-screen .confirm-avatar,
+body[data-theme="gilded"] .characterCard .img {
+  border: 2px solid #8a6428;
+  box-shadow: 0 0 0 1px #4a3214, inset 0 0 8px rgba(0, 0, 0, 0.65);
+  background: #0e0b09;
+}
+
+body[data-theme="gilded"] .inv-close,
+body[data-theme="gilded"] .party-close,
+body[data-theme="gilded"] .recipes-close,
+body[data-theme="gilded"] .item-card-close,
+body[data-theme="gilded"] .detail-close,
+body[data-theme="gilded"] .recipes-overlay .detail-close {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+  border-radius: 3px;
+  border: 1px solid #c79a45 !important;
+  background: linear-gradient(180deg, #b0140c, #6f0201) !important;
+  color: #ffd24a !important;
+  font-family: "Marcellus", serif;
+  line-height: 26px;
+  text-align: center;
+  box-shadow: inset 0 1px 0 rgba(255, 210, 74, 0.35);
+}
+
+body[data-theme="gilded"] .party-close {
+  min-width: 44px;
+  min-height: 44px;
+  width: 44px;
+  height: 44px;
+  border: 0 !important;
+  box-shadow: none;
+  background:
+    linear-gradient(180deg, #b0140c, #6f0201) center / 24px 24px no-repeat,
+    linear-gradient(#c79a45, #c79a45) center / 26px 26px no-repeat !important;
+}
+
+body[data-theme="gilded"] .welcome-screen,
+body[data-theme="gilded"] .nickname-screen,
+body[data-theme="gilded"] .wizard-screen,
+body[data-theme="gilded"] .loading-screen {
+  background: #0b0908;
+}
+
+body[data-theme="gilded"] .welcome-screen .bg-gradient,
+body[data-theme="gilded"] .nickname-screen .bg-gradient,
+body[data-theme="gilded"] .wizard-screen .bg-gradient {
+  background: radial-gradient(ellipse 70% 60% at 50% 45%, transparent 0%, #0b0908 100%);
+}
+
+body[data-theme="gilded"] .welcome-screen .subtitle,
+body[data-theme="gilded"] .welcome-screen .guest-note,
+body[data-theme="gilded"] .nickname-screen .description,
+body[data-theme="gilded"] .wizard-screen .step-description,
+body[data-theme="gilded"] .wizard-screen .template-desc,
+body[data-theme="gilded"] .item-card .item-card-meta,
+body[data-theme="gilded"] .party-overlay .party-subtitle,
+body[data-theme="gilded"] .party-overlay .who-meta,
+body[data-theme="gilded"] .char-picker .meta {
+  color: #a89c8a;
+}
+
+body[data-theme="gilded"] .welcome-screen .icon,
+body[data-theme="gilded"] .loading-screen .loading-icon {
+  color: #ffd24a;
+}
+
+body[data-theme="gilded"] .welcome-screen .guest-choice,
+body[data-theme="gilded"] .wizard-screen .template-card,
+body[data-theme="gilded"] .wizard-screen .race-card,
+body[data-theme="gilded"] .wizard-screen .preview-card,
+body[data-theme="gilded"] .wizard-screen .confirm-card,
+body[data-theme="gilded"] .switcher .menu,
+body[data-theme="gilded"] .char-picker .row,
+body[data-theme="gilded"] .recipes-overlay .recipe-row {
+  background: #1c140e;
+  border: 1px solid #4a3214;
+  border-radius: 3px;
+  color: #efe6d6;
+}
+
+body[data-theme="gilded"] .welcome-screen .guest-choice.selected,
+body[data-theme="gilded"] .wizard-screen .template-card.selected,
+body[data-theme="gilded"] .wizard-screen .race-card.selected {
+  border-color: #c79a45;
+  box-shadow: inset 0 0 0 1px #c79a45;
+  background: #2e2118;
+}
+
+body[data-theme="gilded"] .wizard-screen .template-name,
+body[data-theme="gilded"] .wizard-screen .race-name,
+body[data-theme="gilded"] .wizard-screen .confirm-name,
+body[data-theme="gilded"] .welcome-screen .guest-choice strong,
+body[data-theme="gilded"] .char-picker .name,
+body[data-theme="gilded"] .switcher .name,
+body[data-theme="gilded"] .party-overlay .who-name,
+body[data-theme="gilded"] .party-overlay .party-title,
+body[data-theme="gilded"] .recipes-overlay .recipe-name,
+body[data-theme="gilded"] .recipes-overlay .recipes-title {
+  font-family: "Marcellus", serif;
+  color: #efe6d6;
+  text-shadow: var(--gf-shadow);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+body[data-theme="gilded"] .wizard-screen .step-dot.active,
+body[data-theme="gilded"] .char-picker .level,
+body[data-theme="gilded"] .inventory-widget .gold-display,
+body[data-theme="gilded"] .inv-gold,
+body[data-theme="gilded"] .ng-overlay .ng-kicker,
+body[data-theme="gilded"] .party-overlay .invite-kicker {
+  color: #ffd24a;
+}
+
+body[data-theme="gilded"] .wizard-screen .step-dot.active .step-number,
+body[data-theme="gilded"] .wizard-screen .step-number {
+  border-color: #8a6428;
+  background: #1a100a;
+  color: #efe6d6;
+}
+
+body[data-theme="gilded"] .wizard-screen .step-dot.completed,
+body[data-theme="gilded"] .wizard-screen .step-dot.completed .step-number,
+body[data-theme="gilded"] .wizard-screen .step-line.completed {
+  color: #3ee04a;
+  border-color: #3ee04a;
+  background: #14210f;
+}
+
+body[data-theme="gilded"] .nickname-screen .nickname-input,
+body[data-theme="gilded"] .wizard-screen .form-input,
+body[data-theme="gilded"] .wizard-screen .form-textarea,
+body[data-theme="gilded"] .party-overlay .compose input,
+body[data-theme="gilded"] .party-overlay .adder input,
+body[data-theme="gilded"] .inventory-widget .qty-controls input,
+body[data-theme="gilded"] #modal1 input,
+body[data-theme="gilded"] #modal1 select {
+  background: #0e0b09;
+  color: #efe6d6;
+  border: 1px solid #4a3214;
+  border-radius: 3px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.55);
+}
+
+body[data-theme="gilded"] .nickname-screen .nickname-input:focus,
+body[data-theme="gilded"] .wizard-screen .form-input:focus,
+body[data-theme="gilded"] .wizard-screen .form-textarea:focus,
+body[data-theme="gilded"] .party-overlay .compose input:focus,
+body[data-theme="gilded"] .party-overlay .adder input:focus {
+  border-color: #c79a45;
+  outline: none;
+}
+
+body[data-theme="gilded"] .ng-item.rarity-normal { color: #e8e4df; }
+body[data-theme="gilded"] .ng-item.rarity-magic { color: #1eff00; }
+body[data-theme="gilded"] .ng-item.rarity-rare { color: #0070dd; }
+body[data-theme="gilded"] .ng-item.rarity-legendary { color: #a335ee; }
+body[data-theme="gilded"] .ng-item.rarity-mythic,
+body[data-theme="gilded"] .ng-item.rarity-unique { color: #ff8000; }
+
+body[data-theme="gilded"] .item-card.item-card-unique {
+  border-color: #ff8000;
+  box-shadow: 0 0 0 1px #4a3214, 0 0 18px rgba(255, 128, 0, 0.35), 0 16px 40px rgba(0, 0, 0, 0.6);
+}
+
+body[data-theme="gilded"] .item-card-unique-mark {
+  color: #ff8000;
+  border-color: #ff8000;
+}
+
+body[data-theme="gilded"] .item-card .item-card-effects {
+  border-left-color: #c79a45;
+  background: linear-gradient(90deg, rgba(199, 154, 69, 0.16), transparent);
+}
+
+body[data-theme="gilded"] .item-card .item-card-effects strong,
+body[data-theme="gilded"] .item-card .item-card-facts strong {
+  color: #ffd24a;
+}
+
+body[data-theme="gilded"] .recipes-overlay .ing-ok { color: #3ee04a; }
+body[data-theme="gilded"] .recipes-overlay .ing-miss,
+body[data-theme="gilded"] .item-card .item-card-restriction { color: #ff4a3d; }
+
+body[data-theme="gilded"] #modal1.modal,
+body[data-theme="gilded"] #inventoryModal.modal {
+  background: #15110e url("textures/panel-stone.png");
+  background-blend-mode: soft-light;
+  border: 2px solid #8a6428;
+  color: #efe6d6;
+}
+
+body[data-theme="gilded"] .characterCard.card {
+  background: #241912 !important;
+  border: 1px solid #8a6428;
+  color: #efe6d6;
+}
+
+body[data-theme="gilded"] .characterCard .card-title,
+body[data-theme="gilded"] .characterCard td:first-child {
+  color: #ffd24a;
+  font-family: "Marcellus", serif;
+}
+
+body[data-theme="gilded"] .characterCard .btn {
+  background: #3a2818 !important;
+  color: #ffd24a !important;
+  border: 1px solid #8a6428;
+  border-radius: 3px;
+}
+
+@media (max-width: 768px), (max-width: 1024px) and (max-height: 500px) and (orientation: landscape) {
+  body[data-theme="gilded"] .party-overlay .party-panel {
+    border-radius: 14px 14px 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-theme="gilded"] .inventory-widget .item-slot,
+  body[data-theme="gilded"] .welcome-screen .btn-welcome,
+  body[data-theme="gilded"] .wizard-screen .template-card {
+    transition: none;
+  }
+}

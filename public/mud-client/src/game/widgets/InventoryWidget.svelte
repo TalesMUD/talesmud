@@ -1,5 +1,6 @@
 <script>
   import { itemArtSrc, onItemArtError } from '../itemArtSrc.js';
+  import { itemQualityKey, qualityColor } from '../qualityColor.js';
   import ItemDetailCard from './ItemDetailCard.svelte';
   import { isClearUpgrade, itemCmdName } from './itemComparison.js';
 
@@ -33,13 +34,13 @@
 
   // Category definitions
   const CATEGORIES = [
-    { key: 'equipment', label: 'Equipment', icon: 'shield', color: '#22c55e',
+    { key: 'equipment', label: 'Equipment', icon: 'shield', color: 'var(--inv-cat-equipment, #22c55e)',
       filter: (item) => item.type === 'weapon' || item.type === 'armor' },
-    { key: 'consumables', label: 'Consumables', icon: 'local_drink', color: '#3b82f6',
+    { key: 'consumables', label: 'Consumables', icon: 'local_drink', color: 'var(--inv-cat-consumables, #3b82f6)',
       filter: (item) => item.type === 'consumable' },
-    { key: 'quest', label: 'Quest Items', icon: 'auto_stories', color: '#f59e0b',
+    { key: 'quest', label: 'Quest Items', icon: 'auto_stories', color: 'var(--inv-cat-quest, #f59e0b)',
       filter: (item) => item.type === 'quest' },
-    { key: 'other', label: 'Other', icon: 'category', color: '#9ca3af',
+    { key: 'other', label: 'Other', icon: 'category', color: 'var(--inv-cat-other, #9ca3af)',
       filter: (item) => !['weapon', 'armor', 'consumable', 'quest'].includes(item.type) },
   ];
 
@@ -63,13 +64,7 @@
   }
 
   function getQualityColor(quality) {
-    switch (quality) {
-      case 'magic': return '#22c55e';
-      case 'rare': return '#3b82f6';
-      case 'legendary': return '#a855f7';
-      case 'mythic': return '#f59e0b';
-      default: return '#9ca3af';
-    }
+    return qualityColor(quality);
   }
 
   function isEquippable(item) {
@@ -1137,8 +1132,9 @@
                   class="item-slot"
                   class:selected={detailItem && detailItem.id === item.id}
                   class:equipped-item={equipped}
+                  data-quality={itemQualityKey(item)}
                   title={getItemTooltip(item)}
-                  style="border-color: {getQualityColor(item.quality)}"
+                  style="border-color: {getQualityColor(itemQualityKey(item))}"
                   on:click={() => toggleActions(item)}
                 >
                   {#if equipped}
@@ -1181,10 +1177,10 @@
                     on:error={(e) => onItemArtError(e, item)}
                   />
                   <div class="list-item-info">
-                    <span class="list-item-name" style="color: {getQualityColor(item.quality)}">{item.name}</span>
+                    <span class="list-item-name" style="color: {getQualityColor(itemQualityKey(item))}">{item.name}</span>
                     <span class="list-item-meta">
                       {#if item.quality && item.quality !== 'normal'}
-                        <span class="list-item-quality" style="color: {getQualityColor(item.quality)}">{item.quality}</span>
+                        <span class="list-item-quality" class:is-unique={item.unique} style="color: {getQualityColor(item.quality)}">{item.quality}</span>
                       {/if}
                       {#if item.type}
                         <span class="list-item-type">{formatTypeName(item.type)}</span>

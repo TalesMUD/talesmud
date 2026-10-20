@@ -4,6 +4,7 @@
   import { itemEffectLines } from '../itemEffects.js';
   import { portal } from '../portal.js';
   import { comparisonItems, comparisonRows, isTwoHanded, itemUsabilityReason, itemWeight, itemIsUsable, itemOffersUseOn } from './itemComparison.js';
+  import { itemQualityKey, qualityColor } from '../qualityColor.js';
 
   export let item;
   export let source = 'inventory';
@@ -35,7 +36,7 @@
     close();
   }
   function color(quality) {
-    return { magic: '#4ade80', rare: '#60a5fa', legendary: '#c084fc', mythic: '#fbbf24' }[quality] || '#e5e7eb';
+    return qualityColor(quality, 'card');
   }
   function label(value) { return String(value || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); }
   function format(value) { return Number.isInteger(value) ? String(value) : Number(value).toFixed(1); }
@@ -45,11 +46,11 @@
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 <div class="item-card-backdrop" use:portal on:click={(event) => { if (event.target === event.currentTarget) close(); }}>
-  <section class="item-card" class:item-card-unique={item.unique} role="dialog" aria-modal="true" aria-label="{item.name} details" tabindex="-1" bind:this={card}>
+  <section class="item-card" class:item-card-unique={item.unique} data-quality={itemQualityKey(item)} role="dialog" aria-modal="true" aria-label="{item.name} details" tabindex="-1" bind:this={card}>
     <header class="item-card-header">
       <img class="item-card-art" src={itemArtSrc(item)} alt="" on:error={(event) => onItemArtError(event, item)} />
       <div class="item-card-heading">
-        <h2 style="color: {item.unique ? '#fde68a' : color(item.quality)}">{item.name}{#if item.unique}<span class="item-card-unique-mark">UNIQUE</span>{/if}</h2>
+        <h2 style="color: {color(item.unique ? 'unique' : item.quality)}">{item.name}{#if item.unique}<span class="item-card-unique-mark">UNIQUE</span>{/if}</h2>
         <div class="item-card-meta">{[item.quality || 'normal', item.type, item.subType].filter(Boolean).map(label).join(' · ')}</div>
         {#if equippable}<div class="item-card-slot">{label(item.slot)}{#if isTwoHanded(item)} · Two handed{/if}</div>{/if}
       </div>

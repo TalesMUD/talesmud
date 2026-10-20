@@ -1047,6 +1047,8 @@
         <div class="bar-track">
           <div
             class="bar-fill hp"
+            class:danger={hpPercent <= 60 && hpPercent > 30}
+            class:critical={hpPercent <= 30}
             style="width: {hpPercent}%; --hp-color: {hpColor}; --hp-glow: {hpGlow}"
           ></div>
         </div>
