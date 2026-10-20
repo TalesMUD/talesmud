@@ -33,15 +33,21 @@ body[data-theme="gilded"] {
   background: var(--gf-titlebar);
   color: var(--gf-text);
   border-color: var(--gf-bronze-dark);
-  font-family: var(--gf-font);
   text-shadow: var(--gf-text-shadow);
 }
 
-[data-theme="gilded"] .switcher,
+[data-theme="gilded"] .game-panel-header,
+[data-theme="gilded"] .tab-bar,
+[data-theme="gilded"] .tx-title,
+[data-theme="gilded"] .room-name,
+[data-theme="gilded"] .switcher {
+  font-family: var(--gf-font);
+}
+
 [data-theme="gilded"] .play-header,
 [data-theme="gilded"] .mobile-header,
-[data-theme="gilded"] .room-name {
-  font-family: var(--gf-font);
+[data-theme="gilded"] .room-name,
+[data-theme="gilded"] .switcher {
   color: var(--gf-text);
 }
 
@@ -115,7 +121,6 @@ body[data-theme="gilded"] {
 
 [data-theme="gilded"] .mobile-tab-bar .tab {
   color: var(--gf-text-dim);
-  font-family: var(--gf-font);
 }
 
 [data-theme="gilded"] .mobile-tab-bar .tab.active {
@@ -193,7 +198,6 @@ body[data-theme="gilded"] {
   border-color: var(--gf-bronze);
   border-radius: 3px;
   color: var(--gf-text);
-  font-family: var(--gf-font);
   text-shadow: var(--gf-text-shadow);
 }
 
