@@ -16,6 +16,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/gamemode"
 	"github.com/talesmud/talesmud/pkg/importer"
 	"github.com/talesmud/talesmud/pkg/repository"
+	"github.com/talesmud/talesmud/pkg/ruleset"
 	"github.com/talesmud/talesmud/pkg/server"
 	"github.com/talesmud/talesmud/pkg/service"
 	"github.com/talesmud/talesmud/pkg/util"
@@ -144,11 +145,31 @@ func runImport(folderName, sqlitePath string, verbose, dryRun bool) {
 		if err := contenthealth.RecordBaseline(repos, importPath); err != nil {
 			log.Fatalf("Failed to record content baseline: %v", err)
 		}
+		if err := activateImportRuleset(folderName); err != nil {
+			log.Fatalf("Content pack ruleset: %v", err)
+		}
 		fmt.Println("Import completed successfully!")
 	} else {
 		fmt.Println("Import completed with errors.")
 		os.Exit(1)
 	}
+}
+
+// activateImportRuleset records the imported world and merges its
+// config/ruleset.yaml onto the engine profile. The running server reads the
+// same marker at startup. An omitted key stays on the engine value.
+func activateImportRuleset(folderName string) error {
+	if err := os.MkdirAll("import", 0o755); err != nil {
+		return err
+	}
+	marker := filepath.Join("import", ".active")
+	if err := os.WriteFile(marker, []byte(folderName+"\n"), 0o644); err != nil {
+		return err
+	}
+	if err := ruleset.LoadDefault(); err != nil {
+		return err
+	}
+	return ruleset.ApplyActiveImport("import")
 }
 
 func runCheck(folderName string, asJSON bool, failOn string) int {

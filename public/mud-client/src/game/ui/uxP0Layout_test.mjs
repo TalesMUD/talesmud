@@ -60,7 +60,7 @@ assert.match(need, /\.ng-panel\s*\{[^}]*pointer-events:\s*auto/s);
 assert.match(battle, /yield-roll/);
 assert.match(battle, /lootRollPending/);
 
-assert.match(index, /bundle\.js\?v=uxtop1/);
+assert.match(index, /bundle\.js\?v=wowf1/);
 assert.equal(index.includes('needgreed1'), false);
 
 console.log('uxP0Layout_test ok');

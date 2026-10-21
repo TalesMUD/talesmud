@@ -6,7 +6,7 @@ import {createRequire} from 'node:module';
 const require = createRequire(process.env.UX_PLAYWRIGHT_PACKAGE || new URL('../package.json',import.meta.url));
 const {chromium} = require('playwright');
 const phase = process.env.UX_PHASE || 'local';
-const base = process.env.UX_BASE || 'http://127.0.0.1:8016/play/?v=uxtop1';
+const base = process.env.UX_BASE || 'http://127.0.0.1:8016/play/?v=wowf1';
 const out = process.env.UX_OUT || '/tmp/ux-top-layout';
 const failures = [];
 const measurements = [];

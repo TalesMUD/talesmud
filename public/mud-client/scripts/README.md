@@ -17,7 +17,7 @@ In a second terminal, run the proof.
 UX_PLAYWRIGHT_PACKAGE=/path/to/tools/package.json UX_OUT=/tmp/ux-top-proof node public/mud-client/scripts/uxTopFixtures.mjs
 ```
 
-`UX_PORT` changes the proxy's default port 8016. `UX_PUBLIC` changes its default asset directory `public/mud-client/public`. `UX_BASE` changes the runner's default URL `http://127.0.0.1:8016/play/?v=uxtop1`. `UX_PHASE` names the output group and defaults to `local`. `UX_SIZES` selects comma-separated viewport IDs. `UX_PHASE=before` retains failed baseline hit tests and continues past blocked outcome dismissal.
+`UX_PORT` changes the proxy's default port 8016. `UX_PUBLIC` changes its default asset directory `public/mud-client/public`. `UX_BASE` changes the runner's default URL `http://127.0.0.1:8016/play/?v=wowf1`. `UX_PHASE` names the output group and defaults to `local`. `UX_SIZES` selects comma-separated viewport IDs. `UX_PHASE=before` retains failed baseline hit tests and continues past blocked outcome dismissal.
 
 The fixture messages do not change backend inventory, quests, or combat. Close the runner to close its guest sockets. Keep a real guest walk alongside these deterministic layout checks for dialog, shop, movement, and server combat behavior.
 
@@ -25,5 +25,5 @@ To run without a live backend, set `UX_FIXTURE=1` on both processes. The local p
 
 ```sh
 UX_FIXTURE=1 UX_PORT=8017 UX_PROXY_PACKAGE=/path/to/tools/package.json node public/mud-client/scripts/uxTopLocalServer.mjs
-UX_FIXTURE=1 UX_BASE='http://127.0.0.1:8017/play/?v=uxtop1' UX_PLAYWRIGHT_PACKAGE=/path/to/tools/package.json UX_OUT=/tmp/ux-top-proof node public/mud-client/scripts/uxTopFixtures.mjs
+UX_FIXTURE=1 UX_BASE='http://127.0.0.1:8017/play/?v=wowf1' UX_PLAYWRIGHT_PACKAGE=/path/to/tools/package.json UX_OUT=/tmp/ux-top-proof node public/mud-client/scripts/uxTopFixtures.mjs
 ```

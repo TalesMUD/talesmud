@@ -1,6 +1,8 @@
 package ruleset_test
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -102,6 +104,37 @@ func TestDefaultThemeKey(t *testing.T) {
 	}
 	if ruleset.DefaultTheme() != ruleset.DefaultThemeGilded {
 		t.Fatalf("rejected document changed theme to %q", ruleset.DefaultTheme())
+	}
+}
+
+func TestWorldOverlayKeepsEngineProfile(t *testing.T) {
+	ruleset.Reset()
+	t.Cleanup(ruleset.Reset)
+	if err := ruleset.LoadBytes([]byte("progression:\n  level_cap: 12\nguide:\n  enabled: false\n")); err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	if err := ruleset.ApplyActiveImport(dir); err != nil {
+		t.Fatal(err)
+	}
+	if ruleset.DefaultTheme() != ruleset.DefaultThemeDarkFantasy || ruleset.LevelCap() != 12 || ruleset.GuideEnabled() {
+		t.Fatalf("missing marker theme %q cap %d guide %v", ruleset.DefaultTheme(), ruleset.LevelCap(), ruleset.GuideEnabled())
+	}
+	world := filepath.Join(dir, "mvp-rpg-1", "config")
+	if err := os.MkdirAll(world, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".active"), []byte("mvp-rpg-1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(world, "ruleset.yaml"), []byte("ui:\n  default_theme: gilded\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := ruleset.ApplyActiveImport(dir); err != nil {
+		t.Fatal(err)
+	}
+	if ruleset.DefaultTheme() != ruleset.DefaultThemeGilded || ruleset.LevelCap() != 12 || ruleset.GuideEnabled() {
+		t.Fatalf("overlay theme %q cap %d guide %v", ruleset.DefaultTheme(), ruleset.LevelCap(), ruleset.GuideEnabled())
 	}
 }
 
