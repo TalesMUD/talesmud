@@ -14,7 +14,7 @@ export function fixtureHttp(request,response) {
   }
   const bodies={
     '/api/guest':{token:'local-layout-fixture',expiresIn:1800},
-    '/api/server-info':{serverName:'Layout fixture'},
+    '/api/server-info':{serverName:'Layout fixture',...(process.env.UX_DEFAULT_THEME?{defaultTheme:process.env.UX_DEFAULT_THEME}:{})},
     '/api/classes':{source:'pack',races:[{id:'human',name:'Human'}],classes:[{id:'warrior',name:'Warrior',templateId:'layout-template',races:['human'],skills:[],hotbarCap:4}]},
   };
   response.writeHead(200,{'content-type':'application/json'});

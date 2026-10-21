@@ -95,7 +95,6 @@ body[data-theme="gilded"] .entity-card {
 
 body[data-theme="gilded"] .gf-plaque,
 body[data-theme="gilded"] h3.section-title,
-body[data-theme="gilded"] .outcome-title,
 body[data-theme="gilded"] .quest-log-header h2,
 body[data-theme="gilded"] .widget-chrome-title,
 body[data-theme="gilded"] .sheet-title,
@@ -114,7 +113,6 @@ body[data-theme="gilded"] .entity-name {
 }
 
 body[data-theme="gilded"] h3.section-title.gf-plaque,
-body[data-theme="gilded"] .outcome-title.gf-plaque,
 body[data-theme="gilded"] .quest-log-header h2.gf-plaque,
 body[data-theme="gilded"] .widget-chrome-title.gf-plaque {
   display: block;
@@ -132,9 +130,18 @@ body[data-theme="gilded"] .widget-chrome-title.gf-plaque {
   box-shadow: inset 0 1px 0 rgba(199, 154, 69, 0.35), 0 1px 0 #000 !important;
 }
 
+/* Plaque chrome must not change the outcome title's line box. The continue
+   button sits under it, and a taller title moves that button. */
 body[data-theme="gilded"] .outcome-title.gf-plaque {
-  margin: 0 auto 0.55rem;
-  font-size: clamp(1.35rem, 4vw, 1.8rem);
+  position: relative;
+  display: block;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  line-height: inherit;
+  font-family: inherit;
+  background: none;
+  box-shadow: none;
 }
 
 body[data-theme="gilded"] .quest-log-header h2.gf-plaque,
@@ -418,8 +425,7 @@ body[data-theme="gilded"] .turnin-btn,
 body[data-theme="gilded"] .pin-btn,
 body[data-theme="gilded"] .abandon-btn,
 body[data-theme="gilded"] .back-to-quests-btn,
-body[data-theme="gilded"] .accept-open,
-body[data-theme="gilded"] .outcome-continue {
+body[data-theme="gilded"] .accept-open {
   font-family: Marcellus, Georgia, serif !important;
   color: var(--w3-gold) !important;
   background: linear-gradient(180deg, #4a331f, #3a2818) !important;
@@ -428,6 +434,14 @@ body[data-theme="gilded"] .outcome-continue {
   text-shadow: var(--w3-shadow) !important;
   letter-spacing: 0 !important;
   text-transform: none !important;
+}
+
+body[data-theme="gilded"] .outcome-continue {
+  color: var(--w3-gold) !important;
+  background: linear-gradient(180deg, #4a331f, #3a2818) !important;
+  border-color: var(--w3-bronze) !important;
+  border-radius: 3px !important;
+  text-shadow: var(--w3-shadow) !important;
 }
 
 body[data-theme="gilded"] .quest-entry,
@@ -844,30 +858,14 @@ body[data-theme="gilded"] .npc-portrait-slot.gf-medallion {
   overflow: hidden;
 }
 
+/* .gf-close forces 26px and zero padding. These buttons already have a size. */
 body[data-theme="gilded"] .dialog-dismiss.gf-close,
 body[data-theme="gilded"] .shop-close.gf-close,
 body[data-theme="gilded"] .friends-close.gf-close {
-  position: static;
-  top: auto;
-  right: auto;
   width: auto;
   height: auto;
-  box-sizing: border-box;
-}
-
-body[data-theme="gilded"] .dialog-dismiss.gf-close {
-  min-width: 44px;
-  min-height: 44px;
-  font-size: 1.6rem;
-  line-height: 1;
-}
-
-body[data-theme="gilded"] .shop-close.gf-close,
-body[data-theme="gilded"] .friends-close.gf-close {
-  min-width: 44px;
-  min-height: 44px;
-  font-size: 1.4em;
-  line-height: 1;
+  padding: 0.5em 0.75em;
+  font-family: inherit;
 }
 
 body[data-theme="gilded"] .dialog-dismiss.gf-close::before,

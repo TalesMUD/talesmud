@@ -168,9 +168,6 @@ body[data-theme="gilded"] .item-card-header {
   background: linear-gradient(180deg, #2a1a0f, #1a100a);
   color: #efe6d6;
   border-bottom: 1px solid #4a3214;
-  font-family: "Marcellus", serif;
-  letter-spacing: 0;
-  text-transform: none;
   text-shadow: var(--gf-shadow);
 }
 
@@ -219,9 +216,9 @@ body[data-theme="gilded"] .character-widget .game-panel-divider,
 body[data-theme="gilded"] .inventory-widget .category-header {
   background: #3a2818 url("textures/plaque-leather.png");
   background-blend-mode: multiply;
-  border: 1px solid #8a6428;
+  border-color: #8a6428;
   border-radius: 6px;
-  box-shadow: inset 0 1px 0 rgba(199, 154, 69, 0.55);
+  box-shadow: inset 0 0 0 1px #8a6428, inset 0 1px 0 rgba(199, 154, 69, 0.55);
 }
 
 body[data-theme="gilded"] .character-widget .game-panel-divider {
@@ -448,7 +445,6 @@ body[data-theme="gilded"] .welcome-screen .btn-welcome,
 body[data-theme="gilded"] .nickname-screen .btn-continue,
 body[data-theme="gilded"] .wizard-screen .btn-wizard,
 body[data-theme="gilded"] .wizard-screen .btn-generate,
-body[data-theme="gilded"] .party-overlay .act,
 body[data-theme="gilded"] .recipes-overlay .craft-btn,
 body[data-theme="gilded"] .recipes-overlay .detail-action-btn,
 body[data-theme="gilded"] .ng-overlay .ng-act,
@@ -458,9 +454,13 @@ body[data-theme="gilded"] .switcher .menu-item,
 body[data-theme="gilded"] .inv-craft {
   font-family: "Marcellus", serif;
   border-radius: 3px;
-  letter-spacing: 0;
-  text-transform: none;
   text-shadow: var(--gf-shadow);
+}
+
+body[data-theme="gilded"] .party-overlay .act {
+  border-radius: 3px;
+  text-shadow: var(--gf-shadow);
+  font-family: inherit;
 }
 
 body[data-theme="gilded"] .inv-craft {
@@ -537,7 +537,7 @@ body[data-theme="gilded"] .inventory-widget .use-on-target img,
 body[data-theme="gilded"] .inventory-widget .list-item-art,
 body[data-theme="gilded"] .character-widget .skill-icon {
   border-radius: 2px;
-  border: 2px solid #8a6428 !important;
+  border: 1px solid #8a6428 !important;
   background-color: #0e0b09;
   background-image: url("textures/slot-inset.png");
   background-size: cover;
@@ -682,12 +682,19 @@ body[data-theme="gilded"] .inventory-widget .list-item:nth-child(even) {
   background: #1c140e;
 }
 
-body[data-theme="gilded"] .inventory-widget .view-toggle,
 body[data-theme="gilded"] .char-picker .icon,
 body[data-theme="gilded"] .switcher .icon-btn,
 body[data-theme="gilded"] .wizard-screen .btn-generate {
   background: #0e0b09;
   border: 1px solid #8a6428;
+  border-radius: 5px;
+  color: #ffd24a;
+}
+
+body[data-theme="gilded"] .inventory-widget .view-toggle {
+  background: #0e0b09;
+  border: 0;
+  box-shadow: inset 0 0 0 1px #8a6428;
   border-radius: 5px;
   color: #ffd24a;
 }
@@ -732,31 +739,13 @@ body[data-theme="gilded"] .recipes-close,
 body[data-theme="gilded"] .item-card-close,
 body[data-theme="gilded"] .detail-close,
 body[data-theme="gilded"] .recipes-overlay .detail-close {
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  min-height: 28px;
-  padding: 0;
   border-radius: 3px;
-  border: 1px solid #c79a45 !important;
+  border-color: #c79a45 !important;
   background: linear-gradient(180deg, #b0140c, #6f0201) !important;
   color: #ffd24a !important;
-  font-family: "Marcellus", serif;
-  line-height: 26px;
+  font-family: inherit;
   text-align: center;
   box-shadow: inset 0 1px 0 rgba(255, 210, 74, 0.35);
-}
-
-body[data-theme="gilded"] .party-close {
-  min-width: 44px;
-  min-height: 44px;
-  width: 44px;
-  height: 44px;
-  border: 0 !important;
-  box-shadow: none;
-  background:
-    linear-gradient(180deg, #b0140c, #6f0201) center / 24px 24px no-repeat,
-    linear-gradient(#c79a45, #c79a45) center / 26px 26px no-repeat !important;
 }
 
 body[data-theme="gilded"] .welcome-screen,

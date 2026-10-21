@@ -14,6 +14,8 @@ const sizes = [
   {id:'phone',width:375,height:812,deviceScaleFactor:3,hasTouch:true,isMobile:true},
   {id:'tablet',width:768,height:1024,deviceScaleFactor:2,hasTouch:true,isMobile:true},
   {id:'desktop',width:1440,height:900,deviceScaleFactor:1},
+  {id:'desktop-1024',width:1024,height:768,deviceScaleFactor:1},
+  {id:'desktop-1920',width:1920,height:1080,deviceScaleFactor:1},
   {id:'phone-landscape',width:812,height:375,deviceScaleFactor:2,hasTouch:true,isMobile:true},
   {id:'phone-landscape-wide',width:844,height:390,deviceScaleFactor:2,hasTouch:true,isMobile:true},
 ];
