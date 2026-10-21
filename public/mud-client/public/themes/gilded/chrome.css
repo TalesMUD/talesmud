@@ -51,6 +51,23 @@ body[data-theme="gilded"] {
   color: var(--gf-text);
 }
 
+[data-theme="gilded"] .back-link,
+[data-theme="gilded"] .back-link:visited {
+  color: var(--gf-gold-text);
+  text-shadow: var(--gf-text-shadow);
+}
+
+[data-theme="gilded"] .roomName {
+  color: var(--gf-gold-text);
+  font-family: var(--gf-font);
+  text-shadow: var(--gf-text-shadow);
+}
+
+[data-theme="gilded"] .roomName::before,
+[data-theme="gilded"] .roomName::after {
+  color: var(--gf-bronze-hi);
+}
+
 [data-theme="gilded"] .hdr-btn,
 [data-theme="gilded"] .acct-btn,
 [data-theme="gilded"] .term-fontsize-btn,
