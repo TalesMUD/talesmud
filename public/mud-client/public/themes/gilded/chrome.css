@@ -33,16 +33,43 @@ body[data-theme="gilded"] {
   background: var(--gf-titlebar);
   color: var(--gf-text);
   border-color: var(--gf-bronze-dark);
+  text-shadow: var(--gf-text-shadow);
+}
+
+[data-theme="gilded"] .game-panel-header,
+[data-theme="gilded"] .tab-bar,
+[data-theme="gilded"] .tx-title,
+[data-theme="gilded"] .room-name,
+[data-theme="gilded"] .switcher {
+  font-family: var(--gf-font);
+}
+
+[data-theme="gilded"] .play-header,
+[data-theme="gilded"] .mobile-header,
+[data-theme="gilded"] .switcher {
+  color: var(--gf-text);
+}
+
+[data-theme="gilded"] .room-name {
+  color: var(--gf-gold-text);
+  text-shadow: var(--gf-text-shadow);
+}
+
+[data-theme="gilded"] .back-link,
+[data-theme="gilded"] .back-link:visited {
+  color: var(--gf-gold-text);
+  text-shadow: var(--gf-text-shadow);
+}
+
+[data-theme="gilded"] .roomName {
+  color: var(--gf-gold-text);
   font-family: var(--gf-font);
   text-shadow: var(--gf-text-shadow);
 }
 
-[data-theme="gilded"] .switcher,
-[data-theme="gilded"] .play-header,
-[data-theme="gilded"] .mobile-header,
-[data-theme="gilded"] .room-name {
-  font-family: var(--gf-font);
-  color: var(--gf-text);
+[data-theme="gilded"] .roomName::before,
+[data-theme="gilded"] .roomName::after {
+  color: var(--gf-bronze-hi);
 }
 
 [data-theme="gilded"] .hdr-btn,
@@ -115,7 +142,6 @@ body[data-theme="gilded"] {
 
 [data-theme="gilded"] .mobile-tab-bar .tab {
   color: var(--gf-text-dim);
-  font-family: var(--gf-font);
 }
 
 [data-theme="gilded"] .mobile-tab-bar .tab.active {
@@ -188,12 +214,11 @@ body[data-theme="gilded"] {
 
 [data-theme="gilded"] .action-bar .btn,
 [data-theme="gilded"] .mudx .btn,
-[data-theme="gilded"] .mobile-action .btn {
+[data-theme="gilded"] .mobile-action-bar .btn {
   background: #1c140e;
   border-color: var(--gf-bronze);
   border-radius: 3px;
   color: var(--gf-text);
-  font-family: var(--gf-font);
   text-shadow: var(--gf-text-shadow);
 }
 
@@ -207,7 +232,15 @@ body[data-theme="gilded"] {
 [data-theme="gilded"] .mudx .exit-btn,
 [data-theme="gilded"] .mudx .cmd-btn,
 [data-theme="gilded"] .mudx .combat-btn,
-[data-theme="gilded"] .mudx .context-btn {
+[data-theme="gilded"] .mudx .context-btn,
+[data-theme="gilded"] .mobile-action-bar .exit-btn,
+[data-theme="gilded"] .mobile-action-bar .cmd-btn,
+[data-theme="gilded"] .mobile-action-bar .combat-btn,
+[data-theme="gilded"] .mobile-action-bar .context-btn,
+[data-theme="gilded"] .mobile-action-bar .room-action-btn,
+[data-theme="gilded"] .mobile-action-bar .more-btn,
+[data-theme="gilded"] .mobile-action-bar .pickup-bar-btn,
+[data-theme="gilded"] .mobile-action-bar .pickup-icon-btn {
   background: #241912;
   border-color: var(--gf-bronze);
   color: var(--gf-gold-text);
@@ -219,7 +252,9 @@ body[data-theme="gilded"] {
 [data-theme="gilded"] .action-bar .combat-btn:hover,
 [data-theme="gilded"] .action-bar .context-btn:hover,
 [data-theme="gilded"] .action-bar .room-action-btn:hover,
-[data-theme="gilded"] .mudx .btn:hover {
+[data-theme="gilded"] .mudx .btn:hover,
+[data-theme="gilded"] .mobile-action-bar .btn:hover,
+[data-theme="gilded"] .mobile-action-bar .btn:active {
   background: #2e2118;
   border-color: var(--gf-bronze-hi);
 }
@@ -398,6 +433,60 @@ body[data-theme="gilded"] {
 [data-theme="gilded"] .welcome-screen .title,
 [data-theme="gilded"] .welcome-screen .btn-welcome {
   font-family: var(--gf-font);
+}
+
+[data-theme="gilded"] .welcome-screen .title {
+  color: var(--gf-gold-text);
+  text-shadow: var(--gf-text-shadow);
+}
+
+/* Svelte repeats its scope class, so a two-class override loses.
+   These selectors win without changing widths, heights, or padding. */
+body[data-theme="gilded"][data-theme="gilded"] .mobile-header .header-left .room-name {
+  color: var(--gf-gold-text);
+  text-shadow: var(--gf-text-shadow);
+}
+
+body[data-theme="gilded"][data-theme="gilded"] .mobile-header .hp-pill,
+body[data-theme="gilded"][data-theme="gilded"] .mobile-header .rest-pill {
+  border-radius: 3px;
+  background: #1c140e;
+  border-color: var(--gf-bronze);
+  text-shadow: var(--gf-text-shadow);
+}
+
+body[data-theme="gilded"][data-theme="gilded"] .mobile-header .hp-pill.hp-high,
+body[data-theme="gilded"][data-theme="gilded"] .mobile-header .rest-pill {
+  color: var(--gf-value-buff);
+}
+
+body[data-theme="gilded"][data-theme="gilded"] .mobile-header .hp-pill.hp-mid {
+  color: var(--gf-gold-text);
+}
+
+body[data-theme="gilded"][data-theme="gilded"] .mobile-header .hp-pill.hp-low {
+  color: var(--gf-value-debuff);
+}
+
+body[data-theme="gilded"][data-theme="gilded"] .bar-fill.mana {
+  background: var(--gf-mana);
+  box-shadow: none;
+}
+
+body[data-theme="gilded"][data-theme="gilded"] .bar-fill.xp {
+  background: var(--gf-xp);
+  box-shadow: none;
+}
+
+body[data-theme="gilded"][data-theme="gilded"] .hotbar-widget.docked .slot,
+body[data-theme="gilded"][data-theme="gilded"] .hotbar-widget.compact .slot,
+body[data-theme="gilded"][data-theme="gilded"] .hotbar-widget .slot.filled {
+  border-style: solid;
+  border-color: var(--gf-bronze);
+  border-radius: 2px;
+  background-color: var(--gf-inset);
+  background-image: url("textures/slot-inset.png");
+  box-shadow: inset 0 0 0 1px #000, 0 0 0 1px var(--gf-bronze-dark);
 }
 
 [data-theme="gilded"] {
