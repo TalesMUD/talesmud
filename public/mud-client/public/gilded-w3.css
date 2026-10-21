@@ -1,0 +1,904 @@
+/* Gilded Frame skin for dialogs, quests, shop, notices, combat, and room cards.
+   Applies only when data-theme="gilded". Layout sizes stay on the component rules.
+   Paint uses !important so it beats Svelte's repeated scope hash.
+   Tokens fall back to STYLE.md until the theme pack defines --gf-*. */
+
+@font-face {
+  font-family: "Marcellus";
+  src: url("themes/gilded/fonts/Marcellus-Regular.woff2") format("woff2"),
+       url("themes/gilded/fonts/Marcellus-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+body[data-theme="gilded"] {
+  --w3-gold: var(--gf-gold-text, #ffd24a);
+  --w3-gold-dim: var(--gf-gold-dim, #b8922f);
+  --w3-text: var(--gf-text, #efe6d6);
+  --w3-dim: var(--gf-text-dim, #a89c8a);
+  --w3-panel: var(--gf-panel, #15110e);
+  --w3-warm: var(--gf-panel-warm, #241912);
+  --w3-raised: var(--gf-panel-raised, #2e2118);
+  --w3-row-a: var(--gf-row-a, #2d2017);
+  --w3-row-b: var(--gf-row-b, #1c140e);
+  --w3-bronze: var(--gf-bronze, #8a6428);
+  --w3-bronze-dark: var(--gf-bronze-dark, #4a3214);
+  --w3-bronze-hi: var(--gf-bronze-hi, #c79a45);
+  --w3-buff: var(--gf-value-buff, #3ee04a);
+  --w3-debuff: var(--gf-value-debuff, #ff4a3d);
+  --w3-shadow: 0 1px 0 #000, 0 0 2px rgba(0, 0, 0, 0.8);
+  --w3-frame:
+    0 0 0 1px var(--w3-bronze-dark),
+    inset 0 0 0 1px #000,
+    inset 0 1px 0 rgba(199, 154, 69, 0.45),
+    inset 0 0 24px rgba(0, 0, 0, 0.55),
+    0 6px 18px rgba(0, 0, 0, 0.6);
+  --w3-stone: linear-gradient(rgba(21, 17, 14, 0.84), rgba(21, 17, 14, 0.9)), url("themes/gilded/textures/panel-stone.png");
+  --w3-leather: linear-gradient(rgba(58, 40, 24, 0.5), rgba(74, 51, 31, 0.78)), url("themes/gilded/textures/plaque-leather.png");
+}
+
+/* Shared frame, plaque, medallion, slot, close, coins, scroll. */
+body[data-theme="gilded"] .dialog-sheet,
+body[data-theme="gilded"] .shop-panel,
+body[data-theme="gilded"] .quest-log-panel,
+body[data-theme="gilded"] .questlog-widget,
+body[data-theme="gilded"] .friends-panel,
+body[data-theme="gilded"] .players-overlay,
+body[data-theme="gilded"] .shortcut-sheet,
+body[data-theme="gilded"] .veilspan-card,
+body[data-theme="gilded"] .notification,
+body[data-theme="gilded"] .overlay-message,
+body[data-theme="gilded"] .guide-hint,
+body[data-theme="gilded"] .outcome-card,
+body[data-theme="gilded"] .phase-banner,
+body[data-theme="gilded"] .telegraph-banner,
+body[data-theme="gilded"] .join-banner,
+body[data-theme="gilded"] .action-banner,
+body[data-theme="gilded"] .level-callout,
+body[data-theme="gilded"] .combat-event-card,
+body[data-theme="gilded"] .foe-plate,
+body[data-theme="gilded"] .player-panel,
+body[data-theme="gilded"] .layout-b-frame,
+body[data-theme="gilded"] .combat-log,
+body[data-theme="gilded"] .detail-overlay {
+  background-color: var(--w3-panel) !important;
+  background-image: var(--w3-stone) !important;
+  background-size: auto, 256px 256px !important;
+  border-color: var(--w3-bronze) !important;
+  color: var(--w3-text) !important;
+  box-shadow: var(--w3-frame) !important;
+}
+
+body[data-theme="gilded"] .dialog-sheet,
+body[data-theme="gilded"] .shop-panel,
+body[data-theme="gilded"] .friends-panel,
+body[data-theme="gilded"] .players-overlay,
+body[data-theme="gilded"] .shortcut-sheet,
+body[data-theme="gilded"] .veilspan-card,
+body[data-theme="gilded"] .notification,
+body[data-theme="gilded"] .overlay-message,
+body[data-theme="gilded"] .guide-hint,
+body[data-theme="gilded"] .outcome-card,
+body[data-theme="gilded"] .phase-banner,
+body[data-theme="gilded"] .telegraph-banner,
+body[data-theme="gilded"] .join-banner,
+body[data-theme="gilded"] .action-banner,
+body[data-theme="gilded"] .level-callout,
+body[data-theme="gilded"] .detail-overlay,
+body[data-theme="gilded"] .foe-plate,
+body[data-theme="gilded"] .player-panel,
+body[data-theme="gilded"] .layout-b-frame,
+body[data-theme="gilded"] .entity-card {
+  border-radius: 3px !important;
+}
+
+body[data-theme="gilded"] .gf-plaque,
+body[data-theme="gilded"] h3.section-title,
+body[data-theme="gilded"] .outcome-title,
+body[data-theme="gilded"] .quest-log-header h2,
+body[data-theme="gilded"] .widget-chrome-title,
+body[data-theme="gilded"] .sheet-title,
+body[data-theme="gilded"] .players-overlay-title,
+body[data-theme="gilded"] .friends-title,
+body[data-theme="gilded"] .shop-title,
+body[data-theme="gilded"] .card-title,
+body[data-theme="gilded"] .examine-title,
+body[data-theme="gilded"] .npc-name,
+body[data-theme="gilded"] .entity-name {
+  font-family: Marcellus, Georgia, serif !important;
+  color: var(--w3-text) !important;
+  text-shadow: var(--w3-shadow) !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+body[data-theme="gilded"] h3.section-title.gf-plaque,
+body[data-theme="gilded"] .outcome-title.gf-plaque,
+body[data-theme="gilded"] .quest-log-header h2.gf-plaque,
+body[data-theme="gilded"] .widget-chrome-title.gf-plaque {
+  display: block;
+  position: relative;
+  margin: 0 0 8px;
+  padding: 3px 16px 4px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.3;
+  background-color: #3a2818 !important;
+  background-image: var(--w3-leather) !important;
+  background-size: auto, 256px 256px !important;
+  border: 1px solid var(--w3-bronze) !important;
+  border-radius: 6px !important;
+  box-shadow: inset 0 1px 0 rgba(199, 154, 69, 0.35), 0 1px 0 #000 !important;
+}
+
+body[data-theme="gilded"] .outcome-title.gf-plaque {
+  margin: 0 auto 0.55rem;
+  font-size: clamp(1.35rem, 4vw, 1.8rem);
+}
+
+body[data-theme="gilded"] .quest-log-header h2.gf-plaque,
+body[data-theme="gilded"] .widget-chrome-title.gf-plaque {
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+body[data-theme="gilded"] h3.section-title.gf-plaque::before,
+body[data-theme="gilded"] h3.section-title.gf-plaque::after,
+body[data-theme="gilded"] .outcome-title.gf-plaque::before,
+body[data-theme="gilded"] .outcome-title.gf-plaque::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  margin-top: -4px;
+  border: 1px solid var(--w3-bronze-hi) !important;
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+body[data-theme="gilded"] h3.section-title.gf-plaque::before,
+body[data-theme="gilded"] .outcome-title.gf-plaque::before { left: 6px; }
+
+body[data-theme="gilded"] h3.section-title.gf-plaque::after,
+body[data-theme="gilded"] .outcome-title.gf-plaque::after { right: 6px; }
+
+body[data-theme="gilded"] .npc-portrait-slot.gf-medallion {
+  box-sizing: border-box;
+  border-radius: 50% !important;
+  border-width: 3px;
+  border-style: solid !important;
+  border-color: var(--w3-bronze) !important;
+  box-shadow: 0 0 0 1px var(--w3-bronze-dark),
+    inset 0 0 0 1px var(--w3-bronze-hi),
+    inset 0 0 14px rgba(0, 0, 0, 0.7) !important;
+  background: #0e0b09 !important;
+}
+
+body[data-theme="gilded"] .shop-icon.gf-slot,
+body[data-theme="gilded"] .detail-art-wrap.gf-slot {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+  border-width: 1px;
+  border-style: solid !important;
+  border-color: var(--w3-bronze) !important;
+  border-radius: 2px !important;
+  background-color: #0e0b09 !important;
+  background-image: url("themes/gilded/textures/slot-inset.png") !important;
+  background-size: cover !important;
+  box-shadow: inset 0 0 0 1px #000, inset 0 0 8px rgba(0, 0, 0, 0.65) !important;
+}
+
+body[data-theme="gilded"] .shop-icon.gf-slot {
+  position: relative;
+  flex: 0 0 64px;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+}
+
+body[data-theme="gilded"] .detail-art-wrap.gf-slot {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+}
+
+body[data-theme="gilded"] .gf-slot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(45deg, transparent 42%, var(--w3-bronze-hi) 42% 58%, transparent 58%) 0 0 / 5px 5px no-repeat,
+    linear-gradient(45deg, transparent 42%, var(--w3-bronze-hi) 42% 58%, transparent 58%) 100% 0 / 5px 5px no-repeat,
+    linear-gradient(45deg, transparent 42%, var(--w3-bronze-hi) 42% 58%, transparent 58%) 0 100% / 5px 5px no-repeat,
+    linear-gradient(45deg, transparent 42%, var(--w3-bronze-hi) 42% 58%, transparent 58%) 100% 100% / 5px 5px no-repeat !important;
+}
+
+body[data-theme="gilded"] .detail-art-wrap.gf-slot { position: relative; }
+
+body[data-theme="gilded"] .shop-icon.gf-slot::before,
+body[data-theme="gilded"] .detail-art-wrap.gf-slot::before {
+  content: none;
+}
+
+body[data-theme="gilded"] .gf-slot[data-quality="poor"] { box-shadow: inset 0 0 0 2px var(--gf-q-poor, #9d9d9d), inset 0 0 8px rgba(0, 0, 0, 0.65) !important; }
+body[data-theme="gilded"] .gf-slot[data-quality="common"] { box-shadow: inset 0 0 0 2px var(--gf-q-common, #e8e4df), inset 0 0 8px rgba(0, 0, 0, 0.65) !important; }
+body[data-theme="gilded"] .gf-slot[data-quality="uncommon"] { box-shadow: inset 0 0 0 2px var(--gf-q-uncommon, #1eff00), inset 0 0 10px rgba(30, 255, 0, 0.28) !important; }
+body[data-theme="gilded"] .gf-slot[data-quality="rare"] { box-shadow: inset 0 0 0 2px var(--gf-q-rare, #0070dd), inset 0 0 10px rgba(0, 112, 221, 0.35) !important; }
+body[data-theme="gilded"] .gf-slot[data-quality="epic"] { box-shadow: inset 0 0 0 2px var(--gf-q-epic, #a335ee), inset 0 0 10px rgba(163, 53, 238, 0.35) !important; }
+body[data-theme="gilded"] .gf-slot[data-quality="legendary"] { box-shadow: inset 0 0 0 2px var(--gf-q-legendary, #ff8000), inset 0 0 10px rgba(255, 128, 0, 0.35) !important; }
+
+body[data-theme="gilded"] .coin-gold { color: var(--w3-gold) !important; }
+body[data-theme="gilded"] .coin-silver { color: #d5d8de !important; }
+body[data-theme="gilded"] .coin-copper { color: #c87533 !important; }
+
+body[data-theme="gilded"] .dialog-dismiss,
+body[data-theme="gilded"] .shop-close,
+body[data-theme="gilded"] .friends-close,
+body[data-theme="gilded"] .detail-close,
+body[data-theme="gilded"] .quest-log-panel .close-btn,
+body[data-theme="gilded"] .questlog-widget .close-btn,
+body[data-theme="gilded"] .accept-dismiss,
+body[data-theme="gilded"] .examine-close,
+body[data-theme="gilded"] .guide-hint .x {
+  background: linear-gradient(180deg, #b0140c, #6f0201) !important;
+  color: var(--w3-gold) !important;
+  box-shadow: inset 0 0 0 1px var(--w3-bronze-hi) !important;
+  border-radius: 3px !important;
+}
+
+body[data-theme="gilded"] .dialog-sheet,
+body[data-theme="gilded"] .shop-list,
+body[data-theme="gilded"] .quest-log-content,
+body[data-theme="gilded"] .questlog-content,
+body[data-theme="gilded"] .friends-body,
+body[data-theme="gilded"] .combat-log-body,
+body[data-theme="gilded"] .outcome-content,
+body[data-theme="gilded"] .players-overlay,
+body[data-theme="gilded"] .veilspan-card,
+body[data-theme="gilded"] .overlay-message {
+  scrollbar-width: thin;
+  scrollbar-color: var(--w3-bronze) #1c140e !important;
+}
+
+body[data-theme="gilded"] .dialog-sheet::-webkit-scrollbar,
+body[data-theme="gilded"] .shop-list::-webkit-scrollbar,
+body[data-theme="gilded"] .quest-log-content::-webkit-scrollbar,
+body[data-theme="gilded"] .questlog-content::-webkit-scrollbar,
+body[data-theme="gilded"] .friends-body::-webkit-scrollbar,
+body[data-theme="gilded"] .combat-log-body::-webkit-scrollbar,
+body[data-theme="gilded"] .outcome-content::-webkit-scrollbar,
+body[data-theme="gilded"] .veilspan-card::-webkit-scrollbar,
+body[data-theme="gilded"] .overlay-message::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+body[data-theme="gilded"] .dialog-sheet::-webkit-scrollbar-thumb,
+body[data-theme="gilded"] .shop-list::-webkit-scrollbar-thumb,
+body[data-theme="gilded"] .quest-log-content::-webkit-scrollbar-thumb,
+body[data-theme="gilded"] .questlog-content::-webkit-scrollbar-thumb,
+body[data-theme="gilded"] .friends-body::-webkit-scrollbar-thumb,
+body[data-theme="gilded"] .combat-log-body::-webkit-scrollbar-thumb,
+body[data-theme="gilded"] .outcome-content::-webkit-scrollbar-thumb,
+body[data-theme="gilded"] .veilspan-card::-webkit-scrollbar-thumb,
+body[data-theme="gilded"] .overlay-message::-webkit-scrollbar-thumb {
+  background: var(--w3-bronze-dark) !important;
+  border: 1px solid var(--w3-bronze) !important;
+}
+
+/* Dialog. */
+body[data-theme="gilded"] .dialog-sheet-bar {
+  background: transparent !important;
+}
+
+body[data-theme="gilded"] .npc-name {
+  text-align: center;
+  background: linear-gradient(180deg, #1a100a, #2a1a0f) !important;
+  border-radius: 3px !important;
+  box-shadow: inset 0 0 0 1px var(--w3-bronze-dark) !important;
+  padding: 2px 8px;
+}
+
+body[data-theme="gilded"] .dialog-text {
+  font-family: system-ui, sans-serif !important;
+  color: var(--w3-text) !important;
+  background: var(--w3-warm) !important;
+  border-left-color: var(--w3-bronze) !important;
+  border-radius: 3px !important;
+}
+
+body[data-theme="gilded"] .dialog-option-btn,
+body[data-theme="gilded"] .dialog-option-btn.quest,
+body[data-theme="gilded"] .dialog-option-btn.trade {
+  font-family: Marcellus, Georgia, serif !important;
+  color: var(--w3-text) !important;
+  background: var(--w3-row-b) !important;
+  border-color: var(--w3-bronze) !important;
+  border-radius: 3px !important;
+  box-shadow: inset 0 0 0 1px #000, inset 0 1px 0 rgba(199, 154, 69, 0.28) !important;
+}
+
+body[data-theme="gilded"] .dialog-option-btn:hover,
+body[data-theme="gilded"] .dialog-option-btn:focus,
+body[data-theme="gilded"] .dialog-option-btn.quest:hover,
+body[data-theme="gilded"] .dialog-option-btn.quest:focus,
+body[data-theme="gilded"] .dialog-option-btn.trade:hover,
+body[data-theme="gilded"] .dialog-option-btn.trade:focus {
+  background: var(--w3-raised) !important;
+  border-color: var(--w3-bronze-hi) !important;
+  color: var(--w3-text) !important;
+}
+
+body[data-theme="gilded"] .option-index,
+body[data-theme="gilded"] .dialog-option-btn.quest .option-index,
+body[data-theme="gilded"] .dialog-option-btn.trade .option-index {
+  background: #1a100a !important;
+  color: var(--w3-gold) !important;
+  border-radius: 2px !important;
+  box-shadow: inset 0 0 0 1px var(--w3-bronze) !important;
+}
+
+body[data-theme="gilded"] .repeat-tag {
+  background: #1a100a !important;
+  color: var(--w3-gold) !important;
+  border: 1px solid var(--w3-bronze-hi) !important;
+  border-radius: 2px !important;
+  font-family: Marcellus, Georgia, serif !important;
+  letter-spacing: 0.04em !important;
+  text-shadow: var(--w3-shadow) !important;
+}
+
+body[data-theme="gilded"] .repeat-timer { color: var(--w3-dim) !important; }
+
+/* Quests. */
+body[data-theme="gilded"] .quest-log-panel,
+body[data-theme="gilded"] .questlog-widget {
+  font-family: system-ui, sans-serif !important;
+  border-left-color: var(--w3-bronze) !important;
+}
+
+body[data-theme="gilded"] .quest-log-header,
+body[data-theme="gilded"] .questlog-header {
+  background: linear-gradient(180deg, #1a100a, #2a1a0f) !important;
+  border-bottom-color: var(--w3-bronze-dark) !important;
+}
+
+body[data-theme="gilded"] .objective { color: var(--w3-gold) !important; }
+body[data-theme="gilded"] .objective .obj-text { color: var(--w3-gold) !important; }
+body[data-theme="gilded"] .objective.completed,
+body[data-theme="gilded"] .objective.completed .obj-text,
+body[data-theme="gilded"] .objective.completed .check,
+body[data-theme="gilded"] .objective.completed .quest-progress {
+  color: var(--w3-buff) !important;
+}
+
+body[data-theme="gilded"] .objectives-header,
+body[data-theme="gilded"] .rewards-header,
+body[data-theme="gilded"] .card-list-label,
+body[data-theme="gilded"] .card-kicker {
+  font-family: Marcellus, Georgia, serif !important;
+  color: var(--w3-gold) !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  text-shadow: var(--w3-shadow) !important;
+}
+
+body[data-theme="gilded"] .quest-title,
+body[data-theme="gilded"] .quest-name { color: var(--w3-text) !important; font-family: Marcellus, Georgia, serif !important; }
+body[data-theme="gilded"] .quest-description,
+body[data-theme="gilded"] .notification-message,
+body[data-theme="gilded"] .card-list { color: var(--w3-text) !important; font-family: system-ui, sans-serif !important; }
+body[data-theme="gilded"] .notification-title { color: var(--w3-gold) !important; font-family: Marcellus, Georgia, serif !important; }
+body[data-theme="gilded"] .notification.progress .notification-title,
+body[data-theme="gilded"] .notification.ready .notification-title { color: var(--w3-gold) !important; }
+body[data-theme="gilded"] .notification.progress { border-left-color: var(--w3-bronze-hi) !important; }
+body[data-theme="gilded"] .notification.ready { border-left-color: var(--w3-gold) !important; }
+
+body[data-theme="gilded"] .quest-badge,
+body[data-theme="gilded"] .category-badge,
+body[data-theme="gilded"] .level-badge,
+body[data-theme="gilded"] .ready-badge {
+  font-family: Marcellus, Georgia, serif !important;
+  background: #1a100a !important;
+  color: var(--w3-gold) !important;
+  border-radius: 2px !important;
+  box-shadow: inset 0 0 0 1px var(--w3-bronze-hi) !important;
+}
+
+body[data-theme="gilded"] .category-name { color: var(--w3-gold) !important; }
+
+body[data-theme="gilded"] .type-chip,
+body[data-theme="gilded"] .history-btn,
+body[data-theme="gilded"] .tools-btn,
+body[data-theme="gilded"] .turnin-btn,
+body[data-theme="gilded"] .pin-btn,
+body[data-theme="gilded"] .abandon-btn,
+body[data-theme="gilded"] .back-to-quests-btn,
+body[data-theme="gilded"] .accept-open,
+body[data-theme="gilded"] .outcome-continue {
+  font-family: Marcellus, Georgia, serif !important;
+  color: var(--w3-gold) !important;
+  background: linear-gradient(180deg, #4a331f, #3a2818) !important;
+  border-color: var(--w3-bronze) !important;
+  border-radius: 3px !important;
+  text-shadow: var(--w3-shadow) !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+body[data-theme="gilded"] .quest-entry,
+body[data-theme="gilded"] .area-group-header {
+  background: var(--w3-row-b) !important;
+  border-radius: 3px !important;
+}
+
+body[data-theme="gilded"] .quest-name:hover,
+body[data-theme="gilded"] .quest-entry.expanded { background: var(--w3-raised) !important; }
+body[data-theme="gilded"] .search-input,
+body[data-theme="gilded"] .filter-select,
+body[data-theme="gilded"] .friends-panel input,
+body[data-theme="gilded"] .shop-panel input,
+body[data-theme="gilded"] .qty-controls input {
+  background: #0e0b09 !important;
+  color: var(--w3-text) !important;
+  border-radius: 3px !important;
+  box-shadow: inset 0 0 0 1px var(--w3-bronze-dark) !important;
+}
+
+/* Shop prices. Currency is one gold integer, drawn in the gold coin colour. */
+body[data-theme="gilded"] .shop-price,
+body[data-theme="gilded"] .shop-gold,
+body[data-theme="gilded"] .detail-gold,
+body[data-theme="gilded"] .reward-chip.gold {
+  color: var(--w3-gold) !important;
+  font-family: Marcellus, Georgia, serif !important;
+  text-shadow: var(--w3-shadow) !important;
+}
+
+body[data-theme="gilded"] .shop-row {
+  background: var(--w3-row-b) !important;
+  border-color: var(--w3-bronze-dark) !important;
+  border-radius: 3px !important;
+  color: var(--w3-text) !important;
+}
+
+body[data-theme="gilded"] .shop-list .shop-row:nth-child(even) { background: var(--w3-row-a) !important; }
+body[data-theme="gilded"] .shop-row:hover { background: var(--w3-raised) !important; border-color: var(--w3-bronze) !important; }
+body[data-theme="gilded"] .shop-row.selected {
+  background: var(--w3-raised) !important;
+  border-color: var(--w3-bronze-hi) !important;
+  box-shadow: inset 0 0 0 1px var(--w3-bronze-hi) !important;
+}
+
+body[data-theme="gilded"] .shop-name,
+body[data-theme="gilded"] .detail-name { font-family: Marcellus, Georgia, serif !important; color: var(--w3-text) !important; }
+body[data-theme="gilded"] .detail-name[data-quality="poor"] { color: #9d9d9d !important; }
+body[data-theme="gilded"] .detail-name[data-quality="common"] { color: #e8e4df !important; }
+body[data-theme="gilded"] .detail-name[data-quality="uncommon"] { color: #1eff00 !important; }
+body[data-theme="gilded"] .detail-name[data-quality="rare"] { color: #0070dd !important; }
+body[data-theme="gilded"] .detail-name[data-quality="epic"] { color: #a335ee !important; }
+body[data-theme="gilded"] .detail-name[data-quality="legendary"] { color: #ff8000 !important; }
+body[data-theme="gilded"] .detail-quality[data-quality="poor"] { color: #9d9d9d !important; }
+body[data-theme="gilded"] .detail-quality[data-quality="common"] { color: #e8e4df !important; }
+body[data-theme="gilded"] .detail-quality[data-quality="uncommon"] { color: #1eff00 !important; }
+body[data-theme="gilded"] .detail-quality[data-quality="rare"] { color: #0070dd !important; }
+body[data-theme="gilded"] .detail-quality[data-quality="epic"] { color: #a335ee !important; }
+body[data-theme="gilded"] .detail-quality[data-quality="legendary"] { color: #ff8000 !important; }
+
+body[data-theme="gilded"] .shop-header,
+body[data-theme="gilded"] .friends-header {
+  background: linear-gradient(180deg, #1a100a, #2a1a0f) !important;
+  border-bottom-color: var(--w3-bronze-dark) !important;
+}
+
+body[data-theme="gilded"] .shop-tab,
+body[data-theme="gilded"] .detail-action-btn,
+body[data-theme="gilded"] .qty-btn,
+body[data-theme="gilded"] .qty-all-btn,
+body[data-theme="gilded"] .shop-pager button,
+body[data-theme="gilded"] .friends-panel .act,
+body[data-theme="gilded"] .player-action-btn,
+body[data-theme="gilded"] .shortcut-sheet button,
+body[data-theme="gilded"] .attr-spend {
+  font-family: Marcellus, Georgia, serif !important;
+  color: var(--w3-text) !important;
+  background: var(--w3-warm) !important;
+  border-color: var(--w3-bronze) !important;
+  border-radius: 3px !important;
+}
+
+body[data-theme="gilded"] .shop-tab.active,
+body[data-theme="gilded"] .detail-action-btn.buy,
+body[data-theme="gilded"] .friends-panel .act.add {
+  color: var(--w3-gold) !important;
+  background: linear-gradient(180deg, #4a331f, #3a2818) !important;
+  border-color: var(--w3-bronze-hi) !important;
+}
+
+body[data-theme="gilded"] .detail-action-btn.sell,
+body[data-theme="gilded"] .friends-panel .act.remove,
+body[data-theme="gilded"] .abandon-btn {
+  background: linear-gradient(180deg, #b0140c, #6f0201) !important;
+  color: var(--w3-gold) !important;
+  border-color: var(--w3-bronze-hi) !important;
+}
+
+body[data-theme="gilded"] .shop-stack {
+  font-family: Marcellus, Georgia, serif !important;
+  color: var(--w3-text) !important;
+  text-shadow: 0 1px 0 #000, 0 0 2px #000 !important;
+}
+
+body[data-theme="gilded"] .compare-delta.up { color: var(--w3-buff) !important; }
+body[data-theme="gilded"] .compare-delta.down { color: var(--w3-debuff) !important; }
+body[data-theme="gilded"] .stat-label,
+body[data-theme="gilded"] .compare-label,
+body[data-theme="gilded"] .info-label { color: var(--w3-gold) !important; font-family: Marcellus, Georgia, serif !important; }
+body[data-theme="gilded"] .stat-value,
+body[data-theme="gilded"] .info-value { color: var(--w3-text) !important; }
+
+body[data-theme="gilded"] .friends-panel .row:nth-child(even) { background: var(--w3-row-a) !important; }
+body[data-theme="gilded"] .friends-panel .row { background: var(--w3-row-b) !important; border-bottom-color: rgba(74, 50, 20, 0.65) !important; }
+body[data-theme="gilded"] .who-name { color: var(--w3-text) !important; font-family: Marcellus, Georgia, serif !important; }
+body[data-theme="gilded"] .who-status { color: var(--w3-dim) !important; }
+body[data-theme="gilded"] .who-status.online,
+body[data-theme="gilded"] .dot.online { color: var(--w3-buff) !important; background: var(--w3-buff) !important; }
+body[data-theme="gilded"] .empty,
+body[data-theme="gilded"] .guest-note,
+body[data-theme="gilded"] .hint { color: var(--w3-dim) !important; }
+
+/* Players, shortcuts, room text, guide. */
+body[data-theme="gilded"] .player-badge {
+  border-radius: 3px !important;
+  border-color: var(--w3-bronze) !important;
+  background: var(--w3-panel) !important;
+  color: var(--w3-text) !important;
+}
+
+body[data-theme="gilded"] .badge-count { color: var(--w3-gold) !important; font-family: Marcellus, Georgia, serif !important; }
+body[data-theme="gilded"] .player-name { color: var(--w3-text) !important; }
+body[data-theme="gilded"] .player-tag { color: var(--w3-gold-dim) !important; }
+body[data-theme="gilded"] .chat-who { color: var(--w3-gold) !important; }
+body[data-theme="gilded"] .chat-text { color: var(--w3-text) !important; }
+body[data-theme="gilded"] .shortcut-sheet kbd,
+body[data-theme="gilded"] .sheet kbd { color: var(--w3-gold) !important; font-family: Marcellus, Georgia, serif !important; }
+body[data-theme="gilded"] .shortcut-sheet li,
+body[data-theme="gilded"] .sheet li { border-top-color: rgba(138, 100, 40, 0.45) !important; color: var(--w3-text) !important; }
+
+body[data-theme="gilded"] .overlay-message {
+  font-family: system-ui, sans-serif !important;
+  border-color: var(--w3-bronze) !important;
+}
+
+body[data-theme="gilded"] .overlay-message.ambiance {
+  color: var(--w3-text) !important;
+  border-color: var(--w3-bronze-dark) !important;
+}
+
+body[data-theme="gilded"] .overlay-message.examine,
+body[data-theme="gilded"] .overlay-message.examine.examine-unique {
+  border-color: var(--w3-bronze-hi) !important;
+  border-width: 1px;
+}
+
+body[data-theme="gilded"] .overlay-message.examine.examine-unique {
+  box-shadow: inset 0 0 0 2px var(--gf-q-legendary, #ff8000), var(--w3-frame) !important;
+}
+
+body[data-theme="gilded"] .examine-row-label,
+body[data-theme="gilded"] .examine-chip-label { color: var(--w3-gold) !important; font-family: Marcellus, Georgia, serif !important; }
+body[data-theme="gilded"] .examine-row-value,
+body[data-theme="gilded"] .examine-chip-value,
+body[data-theme="gilded"] .examine-blurb,
+body[data-theme="gilded"] .examine-lore { color: var(--w3-text) !important; }
+body[data-theme="gilded"] .examine-row:nth-child(odd) { background: var(--w3-row-a) !important; }
+body[data-theme="gilded"] .examine-row:nth-child(even) { background: var(--w3-row-b) !important; }
+body[data-theme="gilded"] .guide-hint p { color: var(--w3-text) !important; }
+body[data-theme="gilded"] .guide-hint .act {
+  font-family: Marcellus, Georgia, serif !important;
+  color: var(--w3-gold) !important;
+  background: linear-gradient(180deg, #4a331f, #3a2818) !important;
+  border-color: var(--w3-bronze) !important;
+  border-radius: 3px !important;
+}
+
+/* Combat HUD, lane cards, moments, outcome. Animations stay in the component. */
+body[data-theme="gilded"] .battle-header {
+  background: linear-gradient(180deg, #1a100a, #2a1a0f) !important;
+  border-bottom-color: var(--w3-bronze) !important;
+  color: var(--w3-text) !important;
+}
+
+body[data-theme="gilded"] .header-label,
+body[data-theme="gilded"] .boss-phase-label,
+body[data-theme="gilded"] .hp-label {
+  font-family: Marcellus, Georgia, serif !important;
+  color: var(--w3-gold) !important;
+  text-shadow: var(--w3-shadow) !important;
+}
+
+body[data-theme="gilded"] .header-icon {
+  color: var(--w3-gold) !important;
+  text-shadow: var(--w3-shadow) !important;
+}
+
+body[data-theme="gilded"] .nameplate,
+body[data-theme="gilded"] .player-name,
+body[data-theme="gilded"] .lb-name {
+  font-family: Marcellus, Georgia, serif !important;
+  color: var(--w3-text) !important;
+  border-color: var(--w3-bronze) !important;
+  border-radius: 3px !important;
+  background: linear-gradient(180deg, #2a1a0f, #1a100a) !important;
+  text-shadow: var(--w3-shadow) !important;
+}
+
+body[data-theme="gilded"] .nameplate.enraged { border-color: var(--w3-debuff) !important; color: #fecaca !important; }
+
+body[data-theme="gilded"] .hp-track,
+body[data-theme="gilded"] .sprite-hp-track {
+  background: #0e0b09 !important;
+  box-shadow: inset 0 0 0 1px var(--w3-bronze-dark) !important;
+  border-radius: 2px !important;
+}
+
+body[data-theme="gilded"] .hp-nums,
+body[data-theme="gilded"] .ally-numbers { color: var(--w3-text) !important; text-shadow: var(--w3-shadow) !important; }
+
+body[data-theme="gilded"] .combat-event-card {
+  border-radius: 3px !important;
+  border-color: var(--w3-bronze) !important;
+  color: var(--w3-text) !important;
+  font-family: Marcellus, Georgia, serif !important;
+}
+
+body[data-theme="gilded"] .combat-event-card .material-icons,
+body[data-theme="gilded"] .combat-event-source { color: var(--w3-gold) !important; }
+
+body[data-theme="gilded"] .combat-unique-line,
+body[data-theme="gilded"] .loot-unique {
+  border-radius: 3px !important;
+  border: 1px solid var(--gf-q-legendary, #ff8000) !important;
+  background: var(--w3-warm) !important;
+}
+
+body[data-theme="gilded"] .phase-banner,
+body[data-theme="gilded"] .telegraph-banner,
+body[data-theme="gilded"] .join-banner,
+body[data-theme="gilded"] .level-callout {
+  font-family: Marcellus, Georgia, serif !important;
+  color: var(--w3-gold) !important;
+  border-color: var(--w3-bronze-hi) !important;
+  text-shadow: var(--w3-shadow) !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+body[data-theme="gilded"] .action-banner {
+  font-family: Marcellus, Georgia, serif !important;
+  border-color: var(--w3-bronze-hi) !important;
+  color: var(--w3-text) !important;
+}
+
+body[data-theme="gilded"] .outcome-panel.victory .outcome-title { color: var(--w3-gold) !important; }
+body[data-theme="gilded"] .outcome-panel.defeat .outcome-title { color: var(--w3-debuff) !important; }
+body[data-theme="gilded"] .outcome-panel.fled .outcome-title { color: var(--w3-text) !important; }
+
+body[data-theme="gilded"] .outcome-summary,
+body[data-theme="gilded"] .reward-breakdown { color: var(--w3-text) !important; }
+body[data-theme="gilded"] .rarity-normal { color: #e8e4df !important; }
+body[data-theme="gilded"] .rarity-magic { color: #1eff00 !important; }
+body[data-theme="gilded"] .rarity-rare { color: #0070dd !important; }
+body[data-theme="gilded"] .rarity-legendary { color: #a335ee !important; }
+body[data-theme="gilded"] .rarity-mythic { color: #ff8000 !important; }
+
+body[data-theme="gilded"] .rail-btn {
+  font-family: Marcellus, Georgia, serif !important;
+  color: var(--w3-text) !important;
+  background: var(--w3-panel) !important;
+  border-color: var(--w3-bronze) !important;
+  border-radius: 3px !important;
+}
+
+body[data-theme="gilded"] .rail-btn.primary {
+  color: var(--w3-gold) !important;
+  background: linear-gradient(180deg, #4a331f, #3a2818) !important;
+  border-color: var(--w3-bronze-hi) !important;
+}
+
+body[data-theme="gilded"] .rail-btn.flee {
+  color: var(--w3-gold) !important;
+  background: linear-gradient(180deg, #b0140c, #6f0201) !important;
+  border-color: var(--w3-bronze-hi) !important;
+}
+
+body[data-theme="gilded"] .hb-slot {
+  border-color: var(--w3-bronze) !important;
+  border-radius: 2px !important;
+  background-color: #0e0b09 !important;
+  background-image: url("themes/gilded/textures/slot-inset.png") !important;
+  background-size: cover !important;
+  box-shadow: inset 0 0 0 1px #000 !important;
+}
+
+body[data-theme="gilded"] .hb-slot:hover,
+body[data-theme="gilded"] .hb-slot:focus {
+  border-color: var(--w3-bronze-hi) !important;
+  box-shadow: 0 0 0 1px var(--w3-bronze-hi), inset 0 0 0 1px #000 !important;
+}
+
+body[data-theme="gilded"] .round-chip,
+body[data-theme="gilded"] .turn-chip,
+body[data-theme="gilded"] .queued-chip {
+  font-family: Marcellus, Georgia, serif !important;
+  color: var(--w3-gold) !important;
+  background: #1a100a !important;
+  border-color: var(--w3-bronze) !important;
+  border-radius: 3px !important;
+}
+
+/* Room portrait tiles. */
+body[data-theme="gilded"] .entity-card {
+  border-radius: 3px !important;
+  box-shadow: 0 0 0 1px var(--w3-bronze-dark), 0 0 0 2px var(--w3-bronze), 0 8px 22px rgba(0, 0, 0, 0.55) !important;
+}
+
+body[data-theme="gilded"] .entity-card.enemy { box-shadow: 0 0 0 1px #6f0201, 0 0 0 2px var(--w3-debuff), 0 8px 22px rgba(0, 0, 0, 0.55) !important; }
+body[data-theme="gilded"] .entity-card.merchant { box-shadow: 0 0 0 1px var(--w3-bronze-dark), 0 0 0 2px var(--w3-buff), 0 8px 22px rgba(0, 0, 0, 0.55) !important; }
+body[data-theme="gilded"] .entity-card.quest { box-shadow: 0 0 0 1px var(--w3-bronze-dark), 0 0 0 2px var(--w3-gold), 0 8px 22px rgba(0, 0, 0, 0.55) !important; }
+body[data-theme="gilded"] .entity-card.friendly { box-shadow: 0 0 0 1px var(--w3-bronze-dark), 0 0 0 2px var(--w3-bronze-hi), 0 8px 22px rgba(0, 0, 0, 0.55) !important; }
+
+body[data-theme="gilded"] .entity-card.threat-grey { box-shadow: 0 0 0 2px #9d9d9d, 0 8px 22px rgba(0, 0, 0, 0.55) !important; }
+body[data-theme="gilded"] .entity-card.threat-green { box-shadow: 0 0 0 2px var(--w3-buff), 0 8px 22px rgba(0, 0, 0, 0.55) !important; }
+body[data-theme="gilded"] .entity-card.threat-yellow { box-shadow: 0 0 0 2px var(--w3-gold), 0 8px 22px rgba(0, 0, 0, 0.55) !important; }
+body[data-theme="gilded"] .entity-card.threat-orange { box-shadow: 0 0 0 2px #ff8000, 0 8px 22px rgba(0, 0, 0, 0.55) !important; }
+body[data-theme="gilded"] .entity-card.threat-red { box-shadow: 0 0 0 2px var(--w3-debuff), 0 8px 22px rgba(0, 0, 0, 0.55) !important; }
+body[data-theme="gilded"] .entity-card.threat-skull {
+  box-shadow: 0 0 0 1px #ff8000, 0 0 0 3px var(--w3-bronze-hi), 0 8px 22px rgba(0, 0, 0, 0.55) !important;
+}
+
+body[data-theme="gilded"] .entity-name {
+  display: block;
+  margin: 0;
+  font-size: 11px;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(74, 51, 31, 0.94), rgba(26, 16, 10, 0.94)) !important;
+  border-radius: 2px !important;
+  box-shadow: inset 0 0 0 1px var(--w3-bronze) !important;
+  padding: 1px 3px;
+}
+
+body[data-theme="gilded"] .sheet-title.gf-plaque {
+  display: block;
+  margin: 0 0 0.7rem;
+  padding: 3px 16px 4px;
+  text-align: center;
+  background-color: #3a2818 !important;
+  background-image: var(--w3-leather) !important;
+  background-size: auto, 256px 256px !important;
+  border: 1px solid var(--w3-bronze) !important;
+  border-radius: 6px !important;
+}
+
+body[data-theme="gilded"] .entity-card.threat-grey .entity-name,
+body[data-theme="gilded"] .entity-card.threat-grey .entity-meta { color: #9d9d9d !important; }
+body[data-theme="gilded"] .entity-card.threat-green .entity-name,
+body[data-theme="gilded"] .entity-card.threat-green .entity-meta { color: var(--w3-buff) !important; }
+body[data-theme="gilded"] .entity-card.threat-yellow .entity-name,
+body[data-theme="gilded"] .entity-card.threat-yellow .entity-meta { color: var(--w3-gold) !important; }
+body[data-theme="gilded"] .entity-card.threat-orange .entity-name,
+body[data-theme="gilded"] .entity-card.threat-orange .entity-meta { color: #ff8000 !important; }
+body[data-theme="gilded"] .entity-card.threat-red .entity-name,
+body[data-theme="gilded"] .entity-card.threat-red .entity-meta { color: var(--w3-debuff) !important; }
+body[data-theme="gilded"] .entity-card.threat-skull .entity-name,
+body[data-theme="gilded"] .entity-card.threat-skull .entity-meta { color: var(--w3-gold) !important; }
+
+body[data-theme="gilded"] .entity-meta { font-family: Marcellus, Georgia, serif !important; text-shadow: var(--w3-shadow) !important; }
+body[data-theme="gilded"] .aggro-mark { color: var(--w3-debuff) !important; font-family: Marcellus, Georgia, serif !important; }
+body[data-theme="gilded"] .state-badge {
+  border-radius: 2px !important;
+  background: #1a100a !important;
+  box-shadow: inset 0 0 0 1px var(--w3-bronze) !important;
+  color: var(--w3-gold) !important;
+}
+
+body[data-theme="gilded"] .level-sub,
+body[data-theme="gilded"] .level-flavor { color: var(--w3-text) !important; }
+body[data-theme="gilded"] .attr-spend-name { color: var(--w3-gold) !important; }
+body[data-theme="gilded"] .attr-spend-val,
+body[data-theme="gilded"] .attr-spend-plus { color: var(--w3-text) !important; }
+
+@media (max-width: 768px), (max-height: 500px) {
+  body[data-theme="gilded"] .dialog-sheet,
+  body[data-theme="gilded"] .shop-panel {
+    border-radius: 3px 3px 0 0 !important;
+  }
+}
+
+/* Layout locks. Shared .gf-* primitives may set position and size.
+   These rules keep the boxes this client already measured. */
+body[data-theme="gilded"] .players-overlay.gf-panel {
+  position: absolute;
+  top: 3em;
+  right: 0.8em;
+  display: flex;
+  flex-direction: column;
+}
+
+body[data-theme="gilded"] .players-overlay.expanded.gf-panel {
+  width: min(340px, calc(100% - 1.6em));
+  max-width: 360px;
+  height: 50%;
+  min-height: 180px;
+}
+
+body[data-theme="gilded"] .npc-portrait-slot.gf-medallion {
+  width: clamp(100px, 22vw, 140px);
+  height: auto;
+  aspect-ratio: 1 / 1;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+body[data-theme="gilded"] .dialog-dismiss.gf-close,
+body[data-theme="gilded"] .shop-close.gf-close,
+body[data-theme="gilded"] .friends-close.gf-close {
+  position: static;
+  top: auto;
+  right: auto;
+  width: auto;
+  height: auto;
+  box-sizing: border-box;
+}
+
+body[data-theme="gilded"] .dialog-dismiss.gf-close {
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+body[data-theme="gilded"] .shop-close.gf-close,
+body[data-theme="gilded"] .friends-close.gf-close {
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 1.4em;
+  line-height: 1;
+}
+
+body[data-theme="gilded"] .dialog-dismiss.gf-close::before,
+body[data-theme="gilded"] .shop-close.gf-close::before,
+body[data-theme="gilded"] .friends-close.gf-close::before {
+  content: none;
+}
+
+body[data-theme="gilded"] .entity-name.gf-plaque {
+  display: block;
+  position: static;
+  min-height: 0;
+  margin: 0;
+  padding: 1px 3px;
+  font-size: 11px;
+  line-height: 1.15;
+}
+
+body[data-theme="gilded"] .entity-name.gf-plaque::before,
+body[data-theme="gilded"] .entity-name.gf-plaque::after {
+  content: none;
+}
+
+@media (max-width: 600px) {
+  body[data-theme="gilded"] .npc-portrait-slot.gf-medallion {
+    width: clamp(80px, 28vw, 110px);
+  }
+}
+
+@media (max-height: 500px) {
+  body[data-theme="gilded"] .npc-portrait-slot.gf-medallion {
+    width: 72px;
+  }
+}

@@ -379,7 +379,7 @@
   </button>
 
   {#if showPlayersOverlay}
-    <div class="players-overlay expanded">
+    <div class="players-overlay expanded gf-panel">
       <div class="players-overlay-title">
         In this room
         <button class="player-action-btn friends-link whisper" type="button" on:click={openParty} title="Open party">Party</button>

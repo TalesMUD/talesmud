@@ -312,10 +312,10 @@
   }
 </script>
 
-<div class="questlog-widget game-panel">
+<div class="questlog-widget game-panel gf-panel">
   <div class="questlog-header">
     <div class="header-title-row">
-      <h2 class="widget-chrome-title">Quest Log</h2>
+      <h2 class="widget-chrome-title gf-plaque">Quest Log</h2>
     </div>
     <div class="quest-toolbar" role="toolbar" aria-label="Quest filters and tools">
       <div class="type-filter-chips" role="group" aria-label="Filter by quest type">
@@ -502,7 +502,7 @@
 
     {#if pinnedQuestList.length > 0}
       <div class="quest-section">
-        <h3 class="section-title">📌 Pinned ({pinnedQuestList.length})</h3>
+        <h3 class="section-title gf-plaque">📌 Pinned ({pinnedQuestList.length})</h3>
         {#each pinnedQuestList as quest}
           <div class="quest-entry is-pinned" class:ready={isQuestReady(quest)} class:expanded={expandedQuest === quest.questId}>
             <button
@@ -604,7 +604,7 @@
 
     {#if unpinnedActiveQuests.length > 0}
       <div class="quest-section">
-        <h3 class="section-title">Active ({unpinnedActiveQuests.length})</h3>
+        <h3 class="section-title gf-plaque">Active ({unpinnedActiveQuests.length})</h3>
         {#each activeAreaGroups as group}
           <div class="area-group" class:current={currentAreaLabel && group.area === currentAreaLabel} class:collapsed={!isAreaExpanded(group.area)}>
             <button type="button" class="area-group-header" on:click={() => toggleAreaGroup(group.area)} aria-expanded={isAreaExpanded(group.area)}>
@@ -722,7 +722,7 @@
 
     {#if showCompleted && completedQuests.length > 0}
       <div class="quest-section">
-        <h3 class="section-title">Completed ({completedQuests.length})</h3>
+        <h3 class="section-title gf-plaque">Completed ({completedQuests.length})</h3>
         {#each completedQuests as quest}
           <div class="quest-entry completed" class:expanded={expandedQuest === quest.questId}>
             <button
@@ -802,7 +802,7 @@
 
     {#if showAbandoned && abandonedQuests.length > 0}
       <div class="quest-section">
-        <h3 class="section-title">Abandoned ({abandonedQuests.length})</h3>
+        <h3 class="section-title gf-plaque">Abandoned ({abandonedQuests.length})</h3>
         {#each abandonedQuests as quest}
           <div class="quest-entry abandoned">
             <button
@@ -823,7 +823,7 @@
 
     {#if failedQuests.length > 0}
       <div class="quest-section">
-        <h3 class="section-title">Failed ({failedQuests.length})</h3>
+        <h3 class="section-title gf-plaque">Failed ({failedQuests.length})</h3>
         {#each failedQuests as quest}
           <div class="quest-entry failed">
             <button

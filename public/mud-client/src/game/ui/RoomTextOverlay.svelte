@@ -371,7 +371,7 @@
   <div class="room-text-overlay" aria-live="polite">
     {#each visibleMessages as msg (msg.id)}
       <div
-        class="overlay-message"
+        class="overlay-message gf-panel"
         class:ambiance={msg.kind === 'ambiance'}
         class:examine={msg.kind === 'examine' && msg.examine}
         class:examine-unique={msg.kind === 'examine' && isUniqueExamine(msg.examine)}

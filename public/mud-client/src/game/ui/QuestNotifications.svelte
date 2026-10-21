@@ -188,7 +188,7 @@
   <div class="quest-moment-layer" aria-live="polite">
     {#each activeMoment as notification (notification)}
       <div
-        class="veilspan-card"
+        class="veilspan-card gf-panel"
         class:level-up={notification.type === 'levelup'}
         use:lifetime={{ notification, duration: 16000 }}
         role="dialog"
@@ -268,7 +268,7 @@
   <div class="quest-notifications">
     {#each corner as notification (notification)}
       <div
-        class="notification {notification.type}"
+        class="notification gf-panel {notification.type}"
         use:lifetime={{ notification, duration: 5000 }}
         on:click={() => handleNotificationClick(notification)}
         on:keydown={(e) => e.key === 'Enter' && handleNotificationClick(notification)}

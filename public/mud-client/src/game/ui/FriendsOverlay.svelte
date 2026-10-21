@@ -250,10 +250,10 @@
 {#if open}
   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
   <div class="friends-overlay" role="dialog" aria-modal="true" aria-label="Friends" on:click={(e) => { if (e.target === e.currentTarget) close(); }}>
-    <div class="friends-panel" on:click|stopPropagation>
+    <div class="friends-panel gf-panel" on:click|stopPropagation>
       <div class="friends-header">
         <div class="friends-title"><i class="material-icons">group</i> Friends</div>
-        <button class="friends-close" type="button" on:click={close} aria-label="Close friends">×</button>
+        <button class="friends-close gf-close" type="button" on:click={close} aria-label="Close friends">×</button>
       </div>
       {#if guest}
         <div class="guest-note">Friends are for lasting adventurers. Sign in to keep a list.</div>
