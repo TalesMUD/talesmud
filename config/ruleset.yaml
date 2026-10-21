@@ -32,16 +32,26 @@ combat:
   safe_room: stay       # stay | bind | start — used only when disconnect is release
   disconnect: continue  # continue | release — continue leaves the fight running
   bare_attack: ask      # ask | first_hostile — ask is "Attack whom?" outside combat
+  # Minimum seconds after a death before a spawner replaces the corpse.
+  # An authored respawnDelay still waits when it is longer. 0 disables the floor.
+  # Server start still fills InitialCount immediately.
+  respawn_min_seconds: 30
   # Same-room aggro for enemies with aggroOnSight. Sight is this room only.
   # enabled false is the kill switch. grace_seconds clamps to 0.5–10.
   # max_level_gap skips a player more than this many levels above the enemy; 0 disables that filter.
-  # reaggro_cooldown_seconds is per player+NPC after a fight between them ends. 0 allows an immediate new sighting.
+  # reaggro_cooldown_seconds is per player+NPC instance after a fight between them ends. 0 allows an immediate new sighting.
   # Leaving during the grace window does not start the cooldown.
+  # respawn_grace_seconds holds a fresh respawn that appears on players already in the room. 0 uses grace_seconds.
+  # post_combat_grace_seconds holds aggressive NPCs in the fight room after a victory or flee. Leaving ends it. 0 disables it.
+  # spawn_aggro_cooldown_seconds stops that spawn from auto-aggroing the same player again, including a replacement. 0 disables it. attack still works.
   aggro_on_sight:
     enabled: true
     grace_seconds: 2.5
     max_level_gap: 5
     reaggro_cooldown_seconds: 15
+    respawn_grace_seconds: 8
+    post_combat_grace_seconds: 10
+    spawn_aggro_cooldown_seconds: 60
 
 # Passive HP and mana. Each block has an hp pool and a mana pool.
 # A pool is off when enabled is false, or when percent and flat are both 0.
@@ -82,3 +92,13 @@ regen:
       percent: 1
       flat: 0
       interval_seconds: 10
+
+# Next-step hint for a character who has not finished a quest.
+# enabled false builds no hint and sends nothing. Omitted stays on.
+guide:
+  enabled: true
+
+# Repeatable quests with repeatReset: daily open again at this UTC hour.
+# Omitted stays at 4. A value outside 0-23 is rejected.
+quests:
+  daily_reset_hour_utc: 4

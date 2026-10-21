@@ -5,6 +5,8 @@ package guide
 import (
 	"sort"
 	"strings"
+
+	"github.com/talesmud/talesmud/pkg/ruleset"
 )
 
 // Hint is one line a new character can act on. Empty Text means show nothing.
@@ -36,6 +38,7 @@ type Quest struct {
 	Name           string
 	Level          int32
 	Guide          bool
+	Repeating      bool
 	Status         string
 	SourceType     string
 	SourceNPCID    string
@@ -82,7 +85,7 @@ type Actor struct {
 
 // Build returns the single next step, or nil when the hint must stay hidden.
 func Build(w World) *Hint {
-	if w.Dismissed || anyCompleted(w.Quests) {
+	if !ruleset.GuideEnabled() || w.Dismissed || anyCompleted(w.Quests) {
 		return nil
 	}
 	pool := poolOf(w.Quests)
@@ -108,15 +111,24 @@ func anyCompleted(quests []Quest) bool {
 }
 
 func poolOf(quests []Quest) []Quest {
+	candidates := quests
+	if hasOpenNormal(quests) {
+		candidates = make([]Quest, 0, len(quests))
+		for _, q := range quests {
+			if !q.Repeating {
+				candidates = append(candidates, q)
+			}
+		}
+	}
 	guided := false
-	for _, q := range quests {
+	for _, q := range candidates {
 		if q.Guide && !closed(q) {
 			guided = true
 			break
 		}
 	}
 	var pool []Quest
-	for _, q := range quests {
+	for _, q := range candidates {
 		if closed(q) {
 			continue
 		}
@@ -131,6 +143,15 @@ func poolOf(quests []Quest) []Quest {
 		}
 	}
 	return pool
+}
+
+func hasOpenNormal(quests []Quest) bool {
+	for _, q := range quests {
+		if !q.Repeating && !closed(q) {
+			return true
+		}
+	}
+	return false
 }
 
 func closed(q Quest) bool {
@@ -293,7 +314,7 @@ func killStep(w World, q Quest, obj Objective) *Hint {
 	name := displayName(obj.TargetName, "the enemy")
 	if a := actorHere(w, obj.TargetID, name); a != nil {
 		who := displayName(obj.TargetName, a.Name)
-		return &Hint{Text: "Tap the " + who + " to fight.", QuestName: q.Name, Step: "fight", Command: "attack " + who, Label: "Fight"}
+		return &Hint{Text: "Attack the " + who + ".", QuestName: q.Name, Step: "fight", Command: "attack " + who, Label: "Fight"}
 	}
 	blurb := obj.Description
 	if strings.TrimSpace(blurb) == "" {

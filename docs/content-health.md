@@ -19,6 +19,8 @@ Muted rule ids are stored on server settings (`mutedHealthRuleIDs`). `PUT /api/h
 - `GET /api/health/drift`
 - `GET /api/health/drift/export?type=&id=` (importer-format YAML)
 
+An exported enemy writes authored HP, attack, and defense into the importer fields when `baseStats` is present, so a re-import applies the difficulty multipliers once. A `combat` block on that YAML records both the authored numbers and the effective numbers combat uses. The block is not an importer field. An enemy with no content base exports the stored stats as both.
+
 `/creator/drift` (Operate) lists that drift response. A changed entity expands to each field's before and after value. Export YAML downloads one entity. Export all downloads every added or changed entity as one concatenated YAML file. Removed entities stay in the list and are not exported. Health links to this page.
 
 `/api/diagnostics/world` and `/api/world/validation` keep their existing response shapes.

@@ -28,7 +28,7 @@ assert.equal(roomClear.includes('clearDialog'), true);
 
 assert.equal(shop.includes('shopclose'), true);
 assert.equal(shop.includes("e.key !== 'Escape'"), true);
-assert.match(index, /bundle\.js\?v=oss053/);
+assert.match(index, /bundle\.js\?v=uxtop1/);
 assert.equal(overlay.includes('use:portal'), true);
 assert.equal(overlay.includes('position: fixed'), true);
 assert.equal(shop.includes('use:portal'), true);

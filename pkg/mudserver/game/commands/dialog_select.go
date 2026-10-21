@@ -14,6 +14,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/rooms"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/ruleset"
 	"github.com/talesmud/talesmud/pkg/scripts"
 )
 
@@ -483,6 +484,18 @@ func handleQuestAction(game def.GameCtrl, message *messages.Message, selectedOpt
 		}
 
 		game.SendMessage() <- message.Reply(progressMsg)
+
+	case "wait":
+		quest, _ := game.GetFacade().QuestsService().FindByID(questID)
+		progress, _ := game.GetFacade().QuestsService().GetProgress(char.ID, questID)
+		if quest != nil && progress != nil {
+			if until, waiting := quest.AvailableAgain(progress.CompletedAt, quests.Now(), ruleset.QuestDailyResetHourUTC()); waiting {
+				game.SendMessage() <- message.Reply(quests.FormatAvailableAgain(until, quests.Now()))
+				return
+			}
+		}
+		game.SendMessage() <- message.Reply("That quest is not ready.")
+		return
 	}
 
 	// End dialog after complete/progress (accept refreshes in place above)

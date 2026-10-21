@@ -197,6 +197,9 @@
             {report.category || "quest"}
             {#if report.level} · lvl {report.level}{/if}
             {#if report.area} · {report.area}{/if}
+            {#if report.repeatable} · repeatable{/if}
+            {#if report.repeatReset} · {report.repeatReset}{/if}
+            {#if report.repeatCooldownSeconds} · {report.repeatCooldownSeconds}s{/if}
             {#if report.offer?.reason} · {report.offer.reason}{/if}
             {#if report.rewards && (report.rewards.xp || report.rewards.gold || (report.rewards.items || []).length)}
               · {report.rewards.xp || 0} XP, {report.rewards.gold || 0} gold

@@ -1,11 +1,22 @@
 package commands
 
 import (
+	"strings"
+	"time"
+
 	"github.com/talesmud/talesmud/pkg/entities/quests"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
-	"strings"
+	"github.com/talesmud/talesmud/pkg/ruleset"
 )
+
+// QuestRepeatPayload is the client flag and next-available time for one quest row.
+func QuestRepeatPayload(quest *quests.Quest, status string, completedAt time.Time) quests.RepeatPayload {
+	if quest == nil {
+		return quests.RepeatPayload{}
+	}
+	return quest.RepeatPayload(status, completedAt, quests.Now(), ruleset.QuestDailyResetHourUTC())
+}
 
 func buildQuestLogEntries(game def.GameCtrl, progressList []*quests.QuestProgress) []messages.QuestLogEntry {
 	entries := make([]messages.QuestLogEntry, 0, len(progressList))
@@ -53,6 +64,12 @@ func buildQuestLogEntry(game def.GameCtrl, quest *quests.Quest, progress *quests
 	}
 	if !progress.CompletedAt.IsZero() {
 		entry.CompletedAt = progress.CompletedAt.Format("2006-01-02T15:04:05Z07:00")
+	}
+	if quest != nil {
+		payload := QuestRepeatPayload(quest, string(progress.Status), progress.CompletedAt)
+		entry.Repeats = payload.Repeats
+		entry.RepeatReset = payload.RepeatReset
+		entry.NextAvailableAt = payload.NextAvailableAt
 	}
 
 	return entry

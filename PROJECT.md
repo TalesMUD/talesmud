@@ -12,7 +12,7 @@ TalesMUD is a browser-based Multi-User Dungeon (MUD) framework built with Go and
 - **Core Systems & Features:** `FEATURES.md` (comprehensive reference for all systems, data structures, and APIs)
 - **Game design + MVP backlog:** `docs/design/GAME_DESIGN.md`
 - **Door on the shared engine:** `docs/DOOR-ON-MUD.md`
-- **Ruleset profile:** `config/ruleset.yaml` (level cap, level-up mode, death, new day, resource keys, combat pacing, regen for out of combat, resting, and in combat). Combat math stays in `config/combat_balance.yaml`.
+- **Ruleset profile:** `config/ruleset.yaml` (level cap, level-up mode, death, new day, resource keys, combat pacing, regen for out of combat, resting, and in combat, `guide.enabled`, `combat.respawn_min_seconds`, aggro grace windows). Combat math stays in `config/combat_balance.yaml`.
 - **Scripting system:** `docs/design/SCRIPTING.md`
 - **World map implementation:** `docs/design/WORLD_MAP_IMPLEMENTATION.md`
 - **Quest authoring guide:** `docs/design/QUEST_AUTHORING.md`
@@ -54,7 +54,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Per-character friends list (`friend add/remove/list`); HUD overlay with online flags + whisper; guests refused
   - Guest-public NPC, enemy, and player portraits (`/api/portraits/:filename`). Player art covers Human, Dwarf, and Elf across Warrior, Rogue, Mage/Wizard, Ranger/Hunter, Cleric, and Druid; missing art falls back to a class silhouette.
   - Merchant shop overlay (structured `shop` WS message with item stats/description; click inspects, explicit Buy/Sell confirm; WoW-style compare-to-equipped deltas on buy inspect; dialog Trade inject). On phone, tablet, and short landscape the shop is a bottom sheet portaled above the room; taller desktop windows keep a centered panel. The close control stays in the sheet header.
-  - NPC dialog overlay shows the portrait, the name, the speech, and the authored choices. There is no separate Leave conversation button. Choosing an exit option closes the panel when the server sends `dialogEnd`. Phone, tablet, and short landscape render the dialog as a scrollable bottom sheet above the room (a × runs the authored exit when that choice is on the node). Taller desktop windows use a centered scrollable panel. Play JS and CSS use cache tag `?v=oss053`.
+  - NPC dialog overlay shows the portrait, the name, the speech, and the authored choices. There is no separate Leave conversation button. Choosing an exit option closes the panel when the server sends `dialogEnd`. Phone, tablet, and short landscape render the dialog as a scrollable bottom sheet above the room (a × runs the authored exit when that choice is on the node). Taller desktop windows use a centered scrollable panel. Play JS and CSS use cache tag `?v=curve1`.
   - Player chrome Map: Cartographer overlay (desktop ~80% + intel rail; phone full-bleed + bottom intel sheet); tap select with Travel primary (Inspect optional); compact Map tab has no duplicate Map/Open Map header; 14 terrain types with six native 48px pixel-art variants plus room-driven roof/keep/service/landmark stamps and four underground floor styles on one sprite sheet; dithered biomes, smooth organic beaches/foam/depth bands and offshore rocks/coastal cliffs, mixed foothills and central peaks, biome-specific oaks/pines/marsh trees, crisp town glyphs, quiet dirt roads batched beneath relief, canopies, buildings and opaque town paving, water bridges along charted outdoor exits, street-shaped town paving with angular footprint walls, corner towers and road gates, roofs and town/farm props with filterable interior selection, parchment fog, textured sea, glowing you-marker, Fit world / recenter and zoom/pan, with up to 10× fit scale and 220px tiles (twice the previous closest view), using crisp nearest-neighbor sampling. World fit and minimum zoom share a continent frame at roughly 70–80% of the map height on desktop. The minimap shares cached overview/close landscapes and the underground renderer; 48px close detail bakes on demand in an OffscreenCanvas worker where supported, with a synchronous fallback. The distant overview retains a compact 32px cache; finer leaves, bark, timber lookout towers, roof tiles, masonry, bridge planks, crop rows and props remain crisp at maximum zoom. Lower uses 48px themed floors, bones/barrels and dim cluster light, with no long void-crossing connectors. The full map has low-rate water/smoke accents that respect reduced motion; trees and buildings have no drop shadows. Outdoor elevations stay on Overworld, interiors share exterior anchors, underground rooms stay on Lower. Terrain rules/defaults live in `pkg/worldmap/map_terrain.json`; compact centers/ground/town flags in `pkg/worldmap/map_layout.json`; read-only preview instructions are in `tools/WORLDMAP-PREVIEW.md`
   - Play client WS: single-flight socket gate; close 4001 (session replaced) does not auto-reconnect; `/play` JS/CSS served no-cache. An optional SSH listener (`ssh.enabled`, default off) uses the same session replace across web and SSH. See `docs/ssh-access.md`.
 - Device login: classic `/activate` is a standalone “Connect this terminal/app” page and confirms only after a click. Public `/api/device/start` and `/api/device/poll` let installable clients obtain a signed 30-minute account session using the shared SSH device store. Set `SSH_ACTIVATE_URL` and a persistent `SESSION_SECRET` or session key path; see `docs/device-login.md`. Account menus list and revoke SSH keys linked from an SSH sign-in. Guests cannot confirm codes.
@@ -72,12 +72,14 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Combat self and allies share one row on desktop and a stacked section on phones. Joins show one banner; combat prose stays in the log. Defeated enemy sprites remain visible in grey with a Defeated label.
   - In multi-enemy combat, clicking a BattleStage enemy or pressing Tab changes the gold focus highlight and server aim without spending a turn. Basic attacks and hostile skills use that living target; switching to an orange, red, or skull foe repeats the level-gap warning once per change. A dead target falls back to a living foe.
   - Say chrome opens a message popup, then sends `say <text>`
-  - Inventory chrome opens overlay by default (preference: overlay | on-screen widget)
+  - Inventory chrome opens overlay by default (preference: overlay | on-screen widget). Inventory and party sheets paint above the phone header and Room/Console tabs.
+  - Phones in short landscape use the scrollable Room/Console shell through 1024px width and 500px height. The desktop home link stays outside that room layout.
+  - Quest and room notifications wait through combat, victory/defeat, and pending loot rolls. Their reading time starts on display. A previous fight’s timeout cannot dismiss a later result. Outcome rewards scroll while Continue stays visible; short landscape places outcomes beside Need/Greed.
   - Equipment paper-doll: square slots around portrait (head/neck/chest/hands | legs/boots/ring1/ring2; main_hand + off_hand under); compact ATK/DEF strip
   - Clicking equipped gear opens a detail card; Unequip is an explicit action. Inventory item cards show stats, value, available weight, usability requirements, and differences from worn gear. Clear class-relevant upgrades get a green badge. Equip, Use, Sell, and Drop remain explicit buttons. A unique item card has a gold frame and a UNIQUE mark.
   - A loot entry can be `rarity: unique` with a `chance` and `boss_only`. The roll is skipped when every victory recipient already holds that template (bag, equipped, nested container; no separate item bank). That drop announces `UNIQUE:` as a gold room chip. A template `unique` flag caps ownership and does not send the chip.
   - Room action/system reaction toast: centered on room hero art; LOOK-sized padding (no half-cut last line)
-  - Quest Accepted / Complete: Veilspan moment cards (centered); open Talk dialog refreshes `[Quest]` → `[In Progress]`
+  - Quest Accepted / Complete: centered moment cards; open Talk dialog refreshes `[Quest]` → `[In Progress]`
   - Quest log Turn In for anywhere-ready quests; otherwise Turn in: NPC hint
   - WoW-style private cellar instances: `type: instance` exits, or a shared-room exit into a room tagged `instance`, clone a small room graph per character; town hub stays shared; empty copies are destroyed. Startup deletes leftover `~` room rows and moves characters to the hub, the copy's return exit, the start room, or the bind room, then tells them once on the next login
 
@@ -132,7 +134,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Real-time quest log WebSocket updates include quest definition details, objectives, and rewards after dialog quest actions
   - Quest rewards: XP, Gold, and item grants on completion
   - Quest prerequisites: required quest completions and level requirements
-  - Repeatable quests support
+  - Repeatable quests support. Optional `repeatReset: daily` or `repeatReset: cooldown` blocks the next accept until the ruleset hour (`quests.daily_reset_hour_utc`, default 4) or `repeatCooldownSeconds`. Plain `repeatable: true` still reopens immediately. Quest payloads include `repeats`, `repeatReset`, and `nextAvailableAt` (absolute UTC) while the window is closed.
   - Quest categories and area labels for filtering and organizing regional quest lines
   - QuestTracker: automatic progress updates from game events (NPC kills, item pickups with stack quantities, room entries, dialog nodes, NPC delivery checks)
   - Accepting a collect quest pre-fills progress from matching items already in the character inventory, including stack quantities
@@ -141,7 +143,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Lua scripting API (`tales.quests`) for custom quest logic
   - Creator UI: full quest editor with objectives, rewards, prerequisites, dialog text configuration, validation feedback, and player flow preview
   - Player commands: `quests`/`ql` (quest log), `quest <name>` (details), `abandon <name>` (abandon quest), `guide dismiss` (close the next-step hint)
-  - Next-step hint: one dismissible chip for a new character. A quest may set `guide: true`. When none do, the hint uses the active quest log and prefers an open kill. It walks room exits to the objective, then offers attack or `complete <name>`. Dismissal is stored on the character (`flags.guideDismissed`) and the chip stays hidden after any completed quest. The client keeps it off the room name, the hotbar, dialogs, the shop, and Need/Greed.
+  - Next-step hint: one dismissible chip for a new character. A quest may set `guide: true`. When none do, the hint uses the active quest log and prefers an open kill. A quest with `repeatReset` is not chosen while a normal quest is still open. It walks room exits to the objective, then offers attack or `complete <name>`. The fight line is `Attack the <name>.` The same wording is what telnet, SSH, and Door show. Dismissal is stored on the character (`flags.guideDismissed`) and the chip stays hidden after any completed quest. The client keeps it off the room name, the hotbar, dialogs, the shop, and Need/Greed. `config/ruleset.yaml` `guide.enabled` defaults to on. A game-mode file may set the same key. `false` builds no hint and sends nothing.
 
 - **Guest Mode (Play as Guest)**
   - Anonymous 30-minute demo sessions without Auth0 registration
@@ -173,11 +175,10 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - Guest users skip onboarding (character auto-created server-side)
 
 - **Room Text Overlay**
-  - Game text (combat, actions, player messages) displayed as translucent overlay on room image
-  - Auto-dismiss with duration scaled by text length (2-4 seconds)
-  - Smooth fade-in/fade-out animations
-  - Stacks up to 5 messages during rapid sequences (e.g. combat)
-  - Always enabled on mobile; optional toggle for desktop in Settings > Interface
+  - Room actions, chat, and item examine cards appear over the room image. Combat feedback stays in BattleStage and the console.
+  - Up to four room messages render at once. Later messages queue; a deliberate new examine replaces the previous examine and appears first.
+  - Reading time scales with text length. Hidden room tabs, combat outcomes, and loot rolls pause presentation.
+  - Entry animations respect the system reduced-motion preference. Dismissal removes cards immediately.
 
 - **Multiplayer**
   - Real-time player interactions via WebSocket
@@ -370,7 +371,7 @@ talesmud/
 | `abandon` | - | Abandon a quest: abandon [name] |
 | `guide` | - | Dismiss the next-step hint: guide dismiss |
 | `spend` | - | Spend attribute points: spend \<attr\> [amount] |
-| `pickup` | `get`, `take` | Pick up an item from the room (room-placed catalog items copy per character and stay for the next guest; dropped loot is still taken). The play client opens one pickup panel for desktop and phone: each ground row is tappable, 1–9 and Enter take a row or everything, and the panel closes when the ground is clear. Ground rows include optional quality, stack, type, and one effect line. Play cache tag `oss053`. |
+| `pickup` | `get`, `take` | Pick up an item from the room (room-placed catalog items copy per character and stay for the next guest; dropped loot is still taken). The play client opens one pickup panel for desktop and phone: each ground row is tappable, 1–9 and Enter take a row or everything, and the panel closes when the ground is clear. Ground rows include optional quality, stack, type, and one effect line. Play cache tag `curve1`. |
 | `drop` | - | Drop an item to the room (blocked for bound items) |
 | `destroy` | `discard` | Destroy an item from inventory |
 | `examine` | `inspect` | Examine an item in detail |
@@ -420,8 +421,9 @@ The NPCs branch represents the latest development work, focusing on NPC systems 
    - Turn-order initiative system with auto-processing
    - Players can queue special actions between auto-attacks: target switch, defend, flee
    - Combat starts with `attack`/`kill` and proceeds automatically. Enemies with `aggroOnSight` start the same way after `combat.aggro_on_sight` grace (default 2.5s, gap 5, 15s reaggro cooldown; `enabled: false` turns it off). The sight line is ordinary text, then one fight, including swarm pack and the party assist nudge. A room with `noAggro` does not schedule or start that fight. The play client shows a red Aggressive label on an `aggroOnSight` enemy card and on look or examine. The client bundle and stylesheet use cache tag `aggro1`. Sanctuary flags survive import/export and private room cloning.
+   - A spawner replaces a corpse only after `respawnDelay`, and at least `combat.respawn_min_seconds` (default 30). Server start still fills the room immediately. A fresh respawn waits `respawn_grace_seconds` (default 8) before it engages players already there. After a victory or flee, `post_combat_grace_seconds` (default 10) holds aggressive enemies in that room, and walking out ends the hold. The next room keeps the short grace. `spawn_aggro_cooldown_seconds` (default 60) stops that spawn from auto-aggroing the same player again. Another player is still engaged on sight. `attack` still starts a fight during that window. Movement stays open once the fight has ended.
    - Level-gap modifiers (`config/combat_balance.yaml` `level_gap`): hit, crit, and damage dealt/taken scale with attacker level minus defender level, clamped (default ±6). Equal levels are unchanged. Applies to basic attacks and skills for players and NPCs.
-   - Class balance (`class_balance`): per-class damage dealt and taken, plus an uphill `behind_dealt` multiplier capped at 1.15. The world-pack class catalog wins when it has a row. `config/combat_balance.yaml` is the fallback. Ward takes hits at 1.00. A soak class's Slam starts its cooldown only when the swing hits. `wizard` uses the mage row. Ranger and hunter share the rogue row.
+   - Class balance (`class_balance`): per-class damage dealt and taken, plus an uphill `behind_dealt` multiplier capped at 1.15. The world-pack class catalog wins when it has a row. `config/combat_balance.yaml` is the fallback. Ward takes hits at 1.00. A soak class's Slam starts its cooldown only when the swing hits. `wizard` uses the mage row. Ranger and hunter share the rogue row. `early_normal` shortens normal-tier enemies at level 6 and below (an authored 18 HP Sample Thug lives at 20 HP, not 48). `newbie_curve` adds level 1–5 class factors and a +2 damage-taken multiplier for those same early attackers. Level 10 and hard/boss tiers stay on the old table.
    - Boss mechanics (`boss_mechanics`): bosses and elites telegraph blows; bosses enrage on a round count or HP percent. Bosses also progress through Opening, Escalation (66% HP), and Last Stand (33% HP), with a transition banner and persistent BattleStage phase label. YAML controls tiers, bands, labels, and optional damage/enrage overrides.
    - Threat colors from the same gap (grey through skull) on room enemy names and battle nameplates. Orange or worse asks once before `attack`; `attack!` or a second `attack` engages.
    - Victory XP and gold scale by that tier against the highest level in the reward split. Bosses pay a one-time first-kill bonus per character. The battle victory panel shows base, level modifier, and a first-kill bonus when one was paid, then reveals each drop in its rarity color and calls out a level-up. Defeat lists XP, gold, battered armor, and the room you wake in. The panel dismisses on click, Enter, or Escape and leaves the terminal usable. Hits float a number over the struck nameplate (a crit is larger, a miss reads "miss"); crits and Crushing Blow flash harder. `prefers-reduced-motion` turns those animations off.
@@ -491,9 +493,9 @@ SESSION_SECRET=
 # SSH_ENABLED=false
 # SSH_LISTEN=127.0.0.1:2222
 # SSH_HOST_KEY_PATH=/var/lib/talesmud/ssh/host_ed25519
-# SSH_PUBLIC_HOST=veilspan.com
+# SSH_PUBLIC_HOST=mud.example.com
 # SSH_PUBLIC_PORT=2222
-# SSH_ACTIVATE_URL=https://veilspan.com/activate
+# SSH_ACTIVATE_URL=https://mud.example.com/activate
 # Also required for public app device login; points at the existing /activate.
 # SSH_GUEST_ENABLED=false
 # SSH_DEVICE_ENABLED=false

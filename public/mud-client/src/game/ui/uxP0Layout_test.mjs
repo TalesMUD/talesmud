@@ -20,7 +20,7 @@ function blockAfter(source, marker) {
 
 assert.equal(dialog.includes('use:portal'), true);
 assert.match(dialog, /\.dialog-overlay\s*\{[^}]*position:\s*fixed/s);
-assert.match(dialog, /z-index:\s*10100/);
+assert.match(dialog, /z-index:\s*var\(--layer-dialog\)/);
 assert.match(dialog, /safe-area-inset-bottom/);
 assert.match(dialog, /max-width:\s*768px|min-width:\s*769px/);
 assert.match(dialog, /max-height:\s*500px[\s\S]*overflow-y:\s*auto/);
@@ -30,7 +30,7 @@ assert.equal(dialog.includes('dialogclose'), false);
 
 assert.equal(shop.includes('use:portal'), true);
 assert.match(shop, /\.shop-overlay\s*\{[^}]*position:\s*fixed/s);
-assert.match(shop, /z-index:\s*10120/);
+assert.match(shop, /z-index:\s*var\(--layer-shop\)/);
 assert.match(shop, /safe-area-inset-bottom/);
 assert.match(shop, /max-height:\s*500px/);
 assert.match(shop, /aria-label="Close shop"/);
@@ -54,13 +54,13 @@ assert.equal(/min-width:\s*44px/.test(hot), false);
 assert.match(blockAfter(narrow, '.combat-hotbar {'), /overflow:\s*hidden/);
 
 assert.equal(need.includes('use:portal'), true);
-assert.match(need, /z-index:\s*10240/);
+assert.match(need, /z-index:\s*var\(--layer-roll\)/);
 assert.match(need, /pointer-events:\s*none/);
 assert.match(need, /\.ng-panel\s*\{[^}]*pointer-events:\s*auto/s);
 assert.match(battle, /yield-roll/);
 assert.match(battle, /lootRollPending/);
 
-assert.match(index, /bundle\.js\?v=oss053/);
+assert.match(index, /bundle\.js\?v=uxtop1/);
 assert.equal(index.includes('needgreed1'), false);
 
 console.log('uxP0Layout_test ok');

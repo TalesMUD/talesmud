@@ -179,6 +179,18 @@ export function onPortraitError(ev, entity) {
 
 export function onPortraitBustError(ev, entity) {
   const img = ev && ev.currentTarget;
-  // Prefer full-body sprite; only silhouette if that is also missing.
-  swapOnce(img, portraitSrc(entity));
+  if (!img || img.dataset.fallback === "2") return;
+  const body = portraitSrc(entity);
+  const stand = figureFallback(entity);
+  // First miss: try the full-body sprite. Second miss: a data-URI silhouette,
+  // which cannot 404, so the dialog never keeps a broken-image icon.
+  if (img.dataset.fallback === "1") {
+    img.dataset.fallback = "2";
+    if (stand && img.getAttribute("src") !== stand) img.src = stand;
+    return;
+  }
+  img.dataset.fallback = "1";
+  const next = body && img.getAttribute("src") !== body ? body : stand;
+  if (next && img.getAttribute("src") !== next) img.src = next;
+  if (next === stand) img.dataset.fallback = "2";
 }

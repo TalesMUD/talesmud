@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/quests"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/ruleset"
 )
 
 const questOnlyDialogID = "__quest_options__"
@@ -143,11 +145,14 @@ func (command *TalkCommand) Execute(game def.GameCtrl, message *messages.Message
 
 // questDialogOption represents a quest-related dialog option
 type questDialogOption struct {
-	text      string // Player-facing label shown in the option list
-	npcText   string // NPC response shown after the player selects this option
-	questID   string
-	questName string
-	action    string // "accept", "complete", "progress"
+	text            string // Player-facing label shown in the option list
+	npcText         string // NPC response shown after the player selects this option
+	questID         string
+	questName       string
+	action          string // "accept", "complete", "progress", "wait"
+	repeats         bool
+	repeatReset     string
+	nextAvailableAt string
 }
 
 // getQuestDialogOptions checks for quest-related dialog options for an NPC.
@@ -181,13 +186,18 @@ func getQuestDialogOptions(game def.GameCtrl, characterID, npcTemplateID, npcIns
 				continue
 			}
 
-			options = append(options, questDialogOption{
+			options = append(options, withRepeat(questDialogOption{
 				text:      fmt.Sprintf("[Quest] %s", quest.Name),
 				npcText:   quest.AcceptDialogText,
 				questID:   quest.ID,
 				questName: quest.Name,
 				action:    "accept",
-			})
+			}, quest, progress))
+		} else if progress.Status == quests.QuestStatusCompleted && quest.Repeatable {
+			if !questPrereqsMet(game, characterID, quest, char) {
+				continue
+			}
+			options = append(options, repeatOfferOption(quest, progress))
 		} else if progress.Status == quests.QuestStatusActive {
 			options = append(options, activeQuestDialogOption(quest, progress)...)
 		}
@@ -234,21 +244,54 @@ func activeQuestDialogOption(quest *quests.Quest, progress *quests.QuestProgress
 		return nil
 	}
 	if allComplete {
-		return []questDialogOption{{
+		return []questDialogOption{withRepeat(questDialogOption{
 			text:      fmt.Sprintf("[Turn In] %s", quest.Name),
 			npcText:   quest.CompleteDialogText,
 			questID:   quest.ID,
 			questName: quest.Name,
 			action:    "complete",
-		}}
+		}, quest, progress)}
 	}
-	return []questDialogOption{{
+	return []questDialogOption{withRepeat(questDialogOption{
 		text:      fmt.Sprintf("[In Progress] %s", quest.Name),
 		npcText:   quest.ProgressDialogText,
 		questID:   quest.ID,
 		questName: quest.Name,
 		action:    "progress",
-	}}
+	}, quest, progress)}
+}
+
+func repeatOfferOption(quest *quests.Quest, progress *quests.QuestProgress) questDialogOption {
+	opt := questDialogOption{
+		text:      fmt.Sprintf("[Quest] %s", quest.Name),
+		npcText:   quest.AcceptDialogText,
+		questID:   quest.ID,
+		questName: quest.Name,
+		action:    "accept",
+	}
+	if quest != nil && progress != nil {
+		if until, waiting := quest.AvailableAgain(progress.CompletedAt, quests.Now(), ruleset.QuestDailyResetHourUTC()); waiting {
+			msg := quests.FormatAvailableAgain(until, quests.Now())
+			opt.text = fmt.Sprintf("[Quest] %s — %s", quest.Name, msg)
+			opt.npcText = ""
+			opt.action = "wait"
+		}
+	}
+	return withRepeat(opt, quest, progress)
+}
+
+func withRepeat(opt questDialogOption, quest *quests.Quest, progress *quests.QuestProgress) questDialogOption {
+	status := ""
+	var completedAt time.Time
+	if progress != nil {
+		status = string(progress.Status)
+		completedAt = progress.CompletedAt
+	}
+	payload := QuestRepeatPayload(quest, status, completedAt)
+	opt.repeats = payload.Repeats
+	opt.repeatReset = payload.RepeatReset
+	opt.nextAvailableAt = payload.NextAvailableAt
+	return opt
 }
 
 // questPrereqsMet checks if a character meets the prerequisites for a quest
@@ -274,8 +317,11 @@ func sendQuestOnlyDialog(game def.GameCtrl, message *messages.Message, npcName s
 	options := make([]messages.DialogOption, len(questOptions))
 	for i, qo := range questOptions {
 		options[i] = messages.DialogOption{
-			Index: i + 1,
-			Text:  qo.text,
+			Index:           i + 1,
+			Text:            qo.text,
+			Repeats:         qo.repeats,
+			RepeatReset:     qo.repeatReset,
+			NextAvailableAt: qo.nextAvailableAt,
 		}
 	}
 
@@ -361,7 +407,13 @@ func buildDialogOptions(nodeOptions []*dialogs.Dialog, state *dialogs.DialogStat
 		options = append(options, messages.DialogOption{Index: len(options) + 1, Text: text})
 	}
 	for _, qo := range questOptions {
-		options = append(options, messages.DialogOption{Index: len(options) + 1, Text: qo.text})
+		options = append(options, messages.DialogOption{
+			Index:           len(options) + 1,
+			Text:            qo.text,
+			Repeats:         qo.repeats,
+			RepeatReset:     qo.repeatReset,
+			NextAvailableAt: qo.nextAvailableAt,
+		})
 	}
 	return options
 }

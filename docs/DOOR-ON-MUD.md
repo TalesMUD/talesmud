@@ -151,6 +151,9 @@ regen:
       percent: 1
       flat: 0
       interval_seconds: 10
+
+guide:
+  enabled: true              # false = no next-step hint, and nothing is sent
 ```
 
 Rejected keys if present: `difficulty_multipliers`, `named_overrides`, `level_gap`, `threat`, `reward_scale`, `class_balance`, `first_kill_bonus`.
@@ -166,6 +169,8 @@ Off and slow examples:
 - In combat off: `regen.in_combat.hp.enabled: false` and the same for `mana`. Slow: `percent: 0.1` and `interval_seconds: 30`.
 
 `Character.CalculateManaRegen` (1 + wisdom modifier per combat round, minimum 1) is separate from `regen.in_combat`.
+
+`guide.enabled` defaults to on. A world game-mode file may set the same key. `false` builds no next-step hint for any character, and the server sends no `guideHint`. Leaving the key out stays on. Hint text names the action in ordinary words (`Attack the <name>.`, `Head east.`, `Talk to <name>.`) so web, telnet, SSH, and Door show the same line.
 
 Housekeeping runs on a tick where at least one pool is due: a dead character is skipped, a resting character who is already full is cleared with "You are now fully rested and recovered.", and a resting character who is in combat has the flag cleared. With the defaults that is every 10 seconds. A profile that disables every pool also skips this pass, because no character is loaded. `applyRegeneration` and `InterruptRest` still clear the resting flag.
 

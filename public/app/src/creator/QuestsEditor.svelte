@@ -151,6 +151,8 @@
       area: "",
       level: 1,
       repeatable: false,
+      repeatReset: "",
+      repeatCooldownSeconds: 0,
       source: { type: "npc", npcId: "" },
       objectives: [],
       rewards: { xp: 0, gold: 0, itemTemplateIds: [] },
@@ -515,6 +517,30 @@
           Repeatable
         </label>
       </div>
+      <div class="space-y-1.5">
+        <label class="label-caps" for="quest-repeat-reset">Reset</label>
+        <select
+          id="quest-repeat-reset"
+          class="input-base"
+          bind:value={$store.selectedElement.repeatReset}
+        >
+          <option value="">No reset</option>
+          <option value="daily">Daily</option>
+          <option value="cooldown">Cooldown</option>
+        </select>
+      </div>
+      {#if $store.selectedElement.repeatReset === "cooldown" || ($store.selectedElement.repeatCooldownSeconds > 0 && !$store.selectedElement.repeatReset)}
+        <div class="space-y-1.5">
+          <label class="label-caps" for="quest-repeat-cooldown">Cooldown seconds</label>
+          <input
+            id="quest-repeat-cooldown"
+            type="number"
+            class="input-base"
+            min="1"
+            bind:value={$store.selectedElement.repeatCooldownSeconds}
+          />
+        </div>
+      {/if}
     </div>
 
     <!-- Source -->

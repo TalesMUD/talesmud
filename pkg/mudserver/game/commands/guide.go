@@ -9,6 +9,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/guide"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/def"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/messages"
+	"github.com/talesmud/talesmud/pkg/ruleset"
 )
 
 // GuideCommand handles "guide dismiss".
@@ -38,13 +39,14 @@ func (c *GuideCommand) Execute(game def.GameCtrl, message *messages.Message) boo
 func (c *GuideCommand) Key() CommandKey { return &StartsWithCommandKey{} }
 
 // PushGuideHint sends the current next step, or an empty hint that clears the chip.
+// guide.enabled false sends nothing.
 func PushGuideHint(game def.GameCtrl, userID string, char *characters.Character) {
 	PushGuideHintAt(game, userID, char, "")
 }
 
 // PushGuideHintAt is PushGuideHint with the room the character just entered.
 func PushGuideHintAt(game def.GameCtrl, userID string, char *characters.Character, roomID string) {
-	if game == nil || userID == "" {
+	if game == nil || userID == "" || !ruleset.GuideEnabled() {
 		return
 	}
 	text, name, step, command, label := "", "", "", "", ""
@@ -198,6 +200,7 @@ func gatherGuideWorld(game def.GameCtrl, char *characters.Character, roomID stri
 			Name:          q.Name,
 			Level:         q.Level,
 			Guide:         q.Guide,
+			Repeating:     q.Repeats(),
 			SourceType:    q.Source.Type,
 			SourceNPCID:   q.Source.NPCID,
 			SourceNPCName: names[q.Source.NPCID],

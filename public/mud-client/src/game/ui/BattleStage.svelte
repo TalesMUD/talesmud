@@ -18,7 +18,6 @@
   import { classCatalog } from '../../onboarding/classCatalog.js';
   import { settingsStore } from '../SettingsStore.js';
   import { resolveBattleLayoutB } from '../battleLayout.js';
-  import { overlayStore } from './overlayStore.js';
   import { itemArtSrc, onItemArtError } from '../itemArtSrc.js';
   import { backend } from '../../api/base.js';
   import { livingFocus } from '../combatFocus.js';
@@ -249,15 +248,7 @@
     }
     if (nextParts && nextKey && nextKey !== lastBannerKey) {
       lastBannerKey = nextKey;
-      bannerParts = nextParts;
-      bannerText = nextParts.raw || '';
-      bannerVisible = true;
-      bannerFlashKey += 1;
-      if (bannerTimer) clearTimeout(bannerTimer);
-      bannerTimer = setTimeout(() => {
-        bannerVisible = false;
-        bannerTimer = null;
-      }, 2800);
+      showBanner(nextParts);
       const kind = nextParts.kind;
       if (kind === 'hit' || kind === 'crit' || kind === 'heal') {
         arenaFlash = true;
@@ -624,12 +615,24 @@
     return false;
   }
 
+  function showBanner(parts) {
+    bannerParts = parts;
+    bannerText = parts.raw || '';
+    bannerVisible = true;
+    bannerFlashKey += 1;
+    clearTimeout(bannerTimer);
+    bannerTimer = setTimeout(() => {
+      bannerVisible = false;
+      bannerTimer = null;
+    }, 2800);
+  }
+
   function activateHotbarSlot(bind) {
     if (!bind) return;
     const result = resolveHotbarActivation(bind, { inCombat: true, inventory });
     if (!result.ok) {
-      if (result.reason && result.reason !== 'empty' && overlayStore?.pushMessage) {
-        overlayStore.pushMessage(result.reason);
+      if (result.reason && result.reason !== 'empty') {
+        showBanner(makeBannerParts({ raw: result.reason }));
       }
       return;
     }
@@ -1341,6 +1344,7 @@
     <div class="outcome-panel" class:victory={outcome === 'victory'} class:defeat={outcome === 'defeat'} class:fled={outcome === 'fled'}>
       <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
       <div class="outcome-card" role="status" on:click={dismissOutcome}>
+        <div class="outcome-content">
         <div class="outcome-ornament" aria-hidden="true">♦</div>
         <div class="outcome-title">{outcomeLabel(outcome)}</div>
         {#if outcome === 'victory' && hasRewardBreakdown}
@@ -1403,6 +1407,7 @@
         {:else if endMessage}
           <div class="outcome-summary">{endMessage}</div>
         {/if}
+        </div>
         <button type="button" class="outcome-continue" on:click|stopPropagation={dismissOutcome}>
           Continue
         </button>
@@ -1417,7 +1422,7 @@
   .battle-stage {
     position: fixed;
     inset: 0;
-    z-index: 9000;
+    z-index: var(--layer-battle);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3084,7 +3089,11 @@
   }
 
   .outcome-card {
-    min-width: min(92%, 360px);
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    min-width: 0;
+    width: min(26rem, calc(100vw - 1.5rem));
     max-width: 28rem;
     padding: 1.4rem 1.6rem 1.25rem;
     border-radius: 12px;
@@ -3097,6 +3106,11 @@
       0 0 0 4px rgba(212, 164, 74, 0.22),
       0 18px 48px rgba(0, 0, 0, 0.55),
       inset 0 0 0 1px rgba(255, 220, 150, 0.12);
+  }
+
+  .outcome-content {
+    min-height: 0;
+    overflow-y: auto;
   }
 
   .outcome-ornament {
@@ -3176,6 +3190,7 @@
   .reward-chip.gold i { color: #e8c878; }
 
   .outcome-continue {
+    flex-shrink: 0;
     appearance: none;
     min-width: 10rem;
     padding: 0.7rem 1.4rem;
@@ -3231,7 +3246,9 @@
   .battle-stage.ending .outcome-card {
     pointer-events: auto;
     cursor: pointer;
-    max-width: min(26rem, 38vw);
+    max-width: min(26rem, calc(100vw - 1.5rem));
+    max-height: calc(100dvh - 5.75rem);
+    overflow: hidden;
     text-align: left;
   }
   .battle-stage.ending.yield-roll .outcome-panel {
@@ -3241,7 +3258,6 @@
   .battle-stage.ending.yield-roll .outcome-card {
     max-width: min(26rem, calc(100vw - 1.5rem));
     max-height: min(46dvh, calc(100dvh - 16.5rem));
-    overflow: auto;
   }
   .battle-stage.ending .outcome-title,
   .battle-stage.ending .outcome-ornament,
@@ -3256,6 +3272,16 @@
   .battle-stage.ending .outcome-continue {
     margin-left: auto;
     margin-right: auto;
+  }
+
+  @media (max-width: 1024px) and (max-height: 500px) and (orientation: landscape) {
+    .battle-stage.ending.yield-roll .outcome-panel { justify-items: start; }
+    .battle-stage.ending.yield-roll .outcome-card {
+      min-width: 0;
+      width: calc(50vw - 1.5rem);
+      max-width: calc(50vw - 1.5rem);
+      max-height: calc(100dvh - 1.5rem);
+    }
   }
 
   .loot-reveal {
@@ -3450,8 +3476,7 @@
     }
   }
 
-  /* C7-mobile: thumb-first stack ≤768px — header / arena / dock / log-peek */
-  @media (max-width: 768px) {
+  @media (max-width: 768px), (max-width: 1024px) and (max-height: 500px) and (orientation: landscape) {
     .battle-stage {
       display: flex;
       align-items: stretch;
@@ -4494,7 +4519,7 @@
       linear-gradient(to right, rgba(0, 0, 0, 0.42) 0%, transparent 22%, transparent 78%, rgba(0, 0, 0, 0.42) 100%);
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 768px), (max-width: 1024px) and (max-height: 500px) and (orientation: landscape) {
     .battle-stage.layout-b .layout-b-frame {
       width: min(46%, 200px);
       top: 0.35rem;

@@ -46,6 +46,61 @@ func TestShippedFileMatchesCurrentPlay(t *testing.T) {
 	}
 }
 
+func TestQuestDailyResetHour(t *testing.T) {
+	ruleset.Reset()
+	t.Cleanup(ruleset.Reset)
+	if ruleset.QuestDailyResetHourUTC() != 4 {
+		t.Fatalf("default hour %d", ruleset.QuestDailyResetHourUTC())
+	}
+	if err := ruleset.LoadBytes([]byte("quests:\n  daily_reset_hour_utc: 6\n")); err != nil {
+		t.Fatal(err)
+	}
+	if ruleset.QuestDailyResetHourUTC() != 6 {
+		t.Fatalf("hour %d", ruleset.QuestDailyResetHourUTC())
+	}
+	if err := ruleset.LoadBytes([]byte("quests: {}\n")); err != nil {
+		t.Fatal(err)
+	}
+	if ruleset.QuestDailyResetHourUTC() != 4 {
+		t.Fatal("omitted hour left the override in place")
+	}
+	if err := ruleset.LoadBytes([]byte("quests:\n  daily_reset_hour_utc: 24\n")); err == nil {
+		t.Fatal("hour 24 was accepted")
+	}
+}
+
+func TestGuideEnabledKey(t *testing.T) {
+	ruleset.Reset()
+	t.Cleanup(ruleset.Reset)
+	if !ruleset.GuideEnabled() {
+		t.Fatal("default guide.enabled is off")
+	}
+	if err := ruleset.LoadBytes([]byte("progression:\n  level_cap: 12\n")); err != nil {
+		t.Fatal(err)
+	}
+	if !ruleset.GuideEnabled() || ruleset.LevelCap() != 12 {
+		t.Fatalf("omitted key enabled=%v cap=%d", ruleset.GuideEnabled(), ruleset.LevelCap())
+	}
+	if err := ruleset.LoadBytes([]byte("guide:\n  enabled: false\n")); err != nil {
+		t.Fatal(err)
+	}
+	if ruleset.GuideEnabled() {
+		t.Fatal("guide.enabled false stayed on")
+	}
+	if err := ruleset.LoadBytes([]byte("guide:\n  enabled: true\n")); err != nil {
+		t.Fatal(err)
+	}
+	if !ruleset.GuideEnabled() {
+		t.Fatal("guide.enabled true stayed off")
+	}
+	if err := ruleset.LoadBytes([]byte("guide: {}\n")); err != nil {
+		t.Fatal(err)
+	}
+	if !ruleset.GuideEnabled() {
+		t.Fatal("empty guide block turned the hint off")
+	}
+}
+
 func TestRejectsCombatBalanceKeys(t *testing.T) {
 	ruleset.Reset()
 	t.Cleanup(ruleset.Reset)

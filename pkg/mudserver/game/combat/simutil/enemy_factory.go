@@ -70,12 +70,13 @@ func EnemyConfigsByLevel(maxLevel int32) []EnemyConfig {
 // CreateEnemy creates an NPC enemy from an EnemyConfig
 // Applies difficulty-based (and named) multipliers to base stats
 func CreateEnemy(config EnemyConfig) *npc.NPC {
-	finalHP, finalAttack, finalDefense := balance.ApplyEnemyMultipliers(
+	finalHP, finalAttack, finalDefense := balance.ApplyEnemyCombat(
 		config.HP,
 		config.AttackPower,
 		config.Defense,
 		config.Difficulty,
 		config.Name,
+		config.Level,
 	)
 
 	return &npc.NPC{

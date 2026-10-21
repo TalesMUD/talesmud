@@ -5,6 +5,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	npc "github.com/talesmud/talesmud/pkg/entities/npcs"
+	"github.com/talesmud/talesmud/pkg/ruleset"
 )
 
 // handleSpawnerUpdates processes all spawners and spawns new instances as needed
@@ -27,12 +28,14 @@ func (g *Game) updateSpawner(spawner *npc.NPCSpawner) {
 
 	// Clean up dead instances from active list
 	g.NPCManager.CleanupDeadFromSpawner(spawner.ID)
+	// A death on this tick stamps LastDeathTime before the floor is checked.
+	respawned := !state.LastDeathTime.IsZero()
 
 	// Count current alive instances
 	aliveCount := g.NPCManager.CountAliveForSpawner(spawner.ID)
 
 	now := time.Now()
-	if spawnerRespawnDelayed(spawner.RespawnDelay, state.LastDeathTime, now) {
+	if spawnerRespawnDelayed(spawner.RespawnDelay, ruleset.RespawnMin(), state.LastDeathTime, now) {
 		return
 	}
 	if !spawnerShouldSpawn(aliveCount, spawner.InitialCount, spawner.MaxInstances, spawner.SpawnInterval, state.LastSpawnTime, now) {
@@ -49,7 +52,11 @@ func (g *Game) updateSpawner(spawner *npc.NPCSpawner) {
 		return
 	}
 	if instance != nil && instance.Entity != nil {
-		g.NoteNPCAppeared(instance.Entity.ID, instance.CurrentRoomID)
+		if respawned {
+			g.NoteNPCRespawned(instance.Entity.ID, instance.CurrentRoomID)
+		} else {
+			g.NoteNPCAppeared(instance.Entity.ID, instance.CurrentRoomID)
+		}
 	}
 
 	log.WithFields(log.Fields{
@@ -81,12 +88,21 @@ func spawnerShouldSpawn(alive, initial, max int, interval time.Duration, lastSpa
 	return now.Sub(lastSpawn) >= interval
 }
 
-// spawnerRespawnDelayed is true while a spawner with a RespawnDelay is still
-// inside that window after its last instance death. It never blocks a spawner
-// that has not lost an instance yet (server start fills InitialCount).
-func spawnerRespawnDelayed(delay time.Duration, lastDeath, now time.Time) bool {
-	if delay <= 0 || lastDeath.IsZero() {
+// spawnerRespawnDelayed is true while a spawner is still inside its wait after
+// the last instance death. The wait is the longer of the authored delay and
+// the ruleset floor. It never blocks a spawner that has not lost an instance
+// yet, so server start still fills InitialCount. A floor of 0 leaves an
+// authored delay of 0 free to replace on the next tick.
+func spawnerRespawnDelayed(delay, floor time.Duration, lastDeath, now time.Time) bool {
+	if lastDeath.IsZero() {
 		return false
 	}
-	return now.Sub(lastDeath) < delay
+	wait := delay
+	if floor > wait {
+		wait = floor
+	}
+	if wait <= 0 {
+		return false
+	}
+	return now.Sub(lastDeath) < wait
 }

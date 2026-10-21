@@ -1164,6 +1164,11 @@ func (c *CombatController) cleanupCombatInstance(instance *combat.CombatInstance
 
 	// Remove the instance before catch-up so IsPlayerInCombat is clear.
 	c.manager.RemoveInstance(instance.ID)
+	// Quiet is stamped after InCombat is cleared. Catch-up may walk someone
+	// into this room, and that entry has to see the window already.
+	if c.game != nil {
+		c.game.stampPostCombatAggroQuiet(instance, endState)
+	}
 	for _, player := range instance.Players {
 		if player.ID == "" || c.game == nil {
 			continue

@@ -346,7 +346,9 @@ The game runs multiple update tickers:
 
 3. **Spawner Updates** (5 seconds)
    - Check each spawner's instance count
-   - Spawn new instances when below max capacity
+   - Fill `InitialCount` immediately until the spawner has lost an instance
+   - After a death, wait the longer of `RespawnDelay` and `combat.respawn_min_seconds` (default 30s)
+   - Let `SpawnInterval` space only the extras between `InitialCount` and `MaxInstances`
    - Clean up dead instances from spawner tracking
 
 4. **Combat Updates** (2 seconds)
@@ -405,7 +407,7 @@ Key methods:
 
 Turn-based combat occurs in isolated **Combat Instances** that manage fights between players and NPCs.
 
-Aggro on sight uses that same start. `combat.aggro_on_sight` (default on, 2.5s grace, level gap 5, 15s reaggro cooldown) schedules one watch per player and aggressive NPC when the player enters the room or the NPC arrives. The timer enqueues onto the command loop. The loop re-checks, posts `The <name> spots you.` as a normal message, and calls `BeginEngagement`, which calls `InitiateCombat`. Swarm pack, one `onAggro`, and the party assist nudge match a manual `attack`. Leaving during the grace cancels the watch. The cooldown starts when the fight ends.
+Aggro on sight uses that same start. `combat.aggro_on_sight` (default on, 2.5s grace, level gap 5, 15s reaggro cooldown) schedules one watch per player and aggressive NPC when the player enters the room or the NPC arrives. A death replacement and a unique NPC respawn use `respawn_grace_seconds` (default 8) for players already in the room. The first fill, a walk-in, and a summon keep the short grace. After a victory or flee, `post_combat_grace_seconds` (default 10) holds aggressive NPCs in the fight room for players still standing there. Entering a different room ends that hold. `spawn_aggro_cooldown_seconds` (default 60) is stored on the spawner id, or on the resident NPC id, so a new instance remembers the player it already auto-aggroed. The timer enqueues onto the command loop. The loop re-checks, posts `The <name> spots you.` as a normal message, and calls `BeginEngagement`, which calls `InitiateCombat`. Swarm pack, one `onAggro`, and the party assist nudge match a manual `attack`. Leaving during the grace cancels the watch. The per-instance cooldown starts when the fight ends. A room with `noAggro` is skipped at schedule and again when the timer fires. Room NPC payloads include optional `aggroOnSight: true` (`omitempty`, absent for passive NPCs) so the play client can mark those cards. The field is copied through both the runtime room summary and the websocket response. Look and examine of that NPC add a line `Aggressive`.
 
 #### Combat Instance Model
 
@@ -477,6 +479,8 @@ type StatusEffect struct {
        │   │     Gap 0 matches the pre-gap formulas.
        │   │     class_balance then scales damage dealt and taken per class.
        │   │     The pack catalog wins. The YAML row is the fallback.
+       │   │     early_normal scales normal-tier enemies at level 6 and below.
+       │   │     newbie_curve adds level 1–5 factors. Level 10 does not use them.
        │   │     A soak class's Slam starts its cooldown only when the swing hits.
        │   │     wizard uses the mage row; behind_dealt applies when lower level.
        │   │     boss_mechanics: bosses and hard elites wind up one action before
@@ -964,12 +968,15 @@ type NPCSpawner struct {
     TemplateID    string         // NPC template to spawn
     RoomID        string         // Where to spawn
     MaxInstances  int            // Max alive at once
-    SpawnInterval time.Duration  // Time between spawns
+    SpawnInterval time.Duration  // Time between extra spawns above InitialCount
     InitialCount  int            // Spawn on world load
+    RespawnDelay  time.Duration  // Wait after a death; the ruleset floor can extend it
 
     RespawnTimeOverride *time.Duration  // Override template respawn
 }
 ```
+
+`combat.respawn_min_seconds` (default 30) is the floor under `RespawnDelay` after a death. `0` disables that floor. A spawner that has not lost an instance still fills `InitialCount` on the next tick.
 
 ### LootTable Entity
 
@@ -1008,7 +1015,9 @@ type Quest struct {
     Category    string       // "main", "side", "daily"
     Area        string       // Optional region label for filtering and organization
     Level       int32        // Recommended level
-    Repeatable  bool         // Can be completed again
+    Repeatable            bool   // Can be completed again
+    RepeatReset           string // "daily", "cooldown", or empty (immediate re-accept)
+    RepeatCooldownSeconds int64  // Wait after completion for a cooldown reset
 
     Source      QuestSource  // How player gets quest (NPC, item, auto, script)
     Objectives  []Objective  // Kill, Collect, Deliver, Visit, Talk, Custom objectives
@@ -1297,9 +1306,19 @@ The play client observes `combatPhase` in `Game.svelte` and calls `LayoutStore.s
 
 `SettingsStore` persists `interface.reducedMotion` (`system`/`on`/`off`) and `interface.combatAutoFocus` (default true) alongside the existing inventory mode. `Game.svelte` passes the auto-focus or manual-stage choice into `LayoutStore.syncCombatFocus` and gates Stage rendering; switching the preference during combat restores or opens the transient cover immediately. The shared `prefersReducedMotion()` helper resolves the stored override before the OS media query, and BattleStage CSS uses that resolved state. Map ambience uses the same helper.
 
+### Responsive presentation ownership
+
+`public/mud-client/public/global.css` defines the page z-index ladder with `--layer-*` properties. Shell chrome is below sheets. BattleStage is below NPC dialogs, shop, and Need/Greed. Component decoration keeps its local stacking context.
+
+`mobileStore.js` owns the viewport query for the mobile Room/Console shell, including short landscape. `App.svelte` uses the matching media query to hide its desktop home link. The mobile room scrolls independently from the console tab. `EntityPanel` accepts `--entity-card-width`; the short landscape room sets it to keep NPC cards inside the hero image.
+
+The existing `MUDXPlusStore.questNotifications` and `overlayStore` arrays own queued events. Producers enqueue and explicitly remove messages. They do not expire unseen messages or truncate the pending queue. `notificationPresentation.js` provides the combat/outcome/roll presentation gate and `createVisibleLifetime`, a Svelte action. Each renderer owns one action instance; each rendered card owns one timeout. Removing a card pauses its remaining reading time in a WeakMap keyed by the notification object. Rendering it again resumes that clock. Expiry and explicit dismissal remove the queued event. Mobile room tab visibility also gates room messages. The client keeps combat validation feedback in the BattleStage action banner.
+
+The outcome card contains a scrollable reward body and a separate Continue button. Short landscape reserves separate horizontal lanes for the outcome and Need/Greed.
+
 ### MUD Client — Onboarding Flow
 
-The MUD client (`/play`) uses a phase-based routing system in `App.svelte` to guide new players through onboarding before showing the game UI. After character select, the server pushes `guideHint`. `GuideHint.svelte` renders that one line above the hotbar and sends the hint command, or `guide dismiss`. `pkg/guide` chooses the step from quest progress and the room graph, with no world-pack ids in the engine.
+The MUD client (`/play`) uses a phase-based routing system in `App.svelte` to guide new players through onboarding before showing the game UI. After character select, the server pushes `guideHint`. `GuideHint.svelte` renders that one line above the hotbar and sends the hint command, or `guide dismiss`. `pkg/guide` chooses the step from quest progress and the room graph, with no world-pack ids in the engine. `guide.enabled` in the ruleset defaults to on. `false` builds no hint and sends no `guideHint`. A game-mode file may set the same key. Hint text names the action in ordinary words (`Attack the <name>.`) so telnet, SSH, and Door can show the same line.
 
 ```
 App.svelte (phase-based routing)
@@ -1592,7 +1611,7 @@ pkg/
 ├── repository/        # Data access
 ├── db/                # Database client
 ├── resources/         # Per-character refilling balances
-├── ruleset/           # Level cap, level-up mode, death, new day, resource catalog, passive regen
+├── ruleset/           # Level cap, level-up mode, death, new day, resource catalog, passive regen, guide switch
 ├── gamemode/          # Process presentation and auth mode
 ├── authlocal/         # Optional Argon2id username/password sessions
 ├── presentation/      # Text-client frame renderer and view

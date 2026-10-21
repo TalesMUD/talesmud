@@ -30,8 +30,10 @@ func TestCombatDurationTargets(t *testing.T) {
 		{"trash_rat", 1, "Sample Rat", "trash", 3, 6, 0.90},
 		{"trash_sewer", 2, "Sample Pest", "trash", 3, 6, 0.90},
 		{"trash_mole", 2, "Sample Burrower", "trash", 3, 7, 0.85}, // mole DEF can nudge past 6
-		{"elite_wolf", 2, "Sample Wolf", "elite", 8, 15, 0.85},
-		{"elite_bandit", 3, "Sample Bandit", "elite", 8, 15, 0.75},
+		// early_normal puts level 1–6 normal bodies in the 3–7 window.
+		// Sample Bear stays on the hard tier and the old elite band.
+		{"early_wolf", 2, "Sample Wolf", "early", 3, 7, 0.90},
+		{"early_bandit", 3, "Sample Bandit", "early", 3, 7, 0.90},
 		{"elite_bear", 5, "Sample Bear", "elite", 8, 16, 0.55},
 		{"boss_brute", 4, "Sample Brute", "boss", 15, 30, 0.45},
 		{"boss_warden", 6, "Sample Warden", "boss", 15, 30, 0.35},

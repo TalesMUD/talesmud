@@ -12,6 +12,7 @@ import (
 	"github.com/talesmud/talesmud/pkg/entities/quests"
 	"github.com/talesmud/talesmud/pkg/mudserver/game/leveling"
 	r "github.com/talesmud/talesmud/pkg/repository"
+	"github.com/talesmud/talesmud/pkg/ruleset"
 )
 
 // QuestsService delivers logical functions on top of the quests repositories
@@ -84,22 +85,25 @@ type QuestRewardEntry struct {
 
 // QuestLogEntry is an enriched quest log entry for APIs and WebSocket messages.
 type QuestLogEntry struct {
-	QuestID        string                        `json:"questId"`
-	QuestName      string                        `json:"questName"`
-	Description    string                        `json:"description,omitempty"`
-	Category       string                        `json:"category,omitempty"`
-	Area           string                        `json:"area,omitempty"`
-	Level          int32                         `json:"level,omitempty"`
-	Status         string                        `json:"status"`
-	ReadyToTurnIn  bool                          `json:"readyToTurnIn"`
-	TurnInAnywhere bool                          `json:"turnInAnywhere,omitempty"`
-	TurnInNpcID    string                        `json:"turnInNpcId,omitempty"`
-	TurnInNpcName  string                        `json:"turnInNpcName,omitempty"`
-	TurnInRoomID   string                        `json:"turnInRoomId,omitempty"`
-	Objectives     []QuestObjectiveProgressEntry `json:"objectives"`
-	Rewards        *QuestRewardEntry             `json:"rewards,omitempty"`
-	AcceptedAt     string                        `json:"acceptedAt,omitempty"`
-	CompletedAt    string                        `json:"completedAt,omitempty"`
+	QuestID         string                        `json:"questId"`
+	QuestName       string                        `json:"questName"`
+	Description     string                        `json:"description,omitempty"`
+	Category        string                        `json:"category,omitempty"`
+	Area            string                        `json:"area,omitempty"`
+	Level           int32                         `json:"level,omitempty"`
+	Status          string                        `json:"status"`
+	ReadyToTurnIn   bool                          `json:"readyToTurnIn"`
+	TurnInAnywhere  bool                          `json:"turnInAnywhere,omitempty"`
+	TurnInNpcID     string                        `json:"turnInNpcId,omitempty"`
+	TurnInNpcName   string                        `json:"turnInNpcName,omitempty"`
+	TurnInRoomID    string                        `json:"turnInRoomId,omitempty"`
+	Objectives      []QuestObjectiveProgressEntry `json:"objectives"`
+	Rewards         *QuestRewardEntry             `json:"rewards,omitempty"`
+	AcceptedAt      string                        `json:"acceptedAt,omitempty"`
+	CompletedAt     string                        `json:"completedAt,omitempty"`
+	Repeats         bool                          `json:"repeats,omitempty"`
+	RepeatReset     string                        `json:"repeatReset,omitempty"`
+	NextAvailableAt string                        `json:"nextAvailableAt,omitempty"`
 }
 
 // QuestEventType identifies a game event that can advance active quest objectives.
@@ -346,6 +350,41 @@ func (s *questsService) ValidateQuest(quest *quests.Quest) []QuestValidationIssu
 		}
 	}
 
+	for _, issue := range repeatResetIssues(quest) {
+		issues = append(issues, issue)
+	}
+
+	return issues
+}
+
+func repeatResetIssues(quest *quests.Quest) []QuestValidationIssue {
+	if quest == nil {
+		return nil
+	}
+	var issues []QuestValidationIssue
+	add := func(path, code, message string) {
+		issues = append(issues, QuestValidationIssue{
+			Severity: "error",
+			Path:     path,
+			Code:     code,
+			Message:  message,
+		})
+	}
+	reset := strings.ToLower(strings.TrimSpace(quest.RepeatReset))
+	switch reset {
+	case "", quests.RepeatResetDaily, quests.RepeatResetCooldown:
+	default:
+		add("repeatReset", "invalid_repeat_reset", "repeatReset must be daily, cooldown, or empty.")
+	}
+	if quest.RepeatCooldownSeconds < 0 {
+		add("repeatCooldownSeconds", "invalid_repeat_cooldown", "repeatCooldownSeconds cannot be negative.")
+	}
+	if reset == quests.RepeatResetCooldown && quest.RepeatCooldownSeconds <= 0 {
+		add("repeatCooldownSeconds", "invalid_repeat_cooldown", "A cooldown reset needs repeatCooldownSeconds greater than 0.")
+	}
+	if (reset != "" || quest.RepeatCooldownSeconds > 0) && !quest.Repeatable {
+		add("repeatable", "reset_without_repeatable", "A reset requires repeatable: true.")
+	}
 	return issues
 }
 
@@ -436,6 +475,10 @@ func (s *questsService) BuildQuestLog(characterID string) ([]QuestLogEntry, erro
 		if !progress.CompletedAt.IsZero() {
 			entry.CompletedAt = progress.CompletedAt.Format("2006-01-02T15:04:05Z07:00")
 		}
+		payload := quest.RepeatPayload(string(progress.Status), progress.CompletedAt, quests.Now(), ruleset.QuestDailyResetHourUTC())
+		entry.Repeats = payload.Repeats
+		entry.RepeatReset = payload.RepeatReset
+		entry.NextAvailableAt = payload.NextAvailableAt
 		entries = append(entries, entry)
 	}
 
@@ -497,9 +540,15 @@ func (s *questsService) AcceptQuest(characterID, questID string) (*quests.QuestP
 		return nil, errors.New("quest already active")
 	}
 
-	// Check if completed and not repeatable
-	if existing != nil && existing.Status == quests.QuestStatusCompleted && !quest.Repeatable {
-		return nil, errors.New("quest already completed")
+	// A finished quest stays finished unless it is repeatable.
+	// A repeatable quest with a reset stays closed until that window passes.
+	if existing != nil && existing.Status == quests.QuestStatusCompleted {
+		if !quest.Repeatable {
+			return nil, errors.New("quest already completed")
+		}
+		if until, waiting := quest.AvailableAgain(existing.CompletedAt, quests.Now(), ruleset.QuestDailyResetHourUTC()); waiting {
+			return nil, errors.New(quests.FormatAvailableAgain(until, quests.Now()))
+		}
 	}
 
 	// Check prerequisite quests are completed
@@ -569,7 +618,7 @@ func (s *questsService) AcceptQuest(characterID, questID string) (*quests.QuestP
 		QuestID:     questID,
 		Status:      quests.QuestStatusActive,
 		Objectives:  objectives,
-		AcceptedAt:  time.Now(),
+		AcceptedAt:  quests.Now(),
 	}
 
 	return s.progressRepo.Store(progress)
@@ -634,7 +683,7 @@ func (s *questsService) CompleteQuest(characterID, questID string) (*quests.Ques
 	}
 
 	progress.Status = quests.QuestStatusCompleted
-	progress.CompletedAt = time.Now()
+	progress.CompletedAt = quests.Now()
 
 	if err := s.progressRepo.Update(progress.ID, progress); err != nil {
 		return nil, err
@@ -709,11 +758,15 @@ func (s *questsService) GetAvailableQuests(characterID string) ([]*quests.Quest,
 
 	// Build a map of quest status for this character
 	questStatus := make(map[string]quests.QuestStatus)
+	progressByQuest := make(map[string]*quests.QuestProgress, len(progressList))
 	for _, p := range progressList {
 		questStatus[p.QuestID] = p.Status
+		progressByQuest[p.QuestID] = p
 	}
 
 	available := make([]*quests.Quest, 0)
+	now := quests.Now()
+	hour := ruleset.QuestDailyResetHourUTC()
 	for _, q := range allQuests {
 		status, exists := questStatus[q.ID]
 		if !exists {
@@ -721,10 +774,18 @@ func (s *questsService) GetAvailableQuests(characterID string) ([]*quests.Quest,
 			if s.checkPrereqs(q, questStatus) {
 				available = append(available, q)
 			}
-		} else if status == quests.QuestStatusAbandoned || (status == quests.QuestStatusCompleted && q.Repeatable) {
-			if s.checkPrereqs(q, questStatus) {
-				available = append(available, q)
+			continue
+		}
+		if status != quests.QuestStatusAbandoned && !(status == quests.QuestStatusCompleted && q.Repeatable) {
+			continue
+		}
+		if status == quests.QuestStatusCompleted {
+			if _, waiting := q.AvailableAgain(progressByQuest[q.ID].CompletedAt, now, hour); waiting {
+				continue
 			}
+		}
+		if s.checkPrereqs(q, questStatus) {
+			available = append(available, q)
 		}
 	}
 

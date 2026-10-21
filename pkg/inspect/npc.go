@@ -219,12 +219,13 @@ func statsFor(n *npc.NPC) *NPCStats {
 			AttackPower:  et.BaseStats.AttackPower,
 			Defense:      et.BaseStats.Defense,
 		}
-		hp, attack, defense := balance.ApplyEnemyMultipliers(
+		hp, attack, defense := balance.ApplyEnemyCombat(
 			et.BaseStats.MaxHitPoints,
 			et.BaseStats.AttackPower,
 			et.BaseStats.Defense,
 			et.Difficulty,
 			n.Name,
+			n.Level,
 		)
 		stats.Effective = StatLine{MaxHitPoints: hp, AttackPower: attack, Defense: defense}
 		if ok {

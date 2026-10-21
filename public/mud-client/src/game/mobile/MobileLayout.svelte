@@ -55,7 +55,7 @@
   <div class="mobile-content">
     <!-- Both tabs always mounted; inactive hidden via CSS to preserve terminal state -->
     <div class="tab-panel" class:hidden={$activeTab !== 'room'}>
-      <MobileRoomView {store} {sendMessage} />
+      <MobileRoomView {store} {sendMessage} active={$activeTab === 'room'} />
     </div>
 
     <div class="tab-panel" class:hidden={$activeTab !== 'console'}>

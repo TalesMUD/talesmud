@@ -11,7 +11,7 @@
   .entity-card {
     --entity-accent: rgba(255, 255, 255, 0.28);
     position: relative;
-    width: clamp(88px, 22cqw, 128px);
+    width: var(--entity-card-width, clamp(88px, 22cqw, 128px));
     aspect-ratio: 2 / 3;
     border-radius: 10px;
     overflow: hidden;

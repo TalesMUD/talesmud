@@ -25,22 +25,24 @@ type DebugCharacterInput struct {
 
 // QuestDebug is the static plus live view of one quest.
 type QuestDebug struct {
-	ID            string           `json:"id"`
-	Name          string           `json:"name"`
-	Category      string           `json:"category,omitempty"`
-	Area          string           `json:"area,omitempty"`
-	Level         int32            `json:"level,omitempty"`
-	Repeatable    bool             `json:"repeatable,omitempty"`
-	Verdict       string           `json:"verdict"`
-	Reason        string           `json:"reason"`
-	Offer         DebugParty       `json:"offer"`
-	TurnIn        DebugParty       `json:"turnIn"`
-	Rewards       DebugRewards     `json:"rewards"`
-	Prerequisites []QuestLink      `json:"prerequisites"`
-	Next          []QuestLink      `json:"next"`
-	Steps         []DebugStep      `json:"steps"`
-	Characters    []DebugCharacter `json:"characters"`
-	Ops           DebugOps         `json:"ops"`
+	ID                    string           `json:"id"`
+	Name                  string           `json:"name"`
+	Category              string           `json:"category,omitempty"`
+	Area                  string           `json:"area,omitempty"`
+	Level                 int32            `json:"level,omitempty"`
+	Repeatable            bool             `json:"repeatable,omitempty"`
+	RepeatReset           string           `json:"repeatReset,omitempty"`
+	RepeatCooldownSeconds int64            `json:"repeatCooldownSeconds,omitempty"`
+	Verdict               string           `json:"verdict"`
+	Reason                string           `json:"reason"`
+	Offer                 DebugParty       `json:"offer"`
+	TurnIn                DebugParty       `json:"turnIn"`
+	Rewards               DebugRewards     `json:"rewards"`
+	Prerequisites         []QuestLink      `json:"prerequisites"`
+	Next                  []QuestLink      `json:"next"`
+	Steps                 []DebugStep      `json:"steps"`
+	Characters            []DebugCharacter `json:"characters"`
+	Ops                   DebugOps         `json:"ops"`
 }
 
 // DebugParty is who offers a quest or who turns it in.
@@ -133,21 +135,23 @@ func DebugQuest(world World, questID string, characters []DebugCharacterInput) (
 	verdict, reason = foldVerdict(verdict, reason, turnIn.Verdict, turnIn.Reason)
 
 	out := QuestDebug{
-		ID:            questID,
-		Name:          quest.Name,
-		Category:      quest.Category,
-		Area:          quest.DisplayArea(),
-		Level:         quest.Level,
-		Repeatable:    quest.Repeatable,
-		Verdict:       verdict,
-		Reason:        reason,
-		Offer:         offer,
-		TurnIn:        turnIn,
-		Rewards:       rewardView(ix, quest),
-		Prerequisites: prereqLinks(ix, report, quest),
-		Next:          nextLinks(ix, report, questID),
-		Steps:         []DebugStep{},
-		Characters:    []DebugCharacter{},
+		ID:                    questID,
+		Name:                  quest.Name,
+		Category:              quest.Category,
+		Area:                  quest.DisplayArea(),
+		Level:                 quest.Level,
+		Repeatable:            quest.Repeatable,
+		RepeatReset:           quest.RepeatReset,
+		RepeatCooldownSeconds: quest.RepeatCooldownSeconds,
+		Verdict:               verdict,
+		Reason:                reason,
+		Offer:                 offer,
+		TurnIn:                turnIn,
+		Rewards:               rewardView(ix, quest),
+		Prerequisites:         prereqLinks(ix, report, quest),
+		Next:                  nextLinks(ix, report, questID),
+		Steps:                 []DebugStep{},
+		Characters:            []DebugCharacter{},
 		Ops: DebugOps{QuestStep: DebugOp{
 			Method:      "POST",
 			Path:        QuestStepOpPath,

@@ -87,6 +87,21 @@ fields:
     default: false
     # If true, the quest can be completed multiple times. After completion,
     # it returns to "available" status. Typical for daily quests.
+    # Without repeatReset, the next accept is immediate.
+
+  repeatReset:
+    type: string
+    enum: ["", daily, cooldown]
+    # Optional window after completion. Ignored unless repeatable is true.
+    # daily — next accept waits until quests.daily_reset_hour_utc (default 4).
+    # cooldown — next accept waits repeatCooldownSeconds.
+    # The completion time is stored on the character, so a restart keeps the window.
+
+  repeatCooldownSeconds:
+    type: integer
+    default: 0
+    # Seconds after completion when repeatReset is cooldown.
+    # A positive value with an empty repeatReset is also a cooldown.
 
   guide:
     type: boolean
@@ -225,7 +240,7 @@ Objective:
       required: true
       # Human-readable objective text shown in the quest log.
       # Include the target and quantity. Write as a directive.
-      # Examples: "Kill 8 Sewer Rats", "Collect 5 Moonbloom Herbs",
+      # Examples: "Kill 8 Sample Pests", "Collect 5 Moonbloom Herbs",
       #           "Deliver the package to Captain Aldric"
 
     # ─── Target Fields ──────────────────────────────────────────────────────

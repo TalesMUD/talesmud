@@ -331,8 +331,11 @@ func NewCreateCharacterMessage(user string) MessageResponse {
 
 // DialogOption represents a player choice in a dialog
 type DialogOption struct {
-	Index int    `json:"index"` // 1-based index for player input
-	Text  string `json:"text"`  // The option text to display
+	Index           int    `json:"index"` // 1-based index for player input
+	Text            string `json:"text"`  // The option text to display
+	Repeats         bool   `json:"repeats,omitempty"`
+	RepeatReset     string `json:"repeatReset,omitempty"`
+	NextAvailableAt string `json:"nextAvailableAt,omitempty"`
 }
 
 // DialogMessage represents a dialog message with NPC text and player options
@@ -503,22 +506,25 @@ type QuestReward struct {
 
 // QuestLogEntry represents a quest in the quest log
 type QuestLogEntry struct {
-	QuestID        string                   `json:"questId"`
-	QuestName      string                   `json:"questName"`
-	Description    string                   `json:"description,omitempty"`
-	Category       string                   `json:"category,omitempty"`
-	Area           string                   `json:"area,omitempty"`
-	Level          int32                    `json:"level,omitempty"`
-	Status         string                   `json:"status"`
-	ReadyToTurnIn  bool                     `json:"readyToTurnIn,omitempty"`
-	TurnInAnywhere bool                     `json:"turnInAnywhere,omitempty"`
-	TurnInNpcID    string                   `json:"turnInNpcId,omitempty"`
-	TurnInNpcName  string                   `json:"turnInNpcName,omitempty"`
-	TurnInRoomID   string                   `json:"turnInRoomId,omitempty"`
-	Objectives     []QuestObjectiveProgress `json:"objectives"`
-	Rewards        *QuestReward             `json:"rewards,omitempty"`
-	AcceptedAt     string                   `json:"acceptedAt,omitempty"`
-	CompletedAt    string                   `json:"completedAt,omitempty"`
+	QuestID         string                   `json:"questId"`
+	QuestName       string                   `json:"questName"`
+	Description     string                   `json:"description,omitempty"`
+	Category        string                   `json:"category,omitempty"`
+	Area            string                   `json:"area,omitempty"`
+	Level           int32                    `json:"level,omitempty"`
+	Status          string                   `json:"status"`
+	ReadyToTurnIn   bool                     `json:"readyToTurnIn,omitempty"`
+	TurnInAnywhere  bool                     `json:"turnInAnywhere,omitempty"`
+	TurnInNpcID     string                   `json:"turnInNpcId,omitempty"`
+	TurnInNpcName   string                   `json:"turnInNpcName,omitempty"`
+	TurnInRoomID    string                   `json:"turnInRoomId,omitempty"`
+	Objectives      []QuestObjectiveProgress `json:"objectives"`
+	Rewards         *QuestReward             `json:"rewards,omitempty"`
+	AcceptedAt      string                   `json:"acceptedAt,omitempty"`
+	CompletedAt     string                   `json:"completedAt,omitempty"`
+	Repeats         bool                     `json:"repeats,omitempty"`
+	RepeatReset     string                   `json:"repeatReset,omitempty"`
+	NextAvailableAt string                   `json:"nextAvailableAt,omitempty"`
 }
 
 // QuestLogMessage sends the full quest log to the client

@@ -41,9 +41,9 @@ curl -X POST http://localhost:8010/api/quests \
       {
         "id": "obj1",
         "type": "kill",
-        "description": "Kill 5 Catacomb Rats",
+        "description": "Kill 5 Sample Rats",
         "targetId": "ENM0001",
-        "targetName": "Catacomb Rat",
+        "targetName": "Sample Rat",
         "amount": 5,
         "order": 1
       }
@@ -72,7 +72,9 @@ The server returns the created quest with a generated `id` field (UUID).
 | `description` | string | **Yes** | Journal text describing the quest. Shown when player inspects quest details. |
 | `category` | string | No | Classification: `"main"`, `"side"`, or `"daily"`. Defaults to empty. |
 | `level` | int32 | No | Recommended player level. Used for UI display, not enforced. |
-| `repeatable` | bool | No | If `true`, quest can be accepted again after completion. Default `false`. |
+| `repeatable` | bool | No | If `true`, quest can be accepted again after completion. Default `false`. Without `repeatReset`, the next accept is immediate. |
+| `repeatReset` | string | No | `daily` or `cooldown`. Ignored unless `repeatable` is true. `daily` waits until `quests.daily_reset_hour_utc` (default 4). |
+| `repeatCooldownSeconds` | int64 | No | Seconds to wait after completion when `repeatReset` is `cooldown`. |
 | `source` | QuestSource | **Yes** | How the player acquires this quest. See [Quest Source](#quest-source-configuration). |
 | `objectives` | Objective[] | **Yes** | Array of objectives. At least one required. See [Objective Types](#objective-types). |
 | `rewards` | Reward | No | XP, gold, and items granted on completion. See [Rewards](#rewards). |
@@ -139,7 +141,7 @@ Player must kill a certain number of NPCs matching a template.
 | Field | Required | Description |
 |-------|----------|-------------|
 | `targetId` | **Yes** | NPC **template** ID (e.g., `"ENM0001"`). Matches spawned instances of this template. |
-| `targetName` | Recommended | Display name (e.g., `"Catacomb Rat"`). |
+| `targetName` | Recommended | Display name (e.g., `"Sample Rat"`). |
 | `amount` | **Yes** | Number to kill. |
 
 **How tracking works:** When an NPC dies in combat, the QuestTracker checks the dead NPC's `TemplateID` (or `ID` if no template) against `targetId`. Each kill increments the counter by 1.
@@ -148,9 +150,9 @@ Player must kill a certain number of NPCs matching a template.
 {
   "id": "kill_rats",
   "type": "kill",
-  "description": "Kill 10 Catacomb Rats",
+  "description": "Kill 10 Sample Rats",
   "targetId": "ENM0001",
-  "targetName": "Catacomb Rat",
+  "targetName": "Sample Rat",
   "amount": 10,
   "order": 1
 }
@@ -573,9 +575,9 @@ source:
 objectives:
   - id: kill_sewer_rats
     type: kill
-    description: Kill 8 Sewer Rats
+    description: Kill 8 Sample Pests
     targetId: ENM0001
-    targetName: Catacomb Rat
+    targetName: Sample Rat
     amount: 8
     order: 1
 
@@ -645,9 +647,9 @@ A basic combat quest with a single kill objective.
     {
       "id": "kill_rats",
       "type": "kill",
-      "description": "Kill 5 Catacomb Rats",
+      "description": "Kill 5 Sample Rats",
       "targetId": "ENM0001",
-      "targetName": "Catacomb Rat",
+      "targetName": "Sample Rat",
       "amount": 5,
       "order": 1
     }
@@ -681,7 +683,7 @@ A quest with kill + collect + visit objectives.
       "type": "kill",
       "description": "Kill 3 Meadow Wolves",
       "targetId": "ENM0002",
-      "targetName": "Meadow Wolf",
+      "targetName": "Sample Wolf",
       "amount": 3,
       "order": 1
     },
@@ -840,7 +842,7 @@ QUEST2=$(curl -s -X POST http://localhost:8010/api/quests \
     \"level\": 3,
     \"source\": {\"type\": \"npc\", \"npcId\": \"NPC0004\"},
     \"objectives\": [
-      {\"id\": \"kill_rats\", \"type\": \"kill\", \"description\": \"Kill 10 Sewer Rats\", \"targetId\": \"ENM0001\", \"amount\": 10, \"order\": 1}
+      {\"id\": \"kill_rats\", \"type\": \"kill\", \"description\": \"Kill 10 Sample Pests\", \"targetId\": \"ENM0001\", \"amount\": 10, \"order\": 1}
     ],
     \"rewards\": {\"xp\": 80, \"gold\": 20},
     \"requiredQuestIds\": [\"$QUEST1\"],

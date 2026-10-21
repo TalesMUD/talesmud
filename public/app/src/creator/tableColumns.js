@@ -158,6 +158,10 @@ export const questColumns = [
     key: "repeatable", label: "Repeat", width: 65, type: "boolean", priority: 3,
     accessor: (el) => el.repeatable ? "Yes" : "No",
   },
+  {
+    key: "repeatReset", label: "Reset", width: 90, priority: 3,
+    accessor: (el) => el.repeatReset || (el.repeatCooldownSeconds > 0 ? "cooldown" : ""),
+  },
 ];
 
 export const characterTemplateColumns = [

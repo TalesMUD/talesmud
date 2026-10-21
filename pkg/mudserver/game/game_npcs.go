@@ -75,7 +75,7 @@ func (g *Game) respawnNPC(inst *npc.NPC) {
 		if fresh := g.NPCManager.GetInstance(inst.Entity.ID); fresh != nil && fresh.CurrentRoomID != "" {
 			roomID = fresh.CurrentRoomID
 		}
-		g.NoteNPCAppeared(inst.Entity.ID, roomID)
+		g.NoteNPCRespawned(inst.Entity.ID, roomID)
 	}
 }
 

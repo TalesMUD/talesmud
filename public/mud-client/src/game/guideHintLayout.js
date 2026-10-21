@@ -5,6 +5,7 @@ export function hintBlocked(state) {
   if (state.inCombat) return true;
   if (state.combatPhase && state.combatPhase !== "idle") return true;
   if (state.combatOutcome) return true;
+  if (state.inventoryOverlayOpen || state.partyOverlayOpen || state.friendsOverlayOpen || state.mapOverviewOpen || state.recipes) return true;
   if (state.dialogActive) return true;
   if (state.shop) return true;
   if (state.needGreed) return true;

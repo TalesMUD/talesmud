@@ -18,12 +18,13 @@
   .inv-overlay {
     position: fixed;
     inset: 0;
-    z-index: 120;
+    z-index: var(--layer-inventory);
     background: rgba(0, 0, 0, 0.82);
     backdrop-filter: blur(6px);
     display: flex;
     flex-direction: column;
-    padding: 1em;
+    box-sizing: border-box;
+    padding: max(1em, env(safe-area-inset-top, 0px)) max(1em, env(safe-area-inset-right, 0px)) max(1em, env(safe-area-inset-bottom, 0px)) max(1em, env(safe-area-inset-left, 0px));
     overflow: hidden;
   }
   .inv-panel {
