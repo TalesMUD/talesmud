@@ -17,7 +17,7 @@ In a second terminal, run the proof.
 UX_PLAYWRIGHT_PACKAGE=/path/to/tools/package.json UX_OUT=/tmp/ux-top-proof node public/mud-client/scripts/uxTopFixtures.mjs
 ```
 
-`UX_PORT` changes the proxy's default port 8016. `UX_PUBLIC` changes its default asset directory `public/mud-client/public`. `UX_BASE` changes the runner's default URL `http://127.0.0.1:8016/play/?v=wowf1`. `UX_PHASE` names the output group and defaults to `local`. `UX_SIZES` selects comma-separated viewport IDs. `UX_PHASE=before` retains failed baseline hit tests and continues past blocked outcome dismissal. `UX_DEFAULT_THEME` sets `defaultTheme` on the fixture server-info response so an `auto` client paints that theme. Leave it unset to keep dark-fantasy.
+`UX_PORT` changes the proxy's default port 8016. `UX_PUBLIC` changes its default asset directory `public/mud-client/public`. `UX_BASE` changes the runner's default URL `http://127.0.0.1:8016/play/?v=wowf2`. `UX_PHASE` names the output group and defaults to `local`. `UX_SIZES` selects comma-separated viewport IDs. `UX_PHASE=before` retains failed baseline hit tests and continues past blocked outcome dismissal. `UX_DEFAULT_THEME` sets `defaultTheme` on the fixture server-info response so an `auto` client paints that theme. Leave it unset to keep dark-fantasy.
 
 The fixture messages do not change backend inventory, quests, or combat. Close the runner to close its guest sockets. Keep a real guest walk alongside these deterministic layout checks for dialog, shop, movement, and server combat behavior.
 
@@ -25,5 +25,9 @@ To run without a live backend, set `UX_FIXTURE=1` on both processes. The local p
 
 ```sh
 UX_FIXTURE=1 UX_PORT=8017 UX_PROXY_PACKAGE=/path/to/tools/package.json node public/mud-client/scripts/uxTopLocalServer.mjs
-UX_FIXTURE=1 UX_BASE='http://127.0.0.1:8017/play/?v=wowf1' UX_PLAYWRIGHT_PACKAGE=/path/to/tools/package.json UX_OUT=/tmp/ux-top-proof node public/mud-client/scripts/uxTopFixtures.mjs
+UX_FIXTURE=1 UX_BASE='http://127.0.0.1:8017/play/?v=wowf2' UX_PLAYWRIGHT_PACKAGE=/path/to/tools/package.json UX_OUT=/tmp/ux-top-proof node public/mud-client/scripts/uxTopFixtures.mjs
 ```
+
+Equipment and shop geometry can be checked with `UX_PLAYWRIGHT_PACKAGE=/path/to/tools/package.json UX_PROXY_PACKAGE=/path/to/ws/package.json node public/mud-client/scripts/equipmentShopProof.mjs`. Run it from the repository root. It starts a local protocol fixture, captures both themes at 375, 1024, 1440, and 1920 pixels, and checks that stats follow the full equipment doll and shop prices stay beside icons and below names. `UX_OUT` selects the evidence directory. `UX_PHASE=before` records known baseline failures without failing the process.
+
+To capture dialog, combat, and outcome through real guest gameplay, run `UX_PLAYWRIGHT_PACKAGE=/path/to/tools/package.json node public/mud-client/scripts/captureGuestScenes.mjs --base 'https://your-server/play/?v=wowf2' --out /tmp/guest-scenes --widths 375,1024,1440`. The script visits the Spectral Warden before fighting the tutorial catacomb rat. Each width uses one temporary guest and closes its browser session before the next width. No game state is injected, no production capture route is installed, and guest tokens are never logged. The manifest records scene provenance and hashes of the live assets. A missing scene fails the process. Run before a one-way trip to the shop, or use a fresh guest for the shop.

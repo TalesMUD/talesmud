@@ -121,7 +121,7 @@
     align-items: stretch;
     justify-content: center;
     justify-items: center;
-    flex: 1 1 auto;
+    flex: 1 0 auto;
     min-height: 0;
   }
 
