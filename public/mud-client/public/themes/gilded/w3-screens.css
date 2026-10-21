@@ -706,8 +706,8 @@ body[data-theme="gilded"] .outcome-summary,
 body[data-theme="gilded"] .reward-breakdown { color: var(--w3-text) !important; }
 body[data-theme="gilded"] .rarity-normal { color: #e8e4df !important; }
 body[data-theme="gilded"] .rarity-magic { color: #1eff00 !important; }
-body[data-theme="gilded"] .rarity-rare { color: #0070dd !important; }
-body[data-theme="gilded"] .rarity-legendary { color: #a335ee !important; }
+body[data-theme="gilded"] .rarity-rare { color: #459bf0 !important; }
+body[data-theme="gilded"] .rarity-legendary { color: #bb72ff !important; }
 body[data-theme="gilded"] .rarity-mythic { color: #ff8000 !important; }
 
 body[data-theme="gilded"] .rail-btn {

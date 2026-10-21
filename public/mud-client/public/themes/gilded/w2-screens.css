@@ -77,7 +77,6 @@ body[data-theme="gilded"] {
   --gf-q-normal: #e8e4df;
   --gf-q-magic: #1eff00;
   --gf-q-rare: #0070dd;
-  --gf-q-legendary: #a335ee;
   --gf-q-mythic: #ff8000;
   --gf-q-unique: #ff8000;
   --inv-cat-equipment: #ffd24a;
@@ -279,7 +278,6 @@ body[data-theme="gilded"] .character-widget .combat-stat {
 }
 
 body[data-theme="gilded"] .character-widget .gold-row,
-body[data-theme="gilded"] .equipment-widget .compact-stats,
 body[data-theme="gilded"] .item-card .item-card-stat,
 body[data-theme="gilded"] .wizard-screen .confirm-attr {
   flex-direction: row;
@@ -291,6 +289,12 @@ body[data-theme="gilded"] .wizard-screen .confirm-attr {
   color: #efe6d6;
   font-family: "Marcellus", serif;
   text-align: left;
+}
+
+body[data-theme="gilded"] .equipment-widget .compact-stats {
+  background: #2d2017;
+  color: #efe6d6;
+  font-family: "Marcellus", serif;
 }
 
 body[data-theme="gilded"] .character-widget .attr-item:nth-child(even),
@@ -699,28 +703,11 @@ body[data-theme="gilded"] .inventory-widget .view-toggle {
   color: #ffd24a;
 }
 
-/* The doll can shrink below its slots and paint over the name and stats.
-   Keep the slot size and let the panel scroll. */
-body[data-theme="gilded"] .equipment-widget .doll {
-  flex: 1 1 auto;
-  min-height: min-content;
-  overflow: visible;
-}
-
-body[data-theme="gilded"] .equipment-widget .portrait-col {
-  min-height: 0;
-  overflow: hidden;
-}
-
 body[data-theme="gilded"] .equipment-widget .portrait-frame {
   border-radius: 3px;
   border: 2px solid #8a6428;
   box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.65), 0 0 0 1px #4a3214;
   background: #0e0b09;
-  flex: 1 1 auto;
-  min-height: 0;
-  max-height: 100%;
-  aspect-ratio: auto;
 }
 
 body[data-theme="gilded"] .party-overlay .avatar,
@@ -865,10 +852,19 @@ body[data-theme="gilded"] .party-overlay .adder input:focus {
   outline: none;
 }
 
+body[data-theme="gilded"] .item-card-heading h2,
+body[data-theme="gilded"] .inventory-widget .list-item-name,
+body[data-theme="gilded"] .inventory-widget .list-item-quality {
+  --gf-q-rare: #459bf0;
+  --gf-q-legendary: #bb72ff;
+  --color-quality-rare: #459bf0;
+  --color-quality-legendary: #bb72ff;
+}
+
 body[data-theme="gilded"] .ng-item.rarity-normal { color: #e8e4df; }
 body[data-theme="gilded"] .ng-item.rarity-magic { color: #1eff00; }
-body[data-theme="gilded"] .ng-item.rarity-rare { color: #0070dd; }
-body[data-theme="gilded"] .ng-item.rarity-legendary { color: #a335ee; }
+body[data-theme="gilded"] .ng-item.rarity-rare { color: #459bf0; }
+body[data-theme="gilded"] .ng-item.rarity-legendary { color: #bb72ff; }
 body[data-theme="gilded"] .ng-item.rarity-mythic,
 body[data-theme="gilded"] .ng-item.rarity-unique { color: #ff8000 !important; }
 
