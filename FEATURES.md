@@ -2174,6 +2174,10 @@ The top bar keeps the app links, a search box (`data-creator-search`) that opens
 
 ## Recent Features & Best Practices
 
+### Gilded Frame on inventory and character screens
+
+When `body[data-theme="gilded"]` is set, the play client restyles inventory, equipment, the character sheet, item detail (quality-coloured name, green/red compare deltas, UNIQUE mark), Need/Greed, party, recipes, and the sign-in / character-creation frames. Layout, controls, and test ids stay put. The sign-in card keeps its size. Play as guest is a leather plaque with gold text. Continue with X and Continue with Google are a separate bronze plaque. Quality colours follow the theme variables (`magic` green, `rare` blue, `legendary` purple, `mythic` and `unique` orange). Empty equipment slots draw line silhouettes, and a stack count sits in the slot corner. Other themes keep their previous colours and do not show that count. Stylesheet: `public/mud-client/public/themes/gilded/w2-screens.css`.
+
 ### Additive structured messages (protocol 1)
 
 - `examine`/`inspect` retains its prose and adds `examineResult` for items:
