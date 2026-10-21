@@ -845,7 +845,7 @@
     aria-label="Enemies"
   >
     {#if phaseNotice}
-      <div class="phase-banner" role="status">{phaseNotice}</div>
+      <div class="phase-banner gf-panel" role="status">{phaseNotice}</div>
     {/if}
     {#if windupText}
       <div class="telegraph-banner" role="status">{windupText}</div>
@@ -1135,7 +1135,7 @@
   <div class="action-banner-stack" aria-live="polite">
     {#if bannerVisible && bannerParts && !showJoinBanner}
       <div
-        class="action-banner kind-{bannerParts.kind}"
+        class="action-banner gf-panel kind-{bannerParts.kind}"
         class:flash={bannerFlashKey > 0}
         data-flash={bannerFlashKey}
       >
@@ -1325,7 +1325,7 @@
               {#if line.source}<span class="combat-event-source">{line.source}</span>{/if}
             </div>
           {:else if line.kind === "combatEvent"}
-            <div class="combat-event-card">
+            <div class="combat-event-card gf-panel">
               <i class="material-icons" aria-hidden="true">{combatEventIcon(line.hook)}</i>
               <span class="combat-event-text">{line.text}</span>
               {#if line.source}<span class="combat-event-source">{line.source}</span>{/if}
@@ -1343,10 +1343,10 @@
   {#if phase === 'ending'}
     <div class="outcome-panel" class:victory={outcome === 'victory'} class:defeat={outcome === 'defeat'} class:fled={outcome === 'fled'}>
       <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-      <div class="outcome-card" role="status" on:click={dismissOutcome}>
+      <div class="outcome-card gf-panel" role="status" on:click={dismissOutcome}>
         <div class="outcome-content">
         <div class="outcome-ornament" aria-hidden="true">♦</div>
-        <div class="outcome-title">{outcomeLabel(outcome)}</div>
+        <div class="outcome-title gf-plaque">{outcomeLabel(outcome)}</div>
         {#if outcome === 'victory' && hasRewardBreakdown}
           <ul class="reward-breakdown">
             <li>Base: {rewardBreakdown.baseXp || 0} XP, {rewardBreakdown.baseGold || 0} gold</li>
@@ -1384,7 +1384,7 @@
             </ul>
           {/if}
           {#if levelUp && levelReady}
-            <div class="level-callout">Level {levelUp.newLevel}</div>
+            <div class="level-callout gf-panel">Level {levelUp.newLevel}</div>
           {/if}
         {:else if outcome === 'defeat' && defeatInfo}
           <ul class="reward-breakdown">
