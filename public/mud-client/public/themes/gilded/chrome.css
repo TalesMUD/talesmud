@@ -1,0 +1,512 @@
+/* Paint the existing play chrome. Colors, type, and shadows only.
+   Widths, heights, padding, and positions stay on the components. */
+
+[data-theme="gilded"] body,
+body[data-theme="gilded"] {
+  background-color: var(--gf-bg-void);
+  color: var(--gf-text);
+}
+
+[data-theme="gilded"] .game-panel,
+[data-theme="gilded"] .widget-wrapper.has-title-chrome,
+[data-theme="gilded"] .actionbar-widget.with-hotbar {
+  background-color: var(--gf-panel);
+  background-image:
+    linear-gradient(rgba(21, 17, 14, 0.82), rgba(21, 17, 14, 0.9)),
+    url("textures/panel-stone.png");
+  background-size: auto, 256px 256px;
+  border-color: var(--gf-bronze);
+  border-radius: 3px;
+  box-shadow: var(--gf-frame-shadow);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+[data-theme="gilded"] .game-panel:hover,
+[data-theme="gilded"] .widget-wrapper.has-title-chrome:hover {
+  border-color: var(--gf-bronze-hi);
+}
+
+[data-theme="gilded"] .game-panel-header,
+[data-theme="gilded"] .tab-bar,
+[data-theme="gilded"] .terminal-toolbar {
+  background: var(--gf-titlebar);
+  color: var(--gf-text);
+  border-color: var(--gf-bronze-dark);
+  text-shadow: var(--gf-text-shadow);
+}
+
+[data-theme="gilded"] .game-panel-header,
+[data-theme="gilded"] .tab-bar,
+[data-theme="gilded"] .tx-title,
+[data-theme="gilded"] .room-name,
+[data-theme="gilded"] .switcher {
+  font-family: var(--gf-font);
+}
+
+[data-theme="gilded"] .play-header,
+[data-theme="gilded"] .mobile-header,
+[data-theme="gilded"] .switcher {
+  color: var(--gf-text);
+}
+
+[data-theme="gilded"] .room-name {
+  color: var(--gf-gold-text);
+  text-shadow: var(--gf-text-shadow);
+}
+
+[data-theme="gilded"] .back-link,
+[data-theme="gilded"] .back-link:visited {
+  color: var(--gf-gold-text);
+  text-shadow: var(--gf-text-shadow);
+}
+
+[data-theme="gilded"] .roomName {
+  color: var(--gf-gold-text);
+  font-family: var(--gf-font);
+  text-shadow: var(--gf-text-shadow);
+}
+
+[data-theme="gilded"] .roomName::before,
+[data-theme="gilded"] .roomName::after {
+  color: var(--gf-bronze-hi);
+}
+
+[data-theme="gilded"] .hdr-btn,
+[data-theme="gilded"] .acct-btn,
+[data-theme="gilded"] .term-fontsize-btn,
+[data-theme="gilded"] .tx-fontsize-btn,
+[data-theme="gilded"] .map-panel .icon-btn {
+  border-color: var(--gf-bronze);
+  border-radius: 3px;
+  background: var(--gf-inset);
+  color: var(--gf-gold-text);
+  box-shadow: 0 0 0 1px var(--gf-bronze-dark), inset 0 1px 0 rgba(199, 154, 69, 0.35);
+  text-shadow: var(--gf-text-shadow);
+}
+
+[data-theme="gilded"] .hdr-btn:hover,
+[data-theme="gilded"] .acct-btn:hover,
+[data-theme="gilded"] .icon-btn:hover {
+  background: #2a2112;
+  border-color: var(--gf-bronze-hi);
+}
+
+[data-theme="gilded"] .icon-btn i,
+[data-theme="gilded"] .chevron,
+[data-theme="gilded"] .room-icon,
+[data-theme="gilded"] .acct-btn i {
+  color: var(--gf-gold-text);
+}
+
+[data-theme="gilded"] .menu,
+[data-theme="gilded"] .acct-menu,
+[data-theme="gilded"] #dropdown1.dropdown-content {
+  border-color: var(--gf-bronze);
+  border-radius: 3px;
+  background: #15110e;
+  box-shadow: var(--gf-frame-shadow);
+}
+
+[data-theme="gilded"] .menu-item,
+[data-theme="gilded"] .acct-menu button,
+[data-theme="gilded"] #dropdown1.dropdown-content li > a {
+  color: var(--gf-text);
+  font-family: var(--gf-font);
+}
+
+[data-theme="gilded"] .menu-item:hover,
+[data-theme="gilded"] .acct-menu button:hover,
+[data-theme="gilded"] #dropdown1.dropdown-content li:hover,
+[data-theme="gilded"] #dropdown1.dropdown-content li > a:hover {
+  background: var(--gf-panel-raised);
+  color: var(--gf-gold-text);
+}
+
+[data-theme="gilded"] #dropdown1.dropdown-content li > a > i,
+[data-theme="gilded"] #dropdown1.dropdown-content li > a:hover > i {
+  color: var(--gf-gold-dim);
+}
+
+[data-theme="gilded"] .mobile-header {
+  background: #100e0c;
+  border-bottom-color: var(--gf-bronze-dark);
+  backdrop-filter: none;
+}
+
+[data-theme="gilded"] .mobile-tab-bar {
+  background: #100e0c;
+  border-top-color: var(--gf-bronze);
+  backdrop-filter: none;
+}
+
+[data-theme="gilded"] .mobile-tab-bar .tab {
+  color: var(--gf-text-dim);
+}
+
+[data-theme="gilded"] .mobile-tab-bar .tab.active {
+  color: var(--gf-gold-text);
+}
+
+[data-theme="gilded"] .mobile-tab-bar .tab.active::after {
+  background: var(--gf-bronze-hi);
+}
+
+[data-theme="gilded"] .hp-pill,
+[data-theme="gilded"] .rest-pill {
+  border-radius: 3px;
+  border-color: var(--gf-bronze);
+  background: #1c140e;
+  color: var(--gf-text);
+  font-family: var(--gf-font);
+  text-shadow: var(--gf-text-shadow);
+}
+
+[data-theme="gilded"] .hp-pill.hp-high { color: var(--gf-value-buff); }
+[data-theme="gilded"] .hp-pill.hp-mid { color: var(--gf-gold-text); }
+[data-theme="gilded"] .hp-pill.hp-low { color: var(--gf-value-debuff); }
+[data-theme="gilded"] .rest-pill,
+[data-theme="gilded"] .rest-pill i,
+[data-theme="gilded"] .rest-launch,
+[data-theme="gilded"] .rest-launch i {
+  color: var(--gf-value-buff);
+}
+
+[data-theme="gilded"] .hotbar-widget .slot {
+  border-radius: 2px;
+  border-style: solid;
+  border-color: var(--gf-bronze);
+  background-color: var(--gf-inset);
+  background-image: url("textures/slot-inset.png");
+  background-size: cover;
+  box-shadow: inset 0 0 0 1px #000, 0 0 0 1px var(--gf-bronze-dark);
+  color: var(--gf-gold-dim);
+}
+
+[data-theme="gilded"] .hotbar-widget .slot.filled,
+[data-theme="gilded"] .hotbar-widget .slot.skill.filled,
+[data-theme="gilded"] .hotbar-widget .slot.item.filled {
+  border-color: var(--gf-bronze-hi);
+  background-color: #120e0b;
+}
+
+[data-theme="gilded"] .hotbar-widget .slot:hover:not(.disabled) {
+  border-color: var(--gf-bronze-hi);
+  box-shadow: 0 0 0 1px var(--gf-gold-text), inset 0 0 0 1px #000;
+}
+
+[data-theme="gilded"] .hotbar-widget .slot i,
+[data-theme="gilded"] .hotbar-widget .slot-index {
+  color: var(--gf-gold-text);
+}
+
+[data-theme="gilded"] .hotbar-widget.compact,
+[data-theme="gilded"] .hotbar-widget.docked {
+  background-color: transparent;
+  border-color: var(--gf-bronze-dark);
+}
+
+[data-theme="gilded"] .action-bar {
+  border-color: var(--gf-bronze);
+  border-radius: 3px;
+  backdrop-filter: none;
+}
+
+[data-theme="gilded"] .action-bar .btn,
+[data-theme="gilded"] .mudx .btn,
+[data-theme="gilded"] .mobile-action-bar .btn {
+  background: #1c140e;
+  border-color: var(--gf-bronze);
+  border-radius: 3px;
+  color: var(--gf-text);
+  text-shadow: var(--gf-text-shadow);
+}
+
+[data-theme="gilded"] .action-bar .exit-btn,
+[data-theme="gilded"] .action-bar .cmd-btn,
+[data-theme="gilded"] .action-bar .combat-btn,
+[data-theme="gilded"] .action-bar .context-btn,
+[data-theme="gilded"] .action-bar .room-action-btn,
+[data-theme="gilded"] .action-bar .room-actions-btn,
+[data-theme="gilded"] .action-bar .more-btn,
+[data-theme="gilded"] .mudx .exit-btn,
+[data-theme="gilded"] .mudx .cmd-btn,
+[data-theme="gilded"] .mudx .combat-btn,
+[data-theme="gilded"] .mudx .context-btn,
+[data-theme="gilded"] .mobile-action-bar .exit-btn,
+[data-theme="gilded"] .mobile-action-bar .cmd-btn,
+[data-theme="gilded"] .mobile-action-bar .combat-btn,
+[data-theme="gilded"] .mobile-action-bar .context-btn,
+[data-theme="gilded"] .mobile-action-bar .room-action-btn,
+[data-theme="gilded"] .mobile-action-bar .more-btn,
+[data-theme="gilded"] .mobile-action-bar .pickup-bar-btn,
+[data-theme="gilded"] .mobile-action-bar .pickup-icon-btn {
+  background: #241912;
+  border-color: var(--gf-bronze);
+  color: var(--gf-gold-text);
+}
+
+[data-theme="gilded"] .action-bar .btn:hover,
+[data-theme="gilded"] .action-bar .exit-btn:hover,
+[data-theme="gilded"] .action-bar .cmd-btn:hover,
+[data-theme="gilded"] .action-bar .combat-btn:hover,
+[data-theme="gilded"] .action-bar .context-btn:hover,
+[data-theme="gilded"] .action-bar .room-action-btn:hover,
+[data-theme="gilded"] .mudx .btn:hover,
+[data-theme="gilded"] .mobile-action-bar .btn:hover,
+[data-theme="gilded"] .mobile-action-bar .btn:active {
+  background: #2e2118;
+  border-color: var(--gf-bronze-hi);
+}
+
+[data-theme="gilded"] .compass-btn {
+  background: var(--gf-inset);
+  border-color: var(--gf-bronze);
+  border-radius: 3px;
+  color: var(--gf-gold-text);
+}
+
+[data-theme="gilded"] .compass-btn:hover:not(:disabled) {
+  background: #2a2112;
+  border-color: var(--gf-bronze-hi);
+}
+
+[data-theme="gilded"] .compass-btn:disabled {
+  background: #14110e;
+  border-color: var(--gf-bronze-dark);
+  color: var(--gf-gold-dim);
+}
+
+[data-theme="gilded"] .compass-circle {
+  background: radial-gradient(circle, rgba(138, 100, 40, 0.22), rgba(11, 9, 8, 0.05) 70%);
+  border-color: var(--gf-bronze-dark);
+  box-shadow: none;
+}
+
+[data-theme="gilded"] .compass-center i { color: var(--gf-bronze-hi); }
+
+[data-theme="gilded"] .terminal-widget,
+[data-theme="gilded"] .tx-window {
+  background: #100e0c;
+  border-color: var(--gf-bronze);
+  border-radius: 3px;
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.65), 0 0 0 1px var(--gf-bronze-dark);
+}
+
+[data-theme="gilded"] .tx-window,
+[data-theme="gilded"] .tx-body,
+[data-theme="gilded"] .tx-input,
+[data-theme="gilded"] .tx-prompt,
+[data-theme="gilded"] .terminal-inner,
+[data-theme="gilded"] .xterm {
+  font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+}
+
+[data-theme="gilded"] .tx-scanlines { opacity: 0; }
+
+[data-theme="gilded"] .tx-title,
+[data-theme="gilded"] .tx-titlebar {
+  color: var(--gf-text);
+  font-family: var(--gf-font);
+}
+
+[data-theme="gilded"] .room-widget,
+[data-theme="gilded"] .atlas-compact {
+  box-shadow: inset 0 0 0 1px var(--gf-bronze), inset 0 0 18px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme="gilded"] .map-overlay { background: rgba(11, 9, 8, 0.82); }
+
+[data-theme="gilded"] .map-panel {
+  background: var(--gf-panel);
+  border-color: var(--gf-bronze);
+  border-radius: 3px;
+  box-shadow: var(--gf-frame-shadow);
+}
+
+[data-theme="gilded"] .map-panel .toolbar,
+[data-theme="gilded"] .map-panel .toolbar-title {
+  background: var(--gf-titlebar);
+  color: var(--gf-text);
+  font-family: var(--gf-font);
+  text-shadow: var(--gf-text-shadow);
+}
+
+[data-theme="gilded"] .modal-container {
+  border-color: var(--gf-bronze);
+  border-radius: 3px;
+  background: #15110e;
+  color: var(--gf-text);
+  box-shadow: var(--gf-frame-shadow);
+}
+
+[data-theme="gilded"] .modal-header,
+[data-theme="gilded"] .tabs-sidebar {
+  background: var(--gf-titlebar);
+  border-color: var(--gf-bronze-dark);
+}
+
+[data-theme="gilded"] .modal-title,
+[data-theme="gilded"] .section-title,
+[data-theme="gilded"] .tab-btn.active,
+[data-theme="gilded"] .setting-label {
+  color: var(--gf-gold-text);
+  font-family: var(--gf-font);
+  text-shadow: var(--gf-text-shadow);
+}
+
+[data-theme="gilded"] .close-btn,
+[data-theme="gilded"] .theme-option,
+[data-theme="gilded"] .choice,
+[data-theme="gilded"] .tab-btn {
+  border-color: var(--gf-bronze);
+  border-radius: 3px;
+  background: var(--gf-inset);
+  color: var(--gf-text);
+  font-family: var(--gf-font);
+}
+
+[data-theme="gilded"] .theme-option.active,
+[data-theme="gilded"] .choice.active,
+[data-theme="gilded"] .tab-btn.active {
+  border-color: var(--gf-bronze-hi);
+  background: #2a2112;
+  color: var(--gf-gold-text);
+}
+
+[data-theme="gilded"] .setting-item,
+[data-theme="gilded"] .note {
+  border-color: var(--gf-bronze-dark);
+  background: #1c140e;
+  border-radius: 3px;
+}
+
+[data-theme="gilded"] .setting-desc { color: var(--gf-text-dim); }
+
+[data-theme="gilded"] .bar-label {
+  color: var(--gf-gold-text);
+  font-family: var(--gf-font);
+  text-shadow: var(--gf-text-shadow);
+}
+
+[data-theme="gilded"] .bar-value {
+  color: var(--gf-text);
+  font-family: var(--gf-font);
+  text-shadow: var(--gf-text-shadow);
+}
+
+[data-theme="gilded"] .bar-fill.mana {
+  background: var(--gf-mana);
+  box-shadow: none;
+}
+
+[data-theme="gilded"] .bar-fill.xp {
+  background: var(--gf-xp);
+  box-shadow: none;
+}
+
+[data-theme="gilded"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+[data-theme="gilded"] textarea,
+[data-theme="gilded"] select {
+  background-color: var(--gf-inset);
+  border-color: var(--gf-bronze-dark);
+  color: var(--gf-text);
+  border-radius: 3px;
+}
+
+[data-theme="gilded"] input:not([type="checkbox"]):not([type="radio"]):focus,
+[data-theme="gilded"] textarea:focus,
+[data-theme="gilded"] select:focus {
+  border-color: var(--gf-bronze-hi);
+  outline: 1px solid var(--gf-bronze-hi);
+}
+
+[data-theme="gilded"] .welcome-screen { background: var(--gf-bg-void); }
+
+[data-theme="gilded"] .welcome-screen .card {
+  background: #15110e;
+  border-color: var(--gf-bronze);
+  border-radius: 3px;
+  box-shadow: var(--gf-frame-shadow);
+}
+
+[data-theme="gilded"] .welcome-screen .title,
+[data-theme="gilded"] .welcome-screen .btn-welcome {
+  font-family: var(--gf-font);
+}
+
+[data-theme="gilded"] .welcome-screen .title {
+  color: var(--gf-gold-text);
+  text-shadow: var(--gf-text-shadow);
+}
+
+/* Svelte repeats its scope class, so a two-class override loses.
+   These selectors win without changing widths, heights, or padding. */
+body[data-theme="gilded"][data-theme="gilded"] .mobile-header .header-left .room-name {
+  color: var(--gf-gold-text);
+  text-shadow: var(--gf-text-shadow);
+}
+
+body[data-theme="gilded"][data-theme="gilded"] .mobile-header .hp-pill,
+body[data-theme="gilded"][data-theme="gilded"] .mobile-header .rest-pill {
+  border-radius: 3px;
+  background: #1c140e;
+  border-color: var(--gf-bronze);
+  text-shadow: var(--gf-text-shadow);
+}
+
+body[data-theme="gilded"][data-theme="gilded"] .mobile-header .hp-pill.hp-high,
+body[data-theme="gilded"][data-theme="gilded"] .mobile-header .rest-pill {
+  color: var(--gf-value-buff);
+}
+
+body[data-theme="gilded"][data-theme="gilded"] .mobile-header .hp-pill.hp-mid {
+  color: var(--gf-gold-text);
+}
+
+body[data-theme="gilded"][data-theme="gilded"] .mobile-header .hp-pill.hp-low {
+  color: var(--gf-value-debuff);
+}
+
+body[data-theme="gilded"][data-theme="gilded"] .bar-fill.mana {
+  background: var(--gf-mana);
+  box-shadow: none;
+}
+
+body[data-theme="gilded"][data-theme="gilded"] .bar-fill.xp {
+  background: var(--gf-xp);
+  box-shadow: none;
+}
+
+body[data-theme="gilded"][data-theme="gilded"] .hotbar-widget.docked .slot,
+body[data-theme="gilded"][data-theme="gilded"] .hotbar-widget.compact .slot,
+body[data-theme="gilded"][data-theme="gilded"] .hotbar-widget .slot.filled {
+  border-style: solid;
+  border-color: var(--gf-bronze);
+  border-radius: 2px;
+  background-color: var(--gf-inset);
+  background-image: url("textures/slot-inset.png");
+  box-shadow: inset 0 0 0 1px #000, 0 0 0 1px var(--gf-bronze-dark);
+}
+
+[data-theme="gilded"] {
+  scrollbar-color: var(--gf-bronze) #1c140e;
+}
+
+[data-theme="gilded"] .game-panel::-webkit-scrollbar-thumb,
+[data-theme="gilded"] .widget-scroll::-webkit-scrollbar-thumb,
+[data-theme="gilded"] .roomContentSection::-webkit-scrollbar-thumb,
+[data-theme="gilded"] .tab-content::-webkit-scrollbar-thumb,
+[data-theme="gilded"] .tx-body::-webkit-scrollbar-thumb {
+  background: #3a2818;
+  border: 1px solid var(--gf-bronze);
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="gilded"] .game-panel,
+  [data-theme="gilded"] .action-bar .btn,
+  [data-theme="gilded"] .compass-btn {
+    transition: none;
+  }
+}

@@ -1,0 +1,52 @@
+/* Gilded Frame tokens. Scoped to the theme so other themes keep their own variables.
+   Marcellus is SIL OFL 1.1 (see fonts/OFL.txt). */
+
+@font-face {
+  font-family: "Marcellus";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("fonts/Marcellus-Regular.woff2") format("woff2"),
+       url("fonts/Marcellus-Regular.ttf") format("truetype");
+}
+
+[data-theme="gilded"] {
+  --gf-bg-void: #0b0908;
+  --gf-panel: #15110e;
+  --gf-panel-warm: #241912;
+  --gf-panel-raised: #2e2118;
+  --gf-row-a: #2d2017;
+  --gf-row-b: #1c140e;
+  --gf-titlebar: linear-gradient(180deg, #1a100a, #2a1a0f);
+  --gf-subbar: linear-gradient(180deg, #2b2622, #1d1a17);
+  --gf-leather: linear-gradient(180deg, #3a2818, #4a331f);
+  --gf-bronze-dark: #4a3214;
+  --gf-bronze: #8a6428;
+  --gf-bronze-hi: #c79a45;
+  --gf-gold-text: #ffd24a;
+  --gf-gold-dim: #b8922f;
+  --gf-text: #efe6d6;
+  --gf-text-dim: #a89c8a;
+  --gf-value-buff: #3ee04a;
+  --gf-value-debuff: #ff4a3d;
+  --gf-danger: #b0140c;
+  --gf-danger-shade: #6f0201;
+  --gf-hp: linear-gradient(180deg, #2fb32f, #1f7d1f);
+  --gf-mana: linear-gradient(180deg, #2e6fd8, #1d4796);
+  --gf-xp: #8e4fd0;
+  --gf-q-poor: #9d9d9d;
+  --gf-q-common: #e8e4df;
+  --gf-q-uncommon: #1eff00;
+  --gf-q-rare: #0070dd;
+  --gf-q-epic: #a335ee;
+  --gf-q-legendary: #ff8000;
+  --gf-font: "Marcellus", "Palatino Linotype", Palatino, serif;
+  --gf-text-shadow: 0 1px 0 #000, 0 0 2px rgba(0, 0, 0, 0.8);
+  --gf-inset: #0e0b09;
+  --gf-frame-shadow:
+    0 0 0 1px var(--gf-bronze-dark),
+    inset 0 0 0 1px #000,
+    inset 1px 1px 0 var(--gf-bronze-hi),
+    inset 0 0 24px rgba(0, 0, 0, 0.65),
+    0 6px 18px rgba(0, 0, 0, 0.6);
+}

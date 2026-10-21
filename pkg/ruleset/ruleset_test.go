@@ -69,6 +69,42 @@ func TestQuestDailyResetHour(t *testing.T) {
 	}
 }
 
+func TestDefaultThemeKey(t *testing.T) {
+	ruleset.Reset()
+	t.Cleanup(ruleset.Reset)
+	if ruleset.DefaultTheme() != ruleset.DefaultThemeDarkFantasy {
+		t.Fatalf("default theme %q", ruleset.DefaultTheme())
+	}
+	if err := ruleset.LoadBytes([]byte("progression:\n  level_cap: 12\n")); err != nil {
+		t.Fatal(err)
+	}
+	if ruleset.DefaultTheme() != ruleset.DefaultThemeDarkFantasy || ruleset.LevelCap() != 12 {
+		t.Fatalf("omitted theme %q cap %d", ruleset.DefaultTheme(), ruleset.LevelCap())
+	}
+	if err := ruleset.LoadBytes([]byte("ui:\n  default_theme: gilded\n")); err != nil {
+		t.Fatal(err)
+	}
+	if ruleset.DefaultTheme() != ruleset.DefaultThemeGilded {
+		t.Fatalf("theme %q", ruleset.DefaultTheme())
+	}
+	if err := ruleset.LoadBytes([]byte("ui:\n  default_theme: \"\"\n")); err != nil {
+		t.Fatal(err)
+	}
+	if ruleset.DefaultTheme() != ruleset.DefaultThemeDarkFantasy {
+		t.Fatalf("empty theme %q", ruleset.DefaultTheme())
+	}
+	if err := ruleset.LoadBytes([]byte("ui:\n  default_theme: gilded\n")); err != nil {
+		t.Fatal(err)
+	}
+	err := ruleset.LoadBytes([]byte("ui:\n  default_theme: neon\n"))
+	if err == nil || !strings.Contains(err.Error(), "default_theme") {
+		t.Fatalf("err = %v", err)
+	}
+	if ruleset.DefaultTheme() != ruleset.DefaultThemeGilded {
+		t.Fatalf("rejected document changed theme to %q", ruleset.DefaultTheme())
+	}
+}
+
 func TestGuideEnabledKey(t *testing.T) {
 	ruleset.Reset()
 	t.Cleanup(ruleset.Reset)

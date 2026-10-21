@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"github.com/talesmud/talesmud/pkg/entities/settings"
+	"github.com/talesmud/talesmud/pkg/ruleset"
 	"github.com/talesmud/talesmud/pkg/service"
 )
 
@@ -54,8 +55,9 @@ func (h *ServerSettingsHandler) GetServerInfo(c *gin.Context) {
 		host = c.Request.Host
 	}
 	c.JSON(http.StatusOK, gin.H{
-		"serverName": result.ServerName,
-		"envLabel":   os.Getenv("ADMIN_ENV_LABEL"),
-		"host":       host,
+		"serverName":   result.ServerName,
+		"envLabel":     os.Getenv("ADMIN_ENV_LABEL"),
+		"host":         host,
+		"defaultTheme": ruleset.DefaultTheme(),
 	})
 }

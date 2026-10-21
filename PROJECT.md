@@ -12,7 +12,7 @@ TalesMUD is a browser-based Multi-User Dungeon (MUD) framework built with Go and
 - **Core Systems & Features:** `FEATURES.md` (comprehensive reference for all systems, data structures, and APIs)
 - **Game design + MVP backlog:** `docs/design/GAME_DESIGN.md`
 - **Door on the shared engine:** `docs/DOOR-ON-MUD.md`
-- **Ruleset profile:** `config/ruleset.yaml` (level cap, level-up mode, death, new day, resource keys, combat pacing, regen for out of combat, resting, and in combat, `guide.enabled`, `combat.respawn_min_seconds`, aggro grace windows). Combat math stays in `config/combat_balance.yaml`.
+- **Ruleset profile:** `config/ruleset.yaml` (level cap, level-up mode, death, new day, resource keys, combat pacing, regen for out of combat, resting, and in combat, `guide.enabled`, `combat.respawn_min_seconds`, aggro grace windows, `ui.default_theme`). Combat math stays in `config/combat_balance.yaml`. `ui.default_theme` is `dark-fantasy` when omitted. A deployment may set `clean-hud` or `gilded`.
 - **Scripting system:** `docs/design/SCRIPTING.md`
 - **World map implementation:** `docs/design/WORLD_MAP_IMPLEMENTATION.md`
 - **Quest authoring guide:** `docs/design/QUEST_AUTHORING.md`
@@ -68,7 +68,7 @@ Planned epics (see `game-design/GAME_DESIGN.md`):
   - OOC Resting chip on character HP / mobile header while `Flags.resting`; clears on combat or rest end
   - BattleStage: arena art clipped to the fight band; Attack/Defend/Items/Flee + hotbar share one dock strip; FF-style plates; queue chip centered in the dock. Layout B is the default fight view (party left, enemies right, corner detail frames, slim over-sprite HP, existing race/class and enemy portraits). Other players show on a compact left ally strip. Classic cards remain a Settings opt-out (`?battleLayout=classic`). Every fighter in a group appears: the player's large card and up to four compact ally cards with live HP/MP, turn, down/fled, hit FX, and join banner. Damage numbers float over the struck sprite in white with a dark outline, holding full opacity before fading. A missing portrait or item icon swaps once to a class, enemy, or generic silhouette instead of a broken image.
   - Combat start/join focuses the existing BattleStage cover by default. The local Settings panel can turn auto-focus off; a manual Open BattleStage button remains available during combat. Dismissing victory/defeat, outcome timeout, or leaving combat restores the previous panel focus. Layout and template saves keep the normal arrangement; command input and text fields keep their typing focus.
-  - Settings persist locally: theme, parchment room descriptions, reduced motion (system/on/off), combat auto-focus, Battle layout B (default on; off selects Classic), and inventory opening as an overlay or layout widget. Audio controls are held until game sound exists; inactive Compact Mode and Room Text Overlay controls are hidden.
+  - Settings persist locally: theme, parchment room descriptions, reduced motion (system/on/off), combat auto-focus, Battle layout B (default on; off selects Classic), and inventory opening as an overlay or layout widget. Theme `auto` (the stored default) follows `defaultTheme` from server-info. A named choice (Dark Fantasy, Clean HUD, Gilded Frame) is kept. A saved `dark-fantasy` that was never explicitly chosen migrates to `auto`. Audio controls are held until game sound exists; inactive Compact Mode and Room Text Overlay controls are hidden.
   - Combat self and allies share one row on desktop and a stacked section on phones. Joins show one banner; combat prose stays in the log. Defeated enemy sprites remain visible in grey with a Defeated label.
   - In multi-enemy combat, clicking a BattleStage enemy or pressing Tab changes the gold focus highlight and server aim without spending a turn. Basic attacks and hostile skills use that living target; switching to an orange, red, or skull foe repeats the level-gap warning once per change. A dead target falls back to a living foe.
   - Say chrome opens a message popup, then sends `say <text>`
@@ -579,7 +579,7 @@ go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
 - `GET /api/templates/characters` - Character creation templates
 - `GET /api/room-of-the-day` - Featured room
 - `POST /api/guest` - Create guest session (returns HMAC token)
-- `GET /api/server-info` - Public server info: `serverName`, `envLabel` (`ADMIN_ENV_LABEL`), and `host` (`ADMIN_ENV_HOST` or the request host)
+- `GET /api/server-info` - Public server info: `serverName`, `envLabel` (`ADMIN_ENV_LABEL`), `host` (`ADMIN_ENV_HOST` or the request host), and `defaultTheme` (ruleset `ui.default_theme`, falling back to `dark-fantasy`)
 - `GET /api/ssh/info` - SSH listener status. `{enabled:false}` when SSH is off. When it is on, the body includes host, port, full host-key fingerprints, guest flag, and activate URL
 - `GET /activate` - Device-code page. Local auth serves a sign-in form. Classic auth redirects to `/play/?activate=<code>`
 

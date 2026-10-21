@@ -80,8 +80,11 @@
   .theme-option { flex: 1; padding: 0.55rem; border: 1px solid #8b692f88; border-radius: 6px; background: #17140f; color: #c5b89b; cursor: pointer; text-align: left; }
   .theme-option.active { border-color: #d4a44a; color: #fff0bb; box-shadow: inset 0 0 0 1px #d4a44a55; }
   .theme-preview { display: block; height: 20px; margin-bottom: 0.35rem; border-radius: 3px; }
+  .theme-options { flex-wrap: wrap; }
   .theme-preview.dark-fantasy { background: linear-gradient(90deg, #0e0b08, #8e6126); }
   .theme-preview.clean-hud { background: linear-gradient(90deg, #0c101b, #495671); }
+  .theme-preview.gilded { background: linear-gradient(90deg, #15110e, #8a6428); }
+  .theme-preview.auto { background: linear-gradient(90deg, #1a100a, #c79a45); }
   .note { padding: 0.8rem; border: 1px solid #ae8b5033; border-radius: 6px; background: #ffffff08; }
   @media (max-width: 600px) {
     .modal-backdrop { padding: 0.5rem; align-items: center; }
@@ -117,8 +120,10 @@
             <section class="settings-section">
               <h2 class="section-title">Appearance</h2>
               <div class="theme-options">
+                <button class="theme-option" class:active={($settingsStore.interface?.theme || 'auto') === 'auto'} aria-pressed={($settingsStore.interface?.theme || 'auto') === 'auto'} on:click={() => set('theme', 'auto')}><span class="theme-preview auto"></span>Auto</button>
                 <button class="theme-option" class:active={$settingsStore.interface?.theme === 'dark-fantasy'} aria-pressed={$settingsStore.interface?.theme === 'dark-fantasy'} on:click={() => set('theme', 'dark-fantasy')}><span class="theme-preview dark-fantasy"></span>Dark Fantasy</button>
                 <button class="theme-option" class:active={$settingsStore.interface?.theme === 'clean-hud'} aria-pressed={$settingsStore.interface?.theme === 'clean-hud'} on:click={() => set('theme', 'clean-hud')}><span class="theme-preview clean-hud"></span>Clean HUD</button>
+                <button class="theme-option" class:active={$settingsStore.interface?.theme === 'gilded'} aria-pressed={$settingsStore.interface?.theme === 'gilded'} on:click={() => set('theme', 'gilded')}><span class="theme-preview gilded"></span>Gilded Frame</button>
               </div>
             </section>
             <section class="settings-section">
