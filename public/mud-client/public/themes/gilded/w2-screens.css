@@ -1,13 +1,6 @@
 /* Gilded Frame treatment for inventory, character, equipment, party, items, and sign-in.
-   Decoration stays inside existing boxes. Other themes are unchanged. */
-
-@font-face {
-  font-family: "Marcellus";
-  src: url("fonts/Marcellus-Regular.ttf") format("truetype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
+   Tokens and Marcellus live in tokens.css. Decoration stays inside existing boxes.
+   .gf-slot is not applied here: that primitive sets a 40–56px box, and equipment slots are larger. */
 
 body[data-theme="gilded"] {
   --gf-void: #0b0908;
@@ -200,6 +193,10 @@ body[data-theme="gilded"] .welcome-screen .title {
   text-align: center;
 }
 
+body[data-theme="gilded"] .welcome-screen .title {
+  letter-spacing: 0.06em;
+}
+
 body[data-theme="gilded"] .character-widget .char-info,
 body[data-theme="gilded"] .equipment-widget .portrait-meta {
   justify-content: center;
@@ -275,15 +272,15 @@ body[data-theme="gilded"] .character-widget .game-panel-divider span:not(.unspen
   right: 0;
 }
 
-/* Stat rows: gold label, white value, green or red modifier. Grid stays one column here. */
-body[data-theme="gilded"] .character-widget .attributes-grid,
-body[data-theme="gilded"] .character-widget .combat-stats-grid {
-  grid-template-columns: 1fr;
-  gap: 0;
+/* Stat tiles keep the component grid. Colours only. */
+body[data-theme="gilded"] .character-widget .attr-item,
+body[data-theme="gilded"] .character-widget .combat-stat {
+  background: #1c140e;
+  border: 1px solid #4a3214;
+  border-radius: 3px;
+  color: #efe6d6;
 }
 
-body[data-theme="gilded"] .character-widget .attr-item,
-body[data-theme="gilded"] .character-widget .combat-stat,
 body[data-theme="gilded"] .character-widget .gold-row,
 body[data-theme="gilded"] .equipment-widget .compact-stats,
 body[data-theme="gilded"] .item-card .item-card-stat,
@@ -311,44 +308,12 @@ body[data-theme="gilded"] .character-widget .combat-stat-label,
 body[data-theme="gilded"] .character-widget .gold-label,
 body[data-theme="gilded"] .item-card .item-card-stat span:first-child,
 body[data-theme="gilded"] .wizard-screen .confirm-attr-name {
-  order: 0;
-  flex: 1;
-  margin: 0;
   color: #ffd24a;
-  text-transform: none;
-  letter-spacing: 0;
-  font-size: 13px;
-  text-align: left;
   text-shadow: var(--gf-shadow);
-}
-
-body[data-theme="gilded"] .character-widget .attr-name::after,
-body[data-theme="gilded"] .character-widget .combat-stat-label::after,
-body[data-theme="gilded"] .character-widget .gold-label::after {
-  content: ":";
-}
-
-body[data-theme="gilded"] .character-widget .attr-value {
-  order: 2;
-}
-
-body[data-theme="gilded"] .character-widget .attr-mod {
-  order: 3;
-  margin-left: 8px;
-}
-
-body[data-theme="gilded"] .character-widget .combat-stat-info {
-  display: flex;
-  flex: 1;
-  flex-direction: row;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
 }
 
 body[data-theme="gilded"] .character-widget .combat-stat-formula {
   color: #a89c8a;
-  font-size: 11px;
 }
 
 body[data-theme="gilded"] .character-widget .attr-value,
@@ -451,6 +416,29 @@ body[data-theme="gilded"] .recipes-overlay .chip {
   letter-spacing: 0;
 }
 
+body[data-theme="gilded"] .party-overlay .you-tag {
+  color: #1a1408;
+  background: #c79a45;
+}
+
+body[data-theme="gilded"] .party-overlay .leader-badge {
+  color: #ffd24a;
+  background: #2a1a0f;
+  border: 1px solid #8a6428;
+}
+
+body[data-theme="gilded"] .party-overlay .pill {
+  background: #1c140e;
+  color: #a89c8a;
+  border: 1px solid #4a3214;
+}
+
+body[data-theme="gilded"] .party-overlay .pill.online {
+  background: #14210f;
+  color: #3ee04a;
+  border-color: #2f6a28;
+}
+
 body[data-theme="gilded"] .character-widget .skill-btn,
 body[data-theme="gilded"] .inventory-widget .detail-action-btn,
 body[data-theme="gilded"] .inventory-widget .qty-btn,
@@ -475,9 +463,35 @@ body[data-theme="gilded"] .inv-craft {
   text-shadow: var(--gf-shadow);
 }
 
+body[data-theme="gilded"] .inv-craft {
+  background: linear-gradient(180deg, #4a331f, #3a2818);
+  color: #ffd24a;
+  border: 1px solid #8a6428;
+  box-shadow: inset 0 1px 0 rgba(199, 154, 69, 0.45);
+}
+
+body[data-theme="gilded"] .inv-craft:hover {
+  background: linear-gradient(180deg, #5c4128, #3a2818);
+  color: #ffd24a;
+}
+
+/* Provider buttons stay a solid plaque. Play as guest is the leather one. */
+body[data-theme="gilded"] .welcome-screen .btn-welcome.primary {
+  background: #c79a45;
+  color: #1a1408;
+  border: 1px solid #8a6428;
+  box-shadow: inset 0 1px 0 rgba(255, 236, 190, 0.65);
+  text-shadow: none;
+}
+
+body[data-theme="gilded"] .welcome-screen .btn-welcome.guest {
+  background: linear-gradient(180deg, #4a331f, #3a2818);
+  color: #ffd24a;
+  border: 1px solid #c79a45;
+  box-shadow: inset 0 1px 0 rgba(199, 154, 69, 0.45);
+}
+
 body[data-theme="gilded"] .item-card .item-card-actions button.primary,
-body[data-theme="gilded"] .welcome-screen .btn-welcome.primary,
-body[data-theme="gilded"] .welcome-screen .btn-welcome.guest,
 body[data-theme="gilded"] .wizard-screen .btn-wizard.primary,
 body[data-theme="gilded"] .nickname-screen .btn-continue,
 body[data-theme="gilded"] .party-overlay .act.gold,
@@ -678,11 +692,28 @@ body[data-theme="gilded"] .wizard-screen .btn-generate {
   color: #ffd24a;
 }
 
+/* The doll can shrink below its slots and paint over the name and stats.
+   Keep the slot size and let the panel scroll. */
+body[data-theme="gilded"] .equipment-widget .doll {
+  flex: 1 1 auto;
+  min-height: min-content;
+  overflow: visible;
+}
+
+body[data-theme="gilded"] .equipment-widget .portrait-col {
+  min-height: 0;
+  overflow: hidden;
+}
+
 body[data-theme="gilded"] .equipment-widget .portrait-frame {
   border-radius: 3px;
   border: 2px solid #8a6428;
   box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.65), 0 0 0 1px #4a3214;
   background: #0e0b09;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  aspect-ratio: auto;
 }
 
 body[data-theme="gilded"] .party-overlay .avatar,
@@ -850,7 +881,7 @@ body[data-theme="gilded"] .ng-item.rarity-magic { color: #1eff00; }
 body[data-theme="gilded"] .ng-item.rarity-rare { color: #0070dd; }
 body[data-theme="gilded"] .ng-item.rarity-legendary { color: #a335ee; }
 body[data-theme="gilded"] .ng-item.rarity-mythic,
-body[data-theme="gilded"] .ng-item.rarity-unique { color: #ff8000; }
+body[data-theme="gilded"] .ng-item.rarity-unique { color: #ff8000 !important; }
 
 body[data-theme="gilded"] .item-card.item-card-unique {
   border-color: #ff8000;

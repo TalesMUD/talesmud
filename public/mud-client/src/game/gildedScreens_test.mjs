@@ -16,6 +16,10 @@ assert.match(index, /bundle\.js\?v=uxtop1/);
 assert.match(index, /themes\/gilded\/w2-screens\.css/);
 assert.equal(css.includes('Veilspan'), false);
 assert.equal(css.includes('WoW'), false);
+assert.equal(/grid-template-columns:\s*1fr/.test(css), false);
+assert.match(css, /body\[data-theme="gilded"\] \.welcome-screen \.btn-welcome\.guest \{[^}]*color:\s*#ffd24a/);
+assert.match(css, /body\[data-theme="gilded"\] \.welcome-screen \.btn-welcome\.primary \{[^}]*background:\s*#c79a45/);
+assert.match(css, /body\[data-theme="gilded"\] \.welcome-screen \.btn-welcome\.primary \{[^}]*color:\s*#1a1408/);
 
 for (const hex of ['#0b0908', '#15110e', '#ffd24a', '#3ee04a', '#ff4a3d', '#1eff00', '#0070dd', '#a335ee', '#ff8000']) {
   assert.ok(css.includes(hex), hex);
