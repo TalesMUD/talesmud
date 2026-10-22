@@ -153,6 +153,9 @@ func NewApp() App {
 			log.WithError(err).Warn("Ruleset file failed to load; using built-in defaults")
 		}
 	}
+	if err := ruleset.ApplyActiveImport("import"); err != nil {
+		log.WithError(err).Fatal("Content pack ruleset overlay failed")
+	}
 	if store, err := resources.New(client.DB()); err != nil {
 		log.WithError(err).Warn("Refilling resource store unavailable")
 	} else {

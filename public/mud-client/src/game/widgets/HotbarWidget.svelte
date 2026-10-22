@@ -232,15 +232,23 @@
     min-width: 0;
     gap: 4px;
     justify-content: center;
+    flex-wrap: wrap;
   }
 
   .hotbar-widget.compact .slot {
-    flex: 1 1 0;
+    flex: 1 1 44px;
     width: auto;
-    min-width: 0;
+    min-width: 44px;
     max-width: 56px;
-    height: auto;
-    aspect-ratio: 1;
+    height: 44px;
+    min-height: 44px;
+    aspect-ratio: auto;
+  }
+
+  .picker-overlay.compact button {
+    min-width: 44px;
+    min-height: 44px;
+    box-sizing: border-box;
   }
 
   .slot {
@@ -494,7 +502,7 @@
 
 {#if pickerIndex >= 0}
   <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-  <div class="picker-overlay" on:click={closePicker}>
+  <div class="picker-overlay" class:compact on:click={closePicker}>
     <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
     <div class="picker" on:click|stopPropagation role="dialog" aria-label="Bind hotbar slot">
       <div class="picker-header">

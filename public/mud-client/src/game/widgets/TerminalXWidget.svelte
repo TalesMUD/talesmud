@@ -1,5 +1,7 @@
 <script>
   import { onMount, onDestroy, createEventDispatcher, tick } from 'svelte';
+  import { MOBILE_QUERY } from '../mobile/mobileStore.js';
+  import { floorPhoneFontPx } from '../mobile/phoneSheets.js';
 
   export let onTerminalReady = () => {};
   export let onInput = () => {};
@@ -27,6 +29,8 @@
   const STORAGE_KEY = 'talesmud_termx_fontsize';
 
   let fontSizeIndex = 0;
+  let phoneShell = false;
+  let stopFontShell = () => {};
 
   function loadFontSize() {
     try {
@@ -45,7 +49,7 @@
     } catch (e) { /* ignore */ }
   }
 
-  $: currentFontSize = FONT_SIZES[fontSizeIndex].size;
+  $: currentFontSize = floorPhoneFontPx(FONT_SIZES[fontSizeIndex].size, phoneShell);
   $: currentFontLabel = FONT_SIZES[fontSizeIndex].label;
 
   // ── Line classification: detect content type and assign color class ──
@@ -168,6 +172,11 @@
 
   onMount(() => {
     loadFontSize();
+    const fontQuery = window.matchMedia(MOBILE_QUERY);
+    const onFontShell = (event) => { phoneShell = event.matches; };
+    phoneShell = fontQuery.matches;
+    fontQuery.addEventListener('change', onFontShell);
+    stopFontShell = () => fontQuery.removeEventListener('change', onFontShell);
 
     // Load Fira Code font if not already present
     if (!document.querySelector('link[href*="Fira+Code"]')) {
@@ -212,6 +221,8 @@
     // Auto-focus the input
     if (inputEl) inputEl.focus();
   });
+
+  onDestroy(() => stopFontShell());
 </script>
 
 <style>
@@ -416,6 +427,21 @@
 
   .tx-input::placeholder {
     color: #3d3a36;
+  }
+
+  @media (max-width: 768px), (max-width: 1024px) and (max-height: 500px) and (orientation: landscape) {
+    .tx-fontsize-btn {
+      min-width: 44px;
+      min-height: 44px;
+      box-sizing: border-box;
+    }
+
+    .tx-input,
+    .tx-input:focus,
+    .tx-input:active,
+    .tx-input:hover {
+      min-height: 44px !important;
+    }
   }
 
   /* Kill Materialize's .input-field wrappers if ancestors apply them */

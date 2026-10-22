@@ -20,6 +20,13 @@ import {
   parseHotbarByCharacter,
   reconcileHotbarForCharacter,
 } from './hudPrefs.js';
+import {
+  knownTheme,
+  migrateThemeSettings,
+  resolveAppliedTheme,
+  serverThemeOrFallback,
+  THEME_AUTO,
+} from './themeChoice.js';
 
 const STORAGE_KEY = 'talesmud_settings_v1';
 
@@ -36,7 +43,8 @@ const DEFAULT_SETTINGS = {
   },
   // Interface settings
   interface: {
-    theme: 'dark-fantasy',       // UI theme: 'dark-fantasy' or 'clean-hud'
+    theme: 'auto',               // 'auto' follows server-info defaultTheme
+    themeExplicit: false,        // true when the player picked a named theme
     parchmentBackground: false,  // Room description parchment style (default off)
     compactMode: false,          // Legacy stored field; no active UI consumer
     roomTextOverlay: false,      // Legacy stored field; no active UI consumer
@@ -51,6 +59,7 @@ const DEFAULT_SETTINGS = {
 };
 
 let activeHotbarCharacterId = '';
+let serverDefaultTheme = '';
 
 function readHotbarCharacterMap() {
   if (typeof localStorage === 'undefined') return {};
@@ -121,6 +130,12 @@ function createSettingsStore() {
               normalizeHotbarBinds(iface.hotbarBinds)
             );
             iface.hotbarBinds = seedRestOnEmptyHotbar(beforeSeed);
+            const migratedTheme = migrateThemeSettings(
+              iface.theme,
+              data.interface?.themeExplicit
+            );
+            iface.theme = migratedTheme.theme;
+            iface.themeExplicit = migratedTheme.themeExplicit;
             update(state => ({
               ...state,
               general: { ...DEFAULT_SETTINGS.general, ...data.general },
@@ -130,8 +145,11 @@ function createSettingsStore() {
             const seededEmpty =
               beforeSeed.every((b) => b == null) &&
               iface.hotbarBinds.some((b) => b && b.id === 'rest');
-            // Persist pin revision and empty-bar Rest seed so guests see Rest next load
-            if (prevRev < ACTION_BAR_LAYOUT_REVISION || seededEmpty) {
+            const themeMigrated =
+              iface.theme !== data.interface?.theme ||
+              iface.themeExplicit !== data.interface?.themeExplicit;
+            // Persist pin revision, empty-bar Rest seed, and the auto-theme migration
+            if (prevRev < ACTION_BAR_LAYOUT_REVISION || seededEmpty || themeMigrated) {
               this.saveToStorage();
             }
             return true;
@@ -175,11 +193,17 @@ function createSettingsStore() {
       }
     },
 
-    // Apply the current theme to the document body
+    // Apply a stored theme. `auto` uses the server default.
     applyTheme(theme) {
       if (typeof document !== 'undefined') {
-        document.body.dataset.theme = theme || 'dark-fantasy';
+        document.body.dataset.theme = resolveAppliedTheme(theme, serverDefaultTheme);
       }
+    },
+
+    // Public server-info defaultTheme. Re-paints when the choice is auto.
+    setServerDefault(theme) {
+      serverDefaultTheme = serverThemeOrFallback(theme);
+      this.applyTheme(this.getSetting('interface', 'theme'));
     },
 
     // Update a specific setting
@@ -207,6 +231,17 @@ function createSettingsStore() {
         if (category === 'interface' && key === 'hotbarBinds') {
           nextValue = scrubLegacySearchBinds(normalizeHotbarBinds(value));
         }
+        if (category === 'interface' && key === 'theme') {
+          const choice = value === THEME_AUTO ? THEME_AUTO : (knownTheme(value) || THEME_AUTO);
+          return {
+            ...state,
+            interface: {
+              ...state.interface,
+              theme: choice,
+              themeExplicit: choice !== THEME_AUTO,
+            },
+          };
+        }
         return {
           ...state,
           [category]: {
@@ -217,7 +252,7 @@ function createSettingsStore() {
       });
       // Apply theme immediately when changed
       if (category === 'interface' && key === 'theme') {
-        this.applyTheme(value);
+        this.applyTheme(value === THEME_AUTO ? THEME_AUTO : (knownTheme(value) || THEME_AUTO));
       }
       this.saveToStorage();
     },
@@ -242,6 +277,7 @@ function createSettingsStore() {
         }
       }));
       writeBattleLayoutOverride(null);
+      this.applyTheme(THEME_AUTO);
       this.saveToStorage();
     },
 

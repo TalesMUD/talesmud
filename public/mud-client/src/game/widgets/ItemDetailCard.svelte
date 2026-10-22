@@ -4,6 +4,7 @@
   import { itemEffectLines } from '../itemEffects.js';
   import { portal } from '../portal.js';
   import { comparisonItems, comparisonRows, isTwoHanded, itemUsabilityReason, itemWeight, itemIsUsable, itemOffersUseOn } from './itemComparison.js';
+  import { itemQualityKey, qualityColor } from '../qualityColor.js';
 
   export let item;
   export let source = 'inventory';
@@ -35,7 +36,7 @@
     close();
   }
   function color(quality) {
-    return { magic: '#4ade80', rare: '#60a5fa', legendary: '#c084fc', mythic: '#fbbf24' }[quality] || '#e5e7eb';
+    return qualityColor(quality, 'card');
   }
   function label(value) { return String(value || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); }
   function format(value) { return Number.isInteger(value) ? String(value) : Number(value).toFixed(1); }
@@ -45,11 +46,11 @@
 
 <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 <div class="item-card-backdrop" use:portal on:click={(event) => { if (event.target === event.currentTarget) close(); }}>
-  <section class="item-card" class:item-card-unique={item.unique} role="dialog" aria-modal="true" aria-label="{item.name} details" tabindex="-1" bind:this={card}>
+  <section class="item-card" class:item-card-unique={item.unique} data-quality={itemQualityKey(item)} role="dialog" aria-modal="true" aria-label="{item.name} details" tabindex="-1" bind:this={card}>
     <header class="item-card-header">
       <img class="item-card-art" src={itemArtSrc(item)} alt="" on:error={(event) => onItemArtError(event, item)} />
       <div class="item-card-heading">
-        <h2 style="color: {item.unique ? '#fde68a' : color(item.quality)}">{item.name}{#if item.unique}<span class="item-card-unique-mark">UNIQUE</span>{/if}</h2>
+        <h2 style="color: {color(item.unique ? 'unique' : item.quality)}">{item.name}{#if item.unique}<span class="item-card-unique-mark">UNIQUE</span>{/if}</h2>
         <div class="item-card-meta">{[item.quality || 'normal', item.type, item.subType].filter(Boolean).map(label).join(' · ')}</div>
         {#if equippable}<div class="item-card-slot">{label(item.slot)}{#if isTwoHanded(item)} · Two handed{/if}</div>{/if}
       </div>
@@ -123,7 +124,7 @@
 </div>
 
 <style>
-  .item-card-backdrop{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:16px}
+  .item-card-backdrop{position:fixed;inset:0;z-index:calc(var(--layer-sheet) + 40);background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:16px}
   .item-card{width:min(660px,100%);max-height:min(86dvh,760px);overflow:auto;background:#11161c;border:1px solid rgba(212,175,55,.5);border-radius:12px;box-shadow:0 24px 70px #000c;color:#e5e7eb;padding:20px;outline:none}
   .item-card.item-card-unique{border:2px solid #facc15;box-shadow:0 0 0 1px #7a5a16,0 24px 70px #000c,0 0 22px rgba(250,204,21,.35)}
   .item-card-unique-mark{display:inline-block;margin-left:8px;font-size:.62rem;letter-spacing:.14em;color:#fde68a;border:1px solid rgba(250,204,21,.75);border-radius:999px;padding:1px 6px;vertical-align:middle}
@@ -160,4 +161,7 @@
   .item-card-actions button.primary{background:#3d3018;border-color:#b38c3f;color:#ffe3a4}
   .item-card-actions button:disabled{opacity:.4;cursor:not-allowed}
   @media(max-width:600px){.item-card{padding:14px}.item-card-art{width:64px;height:64px}.item-card-header{gap:10px}}
+  @media (max-width: 768px), (max-width: 1024px) and (max-height: 500px) and (orientation: landscape) {
+    .item-card-actions button, .item-card-close { min-width: 44px; min-height: 44px; box-sizing: border-box; }
+  }
 </style>

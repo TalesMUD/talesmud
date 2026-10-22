@@ -207,6 +207,27 @@
     }
   }
 
+  function slotQuality(quality) {
+    switch (String(quality || '').toLowerCase()) {
+      case 'poor':
+      case 'junk':
+        return 'poor';
+      case 'magic':
+      case 'uncommon':
+        return 'uncommon';
+      case 'rare':
+        return 'rare';
+      case 'legendary':
+      case 'epic':
+        return 'epic';
+      case 'mythic':
+      case 'unique':
+        return 'legendary';
+      default:
+        return 'common';
+    }
+  }
+
   function getQualityColor(quality) {
     switch (quality) {
       case 'magic': return '#22c55e';
@@ -947,11 +968,11 @@
 
 {#if shop}
   <div class="shop-overlay" use:portal role="dialog" aria-modal="true" aria-label="Shop">
-    <div class="shop-panel">
+    <div class="shop-panel gf-panel">
       <div class="shop-header">
         <div class="shop-title">{shop.merchantName || 'Merchant'}'s Shop</div>
         <div class="shop-gold">{gold} gold</div>
-        <button class="shop-close" type="button" on:click={closeShop} aria-label="Close shop">×</button>
+        <button class="shop-close gf-close" type="button" on:click={closeShop} aria-label="Close shop">×</button>
       </div>
       <div class="shop-tabs">
         <button class="shop-tab" class:active={tab === 'buy'} type="button" on:click={() => setTab('buy')}>Buy</button>
@@ -974,7 +995,7 @@
             disabled={oos}
             aria-pressed={isSelected}
           >
-            <div class="shop-icon">
+            <div class="shop-icon gf-slot" data-quality={slotQuality(item.quality)}>
               <img
                 src={itemArtSrc(item)}
                 alt=""
@@ -986,7 +1007,7 @@
             </div>
             <div class="shop-text">
               <div class="shop-name">{item.name}</div>
-              <div class="shop-price">{rowPrice(item)}g</div>
+              <div class="shop-price"><span class="coin-gold">{rowPrice(item)}g</span></div>
             </div>
           </button>
         {:else}
@@ -1007,7 +1028,7 @@
         <div class="detail-overlay" role="dialog" aria-label="{selected.name} details">
           <div class="detail-header">
             <div class="detail-title-row">
-              <div class="detail-art-wrap">
+              <div class="detail-art-wrap gf-slot" data-quality={slotQuality(selected.quality)}>
                 <img
                   class="detail-art"
                   src={itemArtSrc(selected)}
@@ -1016,10 +1037,10 @@
                 />
               </div>
               <div class="detail-title-info">
-                <span class="detail-name" style="color: {getQualityColor(selected.quality)}">{selected.name}</span>
+                <span class="detail-name" data-quality={slotQuality(selected.quality)} style="color: {getQualityColor(selected.quality)}">{selected.name}</span>
                 <span class="detail-meta">
                   {#if selected.quality}
-                    <span class="detail-quality" style="color: {getQualityColor(selected.quality)}">{formatTypeName(selected.quality)}</span>
+                    <span class="detail-quality" data-quality={slotQuality(selected.quality)} style="color: {getQualityColor(selected.quality)}">{formatTypeName(selected.quality)}</span>
                   {/if}
                   {#if selected.type}
                     <span class="detail-type">{formatTypeName(selected.type)}{#if selected.subType} ({formatTypeName(selected.subType)}){/if}</span>

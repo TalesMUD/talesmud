@@ -39,9 +39,10 @@ const compactAt = hotbar.indexOf('.hotbar-widget.compact .slot {');
 assert.notEqual(compactAt, -1);
 const compactEnd = hotbar.indexOf('\n  }', compactAt);
 const compact = hotbar.slice(compactAt, compactEnd);
-assert.match(compact, /min-width:\s*0/);
+assert.match(compact, /min-width:\s*44px/);
 assert.match(compact, /max-width:\s*56px/);
-assert.match(compact, /flex:\s*1 1 0/);
+assert.match(compact, /flex:\s*1 1 44px/);
+assert.match(hotbar, /\.hotbar-widget\.compact \.slots \{[^}]*flex-wrap:\s*wrap/s);
 assert.equal(compact.includes('clamp(40px'), false);
 
 const narrowAt = battle.indexOf('@media (max-width: 768px)');
@@ -60,7 +61,7 @@ assert.match(need, /\.ng-panel\s*\{[^}]*pointer-events:\s*auto/s);
 assert.match(battle, /yield-roll/);
 assert.match(battle, /lootRollPending/);
 
-assert.match(index, /bundle\.js\?v=uxtop1/);
+assert.match(index, /bundle\.js\?v=phone1/);
 assert.equal(index.includes('needgreed1'), false);
 
 console.log('uxP0Layout_test ok');
