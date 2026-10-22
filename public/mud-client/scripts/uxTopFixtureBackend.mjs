@@ -14,7 +14,7 @@ export function fixtureHttp(request,response) {
   }
   const bodies={
     '/api/guest':{token:'local-layout-fixture',expiresIn:1800},
-    '/api/server-info':{serverName:'Layout fixture'},
+    '/api/server-info':{serverName:'Layout fixture',...(process.env.UX_DEFAULT_THEME?{defaultTheme:process.env.UX_DEFAULT_THEME}:{})},
     '/api/classes':{source:'pack',races:[{id:'human',name:'Human'}],classes:[{id:'warrior',name:'Warrior',templateId:'layout-template',races:['human'],skills:[],hotbarCap:4}]},
   };
   response.writeHead(200,{'content-type':'application/json'});
@@ -38,5 +38,6 @@ export function fixtureSocket(socket) {
     if(command.startsWith('speak to ')) send({type:'dialog',npcName:'Training guide',npcText:'Choose a training topic.',options:Array.from({length:6},(_,i)=>({index:i+1,text:i===5?'Goodbye':`Training topic ${i+1}`}))});
     else if(/^\d+$/.test(command)) send({type:'dialogEnd',message:'Conversation ended'});
     else if(command==='list') send({type:'shop',merchantName:'Training merchant',merchantId:'layout-merchant',gold:15,stock:Array.from({length:4},(_,i)=>({id:`layout-stock-${i}`,name:`Training item ${i+1}`,price:2,quantity:3,type:'misc'}))});
+    else if(/^(character|stats|equipment|equip|skills|spells|quests|ql|quest)$/i.test(command)) send({type:'consoleLine',message:`${command}: logged`});
   });
 }

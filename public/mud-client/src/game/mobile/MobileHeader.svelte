@@ -57,8 +57,8 @@
   }
 
   .acct-btn {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     box-sizing: border-box;
     border: 1px solid rgba(251, 191, 36, 0.45);
     border-radius: 8px;
@@ -96,6 +96,8 @@
     align-items: center;
     gap: 0.45rem;
     width: 100%;
+    min-height: 44px;
+    box-sizing: border-box;
     padding: 0.7rem 0.8rem;
     border: 0;
     background: transparent;

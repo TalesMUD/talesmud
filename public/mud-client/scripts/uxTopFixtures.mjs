@@ -6,7 +6,7 @@ import {createRequire} from 'node:module';
 const require = createRequire(process.env.UX_PLAYWRIGHT_PACKAGE || new URL('../package.json',import.meta.url));
 const {chromium} = require('playwright');
 const phase = process.env.UX_PHASE || 'local';
-const base = process.env.UX_BASE || 'http://127.0.0.1:8016/play/?v=uxtop1';
+const base = process.env.UX_BASE || 'http://127.0.0.1:8016/play/?v=dev';
 const out = process.env.UX_OUT || '/tmp/ux-top-layout';
 const failures = [];
 const measurements = [];
@@ -14,6 +14,8 @@ const sizes = [
   {id:'phone',width:375,height:812,deviceScaleFactor:3,hasTouch:true,isMobile:true},
   {id:'tablet',width:768,height:1024,deviceScaleFactor:2,hasTouch:true,isMobile:true},
   {id:'desktop',width:1440,height:900,deviceScaleFactor:1},
+  {id:'desktop-1024',width:1024,height:768,deviceScaleFactor:1},
+  {id:'desktop-1920',width:1920,height:1080,deviceScaleFactor:1},
   {id:'phone-landscape',width:812,height:375,deviceScaleFactor:2,hasTouch:true,isMobile:true},
   {id:'phone-landscape-wide',width:844,height:390,deviceScaleFactor:2,hasTouch:true,isMobile:true},
 ];
@@ -136,6 +138,7 @@ async function run(spec) {
       check(await page.locator('.mobile-layout').count()===1,id,'landscape-mobile-shell',{});
       check(!await page.locator('.back-link').isVisible(),id,'landscape-home-link-hidden',{});
       await page.locator('.hotbar-widget').scrollIntoViewIfNeeded();
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       await hitProof(page,id,'landscape-hotbar','.hotbar-widget .slot',9);
       if(await page.locator('.mobile-layout').count()) {
       await page.locator('.mobile-tab-bar button',{hasText:'Console'}).click();

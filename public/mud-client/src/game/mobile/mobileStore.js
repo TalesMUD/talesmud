@@ -5,7 +5,7 @@ export const MOBILE_QUERY = '(max-width: 768px), (max-width: 1024px) and (max-he
 function createMobileStore() {
   const isMobile = writable(false);
   const activeTab = writable('room'); // 'room' | 'console'
-  const openSheet = writable(null);   // null | 'character' | 'inventory' | 'equipment'
+  const openSheet = writable(null);   // null | 'character' | 'skills' | 'inventory' | 'equipment' | 'quests'
 
   if (typeof window !== 'undefined') {
     const mql = window.matchMedia(MOBILE_QUERY);

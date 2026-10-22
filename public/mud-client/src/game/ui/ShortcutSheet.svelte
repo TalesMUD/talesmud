@@ -16,8 +16,8 @@
 {#if $cheatSheetOpen}
   <div class="sheet-backdrop" on:click={close} role="presentation">
     <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-    <div class="sheet" role="dialog" aria-label="Keyboard shortcuts" on:click|stopPropagation>
-      <div class="sheet-title">Shortcuts</div>
+    <div class="sheet shortcut-sheet gf-panel" role="dialog" aria-label="Keyboard shortcuts" on:click|stopPropagation>
+      <div class="sheet-title gf-plaque">Shortcuts</div>
       <ul>
         {#each rows as row}
           <li><kbd>{row[0]}</kbd><span>{row[1]}</span></li>

@@ -7,6 +7,15 @@
     flex-shrink: 0;
   }
 
+  .sheet-launch-row {
+    display: flex;
+    gap: 6px;
+  }
+
+  .sheet-launch {
+    flex: 1 1 44px;
+  }
+
   .action-row {
     display: flex;
     flex-wrap: wrap;
@@ -383,6 +392,7 @@
   } from '../hudPrefs.js';
   import { classCatalog } from '../../onboarding/classCatalog.js';
   import { pickupPanelOpen } from '../uiChrome.js';
+  import { PHONE_SHEET_LAUNCHERS, sheetIdForCommand } from './phoneSheets.js';
 
   export let store;
   export let sendMessage;
@@ -430,7 +440,8 @@
   $: pins = $settingsStore.interface?.actionBarPins;
   $: inventoryOpenMode = $settingsStore.interface?.inventoryOpenMode || INVENTORY_OPEN_OVERLAY;
   $: chromeCommands = $store.inCombat ? [] : resolveActionBarChrome();
-  $: pinnedCommands = $store.inCombat ? combatCommands : resolvePinnedCommands(pins);
+  $: pinnedCommands = ($store.inCombat ? combatCommands : resolvePinnedCommands(pins))
+    .filter((pin) => $store.inCombat || !sheetIdForCommand(pin.name || pin.id));
   $: contextCommands = $store.inCombat ? [] : [
     ...($store.hasMerchant ? [{ name: "list", icon: "store", label: "Shop" }] : []),
   ];
@@ -482,7 +493,17 @@
       executeCommand('recipes');
       return;
     }
+    const sheet = sheetIdForCommand(pin.name || pin.id);
+    if (sheet) {
+      openPhoneSheet(sheet);
+      return;
+    }
     executeCommand(pin.name);
+  }
+
+  function openPhoneSheet(id) {
+    closeMenus();
+    mobileStore.openBottomSheet(id);
   }
 
   function openSayPrompt() {
@@ -640,6 +661,19 @@
 {/if}
 
 <div class="mobile-action-bar">
+  <div class="sheet-launch-row">
+    {#each PHONE_SHEET_LAUNCHERS as launcher}
+      <button
+        class="btn sheet-launch"
+        type="button"
+        data-sheet={launcher.id}
+        on:click={() => openPhoneSheet(launcher.id)}
+      >
+        <i class="material-icons">{launcher.icon}</i>
+        {launcher.label}
+      </button>
+    {/each}
+  </div>
   <div class="action-row">
     {#each cardinalExits as exit}
       <button

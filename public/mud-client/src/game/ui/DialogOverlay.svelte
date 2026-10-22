@@ -355,14 +355,14 @@
 </style>
 
 <div class="dialog-overlay" use:portal>
-  <div class="dialog-sheet" role="dialog" aria-modal="true" aria-label={npcName || 'Conversation'}>
+  <div class="dialog-sheet gf-panel" role="dialog" aria-modal="true" aria-label={npcName || 'Conversation'}>
   {#if leaveOption}
     <div class="dialog-sheet-bar">
-      <button class="dialog-dismiss" type="button" aria-label="Close" on:click={() => handleOption(leaveOption)}>×</button>
+      <button class="dialog-dismiss gf-close" type="button" aria-label="Close" on:click={() => handleOption(leaveOption)}>×</button>
     </div>
   {/if}
   <div class="dialog-header">
-    <div class="npc-portrait-slot {npcType}">
+    <div class="npc-portrait-slot gf-medallion {npcType}">
       <img
         class="npc-portrait"
         src={portraitBustSrc(npc)}

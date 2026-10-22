@@ -107,6 +107,12 @@ type fileShape struct {
 	Regen  regenFile  `yaml:"regen"`
 	Guide  guideFile  `yaml:"guide"`
 	Quests questsFile `yaml:"quests"`
+	UI     uiFile     `yaml:"ui"`
+}
+
+// uiFile uses a pointer so an omitted default_theme stays on the engine default.
+type uiFile struct {
+	DefaultTheme *string `yaml:"default_theme"`
 }
 
 // questsFile uses a pointer so an omitted hour stays at the built-in default.
@@ -158,6 +164,7 @@ type state struct {
 	regen          RegenProfile
 	guideEnabled   bool
 	dailyResetHour int
+	defaultTheme   string
 }
 
 type aggroSight struct {
@@ -207,6 +214,7 @@ func builtin() state {
 		regen:          defaultRegen(),
 		guideEnabled:   true,
 		dailyResetHour: 4,
+		defaultTheme:   DefaultThemeDarkFantasy,
 	}
 }
 
@@ -270,7 +278,13 @@ func Reset() {
 }
 
 func decode(raw []byte) (state, error) {
-	base := builtin()
+	return decodeFrom(builtin(), raw)
+}
+
+// decodeFrom reads a document onto base. A full ruleset load passes builtin().
+// A content-pack overlay passes the profile already loaded from the engine file,
+// so omitted keys stay put.
+func decodeFrom(base state, raw []byte) (state, error) {
 	var file fileShape
 	file.Progression.LevelCap = base.levelCap
 	file.Progression.LevelUpMode = base.levelUpMode
@@ -292,7 +306,7 @@ func decode(raw []byte) (state, error) {
 		return state{}, fmt.Errorf("parse ruleset: %w", err)
 	}
 
-	next := builtin()
+	next := base
 	next.levelCap = file.Progression.LevelCap
 	if next.levelCap <= 0 {
 		next.levelCap = 50
@@ -420,7 +434,99 @@ func decode(raw []byte) (state, error) {
 		}
 		next.dailyResetHour = hour
 	}
+	if file.UI.DefaultTheme != nil {
+		theme, err := normalizeDefaultTheme(file.UI.DefaultTheme)
+		if err != nil {
+			return state{}, err
+		}
+		next.defaultTheme = theme
+	}
 	return next, nil
+}
+
+// ApplyOverlay merges a partial ruleset document onto the current profile.
+// Omitted keys, including ui.default_theme, stay as they are.
+func ApplyOverlay(raw []byte) error {
+	var node yaml.Node
+	if err := yaml.Unmarshal(raw, &node); err != nil {
+		return fmt.Errorf("parse ruleset: %w", err)
+	}
+	if err := rejectForbidden(&node); err != nil {
+		return err
+	}
+	mu.RLock()
+	base := current
+	mu.RUnlock()
+	next, err := decodeFrom(base, raw)
+	if err != nil {
+		return err
+	}
+	mu.Lock()
+	current = next
+	mu.Unlock()
+	return nil
+}
+
+// ApplyActiveImport reads import/.active and, when that world has
+// config/ruleset.yaml, merges it onto the current profile. A missing marker
+// or a missing overlay file leaves the engine profile unchanged.
+func ApplyActiveImport(importDir string) error {
+	marker, err := os.ReadFile(filepath.Join(importDir, ".active"))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("read active import: %w", err)
+	}
+	name := strings.TrimSpace(string(marker))
+	if name == "" || strings.Contains(name, "/") || strings.Contains(name, `\`) || strings.Contains(name, "..") {
+		return fmt.Errorf("active import %q", name)
+	}
+	path := filepath.Join(importDir, name, "config", "ruleset.yaml")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("read pack ruleset %s: %w", path, err)
+	}
+	if err := ApplyOverlay(raw); err != nil {
+		return fmt.Errorf("pack ruleset %s: %w", path, err)
+	}
+	return nil
+}
+
+const (
+	DefaultThemeDarkFantasy = "dark-fantasy"
+	DefaultThemeCleanHUD    = "clean-hud"
+	DefaultThemeGilded      = "gilded"
+)
+
+func normalizeDefaultTheme(raw *string) (string, error) {
+	if raw == nil {
+		return DefaultThemeDarkFantasy, nil
+	}
+	theme := strings.TrimSpace(*raw)
+	if theme == "" {
+		return DefaultThemeDarkFantasy, nil
+	}
+	switch theme {
+	case DefaultThemeDarkFantasy, DefaultThemeCleanHUD, DefaultThemeGilded:
+		return theme, nil
+	default:
+		return "", fmt.Errorf("ui.default_theme %q", theme)
+	}
+}
+
+// DefaultTheme is ui.default_theme. Omitted or empty stays dark-fantasy.
+// A deployment selects gilded by setting the key. Players can still override it.
+func DefaultTheme() string {
+	mu.RLock()
+	defer mu.RUnlock()
+	if current.defaultTheme == "" {
+		return DefaultThemeDarkFantasy
+	}
+	return current.defaultTheme
 }
 
 func applyAggroSight(base aggroSight, spec *aggroSightFile) aggroSight {

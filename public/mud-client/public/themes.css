@@ -1,7 +1,8 @@
 /* ============================================================
    TalesMUD Theme System
-   Two switchable themes: Dark Fantasy & Clean HUD
+   Dark Fantasy, Clean HUD, and Gilded Frame
    Driven by data-theme attribute on <body>
+   Gilded tokens live in themes/gilded/tokens.css
    ============================================================ */
 
 /* === Shared Design Tokens (both themes) === */
@@ -167,6 +168,76 @@
 
   /* Dividers */
   --divider-color: rgba(60, 100, 180, 0.12);
+}
+
+
+/* ============================================================
+   GILDED FRAME
+   Charcoal panels, bronze bevel, warm gold text.
+   Layout metrics stay on the shared rules below.
+   ============================================================ */
+[data-theme="gilded"] {
+  --font-display: var(--gf-font, "Marcellus", serif);
+
+  --panel-radius: 3px;
+  --panel-bg: var(--gf-panel, #15110e);
+  --panel-border: var(--gf-bronze, #8a6428);
+  --panel-border-hover: var(--gf-bronze-hi, #c79a45);
+  --panel-shadow: var(--gf-frame-shadow);
+
+  --panel-header-bg: var(--gf-titlebar);
+  --panel-header-color: var(--gf-text, #efe6d6);
+  --panel-header-border: var(--gf-bronze-dark, #4a3214);
+  --panel-header-shadow: var(--gf-text-shadow);
+
+  --panel-inner-bg: var(--gf-row-b, #1c140e);
+  --panel-inner-border: var(--gf-bronze-dark, #4a3214);
+  --panel-inner-hover: var(--gf-panel-raised, #2e2118);
+
+  --accent-primary: var(--gf-gold-text, #ffd24a);
+  --accent-glow: rgba(255, 210, 74, 0.16);
+  --accent-subtle: rgba(138, 100, 40, 0.16);
+
+  --text-primary: var(--gf-text, #efe6d6);
+  --text-secondary: var(--gf-text-dim, #a89c8a);
+  --text-dim: var(--gf-text-dim, #a89c8a);
+
+  --tab-active-color: var(--gf-gold-text, #ffd24a);
+  --tab-active-bg: rgba(138, 100, 40, 0.18);
+  --tab-active-border: var(--gf-bronze-hi, #c79a45);
+  --tab-hover-bg: rgba(138, 100, 40, 0.1);
+
+  --scrollbar-thumb: var(--gf-bronze, #8a6428);
+  --scrollbar-thumb-hover: var(--gf-bronze-hi, #c79a45);
+  --scrollbar-track: #1c140e;
+
+  --btn-bg: #241912;
+  --btn-border: var(--gf-bronze, #8a6428);
+  --btn-hover-bg: var(--gf-panel-raised, #2e2118);
+  --btn-hover-border: var(--gf-bronze-hi, #c79a45);
+
+  --input-bg: var(--gf-inset, #0e0b09);
+  --input-border: var(--gf-bronze-dark, #4a3214);
+  --input-focus-border: var(--gf-bronze-hi, #c79a45);
+
+  --bar-track-bg: var(--gf-inset, #0e0b09);
+  --bar-track-border: 1px solid var(--gf-bronze-dark, #4a3214);
+  --bar-radius: 2px;
+
+  --divider-color: rgba(138, 100, 40, 0.35);
+
+  --color-hp: #2fb32f;
+  --color-mana: #2e6fd8;
+  --color-xp: #8e4fd0;
+  --color-gold: var(--gf-gold-text, #ffd24a);
+  --color-danger: var(--gf-danger, #b0140c);
+  --color-success: var(--gf-value-buff, #3ee04a);
+
+  --color-quality-normal: var(--gf-q-common, #e8e4df);
+  --color-quality-magic: var(--gf-q-uncommon, #1eff00);
+  --color-quality-rare: var(--gf-q-rare, #0070dd);
+  --color-quality-legendary: var(--gf-q-epic, #a335ee);
+  --color-quality-mythic: var(--gf-q-legendary, #ff8000);
 }
 
 
