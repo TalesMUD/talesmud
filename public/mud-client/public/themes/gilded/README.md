@@ -10,6 +10,10 @@ Engine theme id: `gilded`. The play client turns it on with `data-theme="gilded"
 - `textures/` holds our generated stone, leather, and slot images.
 - `fonts/Marcellus-Regular.woff2` plus the source TTF. License: `fonts/OFL.txt` (SIL OFL 1.1).
 
+## Provenance
+
+The textures in `textures/` and the SVG icons in `slots/` are original works, released under this repository's MIT license. The Marcellus font is under the SIL Open Font License 1.1; see `fonts/OFL.txt`.
+
 `index.html` loads `tokens.css` before `themes.css`, then `components.css` and `chrome.css` after `global.css`, all with the same `?v=` cache tag as the other play CSS.
 
 ## Primitives

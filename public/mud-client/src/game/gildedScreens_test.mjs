@@ -14,7 +14,7 @@ const index = readFileSync(join(here, '../../public/index.html'), 'utf8');
 
 assert.match(index, /bundle\.js\?v=phone1/);
 assert.match(index, /themes\/gilded\/w2-screens\.css/);
-assert.equal(css.includes('Veilspan'), false);
+assert.deepEqual([...new Set([...index.matchAll(/\?v=([\w.-]+)/g)].map((m) => m[1]))], ['phone1']);
 assert.equal(css.includes('WoW'), false);
 assert.equal(/grid-template-columns:\s*1fr/.test(css), false);
 assert.match(css, /body\[data-theme="gilded"\] \.welcome-screen \.btn-welcome\.guest \{[^}]*color:\s*#ffd24a/);
