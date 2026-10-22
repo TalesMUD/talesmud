@@ -124,7 +124,7 @@
 </div>
 
 <style>
-  .item-card-backdrop{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:16px}
+  .item-card-backdrop{position:fixed;inset:0;z-index:calc(var(--layer-sheet) + 40);background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:16px}
   .item-card{width:min(660px,100%);max-height:min(86dvh,760px);overflow:auto;background:#11161c;border:1px solid rgba(212,175,55,.5);border-radius:12px;box-shadow:0 24px 70px #000c;color:#e5e7eb;padding:20px;outline:none}
   .item-card.item-card-unique{border:2px solid #facc15;box-shadow:0 0 0 1px #7a5a16,0 24px 70px #000c,0 0 22px rgba(250,204,21,.35)}
   .item-card-unique-mark{display:inline-block;margin-left:8px;font-size:.62rem;letter-spacing:.14em;color:#fde68a;border:1px solid rgba(250,204,21,.75);border-radius:999px;padding:1px 6px;vertical-align:middle}
@@ -161,4 +161,7 @@
   .item-card-actions button.primary{background:#3d3018;border-color:#b38c3f;color:#ffe3a4}
   .item-card-actions button:disabled{opacity:.4;cursor:not-allowed}
   @media(max-width:600px){.item-card{padding:14px}.item-card-art{width:64px;height:64px}.item-card-header{gap:10px}}
+  @media (max-width: 768px), (max-width: 1024px) and (max-height: 500px) and (orientation: landscape) {
+    .item-card-actions button, .item-card-close { min-width: 44px; min-height: 44px; box-sizing: border-box; }
+  }
 </style>

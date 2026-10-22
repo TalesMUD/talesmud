@@ -1,7 +1,10 @@
 <style>
   .bottom-sheet-backdrop {
     position: fixed;
-    inset: 0;
+    top: var(--sheet-top, 48px);
+    right: 0;
+    bottom: var(--sheet-bottom, 56px);
+    left: 0;
     background: rgba(0, 0, 0, 0.6);
     z-index: var(--layer-sheet-backdrop);
     animation: backdropFadeIn 0.2s ease-out;
@@ -14,18 +17,20 @@
 
   .bottom-sheet {
     position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 85vh;
+    top: calc(var(--sheet-top, 48px) + 4px);
+    right: 8px;
+    bottom: calc(var(--sheet-bottom, 56px) + 4px);
+    left: 8px;
+    height: auto;
     background: rgba(10, 10, 18, 0.97);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border-top: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 16px 16px 0 0;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
     z-index: var(--layer-sheet);
     display: flex;
     flex-direction: column;
+    overflow: hidden;
     animation: sheetSlideUp 0.3s ease-out;
     box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
     padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -37,12 +42,7 @@
   }
 
   .drag-handle-area {
-    display: flex;
-    justify-content: center;
-    padding: 10px 0 6px;
-    cursor: grab;
-    flex-shrink: 0;
-    touch-action: none;
+    display: none;
   }
 
   .drag-handle {
@@ -56,7 +56,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 16px 12px;
+    padding: 0 12px 4px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     flex-shrink: 0;
   }
@@ -88,8 +88,8 @@
     align-items: center;
     justify-content: center;
     transition: all 0.15s ease;
-    min-width: 36px;
-    min-height: 36px;
+    min-width: 44px;
+    min-height: 44px;
   }
 
   .sheet-close:hover, .sheet-close:active {
@@ -102,11 +102,45 @@
   }
 
   .sheet-content {
+    position: relative;
     flex: 1;
     min-height: 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     padding: 12px 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sheet-content.roomy :global(.questlog-widget.embedded) {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  .sheet-content.roomy {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .sheet-content.roomy :global(button),
+  .sheet-content.roomy :global([role="button"]),
+  .sheet-content.roomy :global([role="tab"]),
+  .sheet-content.roomy :global(input),
+  .sheet-content.roomy :global(select) {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .sheet-content.roomy :global(.skill-card-desc),
+  .sheet-content.roomy :global(.skills-note),
+  .sheet-content.roomy :global(.char-info),
+  .sheet-content.roomy :global(.quest-description),
+  .sheet-content.roomy :global(.obj-text),
+  .sheet-content.roomy :global(.empty-state),
+  .sheet-content.roomy :global(.skills-empty) {
+    font-size: 14px;
+    line-height: 1.45;
   }
 
   /* Hide the widget's own header since the sheet already has one */
@@ -123,6 +157,7 @@
 
   export let title = '';
   export let icon = '';
+  export let roomy = false;
 
   const dispatch = createEventDispatcher();
 
@@ -182,12 +217,12 @@
       {#if icon}<i class="material-icons">{icon}</i>{/if}
       {title}
     </span>
-    <button class="sheet-close" on:click={close}>
+    <button class="sheet-close" type="button" aria-label={`Close ${title}`} on:click={close}>
       <i class="material-icons">close</i>
     </button>
   </div>
 
-  <div class="sheet-content">
+  <div class="sheet-content" class:roomy>
     <slot></slot>
   </div>
 </div>

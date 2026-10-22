@@ -3,9 +3,11 @@
 
   export let store = null;
   export let sendMessage = null;
+  export let embedded = false;
 
   let quests = [];
   let expandedQuest = null;
+  let popupQuestId = null;
   let pinnedQuests = [];
 
   // Filtering and sorting
@@ -214,14 +216,29 @@
   $: abandonedQuests = sortedQuests.filter((q) => q.status === "abandoned");
   $: failedQuests = sortedQuests.filter((q) => q.status === "failed");
 
+  function isQuestOpen(questId) {
+    return (embedded ? popupQuestId : expandedQuest) === questId;
+  }
+
   function toggleQuest(questId) {
+    if (embedded) {
+      popupQuestId = popupQuestId === questId ? null : questId;
+      return;
+    }
     expandedQuest = expandedQuest === questId ? null : questId;
   }
+
+  function closeQuestPopup() {
+    popupQuestId = null;
+  }
+
+  $: popupQuest = embedded && popupQuestId ? (quests.find((q) => q.questId === popupQuestId) || null) : null;
 
   function abandonQuest(questName) {
     if (sendMessage && confirm(`Abandon quest: ${questName}?`)) {
       sendMessage(`abandon ${questName}`);
       expandedQuest = null;
+      popupQuestId = null;
     }
   }
 
@@ -312,7 +329,7 @@
   }
 </script>
 
-<div class="questlog-widget game-panel gf-panel">
+<div class="questlog-widget game-panel gf-panel" class:embedded>
   <div class="questlog-header">
     <div class="header-title-row">
       <h2 class="widget-chrome-title gf-plaque">Quest Log</h2>
@@ -504,7 +521,7 @@
       <div class="quest-section">
         <h3 class="section-title gf-plaque">📌 Pinned ({pinnedQuestList.length})</h3>
         {#each pinnedQuestList as quest}
-          <div class="quest-entry is-pinned" class:ready={isQuestReady(quest)} class:expanded={expandedQuest === quest.questId}>
+          <div class="quest-entry is-pinned" class:ready={isQuestReady(quest)} class:expanded={isQuestOpen(quest.questId)}>
             <button
               class="quest-name"
               on:click={() => toggleQuest(quest.questId)}
@@ -527,10 +544,10 @@
                   {/if}
                 </div>
               </div>
-              <span class="expand-icon">{expandedQuest === quest.questId ? "▾" : "▸"}</span>
+              <span class="expand-icon">{isQuestOpen(quest.questId) ? "▾" : "▸"}</span>
             </button>
 
-            {#if expandedQuest === quest.questId}
+            {#if !embedded && isQuestOpen(quest.questId)}
               <div class="quest-details">
                 {#if quest.description}
                   <p class="quest-description">{quest.description}</p>
@@ -618,7 +635,7 @@
             {#if isAreaExpanded(group.area)}
               <div class="area-group-body">
                 {#each group.items as quest}
-          <div class="quest-entry" class:ready={isQuestReady(quest)} class:expanded={expandedQuest === quest.questId}>
+          <div class="quest-entry" class:ready={isQuestReady(quest)} class:expanded={isQuestOpen(quest.questId)}>
             <button
               class="quest-name"
               on:click={() => toggleQuest(quest.questId)}
@@ -641,10 +658,10 @@
                   {/if}
                 </div>
               </div>
-              <span class="expand-icon">{expandedQuest === quest.questId ? "▾" : "▸"}</span>
+              <span class="expand-icon">{isQuestOpen(quest.questId) ? "▾" : "▸"}</span>
             </button>
 
-            {#if expandedQuest === quest.questId}
+            {#if !embedded && isQuestOpen(quest.questId)}
               <div class="quest-details">
                 {#if quest.description}
                   <p class="quest-description">{quest.description}</p>
@@ -724,7 +741,7 @@
       <div class="quest-section">
         <h3 class="section-title gf-plaque">Completed ({completedQuests.length})</h3>
         {#each completedQuests as quest}
-          <div class="quest-entry completed" class:expanded={expandedQuest === quest.questId}>
+          <div class="quest-entry completed" class:expanded={isQuestOpen(quest.questId)}>
             <button
               class="quest-name"
               on:click={() => toggleQuest(quest.questId)}
@@ -744,10 +761,10 @@
                   {/if}
                 </div>
               </div>
-              <span class="expand-icon">{expandedQuest === quest.questId ? "▾" : "▸"}</span>
+              <span class="expand-icon">{isQuestOpen(quest.questId) ? "▾" : "▸"}</span>
             </button>
 
-            {#if expandedQuest === quest.questId}
+            {#if !embedded && isQuestOpen(quest.questId)}
               <div class="quest-details">
                 {#if quest.description}
                   <p class="quest-description">{quest.description}</p>
@@ -814,7 +831,7 @@
                 <span class="quest-title">{quest.questName || 'Unnamed Quest'}</span>
                   <RepeatMark {quest} />
               </div>
-              <span class="expand-icon">{expandedQuest === quest.questId ? "▾" : "▸"}</span>
+              <span class="expand-icon">{isQuestOpen(quest.questId) ? "▾" : "▸"}</span>
             </button>
           </div>
         {/each}
@@ -835,7 +852,7 @@
                 <span class="quest-title">{quest.questName || 'Unnamed Quest'}</span>
                   <RepeatMark {quest} />
               </div>
-              <span class="expand-icon">{expandedQuest === quest.questId ? "▾" : "▸"}</span>
+              <span class="expand-icon">{isQuestOpen(quest.questId) ? "▾" : "▸"}</span>
             </button>
           </div>
         {/each}
@@ -843,6 +860,48 @@
     {/if}
     {/if}
   </div>
+  {#if popupQuest}
+    <!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+    <div class="quest-popup-backdrop" on:click={closeQuestPopup}></div>
+    <div class="quest-popup gf-panel" role="dialog" aria-label={popupQuest.questName || 'Quest'}>
+      <div class="quest-popup-header">
+        <h3>{popupQuest.questName || 'Unnamed Quest'}</h3>
+        <button type="button" class="quest-popup-close" aria-label="Close quest" on:click={closeQuestPopup}>Close</button>
+      </div>
+      {#if popupQuest.description}
+        <p class="quest-description">{popupQuest.description}</p>
+      {/if}
+      <div class="objectives">
+        <div class="objectives-header">Objectives</div>
+        {#each popupQuest.objectives || [] as obj}
+          <div class="objective" class:completed={obj.completed}>
+            <span class="check">{obj.completed ? "[x]" : "[ ]"}</span>
+            <span class="obj-text">{objectiveText(obj)}</span>
+            <span class="quest-progress">({obj.current}/{obj.required})</span>
+          </div>
+        {/each}
+      </div>
+      {#if popupQuest.area || popupQuest.turnInRoomId}
+        <div class="quest-rooms">
+          {#if popupQuest.area}<div>Area: {popupQuest.area}</div>{/if}
+          {#if popupQuest.turnInRoomId}<div>Turn-in room: {popupQuest.turnInRoomId}</div>{/if}
+        </div>
+      {/if}
+      {#if popupQuest.rewards && (popupQuest.rewards.xp > 0 || popupQuest.rewards.gold > 0 || (popupQuest.rewards.itemTemplateIds && popupQuest.rewards.itemTemplateIds.length > 0))}
+        <div class="rewards">
+          <div class="rewards-header">Rewards</div>
+          {#if popupQuest.rewards.xp > 0}<div class="reward-text">{popupQuest.rewards.xp} XP</div>{/if}
+          {#if popupQuest.rewards.gold > 0}<div class="reward-text">{popupQuest.rewards.gold} Gold</div>{/if}
+          {#if popupQuest.rewards.itemTemplateIds && popupQuest.rewards.itemTemplateIds.length > 0}
+            <div class="reward-text">{popupQuest.rewards.itemTemplateIds.length} item(s)</div>
+          {/if}
+        </div>
+      {/if}
+      {#if popupQuest.turnInNpcName}
+        <p class="turnin-hint">Turn in: {popupQuest.turnInNpcName}</p>
+      {/if}
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -872,6 +931,71 @@
     justify-content: space-between;
     gap: 0.5em;
     min-height: 0;
+  }
+
+  .questlog-widget.embedded {
+    position: absolute;
+    inset: 0;
+    height: auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .questlog-widget.embedded .questlog-header {
+    display: none;
+  }
+
+  .questlog-widget.embedded .questlog-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-anchor: none;
+    scroll-behavior: auto;
+  }
+
+  .quest-popup-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 2;
+  }
+
+  .quest-popup {
+    position: absolute;
+    z-index: 3;
+    inset: 8px;
+    overflow: auto;
+    padding: 16px;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .quest-popup .quest-description,
+  .quest-popup .obj-text,
+  .quest-popup .quest-rooms,
+  .quest-popup .reward-text,
+  .quest-popup .turnin-hint,
+  .quest-popup .objectives-header,
+  .quest-popup .objectives {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .quest-popup-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .quest-popup-header h3 {
+    margin: 0;
+    font-size: 16px;
+  }
+
+  .quest-popup-close {
+    min-width: 44px;
+    min-height: 44px;
   }
 
   .quest-toolbar {

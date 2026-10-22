@@ -17,8 +17,14 @@
   export let sendMessage = null;
   /** Phone sheet already draws the title. */
   export let embedded = false;
+  export let initialTab = 'stats';
 
   let sheetTab = 'stats';
+  let seenInitialTab = null;
+  $: if (initialTab !== seenInitialTab) {
+    seenInitialTab = initialTab;
+    sheetTab = initialTab === 'skills' ? 'skills' : 'stats';
+  }
 
   let character = null;
   let stats = {

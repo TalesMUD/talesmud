@@ -365,6 +365,15 @@
       right: 0.55em;
     }
   }
+
+  @media (max-width: 768px), (max-width: 1024px) and (max-height: 500px) and (orientation: landscape) {
+    .player-badge {
+      min-width: 44px;
+      min-height: 44px;
+      box-sizing: border-box;
+      justify-content: center;
+    }
+  }
 </style>
 
 {#if playerCount > 0}

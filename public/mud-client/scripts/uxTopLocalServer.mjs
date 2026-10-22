@@ -6,7 +6,9 @@ import {createRequire} from 'node:module';
 import {fixtureHttp, fixtureSocket} from './uxTopFixtureBackend.mjs';
 
 const require = createRequire(process.env.UX_PROXY_PACKAGE || new URL('../package.json',import.meta.url));
-const {WebSocket, WebSocketServer} = require('ws');
+const wsMod = require('ws');
+const WebSocket = wsMod.WebSocket || wsMod;
+const WebSocketServer = wsMod.WebSocketServer || wsMod.Server;
 const fixture = process.env.UX_FIXTURE === '1';
 const upstreamOrigin = fixture ? null : new URL(process.env.UX_UPSTREAM);
 const root = path.resolve(process.env.UX_PUBLIC || 'public/mud-client/public');
