@@ -500,6 +500,7 @@ const (
 	DefaultThemeDarkFantasy = "dark-fantasy"
 	DefaultThemeCleanHUD    = "clean-hud"
 	DefaultThemeGilded      = "gilded"
+	DefaultThemeQuietDark   = "quiet-dark"
 )
 
 func normalizeDefaultTheme(raw *string) (string, error) {
@@ -511,7 +512,7 @@ func normalizeDefaultTheme(raw *string) (string, error) {
 		return DefaultThemeDarkFantasy, nil
 	}
 	switch theme {
-	case DefaultThemeDarkFantasy, DefaultThemeCleanHUD, DefaultThemeGilded:
+	case DefaultThemeDarkFantasy, DefaultThemeCleanHUD, DefaultThemeGilded, DefaultThemeQuietDark:
 		return theme, nil
 	default:
 		return "", fmt.Errorf("ui.default_theme %q", theme)
@@ -519,7 +520,7 @@ func normalizeDefaultTheme(raw *string) (string, error) {
 }
 
 // DefaultTheme is ui.default_theme. Omitted or empty stays dark-fantasy.
-// A deployment selects gilded by setting the key. Players can still override it.
+// A deployment selects gilded or quiet-dark by setting the key. Players can still override it.
 func DefaultTheme() string {
 	mu.RLock()
 	defer mu.RUnlock()

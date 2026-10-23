@@ -71,6 +71,27 @@ func TestQuestDailyResetHour(t *testing.T) {
 	}
 }
 
+func TestQuietDarkThemeOverlay(t *testing.T) {
+	ruleset.Reset()
+	t.Cleanup(ruleset.Reset)
+	if err := ruleset.ApplyOverlay([]byte("ui:\n  default_theme: quiet-dark\n")); err != nil {
+		t.Fatal(err)
+	}
+	if ruleset.DefaultTheme() != ruleset.DefaultThemeQuietDark {
+		t.Fatalf("theme %q", ruleset.DefaultTheme())
+	}
+	if err := ruleset.ApplyOverlay([]byte("quests: {}\n")); err != nil {
+		t.Fatal(err)
+	}
+	if ruleset.DefaultTheme() != ruleset.DefaultThemeQuietDark {
+		t.Fatal("omitted overlay reset theme")
+	}
+	ruleset.Reset()
+	if ruleset.DefaultTheme() != ruleset.DefaultThemeDarkFantasy {
+		t.Fatal("engine fallback changed")
+	}
+}
+
 func TestDefaultThemeKey(t *testing.T) {
 	ruleset.Reset()
 	t.Cleanup(ruleset.Reset)

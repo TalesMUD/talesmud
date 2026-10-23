@@ -106,7 +106,7 @@ test('sheet and toast layers stay in the existing ladder', () => {
   assert.ok(layer('roll') > layer('battle'));
   assert.ok(layer('dialog') > layer('sheet'));
   const index = read('../../public/index.html');
-  assert.match(index, /bundle\.js\?v=phone1/);
+  assert.match(index, /bundle\.js\?v=v056/);
   const tags = new Set([...index.matchAll(/\?v=([\w.-]+)/g)].map((m) => m[1]));
-  assert.deepEqual([...tags], ['phone1']);
+  assert.deepEqual([...tags], ['v056']);
 });
