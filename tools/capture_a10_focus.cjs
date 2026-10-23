@@ -6,7 +6,7 @@ const puppeteer = require(process.env.PUPPETEER_MODULE || path.join(process.env.
 
 (async () => {
   const base = process.env.A10_BASE_URL || 'http://127.0.0.1:8010';
-  const out = path.resolve(__dirname, '../.director/ux-audit/after/a10-focus-1920x1080.png');
+  const out = path.resolve(__dirname, '../ux-audit/after/a10-focus-1920x1080.png');
   const browser = await puppeteer.launch({ executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium-browser', headless: 'new', args: ['--no-sandbox', '--disable-dev-shm-usage'] });
   const page = await browser.newPage();
   const errors = [];

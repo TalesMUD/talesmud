@@ -5,7 +5,7 @@
 const fs = require('node:fs'), path = require('node:path');
 const puppeteer = require(process.env.PUPPETEER_MODULE || 'puppeteer-core');
 const label = process.env.WORLDMAP_P1H_LABEL || 'a';
-const out = path.resolve(__dirname, '../.director/ux-audit/after');
+const out = path.resolve(__dirname, '../ux-audit/after');
 fs.mkdirSync(out, { recursive: true });
 const settle = page => page.evaluate(async () => {
   await document.fonts.ready;

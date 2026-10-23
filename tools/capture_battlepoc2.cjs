@@ -2,11 +2,11 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const assert = require('node:assert/strict');
-const puppeteer = require(process.env.PUPPETEER_MODULE || '/home/clawd/clawd/node_modules/puppeteer-core');
+const puppeteer = require(process.env.PUPPETEER_MODULE);
 
 (async () => {
   const base = process.env.BATTLEPOC_BASE_URL || 'http://127.0.0.1:8010';
-  const out = path.resolve(__dirname, '../.director/ux-audit/after/battlepoc2-layoutb-1920x1080.png');
+  const out = path.resolve(__dirname, '../ux-audit/after/battlepoc2-layoutb-1920x1080.png');
   const browser = await puppeteer.launch({
     executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium-browser',
     headless: 'new',
@@ -114,7 +114,7 @@ const puppeteer = require(process.env.PUPPETEER_MODULE || '/home/clawd/clawd/nod
     fs.mkdirSync(path.dirname(out), { recursive: true });
     await page.screenshot({ path: out });
     fs.writeFileSync(
-      path.resolve(__dirname, '../.director/ux-audit/after/battlepoc2-smoke.json'),
+      path.resolve(__dirname, '../ux-audit/after/battlepoc2-smoke.json'),
       JSON.stringify({ out, check, errors }, null, 2)
     );
     console.log(JSON.stringify({ out, check, errors }));
