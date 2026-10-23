@@ -2,12 +2,12 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const assert = require('node:assert/strict');
-const puppeteer = require(process.env.PUPPETEER_MODULE || '/home/clawd/clawd/node_modules/puppeteer-core');
+const puppeteer = require(process.env.PUPPETEER_MODULE);
 
 (async () => {
   const base = process.env.BATTLEB_BASE_URL || 'http://127.0.0.1:8010';
   const publicDir = path.resolve(__dirname, '../public/mud-client/public');
-  const out = path.resolve(__dirname, '../.director/ux-audit/after/b15-layoutb-1920x1080.png');
+  const out = path.resolve(__dirname, '../ux-audit/after/b15-layoutb-1920x1080.png');
   const clientAssets = {
     '/play': 'index.html',
     '/play/': 'index.html',
@@ -187,7 +187,7 @@ const puppeteer = require(process.env.PUPPETEER_MODULE || '/home/clawd/clawd/nod
     fs.mkdirSync(path.dirname(out), { recursive: true });
     await page.screenshot({ path: out });
     fs.writeFileSync(
-      path.resolve(__dirname, '../.director/ux-audit/after/b15-smoke.json'),
+      path.resolve(__dirname, '../ux-audit/after/b15-smoke.json'),
       JSON.stringify({ out, check, errors }, null, 2)
     );
     console.log(JSON.stringify({ out, check, errors }));

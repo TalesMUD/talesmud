@@ -31,7 +31,7 @@ python3 -m http.server 8140 --bind 127.0.0.1 --directory /tmp/worldmap-preview
 
 Open `http://127.0.0.1:8140/`. This mounts the production Svelte overlay on a fully explored in-memory atlas, with the requested fog neighbors. It does not start the game, create a guest, write a database, or connect to production. The JSON includes counts and fallback IDs. `tools/worldmap_snapshot.py` exports only atlas inputs and opens SQLite with `mode=ro`.
 
-For captures, install Puppeteer Core in a separate development environment, then set `PUPPETEER_MODULE` to its directory and `CHROMIUM_PATH` to your Chromium executable. Optionally set `WORLDMAP_CONTENT_JSON` to the census JSON for a larger-world performance check. Historical P1d checks use `node tools/capture_worldmap_p1d.cjs` against that commit; use `node tools/capture_worldmap_p1g.cjs` for the current art. The P1d tool runs against a local preview server (the P1 script retains its historical 8137 capture flow). It waits for terrain loading, `document.fonts.ready`, image decoding, and layout frames. It captures overview, Sampletown + Sample Woods zoom, a Lower close-up, minimum zoom and a Highlands close-up; exercises exterior selection, non-clickable filler, town filtering/interior selection, visible entrance switching, instanced interior marker, recenter, world fit, phone bounds, and Escape; and records changed-scene bake, marker-only snapshot, warm draw timings, and sheet requests in `.director/ux-audit/after/`.
+For captures, install Puppeteer Core in a separate development environment, then set `PUPPETEER_MODULE` to its directory and `CHROMIUM_PATH` to your Chromium executable. Optionally set `WORLDMAP_CONTENT_JSON` to the census JSON for a larger-world performance check. Historical P1d checks use `node tools/capture_worldmap_p1d.cjs` against that commit; use `node tools/capture_worldmap_p1g.cjs` for the current art. The P1d tool runs against a local preview server (the P1 script retains its historical 8137 capture flow). It waits for terrain loading, `document.fonts.ready`, image decoding, and layout frames. It captures overview, Sampletown + Sample Woods zoom, a Lower close-up, minimum zoom and a Highlands close-up; exercises exterior selection, non-clickable filler, town filtering/interior selection, visible entrance switching, instanced interior marker, recenter, world fit, phone bounds, and Escape; and records changed-scene bake, marker-only snapshot, warm draw timings, and sheet requests in `ux-audit/after/`.
 
 ## Layout and rendering
 
@@ -55,7 +55,7 @@ P1c capture checks all P1b interactions plus fog-sensitive cache pixels, every s
 
 ## P1d framing, detail and bake checks
 
-Current capture output is `worldmap-p1d-{overview,zoom,lower,far,highlands}-1920x1080.png`, plus browser and layout JSON under `.director/ux-audit/after/`. Minimum scale is 1 and shares the Fit world frame: 78% of map height, limited by available width on narrow screens. Existing local recenter and maximum scale behavior remain. Highlands capture frames Sample Woods and Sample Peaks.
+Current capture output is `worldmap-p1d-{overview,zoom,lower,far,highlands}-1920x1080.png`, plus browser and layout JSON under `ux-audit/after/`. Minimum scale is 1 and shares the Fit world frame: 78% of map height, limited by available width on narrow screens. Existing local recenter and maximum scale behavior remain. Highlands capture frames Sample Woods and Sample Peaks.
 
 P1d traces angular walls from quarter-cell courtyard/street footprints, with corner towers and incoming road gates. Relief depends on mountain depth: low rock foothills surround taller central peaks and only the highest variant carries a cap. Disclosed zone context chooses oaks, pines or marsh dead trees; rooms add town/farm/highland/plateau props. Offshore rocks and coastal cliffs are decorative, with no room/travel IDs. Drop shadows on buildings/trees are removed.
 
@@ -69,7 +69,7 @@ Roads are a single batched network beneath terrain relief, trees, buildings and 
 
 ## P1f deeper zoom
 
-Scale now spans 1–10 with a 220px tile cap, twice the prior maximum; minimum zoom and continent fit remain P1d’s frame. Wheel and pinch use the shared clamp, and nearest-neighbor sampling keeps enlarged pixels crisp. Run `tools/capture_worldmap_p1f.cjs` against the local production-overlay preview to save overview and Sampletown at maximum zoom, and check wheel/pinch limits, Fit world, local recenter, pixel sampling and page errors. Evidence is under `.director/ux-audit/after/worldmap-p1f-*`.
+Scale now spans 1–10 with a 220px tile cap, twice the prior maximum; minimum zoom and continent fit remain P1d’s frame. Wheel and pinch use the shared clamp, and nearest-neighbor sampling keeps enlarged pixels crisp. Run `tools/capture_worldmap_p1f.cjs` against the local production-overlay preview to save overview and Sampletown at maximum zoom, and check wheel/pinch limits, Fit world, local recenter, pixel sampling and page errors. Evidence is under `ux-audit/after/worldmap-p1f-*`.
 
 
 ## P1j production atlas

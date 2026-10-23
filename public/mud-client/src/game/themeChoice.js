@@ -1,5 +1,5 @@
 /** Named themes a deployment or a player can select. `auto` follows the server. */
-export const THEME_IDS = ["dark-fantasy", "clean-hud", "gilded"];
+export const THEME_IDS = ["dark-fantasy", "clean-hud", "gilded", "quiet-dark"];
 export const THEME_AUTO = "auto";
 export const ENGINE_DEFAULT_THEME = "dark-fantasy";
 

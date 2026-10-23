@@ -2,11 +2,11 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const assert = require('node:assert/strict');
-const puppeteer = require(process.env.PUPPETEER_MODULE || '/home/clawd/clawd/node_modules/puppeteer-core');
+const puppeteer = require(process.env.PUPPETEER_MODULE);
 
 (async () => {
   const base = process.env.BATTLEPOC_BASE_URL || 'http://127.0.0.1:8010';
-  const out = path.resolve(__dirname, '../.director/ux-audit/after/battlepoc3-layoutb-1920x1080.png');
+  const out = path.resolve(__dirname, '../ux-audit/after/battlepoc3-layoutb-1920x1080.png');
   const browser = await puppeteer.launch({
     executablePath: process.env.CHROMIUM_PATH || '/usr/bin/chromium-browser',
     headless: 'new',
@@ -125,18 +125,18 @@ const puppeteer = require(process.env.PUPPETEER_MODULE || '/home/clawd/clawd/nod
     fs.mkdirSync(path.dirname(out), { recursive: true });
     await page.screenshot({ path: out });
     fs.writeFileSync(
-      path.resolve(__dirname, '../.director/ux-audit/after/battlepoc3-smoke.json'),
+      path.resolve(__dirname, '../ux-audit/after/battlepoc3-smoke.json'),
       JSON.stringify({ out, check, errors }, null, 2)
     );
     // Crop TL / TR / sprites for review
     const tl = await page.$('.layout-b-frame.player-frame');
-    if (tl) await tl.screenshot({ path: path.resolve(__dirname, '../.director/ux-audit/after/battlepoc3-tl.png') });
+    if (tl) await tl.screenshot({ path: path.resolve(__dirname, '../ux-audit/after/battlepoc3-tl.png') });
     const tr = await page.$('.layout-b-frame.target-frame');
-    if (tr) await tr.screenshot({ path: path.resolve(__dirname, '../.director/ux-audit/after/battlepoc3-tr.png') });
+    if (tr) await tr.screenshot({ path: path.resolve(__dirname, '../ux-audit/after/battlepoc3-tr.png') });
     const enemySprite = await page.$('.battle-stage.layout-b .enemy-sprite-wrap');
-    if (enemySprite) await enemySprite.screenshot({ path: path.resolve(__dirname, '../.director/ux-audit/after/battlepoc3-enemy-sprite.png') });
+    if (enemySprite) await enemySprite.screenshot({ path: path.resolve(__dirname, '../ux-audit/after/battlepoc3-enemy-sprite.png') });
     const playerSprite = await page.$('.battle-stage.layout-b .player-bust');
-    if (playerSprite) await playerSprite.screenshot({ path: path.resolve(__dirname, '../.director/ux-audit/after/battlepoc3-player-sprite.png') });
+    if (playerSprite) await playerSprite.screenshot({ path: path.resolve(__dirname, '../ux-audit/after/battlepoc3-player-sprite.png') });
     console.log(JSON.stringify({ out, check, errors }));
   } finally {
     await browser.close();

@@ -1,9 +1,9 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const assert = require('node:assert/strict');
-const puppeteer = require('/home/clawd/clawd/node_modules/puppeteer-core');
+const puppeteer = require(process.env.PUPPETEER_MODULE);
 (async () => {
-  const out = path.resolve(__dirname, '../.director/ux-audit/after');
+  const out = path.resolve(__dirname, '../ux-audit/after');
   const base = process.env.FOG1_PREVIEW_URL || 'http://127.0.0.1:8155/';
   const browser = await puppeteer.launch({
     executablePath: '/usr/bin/google-chrome-stable',

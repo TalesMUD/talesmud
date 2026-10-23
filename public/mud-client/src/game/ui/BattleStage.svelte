@@ -948,6 +948,7 @@
             <div class="fx-slash" class:crit={fxIsCrit || fxIsCrush} data-key={fxKey} aria-hidden="true"></div>
           {/if}
         </div>
+        <span class="quiet-enemy-label">{enemy.name}{#if enemy.level > 0}<small>Level {enemy.level}</small>{/if}</span>
       </button>
     {/each}
   </section>
@@ -1419,6 +1420,7 @@
 {/if}
 
 <style>
+  .quiet-enemy-label { display: none; }
   .battle-stage {
     position: fixed;
     inset: 0;
@@ -4040,7 +4042,7 @@
     margin: 0;
     max-width: 100%;
   }
-  /* WoW-style: small rectangles above/beside the combat portrait */
+  /* Small rectangles above/beside the combat portrait */
   .buff-row.portrait-buffs {
     position: absolute;
     z-index: 5;

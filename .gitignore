@@ -42,8 +42,8 @@ public/mud-client/public/worldmap-worker.js.map
 .claude/
 .codex/
 
-# Local director notes and UX captures (not part of the engine)
-.director/
+# Local UX captures (not part of the engine)
+ux-audit/
 
 img/
 

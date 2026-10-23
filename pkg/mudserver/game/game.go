@@ -36,7 +36,7 @@ type Game struct {
 	// Quest tracker for quest progress
 	QuestTracker *QuestTracker
 
-	// Private cellar copies (WoW-style, not a raid platform)
+	// Private cellar copies (gilded fantasy frame, not a raid platform)
 	RoomInstances *roomInstanceAdapter
 
 	// Resources is the refilling balance store. Nil until the process attaches one.

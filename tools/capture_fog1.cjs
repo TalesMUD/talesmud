@@ -2,11 +2,11 @@
 const path = require('node:path');
 const fs = require('node:fs');
 const assert = require('node:assert/strict');
-const puppeteer = require(process.env.PUPPETEER_MODULE || '/home/clawd/clawd/node_modules/puppeteer-core');
+const puppeteer = require(process.env.PUPPETEER_MODULE);
 
 (async () => {
   const base = process.env.FOG1_BASE_URL || 'http://127.0.0.1:8010';
-  const outDir = path.resolve(__dirname, '../.director/ux-audit/after');
+  const outDir = path.resolve(__dirname, '../ux-audit/after');
   fs.mkdirSync(outDir, { recursive: true });
   const overviewPath = path.join(outDir, 'fog1-overview-1920x1080.png');
   const zoomPath = path.join(outDir, 'fog1-maxzoom-1920x1080.png');

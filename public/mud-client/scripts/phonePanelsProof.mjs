@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(process.env.UX_PLAYWRIGHT_PACKAGE || new URL('../package.json', import.meta.url));
 const { chromium } = require('playwright');
-const base = process.env.UX_BASE || 'http://127.0.0.1:8016/play/?v=phone1';
+const base = process.env.UX_BASE || 'http://127.0.0.1:8016/play/?v=v056';
 const outDir = process.env.UX_OUT || '/tmp/phone-panels-proof';
 const sizes = [
   { id: '375x812', width: 375, height: 812, deviceScaleFactor: 3, hasTouch: true, isMobile: true, touch: true },

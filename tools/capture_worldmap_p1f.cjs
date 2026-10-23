@@ -2,7 +2,7 @@
 // PUPPETEER_MODULE=/path/to/puppeteer-core node tools/capture_worldmap_p1f.cjs
 const fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
 const puppeteer = require(process.env.PUPPETEER_MODULE || 'puppeteer-core');
-const out = path.resolve(__dirname, '../.director/ux-audit/after');
+const out = path.resolve(__dirname, '../ux-audit/after');
 const settle = page => page.evaluate(async () => {
   await document.fonts.ready;
   await document.fonts.load('24px "Material Icons"');

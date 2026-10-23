@@ -1750,3 +1750,7 @@ See [SCRIPTING.md](SCRIPTING.md) for full documentation.
 # A10 combat focus
 
 `combatStart.targetId` names the enemy engaged by the initiating or joining player. The web client keeps the local focus ID and short lived threat warning in `MUDXPlusStore`; BattleStage and Tab send `focus <enemy ID>` when the selection changes. The command validates a living enemy in the player's combat instance and updates `CombatantRef.AutoAttackTargetID` without queuing an action. It sends a `combatAction` with `action: "focus"` to synchronize the client. An in-combat `attack <name>` still queues the hit and now sends the same focus action. Existing attack and hostile skill commands read the server target, then fall back to a living enemy.
+
+## Quiet Dark theme selection
+
+Quiet Dark: optional minimal dark client theme, opt-in via `ui.default_theme` or Settings. The theme registry accepts `quiet-dark` beside `dark-fantasy`, `clean-hud`, and `gilded`. Engine fallback remains `dark-fantasy`. `/api/server-info` `defaultTheme` still flows through SettingsStore to `body[data-theme]`. Theme CSS and OFL fonts live under `public/mud-client/public/themes/quiet-dark/`.

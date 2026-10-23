@@ -7,7 +7,7 @@ const bossName = process.env.A9_BOSS_NAME || 'Sample Brute';
 const roomId = process.env.A9_ROOM_ID || 'R0112';
 const guestLevel = Number(process.env.A9_GUEST_LEVEL || 4);
 const guestStrength = Number(process.env.A9_GUEST_STRENGTH || 18);
-const out = path.resolve(__dirname, '../.director/ux-audit/after');
+const out = path.resolve(__dirname, '../ux-audit/after');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
  const report = { base, preparation: `Fresh owner-authorized guest records only: level ${guestLevel} warrior, 250 HP, STR ${guestStrength}, room ${roomId}. Existing live ${bossName} is unchanged.`, guests: [], phases: [], errors: [] };

@@ -2,7 +2,7 @@
 // Requires the read-only preview on 127.0.0.1:8137 and optional full content JSON.
 const fs=require('node:fs'), path=require('node:path'), assert=require('node:assert/strict');
 const puppeteer=require(process.env.PUPPETEER_MODULE||'puppeteer-core');
-const root=path.resolve(__dirname,'..'), out=path.join(root,'.director/ux-audit/after');
+const root=path.resolve(__dirname,'..'), out=path.join(root,'ux-audit/after');
 const settle=page=>page.evaluate(async()=>{await document.fonts.ready;await Promise.all([...document.images].map(i=>i.decode().catch(()=>{})));await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))});
 (async()=>{
  const browser=await puppeteer.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium-browser',headless:'new',args:['--no-sandbox','--disable-dev-shm-usage']});
