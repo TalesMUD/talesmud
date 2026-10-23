@@ -2647,3 +2647,7 @@ Classic `/activate` is a standalone Auth0 page for SSH and app codes, with “Co
 ---
 
 **End of Document**
+
+## Quiet Dark appearance
+
+Players can select Quiet Dark in Settings, or follow the server with Auto. Panels use elevation by tone without ornamental frames or outlined cards. Gold is limited to active-tab underlines, the room-title tick, Pickup, and gold amounts. Room descriptions use 18px EB Garamond; UI uses Alegreya Sans with a 14px text floor. Touch controls and room/combat hotbar slots have a 44px minimum. Reduced-motion preferences remove theme transitions. Character, equipment, inventory, quests, and combat continue to use existing server data.

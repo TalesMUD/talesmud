@@ -684,3 +684,7 @@ This project is actively developed. The NPCs branch contains the latest work on 
 ### Timed wandering NPCs
 NPC templates support routes (loop or pingpong) and constrained roaming with intervals, jitter and engagement pauses. Spawners may override movement. Open dialogs/shops hold NPCs; movement sends departure/arrival prose and room presence updates. Creator NPC inspectors show movement and timers, the world map shows live wanderers, and content health validates routes. Legacy wanderRadius/patrolPath use the same timed system.
 Movement is strictly opt-in: only an explicit movement block, positive wanderRadius or non-empty patrolPath enables it. Existing shopkeepers and unconfigured NPCs stay in place; spawners add no movement defaults.
+
+## Quiet Dark client theme
+
+`quiet-dark` is a selectable borderless theme with tonal near-black panels, serif room prose, sans-serif controls, bare enemy art, thin red enemy health lines, and flat rounded hotbar slots. Phone and tablet controls measure at least 44px, including wrapping combat hotbars. Existing desktop layouts and phone sheets are retained. Auto follows the deployment ruleset; explicit theme choices take precedence.

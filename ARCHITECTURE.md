@@ -1789,3 +1789,7 @@ See [SCRIPTING.md](SCRIPTING.md) for full documentation.
 
 ## NPC movement data flow
 The existing 10-second NPC tick dispatches through `Game.Call` onto the command loop. `NPCInstanceManager` owns memory-only move/pause clocks and character dialog/shop holds; templates and complete spawner overrides supply `npc.Movement`. The existing movement/broadcast path checks ordinary exits and room restrictions, schedules normal arrival aggro, sends both rooms prose, then emits `roomUpdate`. `npc.ValidateMovement` is shared by runtime loading and content health; worldindex includes movement route/whitelist backlinks. Import/export and SQLite entity JSON carry authored configuration; runtime position/clocks/sessions are not saved. Additive live NPC API fields power the inspector and live map overlay. No new external dependency or scheduler is added.
+
+## Quiet Dark theme selection
+
+The theme registry accepts `quiet-dark` alongside `dark-fantasy`, `clean-hud`, and `gilded`. Engine fallback remains `dark-fantasy`. An active content pack or deployment can set `ui.default_theme: quiet-dark` in its ruleset overlay. `/api/server-info.defaultTheme` flows through SettingsStore to `body[data-theme]`. Quiet Dark CSS and bundled OFL fonts live under `public/mud-client/public/themes/quiet-dark/`; scoped selectors preserve other themes. No content import or schema migration is needed.

@@ -958,3 +958,7 @@ Local-only 48px, six-variant rebuild of all 60 authored rows plus regenerated bl
 - Client `node --test` 72 pass. `npm run build` exit 0. `go test -count=1 ./pkg/...` exit 0. Geometry proof failures 0 at 375, 768, 812×375, and 1440.
 - Deploy: VPS engine ff `58ba87f..4631f0b`. Online gates before backup and before SIGTERM were clear (TCP 8010/2222/2223 at 0, `users.isOnline` 0 of 21). Backup `/home/atla/dev/talesmud/backups/phone1-20261022T091812Z/talesmud.db` (6,897,664 bytes, mode 600, integrity ok). Rollback `bin/tales.prev-58ba87f` sha256 `b7b4ebf47945381b9642cdb0dbe5a76d2ea19206c0ea4d635e4627798947dc06`. Built with Go 1.26.9, CGO_ENABLED=1, GOAMD64=v1. Running binary sha256 `62551d56eb1c9b3673d2c6a09356d9a2f17170790d580cbe090f5d01295d6f42`. SIGTERM talesmud MainPID `1423396` only. New MainPID `1449593`, health 200.
 - Smoke: `/play/?v=phone1` 200, 11 `phone1` tags, zero `wowf2`, `POST /api/guest` 200 (`expiresIn` 1800, token unprinted). Shots and the report are in `~/dev/briefs/PHONE-PANELS-1022/` and `~/dev/briefs/PHONE-PANELS-1022-REPORT.md`.
+
+## 2026-10-23 Quiet Dark
+
+Web Quiet Dark is registered as an optional theme with content-pack default selection. Engine fallback remains dark-fantasy. Local verification passed 75 client tests, the full Go package suite, production build, and measured 44px touch controls. Deployment and Flutter release evidence will be recorded in `~/dev/briefs/QUIET-DARK-1023-REPORT.md`.

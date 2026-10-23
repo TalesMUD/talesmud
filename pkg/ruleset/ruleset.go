@@ -500,6 +500,7 @@ const (
 	DefaultThemeDarkFantasy = "dark-fantasy"
 	DefaultThemeCleanHUD    = "clean-hud"
 	DefaultThemeGilded      = "gilded"
+	DefaultThemeQuietDark   = "quiet-dark"
 )
 
 func normalizeDefaultTheme(raw *string) (string, error) {
@@ -511,7 +512,7 @@ func normalizeDefaultTheme(raw *string) (string, error) {
 		return DefaultThemeDarkFantasy, nil
 	}
 	switch theme {
-	case DefaultThemeDarkFantasy, DefaultThemeCleanHUD, DefaultThemeGilded:
+	case DefaultThemeDarkFantasy, DefaultThemeCleanHUD, DefaultThemeGilded, DefaultThemeQuietDark:
 		return theme, nil
 	default:
 		return "", fmt.Errorf("ui.default_theme %q", theme)

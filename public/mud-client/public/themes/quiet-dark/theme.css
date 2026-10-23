@@ -1,0 +1,337 @@
+@font-face {
+  font-family: QuietSans;
+  src: url('fonts/AlegreyaSans-Medium.ttf') format('truetype');
+  font-weight: 400 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: QuietSans;
+  src: url('fonts/AlegreyaSans-Bold.ttf') format('truetype');
+  font-weight: 700 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: QuietProse;
+  src: url('fonts/EBGaramond-VariableFont_wght.ttf') format('truetype');
+  font-weight: 400 800;
+  font-display: swap;
+}
+
+body[data-theme="quiet-dark"] {
+  --qd-bg: #0d0c0b !important;
+  --qd-panel: #151312 !important;
+  --qd-control: #1c1a18 !important;
+  --qd-raised: #25221f !important;
+  --qd-text: #ece6dc !important;
+  --qd-muted: #b5ada1 !important;
+  --qd-gold: #d9b46a !important;
+  --qd-red: #e7796c !important;
+  --qd-green: #7cc27a !important;
+  --qd-blue: #7aa6e0 !important;
+  --panel-bg: var(--qd-panel) !important;
+  --panel-radius: 16px !important;
+  --panel-border: transparent !important;
+  --panel-border-hover: transparent !important;
+  --panel-shadow: none !important;
+  --panel-header-bg: transparent !important;
+  --panel-header-color: var(--qd-text) !important;
+  --panel-header-border: transparent !important;
+  --panel-header-shadow: none !important;
+  --panel-inner-bg: var(--qd-control) !important;
+  --panel-inner-border: transparent !important;
+  --panel-inner-hover: var(--qd-raised) !important;
+  --accent-primary: var(--qd-text) !important;
+  --accent-glow: transparent !important;
+  --accent-subtle: var(--qd-control) !important;
+  --text-primary: var(--qd-text) !important;
+  --text-secondary: var(--qd-muted) !important;
+  --text-dim: var(--qd-muted) !important;
+  --tab-active-color: var(--qd-text) !important;
+  --tab-active-bg: transparent !important;
+  --tab-active-border: var(--qd-gold) !important;
+  --tab-hover-bg: var(--qd-raised) !important;
+  --btn-bg: var(--qd-control) !important;
+  --btn-border: transparent !important;
+  --btn-hover-bg: var(--qd-raised) !important;
+  --btn-hover-border: transparent !important;
+  --input-bg: var(--qd-control) !important;
+  --input-border: transparent !important;
+  --input-focus-border: var(--qd-blue) !important;
+  --bar-track-bg: var(--qd-raised) !important;
+  --bar-track-border: 0 !important;
+  --divider-color: var(--qd-raised) !important;
+  --scrollbar-thumb: #57514a !important;
+  --scrollbar-thumb-hover: #777067 !important;
+  --scrollbar-track: transparent !important;
+  --color-hp: var(--qd-green) !important;
+  --color-hp-warn: var(--qd-red) !important;
+  --color-hp-danger: var(--qd-red) !important;
+  --color-mana: var(--qd-blue) !important;
+  --color-xp: var(--qd-blue) !important;
+  --color-gold: var(--qd-gold) !important;
+  --color-danger: var(--qd-red) !important;
+  --color-success: var(--qd-green) !important;
+  --color-quality-normal: var(--qd-text) !important;
+  --color-quality-magic: var(--qd-green) !important;
+  --color-quality-rare: var(--qd-blue) !important;
+  --color-quality-legendary: #cca5ef !important;
+  --color-quality-mythic: #e6a67c !important;
+  background: var(--qd-bg) !important;
+  color: var(--qd-text) !important;
+  font-family: QuietSans, sans-serif !important;
+  font-size: 16px !important;
+  font-variant-numeric: lining-nums tabular-nums !important;
+  -webkit-font-smoothing: antialiased !important;
+}
+
+body[data-theme="quiet-dark"] :is(.game-panel, .widget-wrapper.has-title-chrome,
+  .bottom-sheet, .modal-container, .inventory-overlay, .inventory-panel, .quest-popup,
+  .dialog-panel, .dialog-container, .shop-panel, .shop-container, .map-panel,
+  .gf-panel, .menu, .acct-menu, .overflow-menu, .item-detail-card, .sell-popup) {
+  background: var(--qd-panel) !important;
+  border: 0 !important;
+  border-image: none !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+  color: var(--qd-text) !important;
+  backdrop-filter: none !important;
+}
+
+body[data-theme="quiet-dark"] :is(.mobile-layout, .mobile-header, .mobile-tab-bar,
+  .play-header, .mobile-action-bar, .actionbar-widget, .hotbar-widget) {
+  background: var(--qd-bg) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: var(--qd-text) !important;
+}
+
+body[data-theme="quiet-dark"] :is(.game-panel-header, .tab-bar, .terminal-toolbar,
+  .sheet-header, .sheet-title, .widget-title, .tx-title, .char-name, .char-info,
+  .level-badge, .back-link, .switcher-button, .account-name, .sheet-tab, .tab-btn,
+  .game-panel-divider, .gold-label, .bar-label, .stat-icon, .quest-title,
+  .quest-name, .section-title, .inventory-title, .dialog-title, .shop-title) {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  color: var(--qd-text) !important;
+  text-shadow: none !important;
+}
+
+body[data-theme="quiet-dark"] :is(button, input, select, textarea, .btn, .cmd-btn,
+  .hdr-btn, .acct-btn, .compass-btn, .rest-pill, .hp-pill, .players-badge,
+  .tx-fontsize-btn, .tx-input, .term-fontsize-btn, .sheet-close, .icon-btn) {
+  font-family: QuietSans, sans-serif !important;
+  font-size: 14px !important;
+  color: var(--qd-text) !important;
+  background: var(--qd-control) !important;
+  border: 0 !important;
+  border-image: none !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+body[data-theme="quiet-dark"] button:not(.enemy-card):hover { background: var(--qd-raised) !important; }
+body[data-theme="quiet-dark"] :focus-visible { outline: 2px solid var(--qd-blue) !important; outline-offset: 2px !important; }
+body[data-theme="quiet-dark"] button:disabled { color: var(--qd-muted) !important; }
+body[data-theme="quiet-dark"] :is(.tab.active, .sheet-tab.active, .tab-btn.active, .dock-tab.active) {
+  color: var(--qd-text) !important;
+  background: transparent !important;
+  box-shadow: inset 0 -2px var(--qd-gold) !important;
+}
+body[data-theme="quiet-dark"] .mobile-tab-bar .tab.active::after { background: var(--qd-gold) !important; }
+body[data-theme="quiet-dark"] :is(.pickup-bar-btn, .pickup-icon-btn, .pickup-btn) {
+  color: #1a1408 !important;
+  background: var(--qd-gold) !important;
+}
+body[data-theme="quiet-dark"] :is(.gold-value, .detail-gold, .gold-amount, .reward-chip.gold) { color: var(--qd-gold) !important; }
+body[data-theme="quiet-dark"] :is(.attr-item, .combat-stat, .gold-row, .quest-card,
+  .item-card, .item-row, .skill-card, .skill-row, .char-identity, .compact-stats,
+  .portrait-frame, .portrait-plate, .slot-tag, .equip-slot, .theme-option) {
+  border: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  color: var(--qd-text) !important;
+}
+body[data-theme="quiet-dark"] :is(.equip-slot, .inventory-grid .item-slot, .hotbar-widget .slot, .combat-hotbar .hb-slot) {
+  background: var(--qd-control) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 10px !important;
+}
+body[data-theme="quiet-dark"] :is(.slot-index, .hb-index, .entity-meta, .attr-name,
+  .combat-stat-label, .combat-stat-formula, .class-race, .tab-count, .empty-message,
+  .quest-description, .quest-meta, .item-type, .slot-label, .slot-tag, .bar-label) {
+  color: var(--qd-muted) !important;
+  font-size: 14px !important;
+}
+body[data-theme="quiet-dark"] :is(.roomDescription, .roomDescription.parchment) {
+  font-family: QuietProse, Georgia, serif !important;
+  font-size: 18px !important;
+  line-height: 1.5 !important;
+  color: #d6cfc3 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+body[data-theme="quiet-dark"] .roomName {
+  color: var(--qd-text) !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+body[data-theme="quiet-dark"] .room-name-text::after {
+  content: '' !important;
+  display: block !important;
+  width: 32px !important;
+  height: 2px !important;
+  margin-top: 6px !important;
+  background: var(--qd-gold) !important;
+}
+body[data-theme="quiet-dark"] :is(.flourish, .outcome-ornament) { display: none !important; }
+body[data-theme="quiet-dark"] :is(.gf-panel, .gf-plaque, .entity-footer, .roomName, .game-panel)::before,
+body[data-theme="quiet-dark"] :is(.gf-panel, .gf-plaque, .entity-footer, .roomName, .game-panel)::after { display: none !important; }
+body[data-theme="quiet-dark"] .roomImageGradient { background: linear-gradient(transparent 35%, var(--qd-panel)) !important; }
+body[data-theme="quiet-dark"] .roomContentSection { background: var(--qd-panel) !important; }
+body[data-theme="quiet-dark"] .entity-card {
+  display: flex !important;
+  flex-direction: column !important;
+  aspect-ratio: auto !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+body[data-theme="quiet-dark"] .entity-bg {
+  position: static !important;
+  height: 110px !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  border-radius: 0 !important;
+  filter: drop-shadow(0 8px 8px #0008) !important;
+}
+body[data-theme="quiet-dark"] .entity-health {
+  position: static !important;
+  height: 4px !important;
+  margin: 6px 12px !important;
+  border-radius: 2px !important;
+  background: var(--qd-raised) !important;
+}
+body[data-theme="quiet-dark"] .entity-health .health-fill { background: #d8574a !important; }
+body[data-theme="quiet-dark"] .entity-footer { position: static !important; padding: 0 0 6px !important; background: transparent !important; }
+body[data-theme="quiet-dark"] .entity-name { color: var(--qd-text) !important; font: 700 16px QuietSans, sans-serif !important; text-shadow: none !important; }
+body[data-theme="quiet-dark"] .aggro-mark { color: var(--qd-red) !important; font-size: 14px !important; }
+body[data-theme="quiet-dark"] .entity-card.enemy .entity-badges { display: none !important; }
+body[data-theme="quiet-dark"] :is(.bar-track, .hp-track, .sprite-hp-track) { background: var(--qd-raised) !important; border: 0 !important; box-shadow: none !important; }
+body[data-theme="quiet-dark"] .bar-fill.hp { background: var(--qd-green) !important; }
+body[data-theme="quiet-dark"] :is(.bar-fill.mana, .bar-fill.xp) { background: var(--qd-blue) !important; }
+body[data-theme="quiet-dark"] :is(.battle-frame, .battle-header, .layout-b-frame, .battle-controls,
+  .battle-rail, .combat-log, .dock-panel.sheet, .player-panel, .foe-plate) {
+  background: var(--qd-panel) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 16px !important;
+  color: var(--qd-text) !important;
+}
+body[data-theme="quiet-dark"] :is(.lb-name, .lb-sub, .battle-title, .queued-chip, .rail-btn, .dock-tab) { color: var(--qd-text) !important; text-shadow: none !important; }
+body[data-theme="quiet-dark"] :is(.target-frame .hp-fill, .sprite-hp-fill) { background: #d8574a !important; }
+body[data-theme="quiet-dark"] :is(.tx-body, .sheet-content, .quest-content, .inventory-content, .combat-log-body) { font-size: max(14px, 1em) !important; color: var(--qd-text) !important; }
+body[data-theme="quiet-dark"] .theme-preview.quiet-dark { background: linear-gradient(90deg, #0d0c0b, #25221f) !important; }
+
+@media (pointer: coarse), (max-width: 1024px) {
+  body[data-theme="quiet-dark"] :is(button, .btn, [role="button"], .hdr-btn, .acct-btn, .icon-btn, .tx-input, .compass-btn) {
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+  body[data-theme="quiet-dark"] :is(.hotbar-widget .slot, .combat-hotbar .hb-slot) {
+    min-width: 44px !important;
+    min-height: 44px !important;
+    width: 44px !important;
+    height: 44px !important;
+    flex: 0 0 44px !important;
+  }
+  body[data-theme="quiet-dark"] .combat-hotbar { flex-wrap: wrap !important; min-width: 0 !important; }
+  body[data-theme="quiet-dark"] .dock-main { flex-wrap: wrap !important; }
+  body[data-theme="quiet-dark"] :is(.sheet-content, .tx-body, .quest-popup, .inventory-panel, .mobile-action-bar) { font-size: 14px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body[data-theme="quiet-dark"] *, body[data-theme="quiet-dark"] *::before, body[data-theme="quiet-dark"] *::after {
+    animation-duration: 0s !important;
+    transition-duration: 0s !important;
+  }
+}
+
+/* Component chrome includes literal colors as well as shared tokens. */
+body[data-theme="quiet-dark"] * {
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+body[data-theme="quiet-dark"] :is(button, .tab, .sheet-tab, .game-panel-header, .widget-title,
+  .sheet-title, .char-info, .char-name, .guide-hint, .lb-name, .header-label, .switcher, .switcher-button) {
+  font-family: QuietSans, sans-serif !important;
+}
+body[data-theme="quiet-dark"] :is(.guide-hint, .inv-panel, .dialog-sheet, .shortcut-sheet,
+  .friends-panel, .players-overlay, .detail-overlay, .notification, .action-banner, .join-banner) {
+  background: var(--qd-panel) !important;
+  color: var(--qd-text) !important;
+  border: 0 !important;
+  border-radius: 16px !important;
+}
+body[data-theme="quiet-dark"] :is(.mobile-header, .play-header, .battle-header, .switcher-button,
+  .sheet-header, .char-info, .char-identity, .tab, .sheet-tab) :is(span, i) { color: var(--qd-text) !important; }
+body[data-theme="quiet-dark"] :is(.tab.active, .sheet-tab.active, .tab-btn.active, .dock-tab.active) {
+  border-radius: 0 !important;
+  box-shadow: inset 0 -2px var(--qd-gold) !important;
+}
+body[data-theme="quiet-dark"] :is(.entity-card, .enemy-card, .enemy-sprite-wrap, .player-sprite-wrap,
+  .ally-card, .ally-portrait, .ground-marker) {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+body[data-theme="quiet-dark"] .target-ring { opacity: 0 !important; }
+body[data-theme="quiet-dark"] .target-ring.focus { opacity: 1 !important; border-bottom: 2px solid var(--qd-blue) !important; }
+body[data-theme="quiet-dark"] :is(.round-chip, .enemy-focus-label, .hp-label, .header-icon, .header-label, .player-name, .nameplate) {
+  color: var(--qd-text) !important;
+  border: 0 !important;
+  text-shadow: none !important;
+  font-size: 14px !important;
+}
+body[data-theme="quiet-dark"] :is(.dock-main, .battle-rail, .combat-hotbar, .action-bar) {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+body[data-theme="quiet-dark"] .actionbar-widget.with-hotbar { overflow: auto !important; }
+body[data-theme="quiet-dark"] .docked-hotbar { border: 0 !important; }
+body[data-theme="quiet-dark"] .combat-hotbar .hb-slot { background: var(--qd-control) !important; }
+body[data-theme="quiet-dark"] .enemy-sprite-wrap .sprite-hp { top: auto !important; bottom: 0 !important; transform: translateX(-50%) !important; }
+body[data-theme="quiet-dark"] .quiet-enemy-label { display: block !important; order: 2 !important; color: var(--qd-text) !important; font-size: 14px !important; text-align: center !important; }
+body[data-theme="quiet-dark"] .quiet-enemy-label small { display: block !important; font-size: 14px !important; color: var(--qd-muted) !important; }
+body[data-theme="quiet-dark"] .player-sprite-hp .sprite-hp-fill { background: var(--qd-green) !important; }
+body[data-theme="quiet-dark"] :is(.room-description, .room-description.parchment) {
+  color: #d6cfc3 !important;
+  background: var(--qd-panel) !important;
+  font: 18px/1.5 QuietProse, Georgia, serif !important;
+  border: 0 !important;
+}
+body[data-theme="quiet-dark"] .room-image-gradient { background: linear-gradient(transparent, var(--qd-panel)) !important; }
+body[data-theme="quiet-dark"] :is(.account-subtitle, .char-info, .class-race, .sheet-content p, .inv-body) { font-size: 14px !important; }
+body[data-theme="quiet-dark"] :is(.tx-muted, .tx-amber, .account-subtitle, .empty-state, .muted, .quest-empty) { color: var(--qd-muted) !important; }
+body[data-theme="quiet-dark"] :is(.tx-body, .tx-window, .tx-input-area, .tx-titlebar) {
+  background: var(--qd-panel) !important;
+  border: 0 !important;
+  font-size: 14px !important;
+}
+body[data-theme="quiet-dark"] :is(.tx-scanlines, .tx-vignette, .header-rule) { display: none !important; }
+body[data-theme="quiet-dark"] .tx-line { font-family: QuietSans, sans-serif !important; font-size: 14px !important; }
+body[data-theme="quiet-dark"] :is(.hp-nums, .rail-label, .mobile-tab-bar .tab span, .mobile-action-bar .btn) { font-size: 14px !important; }
+body[data-theme="quiet-dark"] :is(.attr-mod, .bar-value, .item-count, .item-name, .item-label,
+  .use-on-hint, .use-on-empty, .empty-message, .skill-description, .quest-category,
+  .quest-status, .capacity, .inv-gold, .account-info small, .character-details small) {
+  font-size: 14px !important;
+}
+body[data-theme="quiet-dark"] :is(.player-panel, .ally-card, .ally-portrait, .player-sprite-container) { background: transparent !important; }
+body[data-theme="quiet-dark"] :is(.sheet-tab, .tab, .switcher-button) span { font-family: QuietSans, sans-serif !important; }
+body[data-theme="quiet-dark"] :is(small, .switcher-class, .switcher-level, .account-meta, .attr-mod) { font-size: 14px !important; }
+body[data-theme="quiet-dark"] .entity-name { background: transparent !important; }

@@ -124,6 +124,7 @@
                 <button class="theme-option" class:active={$settingsStore.interface?.theme === 'dark-fantasy'} aria-pressed={$settingsStore.interface?.theme === 'dark-fantasy'} on:click={() => set('theme', 'dark-fantasy')}><span class="theme-preview dark-fantasy"></span>Dark Fantasy</button>
                 <button class="theme-option" class:active={$settingsStore.interface?.theme === 'clean-hud'} aria-pressed={$settingsStore.interface?.theme === 'clean-hud'} on:click={() => set('theme', 'clean-hud')}><span class="theme-preview clean-hud"></span>Clean HUD</button>
                 <button class="theme-option" class:active={$settingsStore.interface?.theme === 'gilded'} aria-pressed={$settingsStore.interface?.theme === 'gilded'} on:click={() => set('theme', 'gilded')}><span class="theme-preview gilded"></span>Gilded Frame</button>
+                <button class="theme-option" class:active={$settingsStore.interface?.theme === 'quiet-dark'} aria-pressed={$settingsStore.interface?.theme === 'quiet-dark'} on:click={() => set('theme', 'quiet-dark')}><span class="theme-preview quiet-dark"></span>Quiet Dark</button>
               </div>
             </section>
             <section class="settings-section">
