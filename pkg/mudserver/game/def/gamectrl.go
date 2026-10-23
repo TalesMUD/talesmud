@@ -126,7 +126,7 @@ type PartyInvite struct {
 	CreatedAt            time.Time
 }
 
-// RoomInstanceCtrl is a WoW-style private copy of a small room graph.
+// RoomInstanceCtrl is a gilded fantasy frame private copy of a small room graph.
 type RoomInstanceCtrl interface {
 	Enter(characterID, hubID, destID string) (clonedDestID string, err error)
 	NoteLeave(characterID, fromRoomID, toRoomID string)
