@@ -16,7 +16,7 @@ test('quiet-dark is selectable and follows deployment choice without changing en
     assert.deepEqual(migrateThemeSettings(theme, true), { theme, themeExplicit: true });
   }
   assert.match(read('ui/SettingsModal.svelte'), /set\('theme', 'quiet-dark'\)/);
-  assert.match(read('../../public/index.html'), /themes\/quiet-dark\/theme\.css\?v=quiet1/);
+  assert.match(read('../../public/index.html'), /themes\/quiet-dark\/theme\.css\?v=quiet2/);
   assert.doesNotMatch(read('../../public/index.html'), /phone1/);
 });
 

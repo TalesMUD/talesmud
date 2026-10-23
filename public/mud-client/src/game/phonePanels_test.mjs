@@ -106,6 +106,6 @@ test('sheet and toast layers stay in the existing ladder', () => {
   assert.ok(layer('roll') > layer('battle'));
   assert.ok(layer('dialog') > layer('sheet'));
   const index = read('../../public/index.html');
-  assert.match(index, /bundle\.js\?v=quiet1/);
+  assert.match(index, /bundle\.js\?v=quiet2/);
   assert.doesNotMatch(index, /wowf2/);
 });

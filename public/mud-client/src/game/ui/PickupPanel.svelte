@@ -1,5 +1,10 @@
 <script>
-  import { createEventDispatcher, onDestroy, tick } from 'svelte';
+  import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte';
+  import {
+    ENEMY_ART_SELECTOR,
+    groundListStyle,
+    placeGroundList,
+  } from '../groundListLayout.js';
   import { itemArtSrc, onItemArtError } from '../itemArtSrc.js';
   import { currentTopPanel, isTextEntry, prefersReducedMotion } from '../keyboardShortcuts.js';
   import {
@@ -26,6 +31,25 @@
   let sentIds = [];
   let closedForEmpty = false;
   let listening = false;
+  let dockStyle = '';
+
+  function enemyArtBoxes() {
+    if (typeof document === 'undefined') return [];
+    return [...document.querySelectorAll(ENEMY_ART_SELECTOR)].map((el) => {
+      const rect = el.getBoundingClientRect();
+      return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+    });
+  }
+
+  function syncDock() {
+    if (typeof window === 'undefined') {
+      dockStyle = '';
+      return;
+    }
+    const rect = placeGroundList(window.innerWidth, window.innerHeight, enemyArtBoxes());
+    const next = groundListStyle(rect);
+    if (next !== dockStyle) dockStyle = next;
+  }
 
   $: rows = groupGroundItems(items);
   $: count = pickupEntryCount(items);
@@ -109,10 +133,16 @@
 
   $: if (open && !wasOpen) {
     wasOpen = true;
+    syncDock();
     focusDialog();
   } else if (!open) {
     wasOpen = false;
   }
+
+  onMount(() => {
+    syncDock();
+    window.addEventListener('resize', syncDock);
+  });
 
   $: if (open && shouldClosePickup(items)) {
     if (!closedForEmpty) {
@@ -123,7 +153,10 @@
     closedForEmpty = false;
   }
 
-  onDestroy(unbindKeys);
+  onDestroy(() => {
+    unbindKeys();
+    if (typeof window !== 'undefined') window.removeEventListener('resize', syncDock);
+  });
 </script>
 
 {#if open && count > 0}
@@ -131,12 +164,14 @@
   <div
     class="pickup-scrim"
     class:reduced={reduceMotion}
+    class:desktop-dock={dockStyle !== ''}
     use:portal
     on:click={close}
   >
     <div
       class="pickup-panel"
       class:reduced={reduceMotion}
+      style={dockStyle}
       role="dialog"
       aria-modal="true"
       aria-labelledby="pickup-panel-title"
@@ -153,7 +188,7 @@
         </button>
       </header>
 
-      <div class="pickup-list">
+      <div class="pickup-list" data-ground-list="open">
         {#each rows as row (row.key)}
           <button
             class="pickup-row"
@@ -212,6 +247,12 @@
     padding: 24px;
     background: rgba(0, 0, 0, 0.72);
     animation: pickup-fade 0.15s ease-out;
+  }
+
+  /* Desktop dock is positioned from the layout module. The scrim stays clickable
+     and does not dim the room, so enemy art beside the list stays visible. */
+  .pickup-scrim.desktop-dock {
+    background: transparent;
   }
 
   .pickup-panel {
