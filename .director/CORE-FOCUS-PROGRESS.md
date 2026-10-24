@@ -1,3 +1,10 @@
+## Player ranking (2026-10-24)
+
+- SHIPPED engine `279a833` (`feat: [grokbot] rank characters by level and equipped item score`) on `engine-june`. Play cache `?v=rank1`. Door `:8020` untouched (pid `1178139`).
+- Public `GET /api/leaderboard` orders characters by level, equipped item score, then earliest `created` time. Item score is `qualityWeight * (1 + item level) + stat budget` on unique equipped items. Weights are `ranking.quality`, `ranking.unknown_quality`, and `ranking.stat_keys`, with a 15s `ranking.cache_seconds`. Guest accounts, the admin role, and characters with no user record stay off the board. Creator accounts and offline characters stay on it.
+- The play client opens the board from the account menu. Phone uses the existing bottom sheet. The character sheet shows Item score. `rank` and `leaderboard` print the top 10.
+- Deploy: VPS engine ff `3124fcf..279a833`. Online gate 0 before backup and before SIGTERM (TCP `:8010`/`:2222`/`:2223`, `isOnline` 0 of 21). Backup `backups/rank1-20261024T084518Z/talesmud.db` (6,918,144 bytes, mode 600, integrity ok). Rollback `bin/tales.prev-3124fcf` sha256 `26411a42ca03f675a3992aa77ad2a290602b7a2bf62435c1c9d6db07fd3c477b`. Running binary sha256 `04a63fbabdddd749a5bf9c0e596cfe57ce0b0b8435f446a14786c04dfcd5e43e`. SIGTERM MainPID `1488876` only. New MainPID `1513298`, health 200. Report `~/dev/briefs/RANK-1024-REPORT.md`.
+
 ## New-player combat curve (2026-10-18)
 
 - SHIPPED engine `803b0a0` (`feat: [grokbot] soften the level 1-5 combat curve`) on `engine-june`. Content `2941520` (`feat: [grokbot] give Ivo Quill art and cut the hollow bounty to one spider`) on `talesmud-rpg-1` main. Play cache `?v=curve1`. Door `:8020` untouched (pid `1178139`).
