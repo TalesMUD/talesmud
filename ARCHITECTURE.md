@@ -1793,3 +1793,7 @@ The existing 10-second NPC tick dispatches through `Game.Call` onto the command 
 ## Quiet Dark theme selection
 
 The theme registry accepts `quiet-dark` alongside `dark-fantasy`, `clean-hud`, and `gilded`. Engine fallback remains `dark-fantasy`. An active content pack or deployment can set `ui.default_theme: quiet-dark` in its ruleset overlay. `/api/server-info.defaultTheme` flows through SettingsStore to `body[data-theme]`. Quiet Dark CSS and bundled OFL fonts live under `public/mud-client/public/themes/quiet-dark/`; scoped selectors preserve other themes. No content import or schema migration is needed.
+
+## Leaderboard
+
+`pkg/ranking` scores equipped items and orders characters. It does not persist a score. `pkg/ruleset` owns the weights and the cache TTL. `GET /api/leaderboard` loads characters and users, drops guests and admins, and keeps the ranked snapshot for `ranking.cache_seconds`. The play client reads that JSON. The `rank` command uses the same functions with its own snapshot. Gear stays embedded on the character document, so the board does not join the items table.

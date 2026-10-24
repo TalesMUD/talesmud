@@ -352,6 +352,7 @@ talesmud/
 | `listcharacters` | `lc` | List your characters |
 | `newcharacter` | `nc` | Create new character |
 | `who` | - | List online players |
+| `rank` | `leaderboard` | Show the top 10 characters by level and item score, plus your rank |
 | `party create` | `p create` | Create a party with your current character |
 | `party invite <player>` | `p invite <player>` | Invite an online player to a party |
 | `party accept` / `party decline` | - | Respond to a pending party invite |
@@ -582,6 +583,7 @@ go run cmd/migrate/main.go -input export.json -sqlite talesmud.db
 - `GET /api/room-of-the-day` - Featured room
 - `POST /api/guest` - Create guest session (returns HMAC token)
 - `GET /api/server-info` - Public server info: `serverName`, `envLabel` (`ADMIN_ENV_LABEL`), `host` (`ADMIN_ENV_HOST` or the request host), and `defaultTheme` (ruleset `ui.default_theme`, falling back to `dark-fantasy`)
+- `GET /api/leaderboard?limit=N&self=` - Public board. Rows are rank, name, class, race, level, item score. Limit defaults to 25 and clamps to 1–100. `you` is the caller's row when `self` matches a ranked character. Guests and admin accounts are omitted. A short ruleset cache avoids a scan on every request.
 - `GET /api/ssh/info` - SSH listener status. `{enabled:false}` when SSH is off. When it is on, the body includes host, port, full host-key fingerprints, guest flag, and activate URL
 - `GET /activate` - Device-code page. Local auth serves a sign-in form. Classic auth redirects to `/play/?activate=<code>`
 
@@ -688,3 +690,7 @@ Movement is strictly opt-in: only an explicit movement block, positive wanderRad
 ## Quiet Dark client theme
 
 `quiet-dark` is a selectable borderless theme with tonal near-black panels, serif room prose, sans-serif controls, bare enemy art, thin red enemy health lines, and flat rounded hotbar slots. Phone and tablet controls measure at least 44px, including wrapping combat hotbars. Existing desktop layouts and phone sheets are retained. Auto follows the deployment ruleset; explicit theme choices take precedence.
+
+## Leaderboard
+
+Characters are ordered by level, then equipped item score, then the earliest `created` time, then name. Item score is `qualityWeight * (1 + item level) + stat budget` over unique equipped items. Weights and the stat keys live in the `ranking` ruleset block. The web client shows the board from the account menu and shows Item score on the character sheet. Phone opens it as a bottom sheet.

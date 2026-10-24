@@ -188,6 +188,7 @@
   import { settingsStore } from "../SettingsStore.js";
   import { openCharacterPicker } from "../ui/characterPickerStore.js";
   import { sshKeysOpen } from "../../sshStore.js";
+  import { mobileStore } from "./mobileStore.js";
 
   export let store;
   export let authToken = "";
@@ -225,6 +226,11 @@
   function editLayout() {
     open = false;
     layoutStore.enterEditMode();
+  }
+
+  function openLeaderboard() {
+    open = false;
+    mobileStore.openBottomSheet('rank');
   }
 
   function openSettings() {
@@ -291,6 +297,7 @@
         <div class="acct-menu" role="menu">
           <button type="button" role="menuitem" on:click={editLayout}><i class="material-icons">dashboard_customize</i> Edit Layout</button>
           <button type="button" role="menuitem" on:click={switchCharacter}><i class="material-icons">switch_account</i> Switch character</button>
+          <button type="button" role="menuitem" on:click={openLeaderboard}><i class="material-icons">format_list_numbered</i> Leaderboard</button>
           <button type="button" role="menuitem" on:click={openSettings}><i class="material-icons">settings</i> Settings</button>
           {#if !guest}
             <button type="button" role="menuitem" on:click={openSSHKeys}><i class="material-icons">vpn_key</i> SSH keys</button>

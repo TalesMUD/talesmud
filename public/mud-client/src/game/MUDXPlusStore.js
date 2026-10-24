@@ -590,6 +590,7 @@ function createStore() {
     mapSelectedId: null,
     inventoryOverlayOpen: false,
     friendsOverlayOpen: false,
+    leaderboardOverlayOpen: false,
     friends: [],
     partyOverlayOpen: false,
     party: { inParty: false, partyId: '', partyName: '', leaderId: '', maxMembers: 5, members: [], following: false },
@@ -1481,6 +1482,16 @@ function createStore() {
     setFriendsOverlayOpen: (open) => {
       update((state) => {
         return { ...state, friendsOverlayOpen: !!open };
+      });
+    },
+    openLeaderboard: () => {
+      update((state) => {
+        return { ...state, leaderboardOverlayOpen: true };
+      });
+    },
+    closeLeaderboard: () => {
+      update((state) => {
+        return { ...state, leaderboardOverlayOpen: false };
       });
     },
 

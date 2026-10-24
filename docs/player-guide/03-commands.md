@@ -41,6 +41,7 @@ View game state and character info:
 | `equipment` | `eq` | View equipped gear |
 | `character` | `c` | View character stats |
 | `who` | - | List players currently online |
+| `rank` | `leaderboard` | Show the top 10 by level and item score, plus your rank |
 | `help` | `?` | Display help information |
 
 ## Interaction Commands
@@ -263,7 +264,7 @@ Enter each command separately.
 | Category | Commands |
 |----------|----------|
 | **Movement** | north, south, east, west, up, down, [special exits] |
-| **Information** | look, inventory, equipment, character, who, help |
+| **Information** | look, inventory, equipment, character, who, rank, help |
 | **Items** | pickup, drop, use, equip, unequip |
 | **Combat** | attack, defend, flee, status |
 | **NPC** | talk, [dialog numbers] |

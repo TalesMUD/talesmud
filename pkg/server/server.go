@@ -568,6 +568,10 @@ func (app *app) setupRoutes() {
 
 		// Public server info (no auth, used by MUD client)
 		public.GET("server-info", serverSettings.GetServerInfo)
+		public.GET("leaderboard", (&handler.LeaderboardHandler{
+			Characters: app.Facade.CharactersService(),
+			Users:      app.Facade.UsersService(),
+		}).Get)
 		public.GET("ssh/info", handler.SSHInfo(app.sshPublicInfo))
 		if app.deviceAPI != nil {
 			public.POST("device/start", app.deviceAPI.Start)

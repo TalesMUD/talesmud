@@ -24,6 +24,7 @@
 14. [Discovered World Atlas](#discovered-world-atlas)
 15. [Game Client Tab Container Widget](#game-client-tab-container-widget)
 16. [SSH Access](#ssh-access)
+17. [Leaderboard](#leaderboard)
 
 ---
 
@@ -2651,3 +2652,15 @@ Classic `/activate` is a standalone Auth0 page for SSH and app codes, with “Co
 ## Quiet Dark appearance
 
 Players can select Quiet Dark in Settings, or follow the server with Auto. Panels use elevation by tone without ornamental frames or outlined cards. Gold is limited to active-tab underlines, the room-title tick, Pickup, and gold amounts. Room descriptions use 18px EB Garamond; UI uses Alegreya Sans with a 14px text floor. Touch controls and room/combat hotbar slots have a 44px minimum. Reduced-motion preferences remove theme transitions. Character, equipment, inventory, quests, and combat continue to use existing server data.
+
+## Leaderboard
+
+`GET /api/leaderboard?limit=N&self=` is public. Each row has rank, name, class, race, level, and item score. The default limit is 25 and the maximum is 100. The body has no account id, email, or other account field. `self` is a character id or exact name and fills `you` even when that character is outside the page.
+
+Item score sums unique equipped items. A piece is `qualityWeight * (1 + item level) + stat budget`. Default weights are normal 10, magic 16, rare 24, legendary 36, and mythic 52. An unknown quality uses 10. Stat budget adds the positive numbers on the configured stat keys. A two-hand weapon stored in both hand slots counts once. Nil items, items with no id, and attributes that are not numbers are ignored. Empty gear is 0.
+
+Order is level, then item score, then earliest `created` time, then name. A zero `created` sorts after any real timestamp. There is no level-reached clock, so creation time is the tie-break.
+
+Guest accounts, the admin role, and characters with no user record are excluded. Creator accounts and offline characters stay. There is no test-character flag.
+
+The `ranking` ruleset block sets `cache_seconds` (default 15, maximum 300), `unknown_quality`, `quality`, and `stat_keys`. Omitted keys keep these engine defaults. The play client opens the board from the account menu. Phone uses the existing bottom sheet. The character sheet shows Item score with the same default formula. `rank` and `leaderboard` print the top 10 and the caller's rank.

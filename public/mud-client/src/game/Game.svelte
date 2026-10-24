@@ -137,6 +137,7 @@
   import BattleStage from "./ui/BattleStage.svelte";
   import MapOverviewOverlay from "./ui/MapOverviewOverlay.svelte";
   import FriendsOverlay from "./ui/FriendsOverlay.svelte";
+  import LeaderboardOverlay from "./ui/LeaderboardOverlay.svelte";
   import PartyOverlay from "./ui/PartyOverlay.svelte";
   import NeedGreedOverlay from "./ui/NeedGreedOverlay.svelte";
 
@@ -369,6 +370,7 @@
       addWidget: showAddPanel,
       map: !!play.mapOverviewOpen,
       friends: !!play.friendsOverlayOpen,
+      leaderboard: !!play.leaderboardOverlayOpen,
       party: !!play.partyOverlayOpen,
       inventory: !!play.inventoryOverlayOpen,
       battleOutcome: play.combatPhase === "ending",
@@ -389,6 +391,7 @@
     else if (id === "addWidget") showAddPanel = false;
     else if (id === "map") muxStore.closeMapOverview();
     else if (id === "friends") muxStore.closeFriendsOverlay();
+    else if (id === "leaderboard") muxStore.closeLeaderboard();
     else if (id === "party") muxStore.closePartyOverlay();
     else if (id === "inventory") muxStore.closeInventoryOverlay();
     else if (id === "battleOutcome") muxStore.dismissCombat();
@@ -580,6 +583,7 @@
   <!-- Inventory popup overlay (default inv open mode) -->
   <InventoryOverlay store={muxStore} {sendMessage} />
   <FriendsOverlay store={muxStore} {sendMessage} />
+  <LeaderboardOverlay store={muxStore} />
   <PartyOverlay store={muxStore} {sendMessage} />
   <NeedGreedOverlay store={muxStore} {sendMessage} />
   <PickupPanel

@@ -87,6 +87,11 @@
     if (store && store.openPartyOverlay) store.openPartyOverlay();
   }
 
+  function openLeaderboard() {
+    closeMenu();
+    if (store && store.openLeaderboard) store.openLeaderboard();
+  }
+
   function editLayout() {
     closeMenu();
     layoutStore.enterEditMode();
@@ -138,6 +143,9 @@
         <i class="material-icons">group</i>
       </button>
     {/if}
+    <button class="hdr-btn icon-btn rank-launch" type="button" title="Leaderboard" aria-label="Leaderboard" on:click={openLeaderboard}>
+      <i class="material-icons">format_list_numbered</i>
+    </button>
     <button
       class="hdr-btn switcher-button"
       type="button"
@@ -173,6 +181,10 @@
         Switch character
       </button>
       <div class="menu-rule"></div>
+      <button class="menu-item rank-launch" type="button" role="menuitem" on:click={openLeaderboard}>
+        <i class="material-icons">format_list_numbered</i>
+        Leaderboard
+      </button>
       <button class="menu-item" type="button" role="menuitem" on:click={openSettings}>
         <i class="material-icons">settings</i>
         Settings
@@ -386,9 +398,21 @@
     color: #fbbf24;
   }
 
+  .menu-item.rank-launch {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
   .menu-item.subtle {
     font-size: 0.74rem;
     color: rgba(240, 230, 211, 0.72);
+  }
+
+  @media (pointer: coarse), (max-width: 1024px) {
+    .rank-launch {
+      min-width: 44px;
+      min-height: 44px;
+    }
   }
 
   .menu-rule {

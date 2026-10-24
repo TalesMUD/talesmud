@@ -271,7 +271,7 @@ body[data-theme="quiet-dark"] :is(button, .tab, .sheet-tab, .game-panel-header, 
   font-family: QuietSans, sans-serif !important;
 }
 body[data-theme="quiet-dark"] :is(.guide-hint, .inv-panel, .dialog-sheet, .shortcut-sheet,
-  .friends-panel, .players-overlay, .detail-overlay, .notification, .action-banner, .join-banner) {
+  .friends-panel, .leaderboard-panel, .leaderboard-frame, .players-overlay, .detail-overlay, .notification, .action-banner, .join-banner) {
   background: var(--qd-panel) !important;
   color: var(--qd-text) !important;
   border: 0 !important;

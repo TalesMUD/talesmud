@@ -41,6 +41,7 @@
   import InventoryWidget from '../widgets/InventoryWidget.svelte';
   import EquipmentWidget from '../widgets/EquipmentWidget.svelte';
   import QuestLogWidget from '../widgets/QuestLogWidget.svelte';
+  import LeaderboardPanel from '../ui/LeaderboardPanel.svelte';
 
   export let store;
   export let sendMessage;
@@ -129,6 +130,12 @@
   {#if $openSheet === 'quests'}
     <BottomSheet title="Quests" icon="assignment" roomy={true} on:close={() => mobileStore.closeBottomSheet()}>
       <QuestLogWidget {store} {sendMessage} embedded={true} />
+    </BottomSheet>
+  {/if}
+
+  {#if $openSheet === 'rank'}
+    <BottomSheet title="Leaderboard" icon="format_list_numbered" roomy={true} on:close={() => mobileStore.closeBottomSheet()}>
+      <LeaderboardPanel {store} embedded={true} />
     </BottomSheet>
   {/if}
 </div>

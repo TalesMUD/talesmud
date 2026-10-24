@@ -92,6 +92,7 @@ func (commandProcessor *CommandProcessor) registerCommands() {
 	commandProcessor.RegisterCommand(&ListCharactersCommand{}, "List all your characters", "lc", "listcharacters")
 	commandProcessor.RegisterCommand(&HelpCommand{processor: commandProcessor}, "Are you really asking?", "h", "help")
 	commandProcessor.RegisterCommand(&WhoCommand{}, "List all online players", "who")
+	commandProcessor.RegisterCommand(&RankCommand{}, "Show the leaderboard: rank", "rank", "leaderboard")
 	commandProcessor.RegisterCommand(&FriendCommand{}, "Friends: friend add <name>, friend remove <name>, friend list", "friend", "friends")
 	commandProcessor.RegisterCommand(&InventoryCommand{}, "Display your inventory", "inventory", "i")
 	commandProcessor.RegisterCommand(&CharacterCommand{}, "Display character stats", "character", "char", "stats")

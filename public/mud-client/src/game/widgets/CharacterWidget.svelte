@@ -2,6 +2,7 @@
   import { settingsStore } from '../SettingsStore.js';
   import { overlayStore } from '../ui/overlayStore.js';
   import { onItemArtError } from '../itemArtSrc.js';
+  import { scoreEquipped } from '../itemScore.js';
   import {
     bindSkillToFirstEmptyHotbar,
     characterClassId,
@@ -52,6 +53,7 @@
   $: maxHp = stats.maxHitPoints || 1;
   $: xp = stats.xp || 0;
   $: gold = stats.gold || 0;
+  $: itemScore = scoreEquipped(store ? $store.equippedItems : null);
   $: inCombat = stats.inCombat || false;
   $: resting = !!(stats.resting && !inCombat);
   $: attributes = stats.attributes || character?.attributes || [];
@@ -401,6 +403,28 @@
     font-size: var(--text-base);
     font-weight: 700;
     color: var(--color-gold);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .item-score-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 44px;
+    padding: 0.28em 0.5em;
+    margin-bottom: 0.35em;
+    background: rgba(255, 255, 255, 0.04);
+    border: 0;
+    border-radius: 12px;
+  }
+
+  .item-score-label,
+  .item-score-value {
+    color: var(--text-primary, #e7e5e4);
+  }
+
+  .item-score-value {
+    font-weight: 700;
     font-variant-numeric: tabular-nums;
   }
 
@@ -1098,6 +1122,11 @@
         Gold
       </span>
       <span class="gold-value">{formatGold(gold)}</span>
+    </div>
+
+    <div class="item-score-row">
+      <span class="item-score-label">Item score</span>
+      <span class="item-score-value">{itemScore.toLocaleString()}</span>
     </div>
 
     <!-- Attributes -->

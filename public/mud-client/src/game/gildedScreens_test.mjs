@@ -12,7 +12,7 @@ const card = readFileSync(join(here, 'widgets/ItemDetailCard.svelte'), 'utf8');
 const need = readFileSync(join(here, 'ui/NeedGreedOverlay.svelte'), 'utf8');
 const index = readFileSync(join(here, '../../public/index.html'), 'utf8');
 
-assert.match(index, /bundle\.js\?v=quiet2/);
+assert.match(index, /bundle\.js\?v=rank1/);
 assert.match(index, /themes\/gilded\/w2-screens\.css/);
 assert.equal(css.includes('Veilspan'), false);
 assert.equal(css.includes('WoW'), false);

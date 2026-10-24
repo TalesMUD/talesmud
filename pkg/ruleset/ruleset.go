@@ -104,10 +104,11 @@ type fileShape struct {
 		RespawnMinSeconds *float64        `yaml:"respawn_min_seconds"`
 		AggroOnSight      *aggroSightFile `yaml:"aggro_on_sight"`
 	} `yaml:"combat"`
-	Regen  regenFile  `yaml:"regen"`
-	Guide  guideFile  `yaml:"guide"`
-	Quests questsFile `yaml:"quests"`
-	UI     uiFile     `yaml:"ui"`
+	Regen   regenFile    `yaml:"regen"`
+	Guide   guideFile    `yaml:"guide"`
+	Quests  questsFile   `yaml:"quests"`
+	UI      uiFile       `yaml:"ui"`
+	Ranking *rankingFile `yaml:"ranking"`
 }
 
 // uiFile uses a pointer so an omitted default_theme stays on the engine default.
@@ -165,6 +166,7 @@ type state struct {
 	guideEnabled   bool
 	dailyResetHour int
 	defaultTheme   string
+	ranking        rankingProfile
 }
 
 type aggroSight struct {
@@ -215,6 +217,7 @@ func builtin() state {
 		guideEnabled:   true,
 		dailyResetHour: 4,
 		defaultTheme:   DefaultThemeDarkFantasy,
+		ranking:        defaultRanking(),
 	}
 }
 
@@ -440,6 +443,9 @@ func decodeFrom(base state, raw []byte) (state, error) {
 			return state{}, err
 		}
 		next.defaultTheme = theme
+	}
+	if file.Ranking != nil {
+		next.ranking = applyRanking(next.ranking, file.Ranking)
 	}
 	return next, nil
 }

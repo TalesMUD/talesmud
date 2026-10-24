@@ -17,6 +17,7 @@ export const PANEL_ORDER = [
   'addWidget',
   'map',
   'friends',
+  'leaderboard',
   'party',
   'inventory',
   'battleOutcome',

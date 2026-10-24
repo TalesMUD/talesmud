@@ -102,3 +102,17 @@ guide:
 # Omitted stays at 4. A value outside 0-23 is rejected.
 quests:
   daily_reset_hour_utc: 4
+
+# Equipped item score for the public leaderboard.
+# Omitted keys keep the engine defaults. piece = quality * (1 + level) + stat budget.
+# cache_seconds 0 recomputes every request. Cap 300.
+# ranking:
+#   cache_seconds: 15
+#   unknown_quality: 10
+#   quality:
+#     normal: 10
+#     magic: 16
+#     rare: 24
+#     legendary: 36
+#     mythic: 52
+#   stat_keys: [damage, defense, armor, strength, agility, intelligence, wisdom, stamina, health, mana, spellPower, holyDamage, naturePower, critChance, critical, criticalChance]
